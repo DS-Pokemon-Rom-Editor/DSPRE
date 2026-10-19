@@ -295,13 +295,13 @@ namespace DSPRE.Avalonia.Views.Shell
             message += "\n\nIf not, you can re-extract the ROM. This throws that folder away and unpacks the"
                      + " ROM again, so anything you have already edited in it is lost.";
 
-            DialogHelper.MsgResult choice = await DialogHelper.AskThreeWay(message, "Extracted Data Detected",
+            DialogHelper.MsgResult choice = await DialogHelper.AskThreeWay(message, "Extracted data detected",
                 "Use it", "Re-extract the ROM");
             if (choice == DialogHelper.MsgResult.Cancel) return null;
             if (choice == DialogHelper.MsgResult.Yes) return false;
 
             bool confirmReExtract = await DialogHelper.AskYesNo(
-                "All data of this ROM will be re-extracted. Proceed?", "Existing Data Will Be Deleted");
+                "All data of this ROM will be re-extracted. Proceed?", "Existing data will be deleted");
             return confirmReExtract ? (bool?)true : null;
         }
 
@@ -500,7 +500,7 @@ namespace DSPRE.Avalonia.Views.Shell
                     SettingsManager.Save();
                 }
                 (DataContext as MainWindowViewModel)?.RefreshRecents();
-                await DialogHelper.ShowError("This project no longer exists and was removed from the recent list:\n" + path, "Open Recent");
+                await DialogHelper.ShowError("This project no longer exists and was removed from the recent list:\n" + path, "Open recent");
             }
         }
 
@@ -869,11 +869,11 @@ namespace DSPRE.Avalonia.Views.Shell
                 {
                     name = await DialogHelper.PromptText(
                         "Name of the ROM Build and Run makes. Emulators keep saves per ROM name, so keep it the same between runs.",
-                        "Build and Run", "test.nds", this);
+                        "Build and run", "test.nds", this);
                     if (name == null) return;
                     if (!HgEngineProject.IsSafeBuildRomName(name))
                     {
-                        await DialogHelper.ShowError("Use a plain file name ending in .nds, made of letters, numbers, spaces, dots, dashes or underscores.", "Build and Run", this);
+                        await DialogHelper.ShowError("Use a plain file name ending in .nds, made of letters, numbers, spaces, dots, dashes or underscores.", "Build and run", this);
                         return;
                     }
                     HgEngineProject.SetBuildRomName(name);
@@ -887,9 +887,39 @@ namespace DSPRE.Avalonia.Views.Shell
                 if (!await BuildRomAsync(rom)) return;
             }
 
+            if (!await OfferTestSaveAsync(emulator.Value.Kind, emulator.Value.Path, rom)) return;
+
             string error = Emulators.Launch(emulator.Value.Kind, emulator.Value.Path, rom);
-            if (error != null) { await DialogHelper.ShowError(error, "Build and Run", this); return; }
+            if (error != null) { await DialogHelper.ShowError(error, "Build and run", this); return; }
             if (DataContext is MainWindowViewModel vm) vm.StatusText = $"Running {System.IO.Path.GetFileName(rom)} in {Emulators.DisplayName(emulator.Value.Kind)}.";
+        }
+
+        // Asks whether to start from the project's chosen save; false when the run is cancelled.
+        private async System.Threading.Tasks.Task<bool> OfferTestSaveAsync(EmulatorKind kind, string emulatorPath, string rom)
+        {
+            string save = TestSaves.For(RomInfo.workDir);
+            if (string.IsNullOrEmpty(save)) return true;
+            if (!TestSaves.Supports(kind))
+            {
+                if (DataContext is MainWindowViewModel note)
+                    note.StatusText = $"{Emulators.DisplayName(kind)} keeps saves its own way, so the project's save wasn't put in place.";
+                return true;
+            }
+            DialogHelper.MsgResult answer = await DialogHelper.AskThreeWay(
+                $"Start from {System.IO.Path.GetFileName(save)}?\n\nCarry on keeps the save the emulator already has for this ROM.",
+                "Build and run", "Start from it", "Carry on");
+            if (answer == DialogHelper.MsgResult.Cancel) return false;
+            if (answer != DialogHelper.MsgResult.Yes) return true;
+            try
+            {
+                TestSaves.Place(kind, emulatorPath, rom, save);
+                return true;
+            }
+            catch (System.Exception ex)
+            {
+                await DialogHelper.ShowError("The save couldn't be put in place. " + ex.Message, "Build and run", this);
+                return false;
+            }
         }
 
         // A fixed name keeps the emulator's saves between runs.
@@ -967,7 +997,7 @@ namespace DSPRE.Avalonia.Views.Shell
         private void CustomCommandManager_Click(object sender, RoutedEventArgs e)
         {
             try { AvaloniaEditorLauncher.OpenCustomCommandManager(); }
-            catch (System.Exception ex) { _ = DialogHelper.ShowError("Couldn't open the Custom Command Manager: " + ex.Message, "Custom Script Command Manager"); }
+            catch (System.Exception ex) { _ = DialogHelper.ShowError("Couldn't open the Custom Command Manager: " + ex.Message, "Custom script command manager error"); }
         }
 
         // ── Pokémon ─────────────────────────────────────────────────────────
@@ -1069,6 +1099,11 @@ namespace DSPRE.Avalonia.Views.Shell
 
         private void BattleScreen_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenBattleScreenEditor();
+
+        private void SummaryScreen_Click(object sender, RoutedEventArgs e) => AvaloniaEditorLauncher.OpenSummaryScreen();
+
+        private void HpBarLayout_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenHpBarLayoutEditor();
 
         private void TilesetBuilder_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenTilesetBuilder();
@@ -1193,8 +1228,8 @@ namespace DSPRE.Avalonia.Views.Shell
                 try { DocTool.ExportDocs(folder); }
                 catch (System.Exception ex) { error = ex.Message; }
             });
-            if (error == null) await DialogHelper.ShowInfo("Docs exported to:\n" + folder, "Export Docs");
-            else await DialogHelper.ShowError("Exporting docs failed:\n" + error, "Export Docs");
+            if (error == null) SaveNotice.Exported(folder);
+            else await DialogHelper.ShowError("Exporting docs failed:\n" + error, "Export docs error");
         }
 
         private async void TrainerUsageCsv_Click(object sender, RoutedEventArgs e)
@@ -1209,8 +1244,8 @@ namespace DSPRE.Avalonia.Views.Shell
                 try { TrainerUsageReport.Generate(path); }
                 catch (System.Exception ex) { error = ex.Message; }
             });
-            if (error == null) await DialogHelper.ShowInfo("Report saved to:\n" + path, "Trainer Usage CSV");
-            else await DialogHelper.ShowError("Generating the report failed:\n" + error, "Trainer Usage CSV");
+            if (error == null) SaveNotice.Exported(path);
+            else await DialogHelper.ShowError("Generating the report failed:\n" + error, "Trainer usage CSV error");
         }
 
         // ── Standalone file tools (no ROM required) ─────────────────────────
@@ -1254,7 +1289,7 @@ namespace DSPRE.Avalonia.Views.Shell
             + "Version " + AppInfo.GetDSPREVersion() + "\n\n"
             + "Icons by SkidMarc25.\n\n"
             + "Built on these tools: ds-rom by AetiasHax, rotom by Kalaay, chatot by Yako, apicula by scurest "
-            + "and BLZ by CUE. The Ekona and Images libraries are by Pleonex.\n\n"
+            + "and BLZ by CUE. Parts of the image code come from Pleonex's Tinke.\n\n"
             + "Based on Nømura's DS Pokémon ROM Editor 1.0.4.\n"
             + "Largely inspired by Markitus95's \"Spiky's DS Map Editor\" (SDSME), from which certain assets were also reused.\n"
             + "Credits go to Markitus, Ark, Zark, Florian, and everyone else who deserves credit for SDSME.\n\n"

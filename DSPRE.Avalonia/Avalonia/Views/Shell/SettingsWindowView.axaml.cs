@@ -52,6 +52,12 @@ namespace DSPRE.Avalonia.Views.Shell
         private void ClearEmulatorPath_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
             => VM.ClearEmulatorPath();
 
+        private async void ChooseTestSave_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+            => await VM.ChooseTestSaveCommand(this);
+
+        private void ClearTestSave_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+            => VM.TestSavePath = "";
+
         private void CheckForUpdates_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
             => VM.CheckForUpdates();
 

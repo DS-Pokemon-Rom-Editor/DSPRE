@@ -1,5 +1,4 @@
 ﻿using Newtonsoft.Json;
-using NSMBe4.DSFileSystem;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,7 +15,6 @@ namespace DSPRE
     public class DspreSettings
     {
         public byte menuLayout { get; set; } = 2;
-        public string lastColorTablePath { get; set; } = "";
         public bool textEditorPreferHex { get; set; } = false;
         public int scriptEditorFormatPreference { get; set; } = 0;
         // Which of the move-animation editor's three ways of reading a script was last used:
@@ -28,10 +26,6 @@ namespace DSPRE
         // Flat 2D event view, off by default so the 3D scene stays the first impression.
         public bool eventEditorFlat2D { get; set; } = false;
         public bool mapEditorFlat2D { get; set; } = false;
-        public bool renderSpawnables { get; set; } = true;
-        public bool renderOverworlds { get; set; } = true;
-        public bool renderWarps { get; set; } = true;
-        public bool renderTriggers { get; set; } = true;
         public string exportPath { get; set; } = "";
         public string mapImportStarterPoint { get; set; } = "";
         public string openDefaultRom { get; set; } = "";
@@ -40,6 +34,8 @@ namespace DSPRE
         public string preferredEmulator { get; set; } = "";
         /// <summary>Where each emulator the user has pointed DSPRE at lives, by EmulatorKind name.</summary>
         public Dictionary<string, string> emulatorPaths { get; set; } = new Dictionary<string, string>();
+        /// <summary>The save Build and Run offers to start each project from, keyed by project folder.</summary>
+        public Dictionary<string, string> testSaves { get; set; } = new Dictionary<string, string>();
         /// <summary>Whether Build and Run on a linked hg-engine checkout runs make first.</summary>
         public bool buildAndRunCompiles { get; set; } = true;
 
@@ -137,7 +133,7 @@ namespace DSPRE
                 Directory.CreateDirectory(directory);
 
             string json = JsonConvert.SerializeObject(Settings, Formatting.Indented);
-            File.WriteAllText(SettingsFile, json);
+            PlainFiles.WriteText(SettingsFile, json);
         }
 
         public const int MaxRecentProjects = 10;

@@ -64,6 +64,13 @@
 		  <Button Grid.Column="2" Content="Change path" controls:Icon.Key="folder" Margin="4,0,0,0" Click="ChangeEmulatorPath_Click"/>
 		  <Button Grid.Column="3" Content="Clear" controls:Icon.Key="Cross" Margin="4,0,0,0" Click="ClearEmulatorPath_Click" IsEnabled="{Binding HasSelectedEmulator}"/>
 		</Grid>
+		<Grid ColumnDefinitions="160,*,Auto,Auto" IsEnabled="{Binding HasProject}"
+		      ToolTip.Tip="Build and run offers to start the game from this save. BizHawk and melonDS only.">
+		  <TextBlock Grid.Column="0" Text="Save for this project" VerticalAlignment="Center"/>
+		  <TextBox Grid.Column="1" Text="{Binding TestSavePath}" IsReadOnly="True" Margin="4,0,0,0"/>
+		  <Button Grid.Column="2" Content="Choose…" controls:Icon.Key="folder" Margin="4,0,0,0" Click="ChooseTestSave_Click"/>
+		  <Button Grid.Column="3" Content="Clear" controls:Icon.Key="Cross" Margin="4,0,0,0" Click="ClearTestSave_Click"/>
+		</Grid>
 	  </StackPanel>
 	</Border>
 

@@ -144,6 +144,23 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             RaiseEmulator();
         }
 
+        // ── The save Build and Run offers to start the open project from ──
+        public bool HasProject => AvaloniaEditorLauncher.IsRomLoaded && !string.IsNullOrEmpty(RomInfo.workDir);
+
+        private string _testSavePath = "";
+        public string TestSavePath { get => _testSavePath; set => Set(ref _testSavePath, value ?? ""); }
+
+        public async Task ChooseTestSaveCommand(Window owner)
+        {
+            List<FilePickerFileType> filters = new()
+            {
+                new("Save files") { Patterns = new[] { "*.sav", "*.SaveRAM", "*.dsv", "*.bin" } },
+                new("All files") { Patterns = new[] { "*" } },
+            };
+            string path = await DialogHelper.OpenFile(owner, "Choose a save", filters);
+            if (path != null) TestSavePath = path;
+        }
+
         private int _themeIndex;
         public int ThemeIndex
         {
@@ -218,6 +235,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                 _emulatorPaths[kv.Key] = kv.Value;
             _emulatorIndex = Enum.TryParse(SettingsManager.Settings.preferredEmulator, out EmulatorKind preferred)
                 ? Array.IndexOf(Emulators.All, preferred) + 1 : 0;
+            _testSavePath = HasProject ? TestSaves.For(RomInfo.workDir) ?? "" : "";
 
             // snapshot for unsaved-changes detection
             _oldExportPath      = ExportPath;
@@ -253,32 +271,33 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
             SettingsManager.Settings.emulatorPaths = new System.Collections.Generic.Dictionary<string, string>(_emulatorPaths);
             SettingsManager.Settings.preferredEmulator = SelectedEmulator?.ToString() ?? "";
+            if (HasProject) TestSaves.Remember(RomInfo.workDir, TestSavePath);
 
             _oldExportPath      = ExportPath;
             _oldMapImportPath   = MapImportPath;
             _oldOpenDefaultPath = OpenDefaultRom;
 
             SettingsManager.Save();
-            await DialogHelper.ShowInfo("Settings saved successfully!", string.Empty);
+            SaveNotice.Saved("settings");
         }
 
         public async Task ChangeExportPathCommand(Window owner)
         {
-            string path = await DialogHelper.OpenFolder(owner, "Select ROM Export Path");
+            string path = await DialogHelper.OpenFolder(owner, "Select ROM export path");
             if (path != null)
                 ExportPath = path;
         }
 
         public async Task ChangeMapImportPathCommand(Window owner)
         {
-            string path = await DialogHelper.OpenFolder(owner, "Select Initial Map Import Path");
+            string path = await DialogHelper.OpenFolder(owner, "Select initial map import path");
             if (path != null)
                 MapImportPath = path;
         }
 
         public async Task ChangeOpenDefaultRomCommand(Window owner)
         {
-            string path = await DialogHelper.OpenFolder(owner, "Select Default ROM Folder");
+            string path = await DialogHelper.OpenFolder(owner, "Select default ROM folder");
             if (path == null) return;
 
             if (!path.EndsWith("DSPRE_contents"))
