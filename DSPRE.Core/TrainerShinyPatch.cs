@@ -27,12 +27,23 @@ namespace DSPRE
             {
                 byte[] arm9 = File.ReadAllBytes(RomInfo.arm9Path);
                 byte[] synthetic = File.Exists(Filesystem.expArmPath) ? File.ReadAllBytes(Filesystem.expArmPath) : null;
-                return Inspect(RomInfo.trainerShinySites, arm9, synthetic);
+                return Inspect(RomLocator.TrainerShinySites, arm9, synthetic);
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
                 return false;
             }
+        }
+
+        /// <summary>The synthetic overlay bytes the routine takes when the ARM9 is hooked to it, whatever is there now.</summary>
+        public static (long Start, long End)? InstalledRange(byte[] arm9)
+        {
+            RomInfo.TrainerShinySites sites = RomLocator.TrainerShinySites;
+            if (sites == null || !Matches(arm9, sites.Mask, PatchedMask)) return null;
+            if (!TryReadBl(arm9, sites.Hook, ARM9.address + (uint)sites.Hook, out uint target)) return null;
+            long offset = (long)target - RomInfo.synthOverlayLoadAddress;
+            if (offset < 0 || offset + PayloadLength > RomInfo.synthOverlaySize) return null;
+            return (offset, offset + PayloadLength);
         }
 
         private static bool Inspect(RomInfo.TrainerShinySites sites, byte[] arm9, byte[] synthetic)
@@ -81,17 +92,15 @@ namespace DSPRE
         private static readonly byte[] OriginalMask = { 0xF0, 0x23 };
         private static readonly byte[] PatchedMask = { 0xB0, 0x23 };
 
-        /// <summary>Where the toolbox offers to place the routine in the synthetic overlay.</summary>
-        public const uint DefaultPayloadOffset = 0x12100;
 
-        public static bool SupportsCurrentRom => RomInfo.trainerShinySites != null && PatchToolboxLogic.Arm9ExpansionWhyNot() == null;
+        public static bool SupportsCurrentRom => RomLocator.TrainerShinySites != null && PatchToolboxLogic.Arm9ExpansionWhyNot() == null;
 
         /// <summary>The routine for a given runtime address.</summary>
         public static byte[] BuildPayload(uint address)
         {
             byte[] payload = (byte[])PayloadTemplate.Clone();
             for (int i = 0; i < CallOffsets.Length; i++)
-                PatchToolboxLogic.BuildThumbBl(address + (uint)CallOffsets[i], RomInfo.trainerShinySites.CallTargets[i]).CopyTo(payload, CallOffsets[i]);
+                PatchToolboxLogic.BuildThumbBl(address + (uint)CallOffsets[i], RomLocator.TrainerShinySites.CallTargets[i]).CopyTo(payload, CallOffsets[i]);
             BitConverter.GetBytes(address + 0x94).CopyTo(payload, 0x98);
             return payload;
         }
@@ -99,7 +108,7 @@ namespace DSPRE
         /// <summary>Why the ARM9 can't take the patch, or null when its two hook sites are as the game ships them.</summary>
         public static string WhyNotApplicable(byte[] arm9)
         {
-            RomInfo.TrainerShinySites sites = RomInfo.trainerShinySites;
+            RomInfo.TrainerShinySites sites = RomLocator.TrainerShinySites;
             bool freesRecords = TryReadBl(arm9, sites.Hook, ARM9.address + (uint)sites.Hook, out uint callee) && callee == sites.CallTargets[^1];
             if (!freesRecords || !Matches(arm9, sites.Mask, OriginalMask))
                 return "The ARM9 code this patch hooks has already been changed.";
@@ -109,7 +118,7 @@ namespace DSPRE
         /// <summary>Writes the routine at <paramref name="payloadOffset"/> in the synthetic overlay and hooks the ARM9 to it.</summary>
         public static void Apply(uint payloadOffset)
         {
-            RomInfo.TrainerShinySites sites = RomInfo.trainerShinySites;
+            RomInfo.TrainerShinySites sites = RomLocator.TrainerShinySites;
             uint address = RomInfo.synthOverlayLoadAddress + payloadOffset;
             DSUtils.WriteToFile(Filesystem.expArmPath, BuildPayload(address), payloadOffset);
             ARM9.WriteBytes(PatchToolboxLogic.BuildThumbBl(ARM9.address + (uint)sites.Hook, address), (uint)sites.Hook);

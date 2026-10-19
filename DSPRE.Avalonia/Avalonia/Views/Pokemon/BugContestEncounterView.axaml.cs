@@ -24,5 +24,10 @@ namespace DSPRE.Avalonia.Views.Pokemon
             if (task == null) return;
             try { await task; } catch { /* handled in VM */ }
         }
+
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
+        }
     }
 }

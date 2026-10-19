@@ -100,7 +100,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private bool _isDirty;
         private bool _isLoading;
         public bool HasUnsavedChanges => _isDirty;
-        public string UnsavedChangesDescription => "Spawn Editor";
+        public string UnsavedChangesDescription => "Spawn point";
 
         private void SetDirty()  { _isDirty = true;  OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean()  { _isDirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }

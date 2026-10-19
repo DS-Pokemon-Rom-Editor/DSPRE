@@ -28,8 +28,8 @@ namespace DSPRE.ROMFiles
         public static string WhyNot()
         {
             if (HgEngine.HgEngineProject.IsActive) return HgEngine.HgEngineSlotOdds.WhyNot();
-            SlotOddsMethod[] methods = SlotOddsMethods;
-            if (methods == null) return "Only US HeartGold, Platinum (Rev 1) and Diamond are supported.";
+            SlotOddsMethod[] methods = RomLocator.SlotOddsMethods;
+            if (methods == null) return "Works on " + DescribeDumps(RomLocator.SlotOddsDumps) + ".";
             foreach (int ov in methods.Select(m => m.Overlay).Distinct())
                 if (!File.Exists(OverlayUtils.GetPath(ov))) return $"Overlay {ov} is missing from this project.";
             try { Load(); }
@@ -65,7 +65,7 @@ namespace DSPRE.ROMFiles
                 return odds;
             }
             Dictionary<int, byte[]> files = new Dictionary<int, byte[]>();
-            foreach (SlotOddsMethod m in SlotOddsMethods ?? throw new InvalidOperationException("This game version isn't supported yet."))
+            foreach (SlotOddsMethod m in RomLocator.SlotOddsMethods ?? throw new InvalidOperationException("This game version isn't supported yet."))
             {
                 if (!files.TryGetValue(m.Overlay, out byte[] d)) files[m.Overlay] = d = ReadOverlay(m.Overlay);
                 List<int> bounds = new List<int>();
@@ -146,7 +146,7 @@ namespace DSPRE.ROMFiles
                     d[tail + 3] = oneRoll ? Bne : Bcs;
                 }
             }
-            foreach ((int ov, byte[] d) in files) File.WriteAllBytes(OverlayUtils.GetPath(ov), d);
+            foreach ((int ov, byte[] d) in files) DSUtils.WriteWholeFile(OverlayUtils.GetPath(ov), d);
             _cache = default;
             Saved?.Invoke();
         }
@@ -164,7 +164,7 @@ namespace DSPRE.ROMFiles
                     int at = Array.FindIndex(HgEngine.HgEngineSlotOdds.Rolls, r => r.Name == methodName);
                     return at >= 0 ? fromSource[at] : null;
                 }
-                SlotOddsMethod[] methods = SlotOddsMethods;
+                SlotOddsMethod[] methods = RomLocator.SlotOddsMethods;
                 if (methods == null) return RetailPercents(methodName);
                 // Only a legacy project can still hold a compressed overlay; a label lookup won't decompress it.
                 if (methods.Any(m => OverlayUtils.IsStillCompressed(m.Overlay))) return RetailPercents(methodName);

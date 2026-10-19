@@ -212,9 +212,7 @@ namespace DSPRE.ROMFiles {
                 int[] fileIndices = GetFileIndices();
 
                 for (int groupIndex = 0; groupIndex < GROUP_COUNT; groupIndex++) {
-                    string filePath = Filesystem.GetPath(narcDir, fileIndices[groupIndex]);
-                    byte[] data = GroupToByteArray(groupIndex);
-                    File.WriteAllBytes(filePath, data);
+                    ArchiveMembers.Put(RomInfo.DirNames.encounterExtended, fileIndices[groupIndex], GroupToByteArray(groupIndex));
                 }
 
                 if (showSuccessMessage) {
@@ -233,7 +231,7 @@ namespace DSPRE.ROMFiles {
         public bool ExportToFile(string path, bool showSuccessMessage = true) {
             try {
                 byte[] data = ToByteArray();
-                File.WriteAllBytes(path, data);
+                ArchiveMembers.Write(path, data);
 
                 if (showSuccessMessage) {
                     AppMessages.Info("Honey Tree encounters exported successfully!", "Success");

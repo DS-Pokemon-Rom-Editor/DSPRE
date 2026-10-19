@@ -190,7 +190,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         private string _status = "";
-        public string Status { get => _status; set => Set(ref _status, value); }
+        public string StatusText { get => _status; set => Set(ref _status, value); }
 
         /// <summary>Which file the Graphics window should open for the piece asked for.</summary>
         public int FileFor(string piece) => _selected == null ? -1 : piece switch

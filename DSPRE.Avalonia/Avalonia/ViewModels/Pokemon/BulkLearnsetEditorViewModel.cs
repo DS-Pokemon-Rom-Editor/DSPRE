@@ -103,8 +103,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public async Task SetupAsync(Window owner)
         {
-            // Opened straight from the Pokémon editor, not the launcher.
-            if (AvaloniaEditorLauncher.Refused("BulkLearnsetEditorView")) { owner?.Close(); return; }
             try
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.learnsets });
@@ -118,7 +116,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowError($"Failed to set up Bulk Learnset Editor:\n{ex.Message}", "Bulk Learnsets");
+                await DialogHelper.ShowError($"Failed to set up Bulk Learnset Editor:\n{ex.Message}", "Bulk learnsets error");
             }
         }
 
@@ -202,10 +200,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 using System.IO.StreamWriter writer = new System.IO.StreamWriter(path);
                 LearnsetCsv.Write(writer, SpeciesNames.ToArray(), MoveNames.ToArray(), Lists().Select(kv => (kv.Key, (IReadOnlyList<LearnsetCsv.Move>)kv.Value)), single: false);
+                writer.Dispose();
+                SaveNotice.Exported(path);
             }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Bulk Learnsets", owner);
+                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Bulk learnsets error", owner);
             }
         }
 
@@ -218,11 +218,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 string json = DocTool.LearnsetJson(Lists().OrderBy(kv => kv.Key)
                     .Select(kv => (kv.Key, kv.Value.Select(m => (m.Level, m.MoveId)))));
-                System.IO.File.WriteAllText(path, json);
+                PlainFiles.WriteText(path, json);
+                SaveNotice.Exported(path);
             }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Bulk Learnsets", owner);
+                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Bulk learnsets error", owner);
             }
         }
 
@@ -231,7 +232,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_loadError != null)
             {
-                await DialogHelper.ShowError("The learnsets couldn't be read:\n" + _loadError, "Bulk Learnsets", owner);
+                await DialogHelper.ShowError("The learnsets couldn't be read:\n" + _loadError, "Bulk learnsets error", owner);
                 return;
             }
             Dictionary<int, List<LearnsetCsv.Move>> now = Lists();
@@ -255,7 +256,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _all.AddRange(rows);
             ApplyFilter();
             Dirty();
-            StatusText = $"Learnsets imported for {imported.Count} Pokémon. Press Save all to write them to disk.";
+            SaveNotice.Imported($"the learnsets of {imported.Count} Pokémon", session.FileName);
         }
 
         private Dictionary<int, List<LearnsetCsv.Move>> Lists() => _all.GroupBy(r => r.SpeciesIndex).OrderBy(g => g.Key)
@@ -265,7 +266,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_loadError != null)
             {
-                _ = DialogHelper.ShowError("The learnsets couldn't be read, so saving would replace them:\n" + _loadError, "Bulk Learnsets");
+                _ = DialogHelper.ShowError("The learnsets couldn't be read, so saving would replace them:\n" + _loadError, "Bulk learnsets error");
                 return;
             }
             if (_sourceLists != null) { _ = SaveSourceAsync(); return; }
@@ -292,7 +293,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 SaveNotice.Saved(UnsavedChangesDescription);
                 StatusText = "Saved all learnsets.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Save failed:\n{ex.Message}", "Bulk Learnsets"); }
+            catch (Exception ex) { _ = DialogHelper.ShowError($"Save failed:\n{ex.Message}", "Bulk learnsets error"); }
         }
 
         // Only species whose rows changed are written into learnsets.json.
@@ -308,7 +309,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             (bool saved, string error) = await HgEngineSave.RunAsync(() =>
                 changes.Count == 0 || HgEngine.HgEngineLearnsets.TrySaveLevelMoves(changes, out string e) ? null : e);
-            if (!saved) { if (error != null) await DialogHelper.ShowError("The learnsets were not saved:\n" + error, "Bulk Learnsets"); return; }
+            if (!saved) { if (error != null) await DialogHelper.ShowError("The learnsets were not saved:\n" + error, "Bulk learnsets error"); return; }
             foreach ((int id, IReadOnlyList<(int level, int move)> rows) in changes)
                 if (rows.Count > 0) _sourceLists[id] = rows.ToList(); else _sourceLists.Remove(id);
             _undo?.MarkSaved();

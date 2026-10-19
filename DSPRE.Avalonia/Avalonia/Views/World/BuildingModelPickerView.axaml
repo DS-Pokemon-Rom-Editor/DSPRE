@@ -14,7 +14,7 @@
 
   <DockPanel Margin="10">
     <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto" Margin="0,10,0,0">
-      <TextBlock Text="{Binding Status}" VerticalAlignment="Center" FontSize="12" TextWrapping="Wrap"
+      <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" FontSize="12" TextWrapping="Wrap"
                  Foreground="{DynamicResource Editor.Subtle}"/>
       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
         <Button Content="Use model" Click="Use_Click" IsDefault="True" IsEnabled="{Binding HasSelection}"/>

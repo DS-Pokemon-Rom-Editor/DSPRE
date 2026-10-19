@@ -6,7 +6,6 @@
         xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         x:Class="DSPRE.Avalonia.Views.Pokemon.PokemonEditorView"
         x:DataType="vm:PokemonEditorViewModel"
-        Title="{Binding Title}"
         Width="1080" Height="860" MinWidth="900" MinHeight="640"
         WindowStartupLocation="CenterScreen">
   <Design.DataContext>
@@ -28,7 +27,7 @@
           <controls:IdNameSelector Grid.Column="2" Value="{Binding SelectedMonIndex}" Maximum="{Binding MaxMonIndex}" Names="{Binding PokemonNames}"
                                    NumberWidth="115" TextElement.FontSize="13" VerticalAlignment="Center"/>
         </Grid>
-        <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}" IsDefault="True"
+        <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"
                 ToolTip.Tip="Save every tab (Ctrl+S)"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
@@ -55,8 +54,8 @@
               <Button Content="Import CSV…" controls:Icon.Key="import" Click="Learnset_Import_Click"/>
               <Button Content="Export CSV…" controls:Icon.Key="export" Click="Learnset_Export_Click"/>
               <Button Content="Bulk edit all" controls:Icon.Key="tableEditor" Click="Learnset_BulkEdit_Click"/>
-              <TextBlock Text="Warning: exceeds vanilla 20-move limit!" IsVisible="{Binding ExceedsVanillaLimit}" Foreground="OrangeRed" FontWeight="Bold" VerticalAlignment="Center"/>
-              <TextBlock Text="{Binding StatusText}" Foreground="Red" FontStyle="Italic" VerticalAlignment="Center"/>
+              <TextBlock Text="Warning: exceeds vanilla 20-move limit!" IsVisible="{Binding ExceedsVanillaLimit}" Foreground="{DynamicResource Editor.Bad}" FontWeight="Bold" VerticalAlignment="Center"/>
+              <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource Editor.Bad}" FontStyle="Italic" VerticalAlignment="Center"/>
             </StackPanel>
           </Border>
           <Border DockPanel.Dock="Bottom" Padding="0,6,0,0">

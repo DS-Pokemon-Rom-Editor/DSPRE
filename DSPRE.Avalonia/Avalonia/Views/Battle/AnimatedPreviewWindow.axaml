@@ -230,7 +230,7 @@
                      Margin="0,0,0,4" Foreground="{DynamicResource Editor.Subtle}"/>
           <TextBlock DockPanel.Dock="Top" Text="{Binding MessageWarning}" FontSize="12"
                      IsVisible="{Binding HasMessageWarning}" TextWrapping="Wrap" Margin="0,0,0,4"
-                     Foreground="#D08A00"/>
+                     Foreground="{DynamicResource Editor.Warn}"/>
           <TextBlock DockPanel.Dock="Top" Text="{Binding MessageFontNote}" FontSize="12"
                      IsVisible="{Binding HasMessageFontNote}" TextWrapping="Wrap" Margin="0,0,0,4"
                      Foreground="{DynamicResource Editor.Subtle}"/>

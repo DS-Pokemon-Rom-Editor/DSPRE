@@ -64,28 +64,14 @@
 		<StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Simple.xaml"/>
 		<StyleInclude Source="avares://AvaloniaEdit/Themes/Simple/AvaloniaEdit.xaml"/>
 
-		<!-- ── Crisp, consistent control sizing across every editor (from feature/avalonia) ── -->
-		<Style Selector="Button">
-			<Setter Property="MinHeight" Value="28"/>
-			<Setter Property="Padding" Value="10,4"/>
-			<Setter Property="CornerRadius" Value="4"/>
-		</Style>
-		<Style Selector="ToggleButton">
-			<Setter Property="MinHeight" Value="28"/>
-			<Setter Property="Padding" Value="10,4"/>
-			<Setter Property="CornerRadius" Value="4"/>
-		</Style>
+		<!-- Control sizes and corners live in Themes/DspreTweaks.axaml. -->
 		<Style Selector=":disabled Image.icon">
 			<Setter Property="Opacity" Value="0.4"/>
 		</Style>
 		<Style Selector="ComboBox">
-			<Setter Property="MinHeight" Value="28"/>
 			<!-- WinForms parity: typing in a focused/open combo jumps to the matching item.
 			     Avalonia ships this (TextSearch) but leaves it off by default. -->
 			<Setter Property="IsTextSearchEnabled" Value="True"/>
-		</Style>
-		<Style Selector="TextBox">
-			<Setter Property="MinHeight" Value="28"/>
 		</Style>
 		<!-- Numeric spinners: wide enough to read, tall enough to match buttons.
 		     Default to integer display (FormatString="0"), since most spinners are IDs/counts; the few
@@ -133,6 +119,10 @@
 			<Setter Property="TextWrapping" Value="Wrap"/>
 		</Style>
 
+		<!-- A disabled control's tooltip is usually the reason it is disabled, and Avalonia hides it unless asked. -->
+		<Style Selector=":is(Control)">
+			<Setter Property="ToolTip.ShowOnDisabled" Value="True"/>
+		</Style>
 		<!-- DSPRE-local rounding + tweaks (last so its setters win over the base Fusion themes). -->
 		<StyleInclude Source="Themes/DspreTweaks.axaml"/>
 	</Application.Styles>

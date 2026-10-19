@@ -135,20 +135,17 @@ namespace DSPRE.ROMFiles {
             return newData.ToArray();
         }
 
-        public bool SaveToFile() {
-            string path = Filesystem.GetHeadbuttPath(ID);
-            return SaveToFile(path);
-        }
+        public bool SaveToFile() => SaveToFile(ID);
 
         public bool SaveToFile(int id) {
-            string path = Filesystem.GetHeadbuttPath(id);
-            return SaveToFile(path);
+            ArchiveMembers.Put(RomInfo.DirNames.headbutt, id, ToByteArray());
+            return true;
         }
 
 
         public bool SaveToFile(string path, bool showSuccessMessage = true) {
             byte[] romFileToByteArray = ToByteArray();
-            File.WriteAllBytes(path, romFileToByteArray);
+            ArchiveMembers.Write(path, romFileToByteArray);
             return true;
         }
     }

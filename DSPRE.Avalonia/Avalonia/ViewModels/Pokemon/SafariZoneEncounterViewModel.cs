@@ -81,7 +81,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ── Dirty tracking ───────────────────────────────────────────────────────
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty;
-        public string UnsavedChangesDescription => "Safari Zone Editor";
+        public string UnsavedChangesDescription => "Safari Zone encounters";
         public void SaveChanges() => Save();
         // Closing the window goes through here, so that path reports a failed save rather than logging it.
         public async Task<bool> SaveChangesAsync() { await SaveAsync(); return !HasUnsavedChanges; }
@@ -165,7 +165,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Failed to load Safari Zone data:\n{ex.Message}", "Safari Zone Error");
+                await DialogHelper.ShowError($"Failed to load Safari Zone data:\n{ex.Message}", "Safari Zone error");
             }
         }
 
@@ -190,7 +190,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                _ = DialogHelper.ShowError($"Failed to load Safari Zone file {id}:\n{ex.Message}", "Safari Zone Error");
+                _ = DialogHelper.ShowError($"Failed to load Safari Zone file {id}:\n{ex.Message}", "Safari Zone error");
             }
         }
 
@@ -231,7 +231,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (UseHgEngineSource) { await SaveHgEngineAsync(); return; }
             if (!SaveCore(out string failure))
-                await DialogHelper.ShowError("Could not save the Safari Zone data:\n" + failure, "Save Error");
+                await DialogHelper.ShowError("Could not save the Safari Zone data:\n" + failure, "Special encounters editor error");
         }
 
         public void Save()
@@ -263,7 +263,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             else if (error != null)
             {
-                await DialogHelper.ShowError("Could not save the Safari Zone data:\n" + error, "Save Error");
+                await DialogHelper.ShowError("Could not save the Safari Zone data:\n" + error, "Special encounters editor error");
             }
         }
 
@@ -296,17 +296,18 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_file == null) return;
             FilePickerFileType filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
-            string path = await DialogHelper.SaveFile(_owner, "Save Safari Zone As", new[] { filter }, "safari_zone.bin");
+            string path = await DialogHelper.SaveFile(_owner, "Save Safari Zone as", new[] { filter }, "safari_zone.bin");
             if (path == null) return;
             try
             {
                 if (!_file.SaveToFile(path, showSuccessMessage: false))
                     await DialogHelper.ShowError(
-                        "The encounter data could not be turned into a file.", "Save Error");
+                        "The encounter data could not be turned into a file.", "Special encounters editor error");
+                else SaveNotice.Exported(path);
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Could not write {path}:\n{ex.Message}", "Save Error");
+                await DialogHelper.ShowError($"Could not write {path}:\n{ex.Message}", "Special encounters editor error");
             }
         }
 
@@ -314,7 +315,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_file == null) return;
             FilePickerFileType filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
-            string path = await DialogHelper.OpenFile(_owner, "Import Safari Zone File", new[] { filter });
+            string path = await DialogHelper.OpenFile(_owner, "Import Safari Zone file", new[] { filter });
             if (path == null) return;
 
             try
@@ -323,11 +324,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 _file = new SafariZoneEncounterFile(path) { ID = _file.ID };
                 BindGroups();
                 Edited();
-                await DialogHelper.ShowInfo("Safari Zone file imported successfully!", "Import Complete");
+                SaveNotice.Imported("Safari Zone encounters", path);
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Error importing file: {ex.Message}", "Import Error");
+                await DialogHelper.ShowError($"Error importing file: {ex.Message}", "Special encounters editor error");
             }
         }
     }

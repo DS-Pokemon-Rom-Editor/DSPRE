@@ -6,7 +6,6 @@ using AvaloniaEdit.Document;
 using global::Avalonia.Controls;
 using global::Avalonia.Platform.Storage;
 using global::Avalonia.Threading;
-using NSMBe4.DSFileSystem;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -25,7 +24,7 @@ using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.ViewModels.Text
 {
-    public class ScriptEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class ScriptEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, IDetachable
     {
         private const int SearchResultLimit = 1000;
 
@@ -242,12 +241,12 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (id < 0) return;
             if (HasUnsavedChanges)
             {
-                await DialogHelper.ShowInfo("Save or discard the open script first.", "Script Editor");
+                await DialogHelper.ShowInfo("Save or discard the open script first.", "Script editor");
                 return;
             }
             // A header may load the file as its level script too, which this check covers.
-            if (NewProjectFiles.WhyKeepLastScriptFile(id) is string keep) { await DialogHelper.ShowInfo(keep, "Script Editor"); return; }
-            if (!await DialogHelper.AskYesNo($"Delete script file {id}, its source and its compiled copy?", "Confirm deletion")) return;
+            if (NewProjectFiles.WhyKeepLastScriptFile(id) is string keep) { await DialogHelper.ShowInfo(keep, "Script editor"); return; }
+            if (!await DialogHelper.AskYesNo($"Delete script file {id}, its source and its compiled copy?", "Delete script file?")) return;
             try
             {
                 string source = _sourceFiles.FirstOrDefault(f => _scriptIdByPath.TryGetValue(f, out int x) && x == id);
@@ -260,7 +259,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError("Couldn't remove the script file:" + Environment.NewLine + ex.Message, "Script Editor");
+                await DialogHelper.ShowError("Couldn't remove the script file:" + Environment.NewLine + ex.Message, "Script editor error");
             }
         }
         public bool CanSearchProject => !IsBusy && _sourceFiles.Count > 0 && !string.IsNullOrWhiteSpace(SearchText);
@@ -544,7 +543,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             {
                 IsReadOnly = true;
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowError("Failed to prepare Rotom scripts:\n" + ex.Message, "Script Editor");
+                await DialogHelper.ShowError("Failed to prepare Rotom scripts:\n" + ex.Message, "Script editor error");
             }
             finally
             {
@@ -806,7 +805,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError("Save failed:\n" + ex.Message, "Script Editor");
+                await DialogHelper.ShowError("Save failed:\n" + ex.Message, "Script editor error");
                 return false;
             }
             finally
@@ -844,14 +843,14 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 }
 
                 if (!result.Success && diagnostics == 0)
-                    await DialogHelper.ShowError("rotom compile failed:\n" + RotomTool.FormatDetails(result), "Script Editor");
+                    await DialogHelper.ShowError("rotom compile failed:\n" + RotomTool.FormatDetails(result), "Script editor error");
                 return result.Success;
             }
             catch (Exception ex)
             {
                 StatusText = "Compile failed: " + ex.Message;
                 DiagnosticsStatusText = "Compile failed before diagnostics were available.";
-                await DialogHelper.ShowError("Compile failed:\n" + ex.Message, "Script Editor");
+                await DialogHelper.ShowError("Compile failed:\n" + ex.Message, "Script editor error");
                 return false;
             }
             finally
@@ -1031,7 +1030,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex)
             {
-                _ = DialogHelper.ShowError("Couldn't add Rotom script:\n" + ex.Message, "Script Editor");
+                _ = DialogHelper.ShowError("Couldn't add Rotom script:\n" + ex.Message, "Script editor error");
             }
         }
 
@@ -1047,11 +1046,11 @@ namespace DSPRE.Avalonia.ViewModels.Text
             {
                 // Stays in the editor until Save, so Discard can still take it back.
                 ScriptText = System.IO.File.ReadAllText(path);
-                StatusText = "Imported into " + (ManagedSource?.RelPath ?? DisplayPath(_currentPath)) + ". Not saved yet.";
+                SaveNotice.Imported(ManagedSource?.RelPath ?? DisplayPath(_currentPath), path);
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError("Import failed:\n" + ex.Message, "Import Error");
+                await DialogHelper.ShowError("Import failed:\n" + ex.Message, "Script editor error");
             }
         }
 
@@ -1067,12 +1066,12 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
             try
             {
-                System.IO.File.WriteAllText(path, ScriptText ?? "");
-                StatusText = "Exported " + DisplayPath(_currentPath) + ".";
+                PlainFiles.WriteText(path, ScriptText ?? "");
+                SaveNotice.Exported(path);
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError("Export failed:\n" + ex.Message, "Export Error");
+                await DialogHelper.ShowError("Export failed:\n" + ex.Message, "Script editor error");
             }
         }
 
@@ -1319,7 +1318,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             else
             {
                 DSPRE.ROMFiles.ProjectSourceWatcher.Expect(_currentPath);
-                System.IO.File.WriteAllText(_currentPath, ScriptText ?? "");
+                PlainFiles.WriteText(_currentPath, ScriptText ?? "");
             }
             SetClean();
             AppEvents.RaiseScriptSourceSaved(this, _currentPath);

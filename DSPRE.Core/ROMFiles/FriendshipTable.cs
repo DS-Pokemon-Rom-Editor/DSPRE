@@ -29,7 +29,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Events the game never reads from this table; items use their own item data.</summary>
         public static bool IsUnused(int e) => e == 1 || e == 2 || (e == 9 && gameFamily == GameFamilies.HGSS);
 
-        public static string WhyNot() => GameTableFile.WhyNot(GameTable.FriendshipChanges, Size);
+        public static string WhyNot() => RomLocator.WhyNot(RomLocator.Thing.FriendshipChanges, Size);
 
         public FriendshipTable(byte[] data)
         {
@@ -38,7 +38,7 @@ namespace DSPRE.ROMFiles
                     Values[e, b] = unchecked((sbyte)data[e * Bands + b]);
         }
 
-        public static FriendshipTable Load() => new FriendshipTable(GameTableFile.Read(GameTable.FriendshipChanges, Size));
+        public static FriendshipTable Load() => new FriendshipTable(RomLocator.Read(RomLocator.Thing.FriendshipChanges, Size));
 
         public byte[] ToBytes()
         {
@@ -56,6 +56,6 @@ namespace DSPRE.ROMFiles
             where !IsUnused(e) && Values[e, b] > SafeMax
             select (e, b);
 
-        public void Save() => GameTableFile.Write(GameTable.FriendshipChanges, ToBytes());
+        public void Save() => RomLocator.Write(RomLocator.Thing.FriendshipChanges, ToBytes());
     }
 }

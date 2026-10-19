@@ -19,7 +19,7 @@ namespace DSPRE.HgEngine
         {
             if (string.IsNullOrEmpty(filePath)) return false;
             // Refused with or without a checkout: nothing on an hg-engine ROM loads this archive's expansion.
-            string synthetic = HgEngineSyntheticOverlay.ExpansionRefusal();
+            string synthetic = HgEngineSyntheticOverlay.WhyNot();
             if (synthetic != null && IsSyntheticOverlayMember(filePath))
             {
                 AppLogger.Warn($"Refused write to the synthetic overlay at 0x{offset:X}: {filePath}");

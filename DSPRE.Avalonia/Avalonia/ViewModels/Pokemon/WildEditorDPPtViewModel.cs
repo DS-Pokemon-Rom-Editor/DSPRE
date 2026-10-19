@@ -152,7 +152,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
     }
 
-    public class WildEditorDPPtViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
+    public class WildEditorDPPtViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -162,8 +162,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         // ── IEditorWithUnsavedChanges ──────────────────────────────────────
         private bool _dirty;
-        public bool HasUnsavedChanges => _dirty;
-        public string UnsavedChangesDescription => $"Wild Encounters (DPPt #{SelectedEncounterIndex})";
+        public bool HasUnsavedChanges => _dirty || _archive.IsDirty;
+        public string UnsavedChangesDescription
+            => DSPRE.Avalonia.Data.StagedArchive.Join($"Wild Encounters (DPPt #{SelectedEncounterIndex})", _dirty, _archive.Describe("encounter file", "encounter files"));
         void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommand();
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
@@ -172,6 +173,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
         public void DiscardChanges()
         {
+            // Added and removed files go with the open file's edits.
+            _archive.Discard();
+            BuildEncounterNameList(_totalHeaders);
+            if (_selectedEncounterIndex >= EncounterNames.Count)
+            {
+                _selectedEncounterIndex = EncounterNames.Count - 1;
+                OnPropertyChanged(nameof(SelectedEncounterIndex));
+            }
             if (_current == null) { SetClean(); return; }
             try { LoadFile(_selectedEncounterIndex); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException) { SetClean(); }
@@ -272,6 +281,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ── Private state ─────────────────────────────────────────────────
         private EncounterFileDPPt _current;
         private string _dirPath;
+        // Added, removed and saved encounter files wait here until Save.
+        private readonly DSPRE.Avalonia.Data.StagedArchive _archive = new(DirNames.encounters);
         private int _totalHeaders;
         private bool _loading;
         private bool _rowsHooked;
@@ -432,10 +443,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             WildEncounterChecks.Check(problems, "Good Rod", GoodRodRate, GoodRodRows, true);
             WildEncounterChecks.Check(problems, "Super Rod", SuperRodRate, SuperRodRows, true);
             if (problems.Count > 0 && !await DialogHelper.AskYesNo("These slots can be rolled but look wrong:\n" + WildEncounterChecks.Describe(problems)
-                    + "\n\nSave anyway?", "Wild Pokémon Editor")) return;
+                    + "\n\nSave anyway?", "Wild Pokémon editor")) return;
             WriteWalkingRowsToFile();
             WriteWaterRowsToFile();
-            _current.SaveToFileDefaultDir(_selectedEncounterIndex, showSuccessMessage: false);
+            _archive.Save(_selectedEncounterIndex, _current.ToByteArray());
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
             _history.MarkSaved();
@@ -471,12 +482,21 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         private void SetDirty() { if (_loading) return; RecordUndoSnapshot(); _dirty = true;  Title = "● Wild Pokémon Editor (DPPt)"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
-        private void SetClean() { _dirty = false; Title = "Wild Pokémon Editor (DPPt)";  OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        private void SetClean() { _dirty = false; StagedChanged(); }
+
+        // Added, removed and repaired files keep the editor unsaved after the open file's edits are clean.
+        private void StagedChanged()
+        {
+            Title = (HasUnsavedChanges ? "● " : "") + "Wild Pokémon Editor (DPPt)";
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
 
         private async Task ConfirmDiscardAsync(int newId)
         {
             if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, null, "encounter file")) { RecordSwitchGuard.SnapBack(() => _selectedEncounterIndex, v => _selectedEncounterIndex = v, () => OnPropertyChanged(nameof(SelectedEncounterIndex))); return; }
             _dirty = false;
+            // Discarding can drop the file being switched to when it was added and not saved.
+            if (newId >= EncounterNames.Count) newId = EncounterNames.Count - 1;
             _selectedEncounterIndex = newId;
             OnPropertyChanged(nameof(SelectedEncounterIndex));
             LoadFile(newId);
@@ -485,7 +505,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void BuildEncounterNameList(int totalHeaders)
         {
             EncounterNames.Clear();
-            string[] files = Directory.GetFiles(_dirPath);
+            int fileCount = _archive.Count;
             Dictionary<int, List<string>> locationMap = new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<string>>();
             List<string> locationNames = GetLocationNames();
             for (ushort i = 0; i < totalHeaders; i++)
@@ -504,7 +524,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     }
                 }
             }
-            for (int i = 0; i < files.Length; i++)
+            for (int i = 0; i < fileCount; i++)
             {
                 string label = locationMap.ContainsKey(i) ? string.Join(" + ", locationMap[i]) : "Unused";
                 EncounterNames.Add($"[{i}] {label}");
@@ -527,9 +547,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void LoadFile(int id)
         {
-            string path = Path.Combine(_dirPath, id.ToString("D4"));
-            using FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read);
-            _current = new EncounterFileDPPt(stream);
+            byte[] bytes = _archive.Read(id) ?? throw new FileNotFoundException($"Encounter file {id} is missing.");
+            _current = new EncounterFileDPPt(new MemoryStream(bytes));
             PopulateRows();
             SetClean();
 
@@ -655,7 +674,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void AddEncounterFile()
         {
             int count = EncounterNames.Count;
-            new EncounterFileDPPt().SaveToFileDefaultDir(count, showSuccessMessage: false);
+            _archive.Add(new EncounterFileDPPt().ToByteArray());
+            StagedChanged();
             EncounterNames.Add($"[{count}] (new)");
             SelectedEncounterIndex = count;
         }
@@ -674,9 +694,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return;
             }
             bool leaving = _selectedEncounterIndex == last;
-            if (leaving && _dirty && !await DialogHelper.AskYesNo("There are unsaved changes. Discard and proceed?", "Unsaved Changes")) return;
-            if (!await DialogHelper.AskYesNo($"Delete the last encounter file ({last})?", "Confirm deletion")) return;
-            File.Delete(Path.Combine(_dirPath, last.ToString("D4")));
+            string unsaved = leaving && _dirty ? " Its unsaved changes go with it." : "";
+            if (!await DialogHelper.AskYesNo($"Delete the last encounter file ({last})?{unsaved}", "Delete encounter file?")) return;
+            _archive.RemoveLast();
+            StagedChanged();
             if (leaving)
             {
                 _selectedEncounterIndex = last - 1;
@@ -694,18 +715,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             SetDirty();
         }
 
-        public void ExportEncounterFile(string path) => File.WriteAllBytes(path, _current.ToByteArray());
+        public void ExportEncounterFile(string path) => PlainFiles.WriteBytes(path, _current.ToByteArray());
 
         public async Task RepairAllAsync()
         {
             if (!await DialogHelper.AskYesNo("Open every encounter file and reset corrupted fields to their defaults?", "Repair all encounter files?")) return;
-            int n = Directory.GetFiles(_dirPath).Length;
+            int n = _archive.Count;
             for (int i = 0; i < n; i++)
-            {
-                using FileStream s = new FileStream(Path.Combine(_dirPath, i.ToString("D4")), FileMode.Open, FileAccess.Read);
-                new EncounterFileDPPt(s).SaveToFileDefaultDir(i, showSuccessMessage: false);
-            }
+                _archive.Put(i, new EncounterFileDPPt(new MemoryStream(_archive.Read(i))).ToByteArray());
             LoadFile(_selectedEncounterIndex);
+            StagedChanged();
         }
 
         private void SyncRows(

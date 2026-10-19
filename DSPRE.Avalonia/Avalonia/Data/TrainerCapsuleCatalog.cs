@@ -58,7 +58,7 @@ namespace DSPRE.Avalonia.Data
             for (int i = 0; i < _capsules.Length; i++)
             {
                 int count = _capsules[i].Seals.Count(s => s.Seal != 0);
-                names.Add(count == 0 ? $"Capsule {i + 1}, empty" : $"Capsule {i + 1}, {count} seal{(count == 1 ? "" : "s")}");
+                names.Add(count == 0 ? $"Empty capsule {i + 1}" : $"Capsule {i + 1}, {count} seal{(count == 1 ? "" : "s")}");
             }
             return names;
         }

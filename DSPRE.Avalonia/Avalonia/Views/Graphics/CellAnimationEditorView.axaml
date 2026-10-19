@@ -35,6 +35,7 @@
       <TextBlock controls:EditorToolbar.Slot="Picker" Text="{Binding Subject}" FontWeight="SemiBold" VerticalAlignment="Center"/>
       <TextBlock controls:EditorToolbar.Slot="Picker" Text="{Binding FileNote}" Classes="hint" VerticalAlignment="Center"/>
       <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
       <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
       <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
     </controls:EditorToolbar>

@@ -13,6 +13,9 @@ namespace DSPRE.Avalonia.Views.Items
         public UndergroundMiningView(UndergroundMiningViewModel vm) : this() { DataContext = vm; }
 
         private async void Save_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.SaveChangesAsync(); }
-        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+        }
     }
 }

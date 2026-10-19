@@ -37,8 +37,8 @@ namespace DSPRE.ROMFiles
         /// <summary>Why this ROM's intro motion can't be edited, or null.</summary>
         public static string WhyNot()
         {
-            VsIntroMotionSites sites = VsIntroMotionCodeSites;
-            if (sites == null) return "Intro motion is mapped for US English HeartGold, SoulSilver, Platinum, Diamond and Pearl only.";
+            VsIntroMotionSites sites = RomLocator.VsIntroMotionSites;
+            if (sites == null) return "Works on " + DescribeDumps(RomLocator.WorksOn(RomLocator.VsIntroMotionSitesIn)) + ".";
             return null;
         }
 
@@ -47,7 +47,7 @@ namespace DSPRE.ROMFiles
         {
             why = WhyNot();
             if (why != null) return null;
-            VsIntroMotionSites sites = VsIntroMotionCodeSites;
+            VsIntroMotionSites sites = RomLocator.VsIntroMotionSites;
             string flightPath = OverlayFile(sites.FlightOverlay), blockPath = OverlayFile(sites.BlockOverlay);
             if (!Fits(flightPath, sites.FlightTable, FlightCount * FlightSize) || !Fits(blockPath, sites.BlockOrder, BlockColumns))
             {

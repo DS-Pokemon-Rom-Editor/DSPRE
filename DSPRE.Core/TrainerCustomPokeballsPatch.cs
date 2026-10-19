@@ -97,7 +97,7 @@ namespace DSPRE
             if (!SupportsCurrentRom) throw new InvalidOperationException("Unsupported ROM.");
             byte[] arm9 = File.ReadAllBytes(RomInfo.arm9Path);
             Apply(RomInfo.romID, arm9);
-            File.WriteAllBytes(RomInfo.arm9Path, arm9);
+            DSUtils.WriteWholeFile(RomInfo.arm9Path, arm9);
         }
 
         // Thumb BL: two halfwords holding the offset from the instruction plus 4, in halfwords.

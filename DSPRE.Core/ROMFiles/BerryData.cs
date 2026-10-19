@@ -81,7 +81,7 @@ namespace DSPRE.ROMFiles
             byte[] data = File.ReadAllBytes(path);
             if (data.Length < Size) data = new byte[Size];
             ToBytes().CopyTo(data, 0);
-            File.WriteAllBytes(path, data);
+            ArchiveMembers.Put(DirNames.berryData, berry, data);
         }
 
         /// <summary>HeartGold and SoulSilver read only growth time, soil drying and yield.</summary>

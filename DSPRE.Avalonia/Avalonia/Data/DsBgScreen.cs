@@ -35,42 +35,10 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Copies a sixteen-colour drawing's pixels in at a character base, from tile <paramref name="tileOffset"/> on.</summary>
         public void LoadTiles(int charBase, byte[] ncgr, int tileOffset = 0)
         {
-            byte[] pixels = ReadCharacters(ncgr);
+            byte[] pixels = NitroBgCodec.ReadCharacters(ncgr);
             int dst = charBase + tileOffset * 32;
             int n = Math.Min(pixels.Length, _vram.Length - dst);
             if (n > 0 && dst >= 0) Array.Copy(pixels, 0, _vram, dst, n);
-        }
-
-        /// <summary>A sixteen-colour drawing's pixels, half a byte each, 32 bytes a tile.</summary>
-        public static byte[] ReadCharacters(byte[] ncgr)
-        {
-            if (ncgr == null) return Array.Empty<byte>();
-            (bool eightBit, int at) = NitroBgCodec.ReadTileHeader(ncgr);
-            if (eightBit) return Array.Empty<byte>();
-            int rahc = NitroBgCodec.Find(ncgr, "RAHC", 0);
-            int size = rahc >= 0 ? NitroBgCodec.U32(ncgr, rahc + 0x18) : ncgr.Length - at;
-            size = Math.Max(0, Math.Min(size, ncgr.Length - at));
-            byte[] pixels = new byte[size];
-            Array.Copy(ncgr, at, pixels, 0, size);
-            return pixels;
-        }
-
-        /// <summary>The raw 15-bit colours of a palette file, every row of them.</summary>
-        public static ushort[] ReadColours(byte[] nclr)
-        {
-            if (nclr == null) return Array.Empty<ushort>();
-            int pltt = NitroBgCodec.Find(nclr, "TTLP", 0);
-            if (pltt < 0) return Array.Empty<ushort>();
-            int size = NitroBgCodec.U32(nclr, pltt + 0x10);
-            int at = pltt + 0x18;
-            // Some Diamond files claim more colours than their section holds, and what follows is the
-            // PMCP section rather than colours, so the section's own length is the real bound.
-            int section = pltt + 8 <= nclr.Length ? NitroBgCodec.U32(nclr, pltt + 4) : 0;
-            if (section >= 0x18) size = Math.Min(size, section - 0x18);
-            int count = Math.Max(0, Math.Min(size, nclr.Length - at)) / 2;
-            ushort[] colours = new ushort[count];
-            for (int i = 0; i < count; i++) colours[i] = (ushort)NitroBgCodec.U16(nclr, at + i * 2);
-            return colours;
         }
 
         /// <summary>Sixteen colours out of a palette file, row <paramref name="row"/>.</summary>
@@ -81,22 +49,6 @@ namespace DSPRE.Avalonia.Data
                 for (int i = 0; i < 16; i++)
                     if (row * 16 + i < colours.Length) result[i] = colours[row * 16 + i];
             return result;
-        }
-
-        /// <summary>A screen arrangement's entries, row after row, and how many tiles wide it says it is.</summary>
-        public static (int WidthTiles, ushort[] Entries) ReadMap(byte[] nscr)
-        {
-            if (nscr == null) return (0, Array.Empty<ushort>());
-            int nrcs = NitroBgCodec.Find(nscr, "NRCS", 0);
-            if (nrcs < 0) return (0, Array.Empty<ushort>());
-            int w = NitroBgCodec.U16(nscr, nrcs + 0x08);
-            int size = NitroBgCodec.U32(nscr, nrcs + 0x10);
-            int at = nrcs + 0x14;
-            int entryBytes = NitroBgCodec.EntryBytes(nscr);
-            int count = Math.Max(0, Math.Min(size, nscr.Length - at)) / entryBytes;
-            ushort[] entries = new ushort[count];
-            for (int i = 0; i < count; i++) entries[i] = (ushort)NitroBgCodec.EntryAt(nscr, at, i, entryBytes);
-            return (w / TileSize, entries);
         }
 
         /// <summary>Puts sixteen colours into palette slot <paramref name="slot"/>, starting at colour <paramref name="from"/>.</summary>
@@ -145,13 +97,9 @@ namespace DSPRE.Avalonia.Data
                 }
         }
 
-        internal static byte Expand(int five) => (byte)((five << 3) | (five >> 2));
-
         private static void Put(byte[] rgba, int at, ushort c)
         {
-            rgba[at] = Expand(c & 31);
-            rgba[at + 1] = Expand((c >> 5) & 31);
-            rgba[at + 2] = Expand((c >> 10) & 31);
+            (rgba[at], rgba[at + 1], rgba[at + 2]) = NitroBgCodec.Colour(c);
             rgba[at + 3] = 255;
         }
 
@@ -197,76 +145,22 @@ namespace DSPRE.Avalonia.Data
             public bool FlipH, FlipV;
         }
 
-        private static readonly (int w, int h)[,] OamSizes =
-        {
-            { (8, 8), (16, 16), (32, 32), (64, 64) },
-            { (16, 8), (32, 8), (32, 16), (64, 32) },
-            { (8, 16), (8, 32), (16, 32), (32, 64) },
-            { (8, 8), (8, 8), (8, 8), (8, 8) },
-        };
-
-        /// <summary>
-        /// The cells of a cell bank, each a list of sprites with the first on top. Where a file carries a
-        /// transfer partition per bank, tile numbers count from that bank's own slice of the sheet, and the
-        /// offset is folded in here so callers need not know.
-        /// </summary>
+        /// <summary>The cells of a cell bank, each a list of sprites with the first on top, tile numbers in characters.</summary>
         public static List<Oam[]> ReadCells(byte[] ncer)
         {
             List<Oam[]> cells = new List<Oam[]>();
-            if (ncer == null) return cells;
-            int kbec = NitroBgCodec.Find(ncer, "KBEC", 0);
-            if (kbec < 0) return cells;
-            int count = NitroBgCodec.U16(ncer, kbec + 8);
-            int type = NitroBgCodec.U16(ncer, kbec + 10);
-            int table = kbec + 8 + NitroBgCodec.U32(ncer, kbec + 12);
-            int entry = type == 1 ? 16 : 8;
-            int oams = table + count * entry;
-
-            // A piece's tile number counts in units of the sprite mapping's boundary, not in single tiles.
-            // Trainer layouts record mapping 1, so their numbers step in twos: a 64 by 64 body at 0 fills
-            // 64 tiles and the next piece says 32, which only stops overlapping the body once doubled.
-            int mapping = (int)NitroBgCodec.U32(ncer, kbec + 16) & 0xFF;
-            int perUnit = 1 << Math.Clamp(mapping, 0, 3);
-
-            // Where each bank's slice of the sheet begins, in tiles. Zero when the file keeps no partitions,
-            // which is how the Pokétch and the battle objects are stored.
-            int[] firstTile = new int[count];
-            int partitions = (int)NitroBgCodec.U32(ncer, kbec + 20);
-            if (partitions != 0)
+            NcerFile file = NcerFile.Read(ncer);
+            if (file == null) return cells;
+            foreach (NcerFile.Cell cell in file.Cells)
             {
-                int head = kbec + 8 + partitions;
-                if (head + 8 <= ncer.Length)
+                Oam[] list = new Oam[cell.Pieces.Count];
+                for (int k = 0; k < list.Length; k++)
                 {
-                    int list = head + (int)NitroBgCodec.U32(ncer, head + 4);
-                    for (int i = 0; i < count; i++)
-                    {
-                        int at = list + i * 8;
-                        if (at + 8 > ncer.Length) break;
-                        firstTile[i] = (int)NitroBgCodec.U32(ncer, at) / 32;
-                    }
-                }
-            }
-
-            for (int i = 0; i < count; i++)
-            {
-                int at = table + i * entry;
-                if (at + 8 > ncer.Length) break;
-                int n = NitroBgCodec.U16(ncer, at);
-                int from = oams + NitroBgCodec.U32(ncer, at + 4);
-                Oam[] list = new Oam[Math.Max(0, n)];
-                for (int k = 0; k < n; k++)
-                {
-                    int o = from + k * 6;
-                    if (o + 6 > ncer.Length) { Array.Resize(ref list, k); break; }
-                    int a0 = NitroBgCodec.U16(ncer, o), a1 = NitroBgCodec.U16(ncer, o + 2), a2 = NitroBgCodec.U16(ncer, o + 4);
-                    int y = a0 & 0xFF; if (y > 127) y -= 256;
-                    int x = a1 & 0x1FF; if (x > 255) x -= 512;
-                    (int w, int h) = OamSizes[(a0 >> 14) & 3, (a1 >> 14) & 3];
+                    NcerFile.Piece p = cell.Pieces[k];
                     list[k] = new Oam
                     {
-                        X = x, Y = y, Width = w, Height = h,
-                        FlipH = ((a1 >> 12) & 1) != 0, FlipV = ((a1 >> 13) & 1) != 0,
-                        Tile = (a2 & 0x3FF) * perUnit + firstTile[i], Palette = a2 >> 12,
+                        X = p.X, Y = p.Y, Width = p.Width, Height = p.Height, FlipH = p.FlipH, FlipV = p.FlipV,
+                        Tile = file.CharacterOf(cell, p), Palette = p.Palette,
                     };
                 }
                 cells.Add(list);
@@ -308,9 +202,10 @@ namespace DSPRE.Avalonia.Data
                         ushort c = palette[index];
                         int p = (Y * Width + X) * 4;
                         if (!translucent) { Put(rgba, p, c); continue; }
-                        rgba[p] = (byte)((Expand(c & 31) * 6 + under[p] * 9) / 16);
-                        rgba[p + 1] = (byte)((Expand((c >> 5) & 31) * 6 + under[p + 1] * 9) / 16);
-                        rgba[p + 2] = (byte)((Expand((c >> 10) & 31) * 6 + under[p + 2] * 9) / 16);
+                        (byte r, byte g, byte b) = NitroBgCodec.Colour(c);
+                        rgba[p] = (byte)((r * 6 + under[p] * 9) / 16);
+                        rgba[p + 1] = (byte)((g * 6 + under[p + 1] * 9) / 16);
+                        rgba[p + 2] = (byte)((b * 6 + under[p + 2] * 9) / 16);
                         rgba[p + 3] = 255;
                     }
             }

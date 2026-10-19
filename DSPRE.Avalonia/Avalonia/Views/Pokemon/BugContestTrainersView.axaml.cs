@@ -19,6 +19,9 @@ namespace DSPRE.Avalonia.Views.Pokemon
         }
 
         private void Locate_Click(object sender, RoutedEventArgs e) => VM?.Locate();
-        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+        }
     }
 }

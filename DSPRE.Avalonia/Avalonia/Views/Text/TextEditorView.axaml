@@ -20,6 +20,7 @@
         <Button Content="Add" controls:Icon.Key="addIcon"    Click="AddArchive_Click"    ToolTip.Tip="Add a new text archive"/>
         <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveArchive_Click" ToolTip.Tip="Delete the last text archive"/>
         <Button Content="Save" controls:Icon.Key="saveButton"    Click="Save_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
         <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
         <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
@@ -90,7 +91,7 @@
             <TextBlock Text="{Binding PreviewStepText}" FontSize="12"
                        Foreground="{DynamicResource Editor.Subtle}"/>
             <TextBlock Text="{Binding PreviewWarning}" IsVisible="{Binding HasPreviewWarning}"
-                       TextWrapping="Wrap" FontSize="12" Foreground="#D08A00"/>
+                       TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Warn}"/>
             <TextBlock Text="{Binding PreviewFontNote}" IsVisible="{Binding HasPreviewFontNote}"
                        TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
             <StackPanel Orientation="Horizontal" Spacing="6">

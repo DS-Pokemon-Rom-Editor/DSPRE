@@ -13,13 +13,13 @@ namespace DSPRE.Avalonia.Views.Items
         public BpShopEditorView(BpShopEditorViewModel vm) : this()
         {
             DataContext = vm;
-            System.EventHandler patched = (_, _) => vm.OnPatchStateChanged();
-            AppEvents.RomPatchStateChanged += patched;
-            DetachedFromVisualTree += (_, _) => AppEvents.RomPatchStateChanged -= patched;
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.SaveChangesAsync(); }
-        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+        }
 
         private void AddLeft_Click(object sender, RoutedEventArgs e) => VM?.Add(false);
         private void AddRight_Click(object sender, RoutedEventArgs e) => VM?.Add(true);

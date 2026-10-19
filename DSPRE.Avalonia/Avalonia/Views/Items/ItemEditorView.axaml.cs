@@ -15,10 +15,10 @@ namespace DSPRE.Avalonia.Views.Items
             InitializeComponent();
             this.FindControl<Button>("SaveAllButton").Click += (_, _) => VM?.SaveChanges();
             this.FindControl<Button>("AddItemButton").Click += async (_, _) => { if (VM != null) await VM.AddNewItemAsync(this); };
-            EditorWindowChrome.Attach(this, vm, onClosed: vm.Detach);
+            EditorWindowChrome.Attach(this, vm);
         }
 
-        private void Export_Click(object sender, RoutedEventArgs e) => VM?.ExportToFile();
+        private async void Export_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.ExportToFileAsync(TopLevel.GetTopLevel(this) as Window); }
         private async void Import_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.ImportFromFileAsync(this); }
 
         /// <summary>Hands this item's icon to the Graphics window. Items do not sit in the icon archive in
@@ -36,7 +36,10 @@ namespace DSPRE.Avalonia.Views.Items
             AvaloniaEditorLauncher.OpenGraphicAt(DSPRE.RomInfo.DirNames.itemIcons, drawing);
         }
 
-        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+        }
         private void Undo_Click(object sender, RoutedEventArgs e) => VM?.Undo();
         private void Redo_Click(object sender, RoutedEventArgs e) => VM?.Redo();
     }

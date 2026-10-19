@@ -55,9 +55,9 @@ namespace DSPRE.ROMFiles
 
         private static PokewalkerSprites FromRom(int pictureCount, out string error)
         {
-            error = GameTableFile.WhyNot(RomInfo.GameTable.PokewalkerSprites, VanillaSpeciesCount * 4);
+            error = RomLocator.WhyNot(RomLocator.Thing.PokewalkerSprites, VanillaSpeciesCount * 4);
             if (error != null) return null;
-            byte[] table = GameTableFile.Read(RomInfo.GameTable.PokewalkerSprites, VanillaSpeciesCount * 4);
+            byte[] table = RomLocator.Read(RomLocator.Thing.PokewalkerSprites, VanillaSpeciesCount * 4);
             PokewalkerSprites index = new PokewalkerSprites();
             for (int s = 1; s < VanillaSpeciesCount; s++)
             {

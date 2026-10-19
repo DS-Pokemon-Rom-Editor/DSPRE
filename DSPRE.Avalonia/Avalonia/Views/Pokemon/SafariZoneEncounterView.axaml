@@ -14,6 +14,7 @@
         <TextBlock Text="File" VerticalAlignment="Center"/>
         <controls:FusionAutoCompleteBox Width="200" ItemsSource="{Binding FileNames}" SelectedIndex="{Binding SelectedFileIndex}"/>
         <Button Content="Save" controls:Icon.Key="saveButton"     Click="Save_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
         <Button Content="Save as…" controls:Icon.Key="export" Click="SaveAs_Click"/>
         <Button Content="Import…" controls:Icon.Key="import"  Click="Import_Click"/>

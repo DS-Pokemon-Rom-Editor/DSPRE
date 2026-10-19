@@ -532,7 +532,7 @@ namespace DSPRE.Resources
             };
 
             string json = JsonSerializer.Serialize(exportDict, options);
-            File.WriteAllText(filePath, json);
+            PlainFiles.WriteText(filePath, json);
     }
 }
 }

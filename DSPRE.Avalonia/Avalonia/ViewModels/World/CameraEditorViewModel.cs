@@ -181,7 +181,7 @@ namespace DSPRE.Avalonia.ViewModels.World
     }
 
     // ── Main ViewModel ────────────────────────────────────────────────────────
-    public class CameraEditorViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges, ISupportsUndo
+    public class CameraEditorViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         void Notify([CallerMemberName] string p = null) =>
@@ -375,7 +375,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     await DialogHelper.ShowInfo(
                         "The game keeps more than one pointer to the camera table and they disagree.\n" +
                         "Camera values might be wrong.",
-                        "Possible Errors");
+                        "Possible errors");
                 }
                 _overlayCameraTblOffset = location.Offset;
 
@@ -401,7 +401,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex)
             {
                 StatusText = $"Error loading camera data: {ex.Message}";
-                await DialogHelper.ShowError($"Failed to load camera data:\n{ex.Message}", "Camera Editor Error");
+                await DialogHelper.ShowError($"Failed to load camera data:\n{ex.Message}", "Camera editor error");
             }
         }
 
@@ -420,7 +420,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Save failed:\n{ex.Message}", "Save Error");
+                await DialogHelper.ShowError($"Save failed:\n{ex.Message}", "Camera editor error");
             }
         }
 
@@ -429,25 +429,24 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             FilePickerFileType filter = new FilePickerFileType("Camera Table File") { Patterns = new[] { "*.bin" } };
             string suggested = System.IO.Path.GetFileNameWithoutExtension(RomInfo.projectName) + " - CameraTable.bin";
-            string path = await DialogHelper.SaveFile(_owner, "Export Camera Table", new[] { filter }, suggested);
+            string path = await DialogHelper.SaveFile(_owner, "Export camera table", new[] { filter }, suggested);
             if (path == null) return;
 
             try
             {
                 WriteCameraTable(path, 0);
-                StatusText = "Camera table exported.";
-                SaveNotice.Show(StatusText);
+                SaveNotice.Exported(path);
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error");
+                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Camera editor error");
             }
         }
 
         public async Task ImportTableAsync()
         {
             FilePickerFileType filter = new FilePickerFileType("Camera Table File") { Patterns = new[] { "*.bin" } };
-            string path = await DialogHelper.OpenFile(_owner, "Import Camera Table", new[] { filter });
+            string path = await DialogHelper.OpenFile(_owner, "Import camera table", new[] { filter });
             if (path == null) return;
 
             try
@@ -457,7 +456,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 {
                     await DialogHelper.ShowError(
                         $"Not a {RomInfo.gameFamily} camera table file.\n" +
-                        $"File length must be a multiple of {RomInfo.cameraSize}.", "Wrong File");
+                        $"File length must be a multiple of {RomInfo.cameraSize}.", "Camera editor error");
                     return;
                 }
 
@@ -470,11 +469,11 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
 
                 Edited();
-                StatusText = $"Imported {nCameras} cameras from file.";
+                SaveNotice.Imported($"{nCameras} cameras", path);
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error");
+                await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Camera editor error");
             }
         }
 
@@ -492,12 +491,11 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 byte[] data = Cameras[index].ToGameCamera(IsHgss).ToByteArray();
                 DSUtils.WriteToFile(path, data, fmode: FileMode.Create);
-                StatusText = $"Camera {index} exported.";
-                SaveNotice.Show(StatusText);
+                SaveNotice.Exported(path);
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error");
+                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Camera editor error");
             }
         }
 
@@ -515,11 +513,11 @@ namespace DSPRE.Avalonia.ViewModels.World
                 GameCamera cam = new GameCamera(data);
                 Cameras[index].LoadFrom(cam);
                 Edited();
-                StatusText = $"Camera {index} imported.";
+                SaveNotice.Imported($"camera {index}", path);
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error");
+                await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Camera editor error");
             }
         }
 
@@ -540,7 +538,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             CameraRowVM row = SelectedCamera;
             if (row == null) return;
-            string name = await DialogHelper.PromptText($"Camera {row.Index}", "Rename Camera", row.Name, _owner);
+            string name = await DialogHelper.PromptText($"Camera {row.Index}", "Rename camera", row.Name, _owner);
             if (name == null || name.Trim() == row.Name) return;
             DSPRE.Avalonia.Data.LabelStore.SetLabel(DSPRE.Avalonia.Data.LabelStore.CameraKey, row.Index, name, global: false);
             DSPRE.Avalonia.Data.LabelStore.Save(global: false);

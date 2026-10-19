@@ -254,7 +254,7 @@ namespace DSPRE.Csv
             List<EggMoveEntry> next = Result(accepted);
             foreach (EggMoveEntry was in _now)
                 if (!next.Any(n => n.speciesID == was.speciesID))
-                    changes.Add(new CsvChange($"#{was.speciesID} {_pokemon[was.speciesID]}", "Egg moves", Describe(was.moveIDs), "None, not in the file"));
+                    changes.Add(new CsvChange($"#{was.speciesID} {_pokemon[was.speciesID]}", "Egg moves", Describe(was.moveIDs), "None (not in the file)"));
             foreach (EggMoveEntry now in next)
             {
                 List<ushort> was = _now.FirstOrDefault(n => n.speciesID == now.speciesID).moveIDs ?? new List<ushort>();

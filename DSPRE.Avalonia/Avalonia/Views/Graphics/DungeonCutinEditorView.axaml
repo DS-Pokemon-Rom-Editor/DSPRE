@@ -4,7 +4,6 @@
 		xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
 		x:Class="DSPRE.Avalonia.Views.Graphics.DungeonCutinEditorView"
 		x:DataType="vm:DungeonCutinEditorViewModel"
-		Title="{Binding Title}"
 		Width="1100" Height="700" MinWidth="800" MinHeight="500"
 		WindowStartupLocation="CenterOwner">
   <Design.DataContext>
@@ -19,10 +18,9 @@
 	  <controls:UndoRedoButtons/>
 	  <Button Content="Export CSV…" controls:Icon.Key="export" Click="Export_Click"/>
 	  <Button Content="Import CSV…" controls:Icon.Key="import" Click="Import_Click"/>
-	  <Button Content="Open in graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
+	  <Button Content="Open in Graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
 	          ToolTip.Tip="Open in the Graphics window"/>
-	  <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="OrangeRed"/>
-	  <TextBlock Text="{Binding ImportNote}" IsVisible="{Binding HasImportNote}" Foreground="{DynamicResource Editor.Warn}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+	  <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Bad}"/>
 	</controls:EditorToolbar>
 
 	<ListBox x:Name="CutinList" DockPanel.Dock="Left" Width="220" Margin="8,8,8,8"

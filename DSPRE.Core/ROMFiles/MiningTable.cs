@@ -17,8 +17,8 @@ namespace DSPRE.ROMFiles
         // Diamond reads the first and third weights, Pearl the second and fourth, the later two once the National Dex is
         // obtained. Platinum picks by trainer ID parity instead.
         public static string[] Columns => RomInfo.gameFamily == RomInfo.GameFamilies.DP
-            ? new[] { "Diamond", "Pearl", "Diamond, National Dex", "Pearl, National Dex" }
-            : new[] { "Odd trainer ID", "Even trainer ID", "Odd ID, National Dex", "Even ID, National Dex" };
+            ? new[] { "Diamond", "Pearl", "Diamond after the National Dex", "Pearl after the National Dex" }
+            : new[] { "Odd trainer ID", "Even trainer ID", "Odd trainer ID after the National Dex", "Even trainer ID after the National Dex" };
 
         private static readonly string[] Spheres =
         {
@@ -58,19 +58,19 @@ namespace DSPRE.ROMFiles
         public static string WhyNot()
         {
             if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) return "HeartGold and SoulSilver have no Underground.";
-            if (GameTableFile.WhyNot(RomInfo.GameTable.MiningTreasures, Size) is string why) return why;
-            return GameTableFile.WhyNot(RomInfo.GameTable.MiningItems, ItemListCount * 2);
+            if (RomLocator.WhyNot(RomLocator.Thing.MiningTreasures, Size) is string why) return why;
+            return RomLocator.WhyNot(RomLocator.Thing.MiningItems, ItemListCount * 2);
         }
 
         public static MiningTable Load()
         {
-            byte[] all = GameTableFile.Read(RomInfo.GameTable.MiningTreasures, Size);
-            byte[] items = GameTableFile.Read(RomInfo.GameTable.MiningItems, ItemListCount * 2);
-            RomInfo.TableSpot spot = RomInfo.SpotOf(RomInfo.GameTable.MiningTreasures).Value;
+            byte[] all = RomLocator.Read(RomLocator.Thing.MiningTreasures, Size);
+            byte[] items = RomLocator.Read(RomLocator.Thing.MiningItems, ItemListCount * 2);
+            RomLocator.Spot spot = RomLocator.Where(RomLocator.Thing.MiningTreasures);
             MiningTable table = new MiningTable
             {
                 _overlayAddress = OverlayUtils.OverlayTable.GetRAMAddress(spot.Overlay),
-                _overlayPath = GameTableFile.PathOf(spot),
+                _overlayPath = RomLocator.PathOf(spot),
             };
             byte[] overlay = File.ReadAllBytes(table._overlayPath);
             Dictionary<uint, byte[]> shapes = new Dictionary<uint, byte[]>();
@@ -172,11 +172,11 @@ namespace DSPRE.ROMFiles
         public void Save()
         {
             if (Problem() is string p) throw new InvalidOperationException(p);
-            GameTableFile.Write(RomInfo.GameTable.MiningTreasures, TableBytes());
+            RomLocator.Write(RomLocator.Thing.MiningTreasures, TableBytes());
             byte[] overlay = File.ReadAllBytes(_overlayPath);
             foreach (Row r in ShapeOwners()) r.Shape.CopyTo(overlay, (int)(r.ShapeAddress - _overlayAddress));
             Code?.WriteInto(overlay);
-            File.WriteAllBytes(_overlayPath, overlay);
+            DSUtils.WriteWholeFile(_overlayPath, overlay);
         }
     }
 
@@ -198,7 +198,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Reads the values, or null when the sites are unknown or a site is not the instruction it should be.</summary>
         public static MiningCode Read(byte[] overlay)
         {
-            RomInfo.MiningCodeSites s = RomInfo.miningCodeSites;
+            RomInfo.MiningCodeSites s = RomLocator.MiningCodeSites;
             if (s == null || s.Tries + 2 > overlay.Length) return null;
             ushort range = Hw(overlay, s.Range), min = Hw(overlay, s.Minimum), first = Hw(overlay, s.FirstDig), tries = Hw(overlay, s.Tries);
             // movs r2, #range; adds rd, rn, #min; movs rN, #first; cmp rN, #tries
@@ -235,7 +235,7 @@ namespace DSPRE.ROMFiles
 
         public void WriteInto(byte[] overlay)
         {
-            RomInfo.MiningCodeSites s = RomInfo.miningCodeSites;
+            RomInfo.MiningCodeSites s = RomLocator.MiningCodeSites;
             SetLowByte(overlay, s.Range, TreasureMax - TreasureMin + 1);
             ushort min = (ushort)((Hw(overlay, s.Minimum) & ~0x1C0) | (TreasureMin << 6));
             BitConverter.GetBytes(min).CopyTo(overlay, (int)s.Minimum);

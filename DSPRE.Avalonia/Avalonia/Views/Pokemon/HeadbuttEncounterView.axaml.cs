@@ -171,7 +171,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private async void Export_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.ExportAsync(TopLevel.GetTopLevel(this) as Window); }
         private async void Screenshot_Click(object sender, RoutedEventArgs e) =>
             await DSPRE.Avalonia.Gl.GlScreenshot.SaveAsync(GlView, TopLevel.GetTopLevel(this) as Window, "dspre_headbutt",
-                path => { if (VM != null) VM.StatusText = $"Screenshot saved to {path}"; });
+                SaveNotice.Exported);
         private void RemoveNormalGroup_Click(object sender, RoutedEventArgs e) => VM?.RemoveGroup(special: false);
         private void AddSpecialGroup_Click(object sender, RoutedEventArgs e) => VM?.AddGroup(special: true);
         private void RemoveSpecialGroup_Click(object sender, RoutedEventArgs e) => VM?.RemoveGroup(special: true);

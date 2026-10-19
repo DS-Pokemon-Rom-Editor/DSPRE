@@ -42,7 +42,7 @@ namespace DSPRE.Models
                 return;
             }
             Directory.CreateDirectory(Path.GetDirectoryName(path));
-            File.WriteAllLines(path, plates.Select(p => string.Join(" ",
+            PlainFiles.WriteLines(path, plates.Select(p => string.Join(" ",
                 new[] { p.MinX, p.MinZ, p.MaxX, p.MaxZ, p.Nx, p.Ny, p.Nz, p.D }.Select(x => x.ToString("R", CultureInfo.InvariantCulture)))));
         }
     }

@@ -56,14 +56,14 @@ namespace DSPRE.ROMFiles
             return null;
         }
 
-        public static string WhyNot() => GameTableFile.WhyNot(RomInfo.GameTable.IncenseBabies, Size);
+        public static string WhyNot() => RomLocator.WhyNot(RomLocator.Thing.IncenseBabies, Size);
 
-        public static IncenseBreedingTable Load() => new IncenseBreedingTable(GameTableFile.Read(RomInfo.GameTable.IncenseBabies, Size));
+        public static IncenseBreedingTable Load() => new IncenseBreedingTable(RomLocator.Read(RomLocator.Thing.IncenseBabies, Size));
 
         public void Save(int speciesCount, int itemCount)
         {
             if (Problem(speciesCount, itemCount) is string p) throw new InvalidOperationException(p);
-            GameTableFile.Write(RomInfo.GameTable.IncenseBabies, ToBytes());
+            RomLocator.Write(RomLocator.Thing.IncenseBabies, ToBytes());
         }
     }
 }

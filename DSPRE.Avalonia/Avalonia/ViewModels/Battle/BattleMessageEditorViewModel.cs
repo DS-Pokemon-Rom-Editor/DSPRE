@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
     /// a plain multi-line TextBox. Save rewrites the whole table + offset file +
     /// message archive (a global operation, exactly like the original).
     /// </summary>
-    public class BattleMessageEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
+    public class BattleMessageEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -214,7 +214,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // ── Dirty tracking ───────────────────────────────────────────────────────────
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty;
-        public string UnsavedChangesDescription => "Trainer Message Editor";
+        public string UnsavedChangesDescription => "Trainer messages";
         public void SaveChanges() => _ = SaveAsync();
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
@@ -279,7 +279,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         // ── Constructors ────────────────────────────────────────────────────────────
         public BattleMessageEditorViewModel() { if (Design.IsDesignMode) Trainers.Add("[0]: Youngster Joey"); }
-        public BattleMessageEditorViewModel(int initialTrainerId) { _initialTrainerId = initialTrainerId; }
+        public BattleMessageEditorViewModel(int initialTrainerId)
+        {
+            _initialTrainerId = initialTrainerId;
+            _spriteSaved = AppEvents.WhenSaved(() => { if (_shownClass >= 0) ShowSprite(_shownClass); }, DirNames.trainerGraphics);
+        }
+
+        private readonly IDisposable _spriteSaved;
+        public void Detach() => _spriteSaved?.Dispose();
         private readonly int _initialTrainerId;
 
         // ── Setup ─────────────────────────────────────────────────────────────────────
@@ -329,7 +336,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             catch (Exception ex)
             {
                 StatusText = $"Error: {ex.Message}";
-                await DialogHelper.ShowError($"Failed to load trainer messages:\n{ex.Message}", "Battle Message Editor");
+                await DialogHelper.ShowError($"Failed to load trainer messages:\n{ex.Message}", "Battle message editor error");
             }
         }
 
@@ -391,8 +398,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             ResetUndo();
         }
 
+        private int _shownClass = -1;
+
         private void ShowSprite(int trainerClass)
         {
+            _shownClass = trainerClass;
             FrameMax = _sprite.Load(trainerClass);
             OnPropertyChanged(nameof(HasSprite));
             if (_frame > FrameMax) { _frame = 0; OnPropertyChanged(nameof(Frame)); }
@@ -600,7 +610,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 : _hgeMaxMessages <= 0 ? "TRAINER_SOURCE_MAX_TEXT_ENTRY_COUNT was not found in include/trainer_data.h."
                 : _hgeCurrent.Count > _hgeMaxMessages ? $"A trainer can have at most {_hgeMaxMessages} messages."
                 : null;
-            if (problem != null) { await DialogHelper.ShowError($"Trainer {trainerId} messages were not saved. {problem}", "Save Error"); return; }
+            if (problem != null) { await DialogHelper.ShowError($"Trainer {trainerId} messages were not saved. {problem}", "Battle message editor error"); return; }
 
             List<HgeMessage> messages = _hgeCurrent.Select(m => new HgeMessage { Token = HgeLabel(m), Value = m.Value, Text = m.Text }).ToList();
             (bool saved, string error) = await HgEngineSave.RunAsync(() =>
@@ -621,7 +631,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             });
             if (!saved)
             {
-                if (error != null) await DialogHelper.ShowError($"Trainer {trainerId} messages were not saved:\n{error}", "Save Error");
+                if (error != null) await DialogHelper.ShowError($"Trainer {trainerId} messages were not saved:\n{error}", "Battle message editor error");
                 return;
             }
 
@@ -656,7 +666,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             bool ok = await DialogHelper.AskYesNo(
                 $"This writes ALL trainer text entries back to the ROM. Text archive {trainerMessageTextNumber} " +
-                "will be overwritten entirely and unused messages will be lost.\n\nContinue?", "Confirm Save");
+                "will be overwritten entirely and unused messages will be lost.\n\nContinue?", "Save all trainer text?");
             if (!ok) return;
 
             try
@@ -672,7 +682,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Error writing trainer text table:\n{ex.Message}", "Save Error");
+                await DialogHelper.ShowError($"Error writing trainer text table:\n{ex.Message}", "Battle message editor error");
             }
         }
 

@@ -61,7 +61,7 @@ namespace DSPRE {
                     sb.Append(PaddingBlock);
                 }
 
-                File.WriteAllText(configPath, sb.ToString());
+                PlainFiles.WriteText(configPath, sb.ToString());
                 AppLogger.Info("Added the missing ds-rom padding fields to " + configPath);
             } catch (Exception ex) {
                 AppLogger.Error("Couldn't update the padding fields in config.yaml: " + ex.Message);

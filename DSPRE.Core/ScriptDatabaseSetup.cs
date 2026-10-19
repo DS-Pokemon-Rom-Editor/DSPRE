@@ -150,7 +150,7 @@ namespace DSPRE
                         "Script database missing");
                     return;
                 }
-                File.Copy(databaseJsonPath, targetJsonPath);
+                PlainFiles.Copy(databaseJsonPath, targetJsonPath);
             }
             else if (File.Exists(databaseJsonPath))
             {

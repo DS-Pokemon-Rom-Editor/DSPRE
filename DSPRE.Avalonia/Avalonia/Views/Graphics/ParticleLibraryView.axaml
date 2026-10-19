@@ -15,7 +15,7 @@
   <DockPanel>
     <controls:EditorToolbar>
         <ComboBox x:Name="CategoryPicker" ItemsSource="{Binding Categories}" SelectedItem="{Binding Category}" Width="200"/>
-        <TextBox x:Name="ParticleSearch" Text="{Binding Search}" PlaceholderText="Find by name or file number" Width="220"/>
+        <TextBox x:Name="ParticleSearch" Text="{Binding Search}" PlaceholderText="Search by name or file number" Width="220"/>
         <Button x:Name="OpenButton" Content="Open" controls:Icon.Key="OpenLink" Click="Open_Click"/>
     </controls:EditorToolbar>
 

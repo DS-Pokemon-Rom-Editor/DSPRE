@@ -4,6 +4,7 @@ using Avalonia.Threading;
 using DSPRE.Avalonia.Data;
 using DSPRE.Avalonia.Gl;
 using NarcAPI;
+using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Views.Controls
 {
@@ -135,9 +136,9 @@ namespace DSPRE.Avalonia.Views.Controls
         // The game copies the background's first sixteen colours into slot 6 and points every tile at it.
         private static byte[] Layer(Narc narc, (int Nclr, int Ncgr, int Nscr) set)
         {
-            ushort[] colours = DsBgScreen.Row(DsBgScreen.ReadColours(narc.GetElementBytes(set.Nclr)), 0);
-            byte[] chars = DsBgScreen.ReadCharacters(narc.GetElementBytes(set.Ncgr));
-            (int widthTiles, ushort[] entries) = DsBgScreen.ReadMap(narc.GetElementBytes(set.Nscr));
+            ushort[] colours = DsBgScreen.Row(NitroBgCodec.ReadColours(narc.GetElementBytes(set.Nclr)), 0);
+            byte[] chars = NitroBgCodec.ReadCharacters(narc.GetElementBytes(set.Ncgr));
+            (int widthTiles, ushort[] entries) = NitroBgCodec.ReadMap(narc.GetElementBytes(set.Nscr));
             byte[] rgba = new byte[256 * 256 * 4];
             if (widthTiles <= 0) return rgba;
             for (int i = 0; i < entries.Length; i++)
@@ -156,7 +157,7 @@ namespace DSPRE.Avalonia.Views.Controls
                         if (index == 0) continue;
                         ushort c = colours[index];
                         int to = ((ty * 8 + py) * 256 + tx * 8 + px) * 4;
-                        rgba[to] = DsBgScreen.Expand(c & 31); rgba[to + 1] = DsBgScreen.Expand((c >> 5) & 31); rgba[to + 2] = DsBgScreen.Expand((c >> 10) & 31);
+                        (rgba[to], rgba[to + 1], rgba[to + 2]) = NitroBgCodec.Colour(c);
                         rgba[to + 3] = 255;
                     }
             }
@@ -184,9 +185,9 @@ namespace DSPRE.Avalonia.Views.Controls
             {
                 Graphics g = new Graphics
                 {
-                    Characters = DsBgScreen.ReadCharacters(narc.GetElementBytes(set.Ncgr)),
+                    Characters = NitroBgCodec.ReadCharacters(narc.GetElementBytes(set.Ncgr)),
                     Cells = DsBgScreen.ReadCells(narc.GetElementBytes(set.Ncer)),
-                    Colours = DsBgScreen.ReadColours(narc.GetElementBytes(set.Nclr)),
+                    Colours = NitroBgCodec.ReadColours(narc.GetElementBytes(set.Nclr)),
                 };
                 NanrFile anim = NanrFile.Read(narc.GetElementBytes(set.Nanr));
                 if (anim != null && anim.Sequences.Count > 0)

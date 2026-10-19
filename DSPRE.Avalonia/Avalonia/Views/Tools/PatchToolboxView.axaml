@@ -21,7 +21,7 @@
         <Button DockPanel.Dock="Right" Content="Generate credits" Click="GenerateCredits_Click"
                 IsEnabled="{Binding CanGenerateCredits}"/>
         <StackPanel Orientation="Horizontal" Spacing="6">
-          <TextBox Width="220" PlaceholderText="Find a patch" Text="{Binding Search}" VerticalAlignment="Center"/>
+          <TextBox Width="220" PlaceholderText="Search patches" Text="{Binding Search}" VerticalAlignment="Center"/>
           <TextBlock Text="{Binding HeaderNote}" TextWrapping="Wrap" FontSize="12" VerticalAlignment="Center"
                      Foreground="{DynamicResource Editor.Subtle}"/>
           <controls:HelpTip Text="These patches change the game's code, overlays and data archives directly."/>

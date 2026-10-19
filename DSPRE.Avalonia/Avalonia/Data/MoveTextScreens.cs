@@ -73,7 +73,7 @@ namespace DSPRE.Avalonia.Data
                 s.InitLayer(bg, priority, charBase);
                 if (ncgr >= 0) s.LoadTiles(charBase, m(ncgr));
                 // Wide arrangements are stored as 32 by 32 blocks; at no scroll the first block is the one shown.
-                s.LoadMap(bg, DsBgScreen.ReadMap(m(nscr)).Entries, DsBgScreen.MapSide);
+                s.LoadMap(bg, NitroBgCodec.ReadMap(m(nscr)).Entries, DsBgScreen.MapSide);
             }
             void Palettes(ushort[] colours) { for (int slot = 0; slot < 16; slot++) s.SetPalette(slot, colours, slot * 16); }
             void Window(int x, int y, int w, int h, int textX = 0)
@@ -88,7 +88,7 @@ namespace DSPRE.Avalonia.Data
                 {
                         Func<int, byte[]> m = Members(RomInfo.DirNames.summaryGraphics);
                     if (m == null) return null;
-                        ushort[] colours = DsBgScreen.ReadColours(m(hg ? 0 : 1));
+                        ushort[] colours = NitroBgCodec.ReadColours(m(hg ? 0 : 1));
                     Palettes(colours);
                     if (hg)
                     {
@@ -96,7 +96,7 @@ namespace DSPRE.Avalonia.Data
                         // first block and the left half of the second are what show.
                         s.InitLayer(1, 2, 0x8000);
                         s.LoadTiles(0x8000, m(20));
-                            ushort[] panel = DsBgScreen.ReadMap(m(21)).Entries;
+                            ushort[] panel = NitroBgCodec.ReadMap(m(21)).Entries;
                         s.Copy(1, 0, 0, 16, 32, panel, 16, 0, 32);
                         if (panel.Length >= 2048) s.Copy(1, 16, 0, 16, 32, panel[1024..2048], 0, 0, 32);
                         Layer(m, 2, 3, 0, 1, 18);
@@ -121,14 +121,14 @@ namespace DSPRE.Avalonia.Data
                     // The art's character base is past the 64 KB this screen keeps; nothing else uses the start.
                     if (hg)
                     {
-                        Palettes(DsBgScreen.ReadColours(m(0)));
+                        Palettes(NitroBgCodec.ReadColours(m(0)));
                         Layer(m, 3, 3, 0, 1, 2);
-                        text = DsBgScreen.Row(DsBgScreen.ReadColours(Members(RomInfo.DirNames.fonts)?.Invoke(7)), 0);
+                        text = DsBgScreen.Row(NitroBgCodec.ReadColours(Members(RomInfo.DirNames.fonts)?.Invoke(7)), 0);
                         Window(17, 10, 15, 10);
                     }
                     else
                     {
-                            ushort[] colours = DsBgScreen.ReadColours(m(12));
+                            ushort[] colours = NitroBgCodec.ReadColours(m(12));
                         Palettes(colours);
                         Layer(m, 2, 2, 0, 10, 11);
                         text = DsBgScreen.Row(colours, 15);
@@ -141,12 +141,12 @@ namespace DSPRE.Avalonia.Data
                 {
                         Func<int, byte[]> m = Members(RomInfo.DirNames.battlePartyGraphics);
                     if (m == null) return null;
-                        ushort[] colours = DsBgScreen.ReadColours(m(23));
+                        ushort[] colours = NitroBgCodec.ReadColours(m(23));
                     Palettes(colours);
                     s.LoadTiles(0x8000, m(22));
                     Layer(m, 3, 3, 0x8000, -1, 6);
                     Layer(m, 2, 2, 0x8000, -1, 7);
-                    text = DsBgScreen.Row(DsBgScreen.ReadColours(Members(RomInfo.DirNames.fonts)?.Invoke(hg ? 7 : 6)), 0);
+                    text = DsBgScreen.Row(NitroBgCodec.ReadColours(Members(RomInfo.DirNames.fonts)?.Invoke(hg ? 7 : 6)), 0);
                     Window(16, 8, 15, 10);
                     b.Ink = text[1]; b.Shadow = text[2];
                     break;
@@ -158,9 +158,9 @@ namespace DSPRE.Avalonia.Data
                     ushort[] colours;
                     if (hg)
                     {
-                        colours = DsBgScreen.ReadColours(m(8));
+                        colours = NitroBgCodec.ReadColours(m(8));
                         Palettes(colours);
-                        s.SetPalette(13, DsBgScreen.Row(DsBgScreen.ReadColours(m(17)), 0));
+                        s.SetPalette(13, DsBgScreen.Row(NitroBgCodec.ReadColours(m(17)), 0));
                         s.LoadTiles(0x8000, m(7));
                         Layer(m, 2, 1, 0x8000, -1, 54);
                         Layer(m, 3, 2, 0x8000, -1, 94);
@@ -170,9 +170,9 @@ namespace DSPRE.Avalonia.Data
                     else
                     {
                         bool dp = RomInfo.gameFamily == RomInfo.GameFamilies.DP;
-                        colours = DsBgScreen.ReadColours(m(dp ? 8 : 12));
+                        colours = NitroBgCodec.ReadColours(m(dp ? 8 : 12));
                         Palettes(colours);
-                        s.SetPalette(13, DsBgScreen.Row(DsBgScreen.ReadColours(m(dp ? 18 : 22)), 0));
+                        s.SetPalette(13, DsBgScreen.Row(NitroBgCodec.ReadColours(m(dp ? 18 : 22)), 0));
                         s.LoadTiles(0, m(dp ? 7 : 11));
                         Layer(m, 1, 1, 0, -1, dp ? 10 : 14);
                         Layer(m, 3, 3, 0, -1, dp ? 9 : 13);

@@ -33,7 +33,7 @@ namespace DSPRE.ROMFiles
 
         public static string[] BodyShapeNames { get; } =
         {
-            "Quadruped", "Bipedal, tailless", "Bipedal, tailed", "Serpentine", "Two pairs of wings", "One pair of wings",
+            "Quadruped", "Bipedal without a tail", "Bipedal with a tail", "Serpentine", "Two pairs of wings", "One pair of wings",
             "Insectoid", "Head and body", "Head and arms", "Head and legs", "Tentacles", "Fins", "Head only", "Multiple bodies",
         };
 
@@ -294,7 +294,7 @@ namespace DSPRE.ROMFiles
                 {
                     byte[] bytes = ToBytes(c.Lists[i]);
                     if (bytes.AsSpan().SequenceEqual(c.Members[i])) continue;
-                    File.WriteAllBytes(Path.Combine(c.Folder, i.ToString("D4")), bytes);
+                    ArchiveMembers.Put(c.Dir, i, bytes);
                     c.Members[i] = bytes;
                 }
             SaveRegionalNumbers();
@@ -314,7 +314,7 @@ namespace DSPRE.ROMFiles
                     // One entry per species; species past the end keep whatever the file holds.
                     ushort[] numbers = new ushort[Math.Max(new FileInfo(path).Length / 2, SpeciesCount)];
                     for (int i = 0; i < order.Count; i++) numbers[order[i]] = (ushort)(i + 1);
-                    WriteIfChanged(path, ToBytes(numbers));
+                    WriteIfChanged(DirNames.regionalDexNumbers, path, ToBytes(numbers));
                 }
             }
             if (gameDirs.ContainsKey(DirNames.regionalDexSpecies))
@@ -327,15 +327,15 @@ namespace DSPRE.ROMFiles
                     int length = Math.Max(order.Count + 1, (int)(new FileInfo(path).Length / 2));
                     ushort[] species = new ushort[length];
                     for (int i = 0; i < order.Count; i++) species[i + 1] = order[i];
-                    WriteIfChanged(path, ToBytes(species));
+                    WriteIfChanged(DirNames.regionalDexSpecies, path, ToBytes(species));
                 }
             }
         }
 
-        private static void WriteIfChanged(string path, byte[] bytes)
+        private static void WriteIfChanged(DirNames dir, string path, byte[] bytes)
         {
             if (File.ReadAllBytes(path).AsSpan().SequenceEqual(bytes)) return;
-            File.WriteAllBytes(path, bytes);
+            ArchiveMembers.Put(dir, 0, bytes);
         }
 
         /// <summary>The regional files' own view of the order, for checking they agree with the list.</summary>

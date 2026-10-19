@@ -276,7 +276,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public string FloorNote { get => _floorNote; private set => Set(ref _floorNote, value); }
 
         private string _status = "";
-        public string Status { get => _status; private set => Set(ref _status, value); }
+        public string StatusText { get => _status; private set => Set(ref _status, value); }
 
         public bool Available => _table != null && _table.Floors.Count > 0;
 
@@ -285,7 +285,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 byte[] table = _archive.Available ? _archive.Get(0) : null;
-                if (table == null) { Status = "This ROM has no Distortion World data."; return; }
+                if (table == null) { StatusText = "This ROM has no Distortion World data."; return; }
 
                 _table = new TornWorldMapTable(table);
                 IReadOnlyList<string> labels = HeaderNames();
@@ -301,14 +301,14 @@ namespace DSPRE.Avalonia.ViewModels.World
                     });
                 }
 
-                Status = $"{Floors.Count} floors.";
+                StatusText = $"{Floors.Count} floors.";
                 if (Floors.Count > 0) SelectedFloorIndex = 0;
                 ResetSteps();
             }
             catch (Exception ex)
             {
                 AppLogger.Error("DistortionWorld.Load: " + ex.Message);
-                Status = "Could not read Distortion World data: " + ex.Message;
+                StatusText = "Could not read Distortion World data: " + ex.Message;
             }
         }
 
@@ -498,7 +498,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             SceneShown?.Invoke();
 
             if (!HasUnsavedChanges)
-                Status = StandingCount > 0
+                StatusText = StandingCount > 0
                     ? $"{Floors.Count} floors, {StandingCount} platforms and props, {WalkableTiles} walkable tiles"
                     : $"{Floors.Count} floors.";
         }
@@ -1605,7 +1605,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (refused != null)
             {
                 if (gridsChanged) RefreshSurfaces();
-                Status = refused;
+                StatusText = refused;
                 return false;
             }
 
@@ -1638,8 +1638,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void SayWhatIsUnsaved()
         {
             int floors = _editedMembers.Count, grids = _editedGrids.Count;
-            if (floors + grids == 0) { Status = $"{Floors.Count} floors."; return; }
-            Status = grids == 0 ? $"{floors} changed, not saved."
+            if (floors + grids == 0) { StatusText = $"{Floors.Count} floors."; return; }
+            StatusText = grids == 0 ? $"{floors} changed, not saved."
                    : floors == 0 ? $"{grids} grid(s) changed, not saved."
                    : $"{floors} floor(s) and {grids} grid(s) changed, not saved.";
         }
@@ -1655,7 +1655,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             public int[] EditedMembers, EditedGrids;
         }
 
-        private readonly Stack<(WorldState Before, WorldState After)> _undoSteps = new(), _redoSteps = new();
+        private readonly UndoHistory<WorldState> _history = new UndoHistory<WorldState>();
         private WorldState _lastState;
 
         private WorldState TakeState()
@@ -1676,8 +1676,8 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void ResetSteps()
         {
-            _undoSteps.Clear(); _redoSteps.Clear();
             _lastState = Floors.Count > 0 ? TakeState() : null;
+            _history.Reset(_lastState);
             RaiseSteps();
         }
 
@@ -1688,30 +1688,16 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (_lastState == null) return;
             WorldState now = TakeState();
             if (SameState(now, _lastState)) return;
-            _undoSteps.Push((_lastState, now));
-            _redoSteps.Clear();
+            _history.Capture(now);
             _lastState = now;
             RaiseSteps();
         }
 
-        public bool CanUndo => _undoSteps.Count > 0;
-        public bool CanRedo => _redoSteps.Count > 0;
+        public bool CanUndo => _history.CanUndo;
+        public bool CanRedo => _history.CanRedo;
 
-        public void Undo()
-        {
-            if (_undoSteps.Count == 0) return;
-            (WorldState Before, WorldState After) step = _undoSteps.Pop();
-            _redoSteps.Push(step);
-            Restore(step.Before, step.After);
-        }
-
-        public void Redo()
-        {
-            if (_redoSteps.Count == 0) return;
-            (WorldState Before, WorldState After) step = _redoSteps.Pop();
-            _undoSteps.Push(step);
-            Restore(step.After, step.Before);
-        }
+        public void Undo() { if (_history.CanUndo) Restore(_history.Undo(), _lastState); }
+        public void Redo() { if (_history.CanRedo) Restore(_history.Redo(), _lastState); }
 
         // Shows the floor the step changed.
         private void Restore(WorldState state, WorldState from)
@@ -1781,12 +1767,12 @@ namespace DSPRE.Avalonia.ViewModels.World
                 _shapeChanged.Clear();
                 Raise(nameof(HasUnsavedChanges));
                 ResetSteps();
-                Status = "Saved.";
+                StatusText = "Saved.";
             }
             catch (Exception ex)
             {
                 AppLogger.Error("DistortionWorld.SaveChanges: " + ex.Message);
-                AppMessages.Error("That could not be saved. " + ex.Message, "Distortion World");
+                AppMessages.Error("That could not be saved. " + ex.Message, "Distortion World error");
             }
         }
 

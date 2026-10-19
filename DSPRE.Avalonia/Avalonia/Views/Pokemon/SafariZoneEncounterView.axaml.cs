@@ -26,5 +26,10 @@ namespace DSPRE.Avalonia.Views.Pokemon
             try { await task; }
             catch (System.Exception ex) { AppLogger.Warn("Safari Zone editor handler failed: " + ex.Message); }
         }
+
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
+        }
     }
 }

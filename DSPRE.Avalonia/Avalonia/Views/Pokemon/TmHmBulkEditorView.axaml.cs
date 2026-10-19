@@ -63,5 +63,10 @@ namespace DSPRE.Avalonia.Views.Pokemon
             // doesn't expose it directly, so rebuild it from the same RomInfo lookup it was constructed with.
             return RomInfo.GetPokemonNames();
         }
+
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
+        }
     }
 }

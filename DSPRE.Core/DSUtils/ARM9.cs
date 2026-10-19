@@ -13,9 +13,29 @@ namespace DSPRE {
                 this.BaseStream.Position = pos;
             }
         }
-        public class Writer : DSUtils.EasyWriter {
-            public Writer(long pos = 0) : base(arm9Path, pos) {
+        /// <summary>
+        /// Edits a copy of arm9; closing it writes the result once through <see cref="DSUtils.WriteWholeFile"/>, so the
+        /// hg-engine guard sees the change and a failed write never leaves half a file.
+        /// </summary>
+        public class Writer : BinaryWriter {
+            private bool _written;
+
+            public Writer(long pos = 0) : base(new MemoryStream()) {
+                byte[] now = File.ReadAllBytes(arm9Path);
+                this.BaseStream.Write(now, 0, now.Length);
                 this.BaseStream.Position = pos;
+            }
+
+            public void EditSize(int increment) {
+                this.BaseStream.SetLength(this.BaseStream.Length + increment);
+            }
+
+            protected override void Dispose(bool disposing) {
+                if (disposing && !_written) {
+                    _written = true;
+                    DSUtils.WriteWholeFile(arm9Path, ((MemoryStream)this.BaseStream).ToArray());
+                }
+                base.Dispose(disposing);
             }
         }
         public static void EditSize(int increment) {
@@ -80,8 +100,8 @@ namespace DSPRE {
         public static List<int> SearchBytes(byte[] needle) {
             return DSUtils.SearchBytes(ReadBytes(0), needle);
         }
-        public static void WriteBytes(byte[] bytesToWrite, uint destOffset, int indexFirstByteToWrite = 0, int? indexLastByteToWrite = null) {
-            DSUtils.WriteToFile(RomInfo.arm9Path, bytesToWrite, destOffset, indexFirstByteToWrite, indexLastByteToWrite);
+        public static void WriteBytes(byte[] bytesToWrite, uint destOffset, int firstByte = 0, int? byteCount = null) {
+            DSUtils.WriteToFile(RomInfo.arm9Path, bytesToWrite, destOffset, firstByte, byteCount);
         }
 
         public static ushort ReadWordLE(uint startOffset)

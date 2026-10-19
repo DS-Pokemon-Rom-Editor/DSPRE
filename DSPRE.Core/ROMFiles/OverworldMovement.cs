@@ -121,12 +121,12 @@ namespace DSPRE.ROMFiles
                     Facings = Parse(route),
                 });
 
-            list.Add(new OverworldMovement { Value = 45, Name = "Look around, up, down",    Kind = MoveKind.TurnRandom, Facings = Parse("UD") });
-            list.Add(new OverworldMovement { Value = 46, Name = "Look around, left, right", Kind = MoveKind.TurnRandom, Facings = Parse("LR") });
+            list.Add(new OverworldMovement { Value = 45, Name = "Look up and down",    Kind = MoveKind.TurnRandom, Facings = Parse("UD") });
+            list.Add(new OverworldMovement { Value = 46, Name = "Look left and right", Kind = MoveKind.TurnRandom, Facings = Parse("LR") });
 
             foreach ((byte val, string name) in new (byte, string)[]
             {
-                (BerryPatch, "Berry patch"), (48, "Follow the player"), (49, "Spin, ready for a rematch"),
+                (BerryPatch, "Berry patch"), (48, "Follow the player"), (49, "Spin when ready for a rematch"),
                 (50, "Follow partner trainer"),
                 (51, "Hidden in snow"), (52, "Hidden in sand"), (53, "Hidden in rock"), (54, "Hidden in grass"),
             })

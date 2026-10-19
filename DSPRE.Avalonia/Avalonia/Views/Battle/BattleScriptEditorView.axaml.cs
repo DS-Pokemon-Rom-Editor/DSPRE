@@ -30,7 +30,7 @@ namespace DSPRE.Avalonia.Views.Battle
             IReadOnlyList<(int File, bool Orthographic)> files = VM.ParticleFilesOfMove();
             string move = $"Move {VM.FileIndex}";
             void Open((int File, bool Orthographic) f) => AvaloniaEditorLauncher.OpenParticleEditor(
-                RomInfo.DirNames.wazaParticle, f.File, $"{move}, particle file {f.File}", null, f.Orthographic);
+                RomInfo.DirNames.wazaParticle, f.File, $"{move} particle file {f.File}", null, f.Orthographic);
             if (files.Count == 0)
             {
                 _ = DialogHelper.ShowInfo("This script loads no particle files.", "Edit particles");
@@ -119,7 +119,10 @@ namespace DSPRE.Avalonia.Views.Battle
 
         private void AddCommand_Click(object sender, RoutedEventArgs e) => VM?.AddCommand();
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
-        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+        }
         private void CommandGuide_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null) return;

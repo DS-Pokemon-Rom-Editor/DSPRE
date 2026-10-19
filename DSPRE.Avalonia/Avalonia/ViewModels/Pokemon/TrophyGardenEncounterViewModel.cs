@@ -68,7 +68,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         // ── IEditorWithUnsavedChanges ──
         public bool HasUnsavedChanges => _isDirty;
-        public string UnsavedChangesDescription => "Trophy Garden Encounter Editor";
+        public string UnsavedChangesDescription => "Trophy Garden encounters";
         public void SaveChanges() => Save();
         // Edits live in the loaded file, so discarding reads it again.
         public void DiscardChanges()
@@ -200,7 +200,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Save()
         {
             if (_file == null) return;
-            if (_file.Problem() is string problem) { _ = DialogHelper.ShowError(problem, "Trophy Garden"); return; }
+            if (_file.Problem() is string problem) { _ = DialogHelper.ShowError(problem, "Trophy Garden error"); return; }
             // The file reports its own write error.
             if (!_file.SaveToNarc(showSuccessMessage: false)) return;
             _isDirty = false;
@@ -212,7 +212,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public void Export(string path)
         {
-            _file?.ExportToFile(path);
+            if (_file != null && _file.ExportToFile(path, showSuccessMessage: false)) SaveNotice.Exported(path);
         }
 
         public void Import(string path)
@@ -225,7 +225,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 _selectedSlotIndex = -1;
                 if (SlotLabels.Count > 0) SelectedSlotIndex = 0;
                 Edited();
-                AppMessages.Info("Trophy Garden encounters imported successfully!", "Import Complete");
+                SaveNotice.Imported("Trophy Garden encounters", path);
             }
         }
 
@@ -235,7 +235,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
                 SystemShell.RevealInFileManager(path);
             else
-                AppMessages.Warning("Trophy Garden encounter directory not found.", "Directory Not Found");
+                AppMessages.Warning("Trophy Garden encounter directory not found.", "Directory not found");
         }
 
         public void ShowHelp()
@@ -253,7 +253,7 @@ now is stored in your save file, not the ROM, so it isn't shown here.
 
 Data format: 16 Pokémon slots, 4 bytes each (2-byte species ID + 2-byte padding), 64
 bytes total. File location: encdata_ex.narc index 8.",
-                "Trophy Garden System Help");
+                "Trophy Garden system help");
         }
 
         private void UpdateStatus() =>

@@ -12,7 +12,6 @@ using AvaloniaEdit.Search;
 using AvaloniaEdit.TextMate;
 using DSPRE.Avalonia.Gl;
 using DSPRE.Avalonia.ViewModels;
-using NSMBe4.DSFileSystem;
 using System;
 using System.ComponentModel;
 using System.IO;
@@ -742,6 +741,11 @@ namespace DSPRE.Avalonia.Views.Text
             if (task == null) return;
             try { await task; }
             catch (Exception ex) { AppLogger.Warn("Script editor async handler failed: " + ex.Message); }
+        }
+
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
         }
     }
 }

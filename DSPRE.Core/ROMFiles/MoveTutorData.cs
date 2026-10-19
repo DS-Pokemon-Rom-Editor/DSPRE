@@ -36,7 +36,7 @@ namespace DSPRE.ROMFiles
         public ulong[] Masks { get; private set; } = new ulong[Rows];
 
         public static readonly string[] PlatinumPlaces = { "Route 212", "Survival Area", "Snowpoint City" };
-        public static readonly string[] HeartGoldTutors = { "Frontier, top left", "Frontier, top right", "Frontier, bottom right", "Headbutt tutor" };
+        public static readonly string[] HeartGoldTutors = { "Frontier top left", "Frontier top right", "Frontier bottom right", "Headbutt tutor" };
         public string[] Places => Platinum ? PlatinumPlaces : HeartGoldTutors;
         public string[] CostNames => Platinum ? new[] { "Red", "Blue", "Yellow", "Green" } : new[] { "BP" };
 
@@ -51,8 +51,8 @@ namespace DSPRE.ROMFiles
             if (UsesSource) return null;
             if (gameFamily == GameFamilies.DP) return "Diamond and Pearl have no move tutors.";
             bool pt = gameFamily == GameFamilies.Plat;
-            if (GameTableFile.WhyNot(GameTable.TutorPool, (pt ? 38 * 12 : 52 * 4)) is string why) return why;
-            if (pt) return GameTableFile.WhyNot(GameTable.TutorCompatibility, Rows * 5);
+            if (RomLocator.WhyNot(RomLocator.Thing.TutorPool, (pt ? 38 * 12 : 52 * 4)) is string why) return why;
+            if (pt) return RomLocator.WhyNot(RomLocator.Thing.TutorCompatibility, Rows * 5);
             if (!File.Exists(HgMaskPath)) return "waza_oshie.bin is missing from this project.";
             return new FileInfo(HgMaskPath).Length == Rows * 8 ? null : "waza_oshie.bin isn't the size the game expects.";
         }
@@ -62,8 +62,8 @@ namespace DSPRE.ROMFiles
             if (WhyNot() is string why) throw new InvalidOperationException(why);
             if (UsesSource) return LoadSource();
             MoveTutorData data = new MoveTutorData(gameFamily == GameFamilies.Plat);
-            byte[] pool = GameTableFile.Read(GameTable.TutorPool, data.PoolSize * data.RecordSize);
-            byte[] masks = data.Platinum ? GameTableFile.Read(GameTable.TutorCompatibility, Rows * 5) : File.ReadAllBytes(HgMaskPath);
+            byte[] pool = RomLocator.Read(RomLocator.Thing.TutorPool, data.PoolSize * data.RecordSize);
+            byte[] masks = data.Platinum ? RomLocator.Read(RomLocator.Thing.TutorCompatibility, Rows * 5) : File.ReadAllBytes(HgMaskPath);
             data.Restore(pool, masks);
             return data;
         }
@@ -197,16 +197,16 @@ namespace DSPRE.ROMFiles
             if (FromSource) { SaveSource(); return; }
             byte[] pool = PoolBytes();
             // A failed compatibility write puts the pool back, so neither file changes.
-            byte[] before = GameTableFile.Read(GameTable.TutorPool, pool.Length);
-            GameTableFile.Write(GameTable.TutorPool, pool);
+            byte[] before = RomLocator.Read(RomLocator.Thing.TutorPool, pool.Length);
+            RomLocator.Write(RomLocator.Thing.TutorPool, pool);
             try
             {
-                if (Platinum) GameTableFile.Write(GameTable.TutorCompatibility, MaskBytes());
-                else File.WriteAllBytes(HgMaskPath, MaskBytes());
+                if (Platinum) RomLocator.Write(RomLocator.Thing.TutorCompatibility, MaskBytes());
+                else PlainFiles.WriteBytes(HgMaskPath, MaskBytes());
             }
             catch
             {
-                GameTableFile.Write(GameTable.TutorPool, before);
+                RomLocator.Write(RomLocator.Thing.TutorPool, before);
                 throw;
             }
         }

@@ -16,6 +16,7 @@ namespace DSPRE.Avalonia.Views.Items
         public GroundItemScriptsView(GroundItemScriptsViewModel vm) : this()
         {
             DataContext = vm;
+            EditorWindowChrome.Attach(this, vm);
         }
 
         private void Add_Click(object sender, RoutedEventArgs e) => VM?.AddEntry();
@@ -25,20 +26,12 @@ namespace DSPRE.Avalonia.Views.Items
         private void Remove_Click(object sender, RoutedEventArgs e) => VM?.RemoveSelectedEntry();
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
-        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.Discard();
-        private void Close_Click(object sender, RoutedEventArgs e) => Close();
-
-        private bool _closeConfirmed;
-        protected override async void OnClosing(WindowClosingEventArgs e)
+        private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            base.OnClosing(e);
-            if (_closeConfirmed || VM?.HasUnsavedChanges != true) return;
-            e.Cancel = true;
-            DialogHelper.MsgResult answer = await DialogHelper.AskYesNoCancel("Save the ground item list before closing?", "Ground Item List");
-            if (answer == DialogHelper.MsgResult.Cancel) return;
-            if (answer == DialogHelper.MsgResult.Yes) VM.Save();
-            _closeConfirmed = true;
-            Close();
+            if (await DialogHelper.ConfirmDiscard(this)) VM?.Discard();
         }
+        private void Close_Click(object sender, RoutedEventArgs e) => Close();
+        private void Undo_Click(object sender, RoutedEventArgs e) => VM?.Undo();
+        private void Redo_Click(object sender, RoutedEventArgs e) => VM?.Redo();
     }
 }

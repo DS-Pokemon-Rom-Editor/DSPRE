@@ -81,7 +81,7 @@ namespace DSPRE.Avalonia
             if (string.IsNullOrEmpty(listPath)) return;
 
             List<string> names = FileListTools.ReadList(File.ReadAllLines(listPath));
-            if (names.Count == 0) { await DialogHelper.ShowError("The list has no names, only comments or empty lines.", "Batch rename", owner); return; }
+            if (names.Count == 0) { await DialogHelper.ShowError("The list has no names, only comments or empty lines.", "Batch rename error", owner); return; }
             int count = Math.Min(files, names.Count);
             string note = names.Count > files ? Br + Br + $"The list has {names.Count} names for {FileCount(files)}; the rest of the list is not used."
                         : names.Count < files ? Br + Br + $"The list has names for {count} of the {FileCount(files)}; the others keep their names." : "";
@@ -93,12 +93,11 @@ namespace DSPRE.Avalonia
             try
             {
                 (int renamed, int isolated) = FileListTools.RenameByList(folder, names, isolate);
-                await DialogHelper.ShowInfo($"Renamed {FileCount(renamed)}." + (isolated > 0 ? $" Moved {FileCount(isolated)} into {FileListTools.IsolatedFolderName}." : ""),
-                                            "Batch rename");
+                SaveNotice.Show($"Renamed {FileCount(renamed)}." + (isolated > 0 ? $" Moved {FileCount(isolated)} into {FileListTools.IsolatedFolderName}." : ""));
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError("Renaming stopped part way:\n" + ex.Message, "Batch rename", owner);
+                await DialogHelper.ShowError("Renaming stopped part way:\n" + ex.Message, "Batch rename error", owner);
             }
         }
 
@@ -119,7 +118,7 @@ namespace DSPRE.Avalonia
             try { list = FileListTools.RenameByContent(folder); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError("Renaming stopped part way:\n" + ex.Message, "Batch rename", owner);
+                await DialogHelper.ShowError("Renaming stopped part way:\n" + ex.Message, "Batch rename error", owner);
                 return;
             }
             int named = list.Count - FileListTools.ListHeader("").Count;
@@ -142,7 +141,7 @@ namespace DSPRE.Avalonia
             if (string.IsNullOrEmpty(source)) return;
             List<string> list;
             try { list = FileListTools.EnumList(File.ReadAllLines(source), Path.GetFileNameWithoutExtension(source)); }
-            catch (FormatException ex) { await DialogHelper.ShowError("The enum could not be read: " + ex.Message, "Name list", owner); return; }
+            catch (FormatException ex) { await DialogHelper.ShowError("The enum could not be read: " + ex.Message, "Name list error", owner); return; }
             await SaveList(owner, list, Path.GetFileNameWithoutExtension(source));
         }
 
@@ -150,10 +149,10 @@ namespace DSPRE.Avalonia
         {
             string dest = await DialogHelper.SaveFile(owner, "Save the list", new[] { ListFilter }, name + ".list");
             if (string.IsNullOrEmpty(dest)) return;
-            try { File.WriteAllLines(dest, list); }
+            try { PlainFiles.WriteLines(dest, list); SaveNotice.Exported(dest); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError("The list could not be saved:\n" + ex.Message, "Name list", owner);
+                await DialogHelper.ShowError("The list could not be saved:\n" + ex.Message, "Name list error", owner);
             }
         }
 
@@ -174,7 +173,7 @@ namespace DSPRE.Avalonia
                 return;
 
             Narc.FromFolder(folder).Save(dest);
-            await DialogHelper.ShowInfo("The contents of folder \"" + folder + "\" have been packed to:\n" + dest, "Archive created");
+            SaveNotice.Exported(dest);
         }
 
         private static readonly string Br = System.Environment.NewLine;
@@ -220,7 +219,7 @@ namespace DSPRE.Avalonia
             if (string.IsNullOrEmpty(dest)) return;
 
             DSUtils.WriteToFile(dest, NSBUtils.GetTexturesFromTexturedNSBMD(modelFile), fmode: FileMode.Create);
-            await DialogHelper.ShowInfo("The textures of " + modelPath + " have been extracted and saved.", "Textures saved");
+            SaveNotice.Exported(dest);
         }
 
         public static async Task RemoveTexturesFromNsbmd(Window owner)
@@ -237,15 +236,13 @@ namespace DSPRE.Avalonia
                 return;
             }
 
-            string extramsg = "";
-            if (await DialogHelper.AskYesNo("Would you like to save the removed textures to a file?", "Save textures?"))
+            if (await DialogHelper.AskYesNo("Save the removed textures to a file as well?", "Save textures?"))
             {
                 string texDest = await DialogHelper.SaveFile(owner, "Save textures as", new[] { NsbtxFilter },
                     Path.GetFileNameWithoutExtension(modelPath) + ".nsbtx");
                 if (!string.IsNullOrEmpty(texDest))
                 {
                     DSUtils.WriteToFile(texDest, NSBUtils.GetTexturesFromTexturedNSBMD(modelFile), fmode: FileMode.Create);
-                    extramsg = " exported and";
                 }
             }
 
@@ -254,7 +251,7 @@ namespace DSPRE.Avalonia
             if (string.IsNullOrEmpty(dest)) return;
 
             DSUtils.WriteToFile(dest, NSBUtils.GetModelWithoutTextures(modelFile), fmode: FileMode.Create);
-            await DialogHelper.ShowInfo("Textures correctly" + extramsg + " removed!", "Success!");
+            SaveNotice.Exported(dest);
         }
 
         public static async Task AddTexturesToNsbmd(Window owner)
@@ -279,7 +276,7 @@ namespace DSPRE.Avalonia
             byte[] textureFile = File.ReadAllBytes(nsbtxPath);
             if (!NSBUtils.IsNSBTX(textureFile))
             {
-                await DialogHelper.ShowError("Please select an NSBTX file.", "Invalid File", owner);
+                await DialogHelper.ShowError("Please select an NSBTX file.", "Model texture tools error", owner);
                 return;
             }
 
@@ -293,7 +290,7 @@ namespace DSPRE.Avalonia
             if (string.IsNullOrEmpty(dest)) return;
 
             DSUtils.WriteToFile(dest, NSBUtils.BuildNSBMDwithTextures(modelFile, textureFile), fmode: FileMode.Create);
-            await DialogHelper.ShowInfo("Textures written to the model.", "Success!");
+            SaveNotice.Exported(dest);
         }
     }
 }

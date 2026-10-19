@@ -53,7 +53,7 @@
         <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
           <TextBlock Text="{Binding FoundSummary}" FontSize="12" TextWrapping="Wrap"
                      Foreground="{DynamicResource Editor.Subtle}"/>
-          <TextBlock Text="{Binding Status}" FontSize="11" TextWrapping="Wrap"
+          <TextBlock Text="{Binding StatusText}" FontSize="11" TextWrapping="Wrap"
                      Foreground="{DynamicResource Editor.Subtle}"/>
         </StackPanel>
       </Grid>
@@ -87,7 +87,7 @@
         <ListBox x:Name="ItemList" ItemsSource="{Binding Shown}" SelectedItem="{Binding Selected}">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:GraphicsBrowserViewModel+Item">
-              <TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="13"/>
+              <TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="13" ToolTip.Tip="{Binding Tip}"/>
             </DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>

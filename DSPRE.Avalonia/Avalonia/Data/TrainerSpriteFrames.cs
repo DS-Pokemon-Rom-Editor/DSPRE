@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Data
 {
@@ -42,12 +43,10 @@ namespace DSPRE.Avalonia.Data
             NanrFile anims = NanrFile.Read(nanr);
             if (anims == null) { why = "The animation file could not be read."; return null; }
 
-            int rahc = ncgr != null && ncgr.Length > 0x30 ? BitConverter.ToUInt16(ncgr, 0xC) : -1;
-            if (rahc < 0 || System.Text.Encoding.ASCII.GetString(ncgr, rahc, 4) != "RAHC") { why = "The drawing has no pixel block."; return null; }
-            if (BitConverter.ToUInt32(ncgr, rahc + 0xC) != 3 || (BitConverter.ToUInt32(ncgr, rahc + 0x14) & 0xFF) != 0)
-            { why = "Only tiled 16-colour drawings can be rebuilt."; return null; }
-            int size = BitConverter.ToInt32(ncgr, rahc + 0x18), data = rahc + 8 + BitConverter.ToInt32(ncgr, rahc + 0x1C);
-            int end = rahc + BitConverter.ToInt32(ncgr, rahc + 4);
+            if (!(NitroBgCodec.ReadDrawingHeader(ncgr) is NitroBgCodec.DrawingHeader head)) { why = "The drawing has no pixel block."; return null; }
+            if (head.EightBit || !head.Tiled) { why = "Only tiled 16-colour drawings can be rebuilt."; return null; }
+            int rahc = head.SectionAt, size = head.DataSize, data = head.DataAt;
+            int end = rahc + head.SectionSize;
             if (data + size != end || end > ncgr.Length) { why = "The drawing's pixel block is not the usual shape."; return null; }
 
             foreach (TrainerCellFile.Cell c in cells.Cells)

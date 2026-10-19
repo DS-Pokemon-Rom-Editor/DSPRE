@@ -225,7 +225,7 @@ namespace DSPRE.HgEngine
             {
                 Directory.CreateDirectory(dir);
                 string ignore = Path.Combine(dir, ".gitignore");
-                if (!File.Exists(ignore)) File.WriteAllText(ignore, "*\n");
+                if (!File.Exists(ignore)) PlainFiles.WriteText(ignore, "*\n");
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
@@ -361,7 +361,7 @@ namespace DSPRE.HgEngine
                     suppressManagedFileSaveNotice = SuppressManagedFileSaveNotice,
                     buildRomName = BuildRomName,
                 };
-                File.WriteAllText(path, JsonSerializer.Serialize(cfg, new JsonSerializerOptions { WriteIndented = true }));
+                PlainFiles.WriteText(path, JsonSerializer.Serialize(cfg, new JsonSerializerOptions { WriteIndented = true }));
             }
             catch (Exception ex) { AppLogger.Error("HgEngineProject.Save: " + ex.Message); }
         }

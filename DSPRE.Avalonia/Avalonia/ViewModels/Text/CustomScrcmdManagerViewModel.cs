@@ -98,7 +98,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
             if (rotom && WhyNotRotomDatabase(picked) is string why)
             {
-                await DialogHelper.ShowError(why, "Import failed");
+                await DialogHelper.ShowError(why, "Custom script command manager error");
                 return;
             }
             try
@@ -108,13 +108,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 {
                     string backup = Path.Combine(DSPRE.RotomTool.ProjectRoot, ".rotom", "backups", "custom-database-" + DateTime.Now.ToString("yyyyMMddHHmmss"));
                     Directory.CreateDirectory(backup);
-                    File.Copy(targetPath, Path.Combine(backup, Path.GetFileName(targetPath)), overwrite: true);
+                    PlainFiles.Copy(targetPath, Path.Combine(backup, Path.GetFileName(targetPath)), overwrite: true);
                 }
-                File.Copy(picked, targetPath, overwrite: true);
+                PlainFiles.Copy(picked, targetPath, overwrite: true);
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Could not replace the database:\n{ex.Message}", "Import failed");
+                await DialogHelper.ShowError($"Could not replace the database:\n{ex.Message}", "Custom script command manager error");
                 return;
             }
 
@@ -125,7 +125,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 "Do you want to reload and reparse all scripts now?\n\n" +
                 "Yes: Reload database and reparse all scripts immediately\n" +
                 "No: Changes will take effect on next ROM load",
-                "Reload Database?");
+                "Reload database?");
             if (reload)
             {
                 // The app's command list is built from the legacy copy with the Rotom project's names laid over it.
@@ -191,17 +191,17 @@ namespace DSPRE.Avalonia.ViewModels.Text
                         $"Affected files: {fileList}\n" +
                         $"Unrecognized commands: {commandList}\n\n" +
                         $"Affected script files will be incomplete and read-only.",
-                        "Partial Success");
+                        "Unrecognised commands");
                 }
                 else
                 {
-                    await DialogHelper.ShowInfo("Database reloaded and all scripts reparsed successfully.", "Success");
+                    SaveNotice.Show("Reparsed every script with this database.");
                 }
                 StatusText = "Reparse finished.";
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Error reloading database: {ex.Message}", "Error");
+                await DialogHelper.ShowError($"Error reloading database: {ex.Message}", "Custom script command manager error");
                 StatusText = "Reparse failed.";
             }
             finally
@@ -217,23 +217,23 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
             if (!File.Exists(sourcePath))
             {
-                await DialogHelper.ShowError($"Script command database not found:\n{sourcePath}", "Error");
+                await DialogHelper.ShowError($"Script command database not found:\n{sourcePath}", "Custom script command manager error");
                 return;
             }
 
-            string dest = await DialogHelper.SaveFile(owner, "Export Script Command Database",
+            string dest = await DialogHelper.SaveFile(owner, "Export script command database",
                 new[] { JsonFilter, DialogHelper.AllFilter },
                 rotom ? Path.GetFileName(sourcePath) : $"{RomInfo.projectName}_scrcmd_database.json");
             if (string.IsNullOrEmpty(dest)) return;
 
             try
             {
-                File.Copy(sourcePath, dest, overwrite: true);
-                await DialogHelper.ShowInfo("Export complete.", "Success");
+                PlainFiles.Copy(sourcePath, dest, overwrite: true);
+                SaveNotice.Exported(dest);
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error");
+                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Custom script command manager error");
             }
         }
 
@@ -242,7 +242,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             string folder = Path.GetDirectoryName(Selected.Path ?? "");
             if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder))
             {
-                await DialogHelper.ShowError($"Folder not found:\n{folder}", "Error");
+                await DialogHelper.ShowError($"Folder not found:\n{folder}", "Custom script command manager error");
                 return;
             }
             SystemShell.OpenWithDefaultApp(folder);

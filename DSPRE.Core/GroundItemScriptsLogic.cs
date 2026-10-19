@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.IO;
 using DSPRE.ROMFiles;
 
@@ -85,8 +86,7 @@ namespace DSPRE
 
         private static void WriteDistortionWorldItemScript(int value)
         {
-            using (DSUtils.EasyWriter writer = new DSUtils.EasyWriter(OverlayUtils.GetPath(9), RomInfo.distortionWorldItemScriptOffset))
-                writer.Write((ushort)value);
+            DSUtils.WriteToFile(OverlayUtils.GetPath(9), BitConverter.GetBytes((ushort)value), RomInfo.distortionWorldItemScriptOffset);
         }
 
         public static void AddEntry(int itemId, int quantity)
@@ -185,6 +185,38 @@ namespace DSPRE
             }
 
             public bool HasChanges { get; private set; }
+
+            /// <summary>The pending list at one moment, for an undo step. Only valid until the next Save.</summary>
+            public sealed class Snapshot
+            {
+                internal List<(ScriptCommandContainer Container, List<ScriptCommand> Commands)> Scripts;
+                internal List<int?> Origin;
+                internal List<int> Removed;
+                internal bool Changed;
+            }
+
+            public Snapshot Take() => new Snapshot
+            {
+                Scripts = _script.allScripts.Select(c => (c, new List<ScriptCommand>(c.commands))).ToList(),
+                Origin = new List<int?>(_origin),
+                Removed = new List<int>(_removed),
+                Changed = HasChanges,
+            };
+
+            public void Restore(Snapshot snapshot)
+            {
+                _script.allScripts.Clear();
+                foreach ((ScriptCommandContainer container, List<ScriptCommand> commands) in snapshot.Scripts)
+                {
+                    container.commands = new List<ScriptCommand>(commands);
+                    _script.allScripts.Add(container);
+                }
+                _origin.Clear();
+                _origin.AddRange(snapshot.Origin);
+                _removed.Clear();
+                _removed.AddRange(snapshot.Removed);
+                HasChanges = snapshot.Changed;
+            }
 
             public List<Entry> Entries()
             {

@@ -15,7 +15,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
     /// Top-level ViewModel for the unified Pokémon editor window.
     /// Owns Personal Data, Learnset, and Evolutions sub-ViewModels and keeps them in sync.
     /// </summary>
-    public class PokemonEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
+    public class PokemonEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -54,7 +54,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         private string _baseTitle = "Pokémon Editor";
-        public string Title => (HasUnsavedChanges ? "● " : "") + _baseTitle;
+        public string Title => _baseTitle;
         private void SetBaseTitle(string t) { _baseTitle = t; OnPropertyChanged(nameof(Title)); }
 
         // ─── Pokémon selector (shared) ────────────────────────────────────────────
@@ -102,9 +102,19 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             PokewalkerVM.HasUnsavedChanges ||
             BattleDisplayVM.HasUnsavedChanges;
 
-        public string UnsavedChangesDescription =>
-            $"Pokémon Editor (#{_selectedMonIndex} {(PokemonNames.Count > _selectedMonIndex ? PokemonNames[_selectedMonIndex] : "")}"
-            + (_pendingSpecies != null ? $", new Pokémon {_pendingSpecies.DisplayName}" : "") + ")";
+        // The tabs with changes, each naming its own data, so the list says what Save would write.
+        public string UnsavedChangesDescription
+        {
+            get
+            {
+                List<string> parts = new List<string>();
+                if (_pendingSpecies != null) parts.Add($"New Pokémon {_pendingSpecies.DisplayName}");
+                foreach (IEditorWithUnsavedChanges tab in new IEditorWithUnsavedChanges[] { PersonalVM, LearnsetVM, EvolutionsVM, PokedexVM, SpriteVM, PokewalkerVM, BattleDisplayVM })
+                    if (tab.HasUnsavedChanges) parts.Add(tab.UnsavedChangesDescription);
+                return parts.Count > 0 ? string.Join(", ", parts)
+                    : (PokemonNames.Count > _selectedMonIndex && _selectedMonIndex >= 0 ? PokemonNames[_selectedMonIndex] : $"Pokémon {_selectedMonIndex}");
+            }
+        }
 
         public void SaveChanges() => SaveAll();
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
@@ -213,7 +223,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             BattleDisplayVM = new BattleDisplayEditorViewModel(SpriteVM);
 
             // Propagate dirty change notifications so the window title can reflect unsaved state
-            void OnChildDirty() { OnPropertyChanged(nameof(HasUnsavedChanges)); OnPropertyChanged(nameof(Title)); }
+            void OnChildDirty() => OnPropertyChanged(nameof(HasUnsavedChanges));
             PersonalVM.PropertyChanged   += (_, e) => { if (e.PropertyName == nameof(PersonalVM.HasUnsavedChanges))    OnChildDirty(); };
             LearnsetVM.PropertyChanged   += (_, e) => { if (e.PropertyName == nameof(LearnsetVM.HasUnsavedChanges))    OnChildDirty(); };
             EvolutionsVM.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(EvolutionsVM.HasUnsavedChanges)) OnChildDirty(); };
@@ -284,7 +294,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         /// <summary>Releases app-wide event subscriptions held by child VMs; call when the window closes.</summary>
-        public void Detach() { EvolutionsVM?.Detach(); PersonalVM?.Detach(); }
+        public void Detach() { EvolutionsVM?.Detach(); PersonalVM?.Detach(); BattleDisplayVM?.Detach(); }
 
         public void RefreshNames()
         {
@@ -373,13 +383,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task AddNewFakemonAsync(Window owner)
         {
             if (!HgEngineProject.IsActive || _pendingSpecies != null) return;
-            string name = await DialogHelper.PromptText("New species' display name:", "Add New Pokémon", owner: owner);
+            string name = await DialogHelper.PromptText("New species' display name:", "Add new Pokémon", owner: owner);
             if (name == null || _pendingSpecies != null) return;
 
             // Checked now so a name the checkout can't take is refused before it looks added.
             if (!HgEngineSpeciesExpansion.TryPlanFakemon(name, out HgEngineSpeciesExpansion.FakemonPlan plan, out string error))
             {
-                await DialogHelper.ShowError($"Could not add the species:\n{error}", "Add New Pokémon", owner);
+                await DialogHelper.ShowError($"Could not add the species:\n{error}", "Add new Pokémon", owner);
                 return;
             }
 
@@ -418,7 +428,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 HgEngineSpeciesExpansion.TryWriteFakemon(name, out written, out string writeError) ? null : writeError);
             if (!saved)
             {
-                if (error != null) await DialogHelper.ShowError($"Could not add the species:\n{error}", "Add New Pokémon", _owner);
+                if (error != null) await DialogHelper.ShowError($"Could not add the species:\n{error}", "Add new Pokémon", _owner);
                 return -1;
             }
 

@@ -202,7 +202,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public Action Changed;
     }
 
-    public class EvolutionsEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
+    public class EvolutionsEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -218,7 +218,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get
             {
                 int n = _pending.Count + (_heldRecord && _dirty ? 1 : 0);
-                return n == 0 ? "" : $"{n} imported Pokémon {(n == 1 ? "has" : "have")} unsaved changes. Press Save to write them to disk.";
+                return n == 0 ? "" : $"{n} imported Pokémon not saved yet";
             }
         }
         public bool HasImportNote => ImportNote.Length > 0;
@@ -329,7 +329,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ─── Dirty tracking ───────────────────────────────────────────────────────
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty || _pending.Count > 0;
-        public string UnsavedChangesDescription => _pending.Count > 0 ? $"Evolutions ({_pending.Count + (_dirty ? 1 : 0)} Pokémon)" : $"Evolutions (Mon {_currentId})";
+        public string UnsavedChangesDescription => _pending.Count > 0 ? $"Evolutions of {_pending.Count + (_dirty ? 1 : 0)} Pokémon" : $"Evolutions of {RomInfo.PokemonName(_currentId)}";
         public void SaveChanges() => Save();
         public void DiscardChanges()
         {
@@ -570,10 +570,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 EvolutionCsv.Setup setup = CsvSetup();
                 using System.IO.StreamWriter writer = new System.IO.StreamWriter(path);
                 EvolutionCsv.Write(writer, setup, Enumerable.Range(0, SpeciesCount).Select(id => (id, (IReadOnlyList<EvolutionCsv.Slot>)setup.Current(id).Slots)));
+                writer.Dispose();
+                SaveNotice.Exported(path);
             }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Evolutions", owner);
+                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Evolutions error", owner);
             }
         }
 
@@ -593,7 +595,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 _heldRecord = true;
             }
             OnPropertyChanged(nameof(HasUnsavedChanges));
-            SaveNotice.Show(result.Count == 1 ? "Evolutions imported for 1 Pokémon." : $"Evolutions imported for {result.Count} Pokémon.");
+            SaveNotice.Imported($"the evolutions of {result.Count} Pokémon", session.FileName);
         }
 
         // ─── Save ─────────────────────────────────────────────────────────────────
@@ -608,7 +610,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 string pendingProblem = BuildFile(slots, out EvolutionFile pendingFile);
                 if (pendingProblem != null)
                 {
-                    _ = DSPRE.Avalonia.DialogHelper.ShowError($"Evolutions of {NameOf(id)} were not saved: {pendingProblem}.", "Evolutions");
+                    _ = DSPRE.Avalonia.DialogHelper.ShowError($"Evolutions of {NameOf(id)} were not saved: {pendingProblem}.", "Evolutions error");
                     return;
                 }
                 pendingFile.SaveToFileDefaultDir(id, showSuccessMessage: false);
@@ -618,7 +620,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string problem = BuildFile(CurrentSlots(), out EvolutionFile newFile);
             if (problem != null)
             {
-                _ = DSPRE.Avalonia.DialogHelper.ShowError($"Evolutions were not saved: {problem}.", "Evolutions");
+                _ = DSPRE.Avalonia.DialogHelper.ShowError($"Evolutions were not saved: {problem}.", "Evolutions error");
                 return;
             }
             newFile.SaveToFileDefaultDir(_currentId, showSuccessMessage: false);
@@ -668,7 +670,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // Saving rows that didn't load faithfully would overwrite the real entries.
             if (_hgLoadError != null)
             {
-                await DSPRE.Avalonia.DialogHelper.ShowError($"Evolutions were not saved:\n{_hgLoadError}", "Evolutions");
+                await DSPRE.Avalonia.DialogHelper.ShowError($"Evolutions were not saved:\n{_hgLoadError}", "Evolutions error");
                 return;
             }
             List<(int Species, List<(string MethodName, int Param, int TargetSpeciesId, int TargetFormId)> Entries)> work =
@@ -686,7 +688,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 if (error == null) return;
                 AppLogger.Error($"hg-engine evolutions write failed for species {failed ?? species.ToString()}: {error}");
-                await DSPRE.Avalonia.DialogHelper.ShowError($"Evolutions{(failed != null ? " of " + failed : "")} were not saved:\n{error}", "Evolutions");
+                await DSPRE.Avalonia.DialogHelper.ShowError($"Evolutions{(failed != null ? " of " + failed : "")} were not saved:\n{error}", "Evolutions error");
                 return;
             }
             foreach ((int id, _) in work) _pending.Remove(id);

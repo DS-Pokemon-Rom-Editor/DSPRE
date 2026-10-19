@@ -94,12 +94,12 @@ namespace DSPRE.ROMFiles
         {
             if (!Available) throw new InvalidOperationException("This game has no field texture animations.");
             Directory.CreateDirectory(Folder);
-            File.WriteAllBytes(Path.Combine(Folder, "0000"), HeaderBytes());
+            ArchiveMembers.Put(DirNames.fieldTextureAnimations, 0, HeaderBytes());
             for (int i = 0; i < Entries.Count; i++)
                 if (Entries[i].FramePack != null)
-                    File.WriteAllBytes(Path.Combine(Folder, (i + 1).ToString("D4")), Entries[i].FramePack);
+                    ArchiveMembers.Put(DirNames.fieldTextureAnimations, i + 1, Entries[i].FramePack);
             for (int i = Entries.Count + 1; File.Exists(Path.Combine(Folder, i.ToString("D4"))); i++)
-                File.Delete(Path.Combine(Folder, i.ToString("D4")));
+                ArchiveMembers.Delete(Path.Combine(Folder, i.ToString("D4")));
         }
     }
 }

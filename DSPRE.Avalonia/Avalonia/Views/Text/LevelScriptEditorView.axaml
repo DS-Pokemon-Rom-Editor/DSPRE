@@ -14,6 +14,7 @@
         <controls:FusionAutoCompleteBox x:Name="FilePicker" Width="150" ItemsSource="{Binding ScriptNames}" SelectedIndex="{Binding SelectedScriptIndex}"/>
         <controls:HeadersButton controls:EditorToolbar.Slot="Picker" Source="LevelScript" FileId="{Binding SelectedScriptIndex}"/>
         <Button Content="Save" controls:Icon.Key="saveButton"    Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
         <Button Content="Add" controls:Icon.Key="addIcon" Click="AddFile_Click" ToolTip.Tip="Add a level script with no triggers"/>
         <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveFile_Click"
@@ -48,7 +49,7 @@
           <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding TriggerTypes}" SelectedIndex="{Binding TriggerTypeIndex}"/>
           <TextBlock Text="Script ID to run" FontSize="12"/>
           <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding NewScriptId}"/>
-          <TextBlock Text="{Binding NewScriptCommonInfo}" FontSize="10" Foreground="Orange" TextWrapping="Wrap"
+          <TextBlock Text="{Binding NewScriptCommonInfo}" FontSize="10" Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"
                      IsVisible="{Binding NewScriptHasCommonInfo}"/>
           <StackPanel Spacing="6" IsVisible="{Binding IsVariableType}">
             <TextBlock Text="Variable to watch" FontSize="12"/>

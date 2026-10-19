@@ -123,7 +123,7 @@ namespace DSPRE.ROMFiles
                 for (int r = 0; r < Rows.Count; r++)
                     for (int c = 0; c < Columns; c++)
                         BitConverter.GetBytes(Rows[r][c]).CopyTo(code, _offset + (r * Columns + c) * 4);
-                File.WriteAllBytes(path, code);
+                DSUtils.WriteWholeFile(path, code);
             }
             Invalidate();
         }

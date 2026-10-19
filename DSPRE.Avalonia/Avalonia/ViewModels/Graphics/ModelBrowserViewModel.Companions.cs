@@ -274,8 +274,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 ModelAssets.Match.Exact => $"Its own: {called}",
                 ModelAssets.Match.SameStart => $"Named for it: {called}",
-                ModelAssets.Match.SameFamily => $"Same family, a guess: {called}",
-                _ => $"Filed beside it, a guess: {called}",
+                ModelAssets.Match.SameFamily => $"Probably the same family: {called}",
+                _ => $"Probably goes with it (filed beside it): {called}",
             };
         }
 

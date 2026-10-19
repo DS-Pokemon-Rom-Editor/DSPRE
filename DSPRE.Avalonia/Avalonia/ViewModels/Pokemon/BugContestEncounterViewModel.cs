@@ -82,7 +82,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ── Dirty tracking ───────────────────────────────────────────────────────
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty;
-        public string UnsavedChangesDescription => "Bug Contest Encounter Editor";
+        public string UnsavedChangesDescription => "Bug Contest encounters";
         public void SaveChanges() => Save();
         // Edits live in the loaded file, so discarding reads it again.
         public void DiscardChanges() { if (_dirty && _file != null) LoadFile(() => new BugContestEncounterFile(true)); SetClean(); }
@@ -149,7 +149,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (!Filesystem.BugContestEncounterFileExists())
             {
                 await DialogHelper.ShowError(
-                    "Bug Contest encounter file not found.\nExpected location: data/mushi/mushi_encount.bin", "File Not Found");
+                    "Bug Contest encounter file not found.\nExpected location: data/mushi/mushi_encount.bin", "Special encounters editor error");
                 IsAvailable = false; OnPropertyChanged(nameof(IsNotAvailable)); return;
             }
             IsAvailable = true; OnPropertyChanged(nameof(IsNotAvailable));
@@ -180,7 +180,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                _ = DialogHelper.ShowError($"Error loading Bug Contest encounters: {ex.Message}", "Error");
+                _ = DialogHelper.ShowError($"Error loading Bug Contest encounters: {ex.Message}", "Special encounters editor error");
             }
         }
 
@@ -232,7 +232,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             foreach (var group in rateGroups)
             {
                 int[] indices = group.Select(x => x.Index + 1).ToArray();
-                warnings.Add($"Rate {group.Key} duplicated at entries {string.Join(", ", indices)} - only first triggers!");
+                warnings.Add($"Rate {group.Key} duplicated at entries {string.Join(", ", indices)}; only the first one is used.");
             }
 
             if (set.Encounters.Count > 0 && set.Encounters[set.Encounters.Count - 1].Rate != 0)
@@ -269,7 +269,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Save()
         {
             if (_file == null) return;
-            if (_file.Problem() is string problem) { _ = DialogHelper.ShowError(problem, "Bug Contest"); return; }
+            if (_file.Problem() is string problem) { _ = DialogHelper.ShowError(problem, "Bug Contest error"); return; }
             // The file reports its own write error.
             if (!_file.SaveToFile(showSuccessMessage: false)) return;
             _undo?.MarkSaved();
@@ -281,16 +281,20 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_file == null) return;
             FilePickerFileType filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
-            string path = await DialogHelper.SaveFile(_owner, "Export Bug Contest Encounters",
+            string path = await DialogHelper.SaveFile(_owner, "Export Bug Contest encounters",
                 new[] { filter }, "mushi_encount.bin");
             if (path == null) return;
-            _file.SaveToFile(path);
+            try { _file.SaveToFile(path, showSuccessMessage: false); SaveNotice.Exported(path); }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Special encounters editor error");
+            }
         }
 
         public async Task ImportAsync()
         {
             FilePickerFileType filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
-            string path = await DialogHelper.OpenFile(_owner, "Import Bug Contest Encounters", new[] { filter });
+            string path = await DialogHelper.OpenFile(_owner, "Import Bug Contest encounters", new[] { filter });
             if (path == null) return;
 
             try
@@ -298,11 +302,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 // An import is one undoable step over what was shown.
                 LoadFile(() => new BugContestEncounterFile(path), newHistory: false);
                 Edited();
-                await DialogHelper.ShowInfo("Bug Contest encounters imported successfully!", "Import Complete");
+                SaveNotice.Imported("Bug Contest encounters", path);
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Error importing file: {ex.Message}", "Import Error");
+                await DialogHelper.ShowError($"Error importing file: {ex.Message}", "Special encounters editor error");
             }
         }
 

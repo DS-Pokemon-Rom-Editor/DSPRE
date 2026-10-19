@@ -39,7 +39,7 @@ namespace DSPRE.Tests.Models
                 byte[] wasBuildings = map.BuildingsToByteArray();
                 int wasCount = map.buildings.Count;
 
-                var mesh = MapMesh.Read(map.mapModelData, out string whynot);
+                MapMesh mesh = MapMesh.Read(map.mapModelData, out string whynot);
                 Assert.True(mesh != null, $"map {id}: {whynot}");
 
                 Func<int, string> pictureOf = m =>
@@ -48,8 +48,8 @@ namespace DSPRE.Tests.Models
                     return named >= 0 ? mesh.NameOfPicture(named) : $"material{m}";
                 };
 
-                var set = MapTileset.FromMap(mesh, pictureOf, $"map{id}");
-                var grid = TileGrid.Of(mesh, set, pictureOf, out _);
+                MapTileset set = MapTileset.FromMap(mesh, pictureOf, $"map{id}");
+                TileGrid grid = TileGrid.Of(mesh, set, pictureOf, out _);
 
                 byte[] built = TileBake.ToModel(TileBake.Of(grid, set), out string why, mesh.ModelScale);
                 Assert.True(built != null, $"map {id}: {why}");
@@ -61,7 +61,7 @@ namespace DSPRE.Tests.Models
                 Assert.True(wasBuildings.SequenceEqual(map.BuildingsToByteArray()),
                     $"map {id}: the buildings changed when only the shape was rebuilt from tiles.");
 
-                var after = MapMesh.Read(map.mapModelData, out _);
+                MapMesh after = MapMesh.Read(map.mapModelData, out _);
                 Assert.NotNull(after);
 
                 withBuildings++;
@@ -81,11 +81,11 @@ namespace DSPRE.Tests.Models
             new RomInfo("CPUE", TestRoms.Platinum);
             DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.maps });
 
-            var map = new MapFile(0, RomInfo.gameFamily, discardMoveperms: false, showMessages: false);
+            MapFile map = new MapFile(0, RomInfo.gameFamily, discardMoveperms: false, showMessages: false);
             Skip.If(map.buildings == null || map.buildings.Count == 0, "That map carries no buildings.");
 
-            var mesh = MapMesh.Read(map.mapModelData, out _);
-            var pieces = BdhcBuild.PiecesOf(mesh, mesh.ModelScale);
+            MapMesh mesh = MapMesh.Read(map.mapModelData, out _);
+            List<BdhcBuild.Piece> pieces = BdhcBuild.PiecesOf(mesh, mesh.ModelScale);
             Assert.NotEmpty(pieces);
 
             _out.WriteLine($"{mesh.Faces.Count} faces of the map's own shape became {pieces.Count} "

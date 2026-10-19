@@ -111,7 +111,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
         public string UnsavedChangesDescription =>
             _selectedSpeciesIndex >= 0 && _selectedSpeciesIndex < PokemonNames.Count
-                ? $"Form Editor ({PokemonNames[_selectedSpeciesIndex]})" : "Form Editor";
+                ? $"Forms of {PokemonNames[_selectedSpeciesIndex]}" : "Forms";
 
         private string _statusText = "Select a species to view or edit its forms.";
         public string StatusText { get => _statusText; set { if (_statusText != value) { _statusText = value; OnPropertyChanged(); } } }

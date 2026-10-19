@@ -83,7 +83,7 @@ namespace DSPRE.ROMFiles
             return data;
         }
 
-        public void Save(string path) => File.WriteAllBytes(path, ToBytes());
+        public void Save(string path) => ArchiveMembers.Write(path, ToBytes());
 
         /// <summary>The opponents' names from the contest text, or numbered labels where that text is unknown.</summary>
         public static string[] OpponentNames()

@@ -136,7 +136,7 @@ namespace DSPRE.HgEngine
                     opened.ExtractToFolder(paths.unpackedDir);
 
                     // Some ViewModels read gameDirs[...].packedDir's narc file directly instead of unpackedDir; refresh both.
-                    try { File.Copy(narcPath, paths.packedDir, overwrite: true); } catch (IOException) { }
+                    try { PlainFiles.Copy(narcPath, paths.packedDir, overwrite: true); } catch (IOException) { }
                 }
 
                 if (domain.SyncOncePerSession) _syncedOnceThisSession.Add(domain.Domain);
@@ -186,7 +186,7 @@ namespace DSPRE.HgEngine
                 if (personal != null) return personal.ElementCount;
             }
             return gameDirs.TryGetValue(DirNames.personalPokeData, out (string packedDir, string unpackedDir) p) && Directory.Exists(p.unpackedDir)
-                ? Directory.GetFiles(p.unpackedDir).Length
+                ? NarcAPI.Narc.MemberCount(p.unpackedDir)
                 : -1;
         }
     }

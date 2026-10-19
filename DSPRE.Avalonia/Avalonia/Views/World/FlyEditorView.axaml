@@ -5,7 +5,6 @@
         xmlns:vmcontrols="clr-namespace:DSPRE.Avalonia.ViewModels.Controls"
 		x:Class="DSPRE.Avalonia.Views.World.FlyEditorView"
 		x:DataType="vm:FlyEditorViewModel"
-		Title="{Binding Title}"
 		Width="760" Height="560" MinWidth="600" MinHeight="400"
 		WindowStartupLocation="CenterOwner">
   <Design.DataContext>
@@ -19,7 +18,7 @@
 		<Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<controls:UndoRedoButtons/>
-		<TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="OrangeRed" Margin="12,0,0,0"/>
+		<TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Bad}" Margin="12,0,0,0"/>
 	</controls:EditorToolbar>
 
 	<!-- Three tabs -->

@@ -32,7 +32,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
     }
 
     /// <summary>Designs a Ball Capsule, standalone or a trainer capsule, and previews it on a send-out.</summary>
-    public sealed class BallCapsuleEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
+    public sealed class BallCapsuleEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
@@ -52,6 +52,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public Bitmap Board { get; }
         public PokemonSpriteEditorViewModel Sprites { get; }
         public BattleDisplayEditorViewModel Battle { get; }
+        public void Detach() => Battle?.Detach();
 
         private readonly BallCapsule _design = new();
         private BallCapsule[] _trainerCapsules = Array.Empty<BallCapsule>();
@@ -280,7 +281,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         // Only the trainer capsules are saved; your design lives for the session.
         public bool HasUnsavedChanges => _savedTrainer != null && !Pack(_trainerCapsules).AsSpan().SequenceEqual(_savedTrainer);
-        public string UnsavedChangesDescription => "Ball Capsules (trainer capsules)";
+        public string UnsavedChangesDescription => "Trainer Ball Capsules";
 
         public void SaveChanges()
         {

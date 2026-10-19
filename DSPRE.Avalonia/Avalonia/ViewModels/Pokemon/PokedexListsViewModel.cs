@@ -13,7 +13,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
     /// <summary>The regional Pokédex order and the Pokédex's sort and search lists.</summary>
-    public class PokedexListsViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
+    public class PokedexListsViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
@@ -43,6 +43,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public PokedexListsViewModel(bool load)
         {
             if (!load) return;
+            // The count patch is applied in the toolbox; the note goes once it lands.
+            AppEvents.RomPatchStateChanged += OnRomPatchStateChanged;
             DSPRE.Avalonia.Data.ListSync.Apply(SpeciesNames, GetPokemonNames());
             if (!PokedexLists.TryLoad(out _lists, out string error)) { LoadError = error; return; }
             foreach (PokedexLists.ListInfo info in _lists.Lists.Where(i => i.Member != PokedexLists.Regional && i.Group != PokedexLists.Group.Unused))
@@ -252,6 +254,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
         public bool HasCountNote => CountNote.Length > 0;
 
+        private void OnRomPatchStateChanged(object sender, System.EventArgs e) => RefreshCountNote();
+        public void Detach() => AppEvents.RomPatchStateChanged -= OnRomPatchStateChanged;
+
         public void RefreshCountNote() { Raise(nameof(CountNote)); Raise(nameof(HasCountNote)); }
 
         public string Warning => _lists?.Warning() ?? "";
@@ -270,11 +275,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task<bool> SaveChangesAsync()
         {
             if (_lists == null) return true;
-            if (HasProblem) { await DialogHelper.ShowError(Problem, "Pokédex Lists"); return false; }
+            if (HasProblem) { await DialogHelper.ShowError(Problem, "Pokédex lists error"); return false; }
             try { _lists.Save(); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
             {
-                await DialogHelper.ShowError("The Pokédex lists were not saved:\n" + e.Message, "Pokédex Lists");
+                await DialogHelper.ShowError("The Pokédex lists were not saved:\n" + e.Message, "Pokédex lists error");
                 return false;
             }
             _saved = _lists.Snapshot();

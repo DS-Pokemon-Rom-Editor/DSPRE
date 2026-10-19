@@ -75,7 +75,7 @@ namespace DSPRE.ROMFiles
                 return Refuse("The trainer properties and packed party archive must be available first.");
             }
 
-            int trainerCount = Directory.GetFiles(propertiesDir).Length;
+            int trainerCount = NarcAPI.Narc.MemberCount(propertiesDir);
             int partyCount;
             string[] unpackedPartyFiles = Directory.Exists(partyDir)
                 ? Directory.GetFiles(partyDir)
@@ -202,7 +202,7 @@ namespace DSPRE.ROMFiles
 
             ushort oldSpecialNumber = checked((ushort)(3000 + analysis.SpecialScriptIndex));
             ushort newSpecialNumber = checked((ushort)(3000 + expandedLayout.SpecialIndex));
-            List<TrainerRosterFileMutation> mutations = new List<TrainerRosterFileMutation>();
+            ArchiveMembers.Batch batch = new ArchiveMembers.Batch();
             foreach (TrainerScriptPatchTarget target in executableDescriptor.Targets)
             {
                 string path = target.File == TrainerScriptExecutableFile.Arm9
@@ -215,17 +215,14 @@ namespace DSPRE.ROMFiles
                 {
                     return false;
                 }
-                mutations.Add(new TrainerRosterFileMutation(path, patched));
+                batch.PutCode(path, patched);
             }
 
             trainerId = analysis.TrainerRecordCount;
-            string index = trainerId.ToString("D4");
-            mutations.Add(new TrainerRosterFileMutation(
-                Path.Combine(gameDirs[DirNames.trainerProperties].unpackedDir, index),
-                new TrainerProperties((ushort)trainerId, 1) { trainerClass = TrainerProperties.NewTrainerClass }.ToByteArray()));
+            batch.Put(DirNames.trainerProperties, trainerId,
+                new TrainerProperties((ushort)trainerId, 1) { trainerClass = TrainerProperties.NewTrainerClass }.ToByteArray());
             // One Pokemon, so battling the new trainer never reads an empty party.
-            mutations.Add(new TrainerRosterFileMutation(Path.Combine(partyDir, index),
-                new PartyPokemon { pokeID = 1, level = 5 }.ToByteArray()));
+            batch.Put(DirNames.trainerParty, trainerId, new PartyPokemon { pokeID = 1, level = 5 }.ToByteArray());
 
             TextArchive trainerNames = new TextArchive(trainerNamesMessageNumber);
             if (trainerNames.messages.Count != trainerId ||
@@ -236,18 +233,17 @@ namespace DSPRE.ROMFiles
                 return false;
             }
             (string binPath, string jsonPath) namePaths = TextArchive.GetFilePaths(trainerNamesMessageNumber);
-            mutations.Add(new TrainerRosterFileMutation(namePaths.jsonPath,
-                trainerNames.ToExpandedJsonBytes(trainerNamesMessageNumber)));
+            batch.PutFile(namePaths.jsonPath, trainerNames.ToExpandedJsonBytes(trainerNamesMessageNumber));
 
             (string binPath, string txtPath) scriptPaths = ScriptFile.GetFilePaths(scriptDescriptor.SharedScriptArchiveId);
-            mutations.Add(new TrainerRosterFileMutation(scriptPaths.binPath, expandedScript));
-            if (!TryAddPlaintextMutation(mutations, sharedScripts, scriptPaths.txtPath, "expanded", out error))
+            batch.Put(DirNames.scripts, scriptDescriptor.SharedScriptArchiveId, expandedScript);
+            if (!TryAddPlaintextMutation(batch, sharedScripts, scriptPaths.txtPath, "expanded", out error))
             {
                 trainerId = -1;
                 return false;
             }
 
-            if (!TrainerRosterFileTransaction.TryCommit(mutations, out error))
+            if (!batch.TryCommit(out error))
             {
                 trainerId = -1;
                 return false;
@@ -259,7 +255,7 @@ namespace DSPRE.ROMFiles
 
         // A Rotom project's expanded/scripts is Rotom's source root: its source is regenerated from the
         // binary instead, and a .script there would be converted over it.
-        private static bool TryAddPlaintextMutation(List<TrainerRosterFileMutation> mutations,
+        private static bool TryAddPlaintextMutation(ArchiveMembers.Batch batch,
             ScriptFile scripts, string txtPath, string what, out string error)
         {
             error = null;
@@ -270,8 +266,7 @@ namespace DSPRE.ROMFiles
                 error = $"The {what} trainer-script plaintext could not be serialized.";
                 return false;
             }
-            mutations.Add(new TrainerRosterFileMutation(txtPath,
-                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(plaintext)));
+            batch.PutFile(txtPath, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(plaintext));
             return true;
         }
 
@@ -356,7 +351,7 @@ namespace DSPRE.ROMFiles
 
             ushort oldSpecialNumber = checked((ushort)(3000 + analysis.SpecialScriptIndex));
             ushort newSpecialNumber = checked((ushort)(3000 + contractedLayout.SpecialIndex));
-            List<TrainerRosterFileMutation> mutations = new List<TrainerRosterFileMutation>();
+            ArchiveMembers.Batch batch = new ArchiveMembers.Batch();
             foreach (TrainerScriptPatchTarget target in executableDescriptor.Targets)
             {
                 string path = target.File == TrainerScriptExecutableFile.Arm9
@@ -370,14 +365,11 @@ namespace DSPRE.ROMFiles
                     trainerId = -1;
                     return false;
                 }
-                mutations.Add(new TrainerRosterFileMutation(path, patched));
+                batch.PutCode(path, patched);
             }
 
-            string index = trainerId.ToString("D4");
-            mutations.Add(TrainerRosterFileMutation.Delete(
-                Path.Combine(gameDirs[DirNames.trainerProperties].unpackedDir, index)));
-            mutations.Add(TrainerRosterFileMutation.Delete(
-                Path.Combine(gameDirs[DirNames.trainerParty].unpackedDir, index)));
+            batch.Delete(DirNames.trainerProperties, trainerId);
+            batch.Delete(DirNames.trainerParty, trainerId);
 
             TextArchive trainerNames = new TextArchive(trainerNamesMessageNumber);
             if (trainerNames.messages.Count != analysis.TrainerNameCount)
@@ -388,18 +380,17 @@ namespace DSPRE.ROMFiles
             }
             trainerNames.messages.RemoveAt(trainerId);
             (string binPath, string jsonPath) namePaths = TextArchive.GetFilePaths(trainerNamesMessageNumber);
-            mutations.Add(new TrainerRosterFileMutation(namePaths.jsonPath,
-                trainerNames.ToExpandedJsonBytes(trainerNamesMessageNumber)));
+            batch.PutFile(namePaths.jsonPath, trainerNames.ToExpandedJsonBytes(trainerNamesMessageNumber));
 
             (string binPath, string txtPath) scriptPaths = ScriptFile.GetFilePaths(scriptDescriptor.SharedScriptArchiveId);
-            mutations.Add(new TrainerRosterFileMutation(scriptPaths.binPath, contractedScript));
-            if (!TryAddPlaintextMutation(mutations, sharedScripts, scriptPaths.txtPath, "contracted", out error))
+            batch.Put(DirNames.scripts, scriptDescriptor.SharedScriptArchiveId, contractedScript);
+            if (!TryAddPlaintextMutation(batch, sharedScripts, scriptPaths.txtPath, "contracted", out error))
             {
                 trainerId = -1;
                 return false;
             }
 
-            if (!TrainerRosterFileTransaction.TryCommit(mutations, out error))
+            if (!batch.TryCommit(out error))
             {
                 trainerId = -1;
                 return false;
@@ -446,128 +437,6 @@ namespace DSPRE.ROMFiles
 
             count = (int)value;
             return true;
-        }
-    }
-
-    internal sealed class TrainerRosterFileMutation
-    {
-        public TrainerRosterFileMutation(string path, byte[] bytes)
-        {
-            Path = path;
-            Bytes = bytes;
-        }
-
-        private TrainerRosterFileMutation(string path)
-        {
-            Path = path;
-            IsDeletion = true;
-        }
-
-        public string Path { get; }
-        public byte[] Bytes { get; }
-        public bool IsDeletion { get; }
-
-        public static TrainerRosterFileMutation Delete(string path) => new(path);
-    }
-
-    internal static class TrainerRosterFileTransaction
-    {
-        public static bool TryCommit(IReadOnlyList<TrainerRosterFileMutation> mutations,
-            out string error)
-        {
-            error = null;
-            if (mutations == null || mutations.Count == 0)
-            {
-                error = "The trainer roster transaction has no outputs.";
-                return false;
-            }
-
-            if (mutations.Any(item => item == null || string.IsNullOrWhiteSpace(item.Path) ||
-                (!item.IsDeletion && item.Bytes == null)) ||
-                mutations.Select(item => System.IO.Path.GetFullPath(item.Path))
-                .Distinct(StringComparer.OrdinalIgnoreCase).Count() != mutations.Count)
-            {
-                error = "The trainer roster transaction contains invalid or duplicate outputs.";
-                return false;
-            }
-
-            string token = Guid.NewGuid().ToString("N");
-            List<(TrainerRosterFileMutation mutation, string stage, bool existed, byte[] original, DateTime timestamp)> staged = new List<(TrainerRosterFileMutation mutation, string stage,
-                bool existed, byte[] original, DateTime timestamp)>();
-            List<string> createdDirectories = new List<string>();
-            try
-            {
-                foreach (TrainerRosterFileMutation mutation in mutations)
-                {
-                    string fullPath = System.IO.Path.GetFullPath(mutation.Path);
-                    string directory = System.IO.Path.GetDirectoryName(fullPath);
-                    if (!Directory.Exists(directory))
-                    {
-                        Directory.CreateDirectory(directory);
-                        createdDirectories.Add(directory);
-                    }
-
-                    bool existed = File.Exists(fullPath);
-                    byte[] original = existed ? File.ReadAllBytes(fullPath) : null;
-                    DateTime timestamp = existed ? File.GetLastWriteTimeUtc(fullPath) : default;
-                    if (mutation.IsDeletion && !existed)
-                    {
-                        throw new FileNotFoundException("A trainer roster deletion target is missing.", fullPath);
-                    }
-                    string stage = mutation.IsDeletion ? null : fullPath + ".dspre-stage-" + token;
-                    staged.Add((mutation, stage, existed, original, timestamp));
-                    if (!mutation.IsDeletion) File.WriteAllBytes(stage, mutation.Bytes);
-                }
-
-                foreach ((TrainerRosterFileMutation mutation, string stage, bool existed, byte[] original, DateTime timestamp) item in staged)
-                {
-                    string target = System.IO.Path.GetFullPath(item.mutation.Path);
-                    if (item.mutation.IsDeletion) File.Delete(target);
-                    else File.Move(item.stage, target, overwrite: true);
-                }
-                return true;
-            }
-            catch (Exception ex)
-            {
-                error = $"Trainer roster transaction failed and was rolled back: {ex.Message}";
-                foreach ((TrainerRosterFileMutation mutation, string stage, bool existed, byte[] original, DateTime timestamp) item in staged)
-                {
-                    string target = System.IO.Path.GetFullPath(item.mutation.Path);
-                    try
-                    {
-                        if (item.existed)
-                        {
-                            File.WriteAllBytes(target, item.original);
-                            File.SetLastWriteTimeUtc(target, item.timestamp);
-                        }
-                        else if (File.Exists(target))
-                        {
-                            File.Delete(target);
-                        }
-                    }
-                    catch (Exception rollbackError)
-                    {
-                        error += $" Rollback also failed for {System.IO.Path.GetFileName(target)}: " +
-                            rollbackError.Message;
-                    }
-                }
-                return false;
-            }
-            finally
-            {
-                foreach ((TrainerRosterFileMutation mutation, string stage, bool existed, byte[] original, DateTime timestamp) item in staged)
-                {
-                    if (!string.IsNullOrEmpty(item.stage) && File.Exists(item.stage)) File.Delete(item.stage);
-                }
-                for (int i = createdDirectories.Count - 1; i >= 0; i--)
-                {
-                    if (Directory.Exists(createdDirectories[i]) &&
-                        !Directory.EnumerateFileSystemEntries(createdDirectories[i]).Any())
-                    {
-                        Directory.Delete(createdDirectories[i]);
-                    }
-                }
-            }
         }
     }
 }

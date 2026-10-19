@@ -13,7 +13,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
     /// <summary>How well each type hits each other type.</summary>
-    public class TypeChartEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
+    public class TypeChartEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
@@ -46,6 +46,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public TypeChartEditorViewModel(bool load)
         {
             if (!load) return;
+            AppEvents.RomPatchStateChanged += OnRomPatchStateChanged;
             _chart = TypeChart.Load();
             _savedKey = Key();
             StartUndo();
@@ -253,13 +254,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task<bool> SaveChangesAsync()
         {
             if (_chart == null) return true;
-            if (HasProblem) { await DialogHelper.ShowError(Problem, "Type Chart"); return false; }
+            if (HasProblem) { await DialogHelper.ShowError(Problem, "Type chart error"); return false; }
             if (_chart.FromSource)
             {
                 (bool saved, string error) = await HgEngineSave.RunAsync(() => { _chart.Save(); return null; });
                 if (!saved)
                 {
-                    if (error != null) await DialogHelper.ShowError("The type chart was not saved:\n" + error, "Type Chart");
+                    if (error != null) await DialogHelper.ShowError("The type chart was not saved:\n" + error, "Type chart error");
                     return false;
                 }
             }
@@ -268,7 +269,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 try { _chart.Save(); }
                 catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
                 {
-                    await DialogHelper.ShowError("The type chart was not saved:\n" + e.Message, "Type Chart");
+                    await DialogHelper.ShowError("The type chart was not saved:\n" + e.Message, "Type chart error");
                     return false;
                 }
             }
@@ -282,9 +283,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public string MakeRoomTip => $"The \"Expand the type chart\" patch in the ROM Patch Toolbox moves the chart to the expanded ARM9 area, where it holds up to {TypeChart.ExpandedCapacity - 2} matchups";
 
         /// <summary>Moving the chart changes the game's code, so the toolbox does it.</summary>
-        public Task MakeRoomAsync() => PatchHandover.OfferAsync("typeChartExpanded", "Expand the type chart", "Room for more matchups", "Type Chart");
+        public Task MakeRoomAsync() => PatchHandover.OfferAsync("typeChartExpanded", "Room for more matchups", "Type Chart");
 
         /// <summary>Rereads the chart after a toolbox patch moved it, unless edits here are still unsaved.</summary>
+        private void OnRomPatchStateChanged(object sender, System.EventArgs e) => OnPatchStateChanged();
+        public void Detach() => AppEvents.RomPatchStateChanged -= OnRomPatchStateChanged;
+
         public void OnPatchStateChanged()
         {
             if (_chart == null || HasUnsavedChanges) return;
@@ -298,7 +302,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try { _chart = TypeChart.Load(); }
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException)
             {
-                _ = DialogHelper.ShowError("The saved type chart couldn't be read back:\n" + e.Message, "Type Chart");
+                _ = DialogHelper.ShowError("The saved type chart couldn't be read back:\n" + e.Message, "Type chart error");
                 return;
             }
             _savedKey = Key();

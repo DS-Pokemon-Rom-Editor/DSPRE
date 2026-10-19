@@ -130,8 +130,8 @@ namespace DSPRE.Models
             try
             {
                 string temp = path + ".tmp";
-                File.WriteAllLines(temp, lines);
-                File.Move(temp, path, true);
+                PlainFiles.WriteLines(temp, lines);
+                PlainFiles.Move(temp, path, true);
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {

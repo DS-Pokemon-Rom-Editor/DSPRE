@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using DSPRE;
+using DSPRE.Avalonia.ViewModels.Pokemon;
 using DSPRE.ROMFiles;
 using Xunit;
 using Xunit.Abstractions;
@@ -35,7 +36,7 @@ namespace DSPRE.Tests
         public void TheScriptNumberIsWorkedOutFromTheFilesOwnHeader()
         {
             int played = 0;
-            foreach (var (code, path, name, file, script) in Games)
+            foreach ((string code, string path, string name, int file, int script) in Games)
             {
                 if (!Directory.Exists(path)) { _out.WriteLine($"{name}: not unpacked here, skipped"); continue; }
                 try { new RomInfo(code, path); }
@@ -59,13 +60,13 @@ namespace DSPRE.Tests
         public void DiamondSaysWhereTheHeldItemLivesAndPlatinumStillEditsIt()
         {
             int played = 0;
-            foreach (var (code, path, name, file, script) in Games)
+            foreach ((string code, string path, string name, int file, int script) in Games)
             {
                 if (!Directory.Exists(path)) { _out.WriteLine($"{name}: not unpacked here, skipped"); continue; }
                 new RomInfo(code, path);
                 DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.scripts });
 
-                var vm = new DSPRE.Avalonia.ViewModels.Pokemon.StarterEditorViewModel();
+                StarterEditorViewModel vm = new DSPRE.Avalonia.ViewModels.Pokemon.StarterEditorViewModel();
                 bool dp = RomInfo.gameFamily == RomInfo.GameFamilies.DP;
                 _out.WriteLine($"{name}: note=\"{vm.ScriptNote}\" heldItem={vm.IsHeldItemSupported}");
 
@@ -91,7 +92,7 @@ namespace DSPRE.Tests
         [Fact]
         public void WithNoStarterScriptItSaysSoRatherThanGuessing()
         {
-            var (code, path, name, _, _) = Games[1];
+            (string code, string path, string name, int _, int _) = Games[1];
             if (!Directory.Exists(path)) { Assert.Fail($"{name} is not unpacked here, so this proved nothing"); return; }
             new RomInfo(code, path);
 

@@ -1,4 +1,5 @@
 using System;
+using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Data
 {
@@ -26,7 +27,7 @@ namespace DSPRE.Avalonia.Data
             byte[] rgba = FieldGrid();
             if (s.Frame != null)
             {
-                ushort[] colours = DsBgScreen.ReadColours(_member(s.FramePalette));
+                ushort[] colours = NitroBgCodec.ReadColours(_member(s.FramePalette));
                 int settled = 1 << 12;
                 DrawSprite(Sprite(new[] { -1, s.Frame[0], s.Frame[1] }, colours, rows: true, cell: AnimCell(s.FrameAnim, 0, settled)),
                     rgba, DpPlayerX + DpFrameDx, DpPlayerY + DpFrameDy);

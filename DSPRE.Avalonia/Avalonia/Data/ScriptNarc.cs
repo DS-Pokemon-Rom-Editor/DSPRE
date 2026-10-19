@@ -128,7 +128,7 @@ namespace DSPRE.Avalonia.Data
             _archive = HgEngine.HgEngineOwnedFiles.ArchiveOf(_dir);
             DSPRE.DSUtils.TryUnpackNarcs(new List<DirNames> { _dir });
             _path = gameDirs[_dir].unpackedDir;
-            _count = (_path != null && Directory.Exists(_path)) ? Directory.GetFiles(_path).Length : 0;
+            _count = _path != null ? NarcAPI.Narc.MemberCount(_path) : 0;
         }
 
         /// <summary>True when the archive is mapped for the current game and there to read.</summary>
@@ -178,12 +178,7 @@ namespace DSPRE.Avalonia.Data
             if (_fromPacked) return;   // read-only view of the ROM's own bytes
             if (_path == null) return;
             if (_staging != null) { _staging.Write(_dir, id, (byte[])data.Clone()); return; }
-            // The build copies that file over the member, so a member saved only here would be lost.
-            HgEngine.HgEngineSourceAssets.WriteVerbatim(_archive, id, data);
-            byte[] before = File.Exists(FilePath(id)) ? File.ReadAllBytes(FilePath(id)) : null;
-            File.WriteAllBytes(FilePath(id), data);
-            BuiltPngSources.Write(_dir, _archive, id, _count, before, data);
-            AppEvents.RaiseArchiveMemberSaved(_dir);
+            ArchiveMembers.Put(_dir, id, data);
         }
     }
 }

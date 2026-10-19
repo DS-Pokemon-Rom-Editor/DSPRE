@@ -18,6 +18,9 @@ namespace DSPRE.Avalonia.Views.Shell
         private void Repair_Click(object sender, RoutedEventArgs e) => VM?.StageRepair();
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveChanges();
-        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+        }
     }
 }

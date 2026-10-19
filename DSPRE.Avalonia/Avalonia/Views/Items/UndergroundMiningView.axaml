@@ -141,7 +141,7 @@
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="vm:UndergroundMiningViewModel+TreasureRow">
             <StackPanel>
-              <TextBlock Text="Rocks, placed at random" IsVisible="{Binding IsFirstRock}"
+              <TextBlock Text="Rocks placed at random" IsVisible="{Binding IsFirstRock}"
                          FontWeight="SemiBold" Margin="0,8,0,4" Foreground="{DynamicResource Editor.Subtle}"/>
               <Grid ColumnDefinitions="190,120,120,120,120">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6">

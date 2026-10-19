@@ -22,7 +22,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
     /// or by picking one machine and checking/unchecking it per species (By TM/HM). Also carries the
     /// evolution-family "Sync" helper (union/intersection) and "Copy Compatibility To…".
     /// </summary>
-    public class TmHmBulkEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
+    public class TmHmBulkEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -90,7 +90,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         // ── IEditorWithUnsavedChanges ──
         public bool HasUnsavedChanges => _isDirty;
-        public string UnsavedChangesDescription => "TM/HM Bulk Editor";
+        public string UnsavedChangesDescription => "TM and HM compatibility";
         public void SaveChanges() => SaveAllChanges();
         public void DiscardChanges()
         {
@@ -514,7 +514,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_selectedSpeciesIds.Count == 0)
             {
-                AppMessages.Info("Select at least one Pokémon on the left first.", "No Selection");
+                AppMessages.Info("Select at least one Pokémon on the left first.", "No selection");
                 return;
             }
 
@@ -536,7 +536,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             List<SpeciesFamily> touched = _families.Where(f => f.MemberIds.Count > 1 && f.MemberIds.Any(_selectedSpeciesIds.Contains)).ToList();
             if (touched.Count == 0)
             {
-                AppMessages.Info("Select at least one Pokémon from a multi-member evolution family (in By Pokémon view) first.", "Sync Family");
+                AppMessages.Info("Select at least one Pokémon from a multi-member evolution family (in By Pokémon view) first.", "Sync family");
                 return;
             }
 
@@ -706,7 +706,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             catch (Exception e) when (e is System.IO.IOException || e is UnauthorizedAccessException || e is InvalidOperationException || e is ArgumentException)
             {
                 foreach (int id in written) AppEvents.RaisePersonalDataSaved(this, id);
-                _ = DialogHelper.ShowError("Not everything was saved: the TM/HM compatibility couldn't be written.\n" + e.Message, "TM/HM Bulk Editor");
+                _ = DialogHelper.ShowError("Not everything was saved: the TM/HM compatibility couldn't be written.\n" + e.Message, "TM / HM bulk editor error");
                 return;
             }
             foreach (int id in written) AppEvents.RaisePersonalDataSaved(this, id);

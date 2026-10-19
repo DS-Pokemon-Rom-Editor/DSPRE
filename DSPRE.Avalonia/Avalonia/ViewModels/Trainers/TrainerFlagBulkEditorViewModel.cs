@@ -95,7 +95,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         // ── IEditorWithUnsavedChanges ──
         public bool HasUnsavedChanges => _isDirty;
-        public string UnsavedChangesDescription => "Trainer Flag Bulk Editor";
+        public string UnsavedChangesDescription => "Trainer flags";
         public void SaveChanges() => SaveAllChanges();
         public void DiscardChanges()
         {
@@ -233,7 +233,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 if (loaded.SequenceEqual(now)) continue;
                 if (!_sourceAi.TryGetValue(id, out int ai))
                 {
-                    await DialogHelper.ShowError($"Trainer {id}'s flags couldn't be read from Trainers.c, so nothing was saved.", "Trainer Flag Bulk Editor");
+                    await DialogHelper.ShowError($"Trainer {id}'s flags couldn't be read from Trainers.c, so nothing was saved.", "Trainer flag bulk editor error");
                     return;
                 }
                 for (int f = 0; f < AI_FLAG_COUNT; f++)
@@ -257,7 +257,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 }
                 return null;
             });
-            if (!saved) { if (error != null) await DialogHelper.ShowError("Not everything was saved:\n" + error, "Trainer Flag Bulk Editor"); return; }
+            if (!saved) { if (error != null) await DialogHelper.ShowError("Not everything was saved:\n" + error, "Trainer flag bulk editor error"); return; }
 
             List<HgEngineSourceBlock> source = HgEngine.HgEngineTrainerSource.LoadAll();
             foreach ((int id, List<HgEngineFieldWrite> _, bool[] now) in writes)
@@ -441,7 +441,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (_selectedTrainerIds.Count == 0)
             {
-                AppMessages.Info("Select at least one trainer on the left first.", "No Selection");
+                AppMessages.Info("Select at least one trainer on the left first.", "No selection");
                 return;
             }
 

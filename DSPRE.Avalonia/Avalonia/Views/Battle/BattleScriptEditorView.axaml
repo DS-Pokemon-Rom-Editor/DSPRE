@@ -16,6 +16,7 @@
       <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"
               ToolTip.Tip="{Binding SaveHint}" ToolTip.ShowOnDisabled="True"/>
       <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <controls:UndoRedoButtons/>
       <StackPanel x:Name="EntryPicker" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2" IsVisible="{Binding IsAvailable}">
         <TextBlock Text="Archive" VerticalAlignment="Center"/>
         <ComboBox ItemsSource="{Binding ArchiveOptions}" SelectedIndex="{Binding ArchiveIndex}" Width="260"/>
@@ -33,13 +34,13 @@
     <!-- Unsupported game banner -->
     <Border Grid.Row="0" IsVisible="{Binding !IsAvailable}" Padding="10" CornerRadius="4"
             Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
-      <TextBlock Text="{Binding UnavailableText}" TextWrapping="Wrap" Foreground="OrangeRed"/>
+      <TextBlock Text="{Binding UnavailableText}" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Bad}"/>
     </Border>
 
     <!-- Selectors -->
     <StackPanel Grid.Row="1" IsVisible="{Binding IsAvailable}" Spacing="8" Margin="0,0,0,8">
       <TextBlock IsVisible="{Binding ArchiveNotAvailable}" Text="{Binding ArchiveUnavailableText}"
-                 FontSize="12" Foreground="OrangeRed" TextWrapping="Wrap"/>
+                 FontSize="12" Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap"/>
       <TextBlock Text="{Binding EntryHeader}" FontWeight="SemiBold"/>
       <TextBlock IsVisible="{Binding ShowTextHelp}" Text="One command per line. // starts a comment."
                  FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
@@ -186,7 +187,7 @@
         </TabControl>
         <!-- Shown while the script has errors. -->
         <Border Grid.Row="1" IsVisible="{Binding HasTextErrors}" Background="#3A1414" CornerRadius="3" Margin="0,4,0,0" Padding="8,4">
-          <TextBlock Text="{Binding TextErrorSummary}" Foreground="#FF8888" FontSize="12" TextWrapping="Wrap"/>
+          <TextBlock Text="{Binding TextErrorSummary}" Foreground="{DynamicResource Editor.Bad}" FontSize="12" TextWrapping="Wrap"/>
         </Border>
       </Grid>
 

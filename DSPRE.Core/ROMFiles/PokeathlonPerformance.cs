@@ -40,7 +40,7 @@ namespace DSPRE.ROMFiles
         // The game's sPokeathlonPerformanceArcIdxs, or null when it can't be found or no longer looks like a member table.
         private static ushort[] RomTable()
         {
-            int offset = PokeathlonMemberTableOffset;
+            int offset = RomLocator.PokeathlonMemberTable;
             if (offset < 0 || string.IsNullOrEmpty(arm9Path) || !File.Exists(arm9Path)) return null;
             string key = arm9Path + "|" + File.GetLastWriteTimeUtc(arm9Path).Ticks;
             if (key == _tableKey) return _table;
@@ -147,7 +147,7 @@ namespace DSPRE.ROMFiles
             byte[] onDisk = File.Exists(path) ? File.ReadAllBytes(path) : new byte[RecordSize];
             if (onDisk.Length < RecordSize) onDisk = new byte[RecordSize];
             _data.AsSpan(0, RecordSize).CopyTo(onDisk);
-            File.WriteAllBytes(path, onDisk);
+            ArchiveMembers.Put(DirNames.pokeathlonPerformance, Member, onDisk);
         }
     }
 }

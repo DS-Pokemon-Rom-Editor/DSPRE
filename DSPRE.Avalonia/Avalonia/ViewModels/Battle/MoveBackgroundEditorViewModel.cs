@@ -160,7 +160,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         public bool HasUnsavedChanges => _table != null && (_table.Rows.Count != _saved.Length || _table.Rows.Zip(_saved).Any(z => !z.First.SequenceEqual(z.Second)));
-        public string UnsavedChangesDescription => "Move Backgrounds";
+        public string UnsavedChangesDescription => "Move backgrounds";
 
         public void SaveChanges() => _ = SaveChangesAsync();
 
@@ -176,14 +176,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     try { _table.Save(members); return null; }
                     catch (InvalidOperationException e) { return e.Message; }
                 });
-                if (!saved) { if (error != null) await DialogHelper.ShowError("The move backgrounds were not saved:\n" + error, "Move Backgrounds"); return false; }
+                if (!saved) { if (error != null) await DialogHelper.ShowError("The move backgrounds were not saved:\n" + error, "Move backgrounds"); return false; }
             }
             else
             {
                 try { _table.Save(members); }
                 catch (Exception e) when (e is InvalidOperationException || e is System.IO.IOException || e is UnauthorizedAccessException)
                 {
-                    await DialogHelper.ShowError("The move backgrounds were not saved:\n" + e.Message, "Move Backgrounds");
+                    await DialogHelper.ShowError("The move backgrounds were not saved:\n" + e.Message, "Move backgrounds");
                     return false;
                 }
             }

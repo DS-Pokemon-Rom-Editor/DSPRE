@@ -16,6 +16,9 @@ namespace DSPRE.Resources.ROMToolboxDB {
 
             internal string y9String;
 
+            // What DSPRE wrote, and where, before every dump's sites were measured into RomLocator.Arm9ExpansionSitesIn.
+            // Only recognising those installs reads it: some places differ from the measured ones (Pearl took Diamond's,
+            // and German HGSS's loader offset was mistyped), and HGSS English and Spanish called the loader through r5.
             public static Dictionary<string, string> arm9ExpansionCodeDB = new Dictionary<string, string>() {
                 // Branches
                 // DP
@@ -99,24 +102,24 @@ namespace DSPRE.Resources.ROMToolboxDB {
 
             private static string Key(string field) => field + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage;
 
-            /// <summary>Whether this per-language entry exists, which DSPRE wrote before measuring each dump.</summary>
+            /// <summary>Whether an older DSPRE had a per-language install for this ROM.</summary>
             internal static bool HasLanguageEntry => arm9ExpansionCodeDB.ContainsKey(Key(nameof(branchString)));
 
             /// <summary>Whether DSPRE can apply the expansion to this ROM.</summary>
-            internal static bool Supported => RomInfo.arm9ExpansionSites != null || HasLanguageEntry;
+            internal static bool Supported => RomLocator.Arm9ExpansionSites != null || HasLanguageEntry;
 
             /// <summary>The dumps with measured sites or a per-language entry, the two ways <see cref="Supported"/> passes.</summary>
             internal static List<(string id, int rev)> SupportedDumps =>
-                RomInfo.DumpsMeasured(m => m.Arm9Expansion?.Length == 3)
+                RomLocator.WorksOn(RomLocator.Arm9ExpansionSitesIn)
                     .Concat(RomInfo.KnownDumps.Where(d => arm9ExpansionCodeDB.ContainsKey(nameof(branchString) + "_" + RomInfo.FamilyOfCode(d.id) + "_" + RomInfo.LanguageOfCode(d.id))))
                     .Distinct().ToList();
 
             /// <summary>The expansion for this ROM: its measured sites where it has them, else the per-language entry.</summary>
-            internal ARM9PatchData() : this(RomInfo.arm9ExpansionSites == null) { }
+            internal ARM9PatchData() : this(RomLocator.Arm9ExpansionSites == null) { }
 
             /// <param name="languageEntry">The per-language entry even where measured sites exist, to recognise an older apply.</param>
             internal ARM9PatchData(bool languageEntry) {
-                if (!languageEntry && RomInfo.arm9ExpansionSites is Arm9ExpansionSites sites)
+                if (!languageEntry && RomLocator.Arm9ExpansionSites is Arm9ExpansionSites sites)
                 {
                     // push {r2-r7, lr}; ldr r0, =synthetic overlay; movs r1, #archive; movs r2, #member; bl file loader;
                     // movs r0, #0; movs r1, #3 (the boot pair it replaced); pop {r2-r7, pc}; .word synthetic overlay.
@@ -169,20 +172,6 @@ namespace DSPRE.Resources.ROMToolboxDB {
                 ["overlayString1"] = "00 4B 18 47 41 9C 3D 02",
                 ["overlayString2"] = "00 4B 18 47 01 9C 3D 02",
             };
-            public static Dictionary<string, uint> BDHCamOffsetsDB = new Dictionary<string, uint>() {
-                ["branchOffset" + "_" + RomInfo.GameFamilies.Plat + "_" + RomInfo.GameLanguages.English] = 0x0202040C,
-                ["branchOffset" + "_" + RomInfo.GameFamilies.Plat + "_" + RomInfo.GameLanguages.Spanish] = 0x0202047C,
-                ["branchOffset" + "_" + RomInfo.GameFamilies.HGSS] = 0x02023174, //Also valid for SS, both ESP and ENG
-
-                ["overlayOffset1" + "_" + RomInfo.GameFamilies.Plat + "_" + RomInfo.GameLanguages.English] = 0x0001E1B4,
-                ["overlayOffset1" + "_" + RomInfo.GameFamilies.Plat + "_" + RomInfo.GameLanguages.Spanish] = 0x0001E1BC,
-                ["overlayOffset1" + "_" + RomInfo.GameFamilies.HGSS] = 0x0001574C,
-
-                ["overlayOffset2" + "_" + RomInfo.GameFamilies.Plat + "_" + RomInfo.GameLanguages.English] = 0x0001E2CC,
-                ["overlayOffset2" + "_" + RomInfo.GameFamilies.Plat + "_" + RomInfo.GameLanguages.Spanish] = 0x0001E2D4,
-                ["overlayOffset2" + "_" + RomInfo.GameFamilies.HGSS] = 0x00015864,
-            };
-
             public static uint BDHCamSubroutineOffset = 0x000115B0;
 
             internal static bool SupportsCurrentRom()
@@ -199,29 +188,15 @@ namespace DSPRE.Resources.ROMToolboxDB {
             }
 
             internal BDHCAMPatchData() {
-                switch (RomInfo.gameFamily) {
-                    case GameFamilies.Plat:
-                        overlayNumber = 5;
-                        if (!BDHCamCodeDB.TryGetValue(nameof(branchString) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage, out branchString)
-                            || !BDHCamOffsetsDB.TryGetValue(nameof(branchOffset) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage, out branchOffset)
-                            || !BDHCamOffsetsDB.TryGetValue(nameof(overlayOffset1) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage, out overlayOffset1)
-                            || !BDHCamOffsetsDB.TryGetValue(nameof(overlayOffset2) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage, out overlayOffset2)) {
-                            throw new NotSupportedException();
-                        }
-                        break;
-                    case GameFamilies.HGSS:
-                        overlayNumber = 1;
-                        if (!BDHCamCodeDB.TryGetValue(nameof(branchString) + "_" + RomInfo.gameFamily, out branchString)
-                            || !BDHCamOffsetsDB.TryGetValue(nameof(branchOffset) + "_" + RomInfo.gameFamily, out branchOffset)
-                            || !BDHCamOffsetsDB.TryGetValue(nameof(overlayOffset1) + "_" + RomInfo.gameFamily, out overlayOffset1)
-                            || !BDHCamOffsetsDB.TryGetValue(nameof(overlayOffset2) + "_" + RomInfo.gameFamily, out overlayOffset2)) {
-                            throw new NotSupportedException();
-                        }
-                        break;
-                    default:
-                        throw new NotSupportedException();
-                }
-                branchOffset -= ARM9.address;
+                RomInfo.BdhcamSites sites = RomLocator.BdhcamSites ?? throw new NotSupportedException();
+                string codeKey = RomInfo.gameFamily == GameFamilies.HGSS
+                    ? nameof(branchString) + "_" + RomInfo.gameFamily
+                    : nameof(branchString) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage;
+                if (!BDHCamCodeDB.TryGetValue(codeKey, out branchString)) throw new NotSupportedException();
+                overlayNumber = (byte)sites.Overlay;
+                branchOffset = sites.Branch;
+                overlayOffset1 = sites.Hook1;
+                overlayOffset2 = sites.Hook2;
                 overlayString1 = BDHCamCodeDB[nameof(overlayString1)];
                 overlayString2 = BDHCamCodeDB[nameof(overlayString2)];
                 subroutine = (byte[])new ResourceManager("DSPRE.Resources.ROMToolboxDB.BDHCAMPatchDB", Assembly.GetExecutingAssembly()).GetObject(RomInfo.romID + "_cam");
@@ -232,7 +207,6 @@ namespace DSPRE.Resources.ROMToolboxDB {
         }
         internal class BuildingRotationPatchData {
             internal byte overlayNumber;
-            internal uint defaultPayloadOffset;
             internal uint hookOverlayOffset;
             internal uint hookRuntimeAddress;
             internal uint rotationMatrixFunctionAddress;
@@ -255,8 +229,7 @@ namespace DSPRE.Resources.ROMToolboxDB {
 
             internal BuildingRotationPatchData()
             {
-                defaultPayloadOffset = 0x00011CE8;
-                RomInfo.BuildingRotationSites sites = RomInfo.buildingRotationSites ?? throw new NotSupportedException();
+                RomInfo.BuildingRotationSites sites = RomLocator.BuildingRotationSites ?? throw new NotSupportedException();
                 overlayNumber = (byte)sites.Overlay;
                 hookOverlayOffset = sites.Hook;
                 hookRuntimeAddress = OverlayUtils.OverlayTable.GetRAMAddress(sites.Overlay) + sites.Hook;
@@ -291,36 +264,17 @@ namespace DSPRE.Resources.ROMToolboxDB {
             internal uint initOffset;
             internal string initString;
             internal string REFERENCE_STRING = "19 00 C0 46";
-            internal int pointerDiff;
 
-            internal int specialCaseOffset1 = 0x3B522;
-            internal int specialCaseOffset2 = 0x3B526;
-            internal int specialCaseOffset3 = 0x3B53C;
+            // HGSS: one header read loads the table address between its (mov r1, #0x18) and its mul, so it is undone by
+            // hand. Distances from the init site, like the pointer table below.
+            internal int specialCaseOffset1 = 0x2BA;
+            internal int specialCaseOffset2 = 0x2BE;
+            internal int specialCaseOffset3 = 0x2D4;
 
             internal string specialCaseData1 = "19 00";
             internal string specialCaseData2 = "C0 46";
             internal string specialCaseData3 = "00 00 00 00";
 
-            public static uint getDynamicHeadersInitOffset(string romID) {
-                switch (romID) {
-                    case "CPUE":
-                        return 0x3A024;
-                    case "CPUS":
-                    case "CPUI":
-                    case "CPUF":
-                    case "CPUD":
-                        return 0x3A0C8;
-                    case "CPUJ":
-                        return 0x39BE0;
-                    case "IPKS":
-                        return 0x3B260;
-                    case "IPKJ":
-                    case "IPGJ":
-                        return 0x3AE20;
-                    default:
-                        return 0x3B268;
-                }
-            }
             public static string getDynamicHeadersInitString(string romID) {
                 switch (romID) {
                     case "CPUE":
@@ -341,69 +295,66 @@ namespace DSPRE.Resources.ROMToolboxDB {
                         return "00 B5 01 1C 32 20 00 22 CC F7 58 F9 03 1C DF F7 49 FC 00 BD";
                 }
             }
+            // Format: the (headerID * 0x18) instruction and the (ARM9_HEADER_TABLE_OFFSET + n) literal, as distances from the
+            // init site (RomLocator.Thing.DynamicHeadersInit), which every dump keeps the same.
             public static Dictionary<GameFamilies, Tuple<uint, uint>[]> dynamicHeadersPointersDB = new Dictionary<GameFamilies, Tuple<uint, uint>[]>() {
-                // format: headerID*18 offset, (ARM9_HEADER_TABLE_OFFSET + n) offset
                 [GameFamilies.Plat] = new Tuple<uint, uint>[] {
-                    new Tuple<uint, uint>(0x3A03E, 0x3A048),
-                    new Tuple<uint, uint>(0x3A052, 0x3A05C),
-                    new Tuple<uint, uint>(0x3A066, 0x3A080),
-                    new Tuple<uint, uint>(0x3A08E, 0x3A098),
-                    new Tuple<uint, uint>(0x3A0A2, 0x3A0AC),
-                    new Tuple<uint, uint>(0x3A0B6, 0x3A0C0),
-                    new Tuple<uint, uint>(0x3A0CA, 0x3A0D4),
-                    new Tuple<uint, uint>(0x3A0DE, 0x3A0E8),
-                    new Tuple<uint, uint>(0x3A0F2, 0x3A108),
-                    new Tuple<uint, uint>(0x3A116, 0x3A120),
-                    new Tuple<uint, uint>(0x3A12A, 0x3A134),
-                    new Tuple<uint, uint>(0x3A13E, 0x3A150),
-                    new Tuple<uint, uint>(0x3A15A, 0x3A170),
-                    new Tuple<uint, uint>(0x3A17A, 0x3A184),
-                    new Tuple<uint, uint>(0x3A18E, 0x3A198),
-                    new Tuple<uint, uint>(0x3A1A2, 0x3A1B4),
-                    new Tuple<uint, uint>(0x3A1BE, 0x3A1D0),
-                    new Tuple<uint, uint>(0x3A1DA, 0x3A1EC),
-                    new Tuple<uint, uint>(0x3A1F6, 0x3A208),
-                    new Tuple<uint, uint>(0x3A212, 0x3A224),
+                    new Tuple<uint, uint>(0x1A, 0x24),
+                    new Tuple<uint, uint>(0x2E, 0x38),
+                    new Tuple<uint, uint>(0x42, 0x5C),
+                    new Tuple<uint, uint>(0x6A, 0x74),
+                    new Tuple<uint, uint>(0x7E, 0x88),
+                    new Tuple<uint, uint>(0x92, 0x9C),
+                    new Tuple<uint, uint>(0xA6, 0xB0),
+                    new Tuple<uint, uint>(0xBA, 0xC4),
+                    new Tuple<uint, uint>(0xCE, 0xE4),
+                    new Tuple<uint, uint>(0xF2, 0xFC),
+                    new Tuple<uint, uint>(0x106, 0x110),
+                    new Tuple<uint, uint>(0x11A, 0x12C),
+                    new Tuple<uint, uint>(0x136, 0x14C),
+                    new Tuple<uint, uint>(0x156, 0x160),
+                    new Tuple<uint, uint>(0x16A, 0x174),
+                    new Tuple<uint, uint>(0x17E, 0x190),
+                    new Tuple<uint, uint>(0x19A, 0x1AC),
+                    new Tuple<uint, uint>(0x1B6, 0x1C8),
+                    new Tuple<uint, uint>(0x1D2, 0x1E4),
+                    new Tuple<uint, uint>(0x1EE, 0x200),
                 },
                 [GameFamilies.HGSS] = new Tuple<uint, uint>[] {
-                    new Tuple<uint, uint>(0x3B282, 0x3B28C),
-                    new Tuple<uint, uint>(0x3B296, 0x3B2A8),
-                    new Tuple<uint, uint>(0x3B2B2, 0x3B2BC),
-                    new Tuple<uint, uint>(0x3B2C6, 0x3B2D0),
-                    new Tuple<uint, uint>(0x3B2DA, 0x3B2E4),
-                    new Tuple<uint, uint>(0x3B2EE, 0x3B2F8),
-                    new Tuple<uint, uint>(0x3B302, 0x3B30C),
-                    new Tuple<uint, uint>(0x3B316, 0x3B320),
-                    new Tuple<uint, uint>(0x3B32A, 0x3B340),
-                    new Tuple<uint, uint>(0x3B34A, 0x3B354),
-                    new Tuple<uint, uint>(0x3B35E, 0x3B368),
-                    new Tuple<uint, uint>(0x3B372, 0x3B384),
-                    new Tuple<uint, uint>(0x3B38E, 0x3B3A4),
-                    new Tuple<uint, uint>(0x3B3AE, 0x3B3C4),
-                    new Tuple<uint, uint>(0x3B3CE, 0x3B3E0),
-                    new Tuple<uint, uint>(0x3B3EA, 0x3B3FC),
-                    new Tuple<uint, uint>(0x3B406, 0x3B418),
-                    new Tuple<uint, uint>(0x3B422, 0x3B434),
-                    new Tuple<uint, uint>(0x3B43E, 0x3B450),
-                    new Tuple<uint, uint>(0x3B45A, 0x3B46C),
-                    new Tuple<uint, uint>(0x3B476, 0x3B488),
-                    new Tuple<uint, uint>(0x3B492, 0x3B4A4),
-                    new Tuple<uint, uint>(0x3B4AE, 0x3B4C0),
-                    new Tuple<uint, uint>(0x3B4CA, 0x3B4D8),
-                    new Tuple<uint, uint>(0x3B4E2, 0x3B4F4),
-                    new Tuple<uint, uint>(0x3B4FE, 0x3B514),
+                    new Tuple<uint, uint>(0x1A, 0x24),
+                    new Tuple<uint, uint>(0x2E, 0x40),
+                    new Tuple<uint, uint>(0x4A, 0x54),
+                    new Tuple<uint, uint>(0x5E, 0x68),
+                    new Tuple<uint, uint>(0x72, 0x7C),
+                    new Tuple<uint, uint>(0x86, 0x90),
+                    new Tuple<uint, uint>(0x9A, 0xA4),
+                    new Tuple<uint, uint>(0xAE, 0xB8),
+                    new Tuple<uint, uint>(0xC2, 0xD8),
+                    new Tuple<uint, uint>(0xE2, 0xEC),
+                    new Tuple<uint, uint>(0xF6, 0x100),
+                    new Tuple<uint, uint>(0x10A, 0x11C),
+                    new Tuple<uint, uint>(0x126, 0x13C),
+                    new Tuple<uint, uint>(0x146, 0x15C),
+                    new Tuple<uint, uint>(0x166, 0x178),
+                    new Tuple<uint, uint>(0x182, 0x194),
+                    new Tuple<uint, uint>(0x19E, 0x1B0),
+                    new Tuple<uint, uint>(0x1BA, 0x1CC),
+                    new Tuple<uint, uint>(0x1D6, 0x1E8),
+                    new Tuple<uint, uint>(0x1F2, 0x204),
+                    new Tuple<uint, uint>(0x20E, 0x220),
+                    new Tuple<uint, uint>(0x22A, 0x23C),
+                    new Tuple<uint, uint>(0x246, 0x258),
+                    new Tuple<uint, uint>(0x262, 0x270),
+                    new Tuple<uint, uint>(0x27A, 0x28C),
+                    new Tuple<uint, uint>(0x296, 0x2AC),
                 },
             };
 
-            internal DynamicHeadersPatchData() {
-                initOffset = getDynamicHeadersInitOffset(RomInfo.romID);
-                initString = getDynamicHeadersInitString(RomInfo.romID);
+            internal static bool SupportsCurrentRom => RomLocator.Where(RomLocator.Thing.DynamicHeadersInit) != null;
 
-                if (RomInfo.gameFamily == GameFamilies.HGSS) {
-                    pointerDiff = (int)(initOffset - getDynamicHeadersInitOffset("IPKE"));
-                } else {
-                    pointerDiff = (int)(initOffset - getDynamicHeadersInitOffset("CPUE"));
-                }
+            internal DynamicHeadersPatchData() {
+                initOffset = (uint)(RomLocator.Where(RomLocator.Thing.DynamicHeadersInit)?.Offset ?? throw new NotSupportedException());
+                initString = getDynamicHeadersInitString(RomInfo.romID);
             }
         }
 
@@ -413,20 +364,21 @@ namespace DSPRE.Resources.ROMToolboxDB {
             [GameFamilies.HGSS] = 0,
         };
 
+        // Distances from RomLocator.Thing.MatrixExpansionCode, and what goes there.
         public static Dictionary<uint[], string> matrixExpansionDB = new Dictionary<uint[], string>() {
-            [new uint[] { 0x0203AEBE }] = "FF 01",
-            [new uint[] { 0x0203AEC0 }] = "76 01",
-            [new uint[] { 0x0203AF58 }] = "C9 01",
-            [new uint[] { 0x0203AF72 }] = "49 01",
-            [new uint[] { 0x0203AF8C }] = "3E 06 00 00",
-            [new uint[] { 0x0203AF90 }] = "3C 1F 00 00",
-            [new uint[] { 0x0203AFA8 }] = "50 1F 00 00",
-            [new uint[] { 0x0203AFF8,
-                          0x0203B108,
-                          0x0203B1F0,
-                          0x0203B25C }] = "C4 12 00 00",
-            [new uint[] { 0x0203B088 }] = "84 0C 00 00",
-            [new uint[] { 0x0203B0BC }] = "7C 0C 00 00",
+            [new uint[] { 0x0 }] = "FF 01",
+            [new uint[] { 0x2 }] = "76 01",
+            [new uint[] { 0x9A }] = "C9 01",
+            [new uint[] { 0xB4 }] = "49 01",
+            [new uint[] { 0xCE }] = "3E 06 00 00",
+            [new uint[] { 0xD2 }] = "3C 1F 00 00",
+            [new uint[] { 0xEA }] = "50 1F 00 00",
+            [new uint[] { 0x13A,
+                          0x24A,
+                          0x332,
+                          0x39E }] = "C4 12 00 00",
+            [new uint[] { 0x1CA }] = "84 0C 00 00",
+            [new uint[] { 0x1FE }] = "7C 0C 00 00",
         };
     }
 }

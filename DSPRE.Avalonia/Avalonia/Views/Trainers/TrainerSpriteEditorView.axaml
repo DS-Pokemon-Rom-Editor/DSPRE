@@ -8,7 +8,6 @@
         x:Class="DSPRE.Avalonia.Views.Trainers.TrainerSpriteEditorView"
         x:Name="RootWindow"
         x:DataType="vm:TrainerSpriteEditorViewModel"
-        Title="{Binding Title}"
         Width="900" Height="760"
         MinWidth="680" MinHeight="520"
         WindowStartupLocation="CenterOwner">
@@ -38,7 +37,7 @@
           <Button Content="Export PNG…" controls:Icon.Key="export" Click="Export_Click"/>
           <Button Content="Export sheet…" controls:Icon.Key="export" Click="ExportSheet_Click" IsVisible="{Binding CanUseSheets}"/>
           <Button Content="Import sheet…" controls:Icon.Key="import" Click="ImportSheet_Click" IsVisible="{Binding CanUseSheets}"/>
-          <Button Content="Open in graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click" IsVisible="{Binding ShowsAnimationsTab}"/>
+          <Button Content="Open in Graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click" IsVisible="{Binding ShowsAnimationsTab}"/>
         </StackPanel>
         <StackPanel x:Name="SpritePicker" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2">
           <TextBlock Text="{Binding ItemLabel}" VerticalAlignment="Center"/>
@@ -160,7 +159,7 @@
                       Classes.readonly="{Binding !CanEditAnimJson}">
             <TabItem Header="Editor">
               <DockPanel Margin="0,8,0,0">
-                <TextBlock DockPanel.Dock="Top" Text="{Binding AnimModelStatusText}" FontSize="11" Foreground="Orange" TextWrapping="Wrap"
+                <TextBlock DockPanel.Dock="Top" Text="{Binding AnimModelStatusText}" FontSize="11" Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"
                            Margin="0,0,0,8" IsVisible="{Binding AnimModelStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,10">

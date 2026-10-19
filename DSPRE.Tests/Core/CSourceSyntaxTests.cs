@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using DSPRE.HgEngine;
 using Xunit;
@@ -14,7 +15,7 @@ namespace DSPRE.Tests.Core
         public void BracesAndCommasInsideStringsAndCommentsAreNotCode()
         {
             const string src = "const char *s[] = { \"a, {b}\", /* }, */ \"c\" // }\n, 'x' };";
-            var decl = new CSourceFile(src).Find("s");
+            CDeclaration decl = new CSourceFile(src).Find("s");
 
             Assert.NotNull(decl);
             Assert.Equal(new[] { "\"a, {b}\"", "\"c\"", "'x'" }, decl.Init.Items.Select(i => i.ValueText(src)));
@@ -24,7 +25,7 @@ namespace DSPRE.Tests.Core
         public void SymbolicIndexDesignatorsKeepTheirNameAndValue()
         {
             const string src = "static const u16 t[] = {\n    [ABILITY_STENCH] = { .a = TRUE },\n    [3] = 7,\n    9,\n};\n";
-            var items = new CSourceFile(src).Find("t").Init.Items;
+            List<CInitItem> items = new CSourceFile(src).Find("t").Init.Items;
 
             Assert.Equal("ABILITY_STENCH", items[0].IndexText);
             Assert.Equal(-1, items[0].Position);
@@ -38,7 +39,7 @@ namespace DSPRE.Tests.Core
         public void RowsUnderAPreprocessorConditionAreMarkedAndNotMergedIntoTheirNeighbours()
         {
             const string src = "const u8 t[][2] = {\n    { 1, 2 },\n#if FAIRY_TYPE_IMPLEMENTED\n    { 3, 4 },\n#else\n    { 5, 6 },\n#endif\n    { 7, 8 },\n};\n";
-            var items = new CSourceFile(src).Find("t").Init.Items;
+            List<CInitItem> items = new CSourceFile(src).Find("t").Init.Items;
 
             Assert.Equal(4, items.Count);
             Assert.Empty(items[0].Conditions);
@@ -52,10 +53,10 @@ namespace DSPRE.Tests.Core
         public void DeclarationsAreFoundByNameWithTheirDimensionsAndFunctionBodiesAreSkipped()
         {
             const string src = "#define N 2\nvoid f(void)\n{\n    int local[] = { 1 };\n}\nconst u16 sLut[N][2] = {\n    { MAP_R01, SWARM_GRASS }, // first\n    { MAP_R03, SWARM_SURFING },\n};\n";
-            var file = new CSourceFile(src);
+            CSourceFile file = new CSourceFile(src);
 
             Assert.Null(file.Find("local"));
-            var decl = file.Find("sLut");
+            CDeclaration decl = file.Find("sLut");
             Assert.Equal(new[] { "[N]", "[2]" }, decl.Dimensions);
             Assert.Equal(2, decl.Init.Items.Count);
             Assert.Equal("SWARM_SURFING", decl.Init.Items[1].List.Items[1].ValueText(src));
@@ -66,7 +67,7 @@ namespace DSPRE.Tests.Core
         public void CastsAndSizeofExpressionsStayOneValue()
         {
             const string src = "const PokedexArchiveMember m[] = {\n    [0] = { (const u8 *)sA, sizeof(sA) / sizeof(*sA) },\n};\n";
-            var row = new CSourceFile(src).Find("m").Init.Items[0].List;
+            CInitList row = new CSourceFile(src).Find("m").Init.Items[0].List;
 
             Assert.Equal(2, row.Items.Count);
             Assert.Equal("(const u8 *)sA", row.Items[0].ValueText(src));
@@ -77,7 +78,7 @@ namespace DSPRE.Tests.Core
         public void ADirectiveOnlyStartsAtTheBeginningOfALineAndRunsThroughContinuations()
         {
             const string src = "#define LONG(a) \\\n    ((a) + 1)\nint x = a # b;\n";
-            var tokens = CLexer.Tokenize(src);
+            List<CToken> tokens = CLexer.Tokenize(src);
 
             Assert.Equal(CTokenKind.Directive, tokens[0].Kind);
             Assert.EndsWith("((a) + 1)", tokens[0].Text(src));
@@ -90,7 +91,7 @@ namespace DSPRE.Tests.Core
             const string src = "const T t[] = {\n    [SPECIES_A] = { .x = 1, .y = { 2, 3 } },\n    [SPECIES_B] = { .x = 4 },\n};\n";
             int open = src.IndexOf("{ .x = 4");
             int close = src.IndexOf('}', open);
-            var list = new CSourceFile(src, open, close + 1).ListAt(open);
+            CInitList list = new CSourceFile(src, open, close + 1).ListAt(open);
 
             Assert.Equal("4", list.Field("x").ValueText(src));
             Assert.Single(list.Items);
@@ -99,7 +100,7 @@ namespace DSPRE.Tests.Core
         [Fact]
         public void ConditionsEvaluateLikeThePreprocessor()
         {
-            var defined = new System.Collections.Generic.HashSet<string> { "FAIRY_TYPE_IMPLEMENTED", "EXPAND_ROAMERS" };
+            HashSet<string> defined = new System.Collections.Generic.HashSet<string> { "FAIRY_TYPE_IMPLEMENTED", "EXPAND_ROAMERS" };
             int? Value(string n) => n == "FAIRY_TYPE_IMPLEMENTED" ? 1 : n == "GEN" ? 6 : null;
 
             Assert.True(CConditions.Evaluate(new[] { "FAIRY_TYPE_IMPLEMENTED" }, defined.Contains, Value));
@@ -114,7 +115,7 @@ namespace DSPRE.Tests.Core
         public void ATrailingCommentIsNotPartOfItsDirective()
         {
             const string src = "#define X 5 // five\n/* #define Y 6 */\n";
-            var tokens = CLexer.Tokenize(src, keepComments: true);
+            List<CToken> tokens = CLexer.Tokenize(src, keepComments: true);
 
             Assert.Equal("#define X 5 ", tokens[0].Text(src));
             Assert.Equal(CTokenKind.Comment, tokens[1].Kind);

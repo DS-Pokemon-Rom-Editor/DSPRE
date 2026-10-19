@@ -62,7 +62,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         /// <summary>The filters beyond the name; they need every trainer read, which hg-engine projects keep in source.</summary>
         public bool HasFacts => _facts != null;
         private string _status = "";
-        public string Status { get => _status; private set { _status = value; OnPropertyChanged(); } }
+        public string StatusText { get => _status; private set { _status = value; OnPropertyChanged(); } }
 
         private TrainerSearchResult _selectedResult;
         public TrainerSearchResult SelectedResult { get => _selectedResult; set { _selectedResult = value; OnPropertyChanged(); } }
@@ -86,8 +86,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         /// <summary>Reads every trainer's class, party and flags for the filters.</summary>
         public async Task LoadFactsAsync()
         {
-            if (HgEngine.HgEngineProject.IsActive) { Status = "hg-engine projects search by name only."; return; }
-            Status = "Reading trainers…";
+            if (HgEngine.HgEngineProject.IsActive) { StatusText = "hg-engine projects search by name only."; return; }
+            StatusText = "Reading trainers…";
             int count = _names.Length;
             _facts = await Task.Run(() =>
             {
@@ -112,7 +112,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 }
                 return facts;
             });
-            Status = "";
+            StatusText = "";
             OnPropertyChanged(nameof(HasFacts));
             Search();
         }

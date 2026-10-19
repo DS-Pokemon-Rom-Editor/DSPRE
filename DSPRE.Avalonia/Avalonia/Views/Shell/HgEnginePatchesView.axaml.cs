@@ -33,16 +33,19 @@ namespace DSPRE.Avalonia.Views.Shell
         private async void Delete_Click(object sender, RoutedEventArgs e)
         {
             string trouble = VM?.DeleteSelected();
-            if (trouble != null) await DialogHelper.ShowError(trouble, "Delete a patch");
+            if (trouble != null) await DialogHelper.ShowError(trouble, "hg-engine patches error");
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e)
         {
             string trouble = VM?.Save();
-            if (trouble != null) await DialogHelper.ShowError(trouble, "hg-engine patches");
+            if (trouble != null) await DialogHelper.ShowError(trouble, "hg-engine patches error");
         }
 
-        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+        }
 
         private async void Reload_Click(object sender, RoutedEventArgs e)
         {
@@ -55,7 +58,7 @@ namespace DSPRE.Avalonia.Views.Shell
                 return;
 
             string trouble = vm.Reload();
-            if (trouble != null) await DialogHelper.ShowError(trouble, "hg-engine patches");
+            if (trouble != null) await DialogHelper.ShowError(trouble, "hg-engine patches error");
         }
     }
 }

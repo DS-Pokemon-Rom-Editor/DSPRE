@@ -201,7 +201,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         // ── IEditorWithUnsavedChanges ──────────────────────────────────────────
         public bool HasUnsavedChanges => ModifiedEntries > 0;
         public string UnsavedChangesDescription =>
-            $"BTX Editor ({ModifiedEntries} modified overworld{(ModifiedEntries != 1 ? "s" : "")})";
+            $"{ModifiedEntries} overworld{(ModifiedEntries != 1 ? "s" : "")}";
 
         public void SaveChanges() => SaveAll();
         public void DiscardChanges()
@@ -535,13 +535,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     mmodelMember.ToString("D4"));
                 try
                 {
-                    File.WriteAllBytes(newMemberPath, stagedImage);
+                    ArchiveMembers.Put(DirNames.OWSprites, (int)mmodelMember, stagedImage);
                 }
                 catch (Exception ex)
                 {
                     try
                     {
-                        if (File.Exists(newMemberPath)) File.Delete(newMemberPath);
+                        ArchiveMembers.Delete(newMemberPath);
                     }
                     catch { }
 
@@ -586,13 +586,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (props != 0 && !HgEngine.HgEngineOverworlds.TrySetProperties(tag, props, out error))
                 return $"NPC {tag} was added but its properties couldn't be copied: {error}";
 
-            string dir = RomInfo.gameDirs[DirNames.OWSprites].unpackedDir;
             try
             {
-                int last = Directory.GetFiles(dir).Select(Path.GetFileName).Select(n => int.TryParse(n, out int i) ? i : -1).Max();
-                for (int i = last; i >= gfx; i--)
-                    File.Move(Path.Combine(dir, i.ToString("D4")), Path.Combine(dir, (i + 1).ToString("D4")));
-                File.WriteAllBytes(Path.Combine(dir, gfx.ToString("D4")), image ?? File.ReadAllBytes(Path.Combine(dir, templateMember.ToString("D4"))));
+                byte[] picture = image ?? File.ReadAllBytes(ArchiveMembers.PathOf(DirNames.OWSprites, (int)templateMember));
+                ArchiveMembers.ShiftUpFollowingCheckout(DirNames.OWSprites, gfx);
+                ArchiveMembers.Put(DirNames.OWSprites, gfx, picture);
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
@@ -733,6 +731,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             OnPropertyChanged(nameof(ExpansionStatusText));
             OnPropertyChanged(nameof(CanAddEntry));
             return null;
+        }
+
+        /// <summary>Starts on the overworld table entry <paramref name="entry"/> when the table has it.</summary>
+        public void OpenAt(uint entry)
+        {
+            int index = _owKeys.IndexOf(entry);
+            if (index >= 0) SelectEntry(index);
         }
 
         /// <summary>Selects an entry and always reloads its data, unlike the SelectedIndex
@@ -1064,13 +1069,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     StatusText = "Save failed: " + sourceError;
                     return false;
                 }
-                File.WriteAllBytes(path, data);
+                ArchiveMembers.Put(DirNames.OWSprites, (int)sprite, data);
             }
             catch (Exception ex)
             {
                 if (original != null)
                 {
-                    try { File.WriteAllBytes(path, original); } catch { }
+                    try { ArchiveMembers.Put(DirNames.OWSprites, (int)sprite, original); } catch { }
                 }
                 if (metadataApplied && !patch.TryRollback(out string rollbackError))
                     StatusText = $"Save failed: {ex.Message}. Metadata rollback also failed: {rollbackError}";

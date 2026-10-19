@@ -20,7 +20,7 @@
       <!-- Shown only when the loaded ROM isn't a supported version. -->
       <Border IsVisible="{Binding !IsAvailable}" Padding="10" CornerRadius="4"
               Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
-        <TextBlock Text="{Binding UnavailableText}" TextWrapping="Wrap" Foreground="OrangeRed"/>
+        <TextBlock Text="{Binding UnavailableText}" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Bad}"/>
       </Border>
 
       <Grid IsEnabled="{Binding IsAvailable}" IsVisible="{Binding IsAvailable}" ColumnDefinitions="Auto,24,*">
@@ -186,7 +186,7 @@
                               ToolTip.Tip="Its class or species theme, else the standard one."/>
                     <CheckBox Content="In Kanto" IsChecked="{Binding KantoMusic}" IsVisible="{Binding ShowKantoMusic}" IsEnabled="{Binding PlayBattleMusic}"
                               VerticalAlignment="Center" ToolTip.Tip="The standard themes play their Kanto versions."/>
-                    <TextBlock Text="{Binding BattleMusicText}" IsVisible="{Binding PlayBattleMusic}" VerticalAlignment="Center" Opacity="0.7"/>
+                    <TextBlock Foreground="{DynamicResource Editor.Subtle}" Text="{Binding BattleMusicText}" IsVisible="{Binding PlayBattleMusic}" VerticalAlignment="Center"/>
                   </StackPanel>
                   <TextBlock Grid.Row="8" Grid.Column="0" Text="Nature" VerticalAlignment="Center" IsVisible="{Binding CanPickNature}"/>
                   <ComboBox Grid.Row="8" Grid.Column="2" ItemsSource="{Binding NatureOptions}" SelectedIndex="{Binding NatureIndex}" Width="140" HorizontalAlignment="Left"

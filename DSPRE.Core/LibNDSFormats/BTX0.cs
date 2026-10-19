@@ -34,25 +34,18 @@ namespace DSPRE.LibNDSFormats
         /// <summary>Decodes with the given palette rather than the static <see cref="PaletteIndex"/>.</summary>
         public static RawImage ReadRaw(byte[] BTXFile, uint paletteIndex)
         {
-            if (BitConverter.ToUInt32(BTXFile, 0) != 811095106)
+            // The picture is the whole texture data read as one sheet as wide as the first texture.
+            DSPRE.ROMFiles.Tex0Block block = DSPRE.ROMFiles.Tex0Block.ReadBtx0(BTXFile, out _);
+            if (block == null || block.Textures.Count == 0)
             {
                 return null;
             }
-            uint num = BitConverter.ToUInt32(BTXFile, 16);
-            if (BitConverter.ToUInt32(BTXFile, (int)num) != 811091284)
-            {
-                return null;
-            }
-            uint num2 = num + BitConverter.ToUInt16(BTXFile, (int)(num + 14));
-            uint num3 = (ImageOffset = num + BitConverter.ToUInt32(BTXFile, (int)(num + 20)));
-            uint num4 = BitConverter.ToUInt32(BTXFile, (int)(num + 48)) << 3;
-            uint num5 = num + BitConverter.ToUInt32(BTXFile, (int)(num + 52));
-            uint num6 = (PaletteOffset = num + BitConverter.ToUInt32(BTXFile, (int)(num + 56)));
-            uint num7 = BTXFile[num2 + 1];
-            uint num8 = BitConverter.ToUInt16(BTXFile, (int)(num2 + 12 + num7 * 4 + 6));
-            uint num9 = (uint)(8 << (((int)num8 >> 4) & 7));
-            uint num10 = (num8 >> 10) & 7;
-            uint num11 = (PaletteCount = BTXFile[num5 + 1]);
+            uint num3 = ImageOffset = (uint)block.TextureDataAt;
+            uint num4 = (uint)block.PaletteDataSize;
+            uint num6 = PaletteOffset = (uint)block.PaletteDataAt;
+            uint num9 = (uint)block.Textures[0].Width;
+            uint num10 = (uint)block.Textures[0].Format;
+            uint num11 = PaletteCount = (uint)block.Palettes.Count;
             PaletteSize = num4;
             if (num11 == 0 || paletteIndex >= num11)
             {
@@ -104,34 +97,6 @@ namespace DSPRE.LibNDSFormats
                 return raw;
             }
             return null;
-        }
-
-        public static Bitmap Read(byte[] BTXFile)
-        {
-            RawImage raw = ReadRaw(BTXFile);
-            if (raw == null)
-            {
-                return null;
-            }
-            Bitmap bitmap = new Bitmap(raw.Width, raw.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-            System.Drawing.Imaging.BitmapData data = bitmap.LockBits(
-                new Rectangle(0, 0, raw.Width, raw.Height),
-                System.Drawing.Imaging.ImageLockMode.WriteOnly,
-                System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-            try
-            {
-                // Format32bppArgb memory layout is B,G,R,A little-endian, same as RawImage.Bgra.
-                for (int y = 0; y < raw.Height; y++)
-                {
-                    System.Runtime.InteropServices.Marshal.Copy(
-                        raw.Bgra, y * raw.Stride, data.Scan0 + y * data.Stride, raw.Stride);
-                }
-            }
-            finally
-            {
-                bitmap.UnlockBits(data);
-            }
-            return bitmap;
         }
 
         /// <summary>
@@ -194,21 +159,14 @@ namespace DSPRE.LibNDSFormats
         private static bool TryGetLayout(byte[] f, uint paletteIndex, out int imageOffset, out int paletteBase, out int colorCount, out int width, out int height)
         {
             imageOffset = paletteBase = colorCount = width = height = 0;
-            if (f == null || f.Length < 20 || BitConverter.ToUInt32(f, 0) != 811095106) return false;
-            uint tex = BitConverter.ToUInt32(f, 16);
-            if (tex + 60 > f.Length || BitConverter.ToUInt32(f, (int)tex) != 811091284) return false;
-            uint dict = tex + BitConverter.ToUInt16(f, (int)(tex + 14));
-            uint img = tex + BitConverter.ToUInt32(f, (int)(tex + 20));
-            uint palSize = BitConverter.ToUInt32(f, (int)(tex + 48)) << 3;
-            uint palDict = tex + BitConverter.ToUInt32(f, (int)(tex + 52));
-            uint pal = tex + BitConverter.ToUInt32(f, (int)(tex + 56));
-            if (dict + 1 >= f.Length || palDict + 1 >= f.Length) return false;
-            uint entries = f[dict + 1];
-            uint paramsAt = dict + 12 + entries * 4 + 6;
-            if (paramsAt + 2 > f.Length) return false;
-            uint param = BitConverter.ToUInt16(f, (int)paramsAt);
+            DSPRE.ROMFiles.Tex0Block block = f == null ? null : DSPRE.ROMFiles.Tex0Block.ReadBtx0(f, out _);
+            if (block == null || block.Textures.Count == 0) return false;
+            uint img = (uint)block.TextureDataAt;
+            uint palSize = (uint)block.PaletteDataSize;
+            uint pal = (uint)block.PaletteDataAt;
+            uint param = block.Textures[0].Parameters;
             if (((param >> 10) & 7) != 3) return false;
-            uint count = f[palDict + 1];
+            uint count = (uint)block.Palettes.Count;
             if (count == 0 || paletteIndex >= count) return false;
             int length = (int)(palSize / count / 2);
             if (palSize < 64 && count >= 2) length = (int)((f.Length - pal) / 2);
@@ -403,77 +361,6 @@ namespace DSPRE.LibNDSFormats
             return seen.Count;
         }
 
-        public static byte[] Write(byte[] BTXFile, Bitmap bm)
-        {
-            HashSet<Color> hashSet = new HashSet<Color>();
-            uint num = 0u;
-            uint num2 = 0u;
-            for (int i = 0; i < bm.Width * bm.Height; i++)
-            {
-                hashSet.Add(bm.GetPixel((int)num, (int)num2));
-                num++;
-                if (num >= bm.Width)
-                {
-                    num = 0u;
-                    num2++;
-                }
-            }
-            Color[] array = hashSet.ToArray();
-            num = 0u;
-            num2 = 0u;
-            for (int j = (int)ImageOffset; j < PaletteOffset; j++)
-            {
-                Color pixel = bm.GetPixel((int)num, (int)num2);
-                num++;
-                uint num3 = 0u;
-                for (int k = 0; k < array.Length; k++)
-                {
-                    if (array[k] == pixel)
-                    {
-                        num3 = (uint)k;
-                        break;
-                    }
-                }
-                pixel = bm.GetPixel((int)num, (int)num2);
-                num++;
-                for (int l = 0; l < array.Length; l++)
-                {
-                    if (array[l] == pixel)
-                    {
-                        num3 += (uint)(l << 4);
-                        break;
-                    }
-                }
-                BTXFile[j] = (byte)num3;
-                if (num >= ImageWidth)
-                {
-                    num = 0u;
-                    num2++;
-                }
-            }
-            for (int m = 0; m < array.Length; m++)
-            {
-                uint num4 = (uint)Math.Round((double)(int)array[m].R / 8.0);
-                uint num5 = (uint)Math.Round((double)(int)array[m].G / 8.0);
-                uint num6 = (uint)Math.Round((double)(int)array[m].B / 8.0);
-                if (num4 > 31)
-                {
-                    num4 = 31u;
-                }
-                if (num5 > 31)
-                {
-                    num5 = 31u;
-                }
-                if (num6 > 31)
-                {
-                    num6 = 31u;
-                }
-                uint num7 = num4 + (num5 << 5) + (num6 << 10);
-                BTXFile[PaletteOffset + PaletteIndex * (ColorCount * 2) + m * 2] = (byte)num7;
-                BTXFile[PaletteOffset + PaletteIndex * (ColorCount * 2) + m * 2 + 1] = (byte)(num7 >> 8);
-            }
-            return BTXFile;
-        }
     }
 
 }

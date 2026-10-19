@@ -201,7 +201,7 @@ namespace DSPRE.ROMFiles
             void Write()
             {
                 ProjectSourceWatcher.Expect(path);
-                File.WriteAllText(path, string.Join(newline, lines) + (endsWithNewline ? newline : ""));
+                PlainFiles.WriteText(path, string.Join(newline, lines) + (endsWithNewline ? newline : ""));
             }
 
             if (m.LineNumber < 1 || m.LineNumber > lines.Length)

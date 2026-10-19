@@ -17,12 +17,14 @@
     <controls:EditorToolbar>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}"/>
+        <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}"/>
         <controls:HelpTip Text="Entries in use can't be removed, and saving renumbers the item events."/>
     </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Bottom" Padding="0,10,0,0">
       <StackPanel Spacing="6">
-        <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="Firebrick" TextWrapping="Wrap"/>
+        <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap"/>
         <StackPanel Orientation="Horizontal" Spacing="6">
           <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding NewItemIndex}"
                     Width="260" HorizontalAlignment="Left"/>

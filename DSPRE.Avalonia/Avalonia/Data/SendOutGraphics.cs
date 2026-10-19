@@ -140,6 +140,18 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Forgets a particle file read earlier, after it has been edited.</summary>
         public void ForgetParticles(int entry) => _bursts.Remove(entry);
 
+        /// <summary>The archives the trainer, ball and party-row pictures come from.</summary>
+        public static readonly DirNames[] PictureArchives = { DirNames.trainerGraphics, DirNames.trainerBackGraphics, DirNames.battleObj, DirNames.ballParticles };
+
+        /// <summary>Forgets every picture read so far, after one of <see cref="PictureArchives"/> was saved; sounds are kept.</summary>
+        public void ForgetPictures()
+        {
+            _balls.Clear(); _ballCells.Clear(); _bursts.Clear();
+            _front = _back = null; _frontClass = -1; _backFrameStarts = null;
+            _trainerBanks.Clear(); _trainerFrames.Clear();
+            _row = null; _rowSeqs = null;
+        }
+
         // ── Trainers ────────────────────────────────────────────────────────────────────────────
         private TrainerClassSpriteRenderer _front, _back;
         private int _frontClass = -1;

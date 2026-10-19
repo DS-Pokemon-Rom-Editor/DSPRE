@@ -59,7 +59,7 @@ namespace DSPRE.ROMFiles
             string path = PathOf(curve);
             byte[] data = File.ReadAllBytes(path);
             for (int l = 0; l < Levels; l++) BitConverter.GetBytes(Totals[curve][l]).CopyTo(data, l * 4);
-            File.WriteAllBytes(path, data);
+            ArchiveMembers.Put(DirNames.growthTable, curve, data);
         }
 
         /// <summary>A copy of <paramref name="curve"/>'s totals.</summary>

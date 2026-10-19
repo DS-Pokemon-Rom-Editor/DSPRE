@@ -17,6 +17,7 @@ namespace DSPRE.Avalonia
         private readonly Action _raise;
         private byte[] _last;
         private DateTime _lastCapture = DateTime.MinValue;
+        private object _lastGroup;
         private bool _applying;
         private const int CoalesceMs = 500;
 
@@ -51,15 +52,19 @@ namespace DSPRE.Avalonia
         public bool IsDirty => _history.IsDirty;
         public void MarkSaved() => _history.MarkSaved();
 
-        public void Record()
+        /// <param name="group">Changes recorded with the same group, one after another, are one step, however slow.</param>
+        public void Record(object group = null)
         {
             if (_applying) return;
             byte[] now = _take();
             if (now.AsSpan().SequenceEqual(_last)) return;
-            bool coalesce = (DateTime.UtcNow - _lastCapture).TotalMilliseconds < CoalesceMs;
+            bool coalesce = group != null
+                ? ReferenceEquals(group, _lastGroup)
+                : (DateTime.UtcNow - _lastCapture).TotalMilliseconds < CoalesceMs;
             _history.Capture(now, coalesce);
             _last = now;
             _lastCapture = DateTime.UtcNow;
+            _lastGroup = group;
             _raise();
         }
 
@@ -73,6 +78,7 @@ namespace DSPRE.Avalonia
             finally { _applying = false; }
             _last = state;
             _lastCapture = DateTime.MinValue;   // the next edit starts a new step
+            _lastGroup = null;
             _raise();
         }
     }

@@ -23,7 +23,7 @@
 
   <DockPanel Margin="10">
     <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" Text="{Binding StatusText}" TextWrapping="Wrap"/>
-    <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" Opacity="0.7"
+    <TextBlock Foreground="{DynamicResource Editor.Subtle}" DockPanel.Dock="Bottom" Margin="0,8,0,0"
                Text="Double-click a result to go to it."/>
 
     <ListBox x:Name="ResultList" Margin="0,8,0,0"

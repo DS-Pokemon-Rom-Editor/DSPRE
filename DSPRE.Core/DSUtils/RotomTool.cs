@@ -135,7 +135,7 @@ namespace DSPRE
                     try
                     {
                         Directory.CreateDirectory(aside);
-                        File.Move(source, Path.Combine(aside, Path.GetFileName(source)), overwrite: true);
+                        PlainFiles.Move(source, Path.Combine(aside, Path.GetFileName(source)), overwrite: true);
                     }
                     catch (IOException ex) { AppLogger.Error("RotomTool.SetAsideHgEngineOwnedSources: " + ex.Message); }
                 }
@@ -145,7 +145,7 @@ namespace DSPRE
         private static void Stage(string from, string to, System.Collections.Generic.List<string> staged)
         {
             if (File.Exists(to) || !File.Exists(from)) return;
-            File.Copy(from, to);
+            PlainFiles.Copy(from, to);
             staged.Add(to);
         }
 

@@ -9,7 +9,7 @@ namespace DSPRE.Tests
     /// so this is set per machine rather than written into each test.
     ///
     /// Set them either way round:
-    ///   testroms.json, beside DS_Map.sln (git ignores it):
+    ///   testroms.json, beside DSPRE.sln (git ignores it):
     ///       { "heartGold": "D:\\roms\\HeartGold (USA)_DSPRE_contents", "platinum": "...", "diamond": "..." }
     ///   or environment variables, which win over the file:
     ///       DSPRE_TEST_HEARTGOLD, DSPRE_TEST_PLATINUM, DSPRE_TEST_DIAMOND
@@ -62,7 +62,7 @@ namespace DSPRE.Tests
                 }
             }
             return _config.Value.ValueKind == JsonValueKind.Object
-                && _config.Value.TryGetProperty(key, out var value)
+                && _config.Value.TryGetProperty(key, out JsonElement value)
                 && value.ValueKind == JsonValueKind.String
                     ? value.GetString() : null;
         }
@@ -73,15 +73,29 @@ namespace DSPRE.Tests
             string named = Environment.GetEnvironmentVariable("DSPRE_TEST_ROMS_CONFIG");
             if (!string.IsNullOrWhiteSpace(named)) return File.Exists(named) ? named : null;
 
-            var dir = new DirectoryInfo(AppContext.BaseDirectory);
+            DirectoryInfo dir = new DirectoryInfo(AppContext.BaseDirectory);
             while (dir != null)
             {
                 string here = Path.Combine(dir.FullName, "testroms.json");
                 if (File.Exists(here)) return here;
-                if (File.Exists(Path.Combine(dir.FullName, "DS_Map.sln"))) return null;
+                if (File.Exists(Path.Combine(dir.FullName, "DSPRE.sln"))) return null;
                 dir = dir.Parent;
             }
             return null;
+        }
+
+        /// <summary>The retail dumps listed under "dumps" in testroms.json: game code, revision and .nds path.</summary>
+        public static System.Collections.Generic.List<(string Id, int Revision, string Rom)> Dumps()
+        {
+            System.Collections.Generic.List<(string, int, string)> list = new System.Collections.Generic.List<(string, int, string)>();
+            FromConfig("");
+            if (_config.Value.ValueKind != JsonValueKind.Object || !_config.Value.TryGetProperty("dumps", out JsonElement dumps)) return list;
+            foreach (JsonProperty d in dumps.EnumerateObject())
+            {
+                if (!d.Value.TryGetProperty("rom", out JsonElement rom) || !d.Value.TryGetProperty("revision", out JsonElement rev)) continue;
+                if (File.Exists(rom.GetString())) list.Add((d.Name.Substring(0, 4), rev.GetInt32(), rom.GetString()));
+            }
+            return list;
         }
     }
 }

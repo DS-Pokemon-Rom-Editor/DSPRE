@@ -58,11 +58,15 @@ namespace DSPRE.ROMFiles
             return data;
         }
 
-        public bool SaveToFile() => SaveToFile(Filesystem.GetRockSmashPath(ID));
+        public bool SaveToFile()
+        {
+            ArchiveMembers.Put(RomInfo.DirNames.rockSmash, ID, ToByteArray());
+            return true;
+        }
 
         public bool SaveToFile(string path)
         {
-            File.WriteAllBytes(path, ToByteArray());
+            ArchiveMembers.Write(path, ToByteArray());
             Existed = true;
             return true;
         }

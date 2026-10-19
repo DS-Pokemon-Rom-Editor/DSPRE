@@ -21,6 +21,10 @@ namespace DSPRE.Avalonia.Views.Pokemon
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+        }
 
         private async void Export_Click(object sender, RoutedEventArgs e)
         {
@@ -29,7 +33,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
             IStorageFile file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = "Export Trophy Garden Encounters",
+                Title = "Export Trophy Garden encounters",
                 DefaultExtension = "bin",
                 SuggestedFileName = "trophy_garden_encounters.bin",
                 FileTypeChoices = new List<FilePickerFileType> { new FilePickerFileType("Binary file") { Patterns = new[] { "*.bin" } } }
@@ -47,7 +51,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
             IReadOnlyList<IStorageFile> files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                Title = "Import Trophy Garden Encounters",
+                Title = "Import Trophy Garden encounters",
                 AllowMultiple = false,
                 FileTypeFilter = new List<FilePickerFileType> { new FilePickerFileType("Binary file") { Patterns = new[] { "*.bin" } } }
             });

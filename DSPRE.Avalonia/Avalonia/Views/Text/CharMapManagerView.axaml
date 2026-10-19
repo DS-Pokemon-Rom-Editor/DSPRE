@@ -4,7 +4,7 @@
 		xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Text"
 		x:Class="DSPRE.Avalonia.Views.Text.CharMapManagerView"
 		x:DataType="vm:CharMapManagerViewModel"
-		Title="{Binding Title}"
+		Title="Character map manager"
 		Width="680" Height="560" MinWidth="520" MinHeight="420"
 		WindowStartupLocation="CenterOwner">
   <Design.DataContext>
@@ -15,6 +15,7 @@
   <DockPanel>
 	<controls:EditorToolbar x:Name="MapActions">
 		<Button Content="Save" controls:Icon.Key="saveButton"              IsEnabled="{Binding HasMap}" Click="Save_Click"/>
+		<Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<Button Content="Create custom map" Click="CreateMap_Click" Margin="12,2,6,2"/>
 		<Button Content="Delete custom map" controls:Icon.Key="deleteIcon" IsEnabled="{Binding HasMap}" Click="DeleteMap_Click"/>
 		<Button Content="Reload" controls:Icon.Key="reload"            Click="Reload_Click"/>
@@ -36,7 +37,7 @@
 	  <!-- Search row under charmap list -->
 	  <DockPanel x:Name="CharSearch" Grid.Row="2" Grid.Column="0" Margin="0,6,0,0">
 		<Button DockPanel.Dock="Right" Content="Search" controls:Icon.Key="lens" Click="Search_Click" Margin="6,0,0,0"/>
-		<TextBox Text="{Binding SearchText}" PlaceholderText="Search (0x... for hex code)"
+		<TextBox Text="{Binding SearchText}" PlaceholderText="Search letters, or 0x and a code"
 				 KeyDown="Search_KeyDown"/>
 	  </DockPanel>
 

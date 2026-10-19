@@ -89,9 +89,9 @@ namespace DSPRE.Tests
 
         public void Repack(params DirNames[] archives)
         {
-            foreach (var archive in archives)
+            foreach (DirNames archive in archives)
             {
-                var directory = gameDirs[archive];
+                (string packedDir, string unpackedDir) directory = gameDirs[archive];
                 Narc.FromFolder(directory.unpackedDir).Save(directory.packedDir);
             }
         }

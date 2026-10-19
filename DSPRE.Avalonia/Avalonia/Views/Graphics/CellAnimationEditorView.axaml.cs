@@ -49,5 +49,10 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         // Each frame's buttons carry that frame's number, since they are stamped out of one template.
         private static int? Which(object sender) => (sender as Control)?.Tag as int?;
+
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
+        }
     }
 }

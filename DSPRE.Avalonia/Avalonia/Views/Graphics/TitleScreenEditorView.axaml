@@ -16,7 +16,7 @@
 	  <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasChanges}"/>
 	  <Button Content="Discard" controls:Icon.Key="resetIcon" Click="RevertChanges_Click" IsEnabled="{Binding HasChanges}"/>
 	  <controls:UndoRedoButtons/>
-	  <TextBlock Text="{Binding StatusText}" Foreground="OrangeRed" VerticalAlignment="Center" Margin="6,0,0,0"/>
+	  <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource Editor.Bad}" VerticalAlignment="Center" Margin="6,0,0,0"/>
   </controls:EditorToolbar>
   <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
   <StackPanel Margin="12" Spacing="12">

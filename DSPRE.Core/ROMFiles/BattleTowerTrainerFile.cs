@@ -128,8 +128,7 @@ namespace DSPRE.ROMFiles {
                 TextArchive messagesArchive = new TextArchive(RomInfo.battleTowerTrainerMessagesNumber);
 
                 for (int i = 0; i < Trainers.Count; i++) {
-                    string filePath = Filesystem.GetPath(narcDir, i);
-                    File.WriteAllBytes(filePath, Trainers[i].ToByteArray());
+                    ArchiveMembers.Put(RomInfo.DirNames.battleTowerTrainers, i, Trainers[i].ToByteArray());
 
                     if (i < namesArchive.messages.Count) {
                         namesArchive.messages[i] = Trainers[i].Name ?? "";
@@ -161,7 +160,7 @@ namespace DSPRE.ROMFiles {
 
         public bool ExportToFile(string path, bool showSuccessMessage = true) {
             try {
-                File.WriteAllBytes(path, ToByteArray());
+                ArchiveMembers.Write(path, ToByteArray());
 
                 if (showSuccessMessage) {
                     AppMessages.Info("Battle Tower trainers exported successfully!", "Success");

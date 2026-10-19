@@ -526,8 +526,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 {
                     Trigger t = _events.triggers[i];
                     StartBesideNames.Add(t.scriptNumber == EventFile.NoScript
-                        ? $"Beside trigger {i}, no script"
-                        : $"Beside trigger {i}, script {t.scriptNumber}");
+                        ? $"Beside trigger {i} with no script"
+                        : $"Beside trigger {i} running script {t.scriptNumber}");
                     _startPlaces.Add((FieldInteraction.TileX(t), FieldInteraction.TileZ(t)));
                 }
                 for (int i = 0; i < _events.warps.Count; i++)
@@ -1078,7 +1078,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 FieldCameraEntry c = CameraEntry;
                 string kind = c.Orthographic ? "flat" : $"{c.FieldOfViewDegrees:0.#} degrees";
                 string name = DSPRE.Avalonia.Data.LabelStore.GetLabel(DSPRE.Avalonia.Data.LabelStore.CameraKeyFor(_family), c.Id);
-                return $"Camera {c.Id}, {name}: {c.DistanceInTiles:0.#} tiles back, "
+                return $"Camera {c.Id} ({name}): {c.DistanceInTiles:0.#} tiles back, "
                      + $"{c.PitchDegrees:0.#} degrees down, {kind}";
             }
         }

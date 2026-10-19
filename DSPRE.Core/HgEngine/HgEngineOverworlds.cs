@@ -379,7 +379,7 @@ namespace DSPRE.HgEngine
             }
             string text = sb.ToString();
             if (File.Exists(path) && File.ReadAllText(path) == text) return;
-            File.WriteAllText(path, text);
+            PlainFiles.WriteText(path, text);
         }
 
         // ── helpers ──────────────────────────────────────────────────────────────────────────────
@@ -390,7 +390,7 @@ namespace DSPRE.HgEngine
         /// </summary>
         public static void CopyAsNew(string from, string to)
         {
-            File.Copy(from, to, overwrite: false);
+            PlainFiles.Copy(from, to, overwrite: false);
             File.SetLastWriteTimeUtc(to, DateTime.UtcNow);
         }
 

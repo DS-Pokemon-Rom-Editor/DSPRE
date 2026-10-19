@@ -27,7 +27,7 @@ namespace DSPRE.ROMFiles
 
         public static string MarkerOf(Kind kind) => kind == Kind.Punching ? "PUNCHMOVESX1" : "SOUNDMOVESX1";
         public static string NameOf(Kind kind) => kind == Kind.Punching ? "punching" : "sound";
-        public static GameTable TableOf(Kind kind) => kind == Kind.Punching ? GameTable.PunchingMoves : GameTable.SoundMoves;
+        public static RomLocator.Thing TableOf(Kind kind) => kind == Kind.Punching ? RomLocator.Thing.PunchingMoves : RomLocator.Thing.SoundMoves;
 
         /// <summary>The DS Pokémon Hacking wiki's write-up of each list, which also covers the trainer AI side.</summary>
         public static string GuideUrl(Kind kind) => "https://ds-pokemon-hacking.github.io/docs/generation-iv/guides/editing_moves/"
@@ -48,13 +48,13 @@ namespace DSPRE.ROMFiles
         public static string WhyNot(Kind kind)
         {
             if (isHGE) return "hg-engine keeps these lists in its own source.";
-            MoveListSites sites = MoveListSitesOf(TableOf(kind));
-            if (sites == null) return "Only US HeartGold, Platinum (Rev 1) and Diamond are supported.";
-            return GameTableFile.WhyNot(TableOf(kind), sites.VanillaCapacity * 2);
+            MoveListSites sites = RomLocator.MoveListSitesOf(TableOf(kind));
+            if (sites == null) return "Works on " + DescribeDumps(RomLocator.MoveListDumps(TableOf(kind))) + ".";
+            return RomLocator.WhyNot(TableOf(kind), sites.VanillaCapacity * 2);
         }
 
         /// <summary>Whether the list already sits in a block DSPRE placed in the expanded ARM9 area.</summary>
-        public static bool IsExpanded(Kind kind)
+        public static bool Expanded(Kind kind)
         {
             try { return WhyNot(kind) == null && Load(kind).InExpansion; }
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException) { return false; }
@@ -80,27 +80,28 @@ namespace DSPRE.ROMFiles
         /// <summary>Follows the battle overlay's pointer, so a list a patch moved is edited where it now lives.</summary>
         private void Locate()
         {
-            TableSpot spot = SpotOf(TableOf(Which)).Value;
-            _sites = MoveListSitesOf(TableOf(Which));
-            _ovPath = GameTableFile.PathOf(spot);
+            RomLocator.Spot spot = RomLocator.Where(TableOf(Which));
+            _sites = RomLocator.MoveListSitesOf(TableOf(Which));
+            _ovPath = RomLocator.PathOf(spot);
             if (OverlayUtils.IsCompressed(spot.Overlay)) OverlayUtils.Decompress(spot.Overlay);
             byte[] ov = File.ReadAllBytes(_ovPath);
             if (_sites.PointerSite + 4 > ov.Length || _sites.CountCompare + 2 > ov.Length)
                 throw new InvalidDataException($"Overlay {spot.Overlay} is too short for the {NameOf(Which)} move list's code.");
-            uint ovBase = OverlayUtils.OverlayTable.GetRAMAddress(spot.Overlay);
             uint ram = BitConverter.ToUInt32(ov, _sites.PointerSite);
 
-            if (ram >= ovBase && ram < ovBase + ov.Length)
+            // The list ends at its first 0xFFFF, so a halfword is the least it can be.
+            (int region, int offset) = RamAddress.Find(ram, 2, RamAddress.Overlay(spot.Overlay, ov.Length),
+                RamAddress.Synthetic(File.Exists(Filesystem.expArmPath) ? new FileInfo(Filesystem.expArmPath).Length : 0));
+            if (region == 0)
             {
-                _path = _ovPath; _offset = (int)(ram - ovBase);
+                _path = _ovPath; _offset = offset;
                 bool vanilla = _offset == spot.Offset;
                 Capacity = vanilla ? _sites.VanillaCapacity : 0;
                 Where = vanilla ? $"in overlay {spot.Overlay}" : $"moved within overlay {spot.Overlay}";
             }
-            else if (ram >= synthOverlayLoadAddress && File.Exists(Filesystem.expArmPath)
-                     && ram - synthOverlayLoadAddress < (ulong)new FileInfo(Filesystem.expArmPath).Length)
+            else if (region == 1)
             {
-                _path = Filesystem.expArmPath; _offset = (int)(ram - synthOverlayLoadAddress);
+                _path = Filesystem.expArmPath; _offset = offset;
                 Where = "in the expanded ARM9 area";
                 byte[] synth = File.ReadAllBytes(_path);
                 (long Start, long End) block = SyntheticOverlaySpace.Blocks(synth, MarkerOf(Which))
@@ -179,13 +180,13 @@ namespace DSPRE.ROMFiles
             ov[_sites.CountCompare] = (byte)Moves.Count;
             try
             {
-                File.WriteAllBytes(Filesystem.expArmPath, synth);
-                File.WriteAllBytes(_ovPath, ov);
+                DSUtils.WriteWholeFile(Filesystem.expArmPath, synth);
+                DSUtils.WriteWholeFile(_ovPath, ov);
             }
             catch
             {
-                File.WriteAllBytes(Filesystem.expArmPath, synthBefore);
-                File.WriteAllBytes(_ovPath, ovBefore);
+                DSUtils.WriteWholeFile(Filesystem.expArmPath, synthBefore);
+                DSUtils.WriteWholeFile(_ovPath, ovBefore);
                 throw;
             }
             _path = Filesystem.expArmPath;

@@ -59,7 +59,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Redo() { if (_history.CanRedo) Apply(_history.Redo()); }
 
         public bool HasUnsavedChanges => _state.Any(kv => !_loaded.TryGetValue(kv.Key, out byte[] was) || !kv.Value.AsSpan().SequenceEqual(was));
-        public string UnsavedChangesDescription => $"Pokéwalker (Mon {_currentId})";
+        public string UnsavedChangesDescription => $"Pokéwalker pictures of {RomInfo.PokemonName(_currentId)}";
 
         public void LoadMon(int id)
         {
@@ -185,7 +185,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 (bool saved, string error) = await HgEngineSave.RunAsync(WriteChanged);
                 if (!saved)
                 {
-                    if (error != null) await DialogHelper.ShowError($"The Pokéwalker pictures were not saved:\n{error}", "Pokéwalker");
+                    if (error != null) await DialogHelper.ShowError($"The Pokéwalker pictures were not saved:\n{error}", "Pokéwalker error");
                     return;
                 }
             }

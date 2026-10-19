@@ -107,6 +107,7 @@ namespace DSPRE.Avalonia.Views.World
             if (VM.Flat2D) GlView.SetOrientation(0f, 90f);
         }
 
+        private void RotationPatch_Click(object sender, RoutedEventArgs e) => AvaloniaEditorLauncher.OpenPatchToolboxAt("buildingRotation");
         private void CamTop_Click(object sender, RoutedEventArgs e) => GlView.SetOrientation(0f, 89f);
         private void CamIso_Click(object sender, RoutedEventArgs e) => GlView.SetOrientation(30f, 30f);
         private void CamFront_Click(object sender, RoutedEventArgs e) => GlView.SetOrientation(0f, 8f);
@@ -322,7 +323,7 @@ namespace DSPRE.Avalonia.Views.World
         }
         private async void Screenshot_Click(object sender, RoutedEventArgs e) =>
             await GlScreenshot.SaveAsync(GlView, TopLevel.GetTopLevel(this) as Window, "dspre_map",
-                path => { if (VM != null) VM.StatusText = $"Screenshot saved to {path}"; });
+                SaveNotice.Exported);
         private void ExportDae_Click(object sender, RoutedEventArgs e) => VM?.ExportDae();
         private void ExportGlb_Click(object sender, RoutedEventArgs e) => VM?.ExportGlb();
         private async void ImportTerrain_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportTerrainAsync());

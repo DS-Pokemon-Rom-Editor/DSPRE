@@ -27,15 +27,17 @@ namespace DSPRE.Avalonia.Views.Pokemon
             DataContext = vm;
             vm.SetOwner(this);
             // VM owns the bound Title (+ marker); chrome adds Ctrl+S + the close guard (Detach on close).
-            EditorWindowChrome.Attach(this, vm, manageTitle: false, onClosed: vm.Detach);
+            EditorWindowChrome.Attach(this, vm, title: () => vm.Title);
             NameRefresh.Bind(this, vm.RefreshNames);
         }
 
         private void Save_Click(object sender, RoutedEventArgs e)
             => ViewModel.SaveAll();
 
-        private void Discard_Click(object sender, RoutedEventArgs e)
-            => ViewModel.DiscardChanges();
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) ViewModel.DiscardChanges();
+        }
 
         private async void AddSpecies_Click(object sender, RoutedEventArgs e)
             => await ViewModel.AddNewFakemonAsync(this);
@@ -55,7 +57,8 @@ namespace DSPRE.Avalonia.Views.Pokemon
             string path = files.Count > 0 ? files[0].TryGetLocalPath() : null;
             if (path == null) return;
             string error = ViewModel.PokewalkerVM.Import(picture, path);
-            if (error != null) await DialogHelper.ShowError(error, "Pokéwalker", this);
+            if (error != null) await DialogHelper.ShowError(error, "Pokémon editor error", this);
+            else SaveNotice.Imported("the Pokéwalker picture", path);
         }
 
         private async void ExportPokewalker_Click(object sender, RoutedEventArgs e)
@@ -71,7 +74,8 @@ namespace DSPRE.Avalonia.Views.Pokemon
             string path = file?.TryGetLocalPath();
             if (path == null) return;
             string error = ViewModel.PokewalkerVM.Export(picture, path);
-            if (error != null) await DialogHelper.ShowError(error, "Pokéwalker", this);
+            if (error != null) await DialogHelper.ShowError(error, "Pokémon editor error", this);
+            else SaveNotice.Exported(path);
         }
 
         private async void ImportFootprint_Click(object sender, RoutedEventArgs e)
@@ -85,7 +89,8 @@ namespace DSPRE.Avalonia.Views.Pokemon
             string path = files.Count > 0 ? files[0].TryGetLocalPath() : null;
             if (path == null) return;
             string error = ViewModel.PokedexVM.ImportFootprint(path);
-            if (error != null) await DialogHelper.ShowError(error, "Footprint", this);
+            if (error != null) await DialogHelper.ShowError(error, "Pokémon editor error", this);
+            else SaveNotice.Imported("the footprint", path);
         }
 
         private async void ExportFootprint_Click(object sender, RoutedEventArgs e)
@@ -100,7 +105,8 @@ namespace DSPRE.Avalonia.Views.Pokemon
             string path = file?.TryGetLocalPath();
             if (path == null) return;
             string error = ViewModel.PokedexVM.ExportFootprint(path);
-            if (error != null) await DialogHelper.ShowError(error, "Footprint", this);
+            if (error != null) await DialogHelper.ShowError(error, "Pokémon editor error", this);
+            else SaveNotice.Exported(path);
         }
 
         /// <summary>Plays the chosen Pokemon's cry. </summary>
@@ -156,7 +162,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
             => ViewModel.LearnsetVM.MoveEntryDown();
 
         private void Learnset_BulkEdit_Click(object sender, RoutedEventArgs e)
-            => new BulkLearnsetEditorView(new BulkLearnsetEditorViewModel(true)).ShowManaged();
+            => AvaloniaEditorLauncher.OpenBulkLearnsetEditor();
 
         private async void Learnset_Import_Click(object sender, RoutedEventArgs e)
             => await ViewModel.LearnsetVM.ImportCsvAsync(this);
@@ -167,8 +173,8 @@ namespace DSPRE.Avalonia.Views.Pokemon
             FilePickerFileType filter = new global::Avalonia.Platform.Storage.FilePickerFileType("CSV") { Patterns = new[] { "*.csv" } };
             string path = await DialogHelper.SaveFile(this, "Export learnset (CSV)", new[] { filter }, $"learnset_{vm.CurrentId:D4}.csv");
             if (path == null) return;
-            try { System.IO.File.WriteAllText(path, vm.BuildCsv()); }
-            catch (System.Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
+            try { PlainFiles.WriteText(path, vm.BuildCsv()); SaveNotice.Exported(path); }
+            catch (System.Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Pokémon editor error"); }
         }
     }
 }

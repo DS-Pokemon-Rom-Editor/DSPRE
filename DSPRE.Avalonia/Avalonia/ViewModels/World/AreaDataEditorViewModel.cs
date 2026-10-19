@@ -22,7 +22,7 @@ namespace DSPRE.Avalonia.ViewModels.World
     /// dynamic-texture/area-type/light fields. This is the data the map &amp; event 3D views resolve
     /// to pick the correct textures; it had no Avalonia editor before (was only in WinForms NSBTX).
     /// </summary>
-    public class AreaDataEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
+    public class AreaDataEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -64,6 +64,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, null, "area")) return;
             SetClean();
+            // Discarding can drop the entry being switched to when it was added and not saved.
+            if (requested >= AreaNames.Count) requested = AreaNames.Count - 1;
             if (Set(ref _selectedIndex, requested, nameof(SelectedIndex))) LoadArea(requested);
         }
 
@@ -93,7 +95,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             for (int i = 0; i < count; i++)
             {
                 _areaPacks[i] = (-1, -1);
-                try { AreaData a = new AreaData((byte)i); _areaPacks[i] = (a.mapTileset, a.buildingsTileset); }
+                try { AreaData a = new AreaData(new MemoryStream(_archive.Read(i))); _areaPacks[i] = (a.mapTileset, a.buildingsTileset); }
                 catch (Exception e) when (e is IOException || e is UnauthorizedAccessException) { }
                 _areaPlaces[i] = new List<string>();
                 if (!byArea.TryGetValue(i, out List<ushort> headers)) continue;
@@ -178,13 +180,36 @@ namespace DSPRE.Avalonia.ViewModels.World
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
 
         private bool _dirty;
-        public bool HasUnsavedChanges => _dirty;
-        public string UnsavedChangesDescription => $"Area data {_selectedIndex}";
+        public bool HasUnsavedChanges => _dirty || _archive.IsDirty;
+        public string UnsavedChangesDescription => DSPRE.Avalonia.Data.StagedArchive.Join($"Area data {_selectedIndex}", _dirty, _archive.Describe("area data", "area data"));
         public void SaveChanges() => Save();
-        public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); if (_selectedIndex >= 0) LoadArea(_selectedIndex); }
+        public void DiscardChanges()
+        {
+            // Added and removed entries go with the open entry's edits.
+            _dirty = false;
+            _archive.Discard();
+            _removedAreas.Clear();
+            ListAreas();
+            if (_selectedIndex >= AreaNames.Count) _selectedIndex = AreaNames.Count - 1;
+            OnPropertyChanged(nameof(SelectedIndex));
+            AreaCountChanged();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            if (_selectedIndex >= 0) LoadArea(_selectedIndex);
+        }
+
+        // Added, removed and saved entries wait here until Save.
+        private readonly StagedArchive _archive = new(DirNames.areaData);
+
+        private void ListAreas()
+        {
+            int count = _archive.Count;
+            AreaNames.Clear();
+            for (int i = 0; i < count; i++) AreaNames.Add("Area data " + i);
+        }
         // RecordUndoSnapshot runs BEFORE the _dirty short-circuit so EVERY edit is captured (not just the first).
         private void Dirty() { RecordUndoSnapshot(); if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
-        private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        // Notifies even when only staged entries were waiting, so the title mark clears after a save.
+        private void SetClean() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         // ── Undo / redo (ISupportsUndo) ────────────────────────────────────────
         private readonly UndoHistory<byte[]> _history = new();
@@ -263,16 +288,15 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.areaData });
-                int count = Directory.GetFiles(gameDirs[DirNames.areaData].unpackedDir).Length;
-                AreaNames.Clear();
-                for (int i = 0; i < count; i++) AreaNames.Add("Area data " + i);
+                ListAreas();
+                int count = AreaNames.Count;
                 StatusText = $"{count} area data entries.";
                 if (count > 0) SelectedIndex = Math.Min(Math.Max(0, InitialIndex), count - 1);
             }
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowError($"Failed to set up Area Data Editor:\n{ex.Message}", "Area Data");
+                await DialogHelper.ShowError($"Failed to set up Area Data Editor:\n{ex.Message}", "Area data error");
             }
         }
 
@@ -280,7 +304,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             try
             {
-                _area = new AreaData((byte)index);
+                _area = new AreaData(new MemoryStream(_archive.Read(index) ?? throw new FileNotFoundException($"Area data {index} is missing.")));
                 _suppress = true;
                 PopulateFromArea();
                 _suppress = false;
@@ -291,7 +315,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 StatusText = $"Loaded area data {index}.";
                 OnPropertyChanged(nameof(UnsavedChangesDescription));
             }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Failed to load area data {index}:\n{ex.Message}", "Area Data"); }
+            catch (Exception ex) { _ = DialogHelper.ShowError($"Failed to load area data {index}:\n{ex.Message}", "Area data error"); }
         }
 
         // ── Import / export of the shown entry ──────────────────────────────────────────
@@ -306,10 +330,10 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (_area == null || _selectedIndex < 0) return;
             string path = await DialogHelper.SaveFile(owner, "Export area data", AreaFiles, $"area_data_{_selectedIndex:D4}.bin");
             if (path == null) return;
-            try { File.WriteAllBytes(path, _area.ToByteArray()); StatusText = $"Exported area data {_selectedIndex}."; }
+            try { PlainFiles.WriteBytes(path, _area.ToByteArray()); SaveNotice.Exported(path); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Area Data");
+                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Area data error");
             }
         }
 
@@ -323,13 +347,13 @@ namespace DSPRE.Avalonia.ViewModels.World
             try { data = File.ReadAllBytes(path); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Area Data");
+                await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Area data error");
                 return;
             }
             // Every game's entry is eight bytes; anything else is some other file.
             if (data.Length != _area.ToByteArray().Length)
             {
-                await DialogHelper.ShowError($"That file is {data.Length} bytes; an area data entry is {_area.ToByteArray().Length}.", "Area Data");
+                await DialogHelper.ShowError($"That file is {data.Length} bytes; an area data entry is {_area.ToByteArray().Length}.", "Area data error");
                 return;
             }
             _area = new AreaData(new MemoryStream(data));
@@ -337,12 +361,10 @@ namespace DSPRE.Avalonia.ViewModels.World
             PopulateFromArea();
             _suppress = false;
             Dirty();
-            StatusText = $"Imported area data into entry {_selectedIndex} (unsaved).";
+            SaveNotice.Imported($"area data {_selectedIndex}", path);
         }
 
         // ── Add / remove (the last entry only: headers refer to area data by number) ─────
-
-        private string AreaPath(int index) => Path.Combine(gameDirs[DirNames.areaData].unpackedDir, index.ToString("D4"));
 
         // Removed entries, newest last, so Ctrl+Z can put them back while no field edit is left to undo.
         private readonly Stack<byte[]> _removedAreas = new();
@@ -355,8 +377,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task AddAsync()
         {
             int count = AreaNames.Count;
-            if (count >= 256) { await DialogHelper.ShowError("Headers can only point at area data 0 to 255.", "Area Data"); return; }
-            File.Copy(AreaPath(0), AreaPath(count));
+            if (count >= 256) { await DialogHelper.ShowError("Headers can only point at area data 0 to 255.", "Area data error"); return; }
+            _archive.Add(_archive.Read(0));
             _removedAreas.Clear();
             AreaNames.Add("Area data " + count);
             SelectedIndex = count;
@@ -367,12 +389,12 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task RemoveLastAsync()
         {
             int last = AreaNames.Count - 1;
-            if (last <= 0) { await DialogHelper.ShowError("There has to be at least one area data entry.", "Area Data"); return; }
-            if (!await DialogHelper.AskYesNo($"Remove area data {last}? Only the last entry can be removed. It is deleted now, not on Save; Ctrl+Z puts it back.", "Remove last area data"))
+            if (last <= 0) { await DialogHelper.ShowError("There has to be at least one area data entry.", "Area data error"); return; }
+            if (!await DialogHelper.AskYesNo($"Remove area data {last}? Only the last entry can be removed. Ctrl+Z puts it back.", "Delete area data?"))
                 return;
             if (_selectedIndex == last && _dirty) SetClean();
-            _removedAreas.Push(File.ReadAllBytes(AreaPath(last)));
-            File.Delete(AreaPath(last));
+            _removedAreas.Push(_archive.Read(last));
+            _archive.RemoveLast();
             if (_selectedIndex >= last) SelectedIndex = last - 1;
             AreaNames.RemoveAt(last);
             StatusText = $"Removed area data {last}.";
@@ -382,7 +404,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void RestoreRemovedArea()
         {
             int id = AreaNames.Count;
-            File.WriteAllBytes(AreaPath(id), _removedAreas.Pop());
+            _archive.Add(_removedAreas.Pop());
             AreaNames.Add("Area data " + id);
             SelectedIndex = id;
             StatusText = $"Put area data {id} back.";
@@ -393,6 +415,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             _areaPacks = null;
             OnPropertyChanged(nameof(RemoveTip));
+            OnPropertyChanged(nameof(HasUnsavedChanges));
             RaiseUndoState();
         }
 
@@ -402,8 +425,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void Save()
         {
             if (_area == null || _selectedIndex < 0) return;
-            try { _area.SaveToFileDefaultDir(_selectedIndex, showSuccessMessage: false); if (_areaPacks != null && _selectedIndex < _areaPacks.Length) _areaPacks[_selectedIndex] = (_area.mapTileset, _area.buildingsTileset); SetClean(); _history.MarkSaved(); RaiseUndoState(); StatusText = $"Saved area data {_selectedIndex}."; SaveNotice.Saved(UnsavedChangesDescription); AppEvents.RaiseAreaDataSaved(this, _selectedIndex); }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Save failed:\n{ex.Message}", "Area Data"); }
+            try { _archive.Save(_selectedIndex, _area.ToByteArray()); if (_areaPacks != null && _selectedIndex < _areaPacks.Length) _areaPacks[_selectedIndex] = (_area.mapTileset, _area.buildingsTileset); SetClean(); _history.MarkSaved(); RaiseUndoState(); StatusText = $"Saved area data {_selectedIndex}."; SaveNotice.Saved(UnsavedChangesDescription); AppEvents.RaiseAreaDataSaved(this, _selectedIndex); }
+            catch (Exception ex) { _ = DialogHelper.ShowError($"Save failed:\n{ex.Message}", "Area data error"); }
         }
     }
 }

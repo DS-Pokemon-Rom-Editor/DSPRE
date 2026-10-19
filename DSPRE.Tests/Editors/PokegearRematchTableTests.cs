@@ -72,8 +72,8 @@ namespace DSPRE.Tests
 
             Assert.True(PokegearPhoneBook.TryReadTrainerIds(out ushort[] phone, out string phoneError), phoneError);
 
-            var callers = phone.Where(id => id != 0).ToList();
-            var rowTrainers = rows.Where(r => !r.IsEmpty).Select(r => r.BaseTrainerId).ToList();
+            List<ushort> callers = phone.Where(id => id != 0).ToList();
+            List<ushort> rowTrainers = rows.Where(r => !r.IsEmpty).Select(r => r.BaseTrainerId).ToList();
 
             _out.WriteLine($"{rowTrainers.Count} rows, {callers.Count} Pokégear callers");
 
@@ -160,7 +160,7 @@ namespace DSPRE.Tests
         [Fact]
         public void VanillaShapedRowsHaveNoProblems()
         {
-            var rows = new[] { Row(151, 151, 335, 453, 603, 0), Row(20, 20, 520, 0, 0, 0) };
+            RematchTable.Row[] rows = new[] { Row(151, 151, 335, 453, 603, 0), Row(20, 20, 520, 0, 0, 0) };
             Assert.Empty(PokegearRematchTable.Problems(rows, 0));
             Assert.Empty(PokegearRematchTable.Problems(rows, 1));
         }
@@ -168,14 +168,14 @@ namespace DSPRE.Tests
         [Fact]
         public void ADifferentTrainerInRematchOneStopsProgress()
         {
-            var rows = new[] { Row(151, 999, 335, 453, 603, 0) };
+            RematchTable.Row[] rows = new[] { Row(151, 999, 335, 453, 603, 0) };
             Assert.Contains(PokegearRematchTable.Problems(rows, 0), p => p.StartsWith("Rematch 1 "));
         }
 
         [Fact]
         public void ATrainerInRematchFiveIsNeverReached()
         {
-            var rows = new[] { Row(151, 151, 335, 453, 603, 700) };
+            RematchTable.Row[] rows = new[] { Row(151, 151, 335, 453, 603, 700) };
             Assert.Contains(PokegearRematchTable.Problems(rows, 0), p => p.StartsWith("Rematch 5 "));
         }
 
@@ -194,7 +194,7 @@ namespace DSPRE.Tests
         [Fact]
         public void OnlyTheFirstRowForABaseTrainerIsUsed()
         {
-            var rows = new[] { Row(151, 151, 335, 0, 0, 0), Row(151, 151, 453, 0, 0, 0) };
+            RematchTable.Row[] rows = new[] { Row(151, 151, 335, 0, 0, 0), Row(151, 151, 453, 0, 0, 0) };
             Assert.Empty(PokegearRematchTable.Problems(rows, 0));
             Assert.Contains(PokegearRematchTable.Problems(rows, 1), p => p.StartsWith("Row 0 "));
         }

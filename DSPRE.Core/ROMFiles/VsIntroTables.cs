@@ -177,7 +177,7 @@ namespace DSPRE.ROMFiles
             if (gameFamily != GameFamilies.DP && gameFamily != GameFamilies.Plat && gameFamily != GameFamilies.HGSS)
                 return "This game has no VS intros DSPRE knows about.";
             if (gameLanguage != GameLanguages.English) return "VS intros are not supported for this language yet. Only US English games can be edited.";
-            VsIntroSites sites = VsIntroCodeSites;
+            VsIntroSites sites = RomLocator.VsIntroSites;
             if (sites == null) return "This version isn't supported yet.";
             if (!File.Exists(arm9Path)) return "arm9 is missing from this project.";
             if (!IsDsRomProject && ARM9.CheckCompressionMark()) return "arm9 is still compressed. Convert this project to ds-rom format first.";
@@ -191,7 +191,7 @@ namespace DSPRE.ROMFiles
         {
             string why = WhyNot();
             if (why != null) throw new InvalidOperationException(why);
-            VsIntroSites sites = VsIntroCodeSites;
+            VsIntroSites sites = RomLocator.VsIntroSites;
 
             // hg-engine's EXPAND_MUSIC_TABLES builds the combo, class and Pokemon tables from src/music_tables.c.
             bool source = isHGE && HgEngine.HgEngineMusicTables.TablesInSource;
@@ -611,6 +611,8 @@ namespace DSPRE.ROMFiles
         /// <summary>The most rows the class search can walk: its count is a byte immediate.</summary>
         public const int MostClassRows = 255;
 
+        public static int ClassRoomBlockLength => (SyntheticOverlaySpace.HeaderSize + 2 * MostClassRows + 3) & ~3;
+
         /// <summary>HGSS: the class table already sits in the expanded ARM9 area.</summary>
         public bool ClassTableMoved => Music.Classes.Repointed;
 
@@ -621,7 +623,7 @@ namespace DSPRE.ROMFiles
             if (FromSource) return "hg-engine builds the class table from src/music_tables.c.";
             if (ClassTableMoved) return "The class table has already been given room.";
             if (HasChanges) return "Save or discard your changes first.";
-            if (!SyntheticOverlaySpace.Available()) return "Apply the ARM9 expansion in the ROM Patch Toolbox first.";
+            if (!SyntheticOverlaySpace.Available()) return "Apply the ARM9 expansion first.";
             // cmp r2, #count: the count is the low byte, 0x2A the opcode.
             byte[] cmp = ARM9.ReadBytes(vsTrainerEntryTableOffsetToSizeLimiter, 2);
             if (cmp[1] != 0x2A || cmp[0] != ClassRowCount) return "The class search doesn't look like the game's, so DSPRE won't move its table.";
@@ -631,7 +633,8 @@ namespace DSPRE.ROMFiles
         /// <summary>
         /// Moves the class table into its own marked block in the expanded ARM9 area with room for
         /// <see cref="MostClassRows"/> rows, the new ones free, and points the class search and its count at it.
-        /// Writes at once, like the type chart's move.
+        /// The toolbox runs it inside <see cref="SyntheticOverlaySpace.PlaceAt"/> so the block lands where its
+        /// confirmation said.
         /// </summary>
         public void MakeClassRoom()
         {
@@ -642,7 +645,7 @@ namespace DSPRE.ROMFiles
             _classRows.Now.CopyTo(rows, 0);
             for (int i = ClassRowCount; i < MostClassRows; i++) BitConverter.GetBytes((ushort)FreeClass).CopyTo(rows, 2 * i);
 
-            byte[] block = new byte[(SyntheticOverlaySpace.HeaderSize + rows.Length + 3) & ~3];
+            byte[] block = new byte[ClassRoomBlockLength];
             System.Text.Encoding.ASCII.GetBytes(ClassTableMarker).CopyTo(block, 0);
             BitConverter.GetBytes(1u).CopyTo(block, 0x0C);
             BitConverter.GetBytes((uint)block.Length).CopyTo(block, 0x10);
@@ -650,24 +653,25 @@ namespace DSPRE.ROMFiles
             rows.CopyTo(block, SyntheticOverlaySpace.HeaderSize);
 
             byte[] synth = File.ReadAllBytes(Filesystem.expArmPath);
-            int at = SyntheticOverlaySpace.FindFree(synth, block.Length, 4, SyntheticOverlaySpace.Reserved(synth));
+            int at = SyntheticOverlaySpace.Place(synth, block.Length, SyntheticOverlaySpace.Reserved(synth));
             if (at < 0) throw new InvalidOperationException("No free space was found in the expanded ARM9 area for the class table.");
 
+            uint pointerAt = vsTrainerEntryTableOffsetToRAMAddress, limitAt = vsTrainerEntryTableOffsetToSizeLimiter;
             byte[] arm9 = File.ReadAllBytes(arm9Path);
-            byte[] synthBefore = (byte[])synth.Clone(), arm9Before = (byte[])arm9.Clone();
-            block.CopyTo(synth, at);
+            byte[] blockBefore = synth.AsSpan(at, block.Length).ToArray(), pointerBefore = arm9.AsSpan((int)pointerAt, 4).ToArray();
+            byte limitBefore = arm9[limitAt];
             uint ram = synthOverlayLoadAddress + (uint)(at + SyntheticOverlaySpace.HeaderSize);
-            BitConverter.GetBytes(ram).CopyTo(arm9, (int)vsTrainerEntryTableOffsetToRAMAddress);
-            arm9[vsTrainerEntryTableOffsetToSizeLimiter] = MostClassRows;
             try
             {
-                File.WriteAllBytes(Filesystem.expArmPath, synth);
-                File.WriteAllBytes(arm9Path, arm9);
+                DSUtils.WriteToFile(Filesystem.expArmPath, block, (uint)at);
+                DSUtils.WriteToFile(arm9Path, BitConverter.GetBytes(ram), pointerAt);
+                DSUtils.WriteToFile(arm9Path, new[] { (byte)MostClassRows }, limitAt);
             }
             catch
             {
-                File.WriteAllBytes(Filesystem.expArmPath, synthBefore);
-                File.WriteAllBytes(arm9Path, arm9Before);
+                DSUtils.WriteToFile(Filesystem.expArmPath, blockBefore, (uint)at);
+                DSUtils.WriteToFile(arm9Path, pointerBefore, pointerAt);
+                DSUtils.WriteToFile(arm9Path, new[] { limitBefore }, limitAt);
                 throw;
             }
 

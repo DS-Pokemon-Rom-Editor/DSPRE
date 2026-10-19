@@ -219,7 +219,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowError($"Failed to set up Headbutt Editor:\n{ex.Message}", "Headbutt Editor");
+                await DialogHelper.ShowError($"Failed to set up Headbutt Editor:\n{ex.Message}", "Headbutt editor error");
             }
         }
 
@@ -229,9 +229,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (HgEngineProject.IsActive) return;
             int headers = GetHeaderCount();
             int have = Filesystem.GetHeadbuttCount();
-            if (have >= headers) { await DialogHelper.ShowInfo($"Every header up to {headers - 1} has a headbutt file.", "Headbutt Editor"); return; }
+            if (have >= headers) { await DialogHelper.ShowInfo($"Every header up to {headers - 1} has a headbutt file.", "Headbutt editor"); return; }
             string which = headers - have == 1 ? $"an empty headbutt file {have} for header {have}" : $"empty headbutt files {have} to {headers - 1}, one for each header without one";
-            if (!await DialogHelper.AskYesNo($"Add {which}?", "Headbutt Editor")) return;
+            if (!await DialogHelper.AskYesNo($"Add {which}?", "Headbutt editor")) return;
             try
             {
                 int made = NewProjectFiles.FillHeadbuttFiles(headers);
@@ -240,7 +240,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError("Couldn't add headbutt files:\n" + ex.Message, "Headbutt Editor");
+                await DialogHelper.ShowError("Couldn't add headbutt files:\n" + ex.Message, "Headbutt editor error");
             }
         }
 
@@ -292,7 +292,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (_file.normalTreeGroups.Count > 0) SelectedNormalGroupIndex = 0;
                 else if (_file.specialTreeGroups.Count > 0) SelectedSpecialGroupIndex = 0;
             }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Failed to load headbutt file {index}:\n{ex.Message}", "Headbutt Editor"); }
+            catch (Exception ex) { _ = DialogHelper.ShowError($"Failed to load headbutt file {index}:\n{ex.Message}", "Headbutt editor error"); }
         }
 
         private void RefreshGroups()
@@ -394,10 +394,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_file == null || _selFile < 0) return;
             string path = await DialogHelper.SaveFile(owner, "Export headbutt file", HeadbuttFiles, $"headbutt_{_selFile:D4}.bin");
             if (path == null) return;
-            try { System.IO.File.WriteAllBytes(path, _file.ToByteArray()); StatusText = $"Exported headbutt file {_selFile}."; }
+            try { PlainFiles.WriteBytes(path, _file.ToByteArray()); SaveNotice.Exported(path); }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Headbutt");
+                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Headbutt error");
             }
         }
 
@@ -411,7 +411,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try { read = new HeadbuttEncounterFile((ushort)_selFile, System.IO.File.ReadAllBytes(path)); }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is System.IO.EndOfStreamException || ex is ArgumentException)
             {
-                await DialogHelper.ShowError($"That file could not be read as a headbutt file:\n{ex.Message}", "Headbutt");
+                await DialogHelper.ShowError($"That file could not be read as a headbutt file:\n{ex.Message}", "Headbutt error");
                 return;
             }
             _file = read;
@@ -421,7 +421,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             RefreshGroups();
             ShowGroupTrees();
             Dirty();
-            StatusText = $"Imported into headbutt file {_selFile} (unsaved).";
+            SaveNotice.Imported($"headbutt file {_selFile}", path);
         }
 
         /// <summary>Takes the selected group, and its trees, out of the normal or special list.</summary>
@@ -1008,7 +1008,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (_file.SaveToFile(_selFile)) MarkSaved(_selFile);
                 else StatusText = "Save failed (see log).";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Save failed:\n{ex.Message}", "Headbutt Editor"); }
+            catch (Exception ex) { _ = DialogHelper.ShowError($"Save failed:\n{ex.Message}", "Headbutt editor error"); }
         }
 
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
@@ -1031,7 +1031,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             if (error == null) return;
             StatusText = "Save failed.";
-            await DialogHelper.ShowError($"Headbutt file {fileId} was not saved.\n{error}", "Headbutt Editor");
+            await DialogHelper.ShowError($"Headbutt file {fileId} was not saved.\n{error}", "Headbutt editor error");
         }
 
         private void MarkSaved(int fileId)

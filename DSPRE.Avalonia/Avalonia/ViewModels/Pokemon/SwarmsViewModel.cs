@@ -13,7 +13,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
     /// <summary>Where swarms can happen: one row per possible destination, picked at random each day.</summary>
-    public class SwarmsViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
+    public class SwarmsViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
@@ -38,6 +38,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public void Setup()
         {
+            AppEvents.RomPatchStateChanged -= OnRomPatchStateChanged;
+            AppEvents.RomPatchStateChanged += OnRomPatchStateChanged;
             if (_table != null) return;
             string why = SwarmTable.WhyNot();
             if (why != null) { WhyNotLoaded = why; Raise(nameof(WhyNotLoaded)); return; }
@@ -196,10 +198,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_expansionOffered || _table?.NeedsExpansion != true) return;
             _expansionOffered = true;
-            await PatchHandover.OfferAsync("swarmTableExpanded", "Expand the swarm table", "More swarm rows", "Swarms");
+            await PatchHandover.OfferAsync("swarmTableExpanded", "More swarm rows", "Swarms");
         }
 
         /// <summary>After the toolbox moved the table, follows it to its new place and keeps the rows being edited.</summary>
+        private void OnRomPatchStateChanged(object sender, System.EventArgs e) => OnPatchStateChanged();
+        public void Detach() => AppEvents.RomPatchStateChanged -= OnRomPatchStateChanged;
+
         public void OnPatchStateChanged()
         {
             if (_table == null || _table.FromSource) return;
@@ -239,7 +244,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             Changed();
         }
 
-        public string Status => _table == null ? "" :
+        public string StatusText => _table == null ? "" :
             _table.InExpansion ? $"{Rows.Count} destinations · in the expanded ARM9 area"
             : $"{Rows.Count} destinations";
 
@@ -248,7 +253,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         internal void Changed()
         {
-            foreach (string n in new[] { nameof(Status), nameof(Problem), nameof(HasProblem), nameof(HasUnsavedChanges) }) Raise(n);
+            foreach (string n in new[] { nameof(StatusText), nameof(Problem), nameof(HasProblem), nameof(HasUnsavedChanges) }) Raise(n);
             _undo?.Record();
         }
 
@@ -262,12 +267,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_table == null) return true;
             if (_table.NeedsExpansion)
             {
-                await PatchHandover.OfferAsync("swarmTableExpanded", "Expand the swarm table", "More swarm rows", "Swarms");
+                await PatchHandover.OfferAsync("swarmTableExpanded", "More swarm rows", "Swarms");
                 return false;
             }
             // The Wild editor may have changed a swarm species since the rows were read.
             _speciesCache.Clear();
-            if (HasProblem) { await DialogHelper.ShowError(Problem, "Swarms"); return false; }
+            if (HasProblem) { await DialogHelper.ShowError(Problem, "Swarms error"); return false; }
             if (_table.FromSource)
             {
                 (bool saved, string error) = await HgEngineSave.RunAsync(() =>
@@ -277,7 +282,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 });
                 if (!saved)
                 {
-                    if (error != null) await DialogHelper.ShowError("The swarms were not saved:\n" + error, "Swarms");
+                    if (error != null) await DialogHelper.ShowError("The swarms were not saved:\n" + error, "Swarms error");
                     return false;
                 }
             }
@@ -286,7 +291,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 try { _table.Save(HeaderNames.Length, h => EncounterFileOf(h) != ushort.MaxValue, HasSwarmSpecies); }
                 catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException || e is InvalidDataException)
                 {
-                    await DialogHelper.ShowError("The swarms were not saved:\n" + e.Message, "Swarms");
+                    await DialogHelper.ShowError("The swarms were not saved:\n" + e.Message, "Swarms error");
                     return false;
                 }
             }
@@ -304,7 +309,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try { _table = SwarmTable.Load(); }
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException || e is ArgumentException)
             {
-                _ = DialogHelper.ShowError("The saved swarms couldn't be read back:\n" + e.Message, "Swarms");
+                _ = DialogHelper.ShowError("The saved swarms couldn't be read back:\n" + e.Message, "Swarms error");
                 return;
             }
             _saved = _table.Snapshot();

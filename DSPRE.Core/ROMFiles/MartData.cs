@@ -57,7 +57,7 @@ namespace DSPRE.ROMFiles
         private bool _roomy;
 
         /// <summary>Whether the marts sit in the layout the toolbox patch makes, with room to grow.</summary>
-        public bool HasRoom => _roomy && !FromSource;
+        public bool Expanded => _roomy && !FromSource;
 
         public List<CommonEntry> CommonItems { get; } = new();
         public List<SpecialtyShop> SpecialtyShops { get; } = new();
@@ -67,7 +67,7 @@ namespace DSPRE.ROMFiles
         public int CommonItemLimit => FromSource ? HgEngine.HgEngineMarts.BadgeMartLimit : MaxCommonItems;
         /// <summary>Vanilla stock tiers run 0-6; hg-engine's badge mart counts badges, Kanto's too.</summary>
         public int MaxTier => FromSource ? 16 : 6;
-        public bool CanAddShops => HasRoom && SpecialtyShops.Count < RoomyShops;
+        public bool CanAddShops => Expanded && SpecialtyShops.Count < RoomyShops;
         public bool HasSizeChanges => CommonItems.Count != _originalCommonCount
             || SpecialtyShops.Count != _specialtyDataOffsets.Length
             || SpecialtyShops.Where((shop, i) => i < _specialtyDataOffsets.Length)
@@ -185,7 +185,7 @@ namespace DSPRE.ROMFiles
         {
             if (FromSource)
                 throw new InvalidOperationException("hg-engine puts its marts in the game's own slots, so no mart can be added.");
-            if (!HasRoom)
+            if (!Expanded)
                 throw new InvalidOperationException("Adding a mart needs the \"Expand the marts\" patch from the ROM Patch Toolbox.");
             if (SpecialtyShops.Count >= RoomyShops)
                 throw new InvalidOperationException($"The marts have room for {RoomyShops} marts.");
@@ -218,7 +218,7 @@ namespace DSPRE.ROMFiles
                 try { return SaveToFile(RomInfo.arm9Path, showSuccessMessage: false); }
                 finally { _saveBase = null; }
             }
-            if (HasRoom)
+            if (Expanded)
             {
                 // The layout already has room: the marts go back where they are and only the common count changes.
                 byte[] overlay = File.ReadAllBytes(Filesystem.expArmPath), overlayBefore = (byte[])overlay.Clone();
@@ -283,7 +283,7 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public void MoveToRoomyLayout()
         {
-            if (FromSource || HasRoom) return;
+            if (FromSource || Expanded) return;
             if (!SyntheticOverlaySpace.Available()) throw new InvalidOperationException("Apply the ARM9 expansion in the ROM Patch Toolbox first.");
             byte[] overlay = File.ReadAllBytes(Filesystem.expArmPath), overlayBefore = (byte[])overlay.Clone();
             List<(long Start, long End)> excluded = SyntheticOverlaySpace.Reserved(overlay);
@@ -412,18 +412,10 @@ namespace DSPRE.ROMFiles
         {
             EnsureRange(pointerData, pointerOffset, 4, label + " pointer");
             uint address = BitConverter.ToUInt32(pointerData, checked((int)pointerOffset));
-            if (address >= RomInfo.synthOverlayLoadAddress && syntheticOverlay != null)
-            {
-                ulong offset = address - RomInfo.synthOverlayLoadAddress;
-                if (offset + (ulong)requiredLength <= (ulong)syntheticOverlay.Length)
-                    return new DataLocation(syntheticOverlay, (int)offset, false);
-            }
-            if (address >= ARM9.address)
-            {
-                ulong offset = address - ARM9.address;
-                if (offset + (ulong)requiredLength <= (ulong)arm9.Length)
-                    return new DataLocation(arm9, (int)offset, true);
-            }
+            (int region, int offset) = RamAddress.Find(address, requiredLength,
+                RamAddress.Synthetic(syntheticOverlay?.Length ?? 0), RamAddress.Arm9(arm9.Length));
+            if (region == 0) return new DataLocation(syntheticOverlay, offset, false);
+            if (region == 1) return new DataLocation(arm9, offset, true);
             throw new InvalidOperationException($"The {label} pointer is outside supported ARM9 memory.");
         }
 
@@ -444,19 +436,7 @@ namespace DSPRE.ROMFiles
 
         private static int Align(int value, int alignment) => (value + alignment - 1) & ~(alignment - 1);
 
-        private static void WriteReplacementFile(string path, byte[] data)
-        {
-            string temp = path + ".mart.tmp";
-            try
-            {
-                File.WriteAllBytes(temp, data);
-                File.Move(temp, path, true);
-            }
-            finally
-            {
-                if (File.Exists(temp)) File.Delete(temp);
-            }
-        }
+        private static void WriteReplacementFile(string path, byte[] data) => DSUtils.WriteWholeFile(path, data);
 
         private static void EnsureRange(byte[] data, uint offset, int length, string label)
         {

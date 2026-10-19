@@ -21,9 +21,6 @@ namespace DSPRE.Avalonia.Views.World
         {
             InitializeComponent();
             HeightGrid.RampByValue = true;
-            System.EventHandler patched = (_, _) => VM?.OnPatchStateChanged();
-            AttachedToVisualTree += (_, _) => AppEvents.RomPatchStateChanged += patched;
-            DetachedFromVisualTree += (_, _) => AppEvents.RomPatchStateChanged -= patched;
 
             MapGrid.Changed += (_, _) => VM?.MarkDirty();
             HeaderGrid.Changed += (_, _) => VM?.MarkDirty();
@@ -60,8 +57,7 @@ namespace DSPRE.Avalonia.Views.World
                     "No header for this cell");
                 return;
             }
-            List<string> names = HeaderLabels.Friendly().ToList();
-            new SpawnEditorView(null, names, header, VM.SelCol, VM.SelRow).ShowManaged();
+            AvaloniaEditorLauncher.OpenSpawnEditorAt(header, VM.SelCol, VM.SelRow);
         }
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
@@ -154,6 +150,11 @@ namespace DSPRE.Avalonia.Views.World
         {
             if (task == null) return;
             try { await task; } catch { }
+        }
+
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
         }
     }
 }

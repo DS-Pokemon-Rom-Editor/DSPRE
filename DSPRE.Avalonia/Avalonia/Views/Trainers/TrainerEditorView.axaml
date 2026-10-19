@@ -89,7 +89,7 @@
               <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,Auto,Auto" Margin="0,0,8,2">
                 <controls:FusionAutoCompleteBox HorizontalAlignment="Stretch" ItemsSource="{Binding TrainerClassItems}" SelectedIndex="{Binding TrainerClassIndex}"/>
                 <TextBlock Grid.Column="1" Text="{Binding ClassGender}" VerticalAlignment="Center" Margin="6,0,0,0"
-                           Foreground="{DynamicResource Editor.Subtle}" ToolTip.Tip="Class gender, used for the party's natures"/>
+                           Foreground="{DynamicResource Editor.Subtle}" ToolTip.Tip="The class's gender, which decides the party's natures"/>
                 <Button Grid.Column="2" controls:Icon.Key="goto" Margin="4,0,0,0" Click="TrainerClasses_Click" ToolTip.Tip="Open this class on the Classes tab"/>
               </Grid>
 

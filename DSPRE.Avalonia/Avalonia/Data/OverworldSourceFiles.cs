@@ -29,7 +29,7 @@ namespace DSPRE.Avalonia.Data
             {
                 if (member.Bin != null)
                 {
-                    if (!File.Exists(member.Bin) || !File.ReadAllBytes(member.Bin).AsSpan().SequenceEqual(btx)) File.WriteAllBytes(member.Bin, btx);
+                    if (!File.Exists(member.Bin) || !File.ReadAllBytes(member.Bin).AsSpan().SequenceEqual(btx)) PlainFiles.WriteBytes(member.Bin, btx);
                     return null;
                 }
                 string problem = Check(member, btx, out byte[] indices, out List<int[]> palettes, out byte[] oldIndices, out uint[] oldColours);
@@ -48,7 +48,7 @@ namespace DSPRE.Avalonia.Data
                 if (!oldIndices.AsSpan().SequenceEqual(indices) || !oldColours.AsSpan().SequenceEqual(colours))
                 {
                     IndexedPng.TryRead(File.ReadAllBytes(member.Png), out _, out _, out int w, out int h);
-                    File.WriteAllBytes(member.Png, IndexedPng.Write(indices, colours, w, h, 4));
+                    PlainFiles.WriteBytes(member.Png, IndexedPng.Write(indices, colours, w, h, 4));
                 }
                 for (int p = 0; p < member.Palettes.Count; p++) HgEngineOverworlds.WriteJasc(member.Palettes[p], palettes[p]);
                 return null;
@@ -140,7 +140,7 @@ namespace DSPRE.Avalonia.Data
                 HgEngineOverworlds.Member member = new HgEngineOverworlds.Member(Path.GetFileName(target), target, json, PalettesOf(json, dir, stem), null);
                 if (member.Palettes.Count == 0) return $"{Rel(json)} names no palettes.";
 
-                File.WriteAllBytes(target, IndexedPng.Write(indices, colours.Take(16).ToArray(), w, h, 4));
+                PlainFiles.WriteBytes(target, IndexedPng.Write(indices, colours.Take(16).ToArray(), w, h, 4));
                 HgEngineOverworlds.WriteJasc(member.Palettes[0], Sixteen(colours));
                 if (shinyColours != null && member.Palettes.Count > 1)
                     HgEngineOverworlds.WriteJasc(member.Palettes[1], Sixteen(shinyColours));

@@ -386,16 +386,10 @@ namespace DSPRE.HgEngine
             int rowBytes = maxLevelupMoves * 4;
             int rowCount = table.Length / rowBytes;
 
-            if (Directory.Exists(unpackedDir)) Directory.Delete(unpackedDir, true);
-            Directory.CreateDirectory(unpackedDir);
-
+            List<byte[]> rows = new List<byte[]>(totalSpeciesCount);
             for (int species = 0; species < totalSpeciesCount; species++)
-            {
-                byte[] outBytes = species < rowCount
-                    ? ConvertRow(table, species * rowBytes, maxLevelupMoves)
-                    : BitConverter.GetBytes(Terminator);
-                File.WriteAllBytes(Path.Combine(unpackedDir, species.ToString("D4")), outBytes);
-            }
+                rows.Add(species < rowCount ? ConvertRow(table, species * rowBytes, maxLevelupMoves) : BitConverter.GetBytes(Terminator));
+            ArchiveMembers.ReplaceAll(unpackedDir, rows);
             return true;
         }
 

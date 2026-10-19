@@ -22,9 +22,6 @@ namespace DSPRE.Avalonia.Views.Pokemon
         {
             DataContext = vm;
             BuildGrid();
-            System.EventHandler patched = (_, _) => vm.OnPatchStateChanged();
-            AppEvents.RomPatchStateChanged += patched;
-            DetachedFromVisualTree += (_, _) => AppEvents.RomPatchStateChanged -= patched;
             vm.CellsChanged += (_, _) => Paint();
             vm.NamesRefreshed += (_, _) =>
             {
@@ -231,7 +228,10 @@ namespace DSPRE.Avalonia.Views.Pokemon
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.SaveChangesAsync(); }
-        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+        }
         private async void MakeRoom_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.MakeRoomAsync(); }
     }
 }

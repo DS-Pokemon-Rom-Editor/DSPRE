@@ -10,8 +10,6 @@ namespace DSPRE.LibNDSFormats
     /// </summary>
     public sealed class Btx0Structure
     {
-        private static readonly int[] BitsPerPixel = { 0, 8, 2, 4, 8, 2, 8, 16 };
-
         private Btx0Structure(
             int textureDataSize,
             int compressedTextureDataSize,
@@ -105,59 +103,28 @@ namespace DSPRE.LibNDSFormats
             {
                 ReadOnlySpan<byte> bytes = data;
                 Require(bytes, 0, 16, "BTX header");
-                if (!HasId(bytes, 0, "BTX0"))
-                    throw new FormatException("The file does not have a BTX0 header.");
-
                 int declaredFileSize = ReadInt32(bytes, 8, "BTX file size");
                 if (declaredFileSize < 0)
                     throw new FormatException("The declared BTX file size is invalid.");
                 if (declaredFileSize != 0 && declaredFileSize > bytes.Length)
                     throw new FormatException("The BTX file is truncated before its declared size.");
 
-                int sectionCount = ReadUInt16(bytes, 14, "BTX section count");
-                if (sectionCount < 1)
-                    throw new FormatException("The BTX file has no TEX0 section.");
+                DSPRE.ROMFiles.Tex0Block block = DSPRE.ROMFiles.Tex0Block.ReadBtx0(data, out string why);
+                if (block == null) throw new FormatException(why);
 
-                Require(bytes, 16, checked(sectionCount * 4), "BTX section table");
-                int tex0Offset = checked((int)ReadUInt32(bytes, 16, "TEX0 offset"));
-                Require(bytes, tex0Offset, 60, "TEX0 header");
-                if (!HasId(bytes, tex0Offset, "TEX0"))
-                    throw new FormatException("The first BTX section is not TEX0.");
-
-                int sectionSize = ReadInt32(bytes, tex0Offset + 4, "TEX0 size");
-                if (sectionSize < 60)
-                    throw new FormatException("The TEX0 section size is invalid.");
-                Require(bytes, tex0Offset, sectionSize, "TEX0 section");
-
-                int textureDataSize = checked(ReadUInt16(bytes, tex0Offset + 12, "texture data size") * 8);
-                int textureDictionaryOffset = ReadUInt16(bytes, tex0Offset + 14, "texture dictionary offset");
-                int textureDataOffset = checked((int)ReadUInt32(bytes, tex0Offset + 20, "texture data offset"));
-                int compressedDataSize = checked(ReadUInt16(bytes, tex0Offset + 28, "compressed texture data size") * 8);
-                int compressedDataOffset = checked((int)ReadUInt32(bytes, tex0Offset + 36, "compressed texture data offset"));
-                int paletteDataSize = checked(ReadUInt16(bytes, tex0Offset + 48, "palette data size") * 8);
-                int paletteDictionaryOffset = ReadUInt16(bytes, tex0Offset + 52, "palette dictionary offset");
-                int paletteDataOffset = checked((int)ReadUInt32(bytes, tex0Offset + 56, "palette data offset"));
-
-                RequireWithinSection(bytes, tex0Offset, sectionSize, textureDataOffset, textureDataSize, "texture data");
-                RequireWithinSection(bytes, tex0Offset, sectionSize, compressedDataOffset, compressedDataSize, "compressed texture data");
-                RequireWithinSection(bytes, tex0Offset, sectionSize, paletteDataOffset, paletteDataSize, "palette data");
-
-                Btx0TextureEntry[] textures = ReadTextures(
-                    bytes, tex0Offset, sectionSize, textureDictionaryOffset,
-                    textureDataSize, compressedDataSize);
-                Btx0PaletteEntry[] palettes = ReadPalettes(
-                    bytes, tex0Offset, sectionSize, paletteDictionaryOffset, paletteDataSize);
+                Btx0TextureEntry[] textures = TextureEntries(block);
+                Btx0PaletteEntry[] palettes = PaletteEntries(block);
 
                 int? sheetWidth = null;
                 int? sheetHeight = null;
-                if (textures.Length > 0 && textureDataSize > 0)
+                if (textures.Length > 0 && block.TextureDataSize > 0)
                 {
                     bool allColor16 = true;
                     for (int i = 0; i < textures.Length; i++)
                         allColor16 &= textures[i].Format == 3;
 
                     int width = textures[0].Width;
-                    int pixelCount = checked(textureDataSize * 2);
+                    int pixelCount = checked(block.TextureDataSize * 2);
                     if (allColor16 && width > 0 && pixelCount % width == 0)
                     {
                         sheetWidth = width;
@@ -166,7 +133,7 @@ namespace DSPRE.LibNDSFormats
                 }
 
                 structure = new Btx0Structure(
-                    textureDataSize, compressedDataSize, paletteDataSize,
+                    block.TextureDataSize, block.CompressedDataSize, block.PaletteDataSize,
                     textures, palettes, sheetWidth, sheetHeight);
                 return true;
             }
@@ -177,126 +144,47 @@ namespace DSPRE.LibNDSFormats
             }
         }
 
-        private static Btx0TextureEntry[] ReadTextures(
-            ReadOnlySpan<byte> bytes,
-            int tex0Offset,
-            int sectionSize,
-            int dictionaryOffset,
-            int textureDataSize,
-            int compressedDataSize)
+        private static Btx0TextureEntry[] TextureEntries(DSPRE.ROMFiles.Tex0Block block)
         {
-            int dictionary = checked(tex0Offset + dictionaryOffset);
-            RequireWithinSection(bytes, tex0Offset, sectionSize, dictionaryOffset, 4, "texture dictionary");
-            int count = bytes[dictionary + 1];
-            int entryStart = checked(dictionary + 16 + count * 4);
-            int namesStart = checked(entryStart + count * 8);
-            int dictionaryLength = checked(16 + count * 28);
-            Require(bytes, dictionary, dictionaryLength, "texture dictionary");
-            RequireWithinSection(bytes, tex0Offset, sectionSize, dictionaryOffset, dictionaryLength, "texture dictionary");
-
             Dictionary<int, int> groups = new Dictionary<int, int>();
-            Btx0TextureEntry[] result = new Btx0TextureEntry[count];
-            for (int i = 0; i < count; i++)
+            Btx0TextureEntry[] result = new Btx0TextureEntry[block.Textures.Count];
+            for (int i = 0; i < result.Length; i++)
             {
-                int entry = checked(entryStart + i * 8);
-                int offset = checked(ReadUInt16(bytes, entry, "texture offset") * 8);
-                ushort parameters = ReadUInt16(bytes, entry + 2, "texture parameters");
-                uint dictionaryData = ReadUInt32(bytes, entry + 4, "texture dictionary data");
-                int format = (parameters >> 10) & 7;
-                int width = 8 << ((parameters >> 4) & 7);
-                int height = 8 << ((parameters >> 7) & 7);
-                int dataLength = checked(width * height * BitsPerPixel[format] / 8);
-                int regionSize = format == 5 ? compressedDataSize : textureDataSize;
-                if (dataLength <= 0 || offset > regionSize || dataLength > regionSize - offset)
+                DSPRE.ROMFiles.Tex0Block.Texture t = block.Textures[i];
+                int regionSize = t.Format == 5 ? block.CompressedDataSize : block.TextureDataSize;
+                if (t.DataSize <= 0 || t.RelativeOffset > regionSize || t.DataSize > regionSize - t.RelativeOffset)
                     throw new FormatException($"Texture {i} points outside its declared data region.");
 
-                if (!groups.TryGetValue(offset, out int offsetGroup))
+                if (!groups.TryGetValue(t.RelativeOffset, out int offsetGroup))
                 {
                     offsetGroup = groups.Count;
-                    groups.Add(offset, offsetGroup);
+                    groups.Add(t.RelativeOffset, offsetGroup);
                 }
-
-                string name = ReadName(bytes, checked(namesStart + i * 16));
-                result[i] = new Btx0TextureEntry(name, width, height, format, dataLength, offsetGroup, parameters, dictionaryData);
+                result[i] = new Btx0TextureEntry(t.Name, t.Width, t.Height, t.Format, t.DataSize, offsetGroup, t.Parameters, t.DictionaryData);
             }
             return result;
         }
 
-        private static Btx0PaletteEntry[] ReadPalettes(
-            ReadOnlySpan<byte> bytes,
-            int tex0Offset,
-            int sectionSize,
-            int dictionaryOffset,
-            int paletteDataSize)
+        private static Btx0PaletteEntry[] PaletteEntries(DSPRE.ROMFiles.Tex0Block block)
         {
-            int dictionary = checked(tex0Offset + dictionaryOffset);
-            RequireWithinSection(bytes, tex0Offset, sectionSize, dictionaryOffset, 4, "palette dictionary");
-            int count = bytes[dictionary + 1];
-            int entryStart = checked(dictionary + 16 + count * 4);
-            int namesStart = checked(entryStart + count * 4);
-            int dictionaryLength = checked(16 + count * 24);
-            Require(bytes, dictionary, dictionaryLength, "palette dictionary");
-            RequireWithinSection(bytes, tex0Offset, sectionSize, dictionaryOffset, dictionaryLength, "palette dictionary");
-
-            int[] offsets = new int[count];
-            for (int i = 0; i < count; i++)
-            {
-                offsets[i] = checked(ReadUInt16(bytes, entryStart + i * 4, "palette offset") * 8);
-                if (offsets[i] < 0 || offsets[i] >= paletteDataSize)
-                    throw new FormatException($"Palette {i} points outside the declared palette data region.");
-            }
-
             Dictionary<int, int> groups = new Dictionary<int, int>();
-            Btx0PaletteEntry[] result = new Btx0PaletteEntry[count];
-            for (int i = 0; i < count; i++)
+            Btx0PaletteEntry[] result = new Btx0PaletteEntry[block.Palettes.Count];
+            for (int i = 0; i < result.Length; i++)
             {
-                int next = paletteDataSize;
-                for (int j = 0; j < count; j++)
-                {
-                    if (offsets[j] > offsets[i] && offsets[j] < next)
-                        next = offsets[j];
-                }
-                int byteCapacity = next - offsets[i];
-                if ((byteCapacity & 1) != 0)
+                DSPRE.ROMFiles.Tex0Block.Palette p = block.Palettes[i];
+                if (p.RelativeOffset < 0 || p.RelativeOffset >= block.PaletteDataSize)
+                    throw new FormatException($"Palette {i} points outside the declared palette data region.");
+                if ((p.DataSize & 1) != 0)
                     throw new FormatException($"Palette {i} has an odd byte length.");
 
-                if (!groups.TryGetValue(offsets[i], out int offsetGroup))
+                if (!groups.TryGetValue(p.RelativeOffset, out int offsetGroup))
                 {
                     offsetGroup = groups.Count;
-                    groups.Add(offsets[i], offsetGroup);
+                    groups.Add(p.RelativeOffset, offsetGroup);
                 }
-
-                string name = ReadName(bytes, checked(namesStart + i * 16));
-                ushort color0 = ReadUInt16(bytes, entryStart + i * 4 + 2, "palette flags");
-                result[i] = new Btx0PaletteEntry(name, byteCapacity / 2, offsetGroup, color0);
+                result[i] = new Btx0PaletteEntry(p.Name, p.DataSize / 2, offsetGroup, p.Flags);
             }
             return result;
-        }
-
-        private static string ReadName(ReadOnlySpan<byte> bytes, int offset)
-        {
-            Require(bytes, offset, 16, "dictionary name");
-            int length = 0;
-            while (length < 16 && bytes[offset + length] != 0)
-                length++;
-            return Encoding.ASCII.GetString(bytes.Slice(offset, length));
-        }
-
-        private static bool HasId(ReadOnlySpan<byte> bytes, int offset, string id)
-        {
-            Require(bytes, offset, id.Length, id + " identifier");
-            for (int i = 0; i < id.Length; i++)
-            {
-                if (bytes[offset + i] != id[i])
-                    return false;
-            }
-            return true;
-        }
-
-        private static ushort ReadUInt16(ReadOnlySpan<byte> bytes, int offset, string field)
-        {
-            Require(bytes, offset, 2, field);
-            return (ushort)(bytes[offset] | bytes[offset + 1] << 8);
         }
 
         private static uint ReadUInt32(ReadOnlySpan<byte> bytes, int offset, string field)
@@ -310,19 +198,6 @@ namespace DSPRE.LibNDSFormats
 
         private static int ReadInt32(ReadOnlySpan<byte> bytes, int offset, string field) =>
             unchecked((int)ReadUInt32(bytes, offset, field));
-
-        private static void RequireWithinSection(
-            ReadOnlySpan<byte> bytes,
-            int sectionOffset,
-            int sectionSize,
-            int relativeOffset,
-            int length,
-            string field)
-        {
-            if (relativeOffset < 0 || length < 0 || relativeOffset > sectionSize || length > sectionSize - relativeOffset)
-                throw new FormatException($"The {field} lies outside the TEX0 section.");
-            Require(bytes, checked(sectionOffset + relativeOffset), length, field);
-        }
 
         private static void Require(ReadOnlySpan<byte> bytes, int offset, int length, string field)
         {

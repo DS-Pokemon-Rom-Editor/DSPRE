@@ -27,7 +27,7 @@ namespace DSPRE.Avalonia.Views.Tools
             {
                 e.Cancel = true;
                 DialogHelper.MsgResult r = await DialogHelper.AskYesNoCancel(
-                    "You have unsaved changes. Do you want to save them before closing?", "Unsaved Changes");
+                    "You have unsaved changes. Do you want to save them before closing?", "Unsaved changes");
                 if (r == DialogHelper.MsgResult.Cancel) return;   // stay open
                 if (r == DialogHelper.MsgResult.Yes) VM.Save(); else VM.Discard();
                 _closeConfirmed = true; Close();

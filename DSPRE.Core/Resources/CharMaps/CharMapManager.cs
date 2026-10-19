@@ -396,7 +396,7 @@ namespace DSPRE.CharMaps
                 }
                 
                 // Write without BOM for consistency
-                File.WriteAllText(filePath, jsonString, new System.Text.UTF8Encoding(false));
+                PlainFiles.WriteText(filePath, jsonString, new System.Text.UTF8Encoding(false));
                 
                 AppLogger.Debug($"Successfully serialized charmap to {filePath} with {charMap.CharacterMap.Count} character entries and {charMap.CommandMap.Count} command entries");
             }
@@ -754,7 +754,7 @@ namespace DSPRE.CharMaps
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(customCharmapFilePath));
                 }
-                File.Copy(charmapFilePath, customCharmapFilePath, overwrite: true);
+                PlainFiles.Copy(charmapFilePath, customCharmapFilePath, overwrite: true);
                 ClearCache(); // Clear cache to force reload with new custom file
                 AppLogger.Info("Custom charmap file created successfully.");
                 return true;

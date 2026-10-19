@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Data
 {
@@ -193,8 +194,8 @@ namespace DSPRE.Avalonia.Data
             ushort bgr = ball >= 1 && ball < FadeColors.Length ? FadeColors[ball]
                        : ball >= FadeColors.Length && ball <= 24 ? (ushort)0x7ADF   // HGSS apricorn balls share the Poké Ball's
                        : FadeColors[4];
-            uint r = (uint)((bgr & 0x1F) * 255 / 31), g = (uint)(((bgr >> 5) & 0x1F) * 255 / 31), b = (uint)(((bgr >> 10) & 0x1F) * 255 / 31);
-            return (r << 16) | (g << 8) | b;
+            (byte r, byte g, byte b) = NitroBgCodec.Colour(bgr);
+            return ((uint)r << 16) | ((uint)g << 8) | b;
         }
 
         private static readonly ushort[] FadeColors =

@@ -406,7 +406,7 @@ namespace DSPRE.ROMFiles
                 fn.CopyTo(code, _reverse);
             }
 
-            File.WriteAllBytes(arm9Path, code);
+            DSUtils.WriteWholeFile(arm9Path, code);
             _code = code;
         }
     }

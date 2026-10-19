@@ -14,14 +14,16 @@ namespace DSPRE.Avalonia.Views.Pokemon
             TradeEditorViewModel vm = new TradeEditorViewModel();
             DataContext = vm;
             // VM owns the bound Title (+ "*" marker); chrome adds Ctrl+S + the close guard.
-            EditorWindowChrome.Attach(this, vm, manageTitle: false, onClosed: vm.Detach);
+            EditorWindowChrome.Attach(this, vm, title: () => vm.Title);
         }
 
         private void Save_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
             => VM.SaveChanges();
 
-        private void Discard_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-            => VM.DiscardChanges();
+        private async void Discard_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) VM.DiscardChanges();
+        }
 
         private async void TradeID_Changed(object sender, NumericUpDownValueChangedEventArgs e)
         {

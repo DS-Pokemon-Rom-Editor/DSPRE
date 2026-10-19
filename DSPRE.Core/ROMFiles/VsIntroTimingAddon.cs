@@ -178,13 +178,13 @@ namespace DSPRE.ROMFiles
             }
             try
             {
-                File.WriteAllBytes(Filesystem.expArmPath, synth);
-                foreach (KeyValuePair<int, byte[]> kv in overlays) File.WriteAllBytes(OverlayUtils.GetPath(kv.Key), kv.Value);
+                DSUtils.WriteWholeFile(Filesystem.expArmPath, synth);
+                foreach (KeyValuePair<int, byte[]> kv in overlays) DSUtils.WriteWholeFile(OverlayUtils.GetPath(kv.Key), kv.Value);
             }
             catch
             {
-                File.WriteAllBytes(Filesystem.expArmPath, synthBefore);
-                foreach (KeyValuePair<int, byte[]> kv in overlaysBefore) File.WriteAllBytes(OverlayUtils.GetPath(kv.Key), kv.Value);
+                DSUtils.WriteWholeFile(Filesystem.expArmPath, synthBefore);
+                foreach (KeyValuePair<int, byte[]> kv in overlaysBefore) DSUtils.WriteWholeFile(OverlayUtils.GetPath(kv.Key), kv.Value);
                 throw;
             }
             return Load();

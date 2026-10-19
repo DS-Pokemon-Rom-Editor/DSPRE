@@ -13,7 +13,7 @@ namespace DSPRE.ROMFiles {
                 return false;
             }
 
-            File.WriteAllBytes(path, romFileToByteArray);
+            ArchiveMembers.Write(path, romFileToByteArray);
 
             if (showSuccessMessage) {
                 AppMessages.Info($"Saved {GetType().Name} {Path.GetFileName(path)}.");
@@ -22,8 +22,19 @@ namespace DSPRE.ROMFiles {
             return true;
         }
         protected internal bool SaveToFileDefaultDir(DirNames dir, int IDtoReplace, bool showSuccessMessage = true) {
-            string path = Path.Combine(RomInfo.gameDirs[dir].unpackedDir, IDtoReplace.ToString("D4"));
-            return this.SaveToFile(path, showSuccessMessage);
+            byte[] romFileToByteArray = ToByteArray();
+            if (romFileToByteArray is null) {
+                AppLogger.Error(GetType().Name + " couldn't be saved!");
+                return false;
+            }
+
+            ArchiveMembers.Put(dir, IDtoReplace, romFileToByteArray);
+
+            if (showSuccessMessage) {
+                AppMessages.Info($"Saved {GetType().Name} {IDtoReplace:D4}.");
+            }
+
+            return true;
         }
         protected internal void SaveToFileExplorePath(string fileType, string fileExtension, string suggestedFileName, bool showSuccessMessage = true) {
             fileExtension = "*." + fileExtension;

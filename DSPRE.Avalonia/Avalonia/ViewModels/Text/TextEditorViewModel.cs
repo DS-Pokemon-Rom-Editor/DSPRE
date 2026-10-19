@@ -51,7 +51,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
     /// (dual binary/JSON format): archive selection, per-line editing, add/remove
     /// strings &amp; archives, reorder, import/export, and search &amp; replace.
     /// </summary>
-    public class TextEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
+    public class TextEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -248,16 +248,59 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         // ── Dirty tracking ───────────────────────────────────────────────────────
         private bool _dirty;
-        public bool HasUnsavedChanges => _dirty;
-        public string UnsavedChangesDescription => _current != null ? $"Text Archive {_current.ID}" : "Text Archive";
+        public bool HasUnsavedChanges => _dirty || _addedArchives.Count > 0 || _removedArchives.Count > 0;
+
+        // Archives added (their lines) and removed since the last save; Save writes them, Discard drops them.
+        private readonly SortedDictionary<int, List<string>> _addedArchives = new();
+        private readonly SortedSet<int> _removedArchives = new();
+        private int _savedArchiveCount;
+
+        private int ArchiveCount => _savedArchiveCount - _removedArchives.Count + _addedArchives.Count;
+
+        private void WriteStagedArchives()
+        {
+            foreach (int id in _removedArchives.Reverse())
+            {
+                (string binPath, string jsonPath) = TextArchive.GetFilePaths(id);
+                if (File.Exists(jsonPath)) File.Delete(jsonPath);
+                ArchiveMembers.Delete(binPath);
+            }
+            foreach ((int id, List<string> lines) in _addedArchives)
+            {
+                List<string> now = _current != null && _current.ID == id ? _current.messages : lines;
+                new TextArchive(id, new List<string>(now)).SaveToExpandedDir(id, showSuccessMessage: false, sender: this);
+                (string binPath, string jsonPath) = TextArchive.GetFilePaths(id);
+                TextConverter.JSONToBin(jsonPath, binPath, CharMapManager.GetCharMapPath());
+            }
+            _removedArchives.Clear();
+            _addedArchives.Clear();
+            _savedArchiveCount = Filesystem.GetTextArchivesCount();
+        }
+        public string UnsavedChangesDescription => DSPRE.Avalonia.Data.StagedArchive.Join(_current != null ? $"Text Archive {_current.ID}" : "Text Archive", _dirty,
+            DSPRE.Avalonia.Data.StagedArchive.Describe("text archive", "text archives",
+                _addedArchives.Keys.Select(id => (id, DSPRE.Avalonia.Data.PendingArchiveWrites.PendingKind.Added))
+                    .Concat(_removedArchives.Select(id => (id, DSPRE.Avalonia.Data.PendingArchiveWrites.PendingKind.Removed)))));
 
         public void SaveChanges() => Save();
         // The edited lines live in the loaded archive, so dropping them means reading it again.
         public void DiscardChanges()
         {
-            bool reload = _dirty && _current != null;
+            bool reload = (_dirty || _addedArchives.Count > 0 || _removedArchives.Count > 0) && _current != null;
+            bool structural = _addedArchives.Count > 0 || _removedArchives.Count > 0;
+            _addedArchives.Clear();
+            _removedArchives.Clear();
             SetClean();
-            if (reload) LoadArchive(_current.ID);
+            if (structural)
+            {
+                _isLoading = true;
+                while (ArchiveNames.Count > _savedArchiveCount) ArchiveNames.RemoveAt(ArchiveNames.Count - 1);
+                while (ArchiveNames.Count < _savedArchiveCount)
+                    ArchiveNames.Add("Text Archive " + ArchiveNames.Count + Marker(HgEngineOwnedFiles.Get(TextArchivePath, ArchiveNames.Count)));
+                if (_selectedArchiveIndex >= ArchiveNames.Count) SelectedArchiveIndex = ArchiveNames.Count - 1;
+                _isLoading = false;
+                OnPropertyChanged(nameof(HasUnsavedChanges));
+            }
+            if (reload && _selectedArchiveIndex >= 0) LoadArchive(_selectedArchiveIndex);
         }
 
         private void SetDirty()
@@ -266,7 +309,6 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (_dirty) return;
             _dirty = true;
             OnPropertyChanged(nameof(HasUnsavedChanges));
-            OnPropertyChanged(nameof(Title));
         }
         private void SetClean()
         {
@@ -274,12 +316,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (!_dirty) return;
             _dirty = false;
             OnPropertyChanged(nameof(HasUnsavedChanges));
-            OnPropertyChanged(nameof(Title));
         }
-
-        public string Title => _current != null
-            ? $"{(_dirty ? "● " : "")}Text Editor - Archive {_current.ID}"
-            : "Text Editor";
 
         // ── Design-time constructor ──────────────────────────────────────────────
         public TextEditorViewModel()
@@ -383,6 +420,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
                 ArchiveNames.Clear();
                 int count = Filesystem.GetTextArchivesCount();
+                _savedArchiveCount = count;
                 for (int i = 0; i < count; i++)
                 {
                     ArchiveNames.Add("Text Archive " + i + Marker(HgEngineOwnedFiles.Get(TextArchivePath, i)));
@@ -401,7 +439,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             catch (Exception ex)
             {
                 StatusText = $"Error loading text archives: {ex.Message}";
-                await DialogHelper.ShowError($"Failed to load text archives:\n{ex.Message}", "Text Editor Error");
+                await DialogHelper.ShowError($"Failed to load text archives:\n{ex.Message}", "Text editor error");
             }
             finally
             {
@@ -416,7 +454,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             {
                 DialogHelper.MsgResult r = await DialogHelper.AskYesNoCancel(
                     "There are unsaved changes to the currently loaded Text Archive.\nDo you want to save them?",
-                    "Text Editor - Unsaved changes");
+                    "Unsaved changes");
 
                 if (r == DialogHelper.MsgResult.Cancel)
                 {
@@ -441,7 +479,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         private void SyncDirtyWithUndo()
         {
             if (_undo == null || _undo.IsDirty == _dirty) return;
-            _dirty = _undo.IsDirty; OnPropertyChanged(nameof(HasUnsavedChanges)); OnPropertyChanged(nameof(Title));
+            _dirty = _undo.IsDirty; OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
         private byte[] MessagesState()
@@ -488,7 +526,9 @@ namespace DSPRE.Avalonia.ViewModels.Text
             _isLoading = true;
             try
             {
-                _current = new TextArchive(id);
+                _current = _addedArchives.TryGetValue(id, out List<string> added)
+                    ? new TextArchive(id, new List<string>(added))
+                    : new TextArchive(id);
                 HgEngineOwnedFile owned = HgEngineOwnedFiles.Get(TextArchivePath, id);
                 _generatedSource = owned?.Ownership == HgEngineOwnership.Generated ? owned : null;
                 _managedSource = owned?.Ownership == HgEngineOwnership.EditableSource ? owned : null;
@@ -536,7 +576,6 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 StatusText = _managedSource != null
                     ? $"Loaded {_managedSource.RelPath} ({_current.messages.Count} lines) from the hg-engine checkout."
                     : $"Loaded Text Archive {id} ({_current.messages.Count} lines).";
-                OnPropertyChanged(nameof(Title));
             }
             finally
             {
@@ -607,28 +646,22 @@ namespace DSPRE.Avalonia.ViewModels.Text
         // ── Add / remove archives ────────────────────────────────────────────────
         public void AddArchive()
         {
-            int newId = NewProjectFiles.AddTextArchive(sender: this);
+            int newId = ArchiveCount;
+            _removedArchives.Remove(newId);
+            _addedArchives[newId] = new List<string> { "Your text here." };
             ArchiveNames.Add("Text Archive " + newId);
             SelectedArchiveIndex = newId;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
         public async Task RemoveArchiveAsync()
         {
             if (ArchiveNames.Count == 0) return;
-            if (!await DialogHelper.AskYesNo("Are you sure you want to delete the last Text Archive?", "Confirm deletion"))
+            if (!await DialogHelper.AskYesNo("Delete the last text archive? It goes when you save.", "Delete text archive?"))
                 return;
 
             int lastIndex = ArchiveNames.Count - 1;
-            try
-            {
-                File.Delete(TextArchive.GetFilePaths(lastIndex).jsonPath);
-                File.Delete(TextArchive.GetFilePaths(lastIndex).binPath);
-            }
-            catch (Exception ex)
-            {
-                await DialogHelper.ShowError("Failed to delete Text Archive files: " + ex.Message, "Error");
-                return;
-            }
+            if (!_addedArchives.Remove(lastIndex)) _removedArchives.Add(lastIndex);
 
             if (SelectedArchiveIndex == lastIndex)
             {
@@ -639,6 +672,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 if (lastIndex - 1 >= 0) LoadArchive(lastIndex - 1);
             }
             ArchiveNames.RemoveAt(lastIndex);
+            OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
         // ── Save ─────────────────────────────────────────────────────────────────
@@ -676,12 +710,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (_fieldSource?.IsMain == true) { _ = SaveToGeneratedFieldAsync(); return; }
             if (_generatedSource != null) { _ = RefusedForManagedArchive("Saving"); return; }
 
-            _current.SaveToExpandedDir(_current.ID, showSuccessMessage: false, sender: this);
+            if (!_addedArchives.ContainsKey(_current.ID))
+                _current.SaveToExpandedDir(_current.ID, showSuccessMessage: false, sender: this);
+            WriteStagedArchives();
             SetClean();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
             SaveNotice.Saved(UnsavedChangesDescription);
             StatusText = $"Saved Text Archive {_current.ID}.";
-            if (_current.ID == locationNamesTextNumber)
-                ReloadHeaderEditorLocations(_current.messages);
             // Names (Pokémon/item/move/…) come from text archives; tell open editors to refresh their combos.
             AppEvents.RaiseNamesChanged();
         }
@@ -744,7 +779,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (!HgEngineOwnedFiles.TryWriteLines(source, _current.messages, out string error))
             {
                 StatusText = error;
-                await DialogHelper.ShowError(error, "Text Editor");
+                await DialogHelper.ShowError(error, "Text editor error");
                 return;
             }
 
@@ -781,7 +816,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 if (error != null)
                 {
                     StatusText = error;
-                    await DialogHelper.ShowError(error, "Text Editor");
+                    await DialogHelper.ShowError(error, "Text editor error");
                 }
                 return;
             }
@@ -803,33 +838,29 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 new FilePickerFileType("JSON Text Archive") { Patterns = new[] { "*.json" } },
                 new FilePickerFileType("Binary Text Archive") { Patterns = new[] { "*.msg", "*.bin" } },
             };
-            string path = await DialogHelper.OpenFile(_owner, "Import Text Archive", filters);
+            string path = await DialogHelper.OpenFile(_owner, "Import text archive", filters);
             if (path == null) return;
-            if (_current == null || !await SaveOrDiscardBeforeReloadAsync("Importing")) return;
-
-            string binPath = TextArchive.GetFilePaths(_current.ID).binPath;
-            string jsonPath = TextArchive.GetFilePaths(_current.ID).jsonPath;
-            string ext = Path.GetExtension(path).ToLowerInvariant();
+            if (_current == null) return;
 
             try
             {
-                if (ext == ".msg" || ext == ".bin" || ext == "")
+                // The lines replace the open archive's, as an edit Save keeps and Undo takes back.
+                List<string> lines = TextArchive.ReadMessagesFrom(path);
+                if (lines.SequenceEqual(_current.messages))
                 {
-                    File.Copy(path, binPath, true);
-                    TextConverter.BinToJSON(binPath, jsonPath, CharMapManager.GetCharMapPath());
+                    StatusText = $"That file matches Text Archive {_current.ID} already.";
+                    return;
                 }
-                else if (ext == ".json")
-                {
-                    File.Copy(path, jsonPath, true);
-                }
-                LoadArchive(_current.ID);
-                TextArchive.RaiseSaved(this, _current.ID);
-                AppEvents.RaiseNamesChanged();
-                await DialogHelper.ShowInfo("Text Archive imported successfully!", "Import");
+                _current.messages.Clear();
+                _current.messages.AddRange(lines);
+                ShowLines();
+                RefreshPreview();
+                SetDirty();
+                SaveNotice.Imported($"{lines.Count} lines into Text Archive {_current.ID}", path);
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error");
+                await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Text editor error");
             }
         }
 
@@ -843,26 +874,33 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 new FilePickerFileType("JSON Text Archive") { Patterns = new[] { "*.json" } },
                 new FilePickerFileType("Binary Text Archive") { Patterns = new[] { "*.msg" } },
             };
-            string path = await DialogHelper.SaveFile(_owner, "Export Text Archive", filters, "Text Archive " + id);
+            string path = await DialogHelper.SaveFile(_owner, "Export text archive", filters, "Text Archive " + id);
             if (path == null) return;
 
             string ext = Path.GetExtension(path).ToLowerInvariant();
             try
             {
-                if (ext == ".msg" || ext == "")
+                // The archive as the editor shows it, unsaved edits and added archives included.
+                byte[] json = _current.ToExpandedJsonBytes(id);
+                if (ext == ".json")
                 {
-                    string jsonPath = TextArchive.GetFilePaths(id).jsonPath;
-                    TextConverter.JSONToBin(jsonPath, path, CharMapManager.GetCharMapPath());
+                    PlainFiles.WriteBytes(path, json);
                 }
-                else if (ext == ".json")
+                else
                 {
-                    File.Copy(TextArchive.GetFilePaths(id).jsonPath, path, true);
+                    string temp = Path.Combine(Path.GetTempPath(), "dspre_text_" + Guid.NewGuid().ToString("N") + ".json");
+                    try
+                    {
+                        PlainFiles.WriteBytes(temp, json);
+                        TextConverter.JSONToBin(temp, path, CharMapManager.GetCharMapPath());
+                    }
+                    finally { if (File.Exists(temp)) File.Delete(temp); }
                 }
-                await DialogHelper.ShowInfo("Text Archive exported.", "Export");
+                SaveNotice.Exported(path);
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error");
+                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Text editor error");
             }
         }
 
@@ -919,7 +957,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
             string message = $"You are about to replace every occurrence of \"{SearchText}\" with \"{ReplaceText}\"{specify}." +
                              "\nThe operation can't be interrupted nor undone.\n\nProceed?";
-            if (!await DialogHelper.AskYesNo(message, "Confirm to proceed")) return;
+            if (!await DialogHelper.AskYesNo(message, "Replace text?")) return;
             if (!await SaveOrDiscardBeforeReloadAsync("Replacing")) return;
 
             SearchResults.Clear();
@@ -959,9 +997,5 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             RevealLine(result.Line);
         }
-
-        // ── Header editor location list refresh (WinForms bridge; the host installs the hook) ─────
-        private static void ReloadHeaderEditorLocations(IEnumerable<string> contents)
-            => ShellIntegration.ReloadWinFormsHeaderLocations(contents);
     }
 }

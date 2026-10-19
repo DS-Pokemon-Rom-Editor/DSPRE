@@ -198,7 +198,7 @@ namespace DSPRE.Avalonia.Data
             (string thing, string part) = BattleObjects.Split(names[fileIndex]);
             if (thing == null) return null;
             string friendly = Friendly(dir, thing);
-            return part == "File" ? friendly : $"{friendly}, {part.ToLowerInvariant()}";
+            return part == "File" ? friendly : $"{friendly} ({part.ToLowerInvariant()})";
         }
     }
 }

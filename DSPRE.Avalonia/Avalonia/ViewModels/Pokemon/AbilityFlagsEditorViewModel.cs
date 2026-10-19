@@ -173,7 +173,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _current.Where(kv => !Same(kv.Value, _saved.TryGetValue(kv.Key, out HashSet<string> s) ? s : null)).ToDictionary(kv => kv.Key, kv => new HashSet<string>(kv.Value));
 
         public bool HasUnsavedChanges => Changes().Count > 0;
-        public string UnsavedChangesDescription => "Ability Flags";
+        public string UnsavedChangesDescription => "Ability flags";
 
         public void SaveChanges() => _ = SaveChangesAsync();
 
@@ -184,7 +184,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             (bool saved, string error) = await HgEngineSave.RunAsync(() => HgEngineAbilityFlags.TryWrite(changes, out string writeError) ? null : writeError);
             if (!saved)
             {
-                if (error != null) await DialogHelper.ShowError($"The ability flags were not saved:\n{error}", "Ability Flags");
+                if (error != null) await DialogHelper.ShowError($"The ability flags were not saved:\n{error}", "Ability flags error");
                 return false;
             }
             foreach ((int id, HashSet<string> set) in changes) _saved[id] = new HashSet<string>(set);

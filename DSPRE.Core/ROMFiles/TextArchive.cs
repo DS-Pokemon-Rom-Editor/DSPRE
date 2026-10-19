@@ -203,6 +203,29 @@ namespace DSPRE.ROMFiles
             return true;
         }
 
+        /// <summary>The messages in a text archive file outside the project: its JSON, or a .bin read through a temporary JSON.</summary>
+        public static List<string> ReadMessagesFrom(string path)
+        {
+            TextArchive read = new TextArchive(-1, new List<string>());
+            string temp = null;
+            string json = path;
+            if (!path.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            {
+                temp = Path.Combine(Path.GetTempPath(), "dspre_text_" + Guid.NewGuid().ToString("N") + ".json");
+                TextConverter.BinToJSON(path, temp, CharMapManager.GetCharMapPath());
+                json = temp;
+            }
+            try
+            {
+                if (!read.TryReadJsonFile(json)) throw new InvalidDataException("That file holds no text archive.");
+                return read.messages;
+            }
+            finally
+            {
+                if (temp != null && File.Exists(temp)) File.Delete(temp);
+            }
+        }
+
         private bool TryReadJsonFile(string jsonPath)
         {
             if (!File.Exists(jsonPath))
@@ -424,7 +447,7 @@ namespace DSPRE.ROMFiles
                 Directory.CreateDirectory(TextConverter.GetExpandedFolderPath());
             }
 
-            File.WriteAllBytes(jsonPath, ToExpandedJsonBytes(IDtoReplace));
+            PlainFiles.WriteBytes(jsonPath, ToExpandedJsonBytes(IDtoReplace));
             AppLogger.Debug($"Saved {messages.Count} messages to {jsonPath}");
             RaiseSaved(sender, IDtoReplace);
 

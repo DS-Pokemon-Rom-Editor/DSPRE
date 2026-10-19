@@ -133,7 +133,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         public AudioEditorViewModel(IReadOnlyList<string> pokemonNames)
         {
             SdatArchive sdat = SoundArchive.Load();
-            if (sdat == null) { Status = "This ROM has no sound archive."; return; }
+            if (sdat == null) { StatusText = "This ROM has no sound archive."; return; }
 
             // The two groups the field loads.
             HashSet<int> overworld = new HashSet<int>();
@@ -191,7 +191,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             foreach (KeyValuePair<int, string> bank in sdat.BankNames) _bankNames[bank.Key] = bank.Value;
 
             ApplyFilter();
-            Status = $"{_allCries.Count} cries, {_allMusic.Count} tunes, {_allFanfares.Count} fanfares, "
+            StatusText = $"{_allCries.Count} cries, {_allMusic.Count} tunes, {_allFanfares.Count} fanfares, "
                    + $"{_allEffects.Count} sound effects, {_allSounds.Count} sounds.";
         }
 
@@ -364,7 +364,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             {
                 AudioItem it = Selected;
                 if (it == null) return "";
-                string name = it.IsSample ? $"{it.Detail}, sound {it.SampleIndex}" : it.Name;
+                string name = it.IsSample ? $"{it.Detail} sound {it.SampleIndex}" : it.Name;
                 return it.IsPending ? name + " (not saved)" : name;
             }
         }
@@ -384,7 +384,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             + "on the Sounds tab.";
 
         private string _status = "";
-        public string Status { get => _status; set => Set(ref _status, value); }
+        public string StatusText { get => _status; set => Set(ref _status, value); }
 
         // ── imports waiting for Save ────────────────────────────────────────────────
 
@@ -415,7 +415,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             public Dictionary<AudioItem, SoundArchive.PendingCry> Cries;
             public List<(AudioItem Item, SoundArchive.PendingSample Sample)> Samples;
         }
-        private readonly Stack<(Held Before, Held After)> _undoSteps = new(), _redoSteps = new();
+        private readonly UndoHistory<Held> _history = new UndoHistory<Held>();
 
         private Held TakeHeld()
         {
@@ -444,37 +444,34 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             PendingChanged();
         }
 
-        public bool CanUndo => _undoSteps.Count > 0;
-        public bool CanRedo => _redoSteps.Count > 0;
+        public bool CanUndo => _history.CanUndo;
+        public bool CanRedo => _history.CanRedo;
 
         public void Undo()
         {
-            if (_undoSteps.Count == 0) return;
-            (Held Before, Held After) step = _undoSteps.Pop();
-            _redoSteps.Push(step);
-            RestoreHeld(step.Before);
+            if (!_history.CanUndo) return;
+            RestoreHeld(_history.Undo());
             RaiseSteps();
         }
 
         public void Redo()
         {
-            if (_redoSteps.Count == 0) return;
-            (Held Before, Held After) step = _redoSteps.Pop();
-            _undoSteps.Push(step);
-            RestoreHeld(step.After);
+            if (!_history.CanRedo) return;
+            RestoreHeld(_history.Redo());
             RaiseSteps();
         }
 
+        // The step goes from exactly what was held before the import, even if something else changed it since the last one.
         private void Stepped(Held before)
         {
-            _undoSteps.Push((before, TakeHeld()));
-            _redoSteps.Clear();
+            _history.Capture(before, coalesce: true);
+            _history.Capture(TakeHeld());
             RaiseSteps();
         }
 
         private void ForgetSteps()
         {
-            _undoSteps.Clear(); _redoSteps.Clear();
+            _history.Reset(null);
             RaiseSteps();
         }
 
@@ -505,7 +502,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             item.IsPending = true;
             PendingChanged();
             Stepped(before);
-            Status = $"Ready to save to {cry.RelPath}.";
+            StatusText = $"Ready to save to {cry.RelPath}.";
         }
 
         /// <summary>Holds a replacement sample until Save, replacing one already held for the same slot.</summary>
@@ -529,7 +526,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             item.IsPending = true;
             PendingChanged();
             Stepped(before);
-            Status = "Imported. Save writes it to the ROM.";
+            StatusText = "";
         }
 
         /// <summary>The sound archive as it will be once saved, which is what is played until then.</summary>
@@ -591,7 +588,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             }
             PendingChanged();
             ForgetSteps();
-            Status = wroteCheckout ? "Saved. Compile the ROM to hear the new cries in game." : "Saved.";
+            StatusText = wroteCheckout ? "Saved. Compile the ROM to hear the new cries in game." : "Saved.";
             return null;
         }
 
@@ -670,7 +667,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
 
             if (item.IsCry && HeldCheckoutWav(item) is byte[] wav)
             {
-                System.IO.File.WriteAllBytes(path, wav);
+                PlainFiles.WriteBytes(path, wav);
                 return true;
             }
 
@@ -679,7 +676,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
                 ? SoundArchive.CrySample(sdat, item.Number)
                 : SoundArchive.Sample(sdat, item.WaveArc, item.SampleIndex);
             if (sample?.Pcm == null || sample.Pcm.Length == 0) return false;
-            System.IO.File.WriteAllBytes(path, CryFiles.WriteWav(sample.Pcm, sample.SampleRate));
+            PlainFiles.WriteBytes(path, CryFiles.WriteWav(sample.Pcm, sample.SampleRate));
             return true;
         }
 

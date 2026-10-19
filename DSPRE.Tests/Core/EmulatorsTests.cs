@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Xunit;
@@ -26,7 +27,7 @@ namespace DSPRE.Tests
             string emulator = Path.Combine(Path.GetTempPath(), "Some Emulator", "EmuHawk.exe");
             string rom = Path.Combine(Path.GetTempPath(), "My Hack (DSPRE build).nds");
 
-            var info = Emulators.StartInfo(emulator, rom);
+            ProcessStartInfo info = Emulators.StartInfo(emulator, rom);
 
             Assert.Equal(emulator, info.FileName);
             Assert.Equal(new[] { rom }, info.ArgumentList.ToArray());

@@ -54,88 +54,40 @@ namespace DSPRE.Avalonia.ViewModels.World
         private string _statusText = "Not loaded";
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
 
-        // Import writes the unpacked archive at once for the preview, so the pre-import bytes are kept for Discard.
-        private readonly Dictionary<string, byte[]> _originals = new();
-        private bool _dirty;
-        public bool HasUnsavedChanges => _dirty;
-        public string UnsavedChangesDescription => "Building models";
+        // An import waits here until Save, and the preview reads it from here.
+        private readonly DSPRE.Avalonia.Data.PendingArchiveWrites _pending = new();
+        public bool HasUnsavedChanges => _pending.IsDirty;
+        public string UnsavedChangesDescription
+            => DSPRE.Avalonia.Data.StagedArchive.Join("Building models", false, DSPRE.Avalonia.Data.StagedArchive.Describe("building model", "building models", _pending.Pending(Archive)));
         public void SaveChanges()
         {
-            if (!_dirty) return;
-            _originals.Clear();
-            _dirty = false;
-            _undo?.MarkSaved();
-            OnPropertyChanged(nameof(HasUnsavedChanges));
+            if (!_pending.IsDirty) return;
+            _pending.Save();
             SaveNotice.Saved(UnsavedChangesDescription);
         }
-        public void DiscardChanges()
+        public void DiscardChanges() => _pending.Discard();
+
+        public bool CanUndo => _pending.CanUndo;
+        public bool CanRedo => _pending.CanRedo;
+        public void Undo() => _pending.Undo();
+        public void Redo() => _pending.Redo();
+
+        private void OnPendingChanged()
         {
-            foreach ((string path, byte[] bytes) in _originals)
-            {
-                try { File.WriteAllBytes(path, bytes); }
-                catch (Exception ex) { AppLogger.Error("Building discard: " + ex.Message); }
-            }
-            _originals.Clear();
-            _dirty = false;
-            OnPropertyChanged(nameof(HasUnsavedChanges));
             if (_selBuilding >= 0) LoadModel(_selBuilding);
-            ResetUndo();
-        }
-
-        // ── Undo / redo: every imported model file as it stands ──
-        private readonly Dictionary<string, byte[]> _historyOriginals = new();
-        private DSPRE.Avalonia.ByteStateUndo _undo;
-        public bool CanUndo => _undo?.CanUndo == true;
-        public bool CanRedo => _undo?.CanRedo == true;
-        public void Undo() => _undo?.Undo();
-        public void Redo() => _undo?.Redo();
-        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
-
-        private static byte[] ReadFile(string path) => File.Exists(path) ? File.ReadAllBytes(path) : null;
-
-        private void Keep(string path)
-        {
-            byte[] now = ReadFile(path);
-            if (now != null && !_originals.ContainsKey(path)) _originals[path] = now;
-            if (!_historyOriginals.ContainsKey(path)) _historyOriginals[path] = now;
-        }
-
-        private byte[] TakeState() => DSPRE.Avalonia.UndoJson.Take(_historyOriginals.Keys.ToDictionary(p => p, ReadFile));
-
-        private void ApplyState(byte[] state)
-        {
-            Dictionary<string, byte[]> s = DSPRE.Avalonia.UndoJson.Read<Dictionary<string, byte[]>>(state);
-            foreach (string path in _historyOriginals.Keys)
-            {
-                byte[] want = s.TryGetValue(path, out byte[] b) ? b : _historyOriginals[path];
-                try { if (want != null) File.WriteAllBytes(path, want); }
-                catch (Exception ex) { AppLogger.Error("Building undo: " + ex.Message); }
-            }
-            if (_selBuilding >= 0) LoadModel(_selBuilding);
-            RecountDirty();
-        }
-
-        // Unsaved while any imported file differs from what it held when last saved.
-        private void RecountDirty()
-        {
-            _dirty = _originals.Any(kv => { byte[] now = ReadFile(kv.Key); return now == null || !now.AsSpan().SequenceEqual(kv.Value); });
             OnPropertyChanged(nameof(HasUnsavedChanges));
-        }
-
-        private void ResetUndo()
-        {
-            _historyOriginals.Clear();
-            _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo);
-            RaiseUndo();
+            OnPropertyChanged(nameof(CanUndo));
+            OnPropertyChanged(nameof(CanRedo));
         }
 
         public BuildingEditorViewModel() { }
-        public BuildingEditorViewModel(bool _) { }
+        public BuildingEditorViewModel(bool _) { _pending.Changed += OnPendingChanged; }
 
         /// <summary>Building model to select once loaded (set before SetupAsync; e.g. from a "Go to Building #N" jump).</summary>
         public int InitialIndex { get; set; }
 
-        private string BuildingDir() => gameDirs[_interior ? DirNames.interiorBuildingModels : DirNames.exteriorBuildingModels].unpackedDir;
+        private DirNames Archive => _interior ? DirNames.interiorBuildingModels : DirNames.exteriorBuildingModels;
+        private string BuildingDir() => gameDirs[Archive].unpackedDir;
 
         public async Task SetupAsync(Window owner)
         {
@@ -154,7 +106,6 @@ namespace DSPRE.Avalonia.ViewModels.World
                 _suppress = false;
 
                 RefreshBuildings();
-                ResetUndo();
                 StatusText = $"{Buildings.Count} building models.";
                 if (Buildings.Count > 0)
                     SelectedBuildingIndex = System.Math.Clamp(InitialIndex, 0, Buildings.Count - 1);
@@ -173,7 +124,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowError($"Failed to set up Building Editor:\n{ex.Message}", "Building Editor");
+                await DialogHelper.ShowError($"Failed to set up Building Editor:\n{ex.Message}", "Building editor error");
             }
         }
 
@@ -184,7 +135,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 string dir = BuildingDir();
                 if (!Directory.Exists(dir)) return;
-                int count = Directory.GetFiles(dir).Length;
+                int count = NarcAPI.Narc.MemberCount(dir);
                 for (int i = 0; i < count; i++) Buildings.Add("Building " + i.ToString("D3"));
             }
             catch (Exception ex) { AppLogger.Error("Building list failed: " + ex.Message); }
@@ -195,9 +146,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             Model3D = null;
             try
             {
-                string path = Path.Combine(BuildingDir(), index.ToString("D4"));
-                if (!File.Exists(path)) { ModelLoaded?.Invoke(this, EventArgs.Empty); return; }
-                _currentData = File.ReadAllBytes(path);
+                _currentData = _pending.ReadMember(Archive, index);
+                if (_currentData == null) { ModelLoaded?.Invoke(this, EventArgs.Empty); return; }
                 NSBMD nsbmd = NSBMDLoader.LoadNSBMD(new MemoryStream(_currentData));
                 BindTextures(nsbmd, _currentData, _texIndex, out bool painted);
                 if (nsbmd.models != null && nsbmd.models.Length > 0)
@@ -245,15 +195,11 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (path == null) return;
             try
             {
-                string target = Path.Combine(BuildingDir(), _selBuilding.ToString("D4"));
-                Keep(target);
-                File.Copy(path, target, true);
-                _undo?.Record();
-                RecountDirty();
-                LoadModel(_selBuilding);
-                StatusText = "Imported building model. Save to keep it.";
+                byte[] model = File.ReadAllBytes(path);
+                _pending.Change(step => step.Put(Archive, _selBuilding, model));
+                SaveNotice.Imported($"building model {_selBuilding}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error"); }
+            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Building editor error"); }
         }
 
         public async Task ExportAsync()
@@ -262,8 +208,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             FilePickerFileType filter = new FilePickerFileType("Model (.nsbmd)") { Patterns = new[] { "*.nsbmd" } };
             string path = await DialogHelper.SaveFile(_owner, "Export building model", new[] { filter }, $"building_{_selBuilding:D4}.nsbmd");
             if (path == null) return;
-            try { File.Copy(Path.Combine(BuildingDir(), _selBuilding.ToString("D4")), path, true); StatusText = "Exported."; }
-            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
+            try { PlainFiles.WriteBytes(path, _pending.ReadMember(Archive, _selBuilding)); SaveNotice.Exported(path); }
+            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Building editor error"); }
         }
     }
 }

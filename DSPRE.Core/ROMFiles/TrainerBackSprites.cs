@@ -26,7 +26,7 @@ namespace DSPRE.ROMFiles
             "Ethan", "Lyra", "Silver", "Lance", "Cheryl", "Riley", "Marley", "Buck", "Mira",
             "Lucas (Diamond and Pearl)", "Dawn (Diamond and Pearl)", "Barry (Diamond and Pearl)",
             "Lucas (Platinum)", "Dawn (Platinum)", "Barry (Platinum)",
-            "Ethan, single battles", "Lyra, single battles",
+            "Ethan in single battles", "Lyra in single battles",
         };
 
         /// <summary>

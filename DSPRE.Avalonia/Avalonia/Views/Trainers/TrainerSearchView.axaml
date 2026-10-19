@@ -37,7 +37,7 @@
         <Button Content="Search" controls:Icon.Key="lens" Click="Search_Click"/>
         <Button Content="Reset" controls:Icon.Key="resetIcon" Click="Reset_Click"/>
         <CheckBox Content="Auto-search" IsChecked="{Binding AutoSearch}" VerticalAlignment="Center"/>
-        <TextBlock Text="{Binding Status}" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+        <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
       </StackPanel>
     </StackPanel>
 

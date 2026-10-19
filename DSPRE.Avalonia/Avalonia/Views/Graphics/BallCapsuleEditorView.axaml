@@ -19,6 +19,7 @@
         <Button Content="Clear" controls:Icon.Key="Cross" Click="Clear_Click" MinWidth="70"/>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}" MinWidth="70"
                 ToolTip.Tip="Writes the trainer capsules."/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
     </controls:EditorToolbar>
 
@@ -30,7 +31,7 @@
     <Grid ColumnDefinitions="260,10,Auto,10,*" Margin="8">
       <DockPanel Grid.Column="0">
         <TextBlock DockPanel.Dock="Top" Text="Seals" FontWeight="SemiBold" Margin="0,0,0,6"/>
-        <TextBox DockPanel.Dock="Top" x:Name="SealFind" Text="{Binding SealFilter}" PlaceholderText="Find a seal" Margin="0,0,0,6"/>
+        <TextBox DockPanel.Dock="Top" x:Name="SealFind" Text="{Binding SealFilter}" PlaceholderText="Search seals" Margin="0,0,0,6"/>
         <StackPanel x:Name="SealButtons" DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
           <Button Content="Place" Click="Place_Click" Width="70"/>
           <Button Content="Edit sticker" controls:Icon.Key="pencil" Click="EditSticker_Click" MinWidth="90"/>

@@ -87,7 +87,7 @@ namespace DSPRE.ROMFiles
             string who = speciesNames != null && icon.Species >= 0 && icon.Species < speciesNames.Count
                 ? speciesNames[icon.Species]?.Trim() : null;
             if (string.IsNullOrEmpty(who)) who = "Pokémon " + icon.Species;
-            return icon.Form == null ? who : $"{who}, {icon.Form}";
+            return icon.Form == null ? who : $"{who} ({icon.Form})";
         }
     }
 }

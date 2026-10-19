@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using DSPRE;
@@ -73,7 +74,7 @@ namespace DSPRE.Tests
         private static int FindCodeOffset(byte[] data)
         {
             byte[] prefix = DSUtils.StringToByteArray(RomInfo.starterGraphicsPrefix);
-            var matches = DSUtils.SearchBytes(data, prefix);
+            List<int> matches = DSUtils.SearchBytes(data, prefix);
             Assert.NotEmpty(matches);
             return matches[0] + prefix.Length;
         }
@@ -84,7 +85,7 @@ namespace DSPRE.Tests
         private static int[] DecodeSpecies(byte[] data, int codeOffset)
         {
             int offset = codeOffset + 0x16 + 0xA;
-            var species = new int[3];
+            int[] species = new int[3];
             for (int i = 0; i < 3; i++)
             {
                 int instr1 = data[offset + 4] | (data[offset + 5] << 8);

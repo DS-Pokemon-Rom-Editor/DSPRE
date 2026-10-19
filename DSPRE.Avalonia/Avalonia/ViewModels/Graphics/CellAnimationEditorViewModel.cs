@@ -11,6 +11,7 @@ using Avalonia.Platform;
 using Avalonia.Threading;
 using DSPRE.Avalonia.Data;
 using DSPRE.Editors;
+using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.ViewModels.Graphics
@@ -213,9 +214,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private int _lastEditFrame = -1;
 
         // Undo carries both files: moving a piece changes the layout, everything else the animation.
-        private readonly record struct Step(byte[] Animation, byte[] Layout);
-        private readonly Stack<Step> _undo = new();
-        private readonly Stack<Step> _redo = new();
+        private sealed record Step(byte[] Animation, byte[] Layout);
+        private readonly UndoHistory<Step> _history = new UndoHistory<Step>();
         private bool _loading = true, _filling, _fillingPieces;
 
         public CellAnimationEditorViewModel() { }   // for the designer
@@ -310,8 +310,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             : $"{_file.Sequences.Count} sequences, {_file.Sequences.Sum(s => s.Frames.Count)} frames"
               + (_file.HasExtendedData ? ", with an extended block that is kept as it is" : "");
 
-        public bool CanUndo => _undo.Count > 0;
-        public bool CanRedo => _redo.Count > 0;
+        public bool CanUndo => _history.CanUndo;
+        public bool CanRedo => _history.CanRedo;
         // Compared as bytes, so undoing back to the saved file counts as clean.
         public bool HasUnsavedChanges => _file != null && (!Same(_file.Write(), _savedAnimation) || (_layout != null && !Same(_layout.Write(), _savedLayout)));
         public string UnsavedChangesDescription => Subject;
@@ -352,6 +352,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 }
                 if (_sprites >= 0) _characters = Sheet(narc, _sprites, _sharedSheet);
                 MarkSaved();
+                _history.Reset(Now());
+                OnPropertyChanged(nameof(CanUndo));
+                OnPropertyChanged(nameof(CanRedo));
 
                 // Opened from a Pokétch application, the preview is drawn inside that application's own
                 // screen, so a frame is seen where a player would see it rather than floating on nothing.
@@ -363,7 +366,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
                 if (_palette >= 0)
                 {
-                    ushort[] all = DsBgScreen.ReadColours(NitroBgCodec.Inflate(narc.Get(_palette)));
+                    ushort[] all = NitroBgCodec.ReadColours(NitroBgCodec.Inflate(narc.Get(_palette)));
                     _colours = DsBgScreen.Row(all, Math.Max(0, _paletteRow));
                 }
                 OnPropertyChanged(nameof(FileNote));
@@ -458,7 +461,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
 
             // A number box commits on every keystroke, so keystrokes on one frame collapse into one step.
-            bool sameAsLast = _lastEditFrame == row.Number && _undo.Count > 0;
+            bool sameAsLast = _lastEditFrame == row.Number && _history.CanUndo;
             Step before = Now();
 
             _file.SetDelay(_sequence, row.Number, row.Delay);
@@ -488,7 +491,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 return;
             }
 
-            if (!sameAsLast) Remember(before);
+            Remember(before, sameAsLast);
             _lastEditFrame = row.Number;
             _lastMoveCell = -1;
             _lastMovePiece = -1;
@@ -564,8 +567,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (_loading || _filling || _file == null || value < 0 || value >= PlayModes.Count) return;
 
                 Stop();
-                Remember();
+                Step before = Now();
                 _file.SetPlayMode(_sequence, value + 1);
+                Remember(before);
                 Dirty = true;
                 if (_sequence >= 0 && _sequence < Sequences.Count)
                     Sequences[_sequence].Freshen(Frames.Count, _file.Sequences[_sequence].PlayMode);
@@ -592,8 +596,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (_loading || _filling || _file == null) return;
 
                 Stop();
-                Remember();
+                Step before = Now();
                 _file.SetLoopStart(_sequence, value - 1);
+                Remember(before);
                 Dirty = true;
                 StatusText = $"It now comes back to frame {value}.";
             }
@@ -617,9 +622,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (_loading || _filling || _file == null || value < 0 || value >= AnimationTypes.Count) return;
 
                 Stop();
-                Remember();
+                Step before = Now();
                 string trouble = _file.SetAnimationType(_sequence, value + 1);
                 if (trouble != null) { StatusText = trouble; return; }
+                Remember(before);
                 Dirty = true;
                 StatusText = value == 1
                     ? "This sequence now draws from multi-cell banks."
@@ -783,8 +789,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
 
             // Keystrokes on one piece collapse into a single step; a move of anything else starts a new one.
-            bool sameAsLast = _lastMoveCell == _pieceCell && _lastMovePiece == row.Number && _undo.Count > 0;
-            if (!sameAsLast) Remember(before);
+            bool sameAsLast = _lastMoveCell == _pieceCell && _lastMovePiece == row.Number && _history.CanUndo;
+            Remember(before, sameAsLast);
             _lastMoveCell = _pieceCell;
             _lastMovePiece = row.Number;
             _lastEditFrame = -1;
@@ -802,25 +808,22 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private Step Now() => new(_file?.Write(), _layout?.Write());
 
-        private void Remember() => Remember(Now());
-
-        private void Remember(Step before)
+        /// <summary>Records an edit made since <paramref name="before"/>; <paramref name="merge"/> folds it into the last step.</summary>
+        private void Remember(Step before, bool merge = false)
         {
             if (before.Animation == null && before.Layout == null) return;
-            _undo.Push(before);
-            _redo.Clear();
+            // The step starts from exactly what was there before this edit.
+            if (!merge) _history.Capture(before, coalesce: true);
+            _history.Capture(Now(), coalesce: merge);
             OnPropertyChanged(nameof(CanUndo));
             OnPropertyChanged(nameof(CanRedo));
         }
 
-        public void Undo() => StepAcross(_undo, _redo, "Put back.");
-        public void Redo() => StepAcross(_redo, _undo, "Done again.");
+        public void Undo() { if (_history.CanUndo) StepTo(_history.Undo(), "Put back."); }
+        public void Redo() { if (_history.CanRedo) StepTo(_history.Redo(), "Done again."); }
 
-        private void StepAcross(Stack<Step> from, Stack<Step> to, string said)
+        private void StepTo(Step step, string said)
         {
-            if (from.Count == 0) return;
-            to.Push(Now());
-            Step step = from.Pop();
 
             if (step.Animation != null) _file = NanrFile.Read(step.Animation);
             if (step.Layout != null)
@@ -902,8 +905,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public void DiscardChanges()
         {
             Stop();
-            _undo.Clear();
-            _redo.Clear();
             _layoutTouched = false;
             Load();
             Dirty = false;
@@ -1035,10 +1036,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     // Seeing the frame is the point of this window, so one with no recorded position is
                     // drawn in the middle and said to be.
                     (int X, int Y)[] slots = _app.SpriteSlots ?? new[] { PoketchScreen.MiddleOfScreen };
-                    Preview = ToBitmap(_casing.RenderApp(
+                    Preview = ImageConverter.FromRgba(_casing.RenderApp(
                         false, 0, false, _app.Tiles, _app.Arrangement, _app.Sprites, _app.Cells, cell,
                         slots, _app.Fills,
-                        new PoketchScreen.Motion(degrees, scaleX, scaleY, sx, sy), _app.BgLayer));
+                        new PoketchScreen.Motion(degrees, scaleX, scaleY, sx, sy), _app.BgLayer), DsBgScreen.Width, DsBgScreen.Height);
                     OnPropertyChanged(nameof(PlayingFrame));
                     if (_app.SpriteSlots == null && string.IsNullOrEmpty(StatusText))
                         StatusText = "Where this screen puts its sprite is in the game's code, so the frame "
@@ -1052,23 +1053,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                                               DsBgScreen.Width / 2 + sx, DsBgScreen.Height / 2 + sy,
                                               degrees, scaleX, scaleY);
 
-                Preview = ToBitmap(rgba);
+                Preview = ImageConverter.FromRgba(rgba, DsBgScreen.Width, DsBgScreen.Height);
                 OnPropertyChanged(nameof(PlayingFrame));
             }
             catch (Exception ex)
             {
                 AppLogger.Error("Cell animation draw: " + ex.Message);
             }
-        }
-
-        private static Bitmap ToBitmap(byte[] rgba)
-        {
-            WriteableBitmap wb = new WriteableBitmap(new global::Avalonia.PixelSize(DsBgScreen.Width, DsBgScreen.Height),
-                                         new global::Avalonia.Vector(96, 96),
-                                         PixelFormat.Rgba8888, AlphaFormat.Unpremul);
-            using (ILockedFramebuffer fb = wb.Lock())
-                System.Runtime.InteropServices.Marshal.Copy(rgba, 0, fb.Address, rgba.Length);
-            return wb;
         }
 
         /// <summary>Opens the Bottom Screen editor on the application this animation belongs to.</summary>
@@ -1086,10 +1077,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         // across both. Laying them out the same way here is what puts the tiles back where the cells expect.
         private static byte[] Sheet(ArchiveFiles narc, int own, int shared)
         {
-            byte[] mine = DsBgScreen.ReadCharacters(NitroBgCodec.Inflate(narc.Get(own)));
+            byte[] mine = NitroBgCodec.ReadCharacters(NitroBgCodec.Inflate(narc.Get(own)));
             if (shared < 0) return mine;
 
-            byte[] first = DsBgScreen.ReadCharacters(NitroBgCodec.Inflate(narc.Get(shared)));
+            byte[] first = NitroBgCodec.ReadCharacters(NitroBgCodec.Inflate(narc.Get(shared)));
             if (first.Length == 0) return mine;
 
             byte[] both = new byte[first.Length + mine.Length];

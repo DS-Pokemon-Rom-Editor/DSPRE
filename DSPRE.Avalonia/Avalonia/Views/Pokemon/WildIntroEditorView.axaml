@@ -69,7 +69,7 @@
                     IsEnabled="{Binding MusicEditable}"/>
           <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding MusicElsewhere}">
             <TextBlock Text="Its music is set in the VS intro editor." Classes="subtle" VerticalAlignment="Center"/>
-            <Button Content="Open VS intro editor" controls:Icon.Key="OpenLink" Click="OpenVsIntros_Click"/>
+            <Button Content="Open in VS intro editor" controls:Icon.Key="OpenLink" Click="OpenVsIntros_Click"/>
           </StackPanel>
         </StackPanel>
         <ListBox x:Name="ComboList" ItemsSource="{Binding ComboRows}" SelectedItem="{Binding SelectedCombo}"

@@ -140,25 +140,36 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
 
         public NsbtxEditorViewModel() { if (Design.IsDesignMode) PackNames.Add("Texture pack 0"); }
-        public NsbtxEditorViewModel(bool _) { }
+        public NsbtxEditorViewModel(bool _)
+        {
+            _pending.Changed += () =>
+            {
+                // Undo and redo can add or remove packs, so the list is rebuilt around the pack showing.
+                if (_mapTextures) _mapPack = _packIndex; else _buildingPack = _packIndex;
+                ReloadPacks();
+                OnPropertyChanged(nameof(HasUnsavedChanges));
+                OnPropertyChanged(nameof(CanUndo));
+                OnPropertyChanged(nameof(CanRedo));
+            };
+        }
 
-        private string TexDir => gameDirs[_mapTextures ? DirNames.mapTextures : DirNames.buildingTextures].unpackedDir;
-        private int TexCount => _mapTextures ? Filesystem.GetMapTexturesCount() : Filesystem.GetBuildingTexturesCount();
-        private string PackPath(int i) => Path.Combine(TexDir, i.ToString("D4"));
+        private DirNames Archive => _mapTextures ? DirNames.mapTextures : DirNames.buildingTextures;
+        private int TexCount => _pending.Count(Archive);
+        private string PackPath(int i) => ArchiveMembers.PathOf(Archive, i);
 
         public async Task SetupAsync(Window owner)
         {
             _owner = owner;
             try
             {
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.mapTextures, DirNames.buildingTextures });
+                // Adding or removing a building pack copies or drops its building list too, so that archive is read here.
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.mapTextures, DirNames.buildingTextures, DirNames.buildingConfigFiles });
                 ReloadPacks();
-                ResetUndo();
             }
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowError($"Couldn't open the texture editor:\n{ex.Message}", "Map & Building Textures");
+                await DialogHelper.ShowError($"Couldn't open the texture editor:\n{ex.Message}", "Map & building textures error");
             }
         }
 
@@ -186,9 +197,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             try
             {
-                string path = PackPath(index);
-                if (!File.Exists(path)) { StatusText = "Pack not found."; return; }
-                byte[] raw = File.ReadAllBytes(path);
+                byte[] raw = _pending.ReadMember(Archive, index);
+                if (raw == null) { StatusText = "Pack not found."; return; }
                 if (!IsTextureSet(raw))
                 {
                     _textures = new List<NSBMDTexture>();
@@ -272,7 +282,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     paldata = pal?.paldata,
                 };
                 NsbmdTextureData decoded = NsbmdTextureDecoder.Decode(mat);
-                Preview = decoded != null ? RgbaToBitmap(decoded.Rgba, decoded.Width, decoded.Height) : null;
+                Preview = decoded != null ? ImageConverter.FromRgba(decoded.Rgba, decoded.Width, decoded.Height) : null;
                 PreviewReason = decoded == null
                     ? "This texture is malformed or uses data the preview cannot decode." : "";
             }
@@ -284,104 +294,27 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
         }
 
-        private static Bitmap RgbaToBitmap(byte[] rgba, int w, int h)
+        // Imports, added packs and removed packs wait here until Save; the archives are not touched before.
+        private readonly PendingArchiveWrites _pending = new();
+        public bool HasUnsavedChanges => _pending.IsDirty;
+        // A building pack's list entry follows its pack, so only the packs are named.
+        public string UnsavedChangesDescription => DSPRE.Avalonia.Data.StagedArchive.Join("Texture packs", false, string.Join(", ", new[]
         {
-            if (rgba == null || w <= 0 || h <= 0) return null;
-            WriteableBitmap wb = new WriteableBitmap(new PixelSize(w, h), new Vector(96, 96), PixelFormat.Rgba8888, AlphaFormat.Unpremul);
-            using (ILockedFramebuffer fb = wb.Lock())
-            {
-                int srcStride = w * 4, dstStride = fb.RowBytes;
-                if (dstStride == srcStride) Marshal.Copy(rgba, 0, fb.Address, Math.Min(rgba.Length, dstStride * h));
-                else for (int y = 0; y < h; y++) Marshal.Copy(rgba, y * srcStride, IntPtr.Add(fb.Address, y * dstStride), srcStride);
-            }
-            return wb;
-        }
-
-        // ── Save / Discard ───────────────────────────────────────────────────────────────
-        // Edits hit the unpacked files at once, so each file's prior bytes (null if new) are kept for Discard.
-        private readonly Dictionary<string, byte[]> _originals = new();
-        private void Keep(string path)
-        {
-            byte[] now = File.Exists(path) ? File.ReadAllBytes(path) : null;
-            if (!_originals.ContainsKey(path)) _originals[path] = now;
-            if (!_historyOriginals.ContainsKey(path)) _historyOriginals[path] = now;
-        }
-        private bool _dirty;
-        public bool HasUnsavedChanges => _dirty;
-        public string UnsavedChangesDescription => "Texture packs";
+            DSPRE.Avalonia.Data.StagedArchive.Describe("map texture pack", "map texture packs", _pending.Pending(DirNames.mapTextures)),
+            DSPRE.Avalonia.Data.StagedArchive.Describe("building texture pack", "building texture packs", _pending.Pending(DirNames.buildingTextures)),
+        }.Where(t => t.Length > 0)));
         public void SaveChanges()
         {
-            if (!_dirty) return;
-            _originals.Clear();
-            _dirty = false;
-            _undo?.MarkSaved();
-            OnPropertyChanged(nameof(HasUnsavedChanges));
+            if (!_pending.IsDirty) return;
+            _pending.Save();
             SaveNotice.Saved(UnsavedChangesDescription);
         }
+        public void DiscardChanges() => _pending.Discard();
 
-        // ── Undo / redo: every touched file as it stands ─────────────────────────────────
-        // Each state is the touched files' bytes; applying one writes them back, as the edits themselves do.
-        private readonly Dictionary<string, byte[]> _historyOriginals = new();
-        private DSPRE.Avalonia.ByteStateUndo _undo;
-        public bool CanUndo => _undo?.CanUndo == true;
-        public bool CanRedo => _undo?.CanRedo == true;
-        public void Undo() => _undo?.Undo();
-        public void Redo() => _undo?.Redo();
-        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
-
-        private static byte[] Read(string path) => File.Exists(path) ? File.ReadAllBytes(path) : null;
-
-        private byte[] TakeState() => DSPRE.Avalonia.UndoJson.Take(_historyOriginals.Keys.ToDictionary(p => p, Read));
-
-        private void ApplyState(byte[] state)
-        {
-            Dictionary<string, byte[]> s = DSPRE.Avalonia.UndoJson.Read<Dictionary<string, byte[]>>(state);
-            foreach (string path in _historyOriginals.Keys)
-            {
-                byte[] want = s.TryGetValue(path, out byte[] b) ? b : _historyOriginals[path];
-                try { if (want == null) { if (File.Exists(path)) File.Delete(path); } else File.WriteAllBytes(path, want); }
-                catch (Exception ex) { AppLogger.Error("Texture pack undo: " + ex.Message); }
-            }
-            int keep = _packIndex;
-            ReloadPacks();
-            if (keep > 0 && keep < PackNames.Count) PackIndex = keep;
-            RecountDirty();
-        }
-
-        // Unsaved while any touched file differs from what it held when last saved.
-        private void RecountDirty()
-        {
-            _dirty = _originals.Any(kv => !SameBytes(Read(kv.Key), kv.Value));
-            OnPropertyChanged(nameof(HasUnsavedChanges));
-        }
-
-        private static bool SameBytes(byte[] a, byte[] b) => a == null ? b == null : b != null && a.AsSpan().SequenceEqual(b);
-
-        private void ResetUndo()
-        {
-            _historyOriginals.Clear();
-            _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo);
-            RaiseUndo();
-        }
-
-        private void Edited()
-        {
-            _undo?.Record();
-            RecountDirty();
-        }
-        public void DiscardChanges()
-        {
-            foreach ((string path, byte[] bytes) in _originals)
-            {
-                try { if (bytes == null) { if (File.Exists(path)) File.Delete(path); } else File.WriteAllBytes(path, bytes); }
-                catch (Exception ex) { AppLogger.Error("Texture pack discard: " + ex.Message); }
-            }
-            _originals.Clear();
-            _dirty = false;
-            OnPropertyChanged(nameof(HasUnsavedChanges));
-            ReloadPacks();
-            ResetUndo();
-        }
+        public bool CanUndo => _pending.CanUndo;
+        public bool CanRedo => _pending.CanRedo;
+        public void Undo() => _pending.Undo();
+        public void Redo() => _pending.Redo();
 
         // ── Add / remove texture packs ───────────────────────────────────────────────────
         public void AddPack()
@@ -389,45 +322,37 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 int newId = PackNames.Count;
-                Keep(PackPath(newId));
-                File.Copy(PackPath(0), PackPath(newId));
-                if (!_mapTextures && gameDirs.ContainsKey(DirNames.buildingConfigFiles))
+                bool configs = !_mapTextures && gameDirs.ContainsKey(DirNames.buildingConfigFiles);
+                byte[] config = configs ? _pending.ReadMember(DirNames.buildingConfigFiles, 0) : null;
+                _pending.Change(step =>
                 {
-                    string cfg = gameDirs[DirNames.buildingConfigFiles].unpackedDir;
-                    if (File.Exists(Path.Combine(cfg, "0000")))
-                    {
-                        Keep(Path.Combine(cfg, newId.ToString("D4")));
-                        File.Copy(Path.Combine(cfg, "0000"), Path.Combine(cfg, newId.ToString("D4")));
-                    }
-                }
-                PackNames.Add("Texture pack " + newId);
+                    step.Put(Archive, newId, _pending.ReadMember(Archive, 0));
+                    if (config != null) step.Put(DirNames.buildingConfigFiles, newId, config);
+                });
                 PackIndex = newId;
                 StatusText = $"Added texture pack {newId}.";
-                Edited();
             }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't add pack:\n{ex.Message}", "Map & Building Textures"); }
+            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't add pack:\n{ex.Message}", "Map & building textures error"); }
         }
 
         public async Task RemoveLastPackAsync()
         {
             if (PackNames.Count <= 1) { StatusText = "Can't remove the last pack."; return; }
             int last = PackNames.Count - 1;
-            if (!await DialogHelper.AskYesNo($"Delete the last texture pack ({last})?", "Confirm deletion")) return;
+            if (!await DialogHelper.AskYesNo($"Delete the last texture pack ({last})?", "Delete texture pack?")) return;
             try
             {
-                Keep(PackPath(last));
-                File.Delete(PackPath(last));
-                if (!_mapTextures && gameDirs.ContainsKey(DirNames.buildingConfigFiles))
-                {
-                    string cfg = Path.Combine(gameDirs[DirNames.buildingConfigFiles].unpackedDir, last.ToString("D4"));
-                    if (File.Exists(cfg)) { Keep(cfg); File.Delete(cfg); }
-                }
+                bool config = !_mapTextures && gameDirs.ContainsKey(DirNames.buildingConfigFiles)
+                              && _pending.ReadMember(DirNames.buildingConfigFiles, last) != null;
                 if (_packIndex == last) PackIndex = last - 1;
-                PackNames.RemoveAt(last);
+                _pending.Change(step =>
+                {
+                    step.Remove(Archive, last);
+                    if (config) step.Remove(DirNames.buildingConfigFiles, last);
+                });
                 StatusText = $"Removed texture pack {last}.";
-                Edited();
             }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't remove pack:\n{ex.Message}", "Map & Building Textures"); }
+            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't remove pack:\n{ex.Message}", "Map & building textures error"); }
         }
 
         // ── Import / export whole packs ─────────────────────────────────────────────────
@@ -446,8 +371,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             string suggested = $"Texture Pack {_packIndex}.nsbtx";
             string path = await DialogHelper.SaveFile(_owner, "Export texture pack", new[] { filter }, suggested);
             if (path == null) return;
-            try { File.Copy(PackPath(_packIndex), path, true); StatusText = "Exported."; }
-            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
+            try { PlainFiles.WriteBytes(path, _pending.ReadMember(Archive, _packIndex)); SaveNotice.Exported(path); }
+            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Map & building textures error"); }
         }
 
         public async Task ImportAsync()
@@ -478,13 +403,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (!await DialogHelper.AskYesNo(question, "Import")) return;
             try
             {
-                Keep(PackPath(_packIndex));
-                File.Copy(path, PackPath(_packIndex), true);
-                LoadPack(_packIndex);
-                StatusText = "Imported. Save to keep it.";
-                Edited();
+                byte[] pack = File.ReadAllBytes(path);
+                _pending.Change(step => step.Put(Archive, _packIndex, pack));
+                SaveNotice.Imported($"texture pack {_packIndex}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error"); }
+            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Map & building textures error"); }
         }
     }
 }

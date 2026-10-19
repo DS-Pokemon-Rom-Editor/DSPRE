@@ -22,7 +22,7 @@ namespace DSPRE.Avalonia.Views.Battle
 
             IReadOnlyList<IStorageFile> files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                Title = "Import Icon PNG",
+                Title = "Import icon PNG",
                 AllowMultiple = false,
                 FileTypeFilter = new List<FilePickerFileType> { new FilePickerFileType("PNG Image") { Patterns = new[] { "*.png" } } }
             });
@@ -36,11 +36,12 @@ namespace DSPRE.Avalonia.Views.Battle
                 using FileStream fs = System.IO.File.OpenRead(path);
                 imported = DSPRE.Avalonia.ImageConverter.DecodeRawImage(fs);
             }
-            catch (System.Exception ex) { await DialogHelper.ShowError($"Could not read the image: {ex.Message}"); return; }
-            if (imported == null) { await DialogHelper.ShowError("Image could not be decoded."); return; }
+            catch (System.Exception ex) { await DialogHelper.ShowError($"Could not read the image: {ex.Message}", "Pokémon editor error"); return; }
+            if (imported == null) { await DialogHelper.ShowError("Image could not be decoded.", "Pokémon editor error"); return; }
 
             string error = VM.ImportIconGraphic(imported);
-            if (error != null) await DialogHelper.ShowError($"Import failed: {error}");
+            if (error != null) await DialogHelper.ShowError($"Import failed: {error}", "Pokémon editor error");
+            else SaveNotice.Imported("the icon", path);
         }
 
         private async void ExportIcon_Click(object sender, RoutedEventArgs e)
@@ -53,13 +54,13 @@ namespace DSPRE.Avalonia.Views.Battle
             if (indexedPng == null && raw == null)
             {
                 string reason = VM.FullPaletteExport ? "save the icon graphic first (full-palette export needs it on disk)" : "nothing to export";
-                await DialogHelper.ShowError($"Export failed: {reason}.");
+                await DialogHelper.ShowError($"Export failed: {reason}.", "Pokémon editor error");
                 return;
             }
 
             IStorageFile file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = "Export Icon PNG",
+                Title = "Export icon PNG",
                 DefaultExtension = "png",
                 FileTypeChoices = new List<FilePickerFileType> { new FilePickerFileType("PNG Image") { Patterns = new[] { "*.png" } } }
             });
@@ -69,10 +70,11 @@ namespace DSPRE.Avalonia.Views.Battle
 
             try
             {
-                if (indexedPng != null) System.IO.File.WriteAllBytes(path, indexedPng);
+                if (indexedPng != null) PlainFiles.WriteBytes(path, indexedPng);
                 else DSPRE.Avalonia.ImageConverter.ToAvaloniaBitmap(raw).Save(path, PngBitmapEncoderOptions.Default);
+                SaveNotice.Exported(path);
             }
-            catch (System.Exception ex) { await DialogHelper.ShowError($"Export failed: {ex.Message}"); }
+            catch (System.Exception ex) { await DialogHelper.ShowError($"Export failed: {ex.Message}", "Pokémon editor error"); }
         }
 
         private void Play_Click(object sender, RoutedEventArgs e) => VM?.ToggleAnimationPlayback();

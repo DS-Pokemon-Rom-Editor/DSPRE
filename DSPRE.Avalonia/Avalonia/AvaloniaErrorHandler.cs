@@ -41,7 +41,7 @@ namespace DSPRE.Avalonia
                     "An unexpected error occurred, but the app is still running and your other open " +
                     "editors are unaffected.\n\n" + (ex?.Message ?? "Unknown error.") +
                     (path != null ? "\n\nA detailed report was saved to:\n" + path : ""),
-                    "Unexpected Error",
+                    "Unexpected error",
                     ex?.ToString());
             }
             catch

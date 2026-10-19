@@ -286,11 +286,11 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public async Task<bool> SaveChangesAsync()
         {
             if (_table == null) return true;
-            if (HasProblem) { await DialogHelper.ShowError(Problem, "Underground Mining"); return false; }
+            if (HasProblem) { await DialogHelper.ShowError(Problem, "Underground mining error"); return false; }
             try { _table.Save(); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
             {
-                await DialogHelper.ShowError("The Underground mining changes were not saved:\n" + e.Message, "Underground Mining");
+                await DialogHelper.ShowError("The Underground mining changes were not saved:\n" + e.Message, "Underground mining error");
                 return false;
             }
             _saved = _table.State();

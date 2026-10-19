@@ -1,0 +1,12 @@
+M:System.IO.File.WriteAllBytes(System.String,System.Byte[]);Game files through ArchiveMembers or DSUtils.WriteToFile/WriteWholeFile, other files through PlainFiles
+M:System.IO.File.WriteAllText(System.String,System.String);Game files through ArchiveMembers or DSUtils.WriteToFile/WriteWholeFile, other files through PlainFiles
+M:System.IO.File.WriteAllText(System.String,System.String,System.Text.Encoding);Game files through ArchiveMembers or DSUtils.WriteToFile/WriteWholeFile, other files through PlainFiles
+M:System.IO.File.WriteAllLines(System.String,System.String[]);Game files through ArchiveMembers or DSUtils.WriteToFile/WriteWholeFile, other files through PlainFiles
+M:System.IO.File.WriteAllLines(System.String,System.Collections.Generic.IEnumerable{System.String});Game files through ArchiveMembers or DSUtils.WriteToFile/WriteWholeFile, other files through PlainFiles
+M:System.IO.File.Copy(System.String,System.String);Game files through ArchiveMembers or DSUtils.WriteToFile/WriteWholeFile, other files through PlainFiles
+M:System.IO.File.Copy(System.String,System.String,System.Boolean);Game files through ArchiveMembers or DSUtils.WriteToFile/WriteWholeFile, other files through PlainFiles
+M:System.IO.File.Move(System.String,System.String);Game files through ArchiveMembers or DSUtils.WriteToFile/WriteWholeFile, other files through PlainFiles
+M:System.IO.File.Move(System.String,System.String,System.Boolean);Game files through ArchiveMembers or DSUtils.WriteToFile/WriteWholeFile, other files through PlainFiles
+T:System.Drawing.Bitmap;No GDI: the app runs on Windows and Linux
+T:System.Drawing.Graphics;No GDI: the app runs on Windows and Linux
+T:System.Drawing.Image;No GDI: the app runs on Windows and Linux

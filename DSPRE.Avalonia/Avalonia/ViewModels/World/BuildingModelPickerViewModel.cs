@@ -50,7 +50,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool HasSelection => _selected != null;
 
         private string _status = "";
-        public string Status { get => _status; private set { _status = value; OnPropertyChanged(); } }
+        public string StatusText { get => _status; private set { _status = value; OnPropertyChanged(); } }
 
         private readonly int _current;
 
@@ -73,7 +73,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 List<Entry> list = new List<Entry>();
                 if (dir == null || !Directory.Exists(dir)) return list;
-                int count = Directory.GetFiles(dir).Length;
+                int count = NarcAPI.Narc.MemberCount(dir);
                 for (int i = 0; i < count; i++)
                 {
                     string name = null;
@@ -108,11 +108,11 @@ namespace DSPRE.Avalonia.ViewModels.World
                     byte[] tex = _textures ?? NSBUtils.GetTexturesFromTexturedNSBMD(data);
                     bool painted = ModelAssets.Dress(nsbmd, tex);
                     if (nsbmd.models != null && nsbmd.models.Length > 0) Preview = NsbmdGeometry.BuildModel(nsbmd.models[0]);
-                    Status = painted ? "" : "Shown unpainted: this map's building textures don't fit it.";
+                    StatusText = painted ? "" : "Shown unpainted: this map's building textures don't fit it.";
                 }
                 catch (Exception ex) when (ex is IOException || ex is ArgumentException || ex is IndexOutOfRangeException || ex is InvalidDataException)
                 {
-                    Status = "Can't show model " + _selected.Id + ": " + ex.Message;
+                    StatusText = "Can't show model " + _selected.Id + ": " + ex.Message;
                 }
             }
             PreviewChanged?.Invoke(this, EventArgs.Empty);

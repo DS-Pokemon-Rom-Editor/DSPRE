@@ -31,7 +31,7 @@ namespace DSPRE.Tests
         [Fact]
         public void ThePaletteFindsPokemonWithoutTheAccent()
         {
-            var vm = new CommandPaletteViewModel(DSPRE.Avalonia.AvaloniaEditorLauncher.BuildCommands());
+            CommandPaletteViewModel vm = new CommandPaletteViewModel(DSPRE.Avalonia.AvaloniaEditorLauncher.BuildCommands());
             vm.SearchText = "pokemon editor";
             Assert.Contains(vm.Items, c => c.Name == "Pokémon Editor");
             Assert.Equal("Pokémon Editor", vm.Items.First().Name);

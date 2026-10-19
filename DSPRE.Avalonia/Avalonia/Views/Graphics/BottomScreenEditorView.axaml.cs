@@ -35,15 +35,14 @@ namespace DSPRE.Avalonia.Views.Graphics
             GraphicAssets.Archive archive = ArchiveOf(piece);
             if (archive == null)
             {
-                await DialogHelper.ShowError("This piece's archive is not one the painter can open.", "Bottom Screen");
+                await DialogHelper.ShowError("This piece's archive is not one the painter can open.", "Bottom screen error");
                 return;
             }
 
-            VM.Remember(piece.Archive, piece.Drawing, $"the painting of {piece.Name}");
-            GraphicPainterView painter = new GraphicPainterView(new GraphicPainterViewModel(archive, piece.Drawing));
-            // The painter writes as it goes, so the screen is read again once it is closed.
-            painter.Closed += (_, _) => VM?.ReloadAfterImport();
-            painter.ShowManaged();
+            // The painter works on the saved file, so pending changes are settled first.
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(VM, this, "graphic", "Save them before painting?")) return;
+            // The painter saves on its own, so the screen is read again once it is closed.
+            AvaloniaEditorLauncher.OpenPainter(archive, piece.Drawing, () => VM?.ReloadAfterImport());
         }
 
         private async void Export_Click(object sender, RoutedEventArgs e)
@@ -57,9 +56,10 @@ namespace DSPRE.Avalonia.Views.Graphics
                 new[] { Png }, Safe(piece.Name) + ".png");
             if (path == null) return;
 
-            string trouble = GraphicAssets.ExportPng(archive, piece.Drawing, path);
-            if (trouble != null) await DialogHelper.ShowError(trouble, "Bottom Screen");
-            else VM?.Say("Saved " + path);
+            string trouble;
+            using (VM.Reading()) trouble = GraphicAssets.ExportPng(archive, piece.Drawing, path);
+            if (trouble != null) await DialogHelper.ShowError(trouble, "Bottom screen error");
+            else SaveNotice.Exported(path);
         }
 
         private async void Import_Click(object sender, RoutedEventArgs e)
@@ -72,14 +72,14 @@ namespace DSPRE.Avalonia.Views.Graphics
             string path = await DialogHelper.OpenFile(this, "Import PNG", new[] { Png });
             if (path == null) return;
 
-            VM.Remember(piece.Archive, piece.Drawing, $"the PNG imported into {piece.Name}");
-            string trouble = GraphicAssets.ImportPng(archive, piece.Drawing, path, out string note);
-            if (trouble != null) { VM?.DropLastStepIfUnchanged(); await DialogHelper.ShowError(trouble, "Bottom Screen"); return; }
-            string tooBig = VM?.RefuseIfOverRoom(piece);
-            if (tooBig != null) { await DialogHelper.ShowError(tooBig, "Bottom Screen"); VM?.ReloadAfterImport(); return; }
-            if (!string.IsNullOrEmpty(note)) await DialogHelper.ShowInfo(note, "Bottom Screen");
-            VM?.ReloadAfterImport();
-            VM?.Say("Put " + System.IO.Path.GetFileName(path) + " in.");
+            (PngColourPrompt.Choice choice, GraphicAssets.PngColourCheck check) = await PngColourPrompt.AskAsync(this, archive, piece.Drawing, path);
+            if (choice == PngColourPrompt.Choice.Cancel) return;
+            string note = null;
+            string trouble = VM.Import(() => PngColourPrompt.Import(archive, piece.Drawing, path, choice, check, out note)
+                                              ?? VM.WhyOverRoom(piece));
+            if (trouble != null) { await DialogHelper.ShowError(trouble, "Bottom screen error"); return; }
+            if (!string.IsNullOrEmpty(note)) await DialogHelper.ShowInfo(note, "Bottom screen");
+            SaveNotice.Imported(piece.Name, path);
         }
 
         private void EditAnimation_Click(object sender, RoutedEventArgs e)
@@ -96,7 +96,10 @@ namespace DSPRE.Avalonia.Views.Graphics
         private void Play_Click(object sender, RoutedEventArgs e) => VM?.TogglePlay();
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveChanges();
-        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+        }
         private void Undo_Click(object sender, RoutedEventArgs e) => VM?.Undo();
 
         private void Redo_Click(object sender, RoutedEventArgs e) => VM?.Redo();
@@ -105,7 +108,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             if (VM == null || sender is not Control c || c.Tag is not int at) return;
             PaletteColorEditorViewModel editor = new PaletteColorEditorViewModel(
-                VM.SelectedName + ", colour " + at, VM.ColourAt(at), argb => VM.SetColour(at, argb));
+                VM.SelectedName + ", colour " + at, VM.ColourAt(at), (argb, group) => VM.SetColour(at, argb, group));
 
             // Opened away from the right-hand side, because the colours sit there and a window over them
             // swallows the click that picks the next one.

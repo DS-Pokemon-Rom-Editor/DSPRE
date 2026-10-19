@@ -15,7 +15,7 @@ namespace DSPRE.Tests
         private static EventEditorViewModel VmWithSelected(Event e)
         {
             if (DSPRE.SettingsManager.Settings == null) DSPRE.SettingsManager.Load();
-            var vm = new EventEditorViewModel();
+            EventEditorViewModel vm = new EventEditorViewModel();
             typeof(EventEditorViewModel)
                 .GetField("_current", BindingFlags.NonPublic | BindingFlags.Instance)
                 .SetValue(vm, e);
@@ -25,8 +25,8 @@ namespace DSPRE.Tests
         [Fact]
         public void TriggerZReachesTheTrigger()
         {
-            var t = new Trigger(0, 0);
-            var vm = VmWithSelected(t);
+            Trigger t = new Trigger(0, 0);
+            EventEditorViewModel vm = VmWithSelected(t);
 
             vm.ZPos = 13;
 
@@ -36,8 +36,8 @@ namespace DSPRE.Tests
         [Fact]
         public void SpawnableZReachesTheSpawnable()
         {
-            var s = new Spawnable(0, 0);
-            var vm = VmWithSelected(s);
+            Spawnable s = new Spawnable(0, 0);
+            EventEditorViewModel vm = VmWithSelected(s);
 
             vm.ZPos = 7;
 
@@ -47,8 +47,8 @@ namespace DSPRE.Tests
         [Fact]
         public void OverworldZIsScaledToFixedPoint()
         {
-            var o = new Overworld(0, 0, 0);
-            var vm = VmWithSelected(o);
+            Overworld o = new Overworld(0, 0, 0);
+            EventEditorViewModel vm = VmWithSelected(o);
 
             vm.ZPos = 3;
 
@@ -60,12 +60,12 @@ namespace DSPRE.Tests
         {
             // The box keeps its own backing field. Selecting another event that happens to show the
             // same number must still push the value down, or the second event never gets written.
-            var first = new Trigger(0, 0);
-            var vm = VmWithSelected(first);
+            Trigger first = new Trigger(0, 0);
+            EventEditorViewModel vm = VmWithSelected(first);
             vm.ZPos = 5;
             Assert.Equal(5, first.zPosition);
 
-            var second = new Trigger(0, 0);
+            Trigger second = new Trigger(0, 0);
             typeof(EventEditorViewModel)
                 .GetField("_current", BindingFlags.NonPublic | BindingFlags.Instance)
                 .SetValue(vm, second);

@@ -32,36 +32,36 @@ namespace DSPRE.ROMFiles
             _ => new Counts(254, 253, -1),
         };
 
-        private static bool HasBound => SpotOf(GameTable.RegionalDexLookupBound) != null;
+        private static bool HasBound => RomLocator.Where(RomLocator.Thing.RegionalDexLookupBound) != null;
 
         /// <summary>Why the counts can't be read or set in this ROM, or null.</summary>
         public static string WhyNot()
         {
-            foreach (GameTable t in new[] { GameTable.RegionalDexCompletion, GameTable.RegionalDexRatingLast })
-                if (SpotOf(t) == null) return "DSPRE knows where these counts are only in US Diamond, Platinum and HeartGold.";
-            foreach (GameTable t in Sites())
+            foreach (RomLocator.Thing t in new[] { RomLocator.Thing.RegionalDexCompletion, RomLocator.Thing.RegionalDexRatingLast })
+                if (RomLocator.Where(t) == null) return "Works on " + RomInfo.DescribeDumps(RomLocator.WorksOn(t)) + ".";
+            foreach (RomLocator.Thing t in Sites())
             {
-                string why = GameTableFile.WhyNot(t, 2);
+                string why = RomLocator.WhyNot(t, 2);
                 if (why != null) return why;
                 // The byte must still be the immediate of a `cmp rN, #imm8`, or the code isn't the one DSPRE knows.
-                byte op = GameTableFile.Read(t, 2)[1];
+                byte op = RomLocator.Read(t, 2)[1];
                 if (op < 0x28 || op > 0x2F) return "The code that checks the regional Pokédex size has been changed, so DSPRE leaves it alone.";
             }
             return null;
         }
 
-        private static IEnumerable<GameTable> Sites()
+        private static IEnumerable<RomLocator.Thing> Sites()
         {
-            yield return GameTable.RegionalDexCompletion;
-            yield return GameTable.RegionalDexRatingLast;
-            if (HasBound) yield return GameTable.RegionalDexLookupBound;
+            yield return RomLocator.Thing.RegionalDexCompletion;
+            yield return RomLocator.Thing.RegionalDexRatingLast;
+            if (HasBound) yield return RomLocator.Thing.RegionalDexLookupBound;
         }
 
         /// <summary>What the game holds now; the lookup bound is -1 where the game has none.</summary>
         public static Counts Current() => new Counts(
-            GameTableFile.Read(GameTable.RegionalDexCompletion, 1)[0],
-            GameTableFile.Read(GameTable.RegionalDexRatingLast, 1)[0],
-            HasBound ? GameTableFile.Read(GameTable.RegionalDexLookupBound, 1)[0] : -1);
+            RomLocator.Read(RomLocator.Thing.RegionalDexCompletion, 1)[0],
+            RomLocator.Read(RomLocator.Thing.RegionalDexRatingLast, 1)[0],
+            HasBound ? RomLocator.Read(RomLocator.Thing.RegionalDexLookupBound, 1)[0] : -1);
 
         /// <summary>What the counts should be for a regional order.</summary>
         public static Counts For(IReadOnlyCollection<ushort> order)
@@ -87,9 +87,9 @@ namespace DSPRE.ROMFiles
             if (WhyNot() is string why) throw new InvalidOperationException(why);
             if (Problem(order) is string p) throw new InvalidOperationException(p);
             Counts c = For(order);
-            GameTableFile.Write(GameTable.RegionalDexCompletion, new[] { (byte)c.Completion });
-            GameTableFile.Write(GameTable.RegionalDexRatingLast, new[] { (byte)c.RatingLast });
-            if (HasBound) GameTableFile.Write(GameTable.RegionalDexLookupBound, new[] { (byte)c.LookupBound });
+            RomLocator.Write(RomLocator.Thing.RegionalDexCompletion, new[] { (byte)c.Completion });
+            RomLocator.Write(RomLocator.Thing.RegionalDexRatingLast, new[] { (byte)c.RatingLast });
+            if (HasBound) RomLocator.Write(RomLocator.Thing.RegionalDexLookupBound, new[] { (byte)c.LookupBound });
         }
 
         /// <summary>The regional order as saved in the project, or null when it can't be read.</summary>

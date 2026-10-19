@@ -46,7 +46,7 @@ namespace DSPRE.ROMFiles
         {
             if (gameFamily == GameFamilies.HGSS)
                 return "HeartGold and SoulSilver build their Battle Point exchange menus in scripts. Use the Script and Text editors.";
-            BpShopSites sites = BpShopCodeSites;
+            BpShopSites sites = RomLocator.BpShopSites;
             if (sites == null) return "Only US Platinum (Rev 1) and Diamond are supported.";
             if (!IsDsRomProject && ARM9.CheckCompressionMark()) return "arm9 is still compressed. Convert this project to ds-rom format first.";
             if (!File.Exists(arm9Path)) return "arm9 is missing from this project.";
@@ -57,7 +57,7 @@ namespace DSPRE.ROMFiles
         public static BpShopData Load()
         {
             if (WhyNot() is string why) throw new InvalidOperationException(why);
-            BpShopData shop = new BpShopData(BpShopCodeSites);
+            BpShopData shop = new BpShopData(RomLocator.BpShopSites);
             if (shop.IsPlatinum) shop.LoadPlatinum(); else shop.LoadDiamond();
             return shop;
         }
@@ -75,13 +75,17 @@ namespace DSPRE.ROMFiles
         /// <summary>Resolves a RAM address to (bytes, offset, 0 arm9 / 1 overlay 7 / 2 synthetic overlay).</summary>
         private static (byte[] data, int offset, int where) Resolve(uint ram, int length, byte[] arm9, byte[] ov7, uint ov7Base, byte[] synth, string what)
         {
-            if (synth != null && ram >= synthOverlayLoadAddress && ram - synthOverlayLoadAddress + (ulong)length <= (ulong)synth.Length)
-                return (synth, (int)(ram - synthOverlayLoadAddress), 2);
-            if (ov7 != null && ram >= ov7Base && ram - ov7Base + (ulong)length <= (ulong)ov7.Length)
-                return (ov7, (int)(ram - ov7Base), 1);
-            if (ram >= ARM9.address && ram - ARM9.address + (ulong)length <= (ulong)arm9.Length)
-                return (arm9, (int)(ram - ARM9.address), 0);
-            throw new InvalidDataException($"The {what} was moved to 0x{ram:X8}, which DSPRE can't follow.");
+            (int region, int offset) = RamAddress.Find(ram, length,
+                RamAddress.Synthetic(synth?.Length ?? 0),
+                new RamAddress.Region("overlay 7", ov7Base, ov7?.Length ?? 0),
+                RamAddress.Arm9(arm9.Length));
+            return region switch
+            {
+                0 => (synth, offset, 2),
+                1 => (ov7, offset, 1),
+                2 => (arm9, offset, 0),
+                _ => throw new InvalidDataException($"The {what} was moved to 0x{ram:X8}, which DSPRE can't follow."),
+            };
         }
 
         private static List<ushort> ReadList((byte[] data, int offset, int where) at, string what)
@@ -121,9 +125,9 @@ namespace DSPRE.ROMFiles
             foreach (ushort i in ReadList(left, "item counter list")) Left.Add(new Entry { Item = i, Price = priceOf.GetValueOrDefault(i) });
             foreach (ushort i in ReadList(right, "TM counter list")) Right.Add(new Entry { Item = i, Price = priceOf.GetValueOrDefault(i) });
 
-            _inPlace = left.where == 0 && left.offset == SpotOf(GameTable.BpShopItems)?.Offset
-                && right.where == 0 && right.offset == SpotOf(GameTable.BpShopTms)?.Offset
-                && prices.where == 1 && prices.offset == SpotOf(GameTable.BpShopPrices)?.Offset;
+            _inPlace = left.where == 0 && left.offset == RomLocator.Where(RomLocator.Thing.BpShopItems)?.Offset
+                && right.where == 0 && right.offset == RomLocator.Where(RomLocator.Thing.BpShopTms)?.Offset
+                && prices.where == 1 && prices.offset == RomLocator.Where(RomLocator.Thing.BpShopPrices)?.Offset;
             if (synth != null && left.where == 2)
             {
                 (long Start, long End) block = SyntheticOverlaySpace.Blocks(synth, Marker).FirstOrDefault(b => left.offset >= b.Start && left.offset < b.End);
@@ -228,15 +232,15 @@ namespace DSPRE.ROMFiles
             ov7[_sites.PriceCountCompare] = (byte)rows.Count;
             try
             {
-                File.WriteAllBytes(Filesystem.expArmPath, synth);
-                File.WriteAllBytes(OverlayUtils.GetPath(7), ov7);
-                File.WriteAllBytes(arm9Path, arm9);
+                DSUtils.WriteWholeFile(Filesystem.expArmPath, synth);
+                DSUtils.WriteWholeFile(OverlayUtils.GetPath(7), ov7);
+                DSUtils.WriteWholeFile(arm9Path, arm9);
             }
             catch
             {
-                File.WriteAllBytes(Filesystem.expArmPath, synthBefore);
-                File.WriteAllBytes(OverlayUtils.GetPath(7), ov7Before);
-                File.WriteAllBytes(arm9Path, arm9Before);
+                DSUtils.WriteWholeFile(Filesystem.expArmPath, synthBefore);
+                DSUtils.WriteWholeFile(OverlayUtils.GetPath(7), ov7Before);
+                DSUtils.WriteWholeFile(arm9Path, arm9Before);
                 throw;
             }
             _inPlace = false;
@@ -253,9 +257,9 @@ namespace DSPRE.ROMFiles
 
             if (_inPlace && FitsInPlace)
             {
-                WriteList(arm9, SpotOf(GameTable.BpShopItems).Value.Offset, Left, VanillaLeft + 1);
-                WriteList(arm9, SpotOf(GameTable.BpShopTms).Value.Offset, Right, VanillaRight + 1);
-                WriteRows(ov7, SpotOf(GameTable.BpShopPrices).Value.Offset, rows, ExchangeRows);
+                WriteList(arm9, RomLocator.Where(RomLocator.Thing.BpShopItems).Offset, Left, VanillaLeft + 1);
+                WriteList(arm9, RomLocator.Where(RomLocator.Thing.BpShopTms).Offset, Right, VanillaRight + 1);
+                WriteRows(ov7, RomLocator.Where(RomLocator.Thing.BpShopPrices).Offset, rows, ExchangeRows);
             }
             else if (_blockStart >= 0 && (Expanded || FitsCurrentRoom))
             {
@@ -282,15 +286,15 @@ namespace DSPRE.ROMFiles
 
             try
             {
-                if (synthChanged) File.WriteAllBytes(Filesystem.expArmPath, synth);
-                File.WriteAllBytes(OverlayUtils.GetPath(7), ov7);
-                File.WriteAllBytes(arm9Path, arm9);
+                if (synthChanged) DSUtils.WriteWholeFile(Filesystem.expArmPath, synth);
+                DSUtils.WriteWholeFile(OverlayUtils.GetPath(7), ov7);
+                DSUtils.WriteWholeFile(arm9Path, arm9);
             }
             catch
             {
-                if (synthChanged) File.WriteAllBytes(Filesystem.expArmPath, synthBefore);
-                File.WriteAllBytes(OverlayUtils.GetPath(7), ov7Before);
-                File.WriteAllBytes(arm9Path, arm9Before);
+                if (synthChanged) DSUtils.WriteWholeFile(Filesystem.expArmPath, synthBefore);
+                DSUtils.WriteWholeFile(OverlayUtils.GetPath(7), ov7Before);
+                DSUtils.WriteWholeFile(arm9Path, arm9Before);
                 throw;
             }
         }
@@ -331,7 +335,7 @@ namespace DSPRE.ROMFiles
             byte[] arm9 = File.ReadAllBytes(arm9Path);
             if (!SplitLooksVanilla(arm9)) throw new InvalidOperationException("The Battle Point exchange code changed since the lists were read; reopen the editor.");
             WriteExchangeRows(arm9);
-            File.WriteAllBytes(arm9Path, arm9);
+            DSUtils.WriteWholeFile(arm9Path, arm9);
         }
 
         // ---------------------------------------------------------------- checks

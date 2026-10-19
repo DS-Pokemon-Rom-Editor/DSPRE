@@ -3,12 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace DSPRE.Avalonia.Data
+namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// A cell animation file, read and written whole. The old reader in Images takes a path and drops
-    /// several fields, so this is a second, byte-oriented model that can put a file back exactly as it
-    /// found it.
+    /// A cell animation file, read and written whole, so a file can go back exactly as it was found.
     ///
     /// Nearly everything is kept verbatim on purpose. The parts a person edits, a frame's hold and which
     /// drawing it shows, are patched in place; everything else is handed back unchanged. That is what makes
@@ -749,7 +747,7 @@ namespace DSPRE.Avalonia.Data
 
         private Sequence At(int i) => i >= 0 && i < Sequences.Count ? Sequences[i] : null;
 
-        private Result ResultFor(int sequence, int frame)
+        public Result ResultFor(int sequence, int frame)
         {
             Sequence s = At(sequence);
             if (s == null || frame < 0 || frame >= s.Frames.Count) return null;

@@ -27,7 +27,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         }
 
         private string _statusMessage = string.Empty;
-        public string StatusMessage
+        public string StatusText
         {
             get => _statusMessage;
             private set { _statusMessage = value; OnPropertyChanged(); }
@@ -40,7 +40,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         public void SearchCommand()
         {
             Results.Clear();
-            StatusMessage = string.Empty;
+            StatusText = string.Empty;
 
             if (Design.IsDesignMode)
             {
@@ -48,7 +48,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 Results.Add(new AddressRow("Overlay 42", "0x1234"));
                 Results.Add(new AddressRow("ARM9", "0x0A2C"));
                 Results.Add(new AddressRow("SynthOVL", "0x00F8"));
-                StatusMessage = "Design-time preview (no actual ROM loaded)";
+                StatusText = "Design-time preview (no actual ROM loaded)";
                 return;
             }
 
@@ -73,7 +73,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             }
             catch
             {
-                StatusMessage = "No overlay found for that address.";
+                StatusText = "No overlay found for that address.";
             }
         }
 

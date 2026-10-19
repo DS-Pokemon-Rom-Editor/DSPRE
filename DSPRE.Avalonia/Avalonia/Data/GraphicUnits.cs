@@ -16,7 +16,7 @@ namespace DSPRE.Avalonia.Data
                 Archive = a, Index = index, Name = name,
                 // The colours in an archive often come before the picture they paint, and a browser that
                 // opens on the first part then shows a row of swatches instead of the thing itself.
-                Kind = name != null && name.StartsWith("Colours", StringComparison.OrdinalIgnoreCase)
+                Kind = name != null && name.IndexOf("colours", StringComparison.OrdinalIgnoreCase) >= 0
                     ? GraphicAssets.Kind.Palette : KindIn(a, index),
             };
 
@@ -53,10 +53,10 @@ namespace DSPRE.Avalonia.Data
 
                 GraphicAssets.Unit u = new GraphicAssets.Unit { Archive = a, Name = $"Backdrop {bg}" };
                 u.Parts.Add(Part(a, drawing, "Drawing"));
-                u.Parts.Add(Part(a, palDay, "Colours, day"));
-                u.Parts.Add(Part(a, palDay + 1, "Colours, evening"));
-                u.Parts.Add(Part(a, palDay + 2, "Colours, night"));
-                if (tilemap < fileCount) u.Parts.Add(Part(a, tilemap, "Arrangement, shared"));
+                u.Parts.Add(Part(a, palDay, "Day colours"));
+                u.Parts.Add(Part(a, palDay + 1, "Evening colours"));
+                u.Parts.Add(Part(a, palDay + 2, "Night colours"));
+                if (tilemap < fileCount) u.Parts.Add(Part(a, tilemap, "Shared arrangement"));
                 units.Add(u);
 
                 spokenFor.Add(tilemap);          // shared by every backdrop, so not a row of its own
@@ -151,11 +151,11 @@ namespace DSPRE.Avalonia.Data
                 };
                 u.Parts.Add(Part(a, mine, "Your side"));
                 u.Parts.Add(Part(a, enemy, "Their side"));
-                u.Parts.Add(Part(a, palDay, "Colours, day"));
-                u.Parts.Add(Part(a, palDay + 1, "Colours, evening"));
-                u.Parts.Add(Part(a, palDay + 2, "Colours, night"));
-                if (mineCell < fileCount) u.Parts.Add(Part(a, mineCell, "Layout, shared"));
-                if (enemyCell < fileCount) u.Parts.Add(Part(a, enemyCell, "Their layout, shared"));
+                u.Parts.Add(Part(a, palDay, "Day colours"));
+                u.Parts.Add(Part(a, palDay + 1, "Evening colours"));
+                u.Parts.Add(Part(a, palDay + 2, "Night colours"));
+                if (mineCell < fileCount) u.Parts.Add(Part(a, mineCell, "Shared layout"));
+                if (enemyCell < fileCount) u.Parts.Add(Part(a, enemyCell, "Their shared layout"));
                 units.Add(u);
 
                 // The two cell layouts are shared by every terrain, so they are named on each row and must
@@ -249,7 +249,7 @@ namespace DSPRE.Avalonia.Data
                 int shared = GraphicAssets.ItemIcons.Sharing(icon.Drawing);
                 GraphicAssets.Unit u = new GraphicAssets.Unit { Archive = a, Name = icon.Name ?? a.Title };
                 u.Parts.Add(Part(a, icon.Drawing, shared > 1
-                    ? $"Drawing, shared with {shared - 1} other" + (shared > 2 ? " icons" : " icon")
+                    ? $"Drawing shared with {shared - 1} other" + (shared > 2 ? " icons" : " icon")
                     : "Drawing"));
                 u.Parts.Add(Part(a, icon.Colours, "Colours"));
                 units.Add(u);
@@ -353,8 +353,8 @@ namespace DSPRE.Avalonia.Data
                 if (layout < fileCount)
                     u.Parts.Add(new GraphicAssets.UnitPart { Archive = own, Index = layout, Name = "As it appears", Kind = GraphicAssets.Kind.CellLayout });
                 u.Parts.Add(Part(a, sprite, "Drawing"));
-                if (animation < fileCount) u.Parts.Add(Part(a, animation, "Animation, shared"));
-                if (colours < fileCount) u.Parts.Add(Part(a, colours, "Colours, shared"));
+                if (animation < fileCount) u.Parts.Add(Part(a, animation, "Shared animation"));
+                if (colours < fileCount) u.Parts.Add(Part(a, colours, "Shared colours"));
                 // DP/Pt also store a layout per seal, in drawing order, but the game draws every sticker with
                 // seal 01's 32x32 layout; and the seal case lists each seal through layout 180.
                 if (!johto)
@@ -362,7 +362,7 @@ namespace DSPRE.Avalonia.Data
                     int ownLayout = sprite - SealDrawingsDppt + SealLayoutsDppt;
                     if (ownLayout >= SealLayoutsDppt && ownLayout < SealLayoutsDppt + SealCountDppt && ownLayout != layout)
                     {
-                        u.Parts.Add(Drawn(a, ownLayout, sprite, colours, "Own layout, unused"));
+                        u.Parts.Add(Drawn(a, ownLayout, sprite, colours, "Its own layout (unused)"));
                         spokenFor.Add(ownLayout);
                     }
                     if (SealCaseLayoutDppt < fileCount)
@@ -375,17 +375,17 @@ namespace DSPRE.Avalonia.Data
 
             if (!johto)
             {
-                Row("Capsule editor, lower screen", true, (267, "Drawing"), (283, "Capsule arrangement"),
-                    (282, "Seal case arrangement"), (287, "Colours"), (294, "Colours, text"));
-                Row("Capsule editor, top screen", true, (268, "Drawing"), (284, "Arrangement"),
+                Row("Capsule editor bottom screen", true, (267, "Drawing"), (283, "Capsule arrangement"),
+                    (282, "Seal case arrangement"), (287, "Colours"), (294, "Text colours"));
+                Row("Capsule editor top screen", true, (268, "Drawing"), (284, "Arrangement"),
                     (269, "Second drawing"), (285, "Second arrangement"), (288, "Colours"));
 
                 // Sprite pieces of the capsule screens: (drawing, layout, animation, colours) as the editor loads them.
                 foreach ((string name, int drawing, int cells, int anim, int pal) in new (string, int, int, int, int)[]
                 {
                     ("Capsule animation", 265, 173, 81, 290), ("Ball", 266, 174, 82, 286), ("Button", 270, 175, 83, 290),
-                    ("Square button", 272, 176, 84, 290), ("Scroll button, first", 273, 177, 85, 290),
-                    ("Scroll button, second", 274, 178, 86, 290), ("Cursor", 275, 179, 87, 291),
+                    ("Square button", 272, 176, 84, 290), ("First scroll button", 273, 177, 85, 290),
+                    ("Second scroll button", 274, 178, 86, 290), ("Cursor", 275, 179, 87, 291),
                 })
                 {
                     if (cells >= fileCount || drawing >= fileCount) continue;
@@ -406,7 +406,7 @@ namespace DSPRE.Avalonia.Data
                 spokenFor.Add(SealDrawingsDppt);
                 Row("Unused pieces", true, (271, "Old button"), (276, "Seal list piece 1"), (277, "Seal list piece 2"),
                     (278, "Seal list piece 3"), (279, "Seal list piece 4"), (280, "Seal list piece 5"), (281, "Seal list piece 6"),
-                    (292, "Colours, seal list"), (289, "Colours, second top screen"));
+                    (292, "Seal list colours"), (289, "Second top screen colours"));
                 for (int i = 181; i <= 183; i++) spokenFor.Add(i);
                 for (int i = 89; i <= 91; i++) spokenFor.Add(i);
                 for (int i = 0; i < SealCountDppt; i++) spokenFor.Add(i);
@@ -575,8 +575,8 @@ namespace DSPRE.Avalonia.Data
                 (int ncgr, int facaNscr, int backNscr, int[] rankPalettes) card = RomInfo.TrainerCardMembers;
                 GraphicAssets.Unit u = new GraphicAssets.Unit { Archive = a, Name = "Card" };
                 Claim(u, card.ncgr, "Drawing");
-                Claim(u, card.facaNscr, "Front, arrangement");
-                Claim(u, card.backNscr, "Back, arrangement");
+                Claim(u, card.facaNscr, "Front arrangement");
+                Claim(u, card.backNscr, "Back arrangement");
                 for (int r = 0; r < card.rankPalettes.Length; r++)
                 {
                     string rank = r < RomInfo.TrainerCardRankNames.Length
@@ -588,8 +588,8 @@ namespace DSPRE.Avalonia.Data
                 (int ncgr, int maleNscr, int femaleNscr) t = RomInfo.TrainerCardTrainerMembers;
                 GraphicAssets.Unit p2 = new GraphicAssets.Unit { Archive = a, Name = "Trainer on the card" };
                 Claim(p2, t.ncgr, "Drawing");
-                Claim(p2, t.maleNscr, "Boy, arrangement");
-                Claim(p2, t.femaleNscr, "Girl, arrangement");
+                Claim(p2, t.maleNscr, "Boy's arrangement");
+                Claim(p2, t.femaleNscr, "Girl's arrangement");
                 if (p2.Parts.Count > 0) units.Add(p2);
             }
             catch (Exception ex) { AppLogger.Error("GraphicUnits.TrainerCard: " + ex.Message); }

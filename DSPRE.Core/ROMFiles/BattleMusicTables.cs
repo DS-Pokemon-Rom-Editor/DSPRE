@@ -213,7 +213,6 @@ namespace DSPRE.ROMFiles
         public static BattleMusicTables LoadRom()
         {
             if (!IsSupported) return null;
-            SetBattleEffectsData();
             if (isHGE && BitConverter.ToUInt32(ARM9.ReadBytes(effectsComboTableOffsetToRAMAddress, 4), 0) >= synthOverlayLoadAddress) return null;
             BattleMusicTables t = new BattleMusicTables();
 
@@ -221,17 +220,18 @@ namespace DSPRE.ROMFiles
             if (gameFamily == GameFamilies.DP && !DpPointersAgree()) return null;
             int comboCount = hgss ? ARM9.ReadByte(effectsComboTableOffsetToSizeLimiter)
                 : gameFamily == GameFamilies.DP ? DpComboCount : PtNormalWild + 1;
-            Locate(t.Combos, effectsComboTableOffsetToRAMAddress);
+            if (!Locate(t.Combos, effectsComboTableOffsetToRAMAddress, comboCount * 4)) return null;
             using (DSUtils.EasyReader r = new DSUtils.EasyReader(t.Combos.Path, t.Combos.Start))
                 for (int i = 0; i < comboCount; i++) t.Combos.Rows.Add((r.ReadUInt16(), r.ReadUInt16()));
 
             if (hgss)
             {
-                ReadPacked(t.Classes, vsTrainerEntryTableOffsetToRAMAddress, ARM9.ReadByte(vsTrainerEntryTableOffsetToSizeLimiter));
-                ReadPacked(t.Species, vsPokemonEntryTableOffsetToRAMAddress, ARM9.ReadByte(vsPokemonEntryTableOffsetToSizeLimiter));
+                if (!ReadPacked(t.Classes, vsTrainerEntryTableOffsetToRAMAddress, ARM9.ReadByte(vsTrainerEntryTableOffsetToSizeLimiter))
+                    || !ReadPacked(t.Species, vsPokemonEntryTableOffsetToRAMAddress, ARM9.ReadByte(vsPokemonEntryTableOffsetToSizeLimiter)))
+                    return null;
             }
 
-            VsIntroSites sites = VsIntroCodeSites;
+            VsIntroSites sites = RomLocator.VsIntroSites;
             uint musicLiteral = effectsComboTableSecondPointerOffset != 0 ? effectsComboTableSecondPointerOffset
                 : sites != null && sites.ComboMusicLiteral >= 0 ? (uint)sites.ComboMusicLiteral : 0;
             if (musicLiteral != 0)
@@ -246,25 +246,24 @@ namespace DSPRE.ROMFiles
         public void WriteCombo(int index)
         {
             (ushort transition, ushort sequence) = Combos.Rows[index];
-            using DSUtils.EasyWriter w = new DSUtils.EasyWriter(Combos.Path, Combos.Start + 4 * (uint)index);
-            w.Write(transition);
-            w.Write(sequence);
+            byte[] row = new byte[4];
+            BitConverter.GetBytes(transition).CopyTo(row, 0);
+            BitConverter.GetBytes(sequence).CopyTo(row, 2);
+            DSUtils.WriteToFile(Combos.Path, row, Combos.Start + 4 * (uint)index);
         }
 
         /// <summary>Writes class row <paramref name="index"/> back, the class in the low 10 bits and the combo above.</summary>
         public void WriteClass(int index)
         {
             (int trainerClass, int combo) = Classes.Rows[index];
-            using DSUtils.EasyWriter w = new DSUtils.EasyWriter(Classes.Path, Classes.Start + 2 * (uint)index);
-            w.Write((ushort)((trainerClass & 0x3FF) | (combo << 10)));
+            DSUtils.WriteToFile(Classes.Path, BitConverter.GetBytes((ushort)((trainerClass & 0x3FF) | (combo << 10))), Classes.Start + 2 * (uint)index);
         }
 
         /// <summary>Writes species row <paramref name="index"/> back, the species in the low 10 bits and the combo above.</summary>
         public void WriteSpecies(int index)
         {
             (int species, int combo) = Species.Rows[index];
-            using DSUtils.EasyWriter w = new DSUtils.EasyWriter(Species.Path, Species.Start + 2 * (uint)index);
-            w.Write((ushort)((species & 0x3FF) | (combo << 10)));
+            DSUtils.WriteToFile(Species.Path, BitConverter.GetBytes((ushort)((species & 0x3FF) | (combo << 10))), Species.Start + 2 * (uint)index);
         }
 
         // A second pointer sits two bytes into the same table; if they disagree, the layout is not the known one.
@@ -273,25 +272,32 @@ namespace DSPRE.ROMFiles
             == BitConverter.ToUInt32(ARM9.ReadBytes(effectsComboTableOffsetToRAMAddress, 4), 0) + 2;
 
         // A row is an id in the low 10 bits and a combo in the high 6.
-        private static void ReadPacked(Table<(int, int)> table, uint pointerOffset, int count)
+        private static bool ReadPacked(Table<(int, int)> table, uint pointerOffset, int count)
         {
             // An emptied table may keep a null pointer, as the trainer class metadata patch (PR #272) leaves the class table.
-            if (count == 0) return;
-            Locate(table, pointerOffset);
+            if (count == 0) return true;
+            if (!Locate(table, pointerOffset, count * 2)) return false;
             using DSUtils.EasyReader r = new DSUtils.EasyReader(table.Path, table.Start);
             for (int i = 0; i < count; i++)
             {
                 ushort v = r.ReadUInt16();
                 table.Rows.Add((v & 0x3FF, v >> 10));
             }
+            return true;
         }
 
-        private static void Locate<T>(Table<T> table, uint pointerOffset)
+        /// <summary>Where the pointer leads, in arm9 or a block a patch moved it to; false when that holds no such table.</summary>
+        private static bool Locate<T>(Table<T> table, uint pointerOffset, int length)
         {
             uint ram = BitConverter.ToUInt32(ARM9.ReadBytes(pointerOffset, 4), 0);
-            table.Repointed = ram >= synthOverlayLoadAddress;
-            table.Start = ram - (table.Repointed ? synthOverlayLoadAddress : ARM9.address);
+            (int region, int offset) = RamAddress.Find(ram, length,
+                RamAddress.Synthetic(File.Exists(Filesystem.expArmPath) ? new FileInfo(Filesystem.expArmPath).Length : 0),
+                RamAddress.Arm9(new FileInfo(arm9Path).Length));
+            if (region < 0) return false;
+            table.Repointed = region == 0;
+            table.Start = (uint)offset;
             table.Path = table.Repointed ? Filesystem.expArmPath : arm9Path;
+            return true;
         }
     }
 }

@@ -157,5 +157,10 @@ namespace DSPRE.Avalonia.Views.Graphics
             AvaloniaEditorLauncher.OpenParticleEditor(DirNames.ballParticles, Chosen.Seal.Particle, Chosen.Seal.Name, VM.ParticlesChanged,
                                                       orthographic: true);
         }
+
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
+        }
     }
 }

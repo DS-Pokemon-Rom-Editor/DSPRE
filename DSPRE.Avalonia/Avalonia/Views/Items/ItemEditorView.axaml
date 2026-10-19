@@ -30,7 +30,7 @@
                 <Button x:Name="ExportButton" Click="Export_Click" Content="Export…" controls:Icon.Key="export"/>
                 <Button x:Name="ImportButton" Click="Import_Click" Content="Import…" controls:Icon.Key="import"
                         ToolTip.Tip="Read an exported item data file into this item"/>
-                <Button Content="Open icon in graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
+                <Button Content="Open in Graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
                         ToolTip.Tip="Open this item's icon in the Graphics window, where it can be painted by hand."/>
                 <Button x:Name="AddItemButton" Content="Add…" controls:Icon.Key="addIcon" IsVisible="{Binding ShowHgEngineBanner}"
                         ToolTip.Tip="Mint a brand new item in the linked hg-engine checkout"/>
@@ -62,7 +62,7 @@
                                 <Image Source="{Binding ItemIcon}" Width="32" Height="32"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                        Stretch="None"/>
-                                <TextBlock Text="n/a" FontSize="10" Opacity="0.6"
+                                <TextBlock Foreground="{DynamicResource Editor.Subtle}" Text="n/a" FontSize="10"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"
                                            IsVisible="{Binding IconUnavailable}"
                                            ToolTip.Tip="This item has no icon yet."/>

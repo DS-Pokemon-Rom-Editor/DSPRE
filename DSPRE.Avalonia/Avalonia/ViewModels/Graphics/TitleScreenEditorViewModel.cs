@@ -41,25 +41,24 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private string _statusText = string.Empty;
         public string StatusText { get => _statusText; private set => Set(ref _statusText, value); }
 
-        /// <summary>True once any import this session has changed a title-screen archive member (for
-        /// either version, or the shared copyright), so <see cref="RevertChanges"/> has something to undo.</summary>
+        /// <summary>True while imports for either version, or the shared copyright, wait to be saved.</summary>
         public bool HasChanges => _graphics.HasChanges;
 
         public TitleScreenEditorViewModel()
         {
             RefreshPreviews();
-            _graphics.History.Changed += () => { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); };
+            _graphics.Pending.Changed += () => { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); OnPropertyChanged(nameof(HasChanges)); OnPropertyChanged(nameof(HasUnsavedChanges)); };
         }
 
-        public bool CanUndo => _graphics.History.CanUndo;
-        public bool CanRedo => _graphics.History.CanRedo;
-        public void Undo() { _graphics.History.Undo(); RefreshPreviews(); }
-        public void Redo() { _graphics.History.Redo(); RefreshPreviews(); }
+        public bool CanUndo => _graphics.Pending.CanUndo;
+        public bool CanRedo => _graphics.Pending.CanRedo;
+        public void Undo() { _graphics.Pending.Undo(); RefreshPreviews(); }
+        public void Redo() { _graphics.Pending.Redo(); RefreshPreviews(); }
 
-        // Every import attempt closes its undo step, so a failed one can't leak into the next.
-        private string Imported(string error)
+        // Each import is one pending step until Save.
+        private string Imported(Func<string> import)
         {
-            _graphics.History.Commit();
+            string error = _graphics.Pending.Import(import);
             if (error == null) RefreshPreviews();
             return error;
         }
@@ -103,21 +102,21 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             RawImage raw = DecodePng(pngPath, out string err);
             if (raw == null) return err;
-            return Imported(_graphics.ImportLogo(raw));
+            return Imported(() => _graphics.ImportLogo(raw));
         }
 
         public string ImportBackground(string pngPath)
         {
             RawImage raw = DecodePng(pngPath, out string err);
             if (raw == null) return err;
-            return Imported(_graphics.ImportBackground(raw));
+            return Imported(() => _graphics.ImportBackground(raw));
         }
 
         public string ImportCopyright(string pngPath)
         {
             RawImage raw = DecodePng(pngPath, out string err);
             if (raw == null) return err;
-            return Imported(_graphics.ImportCopyright(raw));
+            return Imported(() => _graphics.ImportCopyright(raw));
         }
 
         public string ExportLogo(string pngPath) => SavePng(_graphics.ComposeLogo(), pngPath);
@@ -129,14 +128,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             byte[] bytes;
             try { bytes = System.IO.File.ReadAllBytes(nclrPath); }
             catch (Exception ex) { return ex.Message; }
-            return Imported(_graphics.ImportPaletteRaw(bytes));
+            return Imported(() => _graphics.ImportPaletteRaw(bytes));
         }
 
         public string ExportPalette(string nclrPath)
         {
             byte[] bytes = _graphics.ExportPaletteRaw();
             if (bytes == null) return "Could not read the current palette.";
-            try { System.IO.File.WriteAllBytes(nclrPath, bytes); return null; }
+            try { PlainFiles.WriteBytes(nclrPath, bytes); return null; }
             catch (Exception ex) { return ex.Message; }
         }
 

@@ -144,7 +144,7 @@ namespace DSPRE.HgEngine
             if (File.Exists(target)) return "The checkout already has a rom.nds.";
             try
             {
-                File.Copy(sourceRom, target);
+                PlainFiles.Copy(sourceRom, target);
                 // make re-extracts only when rom.nds is newer than base/arm9.bin, and a copy keeps the source's date.
                 File.SetLastWriteTimeUtc(target, DateTime.UtcNow);
             }

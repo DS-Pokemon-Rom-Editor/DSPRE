@@ -78,7 +78,7 @@ namespace DSPRE.Tests
             byte[] row = HgEngineLearnsets.ConvertRow(table, maxLevelupMoves * 4, maxLevelupMoves);
             Assert.Equal(U32((1u << 16) | 45, (7u << 16) | 768, (100u << 16) | 1023, HgEngineLearnsets.Terminator), row);
 
-            var data = new LearnsetData(new MemoryStream(row), wide: true);
+            LearnsetData data = new LearnsetData(new MemoryStream(row), wide: true);
             Assert.Equal(new (byte, ushort)[] { (1, 45), (7, 768), (100, 1023) }, Enumerable.Range(0, data.list.Count).Select(i => data.list[i]));
             Assert.Equal(new ushort[] { 45, 768, 1023, 0 }, data.GetLearnsetAtLevel(100));
             Assert.Equal(row, data.ToByteArray());
@@ -90,7 +90,7 @@ namespace DSPRE.Tests
             byte[] file = new[] { (ushort)((5 << 9) | 33), (ushort)((12 << 9) | 511), (ushort)0xFFFF }
                 .SelectMany(BitConverter.GetBytes).ToArray();
 
-            var data = new LearnsetData(new MemoryStream(file));
+            LearnsetData data = new LearnsetData(new MemoryStream(file));
             Assert.False(data.IsWide);
             Assert.Equal(new (byte, ushort)[] { (5, 33), (12, 511) }, Enumerable.Range(0, data.list.Count).Select(i => data.list[i]));
 
@@ -102,7 +102,7 @@ namespace DSPRE.Tests
         public void WritingOneSpeciesLeavesTheRestOfTheFileIdentical()
         {
             string json = Source();
-            var entries = new List<(int, int)> { (1, 33), (7, 768), (100, 22) };
+            List<(int, int)> entries = new List<(int, int)> { (1, 33), (7, 768), (100, 22) };
 
             Assert.True(HgEngineLearnsets.TryApplyLevelMoves(json, 1, entries, Species, Moves, out string updated, out string error), error);
 
@@ -126,7 +126,7 @@ namespace DSPRE.Tests
             Assert.Equal(json.Substring(0, listStart) + expectedList + json.Substring(listEnd), updated);
 
             Assert.DoesNotContain("\n", updated.Replace("\r\n", ""));
-            using var doc = JsonDocument.Parse(updated);
+            using JsonDocument doc = JsonDocument.Parse(updated);
             Assert.Equal(768, MoveIdOf(doc, "SPECIES_BULBASAUR", 1));
         }
 
@@ -134,7 +134,7 @@ namespace DSPRE.Tests
         public void UnchangedListIsANoOpAndKeepsTheFilesAliasName()
         {
             string json = Source();
-            var entries = new List<(int, int)> { (1, 33), (3, 136) };
+            List<(int, int)> entries = new List<(int, int)> { (1, 33), (3, 136) };
 
             Assert.True(HgEngineLearnsets.TryApplyLevelMoves(json, 1, entries, Species, Moves, out string updated, out string error), error);
             Assert.Equal(json, updated);
@@ -148,20 +148,20 @@ namespace DSPRE.Tests
 
             Assert.DoesNotContain("\r", updated);
             Assert.StartsWith(json.Substring(0, json.IndexOf("\"SPECIES_IVYSAUR\"", StringComparison.Ordinal)), updated);
-            using var doc = JsonDocument.Parse(updated);
+            using JsonDocument doc = JsonDocument.Parse(updated);
             Assert.Equal(768, MoveIdOf(doc, "SPECIES_IVYSAUR", 0));
         }
 
         [Fact]
         public void TooManyMovesIsRefusedWithoutAnyOutput()
         {
-            var entries = Enumerable.Range(1, HgEngineLearnsets.BuildMaxRowSlots).Select(i => (i, 33)).ToList();
+            List<(int i, int)> entries = Enumerable.Range(1, HgEngineLearnsets.BuildMaxRowSlots).Select(i => (i, 33)).ToList();
 
             Assert.False(HgEngineLearnsets.TryApplyLevelMoves(Source(), 1, entries, Species, Moves, out string updated, out string error));
             Assert.Null(updated);
             Assert.Contains("63", error);
 
-            var atLimit = entries.Take(HgEngineLearnsets.BuildMaxRowSlots - 1).ToList();
+            List<(int i, int)> atLimit = entries.Take(HgEngineLearnsets.BuildMaxRowSlots - 1).ToList();
             Assert.True(HgEngineLearnsets.TryApplyLevelMoves(Source(), 1, atLimit, Species, Moves, out _, out error), error);
         }
 
@@ -182,7 +182,7 @@ namespace DSPRE.Tests
             string closing = "\r\n  }\r\n}";
             Assert.StartsWith(json.Substring(0, json.Length - "\r\n}".Length), updated);
             Assert.EndsWith(closing, updated);
-            using var doc = JsonDocument.Parse(updated);
+            using JsonDocument doc = JsonDocument.Parse(updated);
             Assert.Equal(new[] { "SPECIES_BULBASAUR", "SPECIES_IVYSAUR", "SPECIES_MEGA_VENUSAUR" },
                 doc.RootElement.EnumerateObject().Select(p => p.Name));
             Assert.Equal(45, MoveIdOf(doc, "SPECIES_MEGA_VENUSAUR", 0));
@@ -201,7 +201,7 @@ namespace DSPRE.Tests
         public void ReadingAListGivesFileOrderAndSavingItBackIsANoOp()
         {
             string json = Source();
-            Assert.True(HgEngineLearnsets.TryReadLevelMoves(json, 1, Species, Moves, FormToBase, out var list, out string error), error);
+            Assert.True(HgEngineLearnsets.TryReadLevelMoves(json, 1, Species, Moves, FormToBase, out List<(int level, int move)> list, out string error), error);
             Assert.Equal(new[] { (1, 33), (3, 136) }, list);
 
             Assert.True(HgEngineLearnsets.TryApplyLevelMoves(json, 1, list, Species, Moves, out string updated, out error), error);
@@ -212,7 +212,7 @@ namespace DSPRE.Tests
         public void FormWithoutItsOwnKeyReadsItsBaseSpeciesList()
         {
             Assert.Equal("SPECIES_IVYSAUR", FormToBase["SPECIES_MEGA_VENUSAUR"]);
-            Assert.True(HgEngineLearnsets.TryReadLevelMoves(Source(), 3, Species, Moves, FormToBase, out var list, out string error), error);
+            Assert.True(HgEngineLearnsets.TryReadLevelMoves(Source(), 3, Species, Moves, FormToBase, out List<(int level, int move)> list, out string error), error);
             Assert.Equal(new[] { (1, 45) }, list);
         }
 
@@ -227,7 +227,7 @@ namespace DSPRE.Tests
                 "  }",
                 "}");
 
-            Assert.True(HgEngineLearnsets.TryReadLevelMoves(json, 3, Species, Moves, FormToBase, out var list, out string error), error);
+            Assert.True(HgEngineLearnsets.TryReadLevelMoves(json, 3, Species, Moves, FormToBase, out List<(int level, int move)> list, out string error), error);
             Assert.Equal(new[] { (1, 45) }, list);
         }
 
@@ -236,14 +236,14 @@ namespace DSPRE.Tests
         {
             Assert.True(HgEngineLearnsets.TryApplyLevelMoves(Source(), 3, new List<(int, int)> { (5, 22) }, Species, Moves, out string json, out string error), error);
 
-            Assert.True(HgEngineLearnsets.TryReadLevelMoves(json, 3, Species, Moves, FormToBase, out var list, out error), error);
+            Assert.True(HgEngineLearnsets.TryReadLevelMoves(json, 3, Species, Moves, FormToBase, out List<(int level, int move)> list, out error), error);
             Assert.Equal(new[] { (5, 22) }, list);
         }
 
         [Fact]
         public void SpeciesWithNoKeyAndNoBaseReadsAnEmptyList()
         {
-            Assert.True(HgEngineLearnsets.TryReadLevelMoves(Source(), 0, Species, Moves, FormToBase, out var list, out string error), error);
+            Assert.True(HgEngineLearnsets.TryReadLevelMoves(Source(), 0, Species, Moves, FormToBase, out List<(int level, int move)> list, out string error), error);
             Assert.Empty(list);
         }
 

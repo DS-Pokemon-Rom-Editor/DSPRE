@@ -15,27 +15,14 @@ using DSPRE.Avalonia.Views.Shell;
 using DSPRE.Csv;
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
-    public class EggMoveEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
+    public class EggMoveEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
-            if (n == nameof(HasUnsavedChanges)) ClearImportedWhenClean();
         }
 
-        // Shown after a CSV import until the changes are saved or discarded.
-        private bool _imported;
-        public string ImportNote => _imported ? "CSV import has unsaved changes. Press Save to write them to disk." : "";
-        public bool HasImportNote => _imported;
-        private void MarkImported() { _imported = true; OnPropertyChanged(nameof(ImportNote)); OnPropertyChanged(nameof(HasImportNote)); }
-        private void ClearImportedWhenClean()
-        {
-            if (!_imported || HasUnsavedChanges) return;
-            _imported = false;
-            OnPropertyChanged(nameof(ImportNote));
-            OnPropertyChanged(nameof(HasImportNote));
-        }
         private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
         {
             if (Equals(f, v)) return false; f = v; OnPropertyChanged(n); return true;
@@ -52,7 +39,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty;
-        public string UnsavedChangesDescription => "Egg Move Editor";
+        public string UnsavedChangesDescription => "Egg moves";
         void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommand();
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
@@ -293,7 +280,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 await DialogHelper.ShowError(
                     $"Nothing was saved: the egg move table uses {used} of {_maxTableSize} bytes. Remove some moves or Pokémon first.",
-                    "Egg Move Editor");
+                    "Egg move editor error");
                 return;
             }
 
@@ -311,7 +298,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string error = SaveEggMoveData();
             if (error != null)
             {
-                await DialogHelper.ShowError("The egg moves were not saved:\n" + error, "Egg Move Editor");
+                await DialogHelper.ShowError("The egg moves were not saved:\n" + error, "Egg move editor error");
                 return;
             }
             SaveNotice.Saved(UnsavedChangesDescription);
@@ -390,7 +377,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (CbReplaceeIndex < 0 || CbReplacerIndex < 0)
             {
-                await DialogHelper.ShowError("Please select valid moves for the bulk replace.", "Error");
+                await DialogHelper.ShowError("Please select valid moves for the bulk replace.", "Egg move editor error");
                 return;
             }
             ushort from = (ushort)CbReplaceeIndex, to = (ushort)CbReplacerIndex;
@@ -408,17 +395,17 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 RefreshMoveList(_selectedMonIndex);
                 SetDirty(true);
-                await DialogHelper.ShowInfo($"Replaced {count} occurrence(s) of {_moveNames[from]} with {_moveNames[to]}.\nAffected: {string.Join(", ", affected)}", "Bulk Replace");
+                await DialogHelper.ShowInfo($"Replaced {count} occurrence(s) of {_moveNames[from]} with {_moveNames[to]}.\nAffected: {string.Join(", ", affected)}", "Bulk replace");
             }
             else
-                await DialogHelper.ShowInfo($"No occurrences of {_moveNames[from]} were found.", "Bulk Replace");
+                await DialogHelper.ShowInfo($"No occurrences of {_moveNames[from]} were found.", "Bulk replace");
         }
 
         public async Task BulkDeleteCommand()
         {
             if (CbDeleteAllIndex < 0)
             {
-                await DialogHelper.ShowError("Please select a valid move to delete.", "Error");
+                await DialogHelper.ShowError("Please select a valid move to delete.", "Egg move editor error");
                 return;
             }
             ushort del = (ushort)CbDeleteAllIndex;
@@ -438,10 +425,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 UpdateMoveCountLabel();
                 UpdateListSizeLabel();
                 SetDirty(true);
-                await DialogHelper.ShowInfo($"Deleted {count} occurrence(s) of {_moveNames[del]}.\nAffected: {string.Join(", ", affected)}", "Bulk Delete");
+                await DialogHelper.ShowInfo($"Deleted {count} occurrence(s) of {_moveNames[del]}.\nAffected: {string.Join(", ", affected)}", "Bulk delete");
             }
             else
-                await DialogHelper.ShowInfo($"No occurrences of {_moveNames[del]} were found.", "Bulk Delete");
+                await DialogHelper.ShowInfo($"No occurrences of {_moveNames[del]} were found.", "Bulk delete");
         }
 
         public void SearchMonCommand()
@@ -468,28 +455,34 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public async Task ExportCommand(Window owner)
         {
-            string path = await DialogHelper.SaveFile(owner, "Export Egg Move Data",
+            string path = await DialogHelper.SaveFile(owner, "Export egg move data",
                 new[] { DialogHelper.CsvFilter, DialogHelper.AllFilter }, "egg_moves.csv");
             if (path == null) return;
             bool ok = EggMoveCsv.Export(_eggMoveData, path, _monNames, _moveNames);
-            if (ok) await DialogHelper.ShowInfo("Egg move data exported successfully.", "Export Complete");
-            else    await DialogHelper.ShowError("Failed to export egg move data. Check the logs.", "Export Failed");
+            if (ok) SaveNotice.Exported(path);
+            else await DialogHelper.ShowError("The egg moves could not be exported. The log has the reason.", "Egg move editor error");
         }
 
         public async Task ImportCommand(Window owner)
         {
-            string path = await DialogHelper.OpenFile(owner, "Import Egg Move Data",
+            string path = await DialogHelper.OpenFile(owner, "Import egg move data",
                 new[] { DialogHelper.CsvFilter, DialogHelper.AllFilter });
             if (path == null) return;
             EggMoveTableCsv importer = new EggMoveTableCsv(_monNames, _moveNames, _eggMoveData);
             CsvImportSession session = await CsvImportReviewView.ReviewAsync(owner, CsvImportSession.Open(importer, path));
             if (session == null) return;
             _eggMoveData = importer.Result(session.Accepted);
+            int keep = _selectedMonIndex;
             RefreshMonList();
             UpdateEntryCountLabel();
             UpdateListSizeLabel();
+            // Clearing the list drops the selection, so the Pokémon on screen is picked again to show its new moves.
+            _selectedMonIndex = -1;
+            OnPropertyChanged(nameof(SelectedMonIndex));
+            int target = Math.Min(keep, _eggMoveData.Count - 1);
+            if (target >= 0) SelectedMonIndex = target; else OnMonSelected(-1);
             SetDirty(true);
-            MarkImported();
+            SaveNotice.Imported("egg moves", path);
         }
 
 
@@ -608,12 +601,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_useSpecialFormat)
             {
-                ListSizeText  = "List Size: Special Format!";
+                ListSizeText  = "List size: special format";
                 ListSizeBrush = StatusBrushes.Good;
                 return;
             }
             int total = UsedSize;
-            ListSizeText  = $"List Size: {total} / {_maxTableSize} bytes";
+            ListSizeText  = $"List size: {total} / {_maxTableSize} bytes";
             ListSizeBrush = total > _maxTableSize ? StatusBrushes.Bad : total == _maxTableSize ? StatusBrushes.Warn : StatusBrushes.None;
         }
 
@@ -632,7 +625,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // An edit is a step; undoing back to the saved table is clean again.
             if (d && _undo != null) { _undo.Record(); d = _undo.IsDirty; }
             _dirty = d;
-            Title  = d ? "● Egg Move Editor" : "Egg Move Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 

@@ -17,6 +17,7 @@
 
     <controls:EditorToolbar>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
         <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click" ToolTip.Tip="Export encounters to an external file."/>
         <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click" ToolTip.Tip="Import encounters from an external file."/>

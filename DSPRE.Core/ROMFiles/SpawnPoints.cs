@@ -15,28 +15,13 @@ namespace DSPRE.ROMFiles
         public static List<Point> Read()
         {
             List<Point> points = new List<Point>();
-            using ARM9.Reader reader = new ARM9.Reader(FlyTableOffset);
-            for (int i = 0; i < FlyTableRows; i++)
+            foreach (FlyTable.Row row in FlyTable.Read())
             {
-                if (gameFamily == GameFamilies.HGSS)
-                {
-                    reader.ReadByte();
-                    byte flags = reader.ReadByte();
-                    int blackout = reader.ReadUInt16(), bx = reader.ReadByte(), bz = reader.ReadByte();
-                    int fly = reader.ReadUInt16(), fx = reader.ReadUInt16(), fz = reader.ReadUInt16();
-                    int unlock = reader.ReadUInt16(), ux = reader.ReadUInt16(), uz = reader.ReadUInt16();
-                    if ((flags & 0x01) != 0) points.Add(new Point("Blackout point", blackout, bx, bz, false));
-                    if ((flags & 0x02) != 0) points.Add(new Point("Fly point", fly, fx, fz, true));
-                    points.Add(new Point("Warp unlock point", unlock, ux, uz, true));
-                }
-                else
-                {
-                    int blackout = reader.ReadUInt16(), bx = reader.ReadUInt16(), bz = reader.ReadUInt16();
-                    int fly = reader.ReadUInt16(), fx = reader.ReadUInt16(), fz = reader.ReadUInt16();
-                    reader.ReadByte(); reader.ReadByte(); reader.ReadUInt16();
-                    points.Add(new Point("Blackout point", blackout, bx, bz, false));
-                    points.Add(new Point("Fly point", fly, fx, fz, true));
-                }
+                // HGSS rows say which of their points the game uses; the warp unlock point is always there.
+                bool hgss = gameFamily == GameFamilies.HGSS;
+                if (!hgss || row.IsBlackoutSpawn) points.Add(new Point("Blackout point", row.HeaderIdGameOver, row.LocalX, row.LocalY, false));
+                if (!hgss || row.IsFlyPoint) points.Add(new Point("Fly point", row.HeaderIdFly, row.GlobalX, row.GlobalY, true));
+                if (hgss) points.Add(new Point("Warp unlock point", row.HeaderIdUnlockWarp, row.GlobalXUnlock, row.GlobalYUnlock, true));
             }
             return points;
         }

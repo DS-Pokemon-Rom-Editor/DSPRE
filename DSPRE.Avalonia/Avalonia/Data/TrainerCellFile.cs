@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Data
 {
@@ -48,76 +49,36 @@ namespace DSPRE.Avalonia.Data
             catch (Exception e) when (e is ArgumentException or IndexOutOfRangeException or EndOfStreamException) { return null; }
         }
 
+        // Everything comes from the one cell reader; the file is only taken when writing it back gives the same
+        // bytes, which is what proves it has the layout Write produces.
         private static TrainerCellFile Parse(byte[] d)
         {
-            if (d == null || d.Length < 0x30 || d[0] != 'R' || d[1] != 'E' || d[2] != 'C' || d[3] != 'N') return null;
-            int headerSize = U16(d, 0xC), sections = U16(d, 0xE);
-            int k = headerSize;
-            if (Tag(d, k) != "KBEC") return null;
-            int kbecSize = (int)U32(d, k + 4), body = k + 8;
-            if (k + kbecSize > d.Length) return null;
+            if (d == null || d.Length < 0x30) return null;
+            NcerFile n = NcerFile.Read(d);
+            if (n == null || !n.Extended || n.PartitionsAt == 0 || n.UserAt == 0 || n.UserAttr != 1 || n.UserCount != n.Cells.Count) return null;
 
-            int count = U16(d, body);
-            if (U16(d, body + 2) != 1) return null;
-            int cellTable = body + (int)U32(d, body + 4);
             TrainerCellFile f = new TrainerCellFile
             {
-                _version = U16(d, 6),
-                Mapping = U32(d, body + 8),
-                _stringBank = U32(d, body + 16),
+                _version = n.Version,
+                Mapping = n.Mapping,
+                _stringBank = n.StringBank,
+                MaxTransferSize = n.MaxTransferSize,
+                _userAttr = n.UserAttr,
+                _tailSections = n.SectionCount - 1,
             };
-            uint vram = U32(d, body + 12), ext = U32(d, body + 20);
-            if (vram == 0 || ext == 0) return null;
-
-            int pieceArea = cellTable + count * 16;
-            int expectAt = 0;
-            for (int i = 0; i < count; i++)
+            foreach (NcerFile.Cell c in n.Cells)
             {
-                int at = cellTable + i * 16;
-                Cell c = new Cell
+                Cell cell = new Cell
                 {
-                    Attr = U16(d, at + 2),
-                    MaxX = (short)U16(d, at + 8), MaxY = (short)U16(d, at + 10),
-                    MinX = (short)U16(d, at + 12), MinY = (short)U16(d, at + 14),
+                    Attr = c.Attr, MaxX = c.MaxX, MaxY = c.MaxY, MinX = c.MinX, MinY = c.MinY,
+                    TransferOffset = c.TransferOffset, TransferSize = c.TransferSize, UserValue = c.UserValue,
                 };
-                int n = U16(d, at);
-                int from = (int)U32(d, at + 4);
-                // The writer lays pieces out in cell order.
-                if (from != expectAt) return null;
-                for (int p = 0; p < n; p++)
-                {
-                    int o = pieceArea + from + p * 6;
-                    c.Pieces.Add(new[] { U16(d, o), U16(d, o + 2), U16(d, o + 4) });
-                }
-                expectAt += n * 6;
-                f.Cells.Add(c);
+                foreach (NcerFile.Piece p in c.Pieces) cell.Pieces.Add(new[] { p.A0, p.A1, p.A2 });
+                f.Cells.Add(cell);
             }
-
-            int v = body + (int)vram;
-            f.MaxTransferSize = U32(d, v);
-            int array = v + (int)U32(d, v + 4);
-            for (int i = 0; i < count; i++)
-            {
-                f.Cells[i].TransferOffset = U32(d, array + i * 8);
-                f.Cells[i].TransferSize = U32(d, array + i * 8 + 4);
-            }
-            if (Pad4(pieceArea + expectAt) != v) return null;
-            for (int i = pieceArea + expectAt; i < v; i++) if (d[i] != 0) return null;
-            if (U32(d, v + 4) != 8) return null;
-
-            int u = body + (int)ext;
-            if (Tag(d, u) != "TACU" || U16(d, u + 8) != count || U32(d, u + 12) != 8) return null;
-            f._userAttr = U16(d, u + 10);
-            if (f._userAttr != 1) return null;
-            for (int i = 0; i < count; i++)
-            {
-                int offset = (int)U32(d, u + 16 + i * 4);
-                f.Cells[i].UserValue = U32(d, u + 8 + offset);
-            }
-            if (u + (int)U32(d, u + 4) != k + kbecSize) return null;
-
-            f._tailSections = sections - 1;
-            f._tail = d.AsSpan(k + kbecSize).ToArray();
+            int end = n.KbecAt + n.KbecSize;
+            if (end < n.KbecAt || end > d.Length) return null;
+            f._tail = d.AsSpan(end).ToArray();
 
             byte[] check = f.Write();
             return check.AsSpan().SequenceEqual(d) ? f : null;
@@ -172,22 +133,12 @@ namespace DSPRE.Avalonia.Data
 
         // ── piece geometry ──────────────────────────────────────────────────────
 
-        private static readonly (int W, int H)[,] Sizes =
-        {
-            { (8, 8), (16, 16), (32, 32), (64, 64) },
-            { (16, 8), (32, 8), (32, 16), (64, 32) },
-            { (8, 16), (8, 32), (16, 32), (32, 64) },
-            { (8, 8), (8, 8), (8, 8), (8, 8) },
-        };
-
         public readonly record struct Piece(int X, int Y, int Width, int Height, bool FlipX, bool FlipY, int Char, int Palette, bool Colour256);
 
         public static Piece Describe(ushort[] p)
         {
-            int y = p[0] & 0xFF; if (y > 127) y -= 256;
-            int x = p[1] & 0x1FF; if (x > 255) x -= 512;
-            (int w, int h) = Sizes[(p[0] >> 14) & 3, (p[1] >> 14) & 3];
-            return new Piece(x, y, w, h, ((p[1] >> 12) & 1) != 0, ((p[1] >> 13) & 1) != 0, p[2] & 0x3FF, p[2] >> 12, ((p[0] >> 13) & 1) != 0);
+            NcerFile.Piece d = NcerFile.Decode(p[0], p[1], p[2]);
+            return new Piece(d.X, d.Y, d.Width, d.Height, d.FlipH, d.FlipV, d.Tile, d.Palette, d.Colour256);
         }
 
         public string Shift(int cell, int dx, int dy)
@@ -229,10 +180,6 @@ namespace DSPRE.Avalonia.Data
 
         // ── bytes ──────────────────────────────────────────────────────────────
 
-        private static int Pad4(int v) => (v + 3) & ~3;
-        private static string Tag(byte[] d, int at) => at + 4 <= d.Length ? System.Text.Encoding.ASCII.GetString(d, at, 4) : "";
-        private static ushort U16(byte[] d, int at) => BitConverter.ToUInt16(d, at);
-        private static uint U32(byte[] d, int at) => BitConverter.ToUInt32(d, at);
         private static void Put32(byte[] d, int at, uint v) => BitConverter.TryWriteBytes(d.AsSpan(at, 4), v);
     }
 }

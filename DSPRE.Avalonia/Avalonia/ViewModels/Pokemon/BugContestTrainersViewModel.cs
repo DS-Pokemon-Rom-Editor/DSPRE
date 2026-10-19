@@ -52,7 +52,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private byte[] _saved;
         public bool HasUnsavedChanges => _file != null && _saved != null && !_file.ToBytes().AsSpan().SequenceEqual(_saved);
-        public string UnsavedChangesDescription => "Bug Contest Opponents";
+        public string UnsavedChangesDescription => "Bug Contest opponents";
         public void SaveChanges() => _ = SaveAsync();
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
@@ -157,7 +157,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_file == null || !HasUnsavedChanges) return;
             if (HasProblems)
             {
-                await DialogHelper.ShowError($"The contest opponents were not saved:\n{Problems}", "Bug Contest Opponents");
+                await DialogHelper.ShowError($"The contest opponents were not saved:\n{Problems}", "Bug Contest opponents error");
                 return;
             }
             try
@@ -166,7 +166,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError($"The contest opponents were not saved:\n{e.Message}", "Bug Contest Opponents");
+                await DialogHelper.ShowError($"The contest opponents were not saved:\n{e.Message}", "Bug Contest opponents error");
                 return;
             }
             _saved = _file.ToBytes();

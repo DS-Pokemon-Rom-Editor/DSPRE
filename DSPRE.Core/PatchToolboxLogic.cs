@@ -21,7 +21,7 @@ namespace DSPRE
     /// identical patch code (no ROM-writing divergence). Core, no UI-toolkit dependency.
     ///
     /// All user prompts go through the pluggable <see cref="ConfirmYesNo"/> / <see cref="ShowInfo"/> /
-    /// <see cref="ShowError"/> / <see cref="PickSyntheticOverlayOffset"/> hooks (defaults route through
+    /// <see cref="ShowError"/> hooks (defaults route through
     /// <see cref="AppMessages"/>; each shell installs its own dialogs, WinForms via
     /// <c>PatchToolboxDialog.UseWinFormsPrompts()</c>, Avalonia via <c>PatchDialogs.Install()</c>).
     /// The methods set the shared <see cref="RomPatchState"/> flags and return whether the patch was
@@ -38,15 +38,6 @@ namespace DSPRE
         public static Action<string, string> ShowInfo = (msg, title) => AppMessages.Info(msg, title);
         /// <summary>Error message. Default = <see cref="AppMessages"/>.</summary>
         public static Action<string, string> ShowError = (msg, title) => AppMessages.Error(msg, title);
-        /// <summary>
-        /// Ask the user for the synthetic-overlay file offset a payload (<paramref name="expectedBytes"/>
-        /// long) should be written to, showing the affected file range / runtime address / whether the
-        /// range already contains data. Returns null if cancelled (or headless, default is a no-op so a
-        /// synthetic-overlay patch never silently overwrites data without a real UI to confirm it).
-        /// Args: patchName, synthetic-overlay file path, default offset, expected payload bytes, load address.
-        /// </summary>
-        public static Func<string, string, uint, byte[], uint, uint?> PickSyntheticOverlayOffset =
-            (patchName, filePath, defaultOffset, expectedBytes, loadAddress) => null;
 
         // ── Synthetic-overlay ARM9 helpers (Thumb BL encode/decode, payload/range status) ──────────
 
@@ -100,35 +91,6 @@ namespace DSPRE
             return payload;
         }
 
-        /// <summary>Human-readable status of a synthetic-overlay byte range, for confirmation prompts.</summary>
-        public static string GetSyntheticOverlayRangeStatus(uint offset, byte[] expectedBytes)
-        {
-            string expandedPath = Filesystem.expArmPath;
-            if (!File.Exists(expandedPath))
-            {
-                return "Synthetic overlay range status: synthetic overlay file was not found.";
-            }
-
-            long fileLength = new FileInfo(expandedPath).Length;
-            if (offset >= fileLength || (long)offset + expectedBytes.Length > fileLength)
-            {
-                return "Synthetic overlay range status: selected range is outside the synthetic overlay file.";
-            }
-
-            byte[] currentBytes = DSUtils.ReadFromFile(expandedPath, offset, expectedBytes.Length);
-            if (currentBytes.Length != expectedBytes.Length)
-            {
-                return "Synthetic overlay range status: selected range could not be read.";
-            }
-
-            if (currentBytes.All(b => b == 0))
-            {
-                return "Synthetic overlay range status: empty.";
-            }
-
-            return "Synthetic overlay range status: already contains data; continuing will overwrite it.";
-        }
-
         // ── File-state checks (do the ROM bytes say the patch is applied?) ─────────────────────────
 
         /// <summary>Why the ARM9 expansion can't be applied to this ROM, or null when it can (or already is).</summary>
@@ -143,7 +105,7 @@ namespace DSPRE
             if (!ARM9PatchData.Supported) return false;
             if (Arm9ExpansionIn(new ARM9PatchData())) return true;
             // A ROM expanded before its dump was measured carries the per-language entry instead.
-            return RomInfo.arm9ExpansionSites != null && ARM9PatchData.HasLanguageEntry && Arm9ExpansionIn(new ARM9PatchData(languageEntry: true));
+            return RomLocator.Arm9ExpansionSites != null && ARM9PatchData.HasLanguageEntry && Arm9ExpansionIn(new ARM9PatchData(languageEntry: true));
         }
 
         private static bool Arm9ExpansionIn(ARM9PatchData data)
@@ -212,13 +174,8 @@ namespace DSPRE
             {
                 foreach (uint offset in kv.Key)
                 {
-                    int languageOffset = 0;
-                    if (RomInfo.romID == "IPKE" || RomInfo.romID == "IPGE" || RomInfo.romID == "IPGS")
-                    {
-                        languageOffset = +8;
-                    }
-
-                    byte[] read = ARM9.ReadBytes((uint)(offset - ARM9.address + languageOffset), kv.Value.Length / 3 + 1);
+                    if (!(MatrixExpansionCode is int code0)) return false;
+                    byte[] read = ARM9.ReadBytes((uint)(code0 + offset), kv.Value.Length / 3 + 1);
                     byte[] code = DSUtils.HexStringToByteArray(kv.Value);
                     if (read.Length != code.Length || !read.SequenceEqual(code))
                         return false;
@@ -247,8 +204,7 @@ namespace DSPRE
 
         public static bool CheckFilesDynamicHeadersPatchApplied()
         {
-            // The check reads at offsets known for other languages only; Korean cannot have the patch.
-            if (RomInfo.gameLanguage == GameLanguages.Korean) return false;
+            if (!DynamicHeadersPatchData.SupportsCurrentRom) return false;
             DynamicHeadersPatchData data = new DynamicHeadersPatchData();
             ushort initValue = BitConverter.ToUInt16(ARM9.ReadBytes(data.initOffset, 0x2), 0);
             return initValue == 0xB500;
@@ -322,7 +278,7 @@ namespace DSPRE
             }
 
             int archivesUpdated = renamePairs.Count > 0 ? DSUtils.ReplaceTextEverywhere(renamePairs, wholeWord: true) : 0;
-            ShowInfo($"Pokémon names have been converted to Sentence Case.\nOther text banks updated: {archivesUpdated}", "Operation successful");
+            ShowInfo($"Pokémon names have been converted to Sentence Case.\nOther text banks updated: {archivesUpdated}", "Names converted");
             return true;
         }
 
@@ -359,7 +315,7 @@ namespace DSPRE
             itemNames.SaveToExpandedDir(RomInfo.itemNamesTextNumber, showSuccessMessage: false);
 
             int archivesUpdated = renamePairs.Count > 0 ? DSUtils.ReplaceTextEverywhere(renamePairs, wholeWord: true) : 0;
-            ShowInfo($"Item names have been converted to Sentence Case.\nOther text banks updated: {archivesUpdated}", "Operation successful");
+            ShowInfo($"Item names have been converted to Sentence Case.\nOther text banks updated: {archivesUpdated}", "Names converted");
             return true;
         }
 
@@ -383,6 +339,15 @@ namespace DSPRE
                 return false;
             }
 
+            // The routine only works at its own offset, so it can't move out of another block's way.
+            long camStart = BDHCAMPatchData.BDHCamSubroutineOffset, camEnd = camStart + data.subroutine.Length;
+            if (SyntheticOverlaySpace.Reserved(File.ReadAllBytes(expandedCheckPath)).Any(r => r.Start < camEnd && camStart < r.End))
+            {
+                ShowError("Another patch or a table DSPRE moved already uses 0x" + camStart.ToString("X") + " to 0x" + (camEnd - 1).ToString("X") +
+                          " in the synthetic overlay, where this routine has to go.", "Patch not applied");
+                return false;
+            }
+
             if (!ConfirmYesNo("This process will apply the following changes:\n\n" +
             "- Backup ARM9 file (arm9.bin" + BackupSuffix + " will be created)." + "\n\n" +
             "- Backup Overlay" + data.overlayNumber + " file (overlay" + data.overlayNumber + ".bin" + BackupSuffix + " will be created)." + "\n\n" +
@@ -396,9 +361,9 @@ namespace DSPRE
                 return false;
             }
 
-            File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
             string overlayBackupPath = OverlayUtils.GetPath(data.overlayNumber);
-            File.Copy(overlayBackupPath, overlayBackupPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(overlayBackupPath, overlayBackupPath + BackupSuffix, overwrite: true);
 
             try
             {
@@ -410,7 +375,7 @@ namespace DSPRE
                     if (decompressResult != 0)
                     {
                         AppLogger.Error($"Could not decompress overlay {data.overlayNumber}; BDHCAM patch was not applied.");
-                        File.Copy(overlayBackupPath, overlayFilePath, overwrite: true);
+                        DSUtils.WriteWholeFile(overlayFilePath, File.ReadAllBytes(overlayBackupPath + BackupSuffix));
                         if (decompressResult != DSUtils.ERR_TOOL_UNAVAILABLE)
                         {
                             ShowError("The target overlay could not be decompressed, so no changes were made.",
@@ -435,7 +400,7 @@ namespace DSPRE
 
             RomPatchState.flag_BDHCamPatchApplied = true;
 
-            ShowInfo("The BDHCAM patch has been applied.", "Operation successful.");
+            ShowInfo("The BDHCAM patch has been applied.", "Patch applied");
             return true;
         }
 
@@ -482,8 +447,7 @@ namespace DSPRE
         /// Apply the Building Rotation routine (Diamond/Pearl/Platinum/HeartGold/SoulSilver EN, Plat FR,
         /// HG IT). Requires the ARM9 expansion patch and a ds-rom-format project (the hook writes into
         /// an overlay whose compression state ds-rom tracks automatically; a legacy ndstool project can't
-        /// reliably guarantee the overlay is uncompressed here). Lets the user choose where in the
-        /// synthetic overlay the payload lands via <see cref="PickSyntheticOverlayOffset"/>.
+        /// reliably guarantee the overlay is uncompressed here).
         /// </summary>
         public static bool ApplyBuildingRotationPatch()
         {
@@ -519,39 +483,32 @@ namespace DSPRE
                 return false;
             }
 
-            uint? pickedOffset = PickSyntheticOverlayOffset("Building rotation routine", expandedPath, data.defaultPayloadOffset, data.payload, synthOverlayLoadAddress);
-            if (pickedOffset == null)
-            {
-                ShowInfo("No changes have been made.", "Operation canceled");
-                return false;
-            }
+            int blockLength = SyntheticOverlaySpace.HeaderSize + data.payload.Length;
+            if (PlacementNote(new[] { blockLength }, out int[] offsets) is not string placement) return false;
 
-            uint payloadOffset = pickedOffset.Value;
+            uint payloadOffset = (uint)offsets[0] + SyntheticOverlaySpace.HeaderSize;
             uint payloadAddress = synthOverlayLoadAddress + payloadOffset;
             byte[] branchBytes = BuildThumbBl(data.hookRuntimeAddress, payloadAddress);
             byte[] payloadBytes = BuildBuildingRotationPayload(data, payloadAddress);
-            string rangeStatus = GetSyntheticOverlayRangeStatus(payloadOffset, data.payload);
 
-            if (!ConfirmYesNo("This process will apply the following changes:\n\n" +
-                "- Backup Overlay " + data.overlayNumber + " file (overlay" + data.overlayNumber + ".bin" + BackupSuffix + " will be created).\n\n" +
-                "- Replace 4 bytes at Overlay " + data.overlayNumber + " offset 0x" + data.hookOverlayOffset.ToString("X") + " with a branch to the building rotation routine.\n\n" +
-                "- Modify file #" + RomPatchState.expandedARMfileID + " inside " + '\n' + RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + '\n' +
-                "to insert the building rotation routine at offset 0x" + payloadOffset.ToString("X") + " (runtime address 0x" + payloadAddress.ToString("X8") + ").\n" +
-                rangeStatus + "\n\n" +
-                "This enables the existing building rotation values to be used when placing buildings.\n\n" +
-                "Do you wish to continue?" + CreditNote("buildingRotation"), "Confirm to proceed"))
+            if (!ConfirmYesNo("Buildings use the rotation values already stored for them when they are placed.\n\n" +
+                "Four bytes at overlay " + data.overlayNumber + " offset 0x" + data.hookOverlayOffset.ToString("X") + " branch to the routine." +
+                placement + BackupNote("overlay " + data.overlayNumber + " and the synthetic overlay") +
+                "\n\nApply this patch?" + CreditNote("buildingRotation"), "Confirm to proceed"))
             {
                 ShowInfo("No changes have been made.", "Operation canceled");
                 return false;
             }
 
             string overlayFilePath = OverlayUtils.GetPath(data.overlayNumber);
-            File.Copy(overlayFilePath, overlayFilePath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(overlayFilePath, overlayFilePath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(expandedPath, expandedPath + BackupSuffix, overwrite: true);
 
             try
             {
-                DSUtils.WriteToFile(overlayFilePath, branchBytes, data.hookOverlayOffset);
+                DSUtils.WriteToFile(expandedPath, SyntheticOverlaySpace.Header(SyntheticOverlaySpace.BuildingRotationMarker, blockLength), (uint)offsets[0]);
                 DSUtils.WriteToFile(expandedPath, payloadBytes, payloadOffset);
+                DSUtils.WriteToFile(overlayFilePath, branchBytes, data.hookOverlayOffset);
             }
             catch
             {
@@ -561,8 +518,7 @@ namespace DSPRE
 
             RomPatchState.flag_BuildingRotationPatchApplied = true;
 
-            ShowInfo("The Building Rotation patch has been applied.\n\n" +
-                "Synthetic overlay offset: 0x" + payloadOffset.ToString("X"), "Operation successful.");
+            ShowInfo("The Building Rotation patch has been applied.", "Patch applied");
             return true;
         }
 
@@ -589,14 +545,14 @@ namespace DSPRE
                 return false;
             }
             ARM9.DecompressIfMarked();
-            File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
             try { TrainerCustomPokeballsPatch.Apply(); }
             catch (Exception ex)
             {
                 ShowError("Operation failed. Restore the ARM9 backup if needed.\n\n" + ex.Message, "Trainer custom Poké Balls");
                 return false;
             }
-            ShowInfo("The trainer custom Poké Balls patch has been applied. Select each party member's Poké Ball in the Trainer editor.", "Operation successful.");
+            ShowInfo("The trainer custom Poké Balls patch has been applied. Select each party member's Poké Ball in the Trainer editor.", "Patch applied");
             return true;
         }
 
@@ -633,40 +589,32 @@ namespace DSPRE
                 return false;
             }
 
-            byte[] template = TrainerShinyPatch.Template;
-            uint? picked = PickSyntheticOverlayOffset("Trainer shiny routine", expandedPath, TrainerShinyPatch.DefaultPayloadOffset, template, synthOverlayLoadAddress);
-            if (picked == null)
-            {
-                ShowInfo("No changes have been made.", "Operation canceled");
-                return false;
-            }
-            uint offset = picked.Value;
-            if ((offset & 3) != 0)
-            {
-                ShowError("The routine has to start on a four-byte boundary.", "Trainer shiny patch");
-                return false;
-            }
+            int blockLength = SyntheticOverlaySpace.HeaderSize + TrainerShinyPatch.Template.Length;
+            if (PlacementNote(new[] { blockLength }, out int[] offsets) is not string placement) return false;
+            uint offset = (uint)offsets[0] + SyntheticOverlaySpace.HeaderSize;
 
-            if (!ConfirmYesNo("This process will apply the following changes:\n\n" +
-                "- Insert the trainer shiny routine (" + template.Length + " bytes) at synthetic overlay offset 0x" + offset.ToString("X") +
-                " (runtime address 0x" + (synthOverlayLoadAddress + offset).ToString("X8") + ").\n" +
-                GetSyntheticOverlayRangeStatus(offset, template) + "\n\n" +
-                "- Point the ARM9's trainer party setup at it and leave flag 0x40 out of the ability.\n\n" +
-                "Party members ticked Shiny in the Trainer editor then battle shiny." + BackupNote("the ARM9") + "\n\nDo you wish to continue?" + CreditNote("trainerShiny"), "Confirm to proceed"))
+            if (!ConfirmYesNo("Party members ticked Shiny in the Trainer editor battle shiny. The ARM9's trainer party setup is " +
+                "pointed at the routine, and flag 0x40 is left out of the ability." + placement +
+                BackupNote("the ARM9 and the synthetic overlay") + "\n\nApply this patch?" + CreditNote("trainerShiny"), "Confirm to proceed"))
             {
                 ShowInfo("No changes have been made.", "Operation canceled");
                 return false;
             }
 
             ARM9.DecompressIfMarked();
-            File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
-            try { TrainerShinyPatch.Apply(offset); }
+            PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(expandedPath, expandedPath + BackupSuffix, overwrite: true);
+            try
+            {
+                DSUtils.WriteToFile(expandedPath, SyntheticOverlaySpace.Header(SyntheticOverlaySpace.TrainerShinyMarker, blockLength), (uint)offsets[0]);
+                TrainerShinyPatch.Apply(offset);
+            }
             catch
             {
                 ShowError("Operation failed. It is strongly advised that you restore the ARM9 backup.", "Something went wrong");
                 return false;
             }
-            ShowInfo("The trainer shiny patch has been applied.\n\nSynthetic overlay offset: 0x" + offset.ToString("X"), "Operation successful.");
+            ShowInfo("The trainer shiny patch has been applied.", "Patch applied");
             return true;
         }
 
@@ -703,25 +651,13 @@ namespace DSPRE
                 return false;
             }
 
-            byte[] footprint = TrainerClassMetadataPatch.Footprint;
-            uint? picked = PickSyntheticOverlayOffset("Trainer class metadata routines", expandedPath, TrainerClassMetadataPatch.DefaultPayloadOffset, footprint, synthOverlayLoadAddress);
-            if (picked == null)
-            {
-                ShowInfo("No changes have been made.", "Operation canceled");
-                return false;
-            }
-            uint offset = picked.Value;
-            if ((offset & 3) != 0 || offset + footprint.Length > new FileInfo(expandedPath).Length)
-            {
-                ShowError("The routines need 0x" + footprint.Length.ToString("X") + " bytes starting on a four-byte boundary inside the synthetic overlay.", "Trainer class metadata patch");
-                return false;
-            }
-            string rangeStatus = GetSyntheticOverlayRangeStatus(offset, footprint);
+            int blockLength = SyntheticOverlaySpace.HeaderSize + TrainerClassMetadataPatch.PayloadSize;
+            if (PlacementNote(new[] { blockLength }, out int[] offsets) is not string placement) return false;
+            uint offset = (uint)offsets[0] + SyntheticOverlaySpace.HeaderSize;
 
             if (!ConfirmYesNo("This process will apply the following changes:\n\n" +
                 "- Build one record per trainer class in a/1/5/5 from the game's own gender, prize, music and intro tables.\n\n" +
-                "- Insert the patch routines (0x" + footprint.Length.ToString("X") + " bytes) at synthetic overlay offset 0x" + offset.ToString("X") +
-                " (runtime address 0x" + (synthOverlayLoadAddress + offset).ToString("X8") + ").\n" + rangeStatus + "\n\n" +
+                "- Insert the patch routines in the synthetic overlay." + placement + "\n\n" +
                 "- Hook the ARM9 and overlays 1, 12, 80, 115, 117, 118, 119 and 120 to them.\n\n" +
                 "Backups (" + BackupSuffix + ") are made of the ARM9, those overlays and the synthetic overlay, and of a/1/5/5 as " +
                 "unpacked/a155.narc" + BackupSuffix + ".\n\n" +
@@ -733,25 +669,29 @@ namespace DSPRE
             }
 
             ARM9.DecompressIfMarked();
-            File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
             foreach (int overlay in new[] { 1, 12, 80, 115, 117, 118, 119, 120 })
-                File.Copy(OverlayUtils.GetPath(overlay), OverlayUtils.GetPath(overlay) + BackupSuffix, overwrite: true);
-            if (File.Exists(Filesystem.expArmPath)) File.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+                PlainFiles.Copy(OverlayUtils.GetPath(overlay), OverlayUtils.GetPath(overlay) + BackupSuffix, overwrite: true);
+            if (File.Exists(Filesystem.expArmPath)) PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
             // Not beside the archive: ds-rom packs every file under files/, so a copy there would join the ROM.
             (string metadataArchive, string metadataUnpacked) = RomInfo.gameDirs[DirNames.trainerClassMetadata];
             string metadataBackup = Path.Combine(Path.GetDirectoryName(metadataUnpacked), "a155.narc" + BackupSuffix);
             if (File.Exists(metadataArchive))
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(metadataBackup));
-                File.Copy(metadataArchive, metadataBackup, overwrite: true);
+                PlainFiles.Copy(metadataArchive, metadataBackup, overwrite: true);
             }
-            try { TrainerClassMetadataPatch.Apply(offset); }
+            try
+            {
+                DSUtils.WriteToFile(expandedPath, SyntheticOverlaySpace.Header(SyntheticOverlaySpace.ClassMetadataMarker, blockLength), (uint)offsets[0]);
+                TrainerClassMetadataPatch.Apply(offset);
+            }
             catch (Exception ex)
             {
                 ShowError("Operation failed: " + ex.Message + "\nIt is strongly advised that you restore the ARM9, overlay, synthetic overlay and a/1/5/5 backups.", "Something went wrong");
                 return false;
             }
-            ShowInfo("The trainer class metadata patch has been applied.\n\nSynthetic overlay offset: 0x" + offset.ToString("X"), "Operation successful.");
+            ShowInfo("The trainer class metadata patch has been applied.", "Patch applied");
             return true;
         }
 
@@ -822,23 +762,19 @@ namespace DSPRE
             }
             ;
 
-            //Distortion world - turnback cave Griseous Orb fix
-            if (gameFamily.Equals(GameFamilies.Plat))
+            // Turnback Cave's Griseous Orb script number, which the Distortion World code holds itself.
+            if (RomLocator.Where(RomLocator.Thing.DistortionWorldItemScript) is RomLocator.Spot orb)
             {
-                string ow9path = OverlayUtils.GetPath(9);
-                int ow9offs = 0x8E20 + 10;
+                string orbPath = RomLocator.PathOf(orb);
 
                 int itemScriptID;
 
-                using (DSUtils.EasyReader ewr = new DSUtils.EasyReader(ow9path, ow9offs))
+                using (DSUtils.EasyReader ewr = new DSUtils.EasyReader(orbPath, orb.Offset))
                 {
                     itemScriptID = ewr.ReadUInt16() - (itemScrMin - 1);
                 }
 
-                using (DSUtils.EasyWriter ewr = new DSUtils.EasyWriter(ow9path, ow9offs))
-                {
-                    ewr.Write((ushort)(itemScrMin + vanillaItemsArray[itemScriptID - 1]));
-                }
+                DSUtils.WriteToFile(orbPath, BitConverter.GetBytes((ushort)(itemScrMin + vanillaItemsArray[itemScriptID - 1])), (uint)orb.Offset);
             }
 
             // Sort scripts in the Script File according to item indices
@@ -862,7 +798,7 @@ namespace DSPRE
             itemScriptFile.allFunctions[0].usedScriptID = itemCount + 1;
 
             itemScriptFile.SaveToFileDefaultDir(RomInfo.itemScriptFileNumber, showSuccessMessage: false);
-            ShowInfo("Operation successful.", "Process completed.");
+            ShowInfo("The item scripts now follow item number order.", "Patch applied");
 
             RomPatchState.flag_standardizedItems = true;
             return true;
@@ -887,7 +823,7 @@ namespace DSPRE
                 return false;
             }
 
-            File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
 
             try
             {
@@ -926,7 +862,7 @@ namespace DSPRE
 
                 RomPatchState.flag_arm9Expanded = true;
 
-                ShowInfo("The ARM9's usable memory has been expanded.", "Operation successful.");
+                ShowInfo("The ARM9's usable memory has been expanded.", "Patch applied");
                 return true;
             }
             catch
@@ -936,17 +872,19 @@ namespace DSPRE
             }
         }
 
+        /// <summary>Where the matrix expansion's first site is in this dump; null where the patch isn't offered.</summary>
+        private static int? MatrixExpansionCode => RomLocator.Where(RomLocator.Thing.MatrixExpansionCode)?.Offset;
+
         /// <summary>Expand Matrix 0 up to twice its size (HGSS EN/ES).</summary>
         public static bool ApplyMatrixExpansionPatch()
         {
             if (AlreadyApplied(RomPatchState.flag_MatrixExpansionApplied || Probe(CheckFilesMatrixExpansionApplied))) return false;
 
             string listOfChanges = "";
-            int languageOffset = 0;
-
-            if (RomInfo.romID == "IPKE" || RomInfo.romID == "IPGE" || RomInfo.romID == "IPGS")
+            if (!(MatrixExpansionCode is int code0))
             {
-                languageOffset = +8;
+                ShowError("This patch supports English and Spanish HeartGold and SoulSilver.", "Unsupported");
+                return false;
             }
 
             foreach (KeyValuePair<uint[], string> kv in ToolboxDB.matrixExpansionDB)
@@ -957,7 +895,7 @@ namespace DSPRE
 
                 for (int i = 0; i < kv.Key.Length; i++)
                 {
-                    listOfChanges += " 0x" + (kv.Key[i] - ARM9.address + languageOffset).ToString("X");
+                    listOfChanges += " 0x" + (code0 + kv.Key[i]).ToString("X");
 
                     if (i < kv.Key.Length - 1)
                         listOfChanges += ",";
@@ -982,7 +920,7 @@ namespace DSPRE
                 {
                     foreach (uint offset in kv.Key)
                     {
-                        ARM9.WriteBytes(DSUtils.HexStringToByteArray(kv.Value), (uint)(offset - ARM9.address + languageOffset));
+                        ARM9.WriteBytes(DSUtils.HexStringToByteArray(kv.Value), (uint)(code0 + offset));
                     }
                 }
             }
@@ -992,7 +930,7 @@ namespace DSPRE
                 return false;
             }
             RomPatchState.flag_MatrixExpansionApplied = true;
-            ShowInfo("Matrix 0 can now be freely expanded up to twice its size.", "Operation successful.");
+            ShowInfo("Matrix 0 can now be freely expanded up to twice its size.", "Patch applied");
             return true;
         }
 
@@ -1000,20 +938,21 @@ namespace DSPRE
         public static bool ApplyDynamicHeadersPatch()
         {
             // A second run would split the already-patched table over the headers it moved out.
-            if (RomInfo.gameLanguage == GameLanguages.Korean) return false;
+            if (!DynamicHeadersPatchData.SupportsCurrentRom) return false;
             if (AlreadyApplied(RomPatchState.flag_DynamicHeadersPatchApplied || Probe(CheckFilesDynamicHeadersPatchApplied))) return false;
 
             DynamicHeadersPatchData data = new DynamicHeadersPatchData();
             (string packedDir, string unpackedDir) headersDir = RomInfo.gameDirs[DirNames.dynamicHeaders];
 
-            bool specialCase = RomInfo.gameFamily == GameFamilies.HGSS && RomInfo.gameLanguage != GameLanguages.Japanese && RomInfo.gameLanguage != GameLanguages.Spanish;
+            // Every HGSS dump has this read, Japanese and Spanish included.
+            bool specialCase = RomInfo.gameFamily == GameFamilies.HGSS;
             string specialCaseChanges = "";
 
             if (specialCase)
             {
-                specialCaseChanges = "- Replace " + (data.specialCaseData1.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + (data.specialCaseOffset1 + data.pointerDiff).ToString("X") + " with " + '\n' + data.specialCaseData1 + "\n\n" +
-                    "- Replace " + (data.specialCaseData2.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + (data.specialCaseOffset2 + data.pointerDiff).ToString("X") + " with " + '\n' + data.specialCaseData2 + "\n\n" +
-                    "- Replace " + (data.specialCaseData3.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + (data.specialCaseOffset3 + data.pointerDiff).ToString("X") + " with " + '\n' + data.specialCaseData3 + "\n\n";
+                specialCaseChanges = "- Replace " + (data.specialCaseData1.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + (data.specialCaseOffset1 + data.initOffset).ToString("X") + " with " + '\n' + data.specialCaseData1 + "\n\n" +
+                    "- Replace " + (data.specialCaseData2.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + (data.specialCaseOffset2 + data.initOffset).ToString("X") + " with " + '\n' + data.specialCaseData2 + "\n\n" +
+                    "- Replace " + (data.specialCaseData3.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + (data.specialCaseOffset3 + data.initOffset).ToString("X") + " with " + '\n' + data.specialCaseData3 + "\n\n";
             }
 
             if (!ConfirmYesNo("Confirming this process will apply the following changes:\n\n" +
@@ -1030,7 +969,7 @@ namespace DSPRE
                 return false;
             }
 
-            File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
 
             try
             {
@@ -1038,19 +977,17 @@ namespace DSPRE
 
                 foreach (Tuple<uint, uint> reference in DynamicHeadersPatchData.dynamicHeadersPointersDB[RomInfo.gameFamily])
                 {
-                    ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.REFERENCE_STRING), (uint)(reference.Item1 + data.pointerDiff));
-                    uint pointerValue = BitConverter.ToUInt32(ARM9.ReadBytes((uint)(reference.Item2 + data.pointerDiff), 4), 0) - RomInfo.headerTableOffset - ARM9.address;
-                    ARM9.WriteBytes(BitConverter.GetBytes(pointerValue), (uint)(reference.Item2 + data.pointerDiff));
+                    ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.REFERENCE_STRING), (uint)(reference.Item1 + data.initOffset));
+                    uint pointerValue = BitConverter.ToUInt32(ARM9.ReadBytes((uint)(reference.Item2 + data.initOffset), 4), 0) - RomInfo.headerTableOffset - ARM9.address;
+                    ARM9.WriteBytes(BitConverter.GetBytes(pointerValue), (uint)(reference.Item2 + data.initOffset));
                 }
 
                 if (specialCase)
                 {
-                    /*  Special case: at 0x3B522 (non-JAP and non-Spanish HG offset) there is an instruction
-                        between the (mov r1, #0x18) and (mul r1, r0) commands, so we must handle this separately */
 
-                    ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.specialCaseData1), (uint)(data.specialCaseOffset1 + data.pointerDiff));
-                    ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.specialCaseData2), (uint)(data.specialCaseOffset2 + data.pointerDiff));
-                    ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.specialCaseData3), (uint)(data.specialCaseOffset3 + data.pointerDiff));
+                    ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.specialCaseData1), (uint)(data.specialCaseOffset1 + data.initOffset));
+                    ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.specialCaseData2), (uint)(data.specialCaseOffset2 + data.initOffset));
+                    ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.specialCaseData3), (uint)(data.specialCaseOffset3 + data.initOffset));
                 }
 
                 // Clear the dynamic headers directory in 'unpacked'
@@ -1070,7 +1007,7 @@ namespace DSPRE
 
                 RomPatchState.flag_DynamicHeadersPatchApplied = true;
 
-                ShowInfo("The headers are now dynamically allocated in memory.", "Operation successful.");
+                ShowInfo("The headers are now dynamically allocated in memory.", "Patch applied");
                 return true;
             }
             catch
@@ -1087,8 +1024,8 @@ namespace DSPRE
 
         public static PatchState SameHeldItemOddsState()
         {
-            if (ROMFiles.GameTableFile.WhyNot(GameTable.HeldItemSameItemBranch, 2) is string why) return Unsupported(why);
-            byte[] now = ROMFiles.GameTableFile.Read(GameTable.HeldItemSameItemBranch, 2);
+            if (RomLocator.WhyNot(RomLocator.Thing.HeldItemSameItemBranch, 2) is string why) return Unsupported(why);
+            byte[] now = RomLocator.Read(RomLocator.Thing.HeldItemSameItemBranch, 2);
             if (now[0] is < 0x08 or > 0x09) return Unsupported("The code there has already been changed by something else.");
             if (now[1] == BranchAlways) return PatchState.Applied;
             if (now[1] == BranchIfDifferent) return PatchState.Available;
@@ -1101,10 +1038,10 @@ namespace DSPRE
             if (!ConfirmYesNo("Wild Pokémon whose two held items are the same will hold it only as often as the " +
                 "held item odds say, instead of always." + BackupNote("the ARM9") + "\n\nApply this patch?" + CreditNote("sameHeldItemOdds"), "Confirm to proceed"))
                 return false;
-            BackUp(ROMFiles.GameTableFile.PathOf(RomInfo.SpotOf(GameTable.HeldItemSameItemBranch).Value));
-            byte[] branch = ROMFiles.GameTableFile.Read(GameTable.HeldItemSameItemBranch, 2);
-            ROMFiles.GameTableFile.Write(GameTable.HeldItemSameItemBranch, new[] { branch[0], BranchAlways });
-            ShowInfo("Same held items now use the held item odds.", "Operation successful.");
+            BackUp(RomLocator.PathOf(RomLocator.Where(RomLocator.Thing.HeldItemSameItemBranch)));
+            byte[] branch = RomLocator.Read(RomLocator.Thing.HeldItemSameItemBranch, 2);
+            RomLocator.Write(RomLocator.Thing.HeldItemSameItemBranch, new[] { branch[0], BranchAlways });
+            ShowInfo("Same held items now use the held item odds.", "Patch applied");
             return true;
         }
 
@@ -1115,14 +1052,13 @@ namespace DSPRE
             if (AlreadyApplied(TrainerClassTableExpansion.ClassTablesHaveRoom)) return false;
             if (PlacementNote(TrainerClassTableExpansion.ClassTableBlockLengths(), out int[] offsets) is not string placement) return false;
             if (!ConfirmYesNo("This copies the trainer class gender table and prize money table into their own blocks in the synthetic overlay with room for " +
-                TrainerClassTableExpansion.MaxClasses + " classes, and points the ARM9 and overlay 16 at them. Adding a class then writes into that room." + placement + "\n\n" +
-                "Backups (" + BackupSuffix + ") are made of the ARM9, overlay 16 and the synthetic overlay first. It can't be removed by DSPRE; restore the backups to undo it." +
+                TrainerClassTableExpansion.MaxClasses + " classes, and points the ARM9 and overlay 16 at them. Adding a class then writes into that room." + placement + BackupNote("the ARM9, overlay 16 and the synthetic overlay") +
                 "\n\nApply this patch?" + CreditNote("trainerClassTablesExpanded"), "Confirm to proceed"))
                 return false;
-            File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
-            string prizeOverlay = OverlayUtils.GetPath(RomInfo.trainerPrizeTable.Overlay);
-            File.Copy(prizeOverlay, prizeOverlay + BackupSuffix, overwrite: true);
-            File.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+            string prizeOverlay = OverlayUtils.GetPath(RomLocator.TrainerPrizeTable.Overlay);
+            PlainFiles.Copy(prizeOverlay, prizeOverlay + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
             string error = null;
             bool moved = false;
             SyntheticOverlaySpace.PlaceAt(offsets, () => moved = TrainerClassTableExpansion.MoveClassTables(out error));
@@ -1131,7 +1067,7 @@ namespace DSPRE
                 ShowError(error, "Tables not moved");
                 return false;
             }
-            ShowInfo("The trainer class tables have been moved.", "Operation successful.");
+            ShowInfo("The trainer class tables have been moved.", "Patch applied");
             return true;
         }
 
@@ -1141,12 +1077,11 @@ namespace DSPRE
             if (!TrainerClassTableExpansion.IsSupportedForCurrentRom) { ShowError("Only Platinum is supported.", "Patch not applied"); return false; }
             if (PlacementNote(new[] { TrainerClassTableExpansion.MusicBlockLength }, out int[] offsets) is not string placement) return false;
             if (!ConfirmYesNo("This copies the eye-contact music table into its own block in the synthetic overlay with room for an entry per class (" +
-                TrainerClassTableExpansion.MaxClasses + "), and points the ARM9 at it. Giving a class music then writes into that room and raises the entry count." + placement + "\n\n" +
-                "Backups (" + BackupSuffix + ") are made of the ARM9 and the synthetic overlay first. It can't be removed by DSPRE; restore the backups to undo it." +
+                TrainerClassTableExpansion.MaxClasses + "), and points the ARM9 at it. Giving a class music then writes into that room and raises the entry count." + placement + BackupNote("the ARM9 and the synthetic overlay") +
                 "\n\nApply this patch?" + CreditNote("trainerEncounterBgmRepointed"), "Confirm to proceed"))
                 return false;
-            File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
-            File.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
             string error = null;
             bool moved = false;
             SyntheticOverlaySpace.PlaceAt(offsets, () => moved = TrainerClassTableExpansion.MoveEncounterMusicTable(out error));
@@ -1155,7 +1090,7 @@ namespace DSPRE
                 ShowError(error, "Table not moved");
                 return false;
             }
-            ShowInfo("The eye-contact music table has been moved.", "Operation successful.");
+            ShowInfo("The eye-contact music table has been moved.", "Patch applied");
             return true;
         }
 
@@ -1166,15 +1101,14 @@ namespace DSPRE
             if (PlacementNote(new[] { PickupSlotsPatch.BlockLength }, out int[] offsets) is not string placement) return false;
             int overlay = RomInfo.pickupTableOverlayNumber;
             if (!ConfirmYesNo("Each Pickup level range gets its own nine items and two rare items. Pickup gives the same items as before " +
-                "until you change them in Item tables." + placement + "\n\n" +
-                $"Backups ({BackupSuffix}) are made of overlay {overlay} and the synthetic overlay first. It can't be removed by DSPRE; restore the backups to undo it." +
+                "until you change them in Item tables." + placement + BackupNote($"overlay {overlay} and the synthetic overlay") +
                 "\n\nApply this patch?" + CreditNote("pickupSlots"), "Confirm to proceed"))
                 return false;
             string overlayPath = OverlayUtils.GetPath(overlay);
-            File.Copy(overlayPath, overlayPath + BackupSuffix, overwrite: true);
-            File.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(overlayPath, overlayPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
             PickupSlotsPatch.Apply(offsets[0]);
-            ShowInfo("Every Pickup level range now has its own items.", "Operation successful.");
+            ShowInfo("Every Pickup level range now has its own items.", "Patch applied");
             return true;
         }
 
@@ -1183,20 +1117,76 @@ namespace DSPRE
             if (AlreadyApplied(Probe(() => ClassIntroPatch.IsApplied))) return false;
             if (ClassIntroPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
             if (PlacementNote(new[] { ClassIntroPatch.BlockLength }, out int[] offsets) is not string placement) return false;
-            int overlay = RomInfo.VsIntroCodeSites.RecordOverlay;
+            int overlay = RomLocator.VsIntroSites.RecordOverlay;
             string look = RomInfo.gameFamily == RomInfo.GameFamilies.DP ? "its own face, cut from any class's battle sprite" : "its own portrait, name and colours";
             if (!ConfirmYesNo("Each trainer class gets its own VS intro: a style, the battle music, and for gym leader and Elite Four " +
                 $"styles {look}, edited in the VS intro editor. Every class keeps the intro it has now until you " +
-                "change it." + placement + "\n\n" +
-                $"Backups ({BackupSuffix}) are made of the ARM9, overlay {overlay} and the synthetic overlay first. It can't be removed by DSPRE; restore the backups to undo it." +
+                "change it." + placement + BackupNote($"the ARM9, overlay {overlay} and the synthetic overlay") +
                 "\n\nApply this patch?" + CreditNote("classIntros"), "Confirm to proceed"))
                 return false;
             string overlayPath = OverlayUtils.GetPath(overlay);
-            File.Copy(overlayPath, overlayPath + BackupSuffix, overwrite: true);
-            File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
-            File.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(overlayPath, overlayPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
             ClassIntroPatch.Apply(offsets[0]);
-            ShowInfo("Every trainer class now has its own VS intro. Edit them in the VS intro editor.", "Operation successful.");
+            ShowInfo("Every trainer class now has its own VS intro. Edit them in the VS intro editor.", "Patch applied");
+            return true;
+        }
+
+        public static bool ApplyHpBarTextPatch()
+        {
+            if (AlreadyApplied(Probe(() => BattleGaugeTextPatch.IsApplied))) return false;
+            if (BattleGaugeTextPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
+            if (PlacementNote(new[] { BattleGaugeTextPatch.BlockLength }, out int[] offsets) is not string placement) return false;
+            int overlay = RomLocator.HpBarTextSites.Overlay;
+            if (!ConfirmYesNo("Removes the white box behind the name, level and HP in battle, so your HP bar art shows behind them." +
+                placement + BackupNote($"overlay {overlay} and the synthetic overlay") +
+                "\n\nApply this patch?" + CreditNote("hpBarText"), "Confirm to proceed"))
+                return false;
+            string overlayPath = OverlayUtils.GetPath(overlay);
+            PlainFiles.Copy(overlayPath, overlayPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            BattleGaugeTextPatch.Apply(offsets[0]);
+            ShowInfo("Patch applied.", "Patch applied");
+            return true;
+        }
+
+        private static PatchState VsClassTableProbe()
+        {
+            if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+            if (RomInfo.gameFamily != GameFamilies.HGSS) return Unsupported("HeartGold and SoulSilver only");
+            if (VsIntroTables.WhyNot() != null) return UnsupportedVersion(RomLocator.VsIntroClassTableDumps);
+            try
+            {
+                VsIntroTables tables = VsIntroTables.Load();
+                if (tables.ClassTableMoved) return PatchState.Applied;
+                return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
+            }
+            catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException) { return Unsupported("The VS intro tables could not be read"); }
+        }
+
+        public static bool ApplyVsClassTableExpansion()
+        {
+            VsIntroTables tables;
+            try { tables = VsIntroTables.Load(); }
+            catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException) { ShowError(e.Message, "Patch not applied"); return false; }
+            if (AlreadyApplied(tables.ClassTableMoved)) return false;
+            if (tables.WhyNoClassRoom() is string why) { ShowError(why, "Patch not applied"); return false; }
+            if (PlacementNote(new[] { VsIntroTables.ClassRoomBlockLength }, out int[] offsets) is not string placement) return false;
+            if (!ConfirmYesNo($"Moves the table that picks each trainer class's VS intro and battle music into the expanded ARM9 area, " +
+                $"with room for {VsIntroTables.MostClassRows} classes instead of {tables.ClassRowCount}." + placement +
+                BackupNote("the ARM9 and the synthetic overlay") +
+                "\n\nApply this patch?" + CreditNote("vsClassTableExpanded"), "Confirm to proceed"))
+                return false;
+            PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            try { SyntheticOverlaySpace.PlaceAt(offsets, tables.MakeClassRoom); }
+            catch (Exception e) when (e is IOException || e is InvalidOperationException || e is UnauthorizedAccessException)
+            {
+                ShowError("The class table was not moved:\n" + e.Message, "Patch not applied");
+                return false;
+            }
+            ShowInfo($"The class table now has room for {VsIntroTables.MostClassRows} classes. Give classes their intro in the VS intro editor.", "Patch applied");
             return true;
         }
 
@@ -1221,7 +1211,7 @@ namespace DSPRE
                 a.SaveToFile(s, showSuccessMessage: false);
             }
 
-            ShowInfo("Texture Animations have been disabled in every AreaData.", "Operation successful.");
+            ShowInfo("Texture Animations have been disabled in every AreaData.", "Patch applied");
             return true;
         }
 
@@ -1247,7 +1237,7 @@ namespace DSPRE
                 }
 
                 RomPatchState.flag_TrainerNamesExpanded = true;
-                ShowInfo("Trainer Names have been extended.", "Operation successful.");
+                ShowInfo("Trainer Names have been extended.", "Patch applied");
                 return true;
             }
             catch (IOException)
@@ -1267,7 +1257,6 @@ namespace DSPRE
         private const uint ScrcmdTableOffsetInBlock = 0x0C;
         private const uint ScrcmdCountMarker = 0x4E554F43; // "COUN"
         private const uint ScrcmdTableMarker = 0x4C424154; // "TABL"
-        private const uint ScrcmdBlockDefaultOffset = 0x200;
 
         /// <summary>Move the ScrCommands table + count into the expanded ARM9 file (HGSS EN/ES).</summary>
         public static bool ApplyScrcmdRepointPatch()
@@ -1297,23 +1286,13 @@ namespace DSPRE
                 return false;
             }
 
-            uint? pickedOffset = PickSyntheticOverlayOffset("Script command table block", expandedPath, ScrcmdBlockDefaultOffset, commandTablePayload, synthOverlayLoadAddress);
-            if (pickedOffset == null)
-            {
-                ShowInfo("No changes have been made.", "Operation canceled");
-                return false;
-            }
+            int blockLength = SyntheticOverlaySpace.HeaderSize + commandTablePayload.Length;
+            if (PlacementNote(new[] { blockLength }, out int[] offsets) is not string placement) return false;
+            uint blockOffset = (uint)offsets[0] + SyntheticOverlaySpace.HeaderSize;
 
-            uint blockOffset = pickedOffset.Value;
-            string rangeStatus = GetSyntheticOverlayRangeStatus(blockOffset, commandTablePayload);
-
-            if (!ConfirmYesNo("This process will apply the following changes:\n\n" +
-                "- Backup ARM9 file (arm9.bin" + BackupSuffix + " will be created).\n\n" +
-                "- Write the moved ScrCommands block to synthetic overlay offset 0x" + blockOffset.ToString("X") + ".\n\n" +
-                "- Update the ARM9 ScrCommands table pointer.\n\n" +
-                "- Update the ARM9 ScrCommands count pointer.\n" +
-                rangeStatus + "\n\n" +
-                "Do you wish to continue?" + CreditNote("scrcmdRepoint"), "Confirm to proceed"))
+            if (!ConfirmYesNo("The script command table and its count move into the synthetic overlay, and the ARM9's two " +
+                "pointers to them are updated. This doesn't add commands." + placement + BackupNote("the ARM9 and the synthetic overlay") +
+                "\n\nApply this patch?" + CreditNote("scrcmdRepoint"), "Confirm to proceed"))
             {
                 ShowInfo("No changes have been made.", "Operation canceled");
                 return false;
@@ -1321,7 +1300,9 @@ namespace DSPRE
 
             try
             {
-                File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+                PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+                PlainFiles.Copy(expandedPath, expandedPath + BackupSuffix, overwrite: true);
+                DSUtils.WriteToFile(expandedPath, SyntheticOverlaySpace.Header(SyntheticOverlaySpace.CommandTableMarker, blockLength), (uint)offsets[0]);
                 RepointCommandTable(blockOffset, commandTablePayload);
             }
             catch
@@ -1330,12 +1311,7 @@ namespace DSPRE
                 return false;
             }
 
-            ShowInfo("The ScrCommands table patch has been applied.\n\n" +
-                "This does not add new commands or update DSPRE's JSON script-command metadata.\n\n" +
-                "Synthetic overlay offset: 0x" + blockOffset.ToString("X") +
-                " (count: 0x" + (blockOffset + ScrcmdCountOffsetInBlock).ToString("X") +
-                ", table: 0x" + (blockOffset + ScrcmdTableOffsetInBlock).ToString("X") + ")",
-                "ScrCommands Table Moved");
+            ShowInfo("The script command table has been moved. It doesn't add commands or update DSPRE's script command database.", "Patch applied");
             return true;
         }
 
@@ -1375,6 +1351,69 @@ namespace DSPRE
                 return -1;
             }
             return -1; // No table in expanded arm9 file
+        }
+
+        /// <summary>
+        /// Synthetic overlay ranges taken by patches placed without a block marker: at an offset the user picked (building
+        /// rotation, trainer shiny, the script command table) or at BDHCam's fixed offset. Each is found from what points
+        /// at it, so a payload that was partly overwritten since is still kept. Never throws.
+        /// </summary>
+        public static List<(long Start, long End)> HandPlacedRanges()
+        {
+            List<(long Start, long End)> ranges = new List<(long Start, long End)>();
+            byte[] arm9 = null;
+            try { arm9 = File.ReadAllBytes(RomInfo.arm9Path); } catch { }
+
+            try
+            {
+                if (BuildingRotationPatchData.SupportsCurrentRom())
+                {
+                    BuildingRotationPatchData data = new BuildingRotationPatchData();
+                    byte[] hook = DSUtils.ReadFromFile(OverlayUtils.GetPath(data.overlayNumber), data.hookOverlayOffset, 4);
+                    if (TryGetThumbBlTarget(data.hookRuntimeAddress, hook, out uint target) && target >= synthOverlayLoadAddress)
+                    {
+                        long offset = target - synthOverlayLoadAddress;
+                        if (offset + data.payload.Length <= RomInfo.synthOverlaySize) ranges.Add((offset, offset + data.payload.Length));
+                    }
+                }
+            }
+            catch { }
+
+            try
+            {
+                if (arm9 != null && TrainerShinyPatch.InstalledRange(arm9) is (long Start, long End) shiny) ranges.Add(shiny);
+            }
+            catch { }
+
+            try
+            {
+                int table = GetCommandTableOffset();
+                if (table >= 0)
+                {
+                    long block = table - ScrcmdTableOffsetInBlock;
+                    // Commands added after the move lengthen the table, and the block's count says by how much.
+                    uint count = ScrcmdOriginalCommandCount;
+                    byte[] stored = DSUtils.ReadFromFile(Filesystem.expArmPath, (uint)(block + ScrcmdCountOffsetInBlock), 4);
+                    if (stored.Length == 4) count = Math.Max(count, BitConverter.ToUInt32(stored, 0));
+                    long end = Math.Min(table + 4L * count, RomInfo.synthOverlaySize);
+                    ranges.Add((block, end));
+                }
+            }
+            catch { }
+
+            try
+            {
+                if (arm9 != null && BDHCAMPatchData.SupportsCurrentRom())
+                {
+                    BDHCAMPatchData data = new BDHCAMPatchData();
+                    byte[] branch = DSUtils.HexStringToByteArray(data.branchString);
+                    if (data.branchOffset + branch.Length <= arm9.Length && arm9.AsSpan((int)data.branchOffset, branch.Length).SequenceEqual(branch))
+                        ranges.Add((BDHCAMPatchData.BDHCamSubroutineOffset, BDHCAMPatchData.BDHCamSubroutineOffset + data.subroutine.Length));
+                }
+            }
+            catch { }
+
+            return ranges;
         }
 
         /// <summary>Whether the ARM9 command-count pointer already points at the moved block's count field.</summary>
@@ -1527,11 +1566,13 @@ namespace DSPRE
             ["trainerEncounterBgmRepointed"] = ("Mixone", "trainer encounter music repoint"),
             ["pickupSlots"] = ("Mixone", "independent pickup slots"),
             ["classIntros"] = ("Mixone", "trainer class intros"),
+            ["hpBarText"] = ("Mixone", "clear battle text background"),
             ["punchingMovesExpanded"] = ("Mixone", "punching move list expansion"),
             ["soundMovesExpanded"] = ("Mixone", "sound move list expansion"),
             ["regionalDexCount"] = ("Mixone", "regional Pokédex size"),
             ["evolutionSlots"] = ("Mixone", "evolution slots"),
             ["vsIntroTimings"] = ("Mixone", "VS intro timing"),
+            ["vsClassTableExpanded"] = ("Mixone", "VS intro class table expansion"),
             ["typeChartExpanded"] = ("Mixone", "type chart expansion"),
             ["swarmTableExpanded"] = ("Mixone", "swarm table expansion"),
             ["bpShopExpanded"] = ("Mixone", "Battle Point list expansion"),
@@ -1609,23 +1650,58 @@ namespace DSPRE
         /// any WinForms control. Mirrors the enable/disable + Check* logic in the dialog constructor.
         /// Some checks (BDHCam) decompress an overlay as a side effect, same as the WinForms dialog.
         /// </summary>
+        /// <summary>Each toolbox patch's name, as the toolbox lists it and as editors that hand over to it say it.</summary>
+        public static readonly IReadOnlyDictionary<string, string> PatchTitles = new Dictionary<string, string>
+        {
+            ["sameHeldItemOdds"] = "Same held items use the odds",
+            ["sentenceCase"] = "Sentence-case Pokémon names",
+            ["itemSentenceCase"] = "Sentence-case item names",
+            ["itemStandardize"] = "Standardize item numbers",
+            ["punchingMovesExpanded"] = "Expand the punching move list",
+            ["regionalDexCount"] = "Match the regional Pokédex size",
+            ["evolutionSlots"] = "More evolution slots",
+            ["martsExpanded"] = "Expand the marts",
+            ["bpShopExpanded"] = "Expand the Battle Point lists",
+            ["swarmTableExpanded"] = "Expand the swarm table",
+            ["typeChartExpanded"] = "Expand the type chart",
+            ["soundMovesExpanded"] = "Expand the sound move list",
+            ["arm9"] = "Expand ARM9 (synthetic overlay)",
+            ["bdhcam"] = "Dynamic cameras (BDHCam)",
+            ["buildingRotation"] = "Building rotation",
+            ["trainerShiny"] = "Shiny trainer Pokémon",
+            ["trainerClassMetadata"] = "Trainer class metadata",
+            ["vsIntroTimings"] = "VS intro timings per class",
+            ["vsClassTableExpanded"] = "Expand the VS intro class table",
+            ["dynamicHeaders"] = "Dynamic map headers",
+            ["matrix"] = "Expand Matrix 0",
+            ["scrcmdRepoint"] = "Repoint script command table",
+            ["disableTextures"] = "Disable dynamic textures",
+            ["trainerNames"] = "Expand trainer-name length",
+            ["trainerClassTablesExpanded"] = "Trainer class tables",
+            ["trainerEncounterBgmRepointed"] = "Trainer encounter music table",
+            ["pickupSlots"] = "Independent pickup slots",
+            ["classIntros"] = "Trainer class intros",
+            ["hpBarText"] = "Clear battle text background",
+            ["trainerCustomPokeballs"] = "Trainer custom Poké Balls",
+        };
+
         public static List<PatchInfo> GetPatchStatuses()
         {
             List<PatchInfo> list = new List<PatchInfo>();
 
-            list.Add(Status("sameHeldItemOdds", "Same held items use the odds",
+            list.Add(Status("sameHeldItemOdds",
                 "Wild Pokémon whose two held items are the same normally always hold it. With this patch they hold it only as often as the held item odds say.",
                 SameHeldItemOddsState));
 
-            list.Add(Status("sentenceCase", "Sentence-case Pokémon names",
+            list.Add(Status("sentenceCase",
                 "Convert every Pokémon name from ALL-CAPS to Sentence Case, including names you've renamed yourself.",
                 () => PatchState.Available));   // no reliable applied-detection
 
-            list.Add(Status("itemSentenceCase", "Sentence-case item names",
+            list.Add(Status("itemSentenceCase",
                 "Convert every Item name from ALL-CAPS to Sentence Case, including names you've renamed yourself.",
                 () => PatchState.Available));   // no reliable applied-detection
 
-            list.Add(Status("itemStandardize", "Standardize item numbers",
+            list.Add(Status("itemStandardize",
                 "Rearrange item scripts into ascending index order and fix ground-item references.",
                 () =>
                 {
@@ -1635,44 +1711,44 @@ namespace DSPRE
                     return applied ? PatchState.Applied : PatchState.Available;
                 }));
 
-            PatchInfo punching = Status("punchingMovesExpanded", "Expand the punching move list",
+            PatchInfo punching = Status("punchingMovesExpanded",
                 $"Moves the list of punching moves Iron Fist boosts into the expanded ARM9 area with room for {MoveCategoryTable.ExpandedCapacity}, so the Move Data editor can change which moves are punching. Requires the ARM9 expansion patch.",
                 () => MoveListProbe(MoveCategoryTable.Kind.Punching));
             punching.Guide = MoveCategoryTable.GuideUrl(MoveCategoryTable.Kind.Punching);
             list.Add(punching);
 
-            list.Add(Status("regionalDexCount", "Match the regional Pokédex size",
+            list.Add(Status("regionalDexCount",
                 "Sets the counts the game checks the regional Pokédex against (when it is complete, the professor's rating and the regional number lookup) to the size of the regional order saved in Pokédex Lists.",
                 RegionalDexCountProbe));
 
-            list.Add(Status("evolutionSlots", "More evolution slots",
+            list.Add(Status("evolutionSlots",
                 $"Gives every Pokémon room for {EvolutionSlots.Max} evolutions instead of {EvolutionSlots.Vanilla}, so the Evolutions editor can list more.",
                 EvolutionSlotsProbe));
 
-            list.Add(Status("martsExpanded", "Expand the marts",
+            list.Add(Status("martsExpanded",
                 $"Moves every mart into the expanded ARM9 area with room for {MartData.RoomyShops} marts of {MartData.RoomyItems} items, so the Mart Editor can add items and custom marts. Requires the ARM9 expansion patch.",
                 MartExpansionProbe));
 
-            list.Add(Status("bpShopExpanded", "Expand the Battle Point lists",
+            list.Add(Status("bpShopExpanded",
                 $"Moves the Battle Point exchange's item and TM counters and their prices into the expanded ARM9 area with room for {BpShopData.MaxListItems} items each, so the Battle Point Shop editor can add more (Platinum). Requires the ARM9 expansion patch.",
                 BpShopExpansionProbe));
 
-            list.Add(Status("swarmTableExpanded", "Expand the swarm table",
+            list.Add(Status("swarmTableExpanded",
                 $"Moves the table of places a swarm can happen into the expanded ARM9 area with room for {SwarmTable.MaxRows} rows, so the Swarms editor can add more. Requires the ARM9 expansion patch.",
                 SwarmTableExpansionProbe));
 
-            list.Add(Status("typeChartExpanded", "Expand the type chart",
+            list.Add(Status("typeChartExpanded",
                 $"Moves the type chart into the expanded ARM9 area with room for {TypeChart.ExpandedCapacity - 2} matchups, so the Type Chart editor can add more. Requires the ARM9 expansion patch.",
                 TypeChartExpansionProbe));
 
-            PatchInfo sound = Status("soundMovesExpanded", "Expand the sound move list",
+            PatchInfo sound = Status("soundMovesExpanded",
                 $"Moves the list of sound moves Soundproof blocks into the expanded ARM9 area with room for {MoveCategoryTable.ExpandedCapacity}, so the Move Data editor can change which moves are sound. The trainer AI's own sound list is not changed. Requires the ARM9 expansion patch.",
                 () => MoveListProbe(MoveCategoryTable.Kind.Sound));
             sound.Guide = MoveCategoryTable.GuideUrl(MoveCategoryTable.Kind.Sound);
             list.Add(sound);
 
-            list.Add(Status("arm9", "Expand ARM9 (synthetic overlay)",
-                "Add ~88 KB of usable ARM9 memory. Required by the BDHCam / script-command patches. Advanced, can break the game if misused.",
+            list.Add(Status("arm9",
+                "Adds about 88 KB of usable ARM9 memory, the synthetic overlay. Every patch here that says it requires the ARM9 expansion puts its code or tables there. Advanced, can break the game if misused.",
                 () =>
                 {
                     if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
@@ -1681,7 +1757,7 @@ namespace DSPRE
                     return applied ? PatchState.Applied : PatchState.Available;
                 }));
 
-            list.Add(Status("bdhcam", "Dynamic cameras (BDHCam)",
+            list.Add(Status("bdhcam",
                 "Install the BDHCam camera subroutine (Platinum / HGSS, EN or ES). Requires the ARM9 expansion patch first.",
                 () =>
                 {
@@ -1693,30 +1769,30 @@ namespace DSPRE
                     return applied ? PatchState.Applied : PatchState.Available;
                 }));
 
-            list.Add(Status("buildingRotation", "Building rotation",
+            list.Add(Status("buildingRotation",
                 "Enables the game to recognise the rotation of buildings placed in the Map Editor. Requires the ARM9 expansion patch and a ds-rom-format project.",
                 () =>
                 {
                     if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
                     if (!RomInfo.IsDsRomProject) return Unsupported("Convert to ds-rom");
-                    if (!BuildingRotationPatchData.SupportsCurrentRom()) return UnsupportedVersion(RomInfo.DumpsMeasured(m => m.BuildingRotation?.Length == 2));
+                    if (!BuildingRotationPatchData.SupportsCurrentRom()) return UnsupportedVersion(RomLocator.WorksOn(RomLocator.BuildingRotationSitesIn));
                     if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
                     bool applied = RomPatchState.flag_BuildingRotationPatchApplied || CheckFilesBuildingRotationPatchApplied();
                     return applied ? PatchState.Applied : PatchState.Available;
                 }));
 
-            list.Add(Status("trainerShiny", "Shiny trainer Pokémon",
+            list.Add(Status("trainerShiny",
                 "Party members ticked Shiny in the Trainer editor are shiny in battle (HeartGold/SoulSilver). Requires the ARM9 expansion patch and a ds-rom-format project.",
                 () =>
                 {
                     if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
-                    if (!TrainerShinyPatch.SupportsCurrentRom) return UnsupportedVersion(RomInfo.DumpsMeasured(m => m.TrainerShiny?.Length == 8));
+                    if (!TrainerShinyPatch.SupportsCurrentRom) return UnsupportedVersion(RomLocator.WorksOn(RomLocator.TrainerShinySitesIn));
                     if (!RomInfo.IsDsRomProject) return Unsupported("Convert to ds-rom");
                     if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
                     return TrainerShinyPatch.DetectCurrentProject() ? PatchState.Applied : PatchState.Available;
                 }));
 
-            list.Add(Status("trainerClassMetadata", "Trainer class metadata",
+            list.Add(Status("trainerClassMetadata",
                 "Gives every trainer class its own record for gender, prize, eye-contact and battle music and VS intro, edited in the Trainer Classes window and the VS intro editor (US HeartGold/SoulSilver). Requires the ARM9 expansion patch and a ds-rom-format project.",
                 () =>
                 {
@@ -1732,11 +1808,15 @@ namespace DSPRE
                     };
                 }));
 
-            list.Add(Status("vsIntroTimings", "VS intro timings per class",
+            list.Add(Status("vsIntroTimings",
                 $"Lets each trainer class set its own VS intro timings (flashes, slides, holds) in the VS intro editor, for up to {VsIntroTimingAddon.Classes} classes. US HeartGold/SoulSilver with the trainer class metadata patch.",
                 VsIntroTimingsProbe));
 
-            list.Add(Status("dynamicHeaders", "Dynamic map headers",
+            list.Add(Status("vsClassTableExpanded",
+                $"Gives the table that picks each trainer class's VS intro and battle music room for {VsIntroTables.MostClassRows} classes (HeartGold and SoulSilver). Requires the ARM9 expansion patch.",
+                VsClassTableProbe));
+
+            list.Add(Status("dynamicHeaders",
                 "Move the ARM9 header table into a NARC so headers are dynamically allocated (Platinum / HGSS).",
                 () =>
                 {
@@ -1747,7 +1827,7 @@ namespace DSPRE
                     return applied ? PatchState.Applied : PatchState.Available;
                 }));
 
-            list.Add(Status("matrix", "Expand Matrix 0",
+            list.Add(Status("matrix",
                 "Allow Matrix 0 to be freely expanded up to twice its size (HGSS, EN or ES).",
                 () =>
                 {
@@ -1758,7 +1838,7 @@ namespace DSPRE
                     return applied ? PatchState.Applied : PatchState.Available;
                 }));
 
-            list.Add(Status("scrcmdRepoint", "Repoint script command table",
+            list.Add(Status("scrcmdRepoint",
                 "Move the script command table into the expanded ARM9 file so custom commands can be installed (HGSS, EN or ES). Requires the ARM9 expansion patch.",
                 () =>
                 {
@@ -1769,16 +1849,16 @@ namespace DSPRE
                     return IsScrcmdRepointApplied() ? PatchState.Applied : PatchState.Available;
                 }));
 
-            list.Add(Status("disableTextures", "Disable dynamic textures",
+            list.Add(Status("disableTextures",
                 "Set the Dynamic Textures field of every AreaData to 0xFFFF, disabling texture animations (HGSS).",
                 () => RomInfo.gameFamily == GameFamilies.HGSS ? PatchState.Available : UnsupportedVersion(RomInfo.KnownDumps.Where(d => d.id.StartsWith("IP")))));
 
-            list.Add(Status("trainerNames", "Expand trainer-name length",
+            list.Add(Status("trainerNames",
                 $"Raise the trainer-name max length to {RomPatchState.expandedTrainerNameLength - 1} usable characters.",
                 () =>
                 {
                     if (RomPatchState.flag_TrainerNamesExpanded) return AppliedHere();
-                    if (RomInfo.trainerNameLenOffset < 0) return UnsupportedVersion(RomInfo.TrainerNameLengthDumps);
+                    if (RomInfo.trainerNameLenOffset < 0) return UnsupportedVersion(RomLocator.WorksOn(RomLocator.Thing.TrainerNameLength));
                     if (RomInfo.trainerNameMaxLen > TrainerFile.defaultNameLen)
                     {
                         RomPatchState.flag_TrainerNamesExpanded = true;
@@ -1799,7 +1879,7 @@ namespace DSPRE
                 Reason = "Separate tool",
             });
 
-            list.Add(Status("trainerClassTablesExpanded", "Trainer class tables",
+            list.Add(Status("trainerClassTablesExpanded",
                 $"Moves the gender and prize money tables into the synthetic overlay with room for {TrainerClassTableExpansion.MaxClasses} classes, so the Trainer Classes editor can add classes. Requires the ARM9 expansion patch.",
                 () =>
                 {
@@ -1808,7 +1888,7 @@ namespace DSPRE
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
                 }));
 
-            list.Add(Status("trainerEncounterBgmRepointed", "Trainer encounter music table",
+            list.Add(Status("trainerEncounterBgmRepointed",
                 $"Moves the eye-contact music table into the synthetic overlay with room for an entry per class, so the Trainer Classes editor can give more classes music. Requires the ARM9 expansion patch.",
                 () =>
                 {
@@ -1817,17 +1897,17 @@ namespace DSPRE
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
                 }));
 
-            list.Add(Status("pickupSlots", "Independent pickup slots",
+            list.Add(Status("pickupSlots",
                 "Each Pickup level range gets its own nine items and two rare items. Requires the ARM9 expansion patch.",
                 () =>
                 {
                     if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
-                    if (!PickupSlotsPatch.SupportsCurrentRom) return UnsupportedVersion(RomInfo.DumpsMeasured(m => m.PickupSlots?.Length == 4));
+                    if (!PickupSlotsPatch.SupportsCurrentRom) return UnsupportedVersion(RomLocator.WorksOn(RomLocator.PickupSlotSitesIn));
                     if (PickupSlotsPatch.IsApplied) return PatchState.Applied;
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
                 }));
 
-            list.Add(Status("classIntros", "Trainer class intros",
+            list.Add(Status("classIntros",
                 "Each trainer class gets its own VS intro: style, battle music, and for gym leader and Elite Four styles its own look, edited in the VS intro editor (Diamond, Pearl and Platinum). Requires the ARM9 expansion patch.",
                 () =>
                 {
@@ -1838,13 +1918,23 @@ namespace DSPRE
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
                 }));
 
-            list.Add(Status("trainerCustomPokeballs", "Trainer custom Poké Balls",
+            list.Add(Status("hpBarText",
+                "Removes the white box behind the name, level and HP in battle. Requires the ARM9 expansion patch.",
+                () =>
+                {
+                    if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+                    if (!BattleGaugeTextPatch.SupportsCurrentRom) return UnsupportedVersion(RomLocator.HpBarTextDumps);
+                    if (BattleGaugeTextPatch.IsApplied) return PatchState.Applied;
+                    return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
+                }));
+
+            list.Add(Status("trainerCustomPokeballs",
                 "Choose a Poké Ball for each trainer party member instead of ball capsule seals. ARM9 only; no expansion required.",
                 () =>
                 {
                     if (RomInfo.isHGE) return Unsupported("Not compatible with hg-engine");
                     if (!TrainerCustomPokeballsPatch.SupportsCurrentRom)
-                        return UnsupportedVersion(RomInfo.DumpsMeasured(_ => true).Where(d => TrainerCustomPokeballsPatch.Supports(d.id)));
+                        return UnsupportedVersion(RomInfo.KnownDumps.Where(d => TrainerCustomPokeballsPatch.Supports(d.id)));
                     if (TrainerCustomPokeballsPatch.DetectCurrentProject()) return PatchState.Applied;
                     return TrainerCustomPokeballsPatch.WhyNotApplicable(RomInfo.romID, File.ReadAllBytes(RomInfo.arm9Path)) == null
                         ? PatchState.Available : Unsupported("Capsule routine modified");
@@ -1894,13 +1984,11 @@ namespace DSPRE
 
         private static PatchState MartExpansionProbe()
         {
-            if (HgEngine.HgEngineMarts.Enabled) return Unsupported("hg-engine keeps the marts in its own source");
-            // English dumps use the US layouts; the others need their own measured offsets.
+            if (RomInfo.isHGE) return Unsupported("hg-engine keeps the marts in its own source");
             if (!RomInfo.IsMartEditorAvailable())
-                return UnsupportedVersion(RomInfo.DumpsMeasured(m => m.MartCommonCount != null && m.MartCommonPointer != null && m.MartSpecialtyPointer != null)
-                    .Concat(RomInfo.DumpsMeasured(_ => true).Where(d => d.id[3] == 'E')));
+                return UnsupportedVersion(RomLocator.WorksOnAll(RomLocator.Thing.MartCommonCount, RomLocator.Thing.MartCommonPointer, RomLocator.Thing.MartSpecialtyPointer));
             if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
-            try { return MartData.LoadCurrent().HasRoom ? PatchState.Applied : PatchState.Available; }
+            try { return MartData.LoadCurrent().Expanded ? PatchState.Applied : PatchState.Available; }
             catch (Exception e) when (e is IOException || e is InvalidOperationException) { return Unsupported("The marts could not be read"); }
         }
 
@@ -1910,29 +1998,28 @@ namespace DSPRE
             MartData marts;
             try { marts = MartData.LoadCurrent(); }
             catch (Exception e) when (e is IOException || e is InvalidOperationException) { ShowError(e.Message, "Patch not applied"); return false; }
-            if (AlreadyApplied(marts.HasRoom)) return false;
+            if (AlreadyApplied(marts.Expanded)) return false;
             if (PlacementNote(new[] { MartData.RoomyLength }, out int[] offsets) is not string placement) return false;
             if (!ConfirmYesNo($"This copies the common mart and every specialty mart into one block in the synthetic overlay with room for {MartData.RoomyShops} marts of " +
-                $"{MartData.RoomyItems} items each, and points the ARM9's two mart pointers at it." + placement + "\n\n" +
-                "Backups (" + BackupSuffix + ") are made of the ARM9 and the synthetic overlay first. It can't be removed by DSPRE; restore the backups to undo it." +
+                $"{MartData.RoomyItems} items each, and points the ARM9's two mart pointers at it." + placement + BackupNote("the ARM9 and the synthetic overlay") +
                 "\n\nApply this patch?" + CreditNote("martsExpanded"), "Confirm to proceed"))
                 return false;
-            File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
-            File.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
             try { SyntheticOverlaySpace.PlaceAt(offsets, marts.MoveToRoomyLayout); }
             catch (Exception e) when (e is IOException || e is InvalidOperationException || e is UnauthorizedAccessException)
             {
                 ShowError("The marts were not moved:\n" + e.Message, "Patch not applied");
                 return false;
             }
-            ShowInfo($"The marts now have room for {MartData.RoomyShops} marts of {MartData.RoomyItems} items each.", "Operation successful.");
+            ShowInfo($"The marts now have room for {MartData.RoomyShops} marts of {MartData.RoomyItems} items each.", "Patch applied");
             return true;
         }
 
         private static PatchState BpShopExpansionProbe()
         {
             if (RomInfo.isHGE || RomInfo.gameFamily != RomInfo.GameFamilies.Plat) return Unsupported("Platinum only");
-            if (BpShopData.WhyNot() is string bpWhy) return NotHere(RomInfo.BpShopDumps.Where(d => d.id.StartsWith("CPU")), bpWhy);
+            if (BpShopData.WhyNot() is string bpWhy) return NotHere(RomLocator.BpShopDumps.Where(d => d.id.StartsWith("CPU")), bpWhy);
             if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
             try
             {
@@ -1953,27 +2040,26 @@ namespace DSPRE
             if (AlreadyApplied(shop.Expanded)) return false;
             if (PlacementNote(new[] { shop.ExpansionBlockLength }, out int[] offsets) is not string placement) return false;
             if (!ConfirmYesNo($"This copies the saved Battle Point counters and prices into their own block in the synthetic overlay with room for {BpShopData.MaxListItems} items on each counter " +
-                $"and {BpShopData.MaxPriceRows} prices, and points the exchange code in the ARM9 and the price lookup in overlay 7 at it." + placement + "\n\n" +
-                "Backups (" + BackupSuffix + ") are made of the ARM9, overlay 7 and the synthetic overlay first. It can't be removed by DSPRE; restore the backups to undo it." +
+                $"and {BpShopData.MaxPriceRows} prices, and points the exchange code in the ARM9 and the price lookup in overlay 7 at it." + placement + BackupNote("the ARM9, overlay 7 and the synthetic overlay") +
                 "\n\nApply this patch?" + CreditNote("bpShopExpanded"), "Confirm to proceed"))
                 return false;
-            File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
-            File.Copy(OverlayUtils.GetPath(7), OverlayUtils.GetPath(7) + BackupSuffix, overwrite: true);
-            File.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(OverlayUtils.GetPath(7), OverlayUtils.GetPath(7) + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
             try { SyntheticOverlaySpace.PlaceAt(offsets, shop.MoveToExpansion); }
             catch (Exception e) when (e is IOException || e is InvalidOperationException || e is UnauthorizedAccessException)
             {
                 ShowError("The Battle Point lists were not moved:\n" + e.Message, "Patch not applied");
                 return false;
             }
-            ShowInfo($"Each Battle Point counter can now hold {BpShopData.MaxListItems} items.", "Operation successful.");
+            ShowInfo($"Each Battle Point counter can now hold {BpShopData.MaxListItems} items.", "Patch applied");
             return true;
         }
 
         private static PatchState SwarmTableExpansionProbe()
         {
             if (RomInfo.isHGE) return Unsupported("hg-engine keeps the swarms in its own source");
-            if (SwarmTable.WhyNot() is string swarmWhy) return NotHere(RomInfo.SwarmDumps, swarmWhy);
+            if (SwarmTable.WhyNot() is string swarmWhy) return NotHere(RomLocator.SwarmDumps, swarmWhy);
             if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
             try { return SwarmTable.Load().Expanded ? PatchState.Applied : PatchState.Available; }
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException) { return Unsupported("The table could not be read"); }
@@ -1989,25 +2075,25 @@ namespace DSPRE
             string code = Path.GetFileName(table.CodePath);
             if (PlacementNote(new[] { table.ExpansionBlockLength }, out int[] offsets) is not string placement) return false;
             if (!ConfirmYesNo($"This copies the saved swarm table ({table.Rows.Count} rows) into its own block in the synthetic overlay with room for {SwarmTable.MaxRows}, " +
-                $"and points the swarm code in {code} at it." + placement + "\n\nBackups (" + BackupSuffix + $") are made of {code} and the synthetic overlay first. " +
-                "It can't be removed by DSPRE; restore the backups to undo it.\n\nApply this patch?" + CreditNote("swarmTableExpanded"), "Confirm to proceed"))
+                $"and points the swarm code in {code} at it." + placement + BackupNote($"{code} and the synthetic overlay") +
+                "\n\nApply this patch?" + CreditNote("swarmTableExpanded"), "Confirm to proceed"))
                 return false;
-            File.Copy(table.CodePath, table.CodePath + BackupSuffix, overwrite: true);
-            File.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(table.CodePath, table.CodePath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
             try { SyntheticOverlaySpace.PlaceAt(offsets, table.MoveToExpansion); }
             catch (Exception e) when (e is IOException || e is InvalidOperationException || e is UnauthorizedAccessException)
             {
                 ShowError("The swarm table was not moved:\n" + e.Message, "Patch not applied");
                 return false;
             }
-            ShowInfo($"The swarm table can now hold {SwarmTable.MaxRows} rows.", "Operation successful.");
+            ShowInfo($"The swarm table can now hold {SwarmTable.MaxRows} rows.", "Patch applied");
             return true;
         }
 
         private static PatchState TypeChartExpansionProbe()
         {
             if (RomInfo.isHGE) return Unsupported("hg-engine keeps the chart in its own source");
-            if (TypeChart.WhyNot() is string chartWhy) return NotHere(RomInfo.TypeChartDumps, chartWhy);
+            if (TypeChart.WhyNot() is string chartWhy) return NotHere(RomLocator.WorksOn(RomLocator.Thing.TypeChartPointers), chartWhy);
             if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
             try { return TypeChart.Load().InExpansion ? PatchState.Applied : PatchState.Available; }
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException) { return Unsupported("The chart could not be read"); }
@@ -2023,19 +2109,18 @@ namespace DSPRE
             if (PlacementNote(new[] { TypeChart.ExpansionBlockLength }, out int[] offsets) is not string placement) return false;
             if (!ConfirmYesNo($"This copies the saved type chart into its own block in the synthetic overlay with room for {TypeChart.ExpandedCapacity - 2} matchups, " +
                 "points the battle code at it and raises Conversion 2's count to match"
-                + (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS ? "." : ", and writes the chart into the Pokétch's copy.") + placement + "\n\n" +
-                "Backups (" + BackupSuffix + ") are made of the battle overlay and the synthetic overlay first. It can't be removed by DSPRE; " +
-                "restore the backups to undo it." + "\n\nApply this patch?" + CreditNote("typeChartExpanded"), "Confirm to proceed"))
+                + (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS ? "." : ", and writes the chart into the Pokétch's copy.") + placement + BackupNote("the battle overlay and the synthetic overlay") +
+                "\n\nApply this patch?" + CreditNote("typeChartExpanded"), "Confirm to proceed"))
                 return false;
-            File.Copy(chart.CodePath, chart.CodePath + BackupSuffix, overwrite: true);
-            File.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(chart.CodePath, chart.CodePath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
             try { SyntheticOverlaySpace.PlaceAt(offsets, chart.MoveToExpansion); }
             catch (Exception e) when (e is IOException || e is InvalidOperationException || e is UnauthorizedAccessException)
             {
                 ShowError((chart.InExpansion ? "The type chart moved, but the Pokétch copy wasn't updated:" : "The type chart was not moved:") + "\n" + e.Message, "Patch not applied");
                 if (!chart.InExpansion) return false;
             }
-            ShowInfo("The type chart can now hold more matchups.", "Operation successful.");
+            ShowInfo("The type chart can now hold more matchups.", "Patch applied");
             return true;
         }
 
@@ -2058,23 +2143,23 @@ namespace DSPRE
             if (PlacementNote(new[] { VsIntroTimingAddon.BlockLength }, out int[] offsets) is not string placement) return false;
             if (!ConfirmYesNo("This places a small helper and a table of eight timings for each of " + VsIntroTimingAddon.Classes +
                 " trainer classes in the synthetic overlay, and points " + VsIntroTimingAddon.HookCount + " places in overlays 115, 117, 118 and 119 " +
-                "at it. A timing of 0 keeps the game's own value." + placement + "\n\nBackups (" + BackupSuffix + ") are made of those overlays and the synthetic " +
-                "overlay first. It can't be removed by DSPRE; restore the backups to undo it.\n\nApply this patch?" + CreditNote("vsIntroTimings"),
+                "at it. A timing of 0 keeps the game's own value." + placement + BackupNote("those overlays and the synthetic overlay") +
+                "\n\nApply this patch?" + CreditNote("vsIntroTimings"),
                 "Confirm to proceed"))
                 return false;
             foreach (int overlay in VsIntroTimingAddon.HookedOverlays)
             {
                 string path = VsIntroTimingAddon.OverlayFilePath(overlay);
-                File.Copy(path, path + BackupSuffix, overwrite: true);
+                PlainFiles.Copy(path, path + BackupSuffix, overwrite: true);
             }
-            File.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
             try { SyntheticOverlaySpace.PlaceAt(offsets, () => VsIntroTimingAddon.Install()); }
             catch (Exception e) when (e is InvalidOperationException || e is IOException || e is UnauthorizedAccessException)
             {
                 ShowError("The VS intro timings were not added:\n" + e.Message, "Patch not applied");
                 return false;
             }
-            ShowInfo("Each trainer class can now set its own VS intro timings in the VS intro editor.", "Operation successful.");
+            ShowInfo("Each trainer class can now set its own VS intro timings in the VS intro editor.", "Patch applied");
             return true;
         }
 
@@ -2082,7 +2167,7 @@ namespace DSPRE
         {
             if (RomInfo.isHGE) return Unsupported("hg-engine sets these counts in its own source");
             if (RegionalDexCount.WhyNot() is string dexWhy)
-                return NotHere(RomInfo.TableSpotDumps(RomInfo.GameTable.RegionalDexCompletion, RomInfo.GameTable.RegionalDexRatingLast), dexWhy);
+                return NotHere(RomLocator.WorksOnAll(RomLocator.Thing.RegionalDexCompletion, RomLocator.Thing.RegionalDexRatingLast), dexWhy);
             List<ushort> order = RegionalDexCount.SavedOrder();
             if (order == null) return Unsupported("The regional order could not be read");
             if (RegionalDexCount.Problem(order) != null) return Unsupported($"More than {RegionalDexCount.Max} species");
@@ -2095,8 +2180,8 @@ namespace DSPRE
         {
             if (RomInfo.isHGE) return Unsupported("hg-engine sets its evolution slots in its own source");
             if (EvolutionSlots.WhyNot() is string evoWhy)
-                return NotHere(RomInfo.TableSpotDumps(RomInfo.GameTable.EvolutionSlotBuffer, RomInfo.GameTable.EvolutionSlotLoopLevel,
-                    RomInfo.GameTable.EvolutionSlotLoopTrade, RomInfo.GameTable.EvolutionSlotLoopItem), evoWhy);
+                return NotHere(RomLocator.WorksOnAll(RomLocator.Thing.EvolutionSlotBuffer, RomLocator.Thing.EvolutionSlotLoopLevel,
+                    RomLocator.Thing.EvolutionSlotLoopTrade, RomLocator.Thing.EvolutionSlotLoopItem), evoWhy);
             return EvolutionSlots.Expanded ? PatchState.Applied : PatchState.Available;
         }
 
@@ -2118,7 +2203,7 @@ namespace DSPRE
                 ShowError("The evolution slots were not changed:\n" + e.Message, "Patch not applied");
                 return false;
             }
-            ShowInfo($"Every Pokémon now has room for {EvolutionSlots.Max} evolutions in the Evolutions editor.", "Operation successful.");
+            ShowInfo($"Every Pokémon now has room for {EvolutionSlots.Max} evolutions in the Evolutions editor.", "Patch applied");
             return true;
         }
 
@@ -2136,16 +2221,16 @@ namespace DSPRE
                 return false;
             BackUp(RomInfo.arm9Path);
             RegionalDexCount.Apply(order);
-            ShowInfo("The game's regional Pokédex size now matches the regional order.", "Operation successful.");
+            ShowInfo("The game's regional Pokédex size now matches the regional order.", "Patch applied");
             return true;
         }
 
         private static PatchState MoveListProbe(MoveCategoryTable.Kind kind)
         {
             if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
-            if (MoveCategoryTable.WhyNot(kind) is string listWhy) return NotHere(RomInfo.MoveListDumps(MoveCategoryTable.TableOf(kind)), listWhy);
+            if (MoveCategoryTable.WhyNot(kind) is string listWhy) return NotHere(RomLocator.MoveListDumps(MoveCategoryTable.TableOf(kind)), listWhy);
             if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
-            return MoveCategoryTable.IsExpanded(kind) ? PatchState.Applied : PatchState.Available;
+            return MoveCategoryTable.Expanded(kind) ? PatchState.Applied : PatchState.Available;
         }
 
         /// <summary>Moves a punching or sound move list into the expanded ARM9 area, keeping its moves.</summary>
@@ -2154,12 +2239,11 @@ namespace DSPRE
             string key = kind == MoveCategoryTable.Kind.Punching ? "punchingMovesExpanded" : "soundMovesExpanded";
             string name = MoveCategoryTable.NameOf(kind);
             if (MoveCategoryTable.WhyNot(kind) is string why) { ShowError(why, "Patch not applied"); return false; }
-            if (AlreadyApplied(MoveCategoryTable.IsExpanded(kind))) return false;
+            if (AlreadyApplied(MoveCategoryTable.Expanded(kind))) return false;
             if (PlacementNote(new[] { MoveCategoryTable.ExpansionBlockLength }, out int[] offsets) is not string placement) return false;
             if (!ConfirmYesNo($"The list of {name} moves will move into the expanded ARM9 area with room for {MoveCategoryTable.ExpandedCapacity} moves, " +
-                    "and the battle code will be pointed at it. Its moves stay as they are." + placement + "\n\n" +
-                    "Backups (" + BackupSuffix + ") are made of the battle overlay and the synthetic overlay first. It can't be removed by DSPRE; restore the backups to undo it.\n\n" +
-                    "Do you wish to continue?" + CreditNote(key), "Confirm to proceed"))
+                    "and the battle code will be pointed at it. Its moves stay as they are." + placement + BackupNote("the battle overlay and the synthetic overlay") +
+                    "\n\nApply this patch?" + CreditNote(key), "Confirm to proceed"))
             {
                 ShowInfo("No changes have been made.", "Operation canceled");
                 return false;
@@ -2169,7 +2253,7 @@ namespace DSPRE
                 MoveCategoryTable table = MoveCategoryTable.Load(kind);
                 BackUp(table.CodePath, Filesystem.expArmPath);
                 SyntheticOverlaySpace.PlaceAt(offsets, table.MoveToExpansion);
-                ShowInfo($"The {name} move list now has room for {MoveCategoryTable.ExpandedCapacity} moves. Mark moves in the Move Data editor.", "Success");
+                ShowInfo($"The {name} move list now has room for {MoveCategoryTable.ExpandedCapacity} moves. Mark moves in the Move Data editor.", "Patch applied");
                 return true;
             }
             catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is InvalidOperationException || ex is UnauthorizedAccessException)
@@ -2183,7 +2267,7 @@ namespace DSPRE
         private static void BackUp(params string[] paths)
         {
             foreach (string path in paths)
-                if (File.Exists(path)) File.Copy(path, path + BackupSuffix, overwrite: true);
+                if (File.Exists(path)) PlainFiles.Copy(path, path + BackupSuffix, overwrite: true);
         }
 
         /// <summary>
@@ -2244,7 +2328,7 @@ namespace DSPRE
 
         // Platinum, HeartGold and SoulSilver in English or Spanish, as ScrcmdLikeLangOk checks.
         private static IEnumerable<(string id, int rev)> ScrcmdLikeDumps() =>
-            RomInfo.DumpsMeasured(_ => true).Where(d => (d.id.StartsWith("CPU") || d.id.StartsWith("IP")) && (d.id[3] == 'E' || d.id[3] == 'S'));
+            RomInfo.KnownDumps.Where(d => (d.id.StartsWith("CPU") || d.id.StartsWith("IP")) && (d.id[3] == 'E' || d.id[3] == 'S'));
 
         public const string AppliedByHgEngine = "Applied by hg-engine";
 
@@ -2256,9 +2340,9 @@ namespace DSPRE
             return PatchState.Applied;
         }
 
-        private static PatchInfo Status(string key, string title, string desc, Func<PatchState> probe, string actionLabel = null)
+        private static PatchInfo Status(string key, string desc, Func<PatchState> probe, string actionLabel = null)
         {
-            PatchInfo info = new PatchInfo { Key = key, Title = title, Description = desc, ActionLabel = actionLabel,
+            PatchInfo info = new PatchInfo { Key = key, Title = PatchTitles[key], Description = desc, ActionLabel = actionLabel,
                                      Author = Credits.TryGetValue(key, out (string Who, string What) credit) ? credit.Who : null };
             try
             {
@@ -2279,10 +2363,11 @@ namespace DSPRE
         /// <summary>Applies the patch identified by <paramref name="key"/>. Returns whether it was applied.</summary>
         public static bool ApplyByKey(string key)
         {
-            string hgEngineRefusal = HgEngine.HgEngineSyntheticOverlay.ExpansionRefusal();
+            string hgEngineRefusal = HgEngine.HgEngineSyntheticOverlay.WhyNot();
             if (hgEngineRefusal != null && key is "arm9" or "bdhcam" or "buildingRotation" or "scrcmdRepoint"
                 or "trainerClassTablesExpanded" or "trainerEncounterBgmRepointed" or "punchingMovesExpanded" or "soundMovesExpanded"
-                or "pickupSlots" or "classIntros")
+                or "pickupSlots" or "classIntros" or "hpBarText" or "vsClassTableExpanded" or "trainerShiny" or "trainerClassMetadata"
+                or "martsExpanded" or "bpShopExpanded" or "swarmTableExpanded" or "typeChartExpanded" or "vsIntroTimings")
             {
                 ShowError(hgEngineRefusal, "Not available on hg-engine");
                 return false;
@@ -2309,6 +2394,8 @@ namespace DSPRE
                 case "trainerEncounterBgmRepointed": return ApplyMoveEncounterMusicTable();
                 case "pickupSlots": return ApplyPickupSlotsPatch();
                 case "classIntros": return ApplyClassIntrosPatch();
+                case "hpBarText": return ApplyHpBarTextPatch();
+                case "vsClassTableExpanded": return ApplyVsClassTableExpansion();
                 case "punchingMovesExpanded": return ApplyMoveListExpansion(MoveCategoryTable.Kind.Punching);
                 case "soundMovesExpanded": return ApplyMoveListExpansion(MoveCategoryTable.Kind.Sound);
                 case "regionalDexCount": return ApplyRegionalDexCount();

@@ -76,7 +76,10 @@ namespace DSPRE.Avalonia.Views.Graphics
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => ViewModel?.SaveChanges();
-        private void Discard_Click(object sender, RoutedEventArgs e) => ViewModel?.DiscardChanges();
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) ViewModel?.DiscardChanges();
+        }
 
         private async void SaveDae_Click(object sender, RoutedEventArgs e) => await Save(glb: false);
         private async void SaveGlb_Click(object sender, RoutedEventArgs e) => await Save(glb: true);
@@ -100,10 +103,11 @@ namespace DSPRE.Avalonia.Views.Graphics
                 new[] { type }, vm.SuggestedFileName(ext));
             if (path == null) return;
 
-            string err = vm.SaveAsThreeD(path, glb);
-            vm.Status = err ?? $"Saved to {path}. The shape and its pictures are in there; the animations "
-                             + "are separate entries and are not.";
-            if (err != null) await DialogHelper.ShowInfo(err, "Export model");
+            string err = vm.SaveAsThreeD(path, glb, out string written);
+            if (err != null) { await DialogHelper.ShowError(err, "Models and textures error"); return; }
+            if (written == null) return;
+            SaveNotice.Exported(written);
+            vm.StatusText = "The model and its pictures are exported; its animations are separate entries.";
         }
 
         private async void PutIn_Click(object sender, RoutedEventArgs e)
@@ -135,15 +139,14 @@ namespace DSPRE.Avalonia.Views.Graphics
             string err = vm.PutFileIn(path, out string note);
             if (err != null)
             {
-                vm.Status = err;
-                await DialogHelper.ShowInfo(err, "Import");
+                vm.StatusText = err;
+                await DialogHelper.ShowError(err, "Models and textures error");
                 return;
             }
 
-            vm.Status = note == null
-                ? "Imported. Save to keep it."
-                : note + " Save to keep it.";
-            if (note != null) await DialogHelper.ShowInfo(vm.Status, "Import");
+            SaveNotice.Imported(vm.Selected.Name ?? $"{vm.Selected.Archive.Title} {vm.Selected.Index}", path);
+            vm.StatusText = note ?? "";
+            if (note != null) await DialogHelper.ShowInfo(note, "Import");
         }
 
         private async void SaveRaw_Click(object sender, RoutedEventArgs e)
@@ -161,8 +164,8 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (path == null) return;
 
             string err = vm.SaveFileAsItIs(path);
-            vm.Status = err ?? $"Saved to {path}, exactly as it sits in the ROM.";
-            if (err != null) await DialogHelper.ShowInfo(err, "Export file");
+            if (err != null) { await DialogHelper.ShowError(err, "Models and textures error"); return; }
+            SaveNotice.Exported(path);
         }
     }
 }

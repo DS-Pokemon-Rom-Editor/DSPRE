@@ -84,7 +84,7 @@ namespace DSPRE.Avalonia.Data
             try
             {
                 PaletteColorFile file = new PaletteColorFile { favorites = Favorites, lastUsed = LastUsed };
-                File.WriteAllText(path, JsonSerializer.Serialize(file, new JsonSerializerOptions { WriteIndented = true }));
+                PlainFiles.WriteText(path, JsonSerializer.Serialize(file, new JsonSerializerOptions { WriteIndented = true }));
             }
             catch (Exception ex) { AppLogger.Error("PaletteColorStore.Save: " + ex.Message); }
         }

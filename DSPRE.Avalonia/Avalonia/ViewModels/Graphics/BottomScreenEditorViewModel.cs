@@ -121,17 +121,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private List<BottomScreenPiece> _pieces = new();
         private bool _loading = true;
 
-        // Every edit writes straight into the unpacked file, so stepping back and forth means keeping the
-        // bytes from either side of it. These files run from a few hundred bytes to a few kilobytes, so
-        // holding whole copies is simpler than working out which bytes moved and cheap enough not to matter.
-        private readonly Stack<Step> _undo = new();
-        private readonly Stack<Step> _redo = new();
-
-        private readonly record struct Step(DirNames Dir, int Member, byte[] Bytes, string What);
+        // Imports and colour changes wait here until Save; the screens are drawn from them meanwhile.
+        public PendingArchiveWrites Pending { get; } = new PendingArchiveWrites();
 
         public BottomScreenEditorViewModel()
         {
             if (Design.IsDesignMode) { _loading = false; return; }
+            Pending.Changed += RaiseSteps;
 
             IsHgss = gameFamily == GameFamilies.HGSS;
             HasPoketch = gameFamily == GameFamilies.Plat || gameFamily == GameFamilies.DP;
@@ -335,33 +331,22 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private string _status = "";
         public string StatusText { get => _status; private set => Set(ref _status, value); }
 
-        // Edits hit the unpacked files at once, so each file's prior bytes are kept for Discard to write back.
-        private readonly Dictionary<(DirNames Dir, int Member), byte[]> _originals = new();
-
-        public bool HasUnsavedChanges => _originals.Count > 0;
+        public bool HasUnsavedChanges => Pending.IsDirty;
         public string UnsavedChangesDescription => "Bottom screen";
 
         public void SaveChanges()
         {
-            if (_originals.Count == 0) return;
-            _originals.Clear();
-            RaiseSteps();
+            if (!HasUnsavedChanges) return;
+            Pending.Save();
+            ReloadAfterImport();
             SaveNotice.Saved(UnsavedChangesDescription);
         }
 
         public void DiscardChanges()
         {
-            foreach (((DirNames dir, int member), byte[] bytes) in _originals)
-            {
-                try { new ScriptNarc(dir).Put(member, bytes); }
-                catch (Exception ex) { AppLogger.Error("Bottom screen discard: " + ex.Message); }
-            }
-            _originals.Clear();
-            _undo.Clear();
-            _redo.Clear();
-            LoadScreens();
-            Refresh();
-            RaiseSteps();
+            if (!HasUnsavedChanges) return;
+            Pending.Discard();
+            ReloadAfterImport();
         }
 
         // ── Building and drawing ──────────────────────────────────────────────────────
@@ -370,6 +355,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             try
             {
+                using IDisposable pending = Pending.Reading();
                 _hgss = IsHgss ? HgssTouchScreen.Load() : null;
                 _poketch = HasPoketch ? PoketchScreen.Load() : null;
                 if (HasPoketch) LoadAnimation();
@@ -641,7 +627,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 else if (HasPoketch && _poketch != null)
                     rgba = PoketchShot();
 
-                Screen = rgba == null ? null : ToBitmap(rgba, DsBgScreen.Width, DsBgScreen.Height);
+                Screen = rgba == null ? null : ImageConverter.FromRgba(rgba, DsBgScreen.Width, DsBgScreen.Height);
                 if (rgba == null) StatusText = "This screen could not be read from the ROM.";
             }
             catch (Exception ex)
@@ -757,8 +743,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 PoketchApps.App app = _app >= 1 && _app <= PoketchApps.All.Length ? PoketchApps.All[_app - 1] : null;
                 if (app == null || app.Animation < 0) return;
-                _animation = NanrFile.Read(
-                    NitroBgCodec.Inflate(new ScriptNarc(DirNames.poketch).Get(app.Animation)));
+                using (Pending.Reading())
+                    _animation = NanrFile.Read(NitroBgCodec.Inflate(new ScriptNarc(DirNames.poketch).Get(app.Animation)));
             }
             catch (Exception ex) { AppLogger.Error("Poketch animation: " + ex.Message); }
 
@@ -934,9 +920,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 }
         }
 
-        private static ushort[] ReadColours(BottomScreenPiece p)
+        private ushort[] ReadColours(BottomScreenPiece p)
         {
-            try { return DsBgScreen.ReadColours(new ScriptNarc(p.Archive).Get(p.PaletteMember)); }
+            try
+            {
+                using IDisposable pending = Pending.Reading();
+                return NitroBgCodec.ReadColours(new ScriptNarc(p.Archive).Get(p.PaletteMember));
+            }
             catch { return Array.Empty<ushort>(); }
         }
 
@@ -945,20 +935,20 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         /// <summary>
         /// Writes one colour back into the file it came from, at the row it came from, then redraws. A
-        /// palette file here holds many rows side by side, so the row matters as much as the file.
+        /// palette file here holds many rows side by side, so the row matters as much as the file. Changes
+        /// passed the same <paramref name="group"/> are one undo step.
         /// </summary>
-        public void SetColour(int at, uint argb)
+        public void SetColour(int at, uint argb, object group = null)
         {
             BottomScreenPiece p = Selected;
             if (p == null || p.PaletteMember < 0) return;
             try
             {
-                Remember(p.Archive, p.PaletteMember, $"the colour change to {p.Name}");
-                ScriptNarc narc = new ScriptNarc(p.Archive);
-                byte[] file = narc.Get(p.PaletteMember);
+                byte[] file;
+                using (Pending.Reading()) file = new ScriptNarc(p.Archive).Get(p.PaletteMember);
                 string trouble = GraphicAssets.PatchPalette(ref file, new[] { argb }, at);
                 if (trouble != null) { StatusText = trouble; return; }
-                narc.Put(p.PaletteMember, file);
+                Pending.Change(step => step.Put(p.Archive, p.PaletteMember, file), group);
 
                 // The screens keep what they have read, so they are opened again to show the new colour.
                 LoadScreens();
@@ -977,147 +967,60 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         /// <summary>
         /// Why the drawing just put into a piece is too big for the room the game gives it, or null. The
-        /// game copies it into video memory unchecked, so an oversized one would overwrite the casing. A
-        /// refused one is put back the way it was.
+        /// game copies it into video memory unchecked, so an oversized one would overwrite the casing. Asked
+        /// inside the import, so a refused drawing never becomes a pending change.
         /// </summary>
-        public string RefuseIfOverRoom(BottomScreenPiece p)
+        public string WhyOverRoom(BottomScreenPiece p)
         {
             if (p == null || p.TileRoom <= 0 || p.Drawing < 0) return null;
             int tiles;
-            try { tiles = DsBgScreen.ReadCharacters(NitroBgCodec.Inflate(new ScriptNarc(p.Archive).Get(p.Drawing))).Length / 32; }
+            try { tiles = NitroBgCodec.ReadCharacters(NitroBgCodec.Inflate(new ScriptNarc(p.Archive).Get(p.Drawing))).Length / 32; }
             catch { return null; }
-            if (tiles <= p.TileRoom) return null;
-            TakeBackLastStep();
-            return $"That drawing needs {tiles} tiles and this screen has room for {p.TileRoom}. Nothing was changed.";
+            return tiles <= p.TileRoom ? null
+                : $"That drawing needs {tiles} tiles and this screen has room for {p.TileRoom}. Nothing was changed.";
         }
 
-        // Undoes the last change without offering to redo it, for a change that should never have landed.
-        private void TakeBackLastStep()
+        /// <summary>Runs an import whose writes become one pending step. Returns its error or null.</summary>
+        public string Import(Func<string> import)
         {
-            if (_undo.Count == 0) return;
-            Step step = _undo.Pop();
-            try { new ScriptNarc(step.Dir).Put(step.Member, step.Bytes); }
-            catch (Exception ex) { AppLogger.Error("Bottom screen take back: " + ex.Message); }
-            if (!_undo.Any(s => s.Dir == step.Dir && s.Member == step.Member))
-                _originals.Remove((step.Dir, step.Member));
-            RaiseSteps();
+            string error = Pending.Import(import);
+            ReloadAfterImport();
+            return error;
         }
 
-        /// <summary>Drops the last remembered step when its file was never written, so nothing shows as changed.</summary>
-        public void DropLastStepIfUnchanged()
-        {
-            if (_undo.Count == 0) return;
-            Step step = _undo.Peek();
-            byte[] now;
-            try { now = new ScriptNarc(step.Dir).Get(step.Member); }
-            catch (Exception ex) { AppLogger.Error("Bottom screen drop: " + ex.Message); return; }
-            if (now == null || !now.AsSpan().SequenceEqual(step.Bytes)) return;
-            _undo.Pop();
-            if (!_undo.Any(s => s.Dir == step.Dir && s.Member == step.Member))
-                _originals.Remove((step.Dir, step.Member));
-            RaiseSteps();
-        }
+        /// <summary>Reads on this thread see the pending files until disposed.</summary>
+        public IDisposable Reading() => Pending.Reading();
 
-        /// <summary>Reads everything again after a drawing has been replaced.</summary>
+        /// <summary>Reads everything again after a drawing has been replaced or saved by the painter.</summary>
         public void ReloadAfterImport()
         {
-            DropLastStepIfUnchanged();
             LoadScreens();
             Refresh();
         }
 
         // ── Stepping back ─────────────────────────────────────────────────────────────
 
-        public bool CanUndo => _undo.Count > 0;
-        public bool CanRedo => _redo.Count > 0;
+        public bool CanUndo => Pending.CanUndo;
+        public bool CanRedo => Pending.CanRedo;
 
-        public string UndoWhat => _undo.Count == 0 ? "Nothing to undo" : "Undo " + _undo.Peek().What;
-        public string RedoWhat => _redo.Count == 0 ? "Nothing to redo" : "Redo " + _redo.Peek().What;
-
-        /// <summary>
-        /// Keeps a copy of a file before it is written to. Call this before every change, including one made
-        /// by another window such as the painter. A fresh change starts a new branch, so whatever had been
-        /// put back can no longer be put forward again.
-        /// </summary>
-        public void Remember(DirNames dir, int member, string what)
-        {
-            if (member < 0) return;
-            try
-            {
-                byte[] before = new ScriptNarc(dir).Get(member);
-                if (before == null) return;
-                _originals.TryAdd((dir, member), (byte[])before.Clone());
-                _undo.Push(new Step(dir, member, before, what));
-                _redo.Clear();
-                RaiseSteps();
-            }
-            catch (Exception ex) { AppLogger.Error("Bottom screen remember: " + ex.Message); }
-        }
-
-        /// <summary>Puts the last change back the way it was.</summary>
-        public void Undo() => StepAcross(_undo, _redo, "Put back");
-
-        /// <summary>Does again whatever was just put back.</summary>
-        public void Redo() => StepAcross(_redo, _undo, "Done again");
-
-        // Undo and redo are one move in opposite directions: write the bytes waiting on one side, and hand
-        // whatever was on disk to the other side so the move can be reversed again.
-        private void StepAcross(Stack<Step> from, Stack<Step> to, string said)
-        {
-            if (from.Count == 0) return;
-            Step step = from.Pop();
-            try
-            {
-                ScriptNarc narc = new ScriptNarc(step.Dir);
-                byte[] now = narc.Get(step.Member);
-                // With nothing kept for this file, the bytes on disk are the saved ones. A file stepped back
-                // to its saved bytes no longer counts as changed.
-                (DirNames, int) key = (step.Dir, step.Member);
-                if (now != null) _originals.TryAdd(key, (byte[])now.Clone());
-                narc.Put(step.Member, step.Bytes);
-                if (_originals.TryGetValue(key, out byte[] saved) && saved.AsSpan().SequenceEqual(step.Bytes))
-                    _originals.Remove(key);
-                if (now != null) to.Push(new Step(step.Dir, step.Member, now, step.What));
-                LoadScreens();
-                Refresh();
-                StatusText = said + ": " + step.What;
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Error("Bottom screen step: " + ex.Message);
-                StatusText = "That change could not be moved. " + ex.Message;
-            }
-            RaiseSteps();
-        }
+        public void Undo() { if (!Pending.CanUndo) return; Pending.Undo(); ReloadAfterImport(); StatusText = "Put back."; }
+        public void Redo() { if (!Pending.CanRedo) return; Pending.Redo(); ReloadAfterImport(); StatusText = "Done again."; }
 
         private void RaiseSteps()
         {
             OnPropertyChanged(nameof(CanUndo));
             OnPropertyChanged(nameof(CanRedo));
-            OnPropertyChanged(nameof(UndoWhat));
-            OnPropertyChanged(nameof(RedoWhat));
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
+
 
         public void Say(string what) => StatusText = what;
 
         private static uint ToArgb(ushort bgr555)
         {
-            int r = bgr555 & 0x1F, g = (bgr555 >> 5) & 0x1F, b = (bgr555 >> 10) & 0x1F;
-            return 0xFF000000u
-                 | (uint)(((r << 3) | (r >> 2)) << 16)
-                 | (uint)(((g << 3) | (g >> 2)) << 8)
-                 | (uint)((b << 3) | (b >> 2));
+            (byte r, byte g, byte b) = NitroBgCodec.Colour(bgr555);
+            return 0xFF000000u | ((uint)r << 16) | ((uint)g << 8) | b;
         }
 
-        private static Bitmap ToBitmap(byte[] rgba, int width, int height)
-        {
-            WriteableBitmap wb = new WriteableBitmap(new global::Avalonia.PixelSize(width, height),
-                                         new global::Avalonia.Vector(96, 96),
-                                         PixelFormat.Rgba8888, AlphaFormat.Unpremul);
-            using (ILockedFramebuffer fb = wb.Lock())
-                System.Runtime.InteropServices.Marshal.Copy(rgba, 0, fb.Address, rgba.Length);
-            return wb;
-        }
     }
 }

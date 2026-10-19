@@ -14,11 +14,14 @@ namespace DSPRE.Avalonia.Views.Pokemon
             AvaloniaXamlLoader.Load(this);
             StarterEditorViewModel vm = new StarterEditorViewModel();
             DataContext = vm;
-            EditorWindowChrome.Attach(this, vm, manageTitle: false, onClosed: vm.Detach);
+            EditorWindowChrome.Attach(this, vm, title: () => vm.Title);
         }
 
         private void Save_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e) => VM.SaveChanges();
-        private void Discard_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e) => VM.DiscardChanges();
+        private async void Discard_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) VM.DiscardChanges();
+        }
 
         private async void Manage_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
         {

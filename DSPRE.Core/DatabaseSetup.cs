@@ -27,7 +27,7 @@ namespace DSPRE
                     }
                     foreach (string filePath in Directory.GetFiles(sourceDbPath, "*.*", SearchOption.AllDirectories))
                     {
-                        File.Copy(filePath, filePath.Replace(sourceDbPath, AppPaths.DatabasePath), true);
+                        PlainFiles.Copy(filePath, filePath.Replace(sourceDbPath, AppPaths.DatabasePath), true);
                     }
                     // After a successful copy, remove the bundled source (best-effort: the install
                     // dir may be read-only, e.g. a system-wide install on Linux) and update settings.

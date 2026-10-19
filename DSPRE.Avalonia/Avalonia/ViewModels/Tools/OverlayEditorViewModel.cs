@@ -82,7 +82,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 return false;
             }
         }
-        public string UnsavedChangesDescription => "Overlay Editor";
+        public string UnsavedChangesDescription => "Overlays";
         void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveChangesCore();
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
@@ -177,7 +177,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 await DialogHelper.ShowInfo(
                     "Overlay compression cannot be modified in ds-rom format.\n\n" +
                     "ds-rom automatically decompresses overlays when extracting and recompresses them when building the ROM.",
-                    "Read-Only Mode");
+                    "Read-only mode");
                 return;
             }
 
@@ -202,13 +202,13 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                     "There are some overlays in a compression state that does not match the set value for compression in the y9 table.\n" +
                     "This may cause errors or lack of usability on hardware.\n" +
                     "You can find the mismatched rows highlighted in RED.\nThis message is purely informational.",
-                    "Compression Mark Mismatch");
+                    "Compression mark mismatch");
             }
 
             bool proceed = await DialogHelper.AskYesNo(
                 "This operation will modify the following overlays: " + Environment.NewLine +
                 string.Join(", ", modifiedNumbers) + "\nProceed?",
-                "Confirmation required");
+                "Change overlays?");
 
             if (!proceed) return;
 
@@ -304,7 +304,6 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private void SetDirty()
         {
             _undo?.Record();
-            Title = HasUnsavedChanges ? "● Overlay Editor" : "Overlay Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
@@ -312,7 +311,6 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             _loaded = new (bool, bool)[Overlays.Count];
             for (int i = 0; i < Overlays.Count; i++) _loaded[i] = (Overlays[i].IsCompressed, Overlays[i].IsMarkedCompressed);
-            Title = "Overlay Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
             _undo?.MarkSaved();
         }

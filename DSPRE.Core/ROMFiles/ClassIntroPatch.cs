@@ -40,7 +40,7 @@ namespace DSPRE.ROMFiles
         public static IReadOnlyCollection<int> BorrowedPairs => new HashSet<int>(Current.StylePair);
 
         /// <summary>A gym leader record's length: 20 bytes in Platinum, 8 in Diamond and Pearl, which cut the face from the class's sprite.</summary>
-        public static int GymRecordSize => VsIntroCodeSites?.GymSize ?? 20;
+        public static int GymRecordSize => RomLocator.VsIntroSites?.GymSize ?? 20;
         private const int GymCutIn = 12, LeagueCutIn = 20, GymCount = 8, LeagueCount = 5;
 
         // Assembled from class_intros.s: header, ClassEffect, the pair table word, the style pairs and the two buffers.
@@ -74,11 +74,11 @@ namespace DSPRE.ROMFiles
         /// <summary>The dumps the patch is mapped for, with the European English revisions that copy their code.</summary>
         public static List<(string id, int rev)> SupportedDumps => WithTwins(Measured);
         public static bool SupportsCurrentRom => (gameFamily == GameFamilies.Plat || gameFamily == GameFamilies.DP) && romID != null
-                                                 && Measured.Contains(CodeKey) && VsIntroCodeSites is VsIntroSites s
+                                                 && SupportedDumps.Contains((romID, romRevision)) && RomLocator.VsIntroSites is VsIntroSites s
                                                  && s.ClassJumpTable >= 0 && s.GymTable >= 0 && s.LeagueTable >= 0;
 
         // The switch starts 0x14 bytes before its jump table: subs, movs, cmp, bhi, then four lines into add pc.
-        private static int SwitchStart => VsIntroCodeSites.ClassJumpTable - 0x14;
+        private static int SwitchStart => RomLocator.VsIntroSites.ClassJumpTable - 0x14;
 
         /// <summary>The literal in <paramref name="code"/> that holds <paramref name="value"/>, when exactly one does.</summary>
         private static int OnlyLiteral(byte[] code, uint value)
@@ -92,7 +92,7 @@ namespace DSPRE.ROMFiles
         private static Sites Find(out string why)
         {
             why = null;
-            VsIntroSites s = VsIntroCodeSites;
+            VsIntroSites s = RomLocator.VsIntroSites;
             uint pairs = BitConverter.ToUInt32(ARM9.ReadBytes(effectsComboTableOffsetToRAMAddress, 4), 0);
             if (pairs < ARM9.address || pairs >= synthOverlayLoadAddress) { why = "The intro table isn't where the game keeps it."; return null; }
             string ovPath = OverlayUtils.GetPath(s.RecordOverlay);
@@ -189,7 +189,7 @@ namespace DSPRE.ROMFiles
             BattleMusicTables music = BattleMusicTables.LoadRom();
             BattleMusicTables.ClassJumpTable jumps = music.ClassJumps;
             byte[] ov = File.ReadAllBytes(OverlayUtils.GetPath(sites.Overlay));
-            VsIntroSites s = VsIntroCodeSites;
+            VsIntroSites s = RomLocator.VsIntroSites;
             byte[] Gym(int i) => ov.AsSpan(s.GymTable + GymRecordSize * i, GymRecordSize).ToArray();
             byte[] League(int i) => ov.AsSpan(s.LeagueTable + LeagueRecordSize * i, LeagueRecordSize).ToArray();
 

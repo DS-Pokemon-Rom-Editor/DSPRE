@@ -16,28 +16,16 @@ namespace DSPRE.Avalonia.Views.World
             InitializeComponent();
             OpenBattleSceneryButton.IsVisible = BetaEditors.Allows("BattleSceneBrowserView");
             DataContextChanged += (_, _) => Watch(VM);
-            AttachedToVisualTree += (_, _) =>
-            {
-                DSPRE.GameCameraTable.Saved += OnPreviewSourceSaved;
-                DSPRE.FlyTable.Saved += OnPreviewSourceSaved;
-                AppEvents.MapSaved += OnMapSaved;
-                ShowCamera();
-            };
-            DetachedFromVisualTree += (_, _) =>
-            {
-                DSPRE.GameCameraTable.Saved -= OnPreviewSourceSaved;
-                DSPRE.FlyTable.Saved -= OnPreviewSourceSaved;
-                AppEvents.MapSaved -= OnMapSaved;
-            };
+            AttachedToVisualTree += (_, _) => ShowCamera();
         }
 
         private HeaderEditorViewModel _watched;
 
         private void Watch(HeaderEditorViewModel vm)
         {
-            if (_watched != null) _watched.PropertyChanged -= OnVmChanged;
+            if (_watched != null) { _watched.PropertyChanged -= OnVmChanged; _watched.PreviewSourcesChanged -= OnPreviewSourcesChanged; }
             _watched = vm;
-            if (_watched != null) _watched.PropertyChanged += OnVmChanged;
+            if (_watched != null) { _watched.PropertyChanged += OnVmChanged; _watched.PreviewSourcesChanged += OnPreviewSourcesChanged; }
             ShowCamera();
         }
 
@@ -48,10 +36,11 @@ namespace DSPRE.Avalonia.Views.World
                 ShowCamera();
         }
 
-        private void OnPreviewSourceSaved(object sender, System.EventArgs e) => global::Avalonia.Threading.Dispatcher.UIThread.Post(ShowCamera);
-
-        private void OnMapSaved(object sender, int map) =>
-            global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { CameraPreviewBox.Reload(); ShowCamera(); });
+        private void OnPreviewSourcesChanged(bool map)
+        {
+            if (map) CameraPreviewBox.Reload();
+            ShowCamera();
+        }
 
         private void ShowCamera()
         {

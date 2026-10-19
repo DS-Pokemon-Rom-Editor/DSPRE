@@ -240,7 +240,7 @@ namespace DSPRE.Avalonia
                 Margin = new global::Avalonia.Thickness(8, 4, 12, 12),
                 Spacing = 6,
             };
-            Button apply = new Button { Content = saving ? "Continue" : "Apply", MinWidth = 80, IsDefault = true };
+            Button apply = new Button { Content = saving ? "Continue" : "Apply", MinWidth = 80 };
             void Ready() => apply.IsEnabled = boxes.All(b => b.SelectedIndex >= 0);
             foreach (ComboBox b in boxes) b.SelectionChanged += (_, _) => Ready();
             Ready();

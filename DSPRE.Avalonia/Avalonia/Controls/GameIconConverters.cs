@@ -24,6 +24,16 @@ namespace DSPRE.Avalonia.Controls
 
         private GameIconConverter(Kind kind) { _kind = kind; }
 
+        // An icon saved in another editor shows the next time a list asks for it.
+        static GameIconConverter()
+        {
+            AppEvents.ArchiveMemberSaved += (_, dir) =>
+            {
+                GameIconConverter saved = dir == RomInfo.DirNames.itemIcons ? Item : dir == RomInfo.DirNames.monIcons ? Pokemon : null;
+                if (saved != null) global::Avalonia.Threading.Dispatcher.UIThread.Post(() => saved._cache.Clear());
+            };
+        }
+
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
             if (_kind == Kind.PokemonInLabel)

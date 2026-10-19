@@ -226,7 +226,7 @@ namespace DSPRE.ROMFiles
             byte[] bytes = ToBytes(word_alignment_padding);
             // An identical file is left alone, so its Rotom source isn't regenerated for nothing.
             if (File.Exists(path) && File.ReadAllBytes(path).AsSpan().SequenceEqual(bytes)) return bytes.Length;
-            File.WriteAllBytes(path, bytes);
+            ArchiveMembers.Put(RomInfo.DirNames.scripts, id, bytes);
             _ = ScriptSourceSync.BinaryWritten(id);
             return bytes.Length;
         }
@@ -235,7 +235,7 @@ namespace DSPRE.ROMFiles
         {
             byte[] bytes = ToBytes(word_alignment_padding);
             // Create truncates: a shorter file written over a longer one must not keep its tail.
-            File.WriteAllBytes(path, bytes);
+            ArchiveMembers.Write(path, bytes);
             return bytes.Length;
         }
 

@@ -62,7 +62,7 @@ namespace DSPRE.Avalonia.Views.Controls
         private static bool RomFontReady => Font != null && FieldFontCharacters.Ready;
 
         private static FieldWindowFrame _frame;
-        private static WriteableBitmap _frameBitmap;
+        private static Bitmap _frameBitmap;
 
         /// <summary>The border the games draw round the box, read out of the ROM. </summary>
         public static FieldWindowFrame Frame
@@ -163,7 +163,7 @@ namespace DSPRE.Avalonia.Views.Controls
             {
                 byte[] rgba = f.Compose(FieldMessageWindow.TilesWide, FieldMessageWindow.TilesHigh,
                                         out int w, out int h);
-                _frameBitmap = FromRgba(rgba, w, h);
+                _frameBitmap = ImageConverter.FromRgba(rgba, w, h);
             }
             if (_frameBitmap == null) return false;
 
@@ -182,30 +182,6 @@ namespace DSPRE.Avalonia.Views.Controls
             double round = 3 * s;
             ctx.DrawRectangle(paper, new Pen(edge, Math.Max(1, 2 * s)), frame, round, round);
             ctx.DrawRectangle(null, new Pen(inner, Math.Max(1, 1 * s)), frame.Deflate(3 * s), round, round);
-        }
-
-        private static WriteableBitmap FromRgba(byte[] rgba, int w, int h)
-        {
-            if (rgba == null || w <= 0 || h <= 0) return null;
-            WriteableBitmap bmp = new WriteableBitmap(new PixelSize(w, h), new Vector(96, 96),
-                                          PixelFormat.Bgra8888, AlphaFormat.Unpremul);
-            using ILockedFramebuffer buf = bmp.Lock();
-            unsafe
-            {
-                for (int y = 0; y < h; y++)
-                {
-                    byte* row = (byte*)buf.Address + y * buf.RowBytes;
-                    for (int x = 0; x < w; x++)
-                    {
-                        int at = (y * w + x) * 4;
-                        row[x * 4 + 0] = rgba[at + 2];   // b
-                        row[x * 4 + 1] = rgba[at + 1];   // g
-                        row[x * 4 + 2] = rgba[at + 0];   // r
-                        row[x * 4 + 3] = rgba[at + 3];   // a
-                    }
-                }
-            }
-            return bmp;
         }
 
         private void DrawWithRomFont(DrawingContext ctx, string text, Rect textArea)

@@ -70,19 +70,30 @@ namespace NarcAPI {
             return narc;
         }
 
+        /// <summary>How many members packing would make of a folder: its own files, less backups and OS clutter.</summary>
+        public static int MemberCount(string dirPath) {
+            if (!Directory.Exists(dirPath)) return 0;
+            int count = 0;
+            // The listing carries each file's attributes, so counting asks nothing more per file.
+            foreach (FileInfo file in new DirectoryInfo(dirPath).EnumerateFiles()) if (IsMember(file)) count++;
+            return count;
+        }
+
         private static bool IsMemberFile(string path) {
-            string name = Path.GetFileName(path);
-            string ext = Path.GetExtension(path).ToLowerInvariant();
-            if (ext == ".bak" || ext == ".backup") return false;
-            if (name.StartsWith(".")
-                || name.Equals("Thumbs.db", StringComparison.OrdinalIgnoreCase)
-                || name.Equals("desktop.ini", StringComparison.OrdinalIgnoreCase)) return false;
             try {
-                if ((File.GetAttributes(path) & (FileAttributes.Hidden | FileAttributes.System)) != 0) return false;
+                return IsMember(new FileInfo(path));
             } catch (IOException) {
                 return false;
             }
-            return true;
+        }
+
+        private static bool IsMember(FileInfo file) {
+            string ext = file.Extension.ToLowerInvariant();
+            if (ext == ".bak" || ext == ".backup") return false;
+            if (file.Name.StartsWith(".")
+                || file.Name.Equals("Thumbs.db", StringComparison.OrdinalIgnoreCase)
+                || file.Name.Equals("desktop.ini", StringComparison.OrdinalIgnoreCase)) return false;
+            return (file.Attributes & (FileAttributes.Hidden | FileAttributes.System)) == 0;
         }
 
         private static int CompareMemberNames(string a, string b) {

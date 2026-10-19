@@ -19,7 +19,7 @@ namespace DSPRE.Avalonia.Data
         public static int MemberCount()
         {
             string dir = gameDirs[DirNames.undergroundParts].unpackedDir;
-            return Directory.Exists(dir) ? Directory.GetFiles(dir).Length : 0;
+            return NarcAPI.Narc.MemberCount(dir);
         }
 
         /// <summary>What kind of file a member is: "tiles", "palette" or something else.</summary>

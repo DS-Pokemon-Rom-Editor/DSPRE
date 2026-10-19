@@ -85,7 +85,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         // ── IEditorWithUnsavedChanges ─────────────────────────────────────────
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty;
-        public string UnsavedChangesDescription => "Fly / Warp Editor";
+        public string UnsavedChangesDescription => "Fly and warp points";
         void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommand();
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
@@ -191,15 +191,15 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Could not save: {ex.Message}", "Save Error");
+                await DialogHelper.ShowError($"Could not save: {ex.Message}", "Fly / warp editor error");
             }
         }
 
 
 
         // ── Private helpers ───────────────────────────────────────────────────
-        private void SetDirty()  { _dirty = true;  Title = "● Fly / Warp Editor"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
-        private void SetClean()  { _dirty = false; Title = "Fly / Warp Editor";  OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        private void SetDirty()  { _dirty = true;  OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        private void SetClean()  { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         private void Edited()
         {

@@ -1,0 +1,11 @@
+<Project>
+  <!-- Lets .editorconfig's no-var rule fail the build, not only the IDE. -->
+  <PropertyGroup>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+  <!-- Bans the APIs that skip DSPRE's own paths; BannedSymbols.txt says what to use instead. -->
+  <ItemGroup Condition="'$(MSBuildProjectName)' != 'DSPRE.Tests'">
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="3.3.4" PrivateAssets="all" />
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.txt" />
+  </ItemGroup>
+</Project>

@@ -48,7 +48,7 @@ namespace DSPRE.HgEngine
         {
             HgEngineOwnedFile file = VerbatimSourceFor(archive, index);
             if (file == null) return false;
-            System.IO.File.WriteAllBytes(file.FullPath, bytes);
+            PlainFiles.WriteBytes(file.FullPath, bytes);
             return true;
         }
 
@@ -84,7 +84,7 @@ namespace DSPRE.HgEngine
             {
                 if (System.IO.Directory.Exists(dirs.unpackedDir))
                 {
-                    int n = System.IO.Directory.GetFiles(dirs.unpackedDir).Length;
+                    int n = NarcAPI.Narc.MemberCount(dirs.unpackedDir);
                     if (n > 0) return n;
                 }
                 if (System.IO.File.Exists(dirs.packedDir)) return new Editors.Utils.NarcReader(dirs.packedDir).Entrys;

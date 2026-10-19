@@ -75,8 +75,7 @@ namespace DSPRE.ROMFiles {
                     return false;
                 }
 
-                string filePath = Filesystem.GetPath(narcDir, FILE_INDEX);
-                File.WriteAllBytes(filePath, ToByteArray());
+                ArchiveMembers.Put(RomInfo.DirNames.encounterExtended, FILE_INDEX, ToByteArray());
 
                 if (showSuccessMessage) {
                     AppMessages.Info("Trophy Garden encounters saved successfully!", "Success");
@@ -90,7 +89,7 @@ namespace DSPRE.ROMFiles {
 
         public bool ExportToFile(string path, bool showSuccessMessage = true) {
             try {
-                File.WriteAllBytes(path, ToByteArray());
+                ArchiveMembers.Write(path, ToByteArray());
 
                 if (showSuccessMessage) {
                     AppMessages.Info("Trophy Garden encounters exported successfully!", "Success");

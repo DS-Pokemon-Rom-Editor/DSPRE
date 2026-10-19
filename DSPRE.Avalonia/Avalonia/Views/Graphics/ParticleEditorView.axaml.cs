@@ -18,12 +18,15 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             DataContext = vm;
             Closed += (_, _) => vm.Stop();
-            EditorWindowChrome.Attach(this, vm, manageTitle: false);
+            EditorWindowChrome.Attach(this, vm, title: () => vm.Title);
         }
 
         private void Replay_Click(object sender, RoutedEventArgs e) => VM?.Replay();
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveChanges();
-        private void Revert_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
+        private async void Revert_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+        }
 
         private async void Colour_Click(object sender, RoutedEventArgs e)
         {
@@ -36,7 +39,9 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             if ((sender as Control)?.DataContext is not ParticleTextureRow row || VM == null) return;
             string path = await DialogHelper.OpenFile(this, $"Replace texture {row.Index + 1}", new[] { Png });
-            if (path != null) VM.ReplaceTexture(row.Index, path);
+            if (path == null) return;
+            VM.ReplaceTexture(row.Index, path, out bool ok);
+            if (ok) SaveNotice.Imported($"texture {row.Index + 1}", path);
         }
 
         private async void ExportTexture_Click(object sender, RoutedEventArgs e)
@@ -50,7 +55,7 @@ namespace DSPRE.Avalonia.Views.Graphics
                 FileTypeChoices = new[] { Png },
             });
             string path = file?.TryGetLocalPath();
-            if (path != null) VM.ExportTexture(row.Index, path);
+            if (path != null && VM.ExportTexture(row.Index, path) == null) SaveNotice.Exported(path);
         }
     }
 }

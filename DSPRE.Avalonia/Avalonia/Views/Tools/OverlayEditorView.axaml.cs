@@ -14,7 +14,7 @@ namespace DSPRE.Avalonia.Views.Tools
             OverlayEditorViewModel vm = new OverlayEditorViewModel();
             DataContext = vm;
             // The VM owns the bound Title; the chrome adds Ctrl+S and the close guard.
-            EditorWindowChrome.Attach(this, vm, manageTitle: false);
+            EditorWindowChrome.Attach(this, vm, title: () => vm.Title);
         }
 
         private async void Save_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
@@ -26,7 +26,9 @@ namespace DSPRE.Avalonia.Views.Tools
         private void ToggleMarked_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
             => VM.ToggleAllMarked();
 
-        private void Discard_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-            => VM.DiscardChanges();
+        private async void Discard_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) VM.DiscardChanges();
+        }
     }
 }

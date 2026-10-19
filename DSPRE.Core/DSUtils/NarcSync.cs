@@ -105,7 +105,7 @@ namespace DSPRE
         {
             string path = StampsPath;
             if (path == null) return;
-            try { File.WriteAllText(path, JsonSerializer.Serialize(_stamps, new JsonSerializerOptions { WriteIndented = true })); }
+            try { PlainFiles.WriteText(path, JsonSerializer.Serialize(_stamps, new JsonSerializerOptions { WriteIndented = true })); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
                 AppLogger.Warn("The archive fingerprints could not be saved: " + ex.Message);
@@ -305,7 +305,7 @@ namespace DSPRE
             if (choice == Choice.KeepFolder)
             {
                 // The archive is about to be replaced by the folder, so keep the outside version.
-                File.Copy(c.PackedPath, Path.Combine(backups, backupName + ".archive.narc"), overwrite: true);
+                PlainFiles.Copy(c.PackedPath, Path.Combine(backups, backupName + ".archive.narc"), overwrite: true);
                 Narc.FromFolder(c.UnpackedPath).Save(c.PackedPath);
                 AppLogger.Info($"{c.Name}: kept the unpacked folder and packed it over the archive.");
             }
@@ -320,12 +320,6 @@ namespace DSPRE
                 packed.Free();
                 AppLogger.Info($"{c.Name}: unpacked the archive over the folder.");
             }
-        }
-
-        /// <summary>Forgets the cached fingerprints, for a project switch.</summary>
-        public static void Reset()
-        {
-            lock (Gate) { _stamps = null; _stampsFor = null; }
         }
     }
 }

@@ -14,7 +14,7 @@ namespace DSPRE.Tests
             int last = -1;
             for (int tries = 0; tries < 40; tries++)
             {
-                var now = Directory.GetFiles(dir);
+                string[] now = Directory.GetFiles(dir);
                 if (now.Length > 0 && now.Length == last) return now.OrderBy(x => x).ToArray();
                 last = now.Length;
                 Thread.Sleep(250);

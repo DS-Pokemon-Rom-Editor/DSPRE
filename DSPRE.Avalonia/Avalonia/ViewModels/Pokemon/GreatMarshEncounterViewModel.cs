@@ -74,7 +74,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ── Dirty tracking ───────────────────────────────────────────────────────
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty;
-        public string UnsavedChangesDescription => "Great Marsh Encounter Editor";
+        public string UnsavedChangesDescription => "Great Marsh encounters";
         public void SaveChanges() => Save();
         // Edits live in the loaded file, so discarding reads it again.
         public void DiscardChanges() { if (_dirty && _file != null) LoadFile(); SetClean(); }
@@ -145,7 +145,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (string.IsNullOrEmpty(Filesystem.encounterExtended) || !Directory.Exists(Filesystem.encounterExtended))
             {
                 await DialogHelper.ShowError(
-                    "Great Marsh encounter files not found.\nExpected location: arc/encdata_ex.narc", "Files Not Found");
+                    "Great Marsh encounter files not found.\nExpected location: arc/encdata_ex.narc", "Special encounters editor error");
                 IsAvailable = false;
                 OnPropertyChanged(nameof(IsNotAvailable));
                 return;
@@ -176,7 +176,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                _ = DialogHelper.ShowError($"Error loading Great Marsh encounters: {ex.Message}", "Error");
+                _ = DialogHelper.ShowError($"Error loading Great Marsh encounters: {ex.Message}", "Special encounters editor error");
             }
         }
 
@@ -281,17 +281,17 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_file == null) return;
             FilePickerFileType filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
-            string path = await DialogHelper.SaveFile(_owner, "Export Great Marsh Encounters",
+            string path = await DialogHelper.SaveFile(_owner, "Export Great Marsh encounters",
                 new[] { filter }, "great_marsh_encounters.bin");
             if (path == null) return;
-            _file.ExportToFile(path);
+            if (_file.ExportToFile(path, showSuccessMessage: false)) SaveNotice.Exported(path);
         }
 
         public async Task ImportAsync()
         {
             if (_file == null) return;
             FilePickerFileType filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
-            string path = await DialogHelper.OpenFile(_owner, "Import Great Marsh Encounters", new[] { filter });
+            string path = await DialogHelper.OpenFile(_owner, "Import Great Marsh encounters", new[] { filter });
             if (path == null) return;
 
             try
@@ -306,12 +306,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     _selectedGroupIndex = -1;
                     if (GroupNames.Count > 0) SelectedGroupIndex = 0;
                     Edited();
-                    await DialogHelper.ShowInfo("Great Marsh encounters imported successfully!", "Import Complete");
+                    SaveNotice.Imported("Great Marsh encounters", path);
                 }
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Error importing file: {ex.Message}", "Import Error");
+                await DialogHelper.ShowError($"Error importing file: {ex.Message}", "Special encounters editor error");
             }
         }
 

@@ -47,7 +47,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         // ── IEditorWithUnsavedChanges ──
         public bool HasUnsavedChanges => _isDirty;
-        public string UnsavedChangesDescription => "Battle Tower Editor";
+        public string UnsavedChangesDescription => "Battle Tower trainers and Pokémon sets";
         public void SaveChanges()
         {
             if (_trainerFile == null || _setFile == null) return;
@@ -407,7 +407,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             SelectedSetIndex = setId;
         }
 
-        public void ExportTrainers(string path) => _trainerFile?.ExportToFile(path);
+        public void ExportTrainers(string path) { if (_trainerFile != null && _trainerFile.ExportToFile(path, showSuccessMessage: false)) SaveNotice.Exported(path); }
 
         public void ImportTrainers(string path)
         {
@@ -415,6 +415,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 RefreshTrainerList();
                 MarkDirty();
+                SaveNotice.Imported("Battle Tower trainers", path);
             }
         }
 
@@ -528,7 +529,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             MarkDirty();
         }
 
-        public void ExportSets(string path) => _setFile?.ExportToFile(path);
+        public void ExportSets(string path) { if (_setFile != null && _setFile.ExportToFile(path, showSuccessMessage: false)) SaveNotice.Exported(path); }
 
         public void ImportSets(string path)
         {
@@ -536,6 +537,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 RefreshSetList();
                 MarkDirty();
+                SaveNotice.Imported("Battle Tower Pokémon sets", path);
             }
         }
 

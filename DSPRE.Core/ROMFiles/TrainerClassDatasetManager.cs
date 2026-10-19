@@ -131,8 +131,9 @@ namespace DSPRE.ROMFiles
                 descriptions.messages.Add(descriptions.messages[sourceClassId]);
 
                 mutationStarted = true;
-                File.WriteAllBytes(metadataDestination, metadata);
-                for (int i = 0; i < graphics.Length; i++) File.WriteAllBytes(graphicsDestinations[i], graphics[i]);
+                ArchiveMembers.Batch added = new ArchiveMembers.Batch().Put(DirNames.trainerClassMetadata, newClassId, metadata);
+                for (int i = 0; i < graphics.Length; i++) added.Put(DirNames.trainerGraphics, newClassId * GraphicsMembersPerClass + i, graphics[i]);
+                if (!added.TryCommit(out string addError)) throw new IOException(addError);
                 names.SaveToExpandedDir(trainerClassMessageNumber, showSuccessMessage: false);
                 descriptions.SaveToExpandedDir(DescriptionArchiveId, showSuccessMessage: false);
                 timing?.CopyRow(sourceClassId, newClassId);
@@ -308,8 +309,9 @@ namespace DSPRE.ROMFiles
                 descriptionJson = FileSnapshot.Capture(TextArchive.GetFilePaths(DescriptionArchiveId).jsonPath);
 
                 mutationStarted = true;
-                File.Delete(metadataPath);
-                foreach (string path in graphicsPaths) File.Delete(path);
+                ArchiveMembers.Batch removed = new ArchiveMembers.Batch().Delete(DirNames.trainerClassMetadata, removedClassId);
+                for (int i = 0; i < graphicsPaths.Length; i++) removed.Delete(DirNames.trainerGraphics, removedClassId * GraphicsMembersPerClass + i);
+                if (!removed.TryCommit(out string removeError)) throw new IOException(removeError);
                 names.messages.RemoveAt(removedClassId);
                 descriptions.messages.RemoveAt(removedClassId);
                 names.SaveToExpandedDir(trainerClassMessageNumber, showSuccessMessage: false);
@@ -378,13 +380,13 @@ namespace DSPRE.ROMFiles
 
         private static void TryDelete(string path, List<string> errors)
         {
-            try { if (File.Exists(path)) File.Delete(path); }
+            try { ArchiveMembers.Delete(path); }
             catch (Exception ex) { errors.Add(Path.GetFileName(path) + ": " + ex.Message); }
         }
 
         private static void TryRestoreDeletedFile(string path, byte[] data, List<string> errors)
         {
-            try { if (data != null && !File.Exists(path)) File.WriteAllBytes(path, data); }
+            try { if (data != null && !File.Exists(path)) ArchiveMembers.Write(path, data); }
             catch (Exception ex) { errors.Add(Path.GetFileName(path) + ": " + ex.Message); }
         }
 
@@ -415,9 +417,9 @@ namespace DSPRE.ROMFiles
                     {
                         if (File.Exists(_path) && File.ReadAllBytes(_path).SequenceEqual(_data)) return;
                         Directory.CreateDirectory(Path.GetDirectoryName(_path));
-                        File.WriteAllBytes(_path, _data);
+                        ArchiveMembers.Write(_path, _data);
                     }
-                    else if (File.Exists(_path)) File.Delete(_path);
+                    else ArchiveMembers.Delete(_path);
                 }
                 catch (Exception ex) { errors.Add(Path.GetFileName(_path) + ": " + ex.Message); }
             }

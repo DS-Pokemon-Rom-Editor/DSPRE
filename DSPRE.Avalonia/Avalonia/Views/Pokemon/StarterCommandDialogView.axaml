@@ -18,7 +18,7 @@
     <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0" Padding="0,10,0,0" Margin="0,10,0,0"
             BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
       <StackPanel Spacing="6">
-        <TextBlock Text="Somewhere else? Say where and check it:" Opacity="0.85"/>
+        <TextBlock Foreground="{DynamicResource Editor.Subtle}" Text="Somewhere else? Say where and check it:"/>
         <StackPanel Orientation="Horizontal" Spacing="6">
           <TextBlock Text="Script file" VerticalAlignment="Center"/>
           <NumericUpDown Minimum="0" Maximum="9999" Increment="1" FormatString="0" Width="110"
@@ -27,7 +27,7 @@
           <TextBox Text="{Binding ContainerName}" Width="140" PlaceholderText="script_13"/>
           <Button Content="Verify" Click="Verify_Click"/>
         </StackPanel>
-        <TextBlock Text="{Binding VerdictText}" IsVisible="{Binding HasVerdict}" TextWrapping="Wrap" Opacity="0.9"/>
+        <TextBlock Foreground="{DynamicResource Editor.Subtle}" Text="{Binding VerdictText}" IsVisible="{Binding HasVerdict}" TextWrapping="Wrap"/>
       </StackPanel>
     </Border>
 

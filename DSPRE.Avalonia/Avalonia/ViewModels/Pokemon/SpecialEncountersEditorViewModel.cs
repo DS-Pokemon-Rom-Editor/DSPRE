@@ -12,7 +12,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
     /// One tab per special encounter system: Honey Tree, Great Marsh and Trophy Garden in DPPt, Headbutt, Bug Contest
     /// and Safari Zone in HGSS, and Swarms in both.
     /// </summary>
-    public class SpecialEncountersEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
+    public class SpecialEncountersEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
         public const string Title = "Special Encounters Editor";
 
@@ -88,6 +88,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Undo() => _activeTab?.Undo();
         public void Redo() => _activeTab?.Redo();
 
+        private void OnNamesChanged(object sender, System.EventArgs e) => RefreshNames();
+
+        /// <summary>Stops this editor and the swarm tab it owns listening to the app.</summary>
+        public void Detach()
+        {
+            AppEvents.NamesChanged -= OnNamesChanged;
+            SwarmsVM?.Detach();
+        }
+
         public void RefreshNames()
         {
             HoneyTreeVM?.RefreshNames();
@@ -117,6 +126,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <param name="headbuttFile">Headbutt file to open first, or -1 to open on the first tab.</param>
         public SpecialEncountersEditorViewModel(bool headbuttOnly, int headbuttFile = -1)
         {
+            AppEvents.NamesChanged += OnNamesChanged;
             bool dppt = gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat;
             bool hgss = gameFamily == GameFamilies.HGSS;
 

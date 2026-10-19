@@ -37,7 +37,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                Title = "Import Image",
+                Title = "Import image",
                 AllowMultiple = false,
                 FileTypeFilter = new List<FilePickerFileType> { DialogHelper.PngFilter }
             });
@@ -47,14 +47,15 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = import(path);
             if (error != null)
-                await DialogHelper.ShowError($"Import failed: {error}", "Import Error", this);
+                await DialogHelper.ShowError($"Import failed: {error}", "Title screen editor error", this);
+            else SaveNotice.Imported(null, path);
         }
 
         private async System.Threading.Tasks.Task ExportPng(System.Func<string, string> export, string suggestedName)
         {
             IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = "Export Image",
+                Title = "Export image",
                 DefaultExtension = "png",
                 SuggestedFileName = suggestedName,
                 FileTypeChoices = new List<FilePickerFileType> { DialogHelper.PngFilter }
@@ -64,7 +65,8 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = export(path);
             if (error != null)
-                await DialogHelper.ShowError($"Export failed: {error}", "Export Error", this);
+                await DialogHelper.ShowError($"Export failed: {error}", "Title screen editor error", this);
+            else SaveNotice.Exported(path);
         }
 
         private async void ImportPalette_Click(object sender, RoutedEventArgs e)
@@ -81,17 +83,15 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = _vm.ImportPalette(path);
             if (error != null)
-                await DialogHelper.ShowError($"Import failed: {error}", "Import Error", this);
+                await DialogHelper.ShowError($"Import failed: {error}", "Title screen editor error", this);
+            else SaveNotice.Imported(null, path);
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => _vm.SaveChanges();
 
         private async void RevertChanges_Click(object sender, RoutedEventArgs e)
         {
-            bool ok = await DialogHelper.AskYesNo(
-                "Discard the unsaved title screen changes?",
-                "Discard", this);
-            if (!ok) return;
+            if (!await DialogHelper.ConfirmDiscard(this)) return;
             _vm.RevertChanges();
         }
 
@@ -109,7 +109,8 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = _vm.ExportPalette(path);
             if (error != null)
-                await DialogHelper.ShowError($"Export failed: {error}", "Export Error", this);
+                await DialogHelper.ShowError($"Export failed: {error}", "Title screen editor error", this);
+            else SaveNotice.Exported(path);
         }
 
         // Preview is drawn at 1.5x (384px wide standing in for the real 256px), so a real DS pixel offset

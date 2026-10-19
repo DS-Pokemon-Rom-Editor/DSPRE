@@ -127,6 +127,77 @@ namespace DSPRE
                 "US HeartGold, Platinum (Rev 1) or Diamond, the ARM9 expansion and a ds-rom project. Not compatible with hg-engine.\n\n" +
                 "Research\n" +
                 "The list, its count check and its pointer were documented by MrHam88 and the DS Pokémon Hacking wiki's move editing guide.",
+            ["pickupSlots"] =
+                "What it does\n" +
+                "In the game, each Pickup level range reads its nine items and two rare items from one shared sliding list. This gives every range its own items. Pickup gives the same items as before until you change them.\n\n" +
+                "Where to edit\n" +
+                "Items > Item tables (pickup, hidden, Rock Smash).\n\n" +
+                "Requirements\n" +
+                "Diamond, Pearl, Platinum, HeartGold or SoulSilver, with the ARM9 expansion. The toolbox lists the versions it is mapped for. Not compatible with hg-engine.",
+            ["martsExpanded"] =
+                "What it does\n" +
+                "Moves every mart into the expanded ARM9 area with room for 64 marts of 64 items. Every mart keeps its items.\n\n" +
+                "Where to edit\n" +
+                "Items > Mart editor, which can then add items and custom marts.\n\n" +
+                "Requirements\n" +
+                "Diamond, Pearl, Platinum, HeartGold or SoulSilver, with the ARM9 expansion. English dumps and the other measured versions are supported. Not compatible with hg-engine.",
+            ["bpShopExpanded"] =
+                "What it does\n" +
+                "Moves the Battle Point exchange counters and their prices into the expanded ARM9 area with room for 255 items on each counter.\n\n" +
+                "Where to edit\n" +
+                "Items > Battle Point shop.\n\n" +
+                "Requirements\n" +
+                "Platinum, with the ARM9 expansion. Not compatible with hg-engine.",
+            ["swarmTableExpanded"] =
+                "What it does\n" +
+                "Moves the table of places a swarm can happen into the expanded ARM9 area with room for 255 rows.\n\n" +
+                "Where to edit\n" +
+                "Pokémon > Special encounters editor, Swarms tab.\n\n" +
+                "Requirements\n" +
+                "US HeartGold, SoulSilver, Platinum (Rev 1) or Diamond and the other measured versions, with the ARM9 expansion. Not compatible with hg-engine.",
+            ["typeChartExpanded"] =
+                "What it does\n" +
+                "Moves the type chart into the expanded ARM9 area with room for 253 matchups. The existing matchups are kept.\n\n" +
+                "Where to edit\n" +
+                "Pokémon > Type chart.\n\n" +
+                "Requirements\n" +
+                "Diamond, Pearl, Platinum, HeartGold or SoulSilver on the measured versions, with the ARM9 expansion. Not compatible with hg-engine.",
+            ["vsIntroTimings"] =
+                "What it does\n" +
+                "Lets each trainer class set its own VS intro timings: flashes, slides and holds. A timing left at 0 keeps the game's value.\n\n" +
+                "Where to edit\n" +
+                "Trainers > VS intro editor, Timings for the selected class.\n\n" +
+                "Requirements\n" +
+                "US HeartGold or SoulSilver, with the ARM9 expansion and the trainer class metadata patch. Not compatible with hg-engine.",
+            ["trainerClassTablesExpanded"] =
+                "What it does\n" +
+                "Moves the trainer class gender and prize money tables into the synthetic overlay with room for 256 classes, so new classes can be added.\n\n" +
+                "Where to edit\n" +
+                "Trainers > Trainer editor, Classes tab.\n\n" +
+                "Requirements\n" +
+                "Platinum, with the ARM9 expansion. Not compatible with hg-engine.",
+            ["trainerEncounterBgmRepointed"] =
+                "What it does\n" +
+                "Moves the eye-contact music table into the synthetic overlay with room for an entry per class, so more classes can have their own encounter music.\n\n" +
+                "Where to edit\n" +
+                "Trainers > Trainer editor, Classes tab.\n\n" +
+                "Requirements\n" +
+                "Platinum, with the ARM9 expansion. Not compatible with hg-engine.",
+            ["vsClassTableExpanded"] =
+                "What it does\n" +
+                "HeartGold and SoulSilver pick a trainer class's VS intro and battle music from a table with a fixed number of rows. " +
+                "This moves the table into the expanded ARM9 area with room for 255 classes. Every class keeps the intro it has now.\n\n" +
+                "Where to edit\n" +
+                "Trainers > VS intro editor.\n\n" +
+                "Requirements\n" +
+                "HeartGold or SoulSilver, with the ARM9 expansion. Not compatible with hg-engine.",
+            ["hpBarText"] =
+                "What it does\n" +
+                "Removes the white box behind the name, level and HP in battle, so your HP bar art shows behind them.\n\n" +
+                "Where to edit\n" +
+                "Graphics > HP bar layout and Graphics > Battle screen. Their previews drop the box once the patch is in.\n\n" +
+                "Requirements\n" +
+                "US HeartGold, SoulSilver, Platinum (Rev 1) or Diamond, with the ARM9 expansion. Not compatible with hg-engine.",
         };
 
         // What every code patch changes, the room it takes and what it backs up. None can be removed by DSPRE.
@@ -159,7 +230,7 @@ namespace DSPRE
                 "Two blocks of 288 bytes in the synthetic overlay, room for 256 classes each.",
                 "the ARM9, overlay 16 and the synthetic overlay"),
             ["trainerEncounterBgmRepointed"] = ("The ARM9's two pointers to the eye-contact music table are moved to the new table; giving a class music raises the entry count byte.",
-                "About 1 KB in the synthetic overlay (1.5 KB in HeartGold and SoulSilver), room for an entry per class.",
+                "About 1 KB in the synthetic overlay, room for an entry per class.",
                 "the ARM9 and the synthetic overlay"),
             ["dynamicHeaders"] = ("The ARM9 stops reading its built-in header table: its references are rewritten so headers are loaded one at a time from a NARC (a/0/5/0 in HeartGold and SoulSilver, debug/cb_edit/d_test.narc in Platinum).",
                 "No synthetic overlay space; the headers move into that NARC.",
@@ -197,6 +268,15 @@ namespace DSPRE
             ["bpShopExpanded"] = ("The ARM9's two counter list pointers and overlay 7's price lookup are moved to the new lists; saving changes the price count byte.",
                 "About 2 KB in the synthetic overlay, room for 255 items on each counter.",
                 "the ARM9, overlay 7 and the synthetic overlay"),
+            ["pickupSlots"] = ("The Pickup code's range clamp becomes a multiply, and its two item list pointers are moved to the new tables.",
+                "About 400 bytes in the synthetic overlay: a common and a rare item table, nine items for each of the ten level ranges.",
+                "the Pickup overlay and the synthetic overlay"),
+            ["vsClassTableExpanded"] = ("The ARM9's pointer to the class table and the count its search stops at are changed to the new table.",
+                "About 0.5 KB in the synthetic overlay.",
+                "the ARM9 and the synthetic overlay"),
+            ["hpBarText"] = ("Four calls and nine copies in the battle overlay (overlay 12 in HeartGold and SoulSilver, 16 in Platinum, 11 in Diamond) go through the patch's routine.",
+                "140 bytes in the synthetic overlay.",
+                "the battle overlay and the synthetic overlay"),
             ["martsExpanded"] = ("The ARM9's common mart pointer and specialty mart pointer table are moved to the new layout; saving changes the common mart's count byte.",
                 "About 8.7 KB in the synthetic overlay, room for 64 marts of 64 items.",
                 "the ARM9 and the synthetic overlay"),

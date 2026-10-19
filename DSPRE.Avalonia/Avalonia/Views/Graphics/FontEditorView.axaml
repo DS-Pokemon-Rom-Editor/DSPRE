@@ -41,6 +41,7 @@
         <CheckBox Content="Whole font" IsChecked="{Binding WholeFontForPictures}" VerticalAlignment="Center"
                   ToolTip.Tip="Every letter as one sheet"/>
         <Button Content="Save this font" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <TextBlock Classes="hint" VerticalAlignment="Center"
                    Text="Nothing is written until you save."/>
     </controls:EditorToolbar>
@@ -55,7 +56,7 @@
         </StackPanel>
 
         <TextBox DockPanel.Dock="Top" Text="{Binding Search}" Margin="0,0,0,4"
-                 PlaceholderText="Find a letter, or type its number"/>
+                 PlaceholderText="Search letters or numbers"/>
         <ComboBox DockPanel.Dock="Top" SelectedIndex="{Binding ShowWhat}" Margin="0,0,0,4"
                   HorizontalAlignment="Stretch">
           <ComboBoxItem>All letters</ComboBoxItem>

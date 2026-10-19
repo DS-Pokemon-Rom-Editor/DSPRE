@@ -114,7 +114,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try { _table.Save(); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
             {
-                await DialogHelper.ShowError("The friendship changes were not saved:\n" + e.Message, "Friendship Changes");
+                await DialogHelper.ShowError("The friendship changes were not saved:\n" + e.Message, "Friendship changes error");
                 return false;
             }
             _saved = _table.ToBytes();

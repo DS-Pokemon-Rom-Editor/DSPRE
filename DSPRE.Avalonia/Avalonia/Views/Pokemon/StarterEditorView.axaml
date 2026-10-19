@@ -4,7 +4,6 @@
 		xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
 		x:Class="DSPRE.Avalonia.Views.Pokemon.StarterEditorView"
 		x:DataType="vm:StarterEditorViewModel"
-		Title="{Binding Title}"
 		Width="480" Height="420"
 		WindowStartupLocation="CenterOwner"
 		CanResize="False">
@@ -17,7 +16,7 @@
 		<Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<controls:UndoRedoButtons/>
-		<TextBlock Text="{Binding BusyText}" IsVisible="{Binding IsBusy}" VerticalAlignment="Center" Opacity="0.7" Margin="12,0,0,0"/>
+		<TextBlock Foreground="{DynamicResource Editor.Subtle}" Text="{Binding BusyText}" IsVisible="{Binding IsBusy}" VerticalAlignment="Center" Margin="12,0,0,0"/>
 	</controls:EditorToolbar>
 
 	<Border Margin="12" BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="10">
@@ -52,18 +51,16 @@
 					    IsVisible="{Binding IsLevelSupported}"/>
 
 		  <!-- Diamond and Pearl keep the held item and level in a script command, so say where. -->
-		  <TextBlock Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="3" TextWrapping="Wrap" Margin="0,6,0,0"
-					 Opacity="0.85" IsVisible="{Binding HasScriptNote}" Text="{Binding ScriptNote}"/>
+		  <TextBlock Foreground="{DynamicResource Editor.Subtle}" Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="3" TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="{Binding HasScriptNote}" Text="{Binding ScriptNote}"/>
 		</Grid></controls:CappedWidth>
 
 		<!-- Which command hands the starter over, and how to point the editor at a different one. -->
 		<StackPanel x:Name="CommandBar" Orientation="Horizontal" Spacing="8" Margin="0,4,0,0" IsVisible="{Binding CanManageCommand}">
-		  <TextBlock Text="{Binding CommandLocation}" VerticalAlignment="Center" Opacity="0.75"
+		  <TextBlock Foreground="{DynamicResource Editor.Subtle}" Text="{Binding CommandLocation}" VerticalAlignment="Center"
 					 IsVisible="{Binding HasCommandLocation}"/>
 		  <Button Content="Manage…" Click="Manage_Click"
 				  ToolTip.Tip="Choose which give-a-Pokémon command the editor treats as the starter"/>
-		  <TextBlock Text="the scripts have changed since you chose this one" VerticalAlignment="Center"
-					 Opacity="0.9" IsVisible="{Binding CommandsHaveChanged}"/>
+		  <TextBlock Foreground="{DynamicResource Editor.Subtle}" Text="the scripts have changed since you chose this one" VerticalAlignment="Center" IsVisible="{Binding CommandsHaveChanged}"/>
 		</StackPanel>
 	  </StackPanel>
 	</Border>

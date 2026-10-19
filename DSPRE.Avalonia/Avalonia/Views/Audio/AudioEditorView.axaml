@@ -89,7 +89,7 @@
         </Grid>
 
         <StackPanel Spacing="2">
-          <TextBlock Text="{Binding Status}" FontSize="11" TextWrapping="Wrap"
+          <TextBlock Text="{Binding StatusText}" FontSize="11" TextWrapping="Wrap"
                      Foreground="{DynamicResource Editor.Subtle}"/>
           <TextBlock Text="{Binding FoundSummary}" FontSize="11" TextWrapping="Wrap"
                      Foreground="{DynamicResource Editor.Subtle}"/>

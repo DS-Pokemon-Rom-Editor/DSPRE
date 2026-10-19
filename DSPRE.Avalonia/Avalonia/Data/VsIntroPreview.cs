@@ -116,7 +116,7 @@ namespace DSPRE.Avalonia.Data
             byte[] tiles = _member(ncgr), pal = _member(nclr);
             if (tiles == null || pal == null) return null;
             DsBgScreen screen = new DsBgScreen();
-            ushort[] colours = DsBgScreen.ReadColours(pal);
+            ushort[] colours = NitroBgCodec.ReadColours(pal);
             int rows = Math.Max(1, colours.Length / 16);
             for (int slot = 0; slot < 16; slot++) screen.SetPalette(slot, DsBgScreen.Row(colours, rows == 1 ? 0 : slot % rows));
             ushort[] backdrop = DsBgScreen.Row(colours, 0);
@@ -126,7 +126,7 @@ namespace DSPRE.Avalonia.Data
             int bg = 0;
             foreach (int nscr in screens)
             {
-                (int w, ushort[] entries) = DsBgScreen.ReadMap(_member(nscr));
+                (int w, ushort[] entries) = NitroBgCodec.ReadMap(_member(nscr));
                 if (w <= 0) continue;
                 screen.InitLayer(bg, bg, 0);
                 screen.LoadMap(bg, entries, w);
@@ -138,10 +138,10 @@ namespace DSPRE.Avalonia.Data
         private (DsBgScreen.Oam[] Cell, byte[] Tiles, Func<int, ushort[]> Colours)? Sprite(int[] m, ushort[] colours, bool rows = false, int cell = 0)
         {
             if (m == null || m.Length < 3) return null;
-            byte[] tiles = DsBgScreen.ReadCharacters(_member(m[1]));
+            byte[] tiles = NitroBgCodec.ReadCharacters(_member(m[1]));
             List<DsBgScreen.Oam[]> cells = DsBgScreen.ReadCells(_member(m[2]));
             if (tiles.Length == 0 || cells.Count == 0) return null;
-            ushort[] all = colours ?? DsBgScreen.ReadColours(_member(m[0]));
+            ushort[] all = colours ?? NitroBgCodec.ReadColours(_member(m[0]));
             return (cells[Math.Clamp(cell, 0, cells.Count - 1)], tiles, p => DsBgScreen.Row(all, rows ? p % Math.Max(1, all.Length / 16) : 0));
         }
 
@@ -165,7 +165,7 @@ namespace DSPRE.Avalonia.Data
         private void Name(Scene s, byte[] rgba, int x, int y)
         {
             if (string.IsNullOrEmpty(s.Name) || _font == null) return;
-            ushort[] c = DsBgScreen.Row(DsBgScreen.ReadColours(_member(s.NamePalette)), 0);
+            ushort[] c = DsBgScreen.Row(NitroBgCodec.ReadColours(_member(s.NamePalette)), 0);
             ushort letter = c[1] != 0 ? c[1] : White, shadow = c[2] != 0 ? c[2] : Rgb(10, 10, 10);
             DsBgScreen.DrawText(rgba, _font, s.Name, x, y, letter, shadow);
         }
@@ -208,7 +208,7 @@ namespace DSPRE.Avalonia.Data
         // Before the reveal the game fades the portrait's palette 14 sixteenths towards black.
         private ushort[] Silhouette(int[] m, ushort[] colours)
         {
-            ushort[] all = colours ?? (m != null && m.Length > 0 ? DsBgScreen.ReadColours(_member(m[0])) : null);
+            ushort[] all = colours ?? (m != null && m.Length > 0 ? NitroBgCodec.ReadColours(_member(m[0])) : null);
             if (all == null) return null;
             ushort[] dark = new ushort[all.Length];
             for (int i = 0; i < all.Length; i++)
@@ -361,7 +361,7 @@ namespace DSPRE.Avalonia.Data
             if (f >= t.In)
             {
                 bool dark = f < t.Reveal;
-                ushort[] frameColours = DsBgScreen.ReadColours(_member(s.FramePalette));
+                ushort[] frameColours = NitroBgCodec.ReadColours(_member(s.FramePalette));
                 // Each side plays its own sequence, still until the flash-out ends, then 2/60 s per tick.
                 int played = f >= t.Reveal - 1 ? (f - (t.Reveal - 1) + 1) * 2 : -1;
                 if (s.Frame != null)

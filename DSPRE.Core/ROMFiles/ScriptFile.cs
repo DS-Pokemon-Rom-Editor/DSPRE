@@ -365,7 +365,7 @@ namespace DSPRE.ROMFiles
             if (string.IsNullOrEmpty(txt)) return;
 
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath));
-            File.WriteAllText(outputPath, txt);
+            PlainFiles.WriteText(outputPath, txt);
         }
 
 
@@ -739,7 +739,7 @@ namespace DSPRE.ROMFiles
 
             try
             {
-                File.WriteAllText(txtPath, BuildPlainTextFile());
+                PlainFiles.WriteText(txtPath, BuildPlainTextFile());
                 AppLogger.Info($"Script file {fileID:D4} written to plaintext: {txtPath}");
             }
             catch (Exception ex)
@@ -884,7 +884,7 @@ namespace DSPRE.ROMFiles
                         }
                         else
                         {
-                            File.WriteAllText(txtPath, text);
+                            PlainFiles.WriteText(txtPath, text);
                             // Newer than the export, so it reads as unedited.
                             File.SetLastWriteTimeUtc(binPath, DateTime.UtcNow.AddSeconds(1));
                             rewritten++;
@@ -910,7 +910,7 @@ namespace DSPRE.ROMFiles
             if (string.IsNullOrEmpty(currentDbHash)) return;
             string expandedDir = Path.Combine(RomInfo.dspreDir, "expanded", "scripts");
             Directory.CreateDirectory(expandedDir);
-            File.WriteAllText(Path.Combine(expandedDir, ".database_hash"), currentDbHash);
+            PlainFiles.WriteText(Path.Combine(expandedDir, ".database_hash"), currentDbHash);
         }
 
         /// <summary>The loaded ROM's folder under <c>edited_databases</c>.</summary>
@@ -952,131 +952,6 @@ namespace DSPRE.ROMFiles
                     byte[] hash = md5.ComputeHash(stream);
                     return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
                 }
-            }
-        }
-
-        /// <summary>
-        /// Exports all script files from the ROM to expanded/scripts/ on initial load
-        /// This ensures the expanded directory is populated with plaintext versions
-        /// </summary>
-        /// <param name="suppressErrors">If true, collects invalid command errors silently instead of showing popups</param>
-        /// <param name="progressCallback">Optional callback to report progress (current index, total count)</param>
-        /// <returns>True if export completed, false if cancelled or failed</returns>
-        public static bool ExportAllScripts(bool suppressErrors = false, Action<int, int> progressCallback = null)
-        {
-            // expanded/scripts holds Rotom's sources there; legacy exports would be converted over them.
-            if (RomInfo.hasRotomProject)
-            {
-                return true;
-            }
-
-            string expandedDir = Path.Combine(RomInfo.dspreDir, "expanded", "scripts");
-            string dbHashMarkerPath = Path.Combine(expandedDir, ".database_hash");
-
-            if (Directory.Exists(expandedDir))
-            {
-                string[] existingFiles = Directory.GetFiles(expandedDir, "*.script");
-                int scriptCount = Filesystem.GetScriptCount();
-
-                // If we have all script files, check if database has changed
-                if (existingFiles.Length >= scriptCount)
-                {
-                    string currentDbHash = GetDatabaseHash();
-                    string lastDbHash = File.Exists(dbHashMarkerPath) ? File.ReadAllText(dbHashMarkerPath).Trim() : string.Empty;
-
-                    if (!string.IsNullOrEmpty(currentDbHash) && currentDbHash != lastDbHash)
-                    {
-                        AppLogger.Info($"Script: Database has changed since last export (hash mismatch). Regenerating the unedited exports.");
-                        ClearInvalidCommands();
-                        SetSuppressInvalidCommandErrors(suppressErrors);
-                        try
-                        {
-                            RegenerateLegacyExports(progressCallback);
-                            WriteDatabaseHashMarker();
-                        }
-                        finally
-                        {
-                            SetSuppressInvalidCommandErrors(false);
-                        }
-                        return true;
-                    }
-                    else
-                    {
-                        AppLogger.Info($"Script: expanded/scripts already exists with {existingFiles.Length} files, skipping initial export.");
-                        return true;
-                    }
-                }
-                else
-                {
-                    AppLogger.Info($"Script: expanded/scripts exists with only {existingFiles.Length}/{scriptCount} files. Re-exporting to fill in missing scripts.");
-                }
-            }
-            else
-            {
-                Directory.CreateDirectory(expandedDir);
-            }
-
-            ClearInvalidCommands();
-            SetSuppressInvalidCommandErrors(suppressErrors);
-
-            try
-            {
-                // Get count of script files
-                int scriptCount = Filesystem.GetScriptCount();
-                int exportedCount = 0;
-
-                AppLogger.Info($"Script: Beginning export of {scriptCount} script files to {expandedDir}...");
-
-                for (int i = 0; i < scriptCount; i++)
-                {
-                    try
-                    {
-                        string txtPath = GetFilePaths(i).txtPath;
-
-                        if (File.Exists(txtPath))
-                        {
-                            AppLogger.Debug($"Script {i:D4} plaintext already exists, skipping to preserve any edits.");
-                            progressCallback?.Invoke(i + 1, scriptCount);
-                            continue;
-                        }
-
-                        // Load from binary only (don't try to read plaintext since we're creating it)
-                        ScriptFile scriptFile = new ScriptFile(i, true, true);
-                        scriptFile.WritePlainTextFile();
-                        exportedCount++;
-
-                        // Touch the binary file to make it "newer" than the plaintext
-                        // This ensures search performance isn't impacted (binary used unless plaintext is edited)
-                        string binPath = GetFilePaths(i).binPath;
-                        if (File.Exists(binPath))
-                        {
-                            File.SetLastWriteTimeUtc(binPath, DateTime.UtcNow.AddSeconds(1));
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        AppLogger.Error($"Failed to export script {i:D4}: {ex.Message}");
-                    }
-
-                    progressCallback?.Invoke(i + 1, scriptCount);
-                }
-
-                AppLogger.Info($"Script: Exported {exportedCount} of {scriptCount} script files to {expandedDir}");
-
-                string currentDbHash = GetDatabaseHash();
-                if (!string.IsNullOrEmpty(currentDbHash))
-                {
-                    File.WriteAllText(dbHashMarkerPath, currentDbHash);
-                }
-
-                SetSuppressInvalidCommandErrors(false);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Error($"Failed to export scripts: {ex.Message}");
-                SetSuppressInvalidCommandErrors(false);
-                return false;
             }
         }
 
@@ -2140,7 +2015,7 @@ namespace DSPRE.ROMFiles
                 if (showSuccessMessage) AppMessages.Info($"Saved {GetType().Name} {IDtoReplace:D4}.");
                 // Still the file on disk: nothing to write, and no Rotom source to regenerate.
                 if (File.Exists(path) && File.ReadAllBytes(path).AsSpan().SequenceEqual(read)) return true;
-                File.WriteAllBytes(path, read);
+                ArchiveMembers.Put(RomInfo.DirNames.scripts, IDtoReplace, read);
                 success = true;
             }
             else success = SaveToFileDefaultDir(RomInfo.DirNames.scripts, IDtoReplace, showSuccessMessage);
@@ -2167,7 +2042,7 @@ namespace DSPRE.ROMFiles
             if (blindmode)
             {
                 string path = Filesystem.GetScriptPath(fileID);
-                File.Copy(path, chosenPath, overwrite: true);
+                PlainFiles.Copy(path, chosenPath, overwrite: true);
 
                 string msg = "";
                 if (!isLevelScript)

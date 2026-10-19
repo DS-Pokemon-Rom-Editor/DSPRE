@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 
 namespace DSPRE.ROMFiles
 {
@@ -26,22 +25,20 @@ namespace DSPRE.ROMFiles
         private FieldWindowFrame(byte[] tiles, uint[] colours, int paletteEntry)
         { _tiles = tiles; _colours = colours; PaletteEntry = paletteEntry; }
 
-        /// <summary>Reads one of the twenty frames out of the loaded ROM, or null if it cannot be read.</summary>
-        public static FieldWindowFrame Load(int frameIndex = 0)
+        /// <summary>
+        /// Reads one of the twenty frames from the window frame archive's members, or null if it cannot be read.
+        /// The caller supplies the members so pending and saved edits show.
+        /// </summary>
+        public static FieldWindowFrame Load(int frameIndex, Func<int, byte[]> member, int count)
         {
             try
             {
                 if (frameIndex < 0 || frameIndex >= FrameCount) frameIndex = 0;
-                if (!RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.windowFrames, out (string packedDir, string unpackedDir) dirs)) return null;
-                string path = dirs.packedDir;
-                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
-
-                byte[] narc = File.ReadAllBytes(path);
-                int firstPalette = FirstPaletteIndex(narc);
+                int firstPalette = FirstPaletteIndex(member, count);
                 if (firstPalette < 0) return null;
                 int paletteEntry = firstPalette + 1 + frameIndex;
-                byte[] gfx = NarcEntry(narc, FirstGraphicEntry + frameIndex);
-                byte[] pal = NarcEntry(narc, paletteEntry);
+                byte[] gfx = member(FirstGraphicEntry + frameIndex);
+                byte[] pal = member(paletteEntry);
                 if (gfx == null || pal == null) return null;
 
                 byte[] tiles = ReadTiles(gfx, TileCount);
@@ -55,19 +52,14 @@ namespace DSPRE.ROMFiles
         /// The plain one-tile border menus and the yes/no box use: the archive's first picture with its first
         /// palette, standard_system in the Platinum decomp.
         /// </summary>
-        public static FieldWindowFrame LoadStandard()
+        public static FieldWindowFrame LoadStandard(Func<int, byte[]> member, int count)
         {
             try
             {
-                if (!RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.windowFrames, out (string packedDir, string unpackedDir) dirs)) return null;
-                string path = dirs.packedDir;
-                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
-
-                byte[] narc = File.ReadAllBytes(path);
-                int palette = FirstPaletteIndex(narc);
+                int palette = FirstPaletteIndex(member, count);
                 if (palette < 0) return null;
-                byte[] gfx = NarcEntry(narc, 0);
-                byte[] pal = NarcEntry(narc, palette);
+                byte[] gfx = member(0);
+                byte[] pal = member(palette);
                 if (gfx == null || pal == null) return null;
 
                 byte[] tiles = ReadTiles(gfx, StandardTileCount);
@@ -125,17 +117,14 @@ namespace DSPRE.ROMFiles
 
         /// <summary>
         /// The system font's sixteen colours: menu windows are filled with 15 and written in 1 with a 2 shadow.
-        /// Null when the font archive cannot be read.
+        /// Null when the font archive member cannot be read.
         /// </summary>
-        public static uint[] LoadSystemFontColours()
+        public static uint[] LoadSystemFontColours(Func<int, byte[]> fontMember)
         {
             try
             {
                 if (RomInfo.systemFontPaletteEntry < 0) return null;
-                if (!RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.fonts, out (string packedDir, string unpackedDir) dirs)) return null;
-                string path = dirs.packedDir;
-                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
-                byte[] pal = NarcEntry(File.ReadAllBytes(path), RomInfo.systemFontPaletteEntry);
+                byte[] pal = fontMember(RomInfo.systemFontPaletteEntry);
                 return pal == null ? null : ReadColours(pal);
             }
             catch { return null; }
@@ -192,17 +181,14 @@ namespace DSPRE.ROMFiles
         // Tiles of 4-bit pixels, two a byte with the left one in the low half.
         private static byte[] ReadTiles(byte[] ncgr, int count)
         {
-            if (ncgr.Length < 0x30 || ncgr[0] != 'R' || ncgr[1] != 'G' || ncgr[2] != 'C' || ncgr[3] != 'N') return null;
-            int section = 0x10;
-            int size = BitConverter.ToInt32(ncgr, section + 24);
-            int at = section + 32;
-            if (size < count * 32 || at + size > ncgr.Length) return null;
+            byte[] packed = NitroBgCodec.ReadCharacters(ncgr);
+            if (packed.Length < count * 32) return null;
 
             byte[] tiles = new byte[count * TileSize * TileSize];
             for (int t = 0; t < count; t++)
                 for (int i = 0; i < 32; i++)
                 {
-                    byte b = ncgr[at + t * 32 + i];
+                    byte b = packed[t * 32 + i];
                     int p = t * 64 + i * 2;
                     tiles[p] = (byte)(b & 0xF);
                     tiles[p + 1] = (byte)(b >> 4);
@@ -214,57 +200,28 @@ namespace DSPRE.ROMFiles
         // hardware leaves see-through on a background layer, which is what rounds the corners off.
         private static uint[] ReadColours(byte[] nclr)
         {
-            if (nclr.Length < 0x30 || nclr[0] != 'R' || nclr[1] != 'L' || nclr[2] != 'C' || nclr[3] != 'N') return null;
-            int at = 0x10 + 24;
-            if (at + 32 > nclr.Length) return null;
+            ushort[] raw = NitroBgCodec.ReadColours(nclr);
+            if (raw.Length < 16) return null;
 
             uint[] colours = new uint[16];
             for (int i = 0; i < 16; i++)
             {
-                ushort v = BitConverter.ToUInt16(nclr, at + i * 2);
-                uint r = (uint)((v & 31) * 255 / 31);
-                uint g = (uint)(((v >> 5) & 31) * 255 / 31);
-                uint b = (uint)(((v >> 10) & 31) * 255 / 31);
-                colours[i] = i == 0 ? 0u : 0xFF000000u | (r << 16) | (g << 8) | b;
+                (byte r, byte g, byte b) = NitroBgCodec.Colour(raw[i]);
+                colours[i] = i == 0 ? 0u : 0xFF000000u | ((uint)r << 16) | ((uint)g << 8) | b;
             }
             return colours;
         }
 
         // The frames' colours follow the system colours, whose position differs between the games.
-        private static int FirstPaletteIndex(byte[] narc)
+        private static int FirstPaletteIndex(Func<int, byte[]> member, int count)
         {
-            if (narc == null || narc.Length < 0x20) return -1;
-            int count = BitConverter.ToInt32(narc, 0x18);
             for (int i = 0; i < count; i++)
             {
-                byte[] entry = NarcEntry(narc, i);
+                byte[] entry = member(i);
                 if (entry != null && entry.Length >= 4 && entry[0] == 'R' && entry[1] == 'L' && entry[2] == 'C' && entry[3] == 'N')
                     return i;
             }
             return -1;
-        }
-
-        private static byte[] NarcEntry(byte[] narc, int index)
-        {
-            if (narc == null || narc.Length < 0x20) return null;
-            if (narc[0] != 'N' || narc[1] != 'A' || narc[2] != 'R' || narc[3] != 'C') return null;
-
-            int fatSize = BitConverter.ToInt32(narc, 0x14);
-            int count = BitConverter.ToInt32(narc, 0x18);
-            if (index < 0 || index >= count) return null;
-
-            int fntStart = 0x10 + fatSize;
-            int fntSize = BitConverter.ToInt32(narc, fntStart + 4);
-            int images = fntStart + fntSize + 8;
-
-            int at = 0x1C + index * 8;
-            int from = BitConverter.ToInt32(narc, at);
-            int to = BitConverter.ToInt32(narc, at + 4);
-            if (to < from || images + to > narc.Length) return null;
-
-            byte[] blob = new byte[to - from];
-            Array.Copy(narc, images + from, blob, 0, blob.Length);
-            return blob;
         }
     }
 }

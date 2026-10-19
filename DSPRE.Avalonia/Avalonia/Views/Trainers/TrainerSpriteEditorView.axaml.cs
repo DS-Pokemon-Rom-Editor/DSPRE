@@ -29,7 +29,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         public TrainerSpriteEditorView(TrainerSpriteEditorViewModel vm) : this()
         {
             DataContext = vm;
-            EditorWindowChrome.Attach(this, vm);
+            EditorWindowChrome.Attach(this, vm, title: () => vm.Title);
         }
 
 
@@ -54,7 +54,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             vm.SelectedSwatchIndex = index;
             int bank = vm.ActivePaletteBank;
             PaletteColorEditorViewModel editor = new DSPRE.Avalonia.ViewModels.Graphics.PaletteColorEditorViewModel(
-                vm.PaletteTitle(bank, index), vm.SwatchColor(bank, index), argb => vm.SetSwatchColor(bank, index, argb));
+                vm.PaletteTitle(bank, index), vm.SwatchColor(bank, index), (argb, group) => vm.SetSwatchColor(bank, index, argb, group));
             PaletteColorEditorView window = new DSPRE.Avalonia.Views.Graphics.PaletteColorEditorView(editor);
             // Outside the editor, so the palette and the sprite both stay in view while the colour changes.
             PixelRect? area = Screens.ScreenFromWindow(this)?.WorkingArea;
@@ -74,7 +74,10 @@ namespace DSPRE.Avalonia.Views.Trainers
                 VM.SelectedFrameIndex = index;
         }
 
-        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+        }
         private void ZoomIn_Click(object sender, RoutedEventArgs e) => VM?.ZoomIn();
         private void ZoomOut_Click(object sender, RoutedEventArgs e) => VM?.ZoomOut();
 
@@ -156,7 +159,8 @@ namespace DSPRE.Avalonia.Views.Trainers
 
             string error = VM?.ImportPng(path);
             if (error != null)
-                await DialogHelper.ShowError($"Import failed: {error}", owner: this);
+                await DialogHelper.ShowError($"Import failed: {error}", "Trainer sprite editor error", this);
+            else SaveNotice.Imported(null, path);
         }
 
         private async void CopyFrameToOtherSet_Click(object sender, RoutedEventArgs e)
@@ -181,7 +185,8 @@ namespace DSPRE.Avalonia.Views.Trainers
             if (path == null) return;
 
             if (VM?.ExportPng(path) == false)
-                await DialogHelper.ShowError("Export failed.", owner: this);
+                await DialogHelper.ShowError("Export failed.", "Trainer sprite editor error", this);
+            else SaveNotice.Exported(path);
         }
 
         private void ExportSheet_Click(object sender, RoutedEventArgs e) => ShowSheetMenu((Control)sender, export: true);
@@ -229,7 +234,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             string path = file?.TryGetLocalPath();
             if (path == null) return;
             string error = animation == null ? VM.ExportFramesSheet(path) : VM.ExportAnimationSheet(animation.Value, path);
-            if (error != null) await DialogHelper.ShowError($"Export failed: {error}", owner: this);
+            if (error != null) await DialogHelper.ShowError($"Export failed: {error}", "Trainer sprite editor error", this);
         }
 
         private async System.Threading.Tasks.Task ImportSheetAsync(bool animation)
@@ -246,7 +251,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             TrainerSheetImportViewModel wizard = VM.OpenSheetImport(animation, path, out string why);
             if (wizard == null)
             {
-                await DialogHelper.ShowError($"Import failed: {why}", owner: this);
+                await DialogHelper.ShowError($"Import failed: {why}", "Trainer sprite editor error", this);
                 return;
             }
             if (await new TrainerSheetImportView(wizard).ShowDialog<bool>(this)) VM.ApplySheetImport(wizard);

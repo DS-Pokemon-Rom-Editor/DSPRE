@@ -16,7 +16,7 @@ namespace DSPRE.Avalonia.Views.World
             _vm = new FlyEditorViewModel(headerNames);
             DataContext = _vm;
             // VM owns the bound Title (+ "*" marker); chrome adds Ctrl+S + the close guard.
-            EditorWindowChrome.Attach(this, _vm, manageTitle: false);
+            EditorWindowChrome.Attach(this, _vm, title: () => _vm.Title);
 
             // A zero width still leaves a sliver with a live cell in it, so the other family's columns are hidden.
             DataGrid unlock = this.FindControl<DataGrid>("UnlockGrid");
@@ -42,6 +42,9 @@ namespace DSPRE.Avalonia.Views.World
         private async void Save_Click(object sender, RoutedEventArgs e)
             => await _vm.SaveCommand();
 
-        private void Discard_Click(object sender, RoutedEventArgs e) => _vm?.DiscardChanges();
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) _vm?.DiscardChanges();
+        }
     }
 }

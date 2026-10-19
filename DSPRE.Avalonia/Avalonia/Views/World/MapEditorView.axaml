@@ -201,7 +201,8 @@
                 </StackPanel>
                 <StackPanel Spacing="2">
                   <TextBlock Text="Rotation (°)" FontSize="10" Foreground="{DynamicResource Editor.Subtle}"/>
-                  <TextBlock Text="Requires the building rotation patch (patch toolbox)" FontSize="9" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding !BuildingRotationEnabled}"/>
+                  <Button Content="Open in Patch Toolbox" controls:Icon.Key="OpenLink" Click="RotationPatch_Click" IsVisible="{Binding !BuildingRotationEnabled}"
+                          ToolTip.Tip="Turning buildings needs the building rotation patch."/>
                   <Grid ColumnDefinitions="18,*" RowDefinitions="Auto,Auto,Auto">
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="X" VerticalAlignment="Center"/>
                     <Grid Grid.Row="0" Grid.Column="1" ColumnDefinitions="*,4,*" Margin="0,0,0,2">

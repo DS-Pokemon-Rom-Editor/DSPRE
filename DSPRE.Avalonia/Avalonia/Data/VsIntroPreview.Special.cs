@@ -149,9 +149,9 @@ namespace DSPRE.Avalonia.Data
             // Diamond and Pearl's gym banner is drawn in 256 colours.
             byte[] chr = _member(m[1]);
             (bool eightBit, int tilesAt) = NitroBgCodec.ReadTileHeader(chr);
-            byte[] tiles = eightBit && chr != null ? chr[Math.Min(tilesAt, chr.Length)..] : DsBgScreen.ReadCharacters(chr);
-            ushort[] colours = DsBgScreen.ReadColours(_member(m[0]));
-            (int w, ushort[] entries) = DsBgScreen.ReadMap(_member(m[2]));
+            byte[] tiles = eightBit && chr != null ? chr[Math.Min(tilesAt, chr.Length)..] : NitroBgCodec.ReadCharacters(chr);
+            ushort[] colours = NitroBgCodec.ReadColours(_member(m[0]));
+            (int w, ushort[] entries) = NitroBgCodec.ReadMap(_member(m[2]));
             if (w <= 0 || entries == null || tiles.Length == 0) return null;
             int cols = w, rows = entries.Length / cols, width = cols * 8, height = rows * 8;
             byte[] rgba = new byte[width * height * 4];

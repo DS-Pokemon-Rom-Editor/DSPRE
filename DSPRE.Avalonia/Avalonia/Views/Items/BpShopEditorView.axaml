@@ -25,7 +25,7 @@
     </controls:EditorToolbar>
 
     <StackPanel DockPanel.Dock="Bottom" Margin="8,4" Spacing="2">
-      <TextBlock Text="{Binding Status}" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+      <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
       <TextBlock Text="{Binding Warning}" IsVisible="{Binding HasWarning}" Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>
       <TextBlock Text="{Binding Problem}" IsVisible="{Binding HasProblem}" Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap"/>
     </StackPanel>

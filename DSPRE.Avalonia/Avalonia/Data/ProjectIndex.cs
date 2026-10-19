@@ -168,7 +168,7 @@ namespace DSPRE.Avalonia.Data
                 string partyDir = gameDirs[DirNames.trainerParty].unpackedDir;
                 if (!Directory.Exists(propDir) || !Directory.Exists(partyDir)) return;
 
-                int count = Directory.GetFiles(propDir).Length;
+                int count = NarcAPI.Narc.MemberCount(propDir);
                 string[] names; try { names = GetSimpleTrainerNames(); } catch { names = Array.Empty<string>(); }
 
                 for (int id = 0; id < count; id++)

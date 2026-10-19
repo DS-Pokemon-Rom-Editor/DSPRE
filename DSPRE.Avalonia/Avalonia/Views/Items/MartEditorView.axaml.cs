@@ -16,20 +16,18 @@ namespace DSPRE.Avalonia.Views.Items
         public MartEditorView(MartEditorViewModel viewModel) : this()
         {
             DataContext = viewModel;
-            System.EventHandler patched = (_, _) => viewModel.OnPatchStateChanged();
-            AppEvents.RomPatchStateChanged += patched;
-            DetachedFromVisualTree += (_, _) => AppEvents.RomPatchStateChanged -= patched;
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e)
         {
             try { ViewModel?.SaveChanges(); }
-            catch (System.Exception ex) { await DialogHelper.ShowError("The marts could not be saved:\n" + ex.Message, "Mart Editor"); }
+            catch (System.Exception ex) { await DialogHelper.ShowError("The marts could not be saved:\n" + ex.Message, "Mart editor error"); }
         }
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
+            if (!await DialogHelper.ConfirmDiscard(this)) return;
             try { ViewModel?.DiscardChanges(); }
-            catch (System.Exception ex) { await DialogHelper.ShowError("The marts could not be reloaded:\n" + ex.Message, "Mart Editor"); }
+            catch (System.Exception ex) { await DialogHelper.ShowError("The marts could not be reloaded:\n" + ex.Message, "Mart editor error"); }
         }
         private void AddItem_Click(object sender, RoutedEventArgs e) => ViewModel?.AddItem();
         private void RemoveItem_Click(object sender, RoutedEventArgs e) => ViewModel?.RemoveLastItem();
@@ -39,7 +37,7 @@ namespace DSPRE.Avalonia.Views.Items
         {
             if (!await DialogHelper.AskYesNo(
                     "Remove this custom mart? DSPRE will not update scripts that call its SpMartScreen ID.",
-                    "Remove custom mart")) return;
+                    "Delete custom mart?")) return;
             ViewModel?.RemoveCustomShop();
         }
     }

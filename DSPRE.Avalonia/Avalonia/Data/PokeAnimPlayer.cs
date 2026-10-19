@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Data
 {
@@ -381,9 +382,7 @@ namespace DSPRE.Avalonia.Data
             _fadeTargetEvy = endEvy & 0xFF;
             _fadeCounter = 0;
             _fadeDelay = wait & 0xFF;
-            _fadeR = (byte)((rgb & 0x1F) * 255 / 31);
-            _fadeG = (byte)(((rgb >> 5) & 0x1F) * 255 / 31);
-            _fadeB = (byte)(((rgb >> 10) & 0x1F) * 255 / 31);
+            (_fadeR, _fadeG, _fadeB) = NitroBgCodec.Colour(rgb);
         }
 
         private void StepFade()

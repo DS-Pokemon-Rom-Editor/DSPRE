@@ -347,9 +347,9 @@ namespace DSPRE.ROMFiles
         {
             "None", "Cures paralysis", "Cures sleep", "Cures poison", "Cures burn", "Cures freeze", "Restores PP",
             "Restores HP", "Cures confusion", "Cures every status", "Restores a percentage of HP",
-            "Restores HP, confuses if it dislikes spicy", "Restores HP, confuses if it dislikes dry",
-            "Restores HP, confuses if it dislikes sweet", "Restores HP, confuses if it dislikes bitter",
-            "Restores HP, confuses if it dislikes sour", "Raises Attack", "Raises Defense", "Raises Speed",
+            "Restores HP but confuses if it dislikes spicy", "Restores HP but confuses if it dislikes dry",
+            "Restores HP but confuses if it dislikes sweet", "Restores HP but confuses if it dislikes bitter",
+            "Restores HP but confuses if it dislikes sour", "Raises Attack", "Raises Defense", "Raises Speed",
             "Raises Sp. Atk", "Raises Sp. Def", "Raises critical hit rate", "Sharply raises a random stat",
             "Raises the next move's accuracy", "Removes lowered stats", "Cures infatuation", "Makes the target flinch",
             "Paralyzes the target", "Poisons the target", "Badly poisons the target", "Burns the target",

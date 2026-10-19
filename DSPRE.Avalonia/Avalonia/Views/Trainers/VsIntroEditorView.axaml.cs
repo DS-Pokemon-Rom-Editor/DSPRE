@@ -14,14 +14,17 @@ namespace DSPRE.Avalonia.Views.Trainers
         {
             DataContext = vm;
             AttachedToVisualTree += (_, _) => vm.Attach();
-            DetachedFromVisualTree += (_, _) => { vm.StopAnimation(); vm.StopMotion(); vm.StopClassPreview(); vm.Detach(); };
+            DetachedFromVisualTree += (_, _) => { vm.StopAnimation(); vm.StopMotion(); vm.StopClassPreview(); };
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.SaveChangesAsync(); }
-        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+        }
 
         private void ClassesAndMusic_Click(object sender, RoutedEventArgs e) => VM?.ShowClassesAndMusic();
-        private async void MakeClassRoom_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.MakeClassRoomAsync(); }
+        private void MakeClassRoom_Click(object sender, RoutedEventArgs e) => VM?.OpenClassRoomPatch();
         private void ClassColours_Click(object sender, RoutedEventArgs e) => VM?.EditClassColours();
         private void PaintFace_Click(object sender, RoutedEventArgs e) => VM?.PaintFace();
         private void AnimateFace_Click(object sender, RoutedEventArgs e) => VM?.AnimateFace();

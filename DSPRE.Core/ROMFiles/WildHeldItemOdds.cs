@@ -51,9 +51,9 @@ namespace DSPRE.ROMFiles
             return null;
         }
 
-        public static string WhyNot() => GameTableFile.WhyNot(RomInfo.GameTable.WildHeldItemOdds, Size);
+        public static string WhyNot() => RomLocator.WhyNot(RomLocator.Thing.WildHeldItemOdds, Size);
 
-        public static WildHeldItemOdds Load() => new WildHeldItemOdds(GameTableFile.Read(RomInfo.GameTable.WildHeldItemOdds, Size));
+        public static WildHeldItemOdds Load() => new WildHeldItemOdds(RomLocator.Read(RomLocator.Thing.WildHeldItemOdds, Size));
 
         /// <summary>Raised after the odds were written, for editors that show them.</summary>
         public static event Action Saved;
@@ -61,7 +61,7 @@ namespace DSPRE.ROMFiles
         public void Save()
         {
             if (Problem() is string p) throw new InvalidOperationException(p);
-            GameTableFile.Write(RomInfo.GameTable.WildHeldItemOdds, ToBytes());
+            RomLocator.Write(RomLocator.Thing.WildHeldItemOdds, ToBytes());
             Saved?.Invoke();
         }
     }

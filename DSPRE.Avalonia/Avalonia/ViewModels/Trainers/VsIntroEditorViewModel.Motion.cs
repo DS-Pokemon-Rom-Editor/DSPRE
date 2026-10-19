@@ -132,7 +132,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private int[] Emblem()
         {
-            int[] m = RomInfo.VsIntroMotionCodeSites?.EmblemMembers;
+            int[] m = RomLocator.VsIntroMotionSites?.EmblemMembers;
             Kind[] want = { Kind.Palette, Kind.TileGraphic, Kind.CellLayout, Kind.CellAnimation };
             if (m == null || m.Length != 4) return null;
             for (int i = 0; i < 4; i++)

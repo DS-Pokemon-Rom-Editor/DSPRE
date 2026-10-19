@@ -103,7 +103,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ─── Dirty tracking ───────────────────────────────────────────────────────
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty;
-        public string UnsavedChangesDescription => $"Learnset (Mon {_currentId})";
+        public string UnsavedChangesDescription => $"Learnset of {RomInfo.PokemonName(_currentId)}";
         public void SaveChanges() => Save();
         public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
@@ -171,7 +171,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             RefreshEntries();
             SelectedEntryIndex = -1;
             SetDirty();
-            StatusText = "CSV import has unsaved changes. Press Save to write them to disk.";
+            SaveNotice.Imported("the learnset", session.FileName);
         }
 
         // ─── Load ─────────────────────────────────────────────────────────────────
@@ -270,7 +270,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_current == null || _addLevel < 1 || _addLevel > 100 || _addMoveIndex <= 0) return;
             (byte, ushort) entry = ((byte)_addLevel, (ushort)_addMoveIndex);
-            if (_current.list.Contains(entry)) { StatusText = "Entry already exists!"; return; }
+            if (_current.list.Contains(entry)) { StatusText = "That entry is already there."; return; }
 
             int insertAt = _current.list.FindIndex(x => x.level > entry.Item1 || (x.level == entry.Item1 && x.move > entry.Item2));
             if (insertAt < 0) _current.list.Add(entry);
@@ -287,7 +287,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_current == null || !CanEdit || _addLevel < 1 || _addLevel > 100 || _addMoveIndex <= 0) return;
             (byte, ushort) entry = ((byte)_addLevel, (ushort)_addMoveIndex);
             if (_current.list[_selectedEntryIndex] == entry) return;
-            if (_current.list.Contains(entry)) { StatusText = "Entry already exists!"; return; }
+            if (_current.list.Contains(entry)) { StatusText = "That entry is already there."; return; }
 
             _current.list.RemoveAt(_selectedEntryIndex);
             int insertAt = _current.list.FindIndex(x => x.level > entry.Item1 || (x.level == entry.Item1 && x.move > entry.Item2));
@@ -336,7 +336,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (_loadError != null)
                 {
                     StatusText = "Not saved: " + _loadError;
-                    _ = DialogHelper.ShowError("The learnset could not be saved.\n" + _loadError, "Save Error");
+                    _ = DialogHelper.ShowError("The learnset could not be saved.\n" + _loadError, "Pokémon editor error");
                     return;
                 }
                 List<(int level, int move)> entries = new System.Collections.Generic.List<(int level, int move)>(_current.list.Count);
@@ -349,7 +349,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (!ok)
                 {
                     StatusText = "Not saved: " + error;
-                    _ = DialogHelper.ShowError("The learnset could not be saved.\n" + error, "Save Error");
+                    _ = DialogHelper.ShowError("The learnset could not be saved.\n" + error, "Pokémon editor error");
                     return;
                 }
             }

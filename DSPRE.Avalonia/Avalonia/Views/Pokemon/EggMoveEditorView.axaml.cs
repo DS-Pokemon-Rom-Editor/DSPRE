@@ -15,14 +15,16 @@ namespace DSPRE.Avalonia.Views.Pokemon
             EggMoveEditorViewModel vm = new EggMoveEditorViewModel();
             DataContext = vm;
             // VM owns the bound Title (+ "*" marker); chrome adds Ctrl+S + the close guard.
-            EditorWindowChrome.Attach(this, vm, manageTitle: false, onClosed: vm.Detach);
+            EditorWindowChrome.Attach(this, vm, title: () => vm.Title);
         }
 
         private async void Save_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
             => await VM.SaveCommand();
 
-        private void Discard_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-            => VM.DiscardChanges();
+        private async void Discard_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) VM.DiscardChanges();
+        }
 
         private async void Export_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
             => await VM.ExportCommand(this);

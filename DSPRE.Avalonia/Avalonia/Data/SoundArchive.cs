@@ -178,7 +178,7 @@ namespace DSPRE.Avalonia.Data
         {
             SwavSample sample = CrySample(species);
             if (sample == null || sample.Pcm == null || sample.Pcm.Length == 0) return false;
-            File.WriteAllBytes(path, CryFiles.WriteWav(sample.Pcm, sample.SampleRate));
+            PlainFiles.WriteBytes(path, CryFiles.WriteWav(sample.Pcm, sample.SampleRate));
             return true;
         }
 
@@ -236,7 +236,7 @@ namespace DSPRE.Avalonia.Data
             byte[] whole = sdat.ReplaceFile(arcInfo.FileId, rebuilt);
             if (whole == null) { problem = "The sound archive could not be rewritten."; return false; }
 
-            try { File.WriteAllBytes(sdatPath, whole); }
+            try { PlainFiles.WriteBytes(sdatPath, whole); }
             catch (Exception ex) { problem = "The sound archive could not be saved: " + ex.Message; return false; }
 
             Reset();          // read it again next time, so what plays is what is now on disk
@@ -400,7 +400,7 @@ namespace DSPRE.Avalonia.Data
             byte[] whole = ApplySamples(sdat, pending, out problem);
             if (whole == null) return false;
 
-            try { File.WriteAllBytes(sdatPath, whole); }
+            try { PlainFiles.WriteBytes(sdatPath, whole); }
             catch (Exception ex) { problem = "The sound archive could not be saved: " + ex.Message; return false; }
 
             Reset();          // read it again next time, so what plays is what is now on disk
@@ -458,7 +458,7 @@ namespace DSPRE.Avalonia.Data
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(full));
-                File.WriteAllBytes(full, cry.Wav);
+                PlainFiles.WriteBytes(full, cry.Wav);
             }
             catch (Exception ex) { problem = "That cry could not be saved to the checkout: " + ex.Message; return false; }
             return true;
@@ -551,7 +551,7 @@ namespace DSPRE.Avalonia.Data
         {
             SwavSample sample = Sample(waveArc, index);
             if (sample?.Pcm == null || sample.Pcm.Length == 0) return false;
-            File.WriteAllBytes(path, CryFiles.WriteWav(sample.Pcm, sample.SampleRate));
+            PlainFiles.WriteBytes(path, CryFiles.WriteWav(sample.Pcm, sample.SampleRate));
             return true;
         }
 
@@ -599,7 +599,7 @@ namespace DSPRE.Avalonia.Data
             byte[] whole = sdat.ReplaceFile(sdat.WaveArcs[waveArc].FileId, rebuilt);
             if (whole == null) { problem = "The sound archive could not be rewritten."; return false; }
 
-            try { File.WriteAllBytes(sdatPath, whole); }
+            try { PlainFiles.WriteBytes(sdatPath, whole); }
             catch (Exception ex) { problem = "The sound archive could not be saved: " + ex.Message; return false; }
 
             Reset();

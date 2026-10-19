@@ -19,10 +19,11 @@ namespace DSPRE.ROMFiles
         public const int SpriteEntrySize = 6448, PaletteEntrySize = 72;
         private const int Words = SpriteWidth * SpriteHeight / 4;
 
+        private readonly RomInfo.DirNames _dir;
         private readonly string _packed;
         private readonly string _unpacked;
 
-        private PokemonBattleSpriteArchive(string packed, string unpacked) { _packed = packed; _unpacked = unpacked; }
+        private PokemonBattleSpriteArchive(RomInfo.DirNames dir, string packed, string unpacked) { _dir = dir; _packed = packed; _unpacked = unpacked; }
 
         public static PokemonBattleSpriteArchive Open(RomInfo.DirNames dir)
         {
@@ -32,7 +33,7 @@ namespace DSPRE.ROMFiles
             string unpacked = Directory.Exists(paths.unpackedDir) && Directory.EnumerateFiles(paths.unpackedDir).Any()
                 ? paths.unpackedDir : null;
             string packed = File.Exists(paths.packedDir) ? paths.packedDir : null;
-            return unpacked == null && packed == null ? null : new PokemonBattleSpriteArchive(packed, unpacked);
+            return unpacked == null && packed == null ? null : new PokemonBattleSpriteArchive(dir, packed, unpacked);
         }
 
         private string MemberPath(int idx) => Path.Combine(_unpacked, idx.ToString("D4"));
@@ -66,7 +67,7 @@ namespace DSPRE.ROMFiles
             {
                 FileInfo file = new FileInfo(MemberPath(idx));
                 if (!file.Exists || file.Length != data.Length) return false;
-                File.WriteAllBytes(file.FullName, data);
+                ArchiveMembers.Put(_dir, idx, data);
                 written = true;
             }
             if (_packed != null)

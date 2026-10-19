@@ -90,35 +90,16 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private void OnPropertyChanged([CallerMemberName] string n = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
-            if (n == nameof(HasUnsavedChanges)) ClearImportedWhenClean();
         }
 
-        // Shown after a CSV import until the changes are saved or discarded.
-        private bool _imported;
-        public string ImportNote => _imported ? "CSV import has unsaved changes. Press Save to write them to disk." : "";
-        public bool HasImportNote => _imported;
-        private void MarkImported() { _imported = true; OnPropertyChanged(nameof(ImportNote)); OnPropertyChanged(nameof(HasImportNote)); }
-        private void ClearImportedWhenClean()
-        {
-            if (!_imported || HasUnsavedChanges) return;
-            _imported = false;
-            OnPropertyChanged(nameof(ImportNote));
-            OnPropertyChanged(nameof(HasImportNote));
-        }
         private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
         { if (Equals(f, v)) return false; f = v; OnPropertyChanged(n); return true; }
 
-        private readonly Data.DungeonCutinGraphics _graphics = new();
+        // Imported graphics wait here until Save; each undo state holds them with the rows.
+        private readonly Data.PendingArchiveWrites _pending = new();
+        private readonly Data.DungeonCutinGraphics _graphics;
 
-        public const int RowCount = 25;
         private const int FieldsPerRow = 15;
-
-        private static uint ResolveTableOffset()
-        {
-            RomInfo.SetDungeonCutinTableOffsetToRAMAddress();
-            uint ramAddress = BitConverter.ToUInt32(ARM9.ReadBytes(RomInfo.dungeonCutinTableOffsetToRAMAddress, 4), 0);
-            return ramAddress - ARM9.address;
-        }
 
         // ── IEditorWithUnsavedChanges ─────────────────────────────────────────
         private byte[] _saved;
@@ -153,6 +134,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private byte[] TakeState() => ByteStateUndo.Pack(w =>
         {
             foreach (DungeonCutinRow row in Rows) foreach (int v in Values(row)) w.Write(v);
+            byte[] pending = _pending.Take();
+            w.Write(pending.Length);
+            w.Write(pending);
         });
 
         // Shows the row the step changed.
@@ -169,6 +153,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     SetValues(row, v);
                     changed ??= row;
                 }
+                _pending.Restore(r.ReadBytes(r.ReadInt32()));
             });
             if (changed != null && changed != SelectedRow) SelectedRow = changed; else RefreshPreviews();
             Changed();
@@ -181,7 +166,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo));
             Changed();
         }
-        public string UnsavedChangesDescription => "Dungeon Cutin Editor";
+        public string UnsavedChangesDescription => "Dungeon cut-ins";
         void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommand();
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
@@ -190,12 +175,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
         public void DiscardChanges()
         {
-            _graphics.DropImported();
+            _pending.Discard();
             LoadRows();
         }
 
-        /// <summary>Deletes the members imported since the last save, which nothing saved points at.</summary>
-        public void DropUnsavedImports() => _graphics.DropImported();
+        /// <summary>Drops the graphics imported since the last save, which nothing saved points at.</summary>
+        public void DropUnsavedImports() => _pending.Discard();
 
         // ── Observable state ─────────────────────────────────────────────────
         public ObservableCollection<DungeonCutinRow> Rows { get; } = new();
@@ -294,6 +279,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         // ── Constructor ───────────────────────────────────────────────────────
         public DungeonCutinEditorViewModel(List<string> headerNames)
         {
+            _graphics = new Data.DungeonCutinGraphics(_pending);
             foreach (string h in headerNames)
                 Headers.Add(h.TrimEnd('\0'));
             LoadRows();
@@ -323,16 +309,17 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             try
             {
+                // The members first, so the saved table never points at graphics that are not there.
+                _pending.Save();
                 WriteRows();
-                _graphics.KeepImported();
                 _saved = TakeState();
                 Changed();
                 SaveNotice.Saved(UnsavedChangesDescription);
-                await DialogHelper.ShowInfo("Dungeon Cutin table saved successfully.", "Save");
+                StatusText = "Saved.";
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Could not save: {ex.Message}", "Save Error");
+                await DialogHelper.ShowError($"Could not save: {ex.Message}", "Dungeon cutin editor error");
             }
         }
 
@@ -364,14 +351,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
             RefreshPreviews();
             Changed();
-            MarkImported();
+            SaveNotice.Imported($"{session.Accepted.Count} dungeon cut-ins", path);
         }
 
         // ── Private helpers ───────────────────────────────────────────────────
         private void Changed()
         {
             bool dirty = HasUnsavedChanges;
-            Title = dirty ? "● Dungeon Cutin Editor" : "Dungeon Cutin Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
             _undo?.Record();
         }
@@ -383,7 +369,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 // One read of the table, shared with the Graphics window, so the field order is not
                 // written out twice and cannot drift.
-                foreach (DungeonCutinTable.Row t in Data.DungeonCutinTable.Read())
+                foreach (DSPRE.ROMFiles.DungeonCutinTable.Row t in DSPRE.ROMFiles.DungeonCutinTable.Read())
                 {
                     DungeonCutinRow row = new DungeonCutinRow(Headers)
                     {
@@ -419,7 +405,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private void WriteRows()
         {
-            using ARM9.Writer writer = new ARM9.Writer(ResolveTableOffset());
+            using ARM9.Writer writer = new ARM9.Writer(DSPRE.ROMFiles.DungeonCutinTable.TableOffset());
             foreach (DungeonCutinRow row in Rows)
             {
                 writer.Write(row.HeaderIndex);

@@ -87,7 +87,7 @@ namespace DSPRE.Avalonia.ViewModels.World
     /// prompt on add-header, the Advanced Header Search sub-form, and the
     /// open-wild/script/level-script/area-data navigation buttons.
     /// </summary>
-    public class HeaderEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
+    public class HeaderEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -445,7 +445,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         // ── Dirty tracking ───────────────────────────────────────────────────────────
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty;
-        public string UnsavedChangesDescription => _header != null ? $"Header {_header.ID}" : "Header Editor";
+        public string UnsavedChangesDescription => _header != null ? $"Header {_header.ID}" : "Headers";
         public void SaveChanges() => Save();
         public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); LoadHeader(SelectedHeaderId); }
         // RecordUndoSnapshot runs BEFORE the _dirty short-circuit so EVERY edit is captured (not just the first).
@@ -507,7 +507,16 @@ namespace DSPRE.Avalonia.ViewModels.World
             AppEvents.HeaderSaved += OnSavedElsewhere;
             AppEvents.RomPatchStateChanged += OnPatchStateChanged;
             MusicPreview.Changed += OnMusicChanged;
+            DSPRE.GameCameraTable.Saved += OnPreviewSourceSaved;
+            DSPRE.FlyTable.Saved += OnPreviewSourceSaved;
+            AppEvents.MapSaved += OnMapSaved;
         }
+
+        /// <summary>Raised when something the camera preview draws was saved: true when it was a map.</summary>
+        public event Action<bool> PreviewSourcesChanged;
+
+        private void OnPreviewSourceSaved(object sender, EventArgs e) => Dispatcher.UIThread.Post(() => PreviewSourcesChanged?.Invoke(false));
+        private void OnMapSaved(object sender, int map) => Dispatcher.UIThread.Post(() => PreviewSourcesChanged?.Invoke(true));
 
         // Applying the dynamic headers patch with this window open enables Add and Remove last.
         private void OnPatchStateChanged(object sender, EventArgs e)
@@ -529,6 +538,9 @@ namespace DSPRE.Avalonia.ViewModels.World
             AppEvents.RomPatchStateChanged -= OnPatchStateChanged;
             AppEvents.LabelsChanged -= OnLabelsChanged;
             MusicPreview.Changed -= OnMusicChanged;
+            DSPRE.GameCameraTable.Saved -= OnPreviewSourceSaved;
+            DSPRE.FlyTable.Saved -= OnPreviewSourceSaved;
+            AppEvents.MapSaved -= OnMapSaved;
         }
 
         // Another open copy of this header saved: show it, unless this copy holds its own edits.
@@ -580,7 +592,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex)
             {
                 AppLogger.Error("HeaderEditorViewModel.SetupAsync: " + ex);
-                await DialogHelper.ShowError($"Failed to load headers:\n{ex.Message}", "Header Editor Error");
+                await DialogHelper.ShowError($"Failed to load headers:\n{ex.Message}", "Header editor error");
             }
         }
 
@@ -1288,7 +1300,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             _header = h;
             PopulateFromHeader();
             SetDirty();
-            StatusText = "Pasted header (unsaved).";
+            StatusText = "Pasted the header.";
         }
 
         public void Reset()
@@ -1312,9 +1324,9 @@ namespace DSPRE.Avalonia.ViewModels.World
                 _header = h;
                 PopulateFromHeader();
                 SetDirty();
-                StatusText = "Imported header (unsaved).";
+                SaveNotice.Imported($"header {_header.ID}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"Import failed: malformed or not a header file.\n{ex.Message}", "Import Error"); }
+            catch (Exception ex) { await DialogHelper.ShowError($"Import failed: malformed or not a header file.\n{ex.Message}", "Header editor error"); }
         }
 
         public async Task ExportAsync()
@@ -1323,8 +1335,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             FilePickerFileType filter = new global::Avalonia.Platform.Storage.FilePickerFileType("DSPRE header") { Patterns = new[] { "*.dsh" } };
             string path = await DialogHelper.SaveFile(_owner, "Export header", new[] { filter }, $"header_{_header.ID:D4}.dsh");
             if (path == null) return;
-            try { File.WriteAllBytes(path, _header.ToByteArray()); StatusText = "Exported header."; }
-            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
+            try { PlainFiles.WriteBytes(path, _header.ToByteArray()); SaveNotice.Exported(path); }
+            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Header editor error"); }
         }
 
         /// <summary>Shows a header asked for from another editor.</summary>
@@ -1453,7 +1465,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             bool hgss = gameFamily == GameFamilies.HGSS;
             List<(string Label, bool IsChecked)> options = new List<(string, bool)>
             {
-                ("New script file", true), ("New level script, with no triggers", true), ("New event file, empty", true), ("New text archive", true),
+                ("New script file", true), ("New level script with no triggers", true), ("Empty event file", true), ("New text archive", true),
             };
             if (hgss) options.Add(("Headbutt file", true));
             (bool create, bool[] pick) = await DialogHelper.AskWithChecks(
@@ -1502,14 +1514,14 @@ namespace DSPRE.Avalonia.ViewModels.World
             int lastIndex = _headerListNames.Count - 1;
             if (lastIndex <= 0)
             {
-                await DialogHelper.ShowError("You must have at least one header!", "Can't delete last header");
+                await DialogHelper.ShowError("There has to be at least one header.", "Header editor error");
                 return;
             }
 
             string name = lastIndex < _internalNames.Count ? _internalNames[lastIndex] : "";
             if (!await DialogHelper.AskYesNo(
                     $"Remove header {lastIndex:D3} ({name})? Only the last header can be removed. It is deleted now, not on Save; Ctrl+Z puts it back.",
-                    "Remove last header"))
+                    "Delete header?"))
                 return;
 
             byte[] data = File.ReadAllBytes(Filesystem.GetDynamicHeaderPath(lastIndex));

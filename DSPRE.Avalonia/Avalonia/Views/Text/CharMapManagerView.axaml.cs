@@ -16,17 +16,7 @@ namespace DSPRE.Avalonia.Views.Text
             AvaloniaXamlLoader.Load(this);
             _vm = new CharMapManagerViewModel();
             DataContext = _vm;
-            Closing += OnWindowClosing;
-        }
-
-        private async void OnWindowClosing(object sender, WindowClosingEventArgs e)
-        {
-            e.Cancel = true;
-            if (await _vm.ConfirmCloseAsync())
-            {
-                Closing -= OnWindowClosing;
-                Close();
-            }
+            EditorWindowChrome.Attach(this, _vm);
         }
 
         private async void AddAlias_Click(object sender, RoutedEventArgs e)
@@ -72,6 +62,11 @@ namespace DSPRE.Avalonia.Views.Text
                 string item = _vm.CharMapItems[_vm.SelectedCharMapIndex];
                 _ = TopLevel.GetTopLevel(this)?.Clipboard?.SetTextAsync(item);
             }
+        }
+
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
         }
     }
 }

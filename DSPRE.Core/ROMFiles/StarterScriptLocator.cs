@@ -150,7 +150,7 @@ namespace DSPRE.ROMFiles
             string dir = RomInfo.gameDirs[RomInfo.DirNames.scripts].unpackedDir;
             if (!Directory.Exists(dir)) return found;
 
-            int count = Directory.GetFiles(dir).Length;
+            int count = NarcAPI.Narc.MemberCount(dir);
             for (int id = 0; id < count; id++)
             {
                 ScriptFile f = TryParse(id);

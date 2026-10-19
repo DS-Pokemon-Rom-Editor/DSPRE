@@ -41,7 +41,7 @@ namespace DSPRE
             try
             {
                 string filePath = GetCrashReportFilePath();
-                File.WriteAllText(filePath, BuildCrashReport(ex), Encoding.UTF8);
+                PlainFiles.WriteText(filePath, BuildCrashReport(ex), Encoding.UTF8);
                 return filePath;
             }
             catch
@@ -58,7 +58,7 @@ namespace DSPRE
 
             try
             {
-                File.WriteAllText(filePath, crashReport, Encoding.UTF8);
+                PlainFiles.WriteText(filePath, crashReport, Encoding.UTF8);
             }
             catch
             {

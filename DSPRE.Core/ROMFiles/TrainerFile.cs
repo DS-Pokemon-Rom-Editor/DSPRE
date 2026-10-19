@@ -353,12 +353,12 @@ namespace DSPRE.ROMFiles {
         /// <summary>Writes a trainer's properties and party as record <paramref name="id"/> of the unpacked archives.</summary>
         public static void Save(int id, TrainerProperties trp, Party party) {
             SaveProperties(id, trp);
-            File.WriteAllBytes(Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.trainerParty].unpackedDir, id.ToString("D4")), party.ToByteArray());
+            ArchiveMembers.Put(RomInfo.DirNames.trainerParty, id, party.ToByteArray());
         }
 
         /// <summary>Writes only a trainer's properties record, for edits that leave the party alone.</summary>
         public static void SaveProperties(int id, TrainerProperties trp) =>
-            File.WriteAllBytes(Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.trainerProperties].unpackedDir, id.ToString("D4")), trp.ToByteArray());
+            ArchiveMembers.Put(RomInfo.DirNames.trainerProperties, id, trp.ToByteArray());
 
         /// <summary>Reads record <paramref name="id"/> of the unpacked archives, the way the editor opens a trainer.</summary>
         public static TrainerFile Load(int id, string name = "") {

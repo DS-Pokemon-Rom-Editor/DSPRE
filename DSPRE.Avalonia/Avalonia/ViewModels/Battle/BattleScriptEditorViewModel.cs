@@ -18,7 +18,7 @@ using System.Runtime.InteropServices;
 namespace DSPRE.Avalonia.ViewModels.Battle
 {
     /// <summary>Battle scripts (waza_seq, be_seq, sub_seq) and move animations (we). Platinum and HGSS only.</summary>
-    public sealed class BattleScriptEditorViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges
+    public sealed class BattleScriptEditorViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
@@ -483,6 +483,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 if (cmds != null) foreach (WazaSeqCommand c in cmds.Where(c => !c.OnlyTail)) AddRow(c.OpId, c.Args, c.Raw);
             }
             _loadedBytes = _fileIndex >= 0 ? CurrentBytes() : null;
+            _history.Reset(_loadedBytes);
+            _shownBytes = _loadedBytes;
+            RaiseUndo();
             Dirty = false;
             TextErrors = Array.Empty<TextError>();
             SyncTextFromRows();   // seed the text view from the freshly-loaded cards
@@ -495,6 +498,48 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         // Bytes after the entry's last whole word, carried through a save.
         private byte[] _tail;
+
+        // Steps over the entry's bytes, so card and text edits undo alike. hg-engine source text keeps the text box's own undo.
+        private readonly UndoHistory<byte[]> _history = new UndoHistory<byte[]>();
+        private byte[] _shownBytes;
+        private DateTime _lastStep;
+
+        public bool CanUndo => !IsHgEngineSource && _history.CanUndo;
+        public bool CanRedo => !IsHgEngineSource && _history.CanRedo;
+        public void Undo() { if (CanUndo) ShowBytes(_history.Undo()); }
+        public void Redo() { if (CanRedo) ShowBytes(_history.Redo()); }
+
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private void Stepped()
+        {
+            if (IsHgEngineSource || _loadedBytes == null) return;
+            byte[] now = CurrentBytes();
+            if (_shownBytes != null && now.AsSpan().SequenceEqual(_shownBytes)) return;
+            // Typing a value or a line is many edits; those within half a second are one step.
+            DateTime at = DateTime.UtcNow;
+            _history.Capture(now, coalesce: (at - _lastStep).TotalMilliseconds < 500);
+            _lastStep = at;
+            _shownBytes = now;
+            RaiseUndo();
+        }
+
+        private void ShowBytes(byte[] bytes)
+        {
+            List<WazaSeqCommand> cmds = IsAnimation ? BattleAnimScript.Parse(bytes, _version) : WazaSeqScript.Parse(bytes, _version);
+            Rows.Clear();
+            foreach (WazaSeqCommand cmd in cmds.Where(cmd => !cmd.OnlyTail)) AddRow(cmd.OpId, cmd.Args, cmd.Raw);
+            _shownBytes = bytes;
+            _lastStep = default;
+            TextErrors = Array.Empty<TextError>();
+            SyncTextFromRows();
+            Dirty = DiffersFromLoaded();
+            RefreshViewLines();
+            RefreshStoryboard();
+            OnPropertyChanged(nameof(HasRows));
+            OnPropertyChanged(nameof(EntryHeader));
+            RaiseUndo();
+        }
 
         // What the entry held when loaded, so undoing an edit back to it leaves nothing to save.
         private byte[] _loadedBytes;
@@ -544,6 +589,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             Dirty = DiffersFromLoaded();
             RefreshStoryboard();
             SyncTextFromRows();
+            Stepped();
         }
 
         public void AddCommand()
@@ -554,6 +600,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             SyncTextFromRows();
             OnPropertyChanged(nameof(HasRows));
             OnPropertyChanged(nameof(EntryHeader));
+            Stepped();
         }
 
         public void RemoveCommand(ScriptCmdRow row)
@@ -565,6 +612,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             SyncTextFromRows();
             OnPropertyChanged(nameof(HasRows));
             OnPropertyChanged(nameof(EntryHeader));
+            Stepped();
         }
 
         public void MoveCommand(ScriptCmdRow row, int dir)
@@ -575,6 +623,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             Dirty = DiffersFromLoaded();
             RefreshStoryboard();
             SyncTextFromRows();
+            Stepped();
         }
 
         public void Save()
@@ -616,7 +665,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             if (!HgEngineOwnedFiles.TryWriteText(source, SourceText ?? "", out string error))
             {
-                await DSPRE.Avalonia.DialogHelper.ShowError(error, "Battle Scripts");
+                await DSPRE.Avalonia.DialogHelper.ShowError(error, "Battle scripts error");
                 return;
             }
             _loadedSourceText = SourceText ?? "";
@@ -922,6 +971,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             RefreshStoryboard();
             OnPropertyChanged(nameof(HasRows));
             OnPropertyChanged(nameof(EntryHeader));
+            Stepped();
         }
 
         private string _storyboard = "";
@@ -1294,9 +1344,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 // Games whose letters cannot be read fall back to the plain bar.
                 BattleGroundRenderer r = _groundRenderer ??= new DSPRE.Avalonia.Data.BattleGroundRenderer();
                 GaugePlayerImage = Data.GaugeTextImages.Bar(true, GaugeNameText, _gaugeLevel)
-                                ?? GaugeToBitmap(r.BuildGauge(true));
+                                ?? Gauge(r.BuildGauge(true));
                 GaugeEnemyImage = Data.GaugeTextImages.Bar(false, GaugeNameText, _gaugeLevel)
-                               ?? GaugeToBitmap(r.BuildGauge(false));
+                               ?? Gauge(r.BuildGauge(false));
                 OnPropertyChanged(nameof(HasRealGauges));
                 OnPropertyChanged(nameof(ShowPlaceholderGauges));
                 OnPropertyChanged(nameof(RealGaugesVisible));
@@ -1307,23 +1357,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             catch { }
         }
 
-        // GroundImage (256² straight RGBA) → an unpremultiplied BGRA Avalonia bitmap (the frame has transparency).
-        private static Bitmap GaugeToBitmap(DSPRE.Avalonia.Data.BattleGroundRenderer.GroundImage g)
-        {
-            if (g?.Rgba == null) return null;
-            int w = g.Width, h = g.Height;
-            WriteableBitmap wb = new WriteableBitmap(new global::Avalonia.PixelSize(w, h), new global::Avalonia.Vector(96, 96),
-                                         global::Avalonia.Platform.PixelFormat.Bgra8888, global::Avalonia.Platform.AlphaFormat.Unpremul);
-            byte[] bgra = new byte[w * h * 4];
-            for (int i = 0; i < w * h * 4; i += 4) { bgra[i] = g.Rgba[i + 2]; bgra[i + 1] = g.Rgba[i + 1]; bgra[i + 2] = g.Rgba[i]; bgra[i + 3] = g.Rgba[i + 3]; }
-            using (ILockedFramebuffer fb = wb.Lock())
-            {
-                int rb = fb.RowBytes;
-                if (rb == w * 4) System.Runtime.InteropServices.Marshal.Copy(bgra, 0, fb.Address, bgra.Length);
-                else for (int y = 0; y < h; y++) System.Runtime.InteropServices.Marshal.Copy(bgra, y * w * 4, fb.Address + y * rb, w * 4);
-            }
-            return wb;
-        }
+        private static Bitmap Gauge(DSPRE.Avalonia.Data.BattleGroundRenderer.GroundImage g) =>
+            g?.Rgba == null ? null : ImageConverter.FromRgba(g.Rgba, g.Width, g.Height);
 
         /// <summary>Loads the selected backdrop into the compositor: the bundled PNG for index 0, otherwise the
         /// real pl_batt_bg background (cropped to the 256×192 scene). Falls back to the PNG if the ROM/NARC is

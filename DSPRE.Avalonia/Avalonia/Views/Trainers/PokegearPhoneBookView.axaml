@@ -16,7 +16,7 @@
         <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
-        <TextBox Text="{Binding FilterText}" Width="220" PlaceholderText="Filter…" Margin="12,0,0,0"/>
+        <TextBox Text="{Binding FilterText}" Width="220" PlaceholderText="Search contacts" Margin="12,0,0,0"/>
     </controls:EditorToolbar>
 
     <Grid ColumnDefinitions="280,*,320">

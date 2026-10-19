@@ -98,7 +98,7 @@ namespace DSPRE.HgEngine
             {
                 DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.synthOverlay });
                 string dir = Filesystem.synthOverlay;
-                return Directory.Exists(dir) ? Directory.GetFiles(dir).Length : 0;
+                return NarcAPI.Narc.MemberCount(dir);
             }
             catch (Exception ex)
             {

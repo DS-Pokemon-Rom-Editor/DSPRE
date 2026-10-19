@@ -15,8 +15,8 @@ namespace DSPRE.Tests
         [Fact]
         public void AUseScriptToAMissingScriptIsRefusedRatherThanDropped()
         {
-            var end = new ScriptCommand("End", new List<byte[]>(), 0x0002);
-            var file = new ScriptFile(
+            ScriptCommand end = new ScriptCommand("End", new List<byte[]>(), 0x0002);
+            ScriptFile file = new ScriptFile(
                 new List<ScriptCommandContainer>
                 {
                     new ScriptCommandContainer(1, ScriptFile.ContainerTypes.Script, commandList: new List<ScriptCommand> { end }),
@@ -49,10 +49,10 @@ namespace DSPRE.Tests
                 File.SetLastWriteTimeUtc(txtPath, File.GetLastWriteTimeUtc(binPath).AddMinutes(1));
                 ScriptFile.ClearPlaintextCache();
 
-                var first = new ScriptFile(id);
+                ScriptFile first = new ScriptFile(id);
                 Assert.False(first.plaintextParseFailed);
                 int scripts = first.allScripts.Count;
-                var withCommands = first.allScripts.FindIndex(c => c.commands != null && c.commands.Count > 0);
+                int withCommands = first.allScripts.FindIndex(c => c.commands != null && c.commands.Count > 0);
                 Assert.True(withCommands >= 0, "no script with commands, so nothing was checked");
                 int commands = first.allScripts[withCommands].commands.Count;
 
@@ -60,7 +60,7 @@ namespace DSPRE.Tests
                 first.allScripts.Add(new ScriptCommandContainer(999, ScriptFile.ContainerTypes.Script, usedScriptID: 1));
                 first.allScripts[withCommands].commands.Clear();
 
-                var second = new ScriptFile(id);
+                ScriptFile second = new ScriptFile(id);
                 Assert.Equal(scripts, second.allScripts.Count);
                 Assert.Equal(commands, second.allScripts[withCommands].commands.Count);
             });
@@ -77,12 +77,12 @@ namespace DSPRE.Tests
 
                 File.SetLastWriteTimeUtc(txtPath, File.GetLastWriteTimeUtc(binPath).AddMinutes(-1));
                 ScriptFile.ClearPlaintextCache();
-                var unchanged = new ScriptFile(id);
+                ScriptFile unchanged = new ScriptFile(id);
                 Assert.False(unchanged.plaintextParseFailed);
                 Assert.True(unchanged.allScripts.Count > 0);
 
                 File.SetLastWriteTimeUtc(txtPath, File.GetLastWriteTimeUtc(binPath).AddMinutes(1));
-                var edited = new ScriptFile(id);
+                ScriptFile edited = new ScriptFile(id);
                 Assert.True(edited.plaintextParseFailed);
                 Assert.True(edited.SaveToFileDefaultDir(id, showSuccessMessage: false));
                 Assert.Equal(broken, File.ReadAllText(txtPath));
@@ -111,7 +111,7 @@ namespace DSPRE.Tests
             int id = Enumerable.Range(0, Math.Min(80, Filesystem.GetScriptCount())).FirstOrDefault(Usable, -1);
             Skip.If(id < 0, "no plain script file parsed in the first 80");
 
-            var (binPath, txtPath) = ScriptFile.GetFilePaths(id);
+            (string binPath, string txtPath) = ScriptFile.GetFilePaths(id);
             byte[] bin = File.ReadAllBytes(binPath);
             DateTime binTime = File.GetLastWriteTimeUtc(binPath);
             bool hadTxt = File.Exists(txtPath);
@@ -149,7 +149,7 @@ namespace DSPRE.Tests
                 string path = Filesystem.GetScriptPath(id);
                 if (!File.Exists(path)) return false;
                 ScriptFile file;
-                using (var fs = File.OpenRead(path)) file = new ScriptFile(fs, true, true, id);
+                using (FileStream fs = File.OpenRead(path)) file = new ScriptFile(fs, true, true, id);
                 return !file.isLevelScript && !file.parseFailedDueToInvalidCommand
                     && file.allScripts.Any(c => c.commands != null && c.commands.Count > 0)
                     && !string.IsNullOrEmpty(file.ToPlainText(includeActions: true));

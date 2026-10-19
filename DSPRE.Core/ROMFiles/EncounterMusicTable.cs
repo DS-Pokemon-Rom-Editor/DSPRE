@@ -24,11 +24,13 @@ namespace DSPRE.ROMFiles
             public bool Repointed;
         }
 
+        /// <summary>The RAM address the code's pointer holds: arm9, or the synthetic overlay once a patch moved the table.</summary>
+        public static uint Address() => BitConverter.ToUInt32(ARM9.ReadBytes(RomInfo.encounterMusicTableOffsetToRAMAddress, 4), 0);
+
         public static (Location Where, List<Row> Rows) Read()
         {
-            RomInfo.SetEncounterMusicTableOffsetToRAMAddress();
             bool hgss = RomInfo.gameFamily == RomInfo.GameFamilies.HGSS;
-            uint ram = BitConverter.ToUInt32(ARM9.ReadBytes(RomInfo.encounterMusicTableOffsetToRAMAddress, 4), 0);
+            uint ram = Address();
             Location where = new Location { Repointed = ram >= RomInfo.synthOverlayLoadAddress };
             where.Start = ram - (where.Repointed ? RomInfo.synthOverlayLoadAddress : ARM9.address);
             where.Path = where.Repointed ? Filesystem.expArmPath : RomInfo.arm9Path;

@@ -57,11 +57,11 @@ namespace DSPRE.Avalonia.Views.Text
                 VM.BorderIndex = picked;
                 VM.BorderChanged += (_, _) =>
                 {
-                    FieldMessageBoxView.Frame = FieldWindowFrame.Load(VM.BorderIndex);
+                    FieldMessageBoxView.Frame = DSPRE.Avalonia.Data.WindowFrames.Load(VM.BorderIndex);
                     PreviewBox.InvalidateVisual();
                 };
             }
-            FieldMessageBoxView.Frame = FieldWindowFrame.Load(VM.BorderIndex);
+            FieldMessageBoxView.Frame = DSPRE.Avalonia.Data.WindowFrames.Load(VM.BorderIndex);
             VM.MeasureText = FieldMessageBoxView.Measure;
             VM.PreviewFontNote = FieldMessageBoxView.Font == null
                 ? "Showing stand-in letters: the game's own font could not be read from this ROM."
@@ -154,6 +154,11 @@ namespace DSPRE.Avalonia.Views.Text
             Task task = action?.Invoke();
             if (task == null) return;
             try { await task; } catch { /* errors handled inside the VM */ }
+        }
+
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
         }
     }
 }

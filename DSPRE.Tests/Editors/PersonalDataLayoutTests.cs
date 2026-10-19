@@ -14,7 +14,7 @@ namespace DSPRE.Tests
 
         private static byte[] Record(bool hge)
         {
-            var data = new byte[44];
+            byte[] data = new byte[44];
             data[0x16] = 0x01; data[0x17] = 0x01;   // hg-engine: ability 1 is 257 (u16); vanilla: abilities 1 and 1
             data[0x18] = 30;                         // flee rate
             data[0x19] = 0x83;                       // colour 3, flipped
@@ -31,7 +31,7 @@ namespace DSPRE.Tests
             {
                 SetHge(true);
                 byte[] bytes = Record(hge: true);
-                var mon = new PokemonPersonalData(new MemoryStream(bytes));
+                PokemonPersonalData mon = new PokemonPersonalData(new MemoryStream(bytes));
 
                 Assert.Equal(257, mon.firstAbility);
                 Assert.Equal(47, mon.secondAbility);
@@ -50,7 +50,7 @@ namespace DSPRE.Tests
             {
                 SetHge(false);
                 byte[] bytes = Record(hge: false);
-                var mon = new PokemonPersonalData(new MemoryStream(bytes));
+                PokemonPersonalData mon = new PokemonPersonalData(new MemoryStream(bytes));
 
                 Assert.Equal(1, mon.firstAbility);
                 Assert.Equal(1, mon.secondAbility);

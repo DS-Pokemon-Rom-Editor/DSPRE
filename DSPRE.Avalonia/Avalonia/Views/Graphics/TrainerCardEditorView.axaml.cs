@@ -37,7 +37,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                Title = "Import Image",
+                Title = "Import image",
                 AllowMultiple = false,
                 FileTypeFilter = new List<FilePickerFileType> { DialogHelper.PngFilter }
             });
@@ -47,14 +47,15 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = import(path);
             if (error != null)
-                await DialogHelper.ShowError($"Import failed: {error}", "Import Error", this);
+                await DialogHelper.ShowError($"Import failed: {error}", "Trainer card editor error", this);
+            else SaveNotice.Imported(null, path);
         }
 
         private async System.Threading.Tasks.Task ExportPng(System.Func<string, string> export, string suggestedName)
         {
             IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = "Export Image",
+                Title = "Export image",
                 DefaultExtension = "png",
                 SuggestedFileName = suggestedName,
                 FileTypeChoices = new List<FilePickerFileType> { DialogHelper.PngFilter }
@@ -64,7 +65,8 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = export(path);
             if (error != null)
-                await DialogHelper.ShowError($"Export failed: {error}", "Export Error", this);
+                await DialogHelper.ShowError($"Export failed: {error}", "Trainer card editor error", this);
+            else SaveNotice.Exported(path);
         }
 
         private async void ImportRankPalette_Click(object sender, RoutedEventArgs e)
@@ -81,7 +83,8 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = _vm.ImportRankPalette(path);
             if (error != null)
-                await DialogHelper.ShowError($"Import failed: {error}", "Import Error", this);
+                await DialogHelper.ShowError($"Import failed: {error}", "Trainer card editor error", this);
+            else SaveNotice.Imported(null, path);
         }
 
         private async void ExportRankPalette_Click(object sender, RoutedEventArgs e)
@@ -98,7 +101,8 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = _vm.ExportRankPalette(path);
             if (error != null)
-                await DialogHelper.ShowError($"Export failed: {error}", "Export Error", this);
+                await DialogHelper.ShowError($"Export failed: {error}", "Trainer card editor error", this);
+            else SaveNotice.Exported(path);
         }
         /// <summary>Hands the card to the Graphics window, where its drawing, its two arrangements and
         /// every rank's colours are one row.</summary>
@@ -119,10 +123,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void RevertChanges_Click(object sender, RoutedEventArgs e)
         {
-            bool ok = await DialogHelper.AskYesNo(
-                "Discard the unsaved trainer card changes?",
-                "Discard", this);
-            if (!ok) return;
+            if (!await DialogHelper.ConfirmDiscard(this)) return;
             _vm.RevertChanges();
         }
     }

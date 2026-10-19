@@ -145,7 +145,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         /// <summary>Where the item is placed, filled in by the editor from the event files.</summary>
         public string Where { get; set; } = "";
         public bool Daily { get; set; }
-        public string Detail => Daily ? $"{Where}, resets daily" : Where;
+        public string Detail => Daily ? $"{Where} (resets daily)" : Where;
 
         public void Refresh() { OnPC(nameof(ItemID)); OnPC(nameof(Display)); OnPC(nameof(Detail)); }
     }
@@ -620,10 +620,10 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public string UnsavedChangesDescription =>
             string.Join(", ", new[]
             {
-                _pickupDirty ? "Pickup Table" : null,
-                _hiddenDirty ? "Hidden Items" : null,
-                _rockSmashDirty ? "Rock Smash" : null
-            }.Where(s => s != null).DefaultIfEmpty("Item Table Editor"));
+                _pickupDirty ? "Pickup table" : null,
+                _hiddenDirty ? "Hidden items" : null,
+                _rockSmashDirty ? "Rock Smash items" : null
+            }.Where(s => s != null).DefaultIfEmpty("Item tables"));
 
         private void SetPickupDirty() { _pickupDirty = true; Edited(); }
         private void SetHiddenDirty() { _hiddenDirty = true; Edited(); }
@@ -883,7 +883,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             {
                 await DialogHelper.ShowError(
                     $"Event file {string.Join(", ", users.Take(5))}{(users.Count > 5 ? " and more" : "")} still uses this entry. Change or delete those events first.",
-                    "Hidden Items");
+                    "Hidden items");
                 return;
             }
             int idx = HiddenItems.IndexOf(_selectedHiddenItem);
@@ -974,7 +974,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             (bool saved, string error) = await DSPRE.Avalonia.HgEngineSave.RunAsync(() => HgEngineHiddenItems.TrySave(entries, out string err) ? null : err);
             if (!saved)
             {
-                if (error != null) await DialogHelper.ShowError($"Hidden items were not saved.\n{error}", "Item Tables");
+                if (error != null) await DialogHelper.ShowError($"Hidden items were not saved.\n{error}", "Item tables error");
                 return;
             }
 
@@ -1022,7 +1022,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 : null;
             if (refusal != null)
             {
-                _ = DialogHelper.ShowError($"Hidden items were not saved.\n{refusal}", "Item Tables");
+                _ = DialogHelper.ShowError($"Hidden items were not saved.\n{refusal}", "Item tables error");
                 return;
             }
 
@@ -1059,7 +1059,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 catch (Exception e) when (e is InvalidOperationException || e is System.IO.IOException || e is UnauthorizedAccessException)
                 {
                     AppLogger.Error("Item Tables, Rock Smash items: " + e.Message);
-                    _ = DialogHelper.ShowError("The Rock Smash items were not saved:\n" + e.Message, "Item Tables");
+                    _ = DialogHelper.ShowError("The Rock Smash items were not saved:\n" + e.Message, "Item tables error");
                     return;
                 }
             }

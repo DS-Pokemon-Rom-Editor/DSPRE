@@ -29,8 +29,8 @@ namespace DSPRE.Avalonia.Data
                 int t = (file - 5) / 2;
                 string part = (file - 5) % 2 == 0 ? "part 1" : "part 2";
                 // HGSS has no Great Marsh terrain, so its pair is never loaded there.
-                if (hgss && t == 10) return (Unused, $"Battle start: Great Marsh, {part} (not used in this game)");
-                return (BattleEffects, $"Battle start: {terrain[t]}, {part}");
+                if (hgss && t == 10) return (Unused, $"Great Marsh battle start: {part} (not used in this game)");
+                return (BattleEffects, $"{terrain[t]} battle start: {part}");
             }
             switch (file)
             {
@@ -72,7 +72,7 @@ namespace DSPRE.Avalonia.Data
                 case "particledata":
                     switch (member)
                     {
-                        case 2: return (Intros, "VS intro, link battle: sparks");
+                        case 2: return (Intros, "Link battle VS intro: sparks");
                         case 3: return family == GameFamilies.HGSS ? (Unused, "Contest Dance leftover (never loaded)") : (Menus, "Contest Dance: flashes and hits");
                         case 4: return (Story, "Opening: starter cut-ins");
                         case 0: return (Unused, "Field test sparks (never loaded)");
@@ -89,8 +89,8 @@ namespace DSPRE.Avalonia.Data
                     if (member == 1) return (Unused, "Evolution placeholder (never loaded)");
                     break;
                 case "encounter":
-                    if (member == (family == GameFamilies.HGSS ? 151 : 107)) return (Intros, "VS intro, Elite Four and Champion: first burst");
-                    if (member == (family == GameFamilies.HGSS ? 152 : 108)) return (Intros, "VS intro, Elite Four and Champion: second burst");
+                    if (member == (family == GameFamilies.HGSS ? 151 : 107)) return (Intros, "Elite Four and Champion VS intro: first burst");
+                    if (member == (family == GameFamilies.HGSS ? 152 : 108)) return (Intros, "Elite Four and Champion VS intro: second burst");
                     break;
                 case "frontier":
                     switch (member)
@@ -121,7 +121,7 @@ namespace DSPRE.Avalonia.Data
                     if (member == 10) return (Menus, "Aprijuice: giving juice to a Pokémon");
                     break;
             }
-            return (Other, $"{relative}, file {member}");
+            return (Other, $"{relative} file {member}");
         }
 
         // HeartGold and SoulSilver name their archives by number, so the path says nothing about the contents.

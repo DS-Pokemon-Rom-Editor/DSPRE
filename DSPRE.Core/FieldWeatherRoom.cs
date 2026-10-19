@@ -71,7 +71,7 @@ namespace DSPRE
 
             byte[] list = File.ReadAllBytes(Member(DirNames.buildingConfigFiles, area.buildingsTileset));
             int count = BitConverter.ToUInt16(list, 0);
-            int animLists = Directory.GetFiles(gameDirs[DirNames.buildingAnimListOut].unpackedDir).Length;
+            int animLists = NarcAPI.Narc.MemberCount(gameDirs[DirNames.buildingAnimListOut].unpackedDir);
             long cost = Block(list.Length);
             bool dummyListed = false;
             for (int i = 0; i < count; i++)

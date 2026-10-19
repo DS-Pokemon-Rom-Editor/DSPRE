@@ -85,7 +85,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
     }
 
-    public sealed class MartEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
+    public sealed class MartEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         private MartData _data;
         private readonly ObservableCollection<string> _itemNames = new ObservableCollection<string>();
@@ -116,7 +116,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         public bool HasUnsavedChanges => _data != null && _saved != null && !TakeState().AsSpan().SequenceEqual(_saved);
         public string UnsavedChangesDescription => "Mart inventories";
-        public bool CanResize => _data != null && (_data.HasRoom || _data.FromSource);
+        public bool CanResize => _data != null && (_data.Expanded || _data.FromSource);
         public bool CanAddItem => CanResize && SelectedShop != null
             && (!SelectedShop.IsCommon || SelectedShop.Items.Count < _data.CommonItemLimit);
         public bool CanAddShop => _data?.CanAddShops == true;
@@ -145,6 +145,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         public MartEditorViewModel(MartData data, string[] itemNames)
         {
+            AppEvents.RomPatchStateChanged += OnRomPatchStateChanged;
             _data = data ?? throw new ArgumentNullException(nameof(data));
             DSPRE.Avalonia.Data.ListSync.Apply(_itemNames, itemNames ?? Array.Empty<string>());
             PopulateShops();
@@ -296,6 +297,9 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         /// <summary>Making room changes the game's code, so the toolbox does it.</summary>
         public void OfferExpansion() => AvaloniaEditorLauncher.OpenPatchToolboxAt("martsExpanded");
+
+        private void OnRomPatchStateChanged(object sender, System.EventArgs e) => OnPatchStateChanged();
+        public void Detach() => AppEvents.RomPatchStateChanged -= OnRomPatchStateChanged;
 
         /// <summary>Rereads the marts after the toolbox gave them room, unless edits here are still unsaved.</summary>
         public void OnPatchStateChanged()

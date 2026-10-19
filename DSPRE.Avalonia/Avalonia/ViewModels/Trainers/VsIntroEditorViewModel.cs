@@ -50,7 +50,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
     /// The intros special trainer battles open with: the mugshot records and their art, and which trainer
     /// classes get which intro and music.
     /// </summary>
-    public partial class VsIntroEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
+    public partial class VsIntroEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
@@ -186,8 +186,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (_newArt.ContainsKey(member)) return $"New copy ({member})";
             List<string> who = _t.Records.Where(r => uses(r) == member).Select(r => _names.Record(_t, r)).Distinct().ToList();
             VsIntroSites s = _t.Sites;
-            if (who.Count == 0 && member == s.PlayerFaceBoy) who.Add("Player, boy");
-            if (who.Count == 0 && member == s.PlayerFaceGirl) who.Add("Player, girl");
+            if (who.Count == 0 && member == s.PlayerFaceBoy) who.Add("Boy player");
+            if (who.Count == 0 && member == s.PlayerFaceGirl) who.Add("Girl player");
             // Art no retail record uses is named after the classes whose patch rows show it.
             if (who.Count == 0 && IsClassIntroPatch)
                 who.AddRange(Enumerable.Range(0, Math.Min(_ciRows.Count, CiClassCount))
@@ -421,8 +421,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (Rec.Kind == RecordKind.League)
             {
                 Add("Frame", Files(s.LeagueFrame, 3), () => OpenCells(Order(s.LeagueFrame, 3), Rec.Get(RecordField.FramePalette), "League frame"));
-                Add("Player, boy", Files(s.PlayerFaceBoy, 4), () => OpenCells(Order(s.PlayerFaceBoy, 4), -1, "Player face"));
-                Add("Player, girl", Files(s.PlayerFaceGirl, 4), () => OpenCells(Order(s.PlayerFaceGirl, 4), -1, "Player face"));
+                Add("Boy player", Files(s.PlayerFaceBoy, 4), () => OpenCells(Order(s.PlayerFaceBoy, 4), -1, "Player face"));
+                Add("Girl player", Files(s.PlayerFaceGirl, 4), () => OpenCells(Order(s.PlayerFaceGirl, 4), -1, "Player face"));
             }
             if (Rec.Kind == RecordKind.Executive && s.ExecutiveBackdrop >= 0)
                 Add("Backdrop", Files(s.ExecutiveBackdrop, 4), () => AvaloniaEditorLauncher.OpenGraphicAt(Archive, s.ExecutiveBackdrop + 3, true));
@@ -490,7 +490,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (!IsPlatinum || trainerClass < 0) return null;
             if (_classColours.TryGetValue(trainerClass, out ushort[] c)) return c;
-            try { c = DsBgScreen.ReadColours(new ScriptNarc(DirNames.trainerGraphics).Get(trainerClass * 5 + 1)); }
+            try { c = NitroBgCodec.ReadColours(new ScriptNarc(DirNames.trainerGraphics).Get(trainerClass * 5 + 1)); }
             catch { c = null; }
             if (c != null && c.Length == 0) c = null;
             return _classColours[trainerClass] = c;
@@ -528,7 +528,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                         PlayerFace = Four(_girl ? s.PlayerFaceGirl : s.PlayerFaceBoy), PlayerColours = ClassColours(IsPlatinum ? (_girl ? 1 : 0) : -1),
                         Frame = new[] { frame[1], frame[2] }, FrameAnim = frame[3], FramePalette = rec.Get(RecordField.FramePalette),
                         ClashFrames = rec.Get(RecordField.ClashFrames), NamePalette = s.NamePalette, Name = name,
-                        Particles = VsIntroMotionCodeSites?.LeagueParticles,
+                        Particles = RomLocator.VsIntroMotionSites?.LeagueParticles,
                     };
                 default:
                     return new VsIntroPreview.Scene
@@ -585,7 +585,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             RefreshAll();
         });
 
-        private void OnRomPatchStateChanged(object sender, EventArgs e) => OnPatchStateChanged();
+        private void OnRomPatchStateChanged(object sender, EventArgs e)
+        {
+            OnPatchStateChanged();
+            // The class table may have moved; with nothing unsaved, reading it again is the same as discarding.
+            if (_t != null && !IsClassRecords && !IsClassIntroPatch && !HasUnsavedChanges) DiscardChanges();
+        }
 
         private void OnArchiveMemberSaved(object sender, DirNames dir)
         {

@@ -22,7 +22,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
     /// spots the player), a small ARM9-backed table, separate from any single trainer's own data, so it
     /// gets its own tab rather than crowding the main Trainer Editor window.
     /// </summary>
-    public class TrainerClassesViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
+    public class TrainerClassesViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -251,7 +251,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     string[] names = GetSimpleTrainerNames();
                     name = record.TrainerNameId < names.Length ? names[record.TrainerNameId] : record.TrainerNameId.ToString();
                 }
-                IntroSummary = name == null ? style : $"{style}, showing {name}";
+                IntroSummary = name == null ? style : $"{style} showing {name}";
             }
             OnPropertyChanged(nameof(ShowMetadata));
             OnPropertyChanged(nameof(ShowGender));
@@ -428,7 +428,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     try
                     {
                         string dir = gameDirs[DirNames.trainerProperties].unpackedDir;
-                        int count = Directory.GetFiles(dir).Length;
+                        int count = NarcAPI.Narc.MemberCount(dir);
                         for (int i = 0; i < count; i++)
                         {
                             using FileStream fs = File.OpenRead(Path.Combine(dir, i.ToString("D4")));
@@ -542,7 +542,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                _ = DialogHelper.ShowError($"Failed to load trainer classes:\n{ex.Message}", "Trainer Classes");
+                _ = DialogHelper.ShowError($"Failed to load trainer classes:\n{ex.Message}", "Trainer classes error");
             }
         }
 
@@ -590,7 +590,6 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             (EncounterMusicTable.Location where, List<EncounterMusicTable.Row> rows) = EncounterMusicTable.Read();
             _musicWhere = where;
             _musicTableRepointed = where.Repointed;
-            RomPatchState.flag_TrainerEncounterBGMTableRepointed = where.Repointed;
             foreach (EncounterMusicTable.Row row in rows) _musicDict[(byte)row.Class] = (row.Offset, row.Music, row.NightMusic);
         }
 
@@ -742,7 +741,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (!added)
             {
                 StatusText = "The new trainer class was not added.";
-                _ = DialogHelper.ShowError(error, "Add Trainer Class");
+                _ = DialogHelper.ShowError(error, "Add trainer class");
                 return false;
             }
 
@@ -857,7 +856,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 failures.Add(nameError);
                 StatusText = $"Trainer class {savedIndex} was not fully saved.";
-                _ = DialogHelper.ShowError(string.Join("\n", failures), "Trainer Classes");
+                _ = DialogHelper.ShowError(string.Join("\n", failures), "Trainer classes error");
                 return false;
             }
 
@@ -875,7 +874,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (failures.Count > 0)
             {
                 StatusText = $"Trainer class {savedIndex} was not fully saved.";
-                _ = DialogHelper.ShowError(string.Join("\n", failures), "Trainer Classes");
+                _ = DialogHelper.ShowError(string.Join("\n", failures), "Trainer classes error");
                 return false;
             }
             _undo?.MarkSaved();
@@ -931,7 +930,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             MusicAlt = musicNight;
             MarkDirty();
             OnPropertyChanged(nameof(CanEnableMusic));
-            StatusText = "Eye-contact music added. Save to keep it.";
+            StatusText = "Eye-contact music added.";
         }
 
         /// <summary>Holds a new trainer class (name, name with article, gender, prize multiplier, an optional
@@ -956,7 +955,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             OnPropertyChanged(nameof(HasUnsavedChanges));
             OnPropertyChanged(nameof(CanAddClass));
             SelectedClassIndex = PendingIndex;
-            StatusText = "New trainer class added. Save to keep it.";
+            StatusText = "New trainer class added.";
             return null;
         }
     }

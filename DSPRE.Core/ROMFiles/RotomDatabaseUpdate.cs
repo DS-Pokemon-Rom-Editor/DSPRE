@@ -20,7 +20,7 @@ namespace DSPRE.ROMFiles
                 string project = RotomTool.ProjectDatabaseFile();
                 if (project == null || !File.Exists(project)) return;
                 byte[] before = File.ReadAllBytes(project), after = HgEngine.HgEngineScriptDatabase.Overlay(before);
-                if (!after.AsSpan().SequenceEqual(before)) File.WriteAllBytes(project, after);
+                if (!after.AsSpan().SequenceEqual(before)) PlainFiles.WriteBytes(project, after);
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {

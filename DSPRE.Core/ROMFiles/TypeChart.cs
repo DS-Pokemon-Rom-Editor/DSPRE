@@ -54,14 +54,26 @@ namespace DSPRE.ROMFiles
         /// <summary>The size of the block the toolbox patch places.</summary>
         public static int ExpansionBlockLength => (SyntheticOverlaySpace.HeaderSize + ExpandedCapacity * RecordSize + 3) & ~3;
 
+        /// <summary>The battle code's pointers to the chart and its two count sites, or null where they aren't known.</summary>
+        private static (int[] col0, int[] col1, int[] col2, int countCompare, int countModulus)? Sites
+        {
+            get
+            {
+                RomLocator.Spot a = RomLocator.Where(RomLocator.Thing.TypeChartPointers), b = RomLocator.Where(RomLocator.Thing.TypeChartPointersPlus1),
+                    c = RomLocator.Where(RomLocator.Thing.TypeChartPointersPlus2), n = RomLocator.Where(RomLocator.Thing.TypeChartCount),
+                    m = RomLocator.Where(RomLocator.Thing.TypeChartModulus);
+                return a == null || b == null || c == null || n == null || m == null ? null : (a.Offsets, b.Offsets, c.Offsets, n.Offset, m.Offset);
+            }
+        }
+
         /// <summary>Whether the chart already lives in a block DSPRE placed in the expanded ARM9 area.</summary>
         public bool InExpansion { get; private set; }
 
         public static string WhyNot()
         {
             if (UsesSource) return null;
-            if (GameTableFile.WhyNot(GameTable.TypeChart, 112 * RecordSize) is string why) return why;
-            return TypeChartPointerSites == null ? "This game version isn't supported yet." : null;
+            if (RomLocator.WhyNot(RomLocator.Thing.TypeChart, 112 * RecordSize) is string why) return why;
+            return Sites == null ? "Works on " + DescribeDumps(RomLocator.WorksOn(RomLocator.Thing.TypeChartPointers)) + "." : null;
         }
 
         public static TypeChart Load()
@@ -109,13 +121,12 @@ namespace DSPRE.ROMFiles
         private void Locate()
         {
             if (WhyNot() is string why) throw new InvalidOperationException(why);
-            TableSpot spot = SpotOf(GameTable.TypeChart).Value;
-            (int[] col0, int[] col1, int[] col2, int countCompare, int countModulus) sites = TypeChartPointerSites.Value;
-            string ovPath = GameTableFile.PathOf(spot);
+            RomLocator.Spot spot = RomLocator.Where(RomLocator.Thing.TypeChart);
+            (int[] col0, int[] col1, int[] col2, int countCompare, int countModulus) sites = Sites.Value;
+            string ovPath = RomLocator.PathOf(spot);
             _ovPath = ovPath;
             if (OverlayUtils.IsCompressed(spot.Overlay)) OverlayUtils.Decompress(spot.Overlay);
             byte[] ov = File.ReadAllBytes(ovPath);
-            uint ovBase = OverlayUtils.OverlayTable.GetRAMAddress(spot.Overlay);
 
             List<uint> targets = sites.col0.Select(o => BitConverter.ToUInt32(ov, o)).Distinct().ToList();
             if (targets.Count != 1) throw new InvalidDataException("The battle code points at more than one type chart; DSPRE can't tell which is used.");
@@ -123,25 +134,29 @@ namespace DSPRE.ROMFiles
             if (sites.col1.Any(o => BitConverter.ToUInt32(ov, o) != ram + 1) || sites.col2.Any(o => BitConverter.ToUInt32(ov, o) != ram + 2))
                 throw new InvalidDataException("The battle code's type chart pointers don't agree with each other.");
 
-            if (ram >= ovBase && ram < ovBase + ov.Length)
+            (int region, int offset) = RamAddress.Find(ram, RecordSize,
+                RamAddress.Overlay(spot.Overlay, ov.Length),
+                RamAddress.Synthetic(File.Exists(Filesystem.expArmPath) ? new FileInfo(Filesystem.expArmPath).Length : 0),
+                RamAddress.Arm9(new FileInfo(arm9Path).Length));
+            _offset = offset;
+            switch (region)
             {
-                _path = ovPath; _offset = (int)(ram - ovBase);
-                Where = ram - ovBase == spot.Offset ? $"in overlay {spot.Overlay}" : $"moved within overlay {spot.Overlay}";
+                case 0:
+                    _path = ovPath;
+                    Where = offset == spot.Offset ? $"in overlay {spot.Overlay}" : $"moved within overlay {spot.Overlay}";
+                    break;
+                case 1:
+                    _path = Filesystem.expArmPath;
+                    Where = "in the expanded ARM9 area";
+                    InExpansion = SyntheticOverlaySpace.Blocks(File.ReadAllBytes(_path), Marker).Any(b => _offset == b.Start + SyntheticOverlaySpace.HeaderSize);
+                    break;
+                case 2:
+                    _path = arm9Path;
+                    Where = "moved into arm9";
+                    break;
+                default:
+                    throw new InvalidDataException($"The type chart was moved to 0x{ram:X8}, which DSPRE can't follow.");
             }
-            else if (ram >= synthOverlayLoadAddress && File.Exists(Filesystem.expArmPath)
-                     && ram - synthOverlayLoadAddress + (ulong)RecordSize < (ulong)new FileInfo(Filesystem.expArmPath).Length)
-            {
-                _path = Filesystem.expArmPath; _offset = (int)(ram - synthOverlayLoadAddress);
-                Where = "in the expanded ARM9 area";
-                byte[] synth = File.ReadAllBytes(_path);
-                InExpansion = SyntheticOverlaySpace.Blocks(synth, Marker).Any(b => _offset == b.Start + SyntheticOverlaySpace.HeaderSize);
-            }
-            else if (ram >= ARM9.address && ram < ARM9.address + new FileInfo(arm9Path).Length)
-            {
-                _path = arm9Path; _offset = (int)(ram - ARM9.address);
-                Where = "moved into arm9";
-            }
-            else throw new InvalidDataException($"The type chart was moved to 0x{ram:X8}, which DSPRE can't follow.");
 
             // Conversion 2 walks the chart by count, so its `cmp rN, #count` is the capacity.
             byte imm = ov[sites.countCompare], op = ov[sites.countCompare + 1];
@@ -157,7 +172,7 @@ namespace DSPRE.ROMFiles
         private void RepairModulus()
         {
             if (!InExpansion || !_countIsCompare || !_modulusIsMovs) return;
-            (int[] col0, int[] col1, int[] col2, int countCompare, int countModulus) sites = TypeChartPointerSites.Value;
+            (int[] col0, int[] col1, int[] col2, int countCompare, int countModulus) sites = Sites.Value;
             byte[] ov = File.ReadAllBytes(_ovPath);
             if (ov[sites.countModulus] == ov[sites.countCompare]) return;
             DSUtils.WriteToFile(_ovPath, new[] { ov[sites.countCompare] }, (uint)sites.countModulus);
@@ -213,14 +228,14 @@ namespace DSPRE.ROMFiles
             byte[] chart = ToBytes();
             // A failed Pokétch write puts the chart and modulus back, so neither overlay changes.
             byte[] chartBefore = DSUtils.ReadFromFile(_path, _offset, chart.Length);
-            int modulusSite = TypeChartPointerSites.Value.countModulus;
+            int modulusSite = Sites.Value.countModulus;
             byte[] modulusBefore = DSUtils.ReadFromFile(_ovPath, modulusSite, 1);
             DSUtils.WriteToFile(_path, chart, (uint)_offset);
             RepairModulus();
             try
             {
-                if (SpotOf(GameTable.PoketchTypeChart) != null && GameTableFile.WhyNot(GameTable.PoketchTypeChart, VanillaTypes * VanillaTypes) == null)
-                    GameTableFile.Write(GameTable.PoketchTypeChart, PoketchGrid(Matchups));
+                if (RomLocator.Where(RomLocator.Thing.PoketchTypeChart) != null && RomLocator.WhyNot(RomLocator.Thing.PoketchTypeChart, VanillaTypes * VanillaTypes) == null)
+                    RomLocator.Write(RomLocator.Thing.PoketchTypeChart, PoketchGrid(Matchups));
             }
             catch
             {
@@ -236,7 +251,7 @@ namespace DSPRE.ROMFiles
             if (InExpansion) return;
             if (!SyntheticOverlaySpace.Available())
                 throw new InvalidOperationException("Apply the ARM9 expansion in the ROM Patch Toolbox first.");
-            (int[] col0, int[] col1, int[] col2, int countCompare, int countModulus) sites = TypeChartPointerSites ?? throw new InvalidOperationException("This game version isn't supported yet.");
+            (int[] col0, int[] col1, int[] col2, int countCompare, int countModulus) sites = Sites ?? throw new InvalidOperationException("This game version isn't supported yet.");
             if (!_countIsCompare || !_modulusIsMovs) throw new InvalidOperationException("Conversion 2's count check doesn't look like the game's, so DSPRE won't move the chart.");
             int oldCapacity = Capacity;
             Capacity = ExpandedCapacity;
@@ -264,13 +279,13 @@ namespace DSPRE.ROMFiles
             ov[sites.countModulus] = ExpandedCapacity;
             try
             {
-                File.WriteAllBytes(Filesystem.expArmPath, synth);
-                File.WriteAllBytes(_ovPath, ov);
+                DSUtils.WriteWholeFile(Filesystem.expArmPath, synth);
+                DSUtils.WriteWholeFile(_ovPath, ov);
             }
             catch
             {
-                File.WriteAllBytes(Filesystem.expArmPath, synthBefore);
-                File.WriteAllBytes(_ovPath, ovBefore);
+                DSUtils.WriteWholeFile(Filesystem.expArmPath, synthBefore);
+                DSUtils.WriteWholeFile(_ovPath, ovBefore);
                 Capacity = oldCapacity;
                 throw;
             }
@@ -278,8 +293,8 @@ namespace DSPRE.ROMFiles
             _offset = at + SyntheticOverlaySpace.HeaderSize;
             InExpansion = true;
             Where = "in the expanded ARM9 area";
-            if (SpotOf(GameTable.PoketchTypeChart) != null && GameTableFile.WhyNot(GameTable.PoketchTypeChart, VanillaTypes * VanillaTypes) == null)
-                GameTableFile.Write(GameTable.PoketchTypeChart, PoketchGrid(Matchups));
+            if (RomLocator.Where(RomLocator.Thing.PoketchTypeChart) != null && RomLocator.WhyNot(RomLocator.Thing.PoketchTypeChart, VanillaTypes * VanillaTypes) == null)
+                RomLocator.Write(RomLocator.Thing.PoketchTypeChart, PoketchGrid(Matchups));
         }
 
         /// <summary>A chart in the expanded ARM9 area without a DSPRE block, so allocators skip it.</summary>

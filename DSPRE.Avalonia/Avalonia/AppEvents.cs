@@ -32,13 +32,40 @@ namespace DSPRE.Avalonia
         public static event EventHandler<RomInfo.DirNames> ArchiveMemberSaved;
         public static void RaiseArchiveMemberSaved(RomInfo.DirNames dir) => ArchiveMemberSaved?.Invoke(null, dir);
 
+        /// <summary>Runs <paramref name="redraw"/> on the UI thread after members of <paramref name="dirs"/> are saved
+        /// elsewhere, until disposed. A save that writes many members redraws once.</summary>
+        public static IDisposable WhenSaved(Action redraw, params RomInfo.DirNames[] dirs) => new SavedWatch(redraw, dirs);
+
+        private sealed class SavedWatch : IDisposable
+        {
+            private readonly Action _redraw;
+            private readonly RomInfo.DirNames[] _dirs;
+            private int _queued;
+
+            public SavedWatch(Action redraw, RomInfo.DirNames[] dirs) { _redraw = redraw; _dirs = dirs; ArchiveMemberSaved += OnSaved; }
+
+            private void OnSaved(object sender, RomInfo.DirNames dir)
+            {
+                if (Array.IndexOf(_dirs, dir) < 0 || System.Threading.Interlocked.Exchange(ref _queued, 1) == 1) return;
+                global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    System.Threading.Interlocked.Exchange(ref _queued, 0);
+                    if (!_disposed) _redraw();
+                }, global::Avalonia.Threading.DispatcherPriority.Background);
+            }
+
+            private bool _disposed;
+            public void Dispose() { _disposed = true; ArchiveMemberSaved -= OnSaved; }
+        }
+
         /// <summary>Class intros (trainer class metadata patch) were saved in the VS intro editor.</summary>
         public static event EventHandler ClassIntrosSaved;
         public static void RaiseClassIntrosSaved() => ClassIntrosSaved?.Invoke(null, EventArgs.Empty);
 
         /// <summary>Counts <see cref="NamesChanged"/> raises, so a view that was hidden can tell it missed one.</summary>
         public static int NamesVersion { get; private set; }
-        public static void RaiseNamesChanged() { NamesVersion++; NamesChanged?.Invoke(null, EventArgs.Empty); }
+        // Header labels name places, so they are rebuilt whenever names or a header change.
+        public static void RaiseNamesChanged() { NamesVersion++; HeaderLabels.Forget(); NamesChanged?.Invoke(null, EventArgs.Empty); }
         public static void RaiseLabelsChanged() => LabelsChanged?.Invoke(null, EventArgs.Empty);
         public static void RaiseRomPatchStateChanged() => RomPatchStateChanged?.Invoke(null, EventArgs.Empty);
         public static void RaiseBannerChanged() => BannerChanged?.Invoke(null, EventArgs.Empty);
@@ -50,7 +77,7 @@ namespace DSPRE.Avalonia
 
         /// <summary>A header, event file or matrix was written; the sender is the editor that wrote it.</summary>
         public static event EventHandler<int> HeaderSaved, EventFileSaved, MatrixSaved;
-        public static void RaiseHeaderSaved(object sender, int id) => HeaderSaved?.Invoke(sender, id);
+        public static void RaiseHeaderSaved(object sender, int id) { HeaderLabels.Forget(); HeaderSaved?.Invoke(sender, id); }
         public static void RaiseEventFileSaved(object sender, int id) => EventFileSaved?.Invoke(sender, id);
         public static void RaiseMatrixSaved(object sender, int id) => MatrixSaved?.Invoke(sender, id);
         public static event EventHandler<int> AreaDataSaved;

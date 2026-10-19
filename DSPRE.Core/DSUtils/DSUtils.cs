@@ -2,8 +2,6 @@ using DSPRE.Editors;
 using DSPRE.HgEngine;
 using DSPRE.Resources;
 using DSPRE.ROMFiles;
-using Ekona.Images;
-using Images;
 using LibNDSFormats.NSBMD;
 using NarcAPI;
 using System;
@@ -144,17 +142,43 @@ namespace DSPRE {
             }
         }
 
-        public static void WriteToFile(string filepath, byte[] toOutput, uint writeAt = 0, int indexFirstByteToWrite = 0, int? indexLastByteToWrite = null, FileMode fmode = FileMode.OpenOrCreate) {
-            int length = indexLastByteToWrite is null ? toOutput.Length - indexFirstByteToWrite : (int)indexLastByteToWrite;
+        /// <summary>Writes <paramref name="byteCount"/> bytes of <paramref name="toOutput"/> from <paramref name="firstByte"/> (the rest when null) at <paramref name="writeAt"/>.</summary>
+        public static void WriteToFile(string filepath, byte[] toOutput, uint writeAt = 0, int firstByte = 0, int? byteCount = null, FileMode fmode = FileMode.OpenOrCreate) {
+            int length = byteCount ?? toOutput.Length - firstByte;
             if (HgEngineWriteGuard.Refuses(filepath, writeAt, length)) return;
 
             using (EasyWriter writer = new EasyWriter(filepath, writeAt, fmode)) {
-                writer.Write(toOutput, indexFirstByteToWrite, indexLastByteToWrite is null ? toOutput.Length - indexFirstByteToWrite : (int)indexLastByteToWrite);
+                writer.Write(toOutput, firstByte, length);
             }
         }
+        /// <summary>
+        /// Replaces a whole arm9, overlay or synthetic overlay file. The hg-engine write guard is asked about the span
+        /// that changes, and a refusal throws so a caller writing several files can put the others back. Writing goes
+        /// through a temporary file, so a failed write never leaves half a file.
+        /// </summary>
+        public static void WriteWholeFile(string filepath, byte[] bytes) {
+            byte[] now = File.Exists(filepath) ? File.ReadAllBytes(filepath) : Array.Empty<byte>();
+            int first = 0;
+            while (first < bytes.Length && first < now.Length && bytes[first] == now[first]) first++;
+            if (first == bytes.Length && now.Length == bytes.Length) return;
+            int last = bytes.Length - 1;
+            if (now.Length == bytes.Length) while (last > first && bytes[last] == now[last]) last--;
+            if (HgEngineWriteGuard.Refuses(filepath, first, Math.Max(1, last - first + 1)))
+                throw new InvalidOperationException($"hg-engine owns part of {Path.GetFileName(filepath)}, so nothing was written.");
+
+            string temp = filepath + ".dspre.tmp";
+            try {
+                File.WriteAllBytes(temp, bytes);
+                File.Move(temp, filepath, true);
+            }
+            finally {
+                if (File.Exists(temp)) File.Delete(temp);
+            }
+        }
+
         // ── Mon party-icon palette table (1 byte per species: 0/1/2) ──────────────────────────────
         // The table lives at RomInfo.monIconPalTableAddress; which file + offset depends on the overlay
-        // setup, exactly as GetPokePic resolves it when rendering icons. Reused here for the editor.
+        // setup, exactly as GetPokePicRaw resolves it when rendering icons. Reused here for the editor.
         // Requires RomInfo.SetMonIconsPalTableAddress() to have been called first.
         public static bool TryResolveMonIconPalTable(out string path, out int baseOffset) {
             path = null; baseOffset = 0;
@@ -187,7 +211,7 @@ namespace DSPRE {
             // hg-engine owns its copy of this table, so the vanilla one is not the place to write it.
             if (RomInfo.isHGE) return;
             if (!TryResolveMonIconPalTable(out string path, out int baseOff)) return;
-            using (EasyWriter w = new EasyWriter(path, baseOff + species)) w.Write(palId);
+            WriteToFile(path, new[] { palId }, (uint)(baseOff + species));
         }
 
         public static byte[] ReadFromFile(string filepath, long startOffset = 0, long numberOfBytes = 0) {
@@ -319,6 +343,7 @@ namespace DSPRE {
             startInfo.FileName = toolPath;
         }
 
+        [System.Runtime.Versioning.UnsupportedOSPlatform("windows")]
         private static bool TryEnsureUnixExecutable(string toolPath)
         {
             const UnixFileMode executeBits = UnixFileMode.UserExecute
@@ -1101,8 +1126,15 @@ namespace DSPRE {
                     }
 
                     Narc opened = Narc.Open(paths.packedPath) ?? throw new NullReferenceException();
-                    opened.ExtractToFolder(paths.unpackedPath);
-
+                    // Unpacked beside the folder and moved into place whole, so a folder with files in it is always
+                    // complete: an interrupted unpack leaves only the side folder, which the next attempt replaces.
+                    string unpacking = paths.unpackedPath + ".unpacking";
+                    if (Directory.Exists(unpacking)) Directory.Delete(unpacking, true);
+                    opened.ExtractToFolder(unpacking);
+                    if (di.Exists) Directory.Delete(paths.unpackedPath, true);
+                    Directory.Move(unpacking, paths.unpackedPath);
+                    // The side folder is not the archive's own, so the extract above left no fingerprint.
+                    NarcSync.NoteExtracted(paths.packedPath, paths.unpackedPath);
                 }
             });
         }
@@ -1137,25 +1169,9 @@ namespace DSPRE {
         internal static bool IsOptionalNarc(DirNames id, GameFamilies family) =>
             id == DirNames.eggMoves && family != GameFamilies.HGSS;
 
-        /// <summary>GDI twin of <see cref="MonIconFallbackHook"/> for the WinForms-only <see cref="GetPokePic"/>
-        /// path, installed by the WinForms shell (resx Pokéball); never runs off-Windows.</summary>
-        public static Func<Image> MonIconFallbackGdiHook = null;
-
-        /// <param name="paletteIdOverride">When &gt;= 0, render with this icon-palette id (0/1/2) instead of
-        /// the one stored in the ARM9 table, used to PREVIEW a palette change before it is saved.</param>
-        public static Image GetPokePic(int species, int w, int h, int paletteIdOverride = -1) {
-            LoadMonIconParts(species, paletteIdOverride, out ImageBase imageBase, out PaletteBase paletteBase, out SpriteBase spriteBase, out int[] OAMenabled);
-            try {
-                return spriteBase.Get_Image(imageBase, paletteBase, 0, w, h, false, false, false, true, true, -1, OAMenabled);
-            } catch (FormatException) {
-                return MonIconFallbackGdiHook?.Invoke();
-            }
-        }
-
         /// <summary>
-        /// Placeholder mon icon returned by <see cref="GetPokePicRaw"/> when the real icon can't be
-        /// decoded. Installed by each shell (WinForms → resx Pokéball via the GDI bridge, Avalonia →
-        /// avares asset) so this core code stays free of System.Drawing and WinForms resources.
+        /// Placeholder mon icon returned by <see cref="GetPokePicRaw"/> when the real icon can't be decoded. The app
+        /// installs it (an avares asset) so this core code stays free of UI resources.
         /// </summary>
         public static Func<RawImage> MonIconFallbackHook = null;
 
@@ -1213,14 +1229,11 @@ namespace DSPRE {
             return index == species ? GetPokePicRaw(species, w, h) : GetPokePicRaw(index, w, h, GetMonIconPaletteId(palette));
         }
 
-        /// <summary>GDI-free twin of <see cref="GetPokePic"/>, composes the mon icon straight into a <see cref="RawImage"/> (no System.Drawing).</summary>
+        /// <summary>The mon icon composed into a <see cref="RawImage"/>.</summary>
         public static RawImage GetPokePicRaw(int species, int w, int h, int paletteIdOverride = -1) {
-            LoadMonIconParts(species, paletteIdOverride, out ImageBase imageBase, out PaletteBase paletteBase, out SpriteBase spriteBase, out int[] OAMenabled);
-            try {
-                return spriteBase.Get_RawImage(imageBase, paletteBase, 0, w, h, trans: true, currOAM: -1, draw_index: OAMenabled);
-            } catch (FormatException) {
-                return MonIconFallbackHook?.Invoke();
-            }
+            MonIcon icon = LoadMonIconParts(species, paletteIdOverride);
+            if (icon.Header == null) return MonIconFallbackHook?.Invoke();
+            return CellRenderer.Draw(icon.Cells, 0, icon.Drawing, icon.Colours, w, h);
         }
 
         /// <summary>GDI-free item icon lookup, same NCLR/NCGR/NCER decode as the WinForms <c>GetItemPic</c>
@@ -1235,28 +1248,21 @@ namespace DSPRE {
                 int itemPaletteId = (int)entry.itemPalette;
                 string itemIconsDir = gameDirs[DirNames.itemIcons].unpackedDir;
 
-                string paletteFilename = itemPaletteId.ToString("D4");
-                NCLR itemPalette = new NCLR(Path.Combine(itemIconsDir, paletteFilename), itemPaletteId, paletteFilename);
+                ushort[] colours = NitroBgCodec.ReadColours(File.ReadAllBytes(Path.Combine(itemIconsDir, itemPaletteId.ToString("D4"))));
+                byte[] drawing = File.ReadAllBytes(Path.Combine(itemIconsDir, itemIconId.ToString("D4")));
+                NcerFile cells = NcerFile.Read(File.ReadAllBytes(Path.Combine(itemIconsDir, "0001")));   // the only NCER in the itemIcons NARC
+                if (cells == null || NitroBgCodec.ReadDrawingHeader(drawing) == null) return null;
 
-                string spriteFilename = itemIconId.ToString("D4");
-                ImageBase imageBase = new NCGR(Path.Combine(itemIconsDir, spriteFilename), itemIconId, spriteFilename);
-
-                string ncerFileName = "0001"; // the only NCER in the itemIcons NARC
-                SpriteBase spriteBase = new NCER(Path.Combine(itemIconsDir, ncerFileName), 2, ncerFileName);
-
-                return spriteBase.Get_RawImage(imageBase, itemPalette, 0, w, h, trans: true, currOAM: -1, draw_index: null);
+                return CellRenderer.Draw(cells, 0, drawing, colours, w, h);
             } catch (Exception) {
                 return null;
             }
         }
 
-        // Icon NCGRs store nTilesX/nTilesY as the 0xFFFF "unspecified" sentinel, so ImageBase.Read falls
-        // back to Actions.Get_Size's generic square/0x100-wide guess, which produces a nonsensical shape
-        // (e.g. 256×8 for a real 32×64 icon) totally unrelated to how the game actually reads this data.
-        // The OAM-based renderer used everywhere else (SpriteBase.Get_RawImage, via GetPokePicRaw) never
-        // hits this bug because it addresses tiles directly by index and ignores ImageBase.Width/Height
-        // entirely. So icon-graphic editing must do the same: read/write raw 8×8 tile blocks directly,
-        // fixed at the real, universal Gen4 icon width (32px = 4 tiles); height comes from the tile count
+        // Icon NCGRs store nTilesX/nTilesY as the 0xFFFF "unspecified" sentinel, so any size worked out from
+        // the file is a guess unrelated to how the game reads this data. The cell renderer used everywhere
+        // else addresses tiles directly by index, and icon-graphic editing does the same: raw 8×8 tile blocks
+        // at the real, universal Gen4 icon width (32px = 4 tiles); height comes from the tile count
         // (normally 64px = 2 stacked 32×32 animation frames, frame 0 on top).
         private const int MonIconTileSize = 8;
         private const int MonIconTilesWide = 4;
@@ -1268,8 +1274,8 @@ namespace DSPRE {
         /// Rendered with the currently-assigned (or overridden) palette bank.
         /// </summary>
         public static RawImage GetMonIconGraphicRaw(int species, int paletteIdOverride = -1) {
-            LoadMonIconParts(species, paletteIdOverride, out ImageBase imageBase, out PaletteBase paletteBase, out _, out _);
-            return DecodeMonIconTiles(imageBase, paletteBase.Palette[0]);
+            MonIcon icon = LoadMonIconParts(species, paletteIdOverride);
+            return DecodeMonIconTiles(icon.Tiles(), icon.FirstRow());
         }
 
         /// <summary>Same tile walk as <see cref="DecodeMonIconTiles"/>, but returns the raw 0-15 palette
@@ -1278,12 +1284,12 @@ namespace DSPRE {
         /// a genuine indexed PNG (preserving the real 16-color palette table, not just its resolved
         /// pixels) need this instead.</summary>
         public static bool TryGetMonIconIndexedPixels(int species, int paletteIdOverride, out byte[] indices, out int width, out int height, out Color[] palette) {
-            LoadMonIconParts(species, paletteIdOverride, out ImageBase imageBase, out PaletteBase paletteBase, out _, out _);
+            MonIcon icon = LoadMonIconParts(species, paletteIdOverride);
             indices = null; width = 0; height = 0; palette = null;
-            if (imageBase.FormatColor != Ekona.Images.ColorFormat.colors16) return false;
+            if (!icon.SixteenColour) return false;
 
-            byte[] tiles = imageBase.Tiles;
-            int tileBytes = MonIconTileSize * MonIconTileSize * imageBase.BPP / 8;
+            byte[] tiles = icon.Tiles();
+            int tileBytes = MonIconTileSize * MonIconTileSize * 4 / 8;
             int totalTiles = tileBytes > 0 ? tiles.Length / tileBytes : 0;
             int tilesTall = Math.Max(1, totalTiles / MonIconTilesWide);
             height = tilesTall * MonIconTileSize;
@@ -1307,13 +1313,12 @@ namespace DSPRE {
                             indices[(ty * MonIconTileSize + y) * width + (tx * MonIconTileSize + x)] = (byte)idx;
                         }
 
-            palette = paletteBase.Palette[0];
+            palette = icon.FirstRow();
             return true;
         }
 
-        private static RawImage DecodeMonIconTiles(ImageBase imageBase, Color[] palette) {
-            byte[] tiles = imageBase.Tiles;
-            int tileBytes = MonIconTileSize * MonIconTileSize * imageBase.BPP / 8;   // 32 bytes/tile @ 4bpp
+        private static RawImage DecodeMonIconTiles(byte[] tiles, Color[] palette) {
+            int tileBytes = MonIconTileSize * MonIconTileSize * 4 / 8;   // 32 bytes/tile @ 4bpp
             int totalTiles = tileBytes > 0 ? tiles.Length / tileBytes : 0;
             int tilesTall = Math.Max(1, totalTiles / MonIconTilesWide);
             int h = tilesTall * MonIconTileSize;
@@ -1339,13 +1344,13 @@ namespace DSPRE {
             return raw;
         }
 
-        private static string ValidateMonIconGraphicCore(ImageBase imageBase, RawImage newImage) {
+        private static string ValidateMonIconGraphicCore(MonIcon icon, RawImage newImage) {
             if (newImage == null || newImage.IsEmpty) return "The image is empty.";
-            if (imageBase.FormatColor != Ekona.Images.ColorFormat.colors16)
+            if (!icon.SixteenColour)
                 return "This icon isn't a 16-color image; graphic editing isn't supported for this format.";
 
-            int tileBytes = MonIconTileSize * MonIconTileSize * imageBase.BPP / 8;
-            int totalTiles = tileBytes > 0 ? imageBase.Tiles.Length / tileBytes : 0;
+            int tileBytes = MonIconTileSize * MonIconTileSize * 4 / 8;
+            int totalTiles = icon.Header.Value.DataSize / tileBytes;
             int tilesTall = Math.Max(1, totalTiles / MonIconTilesWide);
             int expectedH = tilesTall * MonIconTileSize;
             if (newImage.Width != MonIconWidth || newImage.Height != expectedH)
@@ -1357,8 +1362,7 @@ namespace DSPRE {
         /// (right pixel dimensions, 16-color format) without writing anything. Returns null if OK, else
         /// a user-facing error string.</summary>
         public static string ValidateMonIconGraphic(int species, RawImage newImage) {
-            LoadMonIconParts(species, -1, out ImageBase imageBase, out _, out _, out _);
-            return ValidateMonIconGraphicCore(imageBase, newImage);
+            return ValidateMonIconGraphicCore(LoadMonIconParts(species, -1), newImage);
         }
 
         /// <summary>
@@ -1370,26 +1374,23 @@ namespace DSPRE {
         /// user-facing error string.
         /// </summary>
         public static string SetMonIconGraphic(int species, int paletteIdOverride, RawImage newImage) {
-            LoadMonIconParts(species, paletteIdOverride, out ImageBase imageBase, out PaletteBase paletteBase, out _, out _);
+            MonIcon icon = LoadMonIconParts(species, paletteIdOverride);
 
-            string error = ValidateMonIconGraphicCore(imageBase, newImage);
+            string error = ValidateMonIconGraphicCore(icon, newImage);
             if (error != null) return error;
 
             // LoadMonIconParts already swapped the selected bank into slot 0 for rendering.
-            Color[] palette = paletteBase.Palette[0];
-            byte[] newTiles = EncodeMonIconTiles(imageBase, palette, newImage);
+            byte[] newTiles = EncodeMonIconTiles(icon.Header.Value.DataSize, icon.FirstRow(), newImage);
 
-            // The no-side-effect overload: swaps the tile bytes only, leaving the (already-wrong, but
-            // irrelevant here, nothing downstream uses them) auto-detected Width/Height/FormTile alone.
-            imageBase.Set_Tiles(newTiles);
-
-            string path = Path.Combine(gameDirs[DirNames.monIcons].unpackedDir, imageBase.FileName);
-            imageBase.Write(path, paletteBase);
+            // Only the pixel bytes change; the rest of the file stays as it was.
+            byte[] file = (byte[])icon.Drawing.Clone();
+            Array.Copy(newTiles, 0, file, icon.Header.Value.DataAt, newTiles.Length);
+            ArchiveMembers.Write(icon.DrawingPath, file);
             return null;
         }
 
-        private static byte[] EncodeMonIconTiles(ImageBase imageBase, Color[] palette, RawImage newImage) {
-            byte[] newTiles = new byte[imageBase.Tiles.Length];
+        private static byte[] EncodeMonIconTiles(int length, Color[] palette, RawImage newImage) {
+            byte[] newTiles = new byte[length];
             int w = newImage.Width;
             int tilesTall = newImage.Height / MonIconTileSize;
 
@@ -1425,43 +1426,49 @@ namespace DSPRE {
             return (byte)best;
         }
 
-        // Loads the mon-icon NCLR/NCGR/NCER + enabled-OAM list. Shared by GetPokePic (GDI) and GetPokePicRaw.
-        private static void LoadMonIconParts(int species, int paletteIdOverride,
-            out ImageBase imageBase, out PaletteBase paletteBase, out SpriteBase spriteBase, out int[] OAMenabled) {
-            bool fiveDigits = false; // some extreme future proofing
-            string filename = "0000";
+        /// <summary>A party icon's drawing, colours with the chosen row moved to the front, and the shared cells.</summary>
+        private sealed class MonIcon {
+            public byte[] Drawing;
+            public string DrawingPath;
+            public NitroBgCodec.DrawingHeader? Header;
+            public ushort[] Colours;
+            public NcerFile Cells;
 
-            try {
-                paletteBase = new NCLR(Path.Combine(gameDirs[DirNames.monIcons].unpackedDir, filename), 0, filename);
-            } catch (FileNotFoundException) {
-                filename += '0';
-                paletteBase = new NCLR(Path.Combine(gameDirs[DirNames.monIcons].unpackedDir, filename), 0, filename);
-                fiveDigits = true;
+            public bool SixteenColour => Header is NitroBgCodec.DrawingHeader h && !h.EightBit;
+
+            public byte[] Tiles() => Header is NitroBgCodec.DrawingHeader h ? Drawing.AsSpan(h.DataAt, h.DataSize).ToArray() : Array.Empty<byte>();
+
+            public Color[] FirstRow() {
+                Color[] row = new Color[Math.Min(16, Colours.Length)];
+                for (int i = 0; i < row.Length; i++) {
+                    (byte r, byte g, byte b) = NitroBgCodec.Colour(Colours[i]);
+                    row[i] = Color.FromArgb(r, g, b);
+                }
+                return row;
             }
+        }
+
+        // Loads the mon-icon palette, drawing and cells for GetPokePicRaw.
+        private static MonIcon LoadMonIconParts(int species, int paletteIdOverride) {
+            string dir = gameDirs[DirNames.monIcons].unpackedDir;
+            string digits = File.Exists(Path.Combine(dir, "0000")) || !File.Exists(Path.Combine(dir, "00000")) ? "D4" : "D5";   // some extreme future proofing
+            ushort[] colours = NitroBgCodec.ReadColours(File.ReadAllBytes(Path.Combine(dir, 0.ToString(digits))));
 
             // Palette id: caller override (preview) or the value stored in the ARM9 table.
             int paletteId = paletteIdOverride >= 0 ? paletteIdOverride : GetMonIconPaletteId(species);
-
-            if (paletteId != 0 && paletteId < paletteBase.Palette.Length) {
-                paletteBase.Palette[0] = paletteBase.Palette[paletteId]; // update pal 0 to be the new pal
+            if (paletteId != 0 && paletteId < colours.Length / 16) {
+                Array.Copy(colours, paletteId * 16, colours, 0, 16); // update pal 0 to be the new pal
             }
 
-            // grab tiles
-            int spriteFileID = species + 7;
-            string spriteFilename = spriteFileID.ToString("D" + (fiveDigits ? "5" : "4"));
-            imageBase = new NCGR(Path.Combine(gameDirs[DirNames.monIcons].unpackedDir, spriteFilename), spriteFileID, spriteFilename);
-
-            // grab sprite
-            int ncerFileId = 2;
-            string ncerFileName = ncerFileId.ToString("D" + (fiveDigits ? "5" : "4"));
-            spriteBase = new NCER(Path.Combine(gameDirs[DirNames.monIcons].unpackedDir, ncerFileName), 2, ncerFileName);
-
-            // copy this from the trainer
-            int bank0OAMcount = spriteBase.Banks[0].oams.Length;
-            OAMenabled = new int[bank0OAMcount];
-            for (int i = 0; i < OAMenabled.Length; i++) {
-                OAMenabled[i] = i;
-            }
+            string drawingPath = Path.Combine(dir, (species + 7).ToString(digits));
+            byte[] drawing = File.ReadAllBytes(drawingPath);
+            return new MonIcon {
+                Drawing = drawing,
+                DrawingPath = drawingPath,
+                Header = NitroBgCodec.ReadDrawingHeader(drawing),
+                Colours = colours,
+                Cells = NcerFile.Read(File.ReadAllBytes(Path.Combine(dir, 2.ToString(digits)))),
+            };
         }
     }
 }

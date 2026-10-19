@@ -16,6 +16,7 @@
         <controls:FusionAutoCompleteBox x:Name="FilePicker" Width="200" ItemsSource="{Binding MatrixNames}" SelectedIndex="{Binding SelectedMatrixIndex}"/>
         <controls:HeadersButton controls:EditorToolbar.Slot="Picker" Source="Matrix" FileId="{Binding SelectedMatrixIndex}"/>
         <Button Content="Save" controls:Icon.Key="saveButton"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
         <Button Content="Add" controls:Icon.Key="addIcon" Click="AddMatrix_Click" ToolTip.Tip="Add an empty matrix at the end"/>
         <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveMatrix_Click"

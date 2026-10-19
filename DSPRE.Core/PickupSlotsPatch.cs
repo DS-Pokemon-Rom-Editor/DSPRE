@@ -18,7 +18,7 @@ namespace DSPRE
         public const int TableLength = PickupTable.Ranges * Stride * 2;
         public const int BlockLength = SyntheticOverlaySpace.HeaderSize + TableLength * 2;
 
-        public static bool SupportsCurrentRom => RomInfo.pickupSlotSites != null && RomInfo.pickupTableOverlayNumber >= 0;
+        public static bool SupportsCurrentRom => RomLocator.PickupSlotSites != null && RomInfo.pickupTableOverlayNumber >= 0;
 
         private static int OverlayNumber => RomInfo.pickupTableOverlayNumber;
         private static uint OverlayAddress => OverlayUtils.OverlayTable.GetRAMAddress(OverlayNumber);
@@ -40,7 +40,7 @@ namespace DSPRE
             if (!SupportsCurrentRom || !File.Exists(Filesystem.expArmPath)) return -1;
             try
             {
-                RomInfo.PickupSlotSites s = RomInfo.pickupSlotSites;
+                RomInfo.PickupSlotSites s = RomLocator.PickupSlotSites;
                 byte[] ov = ReadOverlay();
                 if (!ov.AsSpan((int)s.Clamp, 6).SequenceEqual(Multiply(s.Register))) return -1;
                 uint common = BitConverter.ToUInt32(ov, (int)s.CommonLiteral), rare = BitConverter.ToUInt32(ov, (int)s.RareLiteral);
@@ -58,7 +58,7 @@ namespace DSPRE
         {
             if (!SupportsCurrentRom) return "The Pickup code isn't mapped for this ROM.";
             if (!SyntheticOverlaySpace.Available()) return "Apply the ARM9 expansion first.";
-            RomInfo.PickupSlotSites s = RomInfo.pickupSlotSites;
+            RomInfo.PickupSlotSites s = RomLocator.PickupSlotSites;
             byte[] ov = ReadOverlay();
             bool vanilla = ov.AsSpan((int)s.Clamp, 6).SequenceEqual(Clamp(s.Register))
                 && BitConverter.ToUInt32(ov, (int)s.CommonLiteral) == OverlayAddress + RomInfo.pickupCommonItemsOffset
@@ -85,7 +85,7 @@ namespace DSPRE
             PickupTable.Words(rare, rare.Length).CopyTo(block, SyntheticOverlaySpace.HeaderSize + TableLength);
             DSUtils.WriteToFile(Filesystem.expArmPath, block, (uint)blockOffset);
 
-            RomInfo.PickupSlotSites s = RomInfo.pickupSlotSites;
+            RomInfo.PickupSlotSites s = RomLocator.PickupSlotSites;
             uint tables = RomInfo.synthOverlayLoadAddress + (uint)blockOffset + SyntheticOverlaySpace.HeaderSize;
             string path = OverlayUtils.GetPath(OverlayNumber);
             DSUtils.WriteToFile(path, BitConverter.GetBytes(tables), s.CommonLiteral);

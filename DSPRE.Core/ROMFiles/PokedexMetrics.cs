@@ -174,7 +174,7 @@ namespace DSPRE.ROMFiles
                 for (int i = 0; i < c.Members.Length; i++)
                 {
                     if (!c.Dirty[i]) continue;
-                    File.WriteAllBytes(Path.Combine(c.Folder, i.ToString("D4")), c.Members[i]);
+                    ArchiveMembers.Put(c.Dir, i, c.Members[i]);
                     c.Dirty[i] = false;
                 }
         }

@@ -41,38 +41,32 @@ namespace DSPRE
             if (FromHgEngineSource) { WriteSource(entries); return; }
             if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)
             {
-                string path = Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.eggMoves].unpackedDir, "0000");
-                using FileStream stream = File.OpenWrite(path);
-                using BinaryWriter w = new BinaryWriter(stream);
-                WriteTable(w, entries);
-                if (stream.Position < stream.Length) stream.SetLength(stream.Position);
+                ArchiveMembers.Put(RomInfo.DirNames.eggMoves, 0, TableBytes(entries));
             }
             else if (expandedLayout)
             {
-                string folder = RomInfo.gameDirs[RomInfo.DirNames.eggMoves].unpackedDir;
-                Directory.CreateDirectory(folder);
-                HashSet<int> hasFile = new HashSet<int>();
-                foreach (EggMoveEntry e in entries)
+                Directory.CreateDirectory(RomInfo.gameDirs[RomInfo.DirNames.eggMoves].unpackedDir);
+                Dictionary<int, IReadOnlyList<ushort>> moves = new Dictionary<int, IReadOnlyList<ushort>>();
+                foreach (EggMoveEntry e in entries) moves[e.speciesID] = e.moveIDs;
+                for (int i = 0; i < Math.Max(speciesCount, moves.Count == 0 ? 0 : moves.Keys.Max() + 1); i++)
                 {
-                    using BinaryWriter w = new BinaryWriter(File.Create(Path.Combine(folder, e.speciesID.ToString("D4"))));
-                    foreach (ushort m in e.moveIDs) w.Write(m);
-                    w.Write((ushort)0xFFFF);
-                    hasFile.Add(e.speciesID);
-                }
-                for (int i = 0; i < speciesCount; i++)
-                {
-                    if (hasFile.Contains(i)) continue;
-                    using BinaryWriter w = new BinaryWriter(File.Create(Path.Combine(folder, i.ToString("D4"))));
-                    w.Write((ushort)0xFFFF);
+                    IReadOnlyList<ushort> list = moves.TryGetValue(i, out IReadOnlyList<ushort> m) ? m : Array.Empty<ushort>();
+                    ArchiveMembers.Put(RomInfo.DirNames.eggMoves, i, list.Append((ushort)0xFFFF).SelectMany(BitConverter.GetBytes).ToArray());
                 }
             }
             else
             {
-                using FileStream stream = File.OpenWrite(OverlayUtils.GetPath(OVERLAY_NUMBER));
-                using BinaryWriter w = new BinaryWriter(stream);
-                stream.Seek(RomInfo.GetEggMoveTableOffset(), SeekOrigin.Begin);
-                WriteTable(w, entries);
+                DSUtils.WriteToFile(OverlayUtils.GetPath(OVERLAY_NUMBER), TableBytes(entries), (uint)RomInfo.GetEggMoveTableOffset());
             }
+        }
+
+        private static byte[] TableBytes(IReadOnlyList<EggMoveEntry> entries)
+        {
+            using MemoryStream stream = new MemoryStream();
+            using BinaryWriter w = new BinaryWriter(stream);
+            WriteTable(w, entries);
+            w.Flush();
+            return stream.ToArray();
         }
 
         // Only species whose list changed are rewritten; one taken out of the table gets an empty list.

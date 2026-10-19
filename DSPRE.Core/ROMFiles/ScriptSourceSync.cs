@@ -120,7 +120,7 @@ namespace DSPRE.ROMFiles
             string backup = Path.Combine(root, ".rotom", "backups", "dspre-" + DateTime.Now.ToString("yyyyMMddHHmmssfff"));
             Directory.CreateDirectory(backup);
             foreach ((int _, string source) in targets)
-                File.Copy(source, Path.Combine(backup, Path.GetFileName(source)), overwrite: true);
+                PlainFiles.Copy(source, Path.Combine(backup, Path.GetFileName(source)), overwrite: true);
 
             binaryOf ??= Filesystem.GetScriptPath;
             // Windows refuses a command line past 32767 characters, which a whole project's paths exceed.

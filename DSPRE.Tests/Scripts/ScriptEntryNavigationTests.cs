@@ -12,7 +12,7 @@ namespace DSPRE.Tests
         public void FindScriptEntryLine_MatchesJumpTableSlotExactly()
         {
             // A slot that prefix-matches another comes first, so a loose matcher picks the wrong one.
-            var symbols = new List<RotomLspSymbol>
+            List<RotomLspSymbol> symbols = new List<RotomLspSymbol>
             {
                 new RotomLspSymbol("script_21", 12, "#21", 20, 1),
                 new RotomLspSymbol("script_2", 12, "#2", 10, 1),

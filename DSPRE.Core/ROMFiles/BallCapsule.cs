@@ -87,7 +87,7 @@ namespace DSPRE.ROMFiles
             byte[] data = File.Exists(path) ? File.ReadAllBytes(path) : new byte[Count * BallCapsule.Bytes];
             if (data.Length < Count * BallCapsule.Bytes) Array.Resize(ref data, Count * BallCapsule.Bytes);
             for (int i = 0; i < Count && i < capsules.Count; i++) capsules[i].Write(data, i * BallCapsule.Bytes);
-            File.WriteAllBytes(path, data);
+            ArchiveMembers.Put(DirNames.trainerCapsules, 0, data);
         }
     }
 }

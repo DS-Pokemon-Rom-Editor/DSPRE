@@ -41,7 +41,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             bool needsProfile = VM.TryGetCompatibleProfiles(path, out List<OverworldGraphicsProfileOption> profiles, out string analysisError);
             if (analysisError != null)
             {
-                await DialogHelper.ShowError($"Import failed: {analysisError}");
+                await DialogHelper.ShowError($"Import failed: {analysisError}", "Overworld editor error");
                 return;
             }
 
@@ -73,7 +73,8 @@ namespace DSPRE.Avalonia.Views.Graphics
                 }
             }
             if (error != null)
-                await DialogHelper.ShowError($"Import failed: {error}");
+                await DialogHelper.ShowError($"Import failed: {error}", "Overworld editor error");
+            else SaveNotice.Imported(null, path);
         }
 
         private async void Export_Click(object sender, RoutedEventArgs e)
@@ -93,12 +94,16 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (path == null) return;
 
             if (VM?.ExportPng(path) == false)
-                await DialogHelper.ShowError("Export failed.");
+                await DialogHelper.ShowError("Export failed.", "Overworld editor error");
+            else SaveNotice.Exported(path);
         }
 
         private void SaveSelected_Click(object sender, RoutedEventArgs e) => VM?.SaveSelected();
         private void SaveAll_Click(object sender, RoutedEventArgs e)      => VM?.SaveAll();
-        private void Discard_Click(object sender, RoutedEventArgs e)      => VM?.DiscardChanges();
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+        }
 
         private void ShowFile_Click(object sender, RoutedEventArgs e)
         {
@@ -128,7 +133,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void DeleteEntry_Click(object sender, RoutedEventArgs e)
         {
-            if (!await DialogHelper.AskYesNo("Delete this custom overworld entry? This cannot be undone.", "Confirm delete", this))
+            if (!await DialogHelper.AskYesNo("Delete this custom overworld entry? This cannot be undone.", "Delete overworld entry?", this))
                 return;
 
             string error = VM?.DeleteSelectedEntry();

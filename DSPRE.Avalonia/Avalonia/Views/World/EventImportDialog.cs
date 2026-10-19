@@ -35,7 +35,7 @@ namespace DSPRE.Avalonia.Views.World
                 TextWrapping = global::Avalonia.Media.TextWrapping.Wrap, FontSize = 12, Opacity = 0.8,
                 Margin = new global::Avalonia.Thickness(12, 0, 12, 0),
             };
-            Button ok = new Button { Content = "Import", MinWidth = 80, IsDefault = true };
+            Button ok = new Button { Content = "Import", MinWidth = 80 };
             Button cancel = new Button { Content = "Cancel", MinWidth = 80, IsCancel = true };
             ok.Click += (_, _) =>
             {

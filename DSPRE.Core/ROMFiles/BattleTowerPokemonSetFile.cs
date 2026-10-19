@@ -111,11 +111,10 @@ namespace DSPRE.ROMFiles {
                 }
 
                 for (int i = 0; i < Sets.Count; i++) {
-                    string filePath = Filesystem.GetPath(narcDir, i);
                     using (MemoryStream ms = new MemoryStream())
                     using (BinaryWriter bw = new BinaryWriter(ms)) {
                         Sets[i].Write(bw);
-                        File.WriteAllBytes(filePath, ms.ToArray());
+                        ArchiveMembers.Put(RomInfo.DirNames.battleTowerPokemon, i, ms.ToArray());
                     }
                 }
 
@@ -131,7 +130,7 @@ namespace DSPRE.ROMFiles {
 
         public bool ExportToFile(string path, bool showSuccessMessage = true) {
             try {
-                File.WriteAllBytes(path, ToByteArray());
+                ArchiveMembers.Write(path, ToByteArray());
 
                 if (showSuccessMessage) {
                     AppMessages.Info("Battle Tower Pokemon sets exported successfully!", "Success");

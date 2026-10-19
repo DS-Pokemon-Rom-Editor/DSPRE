@@ -33,16 +33,16 @@ namespace DSPRE.ROMFiles
 
         public static readonly IReadOnlyList<Icon> All = new[]
         {
-            new Icon(48, "Player, boy", 7),
-            new Icon(49, "Player, girl", 7),
+            new Icon(48, "Boy player", 7),
+            new Icon(49, "Girl player", 7),
             new Icon(51, "Rival", 7),
             new Icon(47, "Box", 8),
             new Icon(54, "Group", 7),
             new Icon(53, "Pal Pad", 7),
             new Icon(55, "Route 224 rock", 10),
             new Icon(50, "Pokémon (the real icon is drawn over it)", 10),
-            new Icon(45, "Pokémon gender, male", 10),
-            new Icon(46, "Pokémon gender, female", 10),
+            new Icon(45, "Male Pokémon", 10),
+            new Icon(46, "Female Pokémon", 10),
         };
     }
 }

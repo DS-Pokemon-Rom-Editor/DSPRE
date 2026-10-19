@@ -6,6 +6,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using Avalonia.Media.Imaging;
 using DSPRE.Avalonia.Data;
+using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.ViewModels.Graphics
 {
@@ -178,9 +179,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 string dir = Path.GetDirectoryName(basePath);
                 string stem = Path.GetFileNameWithoutExtension(basePath);
-                File.WriteAllBytes(Path.Combine(dir, stem + ".NCLR"), _built.Colours);
-                File.WriteAllBytes(Path.Combine(dir, stem + ".NCGR"), _built.Tiles);
-                File.WriteAllBytes(Path.Combine(dir, stem + ".NSCR"), _built.Arrangement);
+                PlainFiles.WriteBytes(Path.Combine(dir, stem + ".NCLR"), _built.Colours);
+                PlainFiles.WriteBytes(Path.Combine(dir, stem + ".NCGR"), _built.Tiles);
+                PlainFiles.WriteBytes(Path.Combine(dir, stem + ".NSCR"), _built.Arrangement);
                 SavedAs = $"{stem}.NCLR, {stem}.NCGR and {stem}.NSCR written beside each other in {dir}.";
                 OnPropertyChanged(nameof(SavedAs));
                 return null;

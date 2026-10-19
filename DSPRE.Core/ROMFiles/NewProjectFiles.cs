@@ -55,7 +55,7 @@ namespace DSPRE.ROMFiles
             int id = NextScriptId();
             string path = Path.Combine(root, id.ToString("D4") + extension);
             while (File.Exists(path)) path = Path.Combine(root, (++id).ToString("D4") + extension);
-            File.WriteAllText(path, content);
+            PlainFiles.WriteText(path, content);
             return (id, path);
         }
 
@@ -91,7 +91,7 @@ namespace DSPRE.ROMFiles
                     File.Delete(file);
             }
             string member = Path.Combine(gameDirs[DirNames.scripts].unpackedDir, id.ToString("D4"));
-            if (File.Exists(member)) File.Delete(member);
+            ArchiveMembers.Delete(member);
         }
 
         public static (int Id, string Path) AddBlankLevelScript() => AddScriptSource(".json", BlankLevelScriptJson);
@@ -105,7 +105,7 @@ namespace DSPRE.ROMFiles
             for (int id = Filesystem.GetHeadbuttCount(); id < headerCount; id++)
             {
                 // Two zero tree-group counts: a map with no headbutt trees.
-                File.WriteAllBytes(Filesystem.GetHeadbuttPath(id), new byte[4]);
+                ArchiveMembers.Put(DirNames.headbutt, id, new byte[4]);
                 made++;
             }
             return made;

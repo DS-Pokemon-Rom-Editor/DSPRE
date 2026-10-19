@@ -189,10 +189,8 @@ namespace DSPRE.ROMFiles
         /// <summary>Writes this font over an unpacked archive entry.</summary>
         public void Save(int entry)
         {
-            string path = EntryPath(entry) ?? throw new FileNotFoundException($"Font archive entry {entry} is not unpacked.");
-            byte[] bytes = Write();
-            HgEngine.HgEngineSourceAssets.WriteVerbatim(HgEngine.HgEngineOwnedFiles.ArchiveOf(RomInfo.DirNames.fonts), entry, bytes);
-            File.WriteAllBytes(path, bytes);
+            if (EntryPath(entry) == null) throw new FileNotFoundException($"Font archive entry {entry} is not unpacked.");
+            ArchiveMembers.Put(RomInfo.DirNames.fonts, entry, Write());
         }
 
         /// <summary>How wide a letter is, which is how far along the next one starts.</summary>

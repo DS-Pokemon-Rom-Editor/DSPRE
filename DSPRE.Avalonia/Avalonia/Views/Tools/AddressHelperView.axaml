@@ -25,9 +25,9 @@
 
 	<DockPanel Margin="8">
 
-		<TextBlock DockPanel.Dock="Top" Text="{Binding StatusMessage}"
-				   Foreground="OrangeRed"
-				   IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+		<TextBlock DockPanel.Dock="Top" Text="{Binding StatusText}"
+				   Foreground="{DynamicResource Editor.Bad}"
+				   IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
 		<Border BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}">
 			<DataGrid ItemsSource="{Binding Results}"

@@ -14,7 +14,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         NONE = 0, JAPANESE = 1, ENGLISH = 2, FRENCH = 3,
         ITALIAN = 4, GERMAN = 5, UNUSED = 6, SPANISH = 7, KOREAN = 8
     }
-    public class TradeEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
+    public class TradeEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -34,7 +34,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private bool _tradeDirty;
         private bool _textDirty;
         public bool HasUnsavedChanges => _tradeDirty || _textDirty;
-        public string UnsavedChangesDescription => "Trade Editor";
+        public string UnsavedChangesDescription => "In-game trades";
         public void SaveChanges()
         {
             if (!HasUnsavedChanges) return;
@@ -47,7 +47,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (!HasUnsavedChanges) return;
             if (_cur != null) LoadFromFile(_cur.id);
-            else { _tradeDirty = _textDirty = false; Title = "Trade Editor"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+            else { _tradeDirty = _textDirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         }
 
         // ── Undo / redo (ISupportsUndo) ────────────────────────────────────────
@@ -82,7 +82,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _loading = false;
 
             _tradeDirty = _textDirty = _history.IsDirty;
-            Title = _history.IsDirty ? "● Trade Editor" : "Trade Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
             RaiseUndoState();
         }
@@ -361,7 +360,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 DialogHelper.MsgResult result = await DialogHelper.AskYesNoCancel(
                     "You have unsaved changes. Do you want to save before changing the Trade ID?",
-                    "Unsaved Changes");
+                    "Unsaved changes");
 
                 if (result == DialogHelper.MsgResult.Yes)
                     SaveChanges();
@@ -397,7 +396,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             _tradeDirty = false;
             _textDirty  = false;
-            Title = "Trade Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
 
             _loading = false;
@@ -416,7 +414,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _cur.SaveToFileDefaultDir(_cur.id, false);
             _tradeDirty = false;
             OnPropertyChanged(nameof(HasUnsavedChanges));
-            if (!_textDirty) Title = "Trade Editor";
             AppLogger.Debug($"TradeEditor: Saved trade data for ID {_cur.id}.");
             MarkSavedIfClean();
         }
@@ -436,7 +433,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _tradeArchive.SaveToExpandedDir(GetTextBankIndex(), false);
             _textDirty = false;
             OnPropertyChanged(nameof(HasUnsavedChanges));
-            if (!_tradeDirty) Title = "Trade Editor";
             AppLogger.Debug($"TradeEditor: Saved trade text data to message bank {GetTextBankIndex()}");
             MarkSavedIfClean();
         }
@@ -446,7 +442,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_loading) return;
             RecordUndoSnapshot();
             _tradeDirty = true;
-            Title = "● Trade Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
@@ -455,7 +450,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_loading) return;
             RecordUndoSnapshot();
             _textDirty = true;
-            Title = "● Trade Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 

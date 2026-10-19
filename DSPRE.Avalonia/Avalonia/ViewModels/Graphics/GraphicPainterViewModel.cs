@@ -72,8 +72,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             string named = null;
             try { named = _archive.NameOf?.Invoke(_index); } catch { }
             Title = named == null
-                ? $"{_archive.Title}, number {_index}"
-                : $"{named} ({_archive.Title}, number {_index})";
+                ? $"{_archive.Title} {_index}"
+                : $"{named} ({_archive.Title} {_index})";
             Explain = "Every pixel holds a number that picks one of the colours below. Changing a colour "
                     + "changes every pixel using it.";
             OnPropertyChanged(nameof(Title));
@@ -304,7 +304,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public void SaveChanges()
         {
             string err = Save();
-            Status = err ?? "Saved. Save the ROM to keep it.";
+            StatusText = err ?? "Saved. Save the ROM to keep it.";
             // The unsaved-changes prompts show a thrown message as the reason the save failed.
             if (err != null) throw new InvalidOperationException(err);
         }
@@ -325,7 +325,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             Redraw();
             OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(HasUnsavedChanges));
             OnPropertyChanged(nameof(UndoHelp));
-            Status = "Put back the way it was.";
+            StatusText = "Put back the way it was.";
         }
 
         /// <summary>Lays the current number down at one spot. Called as the pointer moves, so it only
@@ -353,13 +353,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             BuildSwatches();
             Redraw();
             int using_ = _pixels.Count(v => v == number);
-            Status = using_ == 0
+            StatusText = using_ == 0
                 ? $"Colour {number} changed. Nothing is using it at the moment."
                 : $"Colour {number} changed, and the {using_} pixels using it changed with it.";
         }
 
         private string _status = "";
-        public string Status { get => _status; set => Set(ref _status, value); }
+        public string StatusText { get => _status; set => Set(ref _status, value); }
 
         private string _pointer = "";
         /// <summary>The pixel under the pointer, counted from 0 at the top left of what is shown.</summary>

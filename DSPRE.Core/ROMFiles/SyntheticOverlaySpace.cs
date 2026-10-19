@@ -18,7 +18,22 @@ namespace DSPRE.ROMFiles
         public static readonly string[] BlockMarkers = { "MARTEXPANDV1", "BPSHOPEXPV1\0", "TYPECHARTXP1", "SWARMTABLEX1", VsIntroTables.ClassTableMarker, VsIntroTimingAddon.Marker,
                                                          MoveCategoryTable.MarkerOf(MoveCategoryTable.Kind.Punching), MoveCategoryTable.MarkerOf(MoveCategoryTable.Kind.Sound),
                                                          TrainerClassTableExpansion.GenderMarker, TrainerClassTableExpansion.PrizeMarker, TrainerClassTableExpansion.MusicMarker,
-                                                         PickupSlotsPatch.Marker, ClassIntroPatch.Marker };
+                                                         PickupSlotsPatch.Marker, ClassIntroPatch.Marker, BattleGaugeTextPatch.Marker,
+                                                         BuildingRotationMarker, TrainerShinyMarker, ClassMetadataMarker, CommandTableMarker };
+
+        /// <summary>Markers for the patches that used to ask for an offset; their blocks hold the old payload after the header.</summary>
+        public const string BuildingRotationMarker = "BLDGROTATEV1", TrainerShinyMarker = "TRAINSHINYV1",
+                            ClassMetadataMarker = "TRCLASSMETA1", CommandTableMarker = "SCRCMDTABLV1";
+
+        /// <summary>The header that starts a block: its marker, version 1 and the block's whole length.</summary>
+        public static byte[] Header(string marker, int blockLength)
+        {
+            byte[] header = new byte[HeaderSize];
+            Encoding.ASCII.GetBytes(marker).CopyTo(header, 0);
+            BitConverter.GetBytes(1u).CopyTo(header, 0x0C);
+            BitConverter.GetBytes((uint)blockLength).CopyTo(header, 0x10);
+            return header;
+        }
 
         /// <summary>Whether the ARM9 expansion is applied and its overlay is large enough to hold tables.</summary>
         public static bool Available()
@@ -57,6 +72,7 @@ namespace DSPRE.ROMFiles
             (long Start, long End)? chart = TypeChart.UnmarkedRangeInExpansion();
             if (chart.HasValue) ranges.Add(chart.Value);
             ranges.AddRange(PlatPatchesBlocks(data));
+            ranges.AddRange(PatchToolboxLogic.HandPlacedRanges());
             ranges.AddRange(TrainerClassTableExpansion.MovedTableRanges());
             // The class metadata patch's payload has zero-filled scratch words an all-zero search would take for free space.
             if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS && TrainerClassMetadataPatch.InstalledOffset() is uint tcm)

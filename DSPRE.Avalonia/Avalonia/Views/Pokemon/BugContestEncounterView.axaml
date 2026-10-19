@@ -15,6 +15,7 @@
     <DockPanel IsVisible="{Binding IsAvailable}">
       <controls:EditorToolbar>
           <Button Content="Save" controls:Icon.Key="saveButton"    Click="Save_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
+          <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
           <controls:UndoRedoButtons/>
           <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
           <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>

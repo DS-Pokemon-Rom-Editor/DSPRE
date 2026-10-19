@@ -25,13 +25,17 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public IBrush Brush => FavoriteSlotVM.ToBrush(Argb);
     }
 
-    /// <summary>RGB slider editor for one palette swatch, plus favorites and last-used; edits write straight into the sprite's live palette array, so the editor's own Save button already persists them.</summary>
+    /// <summary>
+    /// RGB slider editor for one palette swatch, plus favorites and last-used. Each change goes straight to the editor
+    /// that opened it, so that editor's Save keeps it, and everything done in one popup is one undo step there.
+    /// </summary>
     public class PaletteColorEditorViewModel : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
-        private readonly System.Action<uint> _apply;
+        // Gets each colour, and this popup as the undo group.
+        private readonly System.Action<uint, object> _apply;
         private readonly uint _initialArgb;
 
         public string Title { get; }
@@ -43,12 +47,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public PaletteColorEditorViewModel(PokemonSpriteEditorViewModel sprite, bool shiny, int index)
             : this($"{(shiny ? "Shiny" : "Normal")} Palette, Color {index}",
                    sprite.GetPalette(shiny) is uint[] pal && index < pal.Length ? pal[index] : 0xFF000000u,
-                   argb => sprite.SetPaletteColor(shiny, index, argb))
+                   (argb, group) => sprite.SetPaletteColor(shiny, index, argb, group))
         {
         }
 
-        /// <summary>Edits one colour; <paramref name="apply"/> gets each change.</summary>
-        public PaletteColorEditorViewModel(string title, uint initialArgb, System.Action<uint> apply)
+        /// <summary>Edits one colour; <paramref name="apply"/> gets each change and the group that makes them one undo step.</summary>
+        public PaletteColorEditorViewModel(string title, uint initialArgb, System.Action<uint, object> apply)
         {
             Title = title;
             _apply = apply;
@@ -83,7 +87,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private void Apply(uint argb)
         {
             SetFieldsFrom(argb);
-            _apply(argb);
+            _apply(argb, this);
         }
 
         private void SetFieldsFrom(uint argb)

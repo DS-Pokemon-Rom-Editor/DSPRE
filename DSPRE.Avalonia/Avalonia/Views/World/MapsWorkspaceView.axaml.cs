@@ -384,6 +384,12 @@ namespace DSPRE.Avalonia.Views.World
         private void EnsureEncountersEmbedded()
         {
             if (!AvaloniaEditorLauncher.IsRomLoaded) return;
+            // The last ROM's editor still listens for name and slot odds changes until it is detached.
+            switch (_encountersVm)
+            {
+                case WildEditorDPPtViewModel dppt: dppt.Detach(); break;
+                case WildEditorHGSSViewModel hgss: hgss.Detach(); break;
+            }
             if (RomInfo.isHGE)
             {
                 // hg-engine owns encounter data; editing it here would be overwritten on its next build.
@@ -445,7 +451,7 @@ namespace DSPRE.Avalonia.Views.World
             catch (System.Exception ex)
             {
                 _encountersEmbedded = false;
-                _ = DialogHelper.ShowError($"Failed to set up the Wild Encounters editor:\n{ex.Message}", "Wild Encounters");
+                _ = DialogHelper.ShowError($"Failed to set up the Wild Encounters editor:\n{ex.Message}", "Wild encounters error");
             }
         }
 

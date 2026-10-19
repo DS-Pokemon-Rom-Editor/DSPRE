@@ -1323,8 +1323,8 @@ namespace DSPRE.Models
 
             try
             {
-                File.WriteAllText(path, obj.ToString());
-                File.WriteAllText(mtlPath, mtl.ToString());
+                PlainFiles.WriteText(path, obj.ToString());
+                PlainFiles.WriteText(mtlPath, mtl.ToString());
             }
             catch (Exception ex) { return ex.Message; }
 

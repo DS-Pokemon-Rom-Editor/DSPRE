@@ -69,18 +69,18 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             RefreshCardPreviews();
             RefreshTrainerPreviews();
-            _graphics.History.Changed += () => { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); };
+            _graphics.Pending.Changed += () => { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); OnPropertyChanged(nameof(HasChanges)); OnPropertyChanged(nameof(HasUnsavedChanges)); };
         }
 
-        public bool CanUndo => _graphics.History.CanUndo;
-        public bool CanRedo => _graphics.History.CanRedo;
-        public void Undo() { _graphics.History.Undo(); RefreshAll(); }
-        public void Redo() { _graphics.History.Redo(); RefreshAll(); }
+        public bool CanUndo => _graphics.Pending.CanUndo;
+        public bool CanRedo => _graphics.Pending.CanRedo;
+        public void Undo() { _graphics.Pending.Undo(); RefreshAll(); }
+        public void Redo() { _graphics.Pending.Redo(); RefreshAll(); }
 
-        // Every import attempt closes its undo step, so a failed one can't leak into the next.
-        private string Imported(string error)
+        // Each import is one pending step until Save.
+        private string Imported(Func<string> import)
         {
-            _graphics.History.Commit();
+            string error = _graphics.Pending.Import(import);
             if (error == null) RefreshAll();
             return error;
         }
@@ -119,28 +119,28 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             RawImage raw = DecodePng(pngPath, out string err);
             if (raw == null) return err;
-            return Imported(_graphics.ImportCardFront(raw, PickedRanks));
+            return Imported(() => _graphics.ImportCardFront(raw, PickedRanks));
         }
 
         public string ImportCardBack(string pngPath)
         {
             RawImage raw = DecodePng(pngPath, out string err);
             if (raw == null) return err;
-            return Imported(_graphics.ImportCardBack(raw, PickedRanks));
+            return Imported(() => _graphics.ImportCardBack(raw, PickedRanks));
         }
 
         public string ImportTrainerMale(string pngPath)
         {
             RawImage raw = DecodePng(pngPath, out string err);
             if (raw == null) return err;
-            return Imported(_graphics.ImportTrainerMale(raw));
+            return Imported(() => _graphics.ImportTrainerMale(raw));
         }
 
         public string ImportTrainerFemale(string pngPath)
         {
             RawImage raw = DecodePng(pngPath, out string err);
             if (raw == null) return err;
-            return Imported(_graphics.ImportTrainerFemale(raw));
+            return Imported(() => _graphics.ImportTrainerFemale(raw));
         }
 
         public string ExportCardFront(string pngPath) => SavePng(_graphics.ComposeCardFront(SelectedRankIndex), pngPath);
@@ -153,14 +153,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             byte[] bytes;
             try { bytes = System.IO.File.ReadAllBytes(nclrPath); }
             catch (Exception ex) { return ex.Message; }
-            return Imported(_graphics.ImportRankPaletteRaw(SelectedRankIndex, bytes));
+            return Imported(() => _graphics.ImportRankPaletteRaw(SelectedRankIndex, bytes));
         }
 
         public string ExportRankPalette(string nclrPath)
         {
             byte[] bytes = _graphics.ExportRankPaletteRaw(SelectedRankIndex);
             if (bytes == null) return "Could not read the current palette.";
-            try { System.IO.File.WriteAllBytes(nclrPath, bytes); return null; }
+            try { PlainFiles.WriteBytes(nclrPath, bytes); return null; }
             catch (Exception ex) { return ex.Message; }
         }
 

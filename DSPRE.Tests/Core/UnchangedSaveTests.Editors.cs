@@ -19,7 +19,7 @@ namespace DSPRE.Tests
         private static int SaveEach(string dir, Action<int> save)
         {
             int n = 0;
-            foreach (var (id, _) in Members(dir).ToList()) { save(id); n++; }
+            foreach ((int id, string _) in Members(dir).ToList()) { save(id); n++; }
             return n;
         }
 
@@ -33,7 +33,7 @@ namespace DSPRE.Tests
         public void Headers(string game)
         {
             Open(game);
-            var guarded = new List<string>();
+            List<string> guarded = new List<string>();
             if (MapHeader.UsesDynamicHeaders) guarded.Add(Filesystem.dynamicHeaders);
             SavesUnchanged($"{game} headers", guarded, () =>
             {
@@ -83,7 +83,7 @@ namespace DSPRE.Tests
             SavesUnchanged($"{game} level scripts", new[] { Filesystem.scripts }, () =>
             {
                 int n = 0;
-                foreach (var (id, _) in Members(Filesystem.scripts).ToList())
+                foreach ((int id, string _) in Members(Filesystem.scripts).ToList())
                 {
                     LevelScriptFile file;
                     try { file = new LevelScriptFile(id); }
@@ -174,11 +174,11 @@ namespace DSPRE.Tests
 
             SavesUnchanged($"{game} cameras", Array.Empty<string>(), () =>
             {
-                var at = GameCameraTable.Locate();
+                GameCameraTable.Location at = GameCameraTable.Locate();
                 bool hgss = gameFamily == GameFamilies.HGSS;
-                var rows = GameCameraTable.Read(at).Select((camera, i) =>
+                List<GameCamera> rows = GameCameraTable.Read(at).Select((camera, i) =>
                 {
-                    var row = new CameraRowVM(i);
+                    CameraRowVM row = new CameraRowVM(i);
                     row.LoadFrom(camera);
                     return row.ToGameCamera(hgss);
                 }).ToList();
@@ -186,7 +186,7 @@ namespace DSPRE.Tests
                 return rows.Count;
             });
 
-            var fly = FlyTable.TryRead();
+            List<FlyTable.Row> fly = FlyTable.TryRead();
             if (fly != null)
                 SavesUnchanged($"{game} fly", Array.Empty<string>(), () => { FlyTable.Write(fly); return fly.Count; });
         }
@@ -215,7 +215,7 @@ namespace DSPRE.Tests
             {
                 SavesUnchanged($"{game} conditional music", Array.Empty<string>(), () =>
                 {
-                    var (start, rows) = ConditionalMusicTable.Read();
+                    (uint start, List<ConditionalMusicTable.Row> rows) = ConditionalMusicTable.Read();
                     ConditionalMusicTable.Write(start, rows);
                     return rows.Count;
                 });
@@ -233,8 +233,8 @@ namespace DSPRE.Tests
             }
             SavesUnchanged($"{game} encounter music", new[] { Filesystem.expArmPath }, () =>
             {
-                var (where, rows) = EncounterMusicTable.Read();
-                foreach (var row in rows) EncounterMusicTable.WriteMusic(where, row);
+                (EncounterMusicTable.Location where, List<EncounterMusicTable.Row> rows) = EncounterMusicTable.Read();
+                foreach (EncounterMusicTable.Row row in rows) EncounterMusicTable.WriteMusic(where, row);
                 return rows.Count;
             });
         }
@@ -249,7 +249,7 @@ namespace DSPRE.Tests
             {
                 SavesUnchanged($"{game} VS Seeker", Array.Empty<string>(), () =>
                 {
-                    var rows = VsSeekerRematchTable.ReadAll(out _, out string error);
+                    List<RematchTable.Row> rows = VsSeekerRematchTable.ReadAll(out _, out string error);
                     Assert.True(rows != null, error);
                     for (int i = 0; i < rows.Count; i++) Assert.True(VsSeekerRematchTable.WriteRow(i, rows[i], out error), error);
                     return rows.Count;
@@ -260,7 +260,7 @@ namespace DSPRE.Tests
             {
                 SavesUnchanged($"{game} Pokégear rematches", Array.Empty<string>(), () =>
                 {
-                    var rows = PokegearRematchTable.ReadAll(out var location, out string error);
+                    List<RematchTable.Row> rows = PokegearRematchTable.ReadAll(out RematchTable.Location location, out string error);
                     Assert.True(rows != null, error);
                     for (int i = 0; i < rows.Count; i++) Assert.True(PokegearRematchTable.WriteRow(location, i, rows[i], out error), error);
                     return rows.Count;
@@ -272,7 +272,7 @@ namespace DSPRE.Tests
                 Unpack(DirNames.textArchives);
                 SavesUnchanged($"{game} phone book", Array.Empty<string>(), () =>
                 {
-                    var book = PokegearPhoneBook.Load(out string error);
+                    PokegearPhoneBook.Book book = PokegearPhoneBook.Load(out string error);
                     Assert.True(book != null, error);
                     Assert.True(PokegearPhoneBook.Save(book, out error), error);
                     return 1;
@@ -290,7 +290,7 @@ namespace DSPRE.Tests
             Unpack(DirNames.trainerTextTable, DirNames.trainerTextOffset, DirNames.textArchives);
             SavesUnchanged($"{game} battle messages", new[] { Dir(DirNames.trainerTextTable), Dir(DirNames.trainerTextOffset), TextBins }, () =>
             {
-                var entries = TrainerMessageTable.Read();
+                List<TrainerMessageTable.Entry> entries = TrainerMessageTable.Read();
                 TrainerMessageTable.Write(entries, new TextArchive(trainerMessageTextNumber).messages);
                 BuildText();
                 return entries.Count;
@@ -316,15 +316,15 @@ namespace DSPRE.Tests
             Open(game);
             Unpack(DirNames.textArchives);
             int items = GetItemNames().Length, species = GetPokemonNames().Length, moves = GetAttackNames().Length;
-            var tables = new (string Name, Func<string> WhyNot, Func<int> Save)[]
+            (string Name, Func<string> WhyNot, Func<int> Save)[] tables = new (string Name, Func<string> WhyNot, Func<int> Save)[]
             {
-                ("berries", BerryData.WhyNot, () => { var all = BerryData.LoadAll(); for (int i = 0; i < all.Count; i++) all[i].Save(i); return all.Count; }),
+                ("berries", BerryData.WhyNot, () => { List<BerryData> all = BerryData.LoadAll(); for (int i = 0; i < all.Count; i++) all[i].Save(i); return all.Count; }),
                 ("BP shop", BpShopData.WhyNot, () => { BpShopData.Load().Save(items); return 1; }),
                 ("Underground mining", MiningTable.WhyNot, () => { MiningTable.Load().Save(); return 1; }),
                 ("incense breeding", IncenseBreedingTable.WhyNot, () => { IncenseBreedingTable.Load().Save(species, items); return 1; }),
                 ("encounter slot odds", EncounterSlotOdds.WhyNot, () => { EncounterSlotOdds.Load().Save(); return 1; }),
                 ("friendship changes", FriendshipTable.WhyNot, () => { FriendshipTable.Load().Save(); return 1; }),
-                ("growth curves", GrowthTable.WhyNot, () => { var t = GrowthTable.Load(); for (int c = 0; c < GrowthTable.Curves; c++) t.Save(c); return GrowthTable.Curves; }),
+                ("growth curves", GrowthTable.WhyNot, () => { GrowthTable t = GrowthTable.Load(); for (int c = 0; c < GrowthTable.Curves; c++) t.Save(c); return GrowthTable.Curves; }),
                 ("move tutors", MoveTutorData.WhyNot, () => { MoveTutorData.Load().Save(moves); return 1; }),
                 ("type chart", TypeChart.WhyNot, () => { TypeChart.Load().Save(); return 1; }),
                 ("wild held item odds", WildHeldItemOdds.WhyNot, () => { WildHeldItemOdds.Load().Save(); return 1; }),
@@ -332,7 +332,7 @@ namespace DSPRE.Tests
                 ("wild intros", VsIntroTables.WhyNot, () => { VsIntroTables.Load(VsIntroTables.Part.Wild).Save(); return 1; }),
             };
             int checkedTables = 0;
-            foreach (var (name, whyNot, save) in tables)
+            foreach ((string name, Func<string> whyNot, Func<int> save) in tables)
             {
                 if (whyNot() != null) continue;
                 SavesUnchanged($"{game} {name}", Array.Empty<string>(), save);
@@ -347,14 +347,14 @@ namespace DSPRE.Tests
         {
             Open(game);
             bool records = gameFamily != GameFamilies.DP;
-            var dirs = records
+            DirNames[] dirs = records
                 ? new[] { DirNames.pokemonSpriteOffsets, DirNames.pokeHeight }
                 : new[] { DirNames.pokeYofs, DirNames.pokeShadowOfx, DirNames.pokeShadow, DirNames.pokeHeight };
             dirs = dirs.Where(d => gameDirs.ContainsKey(d)).ToArray();
             Unpack(dirs);
             SavesUnchanged($"{game} battle display", dirs.Select(Dir), () =>
             {
-                var recordNarc = records ? new OffsetNarc(DirNames.pokemonSpriteOffsets, SpeciesSpriteData.Size) : null;
+                OffsetNarc recordNarc = records ? new OffsetNarc(DirNames.pokemonSpriteOffsets, SpeciesSpriteData.Size) : null;
                 IBattleOffsetSource source = records
                     ? new CombinedTailSource(recordNarc, withHeights: gameDirs.ContainsKey(DirNames.pokeHeight))
                     : new SeparateByteSource(DirNames.pokeYofs, DirNames.pokeShadowOfx, DirNames.pokeShadow);
@@ -376,16 +376,16 @@ namespace DSPRE.Tests
         public void PokemonSprites(string game)
         {
             Open(game);
-            var dirs = new[] { DirNames.pokemonBattleSprites, DirNames.otherPokemonBattleSprites }.Where(d => gameDirs.ContainsKey(d)).ToArray();
+            DirNames[] dirs = new[] { DirNames.pokemonBattleSprites, DirNames.otherPokemonBattleSprites }.Where(d => gameDirs.ContainsKey(d)).ToArray();
             Unpack(dirs);
             SavesUnchanged($"{game} Pokémon sprites", dirs.SelectMany(d => new[] { gameDirs[d].unpackedDir, gameDirs[d].packedDir }), () =>
             {
                 int n = 0;
-                foreach (var dir in dirs)
+                foreach (DirNames dir in dirs)
                 {
-                    var archive = PokemonBattleSpriteArchive.Open(dir);
+                    PokemonBattleSpriteArchive archive = PokemonBattleSpriteArchive.Open(dir);
                     if (archive == null) continue;
-                    foreach (var (id, _) in Members(Dir(dir)).ToList())
+                    foreach ((int id, string _) in Members(Dir(dir)).ToList())
                     {
                         if (archive.ReadSprite(id) is byte[] sprite) { Assert.True(archive.WriteSprite(id, sprite)); n++; }
                         else if (archive.ReadPalette(id) is uint[] palette) { Assert.True(archive.WritePalette(id, palette)); n++; }
@@ -407,9 +407,9 @@ namespace DSPRE.Tests
             SavesUnchanged($"{game} scripts", new[] { Filesystem.scripts }, () =>
             {
                 int n = 0;
-                foreach (var (id, _) in Members(Filesystem.scripts).ToList())
+                foreach ((int id, string _) in Members(Filesystem.scripts).ToList())
                 {
-                    var file = new ScriptFile(id);
+                    ScriptFile file = new ScriptFile(id);
                     if (file.isLevelScript || file.hasNoScripts) continue;
                     Assert.False(file.parseFailedDueToInvalidCommand, $"{game} script file {id} did not parse");
                     Assert.True(file.SaveToFileDefaultDir(id, showSuccessMessage: false), $"{game} script file {id} did not save");
@@ -427,7 +427,7 @@ namespace DSPRE.Tests
             Skip.If(!IsMartEditorAvailable(), $"the Mart editor does not open {game}");
             SavesUnchanged($"{game} marts", Array.Empty<string>(), () =>
             {
-                var marts = MartData.LoadCurrent();
+                MartData marts = MartData.LoadCurrent();
                 Assert.True(marts.SaveCurrent(), "the mart save failed");
                 return 1;
             });
@@ -441,7 +441,7 @@ namespace DSPRE.Tests
             Unpack(DirNames.fonts);
             SavesUnchanged($"{game} fonts", new[] { Dir(DirNames.fonts) }, () =>
             {
-                var files = FieldFont.UnpackedEntries();
+                string[] files = FieldFont.UnpackedEntries();
                 int n = 0;
                 for (int i = 0; i < files.Length; i++)
                 {

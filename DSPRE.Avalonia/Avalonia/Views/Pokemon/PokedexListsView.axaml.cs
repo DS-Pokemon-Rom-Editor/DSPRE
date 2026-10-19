@@ -13,12 +13,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         public PokedexListsView(PokedexListsViewModel vm) : this()
         {
             DataContext = vm;
-            // The count patch is applied in the toolbox; the note goes once it lands.
-            AppEvents.RomPatchStateChanged += OnPatchStateChanged;
-            DetachedFromVisualTree += (_, _) => AppEvents.RomPatchStateChanged -= OnPatchStateChanged;
         }
-
-        private void OnPatchStateChanged(object sender, System.EventArgs e) => VM?.RefreshCountNote();
 
         private void CountPatch_Click(object sender, RoutedEventArgs e) => AvaloniaEditorLauncher.OpenPatchToolboxAt("regionalDexCount");
 
@@ -33,12 +28,17 @@ namespace DSPRE.Avalonia.Views.Pokemon
             if (offer == null) return;
             (DSPRE.ROMFiles.RegionalDexCount.Counts now, DSPRE.ROMFiles.RegionalDexCount.Counts next, string problem) = offer.Value;
             if (problem != null) { await DialogHelper.ShowError(problem, "Regional Pokédex size"); return; }
-            await PatchHandover.OfferAsync("regionalDexCount", "Match the regional Pokédex size",
+            await PatchHandover.OfferAsync("regionalDexCount",
                 $"The game counts the regional Pokédex complete at {now.Completion} species and the saved order now gives {next.Completion}. Matching them",
                 "Regional Pokédex size");
         }
 
-        private void Discard_Click(object sender, RoutedEventArgs e) { VM?.DiscardChanges(); Say(null); }
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (!await DialogHelper.ConfirmDiscard(this)) return;
+            VM?.DiscardChanges();
+            Say(null);
+        }
 
         private async void Rebuild_Click(object sender, RoutedEventArgs e)
         {

@@ -13,7 +13,7 @@
         <Setter Property="FontSize" Value="{DynamicResource ControlContentThemeFontSize}"/>
     </Style>
 
-    <!-- 3px corner radius (a touch more than Fusion's nominal 2px, reads better at our DPI). -->
+    <!-- Buttons keep Fusion's 2px corners; fields, lists and tabs use 3px. -->
     <Style Selector="Button">
         <Setter Property="CornerRadius" Value="2"/>
         <Setter Property="MinHeight" Value="26"/>

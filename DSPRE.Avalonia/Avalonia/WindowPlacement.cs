@@ -44,9 +44,19 @@ namespace DSPRE.Avalonia
             }
             catch { /* positioning is best-effort, never block opening the window */ }
             w.Opened += FitHeightOnOpen;
+            w.Closed += DetachOnClose;
             OpenEditors.TrackRomWindow(w);
             ThemeManager.ApplyTitleBar(w);
             w.Show();
+        }
+
+        // The one place a window's view model stops listening to app-wide events.
+        private static void DetachOnClose(object sender, EventArgs e)
+        {
+            if (sender is not Window w) return;
+            w.Closed -= DetachOnClose;
+            object model = w is EditorHostWindow { Content: Control hosted } ? hosted.DataContext : w.DataContext;
+            (model as IDetachable)?.Detach();
         }
 
         /// <summary>No window insists on more height than this, so every editor still fits a small screen.</summary>

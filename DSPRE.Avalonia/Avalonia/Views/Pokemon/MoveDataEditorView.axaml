@@ -4,7 +4,6 @@
 		xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
 		x:Class="DSPRE.Avalonia.Views.Pokemon.MoveDataEditorView"
 		x:DataType="vm:MoveDataEditorViewModel"
-		Title="{Binding Title}"
 		Width="980" Height="820"
 		MinWidth="700" MinHeight="520"
 		WindowStartupLocation="CenterScreen">
@@ -28,7 +27,7 @@
 
   <DockPanel LastChildFill="True">
 	<controls:EditorToolbar>
-		<Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}" IsDefault="True"/>
+		<Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<controls:UndoRedoButtons/>
 		<TextBlock Text="Move" VerticalAlignment="Center"/>
@@ -50,8 +49,8 @@
 	  <TextBlock Text="{Binding SourceLoadError, StringFormat='Saving is off: {0}'}" Foreground="White" FontSize="12" TextWrapping="Wrap"/>
 	</Border>
 
-	<TextBlock DockPanel.Dock="Bottom" Text="{Binding Status}" Margin="0,8,0,0" TextTrimming="CharacterEllipsis"
-			   IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+	<TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusText}" Margin="0,8,0,0" TextTrimming="CharacterEllipsis"
+			   IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
 	<!-- Main editing area -->
 	<Grid ColumnDefinitions="*,10,*" RowDefinitions="Auto,8,Auto,8,*,8,Auto">

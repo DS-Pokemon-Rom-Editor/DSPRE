@@ -20,7 +20,8 @@
         <controls:FusionAutoCompleteBox ItemsSource="{Binding MachineNamesList}" SelectedIndex="{Binding CurrentMachineIndex}"
                   Width="220" Margin="0,0,12,4" IsVisible="{Binding IsByMachineMode}"/>
 
-        <Button Content="Save all" controls:Icon.Key="saveButton" Click="SaveAll_Click" Margin="0,0,12,4"/>
+        <Button Content="Save all" controls:Icon.Key="saveButton" Click="SaveAll_Click" IsEnabled="{Binding HasUnsavedChanges}" Margin="0,0,6,4"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}" Margin="0,0,12,4"/>
         <controls:UndoRedoButtons/>
 
         <Button Content="{Binding SelectAllLabel}" Click="SelectAll_Click" Margin="0,0,6,4"/>
@@ -32,8 +33,7 @@
                 ToolTip.Tip="Keep only the machines every member shares"/>
         <Button Content="Copy compatibility to…" controls:Icon.Key="copy" Click="CopyTo_Click" IsEnabled="{Binding IsByPokemonMode}" Margin="0,0,12,4"/>
 
-        <TextBlock Text="Filter" VerticalAlignment="Center" Margin="0,0,6,4"/>
-        <TextBox x:Name="FilterBox" Text="{Binding FilterText}" Width="180" PlaceholderText="pokémon name…" Margin="0,0,0,4"/>
+        <TextBox x:Name="FilterBox" Text="{Binding FilterText}" Width="180" PlaceholderText="Search Pokémon" Margin="0,0,0,4"/>
     </controls:EditorToolbar>
 
     <Grid ColumnDefinitions="360,*">

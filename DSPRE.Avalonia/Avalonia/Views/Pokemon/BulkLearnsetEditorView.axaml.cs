@@ -33,5 +33,10 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private async void Import_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.ImportAsync(this); }
         private async void Export_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.ExportAsync(this); }
         private async void ExportJson_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.ExportJsonAsync(this); }
+
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
+        }
     }
 }

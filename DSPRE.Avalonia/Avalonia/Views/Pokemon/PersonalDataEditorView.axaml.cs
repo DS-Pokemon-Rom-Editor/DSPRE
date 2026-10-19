@@ -64,7 +64,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
             IReadOnlyList<IStorageFile> files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                Title = "Import Overworld Follower Sprite Sheet PNG",
+                Title = "Import overworld follower sprite sheet PNG",
                 AllowMultiple = false,
                 FileTypeFilter = new List<FilePickerFileType> { DialogHelper.PngFilter }
             });

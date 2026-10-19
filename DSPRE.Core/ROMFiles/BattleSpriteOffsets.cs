@@ -63,12 +63,12 @@ namespace DSPRE.ROMFiles
         public void PutRecord(int id, byte[] rec)
         {
             Ensure();
-            if (_multi) { System.IO.File.WriteAllBytes(FilePath(id), rec); return; }
+            if (_multi) { ArchiveMembers.Put(_dir, id, rec); return; }
             if (_blob == null) return;
             int off = id * _recLen;
             if (off < 0 || off + rec.Length > _blob.Length) return;
             System.Array.Copy(rec, 0, _blob, off, rec.Length);
-            System.IO.File.WriteAllBytes(FilePath(0), _blob);   // single-file blob is "0000"
+            ArchiveMembers.Put(_dir, 0, _blob);   // single-file blob is "0000"
         }
     }
 

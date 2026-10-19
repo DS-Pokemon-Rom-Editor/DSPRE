@@ -32,7 +32,7 @@ namespace DSPRE.Tests.Core
             byte[] editedBytes;
             int changedOffset;
 
-            using (var experiment = RomExperiment.Open(
+            using (RomExperiment experiment = RomExperiment.Open(
                 "saved-rom-keeps-archive-edits", TestRoms.Platinum, PlatinumCode))
             {
                 experiment.Unpack(Archive);

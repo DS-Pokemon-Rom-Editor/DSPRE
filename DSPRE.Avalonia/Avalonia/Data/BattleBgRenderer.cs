@@ -1,5 +1,6 @@
 using System;
 using DSPRE.Avalonia.Data;
+using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.Data

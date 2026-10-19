@@ -91,7 +91,7 @@ namespace DSPRE.ROMFiles
                     if (binary == null || !File.Exists(binary)) continue;
                     if (File.ReadAllBytes(binary).AsSpan().SequenceEqual(before.Binary)) continue;
 
-                    File.WriteAllBytes(binary, before.Binary);
+                    ArchiveMembers.Write(binary, before.Binary);
                     entry["output_hash"] = XxHash3.HashToUInt64(before.Binary);
                     kept.Add(int.Parse(Path.GetFileNameWithoutExtension(name)));
                 }
@@ -99,7 +99,7 @@ namespace DSPRE.ROMFiles
                 kept.Sort();
                 if (kept.Count > 0)
                 {
-                    File.WriteAllText(_statePath, state.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+                    PlainFiles.WriteText(_statePath, state.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
                     AppLogger.Warn("Rotom rebuilt scripts nobody edited into different bytes; kept the previous binaries of "
                                    + string.Join(", ", kept.Select(id => id.ToString("D4"))) + ".");
                 }

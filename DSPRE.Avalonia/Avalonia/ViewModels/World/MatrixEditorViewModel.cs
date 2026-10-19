@@ -21,7 +21,7 @@ namespace DSPRE.Avalonia.ViewModels.World
     /// the paintable <c>MatrixGridControl</c>. Supports selecting a matrix, adding the
     /// optional sections, and save / import / export.
     /// </summary>
-    public class MatrixEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
+    public class MatrixEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -89,7 +89,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             _matrix.ResizeMatrix(height, width);
             RebuildLegend();
             MarkDirty();
-            StatusText = $"Matrix {_selectedIndex} is now {width}×{height} (unsaved).";
+            StatusText = $"Matrix {_selectedIndex} is now {width}×{height}.";
             RaiseLoaded();
         }
         public bool HasHeaders => _matrix?.hasHeadersSection ?? false;
@@ -262,10 +262,38 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         // ── Dirty tracking ───────────────────────────────────────────────────────────
         private bool _dirty;
-        public bool HasUnsavedChanges => _dirty;
-        public string UnsavedChangesDescription => $"Matrix {_selectedIndex}";
+        public bool HasUnsavedChanges => _dirty || _archive.IsDirty;
+
+        // Added, removed and saved matrices wait here until Save.
+        private readonly DSPRE.Avalonia.Data.StagedArchive _archive = new(DirNames.matrices);
+
+        private GameMatrix ReadMatrix(int id)
+        {
+            using MemoryStream ms = new MemoryStream(_archive.Read(id) ?? throw new FileNotFoundException($"Matrix {id} is missing."));
+            return new GameMatrix(new GameMatrix(ms), id);
+        }
+
+        private void ListMatrices()
+        {
+            int count = _archive.Count;
+            _suppress = true;
+            MatrixNames.Clear();
+            for (int i = 0; i < count; i++) MatrixNames.Add(ReadMatrix(i).ToString());
+            _suppress = false;
+        }
+        public string UnsavedChangesDescription => DSPRE.Avalonia.Data.StagedArchive.Join($"Matrix {_selectedIndex}", _dirty, _archive.Describe("matrix", "matrices"));
         public void SaveChanges() => Save();
-        public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); if (_selectedIndex >= 0) LoadMatrix(_selectedIndex); }
+        public void DiscardChanges()
+        {
+            // Added and removed matrices go with the open matrix's edits.
+            _dirty = false;
+            _archive.Discard();
+            ListMatrices();
+            if (_selectedIndex >= MatrixNames.Count) _selectedIndex = MatrixNames.Count - 1;
+            OnPropertyChanged(nameof(SelectedMatrixIndex));
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            if (_selectedIndex >= 0) LoadMatrix(_selectedIndex);
+        }
         public void MarkDirty() { _undo?.Record(); if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         // ── Undo / redo ────────────────────────────────────────────────────────────
@@ -323,14 +351,17 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "matrix")) return;
             SetClean();
+            // Discarding can drop the matrix being switched to when it was added and not saved.
+            if (requested >= MatrixNames.Count) requested = MatrixNames.Count - 1;
             if (Set(ref _selectedIndex, requested, nameof(SelectedMatrixIndex))) LoadMatrix(requested);
         }
 
         public MatrixEditorViewModel() { if (Design.IsDesignMode) MatrixNames.Add("Matrix 0"); }
-        public MatrixEditorViewModel(bool _) { AppEvents.MatrixSaved += OnSavedElsewhere; }
+        public MatrixEditorViewModel(bool _) { AppEvents.MatrixSaved += OnSavedElsewhere; AppEvents.RomPatchStateChanged += OnRomPatchStateChanged; }
 
         /// <summary>For a standalone window closing; the Maps workspace's instance lives for the session.</summary>
-        public void Detach() => AppEvents.MatrixSaved -= OnSavedElsewhere;
+        public void Detach() { AppEvents.MatrixSaved -= OnSavedElsewhere; AppEvents.RomPatchStateChanged -= OnRomPatchStateChanged; }
+        private void OnRomPatchStateChanged(object sender, System.EventArgs e) => OnPatchStateChanged();
 
         // Another open copy of this matrix saved: show it, unless this copy holds its own edits.
         private void OnSavedElsewhere(object sender, int id)
@@ -348,18 +379,15 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.matrices });
-                int count = Filesystem.GetMatrixCount();
-                _suppress = true;
-                MatrixNames.Clear();
-                for (int i = 0; i < count; i++) MatrixNames.Add(new GameMatrix(i).ToString());
-                _suppress = false;
+                ListMatrices();
+                int count = MatrixNames.Count;
                 StatusText = $"{count} matrices.";
                 if (count > 0) SelectedMatrixIndex = Math.Min(Math.Max(0, InitialIndex), count - 1);
             }
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowError($"Failed to set up Matrix Editor:\n{ex.Message}", "Matrix Editor");
+                await DialogHelper.ShowError($"Failed to set up Matrix Editor:\n{ex.Message}", "Matrix editor error");
             }
         }
 
@@ -367,7 +395,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             try
             {
-                _matrix = new GameMatrix(index);
+                _matrix = ReadMatrix(index);
                 RebuildLegend();
                 SetClean();
                 StartUndo();
@@ -376,7 +404,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex)
             {
-                _ = DialogHelper.ShowError($"Failed to load matrix {index}:\n{ex.Message}", "Matrix Editor");
+                _ = DialogHelper.ShowError($"Failed to load matrix {index}:\n{ex.Message}", "Matrix editor error");
             }
         }
 
@@ -412,7 +440,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (_matrix == null || !_matrix.hasHeadersSection) return;
             if (!await DialogHelper.AskYesNo("Remove this matrix's header section? Every cell will then use the header that loads the matrix.",
-                                             "Remove header section", _owner)) return;
+                                             "Remove header section?", _owner)) return;
             _matrix.hasHeadersSection = false;
             MarkDirty();
             RaiseLoaded();
@@ -423,7 +451,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (_matrix == null || !_matrix.hasHeightsSection) return;
             if (!await DialogHelper.AskYesNo("Remove this matrix's height section? Every map will then sit at height 0.",
-                                             "Remove height section", _owner)) return;
+                                             "Remove height section?", _owner)) return;
             _matrix.hasHeightsSection = false;
             MarkDirty();
             RaiseLoaded();
@@ -432,11 +460,12 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void Save()
         {
             if (_matrix == null || _selectedIndex < 0) return;
-            _matrix.SaveToFileDefaultDir(_selectedIndex, showSuccessMessage: false);
+            _archive.Save(_selectedIndex, _matrix.ToByteArray());
             SetClean();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
             // The list shows the name, which may have changed.
             _suppress = true;
-            try { if (_selectedIndex < MatrixNames.Count) MatrixNames[_selectedIndex] = new GameMatrix(_selectedIndex).ToString(); }
+            try { if (_selectedIndex < MatrixNames.Count) MatrixNames[_selectedIndex] = ReadMatrix(_selectedIndex).ToString(); }
             finally { _suppress = false; }
             OnPropertyChanged(nameof(SelectedMatrixIndex));
             SaveNotice.Saved(UnsavedChangesDescription);
@@ -450,16 +479,16 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (_dirty && !await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "matrix")) return;
             try
             {
-                int id = Filesystem.GetMatrixCount();
-                new GameMatrix().SaveToFileDefaultDir(id, showSuccessMessage: false);
-                MatrixNames.Add(new GameMatrix(id).ToString());
+                int id = _archive.Add(new GameMatrix().ToByteArray());
+                MatrixNames.Add(ReadMatrix(id).ToString());
                 SetClean();
                 SelectedMatrixIndex = id;
+                OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = $"Added matrix {id}.";
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError($"Couldn't add a matrix:\n{ex.Message}", "Matrix Editor");
+                await DialogHelper.ShowError($"Couldn't add a matrix:\n{ex.Message}", "Matrix editor error");
             }
         }
 
@@ -467,27 +496,28 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task RemoveLastMatrixAsync()
         {
             int count = MatrixNames.Count;
-            if (count <= 1) { await DialogHelper.ShowInfo("At least one matrix must stay.", "Matrix Editor"); return; }
+            if (count <= 1) { await DialogHelper.ShowInfo("At least one matrix must stay.", "Matrix editor"); return; }
             int last = count - 1;
             // A header still pointing at the matrix would load garbage, so it stays while one does.
             List<(ushort Header, string Name)> uses = HeaderLinks.HeadersLinking(HeaderLinks.Kind.Matrix, last);
             if (uses.Count > 0)
             {
                 await DialogHelper.ShowInfo($"Matrix {last} stays: these headers still use it." + Environment.NewLine + HeaderLinks.Describe(uses)
-                    + Environment.NewLine + "Point them at another matrix first.", "Matrix Editor");
+                    + Environment.NewLine + "Point them at another matrix first.", "Matrix editor");
                 return;
             }
-            if (!await DialogHelper.AskYesNo($"Delete the last matrix ({last})?", "Confirm deletion")) return;
+            if (!await DialogHelper.AskYesNo($"Delete the last matrix ({last})?", "Delete matrix?")) return;
             try
             {
-                File.Delete(Path.Combine(gameDirs[DirNames.matrices].unpackedDir, last.ToString("D4")));
                 if (_selectedIndex == last) { SetClean(); SelectedMatrixIndex = last - 1; }
+                _archive.RemoveLast();
                 MatrixNames.RemoveAt(last);
+                OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = $"Removed matrix {last}.";
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError($"Couldn't remove matrix {last}:\n{ex.Message}", "Matrix Editor");
+                await DialogHelper.ShowError($"Couldn't remove matrix {last}:\n{ex.Message}", "Matrix editor error");
             }
         }
 
@@ -501,10 +531,10 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read)) _matrix = new GameMatrix(fs);
                 MarkDirty();
-                StatusText = "Imported matrix (unsaved).";
+                SaveNotice.Imported($"matrix {_selectedIndex}", path);
                 RaiseLoaded();
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error"); }
+            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Matrix editor error"); }
         }
 
         public async Task ExportAsync()
@@ -513,8 +543,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             FilePickerFileType filter = new FilePickerFileType("Matrix file") { Patterns = new[] { "*.mtx" } };
             string path = await DialogHelper.SaveFile(_owner, "Export matrix", new[] { filter }, $"matrix_{_selectedIndex:D4}.mtx");
             if (path == null) return;
-            try { File.WriteAllBytes(path, _matrix.ToByteArray()); StatusText = "Exported."; }
-            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
+            try { PlainFiles.WriteBytes(path, _matrix.ToByteArray()); SaveNotice.Exported(path); }
+            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Matrix editor error"); }
         }
     }
 }

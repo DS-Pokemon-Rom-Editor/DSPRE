@@ -17,10 +17,9 @@ namespace DSPRE
     public static class TrainerClassMetadataPatch
     {
         public const int PayloadSize = 0x2068;
-        public const uint DefaultPayloadOffset = 0x12200;
 
         public static bool SupportsCurrentRom =>
-            RomInfo.gameLanguage == RomInfo.GameLanguages.English && (RomInfo.romID == "IPKE" || RomInfo.romID == "IPGE");
+            RomInfo.gameLanguage == RomInfo.GameLanguages.English && RomInfo.gameFamily == RomInfo.GameFamilies.HGSS;
 
         private sealed class Reloc { public byte Kind; public bool Blx; public uint Offset, Value; }
         private sealed class Span { public uint Offset; public byte[] Original, Patched; }
@@ -143,7 +142,7 @@ namespace DSPRE
                     byte[] bytes = x.Kind == 2 ? Branch(fileBase + x.Offset, address + x.Value, x.Blx) : BitConverter.GetBytes(address + x.Value);
                     bytes.CopyTo(file, (int)x.Offset);
                 }
-                File.WriteAllBytes(path, file);
+                ArchiveMembers.Write(path, file);
             }
             DSUtils.WriteToFile(Filesystem.expArmPath, BuildPayload(address), payloadOffset);
             WriteArchive(records);
@@ -196,8 +195,8 @@ namespace DSPRE
 
         private static List<byte[]> BuildRecords()
         {
-            RomInfo.VsIntroSites sites = RomInfo.VsIntroCodeSites ?? throw new InvalidDataException("This ROM's VS intro records are not mapped.");
-            RomInfo.TrainerPrizeTable prize = RomInfo.trainerPrizeTable ?? throw new InvalidDataException("This ROM's prize table is not mapped.");
+            RomInfo.VsIntroSites sites = RomLocator.VsIntroSites ?? throw new InvalidDataException("This ROM's VS intro records are not mapped.");
+            RomInfo.TrainerPrizeTable prize = RomLocator.TrainerPrizeTable ?? throw new InvalidDataException("This ROM's prize table is not mapped.");
             RomInfo.FrontierBrainTable brains = RomInfo.frontierBrainTable ?? throw new InvalidDataException("This ROM's Frontier Brain table is not mapped.");
             BattleMusicTables music = BattleMusicTables.LoadRom() ?? throw new InvalidDataException("The battle music tables could not be read.");
             List<EncounterMusicTable.Row> eyeMusic = EncounterMusicTable.Read().Rows;
@@ -319,12 +318,18 @@ namespace DSPRE
                 .Concat(btaf).Concat(btnf).Concat(gmifChunk).ToArray();
 
             (string packed, string unpacked) = RomInfo.gameDirs[RomInfo.DirNames.trainerClassMetadata];
-            File.WriteAllBytes(packed, narc);
-            if (Directory.Exists(unpacked))
+            PlainFiles.WriteBytes(packed, narc);
+            if (!Directory.Exists(unpacked)) return;
+            ArchiveMembers.Batch members = new ArchiveMembers.Batch();
+            for (int i = 0; i < records.Count; i++) members.Put(RomInfo.DirNames.trainerClassMetadata, i, records[i]);
+            foreach (string f in Directory.GetFiles(unpacked))
             {
-                foreach (string f in Directory.GetFiles(unpacked)) File.Delete(f);
-                for (int i = 0; i < records.Count; i++) File.WriteAllBytes(Path.Combine(unpacked, i.ToString("D4")), records[i]);
+                if (!int.TryParse(Path.GetFileName(f), out int id)) members.DeleteFile(f);
+                else if (id >= records.Count) members.Delete(RomInfo.DirNames.trainerClassMetadata, id);
             }
+            if (!members.TryCommit(out string error)) throw new IOException(error);
+            // The packed archive was built here, not by Narc.Save, so the drift check is told it matches.
+            NarcSync.NoteSaved(unpacked, packed);
         }
     }
 }

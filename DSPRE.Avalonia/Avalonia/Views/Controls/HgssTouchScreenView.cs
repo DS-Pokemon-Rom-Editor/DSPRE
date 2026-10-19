@@ -162,7 +162,7 @@ namespace DSPRE.Avalonia.Views.Controls
 
             IReadOnlyList<string> choices = Choices;
             string key = ShowsChoices
-                ? $"c|{(choices == null ? "" : string.Join("", choices))}|{YesNo}|{Cursor}|{CursorShown}|{Brightness:0.00}"
+                ? $"c|{(choices == null ? "" : string.Join("\u0001", choices))}|{YesNo}|{Cursor}|{CursorShown}|{Brightness:0.00}"
                 : $"m|{Dimmed}|{_aHeld}|{_shoesOn}|{_highlight}|{ALabel}|{Brightness:0.00}";
             if (_picture == null || _key != key)
             {

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.Data
@@ -39,60 +40,16 @@ namespace DSPRE.Avalonia.Data
         /// ROM's own version. Does not affect the copyright strip, which is shared between both.</summary>
         public GameVersions Version { get; set; } = gameVersion;
 
-        // ── Session backup / revert ──────────────────────────────────────────
-        // Keyed by raw NARC member index (the same index space regardless of which Version is selected,
-        // since HeartGold and SoulSilver just occupy different member slots in the one archive). Captures
-        // each member's on-disk bytes the first time this session is about to overwrite it, so RevertAll
-        // can put back exactly what was there when the editor was opened, undoing every import made since.
-        private readonly Dictionary<int, byte[]> _backup = new();
+        /// <summary>Imports wait here until the owner saves; drawing and exports read through them.</summary>
+        public PendingArchiveWrites Pending { get; } = new PendingArchiveWrites();
 
-        public bool HasChanges
-        {
-            get
-            {
-                foreach (KeyValuePair<int, byte[]> kv in _backup)
-                    if (!(_narc.Get(kv.Key) ?? Array.Empty<byte>()).AsSpan().SequenceEqual(kv.Value)) return true;
-                return false;
-            }
-        }
+        public bool HasChanges => Pending.IsDirty;
 
-        /// <summary>Reads a member's current on-disk bytes, snapshotting them first (once per session) so
-        /// they can be restored later. Use this instead of a bare <c>_narc.Get</c> anywhere about to write.
-        /// The snapshot is a defensive copy: when a member isn't LZ10-compressed, <see cref="NitroBgCodec.Inflate"/>
-        /// hands back the very same array the caller goes on to mutate in place via WritePalette/WriteTileData/
-        /// WriteMapData, so storing that reference directly would silently "revert" to the already-edited bytes.</summary>
-        private byte[] GetAndSnapshot(int id)
-        {
-            History.Touching(id);
-            return Backup(id);
-        }
+        // A copy: Inflate can hand back the very array an import then changes in place.
+        private byte[] Current(int id) => (byte[])_narc.Get(id)?.Clone();
 
-        private byte[] Backup(int id)
-        {
-            byte[] raw = _narc.Get(id);
-            if (raw != null && !_backup.ContainsKey(id)) _backup[id] = (byte[])raw.Clone();
-            return raw;
-        }
-
-        /// <summary>Each import as an undo step; the owner commits after an import succeeds.</summary>
-        public MemberEditUndo History { get; }
-
-        public TitleScreenGraphics()
-        {
-            History = new MemberEditUndo(id => _narc.Get(id), (id, bytes) => { Backup(id); _narc.Put(id, bytes); });
-        }
-
-        /// <summary>Keeps every change so far, for Save; later changes start a new checkpoint.</summary>
-        public void AcceptAll() => _backup.Clear();
-
-        /// <summary>Restores every archive member touched by an import this session back to its bytes from
-        /// before the first edit, then forgets the backup (so importing again starts a fresh checkpoint).</summary>
-        public void RevertAll()
-        {
-            foreach (KeyValuePair<int, byte[]> kv in _backup) _narc.Put(kv.Key, kv.Value);
-            _backup.Clear();
-            History.Clear();
-        }
+        public void AcceptAll() => Pending.Save();
+        public void RevertAll() => Pending.Discard();
 
         // ── Decode ───────────────────────────────────────────────────────────
         public RawImage ComposeLogo()
@@ -116,6 +73,7 @@ namespace DSPRE.Avalonia.Data
 
         private RawImage ComposeVia(int chrIdx, int palIdx, int scrIdx, bool transparentZero)
         {
+            using IDisposable reading = Pending.Reading();
             if (!Available) return null;
             byte[] chr = NitroBgCodec.Inflate(_narc.Get(chrIdx));
             byte[] pal = NitroBgCodec.Inflate(_narc.Get(palIdx));
@@ -158,11 +116,11 @@ namespace DSPRE.Avalonia.Data
                 return $"Image must be exactly {LogoWidth}x{LogoHeight} (got {png.Width}x{png.Height}).";
 
             (int logo, int palette, int background, int logoNscr, int backgroundNscr) members = TitleScreenMembersFor(Version);
-            byte[] palRaw = NitroBgCodec.Inflate(GetAndSnapshot(members.palette));
-            byte[] logoChrRaw = NitroBgCodec.Inflate(GetAndSnapshot(members.logo));
-            byte[] logoScrRaw = NitroBgCodec.Inflate(GetAndSnapshot(members.logoNscr));
-            byte[] bgChrRaw = NitroBgCodec.Inflate(GetAndSnapshot(members.background));
-            byte[] bgScrRaw = NitroBgCodec.Inflate(GetAndSnapshot(members.backgroundNscr));
+            byte[] palRaw = NitroBgCodec.Inflate(Current(members.palette));
+            byte[] logoChrRaw = NitroBgCodec.Inflate(Current(members.logo));
+            byte[] logoScrRaw = NitroBgCodec.Inflate(Current(members.logoNscr));
+            byte[] bgChrRaw = NitroBgCodec.Inflate(Current(members.background));
+            byte[] bgScrRaw = NitroBgCodec.Inflate(Current(members.backgroundNscr));
             if (palRaw == null || logoChrRaw == null || logoScrRaw == null || bgChrRaw == null || bgScrRaw == null)
                 return "Could not read the current title screen graphics.";
 
@@ -224,9 +182,9 @@ namespace DSPRE.Avalonia.Data
                 return $"Image must be exactly {CopyrightWidth}x{CopyrightHeight} (got {png.Width}x{png.Height}).";
 
             (int ncgr, int nclr, int nscr) m = TitleScreenCopyrightMembers;
-            byte[] palRaw = NitroBgCodec.Inflate(GetAndSnapshot(m.nclr));
-            byte[] chrRaw = NitroBgCodec.Inflate(GetAndSnapshot(m.ncgr));
-            byte[] scrRaw = NitroBgCodec.Inflate(GetAndSnapshot(m.nscr));
+            byte[] palRaw = NitroBgCodec.Inflate(Current(m.nclr));
+            byte[] chrRaw = NitroBgCodec.Inflate(Current(m.ncgr));
+            byte[] scrRaw = NitroBgCodec.Inflate(Current(m.nscr));
             if (palRaw == null || chrRaw == null || scrRaw == null)
                 return "Could not read the current copyright graphics.";
 
@@ -263,12 +221,16 @@ namespace DSPRE.Avalonia.Data
                 nclrBytes[0] != (byte)'R' || nclrBytes[1] != (byte)'L' || nclrBytes[2] != (byte)'C' || nclrBytes[3] != (byte)'N')
                 return "Not a valid colour file.";
             int id = TitleScreenMembersFor(Version).palette;
-            GetAndSnapshot(id);
             _narc.Put(id, nclrBytes);
             return null;
         }
 
-        public byte[] ExportPaletteRaw() => Available ? NitroBgCodec.Inflate(_narc.Get(TitleScreenMembersFor(Version).palette)) : null;
+        public byte[] ExportPaletteRaw()
+        {
+            if (!Available) return null;
+            using IDisposable reading = Pending.Reading();
+            return NitroBgCodec.Inflate(_narc.Get(TitleScreenMembersFor(Version).palette));
+        }
 
         // ── Shared quantize + tile-dedup encoding ────────────────────────────
         private sealed class EncodedTiles
@@ -375,15 +337,11 @@ namespace DSPRE.Avalonia.Data
 
         private static void WritePalette(byte[] palRaw, (byte r, byte g, byte b)[] palette)
         {
-            int pltt = NitroBgCodec.Find(palRaw, "TTLP", 0);
-            if (pltt < 0) throw new InvalidDataException("The colour file has no palette block.");
-            int dataOffset = pltt + 0x18;
-            for (int i = 0; i < palette.Length && dataOffset + i * 2 + 1 < palRaw.Length; i++)
+            if (NitroBgCodec.ColourCount(palRaw) < 0) throw new InvalidDataException("The colour file has no palette block.");
+            for (int i = 0; i < palette.Length; i++)
             {
                 (byte r, byte g, byte b) = palette[i];
-                ushort c = (ushort)(((r >> 3) & 0x1F) | (((g >> 3) & 0x1F) << 5) | (((b >> 3) & 0x1F) << 10));
-                palRaw[dataOffset + i * 2] = (byte)(c & 0xFF);
-                palRaw[dataOffset + i * 2 + 1] = (byte)(c >> 8);
+                if (!NitroBgCodec.PutColour(palRaw, i, NitroBgCodec.ToBgr555(r, g, b))) break;
             }
         }
 

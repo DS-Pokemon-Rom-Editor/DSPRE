@@ -362,7 +362,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         // Ramp fills: the ground's own picture, the brush tile's picture, the brush tile fitted over the ramp, or a tileset picture.
         private const int FillGround = 0, FillBrushPicture = 1, FillBrushTile = 2, FirstPicture = 3;
         public ObservableCollection<string> RampFills { get; } = new ObservableCollection<string>
-            { "Ground's own picture", "Selected tile's picture", "Selected tile, fitted as the ramp" };
+            { "Ground's own picture", "Selected tile's picture", "Selected tile fitted as the ramp" };
         private int _rampFillIndex;
         public int RampFillIndex { get => _rampFillIndex; set => Set(ref _rampFillIndex, Math.Max(0, value)); }
 
@@ -1083,7 +1083,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     }
                 }
                 choice.Clash = clash;
-                choice.Said = clash ? "Different picture, same name" : missing ? "New" : Same;
+                choice.Said = clash ? "A different picture with the same name" : missing ? "New" : Same;
             }
 
             // Video memory the field needs for this area afterwards: its map pack plus its buildings.
@@ -1216,8 +1216,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                     NsbtxWriter.Result made = bytes != null ? NsbtxWriter.Extend(bytes, adding, replace) : null;
                     if (made == null || made.Whynot != null) made = NsbtxWriter.Build(adding);
                     if (made.Whynot != null) { Warning = made.Whynot; return made.Whynot; }
-                    int newPack = Directory.GetFiles(folder).Length;
-                    File.WriteAllBytes(Path.Combine(folder, newPack.ToString("D4")), made.Bytes);
+                    int newPack = NarcAPI.Narc.MemberCount(folder);
+                    ArchiveMembers.Write(Path.Combine(folder, newPack.ToString("D4")), made.Bytes);
                     foreach (byte a in packAreas)
                     {
                         AreaData area = new AreaData(a);

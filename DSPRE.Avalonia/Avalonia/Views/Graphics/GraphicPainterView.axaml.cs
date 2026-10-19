@@ -17,7 +17,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         public GraphicPainterView(GraphicPainterViewModel vm)
         {
             InitializeComponent();
-            if (vm != null) { DataContext = vm; EditorWindowChrome.Attach(this, vm, manageTitle: false); }
+            if (vm != null) { DataContext = vm; EditorWindowChrome.Attach(this, vm, title: () => vm.Title); }
         }
 
         private void Close_Click(object sender, RoutedEventArgs e) => Close();
@@ -31,11 +31,11 @@ namespace DSPRE.Avalonia.Views.Graphics
             string err = vm.Save();
             if (err != null)
             {
-                vm.Status = err;
+                vm.StatusText = err;
                 await DialogHelper.ShowInfo(err, "Save");
                 return;
             }
-            vm.Status = "Saved. Save the ROM to keep it.";
+            vm.StatusText = "Saved. Save the ROM to keep it.";
         }
 
         // ── painting ───────────────────────────────────────────────────────────────────────────────
@@ -125,6 +125,11 @@ namespace DSPRE.Avalonia.Views.Graphics
             (byte R, byte G, byte B)? picked = await DialogHelper.PickColour(this, "Change colour " + number, now);
             if (picked == null) return;
             vm.SetColour(number, picked.Value.R, picked.Value.G, picked.Value.B);
+        }
+
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
         }
     }
 }

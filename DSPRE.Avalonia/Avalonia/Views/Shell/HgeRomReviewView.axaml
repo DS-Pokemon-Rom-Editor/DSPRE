@@ -19,7 +19,7 @@
     <TabItem Header="Pokémon graphics">
       <Grid ColumnDefinitions="260,*" Margin="0,6,0,0">
         <DockPanel Grid.Column="0" Margin="0,0,6,0">
-          <TextBox DockPanel.Dock="Top" PlaceholderText="Search" Text="{Binding Search}" Margin="0,0,0,4"/>
+          <TextBox DockPanel.Dock="Top" PlaceholderText="Search Pokémon" Text="{Binding Search}" Margin="0,0,0,4"/>
           <ListBox ItemsSource="{Binding Species}" SelectedIndex="{Binding SelectedSpeciesIndex}">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:HgeRomReviewViewModel+SpeciesRow">
@@ -35,7 +35,7 @@
             <TextBlock Text="{Binding PaletteNote}" TextWrapping="Wrap"
                        Foreground="{DynamicResource Editor.Subtle}"
                        IsVisible="{Binding !PaletteIsWrong}"/>
-            <TextBlock Text="{Binding PaletteNote}" TextWrapping="Wrap" Foreground="Orange"
+            <TextBlock Text="{Binding PaletteNote}" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Warn}"
                        IsVisible="{Binding PaletteIsWrong}"/>
             <ItemsControl ItemsSource="{Binding Icons}">
               <ItemsControl.ItemsPanel>
@@ -50,7 +50,7 @@
                              RenderOptions.BitmapInterpolationMode="None" IsVisible="{Binding HasPicture}"/>
                     </Border>
                     <TextBlock Text="{Binding Caption}" FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0"/>
-                    <TextBlock Text="{Binding Whynot}" FontSize="10" Foreground="Orange" TextWrapping="Wrap"
+                    <TextBlock Text="{Binding Whynot}" FontSize="10" Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"
                                IsVisible="{Binding !HasPicture}"/>
                   </StackPanel>
                 </DataTemplate>
@@ -73,7 +73,7 @@
                              RenderOptions.BitmapInterpolationMode="None" IsVisible="{Binding HasPicture}"/>
                     </Border>
                     <TextBlock Text="{Binding Caption}" FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0"/>
-                    <TextBlock Text="{Binding Whynot}" FontSize="10" Foreground="Orange" TextWrapping="Wrap"
+                    <TextBlock Text="{Binding Whynot}" FontSize="10" Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"
                                IsVisible="{Binding !HasPicture}"/>
                   </StackPanel>
                 </DataTemplate>
@@ -96,7 +96,7 @@
                              RenderOptions.BitmapInterpolationMode="None" IsVisible="{Binding HasPicture}"/>
                     </Border>
                     <TextBlock Text="{Binding Caption}" FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0"/>
-                    <TextBlock Text="{Binding Whynot}" FontSize="10" Foreground="Orange" TextWrapping="Wrap"
+                    <TextBlock Text="{Binding Whynot}" FontSize="10" Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"
                                IsVisible="{Binding !HasPicture}"/>
                   </StackPanel>
                 </DataTemplate>
@@ -112,7 +112,7 @@
         <StackPanel DockPanel.Dock="Top" Spacing="6">
           <TextBlock Text="{Binding ArchiveSummary}" TextWrapping="Wrap"
                      Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding ArchiveIsHealthy}"/>
-          <TextBlock Text="{Binding ArchiveSummary}" TextWrapping="Wrap" Foreground="Orange"
+          <TextBlock Text="{Binding ArchiveSummary}" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Warn}"
                      IsVisible="{Binding !ArchiveIsHealthy}"/>
 
           <TextBlock Text="{Binding RepairNote}" TextWrapping="Wrap" FontSize="11"

@@ -215,8 +215,15 @@ namespace DSPRE
                 }
                 else
                 {
-                    File.Delete(overlayFilePath);
-                    File.Move(overlayFilePath + DSUtils.backupSuffix, overlayFilePath);
+                    try
+                    {
+                        DSUtils.WriteWholeFile(overlayFilePath, File.ReadAllBytes(overlayFilePath + DSUtils.backupSuffix));
+                        File.Delete(overlayFilePath + DSUtils.backupSuffix);
+                    }
+                    catch (InvalidOperationException refused)
+                    {
+                        AppMessages.Error(refused.Message, "Can't restore overlay from backup");
+                    }
                 }
             }
             else
@@ -286,7 +293,7 @@ namespace DSPRE
                 {
                     File.Delete(overlayFilePath + backupSuffix);
                 }
-                File.Copy(overlayFilePath, overlayFilePath + backupSuffix);
+                PlainFiles.Copy(overlayFilePath, overlayFilePath + backupSuffix);
             }
 
             Process decompress = DSUtils.CreateDecompressProcess(overlayFilePath);

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.Data
@@ -27,48 +28,16 @@ namespace DSPRE.Avalonia.Data
 
         public static string[] RankNames => TrainerCardRankNames;
 
-        private readonly Dictionary<int, byte[]> _backup = new();
-        public bool HasChanges
-        {
-            get
-            {
-                foreach (KeyValuePair<int, byte[]> kv in _backup)
-                    if (!(_narc.Get(kv.Key) ?? Array.Empty<byte>()).AsSpan().SequenceEqual(kv.Value)) return true;
-                return false;
-            }
-        }
+        /// <summary>Imports wait here until the owner saves; drawing and exports read through them.</summary>
+        public PendingArchiveWrites Pending { get; } = new PendingArchiveWrites();
 
-        // Clones on first read: Inflate() can return the same array we later mutate in place.
-        private byte[] GetAndSnapshot(int id)
-        {
-            History.Touching(id);
-            return Backup(id);
-        }
+        public bool HasChanges => Pending.IsDirty;
 
-        private byte[] Backup(int id)
-        {
-            byte[] raw = _narc.Get(id);
-            if (raw != null && !_backup.ContainsKey(id)) _backup[id] = (byte[])raw.Clone();
-            return raw;
-        }
+        // A copy: Inflate can hand back the very array an import then changes in place.
+        private byte[] Current(int id) => (byte[])_narc.Get(id)?.Clone();
 
-        /// <summary>Each import as an undo step; the owner commits after an import attempt.</summary>
-        public MemberEditUndo History { get; }
-
-        public TrainerCardGraphics()
-        {
-            History = new MemberEditUndo(id => _narc.Get(id), (id, bytes) => { Backup(id); _narc.Put(id, bytes); });
-        }
-
-        /// <summary>After a save: the current files become what Discard goes back to.</summary>
-        public void AcceptAll() => _backup.Clear();
-
-        public void RevertAll()
-        {
-            foreach (KeyValuePair<int, byte[]> kv in _backup) _narc.Put(kv.Key, kv.Value);
-            _backup.Clear();
-            History.Clear();
-        }
+        public void AcceptAll() => Pending.Save();
+        public void RevertAll() => Pending.Discard();
 
         // ── Decode ───────────────────────────────────────────────────────────
         public RawImage ComposeCardFront(int rankIndex) => ComposeCard(rankIndex, front: true);
@@ -92,6 +61,7 @@ namespace DSPRE.Avalonia.Data
 
         private RawImage ComposeVia(int chrIdx, int palIdx, int scrIdx, bool transparentZero)
         {
+            using IDisposable reading = Pending.Reading();
             if (!Available) return null;
             byte[] chr = NitroBgCodec.Inflate(_narc.Get(chrIdx));
             byte[] pal = NitroBgCodec.Inflate(_narc.Get(palIdx));
@@ -144,9 +114,9 @@ namespace DSPRE.Avalonia.Data
                 return $"Image must be exactly {CardWidth}x{CardHeight} (got {png.Width}x{png.Height}).";
 
             (int ncgr, int facaNscr, int backNscr, int[] rankPalettes) m = TrainerCardMembers;
-            byte[] chrRaw = NitroBgCodec.Inflate(GetAndSnapshot(m.ncgr));
-            byte[] facaRaw = NitroBgCodec.Inflate(GetAndSnapshot(m.facaNscr));
-            byte[] backRaw = NitroBgCodec.Inflate(GetAndSnapshot(m.backNscr));
+            byte[] chrRaw = NitroBgCodec.Inflate(Current(m.ncgr));
+            byte[] facaRaw = NitroBgCodec.Inflate(Current(m.facaNscr));
+            byte[] backRaw = NitroBgCodec.Inflate(Current(m.backNscr));
             if (chrRaw == null || facaRaw == null || backRaw == null)
                 return "Could not read the current card design.";
 
@@ -190,7 +160,7 @@ namespace DSPRE.Avalonia.Data
 
             Dictionary<int, byte[]> palettes = new Dictionary<int, byte[]>();
             foreach (int rank in ranks)
-                if (rank >= 0 && rank < m.rankPalettes.Length && NitroBgCodec.Inflate(GetAndSnapshot(m.rankPalettes[rank])) is byte[] raw)
+                if (rank >= 0 && rank < m.rankPalettes.Length && NitroBgCodec.Inflate(Current(m.rankPalettes[rank])) is byte[] raw)
                     palettes[m.rankPalettes[rank]] = raw;
             try { foreach (byte[] raw in palettes.Values) WritePalette(raw, palette, used); }
             catch (InvalidDataException ex) { return ex.Message; }
@@ -215,10 +185,10 @@ namespace DSPRE.Avalonia.Data
 
             (int ncgr, int maleNscr, int femaleNscr) t = TrainerCardTrainerMembers;
             (int ncgr, int facaNscr, int backNscr, int[] rankPalettes) m = TrainerCardMembers;
-            byte[] chrRaw = NitroBgCodec.Inflate(GetAndSnapshot(t.ncgr));
-            byte[] maleRaw = NitroBgCodec.Inflate(GetAndSnapshot(t.maleNscr));
-            byte[] femaleRaw = NitroBgCodec.Inflate(GetAndSnapshot(t.femaleNscr));
-            byte[] palRaw = NitroBgCodec.Inflate(GetAndSnapshot(m.rankPalettes[0]));
+            byte[] chrRaw = NitroBgCodec.Inflate(Current(t.ncgr));
+            byte[] maleRaw = NitroBgCodec.Inflate(Current(t.maleNscr));
+            byte[] femaleRaw = NitroBgCodec.Inflate(Current(t.femaleNscr));
+            byte[] palRaw = NitroBgCodec.Inflate(Current(m.rankPalettes[0]));
             if (chrRaw == null || maleRaw == null || femaleRaw == null || palRaw == null)
                 return "Could not read the current trainer pose.";
 
@@ -258,7 +228,7 @@ namespace DSPRE.Avalonia.Data
             // HeartGold shows the pose in each rank's colours; DP and Platinum always take Normal's.
             Dictionary<int, byte[]> palettes = new Dictionary<int, byte[]> { [m.rankPalettes[0]] = palRaw };
             foreach (int rank in PoseRanks(m.rankPalettes.Length))
-                if (rank > 0 && NitroBgCodec.Inflate(GetAndSnapshot(m.rankPalettes[rank])) is byte[] other) palettes[m.rankPalettes[rank]] = other;
+                if (rank > 0 && NitroBgCodec.Inflate(Current(m.rankPalettes[rank])) is byte[] other) palettes[m.rankPalettes[rank]] = other;
             int[] poseSlots = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Range(PoseFirstSlot, palette.Length));
             try { foreach (byte[] raw in palettes.Values) WritePalette(raw, palette, poseSlots); }
             catch (InvalidDataException ex) { return ex.Message; }
@@ -278,13 +248,16 @@ namespace DSPRE.Avalonia.Data
                 nclrBytes[0] != (byte)'R' || nclrBytes[1] != (byte)'L' || nclrBytes[2] != (byte)'C' || nclrBytes[3] != (byte)'N')
                 return "Not a valid colour file.";
             int id = TrainerCardMembers.rankPalettes[rankIndex];
-            GetAndSnapshot(id);
             _narc.Put(id, nclrBytes);
             return null;
         }
 
-        public byte[] ExportRankPaletteRaw(int rankIndex) =>
-            Available ? NitroBgCodec.Inflate(_narc.Get(TrainerCardMembers.rankPalettes[rankIndex])) : null;
+        public byte[] ExportRankPaletteRaw(int rankIndex)
+        {
+            if (!Available) return null;
+            using IDisposable reading = Pending.Reading();
+            return NitroBgCodec.Inflate(_narc.Get(TrainerCardMembers.rankPalettes[rankIndex]));
+        }
 
         // ── Shared quantize + tile-dedup encoding ─────────
         private sealed class EncodedTiles
@@ -417,17 +390,11 @@ namespace DSPRE.Avalonia.Data
 
         private static void WritePalette(byte[] palRaw, (byte r, byte g, byte b)[] palette, int[] slots)
         {
-            int pltt = NitroBgCodec.Find(palRaw, "TTLP", 0);
-            if (pltt < 0) throw new InvalidDataException("The colour file has no palette block.");
-            int dataOffset = pltt + 0x18;
+            if (NitroBgCodec.ColourCount(palRaw) < 0) throw new InvalidDataException("The colour file has no palette block.");
             for (int i = 0; i < palette.Length && i < slots.Length; i++)
             {
-                int at = dataOffset + slots[i] * 2;
-                if (at + 1 >= palRaw.Length) continue;
                 (byte r, byte g, byte b) = palette[i];
-                ushort c = (ushort)(((r >> 3) & 0x1F) | (((g >> 3) & 0x1F) << 5) | (((b >> 3) & 0x1F) << 10));
-                palRaw[at] = (byte)(c & 0xFF);
-                palRaw[at + 1] = (byte)(c >> 8);
+                NitroBgCodec.PutColour(palRaw, slots[i], NitroBgCodec.ToBgr555(r, g, b));
             }
         }
 

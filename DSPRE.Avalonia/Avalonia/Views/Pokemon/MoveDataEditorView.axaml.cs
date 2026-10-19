@@ -15,7 +15,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
             EditMoveScriptButton.IsVisible = BetaEditors.Allows("BattleScriptEditorView");
             DataContext = new MoveDataEditorViewModel();
             // VM owns the bound Title (+ "*" marker); chrome adds Ctrl+S + the close guard.
-            EditorWindowChrome.Attach(this, ViewModel, manageTitle: false, onClosed: ViewModel.Detach);
+            EditorWindowChrome.Attach(this, ViewModel, title: () => ViewModel.Title);
             ViewModel.NeedsExpansion += (kind, listed) => _ = OfferExpansionAsync(kind, listed);
         }
 
@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
             try
             {
                 string key = kind == DSPRE.ROMFiles.MoveCategoryTable.Kind.Punching ? "punchingMovesExpanded" : "soundMovesExpanded";
-                await PatchHandover.OfferAsync(key, $"Expand the {name} move list", $"Changing the {name} move list", "Move Data Editor");
+                await PatchHandover.OfferAsync(key, $"Changing the {name} move list", "Move Data Editor");
             }
             finally
             {
@@ -55,7 +55,10 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private async void Save_Click(object sender, RoutedEventArgs e)
             => await ViewModel.SaveCommand();
 
-        private void Discard_Click(object sender, RoutedEventArgs e) => ViewModel.DiscardChanges();
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) ViewModel.DiscardChanges();
+        }
 
         private async void Export_Click(object sender, RoutedEventArgs e)
             => await ViewModel.ExportCommand(this);

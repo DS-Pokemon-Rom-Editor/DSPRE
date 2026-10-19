@@ -124,8 +124,8 @@ namespace DSPRE.Tests
             ScriptFile.SetSuppressInvalidCommandErrors(true);
             try
             {
-                using var input = new MemoryStream(scriptBytes, writable: false);
-                var parsed = new ScriptFile(input, readFunctions: true, readActions: true,
+                using MemoryStream input = new MemoryStream(scriptBytes, writable: false);
+                ScriptFile parsed = new ScriptFile(input, readFunctions: true, readActions: true,
                     fileID: sharedScriptArchiveId);
                 Assert.False(parsed.parseFailedDueToInvalidCommand);
                 string genericBody = CommandSignature(parsed.allScripts[0]);
@@ -156,8 +156,8 @@ namespace DSPRE.Tests
                     firstLayout.GetScriptNumberForTrainer(expectedTrainerCount,
                         expectedTrainerCount + 1, doubleBattle: false));
 
-                using var firstInput = new MemoryStream(firstExpansion, writable: false);
-                var firstParsed = new ScriptFile(firstInput, readFunctions: true, readActions: true,
+                using MemoryStream firstInput = new MemoryStream(firstExpansion, writable: false);
+                ScriptFile firstParsed = new ScriptFile(firstInput, readFunctions: true, readActions: true,
                     fileID: sharedScriptArchiveId);
                 Assert.False(firstParsed.parseFailedDueToInvalidCommand);
                 Assert.Equal(genericBody, CommandSignature(firstParsed.allScripts[0]));
@@ -176,8 +176,8 @@ namespace DSPRE.Tests
                     secondLayout.GetScriptNumberForTrainer(expectedTrainerCount + 1,
                         expectedTrainerCount + 2, doubleBattle: false));
 
-                using var secondInput = new MemoryStream(secondExpansion, writable: false);
-                var secondParsed = new ScriptFile(secondInput, readFunctions: true, readActions: true,
+                using MemoryStream secondInput = new MemoryStream(secondExpansion, writable: false);
+                ScriptFile secondParsed = new ScriptFile(secondInput, readFunctions: true, readActions: true,
                     fileID: sharedScriptArchiveId);
                 Assert.False(secondParsed.parseFailedDueToInvalidCommand);
                 Assert.Equal(genericBody, CommandSignature(secondParsed.allScripts[0]));
@@ -251,7 +251,7 @@ namespace DSPRE.Tests
 
         private static IReadOnlyList<int> ReadScriptPointerTargets(byte[] bytes)
         {
-            var targets = new List<int>();
+            List<int> targets = new List<int>();
             for (int position = 0; ; position += sizeof(uint))
             {
                 if (position + sizeof(ushort) > bytes.Length)

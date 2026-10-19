@@ -57,7 +57,7 @@ namespace DSPRE
             {
                 string target = Path.Combine(dir, Path.GetFileName(names[i]));
                 if (string.Equals(files[i].FullName, target, StringComparison.OrdinalIgnoreCase)) continue;
-                File.Move(files[i].FullName, UniqueName(target));
+                PlainFiles.Move(files[i].FullName, UniqueName(target));
                 renamed++;
             }
 
@@ -68,7 +68,7 @@ namespace DSPRE
                 Directory.CreateDirectory(isolatedDir);
                 for (int i = count; i < files.Length; i++)
                 {
-                    File.Move(files[i].FullName, UniqueName(Path.Combine(isolatedDir, files[i].Name)));
+                    PlainFiles.Move(files[i].FullName, UniqueName(Path.Combine(isolatedDir, files[i].Name)));
                     isolated++;
                 }
             }
@@ -88,7 +88,7 @@ namespace DSPRE
                 string name = NameFromContent(f.FullName);
                 if (name == null) continue;
                 string target = UniqueName(Path.Combine(dir, name), f.FullName);
-                if (!string.Equals(f.FullName, target, StringComparison.OrdinalIgnoreCase)) File.Move(f.FullName, target);
+                if (!string.Equals(f.FullName, target, StringComparison.OrdinalIgnoreCase)) PlainFiles.Move(f.FullName, target);
                 list.Add(Path.GetFileName(target));
             }
             return list;

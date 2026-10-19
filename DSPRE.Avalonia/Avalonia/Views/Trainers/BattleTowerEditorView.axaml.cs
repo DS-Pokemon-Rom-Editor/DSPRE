@@ -24,7 +24,10 @@ namespace DSPRE.Avalonia.Views.Trainers
 
         // ── Toolbar ──────────────────────────────────────────────────────
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveChanges();
-        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+        }
 
         private bool SetsTabActive => VM?.ActiveTabIndex == 1;
 

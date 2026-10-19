@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DSPRE.ROMFiles;
 using SpriteParts = (DSPRE.Avalonia.Data.DsBgScreen.Oam[] Cell, byte[] Tiles, System.Func<int, ushort[]> Colours);
 
 namespace DSPRE.Avalonia.Data
@@ -14,7 +15,7 @@ namespace DSPRE.Avalonia.Data
         public enum BallVariant { GrassEarly, GrassLate, WaterEarly, WaterLate, CaveEarly, CaveLate }
 
         public static readonly string[] BallVariantNames =
-            { "Grass, early", "Grass, late", "Water, early", "Water, late", "Cave, early", "Cave, late" };
+            { "Grass (early)", "Grass (late)", "Water (early)", "Water (late)", "Cave (early)", "Cave (late)" };
 
         private const int FlashFrames = 12, FadeFrames = 8;
 
@@ -32,7 +33,7 @@ namespace DSPRE.Avalonia.Data
         private SpriteParts? Sequence(int[] m, int sequence, int ticks = 0, bool firstRow = false)
         {
             if (m == null || m.Length < 4) return null;
-            byte[] tiles = DsBgScreen.ReadCharacters(_member(m[1]));
+            byte[] tiles = NitroBgCodec.ReadCharacters(_member(m[1]));
             List<DsBgScreen.Oam[]> cells = DsBgScreen.ReadCells(_member(m[2]));
             if (tiles.Length == 0 || cells.Count == 0) return null;
             int cell = 0;
@@ -48,7 +49,7 @@ namespace DSPRE.Avalonia.Data
             }
             catch { }
             if (cell < 0 || cell >= cells.Count) cell = 0;
-            ushort[] all = DsBgScreen.ReadColours(_member(m[0]));
+            ushort[] all = NitroBgCodec.ReadColours(_member(m[0]));
             return (cells[cell], tiles, p => DsBgScreen.Row(all, firstRow ? 0 : p % Math.Max(1, all.Length / 16)));
         }
 

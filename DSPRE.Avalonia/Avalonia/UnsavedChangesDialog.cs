@@ -251,7 +251,7 @@ namespace DSPRE.Avalonia
                 {
                     await DialogHelper.ShowError(
                         "One or more editors could not be saved:\n\n" + string.Join("\n", failures),
-                        "Save Error", this);
+                        "Couldn't save", this);
                     return;
                 }
 
@@ -276,7 +276,7 @@ namespace DSPRE.Avalonia
                 {
                     await DialogHelper.ShowError(
                         "One or more editors could not be discarded:\n\n" + string.Join("\n", failures),
-                        "Discard Error", this);
+                        "Couldn't discard", this);
                     return;
                 }
 
@@ -297,7 +297,7 @@ namespace DSPRE.Avalonia
             if (_completed || _busy) return;
             if (!await DialogHelper.AskYesNo(
                 "Are you sure you want to discard ALL unsaved changes?\n\nThis cannot be undone.",
-                "Confirm Discard", this))
+                "Discard all changes?", this))
             {
                 return;
             }
@@ -325,7 +325,7 @@ namespace DSPRE.Avalonia
                 {
                     await DialogHelper.ShowError(
                         "One or more editors could not be discarded:\n\n" + string.Join("\n", failures),
-                        "Discard Error", this);
+                        "Couldn't discard", this);
                     return;
                 }
 

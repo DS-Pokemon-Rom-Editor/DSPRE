@@ -62,5 +62,10 @@ namespace DSPRE.Avalonia.Views.Text
             if (task == null) return;
             try { await task; } catch { }
         }
+
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
+        }
     }
 }

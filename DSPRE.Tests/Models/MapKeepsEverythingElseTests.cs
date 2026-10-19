@@ -40,11 +40,11 @@ namespace DSPRE.Tests.Models
                 byte[] wasTerrain = (byte[])map.bdhc.Clone();
                 byte[] wasSounds = (byte[])map.bgs.Clone();
 
-                var mesh = MapMesh.Read(map.mapModelData, out string whynot);
+                MapMesh mesh = MapMesh.Read(map.mapModelData, out string whynot);
                 Assert.True(mesh != null, $"map {id}: {whynot}");
                 if (mesh.Vertices.Count < 4) continue;
 
-                var v = mesh.Vertices[mesh.Vertices.Count / 2];
+                MapMesh.Vertex v = mesh.Vertices[mesh.Vertices.Count / 2];
                 mesh.Move(mesh.Vertices.Count / 2, v.X, v.Y + 0.25f, v.Z);
 
                 byte[] shape = mesh.Save(out string why);
@@ -80,12 +80,12 @@ namespace DSPRE.Tests.Models
             new RomInfo("CPUE", TestRoms.Platinum);
             DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.maps });
 
-            var map = new MapFile(0, RomInfo.gameFamily, discardMoveperms: false, showMessages: false);
+            MapFile map = new MapFile(0, RomInfo.gameFamily, discardMoveperms: false, showMessages: false);
             byte[] wasCollisions = map.CollisionsToByteArray();
             byte[] wasBuildings = map.BuildingsToByteArray();
             byte[] wasTerrain = (byte[])map.bdhc.Clone();
 
-            var mesh = MapMesh.Read(map.mapModelData, out _);
+            MapMesh mesh = MapMesh.Read(map.mapModelData, out _);
             byte[] made = BdhcBuild.From(BdhcBuild.PiecesOf(mesh, mesh.ModelScale), out string whynot);
             Assert.True(made != null, whynot);
 

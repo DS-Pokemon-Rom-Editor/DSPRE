@@ -14,7 +14,7 @@
     <DataTemplate x:Key="RecentRow" x:DataType="vm:RecentProjectsViewModel+RecentEntry">
       <StackPanel Spacing="1" ToolTip.Tip="{Binding Path}">
         <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
-        <TextBlock Text="{Binding Where}" FontSize="11" Opacity="0.65" TextTrimming="PrefixCharacterEllipsis"/>
+        <TextBlock Foreground="{DynamicResource Editor.Subtle}" Text="{Binding Where}" FontSize="11" TextTrimming="PrefixCharacterEllipsis"/>
       </StackPanel>
     </DataTemplate>
   </UserControl.Resources>
@@ -24,7 +24,7 @@
       <Button Content="Open ROM (.nds)…" controls:Icon.Key="open_rom" HorizontalAlignment="Stretch" Click="OpenRom_Click"/>
       <Button Content="Open extracted folder…" controls:Icon.Key="open_file" HorizontalAlignment="Stretch" Click="OpenFolder_Click"/>
       <Button Content="Open hg-engine folder…" controls:Icon.Key="open_file" HorizontalAlignment="Stretch" Click="OpenHgEngineFolder_Click"/>
-      <TextBlock Text="Or drop a .nds or project folder here." FontSize="12" Opacity="0.65" TextWrapping="Wrap"/>
+      <TextBlock Foreground="{DynamicResource Editor.Subtle}" Text="Or drop a .nds or project folder here." FontSize="12" TextWrapping="Wrap"/>
     </StackPanel>
     <TextBlock DockPanel.Dock="Top" Text="Recent projects" FontWeight="Bold" Margin="0,14,0,6"/>
     <Panel>
@@ -40,7 +40,7 @@
                    ScrollViewer.HorizontalScrollBarVisibility="Disabled" Loaded="RecentList_Loaded"/>
         </StackPanel>
       </ScrollViewer>
-      <TextBlock Text="No recent projects." IsVisible="{Binding !HasRecents}" Opacity="0.7" TextWrapping="Wrap"/>
+      <TextBlock Foreground="{DynamicResource Editor.Subtle}" Text="No recent projects." IsVisible="{Binding !HasRecents}" TextWrapping="Wrap"/>
     </Panel>
   </DockPanel>
 </UserControl>

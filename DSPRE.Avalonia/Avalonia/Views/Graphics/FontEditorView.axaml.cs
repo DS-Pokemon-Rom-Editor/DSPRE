@@ -35,7 +35,8 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (path == null) return;
 
             string trouble = VM.ExportPng(path, whole);
-            if (trouble != null) await DialogHelper.ShowError(trouble, "Font Editor");
+            if (trouble != null) await DialogHelper.ShowError(trouble, "Font editor error");
+            else SaveNotice.Exported(path);
         }
 
         private async void ImportPng_Click(object sender, RoutedEventArgs e)
@@ -48,7 +49,13 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (path == null) return;
 
             string trouble = VM.ImportPng(path, whole);
-            if (trouble != null) await DialogHelper.ShowError(trouble, "Font Editor");
+            if (trouble != null) await DialogHelper.ShowError(trouble, "Font editor error");
+            else SaveNotice.Imported(whole ? "the font" : $"letter {VM.SelectedGlyphIndex}", path);
+        }
+
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
         }
     }
 }

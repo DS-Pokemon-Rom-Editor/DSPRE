@@ -55,10 +55,10 @@ namespace DSPRE.Avalonia.Data
                 What = "Everything that stands about on the map: people, signs, items and the rest.",
                 DeepEditor = "Overworld Editor" },
 
-            new Archive { Dir = DirNames.exteriorBuildingModels, Title = "Buildings, outside", TextureArchive = DirNames.buildingTextures, AnimationArchive = DirNames.buildingAnimations, In = Group.Buildings,
+            new Archive { Dir = DirNames.exteriorBuildingModels, Title = "Outdoor buildings", TextureArchive = DirNames.buildingTextures, AnimationArchive = DirNames.buildingAnimations, In = Group.Buildings,
                 What = "The buildings as seen from the outside on the world map.",
                 DeepEditor = "Building Editor" },
-            new Archive { Dir = DirNames.interiorBuildingModels, Title = "Buildings, inside", TextureArchive = DirNames.buildingTextures, AnimationArchive = DirNames.buildingAnimations, Indoor = true, In = Group.Buildings,
+            new Archive { Dir = DirNames.interiorBuildingModels, Title = "Indoor buildings", TextureArchive = DirNames.buildingTextures, AnimationArchive = DirNames.buildingAnimations, Indoor = true, In = Group.Buildings,
                 What = "The insides of buildings you can walk into.", DeepEditor = "Building Editor" },
             new Archive { Dir = DirNames.buildingTextures, Title = "Building textures", In = Group.Buildings,
                 What = "The pictures painted onto the buildings.", DeepEditor = "Map & Building Textures editor" },
@@ -760,7 +760,7 @@ namespace DSPRE.Avalonia.Data
             if (!narc.Available) return "This game does not have this archive.";
             byte[] b = narc.Get(index);
             if (b == null || b.Length == 0) return "This entry is empty.";
-            File.WriteAllBytes(path, b);
+            PlainFiles.WriteBytes(path, b);
             return null;
         }
 

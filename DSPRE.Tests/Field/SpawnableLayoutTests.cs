@@ -12,8 +12,8 @@ namespace DSPRE.Tests
     {
         private static byte[] Record(ushort id, ushort type, int gx, int gz, int height, ushort dir)
         {
-            using var ms = new MemoryStream();
-            using var w = new BinaryWriter(ms);
+            using MemoryStream ms = new MemoryStream();
+            using BinaryWriter w = new BinaryWriter(ms);
             w.Write(id); w.Write(type); w.Write(gx); w.Write(gz); w.Write(height); w.Write(dir); w.Write((ushort)0);
             return ms.ToArray();
         }
@@ -21,7 +21,7 @@ namespace DSPRE.Tests
         [Fact]
         public void ReadsEachFieldFromTheEngineOffsets()
         {
-            var s = new Spawnable(new MemoryStream(Record(14, 1, 682, 393, 7, 4)));
+            Spawnable s = new Spawnable(new MemoryStream(Record(14, 1, 682, 393, 7, 4)));
 
             Assert.Equal(14, s.scriptNumber);
             Assert.Equal(1, s.type);
@@ -36,7 +36,7 @@ namespace DSPRE.Tests
         [Fact]
         public void HeightWriteDoesNotDisturbTheGridCoordinates()
         {
-            var s = new Spawnable(new MemoryStream(Record(14, 1, 682, 393, 0, 4)));
+            Spawnable s = new Spawnable(new MemoryStream(Record(14, 1, 682, 393, 0, 4)));
             s.zPosition = 7;
             byte[] outBytes = s.ToByteArray();
 

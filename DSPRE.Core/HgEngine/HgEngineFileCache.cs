@@ -54,8 +54,8 @@ namespace DSPRE.HgEngine
             string temp = path + ".dspre-tmp";
             try
             {
-                File.WriteAllText(temp, output, encoding ?? new System.Text.UTF8Encoding(false));
-                File.Move(temp, path, overwrite: true);
+                PlainFiles.WriteText(temp, output, encoding ?? new System.Text.UTF8Encoding(false));
+                PlainFiles.Move(temp, path, overwrite: true);
             }
             catch
             {

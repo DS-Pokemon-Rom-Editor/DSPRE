@@ -28,7 +28,7 @@ namespace DSPRE.Avalonia.Data
             {
                 get
                 {
-                    if (Headers.Count == 0) return "spare, no place uses it";
+                    if (Headers.Count == 0) return "spare that no place uses";
                     string first = PlaceNames.FirstOrDefault() ?? ("header " + Headers[0]);
                     return Headers.Count == 1 ? first : $"{first} and {Headers.Count - 1} more";
                 }

@@ -56,7 +56,7 @@ namespace DSPRE
                 string dir = Path.Combine(checkout, HgEngineDspreFolder);
                 Directory.CreateDirectory(dir);
                 string ignore = Path.Combine(dir, ".gitignore");
-                if (!File.Exists(ignore)) File.WriteAllText(ignore, "*\n");
+                if (!File.Exists(ignore)) PlainFiles.WriteText(ignore, "*\n");
                 return dir + Path.DirectorySeparatorChar;
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
@@ -109,9 +109,6 @@ namespace DSPRE
         /// </summary>
         public sealed record Arm9ExpansionSites(uint Boot, uint Loader, uint FileLoader);
 
-        /// <summary>Measured where a dump needs its own; otherwise null and ToolboxDB's per-language entry applies.</summary>
-        public static Arm9ExpansionSites arm9ExpansionSites =>
-            MeasuredHere?.Arm9Expansion is uint[] s && s.Length == 3 ? new Arm9ExpansionSites(s[0], s[1], s[2]) : null;
         public static uint arm9spawnOffset { get; private set; }
 
         public static int initialMoneyOverlayNumber { get; private set; }
@@ -129,14 +126,15 @@ namespace DSPRE
         public static uint pickupActivationDivisorOffset { get; private set; }
         public static uint pickupWeightTableOffset { get; private set; }
 
-        // Starter Pokémon table.
-        public static int starterOverlayNumber { get; private set; } = -1;
-        public static uint starterSpeciesOffset { get; private set; }
-        public static byte[] starterArm9SearchSuffix { get; private set; }
-        public static string starterGraphicsPrefix { get; private set; }        // DP/Pt only
-        public static string starterGraphicsPrefixInner { get; private set; }   // DP/Pt only
+        // Starter Pokémon table. Where the species, scene code and cries are is RomLocator's StarterSpecies, StarterScene,
+        // StarterSceneInner and StarterCries.
+        /// <summary>The overlay the starter editor rewrites: the selection scene on DP and Pt, the cries on HGSS; -1 when none.</summary>
+        public static int starterOverlayNumber =>
+            (RomLocator.Where(RomLocator.Thing.StarterSpecies) is RomLocator.Spot species && species.Overlay >= 0
+                ? species : RomLocator.Where(RomLocator.Thing.StarterCries))?.Overlay ?? -1;
+        /// <summary>The bytes just before the selection scene's code, checked before it is rewritten. DP/Pt only.</summary>
+        public static string starterGraphicsPrefix { get; private set; }
         public static int[] starterSceneSpeciesLiterals { get; private set; }    // Japanese DP only
-        public static string starterCriesPrefix { get; private set; }           // HGSS only
         public static int starterHeldItemScriptFileID { get; private set; } = -1; // DP/Pt only
         public static uint starterHeldItemOffset { get; private set; }            // DP/Pt only
 
@@ -207,40 +205,31 @@ namespace DSPRE
         public static uint martSpecialtyPointerOffset { get; private set; }
         public static int martSpecialtyShopCount { get; private set; }
 
-        public static uint conditionalMusicTableOffsetToRAMAddress { get; internal set; }
-        public static uint encounterMusicTableOffsetToRAMAddress { get; internal set; }
+        // Read from the locator whenever asked, so no reader has to set them up first.
+        public static uint conditionalMusicTableOffsetToRAMAddress => (uint)(RomLocator.Where(RomLocator.Thing.ConditionalMusicPointer)?.Offset ?? 0);
+        public static uint encounterMusicTableOffsetToRAMAddress => (uint)(RomLocator.Where(RomLocator.Thing.EncounterMusicPointer)?.Offset ?? 0);
         /// <summary>The row count's compare immediate, read before the table's literal; Japanese DP's loop sits four bytes further back.</summary>
         public static uint encounterMusicCountSite => encounterMusicTableOffsetToRAMAddress
             - (gameFamily == GameFamilies.HGSS ? 12u : gameFamily == GameFamilies.DP && gameLanguage == GameLanguages.Japanese ? 14u : 10u);
-        public static uint dungeonCutinTableOffsetToRAMAddress { get; internal set; }
+        public static uint dungeonCutinTableOffsetToRAMAddress => (uint)(RomLocator.Where(RomLocator.Thing.DungeonCutinPointer)?.Offset ?? 0);
         /// <summary>
-        /// HGSS: the Ruins of Alph, default and Cliff Cave Rock Smash item tables in overlay 1, found by content in every
-        /// dump. SoulSilver keeps HeartGold's offsets with its own exclusive items.
+        /// HGSS: the Ruins of Alph, default and Cliff Cave Rock Smash item tables. SoulSilver keeps HeartGold's offsets with
+        /// its own exclusive items.
         /// </summary>
-        public static uint rockSmashItemTablesOffset => gameLanguage == GameLanguages.Japanese ? 0x23B78u : 0x23D04u;
+        public static uint rockSmashItemTablesOffset => (uint)(RomLocator.Where(RomLocator.Thing.RockSmashItemTables)?.Offset ?? 0);
 
-        public static uint vsTrainerEntryTableOffsetToRAMAddress { get; internal set; }
-        public static uint vsPokemonEntryTableOffsetToRAMAddress { get; internal set; }
-        public static uint effectsComboTableOffsetToRAMAddress { get; internal set; }
-        /// <summary>Diamond and Pearl also point two bytes into the combo table from here.</summary>
-        public static uint effectsComboTableSecondPointerOffset { get; internal set; }
+        public static uint vsTrainerEntryTableOffsetToRAMAddress => (uint)(RomLocator.Where(RomLocator.Thing.VsTrainerEntriesPointer)?.Offset ?? 0);
+        public static uint vsPokemonEntryTableOffsetToRAMAddress => (uint)(RomLocator.Where(RomLocator.Thing.VsPokemonEntriesPointer)?.Offset ?? 0);
+        public static uint effectsComboTableOffsetToRAMAddress => (uint)(RomLocator.Where(RomLocator.Thing.BattleEffectCombosPointer)?.Offset ?? 0);
+        /// <summary>Diamond, Pearl and Platinum also point two bytes into the combo table from here; it has to agree before the table is trusted.</summary>
+        public static uint effectsComboTableSecondPointerOffset => (uint)(RomLocator.Where(RomLocator.Thing.BattleEffectCombosSecondPointer)?.Offset ?? 0);
 
-        public static uint vsTrainerEntryTableOffsetToSizeLimiter { get; internal set; }
-        public static uint vsPokemonEntryTableOffsetToSizeLimiter { get; internal set; }
-        public static uint effectsComboTableOffsetToSizeLimiter { get; internal set; }
+        // HGSS only: the compare that bounds each table, just before its literal.
+        public static uint vsTrainerEntryTableOffsetToSizeLimiter => gameFamily == GameFamilies.HGSS ? vsTrainerEntryTableOffsetToRAMAddress - 0xA : 0;
+        public static uint vsPokemonEntryTableOffsetToSizeLimiter => gameFamily == GameFamilies.HGSS ? vsPokemonEntryTableOffsetToRAMAddress - 0xA : 0;
+        public static uint effectsComboTableOffsetToSizeLimiter => gameFamily == GameFamilies.HGSS ? effectsComboTableOffsetToRAMAddress - 0x1E : 0;
 
         public static uint OWTableOffset { get; internal set; }
-
-        /// <summary>Where arm9 keeps the spawn table: blackout, fly and warp-unlock points per town.</summary>
-        private const uint DPjpOffset  = 0xF41D0, DPusOffset  = 0xF2224, DPfrOffset = 0xF2264;
-        private const uint DPdeOffset  = 0xF2234, DPitOffset  = 0xF21D8, DPspOffset = 0xF2270;
-        private const uint PTjpOffset  = 0xE8E88, PTusOffset  = 0xE97B4, PTfrOffset = 0xE983C;
-        private const uint PTdeOffset  = 0xE980C, PTitOffset  = 0xE97D0, PTspOffset = 0xE9848;
-        private const uint HGSSjpOffset = 0xF9630, HGSSusOffset = 0xF9E80, HGSSfrOffset = 0xF9E64;
-        private const uint HGSSdeOffset = 0xF9E34, HGSSitOffset = 0xF9DF8, HGSSspOffset = 0xF9E68;
-        // Spanish SoulSilver's arm9 runs 0x20 longer than Spanish HeartGold's and the table moves with it; English
-        // SoulSilver keeps HeartGold's.
-        private const uint SSspOffset = 0xF9E70;
 
         /// <summary>
         /// Japanese Diamond and Pearl share one fly table offset, but their header tables sit 4 bytes apart,
@@ -248,47 +237,8 @@ namespace DSPRE
         /// </summary>
         public static bool FlyTableUnverified => gameVersion == GameVersions.Pearl && gameLanguage == GameLanguages.Japanese;
 
-        public static uint FlyTableOffset
-        {
-            get
-            {
-                if (MeasuredHere?.FlyTable is uint measured) return measured;
-                switch (gameFamily)
-                {
-                    case GameFamilies.DP:
-                        switch (gameLanguage)
-                        {
-                            case GameLanguages.Japanese: return DPjpOffset;
-                            case GameLanguages.French:   return DPfrOffset;
-                            case GameLanguages.German:   return DPdeOffset;
-                            case GameLanguages.Italian:  return DPitOffset;
-                            case GameLanguages.Spanish:  return DPspOffset;
-                            default: return DPusOffset;
-                        }
-                    case GameFamilies.Plat:
-                        switch (gameLanguage)
-                        {
-                            case GameLanguages.Japanese: return PTjpOffset;
-                            case GameLanguages.French:   return PTfrOffset;
-                            case GameLanguages.German:   return PTdeOffset;
-                            case GameLanguages.Italian:  return PTitOffset;
-                            case GameLanguages.Spanish:  return PTspOffset;
-                            default: return PTusOffset;
-                        }
-                    case GameFamilies.HGSS:
-                        switch (gameLanguage)
-                        {
-                            case GameLanguages.Japanese: return HGSSjpOffset;
-                            case GameLanguages.French:   return HGSSfrOffset;
-                            case GameLanguages.German:   return HGSSdeOffset;
-                            case GameLanguages.Italian:  return HGSSitOffset;
-                            case GameLanguages.Spanish:  return gameVersion == GameVersions.SoulSilver ? SSspOffset : HGSSspOffset;
-                            default: return HGSSusOffset;
-                        }
-                    default: return DPusOffset;
-                }
-            }
-        }
+        /// <summary>Where arm9 keeps the spawn table: blackout, fly and warp-unlock points per town.</summary>
+        public static uint FlyTableOffset => (uint)(RomLocator.Where(RomLocator.Thing.FlyTable)?.Offset ?? 0);
 
         public static int FlyTableRows => gameFamily switch
         {
@@ -298,158 +248,17 @@ namespace DSPRE
             _                 => 20,
         };
 
-
-        /// <summary>Fixed-size game tables edited in place.</summary>
-        public enum GameTable
-        {
-            WildHeldItemOdds,      // sItemOdds[2][2] u16: none-below, rare-from; row 1 is Compound Eyes
-            IncenseBabies,         // 9 x (u16 baby, u16 item, u16 fallback)
-            TypeChart,             // 112 x (u8 attacker, u8 defender, u8 multiplier x10)
-            PoketchTypeChart,      // s8[18][18], the Pokétch move tester's copy (DP/Pt)
-            TutorPool,             // Pt 38 x 12 bytes, HGSS 52 x 4 bytes
-            TutorCompatibility,    // Pt 505 x 5 bytes (HGSS keeps it in waza_oshie.bin)
-            MiningTreasures,       // 85 x 20 bytes (DP/Pt)
-            MiningItems,           // 49 u16: bag item for mining ids 11-59 (sMiningItems)
-            BpShopPrices,          // Pt 41 x (u16 item, u16 BP); DP 41-row item/price table
-            BpShopItems,           // Pt left corner list, 0xFFFF-terminated
-            BpShopTms,             // Pt right corner list, 0xFFFF-terminated
-            HeldItemSameItemBranch, // the BNE after `cmp item1, item2` in WildMonSetRandomHeldItem
-            FriendshipChanges,     // s8[10][3]: friendship change per event and friendship band
-            TypeIconBanks,         // u8[23]: palette bank of each type icon (18 types, then 5 contest conditions)
-            MoveCategoryIconBanks, // u8[3]: palette bank of the physical, special and status icons
-            TypeIconMembers,       // u32[23]: battle object archive member of each type or contest icon
-            MoveTypeButtonPalettes, // u32[18]: RAM pointers to each type's 16-colour move button palette
-            PokewalkerSprites,     // HGSS u16[494][2]: Pokéwalker picture (a/2/5/6) of each species, male then female
-            PunchingMoves,         // u16[15]: the moves Iron Fist boosts (pokeplatinum sPunchingMoves), in the battle overlay
-            SoundMoves,            // u16[12] with spare slots: the moves Soundproof blocks (pokeplatinum sSoundMoves)
-            RegionalDexCompletion, // u8, the `cmp r0, #n` immediate: regional species (less ignored mythicals) that complete the regional dex
-            RegionalDexRatingLast, // u8, the `cmp r0, #n` immediate: the professor's last rating step before "complete", one less
-            RegionalDexLookupBound, // u8, the `cmp r3, #n` immediate: the highest regional number the lookup reads (DP/Pt)
-            EvolutionSlotBuffer,   // u8, the `movs r1, #n` immediate: GetMonEvolution's buffer, 6 bytes per evolution slot
-            EvolutionSlotLoopLevel, // u8, the `cmp r0, #n` immediate: slots the level-up loop walks
-            EvolutionSlotLoopTrade, // u8, the `cmp r4, #n` immediate: slots the trade loop walks
-            EvolutionSlotLoopItem, // u8, the `cmp r0, #n` immediate: slots the item loop walks
-        }
-
-        /// <summary>Where a table sits: arm9 when <see cref="Overlay"/> is -1, otherwise that overlay; file offset.</summary>
-        public readonly record struct TableSpot(int Overlay, int Offset);
-
-        // Offsets for US HeartGold (IPKE rev 0), Platinum Rev 1 (CPUE rev 1) and Diamond v05 (ADAE rev 5) only.
-        private static readonly Dictionary<(string id, int rev, GameTable table), TableSpot> TableSpots = new()
-        {
-            [("IPKE", 0, GameTable.WildHeldItemOdds)] = new(-1, 0xFF4E4),
-            [("CPUE", 1, GameTable.WildHeldItemOdds)] = new(-1, 0xF0574),
-            [("ADAE", 5, GameTable.WildHeldItemOdds)] = new(-1, 0xF7ECC),
-            // pokeplatinum Pokedex_LocalDexCompleted, Pokedex_GetRatingMessageID_Local and Pokemon_NationalDexNumber;
-            // pokeheartgold Pokedex_JohtoDexIsComplete and GetOakJohtoDexRating; pokediamond Pokedex_SinnohDexIsComplete,
-            // sub_02054CC8 and SinnohDexNoToSpecies.
-            [("IPKE", 0, GameTable.RegionalDexCompletion)] = new(-1, 0x29F66),
-            [("CPUE", 1, GameTable.RegionalDexCompletion)] = new(-1, 0x26F12),
-            [("ADAE", 5, GameTable.RegionalDexCompletion)] = new(-1, 0x2450A),
-            [("IPKE", 0, GameTable.RegionalDexRatingLast)] = new(-1, 0x5BC5C),
-            [("CPUE", 1, GameTable.RegionalDexRatingLast)] = new(-1, 0x5E0D0),
-            [("ADAE", 5, GameTable.RegionalDexRatingLast)] = new(-1, 0x54D08),
-            [("CPUE", 1, GameTable.RegionalDexLookupBound)] = new(-1, 0x775D0),
-            [("ADAE", 5, GameTable.RegionalDexLookupBound)] = new(-1, 0x69B6C),
-            // GetMonEvolution in pokeheartgold, pokeplatinum and pokediamond pokemon.c. The `cmp r2, #7` between the trade
-            // and item loops is the method check for EVO_USE_ITEM, not a slot count.
-            [("IPKE", 0, GameTable.EvolutionSlotBuffer)] = new(-1, 0x70ECE),
-            [("CPUE", 1, GameTable.EvolutionSlotBuffer)] = new(-1, 0x76C18),
-            [("ADAE", 5, GameTable.EvolutionSlotBuffer)] = new(-1, 0x691EC),
-            [("IPKE", 0, GameTable.EvolutionSlotLoopLevel)] = new(-1, 0x71168),
-            [("CPUE", 1, GameTable.EvolutionSlotLoopLevel)] = new(-1, 0x76EAA),
-            [("ADAE", 5, GameTable.EvolutionSlotLoopLevel)] = new(-1, 0x6947E),
-            [("IPKE", 0, GameTable.EvolutionSlotLoopTrade)] = new(-1, 0x7119E),
-            [("CPUE", 1, GameTable.EvolutionSlotLoopTrade)] = new(-1, 0x76EE6),
-            [("ADAE", 5, GameTable.EvolutionSlotLoopTrade)] = new(-1, 0x694B8),
-            [("IPKE", 0, GameTable.EvolutionSlotLoopItem)] = new(-1, 0x7122C),
-            [("CPUE", 1, GameTable.EvolutionSlotLoopItem)] = new(-1, 0x76F74),
-            [("ADAE", 5, GameTable.EvolutionSlotLoopItem)] = new(-1, 0x69546),
-            [("IPKE", 0, GameTable.HeldItemSameItemBranch)] = new(-1, 0x721FE),
-            [("CPUE", 1, GameTable.HeldItemSameItemBranch)] = new(-1, 0x77F66),
-            [("ADAE", 5, GameTable.HeldItemSameItemBranch)] = new(-1, 0x6A0EE),
-
-            [("IPKE", 0, GameTable.IncenseBabies)] = new(-1, 0xFF4AE),
-            [("CPUE", 1, GameTable.IncenseBabies)] = new(5, 0x291EC),
-            [("ADAE", 5, GameTable.IncenseBabies)] = new(5, 0x20632),
-
-            [("IPKE", 0, GameTable.TypeChart)] = new(12, 0x353BC),
-            [("CPUE", 1, GameTable.TypeChart)] = new(16, 0x33B94),
-            [("ADAE", 5, GameTable.TypeChart)] = new(11, 0x30DB8),
-            [("CPUE", 1, GameTable.PoketchTypeChart)] = new(43, 0x8F0),
-            [("ADAE", 5, GameTable.PoketchTypeChart)] = new(38, 0x8F4),
-
-            [("IPKE", 0, GameTable.TutorPool)] = new(1, 0x23AE0),
-            [("CPUE", 1, GameTable.TutorPool)] = new(5, 0x2FF64),
-            [("CPUE", 1, GameTable.TutorCompatibility)] = new(5, 0x3012C),
-
-            [("CPUE", 1, GameTable.MiningItems)] = new(-1, 0x100920),
-            [("ADAE", 5, GameTable.MiningItems)] = new(-1, 0x105C74),
-            [("CPUE", 1, GameTable.MiningTreasures)] = new(23, 0x18D70),
-            [("ADAE", 5, GameTable.MiningTreasures)] = new(18, 0x17490),
-
-            [("CPUE", 1, GameTable.BpShopPrices)] = new(7, 0x5A98),
-            [("CPUE", 1, GameTable.BpShopItems)] = new(-1, 0xEAC20),
-            [("CPUE", 1, GameTable.BpShopTms)] = new(-1, 0xEABB8),
-            [("ADAE", 5, GameTable.BpShopPrices)] = new(-1, 0xF433E),
-            [("IPKE", 0, GameTable.FriendshipChanges)] = new(-1, 0xFF524),
-            [("CPUE", 1, GameTable.FriendshipChanges)] = new(-1, 0xF05A0),
-            [("ADAE", 5, GameTable.FriendshipChanges)] = new(-1, 0xF7ED4),
-
-            [("IPKE", 0, GameTable.TypeIconBanks)] = new(-1, 0x1000A4),
-            [("CPUE", 1, GameTable.TypeIconBanks)] = new(-1, 0xF0B4C),
-            [("ADAE", 5, GameTable.TypeIconBanks)] = new(-1, 0xF843C),
-            [("IPKE", 0, GameTable.MoveCategoryIconBanks)] = new(-1, 0x100038),
-            [("CPUE", 1, GameTable.MoveCategoryIconBanks)] = new(-1, 0xF0AE0),
-            [("ADAE", 5, GameTable.MoveCategoryIconBanks)] = new(-1, 0xF83D0),
-            [("IPKE", 0, GameTable.TypeIconMembers)] = new(-1, 0x100048),
-            [("CPUE", 1, GameTable.TypeIconMembers)] = new(-1, 0xF0AF0),
-            [("ADAE", 5, GameTable.TypeIconMembers)] = new(-1, 0xF83E0),
-            [("IPKE", 0, GameTable.MoveTypeButtonPalettes)] = new(6, 0x3D0),
-            [("CPUE", 1, GameTable.MoveTypeButtonPalettes)] = new(11, 0x3D0),
-            [("ADAE", 5, GameTable.MoveTypeButtonPalettes)] = new(8, 0x18B84),
-            [("IPKE", 0, GameTable.PokewalkerSprites)] = new(112, 0xE07E),
-            [("IPKE", 0, GameTable.PunchingMoves)] = new(12, 0x352FE),
-            [("CPUE", 1, GameTable.PunchingMoves)] = new(16, 0x33AD6),
-            [("ADAE", 5, GameTable.PunchingMoves)] = new(11, 0x30CFA),
-            [("IPKE", 0, GameTable.SoundMoves)] = new(12, 0x37360),
-            [("CPUE", 1, GameTable.SoundMoves)] = new(16, 0x35A4C),
-            [("ADAE", 5, GameTable.SoundMoves)] = new(11, 0x329C4),
-        };
-
         /// <summary>
         /// In a move list's overlay: the literal holding the list's address, the <c>cmp rN, #count</c> that bounds the
         /// walk over it, and how many entries the vanilla list has room for (its zero padding included).
         /// </summary>
         public sealed record MoveListSites(int PointerSite, int CountCompare, int VanillaCapacity);
 
-        private static readonly Dictionary<(string id, int rev, GameTable table), MoveListSites> MoveListSiteTable = new()
-        {
-            [("IPKE", 0, GameTable.PunchingMoves)] = new(0x20224, 0x1FF58, 15),
-            [("CPUE", 1, GameTable.PunchingMoves)] = new(0x1FC2C, 0x1F960, 15),
-            [("ADAE", 5, GameTable.PunchingMoves)] = new(0x1E81C, 0x1E534, 15),
-            [("IPKE", 0, GameTable.SoundMoves)] = new(0x1B7A4, 0x1B718, 16),
-            [("CPUE", 1, GameTable.SoundMoves)] = new(0x1B1A4, 0x1B118, 26),
-            [("ADAE", 5, GameTable.SoundMoves)] = new(0x19FF4, 0x19F68, 14),
-        };
-
-        public static MoveListSites MoveListSitesOf(GameTable table) =>
-            romID != null && (MoveListSiteTable.TryGetValue((SiteKey.id, SiteKey.rev, table), out MoveListSites sites)
-                              || MeasuredMoveListSites.TryGetValue((CodeKey.id, CodeKey.rev, table), out sites)) ? sites : null;
-
-        // In the type chart's overlay: the literals holding the chart's address (column 0, +1 and +2), the
-        // `cmp rN, #count` Conversion 2 bounds its record walk with, and the `movs r1, #count` its random
-        // record pick is taken modulo.
-        private static readonly Dictionary<(string id, int rev), (int[] col0, int[] col1, int[] col2, int countCompare, int countModulus)> TypeChartSites = new()
-        {
-            [("IPKE", 0)] = (new[] { 0x1A78C, 0x1A8B4, 0x1AD80, 0x1ADD4 }, new[] { 0x1A460, 0x1A900, 0x1AD84 }, new[] { 0x1A464, 0x1A904, 0x1AD88 }, 0x1AD54, 0x1AD5C),
-            [("CPUE", 1)] = (new[] { 0x1A18C, 0x1A2B4, 0x1A780, 0x1A7D4 }, new[] { 0x19E60, 0x1A300, 0x1A784 }, new[] { 0x19E64, 0x1A304, 0x1A788 }, 0x1A754, 0x1A75C),
-            [("ADAE", 5)] = (new[] { 0x18FD8, 0x19100, 0x195D0, 0x19624 }, new[] { 0x18CAC, 0x1914C, 0x195D4 }, new[] { 0x18CB0, 0x19150, 0x195D8 }, 0x195A4, 0x195AC),
-        };
-
-        public static (int[] col0, int[] col1, int[] col2, int countCompare, int countModulus)? TypeChartPointerSites =>
-            romID != null && (TypeChartSites.TryGetValue(SiteKey, out (int[] col0, int[] col1, int[] col2, int countCompare, int countModulus) s)
-                              || MeasuredTypeChartSites.TryGetValue(CodeKey, out s)) ? s : null;
+        /// <summary>
+        /// The battle overlay's four HP bar text routines (name, level, current HP, max HP): the <c>ldr r0, [r0]</c> before
+        /// each one's image proxy call, and the BLX of each copy of its text onto the bar.
+        /// </summary>
+        public sealed record HpBarTextSites(int Overlay, int[] Hooks, int[] Copies);
 
         /// <summary>
         /// Battle Point exchange code sites: Platinum's corner list pointers, overlay 7 price literal (the next one is +2)
@@ -457,12 +266,6 @@ namespace DSPRE
         /// </summary>
         public sealed record BpShopSites(int ListPointers, int PriceLiteral, int PriceCountCompare,
             int ExchangeTable, int ExchangeSplit);
-
-        private static readonly Dictionary<(string id, int rev), BpShopSites> BpShopSiteTable = new()
-        {
-            [("CPUE", 1)] = new(0x100AF0, 0x4F8C, 0x4F82, 0xEBC82, 0x49CE6),
-            [("ADAE", 5)] = new(-1, -1, -1, 0xF433E, 0x42AEA),
-        };
 
         /// <summary>
         /// One encounter method's `cmp r0, #boundary` sites per slot boundary in the selector's overlay; a boundary
@@ -475,76 +278,11 @@ namespace DSPRE
         /// <summary>Land's `cmp r0, #x` then branch for the last two slots, relative to the land selector's first compare.</summary>
         public const int LandLastSlotSite = 0x72;
 
-        private static int[][] LandSites(int b) => new[]
-        {
-            new[] { b }, new[] { b + 0x0A, b + 0x12 }, new[] { b + 0x16, b + 0x1E }, new[] { b + 0x22, b + 0x2A },
-            new[] { b + 0x2E, b + 0x36 }, new[] { b + 0x3A, b + 0x42 }, new[] { b + 0x46, b + 0x4E },
-            new[] { b + 0x52, b + 0x5A }, new[] { b + 0x5E, b + 0x66 }, new[] { b + 0x6A },
-        };
-        private static int[][] SurfSites(int b) => new[] { new[] { b }, new[] { b + 0x0A, b + 0x12 }, new[] { b + 0x16, b + 0x1E }, new[] { b + 0x22 } };
-        private static int[][] StepSites(int b, int count) => Enumerable.Range(0, count).Select(i => new[] { b + 8 * i }).ToArray();
-
-        // Offsets for US HeartGold ov2, Platinum Rev 1 ov6 and Diamond v05 ov6 only.
-        private static readonly Dictionary<(string id, int rev), SlotOddsMethod[]> SlotOddsTable = new()
-        {
-            [("IPKE", 0)] = new[]
-            {
-                new SlotOddsMethod("Walking", 2, 12, LandSites(0x1B20)),
-                new SlotOddsMethod("Surfing", 2, 5, SurfSites(0x1BB4)),
-                new SlotOddsMethod("Fishing (all rods)", 2, 5, StepSites(0x1BF8, 4)),
-                new SlotOddsMethod("Rock Smash", 2, 2, StepSites(0x1C30, 1)),
-                new SlotOddsMethod("Headbutt", 2, 6, StepSites(0x1C54, 5)),
-            },
-            [("CPUE", 1)] = new[]
-            {
-                new SlotOddsMethod("Walking", 6, 12, LandSites(0x37E2)),
-                new SlotOddsMethod("Surfing", 6, 5, SurfSites(0x387E)),
-                new SlotOddsMethod("Old Rod", 6, 5, StepSites(0x38DC, 4)),
-                new SlotOddsMethod("Good Rod", 6, 5, StepSites(0x3900, 4)),
-                new SlotOddsMethod("Super Rod", 6, 5, StepSites(0x3924, 4)),
-            },
-            [("ADAE", 5)] = new[]
-            {
-                new SlotOddsMethod("Walking", 6, 12, LandSites(0x2F2A)),
-                new SlotOddsMethod("Surfing", 6, 5, SurfSites(0x2FC6)),
-                new SlotOddsMethod("Old Rod", 6, 5, StepSites(0x3024, 4)),
-                new SlotOddsMethod("Good Rod", 6, 5, StepSites(0x3048, 4)),
-                new SlotOddsMethod("Super Rod", 6, 5, StepSites(0x306C, 4)),
-            },
-        };
-
-        public static SlotOddsMethod[] SlotOddsMethods
-        {
-            get
-            {
-                if (romID == null) return null;
-                if (SlotOddsTable.TryGetValue(SiteKey, out SlotOddsMethod[] m)) return m;
-                if (MeasuredSlotOddsMethods.TryGetValue(CodeKey, out SlotOddsMethod[] whole)) return whole;
-                if (!MeasuredSlotOddsBases.TryGetValue(CodeKey, out int[] bases)) return null;
-                // The selectors are the US ones moved: every boundary keeps its distance from its method's first compare.
-                SlotOddsMethod[] us = SlotOddsTable[gameFamily switch
-                {
-                    GameFamilies.DP => ("ADAE", 5), GameFamilies.Plat => ("CPUE", 1), _ => ("IPKE", 0),
-                }];
-                return us.Select((method, i) => method with
-                {
-                    Boundaries = method.Boundaries.Select(sites => sites.Select(at => at + bases[i] - method.Boundaries[0][0]).ToArray()).ToArray(),
-                }).ToArray();
-            }
-        }
-
         /// <summary>
         /// The swarm destination table. HGSS rows are u16 header + u16 method; DP/Pt rows are a u32 header. The
         /// literals point at the table (HGSS also has one at +2) and the `movs r1, #count` sites give the row count.
         /// </summary>
         public sealed record SwarmSites(int Overlay, int Table, int Rows, int RowSize, int[] Literals, int[] LiteralsPlus2, int[] CountSites);
-
-        private static readonly Dictionary<(string id, int rev), SwarmSites> SwarmSiteTable = new()
-        {
-            [("IPKE", 0)] = new(-1, 0x108F4C, 20, 4, new[] { 0x97F94, 0x97FF0 }, new[] { 0x97F98 }, new[] { 0x97F70, 0x97FA2 }),
-            [("CPUE", 1)] = new(6, 0xAF50, 22, 4, new[] { 0x50E8, 0x5114 }, Array.Empty<int>(), new[] { 0x50DA, 0x50F2 }),
-            [("ADAE", 5)] = new(6, 0x17CA0, 28, 4, new[] { 0xC26C, 0xC298 }, Array.Empty<int>(), new[] { 0xC25E, 0xC276 }),
-        };
 
         /// <summary>
         /// The overlay holding the move-effect background table and its rows: five u32 battle background archive members
@@ -558,12 +296,6 @@ namespace DSPRE
             GameFamilies.HGSS => (7, 59),
             _ => (-1, 0),
         };
-
-        public static SwarmSites SwarmCodeSites =>
-            romID != null && (SwarmSiteTable.TryGetValue(SiteKey, out SwarmSites s) || MeasuredSwarmSites.TryGetValue(CodeKey, out s)) ? s : null;
-
-        public static BpShopSites BpShopCodeSites =>
-            romID != null && (BpShopSiteTable.TryGetValue(SiteKey, out BpShopSites s) || MeasuredBpShopSites.TryGetValue(CodeKey, out s)) ? s : null;
 
         /// <summary>
         /// Special trainer battle intros, as file offsets in the named binary, -1 where the game has none.
@@ -580,26 +312,6 @@ namespace DSPRE
             int[] ParticleSites, int[] EmitterSites,
             int VsMark, int LeagueFrame, int PlayerFaceBoy, int PlayerFaceGirl, int NamePalette, int GymBanner, int ExecutiveBackdrop);
 
-        // US English only; any revision, since the content checks decide.
-        private static readonly Dictionary<string, VsIntroSites> VsIntroSiteTable = new()
-        {
-            ["IPKE"] = new(-1, 0, 1, 0x20FC4, 47, 115, 0x1390, 16, 20, 0x1354, 0x1368, 117, 0xAAC,
-                           0x517E4, 0x517D4, new[] { 0xBD0, 0xED4 }, Array.Empty<int>(), 59, 48, 207, 211, 16, -1, 215),
-            ["CPUE"] = new(0x51C34, 41, 5, 0x28CF4, 31, 5, 0x28FB4, 8, 20, -1, 0x28F8C, -1, -1,
-                           -1, -1, new[] { 0x14D94, 0x15098 }, new[] { 0x14F28, 0x150B4 }, 51, 40, 147, 151, 11, -1, -1),
-            ["ADAE"] = new(0x475D4, 36, 5, 0x20008, 31, 5, 0x20458, 8, 8, -1, 0x20430, -1, -1,
-                           -1, -1, Array.Empty<int>(), Array.Empty<int>(), -1, 15, -1, -1, -1, 11, -1),
-        };
-
-        // SoulSilver and Pearl share their partner's code here, as they do for the battle music tables; the content
-        // checks in VsIntroTables still refuse a ROM whose bytes differ.
-        private static readonly Dictionary<string, string> VsIntroSameAs = new() { ["IPGE"] = "IPKE", ["APAE"] = "ADAE" };
-
-        public static VsIntroSites VsIntroCodeSites =>
-            romID == null ? null
-            : VsIntroSiteTable.TryGetValue(VsIntroSameAs.TryGetValue(romID, out string same) ? same : romID, out VsIntroSites s) ? s
-            : MeasuredVsIntroSites.TryGetValue(CodeKey, out s) ? s : null;
-
         /// <summary>
         /// Data tables in the intro code: the six emblems the Team Rocket or Galactic grunt intro flies in (eight s32
         /// each), the column order of the black block wipe (eight bytes), and the emblem's palette, tiles, cells and
@@ -608,28 +320,11 @@ namespace DSPRE
         /// </summary>
         public sealed record VsIntroMotionSites(int FlightOverlay, int FlightTable, int BlockOverlay, int BlockOrder, int[] EmblemMembers, int[] LeagueParticles);
 
-        private static readonly Dictionary<string, VsIntroMotionSites> VsIntroMotionTable = new()
-        {
-            ["IPKE"] = new(117, 0xAD4, 1, 0x21080, new[] { 3, 156, 158, 157 }, new[] { 151, 152 }),
-            ["CPUE"] = new(5, 0x29114, 5, 0x28C08, new[] { 0, 2, 4, 3 }, new[] { 107, 108 }),
-            ["ADAE"] = new(5, 0x20558, 5, 0x1FF7C, new[] { 0, 2, 4, 3 }, null),
-        };
-
         /// <summary>
         /// How many cells a loaded matrix may hold: the game keeps every matrix in one fixed buffer (MAP_MATRIX_MAX_SIZE,
         /// 900 in DP and Platinum, 799 in HGSS) and indexes past it unchecked. HGSS's matrix expansion patch doubles it.
         /// </summary>
         public static int MatrixMaxCells(bool expansionPatched) => gameFamily == GameFamilies.HGSS ? (expansionPatched ? 799 * 2 : 799) : 900;
-
-        public static VsIntroMotionSites VsIntroMotionCodeSites =>
-            romID == null ? null
-            : VsIntroMotionTable.TryGetValue(VsIntroSameAs.TryGetValue(romID, out string same) ? same : romID, out VsIntroMotionSites s) ? s
-            : MeasuredVsIntroMotion.TryGetValue(CodeKey, out s) ? s : null;
-
-        /// <summary>Where this ROM keeps <paramref name="table"/>, or null for an unsupported version.</summary>
-        public static TableSpot? SpotOf(GameTable table) =>
-            romID != null && (TableSpots.TryGetValue((CodeKey.id, CodeKey.rev, table), out TableSpot spot)
-                              || MeasuredTableSpots.TryGetValue((CodeKey.id, CodeKey.rev, table), out spot)) ? spot : null;
 
         private static int ReadRomRevision(string dir)
         {
@@ -649,50 +344,19 @@ namespace DSPRE
             return -1;
         }
 
-        /// <summary>
-        /// HGSS arm9 file offsets of the follower tables read by SpeciesToOverworldModelIndexOffset,
-        /// OverworldModelLookupFormCount and OverworldModelLookupHasFemaleForm; -1 on other versions.
-        /// </summary>
         /// <summary>DP/Pt: the class switch picking each trainer class's battle music, as (arm9 table, entries), or null.</summary>
         public static (int Table, int Count)? ClassJumpSite =>
-            VsIntroCodeSites is VsIntroSites s && s.ClassJumpTable >= 0 ? (s.ClassJumpTable, s.ClassJumpCount)
-            : MeasuredHere?.ClassJumpTable is int t ? (t, MeasuredHere.ClassJumpCount ?? 0) : null;
+            RomLocator.VsIntroSites is VsIntroSites s && s.ClassJumpTable >= 0 ? (s.ClassJumpTable, s.ClassJumpCount) : null;
         /// <summary>
-        /// The trainer class gender table in arm9, one byte per class (1 female), or 0 when unknown. A dump that keeps it
-        /// apart from its language's usual place has it measured.
+        /// The trainer class gender table in arm9, one byte per class (1 female), or 0 when unknown.
         /// </summary>
-        public static uint trainerClassGenderTableOffset => MeasuredHere?.TrainerClassGender ?? (gameFamily, gameLanguage) switch
-        {
-            (GameFamilies.DP, GameLanguages.English) => 0xF8010,
-            (GameFamilies.DP, GameLanguages.French) => 0xF8054,
-            (GameFamilies.DP, GameLanguages.German) => 0xF8024,
-            (GameFamilies.DP, GameLanguages.Italian) => 0xF7FC8,
-            (GameFamilies.DP, GameLanguages.Spanish) => 0xF8060,
-            (GameFamilies.DP, GameLanguages.Korean) => 0xF3660,
-            (GameFamilies.Plat, GameLanguages.English) => 0xF0714,
-            (GameFamilies.Plat, GameLanguages.Japanese) => 0xEFDA4,
-            (GameFamilies.Plat, GameLanguages.French) => 0xF079C,
-            (GameFamilies.Plat, GameLanguages.German) => 0xF076C,
-            (GameFamilies.Plat, GameLanguages.Italian) => 0xF0730,
-            (GameFamilies.Plat, GameLanguages.Spanish) => 0xF07A8,
-            (GameFamilies.Plat, GameLanguages.Korean) => 0xF119C,
-            (GameFamilies.HGSS, GameLanguages.English) => 0xFFB90,
-            (GameFamilies.HGSS, GameLanguages.Japanese) => 0xFF310,
-            (GameFamilies.HGSS, GameLanguages.French) => 0xFFB74,
-            (GameFamilies.HGSS, GameLanguages.German) => 0xFFB44,
-            (GameFamilies.HGSS, GameLanguages.Italian) => 0xFFB08,
-            (GameFamilies.HGSS, GameLanguages.Spanish) => 0xFFB78,
-            _ => 0u,
-        };
+        public static uint trainerClassGenderTableOffset => (uint)(RomLocator.Where(RomLocator.Thing.TrainerClassGenders)?.Offset ?? 0);
         /// <summary>
         /// The Pickup routine's range clamp (cmp rN, #10; bcc; movs rN, #9, never reached for levels 1 to 100), the register
         /// holding the range, and the literals pointing at the common and rare item lists, all in the pickup overlay.
         /// </summary>
         public sealed record PickupSlotSites(uint Clamp, int Register, uint CommonLiteral, uint RareLiteral);
 
-        /// <summary>Measured per dump.</summary>
-        public static PickupSlotSites pickupSlotSites =>
-            MeasuredHere?.PickupSlots is uint[] s && s.Length == 4 ? new PickupSlotSites(s[0], (int)s[1], s[2], s[3]) : null;
 
         /// <summary>
         /// The Underground wall code in the mining table's overlay: the treasure count's random range and minimum
@@ -702,28 +366,17 @@ namespace DSPRE
         public sealed record MiningCodeSites(uint Range, uint Minimum, uint FirstDig, uint Tries,
             uint OrbRowA, uint OrbBonusA, uint OrbRowB, uint OrbBonusB);
 
-        /// <summary>Measured per DP and Pt dump.</summary>
-        public static MiningCodeSites miningCodeSites =>
-            MeasuredHere?.MiningCode is uint[] s && s.Length == 8 ? new MiningCodeSites(s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7]) : null;
 
-        /// <summary>Platinum: the arm9 literal pointing at the trainer class gender table, or 0 where it is not measured.</summary>
-        public static uint trainerClassGenderPointerOffset =>
-            gameFamily == GameFamilies.Plat ? MeasuredHere?.ClassGenderPointer ?? 0u : 0u;
+
+        /// <summary>
+        /// HGSS arm9 file offsets of the follower tables read by SpeciesToOverworldModelIndexOffset,
+        /// OverworldModelLookupFormCount and OverworldModelLookupHasFemaleForm.
+        /// </summary>
+        public sealed record FollowerTableSites(int Models, int FormCounts, int Female);
 
         /// <summary>The trainer class prize multipliers: overlay, pointer literal there (0 when none is known), table, length.</summary>
         public sealed record TrainerPrizeTable(int Overlay, uint Pointer, uint Table, int Count, bool Paired);
 
-        /// <summary>
-        /// Measured per dump. Platinum's is a byte per class behind a pointer; DP's has no known pointer; HGSS keeps u16
-        /// {class, multiplier} pairs, so its count is pairs.
-        /// </summary>
-        public static TrainerPrizeTable trainerPrizeTable => MeasuredHere?.PrizeTable is not uint table ? null : gameFamily switch
-        {
-            GameFamilies.Plat => new TrainerPrizeTable(16, MeasuredHere.PrizePointer ?? 0, table, 0x69, false),
-            GameFamilies.DP => new TrainerPrizeTable(11, 0, table, 0x62, false),
-            GameFamilies.HGSS => new TrainerPrizeTable(12, 0, table, 129, true),
-            _ => null,
-        };
         /// <summary>The vanilla game's trainer class count: the gender table's length.</summary>
         public static int vanillaTrainerClassCount => gameFamily switch
         {
@@ -739,9 +392,6 @@ namespace DSPRE
         /// </summary>
         public sealed record TrainerShinySites(int Hook, int Mask, uint[] CallTargets);
 
-        /// <summary>Measured per HeartGold and SoulSilver dump.</summary>
-        public static TrainerShinySites trainerShinySites =>
-            MeasuredHere?.TrainerShiny is uint[] s && s.Length == 8 ? new TrainerShinySites((int)s[0], (int)s[1], s[2..]) : null;
 
         /// <summary>
         /// The building rotation patch's sites: the field overlay, the hook in it that passes each building's rotation,
@@ -749,11 +399,25 @@ namespace DSPRE
         /// </summary>
         public sealed record BuildingRotationSites(int Overlay, uint Hook, uint RotationRoutine);
 
-        /// <summary>Measured per dump; Japanese DP has its own hook and payload.</summary>
-        public static BuildingRotationSites buildingRotationSites =>
-            MeasuredHere?.BuildingRotation is uint[] s && s.Length == 2
-                ? new BuildingRotationSites(gameFamily == GameFamilies.HGSS ? 1 : 5, s[0], s[1])
-                : null;
+        /// <summary>BDHCam's arm9 branch and its two jumps in the field overlay (file offsets).</summary>
+        public sealed record BdhcamSites(uint Branch, int Overlay, uint Hook1, uint Hook2);
+
+        /// <summary>One of the summary screen's window tables in arm9: eight bytes a window, the page it belongs to.</summary>
+        public sealed record SummaryWindowTableSite(string Page, uint Offset, int Count);
+
+        /// <summary>
+        /// A summary screen bar's code: the Thumb instructions whose low byte is its tile column and row, how many
+        /// tiles long it is, the background it is drawn into (main 0-3, sub 4-7) and the map entry of a full tile.
+        /// </summary>
+        public sealed record SummaryBarSite(uint X, uint Y, int Tiles, int Layer, int FullTile);
+
+        /// <summary>
+        /// The summary screen's window tables (always-there windows first), its HP and EXP bars, its message bank and the
+        /// banks it reads ability descriptions and contest effects from (-1 where the game has none).
+        /// </summary>
+        public sealed record SummaryScreenSites(SummaryWindowTableSite[] Windows, SummaryBarSite Hp, SummaryBarSite Exp, int MessageBank,
+                                                int AbilityDescriptionBank, int ContestEffectBank);
+
 
         /// <summary>
         /// The trainer class metadata patch's ARM9 veneers (gender and eye-contact music lookups) and the vanilla VS
@@ -763,14 +427,18 @@ namespace DSPRE
 
         /// <summary>US HeartGold and SoulSilver only.</summary>
         public static TrainerClassMetadataHooks trainerClassMetadataHooks =>
-            CodeKey == ("IPKE", 0) || CodeKey == ("IPGE", 0) ? new TrainerClassMetadataHooks(0x735F8, 0x55098, 43) : null;
+            RomLocator.Where(RomLocator.Thing.TrainerClassMetadataGenderHook) is RomLocator.Spot gender
+            && RomLocator.Where(RomLocator.Thing.TrainerClassMetadataEyeContactHook) is RomLocator.Spot eyeContact
+                ? new TrainerClassMetadataHooks((uint)gender.Offset, (uint)eyeContact.Offset, 43) : null;
 
         /// <summary>hzla's PlatPatches: the RAM addresses of their item file and TM/HM hooks in the ARM9.</summary>
         public sealed record PlatPatchesHooks(uint ItemFileId, uint ItemIsTmHm);
 
         /// <summary>US Platinum only.</summary>
         public static PlatPatchesHooks platPatchesHooks =>
-            CodeKey == ("CPUE", 1) ? new PlatPatchesHooks(0x0207CE78, 0x0205E060) : null;
+            RomLocator.Where(RomLocator.Thing.PlatPatchesItemFileIdHook) is RomLocator.Spot itemFile
+            && RomLocator.Where(RomLocator.Thing.PlatPatchesItemIsTmHmHook) is RomLocator.Spot tmHm
+                ? new PlatPatchesHooks(ARM9.address + (uint)itemFile.Offset, ARM9.address + (uint)tmHm.Offset) : null;
 
         /// <summary>Where PlatPatches keep their fixed blocks in the synthetic overlay, up to its end.</summary>
         public const int platPatchesFixedStart = 0x10000;
@@ -787,23 +455,23 @@ namespace DSPRE
             : new TornWorldCodeLayout(9, new uint[] { 573, 574, 575, 576, 577, 579, 580, 581 }, new uint[] { 573, 579, 582, 583 }, 25, 5, 8, 22);
 
         /// <summary>HGSS: the overlay holding the Rock Smash item tables.</summary>
-        public const int rockSmashItemTablesOverlayNumber = 1;
+        public static int rockSmashItemTablesOverlayNumber => RomLocator.Where(RomLocator.Thing.RockSmashItemTables)?.Overlay ?? 1;
 
         /// <summary>The Battle Frontier Brains' VS records: overlay, file offset there, rows and row size.</summary>
         public sealed record FrontierBrainTable(int Overlay, uint Table, int Count, int RowSize);
 
         /// <summary>US HeartGold and SoulSilver only.</summary>
         public static FrontierBrainTable frontierBrainTable =>
-            CodeKey == ("IPKE", 0) || CodeKey == ("IPGE", 0) ? new FrontierBrainTable(80, 0x13CB8, 6, 0x0C) : null;
-        public static int FollowerModelTableOffset => romID == "IPKE" ? 0xFF088 : MeasuredHere?.FollowerModels ?? -1;
-        public static int FollowerFormCountTableOffset => romID == "IPKE" ? 0xFE8D4 : MeasuredHere?.FollowerFormCounts ?? -1;
-        public static int FollowerFemaleTableOffset => romID == "IPKE" ? 0xFECAE : MeasuredHere?.FollowerFemale ?? -1;
+            RomLocator.Where(RomLocator.Thing.FrontierBrainTable) is RomLocator.Spot brains
+                ? new FrontierBrainTable(brains.Overlay, (uint)brains.Offset, 6, 0x0C) : null;
 
         /// <summary>
         /// HGSS: species whose Pokéwalker picture is picked by form, each with the first of its form pictures in
-        /// a/2/5/6, as overlay 112's lookup adds them (the form number is added to it). Empty elsewhere.
+        /// a/2/5/6, as overlay 112's lookup adds them (the form number is added to it). Measured on English HeartGold only;
+        /// empty elsewhere.
         /// </summary>
-        public static IReadOnlyList<(int Species, int FirstPicture)> PokewalkerFormPictures => romID == "IPKE"
+        public static IReadOnlyList<(int Species, int FirstPicture)> PokewalkerFormPictures =>
+            gameVersion == GameVersions.HeartGold && gameLanguage == GameLanguages.English
             ? new[] { (386, 586), (201, 590), (351, 618), (412, 622), (413, 625), (422, 628), (423, 630), (421, 632),
                       (493, 634), (492, 652), (479, 654), (487, 660), (172, 662) }
             : Array.Empty<(int, int)>();
@@ -811,12 +479,10 @@ namespace DSPRE
         /// <summary>HGSS: a Pokéwalker icon (a/2/4/8) is the party icon (a/0/2/0) this many entries earlier; -1 elsewhere.</summary>
         public static int PokewalkerIconLeadIn => gameFamily == GameFamilies.HGSS ? 7 : -1;
 
-        /// <summary>HGSS arm9 file offset of sPokeathlonPerformanceArcIdxs, the first Pokéathlon record of each species; -1 elsewhere.</summary>
-        public static int PokeathlonMemberTableOffset => romID == "IPKE" ? 0xFF7B4 : MeasuredHere?.PokeathlonMembers ?? -1;
 
         /// <summary>Text archive whose lines 78-87 name the ten Bug-Catching Contest opponents; -1 where unknown.</summary>
         public static int BugContestTextNumber =>
-            gameFamily == GameFamilies.HGSS && gameLanguage != GameLanguages.Japanese ? TextBank(246) : MeasuredHere?.BugContestText ?? -1;
+            gameFamily != GameFamilies.HGSS ? -1 : gameLanguage == GameLanguages.Japanese ? 239 : TextBank(246);
         public static string OWtablePath { get; private set; }
 
         public static uint monIconPalTableAddress { get; private set; }
@@ -1044,6 +710,7 @@ namespace DSPRE
             fieldTouchMenu,         // HGSS a/0/1/4, the touch menu panel on the bottom screen
             fieldTouchChoices,      // HGSS a/2/3/7, the Poké Ball screen and its touch buttons
             summaryGraphics,        // DP graphic/pst_gra.narc, Pt graphic/pl_pst_gra.narc, HGSS a/1/6/2: the Pokémon summary screens
+            summarySprites,         // HGSS a/0/3/9: the summary screen's ball cells, markings and other sprites, numbered like Platinum's summary archive
             moveRelearnerGraphics,  // DP/Pt graphic/waza_oshie_gra.narc, HGSS a/1/1/0
             battlePartyGraphics,    // DP battle/graphic/b_plist_gra.narc, Pt battle/graphic/pl_b_plist_gra.narc, HGSS a/0/7/1
             bagGraphics,            // DP graphic/bag_gra.narc, Pt graphic/pl_bag_gra.narc, HGSS a/0/1/5
@@ -1189,6 +856,9 @@ namespace DSPRE
             SetFieldScriptArchives();
             SetupSpawnSettings();
             SetMonIconsPalTableAddress();
+            // The trainer editor and DV calculator read these; only the WinForms trainer editor used to set them.
+            try { SetAIBackportEnabled(); }
+            catch (Exception ex) { AppLogger.Warn("AI backport check failed: " + ex.Message); }
 
             SetAbilityNamesTextNumber();
             SetPokedexTextNumbers();
@@ -1328,9 +998,9 @@ namespace DSPRE
         public static void Set3DOverworldsDict()
         {
             ow3DSpriteDict = new Dictionary<uint, string>();
+            for (uint id = FirstVariableOverworld; id <= LastVariableOverworld; id++) ow3DSpriteDict[id] = "overworld";
             if (gameFamily != GameFamilies.DP && gameFamily != GameFamilies.Plat) return;
 
-            for (uint id = FirstVariableOverworld; id <= LastVariableOverworld; id++) ow3DSpriteDict[id] = "overworld";
             try
             {
                 if (string.IsNullOrEmpty(OWtablePath)) SetOWtable();
@@ -1352,384 +1022,55 @@ namespace DSPRE
             isHGE ? 0x4000 : gameFamily == GameFamilies.HGSS ? 0x170 : 0x120;
 
         /// <summary>Whether an overworld id takes its picture from a map variable rather than the sprite table.</summary>
-        public static bool IsVariableOverworld(uint id) =>
-            (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat)
-            && id >= FirstVariableOverworld && id <= LastVariableOverworld;
+        public static bool IsVariableOverworld(uint id) => id >= FirstVariableOverworld && id <= LastVariableOverworld;
 
-        public static void SetHeaderTableOffset()
+        // pokeheartgold include/constants/sprites.h SPRITE_HEROINE. HGSS scripts put the friend's sprite in
+        // 0x4020 (ScrCmd_GetFriendSprite), so id 101 is the friend, shown as her for a male player.
+        private const uint HgssHeroineOverworld = 97;
+
+        // pokeplatinum scripts_pokemon_center_daily_trainers.s: the Pokémon Centre daily trainers in 111 and 112
+        // change with the day; Kinsey and Tevin, the reporter and cameraman, stand in for them.
+        private const uint PlatDailyTrainerOne = 111, PlatReporterOverworld = 22, PlatCameramanOverworld = 23;
+
+        /// <summary>
+        /// The overworld drawn in an editor for this id: the friend for HGSS's 101, a reporter and cameraman for
+        /// Platinum's 111 and 112, otherwise the id itself.
+        /// </summary>
+        public static uint VariableOverworldStandIn(uint id)
         {
-            switch (gameFamily)
-            {
-                case GameFamilies.DP:
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            headerTableOffset = 0xEEDBC;
-                            break;
-
-                        case GameLanguages.Spanish:
-                            headerTableOffset = 0xEEE08;
-                            break;
-
-                        case GameLanguages.Italian:
-                            headerTableOffset = 0xEED70;
-                            break;
-
-                        case GameLanguages.French:
-                            headerTableOffset = 0xEEDFC;
-                            break;
-
-                        case GameLanguages.German:
-                            headerTableOffset = 0xEEDCC;
-                            break;
-
-                        case GameLanguages.Japanese:
-                            headerTableOffset = gameVersion == GameVersions.Diamond ? (uint)0xF0D68 : 0xF0D6C;
-                            break;
-                    }
-                    break;
-
-                case GameFamilies.Plat:
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            headerTableOffset = 0xE601C;
-                            break;
-
-                        case GameLanguages.Spanish:
-                            headerTableOffset = 0xE60B0;
-                            break;
-
-                        case GameLanguages.Italian:
-                            headerTableOffset = 0xE6038;
-                            break;
-
-                        case GameLanguages.French:
-                            headerTableOffset = 0xE60A4;
-                            break;
-
-                        case GameLanguages.German:
-                            headerTableOffset = 0xE6074;
-                            break;
-
-                        case GameLanguages.Japanese:
-                            headerTableOffset = 0xE56F0;
-                            break;
-                    }
-                    break;
-
-                case GameFamilies.HGSS:
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            headerTableOffset = 0xF6BE0;
-                            break;
-
-                        case GameLanguages.Spanish:
-                            headerTableOffset = gameVersion == GameVersions.HeartGold ? 0xF6BC8 : (uint)0xF6BD0;
-                            break;
-
-                        case GameLanguages.Italian:
-                            headerTableOffset = 0xF6B58;
-                            break;
-
-                        case GameLanguages.French:
-                            headerTableOffset = 0xF6BC4;
-                            break;
-
-                        case GameLanguages.German:
-                            headerTableOffset = 0xF6B94;
-                            break;
-
-                        case GameLanguages.Japanese:
-                            headerTableOffset = 0xF6390;
-                            break;
-                    }
-                    break;
-            }
-            if (MeasuredHere?.HeaderTable is uint measured) headerTableOffset = measured;
+            if (gameFamily == GameFamilies.HGSS && id == FirstVariableOverworld) return HgssHeroineOverworld;
+            if (gameFamily == GameFamilies.Plat && id == PlatDailyTrainerOne) return PlatReporterOverworld;
+            if (gameFamily == GameFamilies.Plat && id == PlatDailyTrainerOne + 1) return PlatCameramanOverworld;
+            return id;
         }
+
+        public static void SetHeaderTableOffset() =>
+            headerTableOffset = (uint)(RomLocator.Where(RomLocator.Thing.MapHeaders)?.Offset ?? 0);
 
         public static void SetupSpawnSettings()
         {
-            switch (gameFamily)
-            {
-                case GameFamilies.DP:
-                    initialMoneyOverlayNumber = 52;
-                    initialMoneyOverlayOffset = 0x1E4;
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            arm9spawnOffset = 0xF2B9C;
-                            break;
-
-                        case GameLanguages.Spanish:
-                            arm9spawnOffset = 0xF2BE8;
-                            break;
-
-                        case GameLanguages.Italian:
-                            arm9spawnOffset = 0xF2B50;
-                            break;
-
-                        case GameLanguages.French:
-                            arm9spawnOffset = 0xF2BDC;
-                            break;
-
-                        case GameLanguages.German:
-                            arm9spawnOffset = 0xF2BAC;
-                            break;
-
-                        case GameLanguages.Japanese:
-                            arm9spawnOffset = 0xF4B48;
-                            break;
-                    }
-                    break;
-
-                case GameFamilies.Plat:
-                    initialMoneyOverlayNumber = 57;
-                    initialMoneyOverlayOffset = 0x1EC;
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            arm9spawnOffset = 0xEA12C;
-                            break;
-
-                        case GameLanguages.Spanish:
-                            arm9spawnOffset = 0xEA1C0;
-                            break;
-
-                        case GameLanguages.Italian:
-                            arm9spawnOffset = 0xEA148;
-                            break;
-
-                        case GameLanguages.French:
-                            arm9spawnOffset = 0xEA1B4;
-                            break;
-
-                        case GameLanguages.German:
-                            arm9spawnOffset = 0xEA184;
-                            break;
-
-                        case GameLanguages.Japanese:
-                            arm9spawnOffset = 0xE9800;
-                            break;
-                    }
-                    break;
-
-                case GameFamilies.HGSS:
-                    initialMoneyOverlayNumber = 36;
-                    initialMoneyOverlayOffset = 0x2FC;
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            arm9spawnOffset = 0xFA17C;
-                            break;
-
-                        case GameLanguages.Spanish:
-                            arm9spawnOffset = gameVersion == GameVersions.HeartGold ? 0xFA164 : (uint)0xFA16C;
-                            break;
-
-                        case GameLanguages.Italian:
-                            arm9spawnOffset = 0xFA0F4;
-                            break;
-
-                        case GameLanguages.French:
-                            arm9spawnOffset = 0xFA160;
-                            break;
-
-                        case GameLanguages.German:
-                            arm9spawnOffset = 0xFA130;
-                            break;
-
-                        case GameLanguages.Japanese:
-                            arm9spawnOffset = 0xF992C;
-                            break;
-                    }
-                    break;
-            }
-            Measure m = MeasuredHere;
-            if (m?.Spawn is uint spawn) arm9spawnOffset = spawn;
-            if (m?.InitialMoney is uint money) initialMoneyOverlayOffset = money;
+            RomLocator.Spot money = RomLocator.Where(RomLocator.Thing.InitialMoney);
+            initialMoneyOverlayNumber = money?.Overlay ?? 0;
+            initialMoneyOverlayOffset = (uint)(money?.Offset ?? 0);
+            arm9spawnOffset = (uint)(RomLocator.Where(RomLocator.Thing.SpawnPoint)?.Offset ?? 0);
         }
 
         public static void SetPickupTableOffsets()
         {
-            // Initialize to invalid values by default
-            pickupTableOverlayNumber = -1;
-            pickupCommonItemsOffset = 0;
-            pickupRareItemsOffset = 0;
-            pickupActivationDivisorOffset = 0;
-            pickupWeightTableOffset = 0;
-
-            switch (gameFamily)
-            {
-                case GameFamilies.DP:
-                    pickupTableOverlayNumber = 11;
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            pickupCommonItemsOffset = 0x30764;
-                            pickupRareItemsOffset = 0x30688;
-                            pickupActivationDivisorOffset = 0xBCB2;
-                            pickupWeightTableOffset = 0x30B90;
-                            break;
-                        case GameLanguages.Japanese:
-                            pickupCommonItemsOffset = 0x32E64;
-                            pickupRareItemsOffset = 0x32D9C;
-                            pickupActivationDivisorOffset = 0xADE4;
-                            pickupWeightTableOffset = 0x32D68;
-                            break;
-                        case GameLanguages.French:
-                            pickupCommonItemsOffset = 0x308CC;
-                            pickupRareItemsOffset = 0x307F0;
-                            pickupActivationDivisorOffset = 0xBDBA;
-                            pickupWeightTableOffset = 0x30CF8;
-                            break;
-                        case GameLanguages.German:
-                            pickupCommonItemsOffset = 0x307E0;
-                            pickupRareItemsOffset = 0x30704;
-                            pickupActivationDivisorOffset = 0xBCCE;
-                            pickupWeightTableOffset = 0x30C0C;
-                            break;
-                        case GameLanguages.Italian:
-                            pickupCommonItemsOffset = 0x307E0;
-                            pickupRareItemsOffset = 0x30704;
-                            pickupActivationDivisorOffset = 0xBCCE;
-                            pickupWeightTableOffset = 0x30C0C;
-                            break;
-                        case GameLanguages.Spanish:
-                            pickupCommonItemsOffset = 0x308CC;
-                            pickupRareItemsOffset = 0x307F0;
-                            pickupActivationDivisorOffset = 0xBDBA;
-                            pickupWeightTableOffset = 0x30CF8;
-                            break;
-                        default:
-                            pickupCommonItemsOffset = 0x30764;
-                            pickupRareItemsOffset = 0x30688;
-                            pickupActivationDivisorOffset = 0xBCB2;
-                            pickupWeightTableOffset = 0x30B90;
-                            break;
-                    }
-                    break;
-
-                case GameFamilies.Plat:
-                    pickupTableOverlayNumber = 16;
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            pickupCommonItemsOffset = 0x3352C;
-                            pickupRareItemsOffset = 0x33450;
-                            pickupActivationDivisorOffset = 0xC62A;
-                            pickupWeightTableOffset = 0x33968;
-                            break;
-                        case GameLanguages.Japanese:
-                            pickupCommonItemsOffset = 0x33520;
-                            pickupRareItemsOffset = 0x33444;
-                            pickupActivationDivisorOffset = 0xC622;
-                            pickupWeightTableOffset = 0x3395C;
-                            break;
-                        case GameLanguages.French:
-                            pickupCommonItemsOffset = 0x33634;
-                            pickupRareItemsOffset = 0x33558;
-                            pickupActivationDivisorOffset = 0xC732;
-                            pickupWeightTableOffset = 0x33A70;
-                            break;
-                        case GameLanguages.German:
-                            pickupCommonItemsOffset = 0x33548;
-                            pickupRareItemsOffset = 0x3346C;
-                            pickupActivationDivisorOffset = 0xC646;
-                            pickupWeightTableOffset = 0x33984;
-                            break;
-                        case GameLanguages.Italian:
-                            pickupCommonItemsOffset = 0x33548;
-                            pickupRareItemsOffset = 0x3346C;
-                            pickupActivationDivisorOffset = 0xC646;
-                            pickupWeightTableOffset = 0x33984;
-                            break;
-                        case GameLanguages.Spanish:
-                            pickupCommonItemsOffset = 0x33634;
-                            pickupRareItemsOffset = 0x33558;
-                            pickupActivationDivisorOffset = 0xC732;
-                            pickupWeightTableOffset = 0x33A70;
-                            break;
-                        default:
-                            pickupCommonItemsOffset = 0x3352C;
-                            pickupRareItemsOffset = 0x33450;
-                            pickupActivationDivisorOffset = 0xC62A;
-                            pickupWeightTableOffset = 0x33968;
-                            break;
-                    }
-                    break;
-
-                case GameFamilies.HGSS:
-                    pickupTableOverlayNumber = 12;
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            pickupCommonItemsOffset = 0x34B44;
-                            pickupRareItemsOffset = 0x34A4C;
-                            pickupActivationDivisorOffset = 0xC852;
-                            pickupWeightTableOffset = 0x3518C;
-                            break;
-                        case GameLanguages.Japanese:
-                            pickupCommonItemsOffset = 0x34B00;
-                            pickupRareItemsOffset = 0x34A08;
-                            pickupActivationDivisorOffset = 0xC85A;
-                            pickupWeightTableOffset = 0x35148;
-                            break;
-                        case GameLanguages.French:
-                            pickupCommonItemsOffset = 0x34B44;
-                            pickupRareItemsOffset = 0x34A4C;
-                            pickupActivationDivisorOffset = 0xC852;
-                            pickupWeightTableOffset = 0x3518C;
-                            break;
-                        case GameLanguages.German:
-                            pickupCommonItemsOffset = 0x34B44;
-                            pickupRareItemsOffset = 0x34A4C;
-                            pickupActivationDivisorOffset = 0xC852;
-                            pickupWeightTableOffset = 0x3518C;
-                            break;
-                        case GameLanguages.Italian:
-                            pickupCommonItemsOffset = 0x34B44;
-                            pickupRareItemsOffset = 0x34A4C;
-                            pickupActivationDivisorOffset = 0xC852;
-                            pickupWeightTableOffset = 0x3518C;
-                            break;
-                        case GameLanguages.Spanish:
-                            pickupCommonItemsOffset = 0x34B44;
-                            pickupRareItemsOffset = 0x34A4C;
-                            pickupActivationDivisorOffset = 0xC852;
-                            pickupWeightTableOffset = 0x3518C;
-                            break;
-                        default:
-                            pickupCommonItemsOffset = 0x34B44;
-                            pickupRareItemsOffset = 0x34A4C;
-                            pickupActivationDivisorOffset = 0xC852;
-                            pickupWeightTableOffset = 0x3518C;
-                            break;
-                    }
-                    break;
-            }
-            if (MeasuredHere?.PickupDivisor is uint divisor) pickupActivationDivisorOffset = divisor;
-            if (MeasuredHere is Measure m && m.PickupCommon is uint common && m.PickupRare is uint rare && m.PickupWeight is uint weight)
-            {
-                pickupCommonItemsOffset = common;
-                pickupRareItemsOffset = rare;
-                pickupWeightTableOffset = weight;
-            }
+            RomLocator.Spot divisor = RomLocator.Where(RomLocator.Thing.PickupDivisor);
+            pickupTableOverlayNumber = divisor?.Overlay ?? -1;
+            pickupActivationDivisorOffset = (uint)(divisor?.Offset ?? 0);
+            pickupCommonItemsOffset = (uint)(RomLocator.Where(RomLocator.Thing.PickupCommonItems)?.Offset ?? 0);
+            pickupRareItemsOffset = (uint)(RomLocator.Where(RomLocator.Thing.PickupRareItems)?.Offset ?? 0);
+            pickupWeightTableOffset = (uint)(RomLocator.Where(RomLocator.Thing.PickupWeights)?.Offset ?? 0);
         }
 
         /// <summary>Offsets for the Starter Pokémon editor. </summary>
         public static void SetStarterOffsets()
         {
             // Initialize to invalid values by default
-            starterOverlayNumber = -1;
-            starterSpeciesOffset = 0;
-            starterArm9SearchSuffix = null;
             starterGraphicsPrefix = null;
-            starterGraphicsPrefixInner = null;
             starterSceneSpeciesLiterals = null;
-            starterCriesPrefix = null;
             starterHeldItemScriptFileID = -1;
             starterHeldItemOffset = 0;
             starterCommandScriptNumber = -1;
@@ -1740,9 +1081,7 @@ namespace DSPRE
             switch (gameFamily)
             {
                 case GameFamilies.DP:
-                    starterOverlayNumber = 64;
                     starterGraphicsPrefix = "000222402104120C";
-                    starterGraphicsPrefixInner = "0290039002200002";
                     starterHeldItemScriptFileID = 342;
                     starterHeldItemOffset = 0x2B4;
                     switch (gameLanguage)
@@ -1750,14 +1089,12 @@ namespace DSPRE
                         case GameLanguages.Japanese:
                             // The scene loads each sprite's species from a literal pool word, not from the
                             // immediates the US code builds, so the US rewrite has nothing to match.
-                            starterGraphicsPrefix = starterGraphicsPrefixInner = null;
+                            starterGraphicsPrefix = null;
                             starterSceneSpeciesLiterals = new[] { 0x16A8, 0x16B0, 0x16B8 };
-                            starterSpeciesOffset = 0x30;
                             starterScreenTextNumber = 318;
                             starterPokedexSpeciesTextNumber = 607;
                             break;
-                        default: // English + EFIGS share identical offsets
-                            starterSpeciesOffset = 0x1B88;
+                        default:
                             starterScreenTextNumber = 320;
                             starterPokedexSpeciesTextNumber = 621;
                             break;
@@ -1765,9 +1102,7 @@ namespace DSPRE
                     break;
 
                 case GameFamilies.Plat:
-                    starterOverlayNumber = 78;
                     starterGraphicsPrefix = "000222402104120C";
-                    starterGraphicsPrefixInner = "0290039002200002";
                     starterHeldItemScriptFileID = 427;
                     starterHeldItemOffset = 0x460;
                     starterCommandScriptNumber = 13;   // GivePokemon 0x8000 0x5 ITEM_NONE 0x800C
@@ -1775,12 +1110,10 @@ namespace DSPRE
                     switch (gameLanguage)
                     {
                         case GameLanguages.Japanese:
-                            starterSpeciesOffset = 0x1BAC;
                             starterScreenTextNumber = 359;
                             starterPokedexSpeciesTextNumber = 698;
                             break;
-                        default: // English + EFIGS share identical offsets
-                            starterSpeciesOffset = 0x1BC0;
+                        default:
                             starterScreenTextNumber = 360;
                             starterPokedexSpeciesTextNumber = 711;
                             break;
@@ -1788,17 +1121,12 @@ namespace DSPRE
                     break;
 
                 case GameFamilies.HGSS:
-                    // Species IDs are read/written straight in arm9.bin via this byte-pattern search (species
-                    // words start 13 bytes before the match) rather than a fixed offset, see StarterPokemonData.
-                    starterArm9SearchSuffix = new byte[] { 0x03, 0x03, 0x1A, 0x12, 0x01, 0x23, 0x00, 0x00 };
-                    starterOverlayNumber = 61; // starter-cries table only (species table is in ARM9, above)
-                    starterCriesPrefix = "0004000C10BD0000000000000000000000E000000000000000E0000000000200";
                     switch (gameLanguage)
                     {
                         case GameLanguages.Japanese:
                             starterScreenTextNumber = 188;
                             break;
-                        default: // English + EFIGS share identical offsets
+                        default:
                             starterScreenTextNumber = 190;
                             break;
                     }
@@ -1809,43 +1137,17 @@ namespace DSPRE
         /// <summary>Where each game keeps its trainer rematch table.</summary>
         public static void SetRematchTableOffsets()
         {
-            vsSeekerRematchOverlayNumber = -1;
-            vsSeekerRematchTableOffset = 0;
-            vsSeekerRematchPointerOffsets = System.Array.Empty<int>();
-            vsSeekerRematchRowCompareOffset = -1;
-            pokegearRematchOverlayNumber = -1;
-            pokegearRematchFallbackTableOffset = 0;
-            pokegearPhoneMessageArchive = -1;
-
-            switch (gameFamily)
-            {
-                // Literal-pool words in the lookup code that hold the table address, and the row-count
-                // compare bounding its loop (pokeplatinum overlay005/vs_seeker.c).
-                case GameFamilies.DP:
-                    vsSeekerRematchOverlayNumber = 5;
-                    vsSeekerRematchTableOffset = 0x1F43C;
-                    vsSeekerRematchPointerOffsets = new[] { 0xA3D8, 0xA420, 0xA47C, 0xA494 };
-                    vsSeekerRematchRowCompareOffset = 0xA3D0;
-                    break;
-
-                case GameFamilies.Plat:
-                    vsSeekerRematchOverlayNumber = 5;
-                    vsSeekerRematchTableOffset = 0x280C8;
-                    vsSeekerRematchPointerOffsets = new[] { 0xB078, 0xB0C0, 0xB11C, 0xB134 };
-                    vsSeekerRematchRowCompareOffset = 0xB070;
-                    break;
-
-                case GameFamilies.HGSS:
-                    pokegearRematchOverlayNumber = 26;
-                    pokegearRematchFallbackTableOffset = 0x20C;
-                    // Japanese archives are numbered differently; a measured Japanese dump gives its own.
-                    pokegearPhoneMessageArchive = gameLanguage != GameLanguages.Japanese ? 271 : MeasuredHere?.PokegearPhoneText ?? -1;
-                    break;
-            }
-            Measure m = MeasuredHere;
-            if (m?.RematchTable is uint table) vsSeekerRematchTableOffset = table;
-            if (m?.RematchPointers != null) vsSeekerRematchPointerOffsets = m.RematchPointers;
-            if (m?.RematchRowCompare is int compare) vsSeekerRematchRowCompareOffset = compare;
+            RomLocator.Spot pokegear = RomLocator.Where(RomLocator.Thing.PokegearRematches);
+            pokegearRematchOverlayNumber = pokegear?.Overlay ?? -1;
+            pokegearRematchFallbackTableOffset = (uint)(pokegear?.Offset ?? 0);
+            pokegearPhoneMessageArchive = gameFamily == GameFamilies.HGSS ? (gameLanguage == GameLanguages.Japanese ? 264 : 271) : -1;
+            // Literal-pool words in the lookup code that hold the table address, and the row-count compare bounding its
+            // loop (pokeplatinum overlay005/vs_seeker.c).
+            RomLocator.Spot rematches = RomLocator.Where(RomLocator.Thing.VsSeekerRematches);
+            vsSeekerRematchOverlayNumber = rematches?.Overlay ?? -1;
+            vsSeekerRematchTableOffset = (uint)(rematches?.Offset ?? 0);
+            vsSeekerRematchPointerOffsets = RomLocator.Where(RomLocator.Thing.VsSeekerRematchPointers)?.Offsets ?? Array.Empty<int>();
+            vsSeekerRematchRowCompareOffset = RomLocator.Where(RomLocator.Thing.VsSeekerRematchRowCompare)?.Offset ?? -1;
         }
 
         /// <summary>The text archives field scripts read menus and shared messages from.</summary>
@@ -1855,28 +1157,19 @@ namespace DSPRE
             fieldSharedMessageArchives = System.Array.Empty<int>();
             systemFontPaletteEntry = -1;
             fieldTouchMenuTextArchive = -1;
-            // Japanese archives are numbered differently; only those measured on a Japanese dump are known.
-            if (gameLanguage == GameLanguages.Japanese)
-            {
-                Measure m = MeasuredHere;
-                fieldMenuEntriesArchive = m?.MenuEntriesText ?? -1;
-                fieldTouchMenuTextArchive = m?.TouchMenuText ?? -1;
-                systemFontPaletteEntry = m?.SystemFontPalette ?? -1;
-                fieldSharedMessageArchives = m?.SharedMessagesText ?? System.Array.Empty<int>();
-                return;
-            }
-
+            // Japanese archives are numbered differently; Japanese Diamond and Pearl's are not known.
+            bool japanese = gameLanguage == GameLanguages.Japanese;
             switch (gameFamily)
             {
                 case GameFamilies.Plat:
-                    fieldMenuEntriesArchive = 361;          // TEXT_BANK_MENU_ENTRIES
+                    fieldMenuEntriesArchive = japanese ? 360 : 361;          // TEXT_BANK_MENU_ENTRIES
                     systemFontPaletteEntry = 6;
                     break;
                 case GameFamilies.HGSS:
-                    fieldMenuEntriesArchive = 191;
-                    fieldSharedMessageArchives = new[] { 752, 211, 30, 435 };
+                    fieldMenuEntriesArchive = japanese ? 189 : 191;
+                    fieldSharedMessageArchives = japanese ? new[] { 740, 209, 29, 428 } : new[] { 752, 211, 30, 435 };
                     systemFontPaletteEntry = 7;
-                    fieldTouchMenuTextArchive = 196;
+                    fieldTouchMenuTextArchive = japanese ? 194 : 196;
                     break;
             }
         }
@@ -1885,105 +1178,12 @@ namespace DSPRE
         {
             // push {r3, lr}; mov r3, r0; <limit into r0>; cmp r3, r0; bls; mov r3, #0; cmp r1, #0.
             // DP and HGSS build the limit with mov r0, #imm; lsl r0, #n, Pt loads it from the literal pool.
-            itemLimitSite = (gameFamily, gameLanguage) switch
-            {
-                (GameFamilies.DP, GameLanguages.English) => 0x6E710,
-                (GameFamilies.Plat, GameLanguages.English) => 0x7CF48,
-                (GameFamilies.Plat, GameLanguages.French) => 0x7CFE8,
-                (GameFamilies.HGSS, GameLanguages.English) => 0x77CE8,
-                _ => 0,
-            };
+            itemLimitSite = (uint)(RomLocator.Where(RomLocator.Thing.ItemLimit)?.Offset ?? 0);
             itemLimitSignature = gameFamily == GameFamilies.Plat
                 ? "08B5031C ??48 8342 00D9 0023 0029"
                 : "08B5031C ??20 ???? 8342 00D9 0023 0029";
-
-            switch (gameFamily)
-            {
-                case GameFamilies.DP:
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            itemTableOffset = 0xF85B4;
-                            break;
-                        case GameLanguages.Japanese:
-                            itemTableOffset = 0xFA520;
-                            break;
-                        case GameLanguages.French:
-                            itemTableOffset = 0xF85F8;
-                            break;
-                        case GameLanguages.German:
-                            itemTableOffset = 0xF85C8;
-                            break;
-                        case GameLanguages.Italian:
-                            itemTableOffset = 0xF856C;
-                            break;
-                        case GameLanguages.Spanish:
-                            itemTableOffset = 0xF8604;
-                            break;
-                        default:
-                            itemTableOffset = 0xF85B4;
-                            break;
-                    }
-                    break;
-                case GameFamilies.Plat:
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            itemTableOffset = 0xF0CC4;
-                            break;
-                        case GameLanguages.Japanese:
-                            itemTableOffset = 0xF0354;
-                            break;
-                        case GameLanguages.French:
-                            itemTableOffset = 0xF0D4C;
-                            break;
-                        case GameLanguages.German:
-                            itemTableOffset = 0xF0D1C;
-                            break;
-                        case GameLanguages.Italian:
-                            itemTableOffset = 0xF0CE0;
-                            break;
-                        case GameLanguages.Spanish:
-                            itemTableOffset = 0xF0D58;
-                            break;
-                        default:
-                            itemTableOffset = 0xF0CC4;
-                            break;
-                    }
-                    break;
-                case GameFamilies.HGSS:
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            itemTableOffset = 0x100194;
-                            break;
-                        case GameLanguages.Japanese:
-                            itemTableOffset = 0xFF914;
-                            break;
-                        case GameLanguages.French:
-                            itemTableOffset = 0x100178;
-                            break;
-                        case GameLanguages.German:
-                            itemTableOffset = 0x100148;
-                            break;
-                        case GameLanguages.Italian:
-                            itemTableOffset = 0x10010C;
-                            break;
-                        case GameLanguages.Spanish:
-                            itemTableOffset = gameVersion == GameVersions.SoulSilver ? 0x100184u : 0x10017C;
-                            break;
-                        default:
-                            itemTableOffset = 0x100194;
-                            break;
-                    }
-                    break;
-                default:
-                    AppLogger.Error("SetItemTableOffset: Unsupported game");
-                    throw new NotSupportedException("Game not supported");
-            }
-            Measure m = MeasuredHere;
-            if (m?.ItemTable is uint table) itemTableOffset = table;
-            if (m?.ItemLimitSite is uint limit) itemLimitSite = limit;
+            itemTableOffset = (uint)(RomLocator.Where(RomLocator.Thing.ItemTable)?.Offset
+                                     ?? throw new NotSupportedException("Game not supported"));
             // Japanese DP opens the loader with push {lr}; sub sp, #4 and loads the limit from the pool; the site is the sub.
             if (gameFamily == GameFamilies.DP && gameLanguage == GameLanguages.Japanese)
                 itemLimitSignature = "81B0031C ??48 8342 00D9 0023 0029";
@@ -1991,78 +1191,23 @@ namespace DSPRE
 
         public static void SetItemReferenceOffsets()
         {
-            hiddenItemTableOffset = 0;
-            hiddenItemTableCapacity = 0;
-            hiddenItemCountSites = System.Array.Empty<uint>();
-            hiddenItemCountLiterals = System.Array.Empty<uint>();
-            distortionWorldItemScriptOffset = 0;
-
-            // HeartGold US: sub_02040578 and GetHiddenItemParams each loop to 231 and test the index after.
-            if (gameVersion == GameVersions.HeartGold && gameLanguage == GameLanguages.English)
-            {
-                hiddenItemTableOffset = 0xFA558;
-                hiddenItemTableCapacity = 231;
-                hiddenItemCountSites = new uint[] { 0x4058E, 0x40592, 0x405E4, 0x405E8 };
-            }
-
-            // SCRIPT_ID(VISIBLE_ITEMS, 321) in sMapObjectEventTurnbackCaveRoom_GriseousOrbItem; seen in US and French.
-            if (gameFamily == GameFamilies.Plat && gameLanguage != GameLanguages.Japanese)
-                distortionWorldItemScriptOffset = 0x8E2A;
-
-            Measure m = MeasuredHere;
+            RomLocator.Spot hidden = RomLocator.Where(RomLocator.Thing.HiddenItems);
+            hiddenItemTableOffset = (uint)(hidden?.Offset ?? 0);
             // The vanilla tables have no spare rows: DP 229, Pt 257, HGSS 231.
-            if (m?.HiddenItemTable is uint hidden && (m.HiddenItemCountSites != null || m.HiddenItemCountLiterals != null))
-            {
-                hiddenItemTableOffset = hidden;
-                hiddenItemTableCapacity = gameFamily switch { GameFamilies.DP => 229, GameFamilies.Plat => 257, _ => 231 };
-                hiddenItemCountSites = m.HiddenItemCountSites ?? System.Array.Empty<uint>();
-                hiddenItemCountLiterals = m.HiddenItemCountLiterals ?? System.Array.Empty<uint>();
-            }
-            if (m?.DistortionWorldItemScript is uint script) distortionWorldItemScriptOffset = script;
+            hiddenItemTableCapacity = hidden == null ? 0 : gameFamily switch { GameFamilies.DP => 229, GameFamilies.Plat => 257, _ => 231 };
+            hiddenItemCountSites = RomLocator.Where(RomLocator.Thing.HiddenItemCounts)?.Offsets.Select(o => (uint)o).ToArray() ?? Array.Empty<uint>();
+            hiddenItemCountLiterals = RomLocator.Where(RomLocator.Thing.HiddenItemCountLiterals)?.Offsets.Select(o => (uint)o).ToArray() ?? Array.Empty<uint>();
+            // SCRIPT_ID(VISIBLE_ITEMS, 321) in sMapObjectEventTurnbackCaveRoom_GriseousOrbItem.
+            distortionWorldItemScriptOffset = (uint)(RomLocator.Where(RomLocator.Thing.DistortionWorldItemScript)?.Offset ?? 0);
         }
 
         public static void SetMartOffsets()
         {
-            martCommonCountOffset = 0;
-            martCommonPointerOffset = 0;
-            martSpecialtyPointerOffset = 0;
-            martSpecialtyShopCount = 0;
-
-            // Other languages use the layouts measured on their dumps; the shop count is the same in all of them.
-            if (gameLanguage != GameLanguages.English)
-            {
-                Measure m = MeasuredHere;
-                if (m?.MartCommonCount is uint count && m.MartCommonPointer is uint common && m.MartSpecialtyPointer is uint specialty)
-                {
-                    martCommonCountOffset = count;
-                    martCommonPointerOffset = common;
-                    martSpecialtyPointerOffset = specialty;
-                    martSpecialtyShopCount = gameFamily switch { GameFamilies.DP => 19, GameFamilies.Plat => 20, _ => 30 };
-                }
-                return;
-            }
-
-            switch (gameFamily)
-            {
-                case GameFamilies.DP:
-                    martCommonCountOffset = 0x3FD94;
-                    martCommonPointerOffset = 0x3FDB4;
-                    martSpecialtyPointerOffset = 0x3FE04;
-                    martSpecialtyShopCount = 19;
-                    break;
-                case GameFamilies.Plat:
-                    martCommonCountOffset = 0x46B74;
-                    martCommonPointerOffset = 0x46B94;
-                    martSpecialtyPointerOffset = 0x46BF0;
-                    martSpecialtyShopCount = 20;
-                    break;
-                case GameFamilies.HGSS:
-                    martCommonCountOffset = 0x48100;
-                    martCommonPointerOffset = 0x48124;
-                    martSpecialtyPointerOffset = 0x48190;
-                    martSpecialtyShopCount = 30;
-                    break;
-            }
+            RomLocator.Spot count = RomLocator.Where(RomLocator.Thing.MartCommonCount);
+            martCommonCountOffset = (uint)(count?.Offset ?? 0);
+            martCommonPointerOffset = (uint)(RomLocator.Where(RomLocator.Thing.MartCommonPointer)?.Offset ?? 0);
+            martSpecialtyPointerOffset = (uint)(RomLocator.Where(RomLocator.Thing.MartSpecialtyPointer)?.Offset ?? 0);
+            martSpecialtyShopCount = count == null ? 0 : gameFamily switch { GameFamilies.DP => 19, GameFamilies.Plat => 20, _ => 30 };
         }
 
         public static void PrepareCameraData()
@@ -2071,14 +1216,12 @@ namespace DSPRE
             {
                 case GameFamilies.DP:
                     cameraTblOverlayNumber = 5;
-                    cameraTblOffsetsToRAMaddress = gameLanguage.Equals(GameLanguages.Japanese) ? (new uint[] { 0x4C50 }) : (new uint[] { 0x4908 });
                     cameraSize = 24;
                     cameraCount = 16;
                     break;
 
                 case GameFamilies.Plat:
                     cameraTblOverlayNumber = 5;
-                    cameraTblOffsetsToRAMaddress = new uint[] { 0x4E24 };
                     cameraSize = 24;
                     cameraCount = 17;
                     break;
@@ -2087,37 +1230,9 @@ namespace DSPRE
                     cameraTblOverlayNumber = 1;
                     cameraSize = 36;
                     cameraCount = 17;
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                        case GameLanguages.Spanish:
-                        case GameLanguages.French:
-                        case GameLanguages.German:
-                        case GameLanguages.Italian:
-                            cameraTblOffsetsToRAMaddress = new uint[] { 0x532C, 0x547C };
-                            break;
-
-                        case GameLanguages.Japanese:
-                            cameraTblOffsetsToRAMaddress = new uint[] { 0x5324, 0x5474 };
-                            break;
-                    }
                     break;
             }
-            if (MeasuredHere?.CameraLiterals is uint[] measured) cameraTblOffsetsToRAMaddress = measured;
-        }
-
-        /// <summary>The candidate right after the render table's 0xFFFF row, else the last candidate.</summary>
-        private static uint FirstAfterSentinel(string path, params uint[] candidates)
-        {
-            try
-            {
-                byte[] data = File.ReadAllBytes(path);
-                foreach (uint at in candidates)
-                    if (at >= 8 && at + 8 <= data.Length && BitConverter.ToUInt32(data, (int)at - 8) == 0xFFFF)
-                        return at;
-            }
-            catch { }
-            return candidates[candidates.Length - 1];
+            cameraTblOffsetsToRAMaddress = RomLocator.Where(RomLocator.Thing.CameraTablePointers)?.Offsets.Select(o => (uint)o).ToArray() ?? Array.Empty<uint>();
         }
 
         public static void SetOWtable()
@@ -2125,49 +1240,9 @@ namespace DSPRE
             switch (gameFamily)
             {
                 case GameFamilies.DP:
-                    OWtablePath = OverlayUtils.GetPath(5);
-                    switch (gameLanguage)
-                    { // Go to the beginning of the overworld table
-                        case GameLanguages.English:
-                            OWTableOffset = 0x22BCC;
-                            break;
-
-                        case GameLanguages.Japanese:
-                            // Japanese revisions differ, so take the offset that follows the render table.
-                            OWTableOffset = FirstAfterSentinel(OWtablePath, 0x23BAC, 0x23BB8);
-                            break;
-
-                        default:
-                            OWTableOffset = MeasuredHere?.OwTable ?? 0x22B84;
-                            break;
-                    }
-                    break;
-
                 case GameFamilies.Plat:
                     OWtablePath = OverlayUtils.GetPath(5);
-                    switch (gameLanguage)
-                    { // Go to the beginning of the overworld table
-                        case GameLanguages.Italian:
-                            OWTableOffset = 0x2BC44;
-                            break;
-
-                        case GameLanguages.French:
-                        case GameLanguages.Spanish:
-                            OWTableOffset = 0x2BC3C;
-                            break;
-
-                        case GameLanguages.German:
-                            OWTableOffset = 0x2BC50;
-                            break;
-
-                        case GameLanguages.Japanese:
-                            OWTableOffset = 0x2BA24;
-                            break;
-
-                        default:
-                            OWTableOffset = MeasuredHere?.OwTable ?? 0x2BC34;
-                            break;
-                    }
+                    OWTableOffset = (uint)(RomLocator.Where(RomLocator.Thing.OverworldTable)?.Offset ?? 0);
                     break;
 
                 case GameFamilies.HGSS:
@@ -2185,36 +1260,10 @@ namespace DSPRE
 
                     string ov1Path = OverlayUtils.GetPath(1);
                     uint ov1Address = OverlayUtils.OverlayTable.GetRAMAddress(1);
+                    RomLocator.Spot pointer = RomLocator.Where(RomLocator.Thing.OverworldTablePointer);
+                    if (pointer == null) return;
 
-                    int ramAddrOfPointer;
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.Italian:
-                            ramAddrOfPointer = 0x021F929C;
-                            break;
-
-                        case GameLanguages.French:
-                            ramAddrOfPointer = 0x021F931C;
-                            break;
-
-                        case GameLanguages.Spanish:
-                            ramAddrOfPointer = gameVersion == GameVersions.SoulSilver ? 0x021F933C : 0x021F931C;
-                            break;
-
-                        case GameLanguages.German:
-                            ramAddrOfPointer = 0x021F92DC;
-                            break;
-
-                        case GameLanguages.Japanese:
-                            ramAddrOfPointer = 0x021F86C4;
-                            break;
-
-                        default:
-                            ramAddrOfPointer = MeasuredHere?.OwTablePointer ?? 0x021F92FC;
-                            break;
-                    }
-
-                    using (DSUtils.EasyReader bReader = new DSUtils.EasyReader(ov1Path, ramAddrOfPointer - ov1Address))
+                    using (DSUtils.EasyReader bReader = new DSUtils.EasyReader(ov1Path, pointer.Offset))
                     { // read the pointer at the specified ram address and adjust accordingly below
                         uint ramAddressOfTable = bReader.ReadUInt32();
                         if ((ramAddressOfTable >> 0x18) != 0x02)
@@ -2247,287 +1296,10 @@ namespace DSPRE
             }
         }
 
-        public static void SetConditionalMusicTableOffsetToRAMAddress()
-        {
-            switch (gameFamily)
-            {
-                case GameFamilies.HGSS:
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.Spanish:
-                            conditionalMusicTableOffsetToRAMAddress = gameVersion == GameVersions.HeartGold ? (uint)0x667D0 : 0x667D8;
-                            break;
-
-                        case GameLanguages.English:
-                        case GameLanguages.Italian:
-                        case GameLanguages.French:
-                        case GameLanguages.German:
-                            conditionalMusicTableOffsetToRAMAddress = 0x667D8;
-                            break;
-
-                        case GameLanguages.Japanese:
-                            conditionalMusicTableOffsetToRAMAddress = 0x66238;
-                            break;
-                    }
-                    if (MeasuredHere?.ConditionalMusic is uint measured) conditionalMusicTableOffsetToRAMAddress = measured;
-                    break;
-            }
-        }
-
-        public static void SetDungeonCutinTableOffsetToRAMAddress()
-        {
-            dungeonCutinTableOffsetToRAMAddress = 0;
-            if (gameFamily != GameFamilies.HGSS) return;
-            switch (gameLanguage)
-            {
-                case GameLanguages.Spanish:
-                    dungeonCutinTableOffsetToRAMAddress = gameVersion == GameVersions.HeartGold ? (uint)0x6A37C : 0x6A384;
-                    break;
-
-                case GameLanguages.English:
-                    dungeonCutinTableOffsetToRAMAddress = 0x6A384;
-                    break;
-            }
-            if (MeasuredHere?.DungeonCutin is uint measured) dungeonCutinTableOffsetToRAMAddress = measured;
-        }
-
-        public static void SetBattleEffectsData()
-        {
-            // Only set where known, so a previous ROM's value never survives.
-            effectsComboTableSecondPointerOffset = 0;
-            switch (gameFamily)
-            {
-                case GameFamilies.HGSS:
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.Spanish:
-                            vsPokemonEntryTableOffsetToRAMAddress = gameVersion == GameVersions.HeartGold ? (uint)0x518CC : 0x518D4;
-                            vsTrainerEntryTableOffsetToRAMAddress = gameVersion == GameVersions.HeartGold ? (uint)0x51888 : 0x51890;
-                            effectsComboTableOffsetToRAMAddress = gameVersion == GameVersions.HeartGold ? (uint)0x517C0 : 0x517C8;
-                            break;
-
-                        case GameLanguages.English:
-                        case GameLanguages.Italian:
-                        case GameLanguages.French:
-                        case GameLanguages.German:
-                            vsPokemonEntryTableOffsetToRAMAddress = 0x518D4;
-                            vsTrainerEntryTableOffsetToRAMAddress = 0x51890;
-                            effectsComboTableOffsetToRAMAddress = 0x517C8;
-                            break;
-
-                        case GameLanguages.Japanese:
-                            vsPokemonEntryTableOffsetToRAMAddress = 0x5136C;
-                            vsTrainerEntryTableOffsetToRAMAddress = 0x51328;
-                            effectsComboTableOffsetToRAMAddress = 0x51260;
-                            break;
-                    }
-                    if (MeasuredHere is Measure vs && vs.VsPokemonEntry is uint pokemon && vs.VsTrainerEntry is uint trainer
-                        && vs.EffectCombo is uint vsCombo)
-                    {
-                        vsPokemonEntryTableOffsetToRAMAddress = pokemon;
-                        vsTrainerEntryTableOffsetToRAMAddress = trainer;
-                        effectsComboTableOffsetToRAMAddress = vsCombo;
-                    }
-                    vsPokemonEntryTableOffsetToSizeLimiter = vsPokemonEntryTableOffsetToRAMAddress - 0xA;
-                    vsTrainerEntryTableOffsetToSizeLimiter = vsTrainerEntryTableOffsetToRAMAddress - 0xA;
-                    effectsComboTableOffsetToSizeLimiter = effectsComboTableOffsetToRAMAddress - 0x1E;
-                    break;
-
-                case GameFamilies.DP:
-                    // The second pointer has to agree before the table is trusted.
-                    effectsComboTableOffsetToRAMAddress = 0;
-                    if (gameLanguage == GameLanguages.English)
-                    {
-                        effectsComboTableOffsetToRAMAddress = 0x47580;
-                        effectsComboTableSecondPointerOffset = 0x4759C;
-                    }
-                    else if (MeasuredHere?.EffectCombo is uint combo && MeasuredHere.EffectComboSecond is uint second)
-                    {
-                        effectsComboTableOffsetToRAMAddress = combo;
-                        effectsComboTableSecondPointerOffset = second;
-                    }
-                    break;
-
-                case GameFamilies.Plat:
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            effectsComboTableOffsetToRAMAddress = 0x51BE0;
-                            effectsComboTableSecondPointerOffset = 0x51BFC;
-                            break;
-
-                        case GameLanguages.Italian:
-                        case GameLanguages.French:
-                        case GameLanguages.Spanish:
-                        case GameLanguages.German:
-                            effectsComboTableOffsetToRAMAddress = 0x51C84;
-                            effectsComboTableSecondPointerOffset = 0x51CA0;
-                            break;
-
-                        case GameLanguages.Japanese:
-                            effectsComboTableOffsetToRAMAddress = 0x514C0;
-                            effectsComboTableSecondPointerOffset = 0x514DC;
-                            break;
-
-                        default:
-                            if (MeasuredHere?.EffectCombo is uint ptCombo && MeasuredHere.EffectComboSecond is uint ptSecond)
-                            {
-                                effectsComboTableOffsetToRAMAddress = ptCombo;
-                                effectsComboTableSecondPointerOffset = ptSecond;
-                            }
-                            break;
-                    }
-                    break;
-            }
-        }
-
-        public static void SetEncounterMusicTableOffsetToRAMAddress()
-        {
-            switch (gameFamily)
-            {
-                case GameFamilies.HGSS:
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.Spanish:
-                            encounterMusicTableOffsetToRAMAddress = gameVersion == GameVersions.HeartGold ? (uint)0x550D8 : 0x550E0;
-                            break;
-
-                        case GameLanguages.English:
-                        case GameLanguages.Italian:
-                        case GameLanguages.French:
-                        case GameLanguages.German:
-                            encounterMusicTableOffsetToRAMAddress = 0x550E0;
-                            break;
-
-                        case GameLanguages.Japanese:
-                            encounterMusicTableOffsetToRAMAddress = 0x54B44;
-                            break;
-                    }
-                    break;
-
-                case GameFamilies.Plat:
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            encounterMusicTableOffsetToRAMAddress = 0x5563C;
-                            break;
-
-                        case GameLanguages.Italian:
-                        case GameLanguages.French:
-                        case GameLanguages.Spanish:
-                        case GameLanguages.German:
-                            encounterMusicTableOffsetToRAMAddress = 0x556E0;
-                            break;
-
-                        case GameLanguages.Japanese:
-                            encounterMusicTableOffsetToRAMAddress = 0x54F04;
-                            break;
-                    }
-                    break;
-
-                case GameFamilies.DP:
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            encounterMusicTableOffsetToRAMAddress = 0x4AD3C;
-                            break;
-
-                        case GameLanguages.Italian:
-                        case GameLanguages.French:
-                        case GameLanguages.Spanish:
-                        case GameLanguages.German:
-                            encounterMusicTableOffsetToRAMAddress = 0x4ADAC;
-                            break;
-
-                        case GameLanguages.Japanese:
-                            encounterMusicTableOffsetToRAMAddress = 0x4D9AC;
-                            break;
-                    }
-                    break;
-            }
-            if (MeasuredHere?.EncounterMusic is uint measured) encounterMusicTableOffsetToRAMAddress = measured;
-        }
-
         public static void SetMonIconsPalTableAddress()
         {
-            if (MeasuredHere?.MonIconPaletteLiteral is uint literal)
-            {
-                monIconPalTableAddress = BitConverter.ToUInt32(ARM9.ReadBytes(literal, 4), 0);
-                return;
-            }
-            switch (RomInfo.gameFamily)
-            {
-                case GameFamilies.DP:
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            monIconPalTableAddress = BitConverter.ToUInt32(ARM9.ReadBytes(0x6B838, 4), 0);
-                            break;
-
-                        case GameLanguages.Italian:
-                            monIconPalTableAddress = BitConverter.ToUInt32(ARM9.ReadBytes(0x6B874, 4), 0);
-                            break;
-
-                        case GameLanguages.German:
-                        case GameLanguages.French:
-                        case GameLanguages.Spanish:
-                            monIconPalTableAddress = BitConverter.ToUInt32(ARM9.ReadBytes(0x6B894, 4), 0);
-                            break;
-
-                        case GameLanguages.Japanese:
-                            monIconPalTableAddress = BitConverter.ToUInt32(ARM9.ReadBytes(0x6FDEC, 4), 0);
-                            break;
-                    }
-                    break;
-
-                case GameFamilies.Plat:
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            monIconPalTableAddress = BitConverter.ToUInt32(ARM9.ReadBytes(0x79F80, 4), 0);
-                            break;
-
-                        case GameLanguages.Italian:
-                        case GameLanguages.German:
-                        case GameLanguages.French:
-                        case GameLanguages.Spanish:
-                            monIconPalTableAddress = BitConverter.ToUInt32(ARM9.ReadBytes(0x7A020, 4), 0);
-                            break;
-
-                        case GameLanguages.Japanese:
-                            monIconPalTableAddress = BitConverter.ToUInt32(ARM9.ReadBytes(0x79858, 4), 0);
-                            break;
-                    }
-                    break;
-
-                case GameFamilies.HGSS:
-                default:
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                        case GameLanguages.Italian:
-                        case GameLanguages.French:
-                        case GameLanguages.German:
-                            monIconPalTableAddress = BitConverter.ToUInt32(ARM9.ReadBytes(0x74408, 4), 0);
-                            break;
-
-                        case GameLanguages.Spanish:
-                            if (gameVersion == GameVersions.HeartGold)
-                            {
-                                monIconPalTableAddress = BitConverter.ToUInt32(ARM9.ReadBytes(0x74400, 4), 0);
-                            }
-                            else
-                            {
-                                monIconPalTableAddress = BitConverter.ToUInt32(ARM9.ReadBytes(0x74408, 4), 0);
-                            }
-                            break;
-
-                        case GameLanguages.Japanese:
-                            monIconPalTableAddress = BitConverter.ToUInt32(ARM9.ReadBytes(0x73EA0, 4), 0);
-                            break;
-                    }
-                    break;
-            }
+            RomLocator.Spot literal = RomLocator.Where(RomLocator.Thing.MonIconPalettePointer);
+            monIconPalTableAddress = literal == null ? 0 : BitConverter.ToUInt32(ARM9.ReadBytes((uint)literal.Offset, 4), 0);
         }
 
         private static void SetItemScriptFileNumber()
@@ -2604,34 +1376,29 @@ namespace DSPRE
                         pokedexWeightTextNumber = 605;
                         pokedexHeightTextNumber = 606;
                         pokedexCategoryTextNumber = 607;
-                        // Japanese DP keeps 5 lines per species, English to Spanish, where the others keep 6.
-                        if (MeasuredHere?.DexForeignSpecies is int jpSpecies && MeasuredHere.DexForeignBanks is int[] jpBanks)
+                    }
+                    else
+                    {
+                        pokedexCategoryTextNumber = 621;
+                        pokedexMessagesTextNumber = 614;
+                        pokedexEntryTextNumber = gameVersion == GameVersions.Pearl ? 616 : 615;
+                        pokedexWeightTextNumber = 619;
+                        pokedexHeightTextNumber = 620;
+                    }
+                    // One bank per kind holds every foreign language's lines, five per species; Korean's are its own
+                    // numbers, so the Korean bank mapping leaves them alone.
+                    pokedexForeignSpeciesTableOffset = RomLocator.Where(RomLocator.Thing.PokedexForeignSpecies)?.Offset ?? -1;
+                    if (pokedexForeignSpeciesTableOffset >= 0)
+                    {
+                        (int entries, int names, int categories) = gameLanguage switch
                         {
-                            pokedexForeignSpeciesTableOffset = jpSpecies;
-                            pokedexForeignEntryTextNumbers = Enumerable.Repeat(jpBanks[0], 5).ToArray();
-                            pokedexForeignNameTextNumbers = Enumerable.Repeat(jpBanks[1], 5).ToArray();
-                            pokedexForeignCategoryTextNumbers = Enumerable.Repeat(jpBanks[2], 5).ToArray();
-                        }
-                        break;
-                    }
-                    pokedexCategoryTextNumber = 621;
-                    pokedexMessagesTextNumber = 614;
-                    pokedexEntryTextNumber = gameVersion == GameVersions.Pearl ? 616 : 615;
-                    pokedexWeightTextNumber = 619;
-                    pokedexHeightTextNumber = 620;
-                    if (gameVersion == GameVersions.Diamond && gameLanguage == GameLanguages.English)
-                    {
-                        pokedexForeignSpeciesTableOffset = 0xFD120;
-                        pokedexForeignEntryTextNumbers = new[] { 617, 617, 617, 617, 617 };
-                        pokedexForeignNameTextNumbers = new[] { 622, 622, 622, 622, 622 };
-                        pokedexForeignCategoryTextNumbers = new[] { 623, 623, 623, 623, 623 };
-                    }
-                    else if (MeasuredHere?.DexForeignSpecies is int foreignSpecies && MeasuredHere.DexForeignBanks is int[] banks)
-                    {
-                        pokedexForeignSpeciesTableOffset = foreignSpecies;
-                        pokedexForeignEntryTextNumbers = Enumerable.Repeat(banks[0], 5).ToArray();
-                        pokedexForeignNameTextNumbers = Enumerable.Repeat(banks[1], 5).ToArray();
-                        pokedexForeignCategoryTextNumbers = Enumerable.Repeat(banks[2], 5).ToArray();
+                            GameLanguages.Japanese => (603, 608, 609),
+                            GameLanguages.Korean => (605, 610, 611),
+                            _ => (617, 622, 623),
+                        };
+                        pokedexForeignEntryTextNumbers = Enumerable.Repeat(entries, 5).ToArray();
+                        pokedexForeignNameTextNumbers = Enumerable.Repeat(names, 5).ToArray();
+                        pokedexForeignCategoryTextNumbers = Enumerable.Repeat(categories, 5).ToArray();
                     }
                     break;
 
@@ -2660,9 +1427,16 @@ namespace DSPRE
                     break;
 
                 case GameFamilies.HGSS:
-                    if (japanese) playerCharacterNamesTextNumber = 438;
-                    else if (gameLanguage == GameLanguages.English) playerCharacterNamesTextNumber = 445;
-                    else if (MeasuredHere?.PlayerNamesText is int playerNames) playerCharacterNamesTextNumber = playerNames;
+                    // Korean's is its own number, so the Korean bank mapping leaves it alone.
+                    playerCharacterNamesTextNumber = japanese ? 438 : gameLanguage == GameLanguages.Korean ? 440 : 445;
+                    RomLocator.Spot areaSort = RomLocator.Where(RomLocator.Thing.PokedexAreaSort);
+                    if (areaSort != null)
+                    {
+                        pokedexFieldZoneTableOffset = RomLocator.Where(RomLocator.Thing.PokedexFieldZones).Offset;
+                        pokedexDungeonZoneTableOffset = RomLocator.Where(RomLocator.Thing.PokedexDungeonZones).Offset;
+                        pokedexAreaSortTableOffset = areaSort.Offset;
+                        pokedexAreaSortTableCount = 142;
+                    }
                     if (japanese)
                     {
                         pokedexMessagesTextNumber = 790;
@@ -2673,7 +1447,6 @@ namespace DSPRE
                         pokedexForeignEntryTextNumbers = new[] { 793, 794, 795, 796, 797 };
                         pokedexForeignNameTextNumbers = new[] { 804, 805, 806, 807, 808 };
                         pokedexForeignCategoryTextNumbers = new[] { 809, 810, 811, 812, 813 };
-                        SetMeasuredDexArea();
                         break;
                     }
                     pokedexMessagesTextNumber = 802;
@@ -2684,26 +1457,8 @@ namespace DSPRE
                     pokedexForeignEntryTextNumbers = new[] { 806, 807, 808, 809, 810 };
                     pokedexForeignNameTextNumbers = new[] { 818, 819, 820, 821, 822 };
                     pokedexForeignCategoryTextNumbers = new[] { 824, 825, 826, 827, 828 };
-                    if (gameVersion == GameVersions.HeartGold && gameLanguage == GameLanguages.English)
-                    {
-                        pokedexFieldZoneTableOffset = 0x14054;
-                        pokedexDungeonZoneTableOffset = 0x13FD8;
-                        pokedexAreaSortTableOffset = 0x140E0;
-                        pokedexAreaSortTableCount = 142;
-                    }
-                    else SetMeasuredDexArea();
                     break;
             }
-        }
-
-        private static void SetMeasuredDexArea()
-        {
-            if (MeasuredHere is not Measure m || m.DexFieldZones is not int fieldZones || m.DexDungeonZones is not int dungeonZones
-                || m.DexAreaSort is not int areaSort) return;
-            pokedexFieldZoneTableOffset = fieldZones;
-            pokedexDungeonZoneTableOffset = dungeonZones;
-            pokedexAreaSortTableOffset = areaSort;
-            pokedexAreaSortTableCount = 142;
         }
 
         private static void SetAttackNamesTextNumber()
@@ -2898,10 +1653,9 @@ namespace DSPRE
                     break;
 
                 default: // HGSS
-                    trainerFunnyScriptNumber = 740;
+                    trainerFunnyScriptNumber = gameLanguage == GameLanguages.Japanese ? 738 : 740;
                     break;
             }
-            if (MeasuredHere?.TrainerScript is int measured) trainerFunnyScriptNumber = measured;
         }
 
         private static void SetTypesTextNumber()
@@ -2931,6 +1685,15 @@ namespace DSPRE
         };
 
         /// <summary>The bank holding US text bank <paramref name="usBank"/> in this ROM's language, or -1 when Korean lacks it.</summary>
+        // Korean numbers its text banks its own way. Each US bank DSPRE uses, and the Korean bank with the same text,
+        // matched by message count and line shape and then read side by side in both languages.
+        private static readonly Dictionary<GameFamilies, Dictionary<int, int>> KoreanTextBanks = new()
+        {
+            [GameFamilies.DP] = new() { [10] = 10, [16] = 15, [320] = 319, [326] = 325, [343] = 341, [344] = 342, [362] = 357, [382] = 376, [552] = 546, [555] = 548, [558] = 551, [559] = 552, [560] = 553, [565] = 557, [587] = 576, [588] = 577, [614] = 602, [615] = 603, [616] = 604, [617] = 605, [619] = 607, [620] = 608, [621] = 609, [622] = 610, [623] = 611 },
+            [GameFamilies.Plat] = new() { [12] = 12, [21] = 20, [360] = 359, [361] = 360, [370] = 369, [391] = 389, [392] = 390, [412] = 408, [433] = 428, [610] = 605, [614] = 608, [617] = 611, [618] = 612, [619] = 613, [624] = 617, [646] = 636, [647] = 637, [697] = 687, [701] = 691, [702] = 692, [703] = 693, [704] = 694, [705] = 695, [706] = 696, [707] = 697, [709] = 699, [711] = 701, [712] = 702, [713] = 703, [714] = 704, [715] = 705, [716] = 706, [717] = 707, [719] = 709, [720] = 710, [721] = 711, [722] = 712, [723] = 713 },
+            [GameFamilies.HGSS] = new() { [15] = 15, [27] = 26, [30] = 29, [190] = 189, [191] = 190, [196] = 195, [200] = 199, [211] = 210, [221] = 219, [222] = 220, [237] = 233, [246] = 241, [271] = 266, [279] = 274, [435] = 430, [445] = 440, [720] = 715, [724] = 718, [728] = 722, [729] = 723, [730] = 724, [735] = 728, [749] = 742, [750] = 743, [752] = 744, [802] = 795, [803] = 796, [804] = 797, [806] = 799, [807] = 800, [808] = 801, [809] = 802, [810] = 803, [812] = 805, [814] = 807, [816] = 809, [817] = 810, [818] = 811, [819] = 812, [820] = 813, [821] = 814, [822] = 815, [824] = 817, [825] = 818, [826] = 819, [827] = 820, [828] = 821 },
+        };
+
         public static int TextBank(int usBank) =>
             gameLanguage != GameLanguages.Korean || usBank < 0 ? usBank
             : KoreanTextBanks.TryGetValue(gameFamily, out Dictionary<int, int> banks) && banks.TryGetValue(usBank, out int korean) ? korean : -1;
@@ -2991,143 +1754,11 @@ namespace DSPRE
             }
         }
 
-        private static void SetTrainerNameLenOffset()
-        {
-            switch (RomInfo.gameFamily)
-            {
-                case GameFamilies.DP:
-                    switch (RomInfo.gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            trainerNameLenOffset = 0x6AC32;
-                            break;
+        private static void SetTrainerNameLenOffset() =>
+            trainerNameLenOffset = RomLocator.Where(RomLocator.Thing.TrainerNameLength)?.Offset ?? -1;
 
-                        case GameLanguages.Italian:
-                            trainerNameLenOffset = 0x6AC6E;
-                            break;
-
-                        case GameLanguages.Spanish:
-                        case GameLanguages.German:
-                        case GameLanguages.French:
-                            trainerNameLenOffset = 0x6AC8E;
-                            break;
-
-                        case GameLanguages.Japanese:
-                        default:
-                            trainerNameLenOffset = MeasuredHere?.TrainerNameLength ?? -1;
-                            break;
-                    }
-                    break;
-
-                case GameFamilies.Plat:
-                    switch (RomInfo.gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            trainerNameLenOffset = 0x791DE;
-                            break;
-
-                        case GameLanguages.Spanish:
-                        case GameLanguages.Italian:
-                        case GameLanguages.German:
-                        case GameLanguages.French:
-                            trainerNameLenOffset = 0x7927E;
-                            break;
-
-                        case GameLanguages.Japanese:
-                            trainerNameLenOffset = 0x78AB6;
-                            break;
-
-                        default:
-                            trainerNameLenOffset = -1;
-                            break;
-                    }
-                    break;
-
-                case GameFamilies.HGSS:
-                    // SoulSilver keeps English HeartGold's spot, even in Spanish where most arm9 tables sit 8 bytes later.
-                    switch (RomInfo.gameLanguage)
-                    {
-                        case GameLanguages.Japanese:
-                            trainerNameLenOffset = 0x72EC2;
-                            break;
-
-                        case GameLanguages.Spanish:
-                            trainerNameLenOffset = gameVersion == GameVersions.SoulSilver ? 0x7342E : 0x73426;
-                            break;
-
-                        default:
-                            trainerNameLenOffset = 0x7342E;
-                            break;
-                    }
-                    break;
-            }
-            if (MeasuredHere?.TrainerNameLength is int measured) trainerNameLenOffset = measured;
-        }
-
-        public static int GetMachineMoveOffset()
-        {
-            if (MeasuredHere?.MachineMoves is int measured) return measured;
-            switch (RomInfo.gameFamily)
-            {
-                case RomInfo.GameFamilies.DP:
-                    switch (RomInfo.gameLanguage)
-                    {
-                        case RomInfo.GameLanguages.English:
-                            return 0xF84EC;
-                        case RomInfo.GameLanguages.Japanese:
-                            return 0xFA458;
-                        case RomInfo.GameLanguages.French:
-                            return 0xF8530;
-                        case RomInfo.GameLanguages.German:
-                            return 0xF8500;
-                        case RomInfo.GameLanguages.Italian:
-                            return 0xF84A4;
-                        case RomInfo.GameLanguages.Spanish:
-                            return 0xF853C;
-                        default:
-                            return 0xF84EC;
-                    }
-                case RomInfo.GameFamilies.Plat:
-                    switch (RomInfo.gameLanguage)
-                    {
-                        case RomInfo.GameLanguages.English:
-                            return 0xF0BFC;
-                        case RomInfo.GameLanguages.Japanese:
-                            return 0xF028C;
-                        case RomInfo.GameLanguages.French:
-                            return 0xF0C84;
-                        case RomInfo.GameLanguages.German:
-                            return 0xF0C54;
-                        case RomInfo.GameLanguages.Italian:
-                            return 0xF0C18;
-                        case RomInfo.GameLanguages.Spanish:
-                            return 0xF0C90;
-                        default:
-                            return 0xF0BFC;
-                    }
-                case RomInfo.GameFamilies.HGSS:
-                    switch (RomInfo.gameLanguage)
-                    {
-                        case RomInfo.GameLanguages.English:
-                            return 0x1000CC;
-                        case RomInfo.GameLanguages.Japanese:
-                            return 0xFF84C;
-                        case RomInfo.GameLanguages.French:
-                            return 0x1000B0;
-                        case RomInfo.GameLanguages.German:
-                            return 0x100080;
-                        case RomInfo.GameLanguages.Italian:
-                            return 0x100044;
-                        case RomInfo.GameLanguages.Spanish:
-                            return 0x1000B4;
-                        default:
-                            return 0x1000CC;
-                    }
-                default:
-                    AppLogger.Error("GetMachineMoveOffset: Unsupported game family.");
-                    throw new NotImplementedException();
-            }
-        }
+        public static int GetMachineMoveOffset() =>
+            RomLocator.Where(RomLocator.Thing.MachineMoves)?.Offset ?? throw new NotSupportedException("Game not supported");
 
         /// <summary>Whether the egg move limit counts only up to the last Pokémon header rather than the whole table.</summary>
         public static bool EggMoveLimitCountsHeadersOnly => gameFamily == GameFamilies.HGSS;
@@ -3139,52 +1770,8 @@ namespace DSPRE
         /// </summary>
         public static int GetEggMoveTableMaxBytes() => gameFamily == GameFamilies.HGSS ? 2045 * 2 : 0xEEC;
 
-        public static int GetEggMoveTableOffset()
-        {
-            if (MeasuredHere?.EggMoves is int measured) return measured;
-            switch (RomInfo.gameFamily)
-            {
-                case RomInfo.GameFamilies.DP:
-                    switch (RomInfo.gameLanguage)
-                    {
-                        case RomInfo.GameLanguages.English:
-                            return 0x20668;
-                        case RomInfo.GameLanguages.Japanese:
-                            return 0x21654;
-                        case RomInfo.GameLanguages.French:
-                            return 0x20620;
-                        case RomInfo.GameLanguages.German:
-                            return 0x20620;
-                        case RomInfo.GameLanguages.Italian:
-                            return 0x20620;
-                        case RomInfo.GameLanguages.Spanish:
-                            return 0x20620;
-                        default:
-                            return 0x20668;
-                    }
-                case RomInfo.GameFamilies.Plat:
-                    switch (RomInfo.gameLanguage)
-                    {
-                        case RomInfo.GameLanguages.English:
-                            return 0x29222;
-                        case RomInfo.GameLanguages.Japanese:
-                            return 0x29012;
-                        case RomInfo.GameLanguages.French:
-                            return 0x2922A;
-                        case RomInfo.GameLanguages.German:
-                            return 0x2923E;
-                        case RomInfo.GameLanguages.Italian:
-                            return 0x29232;
-                        case RomInfo.GameLanguages.Spanish:
-                            return 0x2922A;
-                        default:
-                            return 0x29222;
-                    }
-                default:
-                    AppLogger.Error("GetEggMoveOffset: Unsupported game.");
-                    throw new NotSupportedException("Game not supported");
-            }
-        }
+        public static int GetEggMoveTableOffset() =>
+            RomLocator.Where(RomLocator.Thing.EggMoves)?.Offset ?? throw new NotSupportedException("Game not supported");
 
         public static int SetTrainerNameMaxLen()
         {
@@ -3202,27 +1789,26 @@ namespace DSPRE
 
         public static void SetAIBackportEnabled()
         {
-            if (gameFamily != GameFamilies.Plat)
+            RomLocator.Spot check = RomLocator.Where(RomLocator.Thing.AiBackportCheck);
+            RomLocator.Spot outdated = RomLocator.Where(RomLocator.Thing.AiBackportOutdatedCheck);
+            if (check == null || outdated == null)
             {
-                AIBackportEnabled = false;
+                AIBackportEnabled = OutdatedAIBackportEnabled = false;
                 return;
             }
 
-            byte[] bytesAtOffset = ARM9.ReadBytes(0x0793B8, 4);
+            byte[] bytesAtOffset = ARM9.ReadBytes((uint)check.Offset, 4);
 
-            // Vanilla Plat USA is F8 B5 9A B0 Backport by is F0 B5 93 B0 The tutorial is only for the USA
-            // version, but it might be better to differentiate the different languages here
+            // Vanilla is F8 B5 9A B0; the backport starts F0 B5 93 B0.
             AIBackportEnabled = bytesAtOffset.SequenceEqual(new byte[] { 0xF0, 0xB5, 0x93, 0xB0 });
 
-            bytesAtOffset = ARM9.ReadBytes(0x0795A2, 4);
+            bytesAtOffset = ARM9.ReadBytes((uint)outdated.Offset, 4);
             // Original Backport by Lhea is 1D 1C 0F 23
             // Fixed Backport by YakoSWG is 1E 00 0F 24
             OutdatedAIBackportEnabled = bytesAtOffset.SequenceEqual(new byte[] { 0x1D, 0x1C, 0x0F, 0x23 });
         }
 
         public string GetBuildingModelsDirPath(bool interior) => interior ? gameDirs[DirNames.interiorBuildingModels].unpackedDir : gameDirs[DirNames.exteriorBuildingModels].unpackedDir;
-
-        public string GetRomNameFromWorkdir() => workDir.Substring(0, workDir.Length - folderSuffix.Length - 1);
 
         public static int GetHeaderCount() => (int)new FileInfo(internalNamesPath).Length / internalNameLength;
 
@@ -3267,6 +1853,18 @@ namespace DSPRE
             return names;
         }
 
+        /// <summary>A species by name where the ROM knows one, else "Pokémon 25".</summary>
+        public static string PokemonName(int species)
+        {
+            try
+            {
+                string[] names = GetPokemonNames();
+                return names != null && species >= 0 && species < names.Length && !string.IsNullOrWhiteSpace(names[species])
+                    ? names[species] : $"Pokémon {species}";
+            }
+            catch { return $"Pokémon {species}"; }
+        }
+
         public static string[] GetAbilityNames() => new TextArchive(abilityNamesTextNumber).messages.ToArray();
 
         public static string[] GetAttackNames()
@@ -3278,9 +1876,9 @@ namespace DSPRE
 
         public static string[] GetTypeNames() => new TextArchive(typesTextNumber).messages.ToArray();
 
-        public static int GetLearnsetFilesCount() => Directory.GetFiles(gameDirs[DirNames.learnsets].unpackedDir).Length;
+        public static int GetLearnsetFilesCount() => NarcAPI.Narc.MemberCount(gameDirs[DirNames.learnsets].unpackedDir);
 
-        public static int GetPersonalFilesCount() => Directory.GetFiles(gameDirs[DirNames.personalPokeData].unpackedDir).Length;
+        public static int GetPersonalFilesCount() => NarcAPI.Narc.MemberCount(gameDirs[DirNames.personalPokeData].unpackedDir);
 
         /// <summary>Species names padded with alt-form labels up to targetCount, dropping any that don't fit this ROM's real file count.</summary>
         public static string[] GetPokemonNamesWithForms(int targetCount)
@@ -3319,25 +1917,25 @@ namespace DSPRE
         public static string[] GetBattleEffectSequenceFiles() => Directory.GetFiles(gameDirs[DirNames.moveData].unpackedDir);
         public static int GetBattleEffectSequenceFilesCount() => GetBattleEffectSequenceFiles().Length;
 
-        public int GetAreaDataCount() => Directory.GetFiles(gameDirs[DirNames.areaData].unpackedDir).Length;
+        public int GetAreaDataCount() => NarcAPI.Narc.MemberCount(gameDirs[DirNames.areaData].unpackedDir);
 
-        public int GetMapTexturesCount() => Directory.GetFiles(gameDirs[DirNames.mapTextures].unpackedDir).Length;
+        public int GetMapTexturesCount() => NarcAPI.Narc.MemberCount(gameDirs[DirNames.mapTextures].unpackedDir);
 
-        public int GetBuildingTexturesCount() => Directory.GetFiles(gameDirs[DirNames.buildingTextures].unpackedDir).Length;
+        public int GetBuildingTexturesCount() => NarcAPI.Narc.MemberCount(gameDirs[DirNames.buildingTextures].unpackedDir);
 
-        public int GetMatrixCount() => Directory.GetFiles(gameDirs[DirNames.matrices].unpackedDir).Length;
+        public int GetMatrixCount() => NarcAPI.Narc.MemberCount(gameDirs[DirNames.matrices].unpackedDir);
 
-        public int GetTextArchivesCount() => Directory.GetFiles(TextConverter.GetExpandedFolderPath()).Length;
+        public int GetTextArchivesCount() => NarcAPI.Narc.MemberCount(TextConverter.GetExpandedFolderPath());
 
-        public int GetMapCount() => Directory.GetFiles(gameDirs[DirNames.maps].unpackedDir).Length;
+        public int GetMapCount() => NarcAPI.Narc.MemberCount(gameDirs[DirNames.maps].unpackedDir);
 
-        public int GetEventCount() => Directory.GetFiles(gameDirs[DirNames.eventFiles].unpackedDir).Length;
+        public int GetEventCount() => NarcAPI.Narc.MemberCount(gameDirs[DirNames.eventFiles].unpackedDir);
 
-        public int GetScriptCount() => Directory.GetFiles(gameDirs[DirNames.scripts].unpackedDir).Length;
+        public int GetScriptCount() => NarcAPI.Narc.MemberCount(gameDirs[DirNames.scripts].unpackedDir);
 
-        public int GetBuildingCount(bool interior) => Directory.GetFiles(GetBuildingModelsDirPath(interior)).Length;
+        public int GetBuildingCount(bool interior) => NarcAPI.Narc.MemberCount(GetBuildingModelsDirPath(interior));
 
-        public static int GetEventFileCount() => Directory.GetFiles(RomInfo.gameDirs[DirNames.eventFiles].unpackedDir).Length;
+        public static int GetEventFileCount() => NarcAPI.Narc.MemberCount(RomInfo.gameDirs[DirNames.eventFiles].unpackedDir);
 
         #endregion Methods (22)
 
@@ -3733,6 +2331,7 @@ namespace DSPRE
                         [DirNames.fieldTouchMenu] = $@"{dataFolderName}\a\0\1\4",
                         [DirNames.fieldTouchChoices] = $@"{dataFolderName}\a\2\3\7",
                         [DirNames.summaryGraphics] = $@"{dataFolderName}\a\1\6\2",
+                        [DirNames.summarySprites] = $@"{dataFolderName}\a\0\3\9",
                         [DirNames.moveRelearnerGraphics] = $@"{dataFolderName}\a\1\1\0",
                         [DirNames.battlePartyGraphics] = $@"{dataFolderName}\a\0\7\1",
                         [DirNames.bagGraphics] = $@"{dataFolderName}\a\0\1\5",
@@ -3828,21 +2427,6 @@ namespace DSPRE
                     return "spa";
                 default:
                     return "";
-            }
-        }
-
-        public void ResetMapCellsColorDictionary()
-        {
-            switch (gameFamily)
-            {
-                case GameFamilies.DP:
-                case GameFamilies.Plat:
-                    MapCellsColorDictionary = PokeDatabase.System.MatrixCellColors.DPPtmatrixColorsDict;
-                    break;
-
-                case GameFamilies.HGSS:
-                    MapCellsColorDictionary = PokeDatabase.System.MatrixCellColors.HGSSmatrixColorsDict;
-                    break;
             }
         }
 
@@ -3946,7 +2530,6 @@ namespace DSPRE
         /// </summary>
         public static bool IsDungeonCutinEditorAvailable()
         {
-            SetDungeonCutinTableOffsetToRAMAddress();
             return dungeonCutinTableOffsetToRAMAddress != 0;
         }
 

@@ -39,7 +39,7 @@
                     IsEnabled="{Binding CanGoBack}"/>
             <Button DockPanel.Dock="Right" Content="Next" controls:Icon.Key="arrowright" controls:Icon.After="True" MinWidth="80" Click="Next_Click"
                     IsEnabled="{Binding CanGoNext}"/>
-            <TextBlock Text="{Binding PageLabel}" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.7"/>
+            <TextBlock Foreground="{DynamicResource Editor.Subtle}" Text="{Binding PageLabel}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
           </DockPanel>
           <TextBlock DockPanel.Dock="Top" Text="{Binding PageTitle}" FontSize="17" FontWeight="Bold" Margin="0,0,0,10"/>
           <ScrollViewer>

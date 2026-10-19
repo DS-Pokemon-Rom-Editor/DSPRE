@@ -27,7 +27,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         public TrainerEditorView(TrainerEditorViewModel vm) : this()
         {
             DataContext = vm;
-            EditorWindowChrome.Attach(this, vm, onClosed: vm.Detach);
+            EditorWindowChrome.Attach(this, vm);
             vm.TrainerList.KeepInView(TrainerList);
             // Another trainer starts at its top, not wherever the last one was scrolled to.
             vm.PropertyChanged += (_, e) =>
@@ -57,7 +57,10 @@ namespace DSPRE.Avalonia.Views.Trainers
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
-        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardTrainer();
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardTrainer();
+        }
 
         private void Undo_Click(object sender, RoutedEventArgs e) => VM?.Undo();
         private void Redo_Click(object sender, RoutedEventArgs e) => VM?.Redo();
@@ -68,11 +71,7 @@ namespace DSPRE.Avalonia.Views.Trainers
 
         private void BattleMessages_Click(object sender, RoutedEventArgs e)
         {
-            // hg-engine builds the message table from Trainers.c, which only a linked checkout can edit.
-            if (AvaloniaEditorLauncher.Refused("BattleMessageEditorView")) return;
-
-            int trainerId = VM?.SelectedTrainerIndex ?? 0;
-            new BattleMessageEditorView(new BattleMessageEditorViewModel(trainerId)).ShowManaged();
+            AvaloniaEditorLauncher.OpenBattleMessageEditor(VM?.SelectedTrainerIndex ?? 0);
         }
 
         private void TrainerClasses_Click(object sender, RoutedEventArgs e)

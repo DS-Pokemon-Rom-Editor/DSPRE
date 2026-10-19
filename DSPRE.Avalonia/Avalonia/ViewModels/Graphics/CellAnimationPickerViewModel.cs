@@ -316,7 +316,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (at < 0 || at >= count) return 0;
                 if (!tilesAt.TryGetValue(at, out int tiles))
                 {
-                    try { tiles = DsBgScreen.ReadCharacters(bytes[at]).Length / 32; }
+                    try { tiles = NitroBgCodec.ReadCharacters(bytes[at]).Length / 32; }
                     catch { tiles = 0; }
                     tilesAt[at] = tiles;
                 }

@@ -17,6 +17,7 @@
         <TextBlock Text="Filter" VerticalAlignment="Center"/>
         <ComboBox Width="200" ItemsSource="{Binding SpeciesFilter}" SelectedIndex="{Binding FilterIndex}"/>
         <Button Content="Save all" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
         <Button Content="Add row" controls:Icon.Key="addIcon"  Click="Add_Click"/>
         <Button Content="Remove" controls:Icon.Key="deleteIcon"   Click="Remove_Click"/>

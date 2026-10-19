@@ -233,19 +233,19 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                 List<OverworldSprites.SpritePixels> pictures = OverworldSprites.Pictures(model, palette);
                 if (pictures == null || pictures.Count == 0)
                 {
-                    view.Followers.Add(new SpriteTile { Caption = $"Follower, {which}", Whynot = "No picture in this entry." });
+                    view.Followers.Add(new SpriteTile { Caption = $"Follower ({which})", Whynot = "No picture in this entry." });
                     return;
                 }
                 OverworldSprites.SpritePixels first = pictures[0];
                 view.Followers.Add(new SpriteTile
                 {
-                    Caption = $"Follower, {which}",
+                    Caption = $"Follower ({which})",
                     Picture = ImageConverter.FromRgba(first.Rgba, first.Width, first.Height),
                 });
             }
             catch (Exception ex)
             {
-                view.Followers.Add(new SpriteTile { Caption = $"Follower, {which}", Whynot = ex.Message });
+                view.Followers.Add(new SpriteTile { Caption = $"Follower ({which})", Whynot = ex.Message });
             }
         }
 
@@ -391,12 +391,12 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             ScriptNarc source = SpriteArchive();
             view.SpriteNote = _spriteSourceNote;
 
-            string[] drawings = { "Back, female", "Back, male", "Front, female", "Front, male" };
+            string[] drawings = { "Female back", "Male back", "Female front", "Male front" };
             for (int slot = 0; slot < drawings.Length; slot++)
             {
                 int index = species * SpriteMembersPerSpecies + slot;
-                view.Sprites.Add(SpriteTileFor(archive, source, index, $"{drawings[slot]}, normal", shiny: false));
-                view.Sprites.Add(SpriteTileFor(archive, source, index, $"{drawings[slot]}, shiny", shiny: true));
+                view.Sprites.Add(SpriteTileFor(archive, source, index, $"{drawings[slot]} (normal)", shiny: false));
+                view.Sprites.Add(SpriteTileFor(archive, source, index, $"{drawings[slot]} (shiny)", shiny: true));
             }
         }
 
@@ -482,7 +482,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public bool HasUnsavedChanges => _repairStaged;
 
         public string UnsavedChangesDescription =>
-            _repairStaged ? "a/0/2/8 member order repair" : null;
+            _repairStaged ? "The a/0/2/8 member order repair" : null;
 
         public void SaveChanges()
         {

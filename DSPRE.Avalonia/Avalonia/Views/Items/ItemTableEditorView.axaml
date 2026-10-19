@@ -42,7 +42,7 @@
           </StackPanel>
           <StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="0,8,0,0">
             <TextBlock Text="{Binding PickupChanceNote}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
-            <TextBlock Text="{Binding PickupLinkNote}" IsVisible="{Binding ShowPickupLinkNote}" TextWrapping="Wrap" FontSize="12" Foreground="Orange"/>
+            <TextBlock Text="{Binding PickupLinkNote}" IsVisible="{Binding ShowPickupLinkNote}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Warn}"/>
           </StackPanel>
           <Panel>
           <ScrollViewer x:Name="PickupLists" IsVisible="{Binding PickupListView}" HorizontalScrollBarVisibility="Auto">

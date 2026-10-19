@@ -18,7 +18,10 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         public NsbtxEditorView(NsbtxEditorViewModel vm) : this() { DataContext = vm; EditorWindowChrome.Attach(this, vm); }
         private void Save_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e) => (DataContext as NsbtxEditorViewModel)?.SaveChanges();
-        private void Discard_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e) => (DataContext as NsbtxEditorViewModel)?.DiscardChanges();
+        private async void Discard_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as NsbtxEditorViewModel)?.DiscardChanges();
+        }
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
         {

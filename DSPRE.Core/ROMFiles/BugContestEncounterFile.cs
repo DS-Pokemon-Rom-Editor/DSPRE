@@ -109,9 +109,9 @@ namespace DSPRE.ROMFiles {
         public BugContestEncounterFile() {
             Sets = new List<BugContestEncounterSet> {
                 new BugContestEncounterSet("Before National Dex", "Every contest before the National Dex."),
-                new BugContestEncounterSet("National Dex, Tuesday", "Tuesday contests after the National Dex."),
-                new BugContestEncounterSet("National Dex, Thursday", "Thursday contests after the National Dex."),
-                new BugContestEncounterSet("National Dex, Saturday", "Saturday contests after the National Dex.")
+                new BugContestEncounterSet("Tuesdays after the National Dex", "Tuesday contests after the National Dex."),
+                new BugContestEncounterSet("Thursdays after the National Dex", "Thursday contests after the National Dex."),
+                new BugContestEncounterSet("Saturdays after the National Dex", "Saturday contests after the National Dex.")
             };
         }
 
@@ -205,7 +205,7 @@ namespace DSPRE.ROMFiles {
         public new bool SaveToFile(string path, bool showSuccessMessage = true) {
             try {
                 byte[] data = ToByteArray();
-                File.WriteAllBytes(path, data);
+                ArchiveMembers.Write(path, data);
 
                 if (showSuccessMessage) {
                     AppMessages.Info("Bug Contest encounters saved successfully!", "Success");

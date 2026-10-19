@@ -120,7 +120,7 @@ namespace DSPRE
         public static void WriteDsRomYaml(BannerYaml banner)
         {
             ISerializer serializer = new SerializerBuilder().Build();
-            File.WriteAllText(DsRomYamlPath, serializer.Serialize(banner));
+            PlainFiles.WriteText(DsRomYamlPath, serializer.Serialize(banner));
         }
 
         /// <summary>
@@ -226,7 +226,7 @@ namespace DSPRE
             WriteChunk(ms, "IDAT", compressed);
             WriteChunk(ms, "IEND", Array.Empty<byte>());
 
-            File.WriteAllBytes(path, ms.ToArray());
+            PlainFiles.WriteBytes(path, ms.ToArray());
         }
 
         private static void WriteBE(byte[] buf, int off, int value)

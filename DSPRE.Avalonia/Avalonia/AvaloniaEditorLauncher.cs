@@ -96,7 +96,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("The Audio Editor could not be opened:" + System.Environment.NewLine + ex.Message, "Audio Editor");
+                await DialogHelper.ShowError("The Audio Editor could not be opened:" + System.Environment.NewLine + ex.Message, "Audio editor error");
             }
         }
 
@@ -137,7 +137,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the Pokémon Editor: " + ex.Message, "Pokémon Editor");
+                await DialogHelper.ShowError("Couldn't open the Pokémon Editor: " + ex.Message, "Pokémon editor error");
             }
         }
 
@@ -185,7 +185,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the Move Data Editor: " + ex.Message, "Move Data Editor");
+                await DialogHelper.ShowError("Couldn't open the Move Data Editor: " + ex.Message, "Move data editor error");
             }
         }
 
@@ -240,7 +240,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the Item Editor: " + ex.Message, "Item Editor");
+                await DialogHelper.ShowError("Couldn't open the Item Editor: " + ex.Message, "Item editor error");
             }
         }
 
@@ -282,7 +282,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 _ = DialogHelper.ShowError("The Mart Editor could not be opened:" + System.Environment.NewLine + ex.Message,
-                    "Mart Editor");
+                    "Mart editor error");
             }
         }
 
@@ -306,7 +306,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the Trade Editor: " + ex.Message, "Trade Editor");
+                await DialogHelper.ShowError("Couldn't open the Trade Editor: " + ex.Message, "Trade editor error");
             }
         }
 
@@ -317,7 +317,7 @@ namespace DSPRE.Avalonia
 
         public static async System.Threading.Tasks.Task OpenTextEditorAsync(int initialIndex = 0, int initialLine = -1)
         {
-            if (!IsRomLoaded) return;
+            if (Refused("TextEditorView")) return;
 
             try
             {
@@ -328,7 +328,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the Text Editor: " + ex.Message, "Text Editor");
+                await DialogHelper.ShowError("Couldn't open the Text Editor: " + ex.Message, "Text editor error");
             }
         }
 
@@ -341,7 +341,7 @@ namespace DSPRE.Avalonia
         /// 0 opens on the file alone.</param>
         public static void OpenScriptEditor(int initialIndex = 0, int scriptNumber = 0)
         {
-            if (!IsRomLoaded) return;
+            if (Refused("ScriptEditorView")) return;
             new EditorHostWindow("Rotom script editor",
                 new ScriptEditorView(new ScriptEditorViewModel(true) { InitialIndex = initialIndex, InitialScriptNumber = scriptNumber }),
                 980, 760).ShowManaged();
@@ -358,13 +358,11 @@ namespace DSPRE.Avalonia
         {
             opened = false;
             CommonScriptId.Result result = CommonScriptId.Resolve(gameFamily, scriptNumber);
-            if (result.Kind == CommonScriptId.Kind.Discrepancy)
-                return $"Script {scriptNumber} is a Common Script in an ambiguous range ({result.RangeLower}-{result.RangeUpper}); it is one of: {string.Join(", ", result.CandidateArchives)}.";
             if (result.Kind == CommonScriptId.Kind.Resolved)
             {
                 OpenScriptEditor(result.ScriptArchiveId, result.ManualUserId);
                 opened = true;
-                return $"Common Script {result.ManualUserId} lives in script file {result.ScriptArchiveId}.";
+                return result.Where + ".";
             }
             // Below the common-script ranges the number is the paired file's own jump-table slot.
             int file = pairedScriptFile?.Invoke() ?? -1;
@@ -376,7 +374,7 @@ namespace DSPRE.Avalonia
 
         public static void OpenLevelScriptEditor(int initialIndex = 0)
         {
-            if (!IsRomLoaded) return;
+            if (Refused("LevelScriptEditorView")) return;
             new EditorHostWindow("Level script editor",
                 new LevelScriptEditorView(new LevelScriptEditorViewModel(true) { InitialIndex = initialIndex }),
                 720, 560).ShowManaged();
@@ -483,13 +481,12 @@ namespace DSPRE.Avalonia
                     {
                         TmHmBulkEditorViewModel vm = new TmHmBulkEditorViewModel(GetPokemonNames());
                         EditorHostWindow window = new EditorHostWindow("TM/HM bulk editor", new TmHmBulkEditorView(vm), 1050, 700);
-                        window.Closed += (_, _) => vm.Detach();
                         return window;
                     });
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the TM/HM Bulk Editor: " + ex.Message, "TM/HM Bulk Editor");
+                await DialogHelper.ShowError("Couldn't open the TM/HM Bulk Editor: " + ex.Message, "TM / HM bulk editor error");
             }
         }
 
@@ -515,7 +512,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the Wild Pokémon Editor: " + ex.Message, "Wild Pokémon Editor");
+                await DialogHelper.ShowError("Couldn't open the Wild Pokémon Editor: " + ex.Message, "Wild Pokémon editor error");
             }
 
             global::Avalonia.Controls.Window BuildWild()
@@ -531,14 +528,12 @@ namespace DSPRE.Avalonia
                 {
                     WildEditorDPPtViewModel vm = new WildEditorDPPtViewModel(path, names, initialIndex, headerCount);
                     EditorHostWindow window = new EditorHostWindow("Wild Pokémon editor (DPPt)", new WildEditorDPPtView(vm), 1000, 680) { MinWidth = 960, MinHeight = 520 };
-                    window.Closed += (_, _) => vm.Detach();
                     return window;
                 }
                 else
                 {
                     WildEditorHGSSViewModel vm = new WildEditorHGSSViewModel(path, names, initialIndex, headerCount);
                     EditorHostWindow window = new EditorHostWindow("Wild Pokémon editor (HGSS)", new WildEditorHGSSView(vm), 1000, 680) { MinWidth = 960, MinHeight = 520 };
-                    window.Closed += (_, _) => vm.Detach();
                     return window;
                 }
             }
@@ -546,11 +541,10 @@ namespace DSPRE.Avalonia
 
         public static void OpenHeaderEditor(int initialIndex = -1)
         {
-            if (!IsRomLoaded) return;
+            if (Refused("HeaderEditorView")) return;
             if (BringForward<HeaderEditorView, HeaderEditorViewModel>(vm => { if (initialIndex >= 0) vm.GoToHeader(initialIndex); })) return;
             HeaderEditorViewModel model = new HeaderEditorViewModel(true) { InitialHeaderId = initialIndex };
             EditorHostWindow window = new EditorHostWindow("Header editor", new HeaderEditorView(model));
-            window.Closed += (_, _) => model.Detach();
             window.ShowManaged();
         }
 
@@ -637,7 +631,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the Trainer Editor: " + ex.Message, "Trainer Editor");
+                await DialogHelper.ShowError("Couldn't open the Trainer Editor: " + ex.Message, "Trainer editor error");
             }
         }
 
@@ -660,7 +654,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the Trainer Sprite Editor: " + ex.Message, "Trainer Sprite Editor");
+                await DialogHelper.ShowError("Couldn't open the Trainer Sprite Editor: " + ex.Message, "Trainer sprite editor error");
             }
         }
 
@@ -750,7 +744,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("The Pokégear Phone Book could not be opened:" + System.Environment.NewLine + ex.Message, "Pokégear Phone Book");
+                await DialogHelper.ShowError("The Pokégear Phone Book could not be opened:" + System.Environment.NewLine + ex.Message, "Pokégear phone book error");
             }
         }
 
@@ -768,7 +762,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the Starter Editor: " + ex.Message, "Starter Editor");
+                await DialogHelper.ShowError("Couldn't open the Starter Editor: " + ex.Message, "Starter editor error");
             }
         }
 
@@ -778,7 +772,7 @@ namespace DSPRE.Avalonia
             if (Refused("FlyEditorView")) return;
             if (RomInfo.FlyTableUnverified)
             {
-                _ = DialogHelper.ShowError("The Fly / Warp Editor isn't checked against Japanese Pearl yet, so it stays closed rather than risk writing the wrong place.", "Fly / Warp Editor");
+                _ = DialogHelper.ShowError("The Fly / Warp Editor isn't checked against Japanese Pearl yet, so it stays closed rather than risk writing the wrong place.", "Fly / warp editor error");
                 return;
             }
             new FlyEditorView(HeaderLabels.Friendly().ToList()).ShowManaged();
@@ -814,7 +808,7 @@ namespace DSPRE.Avalonia
             {
                 AppLogger.Error("OpenCellAnimationPicker failed: " + ex.Message);
                 await DialogHelper.ShowInfo("The animations could not be listed. " + ex.Message,
-                                            "Cell Animations");
+                                            "Cell animations");
             }
         }
 
@@ -845,7 +839,7 @@ namespace DSPRE.Avalonia
             if (Refused("CellAnimationEditorView")) return;
             if (animation < 0)
             {
-                _ = DialogHelper.ShowInfo("There is no animation file here to open.", "Cell Animation");
+                _ = DialogHelper.ShowInfo("There is no animation file here to open.", "Cell animation");
                 return;
             }
             // A second window on the same file would go stale and save over the first.
@@ -871,7 +865,7 @@ namespace DSPRE.Avalonia
             {
                 AppLogger.Error("OpenCellAnimationEditor failed: " + ex.Message);
                 _ = DialogHelper.ShowInfo("That animation could not be opened. " + ex.Message,
-                                          "Cell Animation");
+                                          "Cell animation");
             }
         }
 
@@ -928,7 +922,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the Naming Screen Editor: " + ex.Message, "Naming Screen Editor");
+                await DialogHelper.ShowError("Couldn't open the Naming Screen Editor: " + ex.Message, "Naming screen editor error");
             }
         }
 
@@ -1034,7 +1028,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenBallCapsuleEditor failed: " + ex.Message);
-                await DialogHelper.ShowError("The Ball Capsule editor could not be opened: " + ex.Message, "Ball Capsules");
+                await DialogHelper.ShowError("The Ball Capsule editor could not be opened: " + ex.Message, "Ball Capsules error");
             }
         }
 
@@ -1058,76 +1052,100 @@ namespace DSPRE.Avalonia
             new SpawnEditorView(new SpawnEditorViewModel(HeaderLabels.Friendly().ToList())).ShowManaged();
         }
 
+        /// <summary>Opens the spawn editor ready to put the spawn on one cell of a header's matrix.</summary>
+        public static void OpenSpawnEditorAt(ushort header, int column, int row)
+        {
+            if (Refused("SpawnEditorView")) return;
+            new SpawnEditorView(null, HeaderLabels.Friendly().ToList(), header, column, row).ShowManaged();
+        }
+
+        public static void OpenBulkLearnsetEditor()
+        {
+            if (Refused("BulkLearnsetEditorView")) return;
+            new Views.Pokemon.BulkLearnsetEditorView(new ViewModels.Pokemon.BulkLearnsetEditorViewModel(true)).ShowManaged();
+        }
+
+        public static void OpenBattleMessageEditor(int trainerId)
+        {
+            // hg-engine builds the message table from Trainers.c, which only a linked checkout can edit.
+            if (Refused("BattleMessageEditorView")) return;
+            new Views.Battle.BattleMessageEditorView(new ViewModels.Battle.BattleMessageEditorViewModel(trainerId)).ShowManaged();
+        }
+
+        /// <summary>Opens the paint window on one drawing; <paramref name="closed"/> runs when it closes, so the caller can redraw.</summary>
+        public static void OpenPainter(Data.GraphicAssets.Archive archive, int member, System.Action closed = null)
+        {
+            Views.Graphics.GraphicPainterView painter = new Views.Graphics.GraphicPainterView(new ViewModels.Graphics.GraphicPainterViewModel(archive, member));
+            if (closed != null) painter.Closed += (_, _) => closed();
+            painter.ShowManaged();
+        }
+
         public static void OpenHeaderSearch() => OpenHeaderSearchFor(null);
 
         /// <summary>Opens the advanced header search with its results going to <paramref name="goTo"/>.</summary>
         public static void OpenHeaderSearchFor(System.Action<int> goTo)
         {
-            if (!IsRomLoaded) return;
+            if (Refused("HeaderSearchView")) return;
             new HeaderSearchView(new HeaderSearchViewModel(true)) { GoTo = goTo }.ShowManaged();
         }
 
         public static void OpenMapEditor(int mapIndex = -1)
         {
-            if (!IsRomLoaded) return;
+            if (Refused("MapEditorView")) return;
+            if (BringForward<MapEditorView, MapEditorViewModel>(vm => { if (mapIndex >= 0) vm.SelectedMapIndex = mapIndex; })) return;
             MapEditorViewModel vm = new MapEditorViewModel(true) { InitialMapIndex = mapIndex };
             EditorHostWindow window = new EditorHostWindow("Map editor", new MapEditorView(vm), 1200, 720);
-            window.Closed += (_, _) => vm.Detach();
             window.ShowManaged();
         }
 
         public static void OpenBuildingEditor(int initialIndex = 0)
         {
-            if (!IsRomLoaded) return;
+            if (Refused("BuildingEditorView")) return;
             new BuildingEditorView(new BuildingEditorViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
         }
 
         public static void OpenMatrixEditor(int initialIndex = 0, int focusHeader = -1)
         {
-            if (!IsRomLoaded) return;
+            if (Refused("MatrixEditorView")) return;
             if (BringForward<MatrixEditorView, MatrixEditorViewModel>(vm => { vm.SelectedMatrixIndex = initialIndex; vm.FocusHeader = focusHeader; })) return;
             MatrixEditorViewModel model = new MatrixEditorViewModel(true) { InitialIndex = initialIndex, FocusHeader = focusHeader };
             EditorHostWindow window = new EditorHostWindow("Matrix editor", new MatrixEditorView(model), 860, 640);
-            window.Closed += (_, _) => model.Detach();
             window.ShowManaged();
         }
 
         public static void OpenEventEditor(int initialIndex = 0)
         {
-            if (!IsRomLoaded) return;
+            if (Refused("EventEditorView")) return;
             if (BringForward<EventEditorView, EventEditorViewModel>(vm => vm.SelectedEventIndex = initialIndex)) return;
             EventEditorViewModel model = new EventEditorViewModel(true) { InitialIndex = initialIndex };
             EditorHostWindow window = new EditorHostWindow("Event editor", new EventEditorView(model), 1200, 720);
-            window.Closed += (_, _) => model.DetachSaves();
             window.ShowManaged();
         }
 
         public static void OpenEventEditorWithOverworld(int eventFileId, int owIndex)
         {
-            if (!IsRomLoaded) return;
+            if (Refused("EventEditorView")) return;
             if (BringForward<EventEditorView, EventEditorViewModel>(vm => vm.GoToOverworld(eventFileId, owIndex))) return;
             EventEditorViewModel model = new EventEditorViewModel(true) { InitialIndex = eventFileId, InitialOverworldIndex = owIndex };
             EditorHostWindow window = new EditorHostWindow("Event editor", new EventEditorView(model), 1200, 720);
-            window.Closed += (_, _) => model.DetachSaves();
             window.ShowManaged();
         }
 
         public static void OpenEventEditorWithSpawnable(int eventFileId, int spawnIndex)
         {
-            if (!IsRomLoaded) return;
+            if (Refused("EventEditorView")) return;
             if (BringForward<EventEditorView, EventEditorViewModel>(vm => vm.GoToSpawnable(eventFileId, spawnIndex))) return;
             EventEditorViewModel model = new EventEditorViewModel(true) { InitialIndex = eventFileId, InitialSpawnableIndex = spawnIndex };
             EditorHostWindow window = new EditorHostWindow("Event editor", new EventEditorView(model), 1200, 720);
-            window.Closed += (_, _) => model.DetachSaves();
             window.ShowManaged();
         }
 
         public static void OpenAreaDataEditor(int initialIndex = 0)
         {
-            if (!IsRomLoaded) return;
+            if (Refused("AreaDataEditorView")) return;
+            if (BringForward<AreaDataEditorView, AreaDataEditorViewModel>(vm => vm.SelectedIndex = initialIndex)) return;
             AreaDataEditorViewModel model = new AreaDataEditorViewModel(true) { InitialIndex = initialIndex };
             EditorHostWindow window = new EditorHostWindow("Area data editor", new AreaDataEditorView(model), 520, 380);
-            window.Closed += (_, _) => model.Detach();
             window.ShowManaged();
         }
 
@@ -1136,7 +1154,7 @@ namespace DSPRE.Avalonia
         /// <summary>Opens the texture editor on one map or building texture pack.</summary>
         public static void OpenNsbtxEditor(bool buildings, int pack)
         {
-            if (!IsRomLoaded) return;
+            if (Refused("NsbtxEditorView")) return;
             NsbtxEditorViewModel model = new(true);
             if (pack >= 0) model.OpenAt(buildings, pack);
             new NsbtxEditorView(model).ShowManaged();
@@ -1151,7 +1169,10 @@ namespace DSPRE.Avalonia
 
         public static void OpenOverworldEditor() => _ = OpenOverworldEditorAsync();
 
-        public static async System.Threading.Tasks.Task OpenOverworldEditorAsync()
+        /// <summary>Opens the Overworld editor on one overworld table entry.</summary>
+        public static void OpenOverworldEditor(uint entry) => _ = OpenOverworldEditorAsync(entry);
+
+        public static async System.Threading.Tasks.Task OpenOverworldEditorAsync(uint? entry = null)
         {
             if (Refused("BtxEditorView")) return;
 
@@ -1164,12 +1185,14 @@ namespace DSPRE.Avalonia
                         SetOWtable();
                         Set3DOverworldsDict();
                         ReadOWTable();
-                        return new BtxEditorView(new BtxEditorViewModel(true));
+                        BtxEditorViewModel model = new BtxEditorViewModel(true);
+                        if (entry is uint at) model.OpenAt(at);
+                        return new BtxEditorView(model);
                     });
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the Overworld Editor: " + ex.Message, "Overworld Editor");
+                await DialogHelper.ShowError("Couldn't open the Overworld Editor: " + ex.Message, "Overworld editor error");
             }
         }
 
@@ -1224,7 +1247,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("The Distortion World editor could not be opened:" + System.Environment.NewLine + ex.Message, "Distortion World");
+                await DialogHelper.ShowError("The Distortion World editor could not be opened:" + System.Environment.NewLine + ex.Message, "Distortion World error");
             }
         }
 
@@ -1393,13 +1416,40 @@ namespace DSPRE.Avalonia
                         ?? new System.Collections.Generic.List<global::Avalonia.Controls.Window>()));
                 // An open editor may hold unsaved work, so it is brought forward rather than reopened.
                 if (open != null) { open.Activate(); return; }
-                new Views.Graphics.PokedexGraphicsEditorView(new ViewModels.Graphics.PokedexGraphicsEditorViewModel(species, pageId)).ShowManaged();
+                new Views.Graphics.PokedexGraphicsEditorView(new ViewModels.Graphics.ScreenPagesEditorViewModel(new Data.PokedexBook(species), pageId)).ShowManaged();
                 return;
             }
             int first = -1;
             foreach (ScreenGraphicsLayouts.Entry e in Data.ScreenGraphicsLayouts.For(RomInfo.DirNames.pokedexGraphics))
                 if (e.Kind == "NSCR" && e.Drawing >= 0) { first = e.Index; break; }
             OpenGraphicAt(RomInfo.DirNames.pokedexGraphics, System.Math.Max(0, first), preferAssembled: true);
+        }
+
+        /// <summary>Opens the Pokémon summary screen's pages, put together with a sample Pokémon.</summary>
+        public static void OpenSummaryScreen() => _ = OpenSummaryScreenAsync();
+
+        public static async System.Threading.Tasks.Task OpenSummaryScreenAsync()
+        {
+            if (Refused("SummaryScreenEditorView")) return;
+            Views.Graphics.SummaryScreenEditorView open = System.Linq.Enumerable.FirstOrDefault(
+                System.Linq.Enumerable.OfType<Views.Graphics.SummaryScreenEditorView>(
+                    (global::Avalonia.Application.Current?.ApplicationLifetime
+                     as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Windows
+                    ?? new System.Collections.Generic.List<global::Avalonia.Controls.Window>()));
+            // An open editor may hold unsaved work, so it is brought forward rather than reopened.
+            if (open != null) { open.Activate(); return; }
+            try
+            {
+                await OpenBehindCardAsync("Opening Summary screen…", "Reading the summary pages and where the game puts their text.",
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.summaryGraphics, DirNames.summarySprites, DirNames.pokemonBattleSprites,
+                                                                      DirNames.monIcons, DirNames.battleObj, DirNames.personalPokeData, DirNames.moveData, DirNames.fonts }),
+                    () => new Views.Graphics.SummaryScreenEditorView(new ViewModels.Graphics.ScreenPagesEditorViewModel(new Data.SummaryBook(), null)));
+            }
+            catch (System.Exception ex)
+            {
+                AppLogger.Error("OpenSummaryScreen failed: " + ex.Message);
+                _ = DialogHelper.ShowInfo("That window could not be opened.", "Summary screen");
+            }
         }
 
         /// <summary>Opens the graphics window already looking at one file.</summary>
@@ -1439,7 +1489,7 @@ namespace DSPRE.Avalonia
                 }
                 else new Views.Graphics.GraphicsBrowserView(vm).ShowManaged();
                 if (!found)
-                    vm.Status = "That graphic could not be found in this game, so the whole list is shown instead.";
+                    vm.StatusText = "That graphic could not be found in this game, so the whole list is shown instead.";
             }
             catch (System.Exception ex)
             {
@@ -1462,7 +1512,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the Trainer Back Sprite Editor: " + ex.Message, "Trainer Back Sprite Editor");
+                await DialogHelper.ShowError("Couldn't open the Trainer Back Sprite Editor: " + ex.Message, "Trainer back sprite editor error");
             }
         }
 
@@ -1544,7 +1594,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenTilesetBuilder failed: " + ex.Message);
-                _ = DialogHelper.ShowInfo("That window could not be opened.", "Picture to Background");
+                _ = DialogHelper.ShowInfo("That window could not be opened.", "Picture to background");
             }
         }
 
@@ -1560,7 +1610,25 @@ namespace DSPRE.Avalonia
             {
                 AppLogger.Error("OpenFontEditor failed: " + ex.Message);
                 _ = DialogHelper.ShowInfo("The fonts could not be opened. Open a ROM first.",
-                                          "Font Editor");
+                                          "Font editor");
+            }
+        }
+
+        public static void OpenHpBarLayoutEditor() => _ = OpenHpBarLayoutEditorAsync();
+
+        public static async System.Threading.Tasks.Task OpenHpBarLayoutEditorAsync()
+        {
+            if (Refused("HpBarLayoutEditorView")) return;
+            try
+            {
+                await OpenBehindCardAsync("Opening HP bar layout…", "Reading the HP bars and the battle code that writes into them.",
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.battleObj, DirNames.battleBg, DirNames.windowFrames, DirNames.fonts }),
+                    () => new Views.Graphics.HpBarLayoutEditorView());
+            }
+            catch (System.Exception ex)
+            {
+                AppLogger.Error("OpenHpBarLayoutEditor failed: " + ex.Message);
+                _ = DialogHelper.ShowInfo("That window could not be opened.", "HP bar layout");
             }
         }
 
@@ -1625,7 +1693,8 @@ namespace DSPRE.Avalonia
 
         /// <summary>The editor list shown in the command palette (mirrors the main menu).</summary>
         // Beta editors are left out, as in the menus.
-        public static IEnumerable<CommandItem> PaletteCommands() => BuildCommands().Where(c => c.Beta == null || BetaEditors.Allows(c.Beta));
+        public static IEnumerable<CommandItem> PaletteCommands() => BuildCommands()
+            .Where(c => (c.Beta == null || BetaEditors.Allows(c.Beta)) && (c.Shown == null || c.Shown()));
 
         public static List<CommandItem> BuildCommands() => new()
         {
@@ -1634,6 +1703,8 @@ namespace DSPRE.Avalonia
             new() { Name = "All models and textures", Keywords = "3d model nsbmd nsbtx building overworld map mesh", Run = OpenModelBrowser },
             new() { Beta = "BattleScreenEditorView", Name = "Battle screen",         Keywords = "battle screen gauge hp bar backdrop platform message box touch command", Run = OpenBattleScreenEditor },
             new() { Beta = "BattleSceneBrowserView", Name = "Battle scenes",         Keywords = "battle scene backdrop terrain platform ground", Run = OpenBattleSceneBrowser },
+            new() { Beta = "SummaryScreenEditorView", Name = "Summary screen",      Keywords = "summary status pokemon info skills moves ribbons hp exp bar text box layout pst", Run = OpenSummaryScreen },
+            new() { Beta = "HpBarLayoutEditorView", Name = "HP bar layout",         Keywords = "hp bar gauge health name level status experience layout move position", Run = OpenHpBarLayoutEditor },
             new() { Beta = "TilesetBuilderView", Name = "Picture to background", Keywords = "png tiles tilemap palette background", Run = OpenTilesetBuilder },
             new() { Beta = "TitleScreenEditorView", Name = "Title screen editor",   Keywords = "logo copyright intro hgss", Run = OpenTitleScreenEditor },
             new() { Beta = "BottomScreenEditorView", Name = "Bottom screen",         Keywords = "touch menu poketch pokétch bottom screen field panel icons poke ball", Run = () => OpenBottomScreenEditor() },
@@ -1676,12 +1747,13 @@ namespace DSPRE.Avalonia
             new() { Name = "Pokégear rematch editor", Keywords = "rematch trainer phone pokegear call hgss", Run = () => OpenPokegearRematchEditor() },
             new() { Beta = "PokegearPhoneBookView", Name = "Pokégear phone book", Keywords = "phone contact number call gift greeting pokegear hgss", Run = () => OpenPokegearPhoneBook() },
             new() { Name = "hg-engine patches", Keywords = "hook bytereplacement repoint arm9 overlay patch asm", Run = OpenHgEnginePatches },
+            new() { Shown = () => DSPRE.HgEngine.HgEngineDev.Enabled, Name = "Battle tests", Keywords = "hg-engine test scenario auto_test battle_tests", Run = OpenBattleTests },
             new() { Name = "hg-engine settings", Keywords = "config.h config.s define toggle option fairy hidden abilities mega", Run = OpenHgEngineSettings },
             new() { Name = "Trainer flag bulk editor", Keywords = "ai double battle bulk", Run = OpenTrainerFlagBulkEditor },
             new() { Name = "Text editor",           Keywords = "string archive message", Run = () => OpenTextEditor() },
             new() { Name = "Script editor",         Run = () => OpenScriptEditor() },
             new() { Name = "Level script editor",   Run = () => OpenLevelScriptEditor() },
-            new() { Name = "Music & battle tables", Keywords = "table conditional music battle effects combo vs poster", Run = OpenTableEditor },
+            new() { Shown = () => !ViewModels.Tools.TableEditorViewModel.OnlyIntroLinks, Name = "Music & battle tables", Keywords = "table conditional music battle effects combo vs poster", Run = OpenTableEditor },
             new() { Name = "Header editor",         Keywords = "map header", Run = () => OpenHeaderEditor() },
             new() { Name = "Camera editor",         Keywords = "angle map header", Run = OpenCameraEditor },
             new() { Name = "Map editor",            Keywords = "3d model buildings", Run = () => OpenMapEditor() },

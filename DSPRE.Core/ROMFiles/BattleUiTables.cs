@@ -23,9 +23,9 @@ namespace DSPRE.ROMFiles
 
         public static IconTables ReadIconTables()
         {
-            byte[] banks = TryRead(GameTable.TypeIconBanks, IconCount);
-            byte[] kinds = TryRead(GameTable.MoveCategoryIconBanks, CategoryCount);
-            byte[] members = TryRead(GameTable.TypeIconMembers, IconCount * 4);
+            byte[] banks = TryRead(RomLocator.Thing.TypeIconBanks, IconCount);
+            byte[] kinds = TryRead(RomLocator.Thing.MoveCategoryIconBanks, CategoryCount);
+            byte[] members = TryRead(RomLocator.Thing.TypeIconMembers, IconCount * 4);
             if (banks == null || kinds == null || members == null) return null;
             if (Array.Exists(banks, b => b >= PaletteBanks) || Array.Exists(kinds, b => b >= PaletteBanks)) return null;
             uint[] ids = new uint[IconCount];
@@ -39,14 +39,14 @@ namespace DSPRE.ROMFiles
             if (type < 0 || type >= TypeCount) return null;
             try
             {
-                TableSpot? spot = SpotOf(GameTable.MoveTypeButtonPalettes);
-                if (spot == null || GameTableFile.WhyNot(GameTable.MoveTypeButtonPalettes, TypeCount * 4) != null) return null;
+                RomLocator.Spot spot = RomLocator.Where(RomLocator.Thing.MoveTypeButtonPalettes);
+                if (spot == null || RomLocator.WhyNot(RomLocator.Thing.MoveTypeButtonPalettes, TypeCount * 4) != null) return null;
                 // A preview must not rewrite the project, so a still-compressed overlay is not unpacked here.
-                if (spot.Value.Overlay >= 0 && OverlayUtils.IsStillCompressed(spot.Value.Overlay)) return null;
+                if (spot.Overlay >= 0 && OverlayUtils.IsStillCompressed(spot.Overlay)) return null;
 
-                byte[] file = File.ReadAllBytes(GameTableFile.PathOf(spot.Value));
-                uint ramBase = spot.Value.Overlay >= 0 ? OverlayUtils.OverlayTable.GetRAMAddress(spot.Value.Overlay) : ARM9.address;
-                uint pointer = BitConverter.ToUInt32(file, spot.Value.Offset + type * 4);
+                byte[] file = File.ReadAllBytes(RomLocator.PathOf(spot));
+                uint ramBase = spot.Overlay >= 0 ? OverlayUtils.OverlayTable.GetRAMAddress(spot.Overlay) : ARM9.address;
+                uint pointer = BitConverter.ToUInt32(file, spot.Offset + type * 4);
                 long at = (long)pointer - ramBase;
                 if ((pointer & 1) != 0 || at < 0 || at + 32 > file.Length) return null;
 
@@ -60,9 +60,9 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        private static byte[] TryRead(GameTable table, int length)
+        private static byte[] TryRead(RomLocator.Thing table, int length)
         {
-            try { return GameTableFile.WhyNot(table, length) == null ? GameTableFile.Read(table, length) : null; }
+            try { return RomLocator.WhyNot(table, length) == null ? RomLocator.Read(table, length) : null; }
             catch (Exception e) when (e is IOException || e is InvalidOperationException || e is UnauthorizedAccessException)
             {
                 return null;

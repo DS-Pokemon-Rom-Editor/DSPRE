@@ -5,7 +5,6 @@ using DSPRE.Avalonia.Data;
 using DSPRE.Avalonia.Gl;
 using DSPRE.HgEngine;
 using DSPRE.ROMFiles;
-using NSMBe4.DSFileSystem;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -26,7 +25,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
     /// icon uses, 1 byte per species in the ARM9 icon-palette table) and battle-sprite coordinates
     /// (/a/1/8/0). Supported on Diamond/Pearl, Platinum, and HeartGold/SoulSilver; see <see cref="IsAvailable"/>.
     /// </summary>
-    public class BattleDisplayEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
+    public class BattleDisplayEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -138,7 +137,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // One dropdown picks a terrain (Gravel/Sand/Lawn/.../Floor); its matching backdrop is
         // auto-paired (BattleGroundRenderer.BackdropForTerrain). Same renderers the Battle Script Editor
         // already uses for its (separate, more granular) Background/Terrain selectors; see
-        // DS_Map/Avalonia/Data/BattleGroundRenderer.cs + BattleBgRenderer.cs. Falls back to the bundled
+        // Data/BattleGroundRenderer.cs + BattleBgRenderer.cs. Falls back to the bundled
         // placeholder art (HasArenaGraphics=false) if the ROM/NARC is unavailable or decoding fails, so
         // the scene always has a floor. Not saved anywhere, purely how the preview looks.
         private BattleGroundRenderer _groundRenderer;
@@ -179,9 +178,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 bool ok = mine?.Rgba != null && enemy?.Rgba != null && backdropImg?.Rgba != null;
                 if (ok)
                 {
-                    ArenaGroundMine = RgbaToBitmap(mine.Rgba, mine.Width, mine.Height);
+                    ArenaGroundMine = ImageConverter.FromRgba(mine.Rgba, mine.Width, mine.Height);
                     ArenaGroundMineLeft = mine.Left; ArenaGroundMineTop = mine.Top;
-                    ArenaGroundEnemy = RgbaToBitmap(enemy.Rgba, enemy.Width, enemy.Height);
+                    ArenaGroundEnemy = ImageConverter.FromRgba(enemy.Rgba, enemy.Width, enemy.Height);
                     ArenaGroundEnemyLeft = enemy.Left; ArenaGroundEnemyTop = enemy.Top;
                     // The shared backdrop tilemap can be taller than the 256×192 scene (some are a stacked
                     // multi-band scrolling texture), so crop to the top-left 256×192 instead of stretching the
@@ -189,7 +188,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     // (mirrors BattleScriptEditorViewModel.BgToBackdrop, same underlying data).
                     // Two copies side by side so the intro scroll wraps without a seam.
                     _backdropWidth = Math.Max(256, backdropImg.Width);
-                    ArenaBackdrop = RgbaToBitmap(TileBackdropRgba(backdropImg.Rgba, backdropImg.Width, backdropImg.Height, _backdropWidth), _backdropWidth * 2, 192);
+                    ArenaBackdrop = ImageConverter.FromRgba(TileBackdropRgba(backdropImg.Rgba, backdropImg.Width, backdropImg.Height, _backdropWidth), _backdropWidth * 2, 192);
                     OnPropertyChanged(nameof(BackdropX));
                 }
                 HasArenaGraphics = ok;
@@ -321,7 +320,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private static Bitmap GaugeToBitmap(BattleGroundRenderer.GroundImage g)
         {
             if (g?.Rgba == null) return null;
-            return RgbaToBitmap(g.Rgba, g.Width, g.Height);
+            return ImageConverter.FromRgba(g.Rgba, g.Width, g.Height);
         }
 
         // RGBA w×h (battle BG, 512×256) -> two copies of its top width×192 side by side, black-padded if smaller.
@@ -338,24 +337,6 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     outp[di] = rgba[si]; outp[di + 1] = rgba[si + 1]; outp[di + 2] = rgba[si + 2]; outp[di + 3] = 255;
                 }
             return outp;
-        }
-
-        // Straight RGBA byte[] -> an unpremultiplied BGRA Avalonia bitmap (mirrors
-        // BattleScriptEditorViewModel.GaugeToBitmap: same conversion, different scene).
-        private static Bitmap RgbaToBitmap(byte[] rgba, int w, int h)
-        {
-            if (rgba == null || w <= 0 || h <= 0) return null;
-            WriteableBitmap wb = new WriteableBitmap(new global::Avalonia.PixelSize(w, h), new global::Avalonia.Vector(96, 96),
-                                         global::Avalonia.Platform.PixelFormat.Bgra8888, global::Avalonia.Platform.AlphaFormat.Unpremul);
-            byte[] bgra = new byte[w * h * 4];
-            for (int i = 0; i < w * h * 4; i += 4) { bgra[i] = rgba[i + 2]; bgra[i + 1] = rgba[i + 1]; bgra[i + 2] = rgba[i]; bgra[i + 3] = rgba[i + 3]; }
-            using (ILockedFramebuffer fb = wb.Lock())
-            {
-                int rb = fb.RowBytes;
-                if (rb == w * 4) System.Runtime.InteropServices.Marshal.Copy(bgra, 0, fb.Address, bgra.Length);
-                else for (int y = 0; y < h; y++) System.Runtime.InteropServices.Marshal.Copy(bgra, y * w * 4, fb.Address + y * rb, w * 4);
-            }
-            return wb;
         }
 
         // ── Battle mock (shows the mon vs itself: enemy = front sprite, player = back sprite) ──────
@@ -492,8 +473,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             List<int> visited = ActivePatternFrames(front);
             if (!visited.Contains(blank)) return "only has one real frame";
             if (real >= 0 && visited.Contains(real))
-                return "animation flickers to a blank frame, may be intentional";
-            return "animation never shows a real frame, likely a mistake";
+                return "animation flickers to a blank frame, which may be intentional";
+            return "animation never shows a real frame, which is likely a mistake";
         }
 
         public bool EnemyFrameWarning => FrameWarning(true, ShowFemale);
@@ -2145,7 +2126,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // ── IEditorWithUnsavedChanges ─────────────────────────────────────────
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty;
-        public string UnsavedChangesDescription => $"Battle Display (Mon {_currentId})";
+        public string UnsavedChangesDescription => $"Battle display of {RomInfo.PokemonName(_currentId)}";
         public void SaveChanges() => Save();
         public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); _src?.Invalidate(); _formHeightNarc?.Invalidate(); _animNarc?.Invalidate(); if (_currentId >= 0) LoadMon(_currentId); }   // drop in-memory edits → reload from disk
         private void SetDirty()
@@ -2214,6 +2195,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public BattleDisplayEditorViewModel(PokemonSpriteEditorViewModel sprites)
         {
             _sprites = sprites;
+            _picturesSaved = AppEvents.WhenSaved(() => _gfx?.ForgetPictures(), SendOutGraphics.PictureArchives);
             if (_sprites != null)
                 _sprites.PropertyChanged += (_, e) =>
                 {
@@ -2243,7 +2225,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         /// <summary>Stops the preview timer (e.g. when this VM is used only to compute sprite positions elsewhere).</summary>
-        public void Detach() => StopPlayback();
+        public void Detach() { StopPlayback(); _picturesSaved?.Dispose(); }
+
+        // A trainer or ball saved in another editor shows from the next frame on.
+        private readonly IDisposable _picturesSaved;
 
         public void LoadMon(int id)
         {
@@ -2343,7 +2328,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (error != null)
             {
                 AppLogger.Error("Battle Display save failed: " + error);
-                _ = DSPRE.Avalonia.DialogHelper.ShowError("The Battle Display tab could not be saved: " + error, "Save Error");
+                _ = DSPRE.Avalonia.DialogHelper.ShowError("The Battle Display tab could not be saved: " + error, "Pokémon editor error");
                 return;
             }
             _savedPartyPaletteIndex = _partyPaletteIndex;

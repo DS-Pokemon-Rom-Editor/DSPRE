@@ -13,7 +13,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Items
 {
     /// <summary>What the two Battle Point exchange counters sell and for how many points.</summary>
-    public class BpShopEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
+    public class BpShopEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
@@ -41,6 +41,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public BpShopEditorViewModel(bool load)
         {
             if (!load) return;
+            AppEvents.RomPatchStateChanged += OnRomPatchStateChanged;
             RefreshNames();
             _shop = BpShopData.Load();
             _saved = _shop.Snapshot();
@@ -116,10 +117,13 @@ namespace DSPRE.Avalonia.ViewModels.Items
         {
             if (_expansionOffered || _shop?.NeedsExpansion != true) return;
             _expansionOffered = true;
-            await PatchHandover.OfferAsync("bpShopExpanded", "Expand the Battle Point lists", "A longer counter list", "Battle Point Shop");
+            await PatchHandover.OfferAsync("bpShopExpanded", "A longer counter list", "Battle Point Shop");
         }
 
         /// <summary>After the toolbox moved the lists, follows them to their new place and keeps the entries being edited.</summary>
+        private void OnRomPatchStateChanged(object sender, System.EventArgs e) => OnPatchStateChanged();
+        public void Detach() => AppEvents.RomPatchStateChanged -= OnRomPatchStateChanged;
+
         public void OnPatchStateChanged()
         {
             if (_shop == null || !_shop.IsPlatinum) return;
@@ -176,7 +180,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public string LeftHeader => _shop == null ? "Item counter" : $"Item counter ({Left.Count})";
         public string RightHeader => _shop == null ? "TM counter" : $"TM counter ({Right.Count})";
 
-        public string Status
+        public string StatusText
         {
             get
             {
@@ -196,7 +200,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         private void Changed()
         {
-            foreach (string n in new[] { nameof(Problem), nameof(HasProblem), nameof(Warning), nameof(HasWarning), nameof(Status),
+            foreach (string n in new[] { nameof(Problem), nameof(HasProblem), nameof(Warning), nameof(HasWarning), nameof(StatusText),
                 nameof(LeftHeader), nameof(RightHeader), nameof(HasUnsavedChanges) })
                 Raise(n);
             _undo?.Record();
@@ -212,14 +216,14 @@ namespace DSPRE.Avalonia.ViewModels.Items
             if (_shop == null) return true;
             if (_shop.NeedsExpansion)
             {
-                await PatchHandover.OfferAsync("bpShopExpanded", "Expand the Battle Point lists", "A longer counter list", "Battle Point Shop");
+                await PatchHandover.OfferAsync("bpShopExpanded", "A longer counter list", "Battle Point Shop");
                 return false;
             }
-            if (HasProblem) { await DialogHelper.ShowError(Problem, "Battle Point Shop"); return false; }
+            if (HasProblem) { await DialogHelper.ShowError(Problem, "Battle Point shop error"); return false; }
             try { _shop.Save(ItemNames.Count); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException || e is InvalidDataException)
             {
-                await DialogHelper.ShowError("The Battle Point shop was not saved:\n" + e.Message, "Battle Point Shop");
+                await DialogHelper.ShowError("The Battle Point shop was not saved:\n" + e.Message, "Battle Point shop error");
                 return false;
             }
             _saved = _shop.Snapshot();

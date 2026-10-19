@@ -138,7 +138,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         // ── IEditorWithUnsavedChanges ──
         public bool HasUnsavedChanges => _dirtyRows.Count > 0;
-        public string UnsavedChangesDescription => "Pokégear Rematch Editor";
+        public string UnsavedChangesDescription => "Pokégear rematches";
         public void SaveChanges() => SaveAll();
         public void DiscardChanges()
         {

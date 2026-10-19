@@ -6,7 +6,6 @@ using global::Avalonia.Controls;
 using global::Avalonia.Platform.Storage;
 using LibNDSFormats.NSBMD;
 using LibNDSFormats.NSBTX;
-using NSMBe4.DSFileSystem;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -29,7 +28,7 @@ namespace DSPRE.Avalonia.ViewModels.World
     /// events, and save / import / export. The 3D map overlay with event markers and
     /// click-to-place are deferred (the renderer foundation is in place for later).
     /// </summary>
-    public class EventEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
+    public class EventEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         /// <summary>
         /// Whether the parts of this editor that are still being tried out are shown: walking the map,
@@ -248,6 +247,12 @@ namespace DSPRE.Avalonia.ViewModels.World
         public global::Avalonia.Media.Imaging.Bitmap OwSpritePreview { get => _owSpritePreview; private set => Set(ref _owSpritePreview, value); }
         public bool HasOwSpritePreview => _owSpritePreview != null;
 
+        /// <summary>Whether a script picks this overworld's sprite at run time, so the preview is only a stand-in.</summary>
+        public bool IsDynamicSprite => _ow != null && IsVariableOverworld(_ow.overlayTableEntry);
+        public string DynamicSpriteTip => IsDynamicSprite
+            ? $"Dynamic: a script picks this sprite while playing, from variable 0x{0x4020 + _ow.overlayTableEntry - FirstVariableOverworld:X4}. Shown as a stand-in."
+            : null;
+
         /// <summary>The model shown in the sprite box for an entry the game draws as a model, or null.</summary>
         public NsbmdRenderModel OwModelPreview { get; private set; }
         public bool HasOwModelPreview => OwModelPreview != null;
@@ -318,7 +323,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             OnPropertyChanged(nameof(OwHasTypeNote)); OnPropertyChanged(nameof(OwParam1Label));
             OnPropertyChanged(nameof(OwParam1Visible)); OnPropertyChanged(nameof(OwTalkRunsNothing));
             OnPropertyChanged(nameof(OwParam0Label)); OnPropertyChanged(nameof(OwParam0Visible));
-            OnPropertyChanged(nameof(OwScriptGenericWarningVisible)); OnPropertyChanged(nameof(OwScriptCommonInfo)); OnPropertyChanged(nameof(OwScriptHasCommonInfo));
+            OnPropertyChanged(nameof(OwScriptGenericWarningVisible)); OnPropertyChanged(nameof(OwScriptCommonInfo)); OnPropertyChanged(nameof(OwScriptHasCommonInfo)); OnPropertyChanged(nameof(OwScriptCommonName));
         }
 
         public decimal OwParam1
@@ -434,7 +439,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             OnPropertyChanged(nameof(OwScriptEnabled));
             OnPropertyChanged(nameof(OwScriptSectionVisible));
             OnPropertyChanged(nameof(OwScriptCommonInfo));
-            OnPropertyChanged(nameof(OwScriptHasCommonInfo));
+            OnPropertyChanged(nameof(OwScriptHasCommonInfo)); OnPropertyChanged(nameof(OwScriptCommonName));
             OnPropertyChanged(nameof(OwScriptGenericWarningVisible));
         }
 
@@ -572,10 +577,13 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         /// <summary>For a standalone window closing; the Maps workspace's instance keeps listening while its tab is hidden.</summary>
+        void IDetachable.Detach() { Detach(); DetachSaves(); }
+
         public void DetachSaves()
         {
             AppEvents.EventFileSaved -= OnSavedElsewhere;
             AppEvents.MapSaved -= OnMapSavedElsewhere;
+            _spritesSaved?.Dispose();
         }
 
         private bool _itemsStandardized;
@@ -770,7 +778,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (Set(ref _spScript, value) && !_suppress && _spawn != null)
                 {
                     _spawn.scriptNumber = (ushort)value; Dirty();
-                    OnPropertyChanged(nameof(SpScriptIndex)); OnPropertyChanged(nameof(SpScriptIndexOutOfRange)); OnPropertyChanged(nameof(SpScriptCommonInfo)); OnPropertyChanged(nameof(SpScriptHasCommonInfo)); OnPropertyChanged(nameof(SpScriptGenericWarningVisible)); RaiseSpHidden();
+                    OnPropertyChanged(nameof(SpScriptIndex)); OnPropertyChanged(nameof(SpScriptIndexOutOfRange)); OnPropertyChanged(nameof(SpScriptCommonInfo)); OnPropertyChanged(nameof(SpScriptHasCommonInfo)); OnPropertyChanged(nameof(SpScriptCommonName)); OnPropertyChanged(nameof(SpScriptGenericWarningVisible)); RaiseSpHidden();
                 }
             }
         }
@@ -860,7 +868,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     _ow.scriptNumber = (ushort)value; Dirty();
                     OnPropertyChanged(nameof(OwScriptIndex)); OnPropertyChanged(nameof(OwScriptIndexOutOfRange));
                     OnPropertyChanged(nameof(OwScriptCommonInfo));
-            OnPropertyChanged(nameof(OwScriptHasCommonInfo));
+            OnPropertyChanged(nameof(OwScriptHasCommonInfo)); OnPropertyChanged(nameof(OwScriptCommonName));
             OnPropertyChanged(nameof(OwScriptGenericWarningVisible));
                 }
             }
@@ -882,16 +890,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 if (_ow == null || _owKind != OwKind.Normal || OwTalkRunsNothing || !OwScriptIndexOutOfRange) return null;
 
-                CommonScriptId.Result result = CommonScriptId.Resolve(RomInfo.gameFamily, (int)_owScript);
-                switch (result.Kind)
-                {
-                    case CommonScriptId.Kind.Resolved:
-                        return $"This is a Common Script: Script Archive {result.ScriptArchiveId}, Script {result.ManualUserId} (Text Archive {result.TextArchiveId}).";
-                    case CommonScriptId.Kind.Discrepancy:
-                        return $"A discrepancy exists in the assigned script file for this range ({result.RangeLower}-{result.RangeUpper}) of Common Scripts. It is one of the following files: {string.Join(", ", result.CandidateArchives)}.";
-                    default:
-                        return null;
-                }
+                return CommonScriptInfo((int)_owScript);
             }
         }
 
@@ -900,15 +899,11 @@ namespace DSPRE.Avalonia.ViewModels.World
         private static string CommonScriptInfo(int scriptNumber)
         {
             CommonScriptId.Result result = CommonScriptId.Resolve(RomInfo.gameFamily, scriptNumber);
-            switch (result.Kind)
-            {
-                case CommonScriptId.Kind.Resolved:
-                    return $"This is a Common Script: Script Archive {result.ScriptArchiveId}, Script {result.ManualUserId} (Text Archive {result.TextArchiveId}).";
-                case CommonScriptId.Kind.Discrepancy:
-                    return $"A discrepancy exists in the assigned script file for this range ({result.RangeLower}-{result.RangeUpper}) of Common Scripts. It is one of the following files: {string.Join(", ", result.CandidateArchives)}.";
-                default:
-                    return null;
-            }
+            if (result.Kind != CommonScriptId.Kind.Resolved) return null;
+            // Unnamed, the range is the card's title, so this line only says where the script is.
+            return CommonScriptLabels.Of(scriptNumber) != null
+                ? result.Where
+                : $"Script file {result.ScriptArchiveId}, script {result.ManualUserId}";
         }
 
         public string TrScriptCommonInfo => _trig != null && TrScriptIndexOutOfRange ? CommonScriptInfo((int)_trScript) : null;
@@ -948,6 +943,25 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void GoToSpawnableScript() { if (_spawn != null) GoToScript(_spawn.scriptNumber); }
 
         public bool OwScriptHasCommonInfo => !string.IsNullOrEmpty(OwScriptCommonInfo);
+
+        public string OwScriptCommonName => OwScriptHasCommonInfo ? CommonScriptName((int)_owScript) : null;
+        public string TrScriptCommonName => TrScriptHasCommonInfo ? CommonScriptName((int)_trScript) : null;
+        public string SpScriptCommonName => SpScriptHasCommonInfo ? CommonScriptName((int)_spScript) : null;
+
+        private static string CommonScriptName(int scriptNumber) =>
+            CommonScriptLabels.Of(scriptNumber) ?? CommonScriptId.Resolve(RomInfo.gameFamily, scriptNumber).Name;
+
+        /// <summary>The script number of the overworld (0), trigger (1) or spawnable (2) on show.</summary>
+        public int ShownScript(int kind) => kind switch { 0 => (int)_owScript, 1 => (int)_trScript, _ => (int)_spScript };
+
+        /// <summary>Names a shared script in this project's labels.</summary>
+        public void RenameCommonScript(int kind, string name)
+        {
+            CommonScriptLabels.Rename(ShownScript(kind), name);
+            OnPropertyChanged(nameof(OwScriptCommonName)); OnPropertyChanged(nameof(OwScriptCommonInfo));
+            OnPropertyChanged(nameof(TrScriptCommonName)); OnPropertyChanged(nameof(TrScriptCommonInfo));
+            OnPropertyChanged(nameof(SpScriptCommonName)); OnPropertyChanged(nameof(SpScriptCommonInfo));
+        }
         public bool OwScriptGenericWarningVisible => !OwTalkRunsNothing && OwScriptIndexOutOfRange && !OwScriptHasCommonInfo;
         public decimal OwOrientation
         {
@@ -1034,6 +1048,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             OwSpritePreview = bmp;
             OnPropertyChanged(nameof(HasOwSpritePreview));
+            OnPropertyChanged(nameof(IsDynamicSprite));
+            OnPropertyChanged(nameof(DynamicSpriteTip));
         }
 
         // ── Warp fields ───────────────────────────────────────────────────────────────
@@ -1063,7 +1079,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (Set(ref _trScript, value) && !_suppress && _trig != null)
                 {
                     _trig.scriptNumber = (ushort)value; Dirty();
-                    OnPropertyChanged(nameof(TrScriptIndex)); OnPropertyChanged(nameof(TrScriptIndexOutOfRange)); OnPropertyChanged(nameof(TrScriptCommonInfo)); OnPropertyChanged(nameof(TrScriptHasCommonInfo)); OnPropertyChanged(nameof(TrScriptGenericWarningVisible));
+                    OnPropertyChanged(nameof(TrScriptIndex)); OnPropertyChanged(nameof(TrScriptIndexOutOfRange)); OnPropertyChanged(nameof(TrScriptCommonInfo)); OnPropertyChanged(nameof(TrScriptHasCommonInfo)); OnPropertyChanged(nameof(TrScriptCommonName)); OnPropertyChanged(nameof(TrScriptGenericWarningVisible));
                 }
             }
         }
@@ -1104,10 +1120,29 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         // ── Dirty tracking ───────────────────────────────────────────────────────────
         private bool _dirty;
-        public bool HasUnsavedChanges => _dirty;
-        public string UnsavedChangesDescription => $"Event file {_selectedIndex}";
+        public bool HasUnsavedChanges => _dirty || _archive.IsDirty;
+        public string UnsavedChangesDescription => DSPRE.Avalonia.Data.StagedArchive.Join($"Event file {_selectedIndex}", _dirty, _archive.Describe("event file", "event files"));
         public void SaveChanges() => Save();
-        public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); if (_selectedIndex >= 0) LoadFile(_selectedIndex); }
+        public void DiscardChanges()
+        {
+            // Added and removed files go with the open file's edits.
+            _dirty = false;
+            _archive.Discard();
+            ListEventFiles();
+            if (_selectedIndex >= EventNames.Count) { _selectedIndex = EventNames.Count - 1; OnPropertyChanged(nameof(SelectedEventIndex)); }
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            if (_selectedIndex >= 0) LoadFile(_selectedIndex);
+        }
+
+        // Added, removed and saved event files wait here until Save.
+        private readonly StagedArchive _archive = new(DirNames.eventFiles);
+
+        private void ListEventFiles()
+        {
+            int count = _archive.Count;
+            EventNames.Clear();
+            for (int i = 0; i < count; i++) EventNames.Add("Event File " + i);
+        }
         private void Dirty() { _undo?.Record(); if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         // ── Undo / redo ────────────────────────────────────────────────────────────
@@ -1184,6 +1219,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             // the habit the prompt exists to make unnecessary.
             if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "event file")) return;
             SetClean();
+            // Discarding can drop the file being switched to when it was added and not saved.
+            if (requested >= EventNames.Count) requested = EventNames.Count - 1;
             if (Set(ref _selectedIndex, requested, nameof(SelectedEventIndex))) LoadFile(requested);
         }
 
@@ -1237,7 +1274,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             AppEvents.EventFileSaved += OnSavedElsewhere;
             AppEvents.MapSaved += OnMapSavedElsewhere;
+            _spritesSaved = AppEvents.WhenSaved(() => { UpdateOwSpritePreview(); RefreshMarkers(); }, DirNames.OWSprites);
         }
+
+        private readonly IDisposable _spritesSaved;
 
         // A saved map can move buildings and terrain under the events, so the scene is drawn again.
         private void OnMapSavedElsewhere(object sender, int mapIndex)
@@ -1263,7 +1303,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private async Task OfferReloadAsync(int id)
         {
             bool reload = await DialogHelper.AskYesNo(
-                $"Event file {id} was saved in another window.\n\nLoad it and drop the changes made here?", "Event File Changed", _owner);
+                $"Event file {id} was saved in another window.\n\nLoad it and drop the changes made here?", "Event file changed", _owner);
             if (id != _selectedIndex) return;
             if (!reload) { StatusText = $"Event file {id} was saved in another window. Saving here will overwrite it."; return; }
             LoadFile(id);
@@ -1294,9 +1334,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                     foreach (uint key in overworldTableKeys) OwSpriteEntries.Add(OverworldLabels.Of(key));
                 PopulateOwEventTypes();
                 PopulateOwTrainerAndItemEntries();
-                EventNames.Clear();
-                int count = Filesystem.GetEventFileCount();
-                for (int i = 0; i < count; i++) EventNames.Add("Event File " + i);
+                ListEventFiles();
+                int count = EventNames.Count;
                 StatusText = $"{count} event files.";
                 if (count > 0) SelectedEventIndex = Math.Min(Math.Max(0, InitialIndex), count - 1);
                 if (InitialOverworldIndex >= 0 && InitialOverworldIndex < _file?.overworlds.Count)
@@ -1307,7 +1346,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowError($"Failed to set up Event Editor:\n{ex.Message}", "Event Editor");
+                await DialogHelper.ShowError($"Failed to set up Event Editor:\n{ex.Message}", "Event editor error");
             }
         }
 
@@ -1317,7 +1356,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 // Read on every file load, so edits saved in the item tables show up here.
                 PopulateHiddenItemEntries();
-                _file = new EventFile(index);
+                using (MemoryStream ms = new MemoryStream(_archive.Read(index) ?? throw new FileNotFoundException($"Event file {index} is missing.")))
+                    _file = new EventFile(ms) { ID = index };
                 ClearSelection();
                 RefreshLists();
                 ResolveMatrixForFile(index);
@@ -1326,7 +1366,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 StatusText = $"Loaded event file {index}.";
                 OnPropertyChanged(nameof(UnsavedChangesDescription));
             }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Failed to load event file {index}:\n{ex.Message}", "Event Editor"); }
+            catch (Exception ex) { _ = DialogHelper.ShowError($"Failed to load event file {index}:\n{ex.Message}", "Event editor error"); }
         }
 
         private void RefreshLists()
@@ -1361,7 +1401,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             LoadPosition(_spawn);
             SpScript = _spawn.scriptNumber; SpType = _spawn.type; SpDir = _spawn.dir;
             _suppress = false;
-            OnPropertyChanged(nameof(SpScriptIndex)); OnPropertyChanged(nameof(SpScriptIndexOutOfRange)); OnPropertyChanged(nameof(SpScriptCommonInfo)); OnPropertyChanged(nameof(SpScriptHasCommonInfo)); OnPropertyChanged(nameof(SpScriptGenericWarningVisible)); RaiseSpHidden();
+            OnPropertyChanged(nameof(SpScriptIndex)); OnPropertyChanged(nameof(SpScriptIndexOutOfRange)); OnPropertyChanged(nameof(SpScriptCommonInfo)); OnPropertyChanged(nameof(SpScriptHasCommonInfo)); OnPropertyChanged(nameof(SpScriptCommonName)); OnPropertyChanged(nameof(SpScriptGenericWarningVisible)); RaiseSpHidden();
             RefreshMarkers();
         }
 
@@ -1436,7 +1476,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             TrScript = _trig.scriptNumber; TrWidth = _trig.widthX; TrHeight = _trig.heightY;
             TrVarValue = _trig.expectedVarValue; TrVar = _trig.variableWatched;
             _suppress = false;
-            OnPropertyChanged(nameof(TrScriptIndex)); OnPropertyChanged(nameof(TrScriptIndexOutOfRange)); OnPropertyChanged(nameof(TrScriptCommonInfo)); OnPropertyChanged(nameof(TrScriptHasCommonInfo)); OnPropertyChanged(nameof(TrScriptGenericWarningVisible));
+            OnPropertyChanged(nameof(TrScriptIndex)); OnPropertyChanged(nameof(TrScriptIndexOutOfRange)); OnPropertyChanged(nameof(TrScriptCommonInfo)); OnPropertyChanged(nameof(TrScriptHasCommonInfo)); OnPropertyChanged(nameof(TrScriptCommonName)); OnPropertyChanged(nameof(TrScriptGenericWarningVisible));
             RefreshMarkers();
         }
 
@@ -1505,12 +1545,13 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             try
             {
-                int newId = NewProjectFiles.AddEventFile();
+                int newId = _archive.Add(new EventFile().ToByteArray());
                 EventNames.Add("Event File " + newId);
                 SelectedEventIndex = newId;
+                OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = $"Added event file {newId}.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't add event file:\n{ex.Message}", "Event Editor"); }
+            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't add event file:\n{ex.Message}", "Event editor error"); }
         }
 
         public async Task RemoveLastEventFileAsync()
@@ -1523,18 +1564,19 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (uses.Count > 0)
             {
                 await DialogHelper.ShowInfo($"Event file {last} stays: these headers still use it." + Environment.NewLine + HeaderLinks.Describe(uses)
-                    + Environment.NewLine + "Point them at another event file first.", "Event Editor");
+                    + Environment.NewLine + "Point them at another event file first.", "Event editor");
                 return;
             }
-            if (!await DialogHelper.AskYesNo($"Delete the last event file ({last})?", "Confirm deletion")) return;
+            if (!await DialogHelper.AskYesNo($"Delete the last event file ({last})?", "Delete event file?")) return;
             try
             {
-                System.IO.File.Delete(Path.Combine(gameDirs[DirNames.eventFiles].unpackedDir, last.ToString("D4")));
                 if (_selectedIndex == last) SelectedEventIndex = last - 1;
+                _archive.RemoveLast();
                 EventNames.RemoveAt(last);
+                OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = $"Removed event file {last}.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't remove event file:\n{ex.Message}", "Event Editor"); }
+            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't remove event file:\n{ex.Message}", "Event editor error"); }
         }
 
         // ── 3D map view + event markers ─────────────────────────────────────────────────
@@ -1675,11 +1717,11 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
                 catch (Exception ex) { AppLogger.Error("PopulateAvailableScripts: " + ex.Message); }
             }
-            OnPropertyChanged(nameof(TrScriptIndex)); OnPropertyChanged(nameof(TrScriptIndexOutOfRange)); OnPropertyChanged(nameof(TrScriptCommonInfo)); OnPropertyChanged(nameof(TrScriptHasCommonInfo)); OnPropertyChanged(nameof(TrScriptGenericWarningVisible));
-            OnPropertyChanged(nameof(SpScriptIndex)); OnPropertyChanged(nameof(SpScriptIndexOutOfRange)); OnPropertyChanged(nameof(SpScriptCommonInfo)); OnPropertyChanged(nameof(SpScriptHasCommonInfo)); OnPropertyChanged(nameof(SpScriptGenericWarningVisible)); RaiseSpHidden();
+            OnPropertyChanged(nameof(TrScriptIndex)); OnPropertyChanged(nameof(TrScriptIndexOutOfRange)); OnPropertyChanged(nameof(TrScriptCommonInfo)); OnPropertyChanged(nameof(TrScriptHasCommonInfo)); OnPropertyChanged(nameof(TrScriptCommonName)); OnPropertyChanged(nameof(TrScriptGenericWarningVisible));
+            OnPropertyChanged(nameof(SpScriptIndex)); OnPropertyChanged(nameof(SpScriptIndexOutOfRange)); OnPropertyChanged(nameof(SpScriptCommonInfo)); OnPropertyChanged(nameof(SpScriptHasCommonInfo)); OnPropertyChanged(nameof(SpScriptCommonName)); OnPropertyChanged(nameof(SpScriptGenericWarningVisible)); RaiseSpHidden();
             OnPropertyChanged(nameof(OwScriptIndex)); OnPropertyChanged(nameof(OwScriptIndexOutOfRange));
             OnPropertyChanged(nameof(OwScriptCommonInfo));
-            OnPropertyChanged(nameof(OwScriptHasCommonInfo));
+            OnPropertyChanged(nameof(OwScriptHasCommonInfo)); OnPropertyChanged(nameof(OwScriptCommonName));
             OnPropertyChanged(nameof(OwScriptGenericWarningVisible));
         }
 
@@ -1889,6 +1931,13 @@ namespace DSPRE.Avalonia.ViewModels.World
                         if (pix != null && pix.Width > 0 && pix.Height > 0)
                         {
                             float halfH = spriteH * 0.5f;
+                            // A script picks a dynamic overworld's sprite while playing; the outline says the picture is a stand-in.
+                            if (IsVariableOverworld(ow.overlayTableEntry))
+                            {
+                                int plain = pix.Height;
+                                pix = OverworldSprites.Outlined(pix);
+                                halfH *= pix.Height / (float)plain;
+                            }
                             float halfW = halfH * (pix.Width / (float)pix.Height);
                             sprites.Add(new NsbmdGlControl.SpriteInstance
                             {
@@ -2102,7 +2151,6 @@ namespace DSPRE.Avalonia.ViewModels.World
                 // separate files for common scripts, trainers, hidden items and the rest, and read the id
                 // relative to where that range starts (SetScriptDataSub in script.c).
                 CommonScriptId.Result common = CommonScriptId.Resolve(gameFamily, scriptNumber);
-                if (common.Kind == CommonScriptId.Kind.Discrepancy) return null;
 
                 int scriptArchive, textArchive;
                 if (common.Kind == CommonScriptId.Kind.Resolved)
@@ -2200,9 +2248,6 @@ namespace DSPRE.Avalonia.ViewModels.World
                 case CommonScriptId.Kind.Resolved:
                     return $"Script {scriptNumber} lives in shared script file {common.ScriptArchiveId}, "
                          + $"as its script {common.ManualUserId}.";
-                case CommonScriptId.Kind.Discrepancy:
-                    return $"Script {scriptNumber} is in a range whose file DSPRE has conflicting records for "
-                         + $"({string.Join(", ", common.CandidateArchives)}), so it cannot be read.";
                 default:
                     return null;
             }
@@ -2448,8 +2493,9 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void Save()
         {
             if (_file == null || _selectedIndex < 0) return;
-            _file.SaveToFileDefaultDir(_selectedIndex, showSuccessMessage: false);
+            _archive.Save(_selectedIndex, _file.ToByteArray());
             SetClean();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
             SaveNotice.Saved(UnsavedChangesDescription);
             StatusText = $"Saved event file {_selectedIndex}.";
             AppEvents.RaiseEventFileSaved(this, _selectedIndex);
@@ -2469,7 +2515,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             try { using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read)) source = new EventFile(fs); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException)
             {
-                await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error");
+                await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Event editor error");
                 return;
             }
 
@@ -2502,7 +2548,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             foreach (int i in choice.Spawnables) _file.spawnables.Add(source.spawnables[i]);
             RefreshLists(); Dirty(); RefreshMarkers();
             int count = choice.Overworlds.Length + choice.Warps.Length + choice.Triggers.Length + choice.Spawnables.Length;
-            StatusText = $"Imported {count} events (unsaved)." + (renumbered > 0 ? $" {renumbered} overworlds got a new ID." : "");
+            SaveNotice.Imported($"{count} events", path);
+            if (renumbered > 0) StatusText = $"{renumbered} overworlds got a new ID.";
         }
 
         private static int EventCount(EventFile f) =>
@@ -2595,8 +2642,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             FilePickerFileType filter = new FilePickerFileType("Event file") { Patterns = new[] { "*.ev" } };
             string path = await DialogHelper.SaveFile(_owner, "Export event file", new[] { filter }, $"event_{_selectedIndex:D4}.ev");
             if (path == null) return;
-            try { System.IO.File.WriteAllBytes(path, _file.ToByteArray()); StatusText = "Exported."; }
-            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
+            try { PlainFiles.WriteBytes(path, _file.ToByteArray()); SaveNotice.Exported(path); }
+            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Event editor error"); }
         }
     }
 

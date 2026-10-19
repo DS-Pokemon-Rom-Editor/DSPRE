@@ -288,7 +288,6 @@ namespace DSPRE.ROMFiles
             bool genderHookMarker = HasThumbVeneer(RomInfo.trainerClassMetadataHooks.Gender, 0x00, 0x49, 0x08, 0x47);
             bool eyeContactHookMarker = HasThumbVeneer(RomInfo.trainerClassMetadataHooks.EyeContact, 0x00, 0x4A, 0x10, 0x47);
 
-            RomInfo.SetBattleEffectsData();
             bool retiredTrainerTableMarker = TryReadByte(RomInfo.vsTrainerEntryTableOffsetToSizeLimiter, out byte trainerCount) &&
                 TryReadUInt32(RomInfo.vsTrainerEntryTableOffsetToRAMAddress, out uint trainerPointer) &&
                 trainerCount == 0 && trainerPointer == 0;
@@ -606,7 +605,7 @@ namespace DSPRE.ROMFiles
             error = null;
             try
             {
-                File.WriteAllBytes(GetRecordPath(classId), record);
+                ArchiveMembers.Put(DirNames.trainerClassMetadata, classId, record);
                 return true;
             }
             catch (Exception ex)

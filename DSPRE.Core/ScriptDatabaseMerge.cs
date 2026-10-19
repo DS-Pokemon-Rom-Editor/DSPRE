@@ -65,9 +65,9 @@ namespace DSPRE
             if (updated > 0)
             {
                 JsonSerializerOptions options = new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
-                File.WriteAllText(projectCopy, project.ToJsonString(options));
+                PlainFiles.WriteText(projectCopy, project.ToJsonString(options));
             }
-            File.WriteAllText(marker, sharedHash);
+            PlainFiles.WriteText(marker, sharedHash);
             return updated;
         }
 

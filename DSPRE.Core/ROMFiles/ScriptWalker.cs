@@ -995,17 +995,7 @@ namespace DSPRE.ROMFiles
             catch { return id.ToString(); }
         }
 
-        /// <summary>A species by name where the ROM knows one, so a cry reads as more than a number.</summary>
-        private static string PokemonName(int species)
-        {
-            try
-            {
-                string[] names = RomInfo.GetPokemonNames();
-                return names != null && species >= 0 && species < names.Length && !string.IsNullOrWhiteSpace(names[species])
-                    ? names[species] : $"Pokémon {species}";
-            }
-            catch { return $"Pokémon {species}"; }
-        }
+        private static string PokemonName(int species) => RomInfo.PokemonName(species);
 
         private static string DescribeEffect(string name, ScriptCommand cmd, ScriptEffect e)
         {

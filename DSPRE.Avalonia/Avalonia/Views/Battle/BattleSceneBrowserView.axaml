@@ -38,7 +38,7 @@
       <StackPanel Spacing="4">
         <TextBlock Text="{Binding FoundSummary}" FontSize="12" TextWrapping="Wrap"
                    Foreground="{DynamicResource Editor.Subtle}"/>
-        <TextBlock Text="{Binding Status}" FontSize="11" TextWrapping="Wrap"
+        <TextBlock Text="{Binding StatusText}" FontSize="11" TextWrapping="Wrap"
                    Foreground="{DynamicResource Editor.Subtle}"/>
       </StackPanel>
     </Border>

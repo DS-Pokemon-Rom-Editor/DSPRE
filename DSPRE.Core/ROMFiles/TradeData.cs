@@ -141,7 +141,7 @@ namespace DSPRE.ROMFiles
 
         public static int GetTradeCount()
         {
-            return Directory.GetFiles(RomInfo.gameDirs[DirNames.tradeData].unpackedDir, "*.*").Length;
+            return NarcAPI.Narc.MemberCount(RomInfo.gameDirs[DirNames.tradeData].unpackedDir);
         }
 
     }

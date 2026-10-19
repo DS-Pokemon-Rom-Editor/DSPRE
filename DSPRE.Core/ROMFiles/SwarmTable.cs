@@ -47,14 +47,13 @@ namespace DSPRE.ROMFiles
 
         /// <summary>Whether the table already sits in a block with room for <see cref="MaxRows"/>.</summary>
         public bool Expanded => InExpansion && Capacity >= MaxRows;
-        private uint CodeBase => _sites.Overlay < 0 ? ARM9.address : OverlayUtils.OverlayTable.GetRAMAddress(_sites.Overlay);
 
         public static string WhyNot()
         {
             if (HgEngine.HgEngineProject.IsActive)
                 return HgEngine.HgEngineSwarms.WhyNot() ?? (HgEngine.HgEngineSwarms.TryRead(out _, out string error) ? null : error);
-            SwarmSites sites = SwarmCodeSites;
-            if (sites == null) return "Only US HeartGold, Platinum (Rev 1) and Diamond are supported.";
+            SwarmSites sites = RomLocator.SwarmSites;
+            if (sites == null) return "Works on " + DescribeDumps(RomLocator.SwarmDumps) + ".";
             if (sites.Overlay < 0 && !IsDsRomProject && ARM9.CheckCompressionMark()) return "arm9 is still compressed. Convert this project to ds-rom format first.";
             try { Load(); }
             catch (Exception e) when (e is InvalidDataException || e is IOException || e is ArgumentException) { return e.Message; }
@@ -76,7 +75,7 @@ namespace DSPRE.ROMFiles
                 source.Rows.AddRange(rows.Select(r => new Row { Header = r.Header, Method = r.Method }));
                 return source;
             }
-            SwarmSites sites = SwarmCodeSites ?? throw new InvalidOperationException("This game version isn't supported yet.");
+            SwarmSites sites = RomLocator.SwarmSites ?? throw new InvalidOperationException("This game version isn't supported yet.");
             SwarmTable table = new SwarmTable(sites);
             byte[] code = table.ReadCode();
 
@@ -89,19 +88,20 @@ namespace DSPRE.ROMFiles
             if (counts.Count != 1 || counts[0].Item2 != 0x21) throw new InvalidDataException("The swarm code's row count doesn't look like the game's; it may have been patched.");
             int count = counts[0].Item1;
 
-            uint codeBase = table.CodeBase;
-            if (ram >= codeBase && (ulong)(ram - codeBase) + (ulong)(count * sites.RowSize) <= (ulong)code.Length)
+            RamAddress.Region home = sites.Overlay < 0 ? RamAddress.Arm9(code.Length) : RamAddress.Overlay(sites.Overlay, code.Length);
+            (int region, int offset) = RamAddress.Find(ram, count * sites.RowSize,
+                home, RamAddress.Synthetic(File.Exists(Filesystem.expArmPath) ? new FileInfo(Filesystem.expArmPath).Length : 0));
+            if (region == 0)
             {
-                table._path = table.CodePath; table._offset = (int)(ram - codeBase);
+                table._path = table.CodePath; table._offset = offset;
                 bool vanilla = table._offset == sites.Table;
                 table.Capacity = vanilla ? sites.Rows : count;
                 table.Where = vanilla ? "where the game keeps it" : "moved by a patch";
             }
-            else if (ram >= synthOverlayLoadAddress && File.Exists(Filesystem.expArmPath)
-                     && ram - synthOverlayLoadAddress + (ulong)(count * sites.RowSize) <= (ulong)new FileInfo(Filesystem.expArmPath).Length)
+            else if (region == 1)
             {
                 byte[] synth = File.ReadAllBytes(Filesystem.expArmPath);
-                table._path = Filesystem.expArmPath; table._offset = (int)(ram - synthOverlayLoadAddress);
+                table._path = Filesystem.expArmPath; table._offset = offset;
                 (long Start, long End) block = SyntheticOverlaySpace.Blocks(synth, Marker).FirstOrDefault(b => table._offset == b.Start + SyntheticOverlaySpace.HeaderSize);
                 if (block.End > 0)
                 {
@@ -193,19 +193,19 @@ namespace DSPRE.ROMFiles
                     foreach (int o in _sites.CountSites) code[o] = (byte)Rows.Count;
                     try
                     {
-                        File.WriteAllBytes(Filesystem.expArmPath, synth);
-                        File.WriteAllBytes(CodePath, code);
+                        DSUtils.WriteWholeFile(Filesystem.expArmPath, synth);
+                        DSUtils.WriteWholeFile(CodePath, code);
                     }
                     catch
                     {
-                        File.WriteAllBytes(Filesystem.expArmPath, synthOld);
-                        File.WriteAllBytes(CodePath, codeBefore);
+                        DSUtils.WriteWholeFile(Filesystem.expArmPath, synthOld);
+                        DSUtils.WriteWholeFile(CodePath, codeBefore);
                         throw;
                     }
                     return;
                 }
                 foreach (int o in _sites.CountSites) code[o] = (byte)Rows.Count;
-                File.WriteAllBytes(CodePath, code);
+                DSUtils.WriteWholeFile(CodePath, code);
                 return;
             }
 
@@ -244,13 +244,13 @@ namespace DSPRE.ROMFiles
             foreach (int o in _sites.CountSites) code[o] = (byte)Rows.Count;
             try
             {
-                File.WriteAllBytes(Filesystem.expArmPath, synthNow);
-                File.WriteAllBytes(CodePath, code);
+                DSUtils.WriteWholeFile(Filesystem.expArmPath, synthNow);
+                DSUtils.WriteWholeFile(CodePath, code);
             }
             catch
             {
-                File.WriteAllBytes(Filesystem.expArmPath, synthBefore);
-                File.WriteAllBytes(CodePath, codeBefore);
+                DSUtils.WriteWholeFile(Filesystem.expArmPath, synthBefore);
+                DSUtils.WriteWholeFile(CodePath, codeBefore);
                 throw;
             }
             _path = Filesystem.expArmPath; _offset = at + SyntheticOverlaySpace.HeaderSize;

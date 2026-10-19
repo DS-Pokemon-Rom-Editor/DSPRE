@@ -260,13 +260,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task<bool> SaveChangesAsync()
         {
             if (_data == null) return true;
-            if (HasProblem) { await DialogHelper.ShowError(Problem, "Move Tutors"); return false; }
+            if (HasProblem) { await DialogHelper.ShowError(Problem, "Move tutors error"); return false; }
             if (_data.FromSource)
             {
                 (bool saved, string error) = await HgEngineSave.RunAsync(() => { _data.Save(MoveNames.Count); return null; });
                 if (!saved)
                 {
-                    if (error != null) await DialogHelper.ShowError("The move tutors were not saved:\n" + error, "Move Tutors");
+                    if (error != null) await DialogHelper.ShowError("The move tutors were not saved:\n" + error, "Move tutors error");
                     return false;
                 }
             }
@@ -275,7 +275,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 try { _data.Save(MoveNames.Count); }
                 catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
                 {
-                    await DialogHelper.ShowError("The move tutors were not saved:\n" + e.Message, "Move Tutors");
+                    await DialogHelper.ShowError("The move tutors were not saved:\n" + e.Message, "Move tutors error");
                     return false;
                 }
             }
@@ -292,7 +292,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try { _data = MoveTutorData.Load(); }
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException)
             {
-                _ = DialogHelper.ShowError("The saved tutors couldn't be read back:\n" + e.Message, "Move Tutors");
+                _ = DialogHelper.ShowError("The saved tutors couldn't be read back:\n" + e.Message, "Move tutors error");
                 return;
             }
             _tutorNames = null;

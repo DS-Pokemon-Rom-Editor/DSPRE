@@ -16,13 +16,16 @@ namespace DSPRE.Avalonia.Views.Pokemon
             TMEditorViewModel vm = new TMEditorViewModel();
             DataContext = vm;
             // VM owns the bound Title (+ "*" marker); chrome adds Ctrl+S + the close guard.
-            EditorWindowChrome.Attach(this, vm, manageTitle: false, onClosed: vm.Detach);
+            EditorWindowChrome.Attach(this, vm, title: () => vm.Title);
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
             => ViewModel.SaveCommand();
 
-        private void Discard_Click(object sender, RoutedEventArgs e) => ViewModel.DiscardChanges();
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) ViewModel.DiscardChanges();
+        }
 
         private void AutoPaletteButton_Click(object sender, RoutedEventArgs e)
             => ViewModel.AutoPaletteCommand();

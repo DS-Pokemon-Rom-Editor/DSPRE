@@ -105,7 +105,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public bool CanRedo => _pending.CanRedo;
         public void Undo() => _pending.Undo();
         public void Redo() => _pending.Redo();
-        public void SaveChanges() { _pending.Save(); SaveNotice.Saved(UnsavedChangesDescription); Status = "Saved."; }
+        public void SaveChanges() { _pending.Save(); SaveNotice.Saved(UnsavedChangesDescription); StatusText = "Saved."; }
         public void DiscardChanges() => _pending.Discard();
         public void Dispose() => _overlay.Dispose();
 
@@ -616,25 +616,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
             Whynot = "";
             // No bitmap can be made without a running UI, which is how the tests drive this view model.
-            try { TexturePreview = RgbaToBitmap(decoded.Rgba, decoded.Width, decoded.Height); }
+            try { TexturePreview = ImageConverter.FromRgba(decoded.Rgba, decoded.Width, decoded.Height); }
             catch (InvalidOperationException) { TexturePreview = null; }
             Details = BaseDetails + $"  {PreviewTextureNames[_previewTextureIndex]}, {decoded.Width} × {decoded.Height} pixels. "
                 + $"This set contains {_previewTextures.Count} texture{(_previewTextures.Count == 1 ? "" : "s")} "
                 + $"and {_previewPalettes.Count} palette{(_previewPalettes.Count == 1 ? "" : "s")}.";
-        }
-
-        private static Bitmap RgbaToBitmap(byte[] rgba, int width, int height)
-        {
-            WriteableBitmap bitmap = new WriteableBitmap(new PixelSize(width, height), new Vector(96, 96),
-                PixelFormat.Rgba8888, AlphaFormat.Unpremul);
-            using ILockedFramebuffer buffer = bitmap.Lock();
-            int sourceStride = width * 4;
-            if (buffer.RowBytes == sourceStride)
-                Marshal.Copy(rgba, 0, buffer.Address, Math.Min(rgba.Length, buffer.RowBytes * height));
-            else
-                for (int y = 0; y < height; y++)
-                    Marshal.Copy(rgba, y * sourceStride, IntPtr.Add(buffer.Address, y * buffer.RowBytes), sourceStride);
-            return bitmap;
         }
 
         private void ClearTexturePreview()
@@ -742,7 +728,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
             foreach ((int code, JointAnimation anim) in rest)
             {
-                AnimationChoices.Add($"{Called(anim, code)}, {anim.FrameCount} frames");
+                AnimationChoices.Add($"{Called(anim, code)} ({anim.FrameCount} frames)");
                 _animationEntries.Add(code);
             }
 
@@ -1048,7 +1034,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string DeepEditorHint => HasDeepEditor ? $"The {DeepEditorName} does more with these." : "";
 
         private string _status = "";
-        public string Status { get => _status; set => Set(ref _status, value); }
+        public string StatusText { get => _status; set => Set(ref _status, value); }
 
         public string SuggestedFileName(string extension)
         {
@@ -1097,8 +1083,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         /// <summary>Saves the model as a file other 3D programs open, with its pictures.</summary>
-        public string SaveAsThreeD(string path, bool glb)
+        public string SaveAsThreeD(string path, bool glb, out string written)
         {
+            written = null;
             if (_selected == null) return "Pick something first.";
             if (!CanSaveModel) return _options?.SaveNote ?? "This is not a model.";
 
@@ -1110,16 +1097,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             try
             {
-                string name = Path.GetFileNameWithoutExtension(path);
-                string dir = Path.GetDirectoryName(path);
-                string was = Directory.GetCurrentDirectory();
-                try
-                {
-                    if (!string.IsNullOrEmpty(dir)) Directory.SetCurrentDirectory(dir);
-                    if (glb) DSPRE.ModelUtils.ModelToGLB(name, model, textures);
-                    else DSPRE.ModelUtils.ModelToDAE(name, model, textures);
-                }
-                finally { Directory.SetCurrentDirectory(was); }
+                // The file name the user picked becomes the folder apicula writes into, beside where they picked.
+                written = DSPRE.ModelUtils.ExportModel(Path.GetFileNameWithoutExtension(path), model, textures, glb,
+                    Path.GetDirectoryName(path));
                 return null;
             }
             catch (Exception ex)

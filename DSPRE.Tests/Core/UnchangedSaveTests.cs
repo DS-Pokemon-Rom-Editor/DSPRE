@@ -25,7 +25,7 @@ namespace DSPRE.Tests
 
         private static void Open(string game)
         {
-            var (path, code) = game switch
+            (string path, string code) = game switch
             {
                 "Platinum" => (TestRoms.Platinum, "CPUE"),
                 "HeartGold" => (TestRoms.HeartGold, "IPKE"),
@@ -54,21 +54,21 @@ namespace DSPRE.Tests
         /// <param name="restored">Project files the save may rewrite in another form (expanded text or script sources); put back, not compared.</param>
         private static void SavesUnchanged(string what, IEnumerable<string> guarded, Func<int> save, IEnumerable<string> restored = null)
         {
-            var roots = guarded.Where(p => !string.IsNullOrEmpty(p)).Append(arm9Path).Append(overlayPath).Distinct().ToList();
+            List<string> roots = guarded.Where(p => !string.IsNullOrEmpty(p)).Append(arm9Path).Append(overlayPath).Distinct().ToList();
             List<string> FilesUnder(IEnumerable<string> under) => under.SelectMany(r => Directory.Exists(r) ? Directory.GetFiles(r, "*", SearchOption.AllDirectories)
                                                          : File.Exists(r) ? new[] { r } : Array.Empty<string>()).ToList();
             List<string> Files() => FilesUnder(roots);
 
-            var extraRoots = (restored ?? Array.Empty<string>()).Where(p => !string.IsNullOrEmpty(p)).ToList();
-            var extra = FilesUnder(extraRoots).Where(f => !roots.Any(r => f.StartsWith(r, StringComparison.OrdinalIgnoreCase)))
+            List<string> extraRoots = (restored ?? Array.Empty<string>()).Where(p => !string.IsNullOrEmpty(p)).ToList();
+            Dictionary<string, byte[]> extra = FilesUnder(extraRoots).Where(f => !roots.Any(r => f.StartsWith(r, StringComparison.OrdinalIgnoreCase)))
                 .ToDictionary(f => f, File.ReadAllBytes);
-            var before = Files().ToDictionary(f => f, File.ReadAllBytes);
-            var changes = new List<string>();
+            Dictionary<string, byte[]> before = Files().ToDictionary(f => f, File.ReadAllBytes);
+            List<string> changes = new List<string>();
             int saved;
             try
             {
                 saved = save();
-                foreach (var (file, original) in before)
+                foreach ((string file, byte[] original) in before)
                 {
                     if (!File.Exists(file)) { changes.Add($"{Name(file)} was deleted"); continue; }
                     byte[] now = File.ReadAllBytes(file);
@@ -79,10 +79,10 @@ namespace DSPRE.Tests
             finally
             {
                 foreach (string file in FilesUnder(extraRoots).Where(f => !extra.ContainsKey(f) && !before.ContainsKey(f))) File.Delete(file);
-                foreach (var (file, original) in extra)
+                foreach ((string file, byte[] original) in extra)
                     if (!File.Exists(file) || !File.ReadAllBytes(file).AsSpan().SequenceEqual(original)) File.WriteAllBytes(file, original);
                 foreach (string file in Files().Where(f => !before.ContainsKey(f))) File.Delete(file);
-                foreach (var (file, original) in before)
+                foreach ((string file, byte[] original) in before)
                     if (!File.Exists(file) || !File.ReadAllBytes(file).AsSpan().SequenceEqual(original)) File.WriteAllBytes(file, original);
             }
 
@@ -111,10 +111,10 @@ namespace DSPRE.Tests
             SavesUnchanged($"{game} trainers", new[] { Dir(DirNames.trainerProperties), Dir(DirNames.trainerParty) }, () =>
             {
                 int n = 0;
-                foreach (var (id, propPath) in Members(Dir(DirNames.trainerProperties)).ToList())
+                foreach ((int id, string propPath) in Members(Dir(DirNames.trainerProperties)).ToList())
                 {
                     if (!File.Exists(Path.Combine(Dir(DirNames.trainerParty), Path.GetFileName(propPath)))) continue;
-                    var trainer = TrainerRecords.Load(id);
+                    TrainerFile trainer = TrainerRecords.Load(id);
                     TrainerRecords.Save(id, trainer.trp, trainer.party);
                     n++;
                 }
@@ -131,7 +131,7 @@ namespace DSPRE.Tests
             SavesUnchanged($"{game} wild encounters", new[] { Dir(DirNames.encounters) }, () =>
             {
                 int n = 0;
-                foreach (var (id, _) in Members(Dir(DirNames.encounters)).ToList())
+                foreach ((int id, string _) in Members(Dir(DirNames.encounters)).ToList())
                 {
                     EncounterFile file = gameFamily == GameFamilies.HGSS ? new EncounterFileHGSS(id) : new EncounterFileDPPt(id);
                     file.SaveToFileDefaultDir(id, showSuccessMessage: false);
@@ -150,10 +150,10 @@ namespace DSPRE.Tests
             SavesUnchanged($"{game} area data", new[] { Dir(DirNames.areaData) }, () =>
             {
                 int n = 0;
-                foreach (var (id, path) in Members(Dir(DirNames.areaData)).ToList())
+                foreach ((int id, string path) in Members(Dir(DirNames.areaData)).ToList())
                 {
                     ROMFiles.AreaData area;
-                    using (var s = File.OpenRead(path)) area = new ROMFiles.AreaData(s);
+                    using (FileStream s = File.OpenRead(path)) area = new ROMFiles.AreaData(s);
                     area.SaveToFileDefaultDir(id, showSuccessMessage: false);
                     n++;
                 }
@@ -184,7 +184,7 @@ namespace DSPRE.Tests
             SavesUnchanged($"{game} evolutions", new[] { Dir(DirNames.evolutions) }, () =>
             {
                 int n = 0;
-                foreach (var (id, _) in Members(Dir(DirNames.evolutions)).ToList())
+                foreach ((int id, string _) in Members(Dir(DirNames.evolutions)).ToList())
                 {
                     new EvolutionFile(id).SaveToFileDefaultDir(id, showSuccessMessage: false);
                     n++;
@@ -199,10 +199,10 @@ namespace DSPRE.Tests
         {
             Open(game);
             Unpack(DirNames.eggMoves);
-            var guarded = gameDirs.ContainsKey(DirNames.eggMoves) ? new[] { Dir(DirNames.eggMoves) } : Array.Empty<string>();
+            string[] guarded = gameDirs.ContainsKey(DirNames.eggMoves) ? new[] { Dir(DirNames.eggMoves) } : Array.Empty<string>();
             SavesUnchanged($"{game} egg moves", guarded, () =>
             {
-                var editor = new EggMoveEditorViewModel();
+                EggMoveEditorViewModel editor = new EggMoveEditorViewModel();
                 Task.Run(() => editor.SaveCommand()).GetAwaiter().GetResult();
                 return EggMoveData.ReadFromRom().Count;
             });
@@ -230,8 +230,8 @@ namespace DSPRE.Tests
             Unpack(DirNames.battleTowerTrainers, DirNames.battleTowerPokemon);
             SavesUnchanged($"{game} Battle Tower", new[] { Dir(DirNames.battleTowerTrainers), Dir(DirNames.battleTowerPokemon) }, () =>
             {
-                var trainers = new BattleTowerTrainerFile(load: true);
-                var sets = new BattleTowerPokemonSetFile(load: true);
+                BattleTowerTrainerFile trainers = new BattleTowerTrainerFile(load: true);
+                BattleTowerPokemonSetFile sets = new BattleTowerPokemonSetFile(load: true);
                 Assert.True(trainers.SaveToNarc(showSuccessMessage: false) && sets.SaveToNarc(showSuccessMessage: false), "a Battle Tower save failed");
                 return trainers.Trainers.Count + sets.Sets.Count;
             });
@@ -244,7 +244,7 @@ namespace DSPRE.Tests
             Open(game);
             string why = SwarmTable.WhyNot();
             Skip.If(why != null, $"{game} swarms: {why}");
-            var editor = new SwarmsViewModel();
+            SwarmsViewModel editor = new SwarmsViewModel();
             editor.Setup();
             Assert.False(editor.HasProblem, $"{game}: the shipped swarm table reports a problem: {editor.Problem}");
             SavesUnchanged($"{game} swarms", Array.Empty<string>(), () =>
@@ -262,9 +262,9 @@ namespace DSPRE.Tests
             Unpack(DirNames.encounterExtended);
             SavesUnchanged($"{game} Trophy Garden, Great Marsh and Honey Tree", new[] { Filesystem.encounterExtended }, () =>
             {
-                var garden = new TrophyGardenEncounterFile(load: true);
-                var marsh = new GreatMarshEncounterFile(load: true);
-                var honey = new HoneyTreeEncounterFile(load: true);
+                TrophyGardenEncounterFile garden = new TrophyGardenEncounterFile(load: true);
+                GreatMarshEncounterFile marsh = new GreatMarshEncounterFile(load: true);
+                HoneyTreeEncounterFile honey = new HoneyTreeEncounterFile(load: true);
                 Assert.True(garden.SaveToNarc(showSuccessMessage: false), "the Trophy Garden save failed");
                 Assert.True(marsh.SaveToNarc(showSuccessMessage: false), "the Great Marsh save failed");
                 Assert.True(honey.SaveToNarc(showSuccessMessage: false), "the Honey Tree save failed");
@@ -280,12 +280,12 @@ namespace DSPRE.Tests
             SavesUnchanged("HeartGold Headbutt and Safari Zone", new[] { Filesystem.headbutt, Filesystem.safariZone }, () =>
             {
                 int n = 0;
-                foreach (var (id, _) in Members(Filesystem.headbutt).ToList())
+                foreach ((int id, string _) in Members(Filesystem.headbutt).ToList())
                 {
                     Assert.True(new HeadbuttEncounterFile((ushort)id).SaveToFile(id), $"Headbutt file {id} did not save");
                     n++;
                 }
-                foreach (var (id, _) in Members(Filesystem.safariZone).ToList())
+                foreach ((int id, string _) in Members(Filesystem.safariZone).ToList())
                 {
                     Assert.True(new SafariZoneEncounterFile(id).SaveToFile(id), $"Safari Zone file {id} did not save");
                     n++;

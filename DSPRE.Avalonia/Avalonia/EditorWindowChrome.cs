@@ -40,32 +40,36 @@ namespace DSPRE.Avalonia
 
             await DialogHelper.ShowError(
                 $"Could not save {vm.UnsavedChangesDescription} before {action}:\n{failure}",
-                "Save Error");
+                "Couldn't save");
             return false;
         }
 
         /// <param name="manageTitle">When true, prefixes the window title with "● " while there are unsaved
-        /// changes. Pass FALSE for windows whose Title is data-bound (Title="{Binding Title}"): the chrome
-        /// can't set window.Title without fighting the binding, so those VMs show their own marker instead.</param>
+        /// changes. False leaves the title alone.</param>
+        /// <param name="title">The title without the marker, for a window whose title follows the record shown; it is
+        /// read again whenever the view model raises a change of "Title". The window's own Title is used when null.</param>
         /// <param name="onClosed">Optional cleanup (e.g. <c>vm.Detach</c>) run exactly once when the window is
         /// actually allowed to close, both on the clean path and after a confirmed discard.</param>
         public static void Attach(
             Window window,
             IEditorWithUnsavedChanges vm,
             bool manageTitle = true,
-            Action onClosed = null)
+            Action onClosed = null,
+            Func<string> title = null)
         {
             if (window == null || vm == null) return;
 
-            string baseTitle = window.Title ?? "";
+            string fixedTitle = window.Title ?? "";
+            string BaseTitle() => title?.Invoke() ?? fixedTitle;
             if (manageTitle)
             {
-                void UpdateTitle() => window.Title = (vm.HasUnsavedChanges ? "● " : "") + baseTitle;
+                void UpdateTitle() => window.Title = (vm.HasUnsavedChanges ? "● " : "") + BaseTitle();
                 UpdateTitle();
                 if (vm is INotifyPropertyChanged inpc)
                     inpc.PropertyChanged += (_, e) =>
                     {
-                        if (e.PropertyName == nameof(IEditorWithUnsavedChanges.HasUnsavedChanges)) UpdateTitle();
+                        if (e.PropertyName == nameof(IEditorWithUnsavedChanges.HasUnsavedChanges) || (title != null && e.PropertyName == "Title"))
+                            UpdateTitle();
                     };
             }
 
@@ -100,7 +104,7 @@ namespace DSPRE.Avalonia
 
                 // Read when asking: editors such as the Pokémon Editor retitle the window for each record.
                 string name = (window.Title ?? "").TrimStart('●', ' ');
-                bool proceed = await UnsavedChangesDialog.ShowIfNeededAsync(window, vm, name.Length > 0 ? name : baseTitle);
+                bool proceed = await UnsavedChangesDialog.ShowIfNeededAsync(window, vm, name.Length > 0 ? name : BaseTitle());
                 if (proceed)
                 {
                     confirmed = true;

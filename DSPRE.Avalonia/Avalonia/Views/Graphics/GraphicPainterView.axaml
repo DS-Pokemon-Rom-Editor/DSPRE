@@ -5,7 +5,6 @@
         xmlns:v="clr-namespace:DSPRE.Avalonia.Views.Controls"
         x:Class="DSPRE.Avalonia.Views.Graphics.GraphicPainterView"
         x:DataType="vm:GraphicPainterViewModel"
-        Title="{Binding Title}"
         Width="760" Height="640" MinWidth="460" MinHeight="380"
         WindowStartupLocation="CenterScreen">
 
@@ -20,6 +19,7 @@
           <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click"
                   IsEnabled="{Binding CanPaint}"
                   ToolTip.Tip="Write this back into the ROM. Save the ROM afterwards to keep it."/>
+          <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
           <Button Content="Change this colour" controls:Icon.Key="pencil" Click="ChangeColour_Click"
                   IsEnabled="{Binding CanChangeColour}"
                   ToolTip.Tip="{Binding ChangeColourHelp}"/>
@@ -57,7 +57,7 @@
           <TextBlock DockPanel.Dock="Right" Text="{Binding Pointer}" FontSize="12"/>
           <TextBlock Text="{Binding InkDescription}" FontSize="12"/>
         </DockPanel>
-        <TextBlock Text="{Binding Status}" FontSize="11" TextWrapping="Wrap"
+        <TextBlock Text="{Binding StatusText}" FontSize="11" TextWrapping="Wrap"
                    Foreground="{DynamicResource Editor.Subtle}"/>
       </StackPanel>
     </Border>

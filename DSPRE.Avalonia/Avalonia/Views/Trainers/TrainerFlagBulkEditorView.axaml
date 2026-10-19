@@ -31,8 +31,7 @@
         <Button Content="{Binding SelectAllLabel}" Click="SelectAll_Click" Margin="12,0,0,0"/>
         <Button Content="{Binding SelectNoneLabel}" Click="SelectNone_Click"/>
 
-        <TextBlock Text="Filter" VerticalAlignment="Center" Margin="12,0,0,0"/>
-        <TextBox x:Name="FilterBox" Text="{Binding FilterText}" Width="200" PlaceholderText="trainer name…"/>
+        <TextBox Margin="12,0,0,0" x:Name="FilterBox" Text="{Binding FilterText}" Width="200" PlaceholderText="Search trainers"/>
     </controls:EditorToolbar>
 
     <Grid ColumnDefinitions="480,*">

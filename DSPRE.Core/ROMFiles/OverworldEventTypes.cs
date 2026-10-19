@@ -29,16 +29,16 @@ namespace DSPRE.ROMFiles
         {
             new OverworldEventType { Value = 0, Name = "Standard" },
             new OverworldEventType { Value = 1, Name = "Trainer", IsTrainer = true },
-            new OverworldEventType { Value = 2, Name = "Trainer, sees all ways", IsTrainer = true },
+            new OverworldEventType { Value = 2, Name = "Trainer who looks every way", IsTrainer = true },
             new OverworldEventType { Value = 3, Name = "Item" },
-            new OverworldEventType { Value = 4, Name = "Trainer, looks to the sides", IsTrainer = true,
+            new OverworldEventType { Value = 4, Name = "Trainer who looks to the sides", IsTrainer = true,
                 Param1Label = "Steps between looks", Note = WalkingNote },
-            new OverworldEventType { Value = 5, Name = "Trainer, looks round anticlockwise", IsTrainer = true,
+            new OverworldEventType { Value = 5, Name = "Trainer who looks round anticlockwise", IsTrainer = true,
                 Param1Label = "Steps between looks", Note = WalkingNote },
-            new OverworldEventType { Value = 6, Name = "Trainer, looks round clockwise", IsTrainer = true,
+            new OverworldEventType { Value = 6, Name = "Trainer who looks round clockwise", IsTrainer = true,
                 Param1Label = "Steps between looks", Note = WalkingNote },
-            new OverworldEventType { Value = 7, Name = "Trainer, turns anticlockwise on a route", IsTrainer = true },
-            new OverworldEventType { Value = 8, Name = "Trainer, turns clockwise on a route", IsTrainer = true },
+            new OverworldEventType { Value = 7, Name = "Trainer who turns anticlockwise along a route", IsTrainer = true },
+            new OverworldEventType { Value = 8, Name = "Trainer who turns clockwise along a route", IsTrainer = true },
             new OverworldEventType { Value = 9, Name = "Silent", Note = "Talking to it runs nothing." },
         };
 

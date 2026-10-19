@@ -17,7 +17,7 @@ namespace DSPRE.Tests
         [Fact]
         public void ThePathsResolveToSomethingAndAtLeastOneGameIsHere()
         {
-            foreach (var (name, path) in new[]
+            foreach ((string name, string path) in new[]
             {
                 ("HeartGold", TestRoms.HeartGold),
                 ("Platinum", TestRoms.Platinum),
@@ -31,7 +31,7 @@ namespace DSPRE.Tests
             Assert.True(Directory.Exists(TestRoms.HeartGold)
                      || Directory.Exists(TestRoms.Platinum)
                      || Directory.Exists(TestRoms.Diamond),
-                "None of the game projects were found. Set them in testroms.json beside DS_Map.sln, or in "
+                "None of the game projects were found. Set them in testroms.json beside DSPRE.sln, or in "
                 + "DSPRE_TEST_HEARTGOLD / DSPRE_TEST_PLATINUM / DSPRE_TEST_DIAMOND. See docs/Development.md.");
         }
 

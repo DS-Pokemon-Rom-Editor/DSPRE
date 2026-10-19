@@ -104,7 +104,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_pendingIcon != null)
             {
                 string error = GameBanner.ValidateAndWriteDsRomIcon(_pendingIcon);
-                if (error != null) { _ = DialogHelper.ShowError(error, "Game Icon & Banner"); return; }
+                if (error != null) { _ = DialogHelper.ShowError(error, "Game icon & banner error"); return; }
                 _pendingIcon = null;
             }
             if (TitlesEdited && _yaml?.title != null)
@@ -173,13 +173,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 new[] { new FilePickerFileType("PNG image") { Patterns = new[] { "*.png" } } },
                 (RomInfo.projectName ?? "icon") + "_icon.png");
             if (string.IsNullOrEmpty(dest)) return;
-            try { File.Copy(GameBanner.DsRomBitmapPath, dest, overwrite: true); }
+            try { PlainFiles.Copy(GameBanner.DsRomBitmapPath, dest, overwrite: true); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
                 await DialogHelper.ShowError("The icon could not be exported: " + ex.Message, "Export icon");
                 return;
             }
-            StatusText = "Icon exported.";
+            SaveNotice.Exported(dest);
         }
 
         public async Task ImportIconAsync(Window owner)
@@ -210,7 +210,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _picked.Add(raw);
             IconPreview = ImageConverter.ToAvaloniaBitmap(raw);
             Edited();
-            StatusText = "Icon picked. Save to keep it.";
+            SaveNotice.Imported("the game icon", src);
         }
     }
 

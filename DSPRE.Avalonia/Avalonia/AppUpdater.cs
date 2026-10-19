@@ -69,7 +69,7 @@ namespace DSPRE.Avalonia
             {
                 AppLogger.Error($"Error checking for updates: {ex.Message}");
                 if (!silent)
-                    await DialogHelper.ShowError($"Error checking for updates: {ex.Message}", "Error");
+                    await DialogHelper.ShowError($"Error checking for updates: {ex.Message}", "Update error");
             }
         }
 

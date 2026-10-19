@@ -22,8 +22,8 @@ namespace DSPRE.Avalonia.Data
         private static readonly string[] EmitMove =
         {
             "which emitter to move",
-            "how far past the target it ends up, across",
-            "how far past the target it ends up, down",
+            "how far across past the target it ends up",
+            "how far down past the target it ends up",
             "how many frames to wait before starting",
             "how many frames the move takes",
             "how high the arc goes",
@@ -53,7 +53,7 @@ namespace DSPRE.Avalonia.Data
                 Source = "BattleAnimScriptFunc_RotateMon",
                 Words = new[] { "angle to start at", "angle to end at", "how many frames the turn takes",
                                 "0 turns the defender, 1 the attacker around the point given below, 2 the defender the other way",
-                                "the point to turn around, across", "the point to turn around, down" } },
+                                "how far across it turns around", "how far down it turns around" } },
 
             new BattleAnimFunc { Id = 5, Name = "Strength", Summary = "Squashes the attacker down (Strength).",
                 Source = "BattleAnimScriptFunc_Strength",
@@ -150,14 +150,14 @@ namespace DSPRE.Avalonia.Data
 
             new BattleAnimFunc { Id = 44, Name = "ScrollCustomBg", Summary = "Slides a background across the screen behind the battle.",
                 Source = "BattleAnimScriptFunc_ScrollCustomBg",
-                Words = new[] { "which background to use", "where it starts, across", "where it starts, down",
+                Words = new[] { "which background to use", "how far across it starts", "how far down it starts",
                                 "how fast it moves across", "how fast it moves down",
                                 "whether to turn it around when the enemy is attacking",
                                 "how solid it is", "how many frames between each slowing down" } },
 
             new BattleAnimFunc { Id = 45, Name = "MuddyWater", Summary = "Slides a background across the screen behind the battle.",
                 Source = "BattleAnimScriptFunc_MuddyWater",
-                Words = new[] { "which background to use", "where it starts, across", "where it starts, down",
+                Words = new[] { "which background to use", "how far across it starts", "how far down it starts",
                                 "how fast it moves across", "how fast it moves down",
                                 "whether to turn it around when the enemy is attacking",
                                 "", "how many frames between each slowing down" } },
@@ -232,9 +232,9 @@ namespace DSPRE.Avalonia.Data
 
             new BattleAnimFunc { Id = 72, Name = "RevolveEmitter", Summary = "Swings a particle emitter around a Pokémon.",
                 Source = "BattleAnimScriptFunc_RevolveEmitter",
-                Words = new[] { "which emitter to move", "the angle it starts at, across, in degrees",
-                                "the angle it ends at, across, in degrees", "the angle it starts at, down, in degrees",
-                                "the angle it ends at, down, in degrees", "how wide the circle is",
+                Words = new[] { "which emitter to move", "its starting angle across, in degrees",
+                                "its ending angle across, in degrees", "its starting angle down, in degrees",
+                                "its ending angle down, in degrees", "how wide the circle is",
                                 "how tall the circle is", "how many frames the swing takes",
                                 "0 to swing around the attacker, anything else around the defender",
                                 "which set of particles to swing" } },

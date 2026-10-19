@@ -279,7 +279,7 @@ namespace DSPRE
             error = null;
             try
             {
-                File.WriteAllBytes(FilePath, book.ToBytes());
+                PlainFiles.WriteBytes(FilePath, book.ToBytes());
                 return true;
             }
             catch (Exception ex)

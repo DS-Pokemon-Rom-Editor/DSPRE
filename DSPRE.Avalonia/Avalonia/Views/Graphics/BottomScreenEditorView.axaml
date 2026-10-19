@@ -36,9 +36,9 @@
       <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
       <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
       <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click"
-              IsEnabled="{Binding CanUndo}" ToolTip.Tip="{Binding UndoWhat}"/>
+              IsEnabled="{Binding CanUndo}"/>
       <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click"
-              IsEnabled="{Binding CanRedo}" ToolTip.Tip="{Binding RedoWhat}"/>
+              IsEnabled="{Binding CanRedo}"/>
       <TabStrip x:Name="ScreenTabs" ItemsSource="{Binding TabNames}" SelectedIndex="{Binding TabIndex}"/>
     </controls:EditorToolbar>
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">

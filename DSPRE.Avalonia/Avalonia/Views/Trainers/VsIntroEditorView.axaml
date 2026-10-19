@@ -271,8 +271,8 @@
               </ComboBox>
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="{Binding ClassNote}" Classes="subtle" VerticalAlignment="Center"/>
-                <Button Content="Make room" Click="MakeClassRoom_Click" IsVisible="{Binding CanMakeClassRoom}"
-                        ToolTip.Tip="Room for up to 255 classes"/>
+                <Button Content="Open in Patch Toolbox" controls:Icon.Key="OpenLink" Click="MakeClassRoom_Click" IsVisible="{Binding CanMakeClassRoom}"
+                        ToolTip.Tip="The &quot;Expand the VS intro class table&quot; patch gives room for up to 255 classes"/>
               </StackPanel>
               <TextBlock Text="Music" Classes="section"/>
               <ComboBox x:Name="ClassMusicBox" ItemsSource="{Binding SequenceChoices}" SelectedIndex="{Binding ClassMusicIndex}" Width="320"

@@ -47,7 +47,7 @@ namespace DSPRE.Avalonia.ViewModels.World
     /// export of the map .bin. Building placement-by-picking and tileset texture binding
     /// for the preview are deferred.
     /// </summary>
-    public class MapEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
+    public class MapEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         /// <summary>
         /// Whether the parts of this editor that are still being tried out are shown: walking the map,
@@ -346,7 +346,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private async Task TakeAreaSavedElsewhereAsync(byte id)
         {
             if (_areaDirty && !await DialogHelper.AskYesNo(
-                    $"Area {id} was saved in another window.\n\nLoad it and drop the area changes made here?", "Area Data Changed", _owner))
+                    $"Area {id} was saved in another window.\n\nLoad it and drop the area changes made here?", "Area data changed", _owner))
             {
                 StatusText = $"Area {id} was saved in another window. Saving here will overwrite it.";
                 return;
@@ -1403,12 +1403,40 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         // ── Dirty tracking ───────────────────────────────────────────────────────────
         private bool _dirty;
-        public bool HasUnsavedChanges => _dirty;
-        public string UnsavedChangesDescription => IsHeaderView ? $"Header {_headerId} maps" : $"Map {_selectedMapIndex}";
+        public bool HasUnsavedChanges => _dirty || _archive.IsDirty;
+
+        // Added, removed and saved map files wait here until Save, and so does clearing the kept plates of a map
+        // number that was added or removed, so Discard leaves a removed map's plates where they were.
+        private readonly DSPRE.Avalonia.Data.StagedArchive _archive = new(DirNames.maps);
+        private readonly HashSet<int> _platesToClear = new();
+
+        private void ListMaps()
+        {
+            int count = _archive.Count;
+            MapNames.Clear();
+            for (int i = 0; i < count; i++) MapNames.Add("Map " + i);
+        }
+
+        private void SaveStagedMaps()
+        {
+            _archive.Save();
+            foreach (int id in _platesToClear) KeptPlatesFile.Save(id, null);
+            _platesToClear.Clear();
+        }
+        public string UnsavedChangesDescription
+            => DSPRE.Avalonia.Data.StagedArchive.Join(IsHeaderView ? $"Header {_headerId} maps" : $"Map {_selectedMapIndex}", _dirty, _archive.Describe("map", "maps"));
         public void SaveChanges() => Save();
         public void DiscardChanges()
         {
-            _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges));
+            _dirty = false;
+            _archive.Discard();
+            _platesToClear.Clear();
+            _suppress = true;
+            ListMaps();
+            if (_selectedMapIndex >= MapNames.Count) _selectedMapIndex = MapNames.Count - 1;
+            _suppress = false;
+            OnPropertyChanged(nameof(SelectedMapIndex));
+            OnPropertyChanged(nameof(HasUnsavedChanges));
             ClearPendingEvents();
             _areaDirty = false;
 
@@ -2169,7 +2197,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             finally { _applyingStep = false; }
             RaiseUndo();
         }
-        private void SetClean() { _history.MarkSaved(); if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        // Notifies even when only staged members were waiting, so the title mark clears after a save.
+        private void SetClean() { _history.MarkSaved(); _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         private async Task ConfirmHeaderNavigationAsync(int newHeaderId)
         {
@@ -2192,7 +2221,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex)
             {
                 AppLogger.Error("Map header navigation failed: " + ex);
-                await DialogHelper.ShowError($"Could not switch headers:\n{ex.Message}", "Map Editor");
+                await DialogHelper.ShowError($"Could not switch headers:\n{ex.Message}", "Map editor error");
             }
             finally
             {
@@ -2263,9 +2292,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (MapTilesets.Count > 0) MapTilesetIndex = 0;
                 _suppress = false;
 
-                MapNames.Clear();
-                int count = Filesystem.GetMapCount();
-                for (int i = 0; i < count; i++) MapNames.Add("Map " + i);
+                ListMaps();
+                int count = MapNames.Count;
 
                 Matrices.Clear();
                 int matrixCount = Filesystem.GetMatrixCount();
@@ -2285,7 +2313,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowError($"Failed to set up Map Editor:\n{ex.Message}", "Map Editor");
+                await DialogHelper.ShowError($"Failed to set up Map Editor:\n{ex.Message}", "Map editor error");
             }
         }
 
@@ -2294,8 +2322,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             ClearPendingEvents();
             try
             {
-                _map = new MapFile(index, gameFamily);
-                _map.KeptPlates = KeptPlatesFile.Load(index);
+                _map = new MapFile(new MemoryStream(_archive.Read(index) ?? throw new FileNotFoundException($"Map {index} is missing.")), gameFamily);
+                _map.KeptPlates = _platesToClear.Contains(index) ? new List<BdhcBuild.Piece>() : KeptPlatesFile.Load(index);
                 ResolveTilesetForMap(index);
                 RefreshBuildings();
 
@@ -2318,7 +2346,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex)
             {
-                _ = DialogHelper.ShowError($"Failed to load map {index}:\n{ex.Message}", "Map Editor");
+                _ = DialogHelper.ShowError($"Failed to load map {index}:\n{ex.Message}", "Map editor error");
             }
         }
 
@@ -2755,6 +2783,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
                 // Warps moved with a refused map's buildings wait for it, so events and maps stay in step.
                 if (refused) return;
+                SaveStagedMaps();
                 SavePendingEvents();
                 bool areaSaved = _areaDirty;
                 SaveArea();
@@ -2770,7 +2799,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 _ = DialogHelper.ShowError(tooBig + "\n\nThe map was not saved.", "Map too big");
                 return;
             }
-            _map.SaveToFileDefaultDir(_selectedMapIndex, showSuccessMessage: false);
+            _archive.Put(_selectedMapIndex, _map.ToByteArray());
+            SaveStagedMaps();
             KeptPlatesFile.Save(_selectedMapIndex, _map.KeptPlates);
             AppEvents.RaiseMapSaved(this, _selectedMapIndex);
             SaveArea();
@@ -2794,28 +2824,29 @@ namespace DSPRE.Avalonia.ViewModels.World
             try { data = File.ReadAllBytes(path); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error");
+                await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Map editor error");
                 return false;
             }
 
             // The file's contents decide, so a renamed file or one with no extension still comes in.
             if (MapFile.ReadImport(data, gameFamily, out MapFile read, out byte[] model, out bool converted) is string whynot)
             {
-                await DialogHelper.ShowError(whynot, "Import Error");
+                await DialogHelper.ShowError(whynot, "Map editor error");
                 return false;
             }
             bool wholeMap = read != null;
-            string done;
+            string done = null;
             // Filling the loaded map, not swapping it for a new one, keeps the import on the undo history.
             if (wholeMap)
             {
                 _map.TakeContentsOf(read, gameFamily);
-                done = converted ? "Imported map, converted from the other game's layout (unsaved)." : "Imported map (unsaved).";
+                SaveNotice.Imported($"map {_selectedMapIndex}", path);
+                if (converted) done = "Converted from the other game's layout.";
             }
             else
             {
                 _map.LoadMapModel(model, showMessages: false);
-                done = $"Imported model, {model.Length:n0} bytes (unsaved).";
+                SaveNotice.Imported($"the model of map {_selectedMapIndex}", path);
             }
             BuildPreview();
             RefreshBuildings();
@@ -2824,7 +2855,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             OnPropertyChanged(nameof(Types));
             MapLoaded?.Invoke(this, EventArgs.Empty);
             string missing = MapImportCheck.Note(_map, MapTilesetIndex);
-            StatusText = missing == null ? done : done + " " + missing;
+            StatusText = string.Join(" ", new[] { done, missing }.Where(t => t != null));
             return true;
         }
 
@@ -2836,12 +2867,12 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (path == null) return;
             try
             {
-                File.WriteAllBytes(path, _map.ToByteArray());
-                StatusText = "Exported.";
+                PlainFiles.WriteBytes(path, _map.ToByteArray());
+                SaveNotice.Exported(path);
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error");
+                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Map editor error");
             }
         }
 
@@ -2850,30 +2881,31 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             try
             {
-                int newId = MapNames.Count;
-                new MapFile(0, gameFamily, discardMoveperms: true).SaveToFileDefaultDir(newId, showSuccessMessage: false);
-                KeptPlatesFile.Save(newId, null);   // a removed map's plates must not land on the new one
+                int newId = _archive.Add(new MapFile(new MemoryStream(_archive.Read(0)), gameFamily, discardMoveperms: true).ToByteArray());
+                _platesToClear.Add(newId);   // a removed map's plates must not land on the new one
                 MapNames.Add("Map " + newId);
                 SelectedMapIndex = newId;
+                OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = $"Added map file {newId}.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't add map file:\n{ex.Message}", "Map Editor"); }
+            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't add map file:\n{ex.Message}", "Map editor error"); }
         }
 
         public async Task RemoveLastMapFileAsync()
         {
             if (MapNames.Count == 0) return;
             int last = MapNames.Count - 1;
-            if (!await DialogHelper.AskYesNo($"Delete the last map file ({last})?", "Confirm deletion")) return;
+            if (!await DialogHelper.AskYesNo($"Delete the last map file ({last})?", "Delete map file?")) return;
             try
             {
-                File.Delete(Path.Combine(gameDirs[DirNames.maps].unpackedDir, last.ToString("D4")));
-                KeptPlatesFile.Save(last, null);
                 if (_selectedMapIndex == last) SelectedMapIndex = last - 1;
+                _archive.RemoveLast();
+                _platesToClear.Add(last);
                 MapNames.RemoveAt(last);
+                OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = $"Removed map file {last}.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't remove map file:\n{ex.Message}", "Map Editor"); }
+            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't remove map file:\n{ex.Message}", "Map editor error"); }
         }
 
         private byte[] MapTextureData()
@@ -2891,26 +2923,26 @@ namespace DSPRE.Avalonia.ViewModels.World
             FilePickerFileType filter = new FilePickerFileType("Model (.nsbmd)") { Patterns = new[] { "*.nsbmd" } };
             string path = await DialogHelper.SaveFile(_owner, "Export map model", new[] { filter }, ModelName() + ".nsbmd");
             if (path == null) return;
-            try { File.WriteAllBytes(path, _map.mapModelData); StatusText = "Exported map model."; }
-            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
+            try { PlainFiles.WriteBytes(path, _map.mapModelData); SaveNotice.Exported(path); }
+            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Map editor error"); }
         }
         /// <summary>The model with the textures of the map texture pack in use put inside it, for tools that read them there.</summary>
         public async Task ExportTexturedNsbmdAsync()
         {
             if (_map?.mapModelData == null) return;
             string pack = Path.Combine(gameDirs[DirNames.mapTextures].unpackedDir, MapTilesetIndex.ToString("D4"));
-            if (!File.Exists(pack)) { await DialogHelper.ShowError($"Map Tileset {MapTilesetIndex} could not be found.", "Export Error"); return; }
+            if (!File.Exists(pack)) { await DialogHelper.ShowError($"Map Tileset {MapTilesetIndex} could not be found.", "Map editor error"); return; }
             FilePickerFileType filter = new FilePickerFileType("Model (.nsbmd)") { Patterns = new[] { "*.nsbmd" } };
             string path = await DialogHelper.SaveFile(_owner, "Export textured map model", new[] { filter }, ModelName() + "_textured.nsbmd");
             if (path == null) return;
             try
             {
-                File.WriteAllBytes(path, NSBUtils.BuildNSBMDwithTextures(_map.mapModelData, File.ReadAllBytes(pack)));
-                StatusText = $"Exported the map model with Map Tileset {MapTilesetIndex}.";
+                PlainFiles.WriteBytes(path, NSBUtils.BuildNSBMDwithTextures(_map.mapModelData, File.ReadAllBytes(pack)));
+                SaveNotice.Exported(path);
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException)
             {
-                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error");
+                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Map editor error");
             }
         }
 
@@ -2933,8 +2965,19 @@ namespace DSPRE.Avalonia.ViewModels.World
             StatusText = PermissionShowsType ? "Cleared the type layer." : "Cleared the collision layer.";
         }
 
-        public void ExportDae() { if (_map != null) try { ModelUtils.ModelToDAE(ModelName(), _map.mapModelData, MapTextureData()); StatusText = "Exported DAE."; } catch (Exception ex) { AppLogger.Error("DAE export: " + ex.Message); } }
-        public void ExportGlb() { if (_map != null) try { ModelUtils.ModelToGLB(ModelName(), _map.mapModelData, MapTextureData()); StatusText = "Exported GLB."; } catch (Exception ex) { AppLogger.Error("GLB export: " + ex.Message); } }
+        public void ExportDae() => ExportModel(glb: false);
+        public void ExportGlb() => ExportModel(glb: true);
+
+        private void ExportModel(bool glb)
+        {
+            if (_map == null) return;
+            try
+            {
+                string folder = ModelUtils.ExportModel(ModelName(), _map.mapModelData, MapTextureData(), glb);
+                if (folder != null) SaveNotice.Exported(folder);
+            }
+            catch (Exception ex) { AppLogger.Error((glb ? "GLB" : "DAE") + " export: " + ex.Message); }
+        }
 
         // ── Terrain (BDHC) ──────────────────────────────────────────────────────────────
         public async Task ImportTerrainAsync()
@@ -2943,16 +2986,16 @@ namespace DSPRE.Avalonia.ViewModels.World
             string path = await DialogHelper.OpenFile(_owner, "Import terrain", new[] { new FilePickerFileType("Terrain (.bdhc)") { Patterns = new[] { "*.bdhc", "*.bin", "*.*" } } });
             if (path == null) return;
             // Kept plates belong to the terrain being replaced.
-            try { _map.ImportTerrain(File.ReadAllBytes(path)); _map.KeptPlates.Clear(); MarkDirty(); StatusText = $"Imported terrain ({_map.bdhc.Length} B)."; }
-            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error"); }
+            try { _map.ImportTerrain(File.ReadAllBytes(path)); _map.KeptPlates.Clear(); MarkDirty(); SaveNotice.Imported($"the terrain of map {_selectedMapIndex}", path); }
+            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Map editor error"); }
         }
         public async Task ExportTerrainAsync()
         {
             if (_map == null) return;
             string path = await DialogHelper.SaveFile(_owner, "Export terrain", new[] { new FilePickerFileType("Terrain (.bdhc)") { Patterns = new[] { "*.bdhc" } } }, ModelName() + ".bdhc");
             if (path == null) return;
-            try { File.WriteAllBytes(path, _map.bdhc); StatusText = "Exported terrain."; }
-            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
+            try { PlainFiles.WriteBytes(path, _map.bdhc); SaveNotice.Exported(path); }
+            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Map editor error"); }
         }
 
         // ── Sound plates (BGS) ──────────────────────────────────────────────────────────
@@ -2961,18 +3004,18 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (_map == null) return;
             string path = await DialogHelper.OpenFile(_owner, "Import sound plates", new[] { new FilePickerFileType("Sound plates (.bgs)") { Patterns = new[] { "*.bgs", "*.bin", "*.*" } } });
             if (path == null) return;
-            try { _map.ImportSoundPlates(File.ReadAllBytes(path)); MarkDirty(); StatusText = $"Imported sound plates ({_map.bgs.Length} B)."; }
-            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error"); }
+            try { _map.ImportSoundPlates(File.ReadAllBytes(path)); MarkDirty(); SaveNotice.Imported($"the sound plates of map {_selectedMapIndex}", path); }
+            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Map editor error"); }
         }
         public async Task ExportSoundAsync()
         {
             if (_map == null) return;
             string path = await DialogHelper.SaveFile(_owner, "Export sound plates", new[] { new FilePickerFileType("Sound plates (.bgs)") { Patterns = new[] { "*.bgs" } } }, ModelName() + ".bgs");
             if (path == null) return;
-            try { File.WriteAllBytes(path, _map.bgs); StatusText = "Exported sound plates."; }
-            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
+            try { PlainFiles.WriteBytes(path, _map.bgs); SaveNotice.Exported(path); }
+            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Map editor error"); }
         }
-        public void BlankSound() { if (_map != null) { _map.bgs = MapFile.blankBGS; MarkDirty(); StatusText = "Blanked sound plates (remember to save)."; } }
+        public void BlankSound() { if (_map != null) { _map.bgs = MapFile.blankBGS; MarkDirty(); StatusText = "Blanked the sound plates."; } }
 
         // ── Movement permissions ─────────────────────────────────────────────────────────
         public async Task ImportPermissionsAsync()
@@ -2987,17 +3030,17 @@ namespace DSPRE.Avalonia.ViewModels.World
                 OnPropertyChanged(nameof(Collisions)); OnPropertyChanged(nameof(Types));
                 RebuildOverlay();
                 MapLoaded?.Invoke(this, EventArgs.Empty);
-                StatusText = "Imported permissions.";
+                SaveNotice.Imported($"the permissions of map {_selectedMapIndex}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error"); }
+            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Map editor error"); }
         }
         public async Task ExportPermissionsAsync()
         {
             if (_map == null) return;
             string path = await DialogHelper.SaveFile(_owner, "Export permissions", new[] { new FilePickerFileType("Permissions") { Patterns = new[] { "*.mp" } } }, ModelName() + ".mp");
             if (path == null) return;
-            try { File.WriteAllBytes(path, _map.CollisionsToByteArray()); StatusText = "Exported permissions."; }
-            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
+            try { PlainFiles.WriteBytes(path, _map.CollisionsToByteArray()); SaveNotice.Exported(path); }
+            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Map editor error"); }
         }
 
         // ── Buildings I/O + duplicate ────────────────────────────────────────────────────
@@ -3010,17 +3053,17 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 _map.ImportBuildings(File.ReadAllBytes(path));
                 RefreshBuildings(); RebuildPreview(); MarkDirty();
-                StatusText = "Imported buildings.";
+                SaveNotice.Imported($"the buildings of map {_selectedMapIndex}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error"); }
+            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Map editor error"); }
         }
         public async Task ExportBuildingsAsync()
         {
             if (_map == null) return;
             string path = await DialogHelper.SaveFile(_owner, "Export buildings", new[] { new FilePickerFileType("Buildings") { Patterns = new[] { "*.bld" } } }, ModelName() + ".bld");
             if (path == null) return;
-            try { File.WriteAllBytes(path, _map.BuildingsToByteArray()); StatusText = "Exported buildings."; }
-            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
+            try { PlainFiles.WriteBytes(path, _map.BuildingsToByteArray()); SaveNotice.Exported(path); }
+            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Map editor error"); }
         }
         public void DuplicateBuilding()
         {

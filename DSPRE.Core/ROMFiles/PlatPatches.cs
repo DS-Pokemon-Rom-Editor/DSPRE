@@ -107,7 +107,7 @@ namespace DSPRE.ROMFiles
             BitConverter.GetBytes((ushort)entry.itemIcon).CopyTo(synth, o + 2);
             BitConverter.GetBytes((ushort)entry.itemPalette).CopyTo(synth, o + 4);
             BitConverter.GetBytes((ushort)entry.itemAGB).CopyTo(synth, o + 6);
-            File.WriteAllBytes(Filesystem.expArmPath, synth);
+            DSUtils.WriteWholeFile(Filesystem.expArmPath, synth);
             Forget();
             return true;
         }
@@ -162,7 +162,7 @@ namespace DSPRE.ROMFiles
             if (changed.Count == 0) return;
             byte[] synth = (byte[])Files().synth.Clone();
             foreach ((int row, ushort move) in changed) BitConverter.GetBytes(move).CopyTo(synth, t.Marker + 0x590 + row * 2);
-            File.WriteAllBytes(Filesystem.expArmPath, synth);
+            DSUtils.WriteWholeFile(Filesystem.expArmPath, synth);
             Forget();
         }
 
@@ -224,9 +224,9 @@ namespace DSPRE.ROMFiles
                 }
                 if (next == mask) continue;
                 BitConverter.GetBytes(next).CopyTo(p, PersonalMaskOffset);
-                File.WriteAllBytes(path, p);
+                ArchiveMembers.Put(DirNames.personalPokeData, file.Key, p);
             }
-            if (synthChanged) { File.WriteAllBytes(Filesystem.expArmPath, synth); Forget(); }
+            if (synthChanged) { DSUtils.WriteWholeFile(Filesystem.expArmPath, synth); Forget(); }
         }
 
         /// <summary>Every (row, personal file) pair that can learn, for rows from <paramref name="firstRow"/>, read in one pass.</summary>
@@ -363,7 +363,7 @@ namespace DSPRE.ROMFiles
                 if (gameDirs == null || !gameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) dirs)) return int.MaxValue;
                 if (Directory.Exists(dirs.unpackedDir))
                 {
-                    int n = Directory.GetFiles(dirs.unpackedDir).Length;
+                    int n = NarcAPI.Narc.MemberCount(dirs.unpackedDir);
                     if (n > 0) return n;
                 }
                 if (File.Exists(dirs.packedDir)) return new Editors.Utils.NarcReader(dirs.packedDir).Entrys;

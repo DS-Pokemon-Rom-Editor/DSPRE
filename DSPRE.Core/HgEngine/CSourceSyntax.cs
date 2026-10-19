@@ -283,6 +283,14 @@ namespace DSPRE.HgEngine
 
         private bool Is(int t, string s) => t >= 0 && t < Tokens.Count && Tokens[t].Kind == CTokenKind.Punct && Tokens[t].Is(Text, s);
 
+        /// <summary>The source position of the '}' matching the code '{' at <paramref name="openBrace"/>, or -1.</summary>
+        public int MatchingBrace(int openBrace)
+        {
+            if (!_tokenAt.TryGetValue(openBrace, out int t) || !Is(t, "{")) return -1;
+            int close = Match(t);
+            return close < 0 ? -1 : Tokens[close].Start;
+        }
+
         /// <summary>The token index of the bracket matching the one at <paramref name="open"/>, or -1.</summary>
         public int Match(int open)
         {

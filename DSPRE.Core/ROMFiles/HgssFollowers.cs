@@ -57,12 +57,13 @@ namespace DSPRE.ROMFiles
         {
             if (gameFamily != GameFamilies.HGSS) return "Followers exist only in HeartGold and SoulSilver.";
             if (HgEngineProject.IsActive || IsHgEngineBaseProject) return "hg-engine keeps follower data in its source.";
-            if (FollowerModelTableOffset < 0 || !File.Exists(arm9Path)) return "Follower tables not found.";
+            FollowerTableSites tables = RomLocator.FollowerTables;
+            if (tables == null || !File.Exists(arm9Path)) return "Follower tables not found.";
             if (ARM9.CheckCompressionMark()) return "arm9 is compressed.";
             // The tables must still read as the retail ones: Bulbasaur 0, Ivysaur 1, Venusaur 2 with a female model, Unown 27 forms.
-            if (Lut(FollowerModelTableOffset, 4) is not [0, 0, 1, 2]
-                || Lut(FollowerFormCountTableOffset + 200 * 2, 1)[0] != 27
-                || Lut(FollowerFemaleTableOffset + 2 * 2, 1)[0] != 1) return "The follower tables have been moved.";
+            if (Lut(tables.Models, 4) is not [0, 0, 1, 2]
+                || Lut(tables.FormCounts + 200 * 2, 1)[0] != 27
+                || Lut(tables.Female + 2 * 2, 1)[0] != 1) return "The follower tables have been moved.";
             // A path kept from the last ROM would point at its table.
             SetOWtable();
             if (RowOffset(FirstSprite) < 0) return "Follower sprites are missing from the overworld table.";
@@ -81,13 +82,17 @@ namespace DSPRE.ROMFiles
         public static List<(int index, string label)> ModelsOf(int species)
         {
             List<(int, string)> list = new List<(int, string)>();
-            if (species < 1 || species > SpeciesCount) return list;
-            int first = Lut(FollowerModelTableOffset + species * 2, 1)[0];
-            list.Add((first, "Normal"));
-            if (Lut(FollowerFemaleTableOffset + (species - 1) * 2, 1)[0] != 0) list.Add((first + 1, FemaleLabel));
+            FollowerTableSites tables = RomLocator.FollowerTables;
+            if (tables == null || species < 1 || species > SpeciesCount) return list;
+            int first = Lut(tables.Models + species * 2, 1)[0];
+            // The form models follow the game's form numbers, so they take the species' form names.
+            string[] names = PokemonForms.NamesOf(species);
+            string NameOf(int form) => names != null && form < names.Length ? names[form] : form == 0 ? "Normal" : $"Form {form}";
+            list.Add((first, NameOf(0)));
+            if (Lut(tables.Female + (species - 1) * 2, 1)[0] != 0) list.Add((first + 1, FemaleLabel));
             else
-                for (int f = 1, forms = Lut(FollowerFormCountTableOffset + (species - 1) * 2, 1)[0]; f <= forms; f++)
-                    list.Add((first + f, $"Form {f}"));
+                for (int f = 1, forms = Lut(tables.FormCounts + (species - 1) * 2, 1)[0]; f <= forms; f++)
+                    list.Add((first + f, NameOf(f)));
             return list;
         }
 
@@ -169,7 +174,8 @@ namespace DSPRE.ROMFiles
             byte[] param = (byte[])m.Param.Clone();
             param[1] = (byte)(m.TooTall ? 1 : 0);
             param[2] = m.Motion;
-            File.WriteAllBytes(ParamPath(m.Index), param);
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.followerParams });
+            ArchiveMembers.Put(DirNames.followerParams, m.Index, param);
             m.Param = param;
         }
     }

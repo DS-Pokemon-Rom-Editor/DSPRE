@@ -125,8 +125,8 @@ namespace DSPRE.Models
 
             try
             {
-                File.WriteAllText(objPath, obj.ToString());
-                File.WriteAllText(mtlPath, mtl.ToString());
+                PlainFiles.WriteText(objPath, obj.ToString());
+                PlainFiles.WriteText(mtlPath, mtl.ToString());
             }
             catch (Exception ex) { r.Whynot = ex.Message; return r; }
 

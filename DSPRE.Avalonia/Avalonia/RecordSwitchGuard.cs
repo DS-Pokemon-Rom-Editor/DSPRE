@@ -41,7 +41,7 @@ namespace DSPRE.Avalonia
 
             DialogHelper.MsgResult choice = await DialogHelper.AskThreeWay(
                 $"{subject} has unsaved changes.\n\n{question ?? $"Save them before switching to another {what}?"}",
-                "Unsaved Changes", "Save", "Discard");
+                "Unsaved changes", "Save", "Discard");
 
             if (choice == DialogHelper.MsgResult.Cancel) return false;
 
@@ -58,7 +58,7 @@ namespace DSPRE.Avalonia
             // precisely when the user asked for it to be kept.
             await DialogHelper.ShowError(
                 $"Could not save {subject}:\n{failure}\n\nStaying on the current {what}.",
-                "Save Error", owner);
+                "Couldn't save", owner);
             return false;
         }
 
@@ -101,6 +101,6 @@ namespace DSPRE.Avalonia
         public static Task<bool> TakeSavedVersionAsync(string subject)
             => DialogHelper.AskTwoWay(
                 $"{subject} was saved in another editor, and has unsaved changes here.\n\nWhich version do you want to keep?",
-                "Saved Elsewhere", "The saved one", "Mine");
+                "Saved elsewhere", "The saved one", "Mine");
     }
 }

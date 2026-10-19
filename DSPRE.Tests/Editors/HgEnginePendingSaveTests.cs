@@ -43,14 +43,14 @@ namespace DSPRE.Tests
         [Fact]
         public void NewMove_PrepareBuildsTheTextsTheImmediateAddWrote()
         {
-            var table = HgEngineSymbolTable.Parse(MovesHeader);
+            HgEngineSymbolTable table = HgEngineSymbolTable.Parse(MovesHeader);
             int oldId = table.ByName["NUM_OF_CANONICAL_MOVES"] + table.ByName["NUM_OF_CUSTOM_MOVES"];
             string oldDesignator = "MOVE_" + HgEngineNameSlug.ToUniqueSlug("Moon Beam", table, "MOVE_");
             Assert.True(HgEngineMoveExpansion.TryBuildSources(MovesHeader, MovesSource, "Moon Beam", oldDesignator, 0, oldId, null,
                 out string oldHeader, out string oldSource, out string oldError), oldError);
 
             Assert.True(HgEngineMoveExpansion.TryPrepare(MovesHeader, MovesSource, "Moon Beam", null,
-                out var pending, out string header, out string source, out string error), error);
+                out HgEngineMoveExpansion.PendingMove pending, out string header, out string source, out string error), error);
 
             Assert.Equal(oldId, pending.Id);
             Assert.Equal(oldDesignator, pending.Designator);
@@ -62,8 +62,8 @@ namespace DSPRE.Tests
         [Fact]
         public void NewMove_CommitWithTheTemplateValuesWritesExactlyThePreparedTexts()
         {
-            Assert.True(HgEngineMoveExpansion.TryPrepare(MovesHeader, MovesSource, "Moon Beam", null, out var pending, out string header, out string source, out string error), error);
-            var move = EmptyMove();
+            Assert.True(HgEngineMoveExpansion.TryPrepare(MovesHeader, MovesSource, "Moon Beam", null, out HgEngineMoveExpansion.PendingMove pending, out string header, out string source, out string error), error);
+            MoveData move = EmptyMove();
             Assert.True(HgEngineSourceFields.TryRead(pending.Entry, HgEngineMoveSource.Fields, move, Lookup, out error), error);
             Assert.Equal(5, move.pp);
             Assert.Equal(MoveData.MoveSplit.STATUS, move.split);
@@ -78,8 +78,8 @@ namespace DSPRE.Tests
         [Fact]
         public void NewMove_CommitCarriesTheEditsIntoTheNewEntryOnly()
         {
-            Assert.True(HgEngineMoveExpansion.TryPrepare(MovesHeader, MovesSource, "Moon Beam", null, out var pending, out _, out string source, out string error), error);
-            var move = EmptyMove();
+            Assert.True(HgEngineMoveExpansion.TryPrepare(MovesHeader, MovesSource, "Moon Beam", null, out HgEngineMoveExpansion.PendingMove pending, out _, out string source, out string error), error);
+            MoveData move = EmptyMove();
             Assert.True(HgEngineSourceFields.TryRead(pending.Entry, HgEngineMoveSource.Fields, move, Lookup, out error), error);
             move.damage = 80;
             move.pp = 15;
@@ -95,7 +95,7 @@ namespace DSPRE.Tests
         [Fact]
         public void NewMove_CommitRefusesWhenMovesHeaderChangedSinceAdd()
         {
-            Assert.True(HgEngineMoveExpansion.TryPrepare(MovesHeader, MovesSource, "Moon Beam", null, out var pending, out _, out _, out string error), error);
+            Assert.True(HgEngineMoveExpansion.TryPrepare(MovesHeader, MovesSource, "Moon Beam", null, out HgEngineMoveExpansion.PendingMove pending, out _, out _, out string error), error);
             string changed = MovesHeader.Replace("#define NUM_OF_CUSTOM_MOVES 0",
                 "#define MOVE_OTHER (NUM_OF_CANONICAL_MOVES + 0)\n\n#define NUM_OF_CUSTOM_MOVES 1");
 
@@ -152,7 +152,7 @@ namespace DSPRE.Tests
         public void NewItem_PrepareBuildsTheTextsTheImmediateAddWrote()
         {
             // The expected texts, built one step at a time.
-            var table = HgEngineSymbolTable.Parse(ItemsHeader);
+            HgEngineSymbolTable table = HgEngineSymbolTable.Parse(ItemsHeader);
             int oldId = table.ByName.Where(kv => kv.Key.StartsWith("ITEM_")).Max(kv => kv.Value) + 1;
             string oldDesignator = "ITEM_" + HgEngineNameSlug.ToUniqueSlug("Moon Cake", table, "ITEM_");
             string oldHeader = ItemsHeader;
@@ -161,7 +161,7 @@ namespace DSPRE.Tests
             string oldSource = ItemsSource;
             Assert.True(HgEngineHeaderEditor.TryInsertBeforeFinalCloseBrace(ref oldSource, HgEngineItemExpansion.BuildNewEntry(ItemsSource, oldDesignator)));
 
-            Assert.True(HgEngineItemExpansion.TryPrepare(ItemsHeader, ItemsSource, "Moon Cake", null, out var pending, out string header, out string source, out string error), error);
+            Assert.True(HgEngineItemExpansion.TryPrepare(ItemsHeader, ItemsSource, "Moon Cake", null, out HgEngineItemExpansion.PendingItem pending, out string header, out string source, out string error), error);
 
             Assert.Equal(2, pending.Id);
             Assert.Equal(oldDesignator, pending.Designator);
@@ -173,8 +173,8 @@ namespace DSPRE.Tests
         [Fact]
         public void NewItem_CommitWritesThePreparedTextsAndThenTheEditedPrice()
         {
-            Assert.True(HgEngineItemExpansion.TryPrepare(ItemsHeader, ItemsSource, "Moon Cake", null, out var pending, out string header, out string source, out string error), error);
-            var item = new ItemData(new MemoryStream(new byte[36]), pending.Id, hgEngineLayout: true);
+            Assert.True(HgEngineItemExpansion.TryPrepare(ItemsHeader, ItemsSource, "Moon Cake", null, out HgEngineItemExpansion.PendingItem pending, out string header, out string source, out string error), error);
+            ItemData item = new ItemData(new MemoryStream(new byte[36]), pending.Id, hgEngineLayout: true);
             Assert.True(HgEngineItemSource.TryRead(pending.Entry, item, Lookup, out error), error);
             Assert.True(item.Selectable);
 
@@ -221,8 +221,8 @@ namespace DSPRE.Tests
 
         private static MoveData Read(string text, string designator)
         {
-            var move = EmptyMove();
-            var index = HgEngineEntryIndex.Build(text);
+            MoveData move = EmptyMove();
+            Dictionary<string, (int Open, int Close)> index = HgEngineEntryIndex.Build(text);
             Assert.True(HgEngineMoveSource.TryReadEntry(text, index, designator, move, Lookup, out string error), error);
             return move;
         }
@@ -230,8 +230,8 @@ namespace DSPRE.Tests
         [Fact]
         public void StagedImport_WritesEveryRecordOnceAndLeavesTheRestAlone()
         {
-            var pound = Read(ThreeMoves, "MOVE_POUND");
-            var slap = Read(ThreeMoves, "MOVE_DOUBLE_SLAP");
+            MoveData pound = Read(ThreeMoves, "MOVE_POUND");
+            MoveData slap = Read(ThreeMoves, "MOVE_DOUBLE_SLAP");
             pound.damage = 45;
             slap.damage = 20;
             slap.pp = 15;
@@ -257,7 +257,7 @@ namespace DSPRE.Tests
         [Fact]
         public void StagedImport_AMissingMoveWritesNothing()
         {
-            var pound = Read(ThreeMoves, "MOVE_POUND");
+            MoveData pound = Read(ThreeMoves, "MOVE_POUND");
             pound.damage = 99;
             string text = ThreeMoves;
 
@@ -269,7 +269,7 @@ namespace DSPRE.Tests
         [Fact]
         public void EntryIndex_FindsWhatTryFindEntryFindsInOneScan()
         {
-            var index = HgEngineEntryIndex.Build(ThreeMoves);
+            Dictionary<string, (int Open, int Close)> index = HgEngineEntryIndex.Build(ThreeMoves);
             int checkedCount = 0;
             foreach (string designator in new[] { "MOVE_POUND", "MOVE_KARATE_CHOP", "MOVE_DOUBLE_SLAP", "NUM_OF_MOVES + 1" })
             {
@@ -360,7 +360,7 @@ namespace DSPRE.Tests
             Assert.True(outOfRange);
             Assert.Equal("1048576", raw);
 
-            var item = new ItemData(new MemoryStream(new byte[36]), 1, hgEngineLayout: true);
+            ItemData item = new ItemData(new MemoryStream(new byte[36]), 1, hgEngineLayout: true);
             Assert.False(HgEngineItemSource.TryRead(Entry(text), item, Lookup, out string error));
             Assert.Contains("out of range", error);
 
@@ -372,7 +372,7 @@ namespace DSPRE.Tests
 
         private static byte[] BuiltRecord(int price, bool hgEngineLayout)
         {
-            var item = new ItemData(new MemoryStream(new byte[36]), 1, hgEngineLayout) { FullPrice = price, HoldEffectParam = 9 };
+            ItemData item = new ItemData(new MemoryStream(new byte[36]), 1, hgEngineLayout) { FullPrice = price, HoldEffectParam = 9 };
             return item.ToByteArray();
         }
 
@@ -386,7 +386,7 @@ namespace DSPRE.Tests
             Assert.Equal(7, bytes[0x22]);
             Assert.Equal(0, bytes[0x23]);
 
-            var read = new ItemData(new MemoryStream(bytes), 1, hgEngineLayout: true);
+            ItemData read = new ItemData(new MemoryStream(bytes), 1, hgEngineLayout: true);
             Assert.Equal(500000, read.FullPrice);
             Assert.Equal(bytes, read.ToByteArray());
         }
@@ -401,7 +401,7 @@ namespace DSPRE.Tests
             // Vanilla padding is never read as a price, and is written back as zero.
             byte[] withPadding = (byte[])vanilla.Clone();
             withPadding[0x22] = 0x07;
-            var read = new ItemData(new MemoryStream(withPadding), 1, hgEngineLayout: false);
+            ItemData read = new ItemData(new MemoryStream(withPadding), 1, hgEngineLayout: false);
             Assert.Equal(1200, read.FullPrice);
             Assert.Equal(vanilla, read.ToByteArray());
             Assert.Equal(vanilla, new ItemData(new MemoryStream(vanilla), 1, hgEngineLayout: false).ToByteArray());

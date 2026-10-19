@@ -19,9 +19,10 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
     /// <summary>
     /// Backing model for the ground item list dialog (Event Editor's Overworld Item panel). Edits stay in a
-    /// <see cref="GroundItemScriptsLogic.Session"/> until Save, which also renumbers the item events.
+    /// <see cref="GroundItemScriptsLogic.Session"/> until Save, which also renumbers the item events. Each edit is an
+    /// undo step; Save starts the history again, since it renumbers the entries the steps refer to.
     /// </summary>
-    public class GroundItemScriptsViewModel : INotifyPropertyChanged
+    public class GroundItemScriptsViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -62,19 +63,53 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public bool Changed { get; private set; }
 
         private GroundItemScriptsLogic.Session _session;
+        private readonly UndoHistory<GroundItemScriptsLogic.Session.Snapshot> _history = new();
         public bool HasUnsavedChanges => _session?.HasChanges == true;
+        public string UnsavedChangesDescription => "Ground item list";
 
         public GroundItemScriptsViewModel()
         {
             if (Design.IsDesignMode) return;
             foreach (string name in RomInfo.GetItemNames()) ItemNames.Add(name);
             _session = new GroundItemScriptsLogic.Session();
+            _history.Reset(_session.Take());
             Refresh();
         }
+
+        public bool CanUndo => _history.CanUndo;
+        public bool CanRedo => _history.CanRedo;
+
+        public void Undo()
+        {
+            if (!_history.CanUndo) return;
+            _session.Restore(_history.Undo());
+            SelectedEntry = null;
+            Refresh();
+        }
+
+        public void Redo()
+        {
+            if (!_history.CanRedo) return;
+            _session.Restore(_history.Redo());
+            SelectedEntry = null;
+            Refresh();
+        }
+
+        // After a change to the pending list.
+        private void Step()
+        {
+            _history.Capture(_session.Take());
+            Refresh();
+        }
+
+        public void SaveChanges() => Save();
+        public void DiscardChanges() => Discard();
 
         private void Refresh()
         {
             OnPropertyChanged(nameof(HasUnsavedChanges));
+            OnPropertyChanged(nameof(CanUndo));
+            OnPropertyChanged(nameof(CanRedo));
             Entries.Clear();
             foreach (GroundItemScriptsLogic.Entry e in _session.Entries())
             {
@@ -93,7 +128,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
             _session.Add(_newItemIndex, (int)_newQuantity);
             StatusText = "";
-            Refresh();
+            Step();
         }
 
         public void ChangeSelectedEntry()
@@ -108,7 +143,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             int index = _selectedEntry.ScriptIndex;
             _session.Update(index, _newItemIndex, (int)_newQuantity);
             StatusText = "";
-            Refresh();
+            Step();
             foreach (GroundItemRow row in Entries)
                 if (row.ScriptIndex == index) { SelectedEntry = row; break; }
         }
@@ -126,13 +161,14 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
             StatusText = "";
             SelectedEntry = null;
-            Refresh();
+            Step();
         }
 
         public void Save()
         {
             if (!HasUnsavedChanges) return;
             _session.Save();
+            _history.Reset(_session.Take());
             Changed = true;
             StatusText = "";
             Refresh();
@@ -141,6 +177,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public void Discard()
         {
             _session = new GroundItemScriptsLogic.Session();
+            _history.Reset(_session.Take());
             SelectedEntry = null;
             StatusText = "";
             Refresh();

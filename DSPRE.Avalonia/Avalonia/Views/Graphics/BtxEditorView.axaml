@@ -29,7 +29,7 @@
         <Button Content="Remove selected" controls:Icon.Key="deleteIcon" Click="DeleteEntry_Click" IsEnabled="{Binding CanDeleteSelected}"
                 IsVisible="{Binding IsExpansionApplied}" ToolTip.Tip="Only entries you added"/>
       </StackPanel>
-      <TextBlock Text="{Binding ModifiedCount}" Foreground="OrangeRed" FontSize="12"/>
+      <TextBlock Text="{Binding ModifiedCount}" Foreground="{DynamicResource Editor.Bad}" FontSize="12"/>
   </controls:EditorToolbar>
 
   <Grid ColumnDefinitions="160,8,*,8,260" Margin="8">

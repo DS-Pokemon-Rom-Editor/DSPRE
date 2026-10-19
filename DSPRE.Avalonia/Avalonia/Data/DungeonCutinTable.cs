@@ -2,70 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using DSPRE;
+using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Data
 {
-    /// <summary>
-    /// The table saying which files make up each location splash screen.
-    ///
-    /// HeartGold shows a picture of where you are when you walk in, and there are twenty five of them.
-    /// Each names, for four times of day, the tiles it is drawn from, the colours and the arrangement.
-    /// Read once here so the Dungeon Cutin Editor and the Graphics window agree about it rather than each
-    /// having their own copy of the field order.
-    /// </summary>
-    public static class DungeonCutinTable
+    /// <summary>The splash screens as the Graphics window lists them, from <see cref="DungeonCutinTable"/>.</summary>
+    public static class DungeonCutinUnits
     {
-        /// <summary>Rows in the retail table.</summary>
-        public const int RowCount = 25;
-
-        public enum TimeOfDay { Morning, Noon, Evening, Night }
-
-        public sealed class Row
-        {
-            public int Number;                 // 1-based, for showing
-            public int HeaderIndex;            // which zone this is for
-            public int WipeType;
-            public int NameMessageId;
-            /// <summary>Colours, tiles and arrangement for each of the four times of day.</summary>
-            public (int Palette, int Tiles, int Screen)[] Art = new (int, int, int)[4];
-
-            public (int Palette, int Tiles, int Screen) At(TimeOfDay t) => Art[(int)t];
-        }
-
-        /// <summary>Reads the table, or an empty list when this game has none. Only HeartGold and
-        /// SoulSilver do.</summary>
-        public static List<Row> Read()
-        {
-            List<Row> rows = new List<Row>();
-            try
-            {
-                RomInfo.SetDungeonCutinTableOffsetToRAMAddress();
-                if (RomInfo.dungeonCutinTableOffsetToRAMAddress == 0) return rows;
-
-                uint ram = BitConverter.ToUInt32(ARM9.ReadBytes(RomInfo.dungeonCutinTableOffsetToRAMAddress, 4), 0);
-                using ARM9.Reader reader = new ARM9.Reader(ram - ARM9.address);
-                for (int i = 0; i < RowCount; i++)
-                {
-                    Row row = new Row
-                    {
-                        Number = i + 1,
-                        HeaderIndex = reader.ReadInt32(),
-                        WipeType = reader.ReadInt32(),
-                    };
-                    for (int t = 0; t < 4; t++)
-                        row.Art[t] = (reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
-                    row.NameMessageId = reader.ReadInt32();
-                    rows.Add(row);
-                }
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Error("DungeonCutinTable.Read: " + ex.Message);
-                rows.Clear();
-            }
-            return rows;
-        }
-
         private static readonly string[] WhenNames = { "Morning", "Noon", "Evening", "Night" };
 
         /// <summary>
@@ -101,7 +44,7 @@ namespace DSPRE.Avalonia.Data
             // Rows naming the same files are the same screen shown in more than one place.
             Dictionary<string, GraphicAssets.Unit> byFiles = new Dictionary<string, GraphicAssets.Unit>();
 
-            foreach (Row r in Read())
+            foreach (DungeonCutinTable.Row r in DungeonCutinTable.Read())
             {
                 string key = string.Join(",", r.Art.SelectMany(x => new[] { x.Palette, x.Tiles, x.Screen }));
                 if (byFiles.TryGetValue(key, out GraphicAssets.Unit already))
@@ -115,7 +58,7 @@ namespace DSPRE.Avalonia.Data
                 GraphicAssets.Unit u = new GraphicAssets.Unit
                 {
                     Archive = archive,
-                    Name = place != null ? $"Splash screen {r.Number}, {place}" : $"Splash screen {r.Number}",
+                    Name = place != null ? $"Splash screen {r.Number} for {place}" : $"Splash screen {r.Number}",
                 };
                 byFiles[key] = u;
 
@@ -128,7 +71,7 @@ namespace DSPRE.Avalonia.Data
                         if (u.Parts.Exists(x => x.Index == index)) return;
                         u.Parts.Add(new GraphicAssets.UnitPart
                         {
-                            Archive = archive, Index = index, Name = $"{WhenNames[t]}, {what}",
+                            Archive = archive, Index = index, Name = $"{WhenNames[t]} {what.ToLowerInvariant()}",
                         });
                         spokenFor.Add(index);
                     }
@@ -150,14 +93,6 @@ namespace DSPRE.Avalonia.Data
 
             units.Sort((x, y) => x.First.CompareTo(y.First));
             return units;
-        }
-
-        /// <summary>The drawing one location uses at a given time of day, for an editor handing it over.</summary>
-        public static int DrawingFor(int rowNumber, TimeOfDay when)
-        {
-            foreach (Row r in Read())
-                if (r.Number == rowNumber) return r.At(when).Tiles;
-            return -1;
         }
     }
 }

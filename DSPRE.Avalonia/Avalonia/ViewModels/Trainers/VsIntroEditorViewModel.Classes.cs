@@ -35,7 +35,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public int Combo { get; init; }
         public string Name { get; init; }
         public string Music { get; init; }
-        public override string ToString() => $"{Name}, {Music}";
+        public override string ToString() => $"{Name} ({Music})";
     }
 
     public partial class VsIntroEditorViewModel
@@ -163,19 +163,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 return "";
             }
         }
-        public bool CanMakeClassRoom => IsHgss && !_t.ClassTableMoved;
+        public bool CanMakeClassRoom => IsHgss && !_t.ClassTableMoved && !_t.FromSource;
 
-        /// <summary>Gives the class table room for more rows. It writes at once, so it asks first.</summary>
-        public async System.Threading.Tasks.Task MakeClassRoomAsync()
-        {
-            string why = _t.WhyNoClassRoom();
-            if (why != null) { StatusText = why; return; }
-            if (!await DialogHelper.AskYesNo($"Move the class table to the expanded ARM9 area? It will hold up to {VsIntroTables.MostClassRows} classes instead of {_t.ClassRowCount}. This is written right away.", "Make room")) return;
-            try { _t.MakeClassRoom(); }
-            catch (Exception ex) { StatusText = ex.Message; return; }
-            StatusText = $"The class table now has room for {_t.ClassRowCount} classes.";
-            Raise(nameof(CanMakeClassRoom), nameof(ClassNote));
-        }
+        /// <summary>Making room changes the game's code, so the toolbox does it.</summary>
+        public void OpenClassRoomPatch() => AvaloniaEditorLauncher.OpenPatchToolboxAt("vsClassTableExpanded");
 
         public ObservableCollection<IntroChoice> ClassIntroChoices { get; } = new();
 

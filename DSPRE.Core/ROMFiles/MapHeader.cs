@@ -258,7 +258,7 @@ namespace DSPRE.ROMFiles {
         public static int AddDynamicHeader(string internalName, int copyFrom = 0) {
             int id = GetHeaderCount();
             if (copyFrom < 0 || copyFrom >= id) copyFrom = 0;
-            File.Copy(Filesystem.GetDynamicHeaderPath(copyFrom), Filesystem.GetDynamicHeaderPath(id));
+            ArchiveMembers.Write(Filesystem.GetDynamicHeaderPath(id), File.ReadAllBytes(Filesystem.GetDynamicHeaderPath(copyFrom)));
             WriteInternalName(id, internalName);
             return id;
         }
@@ -266,7 +266,7 @@ namespace DSPRE.ROMFiles {
         /// <summary>Puts back a removed last header from its saved bytes; dynamic headers only.</summary>
         public static int RestoreDynamicHeader(byte[] data, string internalName) {
             int id = GetHeaderCount();
-            File.WriteAllBytes(Filesystem.GetDynamicHeaderPath(id), data);
+            ArchiveMembers.Put(RomInfo.DirNames.dynamicHeaders, id, data);
             WriteInternalName(id, internalName);
             return id;
         }
@@ -274,7 +274,7 @@ namespace DSPRE.ROMFiles {
         /// <summary>Removes the last header and its internal name; dynamic headers only.</summary>
         public static void RemoveLastDynamicHeader() {
             int last = GetHeaderCount() - 1;
-            File.Delete(Filesystem.GetDynamicHeaderPath(last));
+            ArchiveMembers.Delete(Filesystem.GetDynamicHeaderPath(last));
             using (DSUtils.EasyWriter writer = new DSUtils.EasyWriter(RomInfo.internalNamesPath)) writer.EditSize(-RomInfo.internalNameLength);
         }
 

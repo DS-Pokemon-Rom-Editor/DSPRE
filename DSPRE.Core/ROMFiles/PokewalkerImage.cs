@@ -7,6 +7,10 @@ namespace DSPRE.ROMFiles
     /// a/2/4/8 (icons, 32 by 48), each member LZ-packed. The picture runs in strips eight rows tall; each column of a
     /// strip is one word, high byte first, whose low byte holds one bit plane and high byte the other for rows 0-7.
     /// A pixel is 0 (white) to 3 (black). hg-engine builds them with tools/ENCODE_IMG from its PNGs.
+    ///
+    /// Based on DECODE_IMG and ENCODE_IMG by DmitryGR, with BluRose's 8bpp PNG changes, as shipped in hg-engine
+    /// (tools/source/DECODEIMG, GPLv3). Value 1 is the light grey and 2 the dark one, as those tools' palette has
+    /// it; their comments name the two the other way round.
     /// </summary>
     public static class PokewalkerImage
     {

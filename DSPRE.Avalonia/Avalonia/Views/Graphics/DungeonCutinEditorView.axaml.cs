@@ -19,7 +19,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             _vm = new DungeonCutinEditorViewModel(headerNames);
             DataContext = _vm;
             // Members imported and then undone stay in the archive until a Discard, so a clean close drops them.
-            EditorWindowChrome.Attach(this, _vm, manageTitle: false, onClosed: () => _vm.DropUnsavedImports());
+            EditorWindowChrome.Attach(this, _vm, title: () => _vm.Title, onClosed: () => _vm.DropUnsavedImports());
         }
 
         // Parameterless constructor for previewer only
@@ -41,7 +41,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             DungeonCutinEditorViewModel vm = DataContext as DSPRE.Avalonia.ViewModels.Graphics.DungeonCutinEditorViewModel;
             int row = vm?.SelectedRow?.RowNumber ?? 0;
             int drawing = row > 0
-                ? Data.DungeonCutinTable.DrawingFor(row, Data.DungeonCutinTable.TimeOfDay.Noon) : -1;
+                ? DSPRE.ROMFiles.DungeonCutinTable.DrawingFor(row, DSPRE.ROMFiles.DungeonCutinTable.TimeOfDay.Noon) : -1;
             if (drawing < 0)
             {
                 _ = DialogHelper.ShowInfo("Pick a splash screen first.", "Open in Graphics");
@@ -51,7 +51,10 @@ namespace DSPRE.Avalonia.Views.Graphics
         }
 
 
-        private void Discard_Click(object sender, RoutedEventArgs e) => (DataContext as DungeonCutinEditorViewModel)?.DiscardChanges();
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as DungeonCutinEditorViewModel)?.DiscardChanges();
+        }
 
         private async void Save_Click(object sender, RoutedEventArgs e)
             => await _vm.SaveCommand();
@@ -60,7 +63,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = "Export Dungeon Cutin Table",
+                Title = "Export dungeon cutin table",
                 DefaultExtension = "csv",
                 SuggestedFileName = "dungeon_cutin.csv",
                 FileTypeChoices = new List<FilePickerFileType> { DialogHelper.CsvFilter }
@@ -70,14 +73,15 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = await _vm.ExportCsvAsync(path);
             if (error != null)
-                await DialogHelper.ShowError($"Export failed: {error}", "Export Error", this);
+                await DialogHelper.ShowError($"Export failed: {error}", "Dungeon cutin editor error", this);
+            else SaveNotice.Exported(path);
         }
 
         private async void Import_Click(object sender, RoutedEventArgs e)
         {
             IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                Title = "Import Dungeon Cutin Table",
+                Title = "Import dungeon cutin table",
                 AllowMultiple = false,
                 FileTypeFilter = new List<FilePickerFileType> { DialogHelper.CsvFilter }
             });
@@ -100,11 +104,11 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async System.Threading.Tasks.Task ImportTimezone(DungeonCutinTimezone tz)
         {
-            if (_vm.SelectedRow == null) { await DialogHelper.ShowError("Select a row first.", "Import Error", this); return; }
+            if (_vm.SelectedRow == null) { await DialogHelper.ShowError("Select a row first.", "Dungeon cutin editor error", this); return; }
 
             IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                Title = "Import Image",
+                Title = "Import image",
                 AllowMultiple = false,
                 FileTypeFilter = new List<FilePickerFileType> { DialogHelper.PngFilter }
             });
@@ -114,16 +118,17 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = _vm.ImportTimezoneImage(tz, path);
             if (error != null)
-                await DialogHelper.ShowError($"Import failed: {error}", "Import Error", this);
+                await DialogHelper.ShowError($"Import failed: {error}", "Dungeon cutin editor error", this);
+            else SaveNotice.Imported($"the {tz.ToString().ToLowerInvariant()} picture", path);
         }
 
         private async System.Threading.Tasks.Task ExportTimezone(DungeonCutinTimezone tz)
         {
-            if (_vm.SelectedRow == null) { await DialogHelper.ShowError("Select a row first.", "Export Error", this); return; }
+            if (_vm.SelectedRow == null) { await DialogHelper.ShowError("Select a row first.", "Dungeon cutin editor error", this); return; }
 
             IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = "Export Image",
+                Title = "Export image",
                 DefaultExtension = "png",
                 SuggestedFileName = $"{tz}.png",
                 FileTypeChoices = new List<FilePickerFileType> { DialogHelper.PngFilter }
@@ -133,7 +138,8 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = _vm.ExportTimezoneImage(tz, path);
             if (error != null)
-                await DialogHelper.ShowError($"Export failed: {error}", "Export Error", this);
+                await DialogHelper.ShowError($"Export failed: {error}", "Dungeon cutin editor error", this);
+            else SaveNotice.Exported(path);
         }
     }
 }

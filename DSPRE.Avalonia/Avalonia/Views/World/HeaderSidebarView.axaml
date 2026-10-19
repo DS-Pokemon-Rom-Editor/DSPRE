@@ -9,7 +9,7 @@
        (binds to a HeaderEditorViewModel: TreeFolders / SelectedTreeNode / TreeFilterText). -->
   <DockPanel>
     <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,4">
-      <TextBox PlaceholderText="Search headers…" Text="{Binding TreeFilterText, Mode=TwoWay}"/>
+      <TextBox PlaceholderText="Search headers" Text="{Binding TreeFilterText, Mode=TwoWay}"/>
       <StackPanel Orientation="Horizontal" Spacing="4">
         <Button Click="ExpandAll_Click" Width="28" Height="28" Padding="0"
                 HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
@@ -28,7 +28,7 @@
         <CheckBox Content="Fuzzy" IsChecked="{Binding FuzzySearch}" VerticalAlignment="Center" Margin="4,0,0,0"
                   ToolTip.Tip="Also match approximate spellings (typo-tolerant)"/>
         <Button Click="Search_Click" controls:Icon.Key="lens" Height="28" Margin="4,0,0,0"
-                ToolTip.Tip="Advanced header search, opening results here"/>
+                ToolTip.Tip="Advanced header search that opens results here"/>
       </StackPanel>
     </StackPanel>
 

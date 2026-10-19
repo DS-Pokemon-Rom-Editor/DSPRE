@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using DSPRE;
+using DSPRE.Avalonia.ViewModels.Pokemon;
 using DSPRE.ROMFiles;
 using Xunit;
 using Xunit.Abstractions;
@@ -41,7 +42,7 @@ namespace DSPRE.Tests
         {
             Skip.If(!Open(), "Platinum sources not here");
 
-            var vanilla = StarterRotomSource.FindVanilla();
+            StarterRotomSource.Match vanilla = StarterRotomSource.FindVanilla();
             Assert.NotNull(vanilla);
             _out.WriteLine($"RomInfo says file {RomInfo.starterHeldItemScriptFileID}, script "
                          + $"{RomInfo.starterCommandScriptNumber}; found {vanilla.Where}");
@@ -52,7 +53,7 @@ namespace DSPRE.Tests
             Assert.Equal(StarterRotomSource.FindStarter().Key, vanilla.Key);
 
             // And it really is one file: the whole game holds give commands in other files too.
-            var everywhere = StarterRotomSource.FindAll();
+            List<StarterRotomSource.Match> everywhere = StarterRotomSource.FindAll();
             Assert.True(everywhere.Count > 1, "one give command in the game proves nothing here");
             Assert.All(StarterRotomSource.ReadFile(vanilla.FileId),
                        m => Assert.Equal(vanilla.FileId, m.FileId));
@@ -60,7 +61,7 @@ namespace DSPRE.Tests
                          + $"{StarterRotomSource.ReadFile(vanilla.FileId).Count} in the one file read");
 
             // A remembered choice is followed the same way, from its own file alone.
-            var byKey = StarterRotomSource.FindByKey(vanilla.Key);
+            StarterRotomSource.Match byKey = StarterRotomSource.FindByKey(vanilla.Key);
             Assert.NotNull(byKey);
             Assert.Equal(vanilla.Key, byKey.Key);
             Assert.Null(StarterRotomSource.FindByKey("rotom:427:script_13:99"));
@@ -81,7 +82,7 @@ namespace DSPRE.Tests
             Assert.True(inTheGame > 100, $"only {inTheGame} sources here, so this would prove nothing");
 
             StarterRotomSource.ForgetFilesRead();
-            var vm = new DSPRE.Avalonia.ViewModels.Pokemon.StarterEditorViewModel();
+            StarterEditorViewModel vm = new DSPRE.Avalonia.ViewModels.Pokemon.StarterEditorViewModel();
             int read = StarterRotomSource.FilesRead;
 
             _out.WriteLine($"opening the editor read {read} of the {inTheGame} script sources");
@@ -95,12 +96,12 @@ namespace DSPRE.Tests
         {
             Skip.If(!Open(), "Platinum sources not here");
 
-            var all = StarterRotomSource.FindAll();
+            List<StarterRotomSource.Match> all = StarterRotomSource.FindAll();
             Assert.True(all.Count >= 2, $"only {all.Count} found, so this proved nothing");
-            foreach (var m in all)
+            foreach (StarterRotomSource.Match m in all)
                 Assert.False(string.IsNullOrEmpty(m.Container), $"{m.Where} has no script around it");
 
-            var starter = StarterRotomSource.FindStarter();
+            StarterRotomSource.Match starter = StarterRotomSource.FindStarter();
             _out.WriteLine($"the starter is in {starter.Container} of file {starter.FileId}");
             Assert.Equal("script_13", starter.Container);
             Assert.Contains("script_13", starter.Where, StringComparison.Ordinal);
@@ -112,22 +113,22 @@ namespace DSPRE.Tests
         {
             Skip.If(!Open(), "Platinum sources not here");
 
-            var starter = StarterRotomSource.FindStarter();
-            var yes = StarterRotomSource.Verify(starter.FileId, starter.Container);
+            StarterRotomSource.Match starter = StarterRotomSource.FindStarter();
+            StarterRotomSource.Check yes = StarterRotomSource.Verify(starter.FileId, starter.Container);
             _out.WriteLine($"the starter's own script: {yes.Verdict} - {yes.Message}");
             Assert.Equal(StarterRotomSource.Verdict.Usable, yes.Verdict);
             Assert.Equal(starter.Key, yes.Found.Key);
 
             // A give command that names the species outright, which the editor cannot drive.
-            var literal = StarterRotomSource.FindAll().FirstOrDefault(m => !m.SpeciesFromVariable);
+            StarterRotomSource.Match literal = StarterRotomSource.FindAll().FirstOrDefault(m => !m.SpeciesFromVariable);
             Assert.True(literal != null, "expected a give command with the species written in");
-            var own = StarterRotomSource.Verify(literal.FileId, literal.Container);
+            StarterRotomSource.Check own = StarterRotomSource.Verify(literal.FileId, literal.Container);
             _out.WriteLine($"{literal.Where}: {own.Verdict} - {own.Message}");
             Assert.Equal(StarterRotomSource.Verdict.SpeciesIsItsOwn, own.Verdict);
             Assert.Contains("manage species on its own", own.Message, StringComparison.Ordinal);
 
             // A script that gives nothing at all.
-            var no = StarterRotomSource.Verify(starter.FileId, "script_1");
+            StarterRotomSource.Check no = StarterRotomSource.Verify(starter.FileId, "script_1");
             _out.WriteLine($"script_1 of the same file: {no.Verdict} - {no.Message}");
             Assert.Equal(StarterRotomSource.Verdict.NotAGiveCommand, no.Verdict);
             Assert.Null(no.Found);
@@ -139,8 +140,8 @@ namespace DSPRE.Tests
         {
             Skip.If(!Open(), "Platinum sources not here");
 
-            var starter = StarterRotomSource.FindStarter();
-            var names = StarterRotomSource.ContainersIn(starter.FileId);
+            StarterRotomSource.Match starter = StarterRotomSource.FindStarter();
+            List<string> names = StarterRotomSource.ContainersIn(starter.FileId);
             _out.WriteLine($"file {starter.FileId} holds {names.Count} scripts: {string.Join(", ", names.Take(6))}");
             Assert.Contains(starter.Container, names);
             Assert.True(names.Count > 1, "a file with one script proves nothing about listing them");
@@ -155,8 +156,8 @@ namespace DSPRE.Tests
         {
             Skip.If(!Open(), "Platinum sources not here");
 
-            var starter = StarterRotomSource.FindStarter();
-            var vm = new DSPRE.Avalonia.ViewModels.Pokemon.StarterCommandDialogViewModel(starter);
+            StarterRotomSource.Match starter = StarterRotomSource.FindStarter();
+            StarterCommandDialogViewModel vm = new DSPRE.Avalonia.ViewModels.Pokemon.StarterCommandDialogViewModel(starter);
             Assert.True(vm.Candidates.Count >= 2, "the picker should have something to pick between");
             Assert.True(vm.SelectedIndex >= 0, "the current one should be picked out already");
 
@@ -165,8 +166,8 @@ namespace DSPRE.Tests
             Assert.Equal(starter.Key, vm.Chosen.Key);
             Assert.False(vm.SpeciesIsOutOfOurHands);
 
-            var literal = StarterRotomSource.FindAll().First(m => !m.SpeciesFromVariable);
-            var other = new DSPRE.Avalonia.ViewModels.Pokemon.StarterCommandDialogViewModel(starter)
+            StarterRotomSource.Match literal = StarterRotomSource.FindAll().First(m => !m.SpeciesFromVariable);
+            StarterCommandDialogViewModel other = new DSPRE.Avalonia.ViewModels.Pokemon.StarterCommandDialogViewModel(starter)
             { FileId = literal.FileId, ContainerName = literal.Container };
             other.Verify();
             other.Accept();
@@ -184,15 +185,15 @@ namespace DSPRE.Tests
         {
             Skip.If(!Open(), "Platinum sources not here");
 
-            var starter = StarterRotomSource.FindStarter();
-            var vm = new DSPRE.Avalonia.ViewModels.Pokemon.StarterEditorViewModel();
+            StarterRotomSource.Match starter = StarterRotomSource.FindStarter();
+            StarterEditorViewModel vm = new DSPRE.Avalonia.ViewModels.Pokemon.StarterEditorViewModel();
             _out.WriteLine($"level control shown={vm.IsLevelSupported}, at {vm.StarterLevel}, {vm.CommandLocation}");
             Assert.True(vm.IsLevelSupported, "Platinum should offer the level");
             Assert.Equal(starter.Level, vm.StarterLevel);
             Assert.Equal(starter.Where, vm.CommandLocation);
             Assert.True(vm.SpeciesEditable);
 
-            var other = StarterRotomSource.FindAll().First(m => m.Key != starter.Key);
+            StarterRotomSource.Match other = StarterRotomSource.FindAll().First(m => m.Key != starter.Key);
             string before = Remembered();
             string fingerprintBefore = Fingerprint();
             try
@@ -202,7 +203,7 @@ namespace DSPRE.Tests
                 Assert.Equal(other.Key, Remembered());
 
                 // A new editor on the same project picks the remembered one back up.
-                var again = new DSPRE.Avalonia.ViewModels.Pokemon.StarterEditorViewModel();
+                StarterEditorViewModel again = new DSPRE.Avalonia.ViewModels.Pokemon.StarterEditorViewModel();
                 _out.WriteLine($"reopened on {again.CommandLocation}");
                 Assert.Equal(other.Where, again.CommandLocation);
             }
@@ -240,14 +241,14 @@ namespace DSPRE.Tests
                 DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.scripts });
                 Skip.If(!StarterRotomSource.IsAvailable, "this project has no decompiled sources");
 
-                var opened = new DSPRE.Avalonia.ViewModels.Pokemon.StarterEditorViewModel();
+                StarterEditorViewModel opened = new DSPRE.Avalonia.ViewModels.Pokemon.StarterEditorViewModel();
                 Assert.True(opened.HasCommandLocation, "the starter should have been found");
                 Assert.False(opened.CommandsHaveChanged, "a project nobody has touched should say nothing");
                 string before = opened.CommandLocation;
                 _out.WriteLine($"first open: {before}, level {opened.StarterLevel}");
 
                 // Somebody sets a held item and a level, and presses Save.
-                var starter = StarterRotomSource.FindStarter();
+                StarterRotomSource.Match starter = StarterRotomSource.FindStarter();
                 string failure = StarterRotomSource.SaveAsync(starter, 12, "ITEM_ORAN_BERRY", 155)
                                                    .GetAwaiter().GetResult();
                 Assert.True(failure == null, "saving reported: " + failure);
@@ -256,7 +257,7 @@ namespace DSPRE.Tests
                 _out.WriteLine("after saving: " + StarterRotomSource.FindStarter()?.Line.Trim());
 
                 // Open it again. Nothing about which command is the starter has changed.
-                var reopened = new DSPRE.Avalonia.ViewModels.Pokemon.StarterEditorViewModel();
+                StarterEditorViewModel reopened = new DSPRE.Avalonia.ViewModels.Pokemon.StarterEditorViewModel();
                 _out.WriteLine($"second open: {reopened.CommandLocation}, level {reopened.StarterLevel}, "
                              + $"asks again={reopened.CommandsHaveChanged}");
                 Assert.False(reopened.CommandsHaveChanged,
@@ -295,16 +296,16 @@ namespace DSPRE.Tests
                 DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.scripts });
                 Skip.If(!StarterRotomSource.IsAvailable, "this project has no decompiled sources");
 
-                var before = StarterRotomSource.FindStarter();
+                StarterRotomSource.Match before = StarterRotomSource.FindStarter();
                 Assert.NotNull(before);
 
                 // A comment put in near the top, which pushes everything below it down a line.
                 string path = StarterRotomSource.PathFor(before.FileId);
-                var lines = File.ReadAllLines(path).ToList();
+                List<string> lines = File.ReadAllLines(path).ToList();
                 lines.Insert(0, "// somebody left a note here");
                 File.WriteAllLines(path, lines);
 
-                var after = StarterRotomSource.FindStarter();
+                StarterRotomSource.Match after = StarterRotomSource.FindStarter();
                 Assert.NotNull(after);
                 _out.WriteLine($"line {before.LineNumber} became {after.LineNumber}, key {after.Key}");
                 Assert.Equal(before.LineNumber + 1, after.LineNumber);
@@ -320,13 +321,13 @@ namespace DSPRE.Tests
 
         private static string Fingerprint()
         {
-            var map = SettingsManager.Settings?.starterCommandFingerprint;
+            Dictionary<string, string> map = SettingsManager.Settings?.starterCommandFingerprint;
             return map != null && map.TryGetValue(RomInfo.workDir ?? "", out string f) ? f : null;
         }
 
         private static string Remembered()
         {
-            var map = SettingsManager.Settings?.starterCommandChoice;
+            Dictionary<string, string> map = SettingsManager.Settings?.starterCommandChoice;
             return map != null && map.TryGetValue(RomInfo.workDir ?? "", out string k) ? k : null;
         }
     }

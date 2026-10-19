@@ -55,21 +55,21 @@ namespace DSPRE.ROMFiles
             {
                 ARM9.DecompressIfMarked();
                 byte[] arm9 = ARM9.ReadBytes(0);
-                List<int> matches = DSUtils.SearchBytes(arm9, RomInfo.starterArm9SearchSuffix);
-                if (matches.Count != 1)
+                int baseOffset = HgssSpeciesSite(arm9);
+                if (baseOffset < 0)
                 {
-                    AppLogger.Warn("StarterPokemonData: HGSS starter ARM9 signature not found (or matched more " +
-                        "than once), showing the vanilla starters. The ARM9 may already be modified by another tool.");
+                    AppLogger.Warn("StarterPokemonData: the HGSS starter code isn't what this ROM shipped with, showing the " +
+                        "vanilla starters. The ARM9 may already be modified by another tool.");
                     return (int[])VanillaHgssStarters.Clone();
                 }
-                int baseOffset = matches[0] - 13;
                 return new[] { ReadWord(arm9, baseOffset), ReadWord(arm9, baseOffset + 4), ReadWord(arm9, baseOffset + 8) };
             }
             else
             {
-                if (RomInfo.starterOverlayNumber < 0) return new[] { 0, 0, 0 };
-                if (OverlayUtils.IsCompressed(RomInfo.starterOverlayNumber)) OverlayUtils.Decompress(RomInfo.starterOverlayNumber);
-                byte[] data = DSUtils.ReadFromFile(OverlayUtils.GetPath(RomInfo.starterOverlayNumber), RomInfo.starterSpeciesOffset, 12);
+                RomLocator.Spot species = RomLocator.Where(RomLocator.Thing.StarterSpecies);
+                if (species == null) return new[] { 0, 0, 0 };
+                if (OverlayUtils.IsCompressed(species.Overlay)) OverlayUtils.Decompress(species.Overlay);
+                byte[] data = DSUtils.ReadFromFile(OverlayUtils.GetPath(species.Overlay), (uint)species.Offset, 12);
                 return new[] { ReadWord(data, 0), ReadWord(data, 4), ReadWord(data, 8) };
             }
         }
@@ -198,14 +198,13 @@ namespace DSPRE.ROMFiles
             {
                 ARM9.DecompressIfMarked();
                 byte[] arm9 = ARM9.ReadBytes(0);
-                List<int> matches = DSUtils.SearchBytes(arm9, RomInfo.starterArm9SearchSuffix);
-                if (matches.Count != 1)
+                int baseOffset = HgssSpeciesSite(arm9);
+                if (baseOffset < 0)
                 {
-                    AppLogger.Warn("StarterPokemonData: HGSS starter ARM9 signature not found (or matched more " +
-                        "than once), starters were NOT changed. The ARM9 may already be modified by another tool.");
+                    AppLogger.Warn("StarterPokemonData: the HGSS starter code isn't what this ROM shipped with, so the " +
+                        "starters were NOT changed. The ARM9 may already be modified by another tool.");
                     return false;
                 }
-                int baseOffset = matches[0] - 13;
                 WriteWordToArm9(baseOffset, newSpecies[0]);
                 WriteWordToArm9(baseOffset + 4, newSpecies[1]);
                 WriteWordToArm9(baseOffset + 8, newSpecies[2]);
@@ -213,19 +212,20 @@ namespace DSPRE.ROMFiles
             }
             else
             {
-                if (RomInfo.starterOverlayNumber < 0) return false;
-                if (OverlayUtils.IsCompressed(RomInfo.starterOverlayNumber)) OverlayUtils.Decompress(RomInfo.starterOverlayNumber);
-                string path = OverlayUtils.GetPath(RomInfo.starterOverlayNumber);
+                RomLocator.Spot species = RomLocator.Where(RomLocator.Thing.StarterSpecies);
+                if (species == null) return false;
+                if (OverlayUtils.IsCompressed(species.Overlay)) OverlayUtils.Decompress(species.Overlay);
+                string path = OverlayUtils.GetPath(species.Overlay);
                 byte[] data = File.ReadAllBytes(path);
 
-                int offset = (int)RomInfo.starterSpeciesOffset;
+                int offset = species.Offset;
                 WriteWord(data, offset, newSpecies[0]);
                 WriteWord(data, offset + 4, newSpecies[1]);
                 WriteWord(data, offset + 8, newSpecies[2]);
 
                 PatchDpPtSelectionSceneAsm(data, newSpecies);
 
-                File.WriteAllBytes(path, data);
+                DSUtils.WriteWholeFile(path, data);
                 return true;
             }
         }
@@ -245,10 +245,13 @@ namespace DSPRE.ROMFiles
                 return;
             }
             if (string.IsNullOrEmpty(RomInfo.starterGraphicsPrefix)) return;
-            byte[] prefix = DSUtils.StringToByteArray(RomInfo.starterGraphicsPrefix);
-            List<int> matches = DSUtils.SearchBytes(starterData, prefix);
-            if (matches.Count == 0 || matches[0] <= 0) return;
-            int offset = matches[0] + prefix.Length;
+            int offset = RomLocator.Where(RomLocator.Thing.StarterScene)?.Offset ?? -1;
+            if (!Follows(starterData, offset, DSUtils.StringToByteArray(RomInfo.starterGraphicsPrefix)))
+            {
+                AppLogger.Warn("StarterPokemonData: the selection scene's code isn't where this ROM keeps it, so the scene " +
+                    "keeps its old models. The overlay may already be modified by another tool.");
+                return;
+            }
 
             // The shift below is one-shot: running it on already patched code shifts it again and breaks
             // the scene, so a patched routine only gets its species immediates rewritten.
@@ -310,16 +313,9 @@ namespace DSPRE.ROMFiles
 
             starterData[offset] = 1;
 
-            if (!string.IsNullOrEmpty(RomInfo.starterGraphicsPrefixInner))
-            {
-                byte[] innerPrefix = DSUtils.StringToByteArray(RomInfo.starterGraphicsPrefixInner);
-                List<int> innerMatches = DSUtils.SearchBytes(starterData, innerPrefix);
-                if (innerMatches.Count > 0 && innerMatches[0] > 0)
-                {
-                    int innerOffset = innerMatches[0] + innerPrefix.Length;
-                    starterData[innerOffset + 1] = 0x68;
-                }
-            }
+            int innerOffset = RomLocator.Where(RomLocator.Thing.StarterSceneInner)?.Offset ?? -1;
+            if (Follows(starterData, innerOffset, SceneInnerPrefix) && innerOffset + 2 <= starterData.Length)
+                starterData[innerOffset + 1] = 0x68;
         }
 
         /// <summary>
@@ -346,27 +342,47 @@ namespace DSPRE.ROMFiles
             && ReadWord(data, offset) == 0x182D
             && ReadWord(data, offset + 2) == 0x6828;
 
+        // What sits around each site in the ROM as it ships. A site whose surroundings differ was changed by something
+        // else, so it is left alone rather than written over.
+        private static readonly byte[] HgssSpeciesTail = { 0x03, 0x03, 0x1A, 0x12, 0x01, 0x23, 0x00, 0x00 };
+        private static readonly byte[] SceneInnerPrefix = { 0x02, 0x90, 0x03, 0x90, 0x02, 0x20, 0x00, 0x02 };
+        private static readonly byte[] CriesPrefix = DSUtils.StringToByteArray("0004000C10BD0000000000000000000000E000000000000000E0000000000200");
+
+        /// <summary>Whether <paramref name="prefix"/> ends right where <paramref name="offset"/> starts.</summary>
+        private static bool Follows(byte[] data, int offset, byte[] prefix) =>
+            offset >= prefix.Length && offset <= data.Length && data.AsSpan(offset - prefix.Length, prefix.Length).SequenceEqual(prefix);
+
+        /// <summary>Where the HGSS arm9 builds the starters' species, or -1 when its code there isn't as shipped.</summary>
+        private static int HgssSpeciesSite(byte[] arm9)
+        {
+            int at = RomLocator.Where(RomLocator.Thing.StarterSpecies)?.Offset ?? -1;
+            int tail = at + 13;
+            return at >= 0 && tail + HgssSpeciesTail.Length <= arm9.Length && arm9.AsSpan(tail, HgssSpeciesTail.Length).SequenceEqual(HgssSpeciesTail) ? at : -1;
+        }
+
         // ── HGSS starter cries table ────────────────────────────────────────────────────────────────────────
 
         private static void PatchStarterCries(int[] newSpecies)
         {
-            if (RomInfo.starterOverlayNumber < 0 || string.IsNullOrEmpty(RomInfo.starterCriesPrefix)) return;
-            if (OverlayUtils.IsCompressed(RomInfo.starterOverlayNumber)) OverlayUtils.Decompress(RomInfo.starterOverlayNumber);
-            string path = OverlayUtils.GetPath(RomInfo.starterOverlayNumber);
+            RomLocator.Spot cries = RomLocator.Where(RomLocator.Thing.StarterCries);
+            if (cries == null) return;
+            if (OverlayUtils.IsCompressed(cries.Overlay)) OverlayUtils.Decompress(cries.Overlay);
+            string path = OverlayUtils.GetPath(cries.Overlay);
             byte[] data = File.ReadAllBytes(path);
 
-            byte[] prefix = DSUtils.StringToByteArray(RomInfo.starterCriesPrefix);
-            List<int> matches = DSUtils.SearchBytes(data, prefix);
-            if (matches.Count == 0 || matches[0] <= 0) return;
-
-            int offset = matches[0] + prefix.Length;
+            int offset = cries.Offset;
+            if (!Follows(data, offset, CriesPrefix))
+            {
+                AppLogger.Warn("StarterPokemonData: the starter cries aren't where this ROM keeps them, so they were left alone.");
+                return;
+            }
             foreach (int species in newSpecies)
             {
                 if (offset + 4 > data.Length) break;
                 WriteLong(data, offset, species);
                 offset += 4;
             }
-            File.WriteAllBytes(path, data);
+            DSUtils.WriteWholeFile(path, data);
         }
 
         // ── Rival / tag-battle scripts ──────────────────────────────────────────────────────────────────────
@@ -401,7 +417,7 @@ namespace DSPRE.ROMFiles
                         WriteWord(data, secondBase + 4, newSpecies[1]);
                     }
 
-                    File.WriteAllBytes(path, data);
+                    ArchiveMembers.Put(RomInfo.DirNames.scripts, fileId, data);
                     touched.Add(fileId);
                 }
                 return touched;
@@ -436,7 +452,7 @@ namespace DSPRE.ROMFiles
                 }
                 if (changed)
                 {
-                    File.WriteAllBytes(path, data);
+                    ArchiveMembers.Put(RomInfo.DirNames.scripts, fileId, data);
                     touched.Add(fileId);
                 }
             }
@@ -479,7 +495,7 @@ namespace DSPRE.ROMFiles
                 }
                 if (changed)
                 {
-                    File.WriteAllBytes(path, data);
+                    ArchiveMembers.Put(RomInfo.DirNames.scripts, fileId, data);
                     touched.Add(fileId);
                 }
             }

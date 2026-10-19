@@ -78,7 +78,7 @@ namespace DSPRE
                 }
 
                 Array.Copy(replacement, 0, current, _offset, replacement.Length);
-                File.WriteAllBytes(_path, current);
+                DSUtils.WriteWholeFile(_path, current);
                 return true;
             }
             catch (Exception ex)

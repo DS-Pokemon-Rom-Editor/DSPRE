@@ -4,7 +4,6 @@
 		xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
 		x:Class="DSPRE.Avalonia.Views.Tools.OverlayEditorView"
 		x:DataType="vm:OverlayEditorViewModel"
-		Title="{Binding Title}"
 		Width="620" Height="500"
 		WindowStartupLocation="CenterOwner">
   <Design.DataContext>

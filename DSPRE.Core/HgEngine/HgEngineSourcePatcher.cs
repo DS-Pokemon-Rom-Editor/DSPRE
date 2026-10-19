@@ -277,29 +277,22 @@ namespace DSPRE.HgEngine
         }
     }
 
-    /// <summary>Finds the brace matching an opening '{', skipping over string/char literals and comments
-    /// so braces mentioned inside quoted game text (e.g. trainer messages) never confuse the scan.</summary>
+    /// <summary>Finds the brace matching an opening '{' through the syntax reader, so braces in quoted game text
+    /// (e.g. trainer messages), comments and preprocessor lines never confuse the match.</summary>
     internal static class BraceScanner
     {
         public static bool TryFindMatchingBrace(string text, int openIndex, out int closeIndex)
         {
             closeIndex = -1;
-            if (openIndex < 0 || openIndex >= text.Length || text[openIndex] != '{') return false;
-            int depth = 0;
-            int i = openIndex;
-            while (i < text.Length)
+            if (text == null || openIndex < 0 || openIndex >= text.Length || text[openIndex] != '{') return false;
+            // An entry is a few KB in files of megabytes that edits rewrite one field at a time, so only a window from the
+            // brace on is read, doubled until the match is inside it. Tokens before the match read the same as in the whole file.
+            for (long window = 4096; ; window *= 2)
             {
-                if (SkipNonCode(text, ref i)) continue;
-                char c = text[i];
-                if (c == '{') depth++;
-                else if (c == '}')
-                {
-                    depth--;
-                    if (depth == 0) { closeIndex = i; return true; }
-                }
-                i++;
+                int end = (int)Math.Min(text.Length, openIndex + window);
+                closeIndex = new CSourceFile(text, openIndex, end).MatchingBrace(openIndex);
+                if (closeIndex >= 0 || end == text.Length) return closeIndex >= 0;
             }
-            return false;
         }
 
         /// <summary>If the position at i starts a comment or string/char literal, advances i past it and

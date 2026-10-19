@@ -284,8 +284,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         // ── textures ───────────────────────────────────────────────────────────────────────────
 
-        public string ReplaceTexture(int index, string path)
+        public string ReplaceTexture(int index, string path, out bool ok)
         {
+            ok = false;
             byte[] file;
             try { file = File.ReadAllBytes(path); }
             catch (Exception ex) { return StatusText = "That file could not be read: " + ex.Message; }
@@ -298,9 +299,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             Edited();
             RebuildTextures();
             Replay();
+            ok = true;
             return StatusText = result.Quantized
-                ? $"Texture {index + 1} replaced, reduced from {result.SourceColors} to {result.PaletteColorsUsed} colours."
-                : $"Texture {index + 1} replaced.";
+                ? $"Reduced from {result.SourceColors} to {result.PaletteColorsUsed} colours to fit."
+                : "";
         }
 
         public string ExportTexture(int index, string path)
@@ -311,7 +313,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 using Bitmap bmp = ImageConverter.FromRgba(row.Rgba, row.Width, row.Height);
                 bmp.Save(path);
-                return StatusText = $"Texture {index + 1} saved.";
+                return null;
             }
             catch (Exception ex) { return StatusText = "Could not save: " + ex.Message; }
         }

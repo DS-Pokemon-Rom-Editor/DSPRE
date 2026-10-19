@@ -11,7 +11,7 @@ using Avalonia.Media.Imaging;
 
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
-    public class StarterEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
+    public class StarterEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -27,7 +27,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ── IEditorWithUnsavedChanges ───────────────────────────────────────────
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty;
-        public string UnsavedChangesDescription => "Starter Pokémon Editor";
+        public string UnsavedChangesDescription => "Starter Pokémon";
         void IEditorWithUnsavedChanges.SaveChanges() => SaveChanges();
         public void DiscardChanges()
         {
@@ -70,7 +70,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _loading = false;
 
             _dirty = !Equals(snap, _saved);
-            Title = _dirty ? "● Starter Pokémon Editor" : "Starter Pokémon Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
             RaiseUndoState();
         }
@@ -199,6 +198,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             AppEvents.NamesChanged -= OnNamesChanged;
             AppEvents.NamesChanged += OnNamesChanged;
+            _iconsSaved = AppEvents.WhenSaved(() => { RefreshStarterIcon(1); RefreshStarterIcon(2); RefreshStarterIcon(3); RefreshHeldItemIcon(); },
+                                              RomInfo.DirNames.monIcons, RomInfo.DirNames.itemIcons);
 
             _loading = false;
         }
@@ -223,7 +224,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             MarkClean();
             _dirty = false;
-            Title = "Starter Pokémon Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
 
             _history.Reset(TakeSnapshot());
@@ -342,7 +342,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>
-        public void Detach() => AppEvents.NamesChanged -= OnNamesChanged;
+        private readonly IDisposable _iconsSaved;
+        public void Detach() { AppEvents.NamesChanged -= OnNamesChanged; _iconsSaved?.Dispose(); }
 
         // ── Busy state (the rotom work after Save, see FinishSavingAsync) ──
         private bool _isBusy;
@@ -366,7 +367,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     AppMessages.Error(
                         "Couldn't safely locate the starter species table on this ROM (it may already be modified " +
                         "by another tool); nothing was changed.",
-                        "Starter Pokémon Editor");
+                        "Starter Pokémon editor");
                     return;
                 }
             }
@@ -384,7 +385,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             MarkClean();
             _dirty = false;
             SaveNotice.Saved(UnsavedChangesDescription);
-            Title = "Starter Pokémon Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
             AppLogger.Debug($"StarterEditor: Saved starters [{Starter1}, {Starter2}, {Starter3}].");
             _history.MarkSaved();
@@ -441,11 +441,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try
             {
                 string failure = await StarterRotomSource.SaveAsync(command, level, itemName, item);
-                if (failure != null) AppMessages.Error(failure, "Starter Pokémon Editor");
+                if (failure != null) AppMessages.Error(failure, "Starter Pokémon editor");
             }
             catch (Exception ex)
             {
-                AppMessages.Error("The script could not be saved: " + ex.Message, "Starter Pokémon Editor");
+                AppMessages.Error("The script could not be saved: " + ex.Message, "Starter Pokémon editor");
             }
         }
 
@@ -454,7 +454,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_loading) return;
             RecordUndoSnapshot();
             _dirty = !Equals(TakeSnapshot(), _saved);
-            Title = _dirty ? "● Starter Pokémon Editor" : "Starter Pokémon Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
     }

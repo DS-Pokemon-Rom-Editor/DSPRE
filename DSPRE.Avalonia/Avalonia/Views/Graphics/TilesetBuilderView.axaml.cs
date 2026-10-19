@@ -47,7 +47,7 @@ namespace DSPRE.Avalonia.Views.Graphics
                 if (there.Count > 0 && !await DialogHelper.AskYesNo(string.Join(" and ", there) + (there.Count == 1 ? " already exists beside it. Replace it?" : " already exist beside it. Replace them?"), "Replace files", this)) return;
                 string why = VM.Save(path);
                 if (why != null) await DialogHelper.ShowError(why, "Those files could not be written", this);
-                else await DialogHelper.ShowInfo(VM.SavedAs, "Written");
+                else SaveNotice.Exported(path);
             }
             catch (System.Exception ex)
             {

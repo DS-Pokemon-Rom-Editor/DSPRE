@@ -53,7 +53,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         // ── IEditorWithUnsavedChanges ──
         public bool HasUnsavedChanges => _book != null && _saved != null && !_book.ToBytes().AsSpan().SequenceEqual(_saved);
-        public string UnsavedChangesDescription => "Pokégear Phone Book";
+        public string UnsavedChangesDescription => "Pokégear phone book";
         public void SaveChanges() => Save();
 
         public void DiscardChanges()
@@ -550,7 +550,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (_book == null) return;
             if (!PokegearPhoneBook.Save(_book, out string error))
             {
-                AppMessages.Error(error, "Pokégear Phone Book");
+                AppMessages.Error(error, "Pokégear phone book error");
                 return;
             }
             _saved = _book.ToBytes();

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Data
 {
@@ -13,46 +13,34 @@ namespace DSPRE.Avalonia.Data
     {
         public readonly record struct Piece(int X, int Y, int Width, int Height, int FirstTile);
 
-        // OAM shape (square, wide, tall) by size, in pixels.
-        private static readonly (int W, int H)[,] Sizes =
-        {
-            { (8, 8), (16, 16), (32, 32), (64, 64) },
-            { (16, 8), (32, 8), (32, 16), (64, 32) },
-            { (8, 16), (8, 32), (16, 32), (32, 64) },
-        };
-
         /// <summary>The first cell's pieces, or null when the file isn't a cell layout this can read.</summary>
         public static List<Piece> Pieces(byte[] ncer, int bitsPerPixel)
         {
-            if (ncer == null || ncer.Length < 0x20 || Encoding.ASCII.GetString(ncer, 0, 4) != "RECN") return null;
-            int kbec = BitConverter.ToUInt16(ncer, 0x0C);
-            if (kbec + 0x20 > ncer.Length || Encoding.ASCII.GetString(ncer, kbec, 4) != "KBEC") return null;
-            int cellCount = BitConverter.ToUInt16(ncer, kbec + 8);
-            bool extended = (BitConverter.ToUInt16(ncer, kbec + 10) & 1) != 0;
-            int cells = kbec + 8 + (int)BitConverter.ToUInt32(ncer, kbec + 12);
-            int mapping = (int)BitConverter.ToUInt32(ncer, kbec + 16);
-            if (cellCount < 1 || mapping > 3 || cells + 8 > ncer.Length) return null;   // 4 is 2D mapping
-
-            int oams = cells + cellCount * (extended ? 16 : 8);
-            int count = BitConverter.ToUInt16(ncer, cells);
-            int at = oams + (int)BitConverter.ToUInt32(ncer, cells + 4);
-            if (at + count * 6 > ncer.Length) return null;
-
+            NcerFile file = NcerFile.Read(ncer);
+            // A mapping past 3 is 2D mapping, which these drawings never use.
+            if (file == null || file.Cells.Count < 1 || file.Mapping > 3) return null;
+            NcerFile.Cell first = file.Cells[0];
             List<Piece> pieces = new List<Piece>();
-            for (int i = 0; i < count; i++, at += 6)
+            foreach (NcerFile.Piece p in first.Pieces)
             {
-                int a0 = BitConverter.ToUInt16(ncer, at), a1 = BitConverter.ToUInt16(ncer, at + 2), a2 = BitConverter.ToUInt16(ncer, at + 4);
-                int shape = a0 >> 14, size = a1 >> 14;
-                if (shape > 2) return null;
-                int x = a1 & 0x1FF;
-                if (x >= 256) x -= 512;
-                // 1D mapping counts characters in 32-byte steps times 2^mapping; an 8bpp tile is two of them.
-                int tile = (a2 & 0x3FF) << mapping;
+                if (p.Shape > 2) return null;
+                // An 8bpp tile is two characters.
+                int tile = file.CharacterOf(first, p);
                 if (bitsPerPixel == 8) tile /= 2;
-                (int w, int h) = Sizes[shape, size];
-                pieces.Add(new Piece(x, (sbyte)(a0 & 0xFF), w, h, tile));
+                pieces.Add(new Piece(p.X, p.Y, p.Width, p.Height, tile));
             }
             return pieces.Count > 0 ? pieces : null;
+        }
+
+        /// <summary>The palette banks the first cell's pieces draw with, or null when the file isn't a cell layout.</summary>
+        public static List<int> Banks(byte[] ncer)
+        {
+            NcerFile file = NcerFile.Read(ncer);
+            if (file == null || file.Cells.Count < 1) return null;
+            List<int> banks = new List<int>();
+            foreach (NcerFile.Piece p in file.Cells[0].Pieces)
+                if (!banks.Contains(p.Palette)) banks.Add(p.Palette);
+            return banks;
         }
 
         /// <summary>Lays the run of tiles out as the cell shows it. False when a piece reaches past the run.</summary>

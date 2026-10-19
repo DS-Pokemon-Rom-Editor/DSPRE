@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using DSPRE.HgEngine;
+using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.Data
@@ -28,6 +29,19 @@ namespace DSPRE.Avalonia.Data
                 : null;
         }
 
+        /// <summary>Hooked to <see cref="ArchiveMembers.Written"/> at startup: every member saved anywhere comes through here.</summary>
+        internal static void OnMemberWritten(DirNames dir, int member, byte[] before, byte[] data)
+        {
+            // Only an hg-engine checkout builds PNGs from members; elsewhere the count would only slow bulk saves.
+            if (data != null && HgEngine.HgEngineProject.IsActive)
+            {
+                string unpacked = gameDirs[dir].unpackedDir;
+                int count = NarcAPI.Narc.MemberCount(unpacked);
+                Write(dir, HgEngineOwnedFiles.ArchiveOf(dir), member, count, before, data);
+            }
+            AppEvents.RaiseArchiveMemberSaved(dir);
+        }
+
         /// <summary>Called once <paramref name="data"/> is on disk as member <paramref name="member"/>, which held <paramref name="before"/>.</summary>
         public static void Write(DirNames dir, string archive, int member, int memberCount, byte[] before, byte[] data)
         {
@@ -36,7 +50,7 @@ namespace DSPRE.Avalonia.Data
             switch (source.Part)
             {
                 case HgEngineBuiltPngs.Part.Copy:
-                    if (!File.Exists(source.Path) || !File.ReadAllBytes(source.Path).AsSpan().SequenceEqual(data)) File.WriteAllBytes(source.Path, data);
+                    if (!File.Exists(source.Path) || !File.ReadAllBytes(source.Path).AsSpan().SequenceEqual(data)) PlainFiles.WriteBytes(source.Path, data);
                     break;
                 case HgEngineBuiltPngs.Part.Pixels:
                     WritePixels(dir, member, source.Path);
@@ -69,7 +83,7 @@ namespace DSPRE.Avalonia.Data
             if (needed > colours.Length)
                 colours = colours.Concat(Enumerable.Range(colours.Length, needed - colours.Length)
                     .Select(i => i < ix.Palette.Length ? ix.Palette[i] : 0xFF000000u)).ToArray();
-            File.WriteAllBytes(png, IndexedPng.Write(ix.Indices, colours, w, h, BitDepth(file, needed)));
+            PlainFiles.WriteBytes(png, IndexedPng.Write(ix.Indices, colours, w, h, BitDepth(file, needed)));
         }
 
         private static void WriteColours(byte[] previous, byte[] nclr, string png)
@@ -98,7 +112,7 @@ namespace DSPRE.Avalonia.Data
             }
             if (used == old.Length && colours.Take(used).SequenceEqual(old)) return;
             Array.Resize(ref colours, used);
-            File.WriteAllBytes(png, IndexedPng.Write(indices, colours, w, h, BitDepth(file, used)));
+            PlainFiles.WriteBytes(png, IndexedPng.Write(indices, colours, w, h, BitDepth(file, used)));
         }
 
         // A JASC palette the build converts into this member keeps its own length.

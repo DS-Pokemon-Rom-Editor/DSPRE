@@ -9,7 +9,7 @@ namespace DSPRE.Tests
     {
         private static EventEditorViewModel ViewModelFor(EventFile events)
         {
-            var vm = new EventEditorViewModel();
+            EventEditorViewModel vm = new EventEditorViewModel();
             typeof(EventEditorViewModel)
                 .GetField("_file", BindingFlags.NonPublic | BindingFlags.Instance)
                 .SetValue(vm, events);
@@ -19,7 +19,7 @@ namespace DSPRE.Tests
         [Fact]
         public void RemoveOverworldDeletesSelectionAndMarksFileDirty()
         {
-            var events = new EventFile();
+            EventFile events = new EventFile();
             events.overworlds.Add(new Overworld(0, 0, 0));
             events.overworlds.Add(new Overworld(1, 0, 0));
 
@@ -38,8 +38,8 @@ namespace DSPRE.Tests
         [Fact]
         public void DuplicateOverworldCopiesSelectionAndSelectsTheCopy()
         {
-            var original = new Overworld(7, 2, 3) { scriptNumber = 42 };
-            var events = new EventFile();
+            Overworld original = new Overworld(7, 2, 3) { scriptNumber = 42 };
+            EventFile events = new EventFile();
             events.overworlds.Add(original);
 
             EventEditorViewModel vm = ViewModelFor(events);

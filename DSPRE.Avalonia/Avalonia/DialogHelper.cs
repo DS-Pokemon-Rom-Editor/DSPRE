@@ -135,6 +135,11 @@ namespace DSPRE.Avalonia
         public static async Task<bool> AskTwoWay(string message, string title, string yes, string no)
             => await ShowMsg(message, title, MsgButtons.YesNo, labels: (yes, no, null)) == MsgResult.Yes;
 
+        /// <summary>Asked by every Discard button: a discard cannot be undone.</summary>
+        public static async Task<bool> ConfirmDiscard(global::Avalonia.Visual from)
+            => await ShowMsg("Discard your unsaved changes?", "Discard", MsgButtons.YesNo,
+                             owner: TopLevel.GetTopLevel(from) as Window, labels: ("Discard", "Keep", null)) == MsgResult.Yes;
+
         /// <summary>Three-way question whose buttons say what they do instead of Yes and No.</summary>
         public static Task<MsgResult> AskThreeWay(string message, string title,
                                                   string yes, string no, string cancel = "Cancel")

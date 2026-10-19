@@ -18,12 +18,12 @@ namespace DSPRE.Avalonia.Data
 
         private static readonly string[] PlatinumNotes =
         {
-            "Follows the clock", "Constant, terrain keeps its colours", "Dim cave light", "Constant midday light",
+            "Follows the clock", "Constant light that keeps the terrain's colours", "Dim cave light", "Constant midday light",
         };
-        private static readonly string[] DiamondPearlNotes = { "Constant, terrain keeps its colours", "Follows the clock" };
+        private static readonly string[] DiamondPearlNotes = { "Constant light that keeps the terrain's colours", "Follows the clock" };
         private static readonly string[] HeartGoldNotes =
         {
-            "Constant, terrain keeps its colours", "Follows the clock", "Lamp off, lit after flag 0x96A",
+            "Constant light that keeps the terrain's colours", "Follows the clock", "Lamp that lights once flag 0x96A is set",
         };
 
         /// <summary>The label category the open game's light names live in, so a project can rename them.</summary>
@@ -40,7 +40,7 @@ namespace DSPRE.Avalonia.Data
             switch (gameFamily)
             {
                 case GameFamilies.Plat:
-                    return value >= 0 && value < PlatinumNotes.Length ? PlatinumNotes[value] : "Out of range, the game stops";
+                    return value >= 0 && value < PlatinumNotes.Length ? PlatinumNotes[value] : "Out of range: the game stops";
                 case GameFamilies.HGSS:
                     return value >= 0 && value < HeartGoldNotes.Length ? HeartGoldNotes[value] : "Same as 1";
                 default:

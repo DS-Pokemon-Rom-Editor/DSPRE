@@ -1,6 +1,10 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using DSPRE;
+using DSPRE.Avalonia.ViewModels.World;
 using DSPRE.ROMFiles;
 using Xunit;
 using Xunit.Abstractions;
@@ -28,7 +32,7 @@ namespace DSPRE.Tests
         {
             // id, sprite, movement, type, flag, script, facing, then the three parameters,
             // all unsigned short, so param0 is the eighth field and starts at 7 * 2 = 14.
-            var bytes = new byte[32];
+            byte[] bytes = new byte[32];
             void U16(int at, int v) { bytes[at] = (byte)v; bytes[at + 1] = (byte)(v >> 8); }
             U16(0, 0x1111);    // id
             U16(2, 0x0107);    // sprite, an apricorn tree
@@ -41,7 +45,7 @@ namespace DSPRE.Tests
             U16(16, 0x9999);   // param1
             U16(18, 0xAAAA);   // param2
 
-            var ow = new Overworld(new MemoryStream(bytes));
+            Overworld ow = new Overworld(new MemoryStream(bytes));
             Assert.Equal(0x0107, ow.overlayTableEntry);
             Assert.Equal(0x00AB, ow.sightRange);
             Assert.Equal(0x9999, ow.param1);
@@ -59,14 +63,14 @@ namespace DSPRE.Tests
             new RomInfo("IPKE", HeartGold);
 
             int trees = 0, read = 0;
-            var beds = new System.Collections.Generic.SortedSet<int>();
+            SortedSet<int> beds = new System.Collections.Generic.SortedSet<int>();
             int files = RomInfo.GetEventFileCount();
             for (int i = 0; i < files; i++)
             {
                 EventFile ev;
                 try { ev = new EventFile(i); } catch { continue; }
                 read++;
-                foreach (var ow in ev.overworlds)
+                foreach (Overworld ow in ev.overworlds)
                 {
                     if (ow.overlayTableEntry < 0x0106 || ow.overlayTableEntry > 0x0114) continue;
                     trees++;
@@ -94,9 +98,9 @@ namespace DSPRE.Tests
             Skip.If(!Directory.Exists(HeartGold), "HeartGold not unpacked here");
             new RomInfo("IPKE", HeartGold);
 
-            var vm = new DSPRE.Avalonia.ViewModels.World.EventEditorViewModel();
-            var t = vm.GetType();
-            var isTree = t.GetProperty("OwIsApricornTree");
+            EventEditorViewModel vm = new DSPRE.Avalonia.ViewModels.World.EventEditorViewModel();
+            Type t = vm.GetType();
+            PropertyInfo isTree = t.GetProperty("OwIsApricornTree");
             Assert.NotNull(isTree);
 
             // With nothing selected it must not claim to be a tree.

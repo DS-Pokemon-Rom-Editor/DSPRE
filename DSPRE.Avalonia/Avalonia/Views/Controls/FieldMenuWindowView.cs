@@ -123,7 +123,7 @@ namespace DSPRE.Avalonia.Views.Controls
             int tilesWide = TilesWide > 0 ? TilesWide : WidthInTiles(WidthItems ?? items);
             int tilesHigh = TilesHigh > 0 ? TilesHigh : items.Count * 2;
 
-            string key = $"{string.Join("", items)}|{Cursor}|{tilesWide}x{tilesHigh}|{Indent}|{CursorX}|{RowOffset}"
+            string key = $"{string.Join("\u0001", items)}|{Cursor}|{tilesWide}x{tilesHigh}|{Indent}|{CursorX}|{RowOffset}"
                        + $"|{Font?.GetHashCode()}|{Frame?.GetHashCode()}|{Colours?.GetHashCode()}";
             if (_picture == null || _pictureKey != key)
             {

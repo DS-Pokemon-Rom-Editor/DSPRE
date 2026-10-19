@@ -27,7 +27,7 @@
     <CheckBox Content="Use this emulator every time" IsChecked="{Binding MakePreferred}"
               ToolTip.Tip="Change it later in Settings."/>
 
-    <TextBlock Text="{Binding StatusText}" Foreground="OrangeRed" FontSize="12"
+    <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource Editor.Bad}" FontSize="12"
                IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6">

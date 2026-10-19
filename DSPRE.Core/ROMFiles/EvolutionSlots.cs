@@ -21,24 +21,24 @@ namespace DSPRE.ROMFiles
         /// <summary>The buffer size is an 8-bit immediate: 42 x 6 = 252.</summary>
         public const int Max = byte.MaxValue / RecordSize;
 
-        private static readonly GameTable[] Loops = { GameTable.EvolutionSlotLoopLevel, GameTable.EvolutionSlotLoopTrade, GameTable.EvolutionSlotLoopItem };
+        private static readonly RomLocator.Thing[] Loops = { RomLocator.Thing.EvolutionSlotLoopLevel, RomLocator.Thing.EvolutionSlotLoopTrade, RomLocator.Thing.EvolutionSlotLoopItem };
 
         /// <summary>Why the slot count can't be read or set in this ROM, or null.</summary>
         public static string WhyNot()
         {
             if (isHGE) return "hg-engine sets its evolution slots in its own source.";
-            if (SpotOf(GameTable.EvolutionSlotBuffer) == null) return "DSPRE knows where the evolution slot count is only in US Diamond, Platinum and HeartGold.";
-            foreach (GameTable t in Loops.Prepend(GameTable.EvolutionSlotBuffer))
-                if (GameTableFile.WhyNot(t, 2) is string why) return why;
-            byte[] buffer = GameTableFile.Read(GameTable.EvolutionSlotBuffer, 2);
+            if (RomLocator.Where(RomLocator.Thing.EvolutionSlotBuffer) == null) return "Works on " + RomInfo.DescribeDumps(RomLocator.WorksOn(RomLocator.Thing.EvolutionSlotBuffer)) + ".";
+            foreach (RomLocator.Thing t in Loops.Prepend(RomLocator.Thing.EvolutionSlotBuffer))
+                if (RomLocator.WhyNot(t, 2) is string why) return why;
+            byte[] buffer = RomLocator.Read(RomLocator.Thing.EvolutionSlotBuffer, 2);
             // movs r1, #imm, then cmp rN, #imm in each loop; anything else means the code isn't the one DSPRE knows.
             bool known = buffer[1] == 0x21 && buffer[0] % RecordSize == 0
-                && Loops.Select(t => GameTableFile.Read(t, 2)).All(c => c[1] >= 0x28 && c[1] <= 0x2F && c[0] * RecordSize == buffer[0]);
+                && Loops.Select(t => RomLocator.Read(t, 2)).All(c => c[1] >= 0x28 && c[1] <= 0x2F && c[0] * RecordSize == buffer[0]);
             return known ? null : "The code that reads evolutions has been changed, so DSPRE leaves it alone.";
         }
 
         /// <summary>This ROM's slots per Pokémon; the game's 7 where DSPRE can't read the code.</summary>
-        public static int Current() => WhyNot() == null ? GameTableFile.Read(GameTable.EvolutionSlotBuffer, 1)[0] / RecordSize : Vanilla;
+        public static int Current() => WhyNot() == null ? RomLocator.Read(RomLocator.Thing.EvolutionSlotBuffer, 1)[0] / RecordSize : Vanilla;
 
         /// <summary>The size every evolution file needs for <paramref name="slots"/>: the game's 44 bytes for 7.</summary>
         public static int FileSize(int slots) => (slots * RecordSize + 3) & ~3;
@@ -60,16 +60,16 @@ namespace DSPRE.ROMFiles
             if (tooLong != null) throw new InvalidOperationException($"Evolution file {Path.GetFileName(tooLong)} is already longer than {size} bytes.");
 
             Directory.CreateDirectory(backupDir);
-            foreach (string f in files) File.Copy(f, Path.Combine(backupDir, Path.GetFileName(f)), overwrite: true);
+            foreach (string f in files) PlainFiles.Copy(f, Path.Combine(backupDir, Path.GetFileName(f)), overwrite: true);
             foreach (string f in files)
             {
                 byte[] data = File.ReadAllBytes(f);
                 if (data.Length == size) continue;
                 Array.Resize(ref data, size);
-                File.WriteAllBytes(f, data);
+                ArchiveMembers.Put(DirNames.evolutions, int.Parse(Path.GetFileName(f)), data);
             }
-            GameTableFile.Write(GameTable.EvolutionSlotBuffer, new[] { (byte)(Max * RecordSize) });
-            foreach (GameTable t in Loops) GameTableFile.Write(t, new[] { (byte)Max });
+            RomLocator.Write(RomLocator.Thing.EvolutionSlotBuffer, new[] { (byte)(Max * RecordSize) });
+            foreach (RomLocator.Thing t in Loops) RomLocator.Write(t, new[] { (byte)Max });
         }
     }
 }

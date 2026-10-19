@@ -128,7 +128,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void LoadClassRecords()
         {
             if (!TrainerClassMetadataStore.EnsureUnpacked(out string error)) throw new InvalidOperationException(error);
-            _sites = VsIntroCodeSites;
+            _sites = RomLocator.VsIntroSites;
             _records.Clear();
             _savedRecords.Clear();
             for (int i = 0; i < TrainerClassMetadataStore.RecordCount; i++)
@@ -479,7 +479,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                         PlayerFace = Four(PlayerGirl ? _sites.PlayerFaceGirl : _sites.PlayerFaceBoy),
                         Frame = Get(Field.Group1Rgcn, Field.Group1Recn), FrameAnim = r.GetAsset(Field.Group1Rnan), FramePalette = r.GetAsset(Field.Group1Rlcn),
                         ClashFrames = r.Style2Timing, NamePalette = _sites.NamePalette, Name = name,
-                        Particles = VsIntroMotionCodeSites?.LeagueParticles,
+                        Particles = RomLocator.VsIntroMotionSites?.LeagueParticles,
                     };
                 case 3:
                     return new VsIntroPreview.Scene

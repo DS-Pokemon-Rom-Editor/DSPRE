@@ -49,7 +49,7 @@ namespace DSPRE.Avalonia.Data
                 if (path == null) return;
                 if (_values.TryGetValue(key, out string old) && old == value) return;
                 _values[key] = value;
-                try { File.WriteAllText(path, JsonSerializer.Serialize(_values, new JsonSerializerOptions { WriteIndented = true })); }
+                try { PlainFiles.WriteText(path, JsonSerializer.Serialize(_values, new JsonSerializerOptions { WriteIndented = true })); }
                 catch (Exception ex) { AppLogger.Error("ProjectPrefs: " + ex.Message); }
             }
         }

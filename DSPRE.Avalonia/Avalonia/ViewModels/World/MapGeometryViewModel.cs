@@ -888,7 +888,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             try
             {
-                File.WriteAllBytes(path,
+                PlainFiles.WriteBytes(path,
                     IndexedPng.Write(indices, colours.ToArray(), picture.Width, picture.Height));
                 return true;
             }

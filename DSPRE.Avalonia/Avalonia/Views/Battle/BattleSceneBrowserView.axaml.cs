@@ -36,7 +36,7 @@ namespace DSPRE.Avalonia.Views.Battle
                 return;
             }
             AvaloniaEditorLauncher.OpenGraphicAt(DSPRE.RomInfo.DirNames.battleBg, file);
-            vm.Status = $"Opened file {file} in the Graphics window.";
+            vm.StatusText = $"Opened file {file} in the Graphics window.";
         }
     }
 }

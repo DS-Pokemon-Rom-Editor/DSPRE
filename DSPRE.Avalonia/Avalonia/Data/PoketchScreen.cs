@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Data
 {
@@ -63,9 +64,9 @@ namespace DSPRE.Avalonia.Data
             DsBgScreen s = new DsBgScreen();
             s.InitLayer(0, 0, 0);
             s.LoadTiles(0, _member(UnavailableTiles));
-            (int w, ushort[] map) = DsBgScreen.ReadMap(_member(UnavailableMap));
+            (int w, ushort[] map) = NitroBgCodec.ReadMap(_member(UnavailableMap));
             s.LoadMap(0, map, w);
-            s.SetPalette(0, DsBgScreen.ReadColours(_member(UnavailablePalette)));
+            s.SetPalette(0, NitroBgCodec.ReadColours(_member(UnavailablePalette)));
             return s.Render();
         }
 
@@ -82,20 +83,20 @@ namespace DSPRE.Avalonia.Data
             s.InitLayer(1, 1, BoardCharBase);
             s.InitLayer(2, 2, 0);
             s.LoadTiles(BoardCharBase, _member(BorderTiles), BoardTileOffset);
-            (int bw, ushort[] board) = DsBgScreen.ReadMap(_member(BorderMap));
+            (int bw, ushort[] board) = NitroBgCodec.ReadMap(_member(BorderMap));
             s.LoadMap(0, board, bw);
-            s.SetPalette(15, DsBgScreen.ReadColours(_member(BorderPalettes)), (female ? 0 : 1) * 16);
+            s.SetPalette(15, NitroBgCodec.ReadColours(_member(BorderPalettes)), (female ? 0 : 1) * 16);
             s.Fill(1, BoardTileOffset + SolidTile, 0, 0, DsBgScreen.MapSide, 24, 15);
             s.Fill(1, BoardTileOffset, 2, 2, 24, 20, 15);
 
             s.LoadTiles(0, _member(WatchTiles));
-            (int ww, ushort[] watch) = DsBgScreen.ReadMap(_member(WatchMap));
+            (int ww, ushort[] watch) = NitroBgCodec.ReadMap(_member(WatchMap));
             s.LoadMap(2, watch, ww);
-            ushort[] themes = DsBgScreen.ReadColours(_member(ThemePalettes));
+            ushort[] themes = NitroBgCodec.ReadColours(_member(ThemePalettes));
             int palettes = Math.Max(1, themes.Length / 32);
             s.SetPalette(0, themes, Math.Clamp(theme, 0, palettes - 1) * 32 + (backlight ? 16 : 0));
 
-            ushort[] digits = DigitStrip(DsBgScreen.ReadMap(_member(WatchDigits)).Entries);
+            ushort[] digits = DigitStrip(NitroBgCodec.ReadMap(_member(WatchDigits)).Entries);
             hour = Math.Clamp(hour, 0, 23);
             minute = Math.Clamp(minute, 0, 59);
             foreach ((int x, int d) in new[] { (3, hour / 10), (8, hour % 10), (15, minute / 10), (20, minute % 10) })
@@ -160,9 +161,9 @@ namespace DSPRE.Avalonia.Data
             s.InitLayer(1, 1, BoardCharBase);
             s.InitLayer(layer, layer, 0);
             s.LoadTiles(BoardCharBase, _member(BorderTiles), BoardTileOffset);
-            (int bw, ushort[] board) = DsBgScreen.ReadMap(_member(BorderMap));
+            (int bw, ushort[] board) = NitroBgCodec.ReadMap(_member(BorderMap));
             s.LoadMap(0, board, bw);
-            s.SetPalette(15, DsBgScreen.ReadColours(_member(BorderPalettes)), (female ? 0 : 1) * 16);
+            s.SetPalette(15, NitroBgCodec.ReadColours(_member(BorderPalettes)), (female ? 0 : 1) * 16);
             s.Fill(1, BoardTileOffset + SolidTile, 0, 0, DsBgScreen.MapSide, 24, 15);
             s.Fill(1, BoardTileOffset, 2, 2, 24, 20, 15);
 
@@ -171,10 +172,10 @@ namespace DSPRE.Avalonia.Data
                 s.LoadTiles(0, _member(tiles));
                 if (arrangement >= 0)
                 {
-                    (int aw, ushort[] map) = DsBgScreen.ReadMap(_member(arrangement));
+                    (int aw, ushort[] map) = NitroBgCodec.ReadMap(_member(arrangement));
                     s.LoadMap(layer, map, aw);
                 }
-                ushort[] themes = DsBgScreen.ReadColours(_member(ThemePalettes));
+                ushort[] themes = NitroBgCodec.ReadColours(_member(ThemePalettes));
                 int rows = Math.Max(1, themes.Length / 16);
                 int row = Math.Clamp(theme * 2 + (backlight ? 1 : 0), 0, rows - 1);
                 s.SetPalette(0, themes, row * 16);
@@ -182,7 +183,7 @@ namespace DSPRE.Avalonia.Data
 
             byte[] rgba = s.Render();
 
-            ushort[] palette = DsBgScreen.ReadColours(_member(ThemePalettes));
+            ushort[] palette = NitroBgCodec.ReadColours(_member(ThemePalettes));
             int paletteRows = Math.Max(1, palette.Length / 16);
             ushort[] colours = DsBgScreen.Row(
                 palette, Math.Clamp(theme * 2 + (backlight ? 1 : 0), 0, paletteRows - 1));
@@ -213,7 +214,7 @@ namespace DSPRE.Avalonia.Data
                 List<DsBgScreen.Oam[]> banks = DsBgScreen.ReadCells(_member(cells));
                 if (banks.Count > 0)
                 {
-                    byte[] chars = DsBgScreen.ReadCharacters(_member(sprites));
+                    byte[] chars = NitroBgCodec.ReadCharacters(_member(sprites));
                     DsBgScreen.Oam[] cell = banks[Math.Clamp(bank, 0, banks.Count - 1)];
                     // Only where the game's own table says. Drawing a sprite in the middle of the window
                     // because its real place is unknown looks right and is wrong, which is worse than
@@ -238,8 +239,8 @@ namespace DSPRE.Avalonia.Data
         private static uint Argb(ushort[] colours, int index)
         {
             ushort v = colours != null && index >= 0 && index < colours.Length ? colours[index] : (ushort)0;
-            int r = v & 0x1F, g = (v >> 5) & 0x1F, b = (v >> 10) & 0x1F;
-            return (uint)(((r << 3 | r >> 2) << 16) | ((g << 3 | g >> 2) << 8) | (b << 3 | b >> 2));
+            (byte r, byte g, byte b) = NitroBgCodec.Colour(v);
+            return ((uint)r << 16) | ((uint)g << 8) | b;
         }
 
         /// <summary>Which part of the Pokétch a touch at bottom-screen pixel x, y lands on.</summary>
