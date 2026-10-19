@@ -94,12 +94,12 @@ namespace DSPRE.Avalonia.Data
         {
             try
             {
-                if (RomInfo.gameFamily != RomInfo.GameFamilies.HGSS) return null;
-                Func<int, byte[]> menu = Members(RomInfo.DirNames.fieldTouchMenu);
-                Func<int, byte[]> choices = Members(RomInfo.DirNames.fieldTouchChoices);
+                if (RomInfo.GameFamily != RomInfo.GameFamilies.HGSS) return null;
+                Func<int, byte[]> menu = Members(RomInfo.DirNames.FieldTouchMenu);
+                Func<int, byte[]> choices = Members(RomInfo.DirNames.FieldTouchChoices);
                 return menu == null || choices == null ? null : new HgssTouchScreen(menu, choices);
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("HgssTouchScreen.Load", ex); return null; }
         }
 
         private static Func<int, byte[]> Members(RomInfo.DirNames dir)
@@ -233,7 +233,7 @@ namespace DSPRE.Avalonia.Data
         private static int CellOf(byte[] nanr, int sequence)
         {
             try { return nanr == null ? -1 : NanrFile.Read(nanr).CellOf(sequence, 0); }
-            catch { return -1; }
+            catch (Exception ex) { AppLogger.WarnOnce("HgssTouchScreen.CellOf", ex); return -1; }
         }
 
         // An item's icon as the game loads it for the panel: its drawing and first row of colours out of the
@@ -244,13 +244,13 @@ namespace DSPRE.Avalonia.Data
             {
                 if (!DSPRE.ROMFiles.ItemTable.Exists(item)) return (null, null);
                 ItemNarcTableEntry row = DSPRE.ROMFiles.ItemTable.Read(item);
-                _itemIcons ??= Members(RomInfo.DirNames.itemIcons);
+                _itemIcons ??= Members(RomInfo.DirNames.ItemIcons);
                 if (_itemIcons == null) return (null, null);
-                byte[] chars = NitroBgCodec.ReadCharacters(_itemIcons((int)row.itemIcon));
-                ushort[] colours = DsBgScreen.Row(NitroBgCodec.ReadColours(_itemIcons((int)row.itemPalette)), 0);
+                byte[] chars = NitroBgCodec.ReadCharacters(_itemIcons((int)row.ItemIcon));
+                ushort[] colours = DsBgScreen.Row(NitroBgCodec.ReadColours(_itemIcons((int)row.ItemPalette)), 0);
                 return chars.Length == 0 ? (null, null) : (chars, colours);
             }
-            catch { return (null, null); }
+            catch (Exception ex) { AppLogger.WarnOnce("HgssTouchScreen.ItemIcon", ex); return (null, null); }
         }
 
         private DSPRE.RawImage _caught;
@@ -259,10 +259,10 @@ namespace DSPRE.Avalonia.Data
             if (_caught != null) return _caught;
             try
             {
-                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.monIcons });
+                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.MonIcons });
                 _caught = DSUtils.GetPokePicRaw(ShownCatch, 32, 32);
             }
-            catch { _caught = null; }
+            catch (Exception ex) { AppLogger.WarnOnce("HgssTouchScreen.CaughtIcon", ex); _caught = null; }
             return _caught;
         }
 

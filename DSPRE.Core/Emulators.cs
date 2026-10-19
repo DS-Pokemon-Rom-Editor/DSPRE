@@ -34,14 +34,14 @@ namespace DSPRE
         public static (EmulatorKind Kind, string Path)? Preferred()
         {
             DspreSettings settings = SettingsManager.Settings;
-            if (settings == null || !Enum.TryParse(settings.preferredEmulator, out EmulatorKind kind)) return null;
+            if (settings == null || !Enum.TryParse(settings.PreferredEmulator, out EmulatorKind kind)) return null;
             string path = PathFor(kind);
             return Exists(path) ? (kind, path) : null;
         }
 
         public static string PathFor(EmulatorKind kind)
         {
-            Dictionary<string, string> paths = SettingsManager.Settings?.emulatorPaths;
+            Dictionary<string, string> paths = SettingsManager.Settings?.EmulatorPaths;
             return paths != null && paths.TryGetValue(kind.ToString(), out string path) ? path : null;
         }
 
@@ -50,9 +50,9 @@ namespace DSPRE
         {
             DspreSettings settings = SettingsManager.Settings;
             if (settings == null) return;
-            settings.emulatorPaths ??= new Dictionary<string, string>();
-            settings.emulatorPaths[kind.ToString()] = path;
-            if (preferred) settings.preferredEmulator = kind.ToString();
+            settings.EmulatorPaths ??= new Dictionary<string, string>();
+            settings.EmulatorPaths[kind.ToString()] = path;
+            if (preferred) settings.PreferredEmulator = kind.ToString();
             SettingsManager.Save();
         }
 

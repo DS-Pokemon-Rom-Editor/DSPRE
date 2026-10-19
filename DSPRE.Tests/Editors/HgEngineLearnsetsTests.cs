@@ -79,7 +79,7 @@ namespace DSPRE.Tests
             Assert.Equal(U32((1u << 16) | 45, (7u << 16) | 768, (100u << 16) | 1023, HgEngineLearnsets.Terminator), row);
 
             LearnsetData data = new LearnsetData(new MemoryStream(row), wide: true);
-            Assert.Equal(new (byte, ushort)[] { (1, 45), (7, 768), (100, 1023) }, Enumerable.Range(0, data.list.Count).Select(i => data.list[i]));
+            Assert.Equal(new (byte, ushort)[] { (1, 45), (7, 768), (100, 1023) }, Enumerable.Range(0, data.List.Count).Select(i => data.List[i]));
             Assert.Equal(new ushort[] { 45, 768, 1023, 0 }, data.GetLearnsetAtLevel(100));
             Assert.Equal(row, data.ToByteArray());
         }
@@ -92,7 +92,7 @@ namespace DSPRE.Tests
 
             LearnsetData data = new LearnsetData(new MemoryStream(file));
             Assert.False(data.IsWide);
-            Assert.Equal(new (byte, ushort)[] { (5, 33), (12, 511) }, Enumerable.Range(0, data.list.Count).Select(i => data.list[i]));
+            Assert.Equal(new (byte, ushort)[] { (5, 33), (12, 511) }, Enumerable.Range(0, data.List.Count).Select(i => data.List[i]));
 
             // Written back as read: no padding the file didn't have.
             Assert.Equal(file, data.ToByteArray());

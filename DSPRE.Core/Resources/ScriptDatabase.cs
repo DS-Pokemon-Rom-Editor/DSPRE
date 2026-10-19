@@ -23,7 +23,7 @@ public static class ScriptDatabaseJsonLoader
         {
             JsonElement root = doc.RootElement;
 
-            ScriptDatabase.movementsDict = root
+            ScriptDatabase.MovementsDict = root
                 .GetProperty("movements")
                 .EnumerateObject()
                 .ToDictionary(
@@ -37,7 +37,7 @@ public static class ScriptDatabaseJsonLoader
                     }
                 );
 
-            ScriptDatabase.comparisonOperatorsDict = root
+            ScriptDatabase.ComparisonOperatorsDict = root
                 .GetProperty("comparisonOperators")
                 .EnumerateObject()
                 .ToDictionary(
@@ -45,7 +45,7 @@ public static class ScriptDatabaseJsonLoader
                     prop => prop.Value.GetString()
                 );
 
-            ScriptDatabase.specialOverworlds = root
+            ScriptDatabase.SpecialOverworlds = root
                 .GetProperty("specialOverworlds")
                 .EnumerateObject()
                 .ToDictionary(
@@ -53,7 +53,7 @@ public static class ScriptDatabaseJsonLoader
                     prop => prop.Value.GetString()
                 );
 
-            ScriptDatabase.overworldDirections = root
+            ScriptDatabase.OverworldDirections = root
                 .GetProperty("overworldDirections")
                 .EnumerateObject()
                 .ToDictionary(
@@ -150,7 +150,7 @@ public static class ScriptDatabaseJsonLoader
             // Load sounds
             if (root.TryGetProperty("sounds", out JsonElement soundsRoot))
             {
-                Dictionary<ushort, string> soundsDict = ScriptDatabase.soundNames;
+                Dictionary<ushort, string> soundsDict = ScriptDatabase.SoundNames;
                 soundsDict.Clear();
                 foreach (JsonProperty prop in soundsRoot.EnumerateObject())
                 {
@@ -206,7 +206,7 @@ public static class ScriptDatabaseJsonLoader
             string stem = file.Replace("_scrcmd_database", "");
             string byGame = V2FileName(gameVersion);
         List<string> candidates = new List<string>();
-            if (RomInfo.hasRotomProject && DSPRE.RotomTool.ProjectDatabaseFile() is string project) candidates.Add(project);
+            if (RomInfo.HasRotomProject && DSPRE.RotomTool.ProjectDatabaseFile() is string project) candidates.Add(project);
             candidates.AddRange(new[]
             {
                 Path.Combine(dir ?? "", stem + "_v2.json"),
@@ -219,7 +219,7 @@ public static class ScriptDatabaseJsonLoader
             }
 
             string v2 = candidates.FirstOrDefault(File.Exists);
-            ScriptDatabase.varNames.Clear();
+            ScriptDatabase.VarNames.Clear();
             if (v2 == null) return 0;
 
             int renamed = 0;
@@ -271,7 +271,7 @@ public static class ScriptDatabaseJsonLoader
                 // Equal meaningful names: the later one wins, as before. Otherwise the first stays.
                 if (known && (rank < existing || (rank == existing && rank != MeaningfulName))) continue;
                 rankOf[(ushort)id] = rank;
-                ScriptDatabase.varNames[(ushort)id] = prop.Name;
+                ScriptDatabase.VarNames[(ushort)id] = prop.Name;
             }
         }
 
@@ -296,7 +296,7 @@ namespace DSPRE.Resources
         public static Dictionary<ushort, ScriptCommandInfo> PlatScrCmdInfo = new Dictionary<ushort, ScriptCommandInfo>();
         public static Dictionary<ushort, ScriptCommandInfo> HGSSScrCmdInfo = new Dictionary<ushort, ScriptCommandInfo>();
 
-        public static Dictionary<ushort, string> comparisonOperatorsGenVappendix = new Dictionary<ushort, string>()
+        public static Dictionary<ushort, string> ComparisonOperatorsGenVappendix = new Dictionary<ushort, string>()
         {
             /* GEN V ONLY */
             [6] = "OR",
@@ -305,27 +305,27 @@ namespace DSPRE.Resources
         };
 
         // Reference data - populated from JSON at runtime
-        public static Dictionary<ushort, string> comparisonOperatorsDict = new Dictionary<ushort, string>();
-        public static Dictionary<ushort, string> specialOverworlds = new Dictionary<ushort, string>();
-        public static Dictionary<byte, string> overworldDirections = new Dictionary<byte, string>();
-        public static Dictionary<ushort, string> pokemonNames = new Dictionary<ushort, string>();
-        public static Dictionary<ushort, string> itemNames = new Dictionary<ushort, string>();
-        public static Dictionary<ushort, string> moveNames = new Dictionary<ushort, string>();
-        public static Dictionary<ushort, string> soundNames = new Dictionary<ushort, string>();
-        public static Dictionary<ushort, string> trainerNames = new Dictionary<ushort, string>();
-        public static Dictionary<ushort, string> npcTradeNames = new Dictionary<ushort, string>();
-        public static Dictionary<ushort, string> trainerClassNames = new Dictionary<ushort, string>();
+        public static Dictionary<ushort, string> ComparisonOperatorsDict = new Dictionary<ushort, string>();
+        public static Dictionary<ushort, string> SpecialOverworlds = new Dictionary<ushort, string>();
+        public static Dictionary<byte, string> OverworldDirections = new Dictionary<byte, string>();
+        public static Dictionary<ushort, string> PokemonNames = new Dictionary<ushort, string>();
+        public static Dictionary<ushort, string> ItemNames = new Dictionary<ushort, string>();
+        public static Dictionary<ushort, string> MoveNames = new Dictionary<ushort, string>();
+        public static Dictionary<ushort, string> SoundNames = new Dictionary<ushort, string>();
+        public static Dictionary<ushort, string> TrainerNames = new Dictionary<ushort, string>();
+        public static Dictionary<ushort, string> NpcTradeNames = new Dictionary<ushort, string>();
+        public static Dictionary<ushort, string> TrainerClassNames = new Dictionary<ushort, string>();
 
         // A class added, copied, removed or renamed is saved through its text bank, so the names follow at once.
         static ScriptDatabase()
         {
-            TextArchive.Saved += (_, id) => { if (id == RomInfo.trainerClassMessageNumber && trainerClassNames.Count > 0) InitializeTrainerClassNames(); };
+            TextArchive.Saved += (_, id) => { if (id == RomInfo.TrainerClassMessageNumber && TrainerClassNames.Count > 0) InitializeTrainerClassNames(); };
         }
-        public static Dictionary<ushort, string> varNames = new Dictionary<ushort, string>();
-        public static Dictionary<ushort, MovementCommandInfo> movementsDict = new Dictionary<ushort, MovementCommandInfo>();
-        public static Dictionary<ushort, string> movementsDictIDName => movementsDict.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Name);
+        public static Dictionary<ushort, string> VarNames = new Dictionary<ushort, string>();
+        public static Dictionary<ushort, MovementCommandInfo> MovementsDict = new Dictionary<ushort, MovementCommandInfo>();
+        public static Dictionary<ushort, string> MovementsDictIDName => MovementsDict.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Name);
 
-        public static Dictionary<ushort, int> commandsWithRelativeJump = new Dictionary<ushort, int>()
+        public static Dictionary<ushort, int> CommandsWithRelativeJump = new Dictionary<ushort, int>()
         {
             //commandID, ID of parameter With Jump Address
 
@@ -339,13 +339,13 @@ namespace DSPRE.Resources
             [0x005E] = 1,   //Movement
         };
 
-        public static HashSet<ushort?> endCodes = new HashSet<ushort?>() {
+        public static HashSet<ushort?> EndCodes = new HashSet<ushort?>() {
             0x2,
             0x16,
             0x1B
         };
 
-        public static HashSet<ushort?> movementEndCodes = new HashSet<ushort?>() {
+        public static HashSet<ushort?> MovementEndCodes = new HashSet<ushort?>() {
             0x00FE,
         };
 
@@ -371,15 +371,15 @@ namespace DSPRE.Resources
 
         public static void InitializePokemonNames()
         {
-            pokemonNames = UnambiguousNames(GetPokemonNames(), "SPECIES_");
+            PokemonNames = UnambiguousNames(GetPokemonNames(), "SPECIES_");
         }
         public static void InitializeItemNames()
         {
-            itemNames = UnambiguousNames(GetItemNames(), "ITEM_");
+            ItemNames = UnambiguousNames(GetItemNames(), "ITEM_");
         }
         public static void InitializeMoveNames()
         {
-            moveNames = UnambiguousNames(GetAttackNames(), "MOVE_");
+            MoveNames = UnambiguousNames(GetAttackNames(), "MOVE_");
         }
 
         /// <summary>
@@ -406,7 +406,7 @@ namespace DSPRE.Resources
         {
             string[] names = GetSimpleTrainerNames();
 
-            trainerNames = Enumerable.Range(0, names.Length)
+            TrainerNames = Enumerable.Range(0, names.Length)
                 .ToDictionary(
                     index => (ushort)index,
                     index => index == 0
@@ -420,10 +420,10 @@ namespace DSPRE.Resources
         /// </summary>
         public static void InitializeNpcTradeNames()
         {
-            npcTradeNames = new Dictionary<ushort, string>();
+            NpcTradeNames = new Dictionary<ushort, string>();
             try
             {
-                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.tradeData });
+                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.TradeData });
                 if (TradeData.TextBank < 0) return;
                 int count = TradeData.GetTradeCount();
                 TextArchive bank = new TextArchive(TradeData.TextBank);
@@ -431,12 +431,12 @@ namespace DSPRE.Resources
                 List<string> names = new List<string>();
                 for (int i = 0; i < count; i++)
                 {
-                    int mon = new TradeData(i).species;
-                    string nickname = i < bank.messages.Count ? bank.messages[i] : "";
+                    int mon = new TradeData(i).Species;
+                    string nickname = i < bank.Messages.Count ? bank.Messages[i] : "";
                     string speciesName = mon >= 0 && mon < species.Length ? species[mon] : mon.ToString();
                     names.Add(nickname.Length > 0 ? nickname + " " + speciesName : speciesName);
                 }
-                npcTradeNames = UnambiguousNames(names, "NPC_TRADE_");
+                NpcTradeNames = UnambiguousNames(names, "NPC_TRADE_");
             }
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is ArgumentException || e is UnauthorizedAccessException)
             {
@@ -453,7 +453,7 @@ namespace DSPRE.Resources
             Dictionary<ushort, string> names = new Dictionary<ushort, string>();
             try
             {
-                List<string> messages = new TextArchive(RomInfo.trainerClassMessageNumber).messages;
+                List<string> messages = new TextArchive(RomInfo.TrainerClassMessageNumber).Messages;
                 string[] keys = messages.Select(ClassKey).ToArray();
                 HashSet<string> repeated = keys.GroupBy(k => k).Where(g => g.Count() > 1).Select(g => g.Key).ToHashSet();
                 for (int i = 0; i < keys.Length && i <= ushort.MaxValue; i++)
@@ -464,7 +464,7 @@ namespace DSPRE.Resources
             {
                 AppLogger.Warn("Script trainer class names: " + e.Message);
             }
-            trainerClassNames = names;
+            TrainerClassNames = names;
         }
 
         private static string ClassKey(string name)
@@ -476,7 +476,7 @@ namespace DSPRE.Resources
 
         internal static void InitializePokemonNamesIfNeeded()
         {
-            if(pokemonNames.Count == 0)
+            if(PokemonNames.Count == 0)
             {
                 InitializePokemonNames();
             }
@@ -484,7 +484,7 @@ namespace DSPRE.Resources
 
         internal static void InitializeMoveNamesIfNeeded()
         {
-            if(moveNames.Count == 0)
+            if(MoveNames.Count == 0)
             {
                 InitializeMoveNames();
             }
@@ -501,16 +501,16 @@ namespace DSPRE.Resources
             Directory.CreateDirectory(romFolderPath);
 
             // Export Pokemon names
-            ExportDictionary(pokemonNames, Path.Combine(romFolderPath, "pokemon.json"));
+            ExportDictionary(PokemonNames, Path.Combine(romFolderPath, "pokemon.json"));
 
             // Export Item names
-            ExportDictionary(itemNames, Path.Combine(romFolderPath, "items.json"));
+            ExportDictionary(ItemNames, Path.Combine(romFolderPath, "items.json"));
 
             // Export Move names
-            ExportDictionary(moveNames, Path.Combine(romFolderPath, "moves.json"));
+            ExportDictionary(MoveNames, Path.Combine(romFolderPath, "moves.json"));
 
             // Export Trainer names
-            ExportDictionary(trainerNames, Path.Combine(romFolderPath, "trainers.json"));
+            ExportDictionary(TrainerNames, Path.Combine(romFolderPath, "trainers.json"));
         }
 
         /// <summary>

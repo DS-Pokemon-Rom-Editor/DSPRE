@@ -102,7 +102,7 @@ namespace DSPRE.HgEngine
         /// linked or not, the game never loads the expansion, and code that branches to its address runs
         /// hg-engine's overlay 131 instead.
         /// </summary>
-        public static string WhyNot() => RomInfo.isHGE
+        public static string WhyNot() => RomInfo.IsHGE
             ? "hg-engine loads its own code where DSPRE's ARM9 expansion would go, so the game never reads the "
               + "expansion, and anything pointing into it would run hg-engine's code instead."
             : null;

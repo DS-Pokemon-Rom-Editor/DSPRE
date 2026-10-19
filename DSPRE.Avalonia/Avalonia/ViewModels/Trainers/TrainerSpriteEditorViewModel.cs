@@ -25,7 +25,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
     public sealed class TrainerSpriteSet
     {
         public DirNames Archive { get; private init; }
-        public bool IsBack => Archive == DirNames.trainerBackGraphics;
+        public bool IsBack => Archive == DirNames.TrainerBackGraphics;
         public int NameDigits { get; private init; }
         public string Title { get; private init; }
         public string Noun { get; private init; }
@@ -37,21 +37,21 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public static readonly TrainerSpriteSet Classes = new()
         {
-            Archive = DirNames.trainerGraphics, NameDigits = 3,
+            Archive = DirNames.TrainerGraphics, NameDigits = 3,
             Title = "Trainer Class Sprite Editor", Noun = "class", ItemLabel = "Class:",
             Names = _ => GetTrainerClassNames().ToList(),
         };
 
         public static readonly TrainerSpriteSet Backs = new()
         {
-            Archive = DirNames.trainerBackGraphics, NameDigits = 2,
+            Archive = DirNames.TrainerBackGraphics, NameDigits = 2,
             Title = "Trainer Back Sprite Editor", Noun = "back sprite", ItemLabel = "Sprite:",
             Names = count => DSPRE.ROMFiles.TrainerBackSprites.Names(count),
         };
 
         public static readonly TrainerSpriteSet NamingIcons = new()
         {
-            Archive = DirNames.nameInputGraphics, NameDigits = 2, NamingScreen = true,
+            Archive = DirNames.NameInputGraphics, NameDigits = 2, NamingScreen = true,
             Title = "Naming Screen Editor", Noun = "icon", ItemLabel = "Icon:",
             Names = _ => DSPRE.ROMFiles.NamingScreenIcons.All.Select(i => i.Name).ToList(),
         };
@@ -935,7 +935,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 RawImage raw = GetCompositedRawImage(cellIndex, size, size, null);
                 return ImageConverter.ToAvaloniaBitmap(raw);
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("TrainerSpriteEditorViewModel.RenderAnimCellThumbnail", ex); return null; }
         }
 
         /// <summary>Re-parses AnimJsonText into the structured model. On a parse error, leaves whatever
@@ -1156,8 +1156,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private int SpriteCount()
         {
-            try { return NarcAPI.Narc.MemberCount(gameDirs[_set.Archive].unpackedDir) / DSPRE.ROMFiles.TrainerBackSprites.FilesPerSprite; }
-            catch { return 0; }
+            try { return NarcAPI.Narc.MemberCount(GameDirs[_set.Archive].unpackedDir) / DSPRE.ROMFiles.TrainerBackSprites.FilesPerSprite; }
+            catch (Exception ex) { AppLogger.WarnOnce("TrainerSpriteEditorViewModel.SpriteCount", ex); return 0; }
         }
 
         // ── Load ───────────────────────────────────────────────────────────────
@@ -1169,7 +1169,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (_set.NamingScreen) return LoadNamingIcon(trClassID);
             try
             {
-                string dir = RomInfo.gameDirs[_set.Archive].unpackedDir;
+                string dir = RomInfo.GameDirs[_set.Archive].unpackedDir;
 
                 int paletteFileID = TrainerGraphicsLayout.ColoursEntry(trClassID);
                 string paletteFilename = paletteFileID.ToString("D4");
@@ -1810,7 +1810,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             try
             {
-                string dir = RomInfo.gameDirs[_set.Archive].unpackedDir;
+                string dir = RomInfo.GameDirs[_set.Archive].unpackedDir;
                 string File4(int i) => Path.Combine(dir, i.ToString("D4"));
 
                 int files = DSPRE.ROMFiles.NamingScreenIcons.SpriteTilesFile;
@@ -1954,7 +1954,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     gender ? DSPRE.ROMFiles.NamingScreenIcons.GenderX : DSPRE.ROMFiles.NamingScreenIcons.IconX,
                     gender ? DSPRE.ROMFiles.NamingScreenIcons.GenderY : DSPRE.ROMFiles.NamingScreenIcons.IconY);
 
-            try { _topBarFont ??= DSPRE.ROMFiles.FieldFont.LoadSystemFont(); } catch { }
+            try { _topBarFont ??= DSPRE.ROMFiles.FieldFont.LoadSystemFont(); } catch (Exception ex) { AppLogger.Warn("Trainer sprite editor: system font: " + ex.Message); }
             for (int i = 0; i < _sampleName.Length && i < letters; i++)
             {
                 string ch = _sampleName[i].ToString();
@@ -2006,7 +2006,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             error = null;
             int id = TrainerGraphicsLayout.ScanEntry(entry);
             if (id < 0) return null;
-            string path = Path.Combine(RomInfo.gameDirs[_set.Archive].unpackedDir, id.ToString("D4"));
+            string path = Path.Combine(RomInfo.GameDirs[_set.Archive].unpackedDir, id.ToString("D4"));
             if (!File.Exists(path)) return null;
 
             byte[] file = File.ReadAllBytes(path);
@@ -2142,7 +2142,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public bool CanUseSheets => _tile != null && !_set.NamingScreen && !HgEngineProject.IsActive && !_cellsFromSource;
         public bool CanUseAnimationSheets => CanUseSheets && !IsFlatSheetMode;
 
-        private string EntryPath(int entry) => Path.Combine(RomInfo.gameDirs[_set.Archive].unpackedDir, entry.ToString("D4"));
+        private string EntryPath(int entry) => Path.Combine(RomInfo.GameDirs[_set.Archive].unpackedDir, entry.ToString("D4"));
 
         private Data.TrainerSpriteFrames OpenFrames(int part)
         {
@@ -2238,7 +2238,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             int count;
             try { count = OpenFrames(_activePart).Animations.Sequences.Count; }
-            catch { return new(); }
+            catch (Exception ex) { AppLogger.WarnOnce("TrainerSpriteEditorViewModel.AnimationSheetChoices", ex); return new(); }
             string Name(int i) => i switch
             {
                 0 => "Standing",

@@ -21,7 +21,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         /// <summary>0 = HeartGold, 1 = SoulSilver. Both sets live in the same archive regardless of which
         /// one is actually loaded, so either is always editable; defaults to the loaded ROM's own version.</summary>
-        private int _selectedTabIndex = RomInfo.gameVersion == RomInfo.GameVersions.HeartGold ? 0 : 1;
+        private int _selectedTabIndex = RomInfo.GameVersion == RomInfo.GameVersions.HeartGold ? 0 : 1;
         public int SelectedTabIndex
         {
             get => _selectedTabIndex;

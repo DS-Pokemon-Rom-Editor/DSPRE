@@ -28,14 +28,14 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             if (VM == null) return;
             bool whole = VM.WholeFontForPictures;
-            string path = await DialogHelper.SaveFile(this,
+            string path = await DialogHelper.SaveFileAsync(this,
                 whole ? "Save the whole font as a PNG" : "Save this letter as a PNG",
                 new[] { PngOnly },
                 whole ? "font.png" : $"letter_{VM.SelectedGlyphIndex}.png");
             if (path == null) return;
 
             string trouble = VM.ExportPng(path, whole);
-            if (trouble != null) await DialogHelper.ShowError(trouble, "Font editor error");
+            if (trouble != null) await DialogHelper.ShowErrorAsync(trouble, "Font editor error");
             else SaveNotice.Exported(path);
         }
 
@@ -43,19 +43,19 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             if (VM == null) return;
             bool whole = VM.WholeFontForPictures;
-            string path = await DialogHelper.OpenFile(this,
+            string path = await DialogHelper.OpenFileAsync(this,
                 whole ? "Read a whole font from a PNG" : "Read this letter from a PNG",
                 new[] { PngOnly });
             if (path == null) return;
 
             string trouble = VM.ImportPng(path, whole);
-            if (trouble != null) await DialogHelper.ShowError(trouble, "Font editor error");
+            if (trouble != null) await DialogHelper.ShowErrorAsync(trouble, "Font editor error");
             else SaveNotice.Imported(whole ? "the font" : $"letter {VM.SelectedGlyphIndex}", path);
         }
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
         }
     }
 }

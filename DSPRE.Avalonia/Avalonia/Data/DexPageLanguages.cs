@@ -16,8 +16,8 @@ namespace DSPRE.Avalonia.Data
 
         public static IReadOnlyList<ScreenPage> ForLoadedRom()
         {
-            IReadOnlyList<ScreenPage> pages = DexPageRecipes.For(gameFamily);
-            if (gameLanguage != GameLanguages.Japanese) return pages;
+            IReadOnlyList<ScreenPage> pages = DexPageRecipes.For(GameFamily);
+            if (GameLanguage != GameLanguages.Japanese) return pages;
             foreach (ScreenPage page in pages.Where(p => p.Id == "info_foreign")) ToJapanese(page);
             return pages;
         }

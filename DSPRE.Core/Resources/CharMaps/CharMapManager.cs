@@ -323,12 +323,12 @@ namespace DSPRE.CharMaps
     
     internal static class CharMapManager
     {
-        public static readonly string charmapFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tools", "charmap.json");
-        public static readonly string customCharmapFilePath = Path.Combine(AppPaths.DspreDataPath, "charmap.json");
-        private static string loadedCharmapPath = null;
+        public static readonly string CharmapFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tools", "charmap.json");
+        public static readonly string CustomCharmapFilePath = Path.Combine(AppPaths.DspreDataPath, "charmap.json");
+        private static string _loadedCharmapPath = null;
         
         // Cache the loaded charmap for quick access
-        private static CharMap cachedCharMap = null;
+        private static CharMap _cachedCharMap = null;
 
         #region Serialization / Deserialization
 
@@ -414,15 +414,15 @@ namespace DSPRE.CharMaps
         /// <returns>The loaded CharMap object</returns>
         public static CharMap LoadCharMap(bool forceReload = false)
         {
-            if (cachedCharMap != null && !forceReload)
+            if (_cachedCharMap != null && !forceReload)
             {
-                return cachedCharMap;
+                return _cachedCharMap;
             }
             
             string charmapPath = GetCharMapPath();
-            cachedCharMap = DeserializeCharMap(charmapPath);
+            _cachedCharMap = DeserializeCharMap(charmapPath);
             
-            return cachedCharMap;
+            return _cachedCharMap;
         }
         
         /// <summary>
@@ -432,16 +432,16 @@ namespace DSPRE.CharMaps
         /// <param name="saveToCustomPath">If true, saves to custom charmap path; otherwise uses current loaded path</param>
         public static void SaveCharMap(CharMap charMap, bool saveToCustomPath = true)
         {
-            string savePath = saveToCustomPath ? customCharmapFilePath : GetCharMapPath();
+            string savePath = saveToCustomPath ? CustomCharmapFilePath : GetCharMapPath();
             SerializeCharMap(charMap, savePath);
             
             // Update cache
-            cachedCharMap = charMap;
+            _cachedCharMap = charMap;
             
             // Update loaded path if saving to custom
             if (saveToCustomPath)
             {
-                loadedCharmapPath = customCharmapFilePath;
+                _loadedCharmapPath = CustomCharmapFilePath;
             }
         }
         
@@ -458,8 +458,8 @@ namespace DSPRE.CharMaps
         /// </summary>
         public static void ClearCache()
         {
-            cachedCharMap = null;
-            loadedCharmapPath = null;
+            _cachedCharMap = null;
+            _loadedCharmapPath = null;
             AppLogger.Debug("Cleared charmap cache");
         }
 
@@ -632,13 +632,13 @@ namespace DSPRE.CharMaps
         /// <returns>Result of the merge operation</returns>
         public static MergeResult MergeCustomWithDefault(MergeStrategy strategy = MergeStrategy.PreferCustom)
         {
-            if (!File.Exists(customCharmapFilePath))
+            if (!File.Exists(CustomCharmapFilePath))
             {
                 throw new FileNotFoundException("Custom charmap does not exist. Cannot merge.");
             }
             
-            CharMap defaultMap = DeserializeCharMap(charmapFilePath);
-            CharMap customMap = DeserializeCharMap(customCharmapFilePath);
+            CharMap defaultMap = DeserializeCharMap(CharmapFilePath);
+            CharMap customMap = DeserializeCharMap(CustomCharmapFilePath);
             
             return MergeCharMaps(defaultMap, customMap, strategy);
         }
@@ -656,22 +656,22 @@ namespace DSPRE.CharMaps
         /// <exception cref="FileNotFoundException">Thrown if neither the custom character map file nor the default character map file exists.</exception>
         public static string GetCharMapPath()
         {
-            if (loadedCharmapPath != null)
+            if (_loadedCharmapPath != null)
             {
-                return loadedCharmapPath;
+                return _loadedCharmapPath;
             }
 
-            if (File.Exists(customCharmapFilePath))
+            if (File.Exists(CustomCharmapFilePath))
             {
                 AppLogger.Info("Loading custom charmap from user data directory.");
-                loadedCharmapPath = customCharmapFilePath;
-                return customCharmapFilePath;
+                _loadedCharmapPath = CustomCharmapFilePath;
+                return CustomCharmapFilePath;
             }
-            else if (File.Exists(charmapFilePath))
+            else if (File.Exists(CharmapFilePath))
             {
                 AppLogger.Info("Loading default charmap from application directory.");
-                loadedCharmapPath = charmapFilePath;
-                return charmapFilePath;
+                _loadedCharmapPath = CharmapFilePath;
+                return CharmapFilePath;
             }
             else
             {
@@ -717,13 +717,13 @@ namespace DSPRE.CharMaps
         public static bool IsCustomMapOutdated()
         {
             // Check if custom charmap file exists
-            if (File.Exists(customCharmapFilePath))
+            if (File.Exists(CustomCharmapFilePath))
             {
                 // Both files exist, compare versions
                 try
                 {
-                    Version defaultVersion = GetCharMapVersion(charmapFilePath);
-                    Version customVersion = GetCharMapVersion(customCharmapFilePath);
+                    Version defaultVersion = GetCharMapVersion(CharmapFilePath);
+                    Version customVersion = GetCharMapVersion(CustomCharmapFilePath);
 
                     return customVersion < defaultVersion;
                 }
@@ -750,11 +750,11 @@ namespace DSPRE.CharMaps
         {
             try
             {
-                if (!Directory.Exists(Path.GetDirectoryName(customCharmapFilePath)))
+                if (!Directory.Exists(Path.GetDirectoryName(CustomCharmapFilePath)))
                 {
-                    Directory.CreateDirectory(Path.GetDirectoryName(customCharmapFilePath));
+                    Directory.CreateDirectory(Path.GetDirectoryName(CustomCharmapFilePath));
                 }
-                PlainFiles.Copy(charmapFilePath, customCharmapFilePath, overwrite: true);
+                PlainFiles.Copy(CharmapFilePath, CustomCharmapFilePath, overwrite: true);
                 ClearCache(); // Clear cache to force reload with new custom file
                 AppLogger.Info("Custom charmap file created successfully.");
                 return true;
@@ -777,9 +777,9 @@ namespace DSPRE.CharMaps
         {
             try
             {
-                if (File.Exists(customCharmapFilePath))
+                if (File.Exists(CustomCharmapFilePath))
                 {
-                    File.Delete(customCharmapFilePath);
+                    File.Delete(CustomCharmapFilePath);
                     ClearCache(); // Clear cache to force reload with default file
                     AppLogger.Info("Custom charmap file deleted successfully.");
                 }

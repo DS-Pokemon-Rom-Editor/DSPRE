@@ -17,11 +17,13 @@
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-namespace System.IO {
+namespace System.IO
+{
     /// <summary>
     /// Extension methods for System.IO.Stream.
     /// </summary>
-    static class StreamExt {
+    static class StreamExt
+    {
         #region Methods (3) 
 
         // Public Methods (3) 
@@ -29,7 +31,8 @@ namespace System.IO {
         /// <summary>
         /// Get remaining length from stream position.
         /// </summary>
-        public static long GetRemainingLength(this Stream stream) {
+        public static long GetRemainingLength(this Stream stream)
+        {
             return stream.Length - stream.Position;
         }
 
@@ -37,7 +40,8 @@ namespace System.IO {
         /// Skip a number of bytes.
         /// </summary>
         /// <param name="skipCount">Number of bytes to skip.</param>
-        public static void Skip(this Stream stream, long skipCount) {
+        public static void Skip(this Stream stream, long skipCount)
+        {
             stream.Seek(skipCount, SeekOrigin.Current);
         }
 
@@ -45,7 +49,8 @@ namespace System.IO {
         /// Skip a number of bytes.
         /// </summary>
         /// <param name="skipCount">Number of bytes to skip.</param>
-        public static void Skip(this Stream stream, uint skipCount) {
+        public static void Skip(this Stream stream, uint skipCount)
+        {
             Skip(stream, (long)skipCount);
         }
 

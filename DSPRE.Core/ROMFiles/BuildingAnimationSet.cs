@@ -21,9 +21,9 @@ namespace DSPRE.ROMFiles
         private static string _cacheDir;
 
         public static bool Available =>
-            gameDirs != null
-            && gameDirs.ContainsKey(DirNames.buildingAnimations)
-            && gameDirs.ContainsKey(DirNames.buildingAnimListOut);
+            GameDirs != null
+            && GameDirs.ContainsKey(DirNames.BuildingAnimations)
+            && GameDirs.ContainsKey(DirNames.BuildingAnimListOut);
 
         /// <summary>The list entry for one building model, or null when it has none.</summary>
         public static BuildingAnimationInfo InfoFor(int modelId, bool indoor)
@@ -36,10 +36,10 @@ namespace DSPRE.ROMFiles
             BuildingAnimationInfo info = null;
             try
             {
-                DirNames list = indoor && gameDirs.ContainsKey(DirNames.buildingAnimListIn)
-                    ? DirNames.buildingAnimListIn : DirNames.buildingAnimListOut;
+                DirNames list = indoor && GameDirs.ContainsKey(DirNames.BuildingAnimListIn)
+                    ? DirNames.BuildingAnimListIn : DirNames.BuildingAnimListOut;
                 DSUtils.TryUnpackNarcs(new List<DirNames> { list });
-                string path = Path.Combine(gameDirs[list].unpackedDir, modelId.ToString("D4"));
+                string path = Path.Combine(GameDirs[list].unpackedDir, modelId.ToString("D4"));
                 if (File.Exists(path))
                 {
                     byte[] b = File.ReadAllBytes(path);
@@ -292,8 +292,8 @@ namespace DSPRE.ROMFiles
             byte[] data = null;
             try
             {
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.buildingAnimations });
-                string path = Path.Combine(gameDirs[DirNames.buildingAnimations].unpackedDir, code.ToString("D4"));
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.BuildingAnimations });
+                string path = Path.Combine(GameDirs[DirNames.BuildingAnimations].unpackedDir, code.ToString("D4"));
                 if (File.Exists(path)) data = File.ReadAllBytes(path);
             }
             catch (Exception ex) { AppLogger.Error($"Building animation {code} failed to load: {ex.Message}"); }
@@ -304,7 +304,7 @@ namespace DSPRE.ROMFiles
 
         private static void Refresh()
         {
-            string dir = gameDirs[DirNames.buildingAnimations].unpackedDir;
+            string dir = GameDirs[DirNames.BuildingAnimations].unpackedDir;
             if (dir == _cacheDir) return;
             InfoCache.Clear();
             ScrollCache.Clear();

@@ -244,7 +244,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             CancellationTokenSource cancellation = _searchCancellation;
             _searchCancellation = null;
             try { cancellation?.Cancel(); }
-            catch (ObjectDisposedException) { }
+            catch (ObjectDisposedException) { }   // the search was already finished and disposed
             unchecked { _searchGeneration++; }
         }
 

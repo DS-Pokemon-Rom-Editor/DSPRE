@@ -232,7 +232,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private static byte[] DiskFile(uint key)
         {
             if (!RomInfo.OverworldTable.TryGetValue(key, out (uint spriteID, ushort properties) entry)) return null;
-            string path = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, entry.spriteID.ToString("D4"));
+            string path = Path.Combine(RomInfo.GameDirs[DirNames.OWSprites].unpackedDir, entry.spriteID.ToString("D4"));
             return File.Exists(path) ? File.ReadAllBytes(path) : null;
         }
 
@@ -399,7 +399,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 LoadOverworldProperties(key);
                 return;
             }
-            string path = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, sprite.ToString("D4"));
+            string path = Path.Combine(RomInfo.GameDirs[DirNames.OWSprites].unpackedDir, sprite.ToString("D4"));
 
             if (_modifiedFiles.TryGetValue(key, out byte[] mod))
                 _btxData = mod;
@@ -531,7 +531,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (stagedImage != null)
             {
                 string newMemberPath = Path.Combine(
-                    RomInfo.gameDirs[DirNames.OWSprites].unpackedDir,
+                    RomInfo.GameDirs[DirNames.OWSprites].unpackedDir,
                     mmodelMember.ToString("D4"));
                 try
                 {
@@ -543,7 +543,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     {
                         ArchiveMembers.Delete(newMemberPath);
                     }
-                    catch { }
+                    catch (Exception removeError) { AppLogger.Warn("BTX editor: removing the new member: " + removeError.Message); }
 
                     if (!OverworldSpriteTableExpansion.DeleteEntry(appearanceId, out string rollbackError))
                         return $"Could not create the new texture member: {ex.Message}. The table rollback also failed: {rollbackError}";
@@ -614,7 +614,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             stagedImage = null;
             error = null;
-            string templatePath = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, templateMember.ToString("D4"));
+            string templatePath = Path.Combine(RomInfo.GameDirs[DirNames.OWSprites].unpackedDir, templateMember.ToString("D4"));
             if (!File.Exists(templatePath)) { error = "Template texture slot file not found."; return false; }
             try
             {
@@ -650,7 +650,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             stagedImage = null;
             error = null;
-            string templatePath = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, templateMember.ToString("D4"));
+            string templatePath = Path.Combine(RomInfo.GameDirs[DirNames.OWSprites].unpackedDir, templateMember.ToString("D4"));
             if (!File.Exists(templatePath)) { error = "Template texture slot file not found."; return false; }
             try
             {
@@ -684,7 +684,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 return false;
             }
 
-            string directory = RomInfo.gameDirs[DirNames.OWSprites].unpackedDir;
+            string directory = RomInfo.GameDirs[DirNames.OWSprites].unpackedDir;
             string templatePath = Path.Combine(directory, templateMember.ToString("D4"));
             string clonePath = Path.Combine(directory, cloneEntry.spriteID.ToString("D4"));
             if (!File.Exists(templatePath) || !File.Exists(clonePath))
@@ -868,7 +868,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
                 uint colorCount = CountColors(import);
                 uint targetKey = _owKeys[_selectedIndex];
-                string dir = RomInfo.gameDirs[DirNames.OWSprites].unpackedDir;
+                string dir = RomInfo.GameDirs[DirNames.OWSprites].unpackedDir;
                 Dictionary<uint, Btx0Structure> structures = new Dictionary<uint, Btx0Structure>();
                 Dictionary<uint, int> sharedCounts = RomInfo.OverworldTable.Values
                     .GroupBy(v => v.spriteID)
@@ -934,7 +934,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (import == null) return "Image could not be decoded.";
 
                 string sourcePath = Path.Combine(
-                    RomInfo.gameDirs[DirNames.OWSprites].unpackedDir,
+                    RomInfo.GameDirs[DirNames.OWSprites].unpackedDir,
                     sourceEntry.spriteID.ToString("D4"));
                 if (!File.Exists(sourcePath)) return "The selected profile's BTX file was not found.";
 
@@ -1001,7 +1001,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 ImageConverter.ToAvaloniaBitmap(raw).Save(filePath, PngBitmapEncoderOptions.Default);
                 return true;
             }
-            catch { return false; }
+            catch (Exception ex) { AppLogger.WarnOnce("BtxEditorViewModel.ExportPng", ex); return false; }
         }
 
         // ── Show file in Explorer ──────────────────────────────────────────────
@@ -1010,7 +1010,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_selectedIndex < 0 || _selectedIndex >= _owKeys.Count) return null;
             uint key    = _owKeys[_selectedIndex];
             uint sprite = RomInfo.OverworldTable[key].spriteID;
-            return Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, sprite.ToString("D4"));
+            return Path.Combine(RomInfo.GameDirs[DirNames.OWSprites].unpackedDir, sprite.ToString("D4"));
         }
 
         // ── Save ───────────────────────────────────────────────────────────────
@@ -1046,7 +1046,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private bool SaveEntry(uint key, byte[] data)
         {
             uint sprite = RomInfo.OverworldTable[key].spriteID;
-            string path = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, sprite.ToString("D4"));
+            string path = Path.Combine(RomInfo.GameDirs[DirNames.OWSprites].unpackedDir, sprite.ToString("D4"));
             byte[] original = File.Exists(path) ? File.ReadAllBytes(path) : null;
             bool metadataApplied = false;
 
@@ -1075,7 +1075,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 if (original != null)
                 {
-                    try { ArchiveMembers.Put(DirNames.OWSprites, (int)sprite, original); } catch { }
+                    try { ArchiveMembers.Put(DirNames.OWSprites, (int)sprite, original); } catch (Exception restoreError) { AppLogger.Warn("BTX editor: restoring the original sprite: " + restoreError.Message); }
                 }
                 if (metadataApplied && !patch.TryRollback(out string rollbackError))
                     StatusText = $"Save failed: {ex.Message}. Metadata rollback also failed: {rollbackError}";

@@ -52,7 +52,7 @@ namespace DSPRE.Avalonia.Views.World
             if (VM == null || !VM.InBounds || AvaloniaEditorLauncher.Refused("SpawnEditorView")) return;
             if (VM.SpawnHeaderNumber is not ushort header)
             {
-                await DialogHelper.ShowError(
+                await DialogHelper.ShowErrorAsync(
                     "This matrix has no header section, and no single header uses it.\n\nOpen the matrix from the header the spawn belongs to.",
                     "No header for this cell");
                 return;
@@ -140,21 +140,26 @@ namespace DSPRE.Avalonia.Views.World
         private void AddHeaders_Click(object sender, RoutedEventArgs e) => VM?.AddHeaderSection();
         private async void RemoveHeaders_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.RemoveHeaderSectionAsync(); }
         private async void RemoveHeights_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.RemoveHeightsSectionAsync(); }
-        private async void AddMatrix_Click(object sender, RoutedEventArgs e) => await Safe(VM?.AddMatrixAsync());
-        private async void RemoveMatrix_Click(object sender, RoutedEventArgs e) => await Safe(VM?.RemoveLastMatrixAsync());
+        private async void AddMatrix_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.AddMatrixAsync());
+        private async void RemoveMatrix_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.RemoveLastMatrixAsync());
         private void AddHeights_Click(object sender, RoutedEventArgs e) => VM?.AddHeightsSection();
-        private async void Import_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportAsync());
-        private async void Export_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportAsync());
+        private async void Import_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportAsync());
+        private async void Export_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportAsync());
 
-        private static async Task Safe(Task task)
+        private static async Task SafeAsync(Task task)
         {
             if (task == null) return;
-            try { await task; } catch { }
+            try { await task; }
+            catch (System.Exception ex)
+            {
+                CrashReporter.LogHandled(ex);
+                await DialogHelper.ShowErrorAsync(ex.Message);
+            }
         }
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
         }
     }
 }

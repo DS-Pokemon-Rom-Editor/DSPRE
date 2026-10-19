@@ -30,23 +30,27 @@ namespace LibNDSFormats.NSBTX
             List<NSBMDMaterial> materials = new List<NSBMDMaterial>();
             BinaryReader reader = new BinaryReader(stream);
             int id = reader.ReadInt32();
-            if (id != NSBMD.NSBMD.NDS_TYPE_BTX0) {
+            if (id != NSBMD.NSBMD.NdsTypeBtx0)
+            {
                 //Console.WriteLine("The header of this texture file is null!!!");
                 return null;
             }
 
             reader.BaseStream.Position += 2;
             int i = reader.ReadUInt16();
-            if (i == NSBMD.NSBMD.NDS_TYPE_UNK1) {
+            if (i == NSBMD.NSBMD.NdsTypeUnk1)
+            {
                 i = reader.ReadInt32();
 
-                if (i == stream.Length) {
+                if (i == stream.Length)
+                {
                     int numblock = reader.ReadInt32();
                     numblock >>= 16;
                     int r = reader.ReadInt32();
                     id = reader.ReadInt32();
 
-                    if (numblock == 1 && r == 0x14) {
+                    if (numblock == 1 && r == 0x14)
+                    {
                         int texnum;
                         int palnum;
                         materials.AddRange(ReadTex0(stream, 0x14, out texnum, out palnum, out texs, out pals));
@@ -105,19 +109,19 @@ namespace LibNDSFormats.NSBTX
             {
                 DSPRE.ROMFiles.Tex0Block.Texture t = block.Textures[i];
                 NSBMDMaterial mat = material[i];
-                mat.texname = t.Name;
-                mat.format = t.Format;
-                mat.width = t.Width;
-                mat.height = t.Height;
-                mat.color0 = t.Color0 ? 1 : 0;
-                mat.texoffset = (uint)t.DataAt;
-                mat.texsize = (uint)t.DataSize;
-                mat.texdata = Slice(data, t.DataAt, t.DataSize);
-                if (t.Format == 5) mat.spdata = Slice(data, t.IndexAt, t.IndexSize);
+                mat.Texname = t.Name;
+                mat.Format = t.Format;
+                mat.Width = t.Width;
+                mat.Height = t.Height;
+                mat.Color0 = t.Color0 ? 1 : 0;
+                mat.Texoffset = (uint)t.DataAt;
+                mat.Texsize = (uint)t.DataSize;
+                mat.Texdata = Slice(data, t.DataAt, t.DataSize);
+                if (t.Format == 5) mat.Spdata = Slice(data, t.IndexAt, t.IndexSize);
                 texs.Add(new NSBMDTexture
                 {
-                    texname = t.Name, format = t.Format, width = t.Width, height = t.Height, color0 = mat.color0,
-                    texsize = mat.texsize, texdata = mat.texdata, spdata = mat.spdata,
+                    Texname = t.Name, Format = t.Format, Width = t.Width, Height = t.Height, Color0 = mat.Color0,
+                    Texsize = mat.Texsize, Texdata = mat.Texdata, Spdata = mat.Spdata,
                 });
             }
 
@@ -125,9 +129,9 @@ namespace LibNDSFormats.NSBTX
             {
                 DSPRE.ROMFiles.Tex0Block.Palette p = block.Palettes[i];
                 NSBMDMaterial mat = material[i];
-                mat.palname = p.Name;
-                mat.paloffset = (uint)p.DataAt;
-                mat.palsize = (uint)p.DataSize;
+                mat.Palname = p.Name;
+                mat.Paloffset = (uint)p.DataAt;
+                mat.Palsize = (uint)p.DataSize;
                 RGBA[] colours = new RGBA[p.DataSize / 2];
                 for (int j = 0; j < colours.Length && p.DataAt + j * 2 + 2 <= data.Length; j++)
                 {
@@ -137,8 +141,8 @@ namespace LibNDSFormats.NSBTX
                     colours[j].B = (byte)(((c >> 10) & 0x1F) << 3);
                     colours[j].A = (c & 0x8000) == 0 ? (byte)0xFF : (byte)0;
                 }
-                mat.paldata = colours;
-                pals.Add(new NSBMDPalette { palname = p.Name, paloffset = mat.paloffset, palsize = mat.palsize, paldata = colours });
+                mat.Paldata = colours;
+                pals.Add(new NSBMDPalette { Palname = p.Name, Paloffset = mat.Paloffset, Palsize = mat.Palsize, Paldata = colours });
             }
 
             ptexnum = texnum;

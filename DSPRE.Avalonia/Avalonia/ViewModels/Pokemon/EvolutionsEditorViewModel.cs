@@ -420,7 +420,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             foreach (string n in Enum.GetNames<EvolutionMethod>()) MethodNames.Add(n);
             for (int i = 0; i < 10; i++) PokemonNames.Add($"Pokémon {i}");
 
-            for (int i = 0; i < EvolutionFile.numEvolutions; i++)
+            for (int i = 0; i < EvolutionFile.NumEvolutions; i++)
             {
                 EvoRows.Add(new EvolutionRowViewModel { MethodIndex = 0, TargetIndex = 0, Param = 0 });
             }
@@ -505,8 +505,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 EvolutionFile file = id > 0 ? new EvolutionFile(id) : new EvolutionFile();
                 for (int i = 0; i < slots.Length; i++)
                 {
-                    EvolutionData d = file.data != null && i < file.data.Length ? file.data[i] : default;
-                    slots[i] = new EvolutionCsv.Slot((int)d.method, d.param, d.target >= 0 ? d.target : 0, 0);
+                    EvolutionData d = file.Data != null && i < file.Data.Length ? file.Data[i] : default;
+                    slots[i] = new EvolutionCsv.Slot((int)d.Method, d.Param, d.Target >= 0 ? d.Target : 0, 0);
                 }
             }
             return (slots, error);
@@ -563,7 +563,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>Every Pokémon's evolutions as this editor holds them, unsaved edits included.</summary>
         public async System.Threading.Tasks.Task ExportCsvAsync(Window owner)
         {
-            string path = await DialogHelper.SaveFile(owner, "Export evolutions CSV", new[] { DialogHelper.CsvFilter, DialogHelper.AllFilter }, "evolutions.csv");
+            string path = await DialogHelper.SaveFileAsync(owner, "Export evolutions CSV", new[] { DialogHelper.CsvFilter, DialogHelper.AllFilter }, "evolutions.csv");
             if (path == null) return;
             try
             {
@@ -575,7 +575,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Evolutions error", owner);
+                await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Evolutions error", owner);
             }
         }
 
@@ -610,7 +610,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 string pendingProblem = BuildFile(slots, out EvolutionFile pendingFile);
                 if (pendingProblem != null)
                 {
-                    _ = DSPRE.Avalonia.DialogHelper.ShowError($"Evolutions of {NameOf(id)} were not saved: {pendingProblem}.", "Evolutions error");
+                    _ = DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"Evolutions of {NameOf(id)} were not saved: {pendingProblem}.", "Evolutions error");
                     return;
                 }
                 pendingFile.SaveToFileDefaultDir(id, showSuccessMessage: false);
@@ -620,7 +620,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string problem = BuildFile(CurrentSlots(), out EvolutionFile newFile);
             if (problem != null)
             {
-                _ = DSPRE.Avalonia.DialogHelper.ShowError($"Evolutions were not saved: {problem}.", "Evolutions error");
+                _ = DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"Evolutions were not saved: {problem}.", "Evolutions error");
                 return;
             }
             newFile.SaveToFileDefaultDir(_currentId, showSuccessMessage: false);
@@ -639,11 +639,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 EvolutionData ed = new EvolutionData
                 {
-                    method = (EvolutionMethod)slots[i].Method,
-                    param  = (short)slots[i].Param,
-                    target = (short)slots[i].Target
+                    Method = (EvolutionMethod)slots[i].Method,
+                    Param  = (short)slots[i].Param,
+                    Target = (short)slots[i].Target
                 };
-                if (ed.method == EvolutionMethod.None) continue;
+                if (ed.Method == EvolutionMethod.None) continue;
                 bool needsTarget = EvolutionRowViewModel.NeedsTargetFor(slots[i].Method, false, null);
                 string problem = ed.Problem(needsTarget);
                 if (problem == null && needsTarget && slots[i].Target > _lastTarget)
@@ -651,7 +651,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (problem != null) return $"evolution {i + 1} {problem}";
                 data.Add(ed);
             }
-            file.data = data.ToArray();
+            file.Data = data.ToArray();
             return null;
         }
 
@@ -670,7 +670,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // Saving rows that didn't load faithfully would overwrite the real entries.
             if (_hgLoadError != null)
             {
-                await DSPRE.Avalonia.DialogHelper.ShowError($"Evolutions were not saved:\n{_hgLoadError}", "Evolutions error");
+                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"Evolutions were not saved:\n{_hgLoadError}", "Evolutions error");
                 return;
             }
             List<(int Species, List<(string MethodName, int Param, int TargetSpeciesId, int TargetFormId)> Entries)> work =
@@ -688,7 +688,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 if (error == null) return;
                 AppLogger.Error($"hg-engine evolutions write failed for species {failed ?? species.ToString()}: {error}");
-                await DSPRE.Avalonia.DialogHelper.ShowError($"Evolutions{(failed != null ? " of " + failed : "")} were not saved:\n{error}", "Evolutions error");
+                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"Evolutions{(failed != null ? " of " + failed : "")} were not saved:\n{error}", "Evolutions error");
                 return;
             }
             foreach ((int id, _) in work) _pending.Remove(id);

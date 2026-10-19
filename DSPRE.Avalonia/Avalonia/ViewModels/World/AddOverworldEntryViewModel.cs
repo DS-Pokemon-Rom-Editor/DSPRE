@@ -129,7 +129,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void LoadOptions()
         {
             HashSet<uint> used = new HashSet<uint>(RomInfo.OverworldTable.Values.Select(v => v.spriteID));
-            string dir = RomInfo.gameDirs[DirNames.OWSprites].unpackedDir;
+            string dir = RomInfo.GameDirs[DirNames.OWSprites].unpackedDir;
             List<uint> unusedCandidates = Directory.Exists(dir)
                 ? Directory.GetFiles(dir)
                     .Select(Path.GetFileName)
@@ -229,8 +229,9 @@ namespace DSPRE.Avalonia.ViewModels.World
                     StatusText = "";
                 }
             }
-            catch
+            catch (System.Exception ex)
             {
+                AppLogger.WarnOnce("AddOverworldEntryViewModel.SetPng", ex);
                 PngPath = null;
                 ImagePreview = null;
                 ImageInfoText = "";
@@ -264,8 +265,9 @@ namespace DSPRE.Avalonia.ViewModels.World
                     StatusText = "";
                 }
             }
-            catch
+            catch (System.Exception ex)
             {
+                AppLogger.WarnOnce("AddOverworldEntryViewModel.SetRawBtx", ex);
                 RawBtxPath = null;
                 ImagePreview = null;
                 ImageInfoText = "";
@@ -312,7 +314,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 width = raw.Width; height = raw.Height; colorLimit = BTX0.ColorCount;
                 return true;
             }
-            catch { return false; }
+            catch (System.Exception ex) { AppLogger.WarnOnce("AddOverworldEntryViewModel.TryReadTextureInfo", ex); return false; }
         }
 
         private static uint CountColors(RawImage img) => (uint)BTX0.CountColors(img);

@@ -194,7 +194,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             _matrixY = Math.Min(matrixY, _matrixYMax);
             _playerDirIndex = 0; // default Up
             // The preset only moves the spawn; the money stays what the ROM has.
-            try { _initialMoney = ReadMoney(); } catch { _initialMoney = 3000; }
+            try { _initialMoney = ReadMoney(); } catch (Exception ex) { AppLogger.WarnOnce("SpawnEditorViewModel.ctor", ex); _initialMoney = 3000; }
 
             OnPropertyChanged(nameof(MatrixX));
             OnPropertyChanged(nameof(MatrixY));
@@ -262,33 +262,33 @@ namespace DSPRE.Avalonia.ViewModels.World
                 ushort headerNumber = (ushort)headerIndex;
                 MapHeader currentHeader = MapHeader.GetMapHeader(headerNumber);
 
-                GameMatrix matrix = new GameMatrix(currentHeader.matrixID);
-                MatrixXMax = matrix.maps.GetLength(1) - 1;
-                MatrixYMax = matrix.maps.GetLength(0) - 1;
+                GameMatrix matrix = new GameMatrix(currentHeader.MatrixID);
+                MatrixXMax = matrix.Maps.GetLength(1) - 1;
+                MatrixYMax = matrix.Maps.GetLength(0) - 1;
 
                 // Clamp existing values
                 if (_matrixX > MatrixXMax) { _matrixX = MatrixXMax; OnPropertyChanged(nameof(MatrixX)); }
                 if (_matrixY > MatrixYMax) { _matrixY = MatrixYMax; OnPropertyChanged(nameof(MatrixY)); }
 
                 string loc = "";
-                switch (RomInfo.gameFamily)
+                switch (RomInfo.GameFamily)
                 {
                     case GameFamilies.DP:
-                        loc = _locationNames.Count > ((HeaderDP)currentHeader).locationName
-                            ? _locationNames[((HeaderDP)currentHeader).locationName] : "";
+                        loc = _locationNames.Count > ((HeaderDP)currentHeader).LocationName
+                            ? _locationNames[((HeaderDP)currentHeader).LocationName] : "";
                         break;
                     case GameFamilies.Plat:
-                        loc = _locationNames.Count > ((HeaderPt)currentHeader).locationName
-                            ? _locationNames[((HeaderPt)currentHeader).locationName] : "";
+                        loc = _locationNames.Count > ((HeaderPt)currentHeader).LocationName
+                            ? _locationNames[((HeaderPt)currentHeader).LocationName] : "";
                         break;
                     case GameFamilies.HGSS:
-                        loc = _locationNames.Count > ((HeaderHGSS)currentHeader).locationName
-                            ? _locationNames[((HeaderHGSS)currentHeader).locationName] : "";
+                        loc = _locationNames.Count > ((HeaderHGSS)currentHeader).LocationName
+                            ? _locationNames[((HeaderHGSS)currentHeader).LocationName] : "";
                         break;
                 }
                 LocationName = loc;
             }
-            catch { LocationName = ""; }
+            catch (Exception ex) { AppLogger.WarnOnce("SpawnEditorViewModel.UpdateHeaderDependents", ex); LocationName = ""; }
         }
 
         // ── Reset filter ───────────────────────────────────────────────────────

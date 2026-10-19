@@ -108,7 +108,7 @@ namespace DSPRE.Models
             {
                 using MemoryStream stream = new MemoryStream(model);
                 NSBMD known = NSBMDLoader.LoadNSBMD(stream);
-                List<NSBMDPolygon> polygons = known?.models?.FirstOrDefault()?.Polygons;
+                List<NSBMDPolygon> polygons = known?.Models?.FirstOrDefault()?.Polygons;
                 if (polygons != null)
                 {
                     List<NSBMDPolygon> withData = polygons.Where(p => p.PolyData != null).ToList();
@@ -119,7 +119,7 @@ namespace DSPRE.Models
                     }
                 }
             }
-            catch { }
+            catch (Exception ex) { AppLogger.Warn("Map mesh stack ids: " + ex.Message); }
 
             Dictionary<(int stack, int x, int y, int z), int> joined = new Dictionary<(int stack, int x, int y, int z), int>();
 

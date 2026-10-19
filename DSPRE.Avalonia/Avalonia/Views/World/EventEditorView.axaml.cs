@@ -29,8 +29,8 @@ namespace DSPRE.Avalonia.Views.World
         public EventEditorView()
         {
             InitializeComponent();
-            DSPRE.Avalonia.Controls.SidePanelWidth.Remember(SplitGrid, () => SettingsManager.Settings.eventEditorSidePanelWidth,
-                w => SettingsManager.Settings.eventEditorSidePanelWidth = w);
+            DSPRE.Avalonia.Controls.SidePanelWidth.Remember(SplitGrid, () => SettingsManager.Settings.EventEditorSidePanelWidth,
+                w => SettingsManager.Settings.EventEditorSidePanelWidth = w);
 
             // Left-drag pans, right-drag orbits, wheel zooms, a click picks an event. In 3D edit mode a left-press grabs a
             // gizmo axis (to drag the event) or picks the nearest event. See Gl3DPointerNavigation.
@@ -183,7 +183,7 @@ namespace DSPRE.Avalonia.Views.World
             if (VM == null) return;
             if (!VM.TrySelectedEventAnchorNorm(out float nx, out float ny, out float nz))
             {
-                await DialogHelper.ShowInfo("Select an event first.", "Centre on event");
+                await DialogHelper.ShowInfoAsync("Select an event first.", "Centre on event");
                 return;
             }
             GlView.LookAt(nx, ny, nz);
@@ -193,7 +193,7 @@ namespace DSPRE.Avalonia.Views.World
         {
             if (VM?.Model3D == null)
             {
-                await DialogHelper.ShowError("Load an event file with a map first, so there is something to animate.", "Animated preview");
+                await DialogHelper.ShowErrorAsync("Load an event file with a map first, so there is something to animate.", "Animated preview");
                 return;
             }
             OpenPreview();
@@ -219,9 +219,9 @@ namespace DSPRE.Avalonia.Views.World
             try
             {
                 LevelScriptFile file = new LevelScriptFile(id);
-                return file.bufferSet != null && file.bufferSet.Count > 0 ? file : null;
+                return file.BufferSet != null && file.BufferSet.Count > 0 ? file : null;
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("EventEditorView.LoadLevelScripts", ex); return null; }
         }
 
         // ── dragging the player onto the map ───────────────────────────────────────── Pick the little
@@ -245,7 +245,7 @@ namespace DSPRE.Avalonia.Views.World
                 PegmanIcon.Source = bmp;
                 DragGhost.Source = bmp;
             }
-            catch { }
+            catch (Exception ex) { AppLogger.Warn("Event editor: pegman icon: " + ex.Message); }
         }
 
         private void Pegman_PointerPressed(object sender, PointerPressedEventArgs e)
@@ -328,13 +328,13 @@ namespace DSPRE.Avalonia.Views.World
         {
             if (VM?.Model3D == null)
             {
-                await DialogHelper.ShowError("Load an event file with a map first, so there is something to animate.", "Step in here");
+                await DialogHelper.ShowErrorAsync("Load an event file with a map first, so there is something to animate.", "Step in here");
                 return;
             }
             (int x, int z)? tile = VM.SelectedEventTile;
             if (tile == null)
             {
-                await DialogHelper.ShowInfo("Select an event first, and the walk will start next to it.", "Step in here");
+                await DialogHelper.ShowInfoAsync("Select an event first, and the walk will start next to it.", "Step in here");
                 return;
             }
 
@@ -347,8 +347,8 @@ namespace DSPRE.Avalonia.Views.World
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
         private async void Import_Click(object sender, RoutedEventArgs e) =>
-            await Safe(VM?.ImportAsync(source => EventImportDialog.ShowAsync(source, TopLevel.GetTopLevel(this) as Window)));
-        private async void Export_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportAsync());
+            await SafeAsync(VM?.ImportAsync(source => EventImportDialog.ShowAsync(source, TopLevel.GetTopLevel(this) as Window)));
+        private async void Export_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportAsync());
 
         private async void ManageGroundItems_Click(object sender, RoutedEventArgs e)
         {
@@ -356,7 +356,7 @@ namespace DSPRE.Avalonia.Views.World
             // Saving the list renumbers item events on disk; an unsaved copy here would put the old numbers back.
             if (VM.HasUnsavedChanges)
             {
-                if (!await DialogHelper.AskYesNo("Save this event file first? The ground item list can renumber item events.", "Event editor")) return;
+                if (!await DialogHelper.AskYesNoAsync("Save this event file first? The ground item list can renumber item events.", "Event editor")) return;
                 VM.SaveChanges();
                 if (VM.HasUnsavedChanges) return;
             }
@@ -377,7 +377,7 @@ namespace DSPRE.Avalonia.Views.World
             if (VM == null) return;
             try
             {
-                string dir = await DialogHelper.OpenFolder(TopLevel.GetTopLevel(this) as Window, "Choose a folder for the 3D debug dump");
+                string dir = await DialogHelper.OpenFolderAsync(TopLevel.GetTopLevel(this) as Window, "Choose a folder for the 3D debug dump");
                 if (dir == null) return;
 
                 string stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
@@ -391,12 +391,12 @@ namespace DSPRE.Avalonia.Views.World
                 {
                     bool pngOk = false;
                     try { if (rgba != null && w > 0 && h > 0) { SaveRgbaToPng(rgba, w, h, pngPath); pngOk = true; } }
-                    catch { pngOk = false; }
+                    catch (Exception ex) { AppLogger.WarnOnce("EventEditorView.ExportDebug_Click", ex); pngOk = false; }
                     SaveNotice.Exported(txtPath);
-                    if (!pngOk) _ = DialogHelper.ShowError("The report was written, but the render could not be captured.", "Event editor error");
+                    if (!pngOk) _ = DialogHelper.ShowErrorAsync("The report was written, but the render could not be captured.", "Event editor error");
                 });
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"Debug dump failed:\n{ex.Message}", "Event editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Debug dump failed:\n{ex.Message}", "Event editor error"); }
         }
 
         // Builds a PNG from a raw RGBA framebuffer (origin bottom-left → flipped to top-left for the image).
@@ -410,7 +410,7 @@ namespace DSPRE.Avalonia.Views.World
         {
             if (VM == null || sender is not Button { Tag: string tag } || !int.TryParse(tag, out int kind)) return;
             int number = VM.ShownScript(kind);
-            string name = await DialogHelper.PromptText($"Name for script {number}:", "Rename shared script",
+            string name = await DialogHelper.PromptTextAsync($"Name for script {number}:", "Rename shared script",
                 DSPRE.Avalonia.Data.CommonScriptLabels.Of(number) ?? "", TopLevel.GetTopLevel(this) as Window);
             if (name != null) VM.RenameCommonScript(kind, name);
         }
@@ -456,12 +456,17 @@ namespace DSPRE.Avalonia.Views.World
         private void RemoveSpawn_Click(object sender, RoutedEventArgs e) => VM?.RemoveSpawnable();
         private void DupSpawn_Click(object sender, RoutedEventArgs e) => VM?.DuplicateSpawnable();
         private void AddFile_Click(object sender, RoutedEventArgs e) => VM?.AddEventFile();
-        private async void RemFile_Click(object sender, RoutedEventArgs e) => await Safe(VM?.RemoveLastEventFileAsync());
+        private async void RemFile_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.RemoveLastEventFileAsync());
 
-        private static async Task Safe(Task task)
+        private static async Task SafeAsync(Task task)
         {
             if (task == null) return;
-            try { await task; } catch { }
+            try { await task; }
+            catch (System.Exception ex)
+            {
+                CrashReporter.LogHandled(ex);
+                await DialogHelper.ShowErrorAsync(ex.Message);
+            }
         }
     }
 }

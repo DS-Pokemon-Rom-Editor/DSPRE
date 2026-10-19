@@ -37,37 +37,37 @@ namespace DSPRE.HgEngine
         // Order within a block follows Species.c, so an absent block is written in the file's own layout.
         public static IReadOnlyList<HgEngineSourceField<PokemonPersonalData>> All { get; } = new[]
         {
-            F(P("baseStats", "hp"), 255, d => d.baseHP, (d, v) => d.baseHP = (byte)v),
-            F(P("baseStats", "attack"), 255, d => d.baseAtk, (d, v) => d.baseAtk = (byte)v),
-            F(P("baseStats", "defense"), 255, d => d.baseDef, (d, v) => d.baseDef = (byte)v),
-            F(P("baseStats", "spAttack"), 255, d => d.baseSpAtk, (d, v) => d.baseSpAtk = (byte)v),
-            F(P("baseStats", "spDefense"), 255, d => d.baseSpDef, (d, v) => d.baseSpDef = (byte)v),
-            F(P("baseStats", "speed"), 255, d => d.baseSpeed, (d, v) => d.baseSpeed = (byte)v),
-            F(P("types", index: 0), 255, d => (int)d.type1, (d, v) => d.type1 = (PokemonType)v, "TYPE_", TypeHeaders),
-            F(P("types", index: 1), 255, d => (int)d.type2, (d, v) => d.type2 = (PokemonType)v, "TYPE_", TypeHeaders),
-            F(P("catchRate"), 255, d => d.catchRate, (d, v) => d.catchRate = (byte)v),
+            F(P("baseStats", "hp"), 255, d => d.BaseHP, (d, v) => d.BaseHP = (byte)v),
+            F(P("baseStats", "attack"), 255, d => d.BaseAtk, (d, v) => d.BaseAtk = (byte)v),
+            F(P("baseStats", "defense"), 255, d => d.BaseDef, (d, v) => d.BaseDef = (byte)v),
+            F(P("baseStats", "spAttack"), 255, d => d.BaseSpAtk, (d, v) => d.BaseSpAtk = (byte)v),
+            F(P("baseStats", "spDefense"), 255, d => d.BaseSpDef, (d, v) => d.BaseSpDef = (byte)v),
+            F(P("baseStats", "speed"), 255, d => d.BaseSpeed, (d, v) => d.BaseSpeed = (byte)v),
+            F(P("types", index: 0), 255, d => (int)d.Type1, (d, v) => d.Type1 = (PokemonType)v, "TYPE_", TypeHeaders),
+            F(P("types", index: 1), 255, d => (int)d.Type2, (d, v) => d.Type2 = (PokemonType)v, "TYPE_", TypeHeaders),
+            F(P("catchRate"), 255, d => d.CatchRate, (d, v) => d.CatchRate = (byte)v),
             // The built record packs each yield into 2 bits.
-            F(P("evYields", "hp"), 3, d => d.evHP, (d, v) => d.evHP = (byte)v),
-            F(P("evYields", "attack"), 3, d => d.evAtk, (d, v) => d.evAtk = (byte)v),
-            F(P("evYields", "defense"), 3, d => d.evDef, (d, v) => d.evDef = (byte)v),
-            F(P("evYields", "spAttack"), 3, d => d.evSpAtk, (d, v) => d.evSpAtk = (byte)v),
-            F(P("evYields", "spDefense"), 3, d => d.evSpDef, (d, v) => d.evSpDef = (byte)v),
-            F(P("evYields", "speed"), 3, d => d.evSpeed, (d, v) => d.evSpeed = (byte)v),
-            F(P("wildHeldItems", "common"), ushort.MaxValue, d => d.item1, (d, v) => d.item1 = (ushort)v, "ITEM_", ItemHeaders, "ITEM_NONE"),
-            F(P("wildHeldItems", "rare"), ushort.MaxValue, d => d.item2, (d, v) => d.item2 = (ushort)v, "ITEM_", ItemHeaders, "ITEM_NONE"),
-            F(P("genderRatio"), 255, d => d.genderVec, (d, v) => d.genderVec = (byte)v),
-            F(P("hatchCycles"), 255, d => d.eggSteps, (d, v) => d.eggSteps = (byte)v),
-            F(P("baseFriendship"), 255, d => d.baseFriendship, (d, v) => d.baseFriendship = (byte)v),
-            F(P("expRate"), 255, d => (int)d.growthCurve, (d, v) => d.growthCurve = (PokemonGrowthCurve)v, "GROWTH_", PokemonHeaders),
-            F(P("eggGroups", index: 0), 255, d => d.eggGroup1, (d, v) => d.eggGroup1 = (byte)v, "EGG_GROUP_", PokemonHeaders),
-            F(P("eggGroups", index: 1), 255, d => d.eggGroup2, (d, v) => d.eggGroup2 = (byte)v, "EGG_GROUP_", PokemonHeaders),
+            F(P("evYields", "hp"), 3, d => d.EvHP, (d, v) => d.EvHP = (byte)v),
+            F(P("evYields", "attack"), 3, d => d.EvAtk, (d, v) => d.EvAtk = (byte)v),
+            F(P("evYields", "defense"), 3, d => d.EvDef, (d, v) => d.EvDef = (byte)v),
+            F(P("evYields", "spAttack"), 3, d => d.EvSpAtk, (d, v) => d.EvSpAtk = (byte)v),
+            F(P("evYields", "spDefense"), 3, d => d.EvSpDef, (d, v) => d.EvSpDef = (byte)v),
+            F(P("evYields", "speed"), 3, d => d.EvSpeed, (d, v) => d.EvSpeed = (byte)v),
+            F(P("wildHeldItems", "common"), ushort.MaxValue, d => d.Item1, (d, v) => d.Item1 = (ushort)v, "ITEM_", ItemHeaders, "ITEM_NONE"),
+            F(P("wildHeldItems", "rare"), ushort.MaxValue, d => d.Item2, (d, v) => d.Item2 = (ushort)v, "ITEM_", ItemHeaders, "ITEM_NONE"),
+            F(P("genderRatio"), 255, d => d.GenderVec, (d, v) => d.GenderVec = (byte)v),
+            F(P("hatchCycles"), 255, d => d.EggSteps, (d, v) => d.EggSteps = (byte)v),
+            F(P("baseFriendship"), 255, d => d.BaseFriendship, (d, v) => d.BaseFriendship = (byte)v),
+            F(P("expRate"), 255, d => (int)d.GrowthCurve, (d, v) => d.GrowthCurve = (PokemonGrowthCurve)v, "GROWTH_", PokemonHeaders),
+            F(P("eggGroups", index: 0), 255, d => d.EggGroup1, (d, v) => d.EggGroup1 = (byte)v, "EGG_GROUP_", PokemonHeaders),
+            F(P("eggGroups", index: 1), 255, d => d.EggGroup2, (d, v) => d.EggGroup2 = (byte)v, "EGG_GROUP_", PokemonHeaders),
             // hg-engine widens abilities to u16.
-            F(P("abilities", index: 0), ushort.MaxValue, d => d.firstAbility, (d, v) => d.firstAbility = (ushort)v, "ABILITY_", AbilityHeaders, "ABILITY_NONE"),
-            F(P("abilities", index: 1), ushort.MaxValue, d => d.secondAbility, (d, v) => d.secondAbility = (ushort)v, "ABILITY_", AbilityHeaders, "ABILITY_NONE"),
-            F(P("safariFleeRate"), 255, d => d.escapeRate, (d, v) => d.escapeRate = (byte)v),
+            F(P("abilities", index: 0), ushort.MaxValue, d => d.FirstAbility, (d, v) => d.FirstAbility = (ushort)v, "ABILITY_", AbilityHeaders, "ABILITY_NONE"),
+            F(P("abilities", index: 1), ushort.MaxValue, d => d.SecondAbility, (d, v) => d.SecondAbility = (ushort)v, "ABILITY_", AbilityHeaders, "ABILITY_NONE"),
+            F(P("safariFleeRate"), 255, d => d.EscapeRate, (d, v) => d.EscapeRate = (byte)v),
             // Shares a byte with the flip bit.
-            F(P("bodyColor"), 127, d => (int)d.color, (d, v) => d.color = (PokemonDexColor)v, "BODY_COLOR_", PokemonHeaders),
-            F(P("flipSprite"), 1, d => d.flip ? 1 : 0, (d, v) => d.flip = v != 0),
+            F(P("bodyColor"), 127, d => (int)d.Color, (d, v) => d.Color = (PokemonDexColor)v, "BODY_COLOR_", PokemonHeaders),
+            F(P("flipSprite"), 1, d => d.Flip ? 1 : 0, (d, v) => d.Flip = v != 0),
         };
 
         /// <summary>Loads the species' Species.c entry into <paramref name="data"/>, keeping the values of
@@ -94,7 +94,7 @@ namespace DSPRE.HgEngine
             if (!HgEngineWriter.TryWriteFields(HgEngineDomain.Species, speciesId, writes, out _, out error, allowInsert: true, allOrNothing: true))
                 return false;
             if (oldTypes.Contains(-1)) return true;
-            return HgEnginePokedexMetrics.TryMoveTypes(speciesId, (oldTypes[0], oldTypes[1]), ((int)data.type1, (int)data.type2), out error);
+            return HgEnginePokedexMetrics.TryMoveTypes(speciesId, (oldTypes[0], oldTypes[1]), ((int)data.Type1, (int)data.Type2), out error);
         }
 
         private static readonly System.Text.RegularExpressions.Regex SpeciesEntry = new(@"\[\s*(SPECIES_\w+)\s*\]\s*=\s*\{");

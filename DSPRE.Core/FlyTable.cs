@@ -27,7 +27,7 @@ namespace DSPRE
             public ushort GlobalXUnlock, GlobalYUnlock;
         }
 
-        private static bool Hgss => RomInfo.gameFamily == RomInfo.GameFamilies.HGSS;
+        private static bool Hgss => RomInfo.GameFamily == RomInfo.GameFamilies.HGSS;
 
         public static List<Row> Read()
         {
@@ -127,7 +127,7 @@ namespace DSPRE
         /// <summary>The table, or null when it cannot be read.</summary>
         public static List<Row> TryRead()
         {
-            if (string.IsNullOrEmpty(RomInfo.workDir)) return null;   // no project open, nothing to read
+            if (string.IsNullOrEmpty(RomInfo.WorkDir)) return null;   // no project open, nothing to read
             try { return Read(); }
             catch (System.Exception ex) { AppLogger.Warn("The fly table could not be read: " + ex.Message); return null; }
         }

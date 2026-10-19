@@ -49,7 +49,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         /// <summary>Fills with this game's music tracks.</summary>
-        public void LoadMusic() => Load(RomInfo.gameFamily switch
+        public void LoadMusic() => Load(RomInfo.GameFamily switch
         {
             RomInfo.GameFamilies.DP => PokeDatabase.MusicDB.DPMusicDict,
             RomInfo.GameFamilies.Plat => PokeDatabase.MusicDB.PtMusicDict,
@@ -114,8 +114,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         public MappedCombo MusicNight { get; } = new MappedCombo();
 
         // ── Family gating ───────────────────────────────────────────────────────────
-        public bool IsHgss => gameFamily == GameFamilies.HGSS;
-        public bool IsDp => gameFamily == GameFamilies.DP;
+        public bool IsHgss => GameFamily == GameFamilies.HGSS;
+        public bool IsDp => GameFamily == GameFamilies.DP;
         public bool ShowAreaIcon { get; private set; }
         public bool ShowHgssOnly => IsHgss;
         public bool CanAddRemove { get; private set; }
@@ -245,18 +245,18 @@ namespace DSPRE.Avalonia.ViewModels.World
         private string _internalNameLen = "[ 0 ]";
         public string InternalNameLen { get => _internalNameLen; set => Set(ref _internalNameLen, value); }
 
-        private decimal _matrixId; public decimal MatrixId { get => _matrixId; set { if (Set(ref _matrixId, value)) Apply(h => h.matrixID = (ushort)value); } }
-        private decimal _areaDataId; public decimal AreaDataId { get => _areaDataId; set { if (Set(ref _areaDataId, value)) { Apply(h => h.areaDataID = (byte)value); UpdateWeatherRoom(); } } }
-        private decimal _scriptFileId; public decimal ScriptFileId { get => _scriptFileId; set { if (Set(ref _scriptFileId, value)) Apply(h => h.scriptFileID = (ushort)value); } }
-        private decimal _levelScriptId; public decimal LevelScriptId { get => _levelScriptId; set { if (Set(ref _levelScriptId, value)) Apply(h => h.levelScriptID = (ushort)value); } }
-        private decimal _eventFileId; public decimal EventFileId { get => _eventFileId; set { if (Set(ref _eventFileId, value)) Apply(h => h.eventFileID = (ushort)value); } }
-        private decimal _textArchiveId; public decimal TextArchiveId { get => _textArchiveId; set { if (Set(ref _textArchiveId, value)) Apply(h => h.textArchiveID = (ushort)value); } }
-        private decimal _wildPokemon; public decimal WildPokemon { get => _wildPokemon; set { if (Set(ref _wildPokemon, value)) { Apply(h => h.wildPokemon = (ushort)value); OnPropertyChanged(nameof(CanOpenEncounters)); } } }
-        private decimal _battleBackground; public decimal BattleBackground { get => _battleBackground; set { if (Set(ref _battleBackground, value)) Apply(h => h.battleBackground = (byte)value); } }
+        private decimal _matrixId; public decimal MatrixId { get => _matrixId; set { if (Set(ref _matrixId, value)) Apply(h => h.MatrixID = (ushort)value); } }
+        private decimal _areaDataId; public decimal AreaDataId { get => _areaDataId; set { if (Set(ref _areaDataId, value)) { Apply(h => h.AreaDataID = (byte)value); UpdateWeatherRoom(); } } }
+        private decimal _scriptFileId; public decimal ScriptFileId { get => _scriptFileId; set { if (Set(ref _scriptFileId, value)) Apply(h => h.ScriptFileID = (ushort)value); } }
+        private decimal _levelScriptId; public decimal LevelScriptId { get => _levelScriptId; set { if (Set(ref _levelScriptId, value)) Apply(h => h.LevelScriptID = (ushort)value); } }
+        private decimal _eventFileId; public decimal EventFileId { get => _eventFileId; set { if (Set(ref _eventFileId, value)) Apply(h => h.EventFileID = (ushort)value); } }
+        private decimal _textArchiveId; public decimal TextArchiveId { get => _textArchiveId; set { if (Set(ref _textArchiveId, value)) Apply(h => h.TextArchiveID = (ushort)value); } }
+        private decimal _wildPokemon; public decimal WildPokemon { get => _wildPokemon; set { if (Set(ref _wildPokemon, value)) { Apply(h => h.WildPokemon = (ushort)value); OnPropertyChanged(nameof(CanOpenEncounters)); } } }
+        private decimal _battleBackground; public decimal BattleBackground { get => _battleBackground; set { if (Set(ref _battleBackground, value)) Apply(h => h.BattleBackground = (byte)value); } }
 
         // No-encounter sentinel (0xffff DPPt / 0xff HGSS): the wild editor clamps it to file 0, so the
         // "Open" affordance is disabled/no-op there rather than silently opening an unrelated file.
-        private int NullEncounterId => IsHgss ? MapHeader.HGSS_NULL_ENCOUNTER_FILE_ID : MapHeader.DPPT_NULL_ENCOUNTER_FILE_ID;
+        private int NullEncounterId => IsHgss ? MapHeader.HgssNullEncounterFileId : MapHeader.DpptNullEncounterFileId;
         public bool CanOpenEncounters => _header != null && (int)_wildPokemon != NullEncounterId;
         /// <summary>The encounter number that means "no wild Pokémon" in the open game.</summary>
         public int NoEncountersId => NullEncounterId;
@@ -266,7 +266,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public decimal CameraValue
         {
             get => _cameraValue;
-            set { if (Set(ref _cameraValue, value)) { Apply(h => h.cameraAngleID = (byte)value); SyncCameraCombo(); } }
+            set { if (Set(ref _cameraValue, value)) { Apply(h => h.CameraAngleID = (byte)value); SyncCameraCombo(); } }
         }
         private int _cameraComboIndex = -1;
         public int CameraComboIndex
@@ -280,7 +280,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public decimal WeatherValue
         {
             get => _weatherValue;
-            set { if (Set(ref _weatherValue, value)) { Apply(h => h.weatherID = (byte)value); SyncWeatherCombo(); UpdateWeatherRoom(); } }
+            set { if (Set(ref _weatherValue, value)) { Apply(h => h.WeatherID = (byte)value); SyncWeatherCombo(); UpdateWeatherRoom(); } }
         }
         private int _weatherComboIndex = -1;
         public int WeatherComboIndex
@@ -289,7 +289,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             set { if (Set(ref _weatherComboIndex, value) && !_suppress && value >= 0) WeatherValue = Weather.KeyAt(value); }
         }
 
-        public bool WeatherRoomChecked => RomInfo.gameFamily == GameFamilies.Plat;
+        public bool WeatherRoomChecked => RomInfo.GameFamily == GameFamilies.Plat;
 
         private string _weatherRoomWarning;
         /// <summary>Set when the weather's background is estimated not to fit next to this header's area data.</summary>
@@ -313,7 +313,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public decimal MusicDayValue
         {
             get => _musicDayValue;
-            set { if (Set(ref _musicDayValue, value)) { MusicPreview.StopIfStartedBy((this, false)); Apply(h => h.musicDayID = (ushort)value); SyncMusicCombo(MusicDay, (int)value, i => _musicDayComboIndex = i, nameof(MusicDayComboIndex)); OnPropertyChanged(nameof(DayPlayIcon)); } }
+            set { if (Set(ref _musicDayValue, value)) { MusicPreview.StopIfStartedBy((this, false)); Apply(h => h.MusicDayID = (ushort)value); SyncMusicCombo(MusicDay, (int)value, i => _musicDayComboIndex = i, nameof(MusicDayComboIndex)); OnPropertyChanged(nameof(DayPlayIcon)); } }
         }
         private int _musicDayComboIndex = -1;
         public int MusicDayComboIndex
@@ -326,7 +326,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public decimal MusicNightValue
         {
             get => _musicNightValue;
-            set { if (Set(ref _musicNightValue, value)) { MusicPreview.StopIfStartedBy((this, true)); Apply(h => h.musicNightID = (ushort)value); SyncMusicCombo(MusicNight, (int)value, i => _musicNightComboIndex = i, nameof(MusicNightComboIndex)); OnPropertyChanged(nameof(NightPlayIcon)); } }
+            set { if (Set(ref _musicNightValue, value)) { MusicPreview.StopIfStartedBy((this, true)); Apply(h => h.MusicNightID = (ushort)value); SyncMusicCombo(MusicNight, (int)value, i => _musicNightComboIndex = i, nameof(MusicNightComboIndex)); OnPropertyChanged(nameof(NightPlayIcon)); } }
         }
         private int _musicNightComboIndex = -1;
         public int MusicNightComboIndex
@@ -371,13 +371,13 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool Flag6 { get => _f6; set { if (Set(ref _f6, value)) ApplyFlags(); } }
 
         // ── HGSS-only ─────────────────────────────────────────────────────────────────
-        private decimal _worldmapX; public decimal WorldmapX { get => _worldmapX; set { if (Set(ref _worldmapX, value)) ApplyHgss(h => h.worldmapX = (byte)value); } }
-        private decimal _worldmapY; public decimal WorldmapY { get => _worldmapY; set { if (Set(ref _worldmapY, value)) ApplyHgss(h => h.worldmapY = (byte)value); } }
-        private decimal _momCallIntroParam; public decimal MomCallIntroParam { get => _momCallIntroParam; set { if (Set(ref _momCallIntroParam, value)) ApplyHgss(h => h.momCallIntroParam = (byte)value); } }
+        private decimal _worldmapX; public decimal WorldmapX { get => _worldmapX; set { if (Set(ref _worldmapX, value)) ApplyHgss(h => h.WorldmapX = (byte)value); } }
+        private decimal _worldmapY; public decimal WorldmapY { get => _worldmapY; set { if (Set(ref _worldmapY, value)) ApplyHgss(h => h.WorldmapY = (byte)value); } }
+        private decimal _momCallIntroParam; public decimal MomCallIntroParam { get => _momCallIntroParam; set { if (Set(ref _momCallIntroParam, value)) ApplyHgss(h => h.MomCallIntroParam = (byte)value); } }
         private int _followModeIndex = -1;
-        public int FollowModeIndex { get => _followModeIndex; set { if (Set(ref _followModeIndex, value)) ApplyHgss(h => h.followMode = (byte)Math.Max(0, value)); } }
+        public int FollowModeIndex { get => _followModeIndex; set { if (Set(ref _followModeIndex, value)) ApplyHgss(h => h.FollowMode = (byte)Math.Max(0, value)); } }
         private bool _kantoFlag;
-        public bool KantoFlag { get => _kantoFlag; set { if (Set(ref _kantoFlag, value)) { ApplyHgss(h => h.kantoFlag = value); OnPropertyChanged(nameof(JohtoFlag)); } } }
+        public bool KantoFlag { get => _kantoFlag; set { if (Set(ref _kantoFlag, value)) { ApplyHgss(h => h.KantoFlag = value); OnPropertyChanged(nameof(JohtoFlag)); } } }
         public bool JohtoFlag => !_kantoFlag;
 
         // ── Copying one field to another header ──────────────────────────────────────
@@ -566,7 +566,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             StatusText = "Loading headers…";
             try
             {
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay, DirNames.textArchives, DirNames.dynamicHeaders });
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.SynthOverlay, DirNames.TextArchives, DirNames.DynamicHeaders });
 
                 _dynamicHeaders = MapHeader.UsesDynamicHeaders;
                 CanAddRemove = _dynamicHeaders;
@@ -587,12 +587,12 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (FileNotFoundException)
             {
-                await DialogHelper.ShowError(internalNamesPath + " doesn't exist.", "Couldn't read internal names");
+                await DialogHelper.ShowErrorAsync(InternalNamesPath + " doesn't exist.", "Couldn't read internal names");
             }
             catch (Exception ex)
             {
                 AppLogger.Error("HeaderEditorViewModel.SetupAsync: " + ex);
-                await DialogHelper.ShowError($"Failed to load headers:\n{ex.Message}", "Header editor error");
+                await DialogHelper.ShowErrorAsync($"Failed to load headers:\n{ex.Message}", "Header editor error");
             }
         }
 
@@ -600,7 +600,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             AreaSettingsItems.Clear();
             AreaIconItems.Clear();
-            switch (gameFamily)
+            switch (GameFamily)
             {
                 case GameFamilies.DP:
                     Camera.LoadLabels(LabelStore.CameraKey);
@@ -650,8 +650,8 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private List<string> ReadLocationNames()
         {
-            try { return new TextArchive(locationNamesTextNumber).messages.ToList(); }
-            catch { return new List<string>(); }
+            try { return new TextArchive(LocationNamesTextNumber).Messages.ToList(); }
+            catch (Exception ex) { AppLogger.WarnOnce("HeaderEditorViewModel.ReadLocationNames", ex); return new List<string>(); }
         }
 
         // ── Sidebar tree: grouping, search, selection ───────────────────────────────
@@ -684,7 +684,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             // Open where a new game starts, which is far more useful than whichever header happens to sort
             // first.
-            int start = FieldStartLocation.HeaderFor(gameFamily, _headerListNames);
+            int start = FieldStartLocation.HeaderFor(GameFamily, _headerListNames);
             if (start >= 0 && start < _locationIndexByHeader.Count) return (ushort)start;
 
             int mystery = FindMysteryZoneIndex();
@@ -883,7 +883,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             CancellationTokenSource cancellation = _treeFilterCancellation;
             _treeFilterCancellation = null;
             try { cancellation?.Cancel(); }
-            catch (ObjectDisposedException) { }
+            catch (ObjectDisposedException) { }   // the search was already finished and disposed
             unchecked { _treeFilterGeneration++; }
         }
 
@@ -1009,11 +1009,11 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private int CurrentHeaderLocationIndex()
         {
-            switch (gameFamily)
+            switch (GameFamily)
             {
-                case GameFamilies.DP: return ((HeaderDP)_header).locationName;
-                case GameFamilies.Plat: return ((HeaderPt)_header).locationName;
-                default: return ((HeaderHGSS)_header).locationName;
+                case GameFamilies.DP: return ((HeaderDP)_header).LocationName;
+                case GameFamilies.Plat: return ((HeaderPt)_header).LocationName;
+                default: return ((HeaderHGSS)_header).LocationName;
             }
         }
 
@@ -1070,41 +1070,41 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 InternalName = _header.ID < _internalNames.Count ? _internalNames[_header.ID] : "";
-                MatrixId = _header.matrixID;
-                AreaDataId = _header.areaDataID;
-                ScriptFileId = _header.scriptFileID;
-                LevelScriptId = _header.levelScriptID;
-                EventFileId = _header.eventFileID;
-                TextArchiveId = _header.textArchiveID;
-                WildPokemon = _header.wildPokemon;
-                BattleBackground = _header.battleBackground;
-                CameraValue = _header.cameraAngleID;
-                WeatherValue = _header.weatherID;
+                MatrixId = _header.MatrixID;
+                AreaDataId = _header.AreaDataID;
+                ScriptFileId = _header.ScriptFileID;
+                LevelScriptId = _header.LevelScriptID;
+                EventFileId = _header.EventFileID;
+                TextArchiveId = _header.TextArchiveID;
+                WildPokemon = _header.WildPokemon;
+                BattleBackground = _header.BattleBackground;
+                CameraValue = _header.CameraAngleID;
+                WeatherValue = _header.WeatherID;
                 UpdateWeatherRoom();
-                MusicDayValue = _header.musicDayID;
-                MusicNightValue = _header.musicNightID;
+                MusicDayValue = _header.MusicDayID;
+                MusicNightValue = _header.MusicNightID;
 
-                switch (gameFamily)
+                switch (GameFamily)
                 {
                     case GameFamilies.DP:
-                        LocationNameIndex = ((HeaderDP)_header).locationName;
-                        AreaSettingsIndex = FindAreaSettingsBySpecifier(_header.locationSpecifier);
+                        LocationNameIndex = ((HeaderDP)_header).LocationName;
+                        AreaSettingsIndex = FindAreaSettingsBySpecifier(_header.LocationSpecifier);
                         break;
                     case GameFamilies.Plat:
-                        LocationNameIndex = ((HeaderPt)_header).locationName;
-                        AreaIconIndex = ((HeaderPt)_header).areaIcon;
-                        AreaSettingsIndex = FindAreaSettingsBySpecifier(_header.locationSpecifier);
+                        LocationNameIndex = ((HeaderPt)_header).LocationName;
+                        AreaIconIndex = ((HeaderPt)_header).AreaIcon;
+                        AreaSettingsIndex = FindAreaSettingsBySpecifier(_header.LocationSpecifier);
                         break;
                     default:
                         HeaderHGSS h = (HeaderHGSS)_header;
-                        LocationNameIndex = h.locationName;
-                        AreaIconIndex = h.areaIcon;
-                        AreaSettingsIndex = h.locationType;
-                        WorldmapX = h.worldmapX;
-                        WorldmapY = h.worldmapY;
-                        MomCallIntroParam = h.momCallIntroParam;
-                        FollowModeIndex = h.followMode;
-                        KantoFlag = h.kantoFlag;
+                        LocationNameIndex = h.LocationName;
+                        AreaIconIndex = h.AreaIcon;
+                        AreaSettingsIndex = h.LocationType;
+                        WorldmapX = h.WorldmapX;
+                        WorldmapY = h.WorldmapY;
+                        MomCallIntroParam = h.MomCallIntroParam;
+                        FollowModeIndex = h.FollowMode;
+                        KantoFlag = h.KantoFlag;
                         break;
                 }
 
@@ -1155,11 +1155,11 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void ApplyLocationName(int index)
         {
-            switch (gameFamily)
+            switch (GameFamily)
             {
-                case GameFamilies.DP: Apply(h => ((HeaderDP)h).locationName = (ushort)index); break;
-                case GameFamilies.Plat: Apply(h => ((HeaderPt)h).locationName = (byte)index); break;
-                default: Apply(h => ((HeaderHGSS)h).locationName = (byte)index); break;
+                case GameFamilies.DP: Apply(h => ((HeaderDP)h).LocationName = (ushort)index); break;
+                case GameFamilies.Plat: Apply(h => ((HeaderPt)h).LocationName = (byte)index); break;
+                default: Apply(h => ((HeaderHGSS)h).LocationName = (byte)index); break;
             }
             if (_header != null) UpdateHeaderLocationInTree(_header.ID, index);   // regroup live
         }
@@ -1167,9 +1167,9 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void ApplyAreaSettings(int index)
         {
             if (_header == null) return;
-            if (gameFamily == GameFamilies.HGSS)
+            if (GameFamily == GameFamilies.HGSS)
             {
-                ((HeaderHGSS)_header).locationType = (byte)index;
+                ((HeaderHGSS)_header).LocationType = (byte)index;
                 SetDirty();
             }
             else
@@ -1177,7 +1177,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 string s = index >= 0 && index < AreaSettingsItems.Count ? AreaSettingsItems[index] : null;
                 if (s != null && s.Length >= 4 && byte.TryParse(s.Substring(1, 3), out byte spec))
                 {
-                    _header.locationSpecifier = spec;
+                    _header.LocationSpecifier = spec;
                     SetDirty();
                 }
             }
@@ -1185,11 +1185,11 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void ApplyAreaIcon(int index)
         {
-            switch (gameFamily)
+            switch (GameFamily)
             {
                 case GameFamilies.DP: break;
-                case GameFamilies.Plat: Apply(h => ((HeaderPt)h).areaIcon = (byte)index); break;
-                default: Apply(h => ((HeaderHGSS)h).areaIcon = (byte)index); break;
+                case GameFamilies.Plat: Apply(h => ((HeaderPt)h).AreaIcon = (byte)index); break;
+                default: Apply(h => ((HeaderHGSS)h).AreaIcon = (byte)index); break;
             }
             UpdateAreaIconImage();
         }
@@ -1208,13 +1208,13 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (_f5) v |= 1 << 5;
                 if (_f6) v |= 1 << 6;
             }
-            _header.flags = v;
+            _header.Flags = v;
             SetDirty();
         }
 
         private void LoadFlags()
         {
-            byte v = _header.flags;
+            byte v = _header.Flags;
             Flag0 = (v & (1 << 0)) != 0;
             Flag1 = (v & (1 << 1)) != 0;
             Flag2 = (v & (1 << 2)) != 0;
@@ -1244,12 +1244,12 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void UpdateAreaIconImage()
         {
             string name = null;
-            switch (gameFamily)
+            switch (GameFamily)
             {
                 case GameFamilies.DP: name = "dpareaicon"; break;
                 case GameFamilies.Plat: if (_areaIconIndex >= 0) name = "areaicon0" + _areaIconIndex; break;
                 default:
-                    if (_areaIconIndex >= 0 && PokeDatabase.System.AreaPics.hgssAreaPicDict.TryGetValue(_areaIconIndex, out string n)) name = n;
+                    if (_areaIconIndex >= 0 && PokeDatabase.System.AreaPics.HgssAreaPicDict.TryGetValue(_areaIconIndex, out string n)) name = n;
                     break;
             }
             AreaIconImage = name != null ? ResImage(name) : null;
@@ -1287,15 +1287,15 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void Copy()
         {
             if (_header == null) return;
-            _clipboard = (_header.ToByteArray(), gameFamily);
+            _clipboard = (_header.ToByteArray(), GameFamily);
             StatusText = $"Copied header {_header.ID}.";
         }
 
         public void Paste()
         {
             if (_header == null || _clipboard.Bytes == null) { StatusText = "Nothing to paste."; return; }
-            if (_clipboard.Family != gameFamily) { StatusText = $"The copied header is from a {_clipboard.Family} ROM and can't be pasted here."; return; }
-            MapHeader h = MapHeader.LoadFromByteArray(_clipboard.Bytes, (ushort)_header.ID, gameFamily);
+            if (_clipboard.Family != GameFamily) { StatusText = $"The copied header is from a {_clipboard.Family} ROM and can't be pasted here."; return; }
+            MapHeader h = MapHeader.LoadFromByteArray(_clipboard.Bytes, (ushort)_header.ID, GameFamily);
             if (h == null) { StatusText = "Clipboard header is incompatible."; return; }
             _header = h;
             PopulateFromHeader();
@@ -1314,7 +1314,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (_header == null) return;
             FilePickerFileType filter = new global::Avalonia.Platform.Storage.FilePickerFileType("DSPRE header")
             { Patterns = new[] { "*.dsh", "*.bin", "*.*" } };
-            string path = await DialogHelper.OpenFile(_owner, "Import header", new[] { filter });
+            string path = await DialogHelper.OpenFileAsync(_owner, "Import header", new[] { filter });
             if (path == null) return;
             try
             {
@@ -1326,17 +1326,17 @@ namespace DSPRE.Avalonia.ViewModels.World
                 SetDirty();
                 SaveNotice.Imported($"header {_header.ID}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"Import failed: malformed or not a header file.\n{ex.Message}", "Header editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Import failed: malformed or not a header file.\n{ex.Message}", "Header editor error"); }
         }
 
         public async Task ExportAsync()
         {
             if (_header == null) return;
             FilePickerFileType filter = new global::Avalonia.Platform.Storage.FilePickerFileType("DSPRE header") { Patterns = new[] { "*.dsh" } };
-            string path = await DialogHelper.SaveFile(_owner, "Export header", new[] { filter }, $"header_{_header.ID:D4}.dsh");
+            string path = await DialogHelper.SaveFileAsync(_owner, "Export header", new[] { filter }, $"header_{_header.ID:D4}.dsh");
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _header.ToByteArray()); SaveNotice.Exported(path); }
-            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Header editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Header editor error"); }
         }
 
         /// <summary>Shows a header asked for from another editor.</summary>
@@ -1386,13 +1386,13 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
         }
 
-        public void OpenMatrix() { if (_header != null && _openInTab?.Invoke("Matrix") != true) AvaloniaEditorLauncher.OpenMatrixEditor(_header.matrixID, _header.ID); }
-        public void OpenAreaData() { if (_header != null && _openInTab?.Invoke("Area Data") != true) AvaloniaEditorLauncher.OpenAreaDataEditor(_header.areaDataID); }
-        public void OpenEvents() { if (_header != null && _openInTab?.Invoke("Events") != true) AvaloniaEditorLauncher.OpenEventEditor(_header.eventFileID); }
-        public void OpenScripts() { if (_header != null && _openInTab?.Invoke("Scripts") != true) AvaloniaEditorLauncher.OpenScriptEditor(_header.scriptFileID); }
-        public void OpenLevelScripts() { if (_header != null && _openInTab?.Invoke("Level Scripts") != true) AvaloniaEditorLauncher.OpenLevelScriptEditor(_header.levelScriptID); }
-        public void OpenTexts() { if (_header != null && _openInTab?.Invoke("Text") != true) AvaloniaEditorLauncher.OpenTextEditor(_header.textArchiveID); }
-        public void OpenEncounters() { if (CanOpenEncounters && _openInTab?.Invoke("Encounters") != true) AvaloniaEditorLauncher.OpenWildEditor(_header.wildPokemon); }
+        public void OpenMatrix() { if (_header != null && _openInTab?.Invoke("Matrix") != true) AvaloniaEditorLauncher.OpenMatrixEditor(_header.MatrixID, _header.ID); }
+        public void OpenAreaData() { if (_header != null && _openInTab?.Invoke("Area Data") != true) AvaloniaEditorLauncher.OpenAreaDataEditor(_header.AreaDataID); }
+        public void OpenEvents() { if (_header != null && _openInTab?.Invoke("Events") != true) AvaloniaEditorLauncher.OpenEventEditor(_header.EventFileID); }
+        public void OpenScripts() { if (_header != null && _openInTab?.Invoke("Scripts") != true) AvaloniaEditorLauncher.OpenScriptEditor(_header.ScriptFileID); }
+        public void OpenLevelScripts() { if (_header != null && _openInTab?.Invoke("Level Scripts") != true) AvaloniaEditorLauncher.OpenLevelScriptEditor(_header.LevelScriptID); }
+        public void OpenTexts() { if (_header != null && _openInTab?.Invoke("Text") != true) AvaloniaEditorLauncher.OpenTextEditor(_header.TextArchiveID); }
+        public void OpenEncounters() { if (CanOpenEncounters && _openInTab?.Invoke("Encounters") != true) AvaloniaEditorLauncher.OpenWildEditor(_header.WildPokemon); }
 
         /// <summary>Opens the battle scenery this place fights on. Every other linked field on this row
         /// has a button to the thing it names; this one was a bare number.</summary>
@@ -1404,7 +1404,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             MapHeader.WriteInternalName(id, _internalName);
 
             if (id < _internalNames.Count) _internalNames[id] = _internalName;
-            if (id < _headerListNames.Count) _headerListNames[id] = id.ToString("D3") + MapHeader.nameSeparator + _internalName;
+            if (id < _headerListNames.Count) _headerListNames[id] = id.ToString("D3") + MapHeader.NameSeparator + _internalName;
             RebuildTree();   // refresh the leaf's label (and any active search)
         }
 
@@ -1445,7 +1445,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             RaiseUndoState();
             OnPropertyChanged(nameof(RemoveTip));
 
-            _headerListNames.Add(newId.ToString("D3") + MapHeader.nameSeparator + newmap);
+            _headerListNames.Add(newId.ToString("D3") + MapHeader.NameSeparator + newmap);
             _internalNames.Add(newmap);
             LoadLocationIndices();
             RebuildTree();
@@ -1459,16 +1459,16 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (HgEngine.HgEngineProject.IsActive)
             {
-                await DialogHelper.ShowInfo($"Header {newId} added. Pick its script and text files below.", "Header added");
+                await DialogHelper.ShowInfoAsync($"Header {newId} added. Pick its script and text files below.", "Header added");
                 return;
             }
-            bool hgss = gameFamily == GameFamilies.HGSS;
+            bool hgss = GameFamily == GameFamilies.HGSS;
             List<(string Label, bool IsChecked)> options = new List<(string, bool)>
             {
                 ("New script file", true), ("New level script with no triggers", true), ("Empty event file", true), ("New text archive", true),
             };
             if (hgss) options.Add(("Headbutt file", true));
-            (bool create, bool[] pick) = await DialogHelper.AskWithChecks(
+            (bool create, bool[] pick) = await DialogHelper.AskWithChecksAsync(
                 $"Header {newId} was added as a copy, so it uses the copied header's files. Give it new ones of its own?",
                 "Header added", "Create", "Keep the copied ones", options.ToArray());
             if (!create) return;
@@ -1501,11 +1501,11 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException)
             {
-                await DialogHelper.ShowError((made.Count > 0 ? $"Made {string.Join(", ", made)}, then: " : "") + ex.Message, "Header added");
+                await DialogHelper.ShowErrorAsync((made.Count > 0 ? $"Made {string.Join(", ", made)}, then: " : "") + ex.Message, "Header added");
                 return;
             }
             if (made.Count > 0)
-                await DialogHelper.ShowInfo($"Header {newId} now has {string.Join(", ", made)}.", "Header added");
+                await DialogHelper.ShowInfoAsync($"Header {newId} now has {string.Join(", ", made)}.", "Header added");
         }
 
         public async Task RemoveHeaderAsync()
@@ -1514,12 +1514,12 @@ namespace DSPRE.Avalonia.ViewModels.World
             int lastIndex = _headerListNames.Count - 1;
             if (lastIndex <= 0)
             {
-                await DialogHelper.ShowError("There has to be at least one header.", "Header editor error");
+                await DialogHelper.ShowErrorAsync("There has to be at least one header.", "Header editor error");
                 return;
             }
 
             string name = lastIndex < _internalNames.Count ? _internalNames[lastIndex] : "";
-            if (!await DialogHelper.AskYesNo(
+            if (!await DialogHelper.AskYesNoAsync(
                     $"Remove header {lastIndex:D3} ({name})? Only the last header can be removed. It is deleted now, not on Save; Ctrl+Z puts it back.",
                     "Delete header?"))
                 return;
@@ -1541,7 +1541,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             (byte[] data, string name) = _removedHeaders.Pop();
             int id = MapHeader.RestoreDynamicHeader(data, name);
-            _headerListNames.Add(id.ToString("D3") + MapHeader.nameSeparator + name);
+            _headerListNames.Add(id.ToString("D3") + MapHeader.NameSeparator + name);
             _internalNames.Add(name);
             LoadLocationIndices();
             RebuildTree();

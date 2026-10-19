@@ -218,7 +218,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             byte[] overlay = Overlay;
             if (overlay == null) return;
-            GraphicAssets.Archive archive = GraphicAssets.All.FirstOrDefault(a => a.Dir == RomInfo.DirNames.battleObj);
+            GraphicAssets.Archive archive = GraphicAssets.All.FirstOrDefault(a => a.Dir == RomInfo.DirNames.BattleObj);
             using (_pending.Reading())
             using (BattleGaugePieces.StagedOverlay(DraftOverlay(overlay)))
             {
@@ -265,7 +265,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public string ImportFitted(string path, HpBarFit.Plan plan)
         {
-            GraphicAssets.Archive archive = GraphicAssets.All.FirstOrDefault(a => a.Dir == RomInfo.DirNames.battleObj);
+            GraphicAssets.Archive archive = GraphicAssets.All.FirstOrDefault(a => a.Dir == RomInfo.DirNames.BattleObj);
             BattleGaugePieces.Found found = BattleGaugePieces.Locate();
             if (archive == null || found == null) return "The battle graphics could not be read.";
             Commit();

@@ -100,10 +100,10 @@ namespace DSPRE.HgEngine
         public static void CompleteAdd(PendingItem pending)
         {
             HgEngineSymbolTable.ClearCache();
-            TextArchive names = new ROMFiles.TextArchive(RomInfo.itemNamesTextNumber);
-            while (names.messages.Count <= pending.Id) names.messages.Add("");
-            names.messages[pending.Id] = pending.DisplayName;
-            names.SaveToExpandedDir(RomInfo.itemNamesTextNumber, showSuccessMessage: false);
+            TextArchive names = new ROMFiles.TextArchive(RomInfo.ItemNamesTextNumber);
+            while (names.Messages.Count <= pending.Id) names.Messages.Add("");
+            names.Messages[pending.Id] = pending.DisplayName;
+            names.SaveToExpandedDir(RomInfo.ItemNamesTextNumber, showSuccessMessage: false);
         }
 
         private static bool TryReadSources(out string headerPath, out string headerText, out string sourcePath, out string sourceText, out string error)
@@ -190,8 +190,8 @@ namespace DSPRE.HgEngine
             out List<(HgEngineOwnedFile File, List<string> Original, List<string> Updated)> textWrites, out string error)
         {
             textWrites = new List<(HgEngineOwnedFile File, List<string> Original, List<string> Updated)>();
-            string textArchive = HgEngineOwnedFiles.ArchiveOf(RomInfo.DirNames.textArchives);
-            HgEngineOwnedFile nameFile = HgEngineOwnedFiles.Get(textArchive, RomInfo.itemNamesTextNumber);
+            string textArchive = HgEngineOwnedFiles.ArchiveOf(RomInfo.DirNames.TextArchives);
+            HgEngineOwnedFile nameFile = HgEngineOwnedFiles.Get(textArchive, RomInfo.ItemNamesTextNumber);
             if (!TryPlanLine(nameFile, "item names", out List<string> nameLines, out error)) return false;
             if (nameLines != null)
                 textWrites.Add((nameFile, nameLines, SetLine(nameLines, candidateId, displayName, "")));

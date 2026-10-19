@@ -36,7 +36,7 @@ namespace DSPRE.ROMFiles
             if (_ready) return;
             _ready = true;
             DSPRE.DSUtils.TryUnpackNarcs(new List<DirNames> { _dir });
-            _path = gameDirs[_dir].unpackedDir;
+            _path = GameDirs[_dir].unpackedDir;
             string[] files = System.IO.Directory.Exists(_path) ? System.IO.Directory.GetFiles(_path) : System.Array.Empty<string>();
             _multi = files.Length > 1;
             _blob = (!_multi && files.Length == 1) ? System.IO.File.ReadAllBytes(files[0]) : null;
@@ -77,7 +77,7 @@ namespace DSPRE.ROMFiles
     public sealed class HeightNarc
     {
         private const int FB = 0, MB = 1, FF = 2, MF = 3;
-        private readonly OffsetNarc _n = new OffsetNarc(DirNames.pokeHeight, 1);
+        private readonly OffsetNarc _n = new OffsetNarc(DirNames.PokeHeight, 1);
         public void Invalidate() => _n.Invalidate();
 
         // Single-gender species leave the unused slots empty; don't fail the whole load over that.

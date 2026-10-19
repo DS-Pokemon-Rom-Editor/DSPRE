@@ -54,7 +54,7 @@ namespace DSPRE.Avalonia.Data
         private static Dictionary<int, (int X, int Y)> Squares(BattleGaugeComposer.Kind kind)
         {
             int layout = BattleObjects.Find(BattleGaugeComposer.GraphicOf(kind), "As it appears");
-            byte[] ncer = layout >= 0 ? GraphicAssets.Unsqueeze(new ScriptNarc(RomInfo.DirNames.battleObj).Get(layout)) : null;
+            byte[] ncer = layout >= 0 ? GraphicAssets.Unsqueeze(new ScriptNarc(RomInfo.DirNames.BattleObj).Get(layout)) : null;
             List<CellPlacement.Piece> pieces = CellPlacement.Pieces(ncer, 4);
             Dictionary<int, (int, int)> at = new();
             if (pieces == null) return at;
@@ -174,7 +174,7 @@ namespace DSPRE.Avalonia.Data
         private static List<int> BarSlots()
         {
             bool[] used = new bool[16];
-            ScriptNarc narc = new ScriptNarc(RomInfo.DirNames.battleObj);
+            ScriptNarc narc = new ScriptNarc(RomInfo.DirNames.BattleObj);
             foreach (BattleGaugeComposer.Kind kind in Enum.GetValues<BattleGaugeComposer.Kind>())
             {
                 int at = BattleObjects.Find(BattleGaugeComposer.GraphicOf(kind), "Drawing");
@@ -205,7 +205,7 @@ namespace DSPRE.Avalonia.Data
             BattleGaugePieces.Found found = BattleGaugePieces.Locate();
             if (sheet == null || found == null || !found.HasSlots) return null;
             int drawing = BattleObjects.Find(BattleGaugeComposer.GraphicOf(kind), "Drawing");
-            byte[] ncgr = drawing >= 0 ? GraphicAssets.Unsqueeze(new ScriptNarc(RomInfo.DirNames.battleObj).Get(drawing)) : null;
+            byte[] ncgr = drawing >= 0 ? GraphicAssets.Unsqueeze(new ScriptNarc(RomInfo.DirNames.BattleObj).Get(drawing)) : null;
             if (ncgr == null) return null;
             int tilesAt = NitroBgCodec.ReadTileHeader(ncgr).TilesAt;
 

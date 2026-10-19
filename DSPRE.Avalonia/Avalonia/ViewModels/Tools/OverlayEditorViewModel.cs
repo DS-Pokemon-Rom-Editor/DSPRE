@@ -83,10 +83,10 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             }
         }
         public string UnsavedChangesDescription => "Overlays";
-        void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveChangesCore();
+        void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveChangesCoreAsync();
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
-            await SaveChangesCore();
+            await SaveChangesCoreAsync();
             return !HasUnsavedChanges;
         }
         public void DiscardChanges() => RevertChanges();
@@ -170,11 +170,11 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             ResetUndo();
         }
 
-        public async Task SaveChangesCore()
+        public async Task SaveChangesCoreAsync()
         {
             if (_isDsRomProject)
             {
-                await DialogHelper.ShowInfo(
+                await DialogHelper.ShowInfoAsync(
                     "Overlay compression cannot be modified in ds-rom format.\n\n" +
                     "ds-rom automatically decompresses overlays when extracting and recompresses them when building the ROM.",
                     "Read-only mode");
@@ -198,14 +198,14 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
             if (HasMismatches())
             {
-                await DialogHelper.ShowInfo(
+                await DialogHelper.ShowInfoAsync(
                     "There are some overlays in a compression state that does not match the set value for compression in the y9 table.\n" +
                     "This may cause errors or lack of usability on hardware.\n" +
                     "You can find the mismatched rows highlighted in RED.\nThis message is purely informational.",
                     "Compression mark mismatch");
             }
 
-            bool proceed = await DialogHelper.AskYesNo(
+            bool proceed = await DialogHelper.AskYesNoAsync(
                 "This operation will modify the following overlays: " + Environment.NewLine +
                 string.Join(", ", modifiedNumbers) + "\nProceed?",
                 "Change overlays?");
@@ -231,7 +231,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             SaveNotice.Saved(UnsavedChangesDescription);
 
             if (hasCompressing)
-                await DialogHelper.ShowInfo("Compression is temporarily disabled until we work on a fix.", "Warning");
+                await DialogHelper.ShowInfoAsync("Compression is temporarily disabled until we work on a fix.", "Warning");
         }
 
 

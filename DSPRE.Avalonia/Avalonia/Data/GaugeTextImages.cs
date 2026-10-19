@@ -39,14 +39,14 @@ namespace DSPRE.Avalonia.Data
                 });
             if (drawn?.Rgba == null) return null;
             try { return ImageConverter.FromRgba(drawn.Rgba, drawn.Width, drawn.Height); }
-            catch { return null; }
+            catch (System.Exception ex) { AppLogger.WarnOnce("GaugeTextImages.Bar", ex); return null; }
         }
 
         private static Bitmap Show(BattleGaugeTextRenderer.Drawn drawn)
         {
             if (drawn?.Rgba == null) return null;
             try { return ImageConverter.FromRgba(drawn.Rgba, drawn.Width, drawn.Height); }
-            catch { return null; }
+            catch (System.Exception ex) { AppLogger.WarnOnce("GaugeTextImages.Show", ex); return null; }
         }
     }
 }

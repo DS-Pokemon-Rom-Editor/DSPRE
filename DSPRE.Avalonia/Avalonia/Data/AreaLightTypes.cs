@@ -27,7 +27,7 @@ namespace DSPRE.Avalonia.Data
         };
 
         /// <summary>The label category the open game's light names live in, so a project can rename them.</summary>
-        public static string LabelKey => gameFamily switch
+        public static string LabelKey => GameFamily switch
         {
             GameFamilies.Plat => "area_light_pt",
             GameFamilies.HGSS => "area_light_hgss",
@@ -37,7 +37,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>What a value does in the open game.</summary>
         public static string NoteFor(int value)
         {
-            switch (gameFamily)
+            switch (GameFamily)
             {
                 case GameFamilies.Plat:
                     return value >= 0 && value < PlatinumNotes.Length ? PlatinumNotes[value] : "Out of range: the game stops";

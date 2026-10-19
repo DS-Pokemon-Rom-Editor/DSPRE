@@ -69,7 +69,7 @@ namespace DSPRE.Avalonia
 
         /// <summary>Loads the graphics for a trainer class. Returns the max frame index (FrameCount-1)
         /// for a scrubber's upper bound; see <see cref="DefaultFrame"/> for which frame to show initially.</summary>
-        public int Load(int trClassID) => Load(trClassID, DirNames.trainerGraphics);
+        public int Load(int trClassID) => Load(trClassID, DirNames.TrainerGraphics);
 
         /// <summary>Same, from another archive laid out the same way, such as the back sprites.</summary>
         public int Load(int trClassID, DirNames archive)
@@ -78,13 +78,13 @@ namespace DSPRE.Avalonia
             try
             {
                 DSUtils.TryUnpackNarcs(new System.Collections.Generic.List<DirNames> { archive });
-                string dir = gameDirs[archive].unpackedDir;
+                string dir = GameDirs[archive].unpackedDir;
 
-                bool back = archive == DirNames.trainerBackGraphics;
+                bool back = archive == DirNames.TrainerBackGraphics;
                 // A class added on hg-engine has its source files before a build gives it archive members; class
                 // 0's members serve as same-sized containers for the source PNG laid over them below.
                 int memberClass = trClassID;
-                if ((back || archive == DirNames.trainerGraphics) && HgEngineProject.IsActive
+                if ((back || archive == DirNames.TrainerGraphics) && HgEngineProject.IsActive
                     && !File.Exists(Path.Combine(dir, TrainerGraphicsLayout.ColoursEntry(trClassID).ToString("D4")))
                     && File.Exists(HgEngineTrainerGraphicsSource.Stem(back, trClassID) + "_cell.json"))
                     memberClass = 0;
@@ -107,7 +107,7 @@ namespace DSPRE.Avalonia
                     return Math.Max(0, FrameCount - 1);
                 }
 
-                if ((back || archive == DirNames.trainerGraphics) && HgEngineProject.IsActive && TryLoadFromSource(trClassID, back))
+                if ((back || archive == DirNames.TrainerGraphics) && HgEngineProject.IsActive && TryLoadFromSource(trClassID, back))
                     return FrameCount - 1;
                 if (memberClass != trClassID) { _rows = null; _tile = null; return 0; }
 
@@ -155,7 +155,7 @@ namespace DSPRE.Avalonia
         {
             string path = Path.Combine(dir, TrainerGraphicsLayout.AnimationEntry(trClassID).ToString("D4"));
             try { return File.Exists(path) ? NanrFile.Read(File.ReadAllBytes(path)) : null; }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("TrainerClassSpriteRenderer.ReadNanr", ex); return null; }
         }
 
         /// <summary>Reads the sprite from the linked checkout's PNG, cell.json and anim.json. False when the

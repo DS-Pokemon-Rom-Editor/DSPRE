@@ -46,7 +46,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void DiscardChanges()
         {
             if (!HasUnsavedChanges) return;
-            if (_cur != null) LoadFromFile(_cur.id);
+            if (_cur != null) LoadFromFile(_cur.Id);
             else { _tradeDirty = _textDirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         }
 
@@ -75,7 +75,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (snap == null || _cur == null) return;
             _loading = true;
-            _cur = new TradeData(_cur.id, new MemoryStream(snap.Data));
+            _cur = new TradeData(_cur.Id, new MemoryStream(snap.Data));
             PopulateFromCur();
             OtName = snap.OtName;
             Nickname = snap.Nickname;
@@ -104,53 +104,53 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void SyncTradeFieldsToCur()
         {
             if (_cur == null) return;
-            _cur.species          = SelectedSpecies;
-            _cur.hpIV             = HpIV;
-            _cur.atkIV            = AtkIV;
-            _cur.defIV            = DefIV;
-            _cur.speedIV          = SpeIV;
-            _cur.spAtkIV          = SpaIV;
-            _cur.spDefIV          = SpdIV;
-            _cur.ability          = SelectedAbility;
-            _cur.otID             = OtID;
-            _cur.cool             = Cool;
-            _cur.beauty           = Beauty;
-            _cur.cute             = Cute;
-            _cur.smart            = Smart;
-            _cur.tough            = Tough;
-            _cur.pid              = Pid;
-            _cur.heldItem         = SelectedHeldItem;
-            _cur.otGender         = SelectedOTGender;
-            _cur.sheen            = Sheen;
-            _cur.language         = SelectedLanguage;
-            _cur.requestedSpecies = SelectedRequested;
-            _cur.unknown          = IsHGSS ? Unknown : 0;
+            _cur.Species          = SelectedSpecies;
+            _cur.HpIV             = HpIV;
+            _cur.AtkIV            = AtkIV;
+            _cur.DefIV            = DefIV;
+            _cur.SpeedIV          = SpeIV;
+            _cur.SpAtkIV          = SpaIV;
+            _cur.SpDefIV          = SpdIV;
+            _cur.Ability          = SelectedAbility;
+            _cur.OtID             = OtID;
+            _cur.Cool             = Cool;
+            _cur.Beauty           = Beauty;
+            _cur.Cute             = Cute;
+            _cur.Smart            = Smart;
+            _cur.Tough            = Tough;
+            _cur.Pid              = Pid;
+            _cur.HeldItem         = SelectedHeldItem;
+            _cur.OtGender         = SelectedOTGender;
+            _cur.Sheen            = Sheen;
+            _cur.Language         = SelectedLanguage;
+            _cur.RequestedSpecies = SelectedRequested;
+            _cur.Unknown          = IsHGSS ? Unknown : 0;
         }
 
         /// <summary>Pushes <see cref="_cur"/> into the bound trade fields. Caller guards with _loading.</summary>
         private void PopulateFromCur()
         {
-            SelectedSpecies  = _cur.species;
-            HpIV  = _cur.hpIV;
-            AtkIV = _cur.atkIV;
-            DefIV = _cur.defIV;
-            SpeIV = _cur.speedIV;
-            SpaIV = _cur.spAtkIV;
-            SpdIV = _cur.spDefIV;
-            SelectedAbility  = _cur.ability;
-            OtID             = _cur.otID;
-            Cool   = _cur.cool;
-            Beauty = _cur.beauty;
-            Cute   = _cur.cute;
-            Smart  = _cur.smart;
-            Tough  = _cur.tough;
-            Pid    = _cur.pid;
-            SelectedHeldItem = _cur.heldItem;
-            SelectedOTGender = _cur.otGender;
-            Sheen            = _cur.sheen;
-            SelectedLanguage = _cur.language;
-            SelectedRequested = _cur.requestedSpecies;
-            Unknown          = _cur.unknown;
+            SelectedSpecies  = _cur.Species;
+            HpIV  = _cur.HpIV;
+            AtkIV = _cur.AtkIV;
+            DefIV = _cur.DefIV;
+            SpeIV = _cur.SpeedIV;
+            SpaIV = _cur.SpAtkIV;
+            SpdIV = _cur.SpDefIV;
+            SelectedAbility  = _cur.Ability;
+            OtID             = _cur.OtID;
+            Cool   = _cur.Cool;
+            Beauty = _cur.Beauty;
+            Cute   = _cur.Cute;
+            Smart  = _cur.Smart;
+            Tough  = _cur.Tough;
+            Pid    = _cur.Pid;
+            SelectedHeldItem = _cur.HeldItem;
+            SelectedOTGender = _cur.OtGender;
+            Sheen            = _cur.Sheen;
+            SelectedLanguage = _cur.Language;
+            SelectedRequested = _cur.RequestedSpecies;
+            Unknown          = _cur.Unknown;
         }
 
         // ----------------------------------------------------------------
@@ -267,7 +267,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         // ---- HGSS-only visibility ----
-        public bool IsHGSS => RomInfo.gameFamily == RomInfo.GameFamilies.HGSS;
+        public bool IsHGSS => RomInfo.GameFamily == RomInfo.GameFamilies.HGSS;
 
         // ----------------------------------------------------------------
         // Loading flag (prevents handlers from firing during load)
@@ -358,7 +358,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_loading) return;
             if (_tradeDirty || _textDirty)
             {
-                DialogHelper.MsgResult result = await DialogHelper.AskYesNoCancel(
+                DialogHelper.MsgResult result = await DialogHelper.AskYesNoCancelAsync(
                     "You have unsaved changes. Do you want to save before changing the Trade ID?",
                     "Unsaved changes");
 
@@ -367,7 +367,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 else if (result == DialogHelper.MsgResult.Cancel)
                 {
                     // revert spinner: caller must handle
-                    TradeID = _cur?.id ?? 0;
+                    TradeID = _cur?.Id ?? 0;
                     return;
                 }
             }
@@ -411,25 +411,25 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             SyncTradeFieldsToCur();
 
             // TradeID may already hold the next trade: the spinner updates it before the save prompt.
-            _cur.SaveToFileDefaultDir(_cur.id, false);
+            _cur.SaveToFileDefaultDir(_cur.Id, false);
             _tradeDirty = false;
             OnPropertyChanged(nameof(HasUnsavedChanges));
-            AppLogger.Debug($"TradeEditor: Saved trade data for ID {_cur.id}.");
+            AppLogger.Debug($"TradeEditor: Saved trade data for ID {_cur.Id}.");
             MarkSavedIfClean();
         }
 
         private void SaveTextCore()
         {
             if (_tradeArchive == null || _cur == null) return;
-            int id = _cur.id;
+            int id = _cur.Id;
             int count = TradeData.GetTradeCount();
-            if (id < 0 || id + count >= _tradeArchive.messages.Count)
+            if (id < 0 || id + count >= _tradeArchive.Messages.Count)
             {
                 AppLogger.Error("TradeEditor: Can't save to text bank. Index is out of range.");
                 return;
             }
-            _tradeArchive.messages[id]         = Nickname;
-            _tradeArchive.messages[id + count] = OtName;
+            _tradeArchive.Messages[id]         = Nickname;
+            _tradeArchive.Messages[id + count] = OtName;
             _tradeArchive.SaveToExpandedDir(GetTextBankIndex(), false);
             _textDirty = false;
             OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -463,7 +463,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private string GetMonNickname(int tradeID)
         {
             const int maxLen = 10;
-            string msg = _tradeArchive.messages[tradeID];
+            string msg = _tradeArchive.Messages[tradeID];
             return msg.Length > maxLen ? msg.Substring(0, maxLen) : msg;
         }
 
@@ -471,7 +471,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             const int maxLen = 7;
             int index = tradeID + TradeData.GetTradeCount();
-            string msg = _tradeArchive.messages[index];
+            string msg = _tradeArchive.Messages[index];
             return msg.Length > maxLen ? msg.Substring(0, maxLen) : msg;
         }
     }

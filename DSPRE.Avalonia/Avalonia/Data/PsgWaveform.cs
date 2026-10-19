@@ -15,14 +15,14 @@ namespace DSPRE.Avalonia.Data
         /// HeartGold's own Game Boy bank never uses it (checked across all 128 of its programs).</summary>
         private static readonly int[] HighEighths = { 1, 2, 3, 4, 5, 6, 7, 0 };
 
-        private static readonly ConcurrentDictionary<int, SwavSample> _cache = new ConcurrentDictionary<int, SwavSample>();
+        private static readonly ConcurrentDictionary<int, SwavSample> Cache = new ConcurrentDictionary<int, SwavSample>();
 
         /// <summary>The clip for a region that has no recording of its own, or null if it has one.</summary>
         public static SwavSample For(SbnkRegion region)
         {
             if (region == null || region.Psg == PsgKind.None) return null;
             int key = ((int)region.Psg << 16) | ((region.PsgDuty & 7) << 8) | (region.BaseNote & 0xFF);
-            return _cache.GetOrAdd(key, _ => Build(region.Psg, region.PsgDuty & 7, region.BaseNote));
+            return Cache.GetOrAdd(key, _ => Build(region.Psg, region.PsgDuty & 7, region.BaseNote));
         }
 
         private static SwavSample Build(PsgKind kind, int duty, int baseNote)

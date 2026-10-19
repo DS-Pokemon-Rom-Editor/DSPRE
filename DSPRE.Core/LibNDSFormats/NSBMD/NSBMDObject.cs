@@ -6,9 +6,9 @@ using System.Collections.Generic;
 
 namespace LibNDSFormats.NSBMD
 {
-	/// <summary>
-	/// Type for NSBMD objects.
-	/// </summary>
+    /// <summary>
+    /// Type for NSBMD objects.
+    /// </summary>
     public class NSBMDObject
     {
         #region Fields (7) 
@@ -23,17 +23,17 @@ namespace LibNDSFormats.NSBMD
         // rotation
         public int StackID = -1;
 
-        public bool visible = true;
+        public bool Visible = true;
 
-        public List<int> childs = new List<int>();
+        public List<int> Childs = new List<int>();
 
-        public float[] rotate_mtx = NSBMDGlRenderer.loadIdentity();
-        public float[] scale = new float[3];
+        public float[] RotateMtx = NSBMDGlRenderer.LoadIdentity();
+        public float[] Scale = new float[3];
 
-        public float[] materix = NSBMDGlRenderer.loadIdentity();
+        public float[] Materix = NSBMDGlRenderer.LoadIdentity();
 
-        public bool isBillboard = false;
-        public bool isYBillboard = false;
+        public bool IsBillboard = false;
+        public bool IsYBillboard = false;
 
         #endregion Fields 
 

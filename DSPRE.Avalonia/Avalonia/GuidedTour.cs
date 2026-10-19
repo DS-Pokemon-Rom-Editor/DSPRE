@@ -48,9 +48,9 @@ namespace DSPRE.Avalonia
             if (layer == null) return;
 
             // Whether it gets finished or skipped, the tour no longer auto-starts after this.
-            if (SettingsManager.Settings != null && !SettingsManager.Settings.guidedTourShown)
+            if (SettingsManager.Settings != null && !SettingsManager.Settings.GuidedTourShown)
             {
-                SettingsManager.Settings.guidedTourShown = true;
+                SettingsManager.Settings.GuidedTourShown = true;
                 SettingsManager.Save();
             }
 

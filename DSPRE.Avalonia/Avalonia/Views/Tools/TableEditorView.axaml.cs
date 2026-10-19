@@ -36,7 +36,7 @@ namespace DSPRE.Avalonia.Views.Tools
         private async void Save_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.SaveAllAsync(); }
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) VM?.DiscardChanges();
         }
         private void OpenVsIntros_Click(object sender, RoutedEventArgs e) => AvaloniaEditorLauncher.OpenVsIntroEditor();
         private async void AddVsPokemonRow_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.AddVsPokemonRowAsync(); }

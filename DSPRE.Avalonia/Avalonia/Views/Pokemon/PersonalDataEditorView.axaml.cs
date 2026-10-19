@@ -24,13 +24,13 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private async void Export_Click(object sender, RoutedEventArgs e)
         {
             Window window = TopLevel.GetTopLevel(this) as Window;
-            await ViewModel.ExportCommand(window);
+            await ViewModel.ExportCommandAsync(window);
         }
 
         private async void Import_Click(object sender, RoutedEventArgs e)
         {
             Window window = TopLevel.GetTopLevel(this) as Window;
-            await ViewModel.ImportCommand(window);
+            await ViewModel.ImportCommandAsync(window);
         }
 
         private void AddMachine_Click(object sender, RoutedEventArgs e)
@@ -73,7 +73,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
             if (path == null) return;
 
             string shiny = null;
-            if (await DialogHelper.AskYesNo("Also import a shiny version? It has to be the same drawing, only recoloured.", "Shiny colours", TopLevel.GetTopLevel(this) as Window))
+            if (await DialogHelper.AskYesNoAsync("Also import a shiny version? It has to be the same drawing, only recoloured.", "Shiny colours", TopLevel.GetTopLevel(this) as Window))
             {
                 IReadOnlyList<IStorageFile> shinyFiles = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
                 {

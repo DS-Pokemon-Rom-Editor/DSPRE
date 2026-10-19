@@ -14,8 +14,8 @@ namespace DSPRE.ROMFiles
         /// <summary>The table's ARM9 offset and its rows, as many as the count byte before the pointer says.</summary>
         public static (uint Start, List<Row> Rows) Read()
         {
-            uint pointer = RomInfo.conditionalMusicTableOffsetToRAMAddress;
-            uint start = BitConverter.ToUInt32(ARM9.ReadBytes(pointer, 4), 0) - ARM9.address;
+            uint pointer = RomInfo.ConditionalMusicTableOffsetToRAMAddress;
+            uint start = BitConverter.ToUInt32(ARM9.ReadBytes(pointer, 4), 0) - ARM9.Address;
             byte count = ARM9.ReadByte(pointer - 8);
             List<Row> rows = new List<Row>(count);
             using (ARM9.Reader r = new ARM9.Reader(start))

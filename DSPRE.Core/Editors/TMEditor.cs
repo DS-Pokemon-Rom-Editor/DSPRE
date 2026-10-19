@@ -13,7 +13,7 @@ namespace DSPRE
     public static class TMEditor
     {
         /// <summary>TM01-TM92 and HM01-HM08, at indices 0-99.</summary>
-        public static readonly int VanillaMachineCount = PokemonPersonalData.tmsCount + PokemonPersonalData.hmsCount;
+        public static readonly int VanillaMachineCount = PokemonPersonalData.TmsCount + PokemonPersonalData.HmsCount;
         private const int FirstMachineItem = 328;
 
         /// <summary>All machines, including PlatPatches' TM93 onwards at indices 100 and up.</summary>
@@ -38,9 +38,9 @@ namespace DSPRE
             if (SourceMachines() is List<HgEngine.HgEngineMachineMoves.Machine> hge)
                 return Enumerable.Range(0, hge.Count).OrderBy(i => hge[i].Label.StartsWith("HM") ? 1 : 0).ToArray();
             int total = MachineCount;
-            return Enumerable.Range(0, PokemonPersonalData.tmsCount)
+            return Enumerable.Range(0, PokemonPersonalData.TmsCount)
                 .Concat(Enumerable.Range(VanillaMachineCount, total - VanillaMachineCount))
-                .Concat(Enumerable.Range(PokemonPersonalData.tmsCount, PokemonPersonalData.hmsCount))
+                .Concat(Enumerable.Range(PokemonPersonalData.TmsCount, PokemonPersonalData.HmsCount))
                 .ToArray();
         }
 
@@ -61,9 +61,9 @@ namespace DSPRE
             if (SourceMachines() is List<HgEngine.HgEngineMachineMoves.Machine> hge)
                 return hge.FindIndex(m => string.Equals(m.Label, label, StringComparison.OrdinalIgnoreCase));
             if (label.Length < 3 || !int.TryParse(label.Substring(2), out int n) || n < 1) return -1;
-            if (label.StartsWith("HM")) return n <= PokemonPersonalData.hmsCount ? PokemonPersonalData.tmsCount + n - 1 : -1;
+            if (label.StartsWith("HM")) return n <= PokemonPersonalData.HmsCount ? PokemonPersonalData.TmsCount + n - 1 : -1;
             if (!label.StartsWith("TM")) return -1;
-            if (n <= PokemonPersonalData.tmsCount) return n - 1;
+            if (n <= PokemonPersonalData.TmsCount) return n - 1;
             int row = n - PlatPatches.FirstExtraTmNumber;
             return row < (PlatPatches.Tms()?.Count ?? 0) ? VanillaMachineCount + row : -1;
         }
@@ -159,7 +159,7 @@ namespace DSPRE
         {
             if (SourceMachines() is List<HgEngine.HgEngineMachineMoves.Machine> hge) return index >= 0 && index < hge.Count ? hge[index].Label : $"Machine {index}";
             if (index >= VanillaMachineCount) return PlatPatches.ExtraTms.Label(index - VanillaMachineCount);
-            return (index < PokemonPersonalData.tmsCount) ? $"TM{index + 1:00}" : $"HM{index - PokemonPersonalData.tmsCount + 1:00}";
+            return (index < PokemonPersonalData.TmsCount) ? $"TM{index + 1:00}" : $"HM{index - PokemonPersonalData.TmsCount + 1:00}";
         }
 
         /// <summary>Every machine's disc palette, or null when an item row can't be read (saving then leaves palettes alone).</summary>
@@ -172,7 +172,7 @@ namespace DSPRE
             {
                 int item = MachineItemId(i);
                 if (!ItemTable.Exists(item)) { AppLogger.Error($"TM Editor: machine {i} has no item row."); return null; }
-                paletteIds[i] = (int)ItemTable.Read(item).itemPalette;
+                paletteIds[i] = (int)ItemTable.Read(item).ItemPalette;
             }
             return paletteIds;
         }
@@ -206,8 +206,8 @@ namespace DSPRE
             {
                 int item = MachineItemId(i);
                 ItemNarcTableEntry e = ItemTable.Read(item);
-                if (e.itemPalette == palettes[i]) continue;
-                e.itemPalette = (uint)palettes[i];
+                if (e.ItemPalette == palettes[i]) continue;
+                e.ItemPalette = (uint)palettes[i];
                 ItemTable.Write(item, e);
             }
         }
@@ -281,7 +281,7 @@ namespace DSPRE
                     byte[] palette = HgEngine.HgEngineMachineIcons.ReadPalette(icon);
                     if (palette == null) { AppLogger.Error($"TM Editor: {icon} has no palette."); return null; }
                     palettes[i] = Convert.ToBase64String(palette);
-                    int type = (int)new MoveData(machines[i].Move).movetype;
+                    int type = (int)new MoveData(machines[i].Move).Movetype;
                     if (!votes.TryGetValue(type, out Dictionary<string, (int Count, string Png)> forType)) votes[type] = forType = new Dictionary<string, (int, string)>();
                     forType[palettes[i]] = forType.TryGetValue(palettes[i], out (int Count, string Png) v) ? (v.Count + 1, v.Png) : (1, icon);
                 }

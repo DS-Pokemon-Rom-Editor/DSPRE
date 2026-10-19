@@ -148,7 +148,7 @@ namespace DSPRE.ROMFiles
         public static FieldCameraEntry Entry(int cameraId, RomInfo.GameFamilies family)
         {
             IReadOnlyList<FieldCameraEntry> table = EntriesFor(family);
-            if (family == RomInfo.gameFamily)
+            if (family == RomInfo.GameFamily)
             {
                 List<GameCamera> rom = RomRows();
                 if (rom != null && rom.Count > 0)
@@ -162,9 +162,9 @@ namespace DSPRE.ROMFiles
 
         /// <summary>A camera table row as the preview reads it.</summary>
         public static FieldCameraEntry FromGameCamera(int id, string name, GameCamera c, RomInfo.GameFamilies family) =>
-            new FieldCameraEntry(id, name, (int)c.distance, c.vertRot, c.perspMode == GameCamera.ORTHO,
-                c.fov, (int)(c.nearClip >> 12), (int)(c.farClip >> 12), c.xOffset ?? 0, c.yOffset ?? 0, c.zOffset ?? 0,
-                c.horiRot, family == RomInfo.GameFamilies.DP ? 0 : c.zRot);
+            new FieldCameraEntry(id, name, (int)c.Distance, c.VertRot, c.PerspMode == GameCamera.ORTHO,
+                c.Fov, (int)(c.NearClip >> 12), (int)(c.FarClip >> 12), c.XOffset ?? 0, c.YOffset ?? 0, c.ZOffset ?? 0,
+                c.HoriRot, family == RomInfo.GameFamilies.DP ? 0 : c.ZRot);
 
         /// <summary>The built-in name for a row; Diamond and Pearl's rows have none of their own.</summary>
         public static string NameFor(int id, RomInfo.GameFamilies family)
@@ -181,7 +181,7 @@ namespace DSPRE.ROMFiles
 
         private static List<GameCamera> RomRows()
         {
-            string project = RomInfo.workDir;
+            string project = RomInfo.WorkDir;
             if (_romRows == null || _romRowsFor != project)
             {
                 _romRows = GameCameraTable.TryRead();

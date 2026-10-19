@@ -23,19 +23,19 @@ namespace DSPRE
         };
 
         public static bool IsSupported =>
-            !RomInfo.isHGE &&
-            RomInfo.vsSeekerRematchOverlayNumber >= 0 &&
-            (RomInfo.gameFamily == RomInfo.GameFamilies.Plat || RomInfo.gameFamily == RomInfo.GameFamilies.DP);
+            !RomInfo.IsHGE &&
+            RomInfo.VsSeekerRematchOverlayNumber >= 0 &&
+            (RomInfo.GameFamily == RomInfo.GameFamilies.Plat || RomInfo.GameFamily == RomInfo.GameFamilies.DP);
 
         private static RematchTable.Descriptor Descriptor => new RematchTable.Descriptor
         {
             Name = "Vs. Seeker rematch table",
-            OverlayNumber = RomInfo.vsSeekerRematchOverlayNumber,
-            FallbackOffset = RomInfo.vsSeekerRematchTableOffset,
+            OverlayNumber = RomInfo.VsSeekerRematchOverlayNumber,
+            FallbackOffset = RomInfo.VsSeekerRematchTableOffset,
             FixedRowCount = RowCount,
             DeriveOffset = false,
-            PointerWordOffsets = RomInfo.vsSeekerRematchPointerOffsets,
-            RowCountCompareOffset = RomInfo.vsSeekerRematchRowCompareOffset,
+            PointerWordOffsets = RomInfo.VsSeekerRematchPointerOffsets,
+            RowCountCompareOffset = RomInfo.VsSeekerRematchRowCompareOffset,
             ValidateRows = true,
         };
 

@@ -40,17 +40,17 @@ namespace DSPRE.Avalonia.Views.Battle
             await vm.SetupAsync(this);
         }
 
-        private async void Save_Click(object sender, RoutedEventArgs e) => await Safe(VM?.SaveAsync());
+        private async void Save_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.SaveAsync());
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) VM?.DiscardChanges();
         }
         private void Add_Click(object sender, RoutedEventArgs e) => VM?.AddEntry();
         private void Delete_Click(object sender, RoutedEventArgs e) => VM?.DeleteEntry();
         private void EditTrigger_Click(object sender, RoutedEventArgs e) => VM?.EditTrigger();
         private void SaveMessage_Click(object sender, RoutedEventArgs e) => VM?.SaveMessage();
 
-        private static async Task Safe(Task task)
+        private static async Task SafeAsync(Task task)
         {
             if (task == null) return;
             try { await task; } catch { /* handled in VM */ }

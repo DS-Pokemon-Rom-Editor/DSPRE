@@ -24,23 +24,23 @@ namespace DSPRE.Tests.Models
             Skip.If(!Directory.Exists(project), $"{game} test project not configured");
 
             new RomInfo(code, project);
-            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.maps });
+            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.Maps });
 
             int done = 0;
 
             foreach (int id in new[] { 0, 3, 11, 40, 90 })
             {
                 MapFile map;
-                try { map = new MapFile(id, RomInfo.gameFamily, discardMoveperms: false, showMessages: false); }
+                try { map = new MapFile(id, RomInfo.GameFamily, discardMoveperms: false, showMessages: false); }
                 catch { continue; }
-                if (map.mapModelData == null) continue;
+                if (map.MapModelData == null) continue;
 
                 byte[] wasCollisions = map.CollisionsToByteArray();
                 byte[] wasBuildings = map.BuildingsToByteArray();
-                byte[] wasTerrain = (byte[])map.bdhc.Clone();
-                byte[] wasSounds = (byte[])map.bgs.Clone();
+                byte[] wasTerrain = (byte[])map.Bdhc.Clone();
+                byte[] wasSounds = (byte[])map.Bgs.Clone();
 
-                MapMesh mesh = MapMesh.Read(map.mapModelData, out string whynot);
+                MapMesh mesh = MapMesh.Read(map.MapModelData, out string whynot);
                 Assert.True(mesh != null, $"map {id}: {whynot}");
                 if (mesh.Vertices.Count < 4) continue;
 
@@ -51,15 +51,15 @@ namespace DSPRE.Tests.Models
                 Assert.True(shape != null, $"map {id}: {why}");
 
                 map.LoadMapModel(shape, showMessages: false);
-                map.mapModelData = shape;
+                map.MapModelData = shape;
 
                 Assert.True(wasCollisions.SequenceEqual(map.CollisionsToByteArray()),
                             $"map {id}: where you may walk changed when only the shape was edited.");
                 Assert.True(wasBuildings.SequenceEqual(map.BuildingsToByteArray()),
                             $"map {id}: the buildings changed when only the shape was edited.");
-                Assert.True(wasTerrain.SequenceEqual(map.bdhc),
+                Assert.True(wasTerrain.SequenceEqual(map.Bdhc),
                             $"map {id}: the ground walked on changed although it was not asked for.");
-                Assert.True(wasSounds.SequenceEqual(map.bgs),
+                Assert.True(wasSounds.SequenceEqual(map.Bgs),
                             $"map {id}: the sounds underfoot changed when only the shape was edited.");
 
                 byte[] whole = map.ToByteArray();
@@ -78,26 +78,26 @@ namespace DSPRE.Tests.Models
             Skip.If(!Directory.Exists(TestRoms.Platinum), "Platinum test project not configured");
 
             new RomInfo("CPUE", TestRoms.Platinum);
-            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.maps });
+            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.Maps });
 
-            MapFile map = new MapFile(0, RomInfo.gameFamily, discardMoveperms: false, showMessages: false);
+            MapFile map = new MapFile(0, RomInfo.GameFamily, discardMoveperms: false, showMessages: false);
             byte[] wasCollisions = map.CollisionsToByteArray();
             byte[] wasBuildings = map.BuildingsToByteArray();
-            byte[] wasTerrain = (byte[])map.bdhc.Clone();
+            byte[] wasTerrain = (byte[])map.Bdhc.Clone();
 
-            MapMesh mesh = MapMesh.Read(map.mapModelData, out _);
+            MapMesh mesh = MapMesh.Read(map.MapModelData, out _);
             byte[] made = BdhcBuild.From(BdhcBuild.PiecesOf(mesh, mesh.ModelScale), out string whynot);
             Assert.True(made != null, whynot);
 
             map.ImportTerrain(made);
 
-            Assert.False(wasTerrain.SequenceEqual(map.bdhc), "The terrain was asked for and did not change.");
+            Assert.False(wasTerrain.SequenceEqual(map.Bdhc), "The terrain was asked for and did not change.");
             Assert.True(wasCollisions.SequenceEqual(map.CollisionsToByteArray()),
                         "Where you may walk changed when only the terrain was asked for.");
             Assert.True(wasBuildings.SequenceEqual(map.BuildingsToByteArray()),
                         "The buildings changed when only the terrain was asked for.");
 
-            _out.WriteLine($"terrain {wasTerrain.Length} bytes became {map.bdhc.Length}, "
+            _out.WriteLine($"terrain {wasTerrain.Length} bytes became {map.Bdhc.Length}, "
                          + "permissions and buildings untouched.");
         }
     }

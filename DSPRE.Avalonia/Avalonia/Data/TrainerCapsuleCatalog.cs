@@ -28,12 +28,12 @@ namespace DSPRE.Avalonia.Data
         private static readonly Dictionary<int, Bitmap> _stickers = new();
         private static string _loadedFor;
 
-        public static bool Available => gameFamily != GameFamilies.DP && TrainerCapsules.Available;
+        public static bool Available => GameFamily != GameFamilies.DP && TrainerCapsules.Available;
 
         /// <summary>Reads the capsules and seal table once per ROM. Unpacks what it needs.</summary>
         public static void Load(bool again = false)
         {
-            string rom = workDir ?? "";
+            string rom = WorkDir ?? "";
             if (!again && _loadedFor == rom) return;
             _loadedFor = rom;
             _stickers.Clear();
@@ -42,8 +42,8 @@ namespace DSPRE.Avalonia.Data
             if (!Available) return;
             try
             {
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerCapsules, DirNames.sealGraphics }
-                    .Where(d => gameDirs.ContainsKey(d)).ToList());
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TrainerCapsules, DirNames.SealGraphics }
+                    .Where(d => GameDirs.ContainsKey(d)).ToList());
                 _capsules = TrainerCapsules.ReadAll();
                 _seals = BallSeals.Read().Where(s => s != null).ToDictionary(s => s.Id);
             }
@@ -88,7 +88,7 @@ namespace DSPRE.Avalonia.Data
             {
                 if (!_stickers.TryGetValue(seal.Id, out Bitmap bitmap))
                 {
-                    try { bitmap = BallCapsuleGraphics.Sticker(seal); } catch { bitmap = null; }
+                    try { bitmap = BallCapsuleGraphics.Sticker(seal); } catch (Exception ex) { AppLogger.WarnOnce("TrainerCapsuleCatalog.Stickers", ex); bitmap = null; }
                     _stickers[seal.Id] = bitmap;
                 }
                 if (bitmap != null) shown.Add(new CapsuleSticker { Sticker = bitmap, Name = seal.Name, Left = left, Top = top });
@@ -109,11 +109,11 @@ namespace DSPRE.Avalonia.Data
         public static Dictionary<int, List<string>> UsedBy()
         {
             Dictionary<int, List<string>> used = new Dictionary<int, List<string>>();
-            if (!Available || !gameDirs.ContainsKey(DirNames.trainerProperties) || !gameDirs.ContainsKey(DirNames.trainerParty))
+            if (!Available || !GameDirs.ContainsKey(DirNames.TrainerProperties) || !GameDirs.ContainsKey(DirNames.TrainerParty))
                 return used;
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties, DirNames.trainerParty });
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TrainerProperties, DirNames.TrainerParty });
             string[] names = DSPRE.TrainerNames.GetAll().ToArray();
-            string props = gameDirs[DirNames.trainerProperties].unpackedDir, party = gameDirs[DirNames.trainerParty].unpackedDir;
+            string props = GameDirs[DirNames.TrainerProperties].unpackedDir, party = GameDirs[DirNames.TrainerParty].unpackedDir;
             for (int i = 0; ; i++)
             {
                 string p = Path.Combine(props, i.ToString("D4")), q = Path.Combine(party, i.ToString("D4"));
@@ -124,15 +124,15 @@ namespace DSPRE.Avalonia.Data
                     using FileStream qs = File.OpenRead(q);
                     TrainerFile file = new TrainerFile(new TrainerProperties((ushort)i, ps), qs, i < names.Length ? names[i] : "");
                     string who = i < names.Length && !string.IsNullOrWhiteSpace(names[i]) ? names[i] : $"Trainer {i}";
-                    for (int m = 0; m < file.trp.partyCount; m++)
+                    for (int m = 0; m < file.Trp.PartyCount; m++)
                     {
-                        PartyPokemon mon = file.party[m];
-                        if (mon == null || mon.CheckEmpty() || mon.ballSeals == 0) continue;
-                        if (!used.TryGetValue(mon.ballSeals, out List<string> list)) used[mon.ballSeals] = list = new List<string>();
+                        PartyPokemon mon = file.Party[m];
+                        if (mon == null || mon.CheckEmpty() || mon.BallSeals == 0) continue;
+                        if (!used.TryGetValue(mon.BallSeals, out List<string> list)) used[mon.BallSeals] = list = new List<string>();
                         if (!list.Contains(who)) list.Add(who);
                     }
                 }
-                catch { }
+                catch { }   // a trainer that can't be read is left out of the seal users
             }
             return used;
         }

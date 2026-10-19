@@ -20,18 +20,18 @@ namespace DSPRE.ROMFiles
 
         public static string WhyNot()
         {
-            if (!gameDirs.ContainsKey(DirNames.growthTable)) return "This game has no known growth table.";
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.growthTable });
+            if (!GameDirs.ContainsKey(DirNames.GrowthTable)) return "This game has no known growth table.";
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.GrowthTable });
             for (int c = 0; c < Curves; c++)
                 if (!File.Exists(PathOf(c))) return $"Growth curve {c} is missing from this project.";
             return null;
         }
 
-        private static string PathOf(int curve) => Path.Combine(gameDirs[DirNames.growthTable].unpackedDir, curve.ToString("D4"));
+        private static string PathOf(int curve) => Path.Combine(GameDirs[DirNames.GrowthTable].unpackedDir, curve.ToString("D4"));
 
         public static GrowthTable Load()
         {
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.growthTable });
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.GrowthTable });
             GrowthTable table = new GrowthTable();
             for (int c = 0; c < Curves; c++)
             {
@@ -59,7 +59,7 @@ namespace DSPRE.ROMFiles
             string path = PathOf(curve);
             byte[] data = File.ReadAllBytes(path);
             for (int l = 0; l < Levels; l++) BitConverter.GetBytes(Totals[curve][l]).CopyTo(data, l * 4);
-            ArchiveMembers.Put(DirNames.growthTable, curve, data);
+            ArchiveMembers.Put(DirNames.GrowthTable, curve, data);
         }
 
         /// <summary>A copy of <paramref name="curve"/>'s totals.</summary>

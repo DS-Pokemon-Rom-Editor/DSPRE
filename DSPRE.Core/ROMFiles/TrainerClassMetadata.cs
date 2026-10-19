@@ -45,11 +45,11 @@ namespace DSPRE.ROMFiles
 
     public sealed class TrainerClassMetadataRecord
     {
-        private readonly byte[] data;
+        private readonly byte[] _data;
 
         private TrainerClassMetadataRecord(byte[] source)
         {
-            data = (byte[])source.Clone();
+            _data = (byte[])source.Clone();
         }
 
         public ushort Gender { get => ReadUInt16(0x00); set => WriteUInt16(0x00, value); }
@@ -59,8 +59,8 @@ namespace DSPRE.ROMFiles
         public ushort BattleMusic { get => ReadUInt16(0x08); set => WriteUInt16(0x08, value); }
         public ushort VsStyle { get => ReadUInt16(0x0A); set => WriteUInt16(0x0A, value); }
         public ushort TrainerNameId { get => ReadUInt16(0x0C); set => WriteUInt16(0x0C, value); }
-        public byte UseSavedRivalName { get => data[0x0E]; set => data[0x0E] = value; }
-        public byte Reserved { get => data[0x0F]; set => data[0x0F] = value; }
+        public byte UseSavedRivalName { get => _data[0x0E]; set => _data[0x0E] = value; }
+        public byte Reserved { get => _data[0x0F]; set => _data[0x0F] = value; }
         public uint Style1Motion { get => ReadUInt32(0x10); set => WriteUInt32(0x10, value); }
         public ushort Style2Timing { get => ReadUInt16(0x14); set => WriteUInt16(0x14, value); }
 
@@ -93,20 +93,20 @@ namespace DSPRE.ROMFiles
 
         public byte[] ToByteArray()
         {
-            return (byte[])data.Clone();
+            return (byte[])_data.Clone();
         }
 
-        private ushort ReadUInt16(int offset) => BitConverter.ToUInt16(data, offset);
-        private uint ReadUInt32(int offset) => BitConverter.ToUInt32(data, offset);
+        private ushort ReadUInt16(int offset) => BitConverter.ToUInt16(_data, offset);
+        private uint ReadUInt32(int offset) => BitConverter.ToUInt32(_data, offset);
 
         private void WriteUInt16(int offset, ushort value)
         {
-            Buffer.BlockCopy(BitConverter.GetBytes(value), 0, data, offset, 2);
+            Buffer.BlockCopy(BitConverter.GetBytes(value), 0, _data, offset, 2);
         }
 
         private void WriteUInt32(int offset, uint value)
         {
-            Buffer.BlockCopy(BitConverter.GetBytes(value), 0, data, offset, 4);
+            Buffer.BlockCopy(BitConverter.GetBytes(value), 0, _data, offset, 4);
         }
 
         private static void EnsureKnownAssetField(TrainerClassMetadataAssetField field)
@@ -244,55 +244,55 @@ namespace DSPRE.ROMFiles
         public const int RecordLength = 0x34;
         public const int MinimumRecordCount = 1;
 
-        private static string detectedWorkDir;
-        private static TrainerClassMetadataDetectionState detectionState;
-        private static string detectionDetail;
-        private static int recordCount;
+        private static string _detectedWorkDir;
+        private static TrainerClassMetadataDetectionState _detectionState;
+        private static string _detectionDetail;
+        private static int _recordCount;
 
-        public static int RecordCount => recordCount;
+        public static int RecordCount => _recordCount;
 
         internal static void SetManagedRecordCount(int count)
         {
-            recordCount = count;
+            _recordCount = count;
         }
 
         public static void Reset()
         {
-            detectedWorkDir = null;
-            detectionState = TrainerClassMetadataDetectionState.Stock;
-            detectionDetail = null;
-            recordCount = 0;
+            _detectedWorkDir = null;
+            _detectionState = TrainerClassMetadataDetectionState.Stock;
+            _detectionDetail = null;
+            _recordCount = 0;
         }
 
         public static TrainerClassMetadataDetectionState DetectCurrentRom(out string detail)
         {
-            string currentWorkDir = RomInfo.workDir ?? string.Empty;
-            if (detectedWorkDir == currentWorkDir && detectionDetail != null)
+            string currentWorkDir = RomInfo.WorkDir ?? string.Empty;
+            if (_detectedWorkDir == currentWorkDir && _detectionDetail != null)
             {
-                detail = detectionDetail;
-                return detectionState;
+                detail = _detectionDetail;
+                return _detectionState;
             }
 
-            detectedWorkDir = currentWorkDir;
-            recordCount = 0;
+            _detectedWorkDir = currentWorkDir;
+            _recordCount = 0;
 
-            if (RomInfo.trainerClassMetadataHooks == null)
+            if (RomInfo.ClassMetadataHooks == null)
             {
-                detectionState = TrainerClassMetadataDetectionState.Stock;
-                detectionDetail = "TCM schema-v1 detection is limited to English HeartGold and SoulSilver.";
-                detail = detectionDetail;
-                return detectionState;
+                _detectionState = TrainerClassMetadataDetectionState.Stock;
+                _detectionDetail = "TCM schema-v1 detection is limited to English HeartGold and SoulSilver.";
+                detail = _detectionDetail;
+                return _detectionState;
             }
 
-            bool archiveMarker = TryInspectArchive(out recordCount, out string archiveDetail);
-            bool genderHookMarker = HasThumbVeneer(RomInfo.trainerClassMetadataHooks.Gender, 0x00, 0x49, 0x08, 0x47);
-            bool eyeContactHookMarker = HasThumbVeneer(RomInfo.trainerClassMetadataHooks.EyeContact, 0x00, 0x4A, 0x10, 0x47);
+            bool archiveMarker = TryInspectArchive(out _recordCount, out string archiveDetail);
+            bool genderHookMarker = HasThumbVeneer(RomInfo.ClassMetadataHooks.Gender, 0x00, 0x49, 0x08, 0x47);
+            bool eyeContactHookMarker = HasThumbVeneer(RomInfo.ClassMetadataHooks.EyeContact, 0x00, 0x4A, 0x10, 0x47);
 
-            bool retiredTrainerTableMarker = TryReadByte(RomInfo.vsTrainerEntryTableOffsetToSizeLimiter, out byte trainerCount) &&
-                TryReadUInt32(RomInfo.vsTrainerEntryTableOffsetToRAMAddress, out uint trainerPointer) &&
+            bool retiredTrainerTableMarker = TryReadByte(RomInfo.VsTrainerEntryTableOffsetToSizeLimiter, out byte trainerCount) &&
+                TryReadUInt32(RomInfo.VsTrainerEntryTableOffsetToRAMAddress, out uint trainerPointer) &&
                 trainerCount == 0 && trainerPointer == 0;
-            bool speciesTableMarker = TryReadByte(RomInfo.vsPokemonEntryTableOffsetToSizeLimiter, out byte speciesCount) &&
-                speciesCount >= RomInfo.trainerClassMetadataHooks.VanillaVsPokemonCount;
+            bool speciesTableMarker = TryReadByte(RomInfo.VsPokemonEntryTableOffsetToSizeLimiter, out byte speciesCount) &&
+                speciesCount >= RomInfo.ClassMetadataHooks.VanillaVsPokemonCount;
 
             bool[] markers =
             {
@@ -313,28 +313,28 @@ namespace DSPRE.ROMFiles
 
             if (allMarkers)
             {
-                detectionState = TrainerClassMetadataDetectionState.SchemaV1;
-                detectionDetail = "TCM schema v1-compatible data detected.";
+                _detectionState = TrainerClassMetadataDetectionState.SchemaV1;
+                _detectionDetail = "TCM schema v1-compatible data detected.";
             }
             else if (!anyMarker)
             {
-                detectionState = TrainerClassMetadataDetectionState.Stock;
-                detectionDetail = "No TCM schema-v1 markers detected.";
+                _detectionState = TrainerClassMetadataDetectionState.Stock;
+                _detectionDetail = "No TCM schema-v1 markers detected.";
             }
             else
             {
-                detectionState = TrainerClassMetadataDetectionState.Inconsistent;
+                _detectionState = TrainerClassMetadataDetectionState.Inconsistent;
                 List<string> failedMarkers = new List<string>();
                 if (!archiveMarker) failedMarkers.Add("a155 structure (" + archiveDetail + ")");
                 if (!genderHookMarker) failedMarkers.Add("gender hook");
                 if (!eyeContactHookMarker) failedMarkers.Add("eye-contact hook");
                 if (!retiredTrainerTableMarker) failedMarkers.Add("retired trainer-to-combo table");
                 if (!speciesTableMarker) failedMarkers.Add("species-to-combo table with at least 43 rows");
-                detectionDetail = "Partial TCM installation: missing or invalid " + string.Join(", ", failedMarkers) + ".";
+                _detectionDetail = "Partial TCM installation: missing or invalid " + string.Join(", ", failedMarkers) + ".";
             }
 
-            detail = detectionDetail;
-            return detectionState;
+            detail = _detectionDetail;
+            return _detectionState;
         }
 
         public static bool EnsureUnpacked(out string error)
@@ -349,8 +349,8 @@ namespace DSPRE.ROMFiles
 
             try
             {
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerClassMetadata });
-                string unpackedDir = RomInfo.gameDirs[DirNames.trainerClassMetadata].unpackedDir;
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TrainerClassMetadata });
+                string unpackedDir = RomInfo.GameDirs[DirNames.TrainerClassMetadata].unpackedDir;
                 if (!Directory.Exists(unpackedDir))
                 {
                     error = "The trainer-class metadata archive could not be unpacked.";
@@ -361,7 +361,7 @@ namespace DSPRE.ROMFiles
                 {
                     return false;
                 }
-                recordCount = unpackedRecordCount;
+                _recordCount = unpackedRecordCount;
                 return true;
             }
             catch (Exception ex)
@@ -469,7 +469,7 @@ namespace DSPRE.ROMFiles
         }
 
         private static string UnpackedFolderName =>
-            RomInfo.gameDirs.TryGetValue(DirNames.encounterEffectGraphics, out (string packedDir, string unpackedDir) dirs)
+            RomInfo.GameDirs.TryGetValue(DirNames.EncounterEffectGraphics, out (string packedDir, string unpackedDir) dirs)
                 ? Path.GetFileName(dirs.unpackedDir) : "encounterEffectGraphics";
 
         private static void ValidateConsumedAssets(TrainerClassMetadataRecord record,
@@ -485,7 +485,7 @@ namespace DSPRE.ROMFiles
             try
             {
                 // The unpacked copy is what editors change and what Save ROM packs, so it is the one that counts.
-                if (RomInfo.gameDirs.TryGetValue(DirNames.encounterEffectGraphics, out (string packedDir, string unpackedDir) art)
+                if (RomInfo.GameDirs.TryGetValue(DirNames.EncounterEffectGraphics, out (string packedDir, string unpackedDir) art)
                     && Directory.Exists(art.unpackedDir) && Directory.EnumerateFiles(art.unpackedDir).Any())
                     archive = Narc.FromFolder(art.unpackedDir);
                 else
@@ -546,7 +546,7 @@ namespace DSPRE.ROMFiles
         private static bool TryGetAssetArchivePath(out string path)
         {
             path = null;
-            if (!RomInfo.gameDirs.TryGetValue(DirNames.trainerClassMetadata,
+            if (!RomInfo.GameDirs.TryGetValue(DirNames.TrainerClassMetadata,
                 out (string packedDir, string unpackedDir) metadataPaths)) return false;
 
             string a1Directory = Path.GetDirectoryName(Path.GetDirectoryName(metadataPaths.packedDir));
@@ -568,7 +568,7 @@ namespace DSPRE.ROMFiles
             {
                 return false;
             }
-            if (classId >= recordCount)
+            if (classId >= _recordCount)
             {
                 error = "Trainer-class metadata record " + classId + " does not exist.";
                 return false;
@@ -605,7 +605,7 @@ namespace DSPRE.ROMFiles
             error = null;
             try
             {
-                ArchiveMembers.Put(DirNames.trainerClassMetadata, classId, record);
+                ArchiveMembers.Put(DirNames.TrainerClassMetadata, classId, record);
                 return true;
             }
             catch (Exception ex)
@@ -617,14 +617,14 @@ namespace DSPRE.ROMFiles
 
         private static string GetRecordPath(int classId)
         {
-            return Path.Combine(RomInfo.gameDirs[DirNames.trainerClassMetadata].unpackedDir, classId.ToString("D4"));
+            return Path.Combine(RomInfo.GameDirs[DirNames.TrainerClassMetadata].unpackedDir, classId.ToString("D4"));
         }
 
         private static bool TryInspectArchive(out int memberCount, out string detail)
         {
             memberCount = 0;
             detail = "archive is missing";
-            if (!RomInfo.gameDirs.TryGetValue(DirNames.trainerClassMetadata, out (string packedDir, string unpackedDir) paths) ||
+            if (!RomInfo.GameDirs.TryGetValue(DirNames.TrainerClassMetadata, out (string packedDir, string unpackedDir) paths) ||
                 !File.Exists(paths.packedDir))
             {
                 return false;
@@ -726,8 +726,9 @@ namespace DSPRE.ROMFiles
                     bytes[2] == byte2 && bytes[3] == byte3 &&
                     (BitConverter.ToUInt32(bytes, 4) & 1) == 1;
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.WarnOnce("TrainerClassMetadataStore.HasThumbVeneer", ex);
                 return false;
             }
         }
@@ -740,8 +741,9 @@ namespace DSPRE.ROMFiles
                 value = ARM9.ReadByte(offset);
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.WarnOnce("TrainerClassMetadataStore.TryReadByte", ex);
                 return false;
             }
         }
@@ -756,8 +758,9 @@ namespace DSPRE.ROMFiles
                 value = BitConverter.ToUInt32(bytes, 0);
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.WarnOnce("TrainerClassMetadataStore.TryReadUInt32", ex);
                 return false;
             }
         }

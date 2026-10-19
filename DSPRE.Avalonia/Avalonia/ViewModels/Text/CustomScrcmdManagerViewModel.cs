@@ -72,33 +72,33 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 StatusText = "Open a project to manage its script commands.";
                 return;
             }
-            string rotom = RomInfo.hasRotomProject ? DSPRE.RotomTool.ProjectDatabaseFile() : null;
+            string rotom = RomInfo.HasRotomProject ? DSPRE.RotomTool.ProjectDatabaseFile() : null;
             if (rotom != null && File.Exists(rotom))
             {
-                Folders.Add($"{RomInfo.projectName} (Rotom project)");
+                Folders.Add($"{RomInfo.ProjectName} (Rotom project)");
                 _files.Add((rotom, true));
                 StatusText = "The project's scripts are read and written with this database.";
                 return;
             }
-            Folders.Add($"{RomInfo.projectName} (scripts not converted to Rotom yet)");
+            Folders.Add($"{RomInfo.ProjectName} (scripts not converted to Rotom yet)");
             _files.Add((Path.Combine(DSPRE.ROMFiles.ScriptFile.CurrentRomDatabaseFolder(), "scrcmd_database.json"), false));
             StatusText = "Rotom carries this database's commands over when the project's scripts are first opened.";
         }
 
         private (string Path, bool Rotom) Selected => HasSelection && SelectedIndex < _files.Count ? _files[SelectedIndex] : (null, false);
 
-        public async Task Import(Window owner)
+        public async Task ImportAsync(Window owner)
         {
             if (!HasSelection || IsBusy) return;
             (string targetPath, bool rotom) = Selected;
 
-            string picked = await DialogHelper.OpenFile(owner, "Select a script command database file",
+            string picked = await DialogHelper.OpenFileAsync(owner, "Select a script command database file",
                 new[] { JsonFilter, DialogHelper.AllFilter });
             if (string.IsNullOrEmpty(picked)) return;
 
             if (rotom && WhyNotRotomDatabase(picked) is string why)
             {
-                await DialogHelper.ShowError(why, "Custom script command manager error");
+                await DialogHelper.ShowErrorAsync(why, "Custom script command manager error");
                 return;
             }
             try
@@ -114,13 +114,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Could not replace the database:\n{ex.Message}", "Custom script command manager error");
+                await DialogHelper.ShowErrorAsync($"Could not replace the database:\n{ex.Message}", "Custom script command manager error");
                 return;
             }
 
             Refresh();
 
-            bool reload = await DialogHelper.AskYesNo(
+            bool reload = await DialogHelper.AskYesNoAsync(
                 "Database replaced successfully.\n\n" +
                 "Do you want to reload and reparse all scripts now?\n\n" +
                 "Yes: Reload database and reparse all scripts immediately\n" +
@@ -129,7 +129,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (reload)
             {
                 // The app's command list is built from the legacy copy with the Rotom project's names laid over it.
-                await ReloadAndReparseScripts(rotom ? Path.Combine(DSPRE.ROMFiles.ScriptFile.CurrentRomDatabaseFolder(), "scrcmd_database.json") : targetPath);
+                await ReloadAndReparseScriptsAsync(rotom ? Path.Combine(DSPRE.ROMFiles.ScriptFile.CurrentRomDatabaseFolder(), "scrcmd_database.json") : targetPath);
             }
         }
 
@@ -151,18 +151,18 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
         }
 
-        private async Task ReloadAndReparseScripts(string databasePath)
+        private async Task ReloadAndReparseScriptsAsync(string databasePath)
         {
             if (!AvaloniaEditorLauncher.IsRomLoaded)
             {
-                await DialogHelper.ShowInfo("No ROM is loaded. The new database will be used on the next ROM load.", "Reload skipped");
+                await DialogHelper.ShowInfoAsync("No ROM is loaded. The new database will be used on the next ROM load.", "Reload skipped");
                 return;
             }
 
             // Reloading would apply another ROM's database to this one and rewrite that ROM's name files.
             if (!DSPRE.ROMFiles.ScriptFile.IsCurrentRomDatabaseFolder(Path.GetDirectoryName(databasePath)))
             {
-                await DialogHelper.ShowInfo("That database belongs to another ROM. It will be used when that ROM is loaded.", "Reload skipped");
+                await DialogHelper.ShowInfoAsync("That database belongs to another ROM. It will be used when that ROM is loaded.", "Reload skipped");
                 return;
             }
 
@@ -186,7 +186,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     List<ushort> uniqueCommands = invalidCommands.Select(c => c.commandID).Distinct().OrderBy(x => x).ToList();
                     string commandList = string.Join(", ", uniqueCommands.Select(c => $"0x{c:X4}"));
 
-                    await DialogHelper.ShowError(
+                    await DialogHelper.ShowErrorAsync(
                         $"Database reloaded, but {invalidCommands.Count} script command(s) across {affectedFiles.Count} file(s) still could not be parsed.\n\n" +
                         $"Affected files: {fileList}\n" +
                         $"Unrecognized commands: {commandList}\n\n" +
@@ -201,7 +201,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Error reloading database: {ex.Message}", "Custom script command manager error");
+                await DialogHelper.ShowErrorAsync($"Error reloading database: {ex.Message}", "Custom script command manager error");
                 StatusText = "Reparse failed.";
             }
             finally
@@ -210,20 +210,20 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
         }
 
-        public async Task Export(Window owner)
+        public async Task ExportAsync(Window owner)
         {
             if (!HasSelection || IsBusy) return;
             (string sourcePath, bool rotom) = Selected;
 
             if (!File.Exists(sourcePath))
             {
-                await DialogHelper.ShowError($"Script command database not found:\n{sourcePath}", "Custom script command manager error");
+                await DialogHelper.ShowErrorAsync($"Script command database not found:\n{sourcePath}", "Custom script command manager error");
                 return;
             }
 
-            string dest = await DialogHelper.SaveFile(owner, "Export script command database",
+            string dest = await DialogHelper.SaveFileAsync(owner, "Export script command database",
                 new[] { JsonFilter, DialogHelper.AllFilter },
-                rotom ? Path.GetFileName(sourcePath) : $"{RomInfo.projectName}_scrcmd_database.json");
+                rotom ? Path.GetFileName(sourcePath) : $"{RomInfo.ProjectName}_scrcmd_database.json");
             if (string.IsNullOrEmpty(dest)) return;
 
             try
@@ -233,16 +233,16 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Custom script command manager error");
+                await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Custom script command manager error");
             }
         }
 
-        public async Task OpenFolder()
+        public async Task OpenFolderAsync()
         {
             string folder = Path.GetDirectoryName(Selected.Path ?? "");
             if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder))
             {
-                await DialogHelper.ShowError($"Folder not found:\n{folder}", "Custom script command manager error");
+                await DialogHelper.ShowErrorAsync($"Folder not found:\n{folder}", "Custom script command manager error");
                 return;
             }
             SystemShell.OpenWithDefaultApp(folder);

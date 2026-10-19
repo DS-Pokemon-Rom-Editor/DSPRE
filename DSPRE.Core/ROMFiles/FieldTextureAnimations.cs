@@ -26,9 +26,9 @@ namespace DSPRE.ROMFiles
 
         public List<Entry> Entries { get; } = new List<Entry>();
 
-        public static bool Available => gameDirs != null && gameDirs.ContainsKey(DirNames.fieldTextureAnimations);
+        public static bool Available => GameDirs != null && GameDirs.ContainsKey(DirNames.FieldTextureAnimations);
 
-        private static string Folder => gameDirs[DirNames.fieldTextureAnimations].unpackedDir;
+        private static string Folder => GameDirs[DirNames.FieldTextureAnimations].unpackedDir;
 
         public Entry For(string textureName) =>
             string.IsNullOrEmpty(textureName) ? null : Entries.FirstOrDefault(e => e.Name == textureName);
@@ -36,7 +36,7 @@ namespace DSPRE.ROMFiles
         public static FieldTextureAnimations Load()
         {
             if (!Available) return null;
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.fieldTextureAnimations });
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.FieldTextureAnimations });
             string header = Path.Combine(Folder, "0000");
             if (!File.Exists(header)) return null;
 
@@ -94,10 +94,10 @@ namespace DSPRE.ROMFiles
         {
             if (!Available) throw new InvalidOperationException("This game has no field texture animations.");
             Directory.CreateDirectory(Folder);
-            ArchiveMembers.Put(DirNames.fieldTextureAnimations, 0, HeaderBytes());
+            ArchiveMembers.Put(DirNames.FieldTextureAnimations, 0, HeaderBytes());
             for (int i = 0; i < Entries.Count; i++)
                 if (Entries[i].FramePack != null)
-                    ArchiveMembers.Put(DirNames.fieldTextureAnimations, i + 1, Entries[i].FramePack);
+                    ArchiveMembers.Put(DirNames.FieldTextureAnimations, i + 1, Entries[i].FramePack);
             for (int i = Entries.Count + 1; File.Exists(Path.Combine(Folder, i.ToString("D4"))); i++)
                 ArchiveMembers.Delete(Path.Combine(Folder, i.ToString("D4")));
         }

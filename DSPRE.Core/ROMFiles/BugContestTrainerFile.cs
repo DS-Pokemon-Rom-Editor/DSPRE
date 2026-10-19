@@ -90,8 +90,8 @@ namespace DSPRE.ROMFiles
         {
             string[] names = new string[Opponents];
             List<string> lines = null;
-            try { if (RomInfo.BugContestTextNumber >= 0) lines = new TextArchive(RomInfo.BugContestTextNumber).messages; }
-            catch (Exception e) when (e is IOException || e is InvalidDataException) { }
+            try { if (RomInfo.BugContestTextNumber >= 0) lines = new TextArchive(RomInfo.BugContestTextNumber).Messages; }
+            catch (Exception e) when (e is IOException || e is InvalidDataException) { }   // without the text archive the opponents keep their numbered names
 
             for (int o = 0; o < Opponents; o++)
             {

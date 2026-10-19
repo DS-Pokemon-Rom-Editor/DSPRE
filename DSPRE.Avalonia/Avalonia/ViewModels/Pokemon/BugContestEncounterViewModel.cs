@@ -148,13 +148,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             if (!Filesystem.BugContestEncounterFileExists())
             {
-                await DialogHelper.ShowError(
+                await DialogHelper.ShowErrorAsync(
                     "Bug Contest encounter file not found.\nExpected location: data/mushi/mushi_encount.bin", "Special encounters editor error");
                 IsAvailable = false; OnPropertyChanged(nameof(IsNotAvailable)); return;
             }
             IsAvailable = true; OnPropertyChanged(nameof(IsNotAvailable));
 
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.monIcons });
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.MonIcons });
             SetMonIconsPalTableAddress();
 
             SpeciesNames.Clear();
@@ -180,7 +180,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                _ = DialogHelper.ShowError($"Error loading Bug Contest encounters: {ex.Message}", "Special encounters editor error");
+                _ = DialogHelper.ShowErrorAsync($"Error loading Bug Contest encounters: {ex.Message}", "Special encounters editor error");
             }
         }
 
@@ -269,7 +269,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Save()
         {
             if (_file == null) return;
-            if (_file.Problem() is string problem) { _ = DialogHelper.ShowError(problem, "Bug Contest error"); return; }
+            if (_file.Problem() is string problem) { _ = DialogHelper.ShowErrorAsync(problem, "Bug Contest error"); return; }
             // The file reports its own write error.
             if (!_file.SaveToFile(showSuccessMessage: false)) return;
             _undo?.MarkSaved();
@@ -281,20 +281,20 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_file == null) return;
             FilePickerFileType filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
-            string path = await DialogHelper.SaveFile(_owner, "Export Bug Contest encounters",
+            string path = await DialogHelper.SaveFileAsync(_owner, "Export Bug Contest encounters",
                 new[] { filter }, "mushi_encount.bin");
             if (path == null) return;
             try { _file.SaveToFile(path, showSuccessMessage: false); SaveNotice.Exported(path); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Special encounters editor error");
+                await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Special encounters editor error");
             }
         }
 
         public async Task ImportAsync()
         {
             FilePickerFileType filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
-            string path = await DialogHelper.OpenFile(_owner, "Import Bug Contest encounters", new[] { filter });
+            string path = await DialogHelper.OpenFileAsync(_owner, "Import Bug Contest encounters", new[] { filter });
             if (path == null) return;
 
             try
@@ -306,7 +306,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Error importing file: {ex.Message}", "Special encounters editor error");
+                await DialogHelper.ShowErrorAsync($"Error importing file: {ex.Message}", "Special encounters editor error");
             }
         }
 

@@ -23,19 +23,22 @@
 Types, methods, properties and events are PascalCase. Private fields start with an underscore, like `_saved` or
 `_undo`. Locals and parameters are camelCase, and so are constants declared inside a method.
 
-DSPRE's own constants and `static readonly` fields are PascalCase, like `SafeMax`. Constants that copy a name from
+DSPRE's own constants and `static readonly` fields are PascalCase, like `SafeMax`. A private `static readonly`
+field behind a property or method of the same name keeps the underscore, like `_all` behind `All`. Constants that copy a name from
 the decomp, a C header or OpenGL keep that name exactly, usually in UPPER_CASE, so one search finds them in both
 places: `GL_TEXTURE_2D`, `WET02_START_Y_OFS`.
 
 Methods that return a `Task` end in `Async`. A view is `<Thing>View` and its view model is `<Thing>ViewModel`. A
 class split over several files uses `<Class>.<Part>.cs`, like `RomLocator.Tables.cs`.
 
-Names use the game's words, or a player's, like `FriendshipChanges`.
+Names use the game's words, or a player's, like `FriendshipChanges`. Enum members whose names are shown in
+editors or written to exports, like `MoveFlags.MAGIC_COAT`, keep their spelling.
 
 ### Layout
 
-Braces go on their own line, namespaces included, and indentation is four spaces. Each public type has its own
-file with the same name. One-line members are written with `=>`.
+Braces go on their own line, namespaces included, and indentation is four spaces. A file is named after its main
+type, and small types that only serve it, like its enums, records and grid row classes, sit in the same file. A
+family of small types with no main one, like the CSV import types, shares a file named after the topic. One-line members are written with `=>`.
 
 ### Reading and writing ROM data
 
@@ -100,7 +103,7 @@ private async void Save_Click(object sender, RoutedEventArgs e)
     catch (Exception ex)
     {
         CrashReporter.LogHandled(ex);
-        await DialogHelper.ShowError("The trainer wasn't saved:\n" + ex.Message, "Save failed");
+        await DialogHelper.ShowErrorAsync("The trainer wasn't saved:\n" + ex.Message, "Save failed");
     }
 }
 ```
@@ -110,6 +113,10 @@ say "An unexpected error occurred", so code shouldn't count on it.
 
 Work started with `Task.Run` is awaited or catches its own errors. If it isn't, a failure is only logged and the
 user never hears about it.
+
+Code that has a fallback, like a name list that can come back empty or a preview that can draw nothing, may
+catch everything, but logs it with `AppLogger.WarnOnce("Class.Method", ex)`. That logs the first failure at that
+spot only, so a fallback that runs every frame doesn't flood the log.
 
 An empty `catch { }` hides bugs. When an error really can be ignored, a comment says why.
 
@@ -263,7 +270,7 @@ public async Task<bool> SaveChangesAsync()
     try { _table.Save(); }
     catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
     {
-        await DialogHelper.ShowError("The friendship changes were not saved:\n" + e.Message, "Friendship changes error");
+        await DialogHelper.ShowErrorAsync("The friendship changes were not saved:\n" + e.Message, "Friendship changes error");
         return false;
     }
     _saved = _table.ToBytes();
@@ -341,7 +348,7 @@ public static void OpenFriendshipChanges() => OpenTableEditor("Friendship Change
     () => new FriendshipChangesView(new FriendshipChangesViewModel(true)), 760, 480, 640, 440);
 
 await OpenBehindCardAsync("Opening Audio Editor…", "Reading the cries, music and sound effects.",
-    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData }),   // off the UI thread
+    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.PersonalPokeData }),   // off the UI thread
     () => new AudioEditorView(new AudioEditorViewModel(names)));                        // on it, card still up
 ```
 
@@ -371,7 +378,7 @@ An editor that only draws archive members redraws with `AppEvents.WhenSaved(redr
 ### Asking the user
 
 Dialogs go through `DialogHelper` with the editor as owner, and Discard asks through
-`DialogHelper.ConfirmDiscard(this)`. A choice that needs a preview is a small class with `AskAsync`, like
+`DialogHelper.ConfirmDiscardAsync(this)`. A choice that needs a preview is a small class with `AskAsync`, like
 `PngColourPrompt`.
 
 ### Toolbar and controls
@@ -405,7 +412,7 @@ backups and temp files, goes through `PlainFiles`, which refuses members and cod
 checkout goes through `HgEngineVerifiedWrite`.
 
 ```csharp
-ArchiveMembers.Put(DirNames.personalPokeData, species, bytes);
+ArchiveMembers.Put(DirNames.PersonalPokeData, species, bytes);
 DSUtils.WriteToFile(OverlayUtils.GetPath(overlay), patch, writeAt: (uint)offset);
 PlainFiles.WriteBytes(exportPath, bytes);
 ```
@@ -417,9 +424,9 @@ Editors keep archive changes in `PendingArchiveWrites` until Save. Editors that 
 new map headers and new overworld entries still apply straight away, after asking.
 
 ```csharp
-_pending.Change(step => step.Put(DirNames.dungeonCutinGraphics, p, nclrBytes)
-                            .Put(DirNames.dungeonCutinGraphics, t, ncgrBytes));   // one undo step
-byte[] shown = _pending.Read(DirNames.dungeonCutinGraphics, p);                    // sees unsaved changes
+_pending.Change(step => step.Put(DirNames.DungeonCutinGraphics, p, nclrBytes)
+                            .Put(DirNames.DungeonCutinGraphics, t, ncgrBytes));   // one undo step
+byte[] shown = _pending.Read(DirNames.DungeonCutinGraphics, p);                    // sees unsaved changes
 _pending.Save();                                                                   // or Discard()
 ```
 
@@ -484,7 +491,7 @@ public static bool ApplyClassIntrosPatch()
     if (!ConfirmYesNo("What the patch does." + placement + BackupNote("the ARM9 and the synthetic overlay") +
         "\n\nApply this patch?" + CreditNote("classIntros"), "Confirm to proceed"))
         return false;
-    PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+    PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
     ClassIntroPatch.Apply(offsets[0]);
     ShowInfo("What changed and where to edit it.", "Patch applied");
     return true;
@@ -531,7 +538,7 @@ project. RAM addresses become file offsets with `RamAddress.Find`.
 
 ### Archives
 
-Each archive is a `RomInfo.DirNames` value mapped in `RomInfo.gameDirs`. `DSUtils.TryUnpackNarcs` unpacks it
+Each archive is a `RomInfo.DirNames` value mapped in `RomInfo.GameDirs`. `DSUtils.TryUnpackNarcs` unpacks it
 before the first read, and from then on DSPRE reads and writes the unpacked folder.
 
 ### Save ROM
@@ -581,8 +588,8 @@ Overworld sprites 101 to 116 are picked by a script while playing, from variable
 
 ## Known traps
 
-- Layouts differ between games and languages, so `RomInfo.gameFamily` and `gameLanguage` decide every offset.
-- `param0` is stored as `sightRange` but is the engine's general parameter.
+- Layouts differ between games and languages, so `RomInfo.GameFamily` and `GameLanguage` decide every offset.
+- `param0` is stored as `SightRange` but is the engine's general parameter.
 - Tile sheets often store `0xFFFF` for width and height. That reads as -1, and the cell layout decides the shape.
 - Backgrounds wider than 32 squares are stored in 32x32 blocks.
 - Battle sprite palettes are per species, and their pixels are XOR-scrambled.
@@ -591,7 +598,7 @@ Overworld sprites 101 to 116 are picked by a script while playing, from variable
 
 ## hg-engine projects
 
-An hg-engine ROM has "hg-engine rocks!" at the start of overlay 129 (`RomInfo.isHGE`).
+An hg-engine ROM has "hg-engine rocks!" at the start of overlay 129 (`RomInfo.IsHGE`).
 `HgEngineProject.IsActive` means a checkout is linked. Each `EditorAvailability` rule says `Open`, `NeedsLink`,
 `Source`, `Closed` or `LinkedOnly`. With a checkout linked, data is read from its source text rather than by
 offset, and written through `HgEngineVerifiedWrite`. Synthetic-overlay patches are refused.

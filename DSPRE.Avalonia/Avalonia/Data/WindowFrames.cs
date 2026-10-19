@@ -8,19 +8,19 @@ namespace DSPRE.Avalonia.Data
     {
         public static FieldWindowFrame Load(int frameIndex)
         {
-            ScriptNarc frames = new ScriptNarc(DirNames.windowFrames);
+            ScriptNarc frames = new ScriptNarc(DirNames.WindowFrames);
             return frames.Available ? FieldWindowFrame.Load(frameIndex, frames.Get, frames.Count) : null;
         }
 
         public static FieldWindowFrame LoadStandard()
         {
-            ScriptNarc frames = new ScriptNarc(DirNames.windowFrames);
+            ScriptNarc frames = new ScriptNarc(DirNames.WindowFrames);
             return frames.Available ? FieldWindowFrame.LoadStandard(frames.Get, frames.Count) : null;
         }
 
         public static uint[] LoadSystemFontColours()
         {
-            ScriptNarc fonts = new ScriptNarc(DirNames.fonts);
+            ScriptNarc fonts = new ScriptNarc(DirNames.Fonts);
             return fonts.Available ? FieldWindowFrame.LoadSystemFontColours(fonts.Get) : null;
         }
     }

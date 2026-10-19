@@ -13,8 +13,8 @@ namespace DSPRE.Tests
             RomInfo.GameFamilies family,
             bool expected)
         {
-            Assert.Equal(expected, DSUtils.IsOptionalNarc(RomInfo.DirNames.eggMoves, family));
-            Assert.False(DSUtils.IsOptionalNarc(RomInfo.DirNames.scripts, family));
+            Assert.Equal(expected, DSUtils.IsOptionalNarc(RomInfo.DirNames.EggMoves, family));
+            Assert.False(DSUtils.IsOptionalNarc(RomInfo.DirNames.Scripts, family));
         }
     }
 }

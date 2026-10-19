@@ -63,12 +63,12 @@ namespace DSPRE.ROMFiles
     {
         public const int Count = 128;
 
-        public static bool Available => gameDirs != null && gameDirs.ContainsKey(DirNames.trainerCapsules);
+        public static bool Available => GameDirs != null && GameDirs.ContainsKey(DirNames.TrainerCapsules);
 
         private static string FilePath()
         {
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerCapsules });
-            return Path.Combine(gameDirs[DirNames.trainerCapsules].unpackedDir, "0000");
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TrainerCapsules });
+            return Path.Combine(GameDirs[DirNames.TrainerCapsules].unpackedDir, "0000");
         }
 
         public static BallCapsule[] ReadAll()
@@ -87,7 +87,7 @@ namespace DSPRE.ROMFiles
             byte[] data = File.Exists(path) ? File.ReadAllBytes(path) : new byte[Count * BallCapsule.Bytes];
             if (data.Length < Count * BallCapsule.Bytes) Array.Resize(ref data, Count * BallCapsule.Bytes);
             for (int i = 0; i < Count && i < capsules.Count; i++) capsules[i].Write(data, i * BallCapsule.Bytes);
-            ArchiveMembers.Put(DirNames.trainerCapsules, 0, data);
+            ArchiveMembers.Put(DirNames.TrainerCapsules, 0, data);
         }
     }
 }

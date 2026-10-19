@@ -11,60 +11,60 @@ namespace DSPRE.ROMFiles
     internal class TradeData : RomFile
     {
 
-        public int id;
+        public int Id;
 
         // TradeData structure in narc
-        public int species;
-        public int hpIV;
-        public int atkIV;
-        public int defIV;
-        public int speedIV;
-        public int spAtkIV;
-        public int spDefIV;
-        public int ability; // unused
-        public int otID;
-        public int cool;
-        public int beauty;
-        public int cute;
-        public int smart;
-        public int tough;
-        public int pid;
-        public int heldItem;
-        public int otGender;
-        public int sheen;
-        public int language;
-        public int requestedSpecies;
-        public int unknown; // unused?
+        public int Species;
+        public int HpIV;
+        public int AtkIV;
+        public int DefIV;
+        public int SpeedIV;
+        public int SpAtkIV;
+        public int SpDefIV;
+        public int Ability; // unused
+        public int OtID;
+        public int Cool;
+        public int Beauty;
+        public int Cute;
+        public int Smart;
+        public int Tough;
+        public int Pid;
+        public int HeldItem;
+        public int OtGender;
+        public int Sheen;
+        public int Language;
+        public int RequestedSpecies;
+        public int Unknown; // unused?
 
         public TradeData(int id, Stream stream)
         {
-            this.id = id;
+            this.Id = id;
             using (BinaryReader br = new BinaryReader(stream))
             {
-                species = br.ReadInt32();
-                hpIV = br.ReadInt32();
-                atkIV = br.ReadInt32();
-                defIV = br.ReadInt32();
-                speedIV = br.ReadInt32();
-                spAtkIV = br.ReadInt32();
-                spDefIV = br.ReadInt32();
-                ability = br.ReadInt32(); // appears unused
-                otID = br.ReadInt32();
-                cool = br.ReadInt32();
-                beauty = br.ReadInt32();
-                cute = br.ReadInt32();
-                smart = br.ReadInt32();
-                tough = br.ReadInt32();
-                pid = br.ReadInt32();
-                heldItem = br.ReadInt32();
-                otGender = br.ReadInt32();
-                sheen = br.ReadInt32();
-                language = br.ReadInt32();
-                requestedSpecies = br.ReadInt32();
+                Species = br.ReadInt32();
+                HpIV = br.ReadInt32();
+                AtkIV = br.ReadInt32();
+                DefIV = br.ReadInt32();
+                SpeedIV = br.ReadInt32();
+                SpAtkIV = br.ReadInt32();
+                SpDefIV = br.ReadInt32();
+                Ability = br.ReadInt32(); // appears unused
+                OtID = br.ReadInt32();
+                Cool = br.ReadInt32();
+                Beauty = br.ReadInt32();
+                Cute = br.ReadInt32();
+                Smart = br.ReadInt32();
+                Tough = br.ReadInt32();
+                Pid = br.ReadInt32();
+                HeldItem = br.ReadInt32();
+                OtGender = br.ReadInt32();
+                Sheen = br.ReadInt32();
+                Language = br.ReadInt32();
+                RequestedSpecies = br.ReadInt32();
 
-                if (RomInfo.gameFamily == GameFamilies.HGSS)
+                if (RomInfo.GameFamily == GameFamilies.HGSS)
                 {
-                    unknown = br.ReadInt32(); // unused?
+                    Unknown = br.ReadInt32(); // unused?
                 }
                     
             }
@@ -75,12 +75,12 @@ namespace DSPRE.ROMFiles
         private static Stream GetStream(int id)
         {
 
-            if (!File.Exists(Path.Combine(RomInfo.gameDirs[DirNames.tradeData].unpackedDir, id.ToString("D4"))))
+            if (!File.Exists(Path.Combine(RomInfo.GameDirs[DirNames.TradeData].unpackedDir, id.ToString("D4"))))
             {
                 // If the file does not exist, create it with default values
-                FileStream fileStream = new FileStream(Path.Combine(RomInfo.gameDirs[DirNames.tradeData].unpackedDir, id.ToString("D4")), FileMode.Create);
+                FileStream fileStream = new FileStream(Path.Combine(RomInfo.GameDirs[DirNames.TradeData].unpackedDir, id.ToString("D4")), FileMode.Create);
                 fileStream.Write(new byte[0x50], 0, 0x50); // create an empty file
-                if (RomInfo.gameFamily == GameFamilies.HGSS)
+                if (RomInfo.GameFamily == GameFamilies.HGSS)
                 {
                     fileStream.Write(new byte[0x04], 0, 0x04); // HGSS only
                 }
@@ -88,7 +88,7 @@ namespace DSPRE.ROMFiles
                 return fileStream;
             }
             
-            return new FileStream(Path.Combine(RomInfo.gameDirs[DirNames.tradeData].unpackedDir, id.ToString("D4")), FileMode.Open);
+            return new FileStream(Path.Combine(RomInfo.GameDirs[DirNames.TradeData].unpackedDir, id.ToString("D4")), FileMode.Open);
             
         }
 
@@ -97,30 +97,30 @@ namespace DSPRE.ROMFiles
             using (MemoryStream ms = new MemoryStream())
             using (BinaryWriter bw = new BinaryWriter(ms))
             {
-                bw.Write(species);
-                bw.Write(hpIV);
-                bw.Write(atkIV);
-                bw.Write(defIV);
-                bw.Write(speedIV);
-                bw.Write(spAtkIV);
-                bw.Write(spDefIV);
-                bw.Write(ability); // unused
-                bw.Write(otID);
-                bw.Write(cool);
-                bw.Write(beauty);
-                bw.Write(cute);
-                bw.Write(smart);
-                bw.Write(tough);
-                bw.Write(pid);
-                bw.Write(heldItem);
-                bw.Write(otGender);
-                bw.Write(sheen);
-                bw.Write(language);
-                bw.Write(requestedSpecies);
+                bw.Write(Species);
+                bw.Write(HpIV);
+                bw.Write(AtkIV);
+                bw.Write(DefIV);
+                bw.Write(SpeedIV);
+                bw.Write(SpAtkIV);
+                bw.Write(SpDefIV);
+                bw.Write(Ability); // unused
+                bw.Write(OtID);
+                bw.Write(Cool);
+                bw.Write(Beauty);
+                bw.Write(Cute);
+                bw.Write(Smart);
+                bw.Write(Tough);
+                bw.Write(Pid);
+                bw.Write(HeldItem);
+                bw.Write(OtGender);
+                bw.Write(Sheen);
+                bw.Write(Language);
+                bw.Write(RequestedSpecies);
 
-                if (RomInfo.gameFamily == GameFamilies.HGSS)
+                if (RomInfo.GameFamily == GameFamilies.HGSS)
                 {
-                    bw.Write(unknown); // HGSS only 
+                    bw.Write(Unknown); // HGSS only 
                 }
                     
                 return ms.ToArray();
@@ -129,7 +129,7 @@ namespace DSPRE.ROMFiles
 
         public void SaveToFileDefaultDir(int IDtoReplace, bool showSuccessMessage = true)
         {
-            SaveToFileDefaultDir(DirNames.tradeData, IDtoReplace, showSuccessMessage);
+            SaveToFileDefaultDir(DirNames.TradeData, IDtoReplace, showSuccessMessage);
         }
         public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true)
         {
@@ -137,11 +137,11 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>The text bank holding each trade's nickname, then each trade's OT name.</summary>
-        public static int TextBank => RomInfo.tradeTextNumber;
+        public static int TextBank => RomInfo.TradeTextNumber;
 
         public static int GetTradeCount()
         {
-            return NarcAPI.Narc.MemberCount(RomInfo.gameDirs[DirNames.tradeData].unpackedDir);
+            return NarcAPI.Narc.MemberCount(RomInfo.GameDirs[DirNames.TradeData].unpackedDir);
         }
 
     }

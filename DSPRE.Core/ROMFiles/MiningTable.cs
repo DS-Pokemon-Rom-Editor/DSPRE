@@ -16,7 +16,7 @@ namespace DSPRE.ROMFiles
 
         // Diamond reads the first and third weights, Pearl the second and fourth, the later two once the National Dex is
         // obtained. Platinum picks by trainer ID parity instead.
-        public static string[] Columns => RomInfo.gameFamily == RomInfo.GameFamilies.DP
+        public static string[] Columns => RomInfo.GameFamily == RomInfo.GameFamilies.DP
             ? new[] { "Diamond", "Pearl", "Diamond after the National Dex", "Pearl after the National Dex" }
             : new[] { "Odd trainer ID", "Even trainer ID", "Odd trainer ID after the National Dex", "Even trainer ID after the National Dex" };
 
@@ -57,7 +57,7 @@ namespace DSPRE.ROMFiles
 
         public static string WhyNot()
         {
-            if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) return "HeartGold and SoulSilver have no Underground.";
+            if (RomInfo.GameFamily == RomInfo.GameFamilies.HGSS) return "HeartGold and SoulSilver have no Underground.";
             if (RomLocator.WhyNot(RomLocator.Thing.MiningTreasures, Size) is string why) return why;
             return RomLocator.WhyNot(RomLocator.Thing.MiningItems, ItemListCount * 2);
         }

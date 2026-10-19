@@ -82,7 +82,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             public string this[string window] => BetaEditors.WhyNot(window);
         }
 
-        private static bool HgAllows => !isHGE || HgEngineProject.IsActive;
+        private static bool HgAllows => !IsHGE || HgEngineProject.IsActive;
 
         // Without a linked checkout, hg-engine's changed formats and tables would be corrupted by the vanilla
         // readers, so only the map, event, script and text editors stay open.
@@ -131,8 +131,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public bool CanUseFriendship => EditorAvailability.Allows("FriendshipChangesView");
         public bool CanUseSlotOdds => EditorAvailability.Allows("EncounterSlotOddsView");
         // Tables a game family doesn't have are hidden rather than greyed out.
-        public bool HasMoveTutors => !IsRomLoaded || gameFamily != GameFamilies.DP;
-        public bool IsDpOrPlatinum => !IsRomLoaded || gameFamily != GameFamilies.HGSS;
+        public bool HasMoveTutors => !IsRomLoaded || GameFamily != GameFamilies.DP;
+        public bool IsDpOrPlatinum => !IsRomLoaded || GameFamily != GameFamilies.HGSS;
         public bool CanUsePokemonEditor => EditorAvailability.Allows("PokemonEditorView");
         // PokeFormDataTbl.c is source-only (no packed-ROM equivalent), so this needs the checkout link
         // itself rather than the isHGE/HgAllows gate the other 5 domains use.
@@ -164,7 +164,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         public bool CanUseWildEditors => EditorAvailability.Allows("WildEditorView");
         // With a linked hg-engine checkout only its Headbutt tab is safe; hg-engine builds the rest itself.
-        public bool CanUseSpecialEncountersEditor => IsRomLoaded && (!isHGE || (IsHgssRom && HgEngineProject.IsActive));
+        public bool CanUseSpecialEncountersEditor => IsRomLoaded && (!IsHGE || (IsHgssRom && HgEngineProject.IsActive));
         public bool IsHgEngineLinked    => HgEngineProject.IsActive;
         // hg-engine's real `make` build, not one of the 5 read/write-covered domains, so this only
         // needs the checkout link itself (like CanUseHgEngineFormEditor), not the HgAllows gate.
@@ -172,12 +172,12 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         public bool BuildAndRunCompiles
         {
-            get => SettingsManager.Settings?.buildAndRunCompiles ?? true;
+            get => SettingsManager.Settings?.BuildAndRunCompiles ?? true;
             set
             {
                 DspreSettings settings = SettingsManager.Settings;
-                if (settings == null || settings.buildAndRunCompiles == value) return;
-                settings.buildAndRunCompiles = value;
+                if (settings == null || settings.BuildAndRunCompiles == value) return;
+                settings.BuildAndRunCompiles = value;
                 SettingsManager.Save();
                 OnPropertyChanged();
             }
@@ -186,11 +186,11 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         /// <summary>Why Compile ROM and the source-backed editors are greyed out, or nothing when they are not.</summary>
         public string HgEngineNote =>
             !IsRomLoaded ? "Open a ROM first."
-            : !isHGE ? "This ROM is not an hg-engine build."
+            : !IsHGE ? "This ROM is not an hg-engine build."
             : !HgEngineProject.IsLinked ? "No hg-engine checkout is linked to this project."
             : !HgEngineProject.Enabled ? "The linked hg-engine checkout is switched off for this project."
             : "Runs the linked checkout's real make build and produces test.nds.";
-        public bool IsHgssRom           => IsRomLoaded && gameFamily == GameFamilies.HGSS;
+        public bool IsHgssRom           => IsRomLoaded && GameFamily == GameFamilies.HGSS;
 
         /// <summary>The Headbutt editor needs an HGSS ROM, and it is still being tried out.</summary>
         // Diamond and Pearl only have the battle music table, where it is supported.
@@ -271,11 +271,11 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         {
             get
             {
-                string id = romID;
+                string id = RomID;
                 if (string.IsNullOrWhiteSpace(id)) return "";
                 string region = id.Length == 4 ? id[3] switch
                 {
-                    'E' => romRevision == 0x0A ? "Europe" : "America", 'P' => "Europe", 'J' => "Japan", 'K' => "Korea",
+                    'E' => RomRevision == 0x0A ? "Europe" : "America", 'P' => "Europe", 'J' => "Japan", 'K' => "Korea",
                     'F' => "France", 'D' => "Germany", 'I' => "Italy", 'S' => "Spain",
                     _ => null,
                 } : null;
@@ -288,7 +288,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         {
             get
             {
-                string dir = RomInfo.workDir?.TrimEnd(System.IO.Path.DirectorySeparatorChar, '/');
+                string dir = RomInfo.WorkDir?.TrimEnd(System.IO.Path.DirectorySeparatorChar, '/');
                 if (string.IsNullOrEmpty(dir)) return "";
                 string name = System.IO.Path.GetFileName(dir);
                 const string contents = "_DSPRE_contents";

@@ -129,8 +129,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (Design.IsDesignMode) { _loading = false; return; }
             Pending.Changed += RaiseSteps;
 
-            IsHgss = gameFamily == GameFamilies.HGSS;
-            HasPoketch = gameFamily == GameFamilies.Plat || gameFamily == GameFamilies.DP;
+            IsHgss = GameFamily == GameFamilies.HGSS;
+            HasPoketch = GameFamily == GameFamilies.Plat || GameFamily == GameFamilies.DP;
 
             foreach (string t in IsHgss ? new[] { "Menu", "Poké Ball screen" } : new[] { "Pokétch" })
                 TabNames.Add(t);
@@ -359,8 +359,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 _hgss = IsHgss ? HgssTouchScreen.Load() : null;
                 _poketch = HasPoketch ? PoketchScreen.Load() : null;
                 if (HasPoketch) LoadAnimation();
-                if (RomInfo.fieldTouchMenuTextArchive >= 0)
-                    try { _words = new TextArchive(RomInfo.fieldTouchMenuTextArchive); } catch { _words = null; }
+                if (RomInfo.FieldTouchMenuTextArchive >= 0)
+                    try { _words = new TextArchive(RomInfo.FieldTouchMenuTextArchive); } catch (Exception ex) { AppLogger.WarnOnce("BottomScreenEditorViewModel.LoadScreens", ex); _words = null; }
             }
             catch (Exception ex) { AppLogger.Error("Bottom screen load: " + ex.Message); }
         }
@@ -369,8 +369,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         // them. Left raw, the panel reads "STRVAR_1, 3, 0, 0" where a name belongs.
         private string Word(int message)
         {
-            if (_words?.messages == null || message < 0 || message >= _words.messages.Count) return null;
-            string line = _words.messages[message];
+            if (_words?.Messages == null || message < 0 || message >= _words.Messages.Count) return null;
+            string line = _words.Messages[message];
             return line == null ? null
                  : FieldStringVars.Expand(line, (_, kind, buffer) => FieldStringVars.SuggestFor(kind, buffer, null));
         }
@@ -436,21 +436,21 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 list.Add(new BottomScreenPiece
                 {
                     Name = "Panel",
-                    Archive = DirNames.fieldTouchMenu, Drawing = MenuTiles, Arrangement = MenuMap,
+                    Archive = DirNames.FieldTouchMenu, Drawing = MenuTiles, Arrangement = MenuMap,
                     PaletteMember = MenuPalettes, PaletteRow = 0, PaletteRows = 16,
                 });
                 for (int i = 0; i < IconNames.Length; i++)
                     list.Add(new BottomScreenPiece
                     {
                         Name = IconNames[i],
-                        Archive = DirNames.fieldTouchMenu, Drawing = IconDrawings[i], Cells = IconCells,
+                        Archive = DirNames.FieldTouchMenu, Drawing = IconDrawings[i], Cells = IconCells,
                         PaletteMember = IconPalettes, PaletteRow = 0, IconKind = i,
                     });
                 list.Add(new BottomScreenPiece
                 {
                     Name = "Side buttons",
                     What = "Registered item frames, running shoes, the A button and the mark beside MENU.",
-                    Archive = DirNames.fieldTouchMenu, Drawing = ButtonDrawing, Cells = ButtonCells,
+                    Archive = DirNames.FieldTouchMenu, Drawing = ButtonDrawing, Cells = ButtonCells,
                     PaletteMember = MenuPalettes, PaletteRow = 0, PaletteRows = 16,
                 });
             }
@@ -459,26 +459,26 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 list.Add(new BottomScreenPiece
                 {
                     Name = "Poké Ball screen",
-                    Archive = DirNames.fieldTouchChoices, Drawing = ChoiceTiles, Arrangement = PokeBallMap,
+                    Archive = DirNames.FieldTouchChoices, Drawing = ChoiceTiles, Arrangement = PokeBallMap,
                     PaletteMember = ChoicePalettes, PaletteRow = 0, PaletteRows = 5,
                 });
                 list.Add(new BottomScreenPiece
                 {
                     Name = "Yes and no boxes",
-                    Archive = DirNames.fieldTouchChoices, Arrangement = YesNoMap,
+                    Archive = DirNames.FieldTouchChoices, Arrangement = YesNoMap,
                     PaletteMember = ChoicePalettes, PaletteRow = 0, PaletteRows = 5,
                 });
                 for (int n = 2; n <= 8; n++)
                     list.Add(new BottomScreenPiece
                     {
                         Name = $"List of {n}",
-                        Archive = DirNames.fieldTouchChoices, Arrangement = n,
+                        Archive = DirNames.FieldTouchChoices, Arrangement = n,
                         PaletteMember = ChoicePalettes, PaletteRow = 0, PaletteRows = 5,
                     });
                 list.Add(new BottomScreenPiece
                 {
                     Name = "Answer frame",
-                    Archive = DirNames.fieldTouchChoices, Drawing = CursorDrawing, Cells = CursorCells,
+                    Archive = DirNames.FieldTouchChoices, Drawing = CursorDrawing, Cells = CursorCells,
                     PaletteMember = CursorPalette, PaletteRow = 0,
                 });
             }
@@ -493,7 +493,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     // that can be changed at all.
                     list.Add(new BottomScreenPiece
                     {
-                        Name = a.Name + " colours", What = a.ReadOnlyBecause, Archive = DirNames.poketch,
+                        Name = a.Name + " colours", What = a.ReadOnlyBecause, Archive = DirNames.Poketch,
                         PaletteMember = ThemePalettes, PaletteRow = row,
                         Warning = a.ReadOnlyBecause,
                     });
@@ -505,7 +505,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     {
                         Name = "Screen",
                         What = $"{a.Name}'s own screen, {a.TilesUsed} of {PoketchApps.TileCeiling} tiles.",
-                        Archive = DirNames.poketch, Drawing = a.Tiles, Arrangement = a.Arrangement,
+                        Archive = DirNames.Poketch, Drawing = a.Tiles, Arrangement = a.Arrangement,
                         PaletteMember = ThemePalettes, PaletteRow = row, Warning = a.Warning,
                         TileRoom = a.TileRoom,
                     });
@@ -515,7 +515,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         Name = "Sprites",
                         What = $"The moving pieces, {a.SpriteTilesUsed} of {PoketchApps.TileCeiling} sprite tiles"
                              + (a.UsesDigitSheet ? ", counting the shared figures." : "."),
-                        Archive = DirNames.poketch, Drawing = a.Sprites,
+                        Archive = DirNames.Poketch, Drawing = a.Sprites,
                         PaletteMember = ThemePalettes, PaletteRow = row,
                         TileRoom = a.SpriteRoom,
                     });
@@ -523,7 +523,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     list.Add(new BottomScreenPiece
                     {
                         Name = "Sprite positions",
-                        Archive = DirNames.poketch, Cells = a.Cells,
+                        Archive = DirNames.Poketch, Cells = a.Cells,
                         Animation = a.Animation,
                         Sprites = a.Sprites,
                         SharedSheet = PoketchApps.SharedSheetFor(a),
@@ -542,7 +542,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         What = PoketchApps.AnimationsWithTransforms.Contains(a.Animation)
                              ? "These frames carry a turn or a stretch."
                              : null,
-                        Archive = DirNames.poketch, Animation = a.Animation,
+                        Archive = DirNames.Poketch, Animation = a.Animation,
                         Cells = a.Cells, Drawing = -1,
                         PaletteMember = ThemePalettes, PaletteRow = row,
                         Sprites = a.Sprites,
@@ -556,26 +556,26 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 {
                     Name = "Casing",
                     What = "Row 0 is the girl's, row 1 the boy's.",
-                    Archive = DirNames.poketch, Drawing = CaseTiles, Arrangement = CaseMap,
+                    Archive = DirNames.Poketch, Drawing = CaseTiles, Arrangement = CaseMap,
                     PaletteMember = CasePalettes, PaletteRow = female ? 0 : 1,
                 });
                 list.Add(new BottomScreenPiece
                 {
                     Name = "Watch face",
-                    Archive = DirNames.poketch, Drawing = WatchTiles, Arrangement = WatchMap,
+                    Archive = DirNames.Poketch, Drawing = WatchTiles, Arrangement = WatchMap,
                     PaletteMember = ThemePalettes, PaletteRow = theme * 2 + (backlight ? 1 : 0),
                 });
                 list.Add(new BottomScreenPiece
                 {
                     Name = "Watch digits",
-                    Archive = DirNames.poketch, Arrangement = WatchDigits,
+                    Archive = DirNames.Poketch, Arrangement = WatchDigits,
                     PaletteMember = ThemePalettes, PaletteRow = theme * 2 + (backlight ? 1 : 0),
                 });
                 list.Add(new BottomScreenPiece
                 {
                     Name = "Before you have one",
                     What = "Shown until the player is given a Pokétch.",
-                    Archive = DirNames.poketch, Drawing = UnavailableTiles, Arrangement = UnavailableMap,
+                    Archive = DirNames.Poketch, Drawing = UnavailableTiles, Arrangement = UnavailableMap,
                     PaletteMember = UnavailablePalette, PaletteRow = 0,
                     Warning = "Also shown by " + Join(PoketchApps.SharedBy(UnavailablePalette).Skip(1).ToList()) + ".",
                 });
@@ -744,7 +744,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 PoketchApps.App app = _app >= 1 && _app <= PoketchApps.All.Length ? PoketchApps.All[_app - 1] : null;
                 if (app == null || app.Animation < 0) return;
                 using (Pending.Reading())
-                    _animation = NanrFile.Read(NitroBgCodec.Inflate(new ScriptNarc(DirNames.poketch).Get(app.Animation)));
+                    _animation = NanrFile.Read(NitroBgCodec.Inflate(new ScriptNarc(DirNames.Poketch).Get(app.Animation)));
             }
             catch (Exception ex) { AppLogger.Error("Poketch animation: " + ex.Message); }
 
@@ -927,7 +927,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 using IDisposable pending = Pending.Reading();
                 return NitroBgCodec.ReadColours(new ScriptNarc(p.Archive).Get(p.PaletteMember));
             }
-            catch { return Array.Empty<ushort>(); }
+            catch (Exception ex) { AppLogger.WarnOnce("BottomScreenEditorViewModel.ReadColours", ex); return Array.Empty<ushort>(); }
         }
 
         /// <summary>The colour a swatch stands for, for the editor that changes it.</summary>
@@ -975,7 +975,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (p == null || p.TileRoom <= 0 || p.Drawing < 0) return null;
             int tiles;
             try { tiles = NitroBgCodec.ReadCharacters(NitroBgCodec.Inflate(new ScriptNarc(p.Archive).Get(p.Drawing))).Length / 32; }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("BottomScreenEditorViewModel.WhyOverRoom", ex); return null; }
             return tiles <= p.TileRoom ? null
                 : $"That drawing needs {tiles} tiles and this screen has room for {p.TileRoom}. Nothing was changed.";
         }

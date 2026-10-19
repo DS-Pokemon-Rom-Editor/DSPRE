@@ -41,7 +41,7 @@ namespace DSPRE.Csv
             _moves = new CsvNames(moves, "move");
             _count = count;
             // The game's entries hold the move in 9 bits; hg-engine's hold 16.
-            _lastMove = Math.Min(moves.Length - 1, LearnsetData.UsesWideEntries ? 0xFFFE : (1 << LearnsetData.bitsMove) - 1);
+            _lastMove = Math.Min(moves.Length - 1, LearnsetData.UsesWideEntries ? 0xFFFE : (1 << LearnsetData.BitsMove) - 1);
             _current = current;
         }
 

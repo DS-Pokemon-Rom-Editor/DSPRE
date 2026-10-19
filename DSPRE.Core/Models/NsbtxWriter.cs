@@ -57,7 +57,7 @@ namespace DSPRE.Models
                 }
                 return c;
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("NsbtxWriter.Read", ex); return null; }
         }
 
         /// <summary>Adds pictures to an existing pack, keeping every texture and palette it had byte for byte.</summary>

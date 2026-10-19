@@ -142,7 +142,7 @@ namespace DSPRE.Avalonia.Data
                     if (_kind == null)
                     {
                         try { _kind = Identify(new ScriptNarc(Archive.Dir).Get(Index)); }
-                        catch { _kind = Kind.Unknown; }
+                        catch (Exception ex) { AppLogger.WarnOnce("UnitPart.Kind", ex); _kind = Kind.Unknown; }
                     }
                     return _kind.Value;
                 }
@@ -209,14 +209,14 @@ namespace DSPRE.Avalonia.Data
 
         private static Aside AsideOf(Archive a, int index)
         {
-            (string, DirNames, int) key = (RomInfo.workDir ?? "", a.Dir, index);
+            (string, DirNames, int) key = (RomInfo.WorkDir ?? "", a.Dir, index);
             lock (_aside)
                 if (_aside.TryGetValue(key, out Aside known)) return known;
             Aside found = Aside.Picture;
             if (a.Pokewalker == null)
             {
                 byte[] b = null;
-                try { b = new ScriptNarc(a.Dir).Get(index); } catch { }
+                try { b = new ScriptNarc(a.Dir).Get(index); } catch { }   // an entry that can't be read is treated as empty
                 Kind kind = Identify(b);
                 if (kind == Kind.CellAnimation) found = Aside.Timing;
                 else if (ModelAssets.Identify(b) is not (ModelAssets.Kind.NotThreeD or ModelAssets.Kind.Empty)) found = Aside.ThreeD;
@@ -369,11 +369,11 @@ namespace DSPRE.Avalonia.Data
             if (fileCount <= 0) return units;
 
             int stride = 0;
-            try { stride = a.StrideNow?.Invoke() ?? 0; } catch { }
+            try { stride = a.StrideNow?.Invoke() ?? 0; } catch (Exception ex) { AppLogger.Warn("Graphic assets: stride: " + ex.Message); }
             if (stride <= 0) stride = a.Stride > 0 ? a.Stride : 1;
 
             string[] partNames = a.PartNames;
-            try { partNames = a.PartNamesNow?.Invoke() ?? a.PartNames; } catch { }
+            try { partNames = a.PartNamesNow?.Invoke() ?? a.PartNames; } catch (Exception ex) { AppLogger.Warn("Graphic assets: part names: " + ex.Message); }
             int at = 0;
 
             if (a.LeadIn > 0)
@@ -390,7 +390,7 @@ namespace DSPRE.Avalonia.Data
             {
                 int n = Math.Min(stride, fileCount - at);
                 string name = null;
-                try { name = a.NameOf?.Invoke(at); } catch { }
+                try { name = a.NameOf?.Invoke(at); } catch { }   // an entry without a name uses the archive's title
                 Unit u = new Unit { Archive = a, Name = name ?? a.Title };
                 for (int k = 0; k < n; k++)
                     u.Parts.Add(new UnitPart
@@ -429,8 +429,8 @@ namespace DSPRE.Avalonia.Data
 
             private static void Build()
             {
-                string now = RomInfo.gameDirs != null && RomInfo.gameDirs.ContainsKey(DirNames.itemIcons)
-                    ? RomInfo.gameDirs[DirNames.itemIcons].unpackedDir : null;
+                string now = RomInfo.GameDirs != null && RomInfo.GameDirs.ContainsKey(DirNames.ItemIcons)
+                    ? RomInfo.GameDirs[DirNames.ItemIcons].unpackedDir : null;
                 if (_builtFor == now && _icons != null) return;
 
                 _icons = new List<Icon>();
@@ -447,8 +447,8 @@ namespace DSPRE.Avalonia.Data
                     {
                         if (!DSPRE.ROMFiles.ItemTable.Exists(item)) continue;
                         ItemNarcTableEntry row = DSPRE.ROMFiles.ItemTable.Read(item);
-                        int drawing = (int)row.itemIcon;
-                        int colours = (int)row.itemPalette;
+                        int drawing = (int)row.ItemIcon;
+                        int colours = (int)row.ItemPalette;
 
                         // Items with the same drawing and the same colours look identical, so they share a
                         // row. Items sharing only the drawing get a row each: four of the status healers
@@ -484,9 +484,9 @@ namespace DSPRE.Avalonia.Data
             {
                 try
                 {
-                    return DSPRE.ROMFiles.ItemTable.Exists(itemId) ? (int)DSPRE.ROMFiles.ItemTable.Read(itemId).itemIcon : -1;
+                    return DSPRE.ROMFiles.ItemTable.Exists(itemId) ? (int)DSPRE.ROMFiles.ItemTable.Read(itemId).ItemIcon : -1;
                 }
-                catch { return -1; }
+                catch (Exception ex) { AppLogger.WarnOnce("ItemIcons.DrawingForItem", ex); return -1; }
             }
 
             public static string NameOfEntry(int entry)
@@ -516,7 +516,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The first cell layout among an archive's opening members, or -1.</summary>
         private static int FirstCellLayout(DirNames dir)
         {
-            (string, DirNames dir) key = (RomInfo.workDir ?? "", dir);
+            (string, DirNames dir) key = (RomInfo.WorkDir ?? "", dir);
             lock (_firstCellLayout)
                 if (_firstCellLayout.TryGetValue(key, out int known)) return known;
             int found = -1;
@@ -526,7 +526,7 @@ namespace DSPRE.Avalonia.Data
                 for (int i = 0; narc.Available && i < Math.Min(8, narc.Count) && found < 0; i++)
                     if (Identify(narc.Get(i)) == Kind.CellLayout) found = i;
             }
-            catch { }
+            catch (Exception ex) { AppLogger.Warn("Graphic assets: first cell layout: " + ex.Message); }
             lock (_firstCellLayout) _firstCellLayout[key] = found;
             return found;
         }
@@ -534,10 +534,10 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The footprint archive's entry for a species, or -1 when the game has none for it.</summary>
         public static int FootprintEntry(int species)
         {
-            int c = FirstCellLayout(DirNames.footprintGraphics);
+            int c = FirstCellLayout(DirNames.FootprintGraphics);
             if (c < 0 || species < 0) return -1;
             int entry = c + 1 + species;
-            return entry < new ScriptNarc(DirNames.footprintGraphics).Count ? entry : -1;
+            return entry < new ScriptNarc(DirNames.FootprintGraphics).Count ? entry : -1;
         }
 
         private static (string Rom, DSPRE.ROMFiles.PokewalkerSprites Index) _pokewalker;
@@ -545,11 +545,11 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The Pokéwalker picture index for the open ROM, or null when it can't be read.</summary>
         public static DSPRE.ROMFiles.PokewalkerSprites PokewalkerIndex()
         {
-            string rom = (RomInfo.workDir ?? "") + "|" + (HgEngine.HgEngineProject.IsActive ? HgEngine.HgEngineProject.RepoRootWindows : "");
+            string rom = (RomInfo.WorkDir ?? "") + "|" + (HgEngine.HgEngineProject.IsActive ? HgEngine.HgEngineProject.RepoRootWindows : "");
             (string Rom, PokewalkerSprites Index) known = _pokewalker;
             if (known.Rom == rom) return known.Index;
             DSPRE.ROMFiles.PokewalkerSprites index = null;
-            try { index = DSPRE.ROMFiles.PokewalkerSprites.Load(new ScriptNarc(DirNames.pokewalkerSprites).Count, out _); } catch { }
+            try { index = DSPRE.ROMFiles.PokewalkerSprites.Load(new ScriptNarc(DirNames.PokewalkerSprites).Count, out _); } catch (Exception ex) { AppLogger.Warn("Pokewalker sprite index: " + ex.Message); }
             _pokewalker = (rom, index);
             return index;
         }
@@ -574,7 +574,7 @@ namespace DSPRE.Avalonia.Data
                 if (string.IsNullOrEmpty(name) || name.Trim('-').Length == 0) return null;
                 return name;
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("GraphicAssets.FromList", ex); return null; }
         }
 
         /// <summary>
@@ -584,7 +584,7 @@ namespace DSPRE.Avalonia.Data
         public static readonly Archive[] All =
         {
             // Six files per Pokemon, in this order, per PokemonSpriteEditorViewModel.cs:24 and :855.
-            new Archive { Dir = DirNames.pokemonBattleSprites, Title = "Pokémon battle sprites", In = Group.PokemonSprites,
+            new Archive { Dir = DirNames.PokemonBattleSprites, Title = "Pokémon battle sprites", In = Group.PokemonSprites,
                 What = "Front and back of every Pokémon as it appears in a battle, with its normal and shiny colours.",
                 Colours = Pairing.NearestInSameArchive, DeepEditor = "Pokémon Sprite Editor",
                 ScrambledPixels = true, FrameWidth = 80, FrameHeight = 80,
@@ -598,7 +598,7 @@ namespace DSPRE.Avalonia.Data
                 NameOf = i => FromList(RomInfo.GetPokemonNames, i / 6) },
             // This archive is not laid out in runs: a form's two drawings sit near the front and its two
             // sets of colours a hundred files further on.
-            new Archive { Dir = DirNames.otherPokemonBattleSprites, Title = "Alternate form sprites", In = Group.PokemonSprites,
+            new Archive { Dir = DirNames.OtherPokemonBattleSprites, Title = "Alternate form sprites", In = Group.PokemonSprites,
                 What = "Battle sprites for the forms that are not a Pokémon's default one.",
                 Colours = Pairing.NearestInSameArchive, DeepEditor = "Pokémon Sprite Editor",
                 ScrambledPixels = true, FrameWidth = 80, FrameHeight = 80,
@@ -606,27 +606,27 @@ namespace DSPRE.Avalonia.Data
                 ShinyColourEntry = i => AlternateFormSprites.ColoursFor(i, shiny: true),
                 NameOf = i => AlternateFormSprites.WhoOwns(i)?.Form.Name,
                 BuildUnits = count => AlternateFormSprites.UnitsFor(
-                    All.First(x => x.Dir == DirNames.otherPokemonBattleSprites), count) },
+                    All.First(x => x.Dir == DirNames.OtherPokemonBattleSprites), count) },
             // Seven shared files, then one icon per Pokemon, then eggs and forms (PokemonIconFiles).
-            new Archive { Dir = DirNames.monIcons, Title = "Pokémon party icons", In = Group.PokemonIcons,
+            new Archive { Dir = DirNames.MonIcons, Title = "Pokémon party icons", In = Group.PokemonIcons,
                 What = "The small pictures used in the party, the box and the menus.",
                 Colours = Pairing.OnePaletteForAll, DeepEditor = "Pokémon Editor",
                 PixelWidth = 32, FrameWidth = 32, FrameHeight = 32,
                 ColourBank = i =>
                 {
                     if (i < 7) return 0;
-                    try { return DSUtils.GetMonIconPaletteId(i - 7); } catch { return 0; }
+                    try { return DSUtils.GetMonIconPaletteId(i - 7); } catch (Exception ex) { AppLogger.WarnOnce("GraphicAssets.?", ex); return 0; }
                 },
                 NameOf = i =>
                 {
                     PokemonIconFiles.Icon icon = DSPRE.ROMFiles.PokemonIconFiles.Describe(i);
                     if (icon == null) return null;
                     try { return DSPRE.ROMFiles.PokemonIconFiles.Label(icon, RomInfo.GetPokemonNames()); }
-                    catch { return DSPRE.ROMFiles.PokemonIconFiles.Label(icon, null); }
+                    catch (Exception ex) { AppLogger.WarnOnce("GraphicAssets.?", ex); return DSPRE.ROMFiles.PokemonIconFiles.Label(icon, null); }
                 },
-                BuildUnits = n => GraphicUnits.PartyIcons(All.First(x => x.Dir == DirNames.monIcons), n) },
+                BuildUnits = n => GraphicUnits.PartyIcons(All.First(x => x.Dir == DirNames.MonIcons), n) },
 
-            new Archive { Dir = DirNames.trainerGraphics, Title = "Trainer sprites", In = Group.Trainers,
+            new Archive { Dir = DirNames.TrainerGraphics, Title = "Trainer sprites", In = Group.Trainers,
                 What = "Every trainer class as it appears when a battle starts.",
                 DeepEditor = "Trainer Sprite Editor",
                 Stride = 5,
@@ -643,7 +643,7 @@ namespace DSPRE.Avalonia.Data
                 ColourEntry = i => TrainerGraphicsLayout.ColoursEntry(TrainerGraphicsLayout.ClassOf(i)),
                 DrawingEntry = i => TrainerGraphicsLayout.DrawingEntry(TrainerGraphicsLayout.ClassOf(i)),
                 NameOf = i => FromList(RomInfo.GetTrainerClassNames, TrainerGraphicsLayout.ClassOf(i)) },
-            new Archive { Dir = DirNames.trainerBackGraphics, Title = "Trainer back sprites", In = Group.Trainers,
+            new Archive { Dir = DirNames.TrainerBackGraphics, Title = "Trainer back sprites", In = Group.Trainers,
                 What = "The player and partners seen from behind, throwing a Poké Ball.",
                 DeepEditor = "Trainer Back Sprite Editor",
                 Stride = 5,
@@ -660,20 +660,20 @@ namespace DSPRE.Avalonia.Data
                 ColourEntry = i => TrainerGraphicsLayout.ColoursEntry(TrainerGraphicsLayout.ClassOf(i)),
                 DrawingEntry = i => TrainerGraphicsLayout.DrawingEntry(TrainerGraphicsLayout.ClassOf(i)),
                 NameOf = i => DSPRE.ROMFiles.TrainerBackSprites.Names(TrainerGraphicsLayout.ClassOf(i) + 1)[TrainerGraphicsLayout.ClassOf(i)] },
-            new Archive { Dir = DirNames.trainerCardGraphics, Title = "Trainer card", In = Group.Trainers,
+            new Archive { Dir = DirNames.TrainerCardGraphics, Title = "Trainer card", In = Group.Trainers,
                 What = "The trainer card's face and back, and the poses drawn on it.",
                 DrawingEntry = GraphicUnits.TrainerCardDrawingFor,
                 ColourEntry = GraphicUnits.TrainerCardColoursFor,
                 BuildUnits = n => GraphicUnits.TrainerCard(
-                    All.First(x => x.Dir == DirNames.trainerCardGraphics), n) },
+                    All.First(x => x.Dir == DirNames.TrainerCardGraphics), n) },
 
-            new Archive { Dir = DirNames.encounterEffectGraphics, Title = "Battle intros", In = Group.Trainers,
+            new Archive { Dir = DirNames.EncounterEffectGraphics, Title = "Battle intros", In = Group.Trainers,
                 What = "The faces, banners, frames and VS mark special trainer battles open with.",
                 DeepEditor = "VS Intro Editor",
                 // Sets keep their palette next to the drawing, before it or, in HGSS banners, after it.
                 ColourEntry = i =>
                 {
-                    ScriptNarc narc = new ScriptNarc(DirNames.encounterEffectGraphics);
+                    ScriptNarc narc = new ScriptNarc(DirNames.EncounterEffectGraphics);
                     bool Palette(int k) => k >= 0 && k < narc.Count && Identify(narc.Get(k)) == Kind.Palette;
                     // A layout or animation uses its set's palette, which sits beside the set's drawing.
                     int at = i;
@@ -684,14 +684,14 @@ namespace DSPRE.Avalonia.Data
                     return Palette(at - 1) ? at - 1 : Palette(at + 1) ? at + 1 : -1;
                 } },
 
-            new Archive { Dir = DirNames.battleBg, Title = "Battle backgrounds", In = Group.BattleScenery,
+            new Archive { Dir = DirNames.BattleBg, Title = "Battle backgrounds", In = Group.BattleScenery,
                 What = "The scenery behind a battle, and the sweeping backgrounds some moves put up.",
                 ColourEntry = GraphicUnits.BackdropColours,
                 DrawingEntry = GraphicUnits.PanelDrawing,
                 ArrangementEntry = GraphicUnits.BackdropArrangement,
                 NameOf = GraphicUnits.BackdropName,
-                BuildUnits = n => GraphicUnits.BattleBackdrops(All.First(x => x.Dir == DirNames.battleBg), n) },
-            new Archive { Dir = DirNames.battleObj, Title = "Battle objects", In = Group.BattleScenery,
+                BuildUnits = n => GraphicUnits.BattleBackdrops(All.First(x => x.Dir == DirNames.BattleBg), n) },
+            new Archive { Dir = DirNames.BattleObj, Title = "Battle objects", In = Group.BattleScenery,
                 What = "The ground the Pokémon stand on, the HP bars, the name boxes and the rest of the "
                      + "battle screen.",
                 ColourEntry = BattleObjects.ColoursFor,
@@ -700,8 +700,8 @@ namespace DSPRE.Avalonia.Data
                 PixelWidthOf = BattleObjects.WidthFor,
                 NameOf = BattleObjects.NameOf,
                 AlsoUsesColours = BattleObjects.AlsoUsesColours,
-                BuildUnits = n => BattleObjects.Units(All.First(x => x.Dir == DirNames.battleObj), n) },
-            new Archive { Dir = DirNames.battleBgPlanm, Title = "Battle background colour cycles", In = Group.BattleChrome,
+                BuildUnits = n => BattleObjects.Units(All.First(x => x.Dir == DirNames.BattleObj), n) },
+            new Archive { Dir = DirNames.BattleBgPlanm, Title = "Battle background colour cycles", In = Group.BattleChrome,
                 What = "Colour changes played over a battle background. HeartGold and SoulSilver only.",
                 Colours = Pairing.NotKnown,
                 // One per entry rather than the archive's title on all of them, which listed thirty one
@@ -710,84 +710,84 @@ namespace DSPRE.Avalonia.Data
                 CannotImportBecause = "These are lists of colour changes played over a background, not pictures. "
                                     + "There is nothing here to put a PNG in place of." },
 
-            new Archive { Dir = DirNames.wazaEffectChar, Title = "Move effect drawings", In = Group.MoveEffects,
+            new Archive { Dir = DirNames.WazaEffectChar, Title = "Move effect drawings", In = Group.MoveEffects,
                 What = "The flat drawings a move animation puts on the screen.",
-                Colours = Pairing.SameIndexInOtherArchive, ColourArchive = DirNames.wazaEffectPltt,
-                BuildUnits = n => GraphicUnits.MoveEffects(All.First(x => x.Dir == DirNames.wazaEffectChar), n) },
-            new Archive { Dir = DirNames.wazaEffectPltt, Title = "Move effect colours", In = Group.MoveEffects,
+                Colours = Pairing.SameIndexInOtherArchive, ColourArchive = DirNames.WazaEffectPltt,
+                BuildUnits = n => GraphicUnits.MoveEffects(All.First(x => x.Dir == DirNames.WazaEffectChar), n) },
+            new Archive { Dir = DirNames.WazaEffectPltt, Title = "Move effect colours", In = Group.MoveEffects,
                 What = "The colours the move effect drawings are painted with." },
-            new Archive { Dir = DirNames.wazaEffectCell, Title = "Move effect layouts", In = Group.MoveEffects,
+            new Archive { Dir = DirNames.WazaEffectCell, Title = "Move effect layouts", In = Group.MoveEffects,
                 What = "How the move effect drawings are cut up and placed on screen.",
-                Colours = Pairing.SameIndexInOtherArchive, ColourArchive = DirNames.wazaEffectPltt,
-                DrawingArchive = DirNames.wazaEffectChar,
+                Colours = Pairing.SameIndexInOtherArchive, ColourArchive = DirNames.WazaEffectPltt,
+                DrawingArchive = DirNames.WazaEffectChar,
                 CannotImportBecause = "This is the arrangement of the pieces, not a picture of them. Edit the "
                                     + "drawing it arranges instead." },
-            new Archive { Dir = DirNames.wazaEffectCellAnm, Title = "Move effect animations", In = Group.MoveEffects,
+            new Archive { Dir = DirNames.WazaEffectCellAnm, Title = "Move effect animations", In = Group.MoveEffects,
                 What = "The order and timing the move effect layouts are shown in.",
                 Colours = Pairing.NotKnown,
                 CannotImportBecause = "This is timing, not a picture. There is nothing here a PNG could replace." },
 
             // The game holds a table saying which drawing and which colours each item uses, so neither has
             // to be guessed at. See DSUtils.GetItemPicRaw for the same table read the same way.
-            new Archive { Dir = DirNames.itemIcons, Title = "Item icons", In = Group.Items,
+            new Archive { Dir = DirNames.ItemIcons, Title = "Item icons", In = Group.Items,
                 What = "The picture of every item as it appears in the bag.",
                 Colours = Pairing.NearestInSameArchive, DeepEditor = "Item Editor",
                 NameOf = i => ItemIcons.NameOfEntry(i),
                 ColourEntry = i => ItemIcons.ColoursFor(i),
-                BuildUnits = n => GraphicUnits.ItemIcons(All.First(x => x.Dir == DirNames.itemIcons), n) },
-            new Archive { Dir = DirNames.fonts, Title = "Fonts", In = Group.TextAndFonts,
+                BuildUnits = n => GraphicUnits.ItemIcons(All.First(x => x.Dir == DirNames.ItemIcons), n) },
+            new Archive { Dir = DirNames.Fonts, Title = "Fonts", In = Group.TextAndFonts,
                 What = "The letters the game writes text with.",
-                NameOf = i => NamedArchives.NameOf(DirNames.fonts, i),
-                ColourEntry = i => NamedArchives.ColoursFor(DirNames.fonts, i),
-                BuildUnits = n => NamedArchives.Units(All.First(x => x.Dir == DirNames.fonts), n) },
-            new Archive { Dir = DirNames.windowFrames, Title = "Text box frames", In = Group.Windows,
+                NameOf = i => NamedArchives.NameOf(DirNames.Fonts, i),
+                ColourEntry = i => NamedArchives.ColoursFor(DirNames.Fonts, i),
+                BuildUnits = n => NamedArchives.Units(All.First(x => x.Dir == DirNames.Fonts), n) },
+            new Archive { Dir = DirNames.WindowFrames, Title = "Text box frames", In = Group.Windows,
                 What = "The borders drawn around text boxes and menus. The cursors have no colours of "
                      + "their own: the game draws each one in the colours of the box it appears in, so "
                      + "what is shown here is a stand-in.",
                 ColourEntry = i => GraphicUnits.WindowFrameColours(i),
-                BuildUnits = n => GraphicUnits.WindowFrames(All.First(x => x.Dir == DirNames.windowFrames), n) },
+                BuildUnits = n => GraphicUnits.WindowFrames(All.First(x => x.Dir == DirNames.WindowFrames), n) },
             // Left ungrouped on purpose.
-            new Archive { Dir = DirNames.synthOverlay, Title = "Map screen overlay", In = Group.Windows,
+            new Archive { Dir = DirNames.SynthOverlay, Title = "Map screen overlay", In = Group.Windows,
                 What = "Pieces drawn over the map screen. In Diamond, Pearl and Platinum this is the "
                      + "weather; in HeartGold and SoulSilver it is something else.",
                 DeepEditor = "Header Editor" },
-            new Archive { Dir = DirNames.weatherGraphics, Title = "Weather", In = Group.Windows,
+            new Archive { Dir = DirNames.WeatherGraphics, Title = "Weather", In = Group.Windows,
                 What = "The weather drawn over the map screen.",
                 DeepEditor = "Header Editor" },
             // One drawing and its colours per banner style, numbered one below the header's area icon.
-            new Archive { Dir = DirNames.areaWindowGraphics, Title = "Location banner", In = Group.Places,
+            new Archive { Dir = DirNames.AreaWindowGraphics, Title = "Location banner", In = Group.Places,
                 What = "The banner shown when you walk into a new place.", DeepEditor = "Header Editor",
                 ColourEntry = i => i | 1,
-                BuildUnits = n => GraphicUnits.AreaWindows(All.First(x => x.Dir == DirNames.areaWindowGraphics), n) },
+                BuildUnits = n => GraphicUnits.AreaWindows(All.First(x => x.Dir == DirNames.AreaWindowGraphics), n) },
 
             // Seal stickers share one set of colours; the capsule screens have their own.
-            new Archive { Dir = DirNames.sealGraphics, Title = "Ball Capsules", In = Group.Items,
+            new Archive { Dir = DirNames.SealGraphics, Title = "Ball Capsules", In = Group.Items,
                 What = "The seals stuck on a Ball Capsule and the screens they are placed on.",
                 DeepEditor = "Ball Capsules",
-                BuildUnits = n => GraphicUnits.SealGraphics(All.First(x => x.Dir == DirNames.sealGraphics), n),
-                ColourEntry = i => gameFamily == GameFamilies.HGSS ? (i is >= 39 and <= 119 ? 6 : -1)
+                BuildUnits = n => GraphicUnits.SealGraphics(All.First(x => x.Dir == DirNames.SealGraphics), n),
+                ColourEntry = i => GameFamily == GameFamilies.HGSS ? (i is >= 39 and <= 119 ? 6 : -1)
                                  : i is >= 184 and <= 264 ? 293 : i == 267 ? 287 : i is 268 or 269 ? 288 : -1 },
 
-            new Archive { Dir = DirNames.dungeonCutinGraphics, Title = "Place splash screens", In = Group.Places,
+            new Archive { Dir = DirNames.DungeonCutinGraphics, Title = "Place splash screens", In = Group.Places,
                 BuildUnits = n => DungeonCutinUnits.UnitsFor(
-                    All.First(x => x.Dir == DirNames.dungeonCutinGraphics), n),
+                    All.First(x => x.Dir == DirNames.DungeonCutinGraphics), n),
                 What = "The picture shown when you enter a dungeon. HeartGold and SoulSilver only." },
 
             // What is on the bottom screen while you walk around. The nearest-palette rule lands right
             // for both of the HGSS archives: the cursor's own colours sit immediately before it.
-            new Archive { Dir = DirNames.fieldTouchMenu, Title = "Field touch menu", In = Group.BottomScreen,
+            new Archive { Dir = DirNames.FieldTouchMenu, Title = "Field touch menu", In = Group.BottomScreen,
                 What = "The menu panel on the bottom screen while you walk around, with its seven icons, "
                      + "the registered item slots, the running shoes and the A button. "
                      + "HeartGold and SoulSilver only.",
                 DeepEditor = "Bottom Screen Editor" },
 
-            new Archive { Dir = DirNames.fieldTouchChoices, Title = "Field touch choices", In = Group.BottomScreen,
+            new Archive { Dir = DirNames.FieldTouchChoices, Title = "Field touch choices", In = Group.BottomScreen,
                 What = "The Poké Ball screen a script puts up to ask a question on the bottom screen, with "
                      + "its yes/no and list arrangements and the red frame around the answer. "
                      + "HeartGold and SoulSilver only.",
                 DeepEditor = "Bottom Screen Editor" },
 
-            new Archive { Dir = DirNames.poketch, Title = "Pokétch", In = Group.BottomScreen,
+            new Archive { Dir = DirNames.Poketch, Title = "Pokétch", In = Group.BottomScreen,
                 What = "The Pokétch on the bottom screen: its casing in both colours, every application's "
                      + "screen and sprites, and the Poké Ball picture shown before you are given one. "
                      + "Diamond, Pearl and Platinum.",
@@ -797,53 +797,53 @@ namespace DSPRE.Avalonia.Data
                 ColourEntry = PoketchApps.ColoursFor,
                 ArrangementEntry = PoketchApps.ArrangementFor },
 
-            new Archive { Dir = DirNames.bagGraphics, Title = "Bag", In = Group.Items,
+            new Archive { Dir = DirNames.BagGraphics, Title = "Bag", In = Group.Items,
                 What = "The bag screen: the bag itself, its pockets and the item list.",
-                NameOf = i => ScreenGraphicsLayouts.NameOf(DirNames.bagGraphics, i),
-                DrawingEntry = i => ScreenGraphicsLayouts.DrawingFor(DirNames.bagGraphics, i),
-                ColourEntry = i => ScreenGraphicsLayouts.ColoursFor(DirNames.bagGraphics, i),
-                ColourBank = i => ScreenGraphicsLayouts.BankFor(DirNames.bagGraphics, i),
-                ArrangementEntry = i => ScreenGraphicsLayouts.ArrangementFor(DirNames.bagGraphics, i) },
+                NameOf = i => ScreenGraphicsLayouts.NameOf(DirNames.BagGraphics, i),
+                DrawingEntry = i => ScreenGraphicsLayouts.DrawingFor(DirNames.BagGraphics, i),
+                ColourEntry = i => ScreenGraphicsLayouts.ColoursFor(DirNames.BagGraphics, i),
+                ColourBank = i => ScreenGraphicsLayouts.BankFor(DirNames.BagGraphics, i),
+                ArrangementEntry = i => ScreenGraphicsLayouts.ArrangementFor(DirNames.BagGraphics, i) },
             // One palette, layout and animation first, then a footprint per Pokemon.
-            new Archive { Dir = DirNames.footprintGraphics, Title = "Footprints", In = Group.PokemonIcons,
+            new Archive { Dir = DirNames.FootprintGraphics, Title = "Footprints", In = Group.PokemonIcons,
                 What = "Each Pokémon's footprint, shown in the Pokédex and on the summary screen.",
                 Colours = Pairing.OnePaletteForAll,
-                CellPlacementEntry = _ => FirstCellLayout(DirNames.footprintGraphics),
+                CellPlacementEntry = _ => FirstCellLayout(DirNames.FootprintGraphics),
                 // After the colours, animation and cell layout comes one drawing per species, from species 0.
-                NameOf = i => { int c = FirstCellLayout(DirNames.footprintGraphics); return c >= 0 && i > c ? FromList(RomInfo.GetPokemonNames, i - c - 1) : null; } },
-            new Archive { Dir = DirNames.pokedexGraphics, Title = "Pokédex", In = Group.Windows,
+                NameOf = i => { int c = FirstCellLayout(DirNames.FootprintGraphics); return c >= 0 && i > c ? FromList(RomInfo.GetPokemonNames, i - c - 1) : null; } },
+            new Archive { Dir = DirNames.PokedexGraphics, Title = "Pokédex", In = Group.Windows,
                 What = "The Pokédex screens: backgrounds, buttons, type icons and the sprites on them.",
-                NameOf = i => ScreenGraphicsLayouts.NameOf(DirNames.pokedexGraphics, i),
-                DrawingEntry = i => ScreenGraphicsLayouts.DrawingFor(DirNames.pokedexGraphics, i),
-                ColourEntry = i => ScreenGraphicsLayouts.ColoursFor(DirNames.pokedexGraphics, i),
-                ColourBank = i => ScreenGraphicsLayouts.BankFor(DirNames.pokedexGraphics, i),
-                ArrangementEntry = i => ScreenGraphicsLayouts.ArrangementFor(DirNames.pokedexGraphics, i) },
-            new Archive { Dir = DirNames.summaryGraphics, Title = "Summary screen", In = Group.Windows,
+                NameOf = i => ScreenGraphicsLayouts.NameOf(DirNames.PokedexGraphics, i),
+                DrawingEntry = i => ScreenGraphicsLayouts.DrawingFor(DirNames.PokedexGraphics, i),
+                ColourEntry = i => ScreenGraphicsLayouts.ColoursFor(DirNames.PokedexGraphics, i),
+                ColourBank = i => ScreenGraphicsLayouts.BankFor(DirNames.PokedexGraphics, i),
+                ArrangementEntry = i => ScreenGraphicsLayouts.ArrangementFor(DirNames.PokedexGraphics, i) },
+            new Archive { Dir = DirNames.SummaryGraphics, Title = "Summary screen", In = Group.Windows,
                 What = "The Pokémon summary pages: backgrounds, balls, markings, ribbons and the sprites on them.",
-                NameOf = i => ScreenGraphicsLayouts.NameOf(DirNames.summaryGraphics, i),
-                DrawingEntry = i => ScreenGraphicsLayouts.DrawingFor(DirNames.summaryGraphics, i),
-                ColourEntry = i => ScreenGraphicsLayouts.ColoursFor(DirNames.summaryGraphics, i),
-                ColourBank = i => ScreenGraphicsLayouts.BankFor(DirNames.summaryGraphics, i),
-                ArrangementEntry = i => ScreenGraphicsLayouts.ArrangementFor(DirNames.summaryGraphics, i) },
-            new Archive { Dir = DirNames.summarySprites, Title = "Summary screen sprites", In = Group.Windows,
+                NameOf = i => ScreenGraphicsLayouts.NameOf(DirNames.SummaryGraphics, i),
+                DrawingEntry = i => ScreenGraphicsLayouts.DrawingFor(DirNames.SummaryGraphics, i),
+                ColourEntry = i => ScreenGraphicsLayouts.ColoursFor(DirNames.SummaryGraphics, i),
+                ColourBank = i => ScreenGraphicsLayouts.BankFor(DirNames.SummaryGraphics, i),
+                ArrangementEntry = i => ScreenGraphicsLayouts.ArrangementFor(DirNames.SummaryGraphics, i) },
+            new Archive { Dir = DirNames.SummarySprites, Title = "Summary screen sprites", In = Group.Windows,
                 What = "The summary screen's ball cells, markings, arrows and other sprites. HeartGold and SoulSilver only." },
-            new Archive { Dir = DirNames.openingDemoGraphics, Title = "Opening movie", In = Group.Places,
+            new Archive { Dir = DirNames.OpeningDemoGraphics, Title = "Opening movie", In = Group.Places,
                 What = "The pictures in the opening movie. HeartGold and SoulSilver only.",
-                NameOf = i => ScreenGraphicsLayouts.NameOf(DirNames.openingDemoGraphics, i),
-                DrawingEntry = i => ScreenGraphicsLayouts.DrawingFor(DirNames.openingDemoGraphics, i),
-                ColourEntry = i => ScreenGraphicsLayouts.ColoursFor(DirNames.openingDemoGraphics, i),
-                ColourBank = i => ScreenGraphicsLayouts.BankFor(DirNames.openingDemoGraphics, i),
-                ArrangementEntry = i => ScreenGraphicsLayouts.ArrangementFor(DirNames.openingDemoGraphics, i) },
-            new Archive { Dir = DirNames.pokewalkerSprites, Title = "Pokéwalker Pokémon", In = Group.PokemonIcons,
+                NameOf = i => ScreenGraphicsLayouts.NameOf(DirNames.OpeningDemoGraphics, i),
+                DrawingEntry = i => ScreenGraphicsLayouts.DrawingFor(DirNames.OpeningDemoGraphics, i),
+                ColourEntry = i => ScreenGraphicsLayouts.ColoursFor(DirNames.OpeningDemoGraphics, i),
+                ColourBank = i => ScreenGraphicsLayouts.BankFor(DirNames.OpeningDemoGraphics, i),
+                ArrangementEntry = i => ScreenGraphicsLayouts.ArrangementFor(DirNames.OpeningDemoGraphics, i) },
+            new Archive { Dir = DirNames.PokewalkerSprites, Title = "Pokéwalker Pokémon", In = Group.PokemonIcons,
                 What = "The Pokémon on the Pokéwalker's screen, two frames each. Four shades of grey.",
                 Pokewalker = (DSPRE.ROMFiles.PokewalkerImage.SpriteWidth, DSPRE.ROMFiles.PokewalkerImage.SpriteHeight),
                 NameOf = PokewalkerPictureName },
-            new Archive { Dir = DirNames.pokewalkerIcons, Title = "Pokéwalker icons", In = Group.PokemonIcons,
+            new Archive { Dir = DirNames.PokewalkerIcons, Title = "Pokéwalker icons", In = Group.PokemonIcons,
                 What = "The Pokéwalker's small pictures, two frames each. Four shades of grey.",
                 Pokewalker = (DSPRE.ROMFiles.PokewalkerImage.IconWidth, DSPRE.ROMFiles.PokewalkerImage.IconHeight),
                 // The same order as the party icons, without their first entries.
                 NameOf = i => RomInfo.PokewalkerIconLeadIn < 0 ? null
-                    : All.First(x => x.Dir == DirNames.monIcons).NameOf?.Invoke(i + RomInfo.PokewalkerIconLeadIn) },
+                    : All.First(x => x.Dir == DirNames.MonIcons).NameOf?.Invoke(i + RomInfo.PokewalkerIconLeadIn) },
         };
 
         // ── reading ────────────────────────────────────────────────────────────────────────────────
@@ -857,7 +857,7 @@ namespace DSPRE.Avalonia.Data
             byte[] d = b;
             if (b.Length > 4 && (b[0] == 0x10 || b[0] == 0x11))
             {
-                try { byte[] u = NitroBgCodec.Inflate(b); if (u != null && u.Length >= 4) d = u; } catch { }
+                try { byte[] u = NitroBgCodec.Inflate(b); if (u != null && u.Length >= 4) d = u; } catch { }   // data that doesn't inflate is identified as it is stored
             }
             if (d.Length < 4) return Kind.Empty;
             switch (System.Text.Encoding.ASCII.GetString(d, 0, 4))
@@ -887,7 +887,7 @@ namespace DSPRE.Avalonia.Data
             if (b == null || b.Length < 5) return b;
             if (b[0] != 0x10 && b[0] != 0x11) return b;
             try { byte[] u = NitroBgCodec.Inflate(b); return u != null && u.Length >= 4 ? u : b; }
-            catch { return b; }
+            catch (Exception ex) { AppLogger.WarnOnce("GraphicAssets.Unsqueeze", ex); return b; }
         }
 
         /// <summary>Squeezes a file back down the way the game stores it. </summary>
@@ -938,7 +938,7 @@ namespace DSPRE.Avalonia.Data
         // Where the colours sit in each archive.
         private static readonly Dictionary<(string Rom, DirNames Dir), List<int>> _paletteIndexes = new();
 
-        private static string OpenGame => (RomInfo.romID ?? "") + "|" + (RomInfo.workDir ?? "");
+        private static string OpenGame => (RomInfo.RomID ?? "") + "|" + (RomInfo.WorkDir ?? "");
 
         private static List<int> PaletteIndexes(DirNames dir, ScriptNarc narc)
         {
@@ -1052,7 +1052,7 @@ namespace DSPRE.Avalonia.Data
                 return "This entry is not a layout, so there is no assembled picture to put back.";
 
             int drawingAt = -1;
-            try { drawingAt = a.DrawingEntry?.Invoke(layoutIndex) ?? -1; } catch { }
+            try { drawingAt = a.DrawingEntry?.Invoke(layoutIndex) ?? -1; } catch { }   // without the game's pairing the drawing the picture was shown with is used
             // Where the game's pairing is not known, the drawing the picture was shown with is the one written.
             if (drawingAt < 0 && a.DrawingArchive == null) drawingAt = FindDrawingIndex(narc, layoutIndex);
             byte[] drawing = drawingAt >= 0 ? narc.Get(drawingAt) : null;
@@ -1134,7 +1134,7 @@ namespace DSPRE.Avalonia.Data
                 return "This entry is not a drawing, so there is no background to put back.";
 
             int arrangementAt = -1;
-            try { arrangementAt = a.ArrangementEntry?.Invoke(drawingIndex) ?? -1; } catch { }
+            try { arrangementAt = a.ArrangementEntry?.Invoke(drawingIndex) ?? -1; } catch { }   // without the game's pairing there is no arrangement to put back
             byte[] scr = arrangementAt >= 0 ? narc.Get(arrangementAt) : null;
             if (scr == null)
                 return "The arrangement this drawing is laid out by is not known, so it cannot be put back.";
@@ -1232,7 +1232,7 @@ namespace DSPRE.Avalonia.Data
                     {
                         // What the game itself pairs this layout with, where that is known.
                         int said = -1;
-                        try { said = a.DrawingEntry?.Invoke(index) ?? -1; } catch { }
+                        try { said = a.DrawingEntry?.Invoke(index) ?? -1; } catch { }   // without the game's pairing the drawing is found by searching
                         if (said >= 0) drawing = narc.Get(said);
                         drawing ??= FindDrawing(narc, index);
                     }
@@ -1392,7 +1392,7 @@ namespace DSPRE.Avalonia.Data
                 List<int> found = PaletteIndexes(a.Dir, narc);
                 return found.Count > 0 ? found[0] : -1;
             }
-            catch { return -1; }
+            catch (Exception ex) { AppLogger.WarnOnce("GraphicAssets.FirstPaletteIndex", ex); return -1; }
         }
 
         /// <summary>How many entries an archive has in the game that is open, or 0 if it has none.</summary>

@@ -30,8 +30,8 @@ namespace DSPRE.Avalonia
         public int AnimationCount => _anm?.Sequences.Count ?? 0;
 
         public bool Load(int charIdx, int plttIdx, int cellIdx, int anmIdx)
-            => Load(DirNames.wazaEffectChar, charIdx, DirNames.wazaEffectPltt, plttIdx,
-                    DirNames.wazaEffectCell, cellIdx, DirNames.wazaEffectCellAnm, anmIdx);
+            => Load(DirNames.WazaEffectChar, charIdx, DirNames.WazaEffectPltt, plttIdx,
+                    DirNames.WazaEffectCell, cellIdx, DirNames.WazaEffectCellAnm, anmIdx);
 
         public bool Load(DirNames charDir, int charIdx, DirNames plttDir, int plttIdx, DirNames cellDir, int cellIdx, DirNames anmDir, int anmIdx)
         {
@@ -169,9 +169,9 @@ namespace DSPRE.Avalonia
 
         private static string EntryPath(DirNames dir, int index)
         {
-            if (!gameDirs.ContainsKey(dir)) return null;
+            if (!GameDirs.ContainsKey(dir)) return null;
             DSUtils.TryUnpackNarcs(new List<DirNames> { dir });
-            string baseDir = gameDirs[dir].unpackedDir;
+            string baseDir = GameDirs[dir].unpackedDir;
             if (baseDir == null || !Directory.Exists(baseDir)) return null;
             string f = Path.Combine(baseDir, index.ToString("D4"));
             return File.Exists(f) ? f : null;

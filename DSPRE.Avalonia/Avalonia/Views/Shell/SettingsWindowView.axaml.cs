@@ -26,16 +26,16 @@ namespace DSPRE.Avalonia.Views.Shell
         }
 
         private async void Save_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-            => await VM.SaveCommand(this);
+            => await VM.SaveCommandAsync(this);
 
         private async void ChangeExportPath_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-            => await VM.ChangeExportPathCommand(this);
+            => await VM.ChangeExportPathCommandAsync(this);
 
         private async void ChangeMapImportPath_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-            => await VM.ChangeMapImportPathCommand(this);
+            => await VM.ChangeMapImportPathCommandAsync(this);
 
         private async void ChangeOpenDefaultRom_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-            => await VM.ChangeOpenDefaultRomCommand(this);
+            => await VM.ChangeOpenDefaultRomCommandAsync(this);
 
         private void ClearExportPath_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
             => VM.ClearExportPath();
@@ -47,13 +47,13 @@ namespace DSPRE.Avalonia.Views.Shell
             => VM.ClearOpenDefaultRom();
 
         private async void ChangeEmulatorPath_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-            => await VM.ChangeEmulatorPathCommand(this);
+            => await VM.ChangeEmulatorPathCommandAsync(this);
 
         private void ClearEmulatorPath_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
             => VM.ClearEmulatorPath();
 
         private async void ChooseTestSave_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-            => await VM.ChooseTestSaveCommand(this);
+            => await VM.ChooseTestSaveCommandAsync(this);
 
         private void ClearTestSave_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
             => VM.TestSavePath = "";

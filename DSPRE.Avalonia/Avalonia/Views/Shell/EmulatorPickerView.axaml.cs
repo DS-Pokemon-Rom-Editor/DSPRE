@@ -31,7 +31,7 @@ namespace DSPRE.Avalonia.Views.Shell
             List<FilePickerFileType> filters = OperatingSystem.IsWindows()
                 ? new List<FilePickerFileType> { new FilePickerFileType("Programs") { Patterns = new[] { "*.exe" } } }
                 : null;
-            string path = await DialogHelper.OpenFile(this, "Choose the emulator", filters);
+            string path = await DialogHelper.OpenFileAsync(this, "Choose the emulator", filters);
             if (path != null) VM.Path = path;
         }
 

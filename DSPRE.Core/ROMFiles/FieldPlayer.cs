@@ -279,25 +279,25 @@ namespace DSPRE.ROMFiles
     public static class FieldInteraction
     {
         /// <summary>The whole-matrix tile an event was placed on.</summary>
-        public static int TileX(Event e) => e.xMatrixPosition * MapFile.mapSize + e.xMapPosition;
-        public static int TileZ(Event e) => e.yMatrixPosition * MapFile.mapSize + e.yMapPosition;
+        public static int TileX(Event e) => e.XMatrixPosition * MapFile.MapSize + e.XMapPosition;
+        public static int TileZ(Event e) => e.YMatrixPosition * MapFile.MapSize + e.YMapPosition;
 
         /// <summary>Whether an overworld is on the map at all. </summary>
         public static bool IsPresent(Overworld o, Func<ushort, bool> flagIsSet) =>
-            o != null && (flagIsSet == null || !flagIsSet(o.flag));
+            o != null && (flagIsSet == null || !flagIsSet(o.Flag));
 
         /// <summary>The overworld standing on a tile, or null.</summary>
         public static Overworld OverworldAt(EventFile events, int tileX, int tileZ,
                                             Func<ushort, bool> flagIsSet = null) =>
-            events?.overworlds?.FirstOrDefault(
+            events?.Overworlds?.FirstOrDefault(
                 o => TileX(o) == tileX && TileZ(o) == tileZ && IsPresent(o, flagIsSet));
 
         /// <summary>Every tile an overworld occupies, for the player to bump into.</summary>
         public static HashSet<(int x, int z)> OccupiedTiles(EventFile events, Func<ushort, bool> flagIsSet = null)
         {
             HashSet<(int, int)> set = new HashSet<(int, int)>();
-            if (events?.overworlds == null) return set;
-            foreach (Overworld o in events.overworlds)
+            if (events?.Overworlds == null) return set;
+            foreach (Overworld o in events.Overworlds)
                 if (IsPresent(o, flagIsSet)) set.Add((TileX(o), TileZ(o)));
             return set;
         }
@@ -318,17 +318,17 @@ namespace DSPRE.ROMFiles
         public static Spawnable SpawnableAt(EventFile events, int tileX, int tileZ,
                                             MoveFacing playerFacing, Func<Spawnable, bool> hiddenStillThere = null)
         {
-            if (events?.spawnables == null) return null;
-            foreach (Spawnable s in events.spawnables)
+            if (events?.Spawnables == null) return null;
+            foreach (Spawnable s in events.Spawnables)
             {
                 if (TileX(s) != tileX || TileZ(s) != tileZ) continue;
 
-                if ((SpawnableKind)s.type == SpawnableKind.HiddenItem)
+                if ((SpawnableKind)s.Type == SpawnableKind.HiddenItem)
                 {
                     if (hiddenStillThere == null || hiddenStillThere(s)) return s;
                     continue;
                 }
-                if (CanTalkFrom(s.dir, playerFacing)) return s;
+                if (CanTalkFrom(s.Dir, playerFacing)) return s;
             }
             return null;
         }
@@ -354,13 +354,13 @@ namespace DSPRE.ROMFiles
         /// <summary>The trigger the player is standing in, or null. </summary>
         public static Trigger TriggerAt(EventFile events, int tileX, int tileZ, Func<ushort, int> variableValue)
         {
-            if (events?.triggers == null) return null;
-            foreach (Trigger t in events.triggers)
+            if (events?.Triggers == null) return null;
+            foreach (Trigger t in events.Triggers)
             {
                 int x = TileX(t), z = TileZ(t);
-                if (tileX < x || tileX >= x + Math.Max(1, (int)t.widthX)) continue;
-                if (tileZ < z || tileZ >= z + Math.Max(1, (int)t.heightY)) continue;
-                if (variableValue != null && variableValue(t.variableWatched) != t.expectedVarValue) continue;
+                if (tileX < x || tileX >= x + Math.Max(1, (int)t.WidthX)) continue;
+                if (tileZ < z || tileZ >= z + Math.Max(1, (int)t.HeightY)) continue;
+                if (variableValue != null && variableValue(t.VariableWatched) != t.ExpectedVarValue) continue;
                 return t;
             }
             return null;
@@ -368,6 +368,6 @@ namespace DSPRE.ROMFiles
 
         /// <summary>The warp on a tile, or null.</summary>
         public static Warp WarpAt(EventFile events, int tileX, int tileZ) =>
-            events?.warps?.FirstOrDefault(w => TileX(w) == tileX && TileZ(w) == tileZ);
+            events?.Warps?.FirstOrDefault(w => TileX(w) == tileX && TileZ(w) == tileZ);
     }
 }

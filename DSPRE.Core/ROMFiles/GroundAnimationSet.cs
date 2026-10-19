@@ -15,18 +15,18 @@ namespace DSPRE.ROMFiles
         private static string _cacheDir;
 
         /// <summary>True when the loaded game has terrain animations at all.</summary>
-        public static bool Available => gameDirs != null && gameDirs.ContainsKey(DirNames.groundAnimations);
+        public static bool Available => GameDirs != null && GameDirs.ContainsKey(DirNames.GroundAnimations);
 
         /// <summary>The animation an area plays, or null when it has none or the game has none.</summary>
         public static TextureSrtAnimation ForArea(AreaData area) =>
-            area == null ? null : Load(area.groundAnimation);
+            area == null ? null : Load(area.GroundAnimation);
 
         /// <summary>Loads one animation by index. Null for <see cref="None"/> or anything missing.</summary>
         public static TextureSrtAnimation Load(int index)
         {
             if (index == None || index < 0 || !Available) return null;
 
-            string dir = gameDirs[DirNames.groundAnimations].unpackedDir;
+            string dir = GameDirs[DirNames.GroundAnimations].unpackedDir;
             if (dir != _cacheDir) { Cache.Clear(); _cacheDir = dir; }
             if (Cache.TryGetValue(index, out TextureSrtAnimation hit)) return hit;
 
@@ -34,7 +34,7 @@ namespace DSPRE.ROMFiles
             try
             {
                 // Nothing else in DSPRE reads this archive, so it is usually still packed.
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.groundAnimations });
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.GroundAnimations });
                 string path = Path.Combine(dir, index.ToString("D4"));
                 if (File.Exists(path)) anim = TextureSrtAnimation.Load(File.ReadAllBytes(path));
             }

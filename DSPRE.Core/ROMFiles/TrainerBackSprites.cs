@@ -34,14 +34,14 @@ namespace DSPRE.ROMFiles
         /// slide-in. The two drawings share a palette, so the editor shows them as one sprite.
         /// </summary>
         public static int LinkedSet(int id) =>
-            gameFamily == GameFamilies.HGSS ? id switch { 0 => 15, 1 => 16, _ => -1 } : -1;
+            GameFamily == GameFamilies.HGSS ? id switch { 0 => 15, 1 => 16, _ => -1 } : -1;
 
-        public static bool IsLinkedSet(int id) => gameFamily == GameFamilies.HGSS && (id == 15 || id == 16);
+        public static bool IsLinkedSet(int id) => GameFamily == GameFamilies.HGSS && (id == 15 || id == 16);
 
         /// <summary>A name for each back sprite; entries past the retail list are numbered.</summary>
         public static List<string> Names(int count)
         {
-            string[] known = gameFamily switch
+            string[] known = GameFamily switch
             {
                 GameFamilies.HGSS => HeartGold,
                 GameFamilies.Plat => Platinum,

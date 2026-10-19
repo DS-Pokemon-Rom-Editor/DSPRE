@@ -34,7 +34,7 @@ namespace DSPRE.Avalonia.Data
             string packed;
             try
             {
-                packed = gameFamily switch
+                packed = GameFamily switch
                 {
                     GameFamilies.HGSS => BattleObjectNames.HeartGold,
                     GameFamilies.Plat => BattleObjectNames.Platinum,
@@ -42,7 +42,7 @@ namespace DSPRE.Avalonia.Data
                     _ => null,
                 };
             }
-            catch { packed = null; }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleObjects.Names", ex); packed = null; }
 
             if (packed == null) return Array.Empty<string>();
             return packed.Split(' ', StringSplitOptions.RemoveEmptyEntries)
@@ -127,10 +127,10 @@ namespace DSPRE.Avalonia.Data
             if (!int.TryParse(number, out int drawing)) return null;
 
             bool johto;
-            try { johto = gameFamily == GameFamilies.HGSS; } catch { return null; }
+            try { johto = GameFamily == GameFamilies.HGSS; } catch (Exception ex) { AppLogger.WarnOnce("BattleObjects.BallNamed", ex); return null; }
 
             string[] items = null;
-            try { items = RomInfo.GetItemNames(); } catch { }
+            try { items = RomInfo.GetItemNames(); } catch (Exception ex) { AppLogger.Warn("Battle objects: item names: " + ex.Message); }
 
             int rows = johto ? 28 : SinnohDrawingForRow.Length;
             List<string> said = new List<string>();
@@ -235,7 +235,7 @@ namespace DSPRE.Avalonia.Data
         {
             lock (BanksLock)
             {
-                string rom = RomInfo.workDir;
+                string rom = RomInfo.WorkDir;
                 if (_banksFor == rom) return _banks;
                 _banksFor = rom;
                 _banks = null;

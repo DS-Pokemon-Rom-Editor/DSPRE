@@ -80,7 +80,7 @@ namespace DSPRE
         private static Dictionary<string, Stamp> _stamps;
         private static string _stampsFor;
 
-        private static string StampsPath => string.IsNullOrEmpty(dspreDir) ? null : Path.Combine(dspreDir, "narc-sync.json");
+        private static string StampsPath => string.IsNullOrEmpty(DspreDir) ? null : Path.Combine(DspreDir, "narc-sync.json");
 
         private static Dictionary<string, Stamp> Stamps()
         {
@@ -115,10 +115,10 @@ namespace DSPRE
         private static bool TryPair(string packedPath, string unpackedPath, out DirNames dir)
         {
             dir = default;
-            if (gameDirs == null || string.IsNullOrEmpty(packedPath)) return false;
+            if (GameDirs == null || string.IsNullOrEmpty(packedPath)) return false;
             string packed = Path.GetFullPath(packedPath);
             string unpacked = unpackedPath == null ? null : Path.GetFullPath(unpackedPath).TrimEnd('\\', '/');
-            foreach (KeyValuePair<DirNames, (string packedDir, string unpackedDir)> kv in gameDirs)
+            foreach (KeyValuePair<DirNames, (string packedDir, string unpackedDir)> kv in GameDirs)
             {
                 if (!string.Equals(Path.GetFullPath(kv.Value.packedDir), packed, StringComparison.OrdinalIgnoreCase)) continue;
                 if (unpacked != null && !string.Equals(Path.GetFullPath(kv.Value.unpackedDir).TrimEnd('\\', '/'), unpacked, StringComparison.OrdinalIgnoreCase)) continue;
@@ -130,7 +130,7 @@ namespace DSPRE
 
         private static string Key(string packedPath)
         {
-            string root = string.IsNullOrEmpty(workDir) ? null : Path.GetFullPath(workDir);
+            string root = string.IsNullOrEmpty(WorkDir) ? null : Path.GetFullPath(WorkDir);
             string full = Path.GetFullPath(packedPath);
             return root != null && full.StartsWith(root, StringComparison.OrdinalIgnoreCase)
                 ? full.Substring(root.Length).TrimStart('\\', '/').Replace('\\', '/')
@@ -180,13 +180,13 @@ namespace DSPRE
         public static List<Conflict> Find(IEnumerable<DirNames> dirs = null)
         {
             List<Conflict> found = new List<Conflict>();
-            if (gameDirs == null || string.IsNullOrEmpty(workDir)) return found;
-            IEnumerable<DirNames> which = dirs ?? gameDirs.Keys;
+            if (GameDirs == null || string.IsNullOrEmpty(WorkDir)) return found;
+            IEnumerable<DirNames> which = dirs ?? GameDirs.Keys;
             foreach (DirNames dir in which.Distinct())
             {
                 // hg-engine builds these from its own source, never from the folder.
                 if (HgEngineDomains.IsOwned(dir)) continue;
-                if (!gameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) p)) continue;
+                if (!GameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) p)) continue;
                 try
                 {
                     Drift? drift;
@@ -299,7 +299,7 @@ namespace DSPRE
 
         private static void Apply(Conflict c, Choice choice)
         {
-            string backups = Path.Combine(dspreDir, "backups", "archives", DateTime.Now.ToString("yyyyMMdd-HHmmss"));
+            string backups = Path.Combine(DspreDir, "backups", "archives", DateTime.Now.ToString("yyyyMMdd-HHmmss"));
             Directory.CreateDirectory(backups);
             string backupName = c.Name.Replace('/', '_').Replace('\\', '_');
             if (choice == Choice.KeepFolder)

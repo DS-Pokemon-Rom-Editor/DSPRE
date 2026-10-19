@@ -37,7 +37,7 @@ namespace DSPRE.Avalonia
             try
             {
                 string path = CrashReporter.LogHandled(ex);
-                await DialogHelper.ShowError(
+                await DialogHelper.ShowErrorAsync(
                     "An unexpected error occurred, but the app is still running and your other open " +
                     "editors are unaffected.\n\n" + (ex?.Message ?? "Unknown error.") +
                     (path != null ? "\n\nA detailed report was saved to:\n" + path : ""),

@@ -272,8 +272,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 return;
             }
 
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.battleTowerTrainers, DirNames.battleTowerPokemon });
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.monIcons });
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.BattleTowerTrainers, DirNames.BattleTowerPokemon });
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.MonIcons });
             SetMonIconsPalTableAddress();
 
             _setFile = new BattleTowerPokemonSetFile(true);
@@ -421,7 +421,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public void LocateTrainers()
         {
-            string path = Filesystem.battleTowerTrainers;
+            string path = Filesystem.BattleTowerTrainers;
             if (!string.IsNullOrEmpty(path) && System.IO.Directory.Exists(path))
                 SystemShell.RevealInFileManager(path);
         }
@@ -543,7 +543,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public void LocateSets()
         {
-            string path = Filesystem.battleTowerPokemon;
+            string path = Filesystem.BattleTowerPokemon;
             if (!string.IsNullOrEmpty(path) && System.IO.Directory.Exists(path))
                 SystemShell.RevealInFileManager(path);
         }

@@ -27,7 +27,7 @@ namespace DSPRE.ROMFiles
 
         public static PokemonBattleSpriteArchive Open(RomInfo.DirNames dir)
         {
-            if (RomInfo.gameDirs == null || !RomInfo.gameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) paths)) return null;
+            if (RomInfo.GameDirs == null || !RomInfo.GameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) paths)) return null;
             if (!HgEngineDomains.IsOwned(dir))
                 DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { dir });
             string unpacked = Directory.Exists(paths.unpackedDir) && Directory.EnumerateFiles(paths.unpackedDir).Any()
@@ -47,12 +47,12 @@ namespace DSPRE.ROMFiles
                 return file.Exists && file.Length == size ? File.ReadAllBytes(file.FullName) : null;
             }
             NarcReader narc = new NarcReader(_packed);
-            if (idx >= narc.fe.Length || narc.fe[idx].Size != size) return null;
+            if (idx >= narc.Fe.Length || narc.Fe[idx].Size != size) return null;
             narc.OpenEntry(idx);
             try
             {
                 byte[] buffer = new byte[size];
-                narc.fs.ReadExactly(buffer);
+                narc.Fs.ReadExactly(buffer);
                 return buffer;
             }
             finally { narc.Close(); }
@@ -73,10 +73,10 @@ namespace DSPRE.ROMFiles
             if (_packed != null)
             {
                 NarcReader narc = new NarcReader(_packed);
-                if (idx < narc.fe.Length && narc.fe[idx].Size == data.Length)
+                if (idx < narc.Fe.Length && narc.Fe[idx].Size == data.Length)
                 {
                     narc.OpenEntry(idx);
-                    try { narc.fs.Write(data, 0, data.Length); }
+                    try { narc.Fs.Write(data, 0, data.Length); }
                     finally { narc.Close(); }
                     written = true;
                 }
@@ -121,7 +121,7 @@ namespace DSPRE.ROMFiles
 
             unchecked
             {
-                if (RomInfo.gameFamily != RomInfo.GameFamilies.DP)
+                if (RomInfo.GameFamily != RomInfo.GameFamilies.DP)
                 {
                     uint num = arr[0];
                     for (int j = 0; j < Words; j++) { arr[j] = (ushort)(arr[j] ^ (ushort)(num & 0xFFFF)); num = num * 1103515245 + 24691; }
@@ -175,7 +175,7 @@ namespace DSPRE.ROMFiles
         /// <param name="template">The member being replaced, whose header and seed are kept; null for the defaults.</param>
         public static byte[] EncodeSprite(byte[] indices, byte[] template = null)
         {
-            bool dp = RomInfo.gameFamily == RomInfo.GameFamilies.DP;
+            bool dp = RomInfo.GameFamily == RomInfo.GameFamilies.DP;
             int seedAt = 48 + (dp ? Words - 1 : 0) * 2;
             ushort? kept = template != null && template.Length == SpriteEntrySize
                 ? (ushort)(template[seedAt] | (template[seedAt + 1] << 8)) : null;

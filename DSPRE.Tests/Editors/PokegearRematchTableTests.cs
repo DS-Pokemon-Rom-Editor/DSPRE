@@ -38,10 +38,10 @@ namespace DSPRE.Tests
 
             Assert.True(location.FoundInOverlay,
                 "the table address should come out of the overlay's own code, not the fallback");
-            Assert.Equal(RomInfo.pokegearRematchOverlayNumber, location.OverlayNumber);
+            Assert.Equal(RomInfo.PokegearRematchOverlayNumber, location.OverlayNumber);
 
             // A derived answer that disagrees with vanilla means the search went wrong.
-            Assert.Equal(RomInfo.pokegearRematchFallbackTableOffset, (uint)location.Offset);
+            Assert.Equal(RomInfo.PokegearRematchFallbackTableOffset, (uint)location.Offset);
         }
 
         [SkippableFact]

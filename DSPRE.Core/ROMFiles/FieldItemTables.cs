@@ -22,27 +22,27 @@ namespace DSPRE.ROMFiles
         public int CommonIndex(int range, int slot) => Independent ? range * PickupSlotsPatch.Stride + slot : range + slot;
         public int RareIndex(int range, int slot) => Independent ? range * PickupSlotsPatch.Stride + slot : range + slot;
 
-        private static string Overlay => OverlayUtils.GetPath(RomInfo.pickupTableOverlayNumber);
+        private static string Overlay => OverlayUtils.GetPath(RomInfo.PickupTableOverlayNumber);
 
         public static PickupTable Read()
         {
             string path = Overlay;
             PickupTable t = new PickupTable
             {
-                Divisor = DSUtils.ReadFromFile(path, RomInfo.pickupActivationDivisorOffset, 1)[0],
-                Weights = DSUtils.ReadFromFile(path, RomInfo.pickupWeightTableOffset, WeightSize),
+                Divisor = DSUtils.ReadFromFile(path, RomInfo.PickupActivationDivisorOffset, 1)[0],
+                Weights = DSUtils.ReadFromFile(path, RomInfo.PickupWeightTableOffset, WeightSize),
             };
             int patched = PickupSlotsPatch.CommonTableOffset();
             if (patched >= 0)
             {
-                byte[] synth = DSUtils.ReadFromFile(Filesystem.expArmPath, (uint)patched, PickupSlotsPatch.TableLength * 2);
+                byte[] synth = DSUtils.ReadFromFile(Filesystem.ExpArmPath, (uint)patched, PickupSlotsPatch.TableLength * 2);
                 t.Independent = true;
                 t.Common = Ushorts(synth, 0, PickupSlotsPatch.TableLength / 2);
                 t.Rare = Ushorts(synth, PickupSlotsPatch.TableLength, PickupSlotsPatch.TableLength / 2);
                 return t;
             }
-            t.Common = Ushorts(DSUtils.ReadFromFile(path, RomInfo.pickupCommonItemsOffset, CommonCount * 2), 0, CommonCount);
-            t.Rare = Ushorts(DSUtils.ReadFromFile(path, RomInfo.pickupRareItemsOffset, RareCount * 2), 0, RareCount);
+            t.Common = Ushorts(DSUtils.ReadFromFile(path, RomInfo.PickupCommonItemsOffset, CommonCount * 2), 0, CommonCount);
+            t.Rare = Ushorts(DSUtils.ReadFromFile(path, RomInfo.PickupRareItemsOffset, RareCount * 2), 0, RareCount);
             return t;
         }
 
@@ -52,16 +52,16 @@ namespace DSPRE.ROMFiles
             if (Independent)
             {
                 uint at = (uint)PickupSlotsPatch.CommonTableOffset();
-                DSUtils.WriteToFile(Filesystem.expArmPath, Words(Common, Common.Length), at);
-                DSUtils.WriteToFile(Filesystem.expArmPath, Words(Rare, Rare.Length), at + PickupSlotsPatch.TableLength);
+                DSUtils.WriteToFile(Filesystem.ExpArmPath, Words(Common, Common.Length), at);
+                DSUtils.WriteToFile(Filesystem.ExpArmPath, Words(Rare, Rare.Length), at + PickupSlotsPatch.TableLength);
             }
             else
             {
-                DSUtils.WriteToFile(path, Words(Common, CommonCount), RomInfo.pickupCommonItemsOffset);
-                DSUtils.WriteToFile(path, Words(Rare, RareCount), RomInfo.pickupRareItemsOffset);
+                DSUtils.WriteToFile(path, Words(Common, CommonCount), RomInfo.PickupCommonItemsOffset);
+                DSUtils.WriteToFile(path, Words(Rare, RareCount), RomInfo.PickupRareItemsOffset);
             }
-            DSUtils.WriteToFile(path, new[] { Divisor }, RomInfo.pickupActivationDivisorOffset);
-            DSUtils.WriteToFile(path, Weights, RomInfo.pickupWeightTableOffset);
+            DSUtils.WriteToFile(path, new[] { Divisor }, RomInfo.PickupActivationDivisorOffset);
+            DSUtils.WriteToFile(path, Weights, RomInfo.PickupWeightTableOffset);
         }
 
         private static ushort[] Ushorts(byte[] bytes, int start, int count)
@@ -100,7 +100,7 @@ namespace DSPRE.ROMFiles
         /// <summary>The count every loop agrees on, or -1 when a count site is not the expected instruction.</summary>
         public static int Count()
         {
-            uint[] sites = RomInfo.hiddenItemCountSites, literals = RomInfo.hiddenItemCountLiterals;
+            uint[] sites = RomInfo.HiddenItemCountSites, literals = RomInfo.HiddenItemCountLiterals;
             if (sites.Length == 0 && literals.Length == 0) return -1;
             int count = int.MaxValue;
             foreach (uint site in sites)
@@ -112,7 +112,7 @@ namespace DSPRE.ROMFiles
             foreach (uint literal in literals)
             {
                 uint value = BitConverter.ToUInt32(ARM9.ReadBytes(literal, 4), 0);
-                if (value > RomInfo.hiddenItemTableCapacity) return -1;
+                if (value > RomInfo.HiddenItemTableCapacity) return -1;
                 count = Math.Min(count, (int)value);
             }
             return count;
@@ -120,7 +120,7 @@ namespace DSPRE.ROMFiles
 
         public static List<Entry> Read(int count)
         {
-            byte[] table = ARM9.ReadBytes(RomInfo.hiddenItemTableOffset, count * EntrySize);
+            byte[] table = ARM9.ReadBytes(RomInfo.HiddenItemTableOffset, count * EntrySize);
             List<Entry> entries = new List<Entry>(count);
             for (int i = 0; i < count; i++)
             {
@@ -151,10 +151,10 @@ namespace DSPRE.ROMFiles
                 BitConverter.GetBytes(e.Padding).CopyTo(table, at + 4);
                 BitConverter.GetBytes(e.Script).CopyTo(table, at + 6);
             }
-            ARM9.WriteBytes(table, RomInfo.hiddenItemTableOffset);
-            foreach (uint site in RomInfo.hiddenItemCountSites)
+            ARM9.WriteBytes(table, RomInfo.HiddenItemTableOffset);
+            foreach (uint site in RomInfo.HiddenItemCountSites)
                 ARM9.WriteBytes(new[] { (byte)entries.Count }, site);
-            foreach (uint literal in RomInfo.hiddenItemCountLiterals)
+            foreach (uint literal in RomInfo.HiddenItemCountLiterals)
                 ARM9.WriteBytes(BitConverter.GetBytes((uint)entries.Count), literal);
         }
 
@@ -173,8 +173,8 @@ namespace DSPRE.ROMFiles
             for (int h = 0; h < headers; h++)
             {
                 MapHeader header;
-                try { header = MapHeader.GetMapHeader((ushort)h); } catch { continue; }
-                if (header != null) headerOfEvents.TryAdd(header.eventFileID, h);
+                try { header = MapHeader.GetMapHeader((ushort)h); } catch (Exception ex) { AppLogger.WarnOnce("HiddenItemTable.Placements", ex); continue; }
+                if (header != null) headerOfEvents.TryAdd(header.EventFileID, h);
             }
 
             Dictionary<int, List<Placement>> found = new Dictionary<int, List<Placement>>();
@@ -182,14 +182,14 @@ namespace DSPRE.ROMFiles
             for (int f = 0; f < files; f++)
             {
                 EventFile events;
-                try { events = new EventFile(f); } catch { continue; }
-                for (int i = 0; i < events.spawnables.Count; i++)
+                try { events = new EventFile(f); } catch (Exception ex) { AppLogger.WarnOnce("HiddenItemTable.Placements", ex); continue; }
+                for (int i = 0; i < events.Spawnables.Count; i++)
                 {
-                    Spawnable sp = events.spawnables[i];
-                    int script = sp.scriptNumber - ScriptBase;
+                    Spawnable sp = events.Spawnables[i];
+                    int script = sp.ScriptNumber - ScriptBase;
                     if (script < 0 || script >= ScriptWindow) continue;
                     if (!found.TryGetValue(script, out List<Placement> list)) found[script] = list = new List<Placement>();
-                    list.Add(new Placement(f, i, headerOfEvents.TryGetValue(f, out int hd) ? hd : -1, sp.xMapPosition, sp.yMapPosition));
+                    list.Add(new Placement(f, i, headerOfEvents.TryGetValue(f, out int hd) ? hd : -1, sp.XMapPosition, sp.YMapPosition));
                 }
             }
             return found;
@@ -200,10 +200,10 @@ namespace DSPRE.ROMFiles
     public static class RockSmashItemSlots
     {
         public const int Slots = 8;
-        public static int Overlay => RomInfo.rockSmashItemTablesOverlayNumber;
-        public static uint RuinsOfAlphOffset => RomInfo.rockSmashItemTablesOffset;
-        public static uint DefaultOffset => RomInfo.rockSmashItemTablesOffset + 0x10;
-        public static uint CliffCaveOffset => RomInfo.rockSmashItemTablesOffset + 0x20;
+        public static int Overlay => RomInfo.RockSmashItemTablesOverlayNumber;
+        public static uint RuinsOfAlphOffset => RomInfo.RockSmashItemTablesOffset;
+        public static uint DefaultOffset => RomInfo.RockSmashItemTablesOffset + 0x10;
+        public static uint CliffCaveOffset => RomInfo.RockSmashItemTablesOffset + 0x20;
 
         public static ushort[] Read(uint offset)
         {

@@ -64,7 +64,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                         names[item] = $"{names[item]} {moveNames[moves[m]]}";
                 }
             }
-            catch (Exception e) when (e is IOException || e is InvalidOperationException || e is IndexOutOfRangeException) { }
+            catch (Exception e) when (e is IOException || e is InvalidOperationException || e is IndexOutOfRangeException) { }   // without the machine table no item names gain a move
             DSPRE.Avalonia.Data.ListSync.Apply(ItemNames, names);
         }
 
@@ -219,11 +219,11 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 await PatchHandover.OfferAsync("bpShopExpanded", "A longer counter list", "Battle Point Shop");
                 return false;
             }
-            if (HasProblem) { await DialogHelper.ShowError(Problem, "Battle Point shop error"); return false; }
+            if (HasProblem) { await DialogHelper.ShowErrorAsync(Problem, "Battle Point shop error"); return false; }
             try { _shop.Save(ItemNames.Count); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException || e is InvalidDataException)
             {
-                await DialogHelper.ShowError("The Battle Point shop was not saved:\n" + e.Message, "Battle Point shop error");
+                await DialogHelper.ShowErrorAsync("The Battle Point shop was not saved:\n" + e.Message, "Battle Point shop error");
                 return false;
             }
             _saved = _shop.Snapshot();

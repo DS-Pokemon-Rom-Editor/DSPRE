@@ -82,10 +82,10 @@ namespace DSPRE.HgEngine
         // Cached per header for the link session. HgEngineSpeciesExpansion/HgEngineItemExpansion/
         // HgEngineMoveExpansion do write new #defines into these headers, so they call ClearCache()
         // after writing.
-        private static readonly Dictionary<string, HgEngineSymbolTable> _cache = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, HgEngineSymbolTable> Cache = new(StringComparer.OrdinalIgnoreCase);
         private const string ConfigHeaderRelPath = "include/config.h";
 
-        internal static void ClearCache() => _cache.Clear();
+        internal static void ClearCache() => Cache.Clear();
 
         /// <summary>Loads and fully resolves every constant declared in a header file (relative to the
         /// linked checkout's root, e.g. "include/constants/species.h"). Returns null if the file, or the
@@ -93,14 +93,14 @@ namespace DSPRE.HgEngine
         public static HgEngineSymbolTable Load(string headerRelPath)
         {
             if (!HgEngineProject.IsLinked) return null;
-            if (_cache.TryGetValue(headerRelPath, out HgEngineSymbolTable cached)) return cached;
+            if (Cache.TryGetValue(headerRelPath, out HgEngineSymbolTable cached)) return cached;
 
             string path = Path.Combine(HgEngineProject.RepoPathUnc, headerRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path)) return null;
             // #if conditions in other headers test config.h switches such as DISALLOW_DEXIT_GEN.
             IReadOnlyDictionary<string, int> config = headerRelPath == ConfigHeaderRelPath ? null : Load(ConfigHeaderRelPath)?.ByName;
             HgEngineSymbolTable table = Parse(File.ReadAllText(path), config);
-            _cache[headerRelPath] = table;
+            Cache[headerRelPath] = table;
             return table;
         }
 

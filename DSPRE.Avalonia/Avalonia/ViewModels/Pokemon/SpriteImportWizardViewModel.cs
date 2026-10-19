@@ -121,29 +121,29 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (Mode == "palette")
             {
                 int refSlot = SlotFor(RefPose);
-                if (IncludeNormalPalette) await _sprite.ImportNormalPalette(refSlot, _owner);
-                if (IncludeShinyPalette) await _sprite.ImportShinyPalette(refSlot, _owner);
+                if (IncludeNormalPalette) await _sprite.ImportNormalPaletteAsync(refSlot, _owner);
+                if (IncludeShinyPalette) await _sprite.ImportShinyPaletteAsync(refSlot, _owner);
             }
             else if (Mode == "sheet")
             {
                 if (SheetGenderMode == "Combined")
                 {
-                    if (SheetColorMode == "shiny") await _sprite.ImportShinyFullSheet(_owner);
-                    else await _sprite.ImportFullSheet(_owner);
+                    if (SheetColorMode == "shiny") await _sprite.ImportShinyFullSheetAsync(_owner);
+                    else await _sprite.ImportFullSheetAsync(_owner);
                     return;
                 }
                 string[] genders = GenderGapActive ? new[] { ExistingGender } : (SheetGenderMode == "Both" ? new[] { "Female", "Male" } : new[] { SheetGenderMode });
                 foreach (string gender in genders)
                 {
                     bool female = gender == "Female";
-                    if (SheetColorMode == "shiny") await _sprite.ImportShinySpriteSheet(_owner, female);
-                    else await _sprite.ImportSpriteSheet(_owner, female);
+                    if (SheetColorMode == "shiny") await _sprite.ImportShinySpriteSheetAsync(_owner, female);
+                    else await _sprite.ImportSpriteSheetAsync(_owner, female);
                 }
             }
             else
             {
                 foreach (string pose in ComputePoseList())
-                    await _sprite.ImportSprite(SlotFor(pose), _owner);
+                    await _sprite.ImportSpriteAsync(SlotFor(pose), _owner);
             }
         }
     }

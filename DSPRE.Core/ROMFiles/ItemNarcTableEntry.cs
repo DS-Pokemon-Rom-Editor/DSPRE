@@ -6,9 +6,9 @@ namespace DSPRE.Editors
     /// </summary>
     public struct ItemNarcTableEntry
     {
-        public uint itemData;
-        public uint itemIcon;
-        public uint itemPalette;
-        public uint itemAGB;
+        public uint ItemData;
+        public uint ItemIcon;
+        public uint ItemPalette;
+        public uint ItemAGB;
     };
 }

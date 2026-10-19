@@ -28,7 +28,7 @@ namespace DSPRE.Tests
             // Leaving script 2 out of the header would renumber script 3 as 2.
             Assert.Null(file.ToByteArray());
 
-            file.allScripts[1].usedScriptID = 1;
+            file.AllScripts[1].UsedScriptID = 1;
             byte[] bytes = file.ToByteArray();
             Assert.NotNull(bytes);
             int Target(int i) => BitConverter.ToInt32(bytes, i * 4) + i * 4 + 4;
@@ -50,19 +50,19 @@ namespace DSPRE.Tests
                 ScriptFile.ClearPlaintextCache();
 
                 ScriptFile first = new ScriptFile(id);
-                Assert.False(first.plaintextParseFailed);
-                int scripts = first.allScripts.Count;
-                int withCommands = first.allScripts.FindIndex(c => c.commands != null && c.commands.Count > 0);
+                Assert.False(first.PlaintextParseFailed);
+                int scripts = first.AllScripts.Count;
+                int withCommands = first.AllScripts.FindIndex(c => c.Commands != null && c.Commands.Count > 0);
                 Assert.True(withCommands >= 0, "no script with commands, so nothing was checked");
-                int commands = first.allScripts[withCommands].commands.Count;
+                int commands = first.AllScripts[withCommands].Commands.Count;
 
                 // What a discarded session does to its copy.
-                first.allScripts.Add(new ScriptCommandContainer(999, ScriptFile.ContainerTypes.Script, usedScriptID: 1));
-                first.allScripts[withCommands].commands.Clear();
+                first.AllScripts.Add(new ScriptCommandContainer(999, ScriptFile.ContainerTypes.Script, usedScriptID: 1));
+                first.AllScripts[withCommands].Commands.Clear();
 
                 ScriptFile second = new ScriptFile(id);
-                Assert.Equal(scripts, second.allScripts.Count);
-                Assert.Equal(commands, second.allScripts[withCommands].commands.Count);
+                Assert.Equal(scripts, second.AllScripts.Count);
+                Assert.Equal(commands, second.AllScripts[withCommands].Commands.Count);
             });
         }
 
@@ -78,12 +78,12 @@ namespace DSPRE.Tests
                 File.SetLastWriteTimeUtc(txtPath, File.GetLastWriteTimeUtc(binPath).AddMinutes(-1));
                 ScriptFile.ClearPlaintextCache();
                 ScriptFile unchanged = new ScriptFile(id);
-                Assert.False(unchanged.plaintextParseFailed);
-                Assert.True(unchanged.allScripts.Count > 0);
+                Assert.False(unchanged.PlaintextParseFailed);
+                Assert.True(unchanged.AllScripts.Count > 0);
 
                 File.SetLastWriteTimeUtc(txtPath, File.GetLastWriteTimeUtc(binPath).AddMinutes(1));
                 ScriptFile edited = new ScriptFile(id);
-                Assert.True(edited.plaintextParseFailed);
+                Assert.True(edited.PlaintextParseFailed);
                 Assert.True(edited.SaveToFileDefaultDir(id, showSuccessMessage: false));
                 Assert.Equal(broken, File.ReadAllText(txtPath));
             });
@@ -94,7 +94,7 @@ namespace DSPRE.Tests
             if (!Directory.Exists(project)) return false;
             SettingsManager.Load();
             new RomInfo("CPUE", project);
-            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.scripts, RomInfo.DirNames.textArchives });
+            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.Scripts, RomInfo.DirNames.TextArchives });
             ScriptDatabase.InitializePokemonNames();
             ScriptDatabase.InitializeItemNames();
             ScriptDatabase.InitializeMoveNames();
@@ -103,7 +103,7 @@ namespace DSPRE.Tests
         }
 
         private static void SetRotomProject(bool value) =>
-            typeof(RomInfo).GetProperty(nameof(RomInfo.hasRotomProject)).SetValue(null, value);
+            typeof(RomInfo).GetProperty(nameof(RomInfo.HasRotomProject)).SetValue(null, value);
 
         /// <summary>Runs on a small ordinary script file as a legacy project, putting both files back after.</summary>
         private static void WithLegacyScript(Action<int, string, string> test)
@@ -117,7 +117,7 @@ namespace DSPRE.Tests
             bool hadTxt = File.Exists(txtPath);
             string txt = hadTxt ? File.ReadAllText(txtPath) : null;
             DateTime txtTime = hadTxt ? File.GetLastWriteTimeUtc(txtPath) : default;
-            bool wasRotom = RomInfo.hasRotomProject;
+            bool wasRotom = RomInfo.HasRotomProject;
             try
             {
                 SetRotomProject(false);
@@ -150,8 +150,8 @@ namespace DSPRE.Tests
                 if (!File.Exists(path)) return false;
                 ScriptFile file;
                 using (FileStream fs = File.OpenRead(path)) file = new ScriptFile(fs, true, true, id);
-                return !file.isLevelScript && !file.parseFailedDueToInvalidCommand
-                    && file.allScripts.Any(c => c.commands != null && c.commands.Count > 0)
+                return !file.IsLevelScript && !file.ParseFailedDueToInvalidCommand
+                    && file.AllScripts.Any(c => c.Commands != null && c.Commands.Count > 0)
                     && !string.IsNullOrEmpty(file.ToPlainText(includeActions: true));
             }
             catch { return false; }

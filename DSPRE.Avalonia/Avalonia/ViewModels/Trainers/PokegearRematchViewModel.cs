@@ -224,7 +224,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 return;
             }
 
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties });
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TrainerProperties });
 
             foreach (string n in DSPRE.TrainerNames.GetAll()) TrainerNames.Add(n);
 

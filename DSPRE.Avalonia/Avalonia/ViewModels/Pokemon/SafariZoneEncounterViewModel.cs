@@ -102,9 +102,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             SafariZoneEncounterFile f = new SafariZoneEncounterFile(_selectedFileIndex, System.Array.Empty<byte>())
             {
-                grassEncounterGroup = GrassVM.CurrentGroup, surfEncounterGroup = SurfVM.CurrentGroup,
-                oldRodEncounterGroup = OldRodVM.CurrentGroup, goodRodEncounterGroup = GoodRodVM.CurrentGroup,
-                superRodEncounterGroup = SuperRodVM.CurrentGroup,
+                GrassEncounterGroup = GrassVM.CurrentGroup, SurfEncounterGroup = SurfVM.CurrentGroup,
+                OldRodEncounterGroup = OldRodVM.CurrentGroup, GoodRodEncounterGroup = GoodRodVM.CurrentGroup,
+                SuperRodEncounterGroup = SuperRodVM.CurrentGroup,
             };
             return f.ToByteArray();
         }
@@ -113,11 +113,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             SafariZoneEncounterFile f = new SafariZoneEncounterFile(_selectedFileIndex, state);
             if (_file != null) _file = f;
-            GrassVM.SetData(f.grassEncounterGroup, keepSelection: true);
-            SurfVM.SetData(f.surfEncounterGroup, keepSelection: true);
-            OldRodVM.SetData(f.oldRodEncounterGroup, keepSelection: true);
-            GoodRodVM.SetData(f.goodRodEncounterGroup, keepSelection: true);
-            SuperRodVM.SetData(f.superRodEncounterGroup, keepSelection: true);
+            GrassVM.SetData(f.GrassEncounterGroup, keepSelection: true);
+            SurfVM.SetData(f.SurfEncounterGroup, keepSelection: true);
+            OldRodVM.SetData(f.OldRodEncounterGroup, keepSelection: true);
+            GoodRodVM.SetData(f.GoodRodEncounterGroup, keepSelection: true);
+            SuperRodVM.SetData(f.SuperRodEncounterGroup, keepSelection: true);
             if (_undo.IsDirty) SetDirty(); else SetClean();
         }
 
@@ -151,7 +151,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _owner = owner;
             try
             {
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.safariZone, DirNames.textArchives });
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.SafariZone, DirNames.TextArchives });
 
                 SpeciesNames.Clear();
                 foreach (string n in GetPokemonNames()) SpeciesNames.Add(n);
@@ -165,7 +165,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Failed to load Safari Zone data:\n{ex.Message}", "Safari Zone error");
+                await DialogHelper.ShowErrorAsync($"Failed to load Safari Zone data:\n{ex.Message}", "Safari Zone error");
             }
         }
 
@@ -190,17 +190,17 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                _ = DialogHelper.ShowError($"Failed to load Safari Zone file {id}:\n{ex.Message}", "Safari Zone error");
+                _ = DialogHelper.ShowErrorAsync($"Failed to load Safari Zone file {id}:\n{ex.Message}", "Safari Zone error");
             }
         }
 
         private void BindGroups()
         {
-            GrassVM.SetData(_file.grassEncounterGroup);
-            SurfVM.SetData(_file.surfEncounterGroup);
-            OldRodVM.SetData(_file.oldRodEncounterGroup);
-            GoodRodVM.SetData(_file.goodRodEncounterGroup);
-            SuperRodVM.SetData(_file.superRodEncounterGroup);
+            GrassVM.SetData(_file.GrassEncounterGroup);
+            SurfVM.SetData(_file.SurfEncounterGroup);
+            OldRodVM.SetData(_file.OldRodEncounterGroup);
+            GoodRodVM.SetData(_file.GoodRodEncounterGroup);
+            SuperRodVM.SetData(_file.SuperRodEncounterGroup);
         }
 
         // hg-engine isn't one of DSPRE's owned domains for the packed-ROM narc, so the vanilla read above
@@ -231,7 +231,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (UseHgEngineSource) { await SaveHgEngineAsync(); return; }
             if (!SaveCore(out string failure))
-                await DialogHelper.ShowError("Could not save the Safari Zone data:\n" + failure, "Special encounters editor error");
+                await DialogHelper.ShowErrorAsync("Could not save the Safari Zone data:\n" + failure, "Special encounters editor error");
         }
 
         public void Save()
@@ -263,7 +263,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             else if (error != null)
             {
-                await DialogHelper.ShowError("Could not save the Safari Zone data:\n" + error, "Special encounters editor error");
+                await DialogHelper.ShowErrorAsync("Could not save the Safari Zone data:\n" + error, "Special encounters editor error");
             }
         }
 
@@ -296,18 +296,18 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_file == null) return;
             FilePickerFileType filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
-            string path = await DialogHelper.SaveFile(_owner, "Save Safari Zone as", new[] { filter }, "safari_zone.bin");
+            string path = await DialogHelper.SaveFileAsync(_owner, "Save Safari Zone as", new[] { filter }, "safari_zone.bin");
             if (path == null) return;
             try
             {
                 if (!_file.SaveToFile(path, showSuccessMessage: false))
-                    await DialogHelper.ShowError(
+                    await DialogHelper.ShowErrorAsync(
                         "The encounter data could not be turned into a file.", "Special encounters editor error");
                 else SaveNotice.Exported(path);
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Could not write {path}:\n{ex.Message}", "Special encounters editor error");
+                await DialogHelper.ShowErrorAsync($"Could not write {path}:\n{ex.Message}", "Special encounters editor error");
             }
         }
 
@@ -315,7 +315,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_file == null) return;
             FilePickerFileType filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
-            string path = await DialogHelper.OpenFile(_owner, "Import Safari Zone file", new[] { filter });
+            string path = await DialogHelper.OpenFileAsync(_owner, "Import Safari Zone file", new[] { filter });
             if (path == null) return;
 
             try
@@ -328,7 +328,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Error importing file: {ex.Message}", "Special encounters editor error");
+                await DialogHelper.ShowErrorAsync($"Error importing file: {ex.Message}", "Special encounters editor error");
             }
         }
     }

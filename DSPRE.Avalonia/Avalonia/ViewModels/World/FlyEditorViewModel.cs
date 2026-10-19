@@ -86,10 +86,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty;
         public string UnsavedChangesDescription => "Fly and warp points";
-        void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommand();
+        void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommandAsync();
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
-            await SaveCommand();
+            await SaveCommandAsync();
             return !HasUnsavedChanges;
         }
         public void DiscardChanges() { LoadRows(); SetClean(); }
@@ -116,10 +116,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         public string Title { get => _title; private set => Set(ref _title, value); }
 
         // Column-visibility helpers (bound to DataGrid column widths / IsVisible)
-        private bool DesignTimeIsHgss = true; // set to true if you want HGSS preview
+        private bool _designTimeIsHgss = true; // set to true if you want HGSS preview
 
-        public bool IsHgss => Design.IsDesignMode ? DesignTimeIsHgss : (gameFamily == GameFamilies.HGSS);
-        public bool IsDpOrPlat => Design.IsDesignMode ? !DesignTimeIsHgss : (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat);
+        public bool IsHgss => Design.IsDesignMode ? _designTimeIsHgss : (GameFamily == GameFamilies.HGSS);
+        public bool IsDpOrPlat => Design.IsDesignMode ? !_designTimeIsHgss : (GameFamily == GameFamilies.DP || GameFamily == GameFamilies.Plat);
 
         private string _statusText = string.Empty;
         public string StatusText { get => _statusText; private set => Set(ref _statusText, value); }
@@ -180,7 +180,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         // ── Commands ──────────────────────────────────────────────────────────
-        public async Task SaveCommand()
+        public async Task SaveCommandAsync()
         {
             try
             {
@@ -191,7 +191,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Could not save: {ex.Message}", "Fly / warp editor error");
+                await DialogHelper.ShowErrorAsync($"Could not save: {ex.Message}", "Fly / warp editor error");
             }
         }
 

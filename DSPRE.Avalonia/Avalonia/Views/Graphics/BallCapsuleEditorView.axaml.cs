@@ -148,19 +148,19 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private void EditSticker_Click(object sender, RoutedEventArgs e)
         {
-            if (Chosen?.Seal != null) AvaloniaEditorLauncher.OpenGraphicAt(DirNames.sealGraphics, Chosen.Seal.Sprite, preferAssembled: true);
+            if (Chosen?.Seal != null) AvaloniaEditorLauncher.OpenGraphicAt(DirNames.SealGraphics, Chosen.Seal.Sprite, preferAssembled: true);
         }
 
         private void EditParticles_Click(object sender, RoutedEventArgs e)
         {
             if (Chosen?.Seal == null || VM == null) return;
-            AvaloniaEditorLauncher.OpenParticleEditor(DirNames.ballParticles, Chosen.Seal.Particle, Chosen.Seal.Name, VM.ParticlesChanged,
+            AvaloniaEditorLauncher.OpenParticleEditor(DirNames.BallParticles, Chosen.Seal.Particle, Chosen.Seal.Name, VM.ParticlesChanged,
                                                       orthographic: true);
         }
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
         }
     }
 }

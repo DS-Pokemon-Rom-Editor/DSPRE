@@ -74,7 +74,7 @@ namespace DSPRE.Avalonia.Views.Battle
                          LevelScriptFile levelScripts = null,
                          IEnumerable<FieldStringVar> stringVars = null)
         {
-            bool indoor = area != null && area.areaType == AreaData.TYPE_INDOOR;
+            bool indoor = area != null && area.AreaType == AreaData.TYPE_INDOOR;
             _vm.CameraId = cameraId;
             _vm.LevelScripts = levelScripts;
             _vm.SetStringVars(stringVars);
@@ -132,7 +132,7 @@ namespace DSPRE.Avalonia.Views.Battle
         /// <summary>Swaps in another scene of the same place, keeping the walk going.</summary>
         public void ReplaceScene(NsbmdRenderModel scene, AreaData area, EventFile events, MapCollisionGrid collision)
         {
-            bool indoor = area != null && area.areaType == AreaData.TYPE_INDOOR;
+            bool indoor = area != null && area.AreaType == AreaData.TYPE_INDOOR;
             _vm.SwapScene(scene, GroundAnimationSet.ForArea(area), events, indoor, collision);
             GlView.SetModel(scene);
             Apply();
@@ -203,7 +203,7 @@ namespace DSPRE.Avalonia.Views.Battle
             if (player == null || scene == null) return;
 
             FieldCameraEntry cam = _vm.CameraEntry;
-            float tile = scene.CellStrideX / MapFile.mapSize;
+            float tile = scene.CellStrideX / MapFile.MapSize;
             float unit = tile * scene.Scale;
 
             // The shift moves the camera and what it looks at together, so it lands on the target.
@@ -253,7 +253,7 @@ namespace DSPRE.Avalonia.Views.Battle
         {
             if (_sdatTried) return _sdat;
             _sdatTried = true;
-            try { _sdat = SoundArchive.Load(); } catch { _sdat = null; }
+            try { _sdat = SoundArchive.Load(); } catch (Exception ex) { AppLogger.WarnOnce("AnimatedPreviewWindow.Sdat", ex); _sdat = null; }
             return _sdat;
         }
 
@@ -320,7 +320,7 @@ namespace DSPRE.Avalonia.Views.Battle
             System.Threading.Tasks.Task.Run(() =>
             {
                 short[] pcm = null;
-                try { pcm = SseqPlayer.Render(sdat, id, 32000, MusicSeconds); } catch { }
+                try { pcm = SseqPlayer.Render(sdat, id, 32000, MusicSeconds); } catch { }   // a sequence that can't render stays silent
                 if (pcm == null || pcm.Length == 0) return;
                 Dispatcher.UIThread.Post(() =>
                 {
@@ -477,8 +477,8 @@ namespace DSPRE.Avalonia.Views.Battle
         /// <summary>The touch menu's words out of the ROM, with the player's name and the like put in.</summary>
         private string TouchMenuText(int message)
         {
-            if (RomInfo.fieldTouchMenuTextArchive < 0) return null;
-            string text = _vm.ArchiveText?.Invoke(RomInfo.fieldTouchMenuTextArchive, message);
+            if (RomInfo.FieldTouchMenuTextArchive < 0) return null;
+            string text = _vm.ArchiveText?.Invoke(RomInfo.FieldTouchMenuTextArchive, message);
             return text == null ? null : _vm.ExpandVars(text);
         }
 

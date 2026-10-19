@@ -41,9 +41,9 @@ namespace DSPRE.Tests
                 if (!Directory.Exists(path)) { _out.WriteLine($"{name}: not unpacked here, skipped"); continue; }
                 try { new RomInfo(code, path); }
                 catch (Exception ex) { _out.WriteLine($"{name}: would not load ({ex.Message}), skipped"); continue; }
-                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.scripts });
+                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.Scripts });
 
-                Assert.Equal(file, RomInfo.starterHeldItemScriptFileID);
+                Assert.Equal(file, RomInfo.StarterHeldItemScriptFileID);
                 int found = StarterPokemonData.GetStarterScriptNumber();
                 _out.WriteLine($"{name}: file {file}, header walk says script {found}, expected {script}");
                 Assert.Equal(script, found);
@@ -64,10 +64,10 @@ namespace DSPRE.Tests
             {
                 if (!Directory.Exists(path)) { _out.WriteLine($"{name}: not unpacked here, skipped"); continue; }
                 new RomInfo(code, path);
-                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.scripts });
+                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.Scripts });
 
                 StarterEditorViewModel vm = new DSPRE.Avalonia.ViewModels.Pokemon.StarterEditorViewModel();
-                bool dp = RomInfo.gameFamily == RomInfo.GameFamilies.DP;
+                bool dp = RomInfo.GameFamily == RomInfo.GameFamilies.DP;
                 _out.WriteLine($"{name}: note=\"{vm.ScriptNote}\" heldItem={vm.IsHeldItemSupported}");
 
                 if (dp)
@@ -97,8 +97,8 @@ namespace DSPRE.Tests
             new RomInfo(code, path);
 
             // HGSS keeps its starters in the ARM9, so there is no script file to walk.
-            Assert.True(RomInfo.starterHeldItemScriptFileID >= 0, "Platinum should have a starter script");
-            _out.WriteLine($"Platinum's starter script id is {RomInfo.starterHeldItemScriptFileID}");
+            Assert.True(RomInfo.StarterHeldItemScriptFileID >= 0, "Platinum should have a starter script");
+            _out.WriteLine($"Platinum's starter script id is {RomInfo.StarterHeldItemScriptFileID}");
         }
     }
 }

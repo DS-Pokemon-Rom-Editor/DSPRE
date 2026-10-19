@@ -386,7 +386,7 @@ namespace DSPRE.Models
 
         /// <summary>Terrain in the loaded game's own layout: Diamond and Pearl walk on triangles, later games on plates.</summary>
         public static byte[] From(IReadOnlyList<Piece> pieces, out string whynot)
-            => RomInfo.gameFamily == RomInfo.GameFamilies.DP ? Triangles(pieces, out whynot) : Plates(pieces, out whynot);
+            => RomInfo.GameFamily == RomInfo.GameFamilies.DP ? Triangles(pieces, out whynot) : Plates(pieces, out whynot);
 
         /// <summary>Platinum and HeartGold/SoulSilver terrain: plates, each a rectangle on its own plane, found by Z strips.</summary>
         public static byte[] Plates(IReadOnlyList<Piece> pieces, out string whynot)

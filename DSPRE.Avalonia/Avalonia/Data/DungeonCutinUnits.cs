@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia.Data
             HashSet<int> spokenFor = new HashSet<int>();
 
             List<string> headerNames = null;
-            try { headerNames = HeaderLists.GetHeaderListBoxNames(); } catch { }
+            try { headerNames = HeaderLists.GetHeaderListBoxNames(); } catch (Exception ex) { AppLogger.Warn("Dungeon cut-ins: header names: " + ex.Message); }
 
             // The list names read "323 -   D24R0211" with the internal name padded out with zero bytes.
             // Only the name is wanted here, without the number or the padding.

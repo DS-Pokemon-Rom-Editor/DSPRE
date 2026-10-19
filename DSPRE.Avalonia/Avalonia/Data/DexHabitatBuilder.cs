@@ -22,10 +22,10 @@ namespace DSPRE.Avalonia.Data
         /// <param name="national">Whether the special list is the one used once the National Pokédex is obtained.</param>
         public static DexHabitatData Build(int species, int time, bool national)
         {
-            if (gameFamily == GameFamilies.HGSS || !PokedexAreaData.TryLoad(out PokedexAreaData areas, out _)) return null;
+            if (GameFamily == GameFamilies.HGSS || !PokedexAreaData.TryLoad(out PokedexAreaData areas, out _)) return null;
             if (species < 0 || species >= areas.SpeciesCount) return null;
             int[][] lists = areas.Get(species);
-            string folder = gameDirs[DirNames.pokedexAreas].unpackedDir;
+            string folder = GameDirs[DirNames.PokedexAreas].unpackedDir;
             byte[] dungeons = File.ReadAllBytes(Path.Combine(folder, "0000"));
             byte[] fields = File.ReadAllBytes(Path.Combine(folder, "0002"));
 
@@ -67,13 +67,13 @@ namespace DSPRE.Avalonia.Data
         /// <param name="kanto">Whether the Kanto half of the map is the one shown.</param>
         public static DexHabitatData BuildHgss(int species, int time, bool kanto)
         {
-            if (gameFamily != GameFamilies.HGSS || !PokedexAreaData.TryLoad(out PokedexAreaData areas, out _)) return null;
+            if (GameFamily != GameFamilies.HGSS || !PokedexAreaData.TryLoad(out PokedexAreaData areas, out _)) return null;
             if (species < 0 || species >= areas.SpeciesCount) return null;
             int[][] lists = areas.Get(species);
-            string folder = gameDirs[DirNames.pokedexAreas].unpackedDir;
+            string folder = GameDirs[DirNames.PokedexAreas].unpackedDir;
             byte[] caveGrid = File.ReadAllBytes(Path.Combine(folder, "0000"));
             byte[] fieldGrid = File.ReadAllBytes(Path.Combine(folder, "0001"));
-            int[] fieldZones = ZoneTable(pokedexFieldZoneTableOffset), caveZones = ZoneTable(pokedexDungeonZoneTableOffset);
+            int[] fieldZones = ZoneTable(PokedexFieldZoneTableOffset), caveZones = ZoneTable(PokedexDungeonZoneTableOffset);
             int region = kanto ? 1 : 0, t = Math.Clamp(time, 0, 2);
             DexHabitatData data = new() { Player = PlayerAt(fieldGrid, fieldZones, kanto) };
             int Zone(int[] table, int id) => table != null && id >= 0 && id < table.Length ? table[id] : -1;
@@ -145,7 +145,7 @@ namespace DSPRE.Avalonia.Data
             foreach (int zone in zones)
             {
                 string name = null;
-                try { name = HeaderLabels.LocationNameOf(MapHeader.GetMapHeader((ushort)zone)); } catch { }
+                try { name = HeaderLabels.LocationNameOf(MapHeader.GetMapHeader((ushort)zone)); } catch { }   // a zone that can't be read is listed by its number
                 data.Places.Add(string.IsNullOrWhiteSpace(name) ? "Map " + zone : name);
             }
             return data;
@@ -154,10 +154,10 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The HGSS AREA page with no places: the map and the player's face only.</summary>
         public static DexHabitatData HgssPlayerOnly(bool kanto)
         {
-            if (gameFamily != GameFamilies.HGSS) return null;
-            string folder = gameDirs[DirNames.pokedexAreas].unpackedDir;
+            if (GameFamily != GameFamilies.HGSS) return null;
+            string folder = GameDirs[DirNames.PokedexAreas].unpackedDir;
             byte[] fieldGrid = File.ReadAllBytes(Path.Combine(folder, "0001"));
-            return new DexHabitatData { Player = PlayerAt(fieldGrid, ZoneTable(pokedexFieldZoneTableOffset), kanto) };
+            return new DexHabitatData { Player = PlayerAt(fieldGrid, ZoneTable(PokedexFieldZoneTableOffset), kanto) };
         }
 
         // The face sits on the player's map block, four pixels in, and only on its own region's map.
@@ -172,15 +172,15 @@ namespace DSPRE.Avalonia.Data
 
         private static int[] SortTable()
         {
-            if (pokedexAreaSortTableOffset < 0 || pokedexAreaSortTableCount <= 0) return null;
+            if (PokedexAreaSortTableOffset < 0 || PokedexAreaSortTableCount <= 0) return null;
             try
             {
-                byte[] overlay = File.ReadAllBytes(OverlayUtils.GetPath(pokedexAreaZoneOverlay));
-                int[] zones = new int[pokedexAreaSortTableCount];
-                for (int i = 0; i < zones.Length; i++) zones[i] = BitConverter.ToInt32(overlay, pokedexAreaSortTableOffset + i * 4);
+                byte[] overlay = File.ReadAllBytes(OverlayUtils.GetPath(PokedexAreaZoneOverlay));
+                int[] zones = new int[PokedexAreaSortTableCount];
+                for (int i = 0; i < zones.Length; i++) zones[i] = BitConverter.ToInt32(overlay, PokedexAreaSortTableOffset + i * 4);
                 return zones;
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("DexHabitatBuilder.SortTable", ex); return null; }
         }
 
         private static int BlockFor(int sx, int sy) => sx switch
@@ -198,8 +198,8 @@ namespace DSPRE.Avalonia.Data
             if (offset < 0) return null;
             try
             {
-                if (OverlayUtils.IsCompressed(pokedexAreaZoneOverlay)) OverlayUtils.Decompress(pokedexAreaZoneOverlay);
-                byte[] overlay = File.ReadAllBytes(OverlayUtils.GetPath(pokedexAreaZoneOverlay));
+                if (OverlayUtils.IsCompressed(PokedexAreaZoneOverlay)) OverlayUtils.Decompress(PokedexAreaZoneOverlay);
+                byte[] overlay = File.ReadAllBytes(OverlayUtils.GetPath(PokedexAreaZoneOverlay));
                 List<int> zones = new() { -1 };
                 for (int at = offset + 2; at + 2 <= overlay.Length; at += 2)
                 {
@@ -209,7 +209,7 @@ namespace DSPRE.Avalonia.Data
                 }
                 return zones.ToArray();
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("DexHabitatBuilder.ZoneTable", ex); return null; }
         }
 
         private static void Locate(byte[] map, byte[] fields, int[] places, int[] skip)

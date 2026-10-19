@@ -11,7 +11,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The word an unnamed entry gets in the label lists.</summary>
         public const string Unnamed = "Script";
 
-        public static string Key => gameFamily switch
+        public static string Key => GameFamily switch
         {
             GameFamilies.DP => "common_scripts_dp", GameFamilies.Plat => "common_scripts_pt", _ => "common_scripts_hgss",
         };

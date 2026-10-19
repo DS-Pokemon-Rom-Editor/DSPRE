@@ -13,8 +13,8 @@ namespace DSPRE.Tests
     public partial class UnchangedSaveTests
     {
         private static string ExpandedText => TextConverter.GetExpandedFolderPath();
-        private static string ExpandedScripts => Path.Combine(workDir, "expanded", "scripts");
-        private static string TextBins => Dir(DirNames.textArchives);
+        private static string ExpandedScripts => Path.Combine(WorkDir, "expanded", "scripts");
+        private static string TextBins => Dir(DirNames.TextArchives);
 
         private static int SaveEach(string dir, Action<int> save)
         {
@@ -34,7 +34,7 @@ namespace DSPRE.Tests
         {
             Open(game);
             List<string> guarded = new List<string>();
-            if (MapHeader.UsesDynamicHeaders) guarded.Add(Filesystem.dynamicHeaders);
+            if (MapHeader.UsesDynamicHeaders) guarded.Add(Filesystem.DynamicHeaders);
             SavesUnchanged($"{game} headers", guarded, () =>
             {
                 int count = MapHeader.GetHeaderCount();
@@ -48,9 +48,9 @@ namespace DSPRE.Tests
         public void Matrices(string game)
         {
             Open(game);
-            Unpack(DirNames.matrices);
-            SavesUnchanged($"{game} matrices", new[] { Dir(DirNames.matrices) }, () =>
-                SaveEach(Dir(DirNames.matrices), id => new GameMatrix(id).SaveToFileDefaultDir(id, showSuccessMessage: false)));
+            Unpack(DirNames.Matrices);
+            SavesUnchanged($"{game} matrices", new[] { Dir(DirNames.Matrices) }, () =>
+                SaveEach(Dir(DirNames.Matrices), id => new GameMatrix(id).SaveToFileDefaultDir(id, showSuccessMessage: false)));
         }
 
         [SkippableTheory]
@@ -58,9 +58,9 @@ namespace DSPRE.Tests
         public void Maps(string game)
         {
             Open(game);
-            Unpack(DirNames.maps);
-            SavesUnchanged($"{game} maps", new[] { Dir(DirNames.maps) }, () =>
-                SaveEach(Dir(DirNames.maps), id => new MapFile(id, gameFamily).SaveToFileDefaultDir(id, showSuccessMessage: false)));
+            Unpack(DirNames.Maps);
+            SavesUnchanged($"{game} maps", new[] { Dir(DirNames.Maps) }, () =>
+                SaveEach(Dir(DirNames.Maps), id => new MapFile(id, GameFamily).SaveToFileDefaultDir(id, showSuccessMessage: false)));
         }
 
         [SkippableTheory]
@@ -68,9 +68,9 @@ namespace DSPRE.Tests
         public void Events(string game)
         {
             Open(game);
-            Unpack(DirNames.eventFiles);
-            SavesUnchanged($"{game} events", new[] { Dir(DirNames.eventFiles) }, () =>
-                SaveEach(Dir(DirNames.eventFiles), id => new EventFile(id).SaveToFileDefaultDir(id, showSuccessMessage: false)));
+            Unpack(DirNames.EventFiles);
+            SavesUnchanged($"{game} events", new[] { Dir(DirNames.EventFiles) }, () =>
+                SaveEach(Dir(DirNames.EventFiles), id => new EventFile(id).SaveToFileDefaultDir(id, showSuccessMessage: false)));
         }
 
         /// <summary>The level script editor saves with word-alignment padding on unless the user turns it off.</summary>
@@ -79,11 +79,11 @@ namespace DSPRE.Tests
         public void LevelScripts(string game)
         {
             Open(game);
-            Unpack(DirNames.scripts);
-            SavesUnchanged($"{game} level scripts", new[] { Filesystem.scripts }, () =>
+            Unpack(DirNames.Scripts);
+            SavesUnchanged($"{game} level scripts", new[] { Filesystem.Scripts }, () =>
             {
                 int n = 0;
-                foreach ((int id, string _) in Members(Filesystem.scripts).ToList())
+                foreach ((int id, string _) in Members(Filesystem.Scripts).ToList())
                 {
                     LevelScriptFile file;
                     try { file = new LevelScriptFile(id); }
@@ -100,7 +100,7 @@ namespace DSPRE.Tests
         public void Text(string game)
         {
             Open(game);
-            Unpack(DirNames.textArchives);
+            Unpack(DirNames.TextArchives);
             SavesUnchanged($"{game} text", new[] { TextBins }, () =>
             {
                 int n = SaveEach(TextBins, id => new TextArchive(id).SaveToExpandedDir(id, showSuccessMessage: false));
@@ -114,15 +114,15 @@ namespace DSPRE.Tests
         public void PokemonData(string game)
         {
             Open(game);
-            Unpack(DirNames.personalPokeData, DirNames.learnsets, DirNames.moveData, DirNames.itemData);
-            SavesUnchanged($"{game} personal data", new[] { Dir(DirNames.personalPokeData) }, () =>
-                SaveEach(Dir(DirNames.personalPokeData), id => new PokemonPersonalData(id).SaveToFileDefaultDir(id, showSuccessMessage: false)));
-            SavesUnchanged($"{game} learnsets", new[] { Dir(DirNames.learnsets) }, () =>
-                SaveEach(Dir(DirNames.learnsets), id => new LearnsetData(id).SaveToFileDefaultDir(id, showSuccessMessage: false)));
-            SavesUnchanged($"{game} moves", new[] { Dir(DirNames.moveData) }, () =>
-                SaveEach(Dir(DirNames.moveData), id => new MoveData(id).SaveToFileDefaultDir(id, showSuccessMessage: false)));
-            SavesUnchanged($"{game} items", new[] { Dir(DirNames.itemData) }, () =>
-                SaveEach(Dir(DirNames.itemData), id => new ItemData(id).SaveToFileDefaultDir(id, showSuccessMessage: false)));
+            Unpack(DirNames.PersonalPokeData, DirNames.Learnsets, DirNames.MoveData, DirNames.ItemData);
+            SavesUnchanged($"{game} personal data", new[] { Dir(DirNames.PersonalPokeData) }, () =>
+                SaveEach(Dir(DirNames.PersonalPokeData), id => new PokemonPersonalData(id).SaveToFileDefaultDir(id, showSuccessMessage: false)));
+            SavesUnchanged($"{game} learnsets", new[] { Dir(DirNames.Learnsets) }, () =>
+                SaveEach(Dir(DirNames.Learnsets), id => new LearnsetData(id).SaveToFileDefaultDir(id, showSuccessMessage: false)));
+            SavesUnchanged($"{game} moves", new[] { Dir(DirNames.MoveData) }, () =>
+                SaveEach(Dir(DirNames.MoveData), id => new MoveData(id).SaveToFileDefaultDir(id, showSuccessMessage: false)));
+            SavesUnchanged($"{game} items", new[] { Dir(DirNames.ItemData) }, () =>
+                SaveEach(Dir(DirNames.ItemData), id => new ItemData(id).SaveToFileDefaultDir(id, showSuccessMessage: false)));
         }
 
         [SkippableTheory]
@@ -131,9 +131,9 @@ namespace DSPRE.Tests
         {
             Open(game);
             int n = 0;
-            if (pickupTableOverlayNumber != -1)
+            if (PickupTableOverlayNumber != -1)
             {
-                if (OverlayUtils.IsCompressed(pickupTableOverlayNumber)) OverlayUtils.Decompress(pickupTableOverlayNumber);
+                if (OverlayUtils.IsCompressed(PickupTableOverlayNumber)) OverlayUtils.Decompress(PickupTableOverlayNumber);
                 SavesUnchanged($"{game} Pickup", Array.Empty<string>(), () => { PickupTable.Read().Write(); return 1; });
                 n++;
             }
@@ -141,7 +141,7 @@ namespace DSPRE.Tests
             {
                 SavesUnchanged($"{game} hidden items", Array.Empty<string>(), () =>
                 {
-                    HiddenItemTable.Write(HiddenItemTable.Read(count), hiddenItemTableCapacity);
+                    HiddenItemTable.Write(HiddenItemTable.Read(count), HiddenItemTableCapacity);
                     return count;
                 });
                 n++;
@@ -149,7 +149,7 @@ namespace DSPRE.Tests
             if (IsRockSmashEditorAvailable())
             {
                 // The editor unpacks the archive before reading it; without this the folder exists only if an earlier test made it.
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.rockSmash });
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.RockSmash });
                 string dir = Path.GetDirectoryName(Filesystem.GetRockSmashPath(0));
                 SavesUnchanged($"{game} Rock Smash", new[] { dir }, () =>
                 {
@@ -175,7 +175,7 @@ namespace DSPRE.Tests
             SavesUnchanged($"{game} cameras", Array.Empty<string>(), () =>
             {
                 GameCameraTable.Location at = GameCameraTable.Locate();
-                bool hgss = gameFamily == GameFamilies.HGSS;
+                bool hgss = GameFamily == GameFamilies.HGSS;
                 List<GameCamera> rows = GameCameraTable.Read(at).Select((camera, i) =>
                 {
                     CameraRowVM row = new CameraRowVM(i);
@@ -196,8 +196,8 @@ namespace DSPRE.Tests
         public void Starters(string game)
         {
             Open(game);
-            Unpack(DirNames.scripts);
-            SavesUnchanged($"{game} starters", new[] { Filesystem.scripts }, () =>
+            Unpack(DirNames.Scripts);
+            SavesUnchanged($"{game} starters", new[] { Filesystem.Scripts }, () =>
             {
                 int[] starters = StarterPokemonData.GetStarters();
                 Assert.True(StarterPokemonData.ApplyStarters(starters, out _), "the starter save failed");
@@ -211,7 +211,7 @@ namespace DSPRE.Tests
         {
             Open(game);
             int n = 0;
-            if (gameFamily == GameFamilies.HGSS)
+            if (GameFamily == GameFamilies.HGSS)
             {
                 SavesUnchanged($"{game} conditional music", Array.Empty<string>(), () =>
                 {
@@ -223,7 +223,7 @@ namespace DSPRE.Tests
             }
             if (BattleMusicTables.IsSupported && BattleMusicTables.LoadRom() is BattleMusicTables tables)
             {
-                SavesUnchanged($"{game} battle music", new[] { Filesystem.expArmPath }, () =>
+                SavesUnchanged($"{game} battle music", new[] { Filesystem.ExpArmPath }, () =>
                 {
                     for (int i = 0; i < tables.Combos.Rows.Count; i++) tables.WriteCombo(i);
                     for (int i = 0; i < tables.Classes.Rows.Count; i++) tables.WriteClass(i);
@@ -231,7 +231,7 @@ namespace DSPRE.Tests
                 });
                 n++;
             }
-            SavesUnchanged($"{game} encounter music", new[] { Filesystem.expArmPath }, () =>
+            SavesUnchanged($"{game} encounter music", new[] { Filesystem.ExpArmPath }, () =>
             {
                 (EncounterMusicTable.Location where, List<EncounterMusicTable.Row> rows) = EncounterMusicTable.Read();
                 foreach (EncounterMusicTable.Row row in rows) EncounterMusicTable.WriteMusic(where, row);
@@ -269,7 +269,7 @@ namespace DSPRE.Tests
             }
             if (PokegearPhoneBook.IsSupported)
             {
-                Unpack(DirNames.textArchives);
+                Unpack(DirNames.TextArchives);
                 SavesUnchanged($"{game} phone book", Array.Empty<string>(), () =>
                 {
                     PokegearPhoneBook.Book book = PokegearPhoneBook.Load(out string error);
@@ -287,11 +287,11 @@ namespace DSPRE.Tests
         public void TrainerClassesAndMessages(string game)
         {
             Open(game);
-            Unpack(DirNames.trainerTextTable, DirNames.trainerTextOffset, DirNames.textArchives);
-            SavesUnchanged($"{game} battle messages", new[] { Dir(DirNames.trainerTextTable), Dir(DirNames.trainerTextOffset), TextBins }, () =>
+            Unpack(DirNames.TrainerTextTable, DirNames.TrainerTextOffset, DirNames.TextArchives);
+            SavesUnchanged($"{game} battle messages", new[] { Dir(DirNames.TrainerTextTable), Dir(DirNames.TrainerTextOffset), TextBins }, () =>
             {
                 List<TrainerMessageTable.Entry> entries = TrainerMessageTable.Read();
-                TrainerMessageTable.Write(entries, new TextArchive(trainerMessageTextNumber).messages);
+                TrainerMessageTable.Write(entries, new TextArchive(TrainerMessageTextNumber).Messages);
                 BuildText();
                 return entries.Count;
             }, restored: new[] { ExpandedText });
@@ -314,7 +314,7 @@ namespace DSPRE.Tests
         public void GameTables(string game)
         {
             Open(game);
-            Unpack(DirNames.textArchives);
+            Unpack(DirNames.TextArchives);
             int items = GetItemNames().Length, species = GetPokemonNames().Length, moves = GetAttackNames().Length;
             (string Name, Func<string> WhyNot, Func<int> Save)[] tables = new (string Name, Func<string> WhyNot, Func<int> Save)[]
             {
@@ -346,18 +346,18 @@ namespace DSPRE.Tests
         public void BattleDisplay(string game)
         {
             Open(game);
-            bool records = gameFamily != GameFamilies.DP;
+            bool records = GameFamily != GameFamilies.DP;
             DirNames[] dirs = records
-                ? new[] { DirNames.pokemonSpriteOffsets, DirNames.pokeHeight }
-                : new[] { DirNames.pokeYofs, DirNames.pokeShadowOfx, DirNames.pokeShadow, DirNames.pokeHeight };
-            dirs = dirs.Where(d => gameDirs.ContainsKey(d)).ToArray();
+                ? new[] { DirNames.PokemonSpriteOffsets, DirNames.PokeHeight }
+                : new[] { DirNames.PokeYofs, DirNames.PokeShadowOfx, DirNames.PokeShadow, DirNames.PokeHeight };
+            dirs = dirs.Where(d => GameDirs.ContainsKey(d)).ToArray();
             Unpack(dirs);
             SavesUnchanged($"{game} battle display", dirs.Select(Dir), () =>
             {
-                OffsetNarc recordNarc = records ? new OffsetNarc(DirNames.pokemonSpriteOffsets, SpeciesSpriteData.Size) : null;
+                OffsetNarc recordNarc = records ? new OffsetNarc(DirNames.PokemonSpriteOffsets, SpeciesSpriteData.Size) : null;
                 IBattleOffsetSource source = records
-                    ? new CombinedTailSource(recordNarc, withHeights: gameDirs.ContainsKey(DirNames.pokeHeight))
-                    : new SeparateByteSource(DirNames.pokeYofs, DirNames.pokeShadowOfx, DirNames.pokeShadow);
+                    ? new CombinedTailSource(recordNarc, withHeights: GameDirs.ContainsKey(DirNames.PokeHeight))
+                    : new SeparateByteSource(DirNames.PokeYofs, DirNames.PokeShadowOfx, DirNames.PokeShadow);
                 int n = 0, species = GetPokemonNames().Length;
                 for (int id = 0; id < species; id++)
                 {
@@ -376,9 +376,9 @@ namespace DSPRE.Tests
         public void PokemonSprites(string game)
         {
             Open(game);
-            DirNames[] dirs = new[] { DirNames.pokemonBattleSprites, DirNames.otherPokemonBattleSprites }.Where(d => gameDirs.ContainsKey(d)).ToArray();
+            DirNames[] dirs = new[] { DirNames.PokemonBattleSprites, DirNames.OtherPokemonBattleSprites }.Where(d => GameDirs.ContainsKey(d)).ToArray();
             Unpack(dirs);
-            SavesUnchanged($"{game} Pokémon sprites", dirs.SelectMany(d => new[] { gameDirs[d].unpackedDir, gameDirs[d].packedDir }), () =>
+            SavesUnchanged($"{game} Pokémon sprites", dirs.SelectMany(d => new[] { GameDirs[d].unpackedDir, GameDirs[d].packedDir }), () =>
             {
                 int n = 0;
                 foreach (DirNames dir in dirs)
@@ -403,15 +403,15 @@ namespace DSPRE.Tests
         public void Scripts(string game)
         {
             Open(game);
-            Unpack(DirNames.scripts);
-            SavesUnchanged($"{game} scripts", new[] { Filesystem.scripts }, () =>
+            Unpack(DirNames.Scripts);
+            SavesUnchanged($"{game} scripts", new[] { Filesystem.Scripts }, () =>
             {
                 int n = 0;
-                foreach ((int id, string _) in Members(Filesystem.scripts).ToList())
+                foreach ((int id, string _) in Members(Filesystem.Scripts).ToList())
                 {
                     ScriptFile file = new ScriptFile(id);
-                    if (file.isLevelScript || file.hasNoScripts) continue;
-                    Assert.False(file.parseFailedDueToInvalidCommand, $"{game} script file {id} did not parse");
+                    if (file.IsLevelScript || file.HasNoScripts) continue;
+                    Assert.False(file.ParseFailedDueToInvalidCommand, $"{game} script file {id} did not parse");
                     Assert.True(file.SaveToFileDefaultDir(id, showSuccessMessage: false), $"{game} script file {id} did not save");
                     n++;
                 }
@@ -438,8 +438,8 @@ namespace DSPRE.Tests
         public void Fonts(string game)
         {
             Open(game);
-            Unpack(DirNames.fonts);
-            SavesUnchanged($"{game} fonts", new[] { Dir(DirNames.fonts) }, () =>
+            Unpack(DirNames.Fonts);
+            SavesUnchanged($"{game} fonts", new[] { Dir(DirNames.Fonts) }, () =>
             {
                 string[] files = FieldFont.UnpackedEntries();
                 int n = 0;

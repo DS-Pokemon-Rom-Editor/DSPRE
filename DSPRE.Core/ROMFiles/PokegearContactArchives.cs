@@ -18,7 +18,7 @@ namespace DSPRE
         /// <summary>Archive IDs by contact, or null when the table can't be found.</summary>
         public static int[] Find(int contactCount)
         {
-            string rom = RomInfo.workDir ?? "";
+            string rom = RomInfo.WorkDir ?? "";
             if (_forRom == rom && _cached != null && _cached.Length == contactCount) return _cached;
 
             _cached = null;
@@ -27,9 +27,9 @@ namespace DSPRE
 
             try
             {
-                if (ARM9.CheckCompressionMark() || !File.Exists(RomInfo.arm9Path)) return null;
-                byte[] arm9 = File.ReadAllBytes(RomInfo.arm9Path);
-                _cached = Locate(arm9, ARM9.address, contactCount, Filesystem.GetTextArchivesCount());
+                if (ARM9.CheckCompressionMark() || !File.Exists(RomInfo.Arm9Path)) return null;
+                byte[] arm9 = File.ReadAllBytes(RomInfo.Arm9Path);
+                _cached = Locate(arm9, ARM9.Address, contactCount, Filesystem.GetTextArchivesCount());
             }
             catch (Exception ex)
             {
@@ -85,7 +85,7 @@ namespace DSPRE
                 string name = null;
                 if (archives != null)
                 {
-                    try { name = new TextArchive(archives[i]).messages.FirstOrDefault(); }
+                    try { name = new TextArchive(archives[i]).Messages.FirstOrDefault(); }
                     catch (Exception ex) { AppLogger.Error($"PokegearContactArchives: archive {archives[i]}: {ex.Message}"); }
                 }
                 names[i] = string.IsNullOrWhiteSpace(name) ? $"Contact {i}" : name.Trim();

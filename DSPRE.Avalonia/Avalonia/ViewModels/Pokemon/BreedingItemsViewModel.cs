@@ -105,11 +105,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task<bool> SaveChangesAsync()
         {
             if (_table == null) return true;
-            if (HasProblem) { await DialogHelper.ShowError(Problem, "Breeding items error"); return false; }
+            if (HasProblem) { await DialogHelper.ShowErrorAsync(Problem, "Breeding items error"); return false; }
             try { _table.Save(SpeciesNames.Count, ItemNames.Count); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
             {
-                await DialogHelper.ShowError("The breeding items were not saved:\n" + e.Message, "Breeding items error");
+                await DialogHelper.ShowErrorAsync("The breeding items were not saved:\n" + e.Message, "Breeding items error");
                 return false;
             }
             _saved = _table.ToBytes();

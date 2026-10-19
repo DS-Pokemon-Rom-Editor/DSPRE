@@ -20,13 +20,13 @@ namespace DSPRE.Avalonia.Data
         }
 
         public override string Title => "Pokédex graphics";
-        public override DirNames Archive => DirNames.pokedexGraphics;
+        public override DirNames Archive => DirNames.PokedexGraphics;
         public override IReadOnlyList<ScreenPage> Pages => _pages;
 
         public override ScreenPageComposer MakeComposer(Func<int, FieldFont> font) => ComposerFor(_sample, font);
 
         // The sample's sprite, icon and footprint come from editors of their own.
-        public override DirNames[] PictureArchives => new[] { DirNames.pokemonBattleSprites, DirNames.monIcons, DirNames.footprintGraphics };
+        public override DirNames[] PictureArchives => new[] { DirNames.PokemonBattleSprites, DirNames.MonIcons, DirNames.FootprintGraphics };
 
         public override int SpriteDrawing(ScreenSprite s) =>
             s.TypeSlot > 0 && s.TypeDrawing >= 0 ? s.TypeDrawing + Math.Max(0, _sample.TypeSlot(s.TypeSlot)) : s.Drawing;
@@ -40,15 +40,15 @@ namespace DSPRE.Avalonia.Data
                 case ScreenMonKind.Back:
                     int first = species * 6;
                     int face = m.Kind == ScreenMonKind.Front ? first + 3 : first + 1;
-                    yield return (m.Kind == ScreenMonKind.Front ? "Front" : "Back", "Battle sprites " + face, DirNames.pokemonBattleSprites, face);
-                    yield return ("Colours", "Battle sprites " + (first + 4), DirNames.pokemonBattleSprites, first + 4);
+                    yield return (m.Kind == ScreenMonKind.Front ? "Front" : "Back", "Battle sprites " + face, DirNames.PokemonBattleSprites, face);
+                    yield return ("Colours", "Battle sprites " + (first + 4), DirNames.PokemonBattleSprites, first + 4);
                     break;
                 case ScreenMonKind.Footprint:
                     int foot = GraphicAssets.FootprintEntry(species);
-                    if (foot >= 0) yield return ("Footprint", "Footprints " + foot, DirNames.footprintGraphics, foot);
+                    if (foot >= 0) yield return ("Footprint", "Footprints " + foot, DirNames.FootprintGraphics, foot);
                     break;
                 case ScreenMonKind.Icon:
-                    yield return ("Icon", "Party icons " + (species + 7), DirNames.monIcons, species + 7);
+                    yield return ("Icon", "Party icons " + (species + 7), DirNames.MonIcons, species + 7);
                     break;
             }
         }
@@ -61,15 +61,15 @@ namespace DSPRE.Avalonia.Data
             ScriptNarc dex = null;
             try
             {
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.pokedexGraphics, DirNames.footprintGraphics,
-                                                            DirNames.pokemonBattleSprites, DirNames.monIcons,
-                                                            DirNames.pokedexAreas, DirNames.pokedexSearchSteps });
-                dex = new ScriptNarc(DirNames.pokedexGraphics);
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.PokedexGraphics, DirNames.FootprintGraphics,
+                                                            DirNames.PokemonBattleSprites, DirNames.MonIcons,
+                                                            DirNames.PokedexAreas, DirNames.PokedexSearchSteps });
+                dex = new ScriptNarc(DirNames.PokedexGraphics);
             }
             catch (Exception ex) { AppLogger.Error("Pokédex graphics: " + ex.Message); }
             ScriptNarc archive = dex;
             return new ScreenPageComposer(i => archive?.Get(i), font, sample.Text, sample.Picture, sample.TypeSlot,
-                                          i => ScreenGraphicsLayouts.BankFor(DirNames.pokedexGraphics, i))
+                                          i => ScreenGraphicsLayouts.BankFor(DirNames.PokedexGraphics, i))
             {
                 Habitat = sample.Habitat,
                 Size = sample.SizeInfo,

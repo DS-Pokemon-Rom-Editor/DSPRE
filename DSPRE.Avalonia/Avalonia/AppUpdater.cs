@@ -31,7 +31,7 @@ namespace DSPRE.Avalonia
                 {
                     AppLogger.Info("Not a Velopack-installed build; skipping update check.");
                     if (!silent)
-                        await DialogHelper.ShowInfo("Update checks are only available in installed builds (not portable/dev runs).", "Check for updates");
+                        await DialogHelper.ShowInfoAsync("Update checks are only available in installed builds (not portable/dev runs).", "Check for updates");
                     return;
                 }
 
@@ -40,7 +40,7 @@ namespace DSPRE.Avalonia
                 {
                     AppLogger.Info("No updates available.");
                     if (!silent)
-                        await DialogHelper.ShowInfo("No update is available.", "Information");
+                        await DialogHelper.ShowInfoAsync("No update is available.", "Information");
                     return;
                 }
 
@@ -49,7 +49,7 @@ namespace DSPRE.Avalonia
                 string availableVersion = ToDotNetVersion(velopackVersion);
 
                 string notes = await Task.Run(() => FetchReleaseNotes($"v{availableVersion}"));
-                bool install = await ShowUpdatePrompt(currentVersion, availableVersion, notes);
+                bool install = await ShowUpdatePromptAsync(currentVersion, availableVersion, notes);
 
                 if (install)
                 {
@@ -69,12 +69,12 @@ namespace DSPRE.Avalonia
             {
                 AppLogger.Error($"Error checking for updates: {ex.Message}");
                 if (!silent)
-                    await DialogHelper.ShowError($"Error checking for updates: {ex.Message}", "Update error");
+                    await DialogHelper.ShowErrorAsync($"Error checking for updates: {ex.Message}", "Update error");
             }
         }
 
         /// <summary>Shows the prompt with the release notes. Public so the dev preview can reuse it.</summary>
-        public static async Task<bool> ShowUpdatePrompt(string currentVersion, string availableVersion, string notes, bool preview = false)
+        public static async Task<bool> ShowUpdatePromptAsync(string currentVersion, string availableVersion, string notes, bool preview = false)
         {
             Window owner = (global::Avalonia.Application.Current?.ApplicationLifetime
                 as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.MainWindow;
@@ -101,7 +101,7 @@ namespace DSPRE.Avalonia
                 string[] v = velopackVersion.Split('.');
                 return v.Length >= 3 ? $"{v[0]}.{v[1]}.{v[2]}.0" : velopackVersion;
             }
-            catch { return velopackVersion; }
+            catch (Exception ex) { AppLogger.WarnOnce("AppUpdater.ToDotNetVersion", ex); return velopackVersion; }
         }
 
         /// <summary>Reads a release's notes off GitHub. Returns null when there are none to show.</summary>

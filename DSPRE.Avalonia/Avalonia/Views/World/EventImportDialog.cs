@@ -22,11 +22,11 @@ namespace DSPRE.Avalonia.Views.World
             };
 
             Grid columns = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*,*"), ColumnSpacing = 8, Margin = new global::Avalonia.Thickness(12) };
-            List<CheckBox> ow = Column(columns, 0, "Overworlds", source.overworlds,
-                                       o => $"ID {o.owID}, {DSPRE.Avalonia.Data.OverworldLabels.Of(o.overlayTableEntry)}");
-            List<CheckBox> warps = Column(columns, 1, "Warps", source.warps, w => w.ToString());
-            List<CheckBox> trigs = Column(columns, 2, "Triggers", source.triggers, t => t.ToString());
-            List<CheckBox> spawns = Column(columns, 3, "Spawnables", source.spawnables, s => s.ToString());
+            List<CheckBox> ow = Column(columns, 0, "Overworlds", source.Overworlds,
+                                       o => $"ID {o.OwID}, {DSPRE.Avalonia.Data.OverworldLabels.Of(o.OverlayTableEntry)}");
+            List<CheckBox> warps = Column(columns, 1, "Warps", source.Warps, w => w.ToString());
+            List<CheckBox> trigs = Column(columns, 2, "Triggers", source.Triggers, t => t.ToString());
+            List<CheckBox> spawns = Column(columns, 3, "Spawnables", source.Spawnables, s => s.ToString());
 
             CheckBox clear = new CheckBox { Content = "Clear this file's events first", VerticalAlignment = VerticalAlignment.Center };
             TextBlock note = new TextBlock

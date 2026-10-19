@@ -114,10 +114,10 @@ namespace DSPRE.HgEngine
 
             // Shows the name now instead of only after a full "compile ROM" rebuild. Forms are numbered after
             // the new species and move up one, as they will in the rebuilt archive, so the name is inserted.
-            TextArchive names = new ROMFiles.TextArchive(RomInfo.pokemonNamesTextNumbers[0]);
-            while (names.messages.Count < written.SpeciesId) names.messages.Add("");
-            names.messages.Insert(written.SpeciesId, written.DisplayName);
-            names.SaveToExpandedDir(RomInfo.pokemonNamesTextNumbers[0], showSuccessMessage: false);
+            TextArchive names = new ROMFiles.TextArchive(RomInfo.PokemonNamesTextNumbers[0]);
+            while (names.Messages.Count < written.SpeciesId) names.Messages.Add("");
+            names.Messages.Insert(written.SpeciesId, written.DisplayName);
+            names.SaveToExpandedDir(RomInfo.PokemonNamesTextNumbers[0], showSuccessMessage: false);
         }
 
         private static bool TryGetPaths(out string headerPath, out string sourcePath, out string error)

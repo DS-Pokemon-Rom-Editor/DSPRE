@@ -95,7 +95,7 @@ namespace DSPRE.Avalonia.Data
             }
             if (handle != null)
             {
-                try { AudioOutput.Current.Stop(handle); } catch { }
+                try { AudioOutput.Current.Stop(handle); } catch { }   // stopping a sound that already ended is harmless
             }
             if (was) Changed?.Invoke();
         }

@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia.Views.Trainers
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) VM?.DiscardChanges();
         }
 
         private void TogglePlay_Click(object sender, RoutedEventArgs e) => VM?.TogglePlay();
@@ -64,7 +64,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             {
                 Key = "trainerClassMetadata", Title = "Trainer class metadata", State = DSPRE.PatchToolboxLogic.PatchState.Applied,
             };
-            await DialogHelper.ShowInfo(DSPRE.PatchNotes.For(patch), patch.Title);
+            await DialogHelper.ShowInfoAsync(DSPRE.PatchNotes.For(patch), patch.Title);
         }
 
         private async void CiPatchNotes_Click(object sender, RoutedEventArgs e)
@@ -73,7 +73,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             {
                 Key = "classIntros", Title = "Trainer class intros", State = DSPRE.PatchToolboxLogic.PatchState.Applied,
             };
-            await DialogHelper.ShowInfo(DSPRE.PatchNotes.For(patch), patch.Title);
+            await DialogHelper.ShowInfoAsync(DSPRE.PatchNotes.For(patch), patch.Title);
         }
 
         private void EditIntro_Click(object sender, RoutedEventArgs e)
@@ -86,7 +86,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             if (VM == null || VM.SelectedClassIndex < 0) return;
             if (!await VM.ConfirmLeaveAsync()) return;
             string error = VM.CopySelectedClass();
-            if (error != null) await DialogHelper.ShowError(error, "Copy class");
+            if (error != null) await DialogHelper.ShowErrorAsync(error, "Copy class");
         }
 
         private async void RemoveLastClass_Click(object sender, RoutedEventArgs e)
@@ -100,19 +100,19 @@ namespace DSPRE.Avalonia.Views.Trainers
             await BusyOverlay.RunAsync($"Checking class {last}",
                 "Looking for trainers, events, scripts, rematches and Battle Tower trainers that use it.",
                 () => uses = vm.LastClassUses(out error), TopLevel.GetTopLevel(this) as Window);
-            if (uses == null) { await DialogHelper.ShowError(error, "Trainer classes error"); return; }
+            if (uses == null) { await DialogHelper.ShowErrorAsync(error, "Trainer classes error"); return; }
             if (uses.Count > 0)
             {
-                await DialogHelper.ShowError($"Class {last} can't be removed while these use it:\n\n" +
+                await DialogHelper.ShowErrorAsync($"Class {last} can't be removed while these use it:\n\n" +
                     DSPRE.ROMFiles.TrainerClassDatasetManager.DescribeUses(uses), "Trainer classes error");
                 return;
             }
-            bool sure = await DialogHelper.AskYesNo(
+            bool sure = await DialogHelper.AskYesNoAsync(
                 $"Remove class {last}? No trainer, event, script, rematch, phone contact or Battle Tower trainer uses it. " +
                 "Custom code isn't checked.", "Delete trainer class?");
             if (!sure) return;
             error = VM.RemoveLastClass();
-            if (error != null) await DialogHelper.ShowError(error, "Trainer classes error");
+            if (error != null) await DialogHelper.ShowErrorAsync(error, "Trainer classes error");
         }
 
         private async void AddTrainerClass_Click(object sender, RoutedEventArgs e)
@@ -120,7 +120,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             if (VM == null) return;
             if (!VM.CanAddClass)
             {
-                await DialogHelper.ShowError("Save or discard the new trainer class first.", "Add trainer class");
+                await DialogHelper.ShowErrorAsync("Save or discard the new trainer class first.", "Add trainer class");
                 return;
             }
             // The new class is selected once it is added, so the loaded class is settled first.
@@ -134,7 +134,7 @@ namespace DSPRE.Avalonia.Views.Trainers
 
             int newClassId = VM.NextClassId;
             string refusal = hgEngine ? DSPRE.HgEngine.HgEngineTrainerClassExpansion.AddRefusal() : null;
-            if (refusal != null) { await DialogHelper.ShowError(refusal, "Add trainer class"); return; }
+            if (refusal != null) { await DialogHelper.ShowErrorAsync(refusal, "Add trainer class"); return; }
 
             AddTrainerClassViewModel dlgVm = new AddTrainerClassViewModel
             {
@@ -152,7 +152,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             string error = VM.AddTrainerClass(dlgVm.ClassName, dlgVm.NameWithArticle, (byte)dlgVm.GenderIndex, (byte)dlgVm.PrizeMultiplier,
                 dlgVm.AddMusic, (ushort)dlgVm.MusicMain, 0, dlgVm.SpriteFrom);
             if (error != null)
-                await DialogHelper.ShowError(error, "Add trainer class");
+                await DialogHelper.ShowErrorAsync(error, "Add trainer class");
         }
     }
 }

@@ -30,8 +30,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 RawImage raw = DSUtils.GetPokePicRaw(species, IconSize, IconSize);
                 icon = ImageConverter.ToAvaloniaBitmap(raw);
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.WarnOnce("PokemonIconCache.Get", ex);
                 icon = null;
             }
 
@@ -165,10 +166,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool HasUnsavedChanges => _dirty || _archive.IsDirty;
         public string UnsavedChangesDescription
             => DSPRE.Avalonia.Data.StagedArchive.Join($"Wild Encounters (DPPt #{SelectedEncounterIndex})", _dirty, _archive.Describe("encounter file", "encounter files"));
-        void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommand();
+        void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommandAsync();
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
-            await SaveCommand();
+            await SaveCommandAsync();
             return !HasUnsavedChanges;
         }
         public void DiscardChanges()
@@ -207,11 +208,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         // ── Encounter rates ───────────────────────────────────────────────
-        private int _walkingRate;  public int WalkingRate  { get => _walkingRate;  set { if (Set(ref _walkingRate,  value) && !_loading) { _current.walkingRate  = (byte)value; SetDirty(); SetNotes(); } } }
-        private int _surfRate;     public int SurfRate     { get => _surfRate;     set { if (Set(ref _surfRate,     value) && !_loading) { _current.surfRate     = (byte)value; SetDirty(); } } }
-        private int _oldRodRate;   public int OldRodRate   { get => _oldRodRate;   set { if (Set(ref _oldRodRate,   value) && !_loading) { _current.oldRodRate   = (byte)value; SetDirty(); } } }
-        private int _goodRodRate;  public int GoodRodRate  { get => _goodRodRate;  set { if (Set(ref _goodRodRate,  value) && !_loading) { _current.goodRodRate  = (byte)value; SetDirty(); } } }
-        private int _superRodRate; public int SuperRodRate { get => _superRodRate; set { if (Set(ref _superRodRate, value) && !_loading) { _current.superRodRate = (byte)value; SetDirty(); } } }
+        private int _walkingRate;  public int WalkingRate  { get => _walkingRate;  set { if (Set(ref _walkingRate,  value) && !_loading) { _current.WalkingRate  = (byte)value; SetDirty(); SetNotes(); } } }
+        private int _surfRate;     public int SurfRate     { get => _surfRate;     set { if (Set(ref _surfRate,     value) && !_loading) { _current.SurfRate     = (byte)value; SetDirty(); } } }
+        private int _oldRodRate;   public int OldRodRate   { get => _oldRodRate;   set { if (Set(ref _oldRodRate,   value) && !_loading) { _current.OldRodRate   = (byte)value; SetDirty(); } } }
+        private int _goodRodRate;  public int GoodRodRate  { get => _goodRodRate;  set { if (Set(ref _goodRodRate,  value) && !_loading) { _current.GoodRodRate  = (byte)value; SetDirty(); } } }
+        private int _superRodRate; public int SuperRodRate { get => _superRodRate; set { if (Set(ref _superRodRate, value) && !_loading) { _current.SuperRodRate = (byte)value; SetDirty(); } } }
 
         // ── Walking encounters (12 slots) ─────────────────────────────────
         public ObservableCollection<WildEncounterRow> WalkingRows { get; } = new();
@@ -253,14 +254,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public int ShellosFormIndex
         {
             get => _shellosFormIndex;
-            set { if (Set(ref _shellosFormIndex, value) && !_loading) { _current.formRates[0] = EastWest(value, _shellosRaw); SetDirty(); } }
+            set { if (Set(ref _shellosFormIndex, value) && !_loading) { _current.FormRates[0] = EastWest(value, _shellosRaw); SetDirty(); } }
         }
 
         private int _gastrodonFormIndex;
         public int GastrodonFormIndex
         {
             get => _gastrodonFormIndex;
-            set { if (Set(ref _gastrodonFormIndex, value) && !_loading) { _current.formRates[1] = EastWest(value, _gastrodonRaw); SetDirty(); } }
+            set { if (Set(ref _gastrodonFormIndex, value) && !_loading) { _current.FormRates[1] = EastWest(value, _gastrodonRaw); SetDirty(); } }
         }
 
         /// <summary>West sea is zero; east sea is anything else, so a number already there is kept.</summary>
@@ -271,7 +272,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public int UnownTableIndex
         {
             get => _unownTableIndex;
-            set { if (Set(ref _unownTableIndex, value) && !_loading) { _current.unownTable = (uint)value; SetDirty(); } }
+            set { if (Set(ref _unownTableIndex, value) && !_loading) { _current.UnownTable = (uint)value; SetDirty(); } }
         }
 
         // ── Title ────────────────────────────────────────────────────────
@@ -282,7 +283,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private EncounterFileDPPt _current;
         private string _dirPath;
         // Added, removed and saved encounter files wait here until Save.
-        private readonly DSPRE.Avalonia.Data.StagedArchive _archive = new(DirNames.encounters);
+        private readonly DSPRE.Avalonia.Data.StagedArchive _archive = new(DirNames.Encounters);
         private int _totalHeaders;
         private bool _loading;
         private bool _rowsHooked;
@@ -375,8 +376,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private int FirstTabWithEncounters()
         {
-            if (_current == null || _current.walkingRate > 0) return 0;
-            if (_current.surfRate > 0 || _current.oldRodRate > 0 || _current.goodRodRate > 0 || _current.superRodRate > 0) return 1;
+            if (_current == null || _current.WalkingRate > 0) return 0;
+            if (_current.SurfRate > 0 || _current.OldRodRate > 0 || _current.GoodRodRate > 0 || _current.SuperRodRate > 0) return 1;
             return _current.HasEncounters ? 2 : 0;
         }
 
@@ -390,7 +391,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     using FileStream stream = new FileStream(Path.Combine(_dirPath, id.ToString("D4")), FileMode.Open, FileAccess.Read);
                     if (new EncounterFileDPPt(stream).HasEncounters) return id;
                 }
-                catch (IOException) { }
+                catch (IOException) { }   // a file that can't be read is skipped
             }
             return 0;
         }
@@ -431,7 +432,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         // ── Commands ──────────────────────────────────────────────────────
-        public async Task SaveCommand()
+        public async Task SaveCommandAsync()
         {
             if (_current == null) return;
             List<string> problems = new List<string>();
@@ -442,7 +443,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             WildEncounterChecks.Check(problems, "Old Rod", OldRodRate, OldRodRows, true);
             WildEncounterChecks.Check(problems, "Good Rod", GoodRodRate, GoodRodRows, true);
             WildEncounterChecks.Check(problems, "Super Rod", SuperRodRate, SuperRodRows, true);
-            if (problems.Count > 0 && !await DialogHelper.AskYesNo("These slots can be rolled but look wrong:\n" + WildEncounterChecks.Describe(problems)
+            if (problems.Count > 0 && !await DialogHelper.AskYesNoAsync("These slots can be rolled but look wrong:\n" + WildEncounterChecks.Describe(problems)
                     + "\n\nSave anyway?", "Wild Pokémon editor")) return;
             WriteWalkingRowsToFile();
             WriteWaterRowsToFile();
@@ -512,15 +513,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 MapHeader h = ReadHeader(i);
 
-                if (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat)
+                if (GameFamily == GameFamilies.DP || GameFamily == GameFamilies.Plat)
                 {
-                    if (h.wildPokemon != 0xFFFF)
+                    if (h.WildPokemon != 0xFFFF)
                     {
-                        if (!locationMap.ContainsKey(h.wildPokemon)) locationMap[h.wildPokemon] = new System.Collections.Generic.List<string>();
+                        if (!locationMap.ContainsKey(h.WildPokemon)) locationMap[h.WildPokemon] = new System.Collections.Generic.List<string>();
                         // Names come from the header's own location; the encounter file id is an unrelated
                         // number and using it labels every entry with a different area.
-                        int locIdx = gameFamily == GameFamilies.DP ? ((HeaderDP)h).locationName : ((HeaderPt)h).locationName;
-                        locationMap[h.wildPokemon].Add(locIdx < locationNames.Count ? locationNames[locIdx] : "Unknown");
+                        int locIdx = GameFamily == GameFamilies.DP ? ((HeaderDP)h).LocationName : ((HeaderPt)h).LocationName;
+                        locationMap[h.WildPokemon].Add(locIdx < locationNames.Count ? locationNames[locIdx] : "Unknown");
                     }
                 }
             }
@@ -540,7 +541,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             for (ushort i = 0; i < _totalHeaders; i++)
             {
                 MapHeader h = ReadHeader(i);
-                if (h != null && h.wildPokemon != nullEncounterID && h.wildPokemon == file) users.Add(i);
+                if (h != null && h.WildPokemon != NullEncounterID && h.WildPokemon == file) users.Add(i);
             }
             return users;
         }
@@ -570,40 +571,40 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void PopulateRows()
         {
             _loading = true;
-            WalkingRate  = _current.walkingRate;
-            SurfRate     = _current.surfRate;
-            OldRodRate   = _current.oldRodRate;
-            GoodRodRate  = _current.goodRodRate;
-            SuperRodRate = _current.superRodRate;
+            WalkingRate  = _current.WalkingRate;
+            SurfRate     = _current.SurfRate;
+            OldRodRate   = _current.OldRodRate;
+            GoodRodRate  = _current.GoodRodRate;
+            SuperRodRate = _current.SuperRodRate;
 
             // Form data: formRates[0]=Shellos, [1]=Gastrodon (0=West, anything else=East)
             // unownTable: 1..8 are the letter tables and 0 reads as 1, so the list index is the value.
-            _shellosRaw = _current.formRates[0];
-            _gastrodonRaw = _current.formRates[1];
-            _shellosFormIndex  = (int)(_current.formRates[0] == 0 ? 0 : 1);
+            _shellosRaw = _current.FormRates[0];
+            _gastrodonRaw = _current.FormRates[1];
+            _shellosFormIndex  = (int)(_current.FormRates[0] == 0 ? 0 : 1);
             OnPropertyChanged(nameof(ShellosFormIndex));
-            _gastrodonFormIndex = (int)(_current.formRates[1] == 0 ? 0 : 1);
+            _gastrodonFormIndex = (int)(_current.FormRates[1] == 0 ? 0 : 1);
             OnPropertyChanged(nameof(GastrodonFormIndex));
-            _unownTableIndex = (int)_current.unownTable;
+            _unownTableIndex = (int)_current.UnownTable;
             if (_unownTableIndex < 0) _unownTableIndex = 0;
             if (_unownTableIndex >= UnownTableNames.Count) _unownTableIndex = 0;
             OnPropertyChanged(nameof(UnownTableIndex));
 
             string[] walkLabels = Enumerable.Range(0, 12).Select(i => EncounterSlotOdds.SlotLabel("Walking", i)).ToArray();
-            SyncRows(WalkingRows,  12, i => walkLabels[i], i => (int)_current.walkingPokemon[i], i => _current.walkingLevels[i], null, null, false);
-            SyncRows(DayRows,       2, i => $"Day {i+1}",   i => (int)_current.dayPokemon[i],     _ => 0,                         null, null, false);
-            SyncRows(NightRows,     2, i => $"Night {i+1}", i => (int)_current.nightPokemon[i],   _ => 0,                         null, null, false);
-            SyncRows(SwarmRows,     2, i => $"Swarm {i+1}", i => (int)_current.swarmPokemon[i],   _ => 0,                         null, null, false);
-            SyncRows(RadarRows,     4, i => $"Radar {i+1}", i => (int)_current.radarPokemon[i],   _ => 0,                         null, null, false);
-            SyncRows(RubyRows,      2, i => $"Ruby {i+1}",      i => (int)_current.rubyPokemon[i],      _ => 0, null, null, false);
-            SyncRows(SapphireRows,  2, i => $"Sapphire {i+1}",  i => (int)_current.sapphirePokemon[i],  _ => 0, null, null, false);
-            SyncRows(EmeraldRows,   2, i => $"Emerald {i+1}",   i => (int)_current.emeraldPokemon[i],   _ => 0, null, null, false);
-            SyncRows(FireRedRows,   2, i => $"FireRed {i+1}",   i => (int)_current.fireRedPokemon[i],   _ => 0, null, null, false);
-            SyncRows(LeafGreenRows, 2, i => $"LeafGreen {i+1}", i => (int)_current.leafGreenPokemon[i], _ => 0, null, null, false);
-            SyncRows(SurfRows,     5, i => EncounterSlotOdds.SlotLabel("Surfing", i),   i => _current.surfPokemon[i],     _ => 0, i => _current.surfMinLevels[i],     i => _current.surfMaxLevels[i],     true);
-            SyncRows(OldRodRows,   5, i => EncounterSlotOdds.SlotLabel("Old Rod", i),   i => _current.oldRodPokemon[i],   _ => 0, i => _current.oldRodMinLevels[i],   i => _current.oldRodMaxLevels[i],   true);
-            SyncRows(GoodRodRows,  5, i => EncounterSlotOdds.SlotLabel("Good Rod", i),  i => _current.goodRodPokemon[i],  _ => 0, i => _current.goodRodMinLevels[i],  i => _current.goodRodMaxLevels[i],  true);
-            SyncRows(SuperRodRows, 5, i => EncounterSlotOdds.SlotLabel("Super Rod", i), i => _current.superRodPokemon[i], _ => 0, i => _current.superRodMinLevels[i], i => _current.superRodMaxLevels[i], true);
+            SyncRows(WalkingRows,  12, i => walkLabels[i], i => (int)_current.WalkingPokemon[i], i => _current.WalkingLevels[i], null, null, false);
+            SyncRows(DayRows,       2, i => $"Day {i+1}",   i => (int)_current.DayPokemon[i],     _ => 0,                         null, null, false);
+            SyncRows(NightRows,     2, i => $"Night {i+1}", i => (int)_current.NightPokemon[i],   _ => 0,                         null, null, false);
+            SyncRows(SwarmRows,     2, i => $"Swarm {i+1}", i => (int)_current.SwarmPokemon[i],   _ => 0,                         null, null, false);
+            SyncRows(RadarRows,     4, i => $"Radar {i+1}", i => (int)_current.RadarPokemon[i],   _ => 0,                         null, null, false);
+            SyncRows(RubyRows,      2, i => $"Ruby {i+1}",      i => (int)_current.RubyPokemon[i],      _ => 0, null, null, false);
+            SyncRows(SapphireRows,  2, i => $"Sapphire {i+1}",  i => (int)_current.SapphirePokemon[i],  _ => 0, null, null, false);
+            SyncRows(EmeraldRows,   2, i => $"Emerald {i+1}",   i => (int)_current.EmeraldPokemon[i],   _ => 0, null, null, false);
+            SyncRows(FireRedRows,   2, i => $"FireRed {i+1}",   i => (int)_current.FireRedPokemon[i],   _ => 0, null, null, false);
+            SyncRows(LeafGreenRows, 2, i => $"LeafGreen {i+1}", i => (int)_current.LeafGreenPokemon[i], _ => 0, null, null, false);
+            SyncRows(SurfRows,     5, i => EncounterSlotOdds.SlotLabel("Surfing", i),   i => _current.SurfPokemon[i],     _ => 0, i => _current.SurfMinLevels[i],     i => _current.SurfMaxLevels[i],     true);
+            SyncRows(OldRodRows,   5, i => EncounterSlotOdds.SlotLabel("Old Rod", i),   i => _current.OldRodPokemon[i],   _ => 0, i => _current.OldRodMinLevels[i],   i => _current.OldRodMaxLevels[i],   true);
+            SyncRows(GoodRodRows,  5, i => EncounterSlotOdds.SlotLabel("Good Rod", i),  i => _current.GoodRodPokemon[i],  _ => 0, i => _current.GoodRodMinLevels[i],  i => _current.GoodRodMaxLevels[i],  true);
+            SyncRows(SuperRodRows, 5, i => EncounterSlotOdds.SlotLabel("Super Rod", i), i => _current.SuperRodPokemon[i], _ => 0, i => _current.SuperRodMinLevels[i], i => _current.SuperRodMaxLevels[i], true);
             if (WalkingSlots.Count == 0)
                 for (int i = 0; i < 12; i++)
                     WalkingSlots.Add(new WildTimeRow(WalkingRows[i], i is 2 or 3 ? DayRows[i - 2] : null, i is 2 or 3 ? NightRows[i - 2] : null));
@@ -688,14 +689,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             List<ushort> users = HeadersUsing(last);
             if (users.Count > 0)
             {
-                await DialogHelper.ShowError(
+                await DialogHelper.ShowErrorAsync(
                     $"Encounter file {last} is used by header{(users.Count > 1 ? "s" : "")} {string.Join(", ", users)}. Point {(users.Count > 1 ? "them" : "it")} elsewhere first.",
                     "Encounter file in use");
                 return;
             }
             bool leaving = _selectedEncounterIndex == last;
             string unsaved = leaving && _dirty ? " Its unsaved changes go with it." : "";
-            if (!await DialogHelper.AskYesNo($"Delete the last encounter file ({last})?{unsaved}", "Delete encounter file?")) return;
+            if (!await DialogHelper.AskYesNoAsync($"Delete the last encounter file ({last})?{unsaved}", "Delete encounter file?")) return;
             _archive.RemoveLast();
             StagedChanged();
             if (leaving)
@@ -719,7 +720,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public async Task RepairAllAsync()
         {
-            if (!await DialogHelper.AskYesNo("Open every encounter file and reset corrupted fields to their defaults?", "Repair all encounter files?")) return;
+            if (!await DialogHelper.AskYesNoAsync("Open every encounter file and reset corrupted fields to their defaults?", "Repair all encounter files?")) return;
             int n = _archive.Count;
             for (int i = 0; i < n; i++)
                 _archive.Put(i, new EncounterFileDPPt(new MemoryStream(_archive.Read(i))).ToByteArray());
@@ -747,31 +748,31 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             for (int i = 0; i < WalkingRows.Count && i < 12; i++)
             {
-                _current.walkingPokemon[i] = (uint)WalkingRows[i].PokemonIndex;
-                _current.walkingLevels[i]  = (byte)WalkingRows[i].Level;
+                _current.WalkingPokemon[i] = (uint)WalkingRows[i].PokemonIndex;
+                _current.WalkingLevels[i]  = (byte)WalkingRows[i].Level;
             }
-            for (int i = 0; i < DayRows.Count   && i < 2; i++) _current.dayPokemon[i]   = (uint)DayRows[i].PokemonIndex;
-            for (int i = 0; i < NightRows.Count  && i < 2; i++) _current.nightPokemon[i] = (uint)NightRows[i].PokemonIndex;
-            for (int i = 0; i < SwarmRows.Count  && i < 2; i++) _current.swarmPokemon[i] = (ushort)SwarmRows[i].PokemonIndex;
-            for (int i = 0; i < RadarRows.Count  && i < 4; i++) _current.radarPokemon[i] = (uint)RadarRows[i].PokemonIndex;
-            for (int i = 0; i < RubyRows.Count   && i < 2; i++) _current.rubyPokemon[i]      = (uint)RubyRows[i].PokemonIndex;
-            for (int i = 0; i < SapphireRows.Count && i < 2; i++) _current.sapphirePokemon[i] = (uint)SapphireRows[i].PokemonIndex;
-            for (int i = 0; i < EmeraldRows.Count  && i < 2; i++) _current.emeraldPokemon[i]  = (uint)EmeraldRows[i].PokemonIndex;
-            for (int i = 0; i < FireRedRows.Count   && i < 2; i++) _current.fireRedPokemon[i]  = (uint)FireRedRows[i].PokemonIndex;
-            for (int i = 0; i < LeafGreenRows.Count && i < 2; i++) _current.leafGreenPokemon[i] = (uint)LeafGreenRows[i].PokemonIndex;
+            for (int i = 0; i < DayRows.Count   && i < 2; i++) _current.DayPokemon[i]   = (uint)DayRows[i].PokemonIndex;
+            for (int i = 0; i < NightRows.Count  && i < 2; i++) _current.NightPokemon[i] = (uint)NightRows[i].PokemonIndex;
+            for (int i = 0; i < SwarmRows.Count  && i < 2; i++) _current.SwarmPokemon[i] = (ushort)SwarmRows[i].PokemonIndex;
+            for (int i = 0; i < RadarRows.Count  && i < 4; i++) _current.RadarPokemon[i] = (uint)RadarRows[i].PokemonIndex;
+            for (int i = 0; i < RubyRows.Count   && i < 2; i++) _current.RubyPokemon[i]      = (uint)RubyRows[i].PokemonIndex;
+            for (int i = 0; i < SapphireRows.Count && i < 2; i++) _current.SapphirePokemon[i] = (uint)SapphireRows[i].PokemonIndex;
+            for (int i = 0; i < EmeraldRows.Count  && i < 2; i++) _current.EmeraldPokemon[i]  = (uint)EmeraldRows[i].PokemonIndex;
+            for (int i = 0; i < FireRedRows.Count   && i < 2; i++) _current.FireRedPokemon[i]  = (uint)FireRedRows[i].PokemonIndex;
+            for (int i = 0; i < LeafGreenRows.Count && i < 2; i++) _current.LeafGreenPokemon[i] = (uint)LeafGreenRows[i].PokemonIndex;
 
             // Form data
-            _current.formRates[0] = EastWest(_shellosFormIndex, _shellosRaw);
-            _current.formRates[1] = EastWest(_gastrodonFormIndex, _gastrodonRaw);
-            _current.unownTable     = (uint)_unownTableIndex;
+            _current.FormRates[0] = EastWest(_shellosFormIndex, _shellosRaw);
+            _current.FormRates[1] = EastWest(_gastrodonFormIndex, _gastrodonRaw);
+            _current.UnownTable     = (uint)_unownTableIndex;
         }
 
         private void WriteWaterRowsToFile()
         {
-            WriteWaterGroup(_current.surfPokemon,     _current.surfMinLevels,     _current.surfMaxLevels,     SurfRows);
-            WriteWaterGroup(_current.oldRodPokemon,   _current.oldRodMinLevels,   _current.oldRodMaxLevels,   OldRodRows);
-            WriteWaterGroup(_current.goodRodPokemon,  _current.goodRodMinLevels,  _current.goodRodMaxLevels,  GoodRodRows);
-            WriteWaterGroup(_current.superRodPokemon, _current.superRodMinLevels, _current.superRodMaxLevels, SuperRodRows);
+            WriteWaterGroup(_current.SurfPokemon,     _current.SurfMinLevels,     _current.SurfMaxLevels,     SurfRows);
+            WriteWaterGroup(_current.OldRodPokemon,   _current.OldRodMinLevels,   _current.OldRodMaxLevels,   OldRodRows);
+            WriteWaterGroup(_current.GoodRodPokemon,  _current.GoodRodMinLevels,  _current.GoodRodMaxLevels,  GoodRodRows);
+            WriteWaterGroup(_current.SuperRodPokemon, _current.SuperRodMinLevels, _current.SuperRodMaxLevels, SuperRodRows);
         }
 
         private static void WriteWaterGroup(ushort[] poke, byte[] min, byte[] max, ObservableCollection<WildEncounterRow> rows)

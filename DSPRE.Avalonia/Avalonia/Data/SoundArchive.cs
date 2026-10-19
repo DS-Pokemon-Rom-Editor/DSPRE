@@ -299,7 +299,7 @@ namespace DSPRE.Avalonia.Data
             { problem = "There is no such set of sounds in this ROM."; return null; }
 
             List<SwavSample> waves;
-            try { waves = sdat.GetWaveArchive(waveArc); } catch { waves = null; }
+            try { waves = sdat.GetWaveArchive(waveArc); } catch (Exception ex) { AppLogger.WarnOnce("SoundArchive.PrepareSample", ex); waves = null; }
             if (waves == null || index < 0 || index >= waves.Count)
             { problem = "There is no such sound in that set to replace."; return null; }
 
@@ -364,7 +364,7 @@ namespace DSPRE.Avalonia.Data
                 { problem = "There is no such set of sounds in this ROM."; return null; }
 
                 List<SwavSample> waves;
-                try { waves = current.GetWaveArchive(arc); } catch { waves = null; }
+                try { waves = current.GetWaveArchive(arc); } catch (Exception ex) { AppLogger.WarnOnce("SoundArchive.ApplySamples", ex); waves = null; }
                 List<SwavSample> replaced = new List<SwavSample>(waves ?? new List<SwavSample>());
                 foreach (PendingSample p in byArc[arc])
                 {
@@ -524,7 +524,7 @@ namespace DSPRE.Avalonia.Data
             {
                 if (sdat.WaveArcs[i] == null || cryArcs.Contains(i)) continue;
                 int n;
-                try { n = sdat.GetWaveArchive(i)?.Count ?? 0; } catch { continue; }
+                try { n = sdat.GetWaveArchive(i)?.Count ?? 0; } catch (Exception ex) { AppLogger.WarnOnce("SoundArchive.SampleArchives", ex); continue; }
                 if (n == 0) continue;
                 string name = sdat.WaveArcNames.TryGetValue(i, out string nm) && !string.IsNullOrWhiteSpace(nm)
                     ? nm : "Wave archive " + i;
@@ -541,7 +541,7 @@ namespace DSPRE.Avalonia.Data
         {
             if (sdat == null || waveArc < 0 || waveArc >= sdat.WaveArcs.Count) return null;
             List<SwavSample> waves;
-            try { waves = sdat.GetWaveArchive(waveArc); } catch { return null; }
+            try { waves = sdat.GetWaveArchive(waveArc); } catch (Exception ex) { AppLogger.WarnOnce("SoundArchive.Sample", ex); return null; }
             if (waves == null || index < 0 || index >= waves.Count) return null;
             return waves[index];
         }
@@ -568,7 +568,7 @@ namespace DSPRE.Avalonia.Data
             { problem = "There is no such set of sounds in this ROM."; return false; }
 
             List<SwavSample> waves;
-            try { waves = sdat.GetWaveArchive(waveArc); } catch { waves = null; }
+            try { waves = sdat.GetWaveArchive(waveArc); } catch (Exception ex) { AppLogger.WarnOnce("SoundArchive.ImportSample", ex); waves = null; }
             if (waves == null || index < 0 || index >= waves.Count)
             { problem = "There is no such sound in that set to replace."; return false; }
 
@@ -623,8 +623,8 @@ namespace DSPRE.Avalonia.Data
         {
             try
             {
-                if (string.IsNullOrEmpty(workDir)) return null;
-                string name = gameFamily switch
+                if (string.IsNullOrEmpty(WorkDir)) return null;
+                string name = GameFamily switch
                 {
                     GameFamilies.HGSS => "gs_sound_data.sdat",
                     GameFamilies.Plat => "pl_sound_data.sdat",
@@ -634,12 +634,12 @@ namespace DSPRE.Avalonia.Data
                 // a DSPRE ndstool project data, and an hg-engine checkout's own tree root.
                 foreach (string root in new[] { "files", "data", "root" })
                 {
-                    string path = Path.Combine(workDir, root, "data", "sound", name);
+                    string path = Path.Combine(WorkDir, root, "data", "sound", name);
                     if (File.Exists(path)) return path;
                 }
                 return null;
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("SoundArchive.PathFor", ex); return null; }
         }
     }
 }

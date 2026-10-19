@@ -42,7 +42,7 @@ namespace DSPRE.Avalonia
             finally { OneAtATime.Release(); }
         }
 
-        private static async Task AfterWork(Action work, Action thenOnUiThread)
+        private static async Task AfterWorkAsync(Action work, Action thenOnUiThread)
         {
             await Task.Run(work);
             if (thenOnUiThread == null) return;
@@ -71,13 +71,13 @@ namespace DSPRE.Avalonia
             if (owner is MainWindowView { DataContext: MainWindowViewModel vm })
             {
                 vm.BusyText = text; vm.BusyHint = hint; vm.IsBusy = true;
-                try { await AfterWork(work, thenOnUiThread); }
+                try { await AfterWorkAsync(work, thenOnUiThread); }
                 finally { vm.IsBusy = false; }
                 return;
             }
 
             OverlayLayer layer = owner == null ? null : OverlayLayer.GetOverlayLayer(owner);
-            if (layer == null) { await AfterWork(work, thenOnUiThread); return; }
+            if (layer == null) { await AfterWorkAsync(work, thenOnUiThread); return; }
 
             Control content = owner.Content as Control;
             bool wasEnabled = content?.IsEnabled ?? true;
@@ -93,7 +93,7 @@ namespace DSPRE.Avalonia
             layer.Children.Add(cover);
             if (content != null) content.IsEnabled = false;
             Busy.Add(owner);
-            try { await AfterWork(work, thenOnUiThread); }
+            try { await AfterWorkAsync(work, thenOnUiThread); }
             finally
             {
                 Busy.Remove(owner);

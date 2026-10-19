@@ -20,7 +20,7 @@ namespace DSPRE.Tests.Core
     public class SavedRomKeepsArchiveEditsTests
     {
         private const string PlatinumCode = "CPUE";
-        private const DirNames Archive = DirNames.trainerProperties;
+        private const DirNames Archive = DirNames.TrainerProperties;
         private const string RecordId = "0001";
 
         [SkippableFact]
@@ -37,7 +37,7 @@ namespace DSPRE.Tests.Core
             {
                 experiment.Unpack(Archive);
 
-                string recordPath = Path.Combine(gameDirs[Archive].unpackedDir, RecordId);
+                string recordPath = Path.Combine(GameDirs[Archive].unpackedDir, RecordId);
                 Assert.True(File.Exists(recordPath),
                     $"record {RecordId} is missing from the unpacked {Archive} archive");
 
@@ -75,7 +75,7 @@ namespace DSPRE.Tests.Core
                 new RomInfo(PlatinumCode, reopened);
                 DSUtils.TryUnpackNarcs(new System.Collections.Generic.List<DirNames> { Archive });
 
-                string reopenedRecord = Path.Combine(gameDirs[Archive].unpackedDir, RecordId);
+                string reopenedRecord = Path.Combine(GameDirs[Archive].unpackedDir, RecordId);
                 Assert.True(File.Exists(reopenedRecord),
                     $"record {RecordId} is missing after the ROM was reopened");
 
@@ -88,7 +88,7 @@ namespace DSPRE.Tests.Core
             {
                 // This test pointed RomInfo at the reopened copy; put it back on the configured
                 // project so the next test in the rom collection does not inherit a deleted path.
-                try { new RomInfo(PlatinumCode, TestRoms.Platinum); } catch { }
+                try { new RomInfo(PlatinumCode, TestRoms.Platinum); } catch { }   // restoring the shared project is best effort; the next test reopens it anyway
                 if (Directory.Exists(reopened)) Directory.Delete(reopened, recursive: true);
                 RomExperiment.ForgetDatabaseFolder(reopened);
                 if (File.Exists(builtRom)) File.Delete(builtRom);

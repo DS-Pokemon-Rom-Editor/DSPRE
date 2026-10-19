@@ -51,7 +51,7 @@ namespace DSPRE.Avalonia.Data
                 int arc = slots[slot];
                 if (arc == 0xffff || arc < 0 || arc >= sdat.WaveArcs.Count) return null;
                 if (waves.TryGetValue(arc, out List<SwavSample> got)) return got;
-                try { got = sdat.GetWaveArchive(arc); } catch { got = null; }
+                try { got = sdat.GetWaveArchive(arc); } catch (Exception ex) { AppLogger.WarnOnce("SoundFontWriter.Build", ex); got = null; }
                 waves[arc] = got;
                 return got;
             }

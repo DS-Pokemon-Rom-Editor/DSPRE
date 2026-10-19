@@ -56,11 +56,11 @@ namespace DSPRE.ROMFiles
         }
 
         public static bool IsAvailable =>
-            RomInfo.hasRotomProject && Directory.Exists(SourceDir());
+            RomInfo.HasRotomProject && Directory.Exists(SourceDir());
 
         private static string SourceDir() =>
-            string.IsNullOrEmpty(RomInfo.workDir)
-                ? null : Path.Combine(RomInfo.dspreDir, "expanded", "scripts");
+            string.IsNullOrEmpty(RomInfo.WorkDir)
+                ? null : Path.Combine(RomInfo.DspreDir, "expanded", "scripts");
 
         public static string PathFor(int fileId) =>
             Path.Combine(SourceDir() ?? "", fileId.ToString("D4") + ".rotom");
@@ -112,7 +112,7 @@ namespace DSPRE.ROMFiles
             if (!File.Exists(path)) return found;
 
             string[] lines;
-            try { lines = File.ReadAllLines(path); } catch { return found; }
+            try { lines = File.ReadAllLines(path); } catch (Exception ex) { AppLogger.WarnOnce("StarterRotomSource.ReadFile", ex); return found; }
             FilesRead++;
 
             {
@@ -226,7 +226,7 @@ namespace DSPRE.ROMFiles
             if (failure != null)
             {
                 lines[m.LineNumber - 1] = original;
-                try { Write(); } catch { }
+                try { Write(); } catch (Exception ex) { AppLogger.Warn("Starter source: restoring the original line: " + ex.Message); }
                 return failure;
             }
 
@@ -366,7 +366,7 @@ namespace DSPRE.ROMFiles
                     if (m.Success) names.Add(m.Groups[1].Value);
                 }
             }
-            catch { }
+            catch (Exception ex) { AppLogger.Warn("Starter source: reading container names: " + ex.Message); }
             return names;
         }
 
@@ -376,8 +376,8 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public static Match FindVanilla()
         {
-            int file = RomInfo.starterHeldItemScriptFileID;
-            int script = RomInfo.starterCommandScriptNumber;
+            int file = RomInfo.StarterHeldItemScriptFileID;
+            int script = RomInfo.StarterCommandScriptNumber;
             if (file < 0 || script < 0) return null;
 
             return ReadFile(file).FirstOrDefault(m => m.ContainerNumber == script && m.NamedAsStarter);

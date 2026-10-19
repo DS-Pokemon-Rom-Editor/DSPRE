@@ -47,9 +47,9 @@ namespace DSPRE.Avalonia.Data
                     list.Add(new HeaderRefs
                     {
                         Id = h.ID,
-                        Matrix = h.matrixID, Area = h.areaDataID, Event = h.eventFileID,
-                        Script = h.scriptFileID, LevelScript = h.levelScriptID,
-                        Text = h.textArchiveID, Wild = h.wildPokemon,
+                        Matrix = h.MatrixID, Area = h.AreaDataID, Event = h.EventFileID,
+                        Script = h.ScriptFileID, LevelScript = h.LevelScriptID,
+                        Text = h.TextArchiveID, Wild = h.WildPokemon,
                     });
                 }
                 catch { /* skip unreadable header */ }
@@ -77,7 +77,7 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>"none" sentinel for a ref kind: area data, and HGSS wild data, are a byte (0xFF); the rest are ushort (0xFFFF).</summary>
         private static int NoneFor(RefKind kind) =>
-            kind == RefKind.AreaData || (kind == RefKind.Wild && RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) ? U8None : U16None;
+            kind == RefKind.AreaData || (kind == RefKind.Wild && RomInfo.GameFamily == RomInfo.GameFamilies.HGSS) ? U8None : U16None;
 
         public static List<ValidationIssue> Validate()
         {
@@ -124,20 +124,20 @@ namespace DSPRE.Avalonia.Data
                 for (int species = 0; species < mons; species++)
                 {
                     EvolutionFile ef;
-                    try { ef = new EvolutionFile(species); } catch { continue; }
-                    if (ef.data == null) continue;
-                    for (int slot = 0; slot < ef.data.Length; slot++)
+                    try { ef = new EvolutionFile(species); } catch (Exception ex) { AppLogger.WarnOnce("ProjectIndex.ValidateEvolutions", ex); continue; }
+                    if (ef.Data == null) continue;
+                    for (int slot = 0; slot < ef.Data.Length; slot++)
                     {
-                        EvolutionData d = ef.data[slot];
-                        if (!d.isValid()) continue;
+                        EvolutionData d = ef.Data[slot];
+                        if (!d.IsValid()) continue;
                         void Add(string msg) => issues.Add(new ValidationIssue
                         { Category = "Evolution", Where = $"{Name(species, mons)} (slot {slot + 1})", Message = msg });
 
-                        if (d.target < 0 || d.target >= mons)
-                            Add($"target species {d.target} is out of range (only {mons} exist)");
+                        if (d.Target < 0 || d.Target >= mons)
+                            Add($"target species {d.Target} is out of range (only {mons} exist)");
 
-                        EvolutionParamMeaning meaning = (EvolutionParamMeaning)LabelStore.GetAttr("evolution_methods", (int)d.method);
-                        int p = d.param;
+                        EvolutionParamMeaning meaning = (EvolutionParamMeaning)LabelStore.GetAttr("evolution_methods", (int)d.Method);
+                        int p = d.Param;
                         if (meaning == EvolutionParamMeaning.PokemonName && (p < 0 || p >= mons))
                             Add($"parameter species {p} is out of range (only {mons} exist)");
                         else if (meaning == EvolutionParamMeaning.ItemName && (p < 0 || p >= items))
@@ -164,12 +164,12 @@ namespace DSPRE.Avalonia.Data
                 int items = GetItemNames().Length;
                 int moves = GetAttackNames().Length;
 
-                string propDir = gameDirs[DirNames.trainerProperties].unpackedDir;
-                string partyDir = gameDirs[DirNames.trainerParty].unpackedDir;
+                string propDir = GameDirs[DirNames.TrainerProperties].unpackedDir;
+                string partyDir = GameDirs[DirNames.TrainerParty].unpackedDir;
                 if (!Directory.Exists(propDir) || !Directory.Exists(partyDir)) return;
 
                 int count = NarcAPI.Narc.MemberCount(propDir);
-                string[] names; try { names = GetSimpleTrainerNames(); } catch { names = Array.Empty<string>(); }
+                string[] names; try { names = GetSimpleTrainerNames(); } catch (Exception ex) { AppLogger.WarnOnce("ProjectIndex.ValidateTrainers", ex); names = Array.Empty<string>(); }
 
                 for (int id = 0; id < count; id++)
                 {
@@ -182,25 +182,25 @@ namespace DSPRE.Avalonia.Data
                         tf = new TrainerFile(new TrainerProperties((ushort)id, propStream), partyStream,
                             id < names.Length ? names[id] : "");
                     }
-                    catch { continue; }
+                    catch (Exception ex) { AppLogger.WarnOnce("ProjectIndex.ValidateTrainers", ex); continue; }
 
                     string who = id < names.Length && !string.IsNullOrWhiteSpace(names[id])
                         ? $"{names[id]} (#{id})" : $"Trainer #{id}";
                     void Add(string msg) => issues.Add(new ValidationIssue { Category = "Trainer", Where = who, Message = msg });
 
-                    int pc = tf.trp?.partyCount ?? 0;
+                    int pc = tf.Trp?.PartyCount ?? 0;
                     for (int i = 0; i < pc; i++)
                     {
                         PartyPokemon p;
-                        try { p = tf.party[i]; } catch { continue; }
+                        try { p = tf.Party[i]; } catch (Exception ex) { AppLogger.WarnOnce("ProjectIndex.ValidateTrainers", ex); continue; }
                         if (p == null || p.CheckEmpty()) continue;
 
-                        int sp = p.pokeID ?? 0;
+                        int sp = p.PokeID ?? 0;
                         if (sp >= mons) Add($"party slot {i + 1} species {sp} is out of range (only {mons} exist)");
-                        if (p.heldItem is ushort it && it >= items)
+                        if (p.HeldItem is ushort it && it >= items)
                             Add($"party slot {i + 1} held item {it} is out of range (only {items} exist)");
-                        if (p.moves != null)
-                            foreach (ushort mv in p.moves)
+                        if (p.Moves != null)
+                            foreach (ushort mv in p.Moves)
                                 if (mv != 0 && mv >= moves)
                                     Add($"party slot {i + 1} move {mv} is out of range (only {moves} exist)");
                     }
@@ -215,7 +215,7 @@ namespace DSPRE.Avalonia.Data
         private static string Name(int species, int mons)
         {
             try { string[] n = GetPokemonNames(); return species < n.Length ? $"{n[species]} (#{species})" : $"Pokémon {species}"; }
-            catch { return $"Pokémon {species}"; }
+            catch (Exception ex) { AppLogger.WarnOnce("ProjectIndex.Name", ex); return $"Pokémon {species}"; }
         }
 
         /// <summary>For every file id of the given kind that some header references, those header ids. One pass over the headers.</summary>

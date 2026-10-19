@@ -41,13 +41,13 @@ namespace DSPRE.ROMFiles
         private static ushort[] RomTable()
         {
             int offset = RomLocator.PokeathlonMemberTable;
-            if (offset < 0 || string.IsNullOrEmpty(arm9Path) || !File.Exists(arm9Path)) return null;
-            string key = arm9Path + "|" + File.GetLastWriteTimeUtc(arm9Path).Ticks;
+            if (offset < 0 || string.IsNullOrEmpty(Arm9Path) || !File.Exists(Arm9Path)) return null;
+            string key = Arm9Path + "|" + File.GetLastWriteTimeUtc(Arm9Path).Ticks;
             if (key == _tableKey) return _table;
             _tableKey = key;
             _table = null;
             if (ARM9.CheckCompressionMark()) return null;
-            byte[] bytes = DSUtils.ReadFromFile(arm9Path, offset, (LastSpecies + 1) * 2);
+            byte[] bytes = DSUtils.ReadFromFile(Arm9Path, offset, (LastSpecies + 1) * 2);
             if (bytes == null || bytes.Length < (LastSpecies + 1) * 2) return null;
             ushort[] table = new ushort[LastSpecies + 1];
             for (int i = 0; i <= LastSpecies; i++) table[i] = BitConverter.ToUInt16(bytes, i * 2);
@@ -122,14 +122,14 @@ namespace DSPRE.ROMFiles
         }
 
         public static string WhyNot() =>
-            gameFamily != GameFamilies.HGSS ? "Pokéathlon stats exist only in HeartGold and SoulSilver."
-            : !gameDirs.ContainsKey(DirNames.pokeathlonPerformance) ? "This ROM has no Pokéathlon archive."
+            GameFamily != GameFamilies.HGSS ? "Pokéathlon stats exist only in HeartGold and SoulSilver."
+            : !GameDirs.ContainsKey(DirNames.PokeathlonPerformance) ? "This ROM has no Pokéathlon archive."
             : null;
 
         private static string PathOf(int member)
         {
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.pokeathlonPerformance });
-            return Path.Combine(gameDirs[DirNames.pokeathlonPerformance].unpackedDir, member.ToString("D4"));
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.PokeathlonPerformance });
+            return Path.Combine(GameDirs[DirNames.PokeathlonPerformance].unpackedDir, member.ToString("D4"));
         }
 
         public static PokeathlonPerformance Read(int member)
@@ -147,7 +147,7 @@ namespace DSPRE.ROMFiles
             byte[] onDisk = File.Exists(path) ? File.ReadAllBytes(path) : new byte[RecordSize];
             if (onDisk.Length < RecordSize) onDisk = new byte[RecordSize];
             _data.AsSpan(0, RecordSize).CopyTo(onDisk);
-            ArchiveMembers.Put(DirNames.pokeathlonPerformance, Member, onDisk);
+            ArchiveMembers.Put(DirNames.PokeathlonPerformance, Member, onDisk);
         }
     }
 }

@@ -73,29 +73,29 @@ namespace DSPRE.Avalonia.Views.World
 
         // ── Toolbar handlers ─────────────────────────────────────────────────
         private async void SaveTable_Click(object sender, RoutedEventArgs e)
-            => await RunSafe(() => VM?.SaveAsync());
+            => await RunSafeAsync(() => VM?.SaveAsync());
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) VM?.DiscardChanges();
         }
 
         private async void ExportTable_Click(object sender, RoutedEventArgs e)
-            => await RunSafe(() => VM?.ExportTableAsync());
+            => await RunSafeAsync(() => VM?.ExportTableAsync());
 
         private async void ImportTable_Click(object sender, RoutedEventArgs e)
-            => await RunSafe(() => VM?.ImportTableAsync());
+            => await RunSafeAsync(() => VM?.ImportTableAsync());
 
         private async void Rename_Click(object sender, RoutedEventArgs e)
-            => await RunSafe(() => VM?.RenameSelectedAsync());
+            => await RunSafeAsync(() => VM?.RenameSelectedAsync());
 
         private async void ExportCamera_Click(object sender, RoutedEventArgs e)
-            => await RunSafe(() => VM?.ExportCameraAsync());
+            => await RunSafeAsync(() => VM?.ExportCameraAsync());
 
         private async void ImportCamera_Click(object sender, RoutedEventArgs e)
-            => await RunSafe(() => VM?.ImportCameraAsync());
+            => await RunSafeAsync(() => VM?.ImportCameraAsync());
 
-        private static async Task RunSafe(System.Func<Task> action)
+        private static async Task RunSafeAsync(System.Func<Task> action)
         {
             if (action == null) return;
             try { await action(); } catch { /* errors handled inside the VM */ }

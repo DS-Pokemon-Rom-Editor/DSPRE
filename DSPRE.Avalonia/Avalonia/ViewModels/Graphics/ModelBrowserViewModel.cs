@@ -134,7 +134,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 foreach (ModelAssets.Archive a in ModelAssets.All.Where(x => x.In == g))
                 {
                     int n;
-                    try { n = ModelAssets.Count(a); } catch { n = 0; }
+                    try { n = ModelAssets.Count(a); } catch (Exception ex) { AppLogger.WarnOnce("ModelBrowserViewModel.Scan", ex); n = 0; }
                     if (n == 0) continue;
                     inGroup += ModelAssets.Units(a, n).Count;
                     foreach (ModelAssets.Unit u in ModelAssets.Units(a, n))
@@ -199,7 +199,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (kind == null) continue;
 
                 IReadOnlyList<string> names;
-                try { names = AnimationNames(item, kind.Value); } catch { continue; }
+                try { names = AnimationNames(item, kind.Value); } catch (Exception ex) { AppLogger.WarnOnce("ModelBrowserViewModel.MarkTheUnclaimed", ex); continue; }
                 item.Unclaimed = names.Count == 0
                                  || !modelNames.Any(m => ModelAssets.BelongsTo(names, m));
             }
@@ -216,7 +216,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 ModelAssets.Kind k = ModelAssets.Identify(b);
                 return IsAnAnimation(k) ? k : (ModelAssets.Kind?)null;
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("ModelBrowserViewModel.KindOf", ex); return null; }
         }
 
         private static IReadOnlyList<string> AnimationNames(Item item, ModelAssets.Kind kind)
@@ -376,7 +376,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_selected == null)
             {
                 _options = null;
-                BaseDetails = "";
+                _baseDetails = "";
                 Details = "Pick something on the left to see it.";
                 OnPropertyChanged(nameof(HasTextureChoice));
                 OnPropertyChanged(nameof(HasAnimationChoice));
@@ -388,8 +388,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             ModelAssets.Archive a = _selected.Archive;
             _options = ModelAssets.WhatCanBeDone(a, ShowingIndex);
-            BaseDetails = $"{Named}, number {ShowingIndex}. {ModelAssets.ShortName(_options.Kind)}.";
-            Details = BaseDetails;
+            _baseDetails = $"{Named}, number {ShowingIndex}. {ModelAssets.ShortName(_options.Kind)}.";
+            Details = _baseDetails;
 
             // An animation picked on its own has no shape to draw, so say what it does instead of
             // leaving an empty box and the word "animation".
@@ -561,11 +561,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             PreviewTextureNames.Clear();
             PreviewPaletteNames.Clear();
             foreach (NSBMDTexture texture in _previewTextures)
-                PreviewTextureNames.Add(string.IsNullOrWhiteSpace(texture.texname)
-                    ? $"Texture {PreviewTextureNames.Count}" : texture.texname);
+                PreviewTextureNames.Add(string.IsNullOrWhiteSpace(texture.Texname)
+                    ? $"Texture {PreviewTextureNames.Count}" : texture.Texname);
             foreach (NSBMDPalette palette in _previewPalettes)
-                PreviewPaletteNames.Add(string.IsNullOrWhiteSpace(palette.palname)
-                    ? $"Palette {PreviewPaletteNames.Count}" : palette.palname);
+                PreviewPaletteNames.Add(string.IsNullOrWhiteSpace(palette.Palname)
+                    ? $"Palette {PreviewPaletteNames.Count}" : palette.Palname);
             _previewTextureIndex = _previewTextures.Count > 0 ? 0 : -1;
             _previewPaletteIndex = BestPaletteFor(_previewTextureIndex);
             _fillingTexturePreview = false;
@@ -579,7 +579,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private int BestPaletteFor(int textureIndex)
         {
             string texture = textureIndex >= 0 && textureIndex < _previewTextures.Count
-                ? _previewTextures[textureIndex].texname : "";
+                ? _previewTextures[textureIndex].Texname : "";
             return ModelTexturePairing.BestPaletteIndex(_previewPalettes, texture);
         }
 
@@ -594,23 +594,23 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
             NSBMDTexture texture = _previewTextures[_previewTextureIndex];
             RGBA[] palette = _previewPaletteIndex >= 0 && _previewPaletteIndex < _previewPalettes.Count
-                ? _previewPalettes[_previewPaletteIndex].paldata : null;
+                ? _previewPalettes[_previewPaletteIndex].Paldata : null;
             NsbmdTextureData decoded = NsbmdTextureDecoder.Decode(new NSBMDMaterial
             {
-                format = texture.format,
-                width = texture.width,
-                height = texture.height,
-                texdata = texture.texdata,
-                spdata = texture.spdata,
-                color0 = texture.color0,
-                paldata = palette,
+                Format = texture.Format,
+                Width = texture.Width,
+                Height = texture.Height,
+                Texdata = texture.Texdata,
+                Spdata = texture.Spdata,
+                Color0 = texture.Color0,
+                Paldata = palette,
             });
             if (decoded == null)
             {
-                Whynot = texture.format == 7 || palette != null
+                Whynot = texture.Format == 7 || palette != null
                     ? "This texture is malformed or uses data the preview cannot decode."
                     : "This texture needs a palette, but this set does not contain one.";
-                Details = BaseDetails;
+                Details = _baseDetails;
                 OnPropertyChanged(nameof(HasNoModel));
                 return;
             }
@@ -618,7 +618,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             // No bitmap can be made without a running UI, which is how the tests drive this view model.
             try { TexturePreview = ImageConverter.FromRgba(decoded.Rgba, decoded.Width, decoded.Height); }
             catch (InvalidOperationException) { TexturePreview = null; }
-            Details = BaseDetails + $"  {PreviewTextureNames[_previewTextureIndex]}, {decoded.Width} × {decoded.Height} pixels. "
+            Details = _baseDetails + $"  {PreviewTextureNames[_previewTextureIndex]}, {decoded.Width} × {decoded.Height} pixels. "
                 + $"This set contains {_previewTextures.Count} texture{(_previewTextures.Count == 1 ? "" : "s")} "
                 + $"and {_previewPalettes.Count} palette{(_previewPalettes.Count == 1 ? "" : "s")}.";
         }
@@ -834,12 +834,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             MovementNote = "";
             OnPropertyChanged(nameof(HasMovementNote));
-            if (anim == null || nsbmd?.models == null || nsbmd.models.Length == 0) return;
+            if (anim == null || nsbmd?.Models == null || nsbmd.Models.Length == 0) return;
 
             try
             {
-                NSBMDModel model = nsbmd.models[0];
-                float scale = model.modelScale;
+                NSBMDModel model = nsbmd.Models[0];
+                float scale = model.ModelScale;
                 NsbmdRenderModel still = NsbmdGeometry.BuildModel(model);
                 bool differs = false;
                 for (int f = 1; f < anim.FrameCount && !differs; f++)
@@ -939,7 +939,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 NSBMD nsbmd = ModelAssets.LoadModel(a, ShowingIndex);
-                if (nsbmd == null || nsbmd.models == null || nsbmd.models.Length == 0)
+                if (nsbmd == null || nsbmd.Models == null || nsbmd.Models.Length == 0)
                 {
                     Whynot = "This model would not open.";
                     return;
@@ -954,23 +954,23 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (_movementJustPicked)
                 {
                     _movementJustPicked = false;
-                    _placeLike = NsbmdGeometry.BuildModel(nsbmd.models[0]);
+                    _placeLike = NsbmdGeometry.BuildModel(nsbmd.Models[0]);
                     CheckTheMovementDoesSomething(nsbmd, anim);
                 }
-                float scale = nsbmd.models[0].modelScale;
+                float scale = nsbmd.Models[0].ModelScale;
                 Model3D = anim == null
-                    ? NsbmdGeometry.BuildModel(nsbmd.models[0])
-                    : NsbmdGeometry.BuildModel(nsbmd.models[0],
+                    ? NsbmdGeometry.BuildModel(nsbmd.Models[0])
+                    : NsbmdGeometry.BuildModel(nsbmd.Models[0],
                         (objectId, part) => anim.MatrixFor(objectId, _frame % Math.Max(1, anim.FrameCount), part, scale),
                         _placeLike);
                 if (Model3D == null) { Whynot = "This model would not open."; return; }
 
                 if (!dressed && TextureChoices.Count > 1)
-                    Details = BaseDetails + "  Shown bare. Pick a picture set above to dress it.";
+                    Details = _baseDetails + "  Shown bare. Pick a picture set above to dress it.";
                 else if (!dressed)
-                    Details = BaseDetails + "  This model has no pictures of its own, and this game keeps "
+                    Details = _baseDetails + "  This model has no pictures of its own, and this game keeps "
                             + "none for it to borrow.";
-                else Details = BaseDetails;
+                else Details = _baseDetails;
             }
             catch (Exception ex)
             {
@@ -982,7 +982,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
 
-        private string BaseDetails = "";
+        private string _baseDetails = "";
 
         /// <summary>What an animation picked on its own does, and which model it was written for.</summary>
         public string AnimationDetails { get; private set; } = "";

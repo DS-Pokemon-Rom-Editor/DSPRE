@@ -23,7 +23,7 @@ namespace DSPRE.Avalonia.Data
             Dictionary<string, int> byName = new(StringComparer.Ordinal);
             for (int i = 0; i < palettes.Count; i++)
             {
-                string name = palettes[i]?.palname;
+                string name = palettes[i]?.Palname;
                 if (!string.IsNullOrEmpty(name)) byName.TryAdd(name, i);
             }
             for (string cut = textureName; cut.Length > 0; cut = cut.Substring(0, cut.Length - 1))
@@ -32,7 +32,7 @@ namespace DSPRE.Avalonia.Data
                 if (byName.TryGetValue(cut, out int plain)) return plain;
             }
             for (int i = 0; i < palettes.Count; i++)
-                if (palettes[i]?.palname?.StartsWith(textureName, StringComparison.Ordinal) == true) return i;
+                if (palettes[i]?.Palname?.StartsWith(textureName, StringComparison.Ordinal) == true) return i;
             return -1;
         }
 

@@ -19,7 +19,7 @@ namespace DSPRE.HgEngine
 
     /// <summary>
     /// Per-project link to an hg-engine checkout (workDir/dspre_hgengine.json, same pattern as
-    /// LabelStore's project file). Distinct from <see cref="RomInfo.isHGE"/>, which detects "this ROM
+    /// LabelStore's project file). Distinct from <see cref="RomInfo.IsHGE"/>, which detects "this ROM
     /// was built by hg-engine", this is "do we have a source checkout to edit its data through."
     ///
     /// The checkout may live inside WSL or on a Windows drive. hg-engine documents both (its README
@@ -50,7 +50,7 @@ namespace DSPRE.HgEngine
 
         /// <summary>Requires the currently open ROM to actually be hg-engine's own build, not just "a
         /// checkout happens to be linked": a stale link must never route another ROM's data through it.</summary>
-        public static bool IsActive => IsLinked && Enabled && RomInfo.isHGE;
+        public static bool IsActive => IsLinked && Enabled && RomInfo.IsHGE;
 
         /// <summary>Legacy name for <see cref="RepoRootWindows"/>, kept because roughly twenty source
         /// readers call it. It is no longer always a UNC path.</summary>
@@ -121,8 +121,8 @@ namespace DSPRE.HgEngine
         /// <summary>The checkout a base-tree project belongs to, which is simply its parent.</summary>
         internal static string CheckoutOfBaseProject()
         {
-            if (!RomInfo.IsHgEngineBaseProject || string.IsNullOrEmpty(workDir)) return null;
-            try { return Directory.GetParent(workDir.TrimEnd(Path.DirectorySeparatorChar))?.FullName; }
+            if (!RomInfo.IsHgEngineBaseProject || string.IsNullOrEmpty(WorkDir)) return null;
+            try { return Directory.GetParent(WorkDir.TrimEnd(Path.DirectorySeparatorChar))?.FullName; }
             catch (Exception ex) { AppLogger.Error("HgEngineProject.CheckoutOfBaseProject: " + ex.Message); return null; }
         }
         private static string _loadedFor;
@@ -131,7 +131,7 @@ namespace DSPRE.HgEngine
         public static void Refresh()
         {
             Reset();
-            _loadedFor = workDir;
+            _loadedFor = WorkDir;
 
             // Only an opened hg-engine folder is linked; its base/ tree names the checkout.
             string checkout = CheckoutOfBaseProject();
@@ -147,7 +147,7 @@ namespace DSPRE.HgEngine
         public static void OpenFolder(string checkout, HgEngineShell shell, string msysBashPath = null)
         {
             Reset();
-            _loadedFor = workDir;   // the project still open must not refresh this away before the folder loads
+            _loadedFor = WorkDir;   // the project still open must not refresh this away before the folder loads
             SetFolderState(checkout.TrimEnd('\\', '/'), HostIsPosix ? HgEngineShell.Native : shell);
             if (!string.IsNullOrWhiteSpace(msysBashPath)) MsysBashPath = msysBashPath;
             Save();
@@ -187,14 +187,17 @@ namespace DSPRE.HgEngine
             if (!File.Exists(path)) return null;
             try
             {
-                HgEngineConfig cfg = JsonSerializer.Deserialize<HgEngineConfig>(File.ReadAllText(path));
-                if (cfg == null || !Enum.TryParse(cfg.shell, out HgEngineShell shell)) return null;
+                HgEngineConfig cfg = JsonSerializer.Deserialize<HgEngineConfig>(File.ReadAllText(path), ReadOptions);
+                if (cfg == null || !Enum.TryParse(cfg.Shell, out HgEngineShell shell)) return null;
                 if (HostIsPosix) return shell == HgEngineShell.Native ? shell : null;
                 if (shell == HgEngineShell.Native) return null;
                 return IsWslPath(checkout) && shell != HgEngineShell.Wsl ? null : shell;
             }
             catch (Exception ex) { AppLogger.Error("HgEngineProject.StoredShellFor: " + ex.Message); return null; }
         }
+
+        // Files saved before the names went PascalCase use camelCase keys.
+        private static readonly JsonSerializerOptions ReadOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
         private static HgEngineShell DefaultShellFor(string checkout) =>
             HostIsPosix ? HgEngineShell.Native : HgEngineShell.Wsl;
@@ -205,14 +208,14 @@ namespace DSPRE.HgEngine
             if (!File.Exists(path)) return;
             try
             {
-                HgEngineConfig cfg = JsonSerializer.Deserialize<HgEngineConfig>(File.ReadAllText(path));
+                HgEngineConfig cfg = JsonSerializer.Deserialize<HgEngineConfig>(File.ReadAllText(path), ReadOptions);
                 if (cfg == null) return;
                 // The shell only matters on Windows, and a WSL path can only build one way.
-                if (!HostIsPosix && !IsWslPath(checkout) && Enum.TryParse(cfg.shell, out HgEngineShell stored) && stored != HgEngineShell.Native)
+                if (!HostIsPosix && !IsWslPath(checkout) && Enum.TryParse(cfg.Shell, out HgEngineShell stored) && stored != HgEngineShell.Native)
                     Shell = stored;
-                if (!string.IsNullOrWhiteSpace(cfg.msysBashPath)) MsysBashPath = cfg.msysBashPath;
-                SuppressManagedFileSaveNotice = cfg.suppressManagedFileSaveNotice;
-                BuildRomName = IsSafeBuildRomName(cfg.buildRomName) ? cfg.buildRomName : null;
+                if (!string.IsNullOrWhiteSpace(cfg.MsysBashPath)) MsysBashPath = cfg.MsysBashPath;
+                SuppressManagedFileSaveNotice = cfg.SuppressManagedFileSaveNotice;
+                BuildRomName = IsSafeBuildRomName(cfg.BuildRomName) ? cfg.BuildRomName : null;
             }
             catch (Exception ex) { AppLogger.Error("HgEngineProject.ReadFolderConfig: " + ex.Message); }
         }
@@ -235,7 +238,7 @@ namespace DSPRE.HgEngine
         }
 
         /// <summary>Ensures the state matches the currently open project (workDir may have changed since Refresh).</summary>
-        private static void EnsureCurrent() { if (_loadedFor != workDir) Refresh(); }
+        private static void EnsureCurrent() { if (_loadedFor != WorkDir) Refresh(); }
 
         /// <summary>
         /// Links to an hg-engine checkout at a Windows-visible path. A \\wsl.localhost\... path settles
@@ -352,14 +355,14 @@ namespace DSPRE.HgEngine
             {
                 HgEngineConfig cfg = new HgEngineConfig
                 {
-                    rootWindows = RepoRootWindows,
-                    shell = Shell.ToString(),
-                    wslDistro = WslDistro,
-                    msysBashPath = MsysBashPath,
-                    repoPathPosix = RepoPathPosix,   // written for older DSPRE builds to still read
-                    enabled = Enabled,
-                    suppressManagedFileSaveNotice = SuppressManagedFileSaveNotice,
-                    buildRomName = BuildRomName,
+                    RootWindows = RepoRootWindows,
+                    Shell = Shell.ToString(),
+                    WslDistro = WslDistro,
+                    MsysBashPath = MsysBashPath,
+                    RepoPathPosix = RepoPathPosix,   // written for older DSPRE builds to still read
+                    Enabled = Enabled,
+                    SuppressManagedFileSaveNotice = SuppressManagedFileSaveNotice,
+                    BuildRomName = BuildRomName,
                 };
                 PlainFiles.WriteText(path, JsonSerializer.Serialize(cfg, new JsonSerializerOptions { WriteIndented = true }));
             }
@@ -404,14 +407,14 @@ namespace DSPRE.HgEngine
 
         private sealed class HgEngineConfig
         {
-            public string rootWindows { get; set; }
-            public string shell { get; set; }
-            public string wslDistro { get; set; }
-            public string msysBashPath { get; set; }
-            public string repoPathPosix { get; set; }
-            public bool enabled { get; set; }
-            public bool suppressManagedFileSaveNotice { get; set; }
-            public string buildRomName { get; set; }
+            public string RootWindows { get; set; }
+            public string Shell { get; set; }
+            public string WslDistro { get; set; }
+            public string MsysBashPath { get; set; }
+            public string RepoPathPosix { get; set; }
+            public bool Enabled { get; set; }
+            public bool SuppressManagedFileSaveNotice { get; set; }
+            public string BuildRomName { get; set; }
         }
     }
 }

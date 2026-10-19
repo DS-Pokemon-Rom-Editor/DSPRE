@@ -76,10 +76,10 @@ namespace DSPRE.Avalonia.Views.Shell
 
         private void SeedDefaultFavourites()
         {
-            if (SettingsManager.Settings.favouritesSeeded) return;
-            List<string> pins = SettingsManager.Settings.favouriteMenuItems ??= new List<string>();
+            if (SettingsManager.Settings.FavouritesSeeded) return;
+            List<string> pins = SettingsManager.Settings.FavouriteMenuItems ??= new List<string>();
             if (pins.Count == 0) pins.AddRange(DefaultFavourites.Where(_menuByPath.ContainsKey));
-            SettingsManager.Settings.favouritesSeeded = true;
+            SettingsManager.Settings.FavouritesSeeded = true;
             SettingsManager.Save();
         }
 
@@ -106,7 +106,7 @@ namespace DSPRE.Avalonia.Views.Shell
 
         private void TogglePin(string path)
         {
-            List<string> pins = SettingsManager.Settings.favouriteMenuItems ??= new List<string>();
+            List<string> pins = SettingsManager.Settings.FavouriteMenuItems ??= new List<string>();
             if (!pins.Remove(path)) pins.Add(path);
             SettingsManager.Save();
             RebuildFavourites();
@@ -124,7 +124,7 @@ namespace DSPRE.Avalonia.Views.Shell
         {
             foreach (Control pin in FavouritesBar.Children.Where(c => !ReferenceEquals(c, FavouritesBar.OverflowButton)).ToList())
                 FavouritesBar.Children.Remove(pin);
-            List<string> pins = SettingsManager.Settings.favouriteMenuItems ?? new List<string>();
+            List<string> pins = SettingsManager.Settings.FavouriteMenuItems ?? new List<string>();
             // A star beside a menu item says it is already pinned.
             foreach (KeyValuePair<string, MenuItem> kv in _menuByPath)
                 kv.Value.Icon = pins.Contains(kv.Key) ? DSPRE.Avalonia.Controls.Icon.Image("star") : null;

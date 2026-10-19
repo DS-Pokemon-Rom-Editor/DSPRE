@@ -82,18 +82,18 @@ namespace DSPRE.ROMFiles
             if (!ARM9.DecompressIfMarked())
                 throw new InvalidOperationException("The ARM9 could not be decompressed.");
 
-            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.synthOverlay });
-            bool expanded = (RomPatchState.flag_arm9Expanded || PatchToolboxLogic.CheckFilesArm9ExpansionApplied())
-                && File.Exists(Filesystem.expArmPath)
-                && new FileInfo(Filesystem.expArmPath).Length >= 0x16000;
+            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.SynthOverlay });
+            bool expanded = (RomPatchState.FlagArm9Expanded || PatchToolboxLogic.CheckFilesArm9ExpansionApplied())
+                && File.Exists(Filesystem.ExpArmPath)
+                && new FileInfo(Filesystem.ExpArmPath).Length >= 0x16000;
 
             return new MartData(
-                File.ReadAllBytes(RomInfo.arm9Path), expanded ? File.ReadAllBytes(Filesystem.expArmPath) : null,
-                RomInfo.martCommonCountOffset,
-                RomInfo.martCommonPointerOffset,
-                RomInfo.martSpecialtyPointerOffset,
-                RomInfo.martSpecialtyShopCount,
-                MartShopNames.ForFamily(RomInfo.gameFamily), expanded);
+                File.ReadAllBytes(RomInfo.Arm9Path), expanded ? File.ReadAllBytes(Filesystem.ExpArmPath) : null,
+                RomInfo.MartCommonCountOffset,
+                RomInfo.MartCommonPointerOffset,
+                RomInfo.MartSpecialtyPointerOffset,
+                RomInfo.MartSpecialtyShopCount,
+                MartShopNames.ForFamily(RomInfo.GameFamily), expanded);
         }
 
         internal MartData(byte[] arm9, uint commonCountOffset, uint commonPointerOffset,
@@ -174,7 +174,7 @@ namespace DSPRE.ROMFiles
         private static MartData LoadSource()
         {
             if (!HgEngine.HgEngineMarts.TryRead(out List<(int Item, int Badges)> badgeMart, out List<HgEngineMarts.Specialty> specialty, out string error)) throw new InvalidOperationException(error);
-            IReadOnlyList<string> names = MartShopNames.ForFamily(RomInfo.gameFamily);
+            IReadOnlyList<string> names = MartShopNames.ForFamily(RomInfo.GameFamily);
             List<CommonEntry> common = badgeMart.Select(r => new CommonEntry { ItemId = (ushort)r.Item, RequiredTier = (ushort)r.Badges }).ToList();
             List<SpecialtyShop> shops = specialty.Select((s, i) => new SpecialtyShop(i, names != null && names.Count == specialty.Count ? names[i] : s.Array,
                 s.Items.Select(x => (ushort)x).ToList())).ToList();
@@ -215,27 +215,27 @@ namespace DSPRE.ROMFiles
             if (!HasSizeChanges && _commonDataOffset >= 0 && _specialtyDataOffsets.All(offset => offset >= 0))
             {
                 _saveBase = Arm9AsItIsNow();
-                try { return SaveToFile(RomInfo.arm9Path, showSuccessMessage: false); }
+                try { return SaveToFile(RomInfo.Arm9Path, showSuccessMessage: false); }
                 finally { _saveBase = null; }
             }
             if (Expanded)
             {
                 // The layout already has room: the marts go back where they are and only the common count changes.
-                byte[] overlay = File.ReadAllBytes(Filesystem.expArmPath), overlayBefore = (byte[])overlay.Clone();
+                byte[] overlay = File.ReadAllBytes(Filesystem.ExpArmPath), overlayBefore = (byte[])overlay.Clone();
                 _saveBase = Arm9AsItIsNow();
                 byte[] arm9Now;
                 try
                 {
-                    byte[] block = BuildRoomyBlock(RomInfo.synthOverlayLoadAddress, _existingExpansionStart, out int commonAt, out int pointersAt);
+                    byte[] block = BuildRoomyBlock(RomInfo.SynthOverlayLoadAddress, _existingExpansionStart, out int commonAt, out int pointersAt);
                     Array.Clear(overlay, _existingExpansionStart, _existingExpansionLength);
                     block.CopyTo(overlay, _existingExpansionStart);
                     arm9Now = (byte[])_saveBase.Clone();
                     arm9Now[_commonCountOffset] = (byte)CommonItems.Count;
                 }
                 finally { _saveBase = null; }
-                WriteReplacementFile(Filesystem.expArmPath, overlay);
-                try { WriteReplacementFile(RomInfo.arm9Path, arm9Now); }
-                catch { WriteReplacementFile(Filesystem.expArmPath, overlayBefore); throw; }
+                WriteReplacementFile(Filesystem.ExpArmPath, overlay);
+                try { WriteReplacementFile(RomInfo.Arm9Path, arm9Now); }
+                catch { WriteReplacementFile(Filesystem.ExpArmPath, overlayBefore); throw; }
                 return true;
             }
             throw new InvalidOperationException("Changing mart sizes needs the \"Expand the marts\" patch from the ROM Patch Toolbox.");
@@ -285,7 +285,7 @@ namespace DSPRE.ROMFiles
         {
             if (FromSource || Expanded) return;
             if (!SyntheticOverlaySpace.Available()) throw new InvalidOperationException("Apply the ARM9 expansion in the ROM Patch Toolbox first.");
-            byte[] overlay = File.ReadAllBytes(Filesystem.expArmPath), overlayBefore = (byte[])overlay.Clone();
+            byte[] overlay = File.ReadAllBytes(Filesystem.ExpArmPath), overlayBefore = (byte[])overlay.Clone();
             List<(long Start, long End)> excluded = SyntheticOverlaySpace.Reserved(overlay);
             // An older, tightly packed mart block is freed for the new one.
             if (_existingExpansionStart >= 0)
@@ -299,17 +299,17 @@ namespace DSPRE.ROMFiles
             byte[] arm9Now;
             try
             {
-                byte[] block = BuildRoomyBlock(RomInfo.synthOverlayLoadAddress, at, out int commonAt, out int pointersAt);
+                byte[] block = BuildRoomyBlock(RomInfo.SynthOverlayLoadAddress, at, out int commonAt, out int pointersAt);
                 block.CopyTo(overlay, at);
                 arm9Now = (byte[])_saveBase.Clone();
                 arm9Now[_commonCountOffset] = (byte)CommonItems.Count;
-                WriteUInt32(arm9Now, checked((int)_commonPointerOffset), checked(RomInfo.synthOverlayLoadAddress + (uint)at + (uint)commonAt));
-                WriteUInt32(arm9Now, checked((int)_specialtyPointerOffset), checked(RomInfo.synthOverlayLoadAddress + (uint)at + (uint)pointersAt));
+                WriteUInt32(arm9Now, checked((int)_commonPointerOffset), checked(RomInfo.SynthOverlayLoadAddress + (uint)at + (uint)commonAt));
+                WriteUInt32(arm9Now, checked((int)_specialtyPointerOffset), checked(RomInfo.SynthOverlayLoadAddress + (uint)at + (uint)pointersAt));
             }
             finally { _saveBase = null; }
-            WriteReplacementFile(Filesystem.expArmPath, overlay);
-            try { WriteReplacementFile(RomInfo.arm9Path, arm9Now); }
-            catch { WriteReplacementFile(Filesystem.expArmPath, overlayBefore); throw; }
+            WriteReplacementFile(Filesystem.ExpArmPath, overlay);
+            try { WriteReplacementFile(RomInfo.Arm9Path, arm9Now); }
+            catch { WriteReplacementFile(Filesystem.ExpArmPath, overlayBefore); throw; }
             _existingExpansionStart = at;
             _existingExpansionLength = RoomyLength;
             _roomy = true;
@@ -321,7 +321,7 @@ namespace DSPRE.ROMFiles
         /// </summary>
         private byte[] Arm9AsItIsNow()
         {
-            byte[] now = File.ReadAllBytes(RomInfo.arm9Path);
+            byte[] now = File.ReadAllBytes(RomInfo.Arm9Path);
             bool same = now.Length == _arm9.Length
                 && now[_commonCountOffset] == _arm9[_commonCountOffset]
                 && now.AsSpan((int)_commonPointerOffset, 4).SequenceEqual(_arm9.AsSpan((int)_commonPointerOffset, 4))

@@ -113,7 +113,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 OnPropertyChanged(nameof(SelectedEditorThemeName));
                 if (SettingsManager.Settings != null)
                 {
-                    SettingsManager.Settings.rotomEditorTheme = SelectedEditorThemeName;
+                    SettingsManager.Settings.RotomEditorTheme = SelectedEditorThemeName;
                     SettingsManager.Save();
                 }
             }
@@ -241,12 +241,12 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (id < 0) return;
             if (HasUnsavedChanges)
             {
-                await DialogHelper.ShowInfo("Save or discard the open script first.", "Script editor");
+                await DialogHelper.ShowInfoAsync("Save or discard the open script first.", "Script editor");
                 return;
             }
             // A header may load the file as its level script too, which this check covers.
-            if (NewProjectFiles.WhyKeepLastScriptFile(id) is string keep) { await DialogHelper.ShowInfo(keep, "Script editor"); return; }
-            if (!await DialogHelper.AskYesNo($"Delete script file {id}, its source and its compiled copy?", "Delete script file?")) return;
+            if (NewProjectFiles.WhyKeepLastScriptFile(id) is string keep) { await DialogHelper.ShowInfoAsync(keep, "Script editor"); return; }
+            if (!await DialogHelper.AskYesNoAsync($"Delete script file {id}, its source and its compiled copy?", "Delete script file?")) return;
             try
             {
                 string source = _sourceFiles.FirstOrDefault(f => _scriptIdByPath.TryGetValue(f, out int x) && x == id);
@@ -259,7 +259,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError("Couldn't remove the script file:" + Environment.NewLine + ex.Message, "Script editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't remove the script file:" + Environment.NewLine + ex.Message, "Script editor error");
             }
         }
         public bool CanSearchProject => !IsBusy && _sourceFiles.Count > 0 && !string.IsNullOrWhiteSpace(SearchText);
@@ -286,7 +286,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             if (HgEngineProject.SuppressManagedFileSaveNotice) return;
 
-            bool never = await DialogHelper.ShowNoticeWithOptOut(
+            bool never = await DialogHelper.ShowNoticeWithOptOutAsync(
                 $"This file is managed by hg-engine. {source.RelPath} has been saved, but you will need to " +
                 "compile, not just save the ROM, to see the change in game.",
                 "Managed by hg-engine");
@@ -370,7 +370,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         public ScriptEditorViewModel(bool _)
         {
-            string savedTheme = SettingsManager.Settings?.rotomEditorTheme ?? "OneDark";
+            string savedTheme = SettingsManager.Settings?.RotomEditorTheme ?? "OneDark";
             int savedThemeIndex = Array.FindIndex(EditorThemeNames,
                 theme => string.Equals(theme, savedTheme, StringComparison.OrdinalIgnoreCase));
             _selectedEditorThemeIndex = savedThemeIndex >= 0 ? savedThemeIndex : 0;
@@ -435,7 +435,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
             string onDisk;
             try { onDisk = System.IO.File.ReadAllText(_currentPath); }
-            catch { return; }
+            catch (Exception ex) { AppLogger.WarnOnce("ScriptEditorViewModel.ReloadSavedElsewhereAsync", ex); return; }
             if (string.Equals(onDisk, ScriptText ?? "", StringComparison.Ordinal))
             {
                 if (_dirty) SetClean();
@@ -465,7 +465,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             IsReadOnly = true;
             StatusText = "Preparing Rotom project...";
 
-            if (gameFamily == GameFamilies.DP && !HasNote)
+            if (GameFamily == GameFamilies.DP && !HasNote)
             {
                 AddNote("Diamond/Pearl scripts are a work in progress",
                     "Rotom handles Diamond and Pearl scripts less reliably than Platinum and HGSS, so a failed " +
@@ -477,9 +477,9 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 if (!RotomTool.IsAvailable)
                     throw new FileNotFoundException("rotom was not found in DSPRE's Tools folder.", RotomTool.ExePath);
 
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.scripts });
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.Scripts });
 
-                if (!hasRotomProject)
+                if (!HasRotomProject)
                 {
                     EnsureDspreSourceRoot();
 
@@ -498,7 +498,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                         throw new InvalidOperationException("These legacy scripts don't build, so they were not converted:\n" + buildFailure);
 
                     StatusText = "Converting legacy scripts to Rotom...";
-                    await RunRequiredRotomCommand("convert", "--non-interactive");
+                    await RunRequiredRotomCommandAsync("convert", "--non-interactive");
                     RefreshRotomProjectState();
                     AppLogger.Info("rotom kept the replaced .script files under " + Path.Combine(RotomTool.ProjectRoot, ".rotom", "backups"));
                 }
@@ -543,7 +543,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             {
                 IsReadOnly = true;
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowError("Failed to prepare Rotom scripts:\n" + ex.Message, "Script editor error");
+                await DialogHelper.ShowErrorAsync("Failed to prepare Rotom scripts:\n" + ex.Message, "Script editor error");
             }
             finally
             {
@@ -576,8 +576,9 @@ namespace DSPRE.Avalonia.ViewModels.Text
                         ? ScriptText ?? ""
                         : System.IO.File.ReadAllText(path);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    AppLogger.WarnOnce("ScriptEditorViewModel.SearchProject", ex);
                     readErrors++;
                     continue;
                 }
@@ -695,7 +696,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             try
             {
                 if (Path.GetExtension(_currentPath).Equals(".rotom", StringComparison.OrdinalIgnoreCase))
-                    await FlushCurrentDocumentChangedToLsp();
+                    await FlushCurrentDocumentChangedToLspAsync();
 
                 int? line = FindScriptEntryLine(await _lsp.DocumentSymbolsAsync(_currentPath), scriptNumber);
                 StatusText = line == null
@@ -735,7 +736,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             try
             {
                 if (Path.GetExtension(_currentPath).Equals(".rotom", StringComparison.OrdinalIgnoreCase))
-                    await FlushCurrentDocumentChangedToLsp();
+                    await FlushCurrentDocumentChangedToLspAsync();
 
                 RotomLspLocation target = await _lsp.DefinitionAsync(_currentPath, line, column);
                 if (target == null || string.IsNullOrWhiteSpace(target.Path))
@@ -805,7 +806,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError("Save failed:\n" + ex.Message, "Script editor error");
+                await DialogHelper.ShowErrorAsync("Save failed:\n" + ex.Message, "Script editor error");
                 return false;
             }
             finally
@@ -835,7 +836,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                         ? "Compile successful: " + summary
                         : "Compile successful with " + diagnostics + " warning(s): " + summary;
                     if (result.KeptBinaries.Count > 0)
-                        await DialogHelper.ShowInfo(KeptBinariesMessage(result.KeptBinaries), "Compile");
+                        await DialogHelper.ShowInfoAsync(KeptBinariesMessage(result.KeptBinaries), "Compile");
                 }
                 else
                 {
@@ -843,14 +844,14 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 }
 
                 if (!result.Success && diagnostics == 0)
-                    await DialogHelper.ShowError("rotom compile failed:\n" + RotomTool.FormatDetails(result), "Script editor error");
+                    await DialogHelper.ShowErrorAsync("rotom compile failed:\n" + RotomTool.FormatDetails(result), "Script editor error");
                 return result.Success;
             }
             catch (Exception ex)
             {
                 StatusText = "Compile failed: " + ex.Message;
                 DiagnosticsStatusText = "Compile failed before diagnostics were available.";
-                await DialogHelper.ShowError("Compile failed:\n" + ex.Message, "Script editor error");
+                await DialogHelper.ShowErrorAsync("Compile failed:\n" + ex.Message, "Script editor error");
                 return false;
             }
             finally
@@ -969,7 +970,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 _lsp = new RotomLanguageServerClient();
                 _lsp.DiagnosticsPublished += OnLspDiagnosticsPublished;
                 await _lsp.StartAsync();
-                await OpenCurrentDocumentInLsp();
+                await OpenCurrentDocumentInLspAsync();
             }
             catch (Exception ex)
             {
@@ -1030,7 +1031,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex)
             {
-                _ = DialogHelper.ShowError("Couldn't add Rotom script:\n" + ex.Message, "Script editor error");
+                _ = DialogHelper.ShowErrorAsync("Couldn't add Rotom script:\n" + ex.Message, "Script editor error");
             }
         }
 
@@ -1039,7 +1040,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (!IsEditable) return;
 
             FilePickerFileType filter = new FilePickerFileType("Rotom source") { Patterns = new[] { "*.rotom", "*.json", "*.*" } };
-            string path = await DialogHelper.OpenFile(_owner, "Import Rotom source", new[] { filter });
+            string path = await DialogHelper.OpenFileAsync(_owner, "Import Rotom source", new[] { filter });
             if (path == null) return;
 
             try
@@ -1050,7 +1051,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError("Import failed:\n" + ex.Message, "Script editor error");
+                await DialogHelper.ShowErrorAsync("Import failed:\n" + ex.Message, "Script editor error");
             }
         }
 
@@ -1060,7 +1061,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
             string extension = Path.GetExtension(_currentPath);
             FilePickerFileType filter = new FilePickerFileType("Rotom source") { Patterns = new[] { "*.rotom", "*.json", "*.*" } };
-            string path = await DialogHelper.SaveFile(_owner, "Export Rotom source", new[] { filter },
+            string path = await DialogHelper.SaveFileAsync(_owner, "Export Rotom source", new[] { filter },
                 Path.GetFileNameWithoutExtension(_currentPath) + extension);
             if (path == null) return;
 
@@ -1071,7 +1072,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError("Export failed:\n" + ex.Message, "Script editor error");
+                await DialogHelper.ShowErrorAsync("Export failed:\n" + ex.Message, "Script editor error");
             }
         }
 
@@ -1102,13 +1103,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (assessment.BothChanged.Count > 0)
             {
                 string files = string.Join(", ", assessment.BothChanged.Select(i => i.ToString("D4")));
-                keepBinaries = await DialogHelper.AskTwoWay(
+                keepBinaries = await DialogHelper.AskTwoWayAsync(
                     $"These scripts changed both in the game data and in their source since they were last compiled: {files}. Which should win?",
                     "Update Rotom project", "Game data", "Source");
             }
             StatusText = "Updating the Rotom project...";
             (string problem, List<int> kept) = await DSPRE.ROMFiles.RotomProjectUpgrade.ApplyAsync(assessment, keepBinaries);
-            if (problem != null) await DialogHelper.ShowError(problem, "Update Rotom project");
+            if (problem != null) await DialogHelper.ShowErrorAsync(problem, "Update Rotom project");
             else if (kept.Count > 0) AddNote(KeptBinariesNote(kept), KeptBinariesMessage(kept));
             RefreshScriptList();
         }
@@ -1132,7 +1133,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             HashSet<int> sourced = new HashSet<int>(_scriptIdByPath.Values);
             List<int> left = new List<int>();
-            foreach (string path in System.IO.Directory.EnumerateFiles(Filesystem.scripts))
+            foreach (string path in System.IO.Directory.EnumerateFiles(Filesystem.Scripts))
                 if (int.TryParse(Path.GetFileName(path), out int id) && !sourced.Contains(id) && new FileInfo(path).Length > 0)
                     left.Add(id);
             left.Sort();
@@ -1142,7 +1143,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             return $"Scripts {ids} could not be decompiled and keep their binaries.";
         }
 
-        private async Task RunRequiredRotomCommand(params string[] args)
+        private async Task RunRequiredRotomCommandAsync(params string[] args)
         {
             RotomTool.Result result = await RotomTool.RunAsync(args);
             if (!result.Success)
@@ -1191,7 +1192,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
 
             IOrderedEnumerable<HgEngineOwnedFile> ownedScripts = HgEngineOwnedFiles
-                .FilesIn(HgEngineOwnedFiles.ArchiveOf(DirNames.scripts)).Values
+                .FilesIn(HgEngineOwnedFiles.ArchiveOf(DirNames.Scripts)).Values
                 .Where(f => f.Ownership == HgEngineOwnership.EditableSource)
                 .OrderBy(f => f.Id);
             foreach (HgEngineOwnedFile owned in ownedScripts)
@@ -1302,7 +1303,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 OnPropertyChanged(nameof(HasDiagnostics));
                 return;
             }
-            _ = OpenCurrentDocumentInLsp();
+            _ = OpenCurrentDocumentInLspAsync();
         }
 
         private void SaveSourceOnly(bool showStatus)
@@ -1324,10 +1325,10 @@ namespace DSPRE.Avalonia.ViewModels.Text
             AppEvents.RaiseScriptSourceSaved(this, _currentPath);
             if (showStatus) StatusText = "Saved " + (managed?.RelPath ?? DisplayPath(_currentPath)) + ".";
             // rotom-lsp never opens hg-engine's own sources.
-            if (managed == null) _ = SendCurrentDocumentSavedToLsp();
+            if (managed == null) _ = SendCurrentDocumentSavedToLspAsync();
         }
 
-        private async Task OpenCurrentDocumentInLsp()
+        private async Task OpenCurrentDocumentInLspAsync()
         {
             RotomLanguageServerClient lsp = _lsp;
             if (lsp == null || !lsp.IsRunning || string.IsNullOrWhiteSpace(_currentPath)) return;
@@ -1361,7 +1362,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
         }
 
-        private async Task SendCurrentDocumentChangedToLsp()
+        private async Task SendCurrentDocumentChangedToLspAsync()
         {
             if (_lsp == null || !_lsp.IsRunning || string.IsNullOrWhiteSpace(_currentPath)) return;
 
@@ -1369,7 +1370,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             {
                 if (string.IsNullOrWhiteSpace(_lspOpenPath) || !SamePath(_lspOpenPath, _currentPath))
                 {
-                    await OpenCurrentDocumentInLsp();
+                    await OpenCurrentDocumentInLspAsync();
                     return;
                 }
 
@@ -1433,7 +1434,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             if (_lspChangeDelay == null) return;
             CancelPendingDocumentChange();
-            await SendCurrentDocumentChangedToLsp();
+            await SendCurrentDocumentChangedToLspAsync();
         }
 
         internal async Task<List<RotomLspCompletion>> CompletionAsync(int line, int column)
@@ -1469,17 +1470,17 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
             CancellationTokenSource delay = new CancellationTokenSource();
             _lspChangeDelay = delay;
-            _ = SendCurrentDocumentChangedToLspAfterDelay(delay);
+            _ = SendCurrentDocumentChangedToLspAfterDelayAsync(delay);
         }
 
-        private async Task SendCurrentDocumentChangedToLspAfterDelay(CancellationTokenSource delay)
+        private async Task SendCurrentDocumentChangedToLspAfterDelayAsync(CancellationTokenSource delay)
         {
             try
             {
                 await Task.Delay(LanguageServerChangeDelayMs, delay.Token);
-                await SendCurrentDocumentChangedToLsp();
+                await SendCurrentDocumentChangedToLspAsync();
             }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException) { }   // cancelled on purpose when a newer change arrives
             finally
             {
                 if (ReferenceEquals(_lspChangeDelay, delay)) _lspChangeDelay = null;
@@ -1487,10 +1488,10 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
         }
 
-        private async Task FlushCurrentDocumentChangedToLsp()
+        private async Task FlushCurrentDocumentChangedToLspAsync()
         {
             CancelPendingDocumentChange();
-            await SendCurrentDocumentChangedToLsp();
+            await SendCurrentDocumentChangedToLspAsync();
         }
 
         private void CancelPendingDocumentChange()
@@ -1500,13 +1501,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
             delay?.Cancel();
         }
 
-        private async Task SendCurrentDocumentSavedToLsp()
+        private async Task SendCurrentDocumentSavedToLspAsync()
         {
             if (_lsp == null || !_lsp.IsRunning || string.IsNullOrWhiteSpace(_currentPath)) return;
 
             try
             {
-                await FlushCurrentDocumentChangedToLsp();
+                await FlushCurrentDocumentChangedToLspAsync();
                 await _lsp.DidSaveAsync(_currentPath);
             }
             catch (Exception ex)
@@ -1542,7 +1543,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (string.IsNullOrWhiteSpace(path)) return "";
             if (_currentPath != null && SamePath(path, _currentPath)) return ScriptText ?? "";
             try { return System.IO.File.Exists(path) ? System.IO.File.ReadAllText(path) : ""; }
-            catch { return ""; }
+            catch (Exception ex) { AppLogger.WarnOnce("ScriptEditorViewModel.ReadSourceForPath", ex); return ""; }
         }
 
         private static string ResolveProjectPath(string path)
@@ -1666,7 +1667,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (!string.IsNullOrWhiteSpace(root))
             {
                 try { path = Path.GetRelativePath(root, path); }
-                catch { }
+                catch { }   // a path on another drive stays absolute
             }
             return path.Replace('\\', '/');
         }

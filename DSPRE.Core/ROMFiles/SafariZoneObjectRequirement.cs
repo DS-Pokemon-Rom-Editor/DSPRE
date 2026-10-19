@@ -1,8 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 
-namespace DSPRE.ROMFiles {
-  public class SafariZoneObjectRequirement {
+namespace DSPRE.ROMFiles
+{
+  public class SafariZoneObjectRequirement
+  {
     public static Dictionary<int, string> ObjectTypes = new Dictionary<int, string>() {
       { 0, "No Requirement" },
       { 1, "Plains" },
@@ -11,31 +13,36 @@ namespace DSPRE.ROMFiles {
       { 4, "Waterside" },
     };
 
-    public byte typeID;
+    public byte TypeID;
     // Points of this object type, not a count of objects; each object earns 1 to 7 by how long its area has been placed.
-    public byte quantity;
+    public byte Quantity;
 
-    public SafariZoneObjectRequirement(byte typeID = 0, byte quantity = 0) {
-      this.typeID = typeID;
-      this.quantity = quantity;
+    public SafariZoneObjectRequirement(byte typeID = 0, byte quantity = 0)
+    {
+      this.TypeID = typeID;
+      this.Quantity = quantity;
     }
 
-    public SafariZoneObjectRequirement(BinaryReader br) {
-      readRequirement(br);
+    public SafariZoneObjectRequirement(BinaryReader br)
+    {
+      ReadRequirement(br);
     }
 
-    public void readRequirement(BinaryReader br) {
-      typeID = br.ReadByte();
-      quantity = br.ReadByte();
+    public void ReadRequirement(BinaryReader br)
+    {
+      TypeID = br.ReadByte();
+      Quantity = br.ReadByte();
     }
 
-    public void writeRequirement(BinaryWriter bw) {
-      bw.Write((byte)typeID);
-      bw.Write((byte)quantity);
+    public void WriteRequirement(BinaryWriter bw)
+    {
+      bw.Write((byte)TypeID);
+      bw.Write((byte)Quantity);
     }
 
-    public override string ToString() {
-      return $"{typeID} {ObjectTypes[typeID]}: {quantity}";
+    public override string ToString()
+    {
+      return $"{TypeID} {ObjectTypes[TypeID]}: {Quantity}";
     }
   }
 }

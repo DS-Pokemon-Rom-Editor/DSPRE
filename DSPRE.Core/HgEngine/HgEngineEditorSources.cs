@@ -76,18 +76,18 @@ namespace DSPRE.HgEngine
         // .battle.flags is an OR of FLAG_* names, some of which compile to zero depending on config.h.
         public static readonly IReadOnlyList<HgEngineSourceField<MoveData>> Fields = new[]
         {
-            F("data", "effect", m => m.battleeffect, (m, v) => m.battleeffect = (ushort)v, 0, ushort.MaxValue, v => HgEngineSourceFields.Symbol(EffectsHeader, "MOVE_EFFECT_", v)),
-            F("data", "split", m => (int)m.split, (m, v) => m.split = (MoveSplit)v, 0, byte.MaxValue, v => HgEngineSourceFields.Symbol(MoveDataHeader, "SPLIT_", v)),
-            F("data", "power", m => m.damage, (m, v) => m.damage = (byte)v, 0, byte.MaxValue),
-            F("data", "type", m => (int)m.movetype, (m, v) => m.movetype = (PokemonType)v, 0, byte.MaxValue, v => HgEngineSourceFields.Symbol(TypesHeader, "TYPE_", v)),
-            F("data", "accuracy", m => m.accuracy, (m, v) => m.accuracy = (byte)v, 0, byte.MaxValue),
-            F("data", "pp", m => m.pp, (m, v) => m.pp = (byte)v, 0, byte.MaxValue),
-            F("data", "effectChance", m => m.sideEffectProbability, (m, v) => m.sideEffectProbability = (byte)v, 0, byte.MaxValue),
-            F("battle", "target", m => m.target, (m, v) => m.target = (ushort)v, 0, ushort.MaxValue, v => HgEngineSourceFields.Symbol(RangesHeader, "RANGE_", v)),
-            F("battle", "priority", m => m.priority, (m, v) => m.priority = (sbyte)v, sbyte.MinValue, sbyte.MaxValue),
-            F("battle", "flags", m => m.flagField, (m, v) => m.flagField = (byte)v, 0, byte.MaxValue, v => HgEngineSourceFields.FlagsSymbol(MoveDataHeader, "FLAG_", v), isFlags: true),
-            F("contest", "appeal", m => m.contestAppeal, (m, v) => m.contestAppeal = (byte)v, 0, byte.MaxValue, v => HgEngineSourceFields.Symbol(MoveDataHeader, "APPEAL_", v)),
-            F("contest", "contestType", m => (int)m.contestConditionType, (m, v) => m.contestConditionType = (ContestCondition)v, 0, byte.MaxValue, v => HgEngineSourceFields.Symbol(MoveDataHeader, "CONTEST_", v)),
+            F("data", "effect", m => m.Battleeffect, (m, v) => m.Battleeffect = (ushort)v, 0, ushort.MaxValue, v => HgEngineSourceFields.Symbol(EffectsHeader, "MOVE_EFFECT_", v)),
+            F("data", "split", m => (int)m.Split, (m, v) => m.Split = (MoveSplit)v, 0, byte.MaxValue, v => HgEngineSourceFields.Symbol(MoveDataHeader, "SPLIT_", v)),
+            F("data", "power", m => m.Damage, (m, v) => m.Damage = (byte)v, 0, byte.MaxValue),
+            F("data", "type", m => (int)m.Movetype, (m, v) => m.Movetype = (PokemonType)v, 0, byte.MaxValue, v => HgEngineSourceFields.Symbol(TypesHeader, "TYPE_", v)),
+            F("data", "accuracy", m => m.Accuracy, (m, v) => m.Accuracy = (byte)v, 0, byte.MaxValue),
+            F("data", "pp", m => m.Pp, (m, v) => m.Pp = (byte)v, 0, byte.MaxValue),
+            F("data", "effectChance", m => m.SideEffectProbability, (m, v) => m.SideEffectProbability = (byte)v, 0, byte.MaxValue),
+            F("battle", "target", m => m.Target, (m, v) => m.Target = (ushort)v, 0, ushort.MaxValue, v => HgEngineSourceFields.Symbol(RangesHeader, "RANGE_", v)),
+            F("battle", "priority", m => m.Priority, (m, v) => m.Priority = (sbyte)v, sbyte.MinValue, sbyte.MaxValue),
+            F("battle", "flags", m => m.FlagField, (m, v) => m.FlagField = (byte)v, 0, byte.MaxValue, v => HgEngineSourceFields.FlagsSymbol(MoveDataHeader, "FLAG_", v), isFlags: true),
+            F("contest", "appeal", m => m.ContestAppeal, (m, v) => m.ContestAppeal = (byte)v, 0, byte.MaxValue, v => HgEngineSourceFields.Symbol(MoveDataHeader, "APPEAL_", v)),
+            F("contest", "contestType", m => (int)m.ContestConditionType, (m, v) => m.ContestConditionType = (ContestCondition)v, 0, byte.MaxValue, v => HgEngineSourceFields.Symbol(MoveDataHeader, "CONTEST_", v)),
         };
 
         /// <summary>Fills <paramref name="move"/> from the move's Moves.c entry.</summary>
@@ -244,20 +244,20 @@ namespace DSPRE.HgEngine
         // Ranges are the widths include/item.h declares, so a value the build would truncate is refused.
         public static readonly IReadOnlyList<HgEngineSourceField<ItemData>> Fields = new[]
         {
-            Top("holdEffect", d => (int)d.holdEffect, (d, v) => d.holdEffect = (HoldEffect)v, 0, byte.MaxValue),
+            Top("holdEffect", d => (int)d.HoldEffect, (d, v) => d.HoldEffect = (HoldEffect)v, 0, byte.MaxValue),
             Top("holdEffectParam", d => d.HoldEffectParam, (d, v) => d.HoldEffectParam = (byte)v, 0, byte.MaxValue),
             Top("pluckEffect", d => d.PluckEffect, (d, v) => d.PluckEffect = (byte)v, 0, byte.MaxValue),
             Top("flingEffect", d => d.FlingEffect, (d, v) => d.FlingEffect = (byte)v, 0, byte.MaxValue),
             Top("flingPower", d => d.FlingPower, (d, v) => d.FlingPower = (byte)v, 0, byte.MaxValue),
             Top("naturalGiftPower", d => d.NaturalGiftPower, (d, v) => d.NaturalGiftPower = (byte)v, 0, byte.MaxValue),
-            Top("naturalGiftType", d => (int)d.naturalGiftType, (d, v) => d.naturalGiftType = (NaturalGiftType)v, 0, 31, v => HgEngineSourceFields.Symbol(TypesHeader, "TYPE_", v)),
+            Top("naturalGiftType", d => (int)d.NaturalGiftType, (d, v) => d.NaturalGiftType = (NaturalGiftType)v, 0, 31, v => HgEngineSourceFields.Symbol(TypesHeader, "TYPE_", v)),
             TopBool("prevent_toss", d => d.PreventToss, (d, v) => d.PreventToss = v),
             TopBool("selectable", d => d.Selectable, (d, v) => d.Selectable = v),
             // item.h packs ITEM_*/POCKET_*/BATTLE_POCKET_* into one namespace, so names are looked up by prefix.
-            Top("fieldPocket", d => (int)d.fieldPocket, (d, v) => d.fieldPocket = (FieldPocket)v, 0, 15, v => HgEngineSourceFields.Symbol(ItemHeader, "POCKET_", v)),
-            Top("battlePocket", d => (int)d.battlePocket, (d, v) => d.battlePocket = (BattlePocket)v, 0, 31, v => HgEngineSourceFields.FlagsSymbol(ItemHeader, "BATTLE_POCKET_", v)),
-            Top("fieldUseFunc", d => (int)d.fieldUseFunc, (d, v) => d.fieldUseFunc = (FieldUseFunc)v, 0, byte.MaxValue),
-            Top("battleUseFunc", d => (int)d.battleUseFunc, (d, v) => d.battleUseFunc = (BattleUseFunc)v, 0, byte.MaxValue),
+            Top("fieldPocket", d => (int)d.FieldPocket, (d, v) => d.FieldPocket = (FieldPocket)v, 0, 15, v => HgEngineSourceFields.Symbol(ItemHeader, "POCKET_", v)),
+            Top("battlePocket", d => (int)d.BattlePocket, (d, v) => d.BattlePocket = (BattlePocket)v, 0, 31, v => HgEngineSourceFields.FlagsSymbol(ItemHeader, "BATTLE_POCKET_", v)),
+            Top("fieldUseFunc", d => (int)d.FieldUseFunc, (d, v) => d.FieldUseFunc = (FieldUseFunc)v, 0, byte.MaxValue),
+            Top("battleUseFunc", d => (int)d.BattleUseFunc, (d, v) => d.BattleUseFunc = (BattleUseFunc)v, 0, byte.MaxValue),
             Top("partyUse", d => d.PartyUse, (d, v) => d.PartyUse = (byte)v, 0, byte.MaxValue),
 
             PartyBool("slp_heal", p => p.SlpHeal, (p, v) => p.SlpHeal = v),
@@ -359,36 +359,36 @@ namespace DSPRE.HgEngine
         {
             List<HgEngineSourceField<EncounterFileHGSS>> fields = new List<HgEngineSourceField<EncounterFileHGSS>>
             {
-                Rate("rateWalk", e => e.walkingRate, (e, v) => e.walkingRate = v),
-                Rate("rateSurf", e => e.surfRate, (e, v) => e.surfRate = v),
-                Rate("rateRockSmash", e => e.rockSmashRate, (e, v) => e.rockSmashRate = v),
-                Rate("rateOldRod", e => e.oldRodRate, (e, v) => e.oldRodRate = v),
-                Rate("rateGoodRod", e => e.goodRodRate, (e, v) => e.goodRodRate = v),
-                Rate("rateSuperRod", e => e.superRodRate, (e, v) => e.superRodRate = v),
-                Mon(e => e.swarmPokemon, 0, "landSwarm"),
-                Mon(e => e.swarmPokemon, 1, "surfSwarm"),
-                Mon(e => e.swarmPokemon, 2, "nightFish"),
-                Mon(e => e.swarmPokemon, 3, "fishSwarm"),
+                Rate("rateWalk", e => e.WalkingRate, (e, v) => e.WalkingRate = v),
+                Rate("rateSurf", e => e.SurfRate, (e, v) => e.SurfRate = v),
+                Rate("rateRockSmash", e => e.RockSmashRate, (e, v) => e.RockSmashRate = v),
+                Rate("rateOldRod", e => e.OldRodRate, (e, v) => e.OldRodRate = v),
+                Rate("rateGoodRod", e => e.GoodRodRate, (e, v) => e.GoodRodRate = v),
+                Rate("rateSuperRod", e => e.SuperRodRate, (e, v) => e.SuperRodRate = v),
+                Mon(e => e.SwarmPokemon, 0, "landSwarm"),
+                Mon(e => e.SwarmPokemon, 1, "surfSwarm"),
+                Mon(e => e.SwarmPokemon, 2, "nightFish"),
+                Mon(e => e.SwarmPokemon, 3, "fishSwarm"),
             };
             for (int i = 0; i < 12; i++)
             {
-                fields.Add(Byte(e => e.walkingLevels, i, "landSlots", "levels", i));
-                fields.Add(Mon(e => e.morningPokemon, i, "landSlots", "speciesMorning", i));
-                fields.Add(Mon(e => e.dayPokemon, i, "landSlots", "speciesDay", i));
-                fields.Add(Mon(e => e.nightPokemon, i, "landSlots", "speciesNight", i));
+                fields.Add(Byte(e => e.WalkingLevels, i, "landSlots", "levels", i));
+                fields.Add(Mon(e => e.MorningPokemon, i, "landSlots", "speciesMorning", i));
+                fields.Add(Mon(e => e.DayPokemon, i, "landSlots", "speciesDay", i));
+                fields.Add(Mon(e => e.NightPokemon, i, "landSlots", "speciesNight", i));
             }
             for (int i = 0; i < 2; i++)
             {
-                fields.Add(Mon(e => e.hoennMusicPokemon, i, "hoennSoundSpecies", i));
-                fields.Add(Mon(e => e.sinnohMusicPokemon, i, "sinnohSoundSpecies", i));
-                AddSlot("rockSmashSlots", i, e => e.rockSmashMinLevels, e => e.rockSmashMaxLevels, e => e.rockSmashPokemon);
+                fields.Add(Mon(e => e.HoennMusicPokemon, i, "hoennSoundSpecies", i));
+                fields.Add(Mon(e => e.SinnohMusicPokemon, i, "sinnohSoundSpecies", i));
+                AddSlot("rockSmashSlots", i, e => e.RockSmashMinLevels, e => e.RockSmashMaxLevels, e => e.RockSmashPokemon);
             }
             for (int i = 0; i < 5; i++)
             {
-                AddSlot("surfSlots", i, e => e.surfMinLevels, e => e.surfMaxLevels, e => e.surfPokemon);
-                AddSlot("oldRodSlots", i, e => e.oldRodMinLevels, e => e.oldRodMaxLevels, e => e.oldRodPokemon);
-                AddSlot("goodRodSlots", i, e => e.goodRodMinLevels, e => e.goodRodMaxLevels, e => e.goodRodPokemon);
-                AddSlot("superRodSlots", i, e => e.superRodMinLevels, e => e.superRodMaxLevels, e => e.superRodPokemon);
+                AddSlot("surfSlots", i, e => e.SurfMinLevels, e => e.SurfMaxLevels, e => e.SurfPokemon);
+                AddSlot("oldRodSlots", i, e => e.OldRodMinLevels, e => e.OldRodMaxLevels, e => e.OldRodPokemon);
+                AddSlot("goodRodSlots", i, e => e.GoodRodMinLevels, e => e.GoodRodMaxLevels, e => e.GoodRodPokemon);
+                AddSlot("superRodSlots", i, e => e.SuperRodMinLevels, e => e.SuperRodMaxLevels, e => e.SuperRodPokemon);
             }
             return fields;
 

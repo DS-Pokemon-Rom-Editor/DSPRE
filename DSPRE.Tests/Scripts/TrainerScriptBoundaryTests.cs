@@ -42,8 +42,8 @@ namespace DSPRE.Tests
             SettingsManager.Load();
             new RomInfo(gameCode, project);
 
-            Assert.Equal(expectedFamily, RomInfo.gameFamily);
-            Assert.Equal(expectedFunnyNumber, RomInfo.trainerFunnyScriptNumber);
+            Assert.Equal(expectedFamily, RomInfo.GameFamily);
+            Assert.Equal(expectedFunnyNumber, RomInfo.TrainerFunnyScriptNumber);
             Assert.True(TrainerScriptDescriptor.TryFor(expectedFamily,
                 out TrainerScriptDescriptor descriptor));
             Assert.Equal(sharedScriptArchiveId, descriptor.SharedScriptArchiveId);
@@ -62,7 +62,7 @@ namespace DSPRE.Tests
             }
             else if (expectedFamily == RomInfo.GameFamilies.HGSS)
             {
-                Assert.Equal(RomInfo.GameVersions.HeartGold, RomInfo.gameVersion);
+                Assert.Equal(RomInfo.GameVersions.HeartGold, RomInfo.GameVersion);
                 AssertEnglishExecutableConsumers(expectedFunnyNumber - 1, expectedTargetCount: 1);
                 TrainerRosterAnalysis analysis = TrainerRosterService.AnalyzeCurrentProject();
                 Assert.True(analysis.CanAdd, analysis.RefusalReason);
@@ -73,8 +73,8 @@ namespace DSPRE.Tests
                 Assert.Equal(2, analysis.RemainingAdditions);
             }
 
-            string trainerPropertiesDir = RomInfo.gameDirs[RomInfo.DirNames.trainerProperties].unpackedDir;
-            string scriptsDir = RomInfo.gameDirs[RomInfo.DirNames.scripts].unpackedDir;
+            string trainerPropertiesDir = RomInfo.GameDirs[RomInfo.DirNames.TrainerProperties].unpackedDir;
+            string scriptsDir = RomInfo.GameDirs[RomInfo.DirNames.Scripts].unpackedDir;
             Skip.IfNot(Directory.Exists(trainerPropertiesDir),
                 $"The {expectedFamily} trainer-properties archive is not unpacked.");
             Skip.IfNot(Directory.Exists(scriptsDir),
@@ -85,14 +85,14 @@ namespace DSPRE.Tests
                 $"The {expectedFamily} trainer-properties archive contained no records.");
             Assert.Equal(expectedTrainerCount, trainerPropertiesCount);
 
-            string trainerPartyNarc = RomInfo.gameDirs[RomInfo.DirNames.trainerParty].packedDir;
+            string trainerPartyNarc = RomInfo.GameDirs[RomInfo.DirNames.TrainerParty].packedDir;
             Assert.True(File.Exists(trainerPartyNarc),
                 $"The {expectedFamily} trainer-party NARC was not found.");
             Assert.Equal(trainerPropertiesCount, ReadNarcElementCount(trainerPartyNarc));
 
             string trainerNames = Path.Combine(
-                RomInfo.gameDirs[RomInfo.DirNames.textArchives].unpackedDir,
-                RomInfo.trainerNamesMessageNumber.ToString("D4"));
+                RomInfo.GameDirs[RomInfo.DirNames.TextArchives].unpackedDir,
+                RomInfo.TrainerNamesMessageNumber.ToString("D4"));
             Assert.True(File.Exists(trainerNames),
                 $"The {expectedFamily} trainer-name archive was not found.");
             Assert.Equal(trainerPropertiesCount, ReadMessageCount(trainerNames));
@@ -127,13 +127,13 @@ namespace DSPRE.Tests
                 using MemoryStream input = new MemoryStream(scriptBytes, writable: false);
                 ScriptFile parsed = new ScriptFile(input, readFunctions: true, readActions: true,
                     fileID: sharedScriptArchiveId);
-                Assert.False(parsed.parseFailedDueToInvalidCommand);
-                string genericBody = CommandSignature(parsed.allScripts[0]);
-                string specialBody = CommandSignature(parsed.allScripts[^1]);
-                Assert.Equal(targets.Count, parsed.allScripts.Count);
-                Assert.Equal(2, parsed.allScripts.Count(script => script.usedScriptID == -1));
+                Assert.False(parsed.ParseFailedDueToInvalidCommand);
+                string genericBody = CommandSignature(parsed.AllScripts[0]);
+                string specialBody = CommandSignature(parsed.AllScripts[^1]);
+                Assert.Equal(targets.Count, parsed.AllScripts.Count);
+                Assert.Equal(2, parsed.AllScripts.Count(script => script.UsedScriptID == -1));
                 Assert.Equal(targets.Count - 2,
-                    parsed.allScripts.Count(script => script.usedScriptID != -1));
+                    parsed.AllScripts.Count(script => script.UsedScriptID != -1));
 
                 byte[] roundTripped = parsed.ToByteArray();
                 Assert.NotNull(roundTripped);
@@ -159,10 +159,10 @@ namespace DSPRE.Tests
                 using MemoryStream firstInput = new MemoryStream(firstExpansion, writable: false);
                 ScriptFile firstParsed = new ScriptFile(firstInput, readFunctions: true, readActions: true,
                     fileID: sharedScriptArchiveId);
-                Assert.False(firstParsed.parseFailedDueToInvalidCommand);
-                Assert.Equal(genericBody, CommandSignature(firstParsed.allScripts[0]));
-                Assert.Equal(specialBody, CommandSignature(firstParsed.allScripts[^1]));
-                Assert.Equal(1, firstParsed.allScripts[^2].usedScriptID);
+                Assert.False(firstParsed.ParseFailedDueToInvalidCommand);
+                Assert.Equal(genericBody, CommandSignature(firstParsed.AllScripts[0]));
+                Assert.Equal(specialBody, CommandSignature(firstParsed.AllScripts[^1]));
+                Assert.Equal(1, firstParsed.AllScripts[^2].UsedScriptID);
                 Assert.True(TrainerScriptLayout.TryInsertGenericAliasBeforeSpecial(firstParsed,
                     out string secondInsertError), secondInsertError);
                 byte[] secondExpansion = firstParsed.ToByteArray();
@@ -179,14 +179,14 @@ namespace DSPRE.Tests
                 using MemoryStream secondInput = new MemoryStream(secondExpansion, writable: false);
                 ScriptFile secondParsed = new ScriptFile(secondInput, readFunctions: true, readActions: true,
                     fileID: sharedScriptArchiveId);
-                Assert.False(secondParsed.parseFailedDueToInvalidCommand);
-                Assert.Equal(genericBody, CommandSignature(secondParsed.allScripts[0]));
-                Assert.Equal(specialBody, CommandSignature(secondParsed.allScripts[^1]));
-                Assert.Equal(1, secondParsed.allScripts[^2].usedScriptID);
-                Assert.Equal(layout.EntryCount + 2, secondParsed.allScripts.Count);
-                Assert.Equal(2, secondParsed.allScripts.Count(script => script.usedScriptID == -1));
+                Assert.False(secondParsed.ParseFailedDueToInvalidCommand);
+                Assert.Equal(genericBody, CommandSignature(secondParsed.AllScripts[0]));
+                Assert.Equal(specialBody, CommandSignature(secondParsed.AllScripts[^1]));
+                Assert.Equal(1, secondParsed.AllScripts[^2].UsedScriptID);
+                Assert.Equal(layout.EntryCount + 2, secondParsed.AllScripts.Count);
+                Assert.Equal(2, secondParsed.AllScripts.Count(script => script.UsedScriptID == -1));
                 Assert.Equal(layout.EntryCount,
-                    secondParsed.allScripts.Count(script => script.usedScriptID != -1));
+                    secondParsed.AllScripts.Count(script => script.UsedScriptID != -1));
             }
             finally
             {
@@ -214,9 +214,9 @@ namespace DSPRE.Tests
 
         private static void AssertEnglishExecutableConsumers(int specialIndex, int expectedTargetCount)
         {
-            Assert.Equal(RomInfo.GameLanguages.English, RomInfo.gameLanguage);
-            Assert.True(TrainerScriptExecutableDescriptor.TryFor(RomInfo.gameVersion,
-                RomInfo.gameLanguage, out TrainerScriptExecutableDescriptor descriptor,
+            Assert.Equal(RomInfo.GameLanguages.English, RomInfo.GameLanguage);
+            Assert.True(TrainerScriptExecutableDescriptor.TryFor(RomInfo.GameVersion,
+                RomInfo.GameLanguage, out TrainerScriptExecutableDescriptor descriptor,
                 out string descriptorError), descriptorError);
             Assert.Equal(expectedTargetCount, descriptor.Targets.Count);
 
@@ -224,7 +224,7 @@ namespace DSPRE.Tests
             foreach (TrainerScriptPatchTarget target in descriptor.Targets)
             {
                 string path = target.File == TrainerScriptExecutableFile.Arm9
-                    ? RomInfo.arm9Path
+                    ? RomInfo.Arm9Path
                     : OverlayUtils.GetPath(target.OverlayNumber);
                 Assert.True(File.Exists(path), $"The {target.File} patch target was not found.");
                 byte[] bytes = File.ReadAllBytes(path);
@@ -238,8 +238,8 @@ namespace DSPRE.Tests
 
         private static string CommandSignature(ScriptCommandContainer container)
         {
-            return string.Join("|", container.commands.Select(command =>
-                $"{command.id}:{string.Join(",", command.cmdParams.SelectMany(bytes => bytes).Select(value => value.ToString("X2")))}"));
+            return string.Join("|", container.Commands.Select(command =>
+                $"{command.Id}:{string.Join(",", command.CmdParams.SelectMany(bytes => bytes).Select(value => value.ToString("X2")))}"));
         }
 
         private static int ReadMessageCount(string path)

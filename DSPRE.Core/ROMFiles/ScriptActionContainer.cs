@@ -4,13 +4,13 @@ namespace DSPRE.ROMFiles
 {
     public class ScriptActionContainer
     {
-        public List<ScriptAction> commands;
-        public uint manualUserID;
+        public List<ScriptAction> Commands;
+        public uint ManualUserID;
 
         public ScriptActionContainer(uint actionNumber, List<ScriptAction> commands = null)
         {
-            manualUserID = actionNumber;
-            this.commands = commands;
+            ManualUserID = actionNumber;
+            this.Commands = commands;
         }
     }
 }

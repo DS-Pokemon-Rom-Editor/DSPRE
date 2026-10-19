@@ -12,8 +12,8 @@ namespace DSPRE.ROMFiles
     {
         public struct Entry { public int MessageId; public uint TrainerId; public ushort TriggerId; }
 
-        private static string TablePath => Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.trainerTextTable].unpackedDir, "0000");
-        private static string OffsetPath => Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.trainerTextOffset].unpackedDir, "0000");
+        private static string TablePath => Path.Combine(RomInfo.GameDirs[RomInfo.DirNames.TrainerTextTable].unpackedDir, "0000");
+        private static string OffsetPath => Path.Combine(RomInfo.GameDirs[RomInfo.DirNames.TrainerTextOffset].unpackedDir, "0000");
 
         public static List<Entry> Read()
         {
@@ -53,7 +53,7 @@ namespace DSPRE.ROMFiles
                 }
             }
 
-            new TextArchive(RomInfo.trainerMessageTextNumber, text).SaveToExpandedDir(RomInfo.trainerMessageTextNumber, false);
+            new TextArchive(RomInfo.TrainerMessageTextNumber, text).SaveToExpandedDir(RomInfo.TrainerMessageTextNumber, false);
 
             using DSUtils.EasyWriter offsetWriter = new DSUtils.EasyWriter(OffsetPath);
             foreach (KeyValuePair<uint, ushort> kvp in firstRow)

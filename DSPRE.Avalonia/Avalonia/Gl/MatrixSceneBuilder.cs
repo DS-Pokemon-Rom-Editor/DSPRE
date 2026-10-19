@@ -23,9 +23,9 @@ namespace DSPRE.Avalonia.Gl
         public static void EnsureUnpacked()
         {
             List<DirNames> dirs = new List<DirNames> {
-                DirNames.matrices, DirNames.maps, DirNames.areaData, DirNames.mapTextures,
-                DirNames.exteriorBuildingModels, DirNames.buildingTextures, DirNames.dynamicHeaders };
-            if (RomInfo.gameFamily == GameFamilies.HGSS) dirs.Add(DirNames.interiorBuildingModels);
+                DirNames.Matrices, DirNames.Maps, DirNames.AreaData, DirNames.MapTextures,
+                DirNames.ExteriorBuildingModels, DirNames.BuildingTextures, DirNames.DynamicHeaders };
+            if (RomInfo.GameFamily == GameFamilies.HGSS) dirs.Add(DirNames.InteriorBuildingModels);
             DSUtils.TryUnpackNarcs(dirs);
         }
 
@@ -46,23 +46,23 @@ namespace DSPRE.Avalonia.Gl
         {
             if (matrix == null) return null;
             List<NsbmdGeometry.MatrixCellGeometry> cells = new List<NsbmdGeometry.MatrixCellGeometry>();
-            string mapTexDir = gameDirs[DirNames.mapTextures].unpackedDir;
-            string extBldDir = gameDirs[DirNames.exteriorBuildingModels].unpackedDir;
-            string intBldDir = gameDirs.ContainsKey(DirNames.interiorBuildingModels) ? gameDirs[DirNames.interiorBuildingModels].unpackedDir : null;
-            string bldTexDir = gameDirs[DirNames.buildingTextures].unpackedDir;
+            string mapTexDir = GameDirs[DirNames.MapTextures].unpackedDir;
+            string extBldDir = GameDirs[DirNames.ExteriorBuildingModels].unpackedDir;
+            string intBldDir = GameDirs.ContainsKey(DirNames.InteriorBuildingModels) ? GameDirs[DirNames.InteriorBuildingModels].unpackedDir : null;
+            string bldTexDir = GameDirs[DirNames.BuildingTextures].unpackedDir;
             Dictionary<byte, AreaData> areaCache = new Dictionary<byte, AreaData>();
 
-            for (int y = 0; y < matrix.height; y++)
-                for (int x = 0; x < matrix.width; x++)
+            for (int y = 0; y < matrix.Height; y++)
+                for (int x = 0; x < matrix.Width; x++)
                 {
                     if (includeCells != null && !includeCells.Contains((x, y))) continue;
-                    int mapIndex = matrix.maps[y, x];
+                    int mapIndex = matrix.Maps[y, x];
                     if (mapIndex == GameMatrix.EMPTY) continue;
 
                     try
                     {
                         byte areaId = ResolveAreaId(matrix, x, y, fallbackAreaId, mapIndex, areaForMap);
-                        float altitudeY = matrix.hasHeightsSection ? matrix.altitudes[y, x] * (NsbmdGeometry.TileSize / 2f) : 0f;
+                        float altitudeY = matrix.HasHeightsSection ? matrix.Altitudes[y, x] * (NsbmdGeometry.TileSize / 2f) : 0f;
                         MapFile map = new MapFile(mapIndex, gameFamily, discardMoveperms: true);
                         NsbmdGeometry.MatrixCellGeometry geo = BuildCellGeometry(map, areaId, gameFamily, x, y, altitudeY,
                             mapTexDir, extBldDir, intBldDir, bldTexDir, areaCache);
@@ -100,10 +100,10 @@ namespace DSPRE.Avalonia.Gl
             IEnumerable<(int cellX, int cellY, PlacedBuilding placed)> extras = null)
         {
             List<NsbmdGeometry.MatrixCellGeometry> cells = new List<NsbmdGeometry.MatrixCellGeometry>();
-            string mapTexDir = gameDirs[DirNames.mapTextures].unpackedDir;
-            string extBldDir = gameDirs[DirNames.exteriorBuildingModels].unpackedDir;
-            string intBldDir = gameDirs.ContainsKey(DirNames.interiorBuildingModels) ? gameDirs[DirNames.interiorBuildingModels].unpackedDir : null;
-            string bldTexDir = gameDirs[DirNames.buildingTextures].unpackedDir;
+            string mapTexDir = GameDirs[DirNames.MapTextures].unpackedDir;
+            string extBldDir = GameDirs[DirNames.ExteriorBuildingModels].unpackedDir;
+            string intBldDir = GameDirs.ContainsKey(DirNames.InteriorBuildingModels) ? GameDirs[DirNames.InteriorBuildingModels].unpackedDir : null;
+            string bldTexDir = GameDirs[DirNames.BuildingTextures].unpackedDir;
             Dictionary<byte, AreaData> areaCache = new Dictionary<byte, AreaData>();
 
             foreach ((int cellX, int cellY, MapFile map, byte areaId, float altitudeY, float shiftX, float shiftZ) in loadedCells)
@@ -144,55 +144,55 @@ namespace DSPRE.Avalonia.Gl
             if (!areaCache.TryGetValue(areaId, out AreaData area)) { area = new AreaData(areaId); areaCache[areaId] = area; }
 
             // HGSS indoor areas use the interior building model set.
-            bool interior = gameFamily == GameFamilies.HGSS && area.areaType == AreaData.TYPE_INDOOR;
+            bool interior = gameFamily == GameFamilies.HGSS && area.AreaType == AreaData.TYPE_INDOOR;
             string bldDir = (interior && intBldDir != null) ? intBldDir : extBldDir;
 
-            BdhcFile.TryParse(map.bdhc, out BdhcFile bdhc);
+            BdhcFile.TryParse(map.Bdhc, out BdhcFile bdhc);
 
-            if (map.mapModel?.models != null && map.mapModel.models.Length > 0)
-                BindNsbtx(map.mapModel, Path.Combine(mapTexDir, area.mapTileset.ToString("D4")));
-            Dictionary<int, (Dictionary<string, NsbmdTextureData> Frames, List<(string Swap, int Frames)> Sequence)> mapAnimations = FieldAnimationFrames(map.mapModel);
+            if (map.MapModel?.Models != null && map.MapModel.Models.Length > 0)
+                BindNsbtx(map.MapModel, Path.Combine(mapTexDir, area.MapTileset.ToString("D4")));
+            Dictionary<int, (Dictionary<string, NsbmdTextureData> Frames, List<(string Swap, int Frames)> Sequence)> mapAnimations = FieldAnimationFrames(map.MapModel);
 
             List<PlacedBuilding> buildings = new List<PlacedBuilding>();
             Dictionary<int, Dictionary<string, NsbmdTextureData>> swappable = new Dictionary<int, Dictionary<string, NsbmdTextureData>>();
-            string btexPath = Path.Combine(bldTexDir, area.buildingsTileset.ToString("D4"));
+            string btexPath = Path.Combine(bldTexDir, area.BuildingsTileset.ToString("D4"));
             byte[] bldTex = System.IO.File.Exists(btexPath) ? System.IO.File.ReadAllBytes(btexPath) : null;
 
-            if (map.buildings != null)
-                foreach (Building b in map.buildings)
+            if (map.Buildings != null)
+                foreach (Building b in map.Buildings)
                 {
                     if (b.NSBMDFile == null)
                     {
-                        string mp = Path.Combine(bldDir, b.modelID.ToString("D4"));
+                        string mp = Path.Combine(bldDir, b.ModelID.ToString("D4"));
                         if (!System.IO.File.Exists(mp)) continue;
                         using FileStream fs = new FileStream(mp, FileMode.Open, FileAccess.Read);
                         b.NSBMDFile = NSBMDLoader.LoadNSBMD(fs);
                     }
-                    if (b.NSBMDFile?.models == null || b.NSBMDFile.models.Length == 0) continue;
+                    if (b.NSBMDFile?.Models == null || b.NSBMDFile.Models.Length == 0) continue;
                     if (bldTex != null)
                     {
                         try
                         {
-                            b.NSBMDFile.materials = NSBTXLoader.LoadNsbtx(new MemoryStream(bldTex), out b.NSBMDFile.Textures, out b.NSBMDFile.Palettes);
+                            b.NSBMDFile.Materials = NSBTXLoader.LoadNsbtx(new MemoryStream(bldTex), out b.NSBMDFile.Textures, out b.NSBMDFile.Palettes);
                             b.NSBMDFile.MatchTextures();
                         }
                         catch { /* pack mismatch, leave untextured */ }
                     }
                     buildings.Add(new PlacedBuilding
                     {
-                        Model = b.NSBMDFile.models[0],
+                        Model = b.NSBMDFile.Models[0],
                         Transform = MapGeometry.BuildingTransform(b),
-                        ModelId = (int)b.modelID,
-                        TileX = cellX * MapFile.mapSize + b.xPosition,
-                        TileZ = cellY * MapFile.mapSize + b.zPosition,
+                        ModelId = (int)b.ModelID,
+                        TileX = cellX * MapFile.MapSize + b.XPosition,
+                        TileZ = cellY * MapFile.MapSize + b.ZPosition,
                         Source = b,
                     });
-                    CollectSwappableTextures(b.NSBMDFile, (int)b.modelID, interior, swappable);
+                    CollectSwappableTextures(b.NSBMDFile, (int)b.ModelID, interior, swappable);
                 }
 
             return new NsbmdGeometry.MatrixCellGeometry
             {
-                Map = map.mapModel?.models?.Length > 0 ? map.mapModel.models[0] : null,
+                Map = map.MapModel?.Models?.Length > 0 ? map.MapModel.Models[0] : null,
                 Buildings = buildings,
                 SwappableTextures = swappable,
                 MapAnimations = mapAnimations,
@@ -211,7 +211,7 @@ namespace DSPRE.Avalonia.Gl
         public static FieldTextureAnimations FieldAnimations(bool reload = false)
         {
             if (!FieldTextureAnimations.Available) return null;
-            string dir = gameDirs[DirNames.fieldTextureAnimations].unpackedDir;
+            string dir = GameDirs[DirNames.FieldTextureAnimations].unpackedDir;
             if (reload || dir != _fieldAnimationsDir) { _fieldAnimations = FieldTextureAnimations.Load(); _fieldAnimationsDir = dir; }
             return _fieldAnimations;
         }
@@ -219,7 +219,7 @@ namespace DSPRE.Avalonia.Gl
         /// <summary>Decodes every frame of each animated map texture with that texture's own palette, as the game only copies texels.</summary>
         public static Dictionary<int, (Dictionary<string, NsbmdTextureData> Frames, List<(string Swap, int Frames)> Sequence)> FieldAnimationFrames(NSBMD container)
         {
-            NSBMDModel model = container?.models?.Length > 0 ? container.models[0] : null;
+            NSBMDModel model = container?.Models?.Length > 0 ? container.Models[0] : null;
             FieldTextureAnimations list = model == null ? null : FieldAnimations();
             if (list == null || list.Entries.Count == 0) return null;
 
@@ -228,8 +228,8 @@ namespace DSPRE.Avalonia.Gl
             for (int k = 0; k < model.Materials.Count; k++)
             {
                 NSBMDMaterial mat = model.Materials[k];
-                FieldTextureAnimations.Entry entry = list.For(mat.texname);
-                if (entry?.FramePack == null || entry.Frames.Count == 0 || mat.texdata == null) continue;
+                FieldTextureAnimations.Entry entry = list.For(mat.Texname);
+                if (entry?.FramePack == null || entry.Frames.Count == 0 || mat.Texdata == null) continue;
                 try
                 {
                     if (!packs.TryGetValue(entry.Name, out List<NSBMDTexture> frames))
@@ -246,10 +246,10 @@ namespace DSPRE.Avalonia.Gl
                         if (!decoded.ContainsKey(swap))
                         {
                             NSBMDMaterial stand_in = mat.Clone();
-                            stand_in.texdata = frames[frame].texdata;
-                            stand_in.texoffset = frames[frame].texoffset;
-                            stand_in.texsize = frames[frame].texsize;
-                            stand_in.spdata = frames[frame].spdata;
+                            stand_in.Texdata = frames[frame].Texdata;
+                            stand_in.Texoffset = frames[frame].Texoffset;
+                            stand_in.Texsize = frames[frame].Texsize;
+                            stand_in.Spdata = frames[frame].Spdata;
                             NsbmdTextureData data = NsbmdTextureDecoder.Decode(stand_in);
                             if (data == null) continue;
                             decoded[swap] = data;
@@ -266,13 +266,13 @@ namespace DSPRE.Avalonia.Gl
         private static byte ResolveAreaId(GameMatrix matrix, int x, int y, byte fallbackAreaId,
             int mapIndex, Func<int, byte?> areaForMap)
         {
-            if (matrix.hasHeadersSection)
+            if (matrix.HasHeadersSection)
             {
                 try
                 {
-                    ushort headerId = matrix.headers[y, x];
+                    ushort headerId = matrix.Headers[y, x];
                     MapHeader h = MapHeader.GetMapHeader(headerId);
-                    if (h != null) return h.areaDataID;
+                    if (h != null) return h.AreaDataID;
                 }
                 catch { /* fall through */ }
             }
@@ -289,7 +289,7 @@ namespace DSPRE.Avalonia.Gl
             try
             {
                 if (!System.IO.File.Exists(path)) return;
-                container.materials = NSBTXLoader.LoadNsbtx(new MemoryStream(System.IO.File.ReadAllBytes(path)), out container.Textures, out container.Palettes);
+                container.Materials = NSBTXLoader.LoadNsbtx(new MemoryStream(System.IO.File.ReadAllBytes(path)), out container.Textures, out container.Palettes);
                 container.MatchTextures();
             }
             catch (Exception ex) { AppLogger.Error("Matrix tileset bind failed: " + ex.Message); }
@@ -302,12 +302,12 @@ namespace DSPRE.Avalonia.Gl
         private static void CollectSwappableTextures(NSBMD file, int modelId, bool indoor,
             Dictionary<int, Dictionary<string, NsbmdTextureData>> into)
         {
-            if (file?.models == null || file.models.Length == 0 || into.ContainsKey(modelId)) return;
+            if (file?.Models == null || file.Models.Length == 0 || into.ContainsKey(modelId)) return;
 
             IReadOnlyList<TexturePatternAnimation> patterns = BuildingAnimationSet.PatternsFor(modelId, indoor);
             if (patterns.Count == 0) return;
 
-            NSBMDModel model = file.models[0];
+            NSBMDModel model = file.Models[0];
             Dictionary<string, string> wanted = new Dictionary<string, string>();       // texture name → palette name
             foreach (TexturePatternAnimation anim in patterns)
                 for (int m = 0; m < anim.MaterialNames.Count; m++)
@@ -320,9 +320,9 @@ namespace DSPRE.Avalonia.Gl
             {
                 try
                 {
-                    NSBMDTexture tex = file.Textures?.FirstOrDefault(t => t.texname == kv.Key);
+                    NSBMDTexture tex = file.Textures?.FirstOrDefault(t => t.Texname == kv.Key);
                     if (tex == null) continue;
-                    NSBMDPalette pal = file.Palettes?.FirstOrDefault(pp => pp.palname == kv.Value);
+                    NSBMDPalette pal = file.Palettes?.FirstOrDefault(pp => pp.Palname == kv.Value);
 
                     // Borrow one of the model's materials for its render flags, then point it at this
                     // texture and palette so the normal decoder can do the work.
@@ -330,16 +330,16 @@ namespace DSPRE.Avalonia.Gl
                     if (basis == null) continue;
                     NSBMDMaterial stand_in = new NSBMDMaterial
                     {
-                        texdata = tex.texdata, spdata = tex.spdata, texname = tex.texname,
-                        texoffset = tex.texoffset, texsize = tex.texsize,
-                        width = tex.width, height = tex.height, format = tex.format, color0 = tex.color0,
-                        repeatS = basis.repeatS, repeatT = basis.repeatT,
-                        flipS = basis.flipS, flipT = basis.flipT,
+                        Texdata = tex.Texdata, Spdata = tex.Spdata, Texname = tex.Texname,
+                        Texoffset = tex.Texoffset, Texsize = tex.Texsize,
+                        Width = tex.Width, Height = tex.Height, Format = tex.Format, Color0 = tex.Color0,
+                        RepeatS = basis.RepeatS, RepeatT = basis.RepeatT,
+                        FlipS = basis.FlipS, FlipT = basis.FlipT,
                     };
                     if (pal != null)
                     {
-                        stand_in.paldata = pal.paldata; stand_in.palname = pal.palname;
-                        stand_in.paloffset = pal.paloffset; stand_in.palsize = pal.palsize;
+                        stand_in.Paldata = pal.Paldata; stand_in.Palname = pal.Palname;
+                        stand_in.Paloffset = pal.Paloffset; stand_in.Palsize = pal.Palsize;
                     }
                     NsbmdTextureData data = NsbmdTextureDecoder.Decode(stand_in);
                     if (data != null) decoded[kv.Key] = data;

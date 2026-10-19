@@ -72,11 +72,11 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         public bool NoTablesAvailable => !ShowConditionalMusic && !ShowEffectsCombos && !ShowVsTables && !ShowIntroLinks;
 
-        private static bool IntroEditorsOpen => !isHGE && DSPRE.ROMFiles.VsIntroTables.WhyNot() == null
+        private static bool IntroEditorsOpen => !IsHGE && DSPRE.ROMFiles.VsIntroTables.WhyNot() == null
             && BetaEditors.Allows("VsIntroEditorView") && BetaEditors.Allows("WildIntroEditorView");
 
         /// <summary>The intro editors hold every table this game has here, so the window would only link to them.</summary>
-        public static bool OnlyIntroLinks => gameFamily != GameFamilies.HGSS && IntroEditorsOpen;
+        public static bool OnlyIntroLinks => GameFamily != GameFamilies.HGSS && IntroEditorsOpen;
 
         // With every tab hidden the strip would still show the first tab's empty panel.
         public bool AnyTableShown => ShowConditionalMusic || ShowEffectsCombos || ShowVsTables;
@@ -393,7 +393,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             IReadOnlyList<string> friendly = HeaderLabels.Friendly();
             string[] given = headerNames?.ToArray() ?? Array.Empty<string>();
             _headerNames = friendly.Count == given.Length ? friendly.ToArray() : given;
-            _spriteSaved = AppEvents.WhenSaved(UpdateTrainerSprite, DirNames.trainerGraphics);
+            _spriteSaved = AppEvents.WhenSaved(UpdateTrainerSprite, DirNames.TrainerGraphics);
         }
 
         private readonly IDisposable _spriteSaved;
@@ -406,7 +406,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             try
             {
                 _suppress = true;
-                MusicNames.Load(gameFamily switch
+                MusicNames.Load(GameFamily switch
                 {
                     GameFamilies.DP => PokeDatabase.MusicDB.DPMusicDict,
                     GameFamilies.Plat => PokeDatabase.MusicDB.PtMusicDict,
@@ -430,14 +430,14 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             {
                 _suppress = false;
                 StatusText = $"Error loading tables: {ex.Message}";
-                await DialogHelper.ShowError($"Failed to load tables:\n{ex.Message}", "Table editor error");
+                await DialogHelper.ShowErrorAsync($"Failed to load tables:\n{ex.Message}", "Table editor error");
             }
         }
 
         // ── Conditional Music setup ────────────────────────────────────────────────
         private void SetupConditionalMusic()
         {
-            if (gameFamily != GameFamilies.HGSS)
+            if (GameFamily != GameFamilies.HGSS)
             {
                 ShowConditionalMusic = false;
                 return;
@@ -473,11 +473,11 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             }
 
             DSUtils.TryUnpackNarcs(new List<DirNames> {
-                DirNames.trainerGraphics, DirNames.textArchives, DirNames.monIcons });
+                DirNames.TrainerGraphics, DirNames.TextArchives, DirNames.MonIcons });
             SetMonIconsPalTableAddress();
 
             // Writes go back to wherever the tables were read from.
-            _fromSource = gameFamily == GameFamilies.HGSS && HgEngineMusicTables.TablesInSource;
+            _fromSource = GameFamily == GameFamilies.HGSS && HgEngineMusicTables.TablesInSource;
             // Only hand the tables over where the intro editors are enabled and can open this ROM; elsewhere they stay editable here.
             ShowIntroLinks = !_fromSource && IntroEditorsOpen;
             if (ShowIntroLinks)
@@ -491,7 +491,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             {
                 ShowEffectsCombos = false;
                 ShowVsTables = false;
-                _tablesNote = isHGE ? "Link the hg-engine checkout to edit these tables." : null;
+                _tablesNote = IsHGE ? "Link the hg-engine checkout to edit these tables." : null;
                 return;
             }
             _battleTables = tables;
@@ -503,7 +503,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             for (int i = 0; i < _effectsComboTable.Count; i++)
                 ComboItems.Add(ComboLabel(i));
 
-            if (gameFamily == GameFamilies.HGSS)
+            if (GameFamily == GameFamilies.HGSS)
             {
                 _vsTrainerList = tables.Classes.Rows;
                 _vsTrainerStartAddr = tables.Classes.Start;

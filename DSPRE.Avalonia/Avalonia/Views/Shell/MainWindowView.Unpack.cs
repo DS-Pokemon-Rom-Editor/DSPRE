@@ -15,9 +15,9 @@ namespace DSPRE.Avalonia.Views.Shell
         {
             List<DirNames> dirs = new List<DirNames>
             {
-                DirNames.exteriorBuildingModels, DirNames.buildingConfigFiles, DirNames.buildingTextures, DirNames.areaData,
+                DirNames.ExteriorBuildingModels, DirNames.BuildingConfigFiles, DirNames.BuildingTextures, DirNames.AreaData,
             };
-            if (gameFamily == GameFamilies.HGSS) dirs.Add(DirNames.interiorBuildingModels);
+            if (GameFamily == GameFamilies.HGSS) dirs.Add(DirNames.InteriorBuildingModels);
             await RunRomOperationAsync(() => UnpackArchivesAsync(dirs,
                 "Unpack building archives",
                 "Building models, their textures and settings, and area data are read again from the ROM's archives. "
@@ -37,16 +37,16 @@ namespace DSPRE.Avalonia.Views.Shell
             if (!AvaloniaEditorLauncher.IsRomLoaded) return;
             if (HgEngineProject.IsActive)
             {
-                await DialogHelper.ShowInfo("Not available for hg-engine projects.", title);
+                await DialogHelper.ShowInfoAsync("Not available for hg-engine projects.", title);
                 return;
             }
-            if (!await DialogHelper.AskYesNo(what + "\n\nOpen editors close first and the project reloads afterwards.\n\nContinue?", title, this))
+            if (!await DialogHelper.AskYesNoAsync(what + "\n\nOpen editors close first and the project reloads afterwards.\n\nContinue?", title, this))
                 return;
             // Unsaved editor changes are offered for saving first, as when another project is opened.
             if (!await ConfirmProjectCloseAsync(openingAnother: false)) return;
             OpenEditors.CloseEditorWindows(this);
 
-            string folder = workDir?.TrimEnd('\\', '/');
+            string folder = WorkDir?.TrimEnd('\\', '/');
             MainWindowViewModel vm = DataContext as MainWindowViewModel;
             if (vm != null)
             {
@@ -66,11 +66,11 @@ namespace DSPRE.Avalonia.Views.Shell
             }
             finally { if (vm != null) vm.IsBusy = false; }
             if (failed.Count > 0)
-                await DialogHelper.ShowError("These folders could not be emptied, so they were left as they were:" + Environment.NewLine + Environment.NewLine
+                await DialogHelper.ShowErrorAsync("These folders could not be emptied, so they were left as they were:" + Environment.NewLine + Environment.NewLine
                     + string.Join(Environment.NewLine, failed), title);
 
             // Every editor and cache read the old folders; reloading the project starts them all afresh.
-            await LoadRom(err0 => { bool ok = AvaloniaRomLoader.LoadFromFolder(folder, out string er, recordRecent: false); err0(er); return ok; },
+            await LoadRomAsync(err0 => { bool ok = AvaloniaRomLoader.LoadFromFolder(folder, out string er, recordRecent: false); err0(er); return ok; },
                 sourcePath: folder);
             if (vm != null) vm.StatusText = title + ": done.";
         }
@@ -82,7 +82,7 @@ namespace DSPRE.Avalonia.Views.Shell
             List<DirNames> cleared = new List<DirNames>();
             foreach (DirNames dir in dirs)
             {
-                if (!gameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) paths)) continue;
+                if (!GameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) paths)) continue;
                 if (!System.IO.File.Exists(paths.packedDir)) continue;
                 try
                 {

@@ -46,7 +46,7 @@ namespace DSPRE.Avalonia.Data
         public SummaryBook(int species = 0)
         {
             _sample = new DexSample(species);
-            _hgss = gameFamily == GameFamilies.HGSS;
+            _hgss = GameFamily == GameFamilies.HGSS;
             _sites = RomLocator.SummaryScreenSites;
             _specs = _sites == null ? Array.Empty<Spec>() : _hgss ? HgssSpecs() : PlatinumSpecs();
             foreach (Spec spec in _specs) _pages.Add(new ScreenPage { Id = spec.Id, Name = spec.Name, Variants = spec.Variants ?? Array.Empty<string>() });
@@ -61,16 +61,16 @@ namespace DSPRE.Avalonia.Data
         }
 
         public override string Title => "Summary screen";
-        public override DirNames Archive => DirNames.summaryGraphics;
+        public override DirNames Archive => DirNames.SummaryGraphics;
         public override IReadOnlyList<ScreenPage> Pages => _pages;
         public override ScreenBookLayout Layout => _original == null ? null : _layout;
-        public override DirNames[] PictureArchives => new[] { DirNames.pokemonBattleSprites, DirNames.monIcons, DirNames.battleObj, DirNames.summarySprites, DirNames.fonts };
+        public override DirNames[] PictureArchives => new[] { DirNames.PokemonBattleSprites, DirNames.MonIcons, DirNames.BattleObj, DirNames.SummarySprites, DirNames.Fonts };
 
         public override IEnumerable<(string Name, string Where, DirNames Dir, int Member)> MonParts(ScreenMon m)
         {
             int first = _sample.Species * 6;
-            yield return ("Front", "Battle sprites " + (first + 3), DirNames.pokemonBattleSprites, first + 3);
-            yield return ("Colours", "Battle sprites " + (first + 4), DirNames.pokemonBattleSprites, first + 4);
+            yield return ("Front", "Battle sprites " + (first + 3), DirNames.PokemonBattleSprites, first + 3);
+            yield return ("Colours", "Battle sprites " + (first + 4), DirNames.PokemonBattleSprites, first + 4);
         }
 
         public override void Forget()
@@ -86,11 +86,11 @@ namespace DSPRE.Avalonia.Data
             ScriptNarc archive = null;
             try
             {
-                List<DirNames> dirs = new() { DirNames.summaryGraphics, DirNames.pokemonBattleSprites, DirNames.monIcons, DirNames.battleObj,
-                                              DirNames.personalPokeData, DirNames.moveData, DirNames.fonts };
-                if (_hgss) dirs.Add(DirNames.summarySprites);
+                List<DirNames> dirs = new() { DirNames.SummaryGraphics, DirNames.PokemonBattleSprites, DirNames.MonIcons, DirNames.BattleObj,
+                                              DirNames.PersonalPokeData, DirNames.MoveData, DirNames.Fonts };
+                if (_hgss) dirs.Add(DirNames.SummarySprites);
                 DSUtils.TryUnpackNarcs(dirs);
-                archive = new ScriptNarc(DirNames.summaryGraphics);
+                archive = new ScriptNarc(DirNames.SummaryGraphics);
             }
             catch (Exception ex) { AppLogger.Error("Summary screen graphics: " + ex.Message); }
             ScriptNarc files = archive;
@@ -99,7 +99,7 @@ namespace DSPRE.Avalonia.Data
             {
                 if (!others.TryGetValue(dir, out ScriptNarc narc))
                 {
-                    try { narc = new ScriptNarc(dir); } catch { narc = null; }
+                    try { narc = new ScriptNarc(dir); } catch (Exception ex) { AppLogger.WarnOnce("SummaryBook.MakeComposer", ex); narc = null; }
                     others[dir] = narc;
                 }
                 return narc?.Get(index);
@@ -122,7 +122,7 @@ namespace DSPRE.Avalonia.Data
 
         private PokemonPersonalData Personal()
         {
-            try { return new PokemonPersonalData(_sample.Species); } catch { return null; }
+            try { return new PokemonPersonalData(_sample.Species); } catch (Exception ex) { AppLogger.WarnOnce("SummaryBook.Personal", ex); return null; }
         }
 
         // The sample's two types by number; the second is -1 when it has one type.
@@ -130,7 +130,7 @@ namespace DSPRE.Avalonia.Data
         {
             PokemonPersonalData data = Personal();
             if (data == null) return (-1, -1);
-            return ((int)data.type1, data.type2 == data.type1 ? -1 : (int)data.type2);
+            return ((int)data.Type1, data.Type2 == data.Type1 ? -1 : (int)data.Type2);
         }
 
         // The sample's stats at its level with no individual or effort values and a neutral nature.
@@ -139,10 +139,10 @@ namespace DSPRE.Avalonia.Data
             PokemonPersonalData d = Personal();
             if (d == null) return (0, 0, 0, 0, 0, 0);
             int Stat(int b) => 2 * b * SampleLevel / 100 + 5;
-            return (2 * d.baseHP * SampleLevel / 100 + SampleLevel + 10, Stat(d.baseAtk), Stat(d.baseDef), Stat(d.baseSpAtk), Stat(d.baseSpDef), Stat(d.baseSpeed));
+            return (2 * d.BaseHP * SampleLevel / 100 + SampleLevel + 10, Stat(d.BaseAtk), Stat(d.BaseDef), Stat(d.BaseSpAtk), Stat(d.BaseSpDef), Stat(d.BaseSpeed));
         }
 
-        private int Ability() => Personal()?.firstAbility ?? 0;
+        private int Ability() => Personal()?.FirstAbility ?? 0;
 
         // A number as the game formats it: no padding, or padded to its digits with spaces or zeros.
         private static string Num(int value, int digits, char pad = '\0') =>
@@ -176,7 +176,7 @@ namespace DSPRE.Avalonia.Data
             if (bank < 0 || line < 0) return null;
             if (!_banks.TryGetValue(bank, out List<string> lines))
             {
-                try { lines = new TextArchive(bank).messages; } catch { lines = null; }
+                try { lines = new TextArchive(bank).Messages; } catch (Exception ex) { AppLogger.WarnOnce("SummaryBook.BankLine", ex); lines = null; }
                 _banks[bank] = lines;
             }
             if (lines == null || line >= lines.Count) return null;
@@ -202,7 +202,7 @@ namespace DSPRE.Avalonia.Data
                 {
                     string[] names = parts[0] == "type" ? BattleObjects.IconOrder : BattleObjects.KindOrder;
                     int index = n >= 0 && n < names.Length ? BattleObjects.Find(names[n], "Drawing") : -1;
-                    GraphicAssets.Archive battle = GraphicAssets.All.FirstOrDefault(a => a.Dir == DirNames.battleObj);
+                    GraphicAssets.Archive battle = GraphicAssets.All.FirstOrDefault(a => a.Dir == DirNames.BattleObj);
                     GraphicAssets.Preview p = index >= 0 && battle != null ? GraphicAssets.Render(battle, index) : null;
                     if (p?.Rgba != null) picture = new ScreenPicture { Rgba = p.Rgba, Width = p.Width, Height = p.Height };
                 }
@@ -216,9 +216,9 @@ namespace DSPRE.Avalonia.Data
         // whose pixel values 1 and 2 the game turns into ink 1 and shadow 2 of the box's colour row.
         private ScreenPicture LevelGlyph(int row)
         {
-            byte[] chr = NitroBgCodec.Inflate(new ScriptNarc(DirNames.fonts).Get(_hgss ? 5 : 4));
+            byte[] chr = NitroBgCodec.Inflate(new ScriptNarc(DirNames.Fonts).Get(_hgss ? 5 : 4));
             byte[] tiles = NitroBgCodec.ReadCharacters(chr);
-            ushort[] colours = NitroBgCodec.ReadColours(new ScriptNarc(DirNames.summaryGraphics).Get(_hgss ? 0 : 1));
+            ushort[] colours = NitroBgCodec.ReadColours(new ScriptNarc(DirNames.SummaryGraphics).Get(_hgss ? 0 : 1));
             if (tiles == null || colours == null) return null;
             byte[] rgba = new byte[16 * 8 * 4];
             for (int y = 0; y < 8; y++)
@@ -358,7 +358,7 @@ namespace DSPRE.Avalonia.Data
         {
             MoveData data = Move(move);
             if (data == null) return -1;
-            return contest ? 18 + (int)data.contestConditionType : (int)data.movetype;
+            return contest ? 18 + (int)data.ContestConditionType : (int)data.Movetype;
         }
 
         // Platinum's sprites, after sprites.c and subscreen.c: the page tabs and arrows, the ball, the markings, the
@@ -408,7 +408,7 @@ namespace DSPRE.Avalonia.Data
                 sprites.Add(TypeIcon("First type", first, 63, 52, Picked));
                 if (second >= 0) sprites.Add(TypeIcon("Second type", second, 97, 52, Picked));
                 if (!contest && Move(SampleMoves[0]) is MoveData picked)
-                    sprites.Add(new ScreenSprite { Name = "Category", Picture = "kind:" + (int)picked.split, X = 108, Y = 72, When = Picked });
+                    sprites.Add(new ScreenSprite { Name = "Category", Picture = "kind:" + (int)picked.Split, X = 108, Y = 72, When = Picked });
                 sprites.Add(new ScreenSprite { Name = "Move cursor", Cells = 131, Anim = 130, Drawing = 132, Colours = 69, Palette = 2, X = 194, Y = 48, Priority = 1, When = Picked });
                 page.Main.Mons.Add(new ScreenMon { Kind = ScreenMonKind.Icon, X = contest ? 32 : 24, Y = contest ? 68 : 48, Priority = 0, When = Picked });
             }
@@ -428,7 +428,7 @@ namespace DSPRE.Avalonia.Data
         // and markings on the top screen, the type icons on the bottom one. The cells come from a/0/3/9.
         private void HgssSprites(ScreenPage page, int pageIndex)
         {
-            const DirNames cells = DirNames.summarySprites;
+            const DirNames cells = DirNames.SummarySprites;
             List<ScreenSprite> top = page.Main.Sprites, bottom = page.Sub.Sprites;
             // A Poké Ball: drawing 24 + ball, colours 49 + the ball's colour set; the ball cells say row 2.
             top.Add(new ScreenSprite { Name = "Ball", Archive = cells, Cells = 48, Anim = 47, Drawing = 28, Colours = 49, Palette = 0, X = 168, Y = 39 });
@@ -459,7 +459,7 @@ namespace DSPRE.Avalonia.Data
                 bottom.Add(TypeIcon("First type", first, 200, 24, Picked));
                 if (second >= 0) bottom.Add(TypeIcon("Second type", second, 234, 24, Picked));
                 if (Move(SampleMoves[0]) is MoveData picked)
-                    bottom.Add(new ScreenSprite { Name = "Category", Picture = "kind:" + (int)picked.split, X = 232, Y = 40, When = Picked });
+                    bottom.Add(new ScreenSprite { Name = "Category", Picture = "kind:" + (int)picked.Split, X = 232, Y = 40, When = Picked });
             }
             if (id == "ribbons")
             {
@@ -525,10 +525,10 @@ namespace DSPRE.Avalonia.Data
         private Box MoveBox(string table, int index, int move, string when = null)
         {
             MoveData data = Move(move);
-            int pp = data?.pp ?? 0;
+            int pp = data?.Pp ?? 0;
             return new Box(table, index, "Move " + (index % 8 + 1), new[]
             {
-                new Print(move, Colour: _hgss ? Ink.Black : Ink.White, X: 1, Y: 2, Bank: moveNamesTextNumbers),
+                new Print(move, Colour: _hgss ? Ink.Black : Ink.White, X: 1, Y: 2, Bank: MoveNamesTextNumbers),
                 new Print(135, Colour: Ink.Black, X: 16, Y: 16),
                 Count(pp, pp, 60, 16),
             }, when);
@@ -591,7 +591,7 @@ namespace DSPRE.Avalonia.Data
                     Value("Skills", 3, "Sp. Atk", 122, Num(spAtk, 3), at: ScreenTextAlign.BoxRight),
                     Value("Skills", 4, "Sp. Def", 123, Num(spDef, 3), at: ScreenTextAlign.BoxRight),
                     Value("Skills", 5, "Speed", 124, Num(speed, 3), at: ScreenTextAlign.BoxRight),
-                    Value("Skills", 6, "Ability", 125, BankLine(abilityNamesTextNumber, ability)),
+                    Value("Skills", 6, "Ability", 125, BankLine(AbilityNamesTextNumber, ability)),
                     Value("Skills", 7, "Ability description", ability, null, bank: _sites.AbilityDescriptionBank),
                 }, Hp: true),
                 new Spec("battle_moves", "Battle moves", 6, 15, new[]
@@ -603,9 +603,9 @@ namespace DSPRE.Avalonia.Data
                     Label("Static", 26, "Power heading", 147, when: Picked),
                     Label("Static", 27, "Accuracy heading", 148, when: Picked),
                     Label("Static", 24, "Cancel", 146, x: 0, y: 2, when: Picked),
-                    Attribute("BattleMoves", 5, "Power", 150, tackle?.damage ?? 0, (tackle?.damage ?? 0) <= 1),
-                    Attribute("BattleMoves", 6, "Accuracy", 151, tackle?.accuracy ?? 0, (tackle?.accuracy ?? 0) == 0),
-                    Value("BattleMoves", 7, "Move description", SampleMoves[0], null, bank: moveDescriptionsTextNumbers, when: Picked),
+                    Attribute("BattleMoves", 5, "Power", 150, tackle?.Damage ?? 0, (tackle?.Damage ?? 0) <= 1),
+                    Attribute("BattleMoves", 6, "Accuracy", 151, tackle?.Accuracy ?? 0, (tackle?.Accuracy ?? 0) == 0),
+                    Value("BattleMoves", 7, "Move description", SampleMoves[0], null, bank: MoveDescriptionsTextNumbers, when: Picked),
                 }.Concat(moves("BattleMoves")).ToArray(), Variants: new[] { "Moves", Picked }),
                 new Spec("condition", "Condition", 7, 15, new[]
                 {
@@ -618,7 +618,7 @@ namespace DSPRE.Avalonia.Data
                     Label("Static", 35, "Button hint", 158, when: "Moves"),
                     Label("Static", 29, "Appeal points heading", 160, Ink.Black, ScreenTextAlign.BoxCentre, when: Picked),
                     // The contest effect's description: line 46 + effect - 1 of the contest effects bank.
-                    Value("ContestMoves", 5, "Move description", 46 + (tackle?.contestAppeal ?? 1) - 1, null, bank: _sites.ContestEffectBank, when: Picked),
+                    Value("ContestMoves", 5, "Move description", 46 + (tackle?.ContestAppeal ?? 1) - 1, null, bank: _sites.ContestEffectBank, when: Picked),
                 }.Concat(moves("ContestMoves")).ToArray(), Variants: new[] { "Moves", Picked }),
                 new Spec("ribbons", "Ribbons", 9, 15, new[]
                 {
@@ -681,7 +681,7 @@ namespace DSPRE.Avalonia.Data
                     Value("Skills", 3, "Sp. Atk", 122, Num(spAtk, 3), at: ScreenTextAlign.BoxRight),
                     Value("Skills", 4, "Sp. Def", 123, Num(spDef, 3), at: ScreenTextAlign.BoxRight),
                     Value("Skills", 5, "Speed", 124, Num(speed, 3), at: ScreenTextAlign.BoxRight),
-                    Value("Skills", 6, "Ability", 125, BankLine(abilityNamesTextNumber, ability)),
+                    Value("Skills", 6, "Ability", 125, BankLine(AbilityNamesTextNumber, ability)),
                     Value("Skills", 7, "Ability description", ability, null, x: 3, bank: _sites.AbilityDescriptionBank),
                     Label("Static", 4, "Moves title", 128),
                     MoveBox("Skills", 8, SampleMoves[0]),
@@ -691,9 +691,9 @@ namespace DSPRE.Avalonia.Data
                     Label("Static", 24, "Category heading", 149, when: Picked),
                     Label("Static", 25, "Power heading", 147, when: Picked),
                     Label("Static", 26, "Accuracy heading", 148, when: Picked),
-                    Attribute("Skills", 13, "Power", 150, tackle?.damage ?? 0, (tackle?.damage ?? 0) <= 1),
-                    Attribute("Skills", 14, "Accuracy", 151, tackle?.accuracy ?? 0, (tackle?.accuracy ?? 0) == 0),
-                    Value("Skills", 15, "Move description", SampleMoves[0], null, bank: moveDescriptionsTextNumbers, when: Picked),
+                    Attribute("Skills", 13, "Power", 150, tackle?.Damage ?? 0, (tackle?.Damage ?? 0) <= 1),
+                    Attribute("Skills", 14, "Accuracy", 151, tackle?.Accuracy ?? 0, (tackle?.Accuracy ?? 0) == 0),
+                    Value("Skills", 15, "Move description", SampleMoves[0], null, bank: MoveDescriptionsTextNumbers, when: Picked),
                 }, Hp: true, Variants: new[] { "Moves", Picked }),
                 new Spec("ribbons", "Performance and ribbons", 10, 9, new[]
                 {

@@ -35,14 +35,14 @@ namespace DSPRE.ROMFiles
                 if (header == null) continue;
                 int linked = kind switch
                 {
-                    Kind.Script => header.scriptFileID,
-                    Kind.LevelScript => header.levelScriptID,
-                    Kind.Event => header.eventFileID,
-                    Kind.Text => header.textArchiveID,
-                    Kind.Matrix => header.matrixID,
-                    Kind.AreaData => header.areaDataID,
-                    Kind.Encounters => header.wildPokemon,
-                    Kind.Camera => header.cameraAngleID,
+                    Kind.Script => header.ScriptFileID,
+                    Kind.LevelScript => header.LevelScriptID,
+                    Kind.Event => header.EventFileID,
+                    Kind.Text => header.TextArchiveID,
+                    Kind.Matrix => header.MatrixID,
+                    Kind.AreaData => header.AreaDataID,
+                    Kind.Encounters => header.WildPokemon,
+                    Kind.Camera => header.CameraAngleID,
                     _ => -1,
                 };
                 if (linked == fileId) uses.Add((id, InternalName(id)));
@@ -63,14 +63,14 @@ namespace DSPRE.ROMFiles
                 try { matrix = new GameMatrix(m); }
                 catch (Exception e) when (e is System.IO.IOException || e is System.IO.EndOfStreamException || e is ArgumentException) { continue; }
                 bool shown = false;
-                for (int y = 0; y < matrix.height; y++)
-                    for (int x = 0; x < matrix.width; x++)
+                for (int y = 0; y < matrix.Height; y++)
+                    for (int x = 0; x < matrix.Width; x++)
                     {
-                        if (matrix.maps[y, x] != map) continue;
+                        if (matrix.Maps[y, x] != map) continue;
                         shown = true;
-                        if (matrix.hasHeadersSection && matrix.headers[y, x] != GameMatrix.EMPTY) found.Add(matrix.headers[y, x]);
+                        if (matrix.HasHeadersSection && matrix.Headers[y, x] != GameMatrix.EMPTY) found.Add(matrix.Headers[y, x]);
                     }
-                if (shown && !matrix.hasHeadersSection)
+                if (shown && !matrix.HasHeadersSection)
                     foreach ((ushort Header, string Name) use in HeadersLinking(Kind.Matrix, m)) found.Add(use.Header);
             }
             return found.Select(h => (h, InternalName(h))).ToList();
@@ -87,7 +87,7 @@ namespace DSPRE.ROMFiles
         {
             try
             {
-                byte[] raw = DSUtils.ReadFromFile(internalNamesPath, (long)id * internalNameLength, internalNameLength);
+                byte[] raw = DSUtils.ReadFromFile(InternalNamesPath, (long)id * InternalNameLength, InternalNameLength);
                 return Encoding.ASCII.GetString(raw).TrimEnd('\0', ' ');
             }
             catch (Exception e) when (e is System.IO.IOException || e is UnauthorizedAccessException) { return ""; }

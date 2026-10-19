@@ -29,7 +29,7 @@ namespace DSPRE.Avalonia.Views.World
         private void Save_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e) => (DataContext as BuildingEditorViewModel)?.SaveChanges();
         private async void Discard_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as BuildingEditorViewModel)?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) (DataContext as BuildingEditorViewModel)?.DiscardChanges();
         }
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
@@ -42,13 +42,18 @@ namespace DSPRE.Avalonia.Views.World
             await vm.SetupAsync(this);
         }
 
-        private async void Import_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportAsync());
-        private async void Export_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportAsync());
+        private async void Import_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportAsync());
+        private async void Export_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportAsync());
 
-        private static async Task Safe(Task task)
+        private static async Task SafeAsync(Task task)
         {
             if (task == null) return;
-            try { await task; } catch { }
+            try { await task; }
+            catch (System.Exception ex)
+            {
+                CrashReporter.LogHandled(ex);
+                await DialogHelper.ShowErrorAsync(ex.Message);
+            }
         }
     }
 }

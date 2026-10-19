@@ -201,14 +201,14 @@ namespace DSPRE.Avalonia.Data
         public static List<GraphicAssets.Unit> MoveEffects(GraphicAssets.Archive a, int fileCount)
         {
             List<GraphicAssets.Unit> units = new List<GraphicAssets.Unit>();
-            GraphicAssets.Archive pltt = Find(DirNames.wazaEffectPltt);
-            GraphicAssets.Archive cell = Find(DirNames.wazaEffectCell);
-            GraphicAssets.Archive anim = Find(DirNames.wazaEffectCellAnm);
+            GraphicAssets.Archive pltt = Find(DirNames.WazaEffectPltt);
+            GraphicAssets.Archive cell = Find(DirNames.WazaEffectCell);
+            GraphicAssets.Archive anim = Find(DirNames.WazaEffectCellAnm);
 
             int Count(GraphicAssets.Archive other)
             {
                 if (other == null) return 0;
-                try { return GraphicAssets.Count(other); } catch { return 0; }
+                try { return GraphicAssets.Count(other); } catch (Exception ex) { AppLogger.WarnOnce("GraphicUnits.MoveEffects", ex); return 0; }
             }
             int nPltt = Count(pltt), nCell = Count(cell), nAnim = Count(anim);
 
@@ -288,7 +288,7 @@ namespace DSPRE.Avalonia.Data
         private static GraphicAssets.Kind KindIn(GraphicAssets.Archive a, int index)
         {
             try { return GraphicAssets.Identify(new ScriptNarc(a.Dir).Get(index)); }
-            catch { return GraphicAssets.Kind.Unknown; }
+            catch (Exception ex) { AppLogger.WarnOnce("GraphicUnits.KindIn", ex); return GraphicAssets.Kind.Unknown; }
         }
 
         /// <summary>A row that is one file on its own.</summary>
@@ -334,10 +334,10 @@ namespace DSPRE.Avalonia.Data
                 if (u.Parts.Count > 0) units.Add(u);
             }
 
-            bool johto = RomInfo.gameFamily == RomInfo.GameFamilies.HGSS;
+            bool johto = RomInfo.GameFamily == RomInfo.GameFamilies.HGSS;
             int layout = johto ? 38 : 93, animation = johto ? 36 : 1, colours = johto ? 6 : 293;
             IReadOnlyList<DSPRE.ROMFiles.BallSeal> seals;
-            try { seals = DSPRE.ROMFiles.BallSeals.Read(); } catch { seals = Array.Empty<DSPRE.ROMFiles.BallSeal>(); }
+            try { seals = DSPRE.ROMFiles.BallSeals.Read(); } catch (Exception ex) { AppLogger.WarnOnce("GraphicUnits.SealGraphics", ex); seals = Array.Empty<DSPRE.ROMFiles.BallSeal>(); }
             foreach (BallSeal seal in seals)
             {
                 if (seal == null || seal.Sprite >= fileCount) continue;
@@ -480,7 +480,7 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public static int WindowFrameColours(int fileIndex)
         {
-            GraphicAssets.Archive a = Find(DirNames.windowFrames);
+            GraphicAssets.Archive a = Find(DirNames.WindowFrames);
             if (a == null) return -1;
             int firstColour = GraphicAssets.FirstPaletteIndex(a);
             const int Styles = 20;
@@ -601,7 +601,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The card's own drawing, for the Trainer Card Editor handing it over.</summary>
         public static int TrainerCardDrawing()
         {
-            try { return RomInfo.TrainerCardMembers.ncgr; } catch { return -1; }
+            try { return RomInfo.TrainerCardMembers.ncgr; } catch (Exception ex) { AppLogger.WarnOnce("GraphicUnits.TrainerCardDrawing", ex); return -1; }
         }
 
         /// <summary>The drawing a card or pose arrangement is laid out from; the nearest drawing in the archive is a different picture.</summary>
@@ -614,7 +614,7 @@ namespace DSPRE.Avalonia.Data
                 (int ncgr, int maleNscr, int femaleNscr) pose = RomInfo.TrainerCardTrainerMembers;
                 if (index == pose.maleNscr || index == pose.femaleNscr) return pose.ncgr;
             }
-            catch { }
+            catch (Exception ex) { AppLogger.Warn("Trainer card drawing lookup: " + ex.Message); }
             return -1;
         }
 
@@ -629,7 +629,7 @@ namespace DSPRE.Avalonia.Data
                     || index == pose.ncgr || index == pose.maleNscr || index == pose.femaleNscr)
                     return card.rankPalettes[0];
             }
-            catch { }
+            catch (Exception ex) { AppLogger.Warn("Trainer card palette lookup: " + ex.Message); }
             return -1;
         }
 
@@ -659,12 +659,12 @@ namespace DSPRE.Avalonia.Data
             string label = null;
             try
             {
-                if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)
+                if (RomInfo.GameFamily == RomInfo.GameFamilies.HGSS)
                     DSPRE.Resources.PokeDatabase.Area.HGSSAreaIconsDict.TryGetValue((byte)(style + 1), out label);
                 else if (style + 1 < DSPRE.Resources.PokeDatabase.Area.PtAreaIconValues.Length)
                     label = DSPRE.Resources.PokeDatabase.Area.PtAreaIconValues[style + 1];
             }
-            catch { }
+            catch { }   // an unknown banner style is called Banner N
             if (label != null && label.StartsWith("[") && label.Contains(']')) label = label.Substring(label.IndexOf(']') + 1).Trim();
             return string.IsNullOrEmpty(label) ? $"Banner {style + 1}" : $"{label} banner";
         }
@@ -691,7 +691,7 @@ namespace DSPRE.Avalonia.Data
             if (lead.Parts.Count > 0) units.Add(lead);
 
             string[] names;
-            try { names = RomInfo.GetPokemonNames(); } catch { names = Array.Empty<string>(); }
+            try { names = RomInfo.GetPokemonNames(); } catch (Exception ex) { AppLogger.WarnOnce("GraphicUnits.PartyIcons", ex); names = Array.Empty<string>(); }
 
             // Files run species by species, then eggs and forms, so every species has its row before its forms.
             Dictionary<int, GraphicAssets.Unit> rowOf = new Dictionary<int, GraphicAssets.Unit>();

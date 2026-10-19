@@ -2,36 +2,43 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
-namespace NarcAPI {
-    public class Narc { //Nitro Archive
+namespace NarcAPI
+{
+    public class Narc
+    { //Nitro Archive
         public String Name { get; set; }
-        private MemoryStream[] Elements;
-        private int FileNameTableOffset, FileImageOffset;
+        private MemoryStream[] _elements;
+        private int _fileNameTableOffset, _fileImageOffset;
         
-        private const int NARC_FILE_MAGIC_NUM = 0x4352414E;                 //"NARC" in ascii/unicode
-        private const int FILE_ALLOCATION_TABLE_OFFSET = 0x10;
-        private const int FILE_ALLOCATION_TABLE_NUM_ELEMENTS_OFFSET = 0x18;
-        private const int FILE_ALLOCATION_TABLE_HEADER_LENGTH = 12;
-        private const int FILE_ALLOCATION_TABLE_ELEMENT_LENGTH = 0x8;
-        private const int FILE_IMAGE_HEADER_SIZE = 0x8;
-        private const int FILE_NAME_TABLE_SIGNATURE_LENGTH = 0x4;
+        private const int NarcFileMagicNum = 0x4352414E;                 //"NARC" in ascii/unicode
+        private const int FileAllocationTableOffset = 0x10;
+        private const int FileAllocationTableNumElementsOffset = 0x18;
+        private const int FileAllocationTableHeaderLength = 12;
+        private const int FileAllocationTableElementLength = 0x8;
+        private const int FileImageHeaderSize = 0x8;
+        private const int FileNameTableSignatureLength = 0x4;
 
-        private Narc(String name) {
+        private Narc(String name)
+        {
             this.Name = name;
         }
 
-        public static Narc NewEmpty(String name = "NewNarc") {
+        public static Narc NewEmpty(String name = "NewNarc")
+        {
             Narc narc = new Narc(name);
             return narc;
         }
 
         // Where this archive was read from, so packing a project's folder or unpacking its archive keeps the two in step.
-        private string sourceFile, sourceFolder;
+        private string _sourceFile, _sourceFolder;
 
-        public static Narc Open(String filePath) {
-            Narc narc = new Narc(Path.GetFileNameWithoutExtension(filePath)) { sourceFile = filePath };
-            using (BinaryReader br = new BinaryReader(File.OpenRead(filePath))) {
-                if (br.BaseStream.Length < 4 || br.ReadUInt32() != NARC_FILE_MAGIC_NUM) {
+        public static Narc Open(String filePath)
+        {
+            Narc narc = new Narc(Path.GetFileNameWithoutExtension(filePath)) { _sourceFile = filePath };
+            using (BinaryReader br = new BinaryReader(File.OpenRead(filePath)))
+            {
+                if (br.BaseStream.Length < 4 || br.ReadUInt32() != NarcFileMagicNum)
+                {
                     return null;
                 }
 
@@ -39,13 +46,14 @@ namespace NarcAPI {
                 narc.ReadElements(br);
             }
 
-            AppLogger.Debug($"Loaded NARC \"{narc.Name}\" with {narc.Elements.Length} elements from file: {filePath}");
+            AppLogger.Debug($"Loaded NARC \"{narc.Name}\" with {narc._elements.Length} elements from file: {filePath}");
 
             return narc;
         }
 
-        public static Narc FromFolder(String dirPath) {
-            Narc narc = new Narc(Path.GetFileNameWithoutExtension(dirPath)) { sourceFolder = dirPath };
+        public static Narc FromFolder(String dirPath)
+        {
+            Narc narc = new Narc(Path.GetFileNameWithoutExtension(dirPath)) { _sourceFolder = dirPath };
             // Members are the folder's own files; subfolders, backups and OS clutter are not.
             String[] fileNames = Directory.GetFiles(dirPath, "*", SearchOption.TopDirectoryOnly);
             fileNames = Array.FindAll(fileNames, IsMemberFile);
@@ -53,7 +61,7 @@ namespace NarcAPI {
             Array.Sort(fileNames, CompareMemberNames);
 
             uint numberOfElements = (uint)fileNames.Length;
-            narc.Elements = new MemoryStream[numberOfElements];
+            narc._elements = new MemoryStream[numberOfElements];
 
             Parallel.For(0, numberOfElements, i => {
                 FileStream fs = File.OpenRead(fileNames[i]);
@@ -61,7 +69,7 @@ namespace NarcAPI {
                 byte[] buffer = new byte[fs.Length];
                 fs.Read(buffer, 0, (int)fs.Length);
                 ms.Write(buffer, 0, (int)fs.Length);
-                narc.Elements[i] = ms;
+                narc._elements[i] = ms;
                 fs.Close();
             });
 
@@ -71,7 +79,8 @@ namespace NarcAPI {
         }
 
         /// <summary>How many members packing would make of a folder: its own files, less backups and OS clutter.</summary>
-        public static int MemberCount(string dirPath) {
+        public static int MemberCount(string dirPath)
+        {
             if (!Directory.Exists(dirPath)) return 0;
             int count = 0;
             // The listing carries each file's attributes, so counting asks nothing more per file.
@@ -79,15 +88,20 @@ namespace NarcAPI {
             return count;
         }
 
-        private static bool IsMemberFile(string path) {
-            try {
+        private static bool IsMemberFile(string path)
+        {
+            try
+            {
                 return IsMember(new FileInfo(path));
-            } catch (IOException) {
+            }
+            catch (IOException)
+            {
                 return false;
             }
         }
 
-        private static bool IsMember(FileInfo file) {
+        private static bool IsMember(FileInfo file)
+        {
             string ext = file.Extension.ToLowerInvariant();
             if (ext == ".bak" || ext == ".backup") return false;
             if (file.Name.StartsWith(".")
@@ -96,7 +110,8 @@ namespace NarcAPI {
             return (file.Attributes & (FileAttributes.Hidden | FileAttributes.System)) == 0;
         }
 
-        private static int CompareMemberNames(string a, string b) {
+        private static int CompareMemberNames(string a, string b)
+        {
             string na = Path.GetFileNameWithoutExtension(a), nb = Path.GetFileNameWithoutExtension(b);
             bool numA = long.TryParse(na, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out long ia);
             bool numB = long.TryParse(nb, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out long ib);
@@ -106,12 +121,13 @@ namespace NarcAPI {
             return StringComparer.OrdinalIgnoreCase.Compare(Path.GetFileName(a), Path.GetFileName(b));
         }
 
-        public void Save(String filePath) {
+        public void Save(String filePath)
+        {
             uint fileSizeOffset, fileImageSizeOffset, curOffset;
 
             BinaryWriter bw = new BinaryWriter(File.Create(filePath));
             // Write NARC Section
-            bw.Write(NARC_FILE_MAGIC_NUM);
+            bw.Write(NarcFileMagicNum);
             bw.Write(0x0100FFFE);
             fileSizeOffset = (uint)bw.BaseStream.Position;
             bw.Write((UInt32)0x0);
@@ -119,16 +135,18 @@ namespace NarcAPI {
             bw.Write((ushort)3);                    //the number of sections in the header
             // Write FATB Section
             bw.Write(0x46415442);                   // "BTAF"
-            bw.Write((UInt32)(FILE_ALLOCATION_TABLE_HEADER_LENGTH + Elements.Length * FILE_ALLOCATION_TABLE_ELEMENT_LENGTH));
-            bw.Write((UInt32)Elements.Length);      // Number of elements
+            bw.Write((UInt32)(FileAllocationTableHeaderLength + _elements.Length * FileAllocationTableElementLength));
+            bw.Write((UInt32)_elements.Length);      // Number of elements
             curOffset = 0;
-            for (int i = 0; i < Elements.Length; i++) {
-                while (curOffset % 4 != 0) {
+            for (int i = 0; i < _elements.Length; i++)
+            {
+                while (curOffset % 4 != 0)
+                {
                     curOffset++;     // Force offsets to be a multiple of 4
                 }
 
                 bw.Write(curOffset);
-                curOffset += (uint)Elements[i].Length;
+                curOffset += (uint)_elements[i].Length;
                 bw.Write(curOffset);
             }
             // Write FNTB Section (No names, sorry =( )
@@ -142,16 +160,18 @@ namespace NarcAPI {
             bw.Write((UInt32)0x0);      
             curOffset = 0;
             byte[] buffer;
-            for (int i = 0; i < Elements.Length; i++) {
-                while (curOffset % 4 != 0) { // Force offsets to be a multiple of 4
+            for (int i = 0; i < _elements.Length; i++)
+            {
+                while (curOffset % 4 != 0)
+                { // Force offsets to be a multiple of 4
                     bw.Write((Byte)0xFF); curOffset++; 
                 }     
                 // Data writin'
-                buffer = new byte[Elements[i].Length];
-                Elements[i].Seek(0, SeekOrigin.Begin);
-                Elements[i].Read(buffer, 0, (int)Elements[i].Length);
-                bw.Write(buffer, 0, (int)Elements[i].Length);
-                curOffset += (uint)Elements[i].Length;
+                buffer = new byte[_elements[i].Length];
+                _elements[i].Seek(0, SeekOrigin.Begin);
+                _elements[i].Read(buffer, 0, (int)_elements[i].Length);
+                bw.Write(buffer, 0, (int)_elements[i].Length);
+                curOffset += (uint)_elements[i].Length;
             }
 
             // Pad to 4-byte boundary
@@ -166,125 +186,153 @@ namespace NarcAPI {
             bw.Seek((int)fileSizeOffset, SeekOrigin.Begin);         // File size
             bw.Write((UInt32)fileSize);
             bw.Seek((int)fileImageSizeOffset, SeekOrigin.Begin);         // seeks back to FIMG size
-            bw.Write((UInt32)curOffset + FILE_IMAGE_HEADER_SIZE);   // FIMG size == Last end offset + File image header size
+            bw.Write((UInt32)curOffset + FileImageHeaderSize);   // FIMG size == Last end offset + File image header size
 
-            AppLogger.Debug($"Saved NARC \"{Name}\" with {Elements.Length} elements and filesize {fileSize} Bytes to file: {filePath}");
+            AppLogger.Debug($"Saved NARC \"{Name}\" with {_elements.Length} elements and filesize {fileSize} Bytes to file: {filePath}");
 
             bw.Close();
-            DSPRE.NarcSync.NoteSaved(sourceFolder, filePath);
+            DSPRE.NarcSync.NoteSaved(_sourceFolder, filePath);
         }
 
-        public int ElementCount => Elements.Length;
+        public int ElementCount => _elements.Length;
 
-        public byte[] GetElementBytes(int index) {
-            MemoryStream stream = Elements[index];
+        public byte[] GetElementBytes(int index)
+        {
+            MemoryStream stream = _elements[index];
             byte[] buffer = new byte[stream.Length];
             stream.Seek(0, SeekOrigin.Begin);
             stream.Read(buffer, 0, buffer.Length);
             return buffer;
         }
 
-        public void ExtractToFolder(String dirPath, string extension = null) {
-            if ( string.IsNullOrWhiteSpace(dirPath) ) {
+        public void ExtractToFolder(String dirPath, string extension = null)
+        {
+            if ( string.IsNullOrWhiteSpace(dirPath) )
+            {
                 AppMessages.Error("Dir path + \"" + dirPath + "\" is invalid.", "Can't create directory");
                 return;
             }
 
-            if (Directory.Exists(dirPath)) {
-                if (Directory.GetFiles(dirPath).Length > 0) {
-                    try {
-                        if (dirPath.IndexOf(RomInfo.folderSuffix, StringComparison.CurrentCultureIgnoreCase) >= 0) {
+            if (Directory.Exists(dirPath))
+            {
+                if (Directory.GetFiles(dirPath).Length > 0)
+                {
+                    try
+                    {
+                        if (dirPath.IndexOf(RomInfo.FolderSuffix, StringComparison.CurrentCultureIgnoreCase) >= 0)
+                        {
                             Directory.Delete(dirPath, true);
                             AppLogger.Debug("Deleted DSPRE-related folder \"" + dirPath + "\" without user confirmation.");
-                        } else {
+                        }
+                        else
+                        {
                             if (AppMessages.Confirm("Directory \"" + dirPath + "\" already exists and is not empty.\n" +
-                                "Do you want to delete its contents?", "Directory not empty")) {
+                                "Do you want to delete its contents?", "Directory not empty"))
+                            {
                                 Directory.Delete(dirPath, true);
                                 AppLogger.Debug("Deleted non-DSPRE-related folder \"" + dirPath + "\" after user confirmation.");
-                            } else {
+                            }
+                            else
+                            {
                                 return;
                             }
                         }
-                    } catch (IOException) {
+                    }
+                    catch (IOException)
+                    {
                         AppMessages.Error("NARC has not been extracted.\nCan't delete directory: \n" + dirPath + "\nThis might be a temporary issue.\nMake sure no other process is using it and try again.", "Delete Error");
                         return;
                     }
                 }
             }
 
-            if (!Directory.Exists(dirPath)) {
-                try {
+            if (!Directory.Exists(dirPath))
+            {
+                try
+                {
                     Directory.CreateDirectory(dirPath);
                     AppLogger.Debug("Created NARC folder \"" + dirPath + "\".");
-                } catch (IOException) {
+                }
+                catch (IOException)
+                {
                     AppMessages.Error("NARC has not been extracted.\nCan't create directory: \n" + dirPath + "\nThis might be a temporary issue.\nMake sure no other process is using it and try again.", "Creation Error");
                     return;
                 }
             }
 
-            Parallel.For(0, Elements.Length, i => {
+            Parallel.For(0, _elements.Length, i => {
                 string path = Path.Combine(dirPath, i.ToString("D4") + (string.IsNullOrWhiteSpace(extension) ? "" : extension) );
-                using (BinaryWriter wr = new BinaryWriter(File.Create(path))) {
-                    long len = Elements[i].Length;
+                using (BinaryWriter wr = new BinaryWriter(File.Create(path)))
+                {
+                    long len = _elements[i].Length;
                     byte[] buffer = new byte[len];
-                    Elements[i].Seek(0, SeekOrigin.Begin);
-                    Elements[i].Read(buffer, 0, (int)len);
+                    _elements[i].Seek(0, SeekOrigin.Begin);
+                    _elements[i].Read(buffer, 0, (int)len);
                     wr.Write(buffer);
                 }
             });
 
-            AppLogger.Debug($"Extracted NARC \"{Name}\" with {Elements.Length} elements to folder: {dirPath}");
-            DSPRE.NarcSync.NoteExtracted(sourceFile, dirPath);
+            AppLogger.Debug($"Extracted NARC \"{Name}\" with {_elements.Length} elements to folder: {dirPath}");
+            DSPRE.NarcSync.NoteExtracted(_sourceFile, dirPath);
 
         }
 
-        public void Free() { // Libera todos los recursos de memoria asociados (cierra los streams)
-            Parallel.For(0, Elements.Length, i => {
-                Elements[i].Close();
+        public void Free()
+        { // Libera todos los recursos de memoria asociados (cierra los streams)
+            Parallel.For(0, _elements.Length, i => {
+                _elements[i].Close();
             });
         }
 
-        public MemoryStream this[int elemIndex] {
-            get {
-                return Elements[elemIndex];
+        public MemoryStream this[int elemIndex]
+        {
+            get
+            {
+                return _elements[elemIndex];
             }
-            set {
-                Elements[elemIndex] = value;
+            set
+            {
+                _elements[elemIndex] = value;
             }
         }
 
-        public int GetElementsLength() {
-            return Elements.Length;
+        public int GetElementsLength()
+        {
+            return _elements.Length;
         }
 
-        private void ReadOffsets(BinaryReader br) {
-            br.BaseStream.Position = FILE_ALLOCATION_TABLE_NUM_ELEMENTS_OFFSET;             
-            FileNameTableOffset = (int)br.ReadUInt32() * FILE_ALLOCATION_TABLE_ELEMENT_LENGTH + FILE_ALLOCATION_TABLE_OFFSET + FILE_ALLOCATION_TABLE_HEADER_LENGTH;
-            br.BaseStream.Position = FileNameTableOffset + FILE_NAME_TABLE_SIGNATURE_LENGTH;
-            FileImageOffset = (int)br.ReadUInt32() + FileNameTableOffset;
+        private void ReadOffsets(BinaryReader br)
+        {
+            br.BaseStream.Position = FileAllocationTableNumElementsOffset;             
+            _fileNameTableOffset = (int)br.ReadUInt32() * FileAllocationTableElementLength + FileAllocationTableOffset + FileAllocationTableHeaderLength;
+            br.BaseStream.Position = _fileNameTableOffset + FileNameTableSignatureLength;
+            _fileImageOffset = (int)br.ReadUInt32() + _fileNameTableOffset;
         }
 
-        private void ReadElements(BinaryReader br) {
+        private void ReadElements(BinaryReader br)
+        {
             uint numberOfElements;
             uint[] startOffsets, endOffsets;
             // Create array of elements
-            br.BaseStream.Position = FILE_ALLOCATION_TABLE_NUM_ELEMENTS_OFFSET;
-            Elements = new MemoryStream[numberOfElements = br.ReadUInt32()];
+            br.BaseStream.Position = FileAllocationTableNumElementsOffset;
+            _elements = new MemoryStream[numberOfElements = br.ReadUInt32()];
 
             // Read offsets of each element
             startOffsets = new uint[numberOfElements]; 
             endOffsets = new uint[numberOfElements];
-            br.BaseStream.Position = FILE_ALLOCATION_TABLE_OFFSET + FILE_ALLOCATION_TABLE_HEADER_LENGTH;
-            for (int i = 0; i < numberOfElements; i++) { 
+            br.BaseStream.Position = FileAllocationTableOffset + FileAllocationTableHeaderLength;
+            for (int i = 0; i < numberOfElements; i++)
+            { 
                 startOffsets[i] = br.ReadUInt32(); 
                 endOffsets[i] = br.ReadUInt32(); 
             }
             // Read elements
-            for(int i = 0; i < numberOfElements; i++) {
-                br.BaseStream.Position = FileImageOffset + startOffsets[i] + FILE_IMAGE_HEADER_SIZE;
+            for(int i = 0; i < numberOfElements; i++)
+            {
+                br.BaseStream.Position = _fileImageOffset + startOffsets[i] + FileImageHeaderSize;
                 byte[] buffer = new byte[endOffsets[i] - startOffsets[i]];
                 br.Read(buffer, 0, (int)(endOffsets[i] - startOffsets[i]));
-                Elements[i] = new MemoryStream(buffer);
+                _elements[i] = new MemoryStream(buffer);
             }
         }
     }

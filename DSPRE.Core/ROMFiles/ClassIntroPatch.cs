@@ -28,7 +28,7 @@ namespace DSPRE.ROMFiles
         private const ushort UseTerrain = 0xFFFF;
         private static readonly Game Platinum = new(new[] { 33, 7, 8, 24, 25, 31, 13 }, new ushort[] { UseTerrain, 19, 20, 27, 28, 29, 30 }, 7, "Frontier Brain");
         private static readonly Game DiamondPearl = new(new[] { 29, 0, 8, 21, 22, 28, 13 }, new ushort[] { UseTerrain, 12, 20, 27, 28, 29, 30 }, 0, "Tower Tycoon");
-        private static Game Current => gameFamily == GameFamilies.DP ? DiamondPearl : Platinum;
+        private static Game Current => GameFamily == GameFamilies.DP ? DiamondPearl : Platinum;
 
         public static string[] StyleNames => new[]
         {
@@ -73,8 +73,8 @@ namespace DSPRE.ROMFiles
 
         /// <summary>The dumps the patch is mapped for, with the European English revisions that copy their code.</summary>
         public static List<(string id, int rev)> SupportedDumps => WithTwins(Measured);
-        public static bool SupportsCurrentRom => (gameFamily == GameFamilies.Plat || gameFamily == GameFamilies.DP) && romID != null
-                                                 && SupportedDumps.Contains((romID, romRevision)) && RomLocator.VsIntroSites is VsIntroSites s
+        public static bool SupportsCurrentRom => (GameFamily == GameFamilies.Plat || GameFamily == GameFamilies.DP) && RomID != null
+                                                 && SupportedDumps.Contains((RomID, RomRevision)) && RomLocator.VsIntroSites is VsIntroSites s
                                                  && s.ClassJumpTable >= 0 && s.GymTable >= 0 && s.LeagueTable >= 0;
 
         // The switch starts 0x14 bytes before its jump table: subs, movs, cmp, bhi, then four lines into add pc.
@@ -93,8 +93,8 @@ namespace DSPRE.ROMFiles
         {
             why = null;
             VsIntroSites s = RomLocator.VsIntroSites;
-            uint pairs = BitConverter.ToUInt32(ARM9.ReadBytes(effectsComboTableOffsetToRAMAddress, 4), 0);
-            if (pairs < ARM9.address || pairs >= synthOverlayLoadAddress) { why = "The intro table isn't where the game keeps it."; return null; }
+            uint pairs = BitConverter.ToUInt32(ARM9.ReadBytes(EffectsComboTableOffsetToRAMAddress, 4), 0);
+            if (pairs < ARM9.Address || pairs >= SynthOverlayLoadAddress) { why = "The intro table isn't where the game keeps it."; return null; }
             string ovPath = OverlayUtils.GetPath(s.RecordOverlay);
             if (OverlayUtils.IsCompressed(s.RecordOverlay)) OverlayUtils.Decompress(s.RecordOverlay);
             byte[] ov = File.ReadAllBytes(ovPath);
@@ -113,7 +113,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Where the patch's block starts in the synthetic overlay, or -1 when the patch is not applied.</summary>
         public static int InstalledOffset()
         {
-            if (!SupportsCurrentRom || !File.Exists(Filesystem.expArmPath)) return -1;
+            if (!SupportsCurrentRom || !File.Exists(Filesystem.ExpArmPath)) return -1;
             try
             {
                 int at = SwitchStart;
@@ -121,9 +121,9 @@ namespace DSPRE.ROMFiles
                 int literal = now[0] == 0x00 && now[1] == 0x4B && now[2] == 0x18 && now[3] == 0x47 ? 4
                             : now[0] == 0x01 && now[1] == 0x4B && now[2] == 0x18 && now[3] == 0x47 ? 6 : -1;
                 if (literal < 0) return -1;
-                long block = (long)(BitConverter.ToUInt32(now, literal) & ~1u) - synthOverlayLoadAddress - CodeStart - ClassEffectAt;
-                if (block < 0 || block + BlockLength > new FileInfo(Filesystem.expArmPath).Length) return -1;
-                byte[] head = DSUtils.ReadFromFile(Filesystem.expArmPath, (uint)block, Marker.Length);
+                long block = (long)(BitConverter.ToUInt32(now, literal) & ~1u) - SynthOverlayLoadAddress - CodeStart - ClassEffectAt;
+                if (block < 0 || block + BlockLength > new FileInfo(Filesystem.ExpArmPath).Length) return -1;
+                byte[] head = DSUtils.ReadFromFile(Filesystem.ExpArmPath, (uint)block, Marker.Length);
                 return Encoding.ASCII.GetString(head) == Marker ? (int)block : -1;
             }
             catch (Exception ex) when (ex is IOException || ex is ArgumentException) { return -1; }
@@ -223,7 +223,7 @@ namespace DSPRE.ROMFiles
         {
             int block = InstalledOffset();
             if (block < 0) return null;
-            byte[] all = DSUtils.ReadFromFile(Filesystem.expArmPath, (uint)(block + CodeStart + RowsAt), Classes * RowSize);
+            byte[] all = DSUtils.ReadFromFile(Filesystem.ExpArmPath, (uint)(block + CodeStart + RowsAt), Classes * RowSize);
             return Enumerable.Range(0, Classes).Select(c => new Row(all.AsSpan(c * RowSize, RowSize).ToArray())).ToList();
         }
 
@@ -231,7 +231,7 @@ namespace DSPRE.ROMFiles
         {
             int block = InstalledOffset();
             if (block < 0 || trainerClass < 0 || trainerClass >= Classes) throw new InvalidOperationException("The class intros patch is not applied.");
-            DSUtils.WriteToFile(Filesystem.expArmPath, row.Bytes, (uint)(block + CodeStart + RowsAt + trainerClass * RowSize));
+            DSUtils.WriteToFile(Filesystem.ExpArmPath, row.Bytes, (uint)(block + CodeStart + RowsAt + trainerClass * RowSize));
         }
 
         // ── Applying ─────────────────────────────────────────────────────────────────────────────
@@ -247,7 +247,7 @@ namespace DSPRE.ROMFiles
             Sites sites = Find(out string why) ?? throw new InvalidOperationException(why);
             List<Row> rows = RowsFromGame(sites);
 
-            uint code = synthOverlayLoadAddress + (uint)blockOffset + (uint)CodeStart;
+            uint code = SynthOverlayLoadAddress + (uint)blockOffset + (uint)CodeStart;
             byte[] block = new byte[BlockLength];
             Encoding.ASCII.GetBytes(Marker).CopyTo(block, 0);
             BitConverter.GetBytes(1u).CopyTo(block, 0x0C);
@@ -257,10 +257,10 @@ namespace DSPRE.ROMFiles
             for (int st = 0; st < StyleCount; st++) block[CodeStart + StylePairsAt + st] = (byte)Current.StylePair[st];
             block[CodeStart + StylePairsAt + StyleCount] = (byte)Current.StylePair[0];
             for (int c = 0; c < Classes; c++) rows[c].Bytes.CopyTo(block, CodeStart + RowsAt + c * RowSize);
-            DSUtils.WriteToFile(Filesystem.expArmPath, block, (uint)blockOffset);
+            DSUtils.WriteToFile(Filesystem.ExpArmPath, block, (uint)blockOffset);
 
             // Each borrowed pair keeps the intro its style draws, whatever an earlier edit pointed it at.
-            uint pairsFile = sites.PairTable - ARM9.address;
+            uint pairsFile = sites.PairTable - ARM9.Address;
             for (int st = 0; st < StyleCount; st++)
                 ARM9.WriteBytes(BitConverter.GetBytes(Current.StyleCutIn[st]), pairsFile + 4 * (uint)Current.StylePair[st]);
 

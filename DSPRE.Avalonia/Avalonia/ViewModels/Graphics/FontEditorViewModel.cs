@@ -60,10 +60,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (Design.IsDesignMode) { _loading = false; return; }
             try
             {
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.fonts });
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.Fonts });
                 // Touching the character map here means the letters are known by the time the list
                 // is filled, rather than one load too late.
-                try { FieldFontCharacters.GlyphFor('A'); } catch { }
+                try { FieldFontCharacters.GlyphFor('A'); } catch (Exception ex) { AppLogger.Warn("Font editor: field font character map: " + ex.Message); }
                 LoadFontList();
             }
             catch (Exception ex)
@@ -112,11 +112,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             for (int i = 0; i < files.Length; i++)
             {
                 FieldFont f;
-                try { f = FieldFont.Read(File.ReadAllBytes(files[i])); } catch { continue; }
+                try { f = FieldFont.Read(File.ReadAllBytes(files[i])); } catch (Exception ex) { AppLogger.WarnOnce("FontEditorViewModel.LoadFontList", ex); continue; }
                 if (f == null) continue;      // the width tables in the same archive are not fonts
                 _fontEntries.Add(i);
                 // The games name these themselves; anything unnamed still says which entry it is.
-                string named = NamedArchives.NameOf(DirNames.fonts, i);
+                string named = NamedArchives.NameOf(DirNames.Fonts, i);
                 FontNames.Add(string.IsNullOrEmpty(named) ? "Font " + i : named);
             }
             StatusText = _fontEntries.Count == 0
@@ -528,7 +528,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                       + $"{1 << _font.BitsPerPixel} shades. {mapped} of them are written by a "
                       + "character in this ROM's map; the rest are kana and symbols it never asks for.";
                 if (_font != null && HgEngine.HgEngineSourceAssets.VerbatimSourceFor(
-                        HgEngine.HgEngineOwnedFiles.ArchiveOf(DirNames.fonts), _fontEntries[which]) is HgEngine.HgEngineOwnedFile source)
+                        HgEngine.HgEngineOwnedFiles.ArchiveOf(DirNames.Fonts), _fontEntries[which]) is HgEngine.HgEngineOwnedFile source)
                     StatusText += $" hg-engine builds this font from {source.RelPath}, so saving writes there too.";
                 RaiseGlyph();
                 // Steps hold pixels of the font that was open; undoing one here would paint them into this one.
@@ -561,7 +561,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                             if (g >= 0 && !built.ContainsKey(g)) built[g] = c.ToString();
                         }
                 }
-                catch { }
+                catch (Exception ex) { AppLogger.Warn("Font editor: letters by glyph: " + ex.Message); }
                 if (built.Count > 0) _lettersByGlyph = built;
                 else return "";
             }

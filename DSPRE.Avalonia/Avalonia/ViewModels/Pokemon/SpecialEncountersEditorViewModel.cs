@@ -127,8 +127,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public SpecialEncountersEditorViewModel(bool headbuttOnly, int headbuttFile = -1)
         {
             AppEvents.NamesChanged += OnNamesChanged;
-            bool dppt = gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat;
-            bool hgss = gameFamily == GameFamilies.HGSS;
+            bool dppt = GameFamily == GameFamilies.DP || GameFamily == GameFamilies.Plat;
+            bool hgss = GameFamily == GameFamilies.HGSS;
 
             if (dppt)
             {

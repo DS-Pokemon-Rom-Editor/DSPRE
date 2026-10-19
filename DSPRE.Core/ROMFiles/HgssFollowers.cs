@@ -55,10 +55,10 @@ namespace DSPRE.ROMFiles
         /// <summary>Null when this ROM's follower data can be edited, otherwise why not.</summary>
         public static string WhyNot()
         {
-            if (gameFamily != GameFamilies.HGSS) return "Followers exist only in HeartGold and SoulSilver.";
+            if (GameFamily != GameFamilies.HGSS) return "Followers exist only in HeartGold and SoulSilver.";
             if (HgEngineProject.IsActive || IsHgEngineBaseProject) return "hg-engine keeps follower data in its source.";
             FollowerTableSites tables = RomLocator.FollowerTables;
-            if (tables == null || !File.Exists(arm9Path)) return "Follower tables not found.";
+            if (tables == null || !File.Exists(Arm9Path)) return "Follower tables not found.";
             if (ARM9.CheckCompressionMark()) return "arm9 is compressed.";
             // The tables must still read as the retail ones: Bulbasaur 0, Ivysaur 1, Venusaur 2 with a female model, Unown 27 forms.
             if (Lut(tables.Models, 4) is not [0, 0, 1, 2]
@@ -72,7 +72,7 @@ namespace DSPRE.ROMFiles
 
         private static ushort[] Lut(int offset, int count)
         {
-            byte[] bytes = DSUtils.ReadFromFile(arm9Path, offset, count * 2);
+            byte[] bytes = DSUtils.ReadFromFile(Arm9Path, offset, count * 2);
             ushort[] values = new ushort[count];
             for (int i = 0; i < count; i++) values[i] = BitConverter.ToUInt16(bytes, i * 2);
             return values;
@@ -130,8 +130,8 @@ namespace DSPRE.ROMFiles
 
         private static string ParamPath(int model)
         {
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.followerParams });
-            return Path.Combine(gameDirs[DirNames.followerParams].unpackedDir, model.ToString("D4"));
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.FollowerParams });
+            return Path.Combine(GameDirs[DirNames.FollowerParams].unpackedDir, model.ToString("D4"));
         }
 
         public static Model Read(int model, string label)
@@ -154,10 +154,10 @@ namespace DSPRE.ROMFiles
                 if (File.Exists(art))
                 {
                     NSBTXLoader.LoadNsbtx(new FileInfo(art), out List<NSBMDTexture> texs, out _);
-                    if (texs?.Count > 0) { m.TextureWidth = texs[0].width; m.TextureHeight = texs[0].height; }
+                    if (texs?.Count > 0) { m.TextureWidth = texs[0].Width; m.TextureHeight = texs[0].Height; }
                 }
             }
-            catch (Exception e) when (e is IOException || e is InvalidDataException || e is EndOfStreamException) { }
+            catch (Exception e) when (e is IOException || e is InvalidDataException || e is EndOfStreamException) { }   // without the texture the follower keeps its default size
             return m;
         }
 
@@ -174,8 +174,8 @@ namespace DSPRE.ROMFiles
             byte[] param = (byte[])m.Param.Clone();
             param[1] = (byte)(m.TooTall ? 1 : 0);
             param[2] = m.Motion;
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.followerParams });
-            ArchiveMembers.Put(DirNames.followerParams, m.Index, param);
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.FollowerParams });
+            ArchiveMembers.Put(DirNames.FollowerParams, m.Index, param);
             m.Param = param;
         }
     }

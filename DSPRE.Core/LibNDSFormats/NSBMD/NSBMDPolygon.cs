@@ -5,9 +5,9 @@ using System;
 
 namespace LibNDSFormats.NSBMD
 {
-	/// <summary>
-	/// Type for NSBMd polygons.
-	/// </summary>
+    /// <summary>
+    /// Type for NSBMd polygons.
+    /// </summary>
     public class NSBMDPolygon
     {
         #region Properties (4) 

@@ -149,7 +149,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>How many members the archive has with the pending additions and removals applied.</summary>
         public int Count(DirNames dir)
         {
-            string folder = gameDirs[dir].unpackedDir;
+            string folder = GameDirs[dir].unpackedDir;
             int top = NarcAPI.Narc.MemberCount(folder) - 1;
             foreach (KeyValuePair<(DirNames, int), byte[]> kv in _state.Members)
                 if (kv.Key.Item1 == dir && !ReferenceEquals(kv.Value, Removed) && kv.Key.Item2 > top) top = kv.Key.Item2;

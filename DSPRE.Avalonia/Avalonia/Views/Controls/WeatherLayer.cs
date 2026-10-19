@@ -46,7 +46,7 @@ namespace DSPRE.Avalonia.Views.Controls
             _background = _lightning = null;
             _gl.SetScreenLayers(null);
 
-            FieldWeather.Spec spec = FieldWeather.For(RomInfo.gameFamily, headerWeather);
+            FieldWeather.Spec spec = FieldWeather.For(RomInfo.GameFamily, headerWeather);
             if (spec.Particles < 0 && spec.Background < 0 && spec.Companion == null) return;
 
             try
@@ -72,7 +72,7 @@ namespace DSPRE.Avalonia.Views.Controls
                 return;
             }
 
-            _sim = new FieldWeatherSim(RomInfo.gameFamily, spec);
+            _sim = new FieldWeatherSim(RomInfo.GameFamily, spec);
             Publish(_sim);
             if (_running) _timer.Start();
         }

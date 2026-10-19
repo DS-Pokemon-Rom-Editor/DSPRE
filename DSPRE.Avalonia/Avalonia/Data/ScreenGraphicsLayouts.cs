@@ -871,21 +871,21 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The members of a dex, bag, summary or opening movie archive for the open game, or none.</summary>
         public static IReadOnlyList<Entry> For(DirNames dir) => dir switch
         {
-            DirNames.pokedexGraphics => gameFamily switch
+            DirNames.PokedexGraphics => GameFamily switch
             {
                 GameFamilies.Plat => Platinum,
                 GameFamilies.DP => DiamondPearl,
                 GameFamilies.HGSS => HeartGold,
                 _ => System.Array.Empty<Entry>(),
             },
-            DirNames.openingDemoGraphics when gameFamily == GameFamilies.HGSS => Opening,
-            DirNames.summaryGraphics => gameFamily switch
+            DirNames.OpeningDemoGraphics when GameFamily == GameFamilies.HGSS => Opening,
+            DirNames.SummaryGraphics => GameFamily switch
             {
                 GameFamilies.Plat => SummaryPlatinum,
                 GameFamilies.HGSS => SummaryHeartGold,
                 _ => System.Array.Empty<Entry>(),
             },
-            DirNames.bagGraphics => gameFamily switch
+            DirNames.BagGraphics => GameFamily switch
             {
                 GameFamilies.Plat => BagPlatinum,
                 GameFamilies.DP => BagDiamondPearl,

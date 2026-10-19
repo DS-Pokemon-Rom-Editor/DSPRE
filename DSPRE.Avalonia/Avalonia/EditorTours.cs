@@ -133,9 +133,9 @@ namespace DSPRE.Avalonia
                 timer.Stop();
                 DspreSettings settings = SettingsManager.Settings;
                 if (settings == null) return;
-                settings.editorToursShown ??= new List<string>();
-                if (settings.editorToursShown.Contains(key)) return;
-                settings.editorToursShown.Add(key);
+                settings.EditorToursShown ??= new List<string>();
+                if (settings.EditorToursShown.Contains(key)) return;
+                settings.EditorToursShown.Add(key);
                 SettingsManager.Save();
                 Offer(root, key);
             };

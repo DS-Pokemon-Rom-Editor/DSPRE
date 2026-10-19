@@ -30,7 +30,7 @@ namespace DSPRE.Avalonia.Data
         // Board tiles are loaded 64 tiles in, and the board arrangement already counts from there.
         private const int BoardTileOffset = 64, BoardCharBase = 0x4000;
         // Diamond's casing sheet is 21 tiles wide, not 32.
-        private static int SolidTile => RomInfo.gameFamily == RomInfo.GameFamilies.DP ? 152 : 164;
+        private static int SolidTile => RomInfo.GameFamily == RomInfo.GameFamilies.DP ? 152 : 164;
 
         private readonly Func<int, byte[]> _member;
 
@@ -45,8 +45,8 @@ namespace DSPRE.Avalonia.Data
         {
             try
             {
-                if (RomInfo.gameFamily != RomInfo.GameFamilies.Plat && RomInfo.gameFamily != RomInfo.GameFamilies.DP) return null;
-                ScriptNarc narc = new ScriptNarc(RomInfo.DirNames.poketch);
+                if (RomInfo.GameFamily != RomInfo.GameFamilies.Plat && RomInfo.GameFamily != RomInfo.GameFamilies.DP) return null;
+                ScriptNarc narc = new ScriptNarc(RomInfo.DirNames.Poketch);
                 if (!narc.Available) return null;
                 byte[][] cache = new byte[narc.Count][];
                 return new PoketchScreen(i =>
@@ -55,7 +55,7 @@ namespace DSPRE.Avalonia.Data
                     return cache[i] ??= NitroBgCodec.Inflate(narc.Get(i));
                 });
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("PoketchScreen.Load", ex); return null; }
         }
 
         /// <summary>The Poké Ball picture shown until the player is given a Pokétch.</summary>
@@ -102,7 +102,7 @@ namespace DSPRE.Avalonia.Data
             foreach ((int x, int d) in new[] { (3, hour / 10), (8, hour % 10), (15, minute / 10), (20, minute % 10) })
                 s.Copy(2, x, 7, 4, 9, digits, 4 * d, 0, DigitStripWidth);
 
-            if (RomInfo.gameFamily == RomInfo.GameFamilies.DP)
+            if (RomInfo.GameFamily == RomInfo.GameFamilies.DP)
             {
                 s.Put(0, DpButtonBlock(up == Look.Hold ? 80 : up == Look.Lock ? 76 : 72), 27, 11, 4, 11);
             }
@@ -247,7 +247,7 @@ namespace DSPRE.Avalonia.Data
         public static Spot HitTest(int x, int y)
         {
             // Diamond and Pearl have one side button, reported as Up.
-            if (RomInfo.gameFamily == RomInfo.GameFamilies.DP)
+            if (RomInfo.GameFamily == RomInfo.GameFamilies.DP)
             {
                 if (x >= 16 && x <= 207 && y >= 16 && y <= 175) return Spot.Screen;
                 if (x >= 220 && x <= 244 && y >= 96 && y <= 172) return Spot.Up;

@@ -53,18 +53,18 @@ namespace DSPRE.Avalonia.Views.Pokemon
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e)
-            => await ViewModel.SaveCommand();
+            => await ViewModel.SaveCommandAsync();
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) ViewModel.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) ViewModel.DiscardChanges();
         }
 
         private async void Export_Click(object sender, RoutedEventArgs e)
-            => await ViewModel.ExportCommand(this);
+            => await ViewModel.ExportCommandAsync(this);
 
         private async void Import_Click(object sender, RoutedEventArgs e)
-            => await ViewModel.ImportCommand(this);
+            => await ViewModel.ImportCommandAsync(this);
 
         private async void AddMove_Click(object sender, RoutedEventArgs e)
             => await ViewModel.AddNewMoveAsync(this);

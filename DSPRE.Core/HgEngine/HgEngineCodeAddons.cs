@@ -13,7 +13,7 @@ namespace DSPRE.HgEngine
     ///
     /// These are tables, not code: hg-engine's code lives in overlay 129, which its armips hook loads
     /// as the ARM9 expansion in place of the synthetic overlay DSPRE builds for a vanilla ROM. DSPRE
-    /// still files this archive under <see cref="RomInfo.DirNames.synthOverlay"/>, which is its own
+    /// still files this archive under <see cref="RomInfo.DirNames.SynthOverlay"/>, which is its own
     /// name for it from that arrangement, and means nothing about where hg-engine keeps code.
     /// </summary>
     public static class HgEngineCodeAddons
@@ -58,10 +58,10 @@ namespace DSPRE.HgEngine
         /// <summary>One member of the archive as the game would find it.</summary>
         public static byte[] Member(int index)
         {
-            if (!RomInfo.isHGE || index < 0) return null;
+            if (!RomInfo.IsHGE || index < 0) return null;
             try
             {
-                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.synthOverlay });
+                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.SynthOverlay });
                 string path = Filesystem.GetSynthOerlayPath(index);
                 return File.Exists(path) ? File.ReadAllBytes(path) : null;
             }
@@ -81,7 +81,7 @@ namespace DSPRE.HgEngine
         {
             try
             {
-                if (!RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.personalPokeData, out (string packedDir, string unpackedDir) dirs)) return 0;
+                if (!RomInfo.GameDirs.TryGetValue(RomInfo.DirNames.PersonalPokeData, out (string packedDir, string unpackedDir) dirs)) return 0;
                 return File.Exists(dirs.packedDir) ? new Editors.Utils.NarcReader(dirs.packedDir).Entrys : 0;
             }
             catch (Exception ex)
@@ -93,11 +93,11 @@ namespace DSPRE.HgEngine
 
         public static int MemberCount()
         {
-            if (!RomInfo.isHGE) return 0;
+            if (!RomInfo.IsHGE) return 0;
             try
             {
-                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.synthOverlay });
-                string dir = Filesystem.synthOverlay;
+                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.SynthOverlay });
+                string dir = Filesystem.SynthOverlay;
                 return NarcAPI.Narc.MemberCount(dir);
             }
             catch (Exception ex)

@@ -3,20 +3,24 @@ using System;
 using System.IO;
 using System.Text;
 
-namespace DSPRE {
-    public static class NSBUtils {
-        public const int NSBMD_DOESNTHAVE_TEXTURE = 0;
-        public const int NSBMD_HAS_TEXTURE = 1;
+namespace DSPRE
+{
+    public static class NSBUtils
+    {
+        public const int NsbmdDoesnthaveTexture = 0;
+        public const int NsbmdHasTexture = 1;
 
-        public static byte[] BuildNSBMDwithTextures(byte[] nsbmd, byte[] nsbtx) {
+        public static byte[] BuildNSBMDwithTextures(byte[] nsbmd, byte[] nsbtx)
+        {
             byte[] wholeMDL0 = GetFirstBlock(nsbmd);
             byte[] wholeTEX0 = GetFirstBlock(nsbtx);
 
             MemoryStream ms = new MemoryStream();
-            using (BinaryWriter msWriter = new BinaryWriter(ms)) {
-                msWriter.Write(NSBMD.NDS_TYPE_BMD0);
-                msWriter.Write(NSBMD.NDS_TYPE_BYTEORDER);
-                msWriter.Write(NSBMD.NDS_TYPE_UNK2);
+            using (BinaryWriter msWriter = new BinaryWriter(ms))
+            {
+                msWriter.Write(NSBMD.NdsTypeBmd0);
+                msWriter.Write(NSBMD.NdsTypeByteorder);
+                msWriter.Write(NSBMD.NdsTypeUnk2);
 
                 ushort nBlocks = 2;
                 uint modelLength = (uint)(wholeMDL0.Length + NSBMD.HEADERSIZE + 4 * nBlocks);
@@ -32,10 +36,12 @@ namespace DSPRE {
             }
             return ms.ToArray();
         }
-        public static byte[] BuildNSBTXHeader(uint texturesSize) {
+        public static byte[] BuildNSBTXHeader(uint texturesSize)
+        {
             MemoryStream ms = new MemoryStream();
 
-            using (BinaryWriter bw = new BinaryWriter(ms)) {
+            using (BinaryWriter bw = new BinaryWriter(ms))
+            {
                 bw.Write(Encoding.UTF8.GetBytes("BTX0")); // Write magic code BTX0
                 bw.Write((ushort)0xFEFF); // Byte order
                 bw.Write((ushort)0x0001); // ???
@@ -46,30 +52,36 @@ namespace DSPRE {
             }
             return ms.ToArray();
         }
-        public static int CheckNSBMDHeader(byte[] modelFile) {
-            using (BinaryReader byteArrReader = new BinaryReader(new MemoryStream(modelFile))) {
-                if (modelFile.Length < 0x10 || byteArrReader.ReadUInt32() != NSBMD.NDS_TYPE_BMD0) {
+        public static int CheckNSBMDHeader(byte[] modelFile)
+        {
+            using (BinaryReader byteArrReader = new BinaryReader(new MemoryStream(modelFile)))
+            {
+                if (modelFile.Length < 0x10 || byteArrReader.ReadUInt32() != NSBMD.NdsTypeBmd0)
+                {
                     AppMessages.Error("Please select an NSBMD file.", "Invalid File");
                     return -1;
                 }
 
                 byteArrReader.BaseStream.Position = 0xE;
-                return byteArrReader.ReadInt16() >= 2 ? NSBMD_HAS_TEXTURE : NSBMD_DOESNTHAVE_TEXTURE;
+                return byteArrReader.ReadInt16() >= 2 ? NsbmdHasTexture : NsbmdDoesnthaveTexture;
             }
         }
 
         // Length covers the block offset GetFirstBlock reads at 0x10.
-        public static bool IsNSBTX(byte[] file) {
+        public static bool IsNSBTX(byte[] file)
+        {
             return file != null && file.Length >= 0x14
                 && file[0] == (byte)'B' && file[1] == (byte)'T' && file[2] == (byte)'X' && file[3] == (byte)'0';
         }
 
-        public static byte[] GetModelWithoutTextures(byte[] modelFile) {
+        public static byte[] GetModelWithoutTextures(byte[] modelFile)
+        {
             byte[] nsbmdHeaderData;
             uint mdl0Size;
             byte[] mdl0Data;
 
-            using (BinaryReader modelReader = new BinaryReader(new MemoryStream(modelFile))) {
+            using (BinaryReader modelReader = new BinaryReader(new MemoryStream(modelFile)))
+            {
                 modelReader.BaseStream.Position = 0x0;
                 nsbmdHeaderData = modelReader.ReadBytes(0x8);
 
@@ -81,7 +93,8 @@ namespace DSPRE {
             }
 
             MemoryStream output = new MemoryStream();
-            using (BinaryWriter writer = new BinaryWriter(output)) {
+            using (BinaryWriter writer = new BinaryWriter(output))
+            {
 
                 writer.Write(nsbmdHeaderData); // Write first header bytes, same for all NSBMD.
                 writer.Write(mdl0Size + 0x14);
@@ -94,8 +107,10 @@ namespace DSPRE {
             return output.ToArray();
         }
 
-        public static byte[] GetTexturesFromTexturedNSBMD(byte[] modelFile) {
-            using (BinaryReader byteArrReader = new BinaryReader(new MemoryStream(modelFile))) {
+        public static byte[] GetTexturesFromTexturedNSBMD(byte[] modelFile)
+        {
+            using (BinaryReader byteArrReader = new BinaryReader(new MemoryStream(modelFile)))
+            {
                 byteArrReader.BaseStream.Position = 14;
                 if (byteArrReader.ReadUInt16() < 2) //No textures
                     return new byte[0];
@@ -115,10 +130,12 @@ namespace DSPRE {
                 return output;
             }
         }
-        private static byte[] GetFirstBlock(byte[] NSBFile) {
+        private static byte[] GetFirstBlock(byte[] NSBFile)
+        {
             int blockSize;
             uint offsetToMainBlock;
-            using (BinaryReader reader = new BinaryReader(new MemoryStream(NSBFile))) {
+            using (BinaryReader reader = new BinaryReader(new MemoryStream(NSBFile)))
+            {
                 reader.BaseStream.Position = 16;
                 offsetToMainBlock = reader.ReadUInt32();
 

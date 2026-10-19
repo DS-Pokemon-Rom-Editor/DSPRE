@@ -242,7 +242,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         private static long OverlayRam(int overlayNumber)
         {
             try { return OverlayUtils.OverlayTable.GetRAMAddress(overlayNumber); }
-            catch { return 0; }
+            catch (Exception ex) { AppLogger.WarnOnce("HgEnginePatchesViewModel.OverlayRam", ex); return 0; }
         }
 
         /// <summary>

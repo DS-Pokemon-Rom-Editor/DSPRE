@@ -18,9 +18,9 @@ namespace DSPRE
         public const int TableLength = PickupTable.Ranges * Stride * 2;
         public const int BlockLength = SyntheticOverlaySpace.HeaderSize + TableLength * 2;
 
-        public static bool SupportsCurrentRom => RomLocator.PickupSlotSites != null && RomInfo.pickupTableOverlayNumber >= 0;
+        public static bool SupportsCurrentRom => RomLocator.PickupSlotSites != null && RomInfo.PickupTableOverlayNumber >= 0;
 
-        private static int OverlayNumber => RomInfo.pickupTableOverlayNumber;
+        private static int OverlayNumber => RomInfo.PickupTableOverlayNumber;
         private static uint OverlayAddress => OverlayUtils.OverlayTable.GetRAMAddress(OverlayNumber);
 
         // cmp rN, #10; bcc +0; movs rN, #9
@@ -37,15 +37,15 @@ namespace DSPRE
         /// <summary>Where the patch's common table sits in the synthetic overlay, or -1 when the patch is not applied.</summary>
         public static int CommonTableOffset()
         {
-            if (!SupportsCurrentRom || !File.Exists(Filesystem.expArmPath)) return -1;
+            if (!SupportsCurrentRom || !File.Exists(Filesystem.ExpArmPath)) return -1;
             try
             {
                 RomInfo.PickupSlotSites s = RomLocator.PickupSlotSites;
                 byte[] ov = ReadOverlay();
                 if (!ov.AsSpan((int)s.Clamp, 6).SequenceEqual(Multiply(s.Register))) return -1;
                 uint common = BitConverter.ToUInt32(ov, (int)s.CommonLiteral), rare = BitConverter.ToUInt32(ov, (int)s.RareLiteral);
-                long at = (long)common - RomInfo.synthOverlayLoadAddress;
-                if (at < 0 || rare != common + TableLength || at + TableLength * 2 > new FileInfo(Filesystem.expArmPath).Length) return -1;
+                long at = (long)common - RomInfo.SynthOverlayLoadAddress;
+                if (at < 0 || rare != common + TableLength || at + TableLength * 2 > new FileInfo(Filesystem.ExpArmPath).Length) return -1;
                 return (int)at;
             }
             catch (Exception ex) when (ex is IOException || ex is ArgumentException) { return -1; }
@@ -61,8 +61,8 @@ namespace DSPRE
             RomInfo.PickupSlotSites s = RomLocator.PickupSlotSites;
             byte[] ov = ReadOverlay();
             bool vanilla = ov.AsSpan((int)s.Clamp, 6).SequenceEqual(Clamp(s.Register))
-                && BitConverter.ToUInt32(ov, (int)s.CommonLiteral) == OverlayAddress + RomInfo.pickupCommonItemsOffset
-                && BitConverter.ToUInt32(ov, (int)s.RareLiteral) == OverlayAddress + RomInfo.pickupRareItemsOffset;
+                && BitConverter.ToUInt32(ov, (int)s.CommonLiteral) == OverlayAddress + RomInfo.PickupCommonItemsOffset
+                && BitConverter.ToUInt32(ov, (int)s.RareLiteral) == OverlayAddress + RomInfo.PickupRareItemsOffset;
             return vanilla ? null : "The Pickup code has already been changed by something else.";
         }
 
@@ -83,10 +83,10 @@ namespace DSPRE
             BitConverter.GetBytes((uint)BlockLength).CopyTo(block, 0x10);
             PickupTable.Words(common, common.Length).CopyTo(block, SyntheticOverlaySpace.HeaderSize);
             PickupTable.Words(rare, rare.Length).CopyTo(block, SyntheticOverlaySpace.HeaderSize + TableLength);
-            DSUtils.WriteToFile(Filesystem.expArmPath, block, (uint)blockOffset);
+            DSUtils.WriteToFile(Filesystem.ExpArmPath, block, (uint)blockOffset);
 
             RomInfo.PickupSlotSites s = RomLocator.PickupSlotSites;
-            uint tables = RomInfo.synthOverlayLoadAddress + (uint)blockOffset + SyntheticOverlaySpace.HeaderSize;
+            uint tables = RomInfo.SynthOverlayLoadAddress + (uint)blockOffset + SyntheticOverlaySpace.HeaderSize;
             string path = OverlayUtils.GetPath(OverlayNumber);
             DSUtils.WriteToFile(path, BitConverter.GetBytes(tables), s.CommonLiteral);
             DSUtils.WriteToFile(path, BitConverter.GetBytes(tables + TableLength), s.RareLiteral);

@@ -150,7 +150,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             foreach (GraphicAssets.Archive a in GraphicAssets.All)
             {
                 int n;
-                try { n = GraphicAssets.Count(a); } catch { n = 0; }
+                try { n = GraphicAssets.Count(a); } catch (Exception ex) { AppLogger.WarnOnce("GraphicsBrowserViewModel.Scan", ex); n = 0; }
                 if (n == 0) continue;      // this game does not have it
                 archives.Add((a, GraphicAssets.Units(a, n)));
             }
@@ -350,7 +350,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 string name = arc.NameOf?.Invoke(ShowingIndex);
                 if (!string.IsNullOrWhiteSpace(name)) return name;
             }
-            catch { }
+            catch { }   // an entry without a name uses the archive's title
             return arc.Title;
         }
 
@@ -372,7 +372,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 GraphicAssets.Archive a = ShowingArchive;
                 if (a == null) return null;
                 try { return AvaloniaEditorLauncher.EditorForGraphic(a.Dir, ShowingIndex)?.Name; }
-                catch { return null; }
+                catch (Exception ex) { AppLogger.WarnOnce("GraphicsBrowserViewModel.OwningEditorName", ex); return null; }
             }
         }
 

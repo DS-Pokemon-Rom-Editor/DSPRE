@@ -39,8 +39,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         public BattleScriptEditorViewModel()
         {
-            IsAvailable = gameFamily == GameFamilies.Plat || gameFamily == GameFamilies.HGSS;
-            _version = gameFamily switch
+            IsAvailable = GameFamily == GameFamilies.Plat || GameFamily == GameFamilies.HGSS;
+            _version = GameFamily switch
             {
                 GameFamilies.DP => WazaSeqVersion.DP,
                 GameFamilies.Plat => WazaSeqVersion.Plat,
@@ -48,24 +48,24 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             };
             _moveNames = SafeMoveNames();
 
-            _narcs[(int)Archive.MoveScripts]  = new ScriptNarc(DirNames.wazaSeq);
-            _narcs[(int)Archive.EffectScripts] = new ScriptNarc(DirNames.beSeq);
-            _narcs[(int)Archive.Subroutines]  = new ScriptNarc(DirNames.subSeq);
-            _narcs[(int)Archive.MoveAnimation] = new ScriptNarc(DirNames.wazaEffectScripts);
-            _narcs[(int)Archive.SubAnimation] = new ScriptNarc(DirNames.wazaEffectSub);
+            _narcs[(int)Archive.MoveScripts]  = new ScriptNarc(DirNames.WazaSeq);
+            _narcs[(int)Archive.EffectScripts] = new ScriptNarc(DirNames.BeSeq);
+            _narcs[(int)Archive.Subroutines]  = new ScriptNarc(DirNames.SubSeq);
+            _narcs[(int)Archive.MoveAnimation] = new ScriptNarc(DirNames.WazaEffectScripts);
+            _narcs[(int)Archive.SubAnimation] = new ScriptNarc(DirNames.WazaEffectSub);
 
-            _dirs[(int)Archive.MoveScripts] = DirNames.wazaSeq;
-            _dirs[(int)Archive.EffectScripts] = DirNames.beSeq;
-            _dirs[(int)Archive.Subroutines] = DirNames.subSeq;
-            _dirs[(int)Archive.MoveAnimation] = DirNames.wazaEffectScripts;
-            _dirs[(int)Archive.SubAnimation] = DirNames.wazaEffectSub;
+            _dirs[(int)Archive.MoveScripts] = DirNames.WazaSeq;
+            _dirs[(int)Archive.EffectScripts] = DirNames.BeSeq;
+            _dirs[(int)Archive.Subroutines] = DirNames.SubSeq;
+            _dirs[(int)Archive.MoveAnimation] = DirNames.WazaEffectScripts;
+            _dirs[(int)Archive.SubAnimation] = DirNames.WazaEffectSub;
 
             if (IsAvailable) SelectArchive(0);
         }
 
         private static string[] SafeMoveNames()
         {
-            try { return GetAttackNames(); } catch { return Array.Empty<string>(); }
+            try { return GetAttackNames(); } catch (Exception ex) { AppLogger.WarnOnce("BattleScriptEditorViewModel.SafeMoveNames", ex); return Array.Empty<string>(); }
         }
 
         // ── Archive selection ────────────────────────────────────────────────────
@@ -116,7 +116,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             try
             {
                 // Each version's sound archive has its own filename; DP does not carry Platinum's "pl_" file.
-                string fileName = gameFamily switch
+                string fileName = GameFamily switch
                 {
                     GameFamilies.HGSS => "gs_sound_data.sdat",
                     GameFamilies.Plat => "pl_sound_data.sdat",
@@ -126,7 +126,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 // workDir is the project's own root (where arm9/banner/etc. live); the ROM's own internal
                 // filesystem (where "data/sound/..." actually lives) is nested one level deeper, under "files"
                 // for a ds-rom project or "data" for a legacy one.
-                string romRoot = System.IO.Path.Combine(workDir, IsDsRomProject ? "files" : "data");
+                string romRoot = System.IO.Path.Combine(WorkDir, IsDsRomProject ? "files" : "data");
                 string path = System.IO.Path.Combine(romRoot, "data", "sound", fileName);
                 if (!System.IO.File.Exists(path)) { _sdatLoadError = $"Sound archive not found at:\n{path}"; return null; }
                 _sdat = SdatArchive.Parse(System.IO.File.ReadAllBytes(path));
@@ -171,7 +171,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// rather than the one sound the script named.</summary>
         private void PreviewStopSound(int soundId)
         {
-            try { AudioOutput.Current.Stop(); } catch { }
+            try { AudioOutput.Current.Stop(); } catch { }   // stopping a sound that already ended is harmless
         }
 
         private void PreviewSound(int soundId)
@@ -205,7 +205,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 if (AudioOutput.Current is NullAudioOutput) return "This build has no sound output yet.";
                 return null;
             }
-            catch (System.Exception ex) { return ex.ToString(); }
+            catch (System.Exception ex) { AppLogger.WarnOnce("BattleScriptEditorViewModel.TryPreviewSound", ex); return ex.ToString(); }
         }
 
         /// <summary>Internal opcode names for the current archive (index = opcode id), used for schema lookups.</summary>
@@ -239,13 +239,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// <summary>Which view is showing. Remembered between sessions.</summary>
         public int ViewMode
         {
-            get => DSPRE.SettingsManager.Settings?.moveAnimationViewMode ?? 0;
+            get => DSPRE.SettingsManager.Settings?.MoveAnimationViewMode ?? 0;
             set
             {
                 int v = Math.Clamp(value, 0, 2);
-                if (DSPRE.SettingsManager.Settings == null || DSPRE.SettingsManager.Settings.moveAnimationViewMode == v) return;
-                DSPRE.SettingsManager.Settings.moveAnimationViewMode = v;
-                try { DSPRE.SettingsManager.Save(); } catch { }
+                if (DSPRE.SettingsManager.Settings == null || DSPRE.SettingsManager.Settings.MoveAnimationViewMode == v) return;
+                DSPRE.SettingsManager.Settings.MoveAnimationViewMode = v;
+                try { DSPRE.SettingsManager.Save(); } catch (Exception ex) { AppLogger.Warn("Saving the move animation view mode: " + ex.Message); }
                 OnPropertyChanged(nameof(ViewMode));
                 OnPropertyChanged(nameof(ViewNote));
                 RefreshViewLines();
@@ -332,7 +332,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         public bool ArchiveNotAvailable => IsAvailable && _archiveIndex >= 0 && !CurrentNarc.Available;
         public string ArchiveUnavailableText =>
-            $"This archive isn't mapped for {gameFamily} yet (no path wired). Provide the NARC path to enable it.";
+            $"This archive isn't mapped for {GameFamily} yet (no path wired). Provide the NARC path to enable it.";
 
         // ── Entry (file) selection ────────────────────────────────────────────────
         public ObservableCollection<string> FileItems { get; } = new ObservableCollection<string>();
@@ -632,14 +632,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (!IsAvailable || _fileIndex < 0 || !CurrentNarc.Available) return;
             if (HasTextErrors)   // the cards are stale while the text is invalid, don't persist the wrong thing
             {
-                _ = DSPRE.Avalonia.DialogHelper.ShowInfo("The script has errors. Fix the underlined lines before saving.", "Fix errors first");
+                _ = DSPRE.Avalonia.DialogHelper.ShowInfoAsync("The script has errors. Fix the underlined lines before saving.", "Fix errors first");
                 return;
             }
             List<WazaSeqCommand> cmds = BuildCommands();
             byte[] bytes = IsAnimation ? BattleAnimScript.Serialize(cmds) : WazaSeqScript.Serialize(cmds);
             if (!ReadsBackTheSame(cmds, bytes))
             {
-                _ = DSPRE.Avalonia.DialogHelper.ShowError("These commands would not read back the same once saved, so nothing was written. " +
+                _ = DSPRE.Avalonia.DialogHelper.ShowErrorAsync("These commands would not read back the same once saved, so nothing was written. " +
                     "Check that each command has the number of values it takes.", "Not saved");
                 return;
             }
@@ -665,14 +665,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             if (!HgEngineOwnedFiles.TryWriteText(source, SourceText ?? "", out string error))
             {
-                await DSPRE.Avalonia.DialogHelper.ShowError(error, "Battle scripts error");
+                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync(error, "Battle scripts error");
                 return;
             }
             _loadedSourceText = SourceText ?? "";
             Dirty = false;
 
             if (HgEngineProject.SuppressManagedFileSaveNotice) return;
-            bool never = await DSPRE.Avalonia.DialogHelper.ShowNoticeWithOptOut(
+            bool never = await DSPRE.Avalonia.DialogHelper.ShowNoticeWithOptOutAsync(
                 $"This file is managed by hg-engine. {source.RelPath} has been saved, but you will need to " +
                 "compile, not just save the ROM, to see the change in game.",
                 "Managed by hg-engine");
@@ -1008,7 +1008,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private readonly WeCellAnimRenderer _cellRenderer = new WeCellAnimRenderer();
         private IReadOnlyList<WeCellAnimRenderer.Frame> _cellFrames = Array.Empty<WeCellAnimRenderer.Frame>();
-        private readonly ScriptNarc _particleNarc = new ScriptNarc(DirNames.wazaParticle);
+        private readonly ScriptNarc _particleNarc = new ScriptNarc(DirNames.WazaParticle);
         private BattleAnimPlayer _animPlayer;
         private DispatcherTimer _previewTimer;
         private int _cellFrameIdx, _cellTick, _cellLoops, _previewFrames;
@@ -1248,7 +1248,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     if (enemy?.Rgba != null) { _compositor.AddStatic(enemy.Rgba, enemy.Width, enemy.Height, enemy.Left, enemy.Top); placed = true; }
                     if (mine?.Rgba != null) { _compositor.AddStatic(mine.Rgba, mine.Width, mine.Height, mine.Left, mine.Top); placed = true; }
                 }
-                catch { placed = false; }
+                catch (Exception ex) { AppLogger.WarnOnce("BattleScriptEditorViewModel.ApplyGround", ex); placed = false; }
             }
             if (!placed) { AddStatic("platform_opponent.png", 129, 72); AddStatic("platform_you.png", -42, 122); }
         }
@@ -1273,8 +1273,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             if (moveId < 0) moveId = _fileIndex;
             if ((Archive)_archiveIndex != Archive.MoveAnimation || moveId < 0) return -1;
-            try { return new MoveData(moveId).flagField; }
-            catch { return -1; }
+            try { return new MoveData(moveId).FlagField; }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleScriptEditorViewModel.GetMoveFlagField", ex); return -1; }
         }
 
         // Configurable gauge readout (the preview mons are placeholders, so these are user-set, default Shuckle/Lv42/100%).
@@ -1291,7 +1291,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // live-loads that species' front/back battle sprites into the scene.
         private string[] _speciesNames;
         public string[] SpeciesNames => _speciesNames ??= SafeSpeciesNames();
-        private static string[] SafeSpeciesNames() { try { return GetPokemonNames(); } catch { return Array.Empty<string>(); } }
+        private static string[] SafeSpeciesNames() { try { return GetPokemonNames(); } catch (Exception ex) { AppLogger.WarnOnce("BattleScriptEditorViewModel.SafeSpeciesNames", ex); return Array.Empty<string>(); } }
         public int GaugeSpeciesIndex
         {
             get => _gaugeSpeciesId;
@@ -1332,7 +1332,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private static readonly IBrush GaugeRed = Bar(0xFB, 0x41, 0x10);
         public IBrush GaugeHpBrush => _gaugeHpPercent > 50 ? GaugeGreen : _gaugeHpPercent > 20 ? GaugeAmber : GaugeRed;
         /// <summary>HGSS gauges are cream frames with dark text; DPPt frames are dark with white text.</summary>
-        public IBrush GaugeTextBrush => gameFamily == GameFamilies.HGSS
+        public IBrush GaugeTextBrush => GameFamily == GameFamilies.HGSS
             ? new SolidColorBrush(global::Avalonia.Media.Color.FromRgb(0x28, 0x28, 0x28))
             : new SolidColorBrush(global::Avalonia.Media.Color.FromRgb(0xF8, 0xF8, 0xF8));
 
@@ -1354,7 +1354,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 OnPropertyChanged(nameof(PlayerGaugeImageLeft));
                 OnPropertyChanged(nameof(PlayerHealthFillLeft));
             }
-            catch { }
+            catch (Exception ex) { AppLogger.Warn("Battle script preview gauges: " + ex.Message); }
         }
 
         private static Bitmap Gauge(DSPRE.Avalonia.Data.BattleGroundRenderer.GroundImage g) =>
@@ -1373,7 +1373,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     BattleBgRenderer.BgImage img = (_bgRenderer ??= new DSPRE.Avalonia.Data.BattleBgRenderer()).BuildBackdrop(_backgroundIndex - 1);
                     if (img?.Rgba != null) rgb = BgToBackdrop(img.Rgba, img.Width, img.Height);
                 }
-                catch { rgb = null; }
+                catch (Exception ex) { AppLogger.WarnOnce("BattleScriptEditorViewModel.ApplyBackdrop", ex); rgb = null; }
             }
             // Index 0 is deliberately "No background" (plain black), NOT the bundled placeholder art:
             // effects are easiest to judge against black, and it's honest about not being ROM data.
@@ -1400,7 +1400,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private static Bitmap LoadAsset(string name)
         {
             try { return new Bitmap(global::Avalonia.Platform.AssetLoader.Open(new System.Uri($"avares://DSPRE.Avalonia/Avalonia/Assets/Battle/{name}"))); }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleScriptEditorViewModel.LoadAsset", ex); return null; }
         }
 
         // Avalonia Bitmap → straight RGBA (un-premultiplied). CopyPixels gives BGRA premultiplied.
@@ -1497,7 +1497,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // The game picks Metronome's move in battle code, so the preview picks one itself after the finger wag.
         private const int MetronomeMoveId = 118;
         private bool IsMetronomePreview => IsAnimation && _fileIndex == MetronomeMoveId;
-        private static readonly Random _metronomeRandom = new Random();
+        private static readonly Random MetronomeRandom = new Random();
         private int _metronomeCalledMoveId = -1;
 
         /// <summary>Picks a move id for Metronome's preview flourish to "call". Real Metronome excludes a long,
@@ -1510,7 +1510,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (count <= 1) return -1;
             for (int attempt = 0; attempt < 20; attempt++)
             {
-                int id = _metronomeRandom.Next(1, count);
+                int id = MetronomeRandom.Next(1, count);
                 if (id == MetronomeMoveId) continue;
                 byte[] bytes = CurrentNarc.Get(id);
                 if (bytes != null && bytes.Length >= 4) return id;
@@ -1584,8 +1584,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             if (moveId < 0) moveId = _fileIndex;
             if ((Archive)_archiveIndex != Archive.MoveAnimation || moveId < 0) return -1;
-            try { return new MoveData(moveId).damage; }
-            catch { return -1; }
+            try { return new MoveData(moveId).Damage; }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleScriptEditorViewModel.GetMovePower", ex); return -1; }
         }
 
         private bool IsSelfTargetMove(int moveId = -1)
@@ -1594,11 +1594,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if ((Archive)_archiveIndex != Archive.MoveAnimation || moveId < 0) return false;
             try
             {
-                ushort range = new MoveData(moveId).target;
+                ushort range = new MoveData(moveId).Target;
                 const ushort USER = 1 << 4, USER_SIDE = 1 << 5, USER_OR_ALLY = 1 << 9;
                 return (range & (USER | USER_SIDE | USER_OR_ALLY)) != 0;
             }
-            catch { return false; }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleScriptEditorViewModel.IsSelfTargetMove", ex); return false; }
         }
 
         private void PreviewTick(object sender, EventArgs e)

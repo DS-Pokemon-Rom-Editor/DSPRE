@@ -19,15 +19,15 @@ namespace LibNDSFormats.NSBMD
         // ----------------------------------------------------------------
         // Public static options (read/written by MapEditor, EventEditor)
         // ----------------------------------------------------------------
-        public static bool gOptColoring  = true;
-        public static bool gOptWireFrame = false;
+        public static bool GOptColoring  = true;
+        public static bool GOptWireFrame = false;
 
         // ----------------------------------------------------------------
         // Public fields (read by OBJ exporter / 3D tools)
         // ----------------------------------------------------------------
-        public List<float[]> vertex        = new List<float[]>();
-        public List<float[]> normals       = new List<float[]>();
-        public List<int>     vertex_normal = new List<int>();
+        public List<float[]> Vertex        = new List<float[]>();
+        public List<float[]> Normals       = new List<float[]>();
+        public List<int>     VertexNormal = new List<int>();
 
         // ----------------------------------------------------------------
         // Model property
@@ -50,7 +50,8 @@ namespace LibNDSFormats.NSBMD
         /// rewrite, kept in sync so a future merge with main doesn't conflict on this hunk, and so the
         /// eventual OpenTK renderer has it ready to call. The real fix now lives in the Avalonia
         /// renderer: see NsbmdGeometry.MaterialAlpha + NsbmdGlControl's per-part GL_BLEND.</summary>
-        private static float MaterialAlpha(NSBMDMaterial mat) {
+        private static float MaterialAlpha(NSBMDMaterial mat)
+        {
             return mat.Alpha >= 31 ? 1.0f : mat.Alpha / 31.0f;
         }
 
@@ -101,7 +102,7 @@ namespace LibNDSFormats.NSBMD
             return data;
         }
 
-        public static float[] loadIdentity()
+        public static float[] LoadIdentity()
         {
             float[] a = new float[16];
             a[0]  = 1.0F;
@@ -111,7 +112,7 @@ namespace LibNDSFormats.NSBMD
             return a;
         }
 
-        public static float[] multMatrix(float[] a, float[] b)
+        public static float[] MultMatrix(float[] a, float[] b)
         {
             float[] c = new float[16];
             for (int i = 0; i < 4; i++)
@@ -126,43 +127,43 @@ namespace LibNDSFormats.NSBMD
 
         public static float[] Translate(float[] a, float x, float y, float z)
         {
-            float[] b = loadIdentity();
+            float[] b = LoadIdentity();
             b[12] = x;
             b[13] = y;
             b[14] = z;
-            return multMatrix(a, b);
+            return MultMatrix(a, b);
         }
 
         public static float[] Rotate(float[] a, float x, float y, float z)
         {
-            float[] b = loadIdentity();
+            float[] b = LoadIdentity();
             float cx = (float)System.Math.Cos(x);  float sx = (float)System.Math.Sin(x);
             float cy = (float)System.Math.Cos(y);  float sy = (float)System.Math.Sin(y);
             float cz = (float)System.Math.Cos(z);  float sz = (float)System.Math.Sin(z);
             b[0] = cy * cz;   b[1] = cy * sz;   b[2]  = -sy;
             b[4] = cz * sx * sy - sz * cx; b[5] = sx * sy + cx * cz; b[6] = sx * cy;
             b[8] = cx * cz * sy + sx * sz; b[9] = cx * sy * sz - sx * cz; b[10] = cx * cy;
-            return multMatrix(a, b);
+            return MultMatrix(a, b);
         }
 
-        public static float[] scale(float[] a, float x, float y, float z)
+        public static float[] Scale(float[] a, float x, float y, float z)
         {
-            float[] b = loadIdentity();
+            float[] b = LoadIdentity();
             b[0]  = x;
             b[5]  = y;
             b[10] = z;
-            return multMatrix(a, b);
+            return MultMatrix(a, b);
         }
 
-        public static float[] loadMatrix(float[] fmatrix, int stack)
+        public static float[] LoadMatrix(float[] fmatrix, int stack)
         {
-            float[] a = loadIdentity();
+            float[] a = LoadIdentity();
             for (int i = 0; i < a.Length; i++)
                 a[i] = fmatrix[stack * 16 + i];
             return a;
         }
 
-        public float[] multVector(float[] cmatrix, float[] vtxState)
+        public float[] MultVector(float[] cmatrix, float[] vtxState)
         {
             float[] vtxTrans = new float[3];
             for (int i = 0; i < 3; i++)
@@ -173,12 +174,12 @@ namespace LibNDSFormats.NSBMD
             return vtxTrans;
         }
 
-        public float[] pullVector(float[] fmatrix, int offset)
+        public float[] PullVector(float[] fmatrix, int offset)
         {
             float[] cmatrix = new float[16];
             for (int i = 0; i < cmatrix.Length; i++)
                 cmatrix[i] = fmatrix[offset + i];
-            return multVector(cmatrix, new float[] { 0.0F, 0.0F, 0.0F });
+            return MultVector(cmatrix, new float[] { 0.0F, 0.0F, 0.0F });
         }
     }
 }

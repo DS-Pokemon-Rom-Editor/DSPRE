@@ -15,7 +15,7 @@ namespace DSPRE.Avalonia.Views.Items
         private async void Save_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.SaveChangesAsync(); }
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) VM?.DiscardChanges();
         }
     }
 }

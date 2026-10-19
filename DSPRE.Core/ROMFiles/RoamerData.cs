@@ -121,7 +121,7 @@ namespace DSPRE.ROMFiles
         }
 
         private static uint Word(byte[] code, int at) => BitConverter.ToUInt32(code, at);
-        private static int ToFile(uint ram) => (int)(ram - ARM9.address);
+        private static int ToFile(uint ram) => (int)(ram - ARM9.Address);
         private static int LiteralOf(int ldrAt, byte[] code) => ((ldrAt + 4) & ~3) + code[ldrAt] * 4;
 
         /// <summary>Why the roamers can't be edited, or null.</summary>
@@ -132,14 +132,14 @@ namespace DSPRE.ROMFiles
             data = null;
             if (HgEngine.HgEngineProject.IsActive) { error = "hg-engine keeps its roamers in src/field_roamer.c."; return false; }
             if (!IsDsRomProject && ARM9.CheckCompressionMark()) { error = "arm9 is still compressed. Convert this project to ds-rom format first."; return false; }
-            Family? family = gameFamily switch { GameFamilies.DP => Family.DP, GameFamilies.Plat => Family.Plat, GameFamilies.HGSS => Family.HGSS, _ => (Family?)null };
+            Family? family = GameFamily switch { GameFamilies.DP => Family.DP, GameFamilies.Plat => Family.Plat, GameFamilies.HGSS => Family.HGSS, _ => (Family?)null };
             if (family == null) { error = "This game has no roamers DSPRE knows."; return false; }
             byte[] code;
-            try { code = File.ReadAllBytes(arm9Path); }
+            try { code = File.ReadAllBytes(Arm9Path); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException) { error = e.Message; return false; }
 
             RoamerData d = new RoamerData { _code = code, _family = family.Value,
-                _japaneseDp = family == Family.DP && gameLanguage == GameLanguages.Japanese };
+                _japaneseDp = family == Family.DP && GameLanguage == GameLanguages.Japanese };
             error = d.Read();
             if (error != null) return false;
             data = d;
@@ -210,7 +210,7 @@ namespace DSPRE.ROMFiles
                 foreach (int c in cases)
                 {
                     Slot slot = DecodeCase(c, layout);
-                    if (slot == null) return $"A roamer slot at 0x{ARM9.address + c:X8} isn't coded the way DSPRE reads; {fail}.";
+                    if (slot == null) return $"A roamer slot at 0x{ARM9.Address + c:X8} isn't coded the way DSPRE reads; {fail}.";
                     Slots.Add(slot);
                 }
             }
@@ -227,7 +227,7 @@ namespace DSPRE.ROMFiles
                     int[] calls = { 0x28, 0x30, 0x38, 0x40, 0x48 };
                     int[] slots = { 0, 1, 3, 4, 5 };
                     _setters = new int[6];
-                    for (int k = 0; k < calls.Length; k++) _setters[slots[k]] = (int)(ARM9.address + BlTarget(orig + calls[k])) | 1;
+                    for (int k = 0; k < calls.Length; k++) _setters[slots[k]] = (int)(ARM9.Address + BlTarget(orig + calls[k])) | 1;
                 }
                 else if (patched >= 0)
                 {
@@ -387,14 +387,14 @@ namespace DSPRE.ROMFiles
                 BitConverter.GetBytes((ushort)Slots[s].Level).CopyTo(region, at + 2);
             }
             region.CopyTo(code, _switch);
-            uint tableRam = ARM9.address + (uint)(_switch + layout.TableOffset);
+            uint tableRam = ARM9.Address + (uint)(_switch + layout.TableOffset);
 
             if (_family == Family.Plat)
             {
                 byte[] fn = new byte[PtReverseLength];
                 PtReversePatched.CopyTo(fn, 0);
                 BitConverter.GetBytes(tableRam).CopyTo(fn, 0x28);
-                BitConverter.GetBytes(ARM9.address + (uint)_reverse + 0x30).CopyTo(fn, 0x2C);
+                BitConverter.GetBytes(ARM9.Address + (uint)_reverse + 0x30).CopyTo(fn, 0x2C);
                 for (int s = 0; s < 6; s++) BitConverter.GetBytes((uint)(s < _setters.Length ? _setters[s] : 0)).CopyTo(fn, 0x30 + s * 4);
                 fn.CopyTo(code, _reverse);
             }
@@ -406,7 +406,7 @@ namespace DSPRE.ROMFiles
                 fn.CopyTo(code, _reverse);
             }
 
-            DSUtils.WriteWholeFile(arm9Path, code);
+            DSUtils.WriteWholeFile(Arm9Path, code);
             _code = code;
         }
     }

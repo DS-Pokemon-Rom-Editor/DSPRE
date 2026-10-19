@@ -25,8 +25,8 @@ namespace DSPRE.Avalonia.Views.World
         public MapEditorView()
         {
             InitializeComponent();
-            DSPRE.Avalonia.Controls.SidePanelWidth.Remember(SplitGrid, () => SettingsManager.Settings.mapEditorSidePanelWidth,
-                w => SettingsManager.Settings.mapEditorSidePanelWidth = w);
+            DSPRE.Avalonia.Controls.SidePanelWidth.Remember(SplitGrid, () => SettingsManager.Settings.MapEditorSidePanelWidth,
+                w => SettingsManager.Settings.MapEditorSidePanelWidth = w);
             CollisionThumb.IsCollision = true;
             TypeThumb.IsCollision = false;
             PermGrid.Changed += (_, _) =>
@@ -187,7 +187,7 @@ namespace DSPRE.Avalonia.Views.World
         private SceneBuildingAnimator BuildingAnimatorFor(NsbmdRenderModel scene)
         {
             if (scene == null) return null;
-            bool indoor = RomInfo.gameFamily == RomInfo.GameFamilies.HGSS && VM.AreaIndoor;
+            bool indoor = RomInfo.GameFamily == RomInfo.GameFamilies.HGSS && VM.AreaIndoor;
             try { return new SceneBuildingAnimator(scene, indoor, FieldTimeOfDay.Now); }
             catch (Exception ex)
             {
@@ -260,7 +260,7 @@ namespace DSPRE.Avalonia.Views.World
         {
             if (VM?.Model3D == null)
             {
-                await DialogHelper.ShowError("Load a map first, so there is something to animate.", "Animated preview");
+                await DialogHelper.ShowErrorAsync("Load a map first, so there is something to animate.", "Animated preview");
                 return;
             }
             AnimatedPreviewWindow win = new AnimatedPreviewWindow();
@@ -302,17 +302,17 @@ namespace DSPRE.Avalonia.Views.World
             if (vm.ReviewImport(permissionsBefore, fromModelWindow: false) is MapImportReviewViewModel review)
                 await new MapImportReviewView(review).ShowDialog(owner);
         }
-        private async void Export_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportAsync());
+        private async void Export_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportAsync());
         private void AddMap_Click(object sender, RoutedEventArgs e) => VM?.AddMapFile();
-        private async void RemMap_Click(object sender, RoutedEventArgs e) => await Safe(VM?.RemoveLastMapFileAsync());
+        private async void RemMap_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.RemoveLastMapFileAsync());
         private void AddBuilding_Click(object sender, RoutedEventArgs e) => VM?.AddBuilding();
         private void RemoveBuilding_Click(object sender, RoutedEventArgs e) => VM?.RemoveBuilding();
         private void DupBuilding_Click(object sender, RoutedEventArgs e) => VM?.DuplicateBuilding();
-        private async void ImportBuildings_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportBuildingsAsync());
-        private async void ExportBuildings_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportBuildingsAsync());
+        private async void ImportBuildings_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportBuildingsAsync());
+        private async void ExportBuildings_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportBuildingsAsync());
 
-        private async void ExportNsbmd_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportNsbmdAsync());
-        private async void ExportTexturedNsbmd_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportTexturedNsbmdAsync());
+        private async void ExportNsbmd_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportNsbmdAsync());
+        private async void ExportTexturedNsbmd_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportTexturedNsbmdAsync());
         private void ShowMapFile_Click(object sender, RoutedEventArgs e) => VM?.ShowMapFile();
         private void ClearLayer_Click(object sender, RoutedEventArgs e)
         {
@@ -326,13 +326,13 @@ namespace DSPRE.Avalonia.Views.World
                 SaveNotice.Exported);
         private void ExportDae_Click(object sender, RoutedEventArgs e) => VM?.ExportDae();
         private void ExportGlb_Click(object sender, RoutedEventArgs e) => VM?.ExportGlb();
-        private async void ImportTerrain_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportTerrainAsync());
-        private async void ExportTerrain_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportTerrainAsync());
-        private async void ImportSound_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportSoundAsync());
-        private async void ExportSound_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportSoundAsync());
+        private async void ImportTerrain_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportTerrainAsync());
+        private async void ExportTerrain_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportTerrainAsync());
+        private async void ImportSound_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportSoundAsync());
+        private async void ExportSound_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportSoundAsync());
         private void BlankSound_Click(object sender, RoutedEventArgs e) => VM?.BlankSound();
-        private async void ImportPerms_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportPermissionsAsync());
-        private async void ExportPerms_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportPermissionsAsync());
+        private async void ImportPerms_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportPermissionsAsync());
+        private async void ExportPerms_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportPermissionsAsync());
 
         private async void ScanTypes_Click(object sender, RoutedEventArgs e)
         {
@@ -340,10 +340,10 @@ namespace DSPRE.Avalonia.Views.World
             string report = VM.ScanUsedTypes();
             IClipboard clip = TopLevel.GetTopLevel(this)?.Clipboard;
             clip?.SetTextAsync(report);
-            await DialogHelper.ShowInfo($"Used types across all maps (copied to clipboard):\n\n{report}", "Used collision types");
+            await DialogHelper.ShowInfoAsync($"Used types across all maps (copied to clipboard):\n\n{report}", "Used collision types");
         }
 
-        private static async Task Safe(Task task)
+        private static async Task SafeAsync(Task task)
         {
             if (task == null) return;
             try { await task; } catch { /* handled in VM */ }

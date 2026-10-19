@@ -24,11 +24,11 @@ namespace DSPRE.ROMFiles
         public static readonly string[] MethodNames = { "Walking", "Surfing", "Fishing" };
 
         public List<Row> Rows { get; } = new List<Row>();
-        public bool HasMethod => gameFamily == GameFamilies.HGSS;
+        public bool HasMethod => GameFamily == GameFamilies.HGSS;
         public string Where { get; private set; } = "";
         /// <summary>hg-engine: the rows are src/swarms.c's sSwarmMapLUT.</summary>
         public bool FromSource { get; private set; }
-        public bool InExpansion => _path == Filesystem.expArmPath;
+        public bool InExpansion => _path == Filesystem.ExpArmPath;
         /// <summary>Rows that fit where the table is now without moving it.</summary>
         public int Capacity { get; private set; }
 
@@ -40,7 +40,7 @@ namespace DSPRE.ROMFiles
         private SwarmTable(SwarmSites sites) { _sites = sites; }
 
         /// <summary>The code file holding the swarm code's pointers and counts.</summary>
-        public string CodePath => _sites.Overlay < 0 ? arm9Path : OverlayUtils.GetPath(_sites.Overlay);
+        public string CodePath => _sites.Overlay < 0 ? Arm9Path : OverlayUtils.GetPath(_sites.Overlay);
 
         /// <summary>The most rows the game can pick from: the count is a byte immediate.</summary>
         public const int MaxRows = 255;
@@ -90,7 +90,7 @@ namespace DSPRE.ROMFiles
 
             RamAddress.Region home = sites.Overlay < 0 ? RamAddress.Arm9(code.Length) : RamAddress.Overlay(sites.Overlay, code.Length);
             (int region, int offset) = RamAddress.Find(ram, count * sites.RowSize,
-                home, RamAddress.Synthetic(File.Exists(Filesystem.expArmPath) ? new FileInfo(Filesystem.expArmPath).Length : 0));
+                home, RamAddress.Synthetic(File.Exists(Filesystem.ExpArmPath) ? new FileInfo(Filesystem.ExpArmPath).Length : 0));
             if (region == 0)
             {
                 table._path = table.CodePath; table._offset = offset;
@@ -100,8 +100,8 @@ namespace DSPRE.ROMFiles
             }
             else if (region == 1)
             {
-                byte[] synth = File.ReadAllBytes(Filesystem.expArmPath);
-                table._path = Filesystem.expArmPath; table._offset = offset;
+                byte[] synth = File.ReadAllBytes(Filesystem.ExpArmPath);
+                table._path = Filesystem.ExpArmPath; table._offset = offset;
                 (long Start, long End) block = SyntheticOverlaySpace.Blocks(synth, Marker).FirstOrDefault(b => table._offset == b.Start + SyntheticOverlaySpace.HeaderSize);
                 if (block.End > 0)
                 {
@@ -186,19 +186,19 @@ namespace DSPRE.ROMFiles
                 }
                 else
                 {
-                    byte[] synth = File.ReadAllBytes(Filesystem.expArmPath), synthOld = (byte[])synth.Clone();
+                    byte[] synth = File.ReadAllBytes(Filesystem.ExpArmPath), synthOld = (byte[])synth.Clone();
                     Array.Clear(synth, _offset, Capacity * _sites.RowSize);
                     rows.CopyTo(synth, _offset);
                     if (_blockStart >= 0) BitConverter.GetBytes((uint)Rows.Count).CopyTo(synth, _blockStart + 0x14);
                     foreach (int o in _sites.CountSites) code[o] = (byte)Rows.Count;
                     try
                     {
-                        DSUtils.WriteWholeFile(Filesystem.expArmPath, synth);
+                        DSUtils.WriteWholeFile(Filesystem.ExpArmPath, synth);
                         DSUtils.WriteWholeFile(CodePath, code);
                     }
                     catch
                     {
-                        DSUtils.WriteWholeFile(Filesystem.expArmPath, synthOld);
+                        DSUtils.WriteWholeFile(Filesystem.ExpArmPath, synthOld);
                         DSUtils.WriteWholeFile(CodePath, codeBefore);
                         throw;
                     }
@@ -225,7 +225,7 @@ namespace DSPRE.ROMFiles
             if (!SyntheticOverlaySpace.Available()) throw new InvalidOperationException("Apply the ARM9 expansion in the ROM Patch Toolbox first.");
             byte[] code = ReadCode(), codeBefore = (byte[])code.Clone();
             byte[] rows = RowBytes();
-            byte[] synthNow = File.ReadAllBytes(Filesystem.expArmPath), synthBefore = (byte[])synthNow.Clone();
+            byte[] synthNow = File.ReadAllBytes(Filesystem.ExpArmPath), synthBefore = (byte[])synthNow.Clone();
             byte[] block = new byte[ExpansionBlockLength];
             Encoding.ASCII.GetBytes(Marker).CopyTo(block, 0);
             BitConverter.GetBytes(1u).CopyTo(block, 0x0C);
@@ -238,22 +238,22 @@ namespace DSPRE.ROMFiles
             int at = SyntheticOverlaySpace.Place(synthNow, block.Length, SyntheticOverlaySpace.Reserved(synthNow));
             if (at < 0) throw new InvalidOperationException("No free space was found in the expanded ARM9 area for the swarm table.");
             block.CopyTo(synthNow, at);
-            uint ram = synthOverlayLoadAddress + (uint)(at + SyntheticOverlaySpace.HeaderSize);
+            uint ram = SynthOverlayLoadAddress + (uint)(at + SyntheticOverlaySpace.HeaderSize);
             foreach (int o in _sites.Literals) BitConverter.GetBytes(ram).CopyTo(code, o);
             foreach (int o in _sites.LiteralsPlus2) BitConverter.GetBytes(ram + 2).CopyTo(code, o);
             foreach (int o in _sites.CountSites) code[o] = (byte)Rows.Count;
             try
             {
-                DSUtils.WriteWholeFile(Filesystem.expArmPath, synthNow);
+                DSUtils.WriteWholeFile(Filesystem.ExpArmPath, synthNow);
                 DSUtils.WriteWholeFile(CodePath, code);
             }
             catch
             {
-                DSUtils.WriteWholeFile(Filesystem.expArmPath, synthBefore);
+                DSUtils.WriteWholeFile(Filesystem.ExpArmPath, synthBefore);
                 DSUtils.WriteWholeFile(CodePath, codeBefore);
                 throw;
             }
-            _path = Filesystem.expArmPath; _offset = at + SyntheticOverlaySpace.HeaderSize;
+            _path = Filesystem.ExpArmPath; _offset = at + SyntheticOverlaySpace.HeaderSize;
             _blockStart = at; _blockLength = block.Length;
             Capacity = (block.Length - SyntheticOverlaySpace.HeaderSize) / _sites.RowSize;
             Where = "in the expanded ARM9 area";

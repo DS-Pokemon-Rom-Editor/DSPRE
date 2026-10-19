@@ -33,7 +33,7 @@ namespace DSPRE.Avalonia.Views.Battle
         private static Bitmap LoadAsset(string name)
         {
             try { return new Bitmap(global::Avalonia.Platform.AssetLoader.Open(new System.Uri($"avares://DSPRE.Avalonia/Avalonia/Assets/Battle/{name}"))); }
-            catch { return null; }
+            catch (System.Exception ex) { AppLogger.WarnOnce("BattleSceneControl.LoadAsset", ex); return null; }
         }
 
         public static Bitmap BackgroundAsset       { get; } = LoadAsset("background.png");

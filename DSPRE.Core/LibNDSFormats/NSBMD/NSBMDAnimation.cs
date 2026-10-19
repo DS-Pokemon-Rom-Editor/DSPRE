@@ -10,13 +10,13 @@ namespace LibNDSFormats.NSBMD
     /// </summary>
     public class NSBMDAnimation
     {
-	    public int dataoffset = 0;
-        public int flag = 0;
-        public float[] m_trans = new float[3];
-        public float a, b = 0;
-        public float[] m_scale = new float[3];
-        public int frame = 0;
-        public int framelen = 0;
-        public List<Int16> animdata = new List<short>();
+        public int Dataoffset = 0;
+        public int Flag = 0;
+        public float[] MTrans = new float[3];
+        public float A, B = 0;
+        public float[] MScale = new float[3];
+        public int Frame = 0;
+        public int Framelen = 0;
+        public List<Int16> Animdata = new List<short>();
     }
 }

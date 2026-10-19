@@ -56,18 +56,18 @@ namespace DSPRE.ROMFiles
 
         public static string WhyNot()
         {
-            if (!gameDirs.ContainsKey(DirNames.berryData)) return "This game has no known berry data.";
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.berryData });
+            if (!GameDirs.ContainsKey(DirNames.BerryData)) return "This game has no known berry data.";
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.BerryData });
             for (int b = 0; b < Count; b++)
                 if (!File.Exists(PathOf(b))) return $"Berry {b} is missing from this project.";
             return null;
         }
 
-        private static string PathOf(int berry) => Path.Combine(gameDirs[DirNames.berryData].unpackedDir, berry.ToString("D4"));
+        private static string PathOf(int berry) => Path.Combine(GameDirs[DirNames.BerryData].unpackedDir, berry.ToString("D4"));
 
         public static List<BerryData> LoadAll()
         {
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.berryData });
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.BerryData });
             List<BerryData> all = new List<BerryData>();
             for (int b = 0; b < Count; b++) all.Add(new BerryData(File.ReadAllBytes(PathOf(b))));
             return all;
@@ -81,10 +81,10 @@ namespace DSPRE.ROMFiles
             byte[] data = File.ReadAllBytes(path);
             if (data.Length < Size) data = new byte[Size];
             ToBytes().CopyTo(data, 0);
-            ArchiveMembers.Put(DirNames.berryData, berry, data);
+            ArchiveMembers.Put(DirNames.BerryData, berry, data);
         }
 
         /// <summary>HeartGold and SoulSilver read only growth time, soil drying and yield.</summary>
-        public static bool GameReadsLooks => gameFamily != GameFamilies.HGSS;
+        public static bool GameReadsLooks => GameFamily != GameFamilies.HGSS;
     }
 }

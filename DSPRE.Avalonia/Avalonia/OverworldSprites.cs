@@ -17,7 +17,7 @@ namespace DSPRE.Avalonia
     {
         public sealed class SpritePixels { public byte[] Rgba; public int Width, Height; }
 
-        private static readonly Dictionary<(ushort, ushort), SpritePixels> _cache = new Dictionary<(ushort, ushort), SpritePixels>();
+        private static readonly Dictionary<(ushort, ushort), SpritePixels> Cache = new Dictionary<(ushort, ushort), SpritePixels>();
 
         /// <summary>
         /// One tile is sixteen pixels of overworld art, so a 32 by 32 sprite stands two tiles tall.
@@ -38,27 +38,27 @@ namespace DSPRE.Avalonia
         public static int FrameCount(ushort eventEntryID)
         {
             eventEntryID = (ushort)VariableOverworldStandIn(eventEntryID);
-            if (_frameCounts.TryGetValue(eventEntryID, out int n)) return n;
+            if (FrameCounts.TryGetValue(eventEntryID, out int n)) return n;
             n = 0;
             try
             {
                 if (OverworldTable == null) { SetOWtable(); ReadOWTable(); }
                 if (OverworldTable != null && OverworldTable.TryGetValue(eventEntryID, out (uint spriteID, ushort properties) r) && r.spriteID != 0x3D3D)
                 {
-                    n = Tex0Block.ReadBtx0(File.ReadAllBytes(Path.Combine(gameDirs[DirNames.OWSprites].unpackedDir, r.spriteID.ToString("D4"))), out _)?.Textures.Count ?? 0;
+                    n = Tex0Block.ReadBtx0(File.ReadAllBytes(Path.Combine(GameDirs[DirNames.OWSprites].unpackedDir, r.spriteID.ToString("D4"))), out _)?.Textures.Count ?? 0;
                 }
             }
-            catch { }
-            if (n > 0) _frameCounts[eventEntryID] = n;
+            catch { }   // a sprite that can't be read reports no frames and is tried again next time
+            if (n > 0) FrameCounts[eventEntryID] = n;
             return n;
         }
 
-        private static readonly Dictionary<ushort, int> _frameCounts = new Dictionary<ushort, int>();
+        private static readonly Dictionary<ushort, int> FrameCounts = new Dictionary<ushort, int>();
 
         private static SpritePixels GetCached(ushort eventEntryID, ushort cacheDir, ushort orientation, int picture)
         {
             (ushort eventEntryID, ushort cacheDir) key = (eventEntryID, cacheDir);
-            if (_cache.TryGetValue(key, out SpritePixels cached)) return cached;
+            if (Cache.TryGetValue(key, out SpritePixels cached)) return cached;
             SpritePixels result = null;
             try
             {
@@ -68,11 +68,11 @@ namespace DSPRE.Avalonia
             catch (Exception ex) { AppLogger.Error("OW sprite load failed: " + ex.Message); }
             // Only keep what actually loaded. A sprite asked for before the ROM's folders are ready
             // comes back empty, and remembering that would leave the person invisible from then on.
-            if (result != null) _cache[key] = result;
+            if (result != null) Cache[key] = result;
             return result;
         }
 
-        public static void ClearCache() { _cache.Clear(); _frameCounts.Clear(); _outlined.Clear(); }
+        public static void ClearCache() { Cache.Clear(); FrameCounts.Clear(); _outlined.Clear(); }
 
         private static readonly Dictionary<SpritePixels, SpritePixels> _outlined = new Dictionary<SpritePixels, SpritePixels>();
 
@@ -114,10 +114,10 @@ namespace DSPRE.Avalonia
         private static DSPRE.RawImage LoadRaw(ushort eventEntryID, ushort orientation, int picture)
         {
             // The lookup tables are populated during ROM/event setup; make sure they exist.
-            if (ow3DSpriteDict == null) try { Set3DOverworldsDict(); } catch { }
-            if (OverworldTable == null) try { SetOWtable(); ReadOWTable(); } catch { }
+            if (Ow3DSpriteDict == null) try { Set3DOverworldsDict(); } catch (Exception ex) { AppLogger.Warn("Overworld 3D sprite table: " + ex.Message); }
+            if (OverworldTable == null) try { SetOWtable(); ReadOWTable(); } catch (Exception ex) { AppLogger.Warn("Overworld table: " + ex.Message); }
 
-            if (ow3DSpriteDict != null && ow3DSpriteDict.TryGetValue(eventEntryID, out string imageName))
+            if (Ow3DSpriteDict != null && Ow3DSpriteDict.TryGetValue(eventEntryID, out string imageName))
                 return ResourceImages.GetRaw(imageName);
 
             if (OverworldTable == null || !OverworldTable.TryGetValue(eventEntryID, out (uint spriteID, ushort properties) result))
@@ -125,7 +125,7 @@ namespace DSPRE.Avalonia
 
             try
             {
-                byte[] bank = File.ReadAllBytes(Path.Combine(gameDirs[DirNames.OWSprites].unpackedDir, result.spriteID.ToString("D4")));
+                byte[] bank = File.ReadAllBytes(Path.Combine(GameDirs[DirNames.OWSprites].unpackedDir, result.spriteID.ToString("D4")));
                 Tex0Block block = Tex0Block.ReadBtx0(bank, out _);
                 if (block == null) return ResourceImages.GetRaw("overworldUnreadable");
                 int n = block.Textures.Count;
@@ -138,8 +138,9 @@ namespace DSPRE.Avalonia
                 if (at < 0 || at >= n) at = 0;
                 return Draw(bank, block, NumericOrder(block)[at], 0);
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.WarnOnce("OverworldSprites.LoadRaw", ex);
                 return ResourceImages.GetRaw("overworldUnreadable");
             }
         }
@@ -175,10 +176,10 @@ namespace DSPRE.Avalonia
             }
             NSBMDMaterial material = new NSBMDMaterial
             {
-                format = t.Format, width = t.Width, height = t.Height, color0 = t.Color0 ? 1 : 0,
-                texdata = btx0.AsSpan(t.DataAt, t.DataSize).ToArray(),
-                spdata = t.Format == 5 ? btx0.AsSpan(t.IndexAt, t.IndexSize).ToArray() : null,
-                paldata = colours,
+                Format = t.Format, Width = t.Width, Height = t.Height, Color0 = t.Color0 ? 1 : 0,
+                Texdata = btx0.AsSpan(t.DataAt, t.DataSize).ToArray(),
+                Spdata = t.Format == 5 ? btx0.AsSpan(t.IndexAt, t.IndexSize).ToArray() : null,
+                Paldata = colours,
             };
             DSPRE.Avalonia.Gl.NsbmdTextureData decoded = DSPRE.Avalonia.Gl.NsbmdTextureDecoder.Decode(material);
             if (decoded == null) return null;

@@ -40,10 +40,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty;
         public string UnsavedChangesDescription => "Egg moves";
-        void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommand();
+        void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommandAsync();
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
-            await SaveCommand();
+            await SaveCommandAsync();
             return !HasUnsavedChanges;
         }
         public void DiscardChanges()
@@ -76,7 +76,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
 
         private byte[] TakeState() => DSPRE.Avalonia.UndoJson.Take(
-            _eggMoveData.Select(en => new[] { en.speciesID }.Concat(en.moveIDs.Select(m => (int)m)).ToArray()).ToArray());
+            _eggMoveData.Select(en => new[] { en.SpeciesID }.Concat(en.MoveIDs.Select(m => (int)m)).ToArray()).ToArray());
 
         private void ApplyState(byte[] state)
         {
@@ -197,14 +197,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public string MoveIdText { get => _moveIdText; private set => Set(ref _moveIdText, value); }
 
         // ---- Button enables ----
-        public bool CanAddMon     => CbMonIndex >= 0 && !_eggMoveData.Any(e => e.speciesID == CbMonIndex);
+        public bool CanAddMon     => CbMonIndex >= 0 && !_eggMoveData.Any(e => e.SpeciesID == CbMonIndex);
         public bool CanReplaceMon => CanAddMon && _selectedMonIndex >= 0;
         public bool CanDeleteMon  => _selectedMonIndex >= 0 && _selectedMonIndex < _eggMoveData.Count;
         public bool CanAddMove    => CbMoveIndex >= 0 && _selectedMonIndex >= 0 && _selectedMonIndex < _eggMoveData.Count
-                                     && !_eggMoveData[_selectedMonIndex].moveIDs.Contains((ushort)CbMoveIndex);
+                                     && !_eggMoveData[_selectedMonIndex].MoveIDs.Contains((ushort)CbMoveIndex);
         public bool CanReplaceMove => CanAddMove && _selectedMoveIndex >= 0;
         public bool CanDeleteMove  => _selectedMonIndex >= 0 && _selectedMoveIndex >= 0
-                                      && _selectedMoveIndex < _eggMoveData[_selectedMonIndex].moveIDs.Count;
+                                      && _selectedMoveIndex < _eggMoveData[_selectedMonIndex].MoveIDs.Count;
 
         // ---- Search ----
         private string _searchText = string.Empty;
@@ -273,12 +273,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Commands (called from code-behind)
         // ----------------------------------------------------------------
 
-        public async Task SaveCommand()
+        public async Task SaveCommandAsync()
         {
             int used = UsedSize;
             if (!_useSpecialFormat && used > _maxTableSize)
             {
-                await DialogHelper.ShowError(
+                await DialogHelper.ShowErrorAsync(
                     $"Nothing was saved: the egg move table uses {used} of {_maxTableSize} bytes. Remove some moves or Pokémon first.",
                     "Egg move editor error");
                 return;
@@ -286,10 +286,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             foreach (EggMoveEntry entry in _eggMoveData)
             {
-                if (entry.moveIDs.Count > _maxEggMoves)
+                if (entry.MoveIDs.Count > _maxEggMoves)
                 {
-                    string monName = entry.speciesID < _monNames.Length ? _monNames[entry.speciesID] : $"SPECIES_{entry.speciesID}";
-                    await DialogHelper.ShowInfo(
+                    string monName = entry.SpeciesID < _monNames.Length ? _monNames[entry.SpeciesID] : $"SPECIES_{entry.SpeciesID}";
+                    await DialogHelper.ShowInfoAsync(
                         $"{monName} has more than the maximum allowed Egg Moves ({_maxEggMoves}). This may cause issues in-game.",
                         "Warning");
                 }
@@ -298,7 +298,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string error = SaveEggMoveData();
             if (error != null)
             {
-                await DialogHelper.ShowError("The egg moves were not saved:\n" + error, "Egg move editor error");
+                await DialogHelper.ShowErrorAsync("The egg moves were not saved:\n" + error, "Egg move editor error");
                 return;
             }
             SaveNotice.Saved(UnsavedChangesDescription);
@@ -320,7 +320,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (CbMonIndex < 0 || _selectedMonIndex < 0) return;
             EggMoveEntry entry = _eggMoveData[_selectedMonIndex];
-            entry.speciesID = CbMonIndex;
+            entry.SpeciesID = CbMonIndex;
             _eggMoveData[_selectedMonIndex] = entry;
             MonList[_selectedMonIndex] = MonLabel(CbMonIndex);
             SetDirty(true);
@@ -341,10 +341,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (CbMoveIndex < 0 || _selectedMonIndex < 0) return;
             EggMoveEntry entry = _eggMoveData[_selectedMonIndex];
-            entry.moveIDs.Add((ushort)CbMoveIndex);
+            entry.MoveIDs.Add((ushort)CbMoveIndex);
             _eggMoveData[_selectedMonIndex] = entry;
             MoveList.Add(Row((ushort)CbMoveIndex));
-            SelectedMoveIndex = entry.moveIDs.Count - 1;
+            SelectedMoveIndex = entry.MoveIDs.Count - 1;
             UpdateMoveCountLabel();
             UpdateListSizeLabel();
             SetDirty(true);
@@ -354,7 +354,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (CbMoveIndex < 0 || _selectedMonIndex < 0 || _selectedMoveIndex < 0) return;
             EggMoveEntry entry = _eggMoveData[_selectedMonIndex];
-            entry.moveIDs[_selectedMoveIndex] = (ushort)CbMoveIndex;
+            entry.MoveIDs[_selectedMoveIndex] = (ushort)CbMoveIndex;
             _eggMoveData[_selectedMonIndex] = entry;
             MoveList[_selectedMoveIndex] = Row((ushort)CbMoveIndex);
             SetDirty(true);
@@ -364,60 +364,60 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_selectedMonIndex < 0 || _selectedMoveIndex < 0) return;
             EggMoveEntry entry = _eggMoveData[_selectedMonIndex];
-            entry.moveIDs.RemoveAt(_selectedMoveIndex);
+            entry.MoveIDs.RemoveAt(_selectedMoveIndex);
             _eggMoveData[_selectedMonIndex] = entry;
             MoveList.RemoveAt(_selectedMoveIndex);
-            SelectedMoveIndex = Math.Min(_selectedMoveIndex, entry.moveIDs.Count - 1);
+            SelectedMoveIndex = Math.Min(_selectedMoveIndex, entry.MoveIDs.Count - 1);
             UpdateMoveCountLabel();
             UpdateListSizeLabel();
             SetDirty(true);
         }
 
-        public async Task BulkReplaceCommand()
+        public async Task BulkReplaceCommandAsync()
         {
             if (CbReplaceeIndex < 0 || CbReplacerIndex < 0)
             {
-                await DialogHelper.ShowError("Please select valid moves for the bulk replace.", "Egg move editor error");
+                await DialogHelper.ShowErrorAsync("Please select valid moves for the bulk replace.", "Egg move editor error");
                 return;
             }
             ushort from = (ushort)CbReplaceeIndex, to = (ushort)CbReplacerIndex;
             int count = 0; List<string> affected = new List<string>();
             foreach (EggMoveEntry entry in _eggMoveData)
             {
-                for (int i = 0; i < entry.moveIDs.Count; i++)
+                for (int i = 0; i < entry.MoveIDs.Count; i++)
                 {
-                    if (entry.moveIDs[i] != from) continue;
-                    entry.moveIDs[i] = to; count++;
-                    affected.Add(entry.speciesID < _monNames.Length ? _monNames[entry.speciesID] : $"SPECIES_{entry.speciesID}");
+                    if (entry.MoveIDs[i] != from) continue;
+                    entry.MoveIDs[i] = to; count++;
+                    affected.Add(entry.SpeciesID < _monNames.Length ? _monNames[entry.SpeciesID] : $"SPECIES_{entry.SpeciesID}");
                 }
             }
             if (count > 0)
             {
                 RefreshMoveList(_selectedMonIndex);
                 SetDirty(true);
-                await DialogHelper.ShowInfo($"Replaced {count} occurrence(s) of {_moveNames[from]} with {_moveNames[to]}.\nAffected: {string.Join(", ", affected)}", "Bulk replace");
+                await DialogHelper.ShowInfoAsync($"Replaced {count} occurrence(s) of {_moveNames[from]} with {_moveNames[to]}.\nAffected: {string.Join(", ", affected)}", "Bulk replace");
             }
             else
-                await DialogHelper.ShowInfo($"No occurrences of {_moveNames[from]} were found.", "Bulk replace");
+                await DialogHelper.ShowInfoAsync($"No occurrences of {_moveNames[from]} were found.", "Bulk replace");
         }
 
-        public async Task BulkDeleteCommand()
+        public async Task BulkDeleteCommandAsync()
         {
             if (CbDeleteAllIndex < 0)
             {
-                await DialogHelper.ShowError("Please select a valid move to delete.", "Egg move editor error");
+                await DialogHelper.ShowErrorAsync("Please select a valid move to delete.", "Egg move editor error");
                 return;
             }
             ushort del = (ushort)CbDeleteAllIndex;
             int count = 0; List<string> affected = new List<string>();
             foreach (EggMoveEntry entry in _eggMoveData)
             {
-                int before = entry.moveIDs.Count;
-                entry.moveIDs.RemoveAll(m => m == del);
-                int diff = before - entry.moveIDs.Count;
+                int before = entry.MoveIDs.Count;
+                entry.MoveIDs.RemoveAll(m => m == del);
+                int diff = before - entry.MoveIDs.Count;
                 if (diff <= 0) continue;
                 count += diff;
-                affected.Add(entry.speciesID < _monNames.Length ? _monNames[entry.speciesID] : $"SPECIES_{entry.speciesID}");
+                affected.Add(entry.SpeciesID < _monNames.Length ? _monNames[entry.SpeciesID] : $"SPECIES_{entry.SpeciesID}");
             }
             if (count > 0)
             {
@@ -425,10 +425,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 UpdateMoveCountLabel();
                 UpdateListSizeLabel();
                 SetDirty(true);
-                await DialogHelper.ShowInfo($"Deleted {count} occurrence(s) of {_moveNames[del]}.\nAffected: {string.Join(", ", affected)}", "Bulk delete");
+                await DialogHelper.ShowInfoAsync($"Deleted {count} occurrence(s) of {_moveNames[del]}.\nAffected: {string.Join(", ", affected)}", "Bulk delete");
             }
             else
-                await DialogHelper.ShowInfo($"No occurrences of {_moveNames[del]} were found.", "Bulk delete");
+                await DialogHelper.ShowInfoAsync($"No occurrences of {_moveNames[del]} were found.", "Bulk delete");
         }
 
         public void SearchMonCommand()
@@ -438,7 +438,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string lower = SearchText.Trim().ToLower();
             foreach (EggMoveEntry entry in _eggMoveData)
             {
-                string name = entry.speciesID < _monNames.Length ? _monNames[entry.speciesID] : $"SPECIES_{entry.speciesID}";
+                string name = entry.SpeciesID < _monNames.Length ? _monNames[entry.SpeciesID] : $"SPECIES_{entry.SpeciesID}";
                 if (name.ToLower().Contains(lower)) SearchResults.Add(name);
             }
         }
@@ -453,19 +453,19 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
         }
 
-        public async Task ExportCommand(Window owner)
+        public async Task ExportCommandAsync(Window owner)
         {
-            string path = await DialogHelper.SaveFile(owner, "Export egg move data",
+            string path = await DialogHelper.SaveFileAsync(owner, "Export egg move data",
                 new[] { DialogHelper.CsvFilter, DialogHelper.AllFilter }, "egg_moves.csv");
             if (path == null) return;
             bool ok = EggMoveCsv.Export(_eggMoveData, path, _monNames, _moveNames);
             if (ok) SaveNotice.Exported(path);
-            else await DialogHelper.ShowError("The egg moves could not be exported. The log has the reason.", "Egg move editor error");
+            else await DialogHelper.ShowErrorAsync("The egg moves could not be exported. The log has the reason.", "Egg move editor error");
         }
 
-        public async Task ImportCommand(Window owner)
+        public async Task ImportCommandAsync(Window owner)
         {
-            string path = await DialogHelper.OpenFile(owner, "Import egg move data",
+            string path = await DialogHelper.OpenFileAsync(owner, "Import egg move data",
                 new[] { DialogHelper.CsvFilter, DialogHelper.AllFilter });
             if (path == null) return;
             EggMoveTableCsv importer = new EggMoveTableCsv(_monNames, _moveNames, _eggMoveData);
@@ -523,7 +523,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 RefreshButtonEnables();
                 return;
             }
-            CbMonIndex = _eggMoveData[idx].speciesID;
+            CbMonIndex = _eggMoveData[idx].SpeciesID;
             RefreshMoveList(idx);
             UpdateMonStatus();
             UpdateMoveStatus();
@@ -534,12 +534,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void OnMoveSelected(int idx)
         {
-            if (_selectedMonIndex < 0 || idx < 0 || idx >= _eggMoveData[_selectedMonIndex].moveIDs.Count)
+            if (_selectedMonIndex < 0 || idx < 0 || idx >= _eggMoveData[_selectedMonIndex].MoveIDs.Count)
             {
                 RefreshButtonEnables();
                 return;
             }
-            CbMoveIndex = _eggMoveData[_selectedMonIndex].moveIDs[idx];
+            CbMoveIndex = _eggMoveData[_selectedMonIndex].MoveIDs[idx];
             UpdateMoveStatus();
             MoveIdText = $"Move Index: {idx}";
             RefreshButtonEnables();
@@ -548,14 +548,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void RefreshMonList()
         {
             MonList.Clear();
-            foreach (EggMoveEntry e in _eggMoveData) MonList.Add(MonLabel(e.speciesID));
+            foreach (EggMoveEntry e in _eggMoveData) MonList.Add(MonLabel(e.SpeciesID));
         }
 
         private void RefreshMoveList(int monIdx)
         {
             MoveList.Clear();
             if (monIdx < 0 || monIdx >= _eggMoveData.Count) return;
-            foreach (ushort id in _eggMoveData[monIdx].moveIDs) MoveList.Add(Row(id));
+            foreach (ushort id in _eggMoveData[monIdx].MoveIDs) MoveList.Add(Row(id));
         }
 
         private string MonLabel(int id)  => id >= 0 && id < _monNames.Length  ? _monNames[id]  : $"SPECIES_{id}";
@@ -567,7 +567,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             OnPropertyChanged(nameof(CanAddMon));
             OnPropertyChanged(nameof(CanReplaceMon));
             MonStatusText = CbMonIndex < 0 ? "Pick a Pokémon below to add, replace or delete."
-                : _eggMoveData.Any(e => e.speciesID == CbMonIndex) ? "This Pokémon already has egg moves."
+                : _eggMoveData.Any(e => e.SpeciesID == CbMonIndex) ? "This Pokémon already has egg moves."
                 : "This Pokémon can be added.";
         }
 
@@ -578,7 +578,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (CbMoveIndex < 0) { MoveStatusText = "Pick a move below to add, replace or delete."; return; }
             if (_selectedMonIndex < 0) { MoveStatusText = "No Pokémon selected."; return; }
             ushort id = (ushort)CbMoveIndex;
-            MoveStatusText = _eggMoveData[_selectedMonIndex].moveIDs.Contains(id)
+            MoveStatusText = _eggMoveData[_selectedMonIndex].MoveIDs.Contains(id)
                 ? "Egg move already in list." : "Egg move can be added.";
         }
 
@@ -592,7 +592,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 MoveCountBrush = Brushes.Transparent;
                 return;
             }
-            int cnt = _eggMoveData[_selectedMonIndex].moveIDs.Count;
+            int cnt = _eggMoveData[_selectedMonIndex].MoveIDs.Count;
             MoveCountText = $"Move Count: {cnt}";
             MoveCountBrush = cnt > _maxEggMoves ? StatusBrushes.Bad : cnt == _maxEggMoves ? StatusBrushes.Warn : StatusBrushes.None;
         }

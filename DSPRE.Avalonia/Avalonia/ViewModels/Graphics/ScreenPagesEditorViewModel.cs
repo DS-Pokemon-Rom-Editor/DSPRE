@@ -78,7 +78,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             if (_fonts.TryGetValue(entry, out FieldFont known)) return known;
             FieldFont font = null;
-            try { font = FieldFont.LoadFromArchive(entry); } catch { }
+            try { font = FieldFont.LoadFromArchive(entry); } catch (Exception ex) { AppLogger.Warn("Screen pages: field font: " + ex.Message); }
             _fonts[entry] = font;
             return font;
         }
@@ -361,7 +361,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             _composer?.Forget();
             _book.Forget();
-            try { GraphicAssets.Forget(); } catch { }
+            try { GraphicAssets.Forget(); } catch (Exception ex) { AppLogger.Warn("Screen pages: forgetting graphic assets: " + ex.Message); }
             Compose();
         }
 

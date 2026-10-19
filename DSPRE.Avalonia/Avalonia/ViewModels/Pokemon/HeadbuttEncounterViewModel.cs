@@ -30,10 +30,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         { Name = name; _e = e; Species = species; _changed = changed; }
         // Out-of-range values show clamped so the boxes never coerce, and are only replaced when the user picks another value.
         private const int MaxShownLevel = 100;
-        public int SpeciesIndex { get => _e.pokemonID < Species.Count ? _e.pokemonID : -1; set { if (value < 0 || value == SpeciesIndex) return; _e.pokemonID = (ushort)value; On(nameof(SpeciesIndex)); _changed(); } }
+        public int SpeciesIndex { get => _e.PokemonID < Species.Count ? _e.PokemonID : -1; set { if (value < 0 || value == SpeciesIndex) return; _e.PokemonID = (ushort)value; On(nameof(SpeciesIndex)); _changed(); } }
         internal void Reselect() => On(nameof(SpeciesIndex));
-        public decimal MinLevel { get => Math.Min((int)_e.minLevel, MaxShownLevel); set { if (value == MinLevel) return; _e.minLevel = (byte)value; On(nameof(MinLevel)); _changed(); } }
-        public decimal MaxLevel { get => Math.Min((int)_e.maxLevel, MaxShownLevel); set { if (value == MaxLevel) return; _e.maxLevel = (byte)value; On(nameof(MaxLevel)); _changed(); } }
+        public decimal MinLevel { get => Math.Min((int)_e.MinLevel, MaxShownLevel); set { if (value == MinLevel) return; _e.MinLevel = (byte)value; On(nameof(MinLevel)); _changed(); } }
+        public decimal MaxLevel { get => Math.Min((int)_e.MaxLevel, MaxShownLevel); set { if (value == MaxLevel) return; _e.MaxLevel = (byte)value; On(nameof(MaxLevel)); _changed(); } }
     }
 
     /// <summary>One tree's global (x,y) position within a tree group.</summary>
@@ -46,14 +46,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private readonly Action _changed;
         public HeadbuttTreeRow(string name, HeadbuttTree t, Action changed) { Name = name; _t = t; _changed = changed; }
         internal HeadbuttTree Tree => _t;
-        public decimal GlobalX { get => _t.globalX; set { if (_t.globalX == value) return; _t.globalX = (ushort)value; OnAll(); } }
-        public decimal GlobalY { get => _t.globalY; set { if (_t.globalY == value) return; _t.globalY = (ushort)value; OnAll(); } }
+        public decimal GlobalX { get => _t.GlobalX; set { if (_t.GlobalX == value) return; _t.GlobalX = (ushort)value; OnAll(); } }
+        public decimal GlobalY { get => _t.GlobalY; set { if (_t.GlobalY == value) return; _t.GlobalY = (ushort)value; OnAll(); } }
         // Matrix-cell + in-map-tile breakdown (globalX = matrixX*32 + mapX): the same coordinates the
         // 3D map view and the rest of the editor use, so placement is human-readable.
-        public decimal MatrixX { get => _t.matrixX; set { if (_t.matrixX == value) return; _t.matrixX = (ushort)value; OnAll(); } }
-        public decimal MatrixY { get => _t.matrixY; set { if (_t.matrixY == value) return; _t.matrixY = (ushort)value; OnAll(); } }
-        public decimal MapX { get => _t.mapX; set { if (_t.mapX == value) return; _t.mapX = (ushort)value; OnAll(); } }
-        public decimal MapY { get => _t.mapY; set { if (_t.mapY == value) return; _t.mapY = (ushort)value; OnAll(); } }
+        public decimal MatrixX { get => _t.MatrixX; set { if (_t.MatrixX == value) return; _t.MatrixX = (ushort)value; OnAll(); } }
+        public decimal MatrixY { get => _t.MatrixY; set { if (_t.MatrixY == value) return; _t.MatrixY = (ushort)value; OnAll(); } }
+        public decimal MapX { get => _t.MapX; set { if (_t.MapX == value) return; _t.MapX = (ushort)value; OnAll(); } }
+        public decimal MapY { get => _t.MapY; set { if (_t.MapY == value) return; _t.MapY = (ushort)value; OnAll(); } }
         public void RaiseAll() => OnAll();
         private void OnAll()
         {
@@ -180,11 +180,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void BuildEncounterRows()
         {
             NormalEncounters.Clear();
-            for (int i = 0; i < _file.normalEncounters.Count; i++)
-                NormalEncounters.Add(new HeadbuttEncRow($"Normal {i + 1}", _file.normalEncounters[i], Species, Dirty));
+            for (int i = 0; i < _file.NormalEncounters.Count; i++)
+                NormalEncounters.Add(new HeadbuttEncRow($"Normal {i + 1}", _file.NormalEncounters[i], Species, Dirty));
             SpecialEncounters.Clear();
-            for (int i = 0; i < _file.specialEncounters.Count; i++)
-                SpecialEncounters.Add(new HeadbuttEncRow($"Special {i + 1}", _file.specialEncounters[i], Species, Dirty));
+            for (int i = 0; i < _file.SpecialEncounters.Count; i++)
+                SpecialEncounters.Add(new HeadbuttEncRow($"Special {i + 1}", _file.SpecialEncounters[i], Species, Dirty));
         }
         private void OnTreeChanged() { Dirty(); RefreshTreeMarkers(); }
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
@@ -200,16 +200,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _owner = owner;
             try
             {
-                if (gameFamily != GameFamilies.HGSS)
+                if (GameFamily != GameFamilies.HGSS)
                 {
                     StatusText = "Headbutt encounters are HeartGold/SoulSilver only.";
                     return;
                 }
                 IsAvailable = true;
                 DSUtils.TryUnpackNarcs(new List<DirNames> {
-                    DirNames.headbutt, DirNames.maps, DirNames.matrices, DirNames.areaData,
-                    DirNames.dynamicHeaders, DirNames.exteriorBuildingModels, DirNames.interiorBuildingModels,
-                    DirNames.buildingTextures, DirNames.mapTextures });
+                    DirNames.Headbutt, DirNames.Maps, DirNames.Matrices, DirNames.AreaData,
+                    DirNames.DynamicHeaders, DirNames.ExteriorBuildingModels, DirNames.InteriorBuildingModels,
+                    DirNames.BuildingTextures, DirNames.MapTextures });
                 foreach (string n in GetPokemonNames()) Species.Add(n);
                 int count = Filesystem.GetHeadbuttCount();
                 for (int i = 0; i < count; i++) FileNames.Add("Headbutt File " + i);
@@ -219,7 +219,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowError($"Failed to set up Headbutt Editor:\n{ex.Message}", "Headbutt editor error");
+                await DialogHelper.ShowErrorAsync($"Failed to set up Headbutt Editor:\n{ex.Message}", "Headbutt editor error");
             }
         }
 
@@ -229,9 +229,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (HgEngineProject.IsActive) return;
             int headers = GetHeaderCount();
             int have = Filesystem.GetHeadbuttCount();
-            if (have >= headers) { await DialogHelper.ShowInfo($"Every header up to {headers - 1} has a headbutt file.", "Headbutt editor"); return; }
+            if (have >= headers) { await DialogHelper.ShowInfoAsync($"Every header up to {headers - 1} has a headbutt file.", "Headbutt editor"); return; }
             string which = headers - have == 1 ? $"an empty headbutt file {have} for header {have}" : $"empty headbutt files {have} to {headers - 1}, one for each header without one";
-            if (!await DialogHelper.AskYesNo($"Add {which}?", "Headbutt editor")) return;
+            if (!await DialogHelper.AskYesNoAsync($"Add {which}?", "Headbutt editor")) return;
             try
             {
                 int made = NewProjectFiles.FillHeadbuttFiles(headers);
@@ -240,7 +240,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError("Couldn't add headbutt files:\n" + ex.Message, "Headbutt editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't add headbutt files:\n" + ex.Message, "Headbutt editor error");
             }
         }
 
@@ -254,9 +254,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     HeadbuttEncounterFile file;
                     if (HgEngineProject.IsActive) { if (!HgEngineHeadbutt.TryLoad(i, out file, out _)) continue; }
                     else file = new HeadbuttEncounterFile((ushort)i);
-                    if (file.normalTreeGroups.Count > 0 || file.specialTreeGroups.Count > 0) return i;
+                    if (file.NormalTreeGroups.Count > 0 || file.SpecialTreeGroups.Count > 0) return i;
                 }
-                catch (System.IO.IOException) { }
+                catch (System.IO.IOException) { }   // a file that can't be read is skipped
             }
             return 0;
         }
@@ -283,24 +283,24 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 RefreshGroups();
                 SetClean();
                 ResetUndo();
-                StatusText = $"Loaded headbutt file {index} ({_file.normalTreeGroups.Count} normal / {_file.specialTreeGroups.Count} special tree groups).";
+                StatusText = $"Loaded headbutt file {index} ({_file.NormalTreeGroups.Count} normal / {_file.SpecialTreeGroups.Count} special tree groups).";
                 OnPropertyChanged(nameof(UnsavedChangesDescription));
                 // Resolve + render the map ONCE per file, exactly like the event editor (full matrix when
                 // small, else the bounding box of all trees). Group selection only re-marks, never rebuilds.
                 ResolveMatrix();
                 DisplayMap();
-                if (_file.normalTreeGroups.Count > 0) SelectedNormalGroupIndex = 0;
-                else if (_file.specialTreeGroups.Count > 0) SelectedSpecialGroupIndex = 0;
+                if (_file.NormalTreeGroups.Count > 0) SelectedNormalGroupIndex = 0;
+                else if (_file.SpecialTreeGroups.Count > 0) SelectedSpecialGroupIndex = 0;
             }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Failed to load headbutt file {index}:\n{ex.Message}", "Headbutt editor error"); }
+            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Failed to load headbutt file {index}:\n{ex.Message}", "Headbutt editor error"); }
         }
 
         private void RefreshGroups()
         {
             NormalTreeGroups.Clear();
-            for (int i = 0; i < _file.normalTreeGroups.Count; i++) NormalTreeGroups.Add($"Group {i + 1}");
+            for (int i = 0; i < _file.NormalTreeGroups.Count; i++) NormalTreeGroups.Add($"Group {i + 1}");
             SpecialTreeGroups.Clear();
-            for (int i = 0; i < _file.specialTreeGroups.Count; i++) SpecialTreeGroups.Add($"Group {i + 1}");
+            for (int i = 0; i < _file.SpecialTreeGroups.Count; i++) SpecialTreeGroups.Add($"Group {i + 1}");
             SelectedGroupTrees.Clear();
         }
 
@@ -308,9 +308,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             SelectedGroupTrees.Clear();
             if (_file == null || _selGroup < 0) return;
-            BindingList<HeadbuttTreeGroup> groups = _specialGroupActive ? _file.specialTreeGroups : _file.normalTreeGroups;
+            BindingList<HeadbuttTreeGroup> groups = _specialGroupActive ? _file.SpecialTreeGroups : _file.NormalTreeGroups;
             if (_selGroup >= groups.Count) return;
-            List<HeadbuttTree> trees = groups[_selGroup].trees;
+            List<HeadbuttTree> trees = groups[_selGroup].Trees;
             // Only show USED tree slots; empty slots are the 65535/65535 sentinel and just look like
             // broken numbers. The slot index is kept in the name so it's traceable. Add/Remove tree
             // activates/clears a slot.
@@ -345,10 +345,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get
             {
                 if (_file == null || _selGroup < 0) return "";
-                BindingList<HeadbuttTreeGroup> groups = _specialGroupActive ? _file.specialTreeGroups : _file.normalTreeGroups;
+                BindingList<HeadbuttTreeGroup> groups = _specialGroupActive ? _file.SpecialTreeGroups : _file.NormalTreeGroups;
                 if (_selGroup >= groups.Count) return "";
-                int used = 0, total = groups[_selGroup].trees.Count;
-                foreach (HeadbuttTree t in groups[_selGroup].trees) if (!t.IsUnused) used++;
+                int used = 0, total = groups[_selGroup].Trees.Count;
+                foreach (HeadbuttTree t in groups[_selGroup].Trees) if (!t.IsUnused) used++;
                 return $"{used} of {total} trees";
             }
         }
@@ -356,7 +356,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private HeadbuttTreeGroup CurrentGroup()
         {
             if (_file == null || _selGroup < 0) return null;
-            BindingList<HeadbuttTreeGroup> groups = _specialGroupActive ? _file.specialTreeGroups : _file.normalTreeGroups;
+            BindingList<HeadbuttTreeGroup> groups = _specialGroupActive ? _file.SpecialTreeGroups : _file.NormalTreeGroups;
             return _selGroup < groups.Count ? groups[_selGroup] : null;
         }
 
@@ -364,7 +364,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void AddGroup(bool special)
         {
             if (_file == null) return;
-            BindingList<HeadbuttTreeGroup> groups = special ? _file.specialTreeGroups : _file.normalTreeGroups;
+            BindingList<HeadbuttTreeGroup> groups = special ? _file.SpecialTreeGroups : _file.NormalTreeGroups;
             groups.Add(new HeadbuttTreeGroup());
             Dirty();
             RefreshGroups();
@@ -375,7 +375,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void DuplicateGroup(bool special)
         {
             if (_file == null || _specialGroupActive != special || CurrentGroup() is not HeadbuttTreeGroup group) return;
-            BindingList<HeadbuttTreeGroup> groups = special ? _file.specialTreeGroups : _file.normalTreeGroups;
+            BindingList<HeadbuttTreeGroup> groups = special ? _file.SpecialTreeGroups : _file.NormalTreeGroups;
             groups.Add(new HeadbuttTreeGroup(group));
             Dirty();
             RefreshGroups();
@@ -392,12 +392,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task ExportAsync(Window owner)
         {
             if (_file == null || _selFile < 0) return;
-            string path = await DialogHelper.SaveFile(owner, "Export headbutt file", HeadbuttFiles, $"headbutt_{_selFile:D4}.bin");
+            string path = await DialogHelper.SaveFileAsync(owner, "Export headbutt file", HeadbuttFiles, $"headbutt_{_selFile:D4}.bin");
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _file.ToByteArray()); SaveNotice.Exported(path); }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Headbutt error");
+                await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Headbutt error");
             }
         }
 
@@ -405,13 +405,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task ImportAsync(Window owner)
         {
             if (_file == null || _selFile < 0) return;
-            string path = await DialogHelper.OpenFile(owner, "Import headbutt file", HeadbuttFiles);
+            string path = await DialogHelper.OpenFileAsync(owner, "Import headbutt file", HeadbuttFiles);
             if (path == null) return;
             HeadbuttEncounterFile read;
             try { read = new HeadbuttEncounterFile((ushort)_selFile, System.IO.File.ReadAllBytes(path)); }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is System.IO.EndOfStreamException || ex is ArgumentException)
             {
-                await DialogHelper.ShowError($"That file could not be read as a headbutt file:\n{ex.Message}", "Headbutt error");
+                await DialogHelper.ShowErrorAsync($"That file could not be read as a headbutt file:\n{ex.Message}", "Headbutt error");
                 return;
             }
             _file = read;
@@ -428,7 +428,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void RemoveGroup(bool special)
         {
             if (_file == null || _specialGroupActive != special || _selGroup < 0) return;
-            BindingList<HeadbuttTreeGroup> groups = special ? _file.specialTreeGroups : _file.normalTreeGroups;
+            BindingList<HeadbuttTreeGroup> groups = special ? _file.SpecialTreeGroups : _file.NormalTreeGroups;
             if (_selGroup >= groups.Count) return;
             int keep = Math.Min(_selGroup, groups.Count - 2);
             groups.RemoveAt(_selGroup);
@@ -445,11 +445,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             HeadbuttTreeGroup g = CurrentGroup();
             if (g == null) return;
             HeadbuttTree slot = null;
-            foreach (HeadbuttTree t in g.trees) if (t.IsUnused) { slot = t; break; }
+            foreach (HeadbuttTree t in g.Trees) if (t.IsUnused) { slot = t; break; }
             if (slot == null) { StatusText = "All tree slots in this group are in use."; return; }
             ushort gx = 0, gy = 0;
-            foreach (HeadbuttTree t in g.trees) if (!t.IsUnused) { gx = t.globalX; gy = t.globalY; break; }
-            slot.globalX = gx; slot.globalY = gy;
+            foreach (HeadbuttTree t in g.Trees) if (!t.IsUnused) { gx = t.GlobalX; gy = t.GlobalY; break; }
+            slot.GlobalX = gx; slot.GlobalY = gy;
             Dirty();
             ShowGroupTrees();
             SelectedTreeIndex = SelectedGroupTrees.Count - 1;
@@ -460,7 +460,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_selTree < 0 || _selTree >= SelectedGroupTrees.Count) return;
             HeadbuttTree t = SelectedGroupTrees[_selTree].Tree;
-            t.globalX = ushort.MaxValue; t.globalY = ushort.MaxValue;
+            t.GlobalX = ushort.MaxValue; t.GlobalY = ushort.MaxValue;
             Dirty();
             ShowGroupTrees();
         }
@@ -492,9 +492,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (hdr != null)
                 {
                     _headerId = hdr.ID;
-                    _matrixId = hdr.matrixID;
-                    _areaDataId = hdr.areaDataID;
-                    _matrix = new GameMatrix(hdr.matrixID);
+                    _matrixId = hdr.MatrixID;
+                    _areaDataId = hdr.AreaDataID;
+                    _matrix = new GameMatrix(hdr.MatrixID);
                 }
             }
             catch (Exception ex) { AppLogger.Error("Headbutt matrix resolve failed (file " + _selFile + "): " + ex.Message); }
@@ -518,7 +518,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     RefreshTreeMarkers();
                     return;
                 }
-                Model3D = MatrixSceneBuilder.Build(_matrix, _areaDataId, gameFamily, areaForMap: null, includeCells: include);
+                Model3D = MatrixSceneBuilder.Build(_matrix, _areaDataId, GameFamily, areaForMap: null, includeCells: include);
                 IReadOnlyList<string> headers = HeaderLabels.Friendly();
                 string place = _headerId < headers.Count ? headers[_headerId] : $"Header {_headerId}";
                 MapInfo = Model3D != null ? place : place + ": no map to show.";
@@ -536,25 +536,25 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_matrix == null) return set;
             // The catch-all header owns no place of its own, only the cells its trees stand on.
             if (_headerId != MapHeader.Everywhere)
-                for (int y = 0; y < _matrix.height; y++)
-                    for (int x = 0; x < _matrix.width; x++)
+                for (int y = 0; y < _matrix.Height; y++)
+                    for (int x = 0; x < _matrix.Width; x++)
                     {
-                        if (_matrix.maps[y, x] == GameMatrix.EMPTY) continue;
-                        if (_matrix.hasHeadersSection && _matrix.headers[y, x] != _headerId) continue;
+                        if (_matrix.Maps[y, x] == GameMatrix.EMPTY) continue;
+                        if (_matrix.HasHeadersSection && _matrix.Headers[y, x] != _headerId) continue;
                         set.Add((x, y));
                     }
             if (_file != null)
             {
                 void NoteTrees(HeadbuttTreeGroup g)
                 {
-                    foreach (HeadbuttTree t in g.trees)
+                    foreach (HeadbuttTree t in g.Trees)
                     {
-                        if (t.IsUnused || t.matrixX >= _matrix.width || t.matrixY >= _matrix.height) continue;
-                        if (_matrix.maps[t.matrixY, t.matrixX] != GameMatrix.EMPTY) set.Add((t.matrixX, t.matrixY));
+                        if (t.IsUnused || t.MatrixX >= _matrix.Width || t.MatrixY >= _matrix.Height) continue;
+                        if (_matrix.Maps[t.MatrixY, t.MatrixX] != GameMatrix.EMPTY) set.Add((t.MatrixX, t.MatrixY));
                     }
                 }
-                foreach (HeadbuttTreeGroup g in _file.normalTreeGroups) NoteTrees(g);
-                foreach (HeadbuttTreeGroup g in _file.specialTreeGroups) NoteTrees(g);
+                foreach (HeadbuttTreeGroup g in _file.NormalTreeGroups) NoteTrees(g);
+                foreach (HeadbuttTreeGroup g in _file.SpecialTreeGroups) NoteTrees(g);
             }
             return set;
         }
@@ -603,11 +603,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 for (int g = 0; g < groups.Count; g++)
                 {
                     TreeBox box = null;
-                    foreach (HeadbuttTree t in groups[g].trees)
+                    foreach (HeadbuttTree t in groups[g].Trees)
                     {
-                        if (t.IsUnused || !m.TryCellPlacement(t.matrixX, t.matrixY, out NsbmdRenderModel.CellPlacement p)) continue;
+                        if (t.IsUnused || !m.TryCellPlacement(t.MatrixX, t.MatrixY, out NsbmdRenderModel.CellPlacement p)) continue;
                         float tw = p.Width / MapTiles, th = p.Height / MapTiles;
-                        float x0 = p.OriginX + t.mapX * tw, z0 = p.OriginZ + t.mapY * th;
+                        float x0 = p.OriginX + t.MapX * tw, z0 = p.OriginZ + t.MapY * th;
                         float ground = m.SurfaceY(x0 + tw / 2, z0 + th / 2);
                         (float ax, float ay, float az) = m.ToNormalized(x0, ground, z0);
                         (float bx, float _, float bz) = m.ToNormalized(x0 + tw, ground, z0 + th);
@@ -622,8 +622,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     if (box != null) _treeBoxes.Add(box);
                 }
             }
-            Add(_file.normalTreeGroups, false);
-            Add(_file.specialTreeGroups, true);
+            Add(_file.NormalTreeGroups, false);
+            Add(_file.SpecialTreeGroups, true);
         }
 
         // Raised scene triangles grouped into connected pieces, built once per scene.
@@ -818,7 +818,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (species <= 0) return null;
             if (_iconCache.TryGetValue(species, out Bitmap icon)) return icon;
             try { icon = ImageConverter.ToAvaloniaBitmap(DSUtils.GetPokePicRaw(species, 32, 32)); }
-            catch { icon = null; }
+            catch (Exception ex) { AppLogger.WarnOnce("HeadbuttEncounterViewModel.IconOf", ex); icon = null; }
             return _iconCache[species] = icon;
         }
 
@@ -830,8 +830,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             for (int s = 0; s < HeadbuttRules.SlotsPerTable && first + s < slots.Count; s++)
             {
                 HeadbuttEncounter e = slots[first + s];
-                if (e.pokemonID == 0) continue;
-                (ushort pokemonID, byte minLevel, byte maxLevel) key = (e.pokemonID, e.minLevel, e.maxLevel);
+                if (e.PokemonID == 0) continue;
+                (ushort pokemonID, byte minLevel, byte maxLevel) key = (e.PokemonID, e.MinLevel, e.MaxLevel);
                 if (!chance.ContainsKey(key)) { chance[key] = 0; order.Add(key); }
                 chance[key] += (EncounterSlotOdds.CurrentPercents("Headbutt") ?? HeadbuttRules.SlotChance)[s];
             }
@@ -853,15 +853,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_file == null) return null;
             if (special)
             {
-                if (group < 0 || group >= _file.specialTreeGroups.Count) return null;
+                if (group < 0 || group >= _file.SpecialTreeGroups.Count) return null;
                 return new HoverCard
                 {
                     Title = $"Special tree {group}",
                     Rule = "Same for every trainer ID.",
-                    Tables = new List<HoverTable> { TableOf("Secret", _file.specialEncounters, 0) },
+                    Tables = new List<HoverTable> { TableOf("Secret", _file.SpecialEncounters, 0) },
                 };
             }
-            int count = _file.normalTreeGroups.Count;
+            int count = _file.NormalTreeGroups.Count;
             if (group < 0 || group >= count) return null;
             Dictionary<HeadbuttRules.Table, List<int>> byTable = new Dictionary<HeadbuttRules.Table, List<int>>();
             for (int digit = 0; digit <= 9; digit++)
@@ -876,17 +876,17 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (Ends(HeadbuttRules.Table.Rare) is string r) parts.Add($"Rare: ID key {r}");
             if (Ends(HeadbuttRules.Table.None) is string n) parts.Add($"Nothing: ID key {n}");
             List<HoverTable> tables = new List<HoverTable>();
-            if (byTable.ContainsKey(HeadbuttRules.Table.Common)) tables.Add(TableOf("Common", _file.normalEncounters, 0));
-            if (byTable.ContainsKey(HeadbuttRules.Table.Rare)) tables.Add(TableOf("Rare", _file.normalEncounters, HeadbuttRules.SlotsPerTable));
+            if (byTable.ContainsKey(HeadbuttRules.Table.Common)) tables.Add(TableOf("Common", _file.NormalEncounters, 0));
+            if (byTable.ContainsKey(HeadbuttRules.Table.Rare)) tables.Add(TableOf("Rare", _file.NormalEncounters, HeadbuttRules.SlotsPerTable));
             return new HoverCard { Title = $"Normal tree {group}", Rule = string.Join("\n", parts), Tables = tables };
         }
 
         private static bool TreeRaw(NsbmdRenderModel m, HeadbuttTree t, out float rx, out float rz)
         {
             rx = rz = 0f;
-            if (!m.TryCellPlacement(t.matrixX, t.matrixY, out NsbmdRenderModel.CellPlacement p)) return false;
-            rx = p.OriginX + (t.mapX + 0.5f) / MapTiles * p.Width;
-            rz = p.OriginZ + (t.mapY + 0.5f) / MapTiles * p.Height;
+            if (!m.TryCellPlacement(t.MatrixX, t.MatrixY, out NsbmdRenderModel.CellPlacement p)) return false;
+            rx = p.OriginX + (t.MapX + 0.5f) / MapTiles * p.Width;
+            rz = p.OriginZ + (t.MapY + 0.5f) / MapTiles * p.Height;
             return true;
         }
 
@@ -948,19 +948,19 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (t.IsUnused) return;
             if (dx != 0)
             {
-                int tile = t.mapX + dx, mat = t.matrixX;
+                int tile = t.MapX + dx, mat = t.MatrixX;
                 while (tile < 0) { mat--; tile += MapTiles; }
                 while (tile >= MapTiles) { mat++; tile -= MapTiles; }
                 if (mat < 0) { mat = 0; tile = 0; }
-                t.mapX = (ushort)tile; t.matrixX = (ushort)mat;
+                t.MapX = (ushort)tile; t.MatrixX = (ushort)mat;
             }
             if (dz != 0)
             {
-                int tile = t.mapY + dz, mat = t.matrixY;
+                int tile = t.MapY + dz, mat = t.MatrixY;
                 while (tile < 0) { mat--; tile += MapTiles; }
                 while (tile >= MapTiles) { mat++; tile -= MapTiles; }
                 if (mat < 0) { mat = 0; tile = 0; }
-                t.mapY = (ushort)tile; t.matrixY = (ushort)mat;
+                t.MapY = (ushort)tile; t.MatrixY = (ushort)mat;
             }
             SelectedGroupTrees[_selTree].RaiseAll();
         }
@@ -974,27 +974,27 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (m == null || axis == 1 || rawDelta == 0f || _selTree < 0 || _selTree >= SelectedGroupTrees.Count) return;
             HeadbuttTreeRow row = SelectedGroupTrees[_selTree];
             HeadbuttTree t = row.Tree;
-            if (t.IsUnused || !m.TryCellPlacement(t.matrixX, t.matrixY, out NsbmdRenderModel.CellPlacement p)) return;
+            if (t.IsUnused || !m.TryCellPlacement(t.MatrixX, t.MatrixY, out NsbmdRenderModel.CellPlacement p)) return;
             int step;
             if (axis == 0)
             {
                 float per = p.Width / MapTiles; if (per <= 0) return;
                 _dragAccumX += rawDelta / per; step = (int)_dragAccumX; if (step == 0) return; _dragAccumX -= step;
-                int tile = t.mapX + step, mat = t.matrixX;
+                int tile = t.MapX + step, mat = t.MatrixX;
                 while (tile < 0) { mat--; tile += MapTiles; }
                 while (tile >= MapTiles) { mat++; tile -= MapTiles; }
                 if (mat < 0) { mat = 0; tile = 0; }
-                t.mapX = (ushort)tile; t.matrixX = (ushort)mat;
+                t.MapX = (ushort)tile; t.MatrixX = (ushort)mat;
             }
             else
             {
                 float per = p.Height / MapTiles; if (per <= 0) return;
                 _dragAccumZ += rawDelta / per; step = (int)_dragAccumZ; if (step == 0) return; _dragAccumZ -= step;
-                int tile = t.mapY + step, mat = t.matrixY;
+                int tile = t.MapY + step, mat = t.MatrixY;
                 while (tile < 0) { mat--; tile += MapTiles; }
                 while (tile >= MapTiles) { mat++; tile -= MapTiles; }
                 if (mat < 0) { mat = 0; tile = 0; }
-                t.mapY = (ushort)tile; t.matrixY = (ushort)mat;
+                t.MapY = (ushort)tile; t.MatrixY = (ushort)mat;
             }
             row.RaiseAll();   // updates numeric fields + marks dirty + refreshes markers
         }
@@ -1008,7 +1008,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (_file.SaveToFile(_selFile)) MarkSaved(_selFile);
                 else StatusText = "Save failed (see log).";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Save failed:\n{ex.Message}", "Headbutt editor error"); }
+            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Save failed:\n{ex.Message}", "Headbutt editor error"); }
         }
 
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
@@ -1031,7 +1031,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             if (error == null) return;
             StatusText = "Save failed.";
-            await DialogHelper.ShowError($"Headbutt file {fileId} was not saved.\n{error}", "Headbutt editor error");
+            await DialogHelper.ShowErrorAsync($"Headbutt file {fileId} was not saved.\n{error}", "Headbutt editor error");
         }
 
         private void MarkSaved(int fileId)

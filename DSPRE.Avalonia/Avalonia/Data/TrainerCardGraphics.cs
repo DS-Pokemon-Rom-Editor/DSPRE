@@ -23,7 +23,7 @@ namespace DSPRE.Avalonia.Data
             return capacity;
         }
 
-        private readonly ScriptNarc _narc = new(DirNames.trainerCardGraphics);
+        private readonly ScriptNarc _narc = new(DirNames.TrainerCardGraphics);
         public bool Available => _narc.Available;
 
         public static string[] RankNames => TrainerCardRankNames;
@@ -95,11 +95,11 @@ namespace DSPRE.Avalonia.Data
         {
             List<int> slots = new List<int>();
             for (int i = 16; i < 64; i++) slots.Add(i);
-            if (gameFamily == GameFamilies.HGSS) for (int i = 96; i < 144; i++) slots.Add(i);
+            if (GameFamily == GameFamilies.HGSS) for (int i = 96; i < 144; i++) slots.Add(i);
             return slots.ToArray();
         }
 
-        private static int[] PoseRanks(int rankCount) => gameFamily == GameFamilies.HGSS
+        private static int[] PoseRanks(int rankCount) => GameFamily == GameFamilies.HGSS
             ? System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Range(0, rankCount)) : new[] { 0 };
 
         public string ImportCardFront(RawImage png, IReadOnlyCollection<int> ranks) => ImportCardDesign(png, front: true, ranks);

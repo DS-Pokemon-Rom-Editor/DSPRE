@@ -79,7 +79,7 @@ namespace DSPRE.HgEngine
         // Members in the copy DSPRE edits, else in the packed archive; -1 when neither can be read.
         private static int MemberCount(RomInfo.DirNames dir)
         {
-            if (RomInfo.gameDirs == null || !RomInfo.gameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) dirs)) return -1;
+            if (RomInfo.GameDirs == null || !RomInfo.GameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) dirs)) return -1;
             try
             {
                 if (System.IO.Directory.Exists(dirs.unpackedDir))

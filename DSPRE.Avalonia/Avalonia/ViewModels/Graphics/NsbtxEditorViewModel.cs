@@ -107,7 +107,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             set
             {
                 if (!Set(ref _textureIndex, value) || _suppress) return;
-                string name = value >= 0 && value < _textures.Count ? _textures[value].texname : "";
+                string name = value >= 0 && value < _textures.Count ? _textures[value].Texname : "";
                 MatchPalette(name);
                 RenderPreview();
             }
@@ -153,7 +153,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             };
         }
 
-        private DirNames Archive => _mapTextures ? DirNames.mapTextures : DirNames.buildingTextures;
+        private DirNames Archive => _mapTextures ? DirNames.MapTextures : DirNames.BuildingTextures;
         private int TexCount => _pending.Count(Archive);
         private string PackPath(int i) => ArchiveMembers.PathOf(Archive, i);
 
@@ -163,13 +163,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 // Adding or removing a building pack copies or drops its building list too, so that archive is read here.
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.mapTextures, DirNames.buildingTextures, DirNames.buildingConfigFiles });
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.MapTextures, DirNames.BuildingTextures, DirNames.BuildingConfigFiles });
                 ReloadPacks();
             }
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowError($"Couldn't open the texture editor:\n{ex.Message}", "Map & building textures error");
+                await DialogHelper.ShowErrorAsync($"Couldn't open the texture editor:\n{ex.Message}", "Map & building textures error");
             }
         }
 
@@ -219,12 +219,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
                 _suppress = true;
                 TextureNames.Clear(); PaletteNames.Clear();
-                foreach (NSBMDTexture t in _textures) TextureNames.Add(string.IsNullOrEmpty(t.texname) ? $"Texture {TextureNames.Count}" : t.texname);
-                foreach (NSBMDPalette p in _palettes) PaletteNames.Add(string.IsNullOrEmpty(p.palname) ? $"Palette {PaletteNames.Count}" : p.palname);
+                foreach (NSBMDTexture t in _textures) TextureNames.Add(string.IsNullOrEmpty(t.Texname) ? $"Texture {TextureNames.Count}" : t.Texname);
+                foreach (NSBMDPalette p in _palettes) PaletteNames.Add(string.IsNullOrEmpty(p.Palname) ? $"Palette {PaletteNames.Count}" : p.Palname);
                 _suppress = false;
 
                 _textureIndex = TextureNames.Count > 0 ? 0 : -1;
-                string texture = _textureIndex >= 0 ? _textures[_textureIndex].texname : "";
+                string texture = _textureIndex >= 0 ? _textures[_textureIndex].Texname : "";
                 _paletteIndex = -1;
                 MatchPalette(texture);
                 OnPropertyChanged(nameof(TextureIndex));
@@ -248,7 +248,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 IReadOnlyList<int> areas;
                 try { areas = BuildingModelTextureSets.AreasThatNeverReadSet(index); }
-                catch { areas = Array.Empty<int>(); }
+                catch (Exception ex) { AppLogger.WarnOnce("NsbtxEditorViewModel.WhyNoTextureSet", ex); areas = Array.Empty<int>(); }
                 if (areas.Count > 0)
                     return $"No building textures: no buildings in {(areas.Count == 1 ? "area " + areas[0] : "areas " + string.Join(", ", areas))}.";
                 return "No building textures.";
@@ -270,16 +270,16 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 NSBMDTexture tex = _textures[_textureIndex];
                 NSBMDPalette pal = _paletteIndex >= 0 && _paletteIndex < _palettes.Count
                     ? _palettes[_paletteIndex] : null;
-                if (tex.format != 7 && pal == null)
+                if (tex.Format != 7 && pal == null)
                 {
                     PreviewReason = "This indexed texture needs a palette, but this pack contains none.";
                     return;
                 }
                 NSBMDMaterial mat = new NSBMDMaterial
                 {
-                    format = tex.format, width = tex.width, height = tex.height,
-                    texdata = tex.texdata, spdata = tex.spdata, color0 = tex.color0,
-                    paldata = pal?.paldata,
+                    Format = tex.Format, Width = tex.Width, Height = tex.Height,
+                    Texdata = tex.Texdata, Spdata = tex.Spdata, Color0 = tex.Color0,
+                    Paldata = pal?.Paldata,
                 };
                 NsbmdTextureData decoded = NsbmdTextureDecoder.Decode(mat);
                 Preview = decoded != null ? ImageConverter.FromRgba(decoded.Rgba, decoded.Width, decoded.Height) : null;
@@ -300,8 +300,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         // A building pack's list entry follows its pack, so only the packs are named.
         public string UnsavedChangesDescription => DSPRE.Avalonia.Data.StagedArchive.Join("Texture packs", false, string.Join(", ", new[]
         {
-            DSPRE.Avalonia.Data.StagedArchive.Describe("map texture pack", "map texture packs", _pending.Pending(DirNames.mapTextures)),
-            DSPRE.Avalonia.Data.StagedArchive.Describe("building texture pack", "building texture packs", _pending.Pending(DirNames.buildingTextures)),
+            DSPRE.Avalonia.Data.StagedArchive.Describe("map texture pack", "map texture packs", _pending.Pending(DirNames.MapTextures)),
+            DSPRE.Avalonia.Data.StagedArchive.Describe("building texture pack", "building texture packs", _pending.Pending(DirNames.BuildingTextures)),
         }.Where(t => t.Length > 0)));
         public void SaveChanges()
         {
@@ -322,37 +322,37 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 int newId = PackNames.Count;
-                bool configs = !_mapTextures && gameDirs.ContainsKey(DirNames.buildingConfigFiles);
-                byte[] config = configs ? _pending.ReadMember(DirNames.buildingConfigFiles, 0) : null;
+                bool configs = !_mapTextures && GameDirs.ContainsKey(DirNames.BuildingConfigFiles);
+                byte[] config = configs ? _pending.ReadMember(DirNames.BuildingConfigFiles, 0) : null;
                 _pending.Change(step =>
                 {
                     step.Put(Archive, newId, _pending.ReadMember(Archive, 0));
-                    if (config != null) step.Put(DirNames.buildingConfigFiles, newId, config);
+                    if (config != null) step.Put(DirNames.BuildingConfigFiles, newId, config);
                 });
                 PackIndex = newId;
                 StatusText = $"Added texture pack {newId}.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't add pack:\n{ex.Message}", "Map & building textures error"); }
+            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't add pack:\n{ex.Message}", "Map & building textures error"); }
         }
 
         public async Task RemoveLastPackAsync()
         {
             if (PackNames.Count <= 1) { StatusText = "Can't remove the last pack."; return; }
             int last = PackNames.Count - 1;
-            if (!await DialogHelper.AskYesNo($"Delete the last texture pack ({last})?", "Delete texture pack?")) return;
+            if (!await DialogHelper.AskYesNoAsync($"Delete the last texture pack ({last})?", "Delete texture pack?")) return;
             try
             {
-                bool config = !_mapTextures && gameDirs.ContainsKey(DirNames.buildingConfigFiles)
-                              && _pending.ReadMember(DirNames.buildingConfigFiles, last) != null;
+                bool config = !_mapTextures && GameDirs.ContainsKey(DirNames.BuildingConfigFiles)
+                              && _pending.ReadMember(DirNames.BuildingConfigFiles, last) != null;
                 if (_packIndex == last) PackIndex = last - 1;
                 _pending.Change(step =>
                 {
                     step.Remove(Archive, last);
-                    if (config) step.Remove(DirNames.buildingConfigFiles, last);
+                    if (config) step.Remove(DirNames.BuildingConfigFiles, last);
                 });
                 StatusText = $"Removed texture pack {last}.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't remove pack:\n{ex.Message}", "Map & building textures error"); }
+            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't remove pack:\n{ex.Message}", "Map & building textures error"); }
         }
 
         // ── Import / export whole packs ─────────────────────────────────────────────────
@@ -369,45 +369,45 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_packIndex < 0) return;
             FilePickerFileType filter = new FilePickerFileType("NSBTX texture pack") { Patterns = new[] { "*.nsbtx", "*.bin" } };
             string suggested = $"Texture Pack {_packIndex}.nsbtx";
-            string path = await DialogHelper.SaveFile(_owner, "Export texture pack", new[] { filter }, suggested);
+            string path = await DialogHelper.SaveFileAsync(_owner, "Export texture pack", new[] { filter }, suggested);
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _pending.ReadMember(Archive, _packIndex)); SaveNotice.Exported(path); }
-            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Map & building textures error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Map & building textures error"); }
         }
 
         public async Task ImportAsync()
         {
             if (_packIndex < 0) return;
             FilePickerFileType filter = new FilePickerFileType("NSBTX texture pack") { Patterns = new[] { "*.nsbtx", "*.bin", "*.*" } };
-            string path = await DialogHelper.OpenFile(_owner, "Import texture pack", new[] { filter });
+            string path = await DialogHelper.OpenFileAsync(_owner, "Import texture pack", new[] { filter });
             if (path == null) return;
             try
             {
                 if (!IsTextureSet(File.ReadAllBytes(path)))
                 {
-                    await DialogHelper.ShowError("That file is not a texture set (BTX0).", "Import");
+                    await DialogHelper.ShowErrorAsync("That file is not a texture set (BTX0).", "Import");
                     return;
                 }
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"That file could not be read:\n{ex.Message}", "Import"); return; }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"That file could not be read:\n{ex.Message}", "Import"); return; }
 
             string question = $"Replace texture pack {_packIndex} with this file?";
             if (!_mapTextures)
             {
                 IReadOnlyList<int> unused;
                 try { unused = BuildingModelTextureSets.AreasThatNeverReadSet(_packIndex); }
-                catch { unused = Array.Empty<int>(); }
+                catch (Exception ex) { AppLogger.WarnOnce("NsbtxEditorViewModel.ImportAsync", ex); unused = Array.Empty<int>(); }
                 if (unused.Count > 0)
                     question += " The areas using it have no buildings, so the game will not read it.";
             }
-            if (!await DialogHelper.AskYesNo(question, "Import")) return;
+            if (!await DialogHelper.AskYesNoAsync(question, "Import")) return;
             try
             {
                 byte[] pack = File.ReadAllBytes(path);
                 _pending.Change(step => step.Put(Archive, _packIndex, pack));
                 SaveNotice.Imported($"texture pack {_packIndex}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Map & building textures error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Map & building textures error"); }
         }
     }
 }

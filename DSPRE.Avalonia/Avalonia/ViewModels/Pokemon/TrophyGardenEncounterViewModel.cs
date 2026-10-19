@@ -115,15 +115,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return;
             }
 
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.encounterExtended });
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.EncounterExtended });
 
-            if (string.IsNullOrEmpty(Filesystem.encounterExtended) || !Directory.Exists(Filesystem.encounterExtended))
+            if (string.IsNullOrEmpty(Filesystem.EncounterExtended) || !Directory.Exists(Filesystem.EncounterExtended))
             {
                 StatusText = "Trophy Garden encounter files not found. Expected location: arc/encdata_ex.narc";
                 return;
             }
 
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.monIcons });
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.MonIcons });
             SetMonIconsPalTableAddress();
 
             foreach (string name in GetPokemonNames()) PokemonNames.Add(name);
@@ -200,7 +200,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Save()
         {
             if (_file == null) return;
-            if (_file.Problem() is string problem) { _ = DialogHelper.ShowError(problem, "Trophy Garden error"); return; }
+            if (_file.Problem() is string problem) { _ = DialogHelper.ShowErrorAsync(problem, "Trophy Garden error"); return; }
             // The file reports its own write error.
             if (!_file.SaveToNarc(showSuccessMessage: false)) return;
             _isDirty = false;
@@ -231,7 +231,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public void Locate()
         {
-            string path = Filesystem.encounterExtended;
+            string path = Filesystem.EncounterExtended;
             if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
                 SystemShell.RevealInFileManager(path);
             else

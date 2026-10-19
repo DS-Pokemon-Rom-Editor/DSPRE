@@ -40,9 +40,9 @@ namespace DSPRE
             "Day-Care Man", "Day-Care Lady", "Buena", "Ethan / Lyra", "Gym Leader", "Safari Warden", "Irwin", "Other",
         };
 
-        public static bool IsSupported => RomInfo.gameFamily == RomInfo.GameFamilies.HGSS;
+        public static bool IsSupported => RomInfo.GameFamily == RomInfo.GameFamilies.HGSS;
 
-        public static string FilePath => Path.Combine(RomInfo.dataPath, "tel", "pmtel_book.dat");
+        public static string FilePath => Path.Combine(RomInfo.DataPath, "tel", "pmtel_book.dat");
 
         /// <summary>Index of the first phone title in the Pokégear phone strings.</summary>
         public const int FirstPhoneTitleMessage = 38;

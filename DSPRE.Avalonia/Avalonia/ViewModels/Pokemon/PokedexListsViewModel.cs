@@ -201,8 +201,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             byte[] before = _lists.Snapshot();
             try
             {
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData });
-                string folder = gameDirs[DirNames.personalPokeData].unpackedDir;
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.PersonalPokeData });
+                string folder = GameDirs[DirNames.PersonalPokeData].unpackedDir;
                 (int, int) Types(int s)
                 {
                     string path = Path.Combine(folder, s.ToString("D4"));
@@ -275,11 +275,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task<bool> SaveChangesAsync()
         {
             if (_lists == null) return true;
-            if (HasProblem) { await DialogHelper.ShowError(Problem, "Pokédex lists error"); return false; }
+            if (HasProblem) { await DialogHelper.ShowErrorAsync(Problem, "Pokédex lists error"); return false; }
             try { _lists.Save(); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
             {
-                await DialogHelper.ShowError("The Pokédex lists were not saved:\n" + e.Message, "Pokédex lists error");
+                await DialogHelper.ShowErrorAsync("The Pokédex lists were not saved:\n" + e.Message, "Pokédex lists error");
                 return false;
             }
             _saved = _lists.Snapshot();

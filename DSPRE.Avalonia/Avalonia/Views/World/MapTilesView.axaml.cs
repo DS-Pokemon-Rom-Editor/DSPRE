@@ -259,7 +259,7 @@ namespace DSPRE.Avalonia.Views.World
             bool terrain = vm.AlsoTerrain;
             if (replaced > 0)
             {
-                bool replace = await DSPRE.Avalonia.DialogHelper.AskYesNo(
+                bool replace = await DSPRE.Avalonia.DialogHelper.AskYesNoAsync(
                     $"Rebuilding the terrain replaces {replaced} of this map's plates over the squares you changed. Replace them?",
                     "Rebuild terrain");
                 // Closing the window while asked cancels the Apply.
@@ -270,7 +270,7 @@ namespace DSPRE.Avalonia.Views.World
             (int newBuildings, int currentBuildings)? swap = vm.BuildingsApplyWouldReplace();
             if (swap != null)
             {
-                bringInBuildings = await DSPRE.Avalonia.DialogHelper.AskYesNo(
+                bringInBuildings = await DSPRE.Avalonia.DialogHelper.AskYesNoAsync(
                     swap.Value.newBuildings > 0
                         ? $"The PDSMS map carries {swap.Value.newBuildings} buildings. Replace the {swap.Value.currentBuildings} buildings on this map with them?"
                         : $"The PDSMS map carries no buildings. Remove the {swap.Value.currentBuildings} buildings on this map?",

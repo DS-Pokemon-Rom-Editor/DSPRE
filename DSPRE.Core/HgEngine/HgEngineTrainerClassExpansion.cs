@@ -30,7 +30,7 @@ namespace DSPRE.HgEngine
         {
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return -1; }
-            HgEngineOwnedFile names = NameFile(RomInfo.trainerClassMessageNumber);
+            HgEngineOwnedFile names = NameFile(RomInfo.TrainerClassMessageNumber);
             if (names == null || !HgEngineOwnedFiles.TryReadLines(names, out List<string> lines, out error)) { error ??= "The trainer class names text isn't in the checkout."; return -1; }
             int next = lines.Count;
             HgEngineSymbolTable classes = HgEngineSymbolTable.Load(HeaderRelPath);
@@ -55,7 +55,7 @@ namespace DSPRE.HgEngine
                 return $"Turn on {GenderSwitch} in hg-engine Settings first. Without it the game reads a new class's gender from past the end of its own table.";
             if (!defined.Contains(MoneySwitch))
                 return $"Turn on {MoneySwitch} in hg-engine Settings first. Without it the game has no prize money row for a new class.";
-            foreach (int archive in new[] { RomInfo.trainerClassMessageNumber, RomInfo.trainerClassMessageNumber + 1 })
+            foreach (int archive in new[] { RomInfo.TrainerClassMessageNumber, RomInfo.TrainerClassMessageNumber + 1 })
             {
                 HgEngineOwnedFile file = NameFile(archive);
                 if (file == null) return $"Text {archive} isn't in the checkout.";
@@ -85,12 +85,12 @@ namespace DSPRE.HgEngine
             if (!TryInsertAfterValue(asm, @"^(\s*\.equ\s+)(" + Prefix + @"\w+)(,\s*)(\d+)", id - 1, symbol, id, out string newAsm))
             { error = $"{AsmRelPath} has no .equ line for class {id - 1} to add after."; return false; }
 
-            HgEngineOwnedFile nameFile = NameFile(RomInfo.trainerClassMessageNumber);
-            HgEngineOwnedFile articleFile = NameFile(RomInfo.trainerClassMessageNumber + 1);
+            HgEngineOwnedFile nameFile = NameFile(RomInfo.TrainerClassMessageNumber);
+            HgEngineOwnedFile articleFile = NameFile(RomInfo.TrainerClassMessageNumber + 1);
             if (!HgEngineOwnedFiles.TryReadLines(nameFile, out List<string> nameLines, out error)) return false;
             if (!HgEngineOwnedFiles.TryReadLines(articleFile, out List<string> articleLines, out error)) return false;
             if (nameLines.Count != id || articleLines.Count != id)
-            { error = $"Texts {RomInfo.trainerClassMessageNumber} and {RomInfo.trainerClassMessageNumber + 1} should both have {id} lines; make them agree first."; return false; }
+            { error = $"Texts {RomInfo.TrainerClassMessageNumber} and {RomInfo.TrainerClassMessageNumber + 1} should both have {id} lines; make them agree first."; return false; }
 
             string sprites = Path.GetDirectoryName(HgEngineTrainerGraphicsSource.Stem(false, id));
             List<(string From, string To)> copies = new List<(string From, string To)>();
@@ -159,7 +159,7 @@ namespace DSPRE.HgEngine
         }
 
         private static HgEngineOwnedFile NameFile(int archive) =>
-            HgEngineOwnedFiles.Get(HgEngineOwnedFiles.ArchiveOf(RomInfo.DirNames.textArchives), archive);
+            HgEngineOwnedFiles.Get(HgEngineOwnedFiles.ArchiveOf(RomInfo.DirNames.TextArchives), archive);
 
         // TRAINERCLASS_ plus the name in capitals, made unique with a number.
         private static string UniqueSymbol(string name)

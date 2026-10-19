@@ -63,7 +63,8 @@ public class ScriptParameter
     }
 
     // Constructor for relative jumps
-    public ScriptParameter(int targetOffset, string targetLabel) {
+    public ScriptParameter(int targetOffset, string targetLabel)
+    {
         Type = ParameterType.Function;
         TargetOffset = targetOffset;
         TargetLabel = targetLabel;
@@ -119,19 +120,19 @@ public class ScriptParameter
         switch (type)
         {
             case ParameterType.Pokemon:
-                if (ScriptDatabase.pokemonNames.TryGetValue((ushort)value, out string pokeName))
+                if (ScriptDatabase.PokemonNames.TryGetValue((ushort)value, out string pokeName))
                     return $"{pokeName}";
                 break;
             case ParameterType.Item:
-                if (ScriptDatabase.itemNames.TryGetValue((ushort)value, out string itemName))
+                if (ScriptDatabase.ItemNames.TryGetValue((ushort)value, out string itemName))
                     return $"{itemName}";
                 break;
             case ParameterType.Move:
-                if (ScriptDatabase.moveNames.TryGetValue((ushort)value, out string moveName))
+                if (ScriptDatabase.MoveNames.TryGetValue((ushort)value, out string moveName))
                     return $"{moveName}";
                 break;
             case ParameterType.Trainer:
-                if (ScriptDatabase.trainerNames.TryGetValue((ushort)value, out string trainerName))
+                if (ScriptDatabase.TrainerNames.TryGetValue((ushort)value, out string trainerName))
                     return $"{trainerName}";
                 break;
             case ParameterType.Function:
@@ -143,14 +144,14 @@ public class ScriptParameter
             case ParameterType.CMDNumber:
                 return $"CMD_{value:X3}";
             case ParameterType.Overworld:
-                if (ScriptDatabase.specialOverworlds.TryGetValue((ushort)value, out string owName))
+                if (ScriptDatabase.SpecialOverworlds.TryGetValue((ushort)value, out string owName))
                     return owName;
                 return value < 4000 ? $"{Event.EventType.Overworld}.{value}" : FormatHexNumber(value);
             case ParameterType.OwMovementType:
                 return value < 4000 ? $"Move.{value}" : FormatHexNumber(value);
             case ParameterType.OwMovementDirection:
                 // A direction can come from a variable (0x4000 and up), which must stay a number.
-                if (value <= byte.MaxValue && ScriptDatabase.overworldDirections.TryGetValue((byte)value, out string dirName))
+                if (value <= byte.MaxValue && ScriptDatabase.OverworldDirections.TryGetValue((byte)value, out string dirName))
                     return dirName;
                 break;
             case ParameterType.ComparisonOperator:
@@ -158,15 +159,15 @@ public class ScriptParameter
                     return compName;
                 break;
             case ParameterType.Sound:
-                if (ScriptDatabase.soundNames.TryGetValue((ushort)value, out string soundName))
+                if (ScriptDatabase.SoundNames.TryGetValue((ushort)value, out string soundName))
                     return soundName;
                 break;
             case ParameterType.NpcTrade:
-                if (ScriptDatabase.npcTradeNames.TryGetValue((ushort)value, out string tradeName))
+                if (ScriptDatabase.NpcTradeNames.TryGetValue((ushort)value, out string tradeName))
                     return tradeName;
                 return value.ToString();
             case ParameterType.TrainerClass:
-                if (ScriptDatabase.trainerClassNames.TryGetValue((ushort)value, out string className))
+                if (ScriptDatabase.TrainerClassNames.TryGetValue((ushort)value, out string className))
                     return className;
                 break;
         }
@@ -197,7 +198,7 @@ public class ScriptParameter
     {
         // Nothing but the script editor cares how this reads, and anything parsing a script without a
         // UI (the starter locator, tests) has no settings loaded. Fall back rather than throwing.
-        int preference = SettingsManager.Settings?.scriptEditorFormatPreference ?? (int)NumberStyles.None;
+        int preference = SettingsManager.Settings?.ScriptEditorFormatPreference ?? (int)NumberStyles.None;
         if (preference == (int)NumberStyles.HexNumber)
         {
             return $"0x{value:X}";

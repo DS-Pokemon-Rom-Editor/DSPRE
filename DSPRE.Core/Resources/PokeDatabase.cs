@@ -4,9 +4,12 @@ using System.Linq;
 using System.Drawing;
 using static DSPRE.RomInfo;
 
-namespace DSPRE.Resources {
-    public static class PokeDatabase {
-        public static class Area {
+namespace DSPRE.Resources
+{
+    public static class PokeDatabase
+    {
+        public static class Area
+        {
             // The place-name banner style, pokeplatinum MapLabelWindowID. HGSS uses the same numbering.
             public static string[] PtAreaIconValues = new string[] {
                 "[00] None",
@@ -54,7 +57,8 @@ namespace DSPRE.Resources {
             };
         }
         // Decides the place-name banner, Teleport and Pokémon Center checks.
-        public static class MapType {
+        public static class MapType
+        {
             public static string[] DPPtValues = new string[] {
                 "[000] None",
                 "[001] Town",
@@ -65,7 +69,8 @@ namespace DSPRE.Resources {
                 "[006] Underground"
             };
         }
-        public static class Weather {
+        public static class Weather
+        {
             public static Dictionary<int, string> DPWeatherDict = new Dictionary<int, string> {
                 [00] = "Sunny",
                 [01] = "Cloudy",
@@ -153,7 +158,8 @@ namespace DSPRE.Resources {
                 [13] = "Low Light (Battle Arcade)"
             };
         }
-        public static class CameraAngles {
+        public static class CameraAngles
+        {
             public static Dictionary<int, string> DPPtCameraDict = new Dictionary<int, string>() {
                 [00] = "3D Normal",
                 [01] = "3D Top Higher",
@@ -196,7 +202,8 @@ namespace DSPRE.Resources {
                 [16] = "3D Top View [16]"
             };
         }
-        public abstract class MusicDB {
+        public abstract class MusicDB
+        {
             public static Dictionary<ushort, string> DPMusicDict = new Dictionary<ushort, string>() { //Perfectly contained in Platinum's, as it seems (?)
                 [1000] = "Mystery Zone",
                 [1001] = "Silence",
@@ -514,9 +521,11 @@ namespace DSPRE.Resources {
                 [1216] = "Route 17"
             };
         }
-        public static class EventEditor {
-            public static class Spawnables {
-                public static string[] orientationsArray = new string[] {
+        public static class EventEditor
+        {
+            public static class Spawnables
+            {
+                public static string[] OrientationsArray = new string[] {
                     "Front Interaction",
                     "Activated from the left",
                     "Activated from the right",
@@ -525,14 +534,15 @@ namespace DSPRE.Resources {
                     "Activated from the sides",
                     "Front/Back Interaction",
                 };
-                public static string[] typesArray = new string[] {
+                public static string[] TypesArray = new string[] {
                     "Misc",
                     "Board (Front Auto-Trigger)",
                     "Hidden Item",
                 };
             }
-            public static class Overworlds {
-                public static string[] movementTypesArray = new string[] {
+            public static class Overworlds
+            {
+                public static string[] MovementTypesArray = new string[] {
                     "[00]  None",
                     "[01]  None",
                     "[02]  Looking in all directions",
@@ -608,8 +618,9 @@ namespace DSPRE.Resources {
                 };
             }
         }
-        public static class System {
-            public static Dictionary<string, GameVersions> versionsDict = new Dictionary<string, GameVersions>() {
+        public static class System
+        {
+            public static Dictionary<string, GameVersions> VersionsDict = new Dictionary<string, GameVersions>() {
                 ["ADAE"] = GameVersions.Diamond,
                 ["ADAS"] = GameVersions.Diamond,
                 ["ADAI"] = GameVersions.Diamond,
@@ -652,7 +663,7 @@ namespace DSPRE.Resources {
                 ["IPGK"] = GameVersions.SoulSilver
             };
 
-            public static Dictionary<ushort, string> pokeNames = new Dictionary<ushort, string>() {
+            public static Dictionary<ushort, string> PokeNames = new Dictionary<ushort, string>() {
                 [1] = "Bulbasaur",
                 [2] = "Ivysaur",
                 [3] = "Venusaur",
@@ -1357,7 +1368,8 @@ namespace DSPRE.Resources {
                 [698] = "Meloetta",
                 [699] = "Genesect",
             };
-            public static class MatrixCellColors {
+            public static class MatrixCellColors
+            {
                 /* Initialize dictionary of colors corresponding to border maps in the matrix editor */
                 public static Dictionary<List<uint>, (Color back, Color fore)> DPPtmatrixColorsDict = new Dictionary<List<uint>, (Color back, Color fore)> {
                     [new List<uint> { 173, 176, 177, 179 }] = (Color.ForestGreen, Color.White),
@@ -1381,8 +1393,9 @@ namespace DSPRE.Resources {
                     [new List<uint> { GameMatrix.EMPTY }] = (Color.Black, Color.White)
                 };
             }
-            public static class AreaPics {
-                public static Dictionary<int, string> hgssAreaPicDict = new Dictionary<int, string>() {
+            public static class AreaPics
+            {
+                public static Dictionary<int, string> HgssAreaPicDict = new Dictionary<int, string>() {
                     [0] = "empty",
                     [1] = "hgsswall",
                     [2] = "hgsswood",
@@ -1396,8 +1409,9 @@ namespace DSPRE.Resources {
                 };
             }
         }
-        public static class MoveData {
-            public static string[] battleSequenceDescriptions = new string[] 
+        public static class MoveData
+        {
+            public static string[] BattleSequenceDescriptions = new string[] 
             {
             /* 000 */ "Hit",
             /* 001 */ "Causes Sleep",
@@ -1678,21 +1692,24 @@ namespace DSPRE.Resources {
             /* 276 */ "May raise User's Sp. Atk (Hit)",
             };
         }
-        public static class PersonalData {
-            public class PersonalExtraFiles {
-                public int monId { get; set; }
-                public string description { get; set; }
-                public int iconId { get; set; }
+        public static class PersonalData
+        {
+            public class PersonalExtraFiles
+            {
+                public int MonId { get; set; }
+                public string Description { get; set; }
+                public int IconId { get; set; }
 
-                public PersonalExtraFiles(int monId, string desc, int iconId) {
-                    this.monId = monId;
-                    this.description = desc;
-                    this.iconId = iconId;
+                public PersonalExtraFiles(int monId, string desc, int iconId)
+                {
+                    this.MonId = monId;
+                    this.Description = desc;
+                    this.IconId = iconId;
                 }
             }
 
             // Order matters: GetPokemonNamesWithForms() stops once the ROM's file count is hit, so keep this in the order each game family's data actually grew.
-            public static PersonalExtraFiles[] personalExtraFiles = new PersonalExtraFiles[] {
+            public static PersonalExtraFiles[] ExtraFiles = new PersonalExtraFiles[] {
                 /* Deoxys */
                 new PersonalExtraFiles(386, "Attack", 496), /* Ideally replace this last number with an alt form icon id? */
                 new PersonalExtraFiles(386, "Defense", 497),

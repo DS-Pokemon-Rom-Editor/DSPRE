@@ -209,7 +209,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task<bool> SaveChangesAsync()
         {
             if (!HasUnsavedChanges) return true;
-            if (HasProblem) { await DialogHelper.ShowError(Problem, "Roamers error"); return false; }
+            if (HasProblem) { await DialogHelper.ShowErrorAsync(Problem, "Roamers error"); return false; }
             if (_fromSource)
             {
                 List<HgEngineRoamers.Slot> slots = Slots.Select(s => new HgEngineRoamers.Slot(s.Species, s.Level)).ToList();
@@ -218,14 +218,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 (bool saved, string error) = await HgEngineSave.RunAsync(() =>
                     !HgEngineRoamers.TryWrite(slots, out string e) ? e
                     : routesChanged && !HgEngineRoamers.TryWriteRoutes(routes, adjacency, out e) ? e : null);
-                if (!saved) { if (error != null) await DialogHelper.ShowError("The roamers were not saved:\n" + error, "Roamers error"); return false; }
+                if (!saved) { if (error != null) await DialogHelper.ShowErrorAsync("The roamers were not saved:\n" + error, "Roamers error"); return false; }
             }
             else
             {
                 try { Apply(); _data.Save(HeaderNames.Length, PokemonNames.Length); }
                 catch (Exception e) when (e is InvalidOperationException || e is System.IO.IOException || e is UnauthorizedAccessException)
                 {
-                    await DialogHelper.ShowError("The roamers were not saved:\n" + e.Message, "Roamers error");
+                    await DialogHelper.ShowErrorAsync("The roamers were not saved:\n" + e.Message, "Roamers error");
                     return false;
                 }
             }

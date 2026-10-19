@@ -15,7 +15,7 @@ namespace DSPRE
     /// detected, lets the Overworld Editor add/delete custom entries within the capacity the
     /// patch pre-reserved.
     ///
-    /// Layout inside <see cref="Filesystem.expArmPath"/> (the same "synthetic overlay" NARC
+    /// Layout inside <see cref="Filesystem.ExpArmPath"/> (the same "synthetic overlay" NARC
     /// member DSPRE's own patches already use) once patched:
     ///   0x00: 12-byte ASCII marker "OWTBLXPANDV1"
     ///   0x10: u32 version (1)
@@ -74,7 +74,7 @@ namespace DSPRE
         public static uint UsedCount => _usedCount;
         public static uint Capacity => _capacity;
 
-        /// <summary>The full byte range this patch owns in <see cref="Filesystem.expArmPath"/> (marker
+        /// <summary>The full byte range this patch owns in <see cref="Filesystem.ExpArmPath"/> (marker
         /// + header + all 4 tables, including their still-zero-filled unused capacity headroom).
         /// Other synthetic-overlay writers that scan for "free" (zero) space must skip this range even
         /// where it reads as zero, since it's pre-reserved for future <see cref="AddEntry"/> calls,
@@ -91,7 +91,7 @@ namespace DSPRE
             _markerOffset = -1;
             _tables = null;
 
-            if (RomInfo.gameFamily != GameFamilies.Plat && RomInfo.gameFamily != GameFamilies.DP)
+            if (RomInfo.GameFamily != GameFamilies.Plat && RomInfo.GameFamily != GameFamilies.DP)
             {
                 PushFlags();
                 return false;
@@ -99,8 +99,8 @@ namespace DSPRE
 
             try
             {
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay });
-                _path = Filesystem.expArmPath;
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.SynthOverlay });
+                _path = Filesystem.ExpArmPath;
                 if (!File.Exists(_path))
                 {
                     PushFlags();
@@ -158,9 +158,9 @@ namespace DSPRE
 
         private static void PushFlags()
         {
-            RomPatchState.flag_OverworldSpriteExpansionApplied = _detected;
-            RomPatchState.overworldExpansionUsedCount = _detected ? _usedCount : 0;
-            RomPatchState.overworldExpansionCapacity = _detected ? _capacity : 0;
+            RomPatchState.FlagOverworldSpriteExpansionApplied = _detected;
+            RomPatchState.OverworldExpansionUsedCount = _detected ? _usedCount : 0;
+            RomPatchState.OverworldExpansionCapacity = _detected ? _capacity : 0;
         }
 
         /// <summary>Texture-association table (appearanceId -&gt; mmodel NARC member), read from
@@ -289,7 +289,7 @@ namespace DSPRE
         /// </summary>
         private static SimpleTable FindVanillaRenderTable()
         {
-            if (RomInfo.gameFamily != GameFamilies.DP && RomInfo.gameFamily != GameFamilies.Plat) return new SimpleTable();
+            if (RomInfo.GameFamily != GameFamilies.DP && RomInfo.GameFamily != GameFamilies.Plat) return new SimpleTable();
             string path = RomInfo.OWtablePath;
             if (path == null || !File.Exists(path)) return new SimpleTable();
 
@@ -502,7 +502,7 @@ namespace DSPRE
         /// NARC by one slot; nothing needs to be pre-reserved the way the table capacity is.</summary>
         public static uint AllocateNewMmodelSlot()
         {
-            string dir = RomInfo.gameDirs[DirNames.OWSprites].unpackedDir;
+            string dir = RomInfo.GameDirs[DirNames.OWSprites].unpackedDir;
             long max = -1;
             if (Directory.Exists(dir))
             {

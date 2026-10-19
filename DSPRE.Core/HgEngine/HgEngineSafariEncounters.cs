@@ -58,8 +58,8 @@ namespace DSPRE.HgEngine
                     if (parts.Count < 2) continue;
                     dest.Add(new SafariZoneEncounter
                     {
-                        pokemonID = (ushort)ResolveSpecies(parts[0], species, ref unreadable),
-                        level = (byte)ResolveToken(parts[1], null),
+                        PokemonID = (ushort)ResolveSpecies(parts[0], species, ref unreadable),
+                        Level = (byte)ResolveToken(parts[1], null),
                     });
                 }
             }
@@ -142,8 +142,8 @@ namespace DSPRE.HgEngine
                 for (int i = 0; i < count; i++)
                 {
                     SafariZoneEncounter e = i < list.Count ? list[i] : new SafariZoneEncounter();
-                    string sp = HgEngineTrainerSource.FormatPackedSpecies(e.pokemonID, SpeciesHeaderRelPath);
-                    items.Add($"{{ {sp}, {e.level} }}");
+                    string sp = HgEngineTrainerSource.FormatPackedSpecies(e.PokemonID, SpeciesHeaderRelPath);
+                    items.Add($"{{ {sp}, {e.Level} }}");
                 }
                 return items;
             }
@@ -155,9 +155,9 @@ namespace DSPRE.HgEngine
                 {
                     SafariZoneObjectRequirement r = i < req.Count ? req[i] : new SafariZoneObjectRequirement();
                     SafariZoneObjectRequirement o = i < opt.Count ? opt[i] : new SafariZoneObjectRequirement();
-                    string rt = header != null && header.TryGetNameWithPrefix(r.typeID, ObjectTypePrefix, out string rn) ? rn : r.typeID.ToString();
-                    string ot = header != null && header.TryGetNameWithPrefix(o.typeID, ObjectTypePrefix, out string on) ? on : o.typeID.ToString();
-                    items.Add($"{{ .objects = {{ {{ {rt}, {r.quantity} }}, {{ {ot}, {o.quantity} }} }} }}");
+                    string rt = header != null && header.TryGetNameWithPrefix(r.TypeID, ObjectTypePrefix, out string rn) ? rn : r.TypeID.ToString();
+                    string ot = header != null && header.TryGetNameWithPrefix(o.TypeID, ObjectTypePrefix, out string on) ? on : o.TypeID.ToString();
+                    items.Add($"{{ .objects = {{ {{ {rt}, {r.Quantity} }}, {{ {ot}, {o.Quantity} }} }} }}");
                 }
                 return items;
             }

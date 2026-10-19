@@ -18,9 +18,9 @@ namespace DSPRE.Avalonia.Views.Text
             DataContext = vm;
         }
 
-        private async void Import_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.Import(this); }
-        private async void Export_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.Export(this); }
-        private async void OpenFolder_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.OpenFolder(); }
+        private async void Import_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.ImportAsync(this); }
+        private async void Export_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.ExportAsync(this); }
+        private async void OpenFolder_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.OpenFolderAsync(); }
         private void Refresh_Click(object sender, RoutedEventArgs e) => VM?.Refresh();
     }
 }

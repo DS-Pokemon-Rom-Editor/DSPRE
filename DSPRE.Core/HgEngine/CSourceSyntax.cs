@@ -266,11 +266,11 @@ namespace DSPRE.HgEngine
 
         public CSourceFile(string text) : this(text, 0, text?.Length ?? 0) { }
 
-        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<string, CSourceFile> _parsed = new();
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<string, CSourceFile> Parsed = new();
 
         /// <summary>The parse of <paramref name="text"/>, shared while the same text is in use (the file cache hands out
         /// one string per file version), so large tables aren't tokenized on every read.</summary>
-        public static CSourceFile For(string text) => _parsed.GetValue(text ?? "", t => new CSourceFile(t));
+        public static CSourceFile For(string text) => Parsed.GetValue(text ?? "", t => new CSourceFile(t));
 
         /// <summary>Only the tokens from <paramref name="start"/> up to <paramref name="end"/>, for reading one entry of a
         /// large file without tokenizing all of it.</summary>

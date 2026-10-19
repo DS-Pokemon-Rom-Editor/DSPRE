@@ -15,7 +15,7 @@ namespace DSPRE.ROMFiles
         {
             if (b == null) return null;
             // A glyph font also starts with 0x10, but only a compressed file gives a nonzero size after it.
-            if (b.Length > 3 && b[0] == 0x10 && (b[1] | b[2] | b[3]) != 0) { try { return Lz77.Decompress(b); } catch { return b; } }
+            if (b.Length > 3 && b[0] == 0x10 && (b[1] | b[2] | b[3]) != 0) { try { return Lz77.Decompress(b); } catch (Exception ex) { AppLogger.WarnOnce("NitroBgCodec.Inflate", ex); return b; } }
             return b;
         }
 

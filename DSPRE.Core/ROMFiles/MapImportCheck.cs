@@ -30,7 +30,7 @@ namespace DSPRE.ROMFiles
             public string Problem => NoSuchModel ? "No such model in this game" : "Lacks " + string.Join(", ", Lacking);
         }
 
-        public static string MapPackPath(int pack) => Path.Combine(gameDirs[DirNames.mapTextures].unpackedDir, pack.ToString("D4"));
+        public static string MapPackPath(int pack) => Path.Combine(GameDirs[DirNames.MapTextures].unpackedDir, pack.ToString("D4"));
 
         /// <summary>
         /// The model's materials the pack can't dress and the names it lacks, by the renderer's own pairing
@@ -52,7 +52,7 @@ namespace DSPRE.ROMFiles
             List<(int Pack, int Undressed)> ranked = new List<(int Pack, int Undressed)>();
             NSBMD copy = ParseModel(map);
             if (copy == null) return ranked;
-            string dir = gameDirs[DirNames.mapTextures].unpackedDir;
+            string dir = GameDirs[DirNames.MapTextures].unpackedDir;
             foreach (string file in Directory.GetFiles(dir))
             {
                 if (!int.TryParse(Path.GetFileName(file), out int pack)) continue;
@@ -61,7 +61,7 @@ namespace DSPRE.ROMFiles
                     ReadPack(file, out List<NSBMDTexture> textures, out List<NSBMDPalette> palettes);
                     ranked.Add((pack, Match(copy, textures, palettes).Undressed));
                 }
-                catch (Exception ex) when (ex is IOException || ex is EndOfStreamException || ex is ArgumentException || ex is IndexOutOfRangeException) { }
+                catch (Exception ex) when (ex is IOException || ex is EndOfStreamException || ex is ArgumentException || ex is IndexOutOfRangeException) { }   // a pack that can't be read is left out of the ranking
             }
             ranked.Sort((a, b) => a.Undressed != b.Undressed ? a.Undressed.CompareTo(b.Undressed) : a.Pack.CompareTo(b.Pack));
             return ranked;
@@ -85,26 +85,26 @@ namespace DSPRE.ROMFiles
         public static List<BuildingTrouble> Buildings(MapFile map, int areaId, GameFamilies family)
         {
             List<BuildingTrouble> trouble = new List<BuildingTrouble>();
-            if (map?.buildings == null || map.buildings.Count == 0) return trouble;
+            if (map?.Buildings == null || map.Buildings.Count == 0) return trouble;
             AreaData area = areaId >= 0 ? new AreaData((byte)areaId) : null;
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.buildingTextures });
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.BuildingTextures });
             string packPath = area == null ? null
-                : Path.Combine(gameDirs[DirNames.buildingTextures].unpackedDir, area.buildingsTileset.ToString("D4"));
+                : Path.Combine(GameDirs[DirNames.BuildingTextures].unpackedDir, area.BuildingsTileset.ToString("D4"));
             // Without the pack file there is nothing to compare against, so only missing models are reported.
             bool hasPack = packPath != null && File.Exists(packPath);
             HashSet<string> have = new HashSet<string>(StringComparer.Ordinal);
             if (hasPack)
             {
                 ReadPack(packPath, out List<NSBMDTexture> textures, out List<NSBMDPalette> palettes);
-                foreach (NSBMDTexture t in textures) have.Add(t.texname.TrimEnd('\0'));
-                foreach (NSBMDPalette p in palettes) have.Add(p.palname.TrimEnd('\0'));
+                foreach (NSBMDTexture t in textures) have.Add(t.Texname.TrimEnd('\0'));
+                foreach (NSBMDPalette p in palettes) have.Add(p.Palname.TrimEnd('\0'));
             }
 
-            bool interior = area != null && family == GameFamilies.HGSS && gameDirs.ContainsKey(DirNames.interiorBuildingModels) && area.areaType == AreaData.TYPE_INDOOR;
-            if (interior) DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.interiorBuildingModels });
-            string dir = gameDirs[interior ? DirNames.interiorBuildingModels : DirNames.exteriorBuildingModels].unpackedDir;
+            bool interior = area != null && family == GameFamilies.HGSS && GameDirs.ContainsKey(DirNames.InteriorBuildingModels) && area.AreaType == AreaData.TYPE_INDOOR;
+            if (interior) DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.InteriorBuildingModels });
+            string dir = GameDirs[interior ? DirNames.InteriorBuildingModels : DirNames.ExteriorBuildingModels].unpackedDir;
 
-            foreach (IGrouping<uint, Building> same in map.buildings.GroupBy(b => b.modelID).OrderBy(g => g.Key))
+            foreach (IGrouping<uint, Building> same in map.Buildings.GroupBy(b => b.ModelID).OrderBy(g => g.Key))
             {
                 string path = Path.Combine(dir, same.Key.ToString("D4"));
                 MapMesh mesh = File.Exists(path) ? MapMesh.Read(File.ReadAllBytes(path), out _) : null;
@@ -120,9 +120,9 @@ namespace DSPRE.ROMFiles
 
         private static NSBMD ParseModel(MapFile map)
         {
-            if (map?.mapModelData == null) return null;
-            NSBMD copy = NSBMDLoader.LoadNSBMD(new MemoryStream(map.mapModelData));
-            return copy?.models == null || copy.models.Length == 0 ? null : copy;
+            if (map?.MapModelData == null) return null;
+            NSBMD copy = NSBMDLoader.LoadNSBMD(new MemoryStream(map.MapModelData));
+            return copy?.Models == null || copy.Models.Length == 0 ? null : copy;
         }
 
         private static void ReadPack(string path, out List<NSBMDTexture> textures, out List<NSBMDPalette> palettes)
@@ -139,18 +139,18 @@ namespace DSPRE.ROMFiles
             copy.MatchTextures();
             List<Missing> names = new List<Missing>();
             int materials = 0, undressed = 0;
-            NSBMDModel model = copy.models[0];
+            NSBMDModel model = copy.Models[0];
             for (int i = 0; i < model.Materials.Count; i++)
             {
-                NSBMDTexture wanted = model.Textures.Find(t => t.texmatid.Contains((uint)i));
+                NSBMDTexture wanted = model.Textures.Find(t => t.Texmatid.Contains((uint)i));
                 if (wanted == null) continue;
                 materials++;
-                if (!model.Materials[i].missingExternalTexture) continue;
+                if (!model.Materials[i].MissingExternalTexture) continue;
                 undressed++;
-                bool hasTexture = textures.Exists(t => string.Equals(t.texname, wanted.texname, StringComparison.Ordinal));
+                bool hasTexture = textures.Exists(t => string.Equals(t.Texname, wanted.Texname, StringComparison.Ordinal));
                 Missing name = hasTexture
-                    ? new Missing { Name = model.Palettes.Find(p => p.palmatid.Contains((uint)i))?.palname ?? wanted.texname, Palette = true }
-                    : new Missing { Name = wanted.texname };
+                    ? new Missing { Name = model.Palettes.Find(p => p.Palmatid.Contains((uint)i))?.Palname ?? wanted.Texname, Palette = true }
+                    : new Missing { Name = wanted.Texname };
                 if (!names.Exists(n => n.Name == name.Name && n.Palette == name.Palette)) names.Add(name);
             }
             return (materials, undressed, names);

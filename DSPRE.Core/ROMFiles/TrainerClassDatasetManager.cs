@@ -33,7 +33,7 @@ namespace DSPRE.ROMFiles
     {
         public const int GraphicsMembersPerClass = 5;
 
-        private static int DescriptionArchiveId => trainerClassWithArticleMessageNumber;
+        private static int DescriptionArchiveId => TrainerClassWithArticleMessageNumber;
 
         public static bool TryInspect(out TrainerClassDatasetState state, out string error)
         {
@@ -48,17 +48,17 @@ namespace DSPRE.ROMFiles
 
             try
             {
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.textArchives, DirNames.trainerGraphics, DirNames.trainerProperties });
-                string graphicsDir = gameDirs[DirNames.trainerGraphics].unpackedDir;
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TextArchives, DirNames.TrainerGraphics, DirNames.TrainerProperties });
+                string graphicsDir = GameDirs[DirNames.TrainerGraphics].unpackedDir;
                 if (!TryCountContiguousMembers(graphicsDir, out int graphicsCount, out error)) return false;
 
-                TextArchive names = new TextArchive(trainerClassMessageNumber);
+                TextArchive names = new TextArchive(TrainerClassMessageNumber);
                 TextArchive descriptions = new TextArchive(DescriptionArchiveId);
                 state = new TrainerClassDatasetState
                 {
                     MetadataCount = TrainerClassMetadataStore.RecordCount,
-                    NameCount = names.messages.Count,
-                    DescriptionCount = descriptions.messages.Count,
+                    NameCount = names.Messages.Count,
+                    DescriptionCount = descriptions.Messages.Count,
                     GraphicsMemberCount = graphicsCount,
                 };
 
@@ -119,22 +119,22 @@ namespace DSPRE.ROMFiles
             byte[] timingBefore = null;
             try
             {
-                TextArchive names = new TextArchive(trainerClassMessageNumber);
+                TextArchive names = new TextArchive(TrainerClassMessageNumber);
                 TextArchive descriptions = new TextArchive(DescriptionArchiveId);
                 timing = VsIntroTimingAddon.Load();
                 timingBefore = timing?.Snapshot();
                 byte[] metadata = File.ReadAllBytes(MetadataPath(sourceClassId));
                 byte[][] graphics = graphicsSources.Select(File.ReadAllBytes).ToArray();
-                nameJson = FileSnapshot.Capture(TextArchive.GetFilePaths(trainerClassMessageNumber).jsonPath);
+                nameJson = FileSnapshot.Capture(TextArchive.GetFilePaths(TrainerClassMessageNumber).jsonPath);
                 descriptionJson = FileSnapshot.Capture(TextArchive.GetFilePaths(DescriptionArchiveId).jsonPath);
-                names.messages.Add(names.messages[sourceClassId]);
-                descriptions.messages.Add(descriptions.messages[sourceClassId]);
+                names.Messages.Add(names.Messages[sourceClassId]);
+                descriptions.Messages.Add(descriptions.Messages[sourceClassId]);
 
                 mutationStarted = true;
-                ArchiveMembers.Batch added = new ArchiveMembers.Batch().Put(DirNames.trainerClassMetadata, newClassId, metadata);
-                for (int i = 0; i < graphics.Length; i++) added.Put(DirNames.trainerGraphics, newClassId * GraphicsMembersPerClass + i, graphics[i]);
+                ArchiveMembers.Batch added = new ArchiveMembers.Batch().Put(DirNames.TrainerClassMetadata, newClassId, metadata);
+                for (int i = 0; i < graphics.Length; i++) added.Put(DirNames.TrainerGraphics, newClassId * GraphicsMembersPerClass + i, graphics[i]);
                 if (!added.TryCommit(out string addError)) throw new IOException(addError);
-                names.SaveToExpandedDir(trainerClassMessageNumber, showSuccessMessage: false);
+                names.SaveToExpandedDir(TrainerClassMessageNumber, showSuccessMessage: false);
                 descriptions.SaveToExpandedDir(DescriptionArchiveId, showSuccessMessage: false);
                 timing?.CopyRow(sourceClassId, newClassId);
                 timing?.Save();
@@ -174,8 +174,8 @@ namespace DSPRE.ROMFiles
 
             try
             {
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties });
-                string directory = gameDirs[DirNames.trainerProperties].unpackedDir;
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TrainerProperties });
+                string directory = GameDirs[DirNames.TrainerProperties].unpackedDir;
                 if (!Directory.Exists(directory))
                 {
                     error = "The trainer properties archive could not be unpacked.";
@@ -220,7 +220,7 @@ namespace DSPRE.ROMFiles
             if (!TryFindTrainerUses(classId, out List<int> trainerIds, out error)) return false;
             try
             {
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.scripts, DirNames.eventFiles, DirNames.trainerTextTable });
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.Scripts, DirNames.EventFiles, DirNames.TrainerTextTable });
                 string[] names = GetSimpleTrainerNames();
                 foreach (int id in trainerIds)
                     uses.Add(new TrainerReference("Trainer", id < names.Length ? $"{id} {names[id]}" : id.ToString()) { TrainerId = id, Index = id });
@@ -241,7 +241,7 @@ namespace DSPRE.ROMFiles
 
                 if (BattleTowerTrainerFile.IsAvailable())
                 {
-                    DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.battleTowerTrainers });
+                    DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.BattleTowerTrainers });
                     BattleTowerTrainerFile tower = new BattleTowerTrainerFile(true);
                     for (int i = 0; i < tower.Trainers.Count; i++)
                         if (tower.Trainers[i].UnreadBytes == null && tower.Trainers[i].TrainerType == classId)
@@ -299,22 +299,22 @@ namespace DSPRE.ROMFiles
             byte[] timingBefore = null;
             try
             {
-                TextArchive names = new TextArchive(trainerClassMessageNumber);
+                TextArchive names = new TextArchive(TrainerClassMessageNumber);
                 TextArchive descriptions = new TextArchive(DescriptionArchiveId);
                 timing = VsIntroTimingAddon.Load();
                 timingBefore = timing?.Snapshot();
                 metadata = File.ReadAllBytes(metadataPath);
                 graphics = graphicsPaths.Select(File.ReadAllBytes).ToArray();
-                nameJson = FileSnapshot.Capture(TextArchive.GetFilePaths(trainerClassMessageNumber).jsonPath);
+                nameJson = FileSnapshot.Capture(TextArchive.GetFilePaths(TrainerClassMessageNumber).jsonPath);
                 descriptionJson = FileSnapshot.Capture(TextArchive.GetFilePaths(DescriptionArchiveId).jsonPath);
 
                 mutationStarted = true;
-                ArchiveMembers.Batch removed = new ArchiveMembers.Batch().Delete(DirNames.trainerClassMetadata, removedClassId);
-                for (int i = 0; i < graphicsPaths.Length; i++) removed.Delete(DirNames.trainerGraphics, removedClassId * GraphicsMembersPerClass + i);
+                ArchiveMembers.Batch removed = new ArchiveMembers.Batch().Delete(DirNames.TrainerClassMetadata, removedClassId);
+                for (int i = 0; i < graphicsPaths.Length; i++) removed.Delete(DirNames.TrainerGraphics, removedClassId * GraphicsMembersPerClass + i);
                 if (!removed.TryCommit(out string removeError)) throw new IOException(removeError);
-                names.messages.RemoveAt(removedClassId);
-                descriptions.messages.RemoveAt(removedClassId);
-                names.SaveToExpandedDir(trainerClassMessageNumber, showSuccessMessage: false);
+                names.Messages.RemoveAt(removedClassId);
+                descriptions.Messages.RemoveAt(removedClassId);
+                names.SaveToExpandedDir(TrainerClassMessageNumber, showSuccessMessage: false);
                 descriptions.SaveToExpandedDir(DescriptionArchiveId, showSuccessMessage: false);
                 timing?.CopyRow(-1, removedClassId);
                 timing?.Save();
@@ -371,11 +371,11 @@ namespace DSPRE.ROMFiles
         }
 
         private static string MetadataPath(int classId) =>
-            Path.Combine(gameDirs[DirNames.trainerClassMetadata].unpackedDir, classId.ToString("D4"));
+            Path.Combine(GameDirs[DirNames.TrainerClassMetadata].unpackedDir, classId.ToString("D4"));
 
         private static string[] GraphicsPaths(int classId) =>
             Enumerable.Range(classId * GraphicsMembersPerClass, GraphicsMembersPerClass)
-                .Select(id => Path.Combine(gameDirs[DirNames.trainerGraphics].unpackedDir, id.ToString("D4")))
+                .Select(id => Path.Combine(GameDirs[DirNames.TrainerGraphics].unpackedDir, id.ToString("D4")))
                 .ToArray();
 
         private static void TryDelete(string path, List<string> errors)

@@ -19,18 +19,18 @@ namespace DSPRE.Avalonia.Views.Pokemon
         }
 
         private async void Save_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-            => await VM.SaveCommand();
+            => await VM.SaveCommandAsync();
 
         private async void Discard_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) VM.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) VM.DiscardChanges();
         }
 
         private async void Export_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-            => await VM.ExportCommand(this);
+            => await VM.ExportCommandAsync(this);
 
         private async void Import_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-            => await VM.ImportCommand(this);
+            => await VM.ImportCommandAsync(this);
 
         private void AddMon_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
             => VM.AddMonCommand();
@@ -51,10 +51,10 @@ namespace DSPRE.Avalonia.Views.Pokemon
             => VM.DeleteMoveCommand();
 
         private async void BulkReplace_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-            => await VM.BulkReplaceCommand();
+            => await VM.BulkReplaceCommandAsync();
 
         private async void BulkDelete_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-            => await VM.BulkDeleteCommand();
+            => await VM.BulkDeleteCommandAsync();
 
         private void Search_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
             => VM.SearchMonCommand();

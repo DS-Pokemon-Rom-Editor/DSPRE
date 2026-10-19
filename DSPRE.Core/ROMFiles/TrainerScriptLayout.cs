@@ -75,16 +75,16 @@ namespace DSPRE.ROMFiles
         public static bool TryInsertGenericAliasBeforeSpecial(ScriptFile scriptFile, out string error)
         {
             error = null;
-            if (scriptFile?.allScripts == null || scriptFile.allScripts.Count < 2)
+            if (scriptFile?.AllScripts == null || scriptFile.AllScripts.Count < 2)
             {
                 error = "The shared trainer-script file has no usable script table.";
                 return false;
             }
 
-            List<ScriptCommandContainer> scripts = scriptFile.allScripts;
+            List<ScriptCommandContainer> scripts = scriptFile.AllScripts;
             for (int i = 0; i < scripts.Count; i++)
             {
-                if (scripts[i].manualUserID != (uint)(i + 1))
+                if (scripts[i].ManualUserID != (uint)(i + 1))
                 {
                     error = "The shared trainer-script IDs are not sequential.";
                     return false;
@@ -93,47 +93,47 @@ namespace DSPRE.ROMFiles
 
             ScriptCommandContainer generic = scripts[0];
             ScriptCommandContainer special = scripts[^1];
-            if (generic.usedScriptID != -1 || generic.commands == null ||
-                special.usedScriptID != -1 || special.commands == null)
+            if (generic.UsedScriptID != -1 || generic.Commands == null ||
+                special.UsedScriptID != -1 || special.Commands == null)
             {
                 error = "The generic and eye-meets entries must both own script bodies.";
                 return false;
             }
 
-            if (scripts.Count(script => script.usedScriptID == -1) != 2)
+            if (scripts.Count(script => script.UsedScriptID == -1) != 2)
             {
                 error = "The shared trainer-script file does not contain exactly two script bodies.";
                 return false;
             }
 
-            int genericId = checked((int)generic.manualUserID);
+            int genericId = checked((int)generic.ManualUserID);
             for (int i = 1; i < scripts.Count - 1; i++)
             {
-                if (scripts[i].usedScriptID != genericId)
+                if (scripts[i].UsedScriptID != genericId)
                 {
                     error = $"Shared trainer-script entry {i} does not reference the generic entry.";
                     return false;
                 }
             }
 
-            if (special.manualUserID >= int.MaxValue)
+            if (special.ManualUserID >= int.MaxValue)
             {
                 error = "The shared trainer-script ID range is exhausted.";
                 return false;
             }
 
-            uint oldSpecialId = special.manualUserID;
-            special.manualUserID++;
+            uint oldSpecialId = special.ManualUserID;
+            special.ManualUserID++;
 
             // Functions can also use a script body by ID. Preserve any reference that deliberately
             // targeted the special body when its ID moves.
-            if (scriptFile.allFunctions != null)
+            if (scriptFile.AllFunctions != null)
             {
-                foreach (ScriptCommandContainer function in scriptFile.allFunctions)
+                foreach (ScriptCommandContainer function in scriptFile.AllFunctions)
                 {
-                    if (function.usedScriptID == checked((int)oldSpecialId))
+                    if (function.UsedScriptID == checked((int)oldSpecialId))
                     {
-                        function.usedScriptID = checked((int)special.manualUserID);
+                        function.UsedScriptID = checked((int)special.ManualUserID);
                     }
                 }
             }
@@ -148,16 +148,16 @@ namespace DSPRE.ROMFiles
         public static bool TryRemoveGenericAliasBeforeSpecial(ScriptFile scriptFile, out string error)
         {
             error = null;
-            if (scriptFile?.allScripts == null || scriptFile.allScripts.Count < 3)
+            if (scriptFile?.AllScripts == null || scriptFile.AllScripts.Count < 3)
             {
                 error = "The shared trainer-script file has no removable generic entry.";
                 return false;
             }
 
-            List<ScriptCommandContainer> scripts = scriptFile.allScripts;
+            List<ScriptCommandContainer> scripts = scriptFile.AllScripts;
             for (int i = 0; i < scripts.Count; i++)
             {
-                if (scripts[i].manualUserID != (uint)(i + 1))
+                if (scripts[i].ManualUserID != (uint)(i + 1))
                 {
                     error = "The shared trainer-script IDs are not sequential.";
                     return false;
@@ -167,32 +167,32 @@ namespace DSPRE.ROMFiles
             ScriptCommandContainer generic = scripts[0];
             ScriptCommandContainer removable = scripts[^2];
             ScriptCommandContainer special = scripts[^1];
-            int genericId = checked((int)generic.manualUserID);
-            if (generic.usedScriptID != -1 || generic.commands == null ||
-                removable.usedScriptID != genericId || special.usedScriptID != -1 ||
-                special.commands == null)
+            int genericId = checked((int)generic.ManualUserID);
+            if (generic.UsedScriptID != -1 || generic.Commands == null ||
+                removable.UsedScriptID != genericId || special.UsedScriptID != -1 ||
+                special.Commands == null)
             {
                 error = "The final shared trainer-script entries do not match the verified expansion layout.";
                 return false;
             }
-            if (removable.manualUserID + 1 != special.manualUserID)
+            if (removable.ManualUserID + 1 != special.ManualUserID)
             {
                 error = "The removable trainer-script entry is not immediately before the eye-meets entry.";
                 return false;
             }
 
-            uint oldSpecialId = special.manualUserID;
+            uint oldSpecialId = special.ManualUserID;
             uint newSpecialId = oldSpecialId - 1;
             scripts.RemoveAt(scripts.Count - 2);
-            special.manualUserID = newSpecialId;
+            special.ManualUserID = newSpecialId;
 
-            if (scriptFile.allFunctions != null)
+            if (scriptFile.AllFunctions != null)
             {
-                foreach (ScriptCommandContainer function in scriptFile.allFunctions)
+                foreach (ScriptCommandContainer function in scriptFile.AllFunctions)
                 {
-                    if (function.usedScriptID == checked((int)oldSpecialId))
+                    if (function.UsedScriptID == checked((int)oldSpecialId))
                     {
-                        function.usedScriptID = checked((int)newSpecialId);
+                        function.UsedScriptID = checked((int)newSpecialId);
                     }
                 }
             }

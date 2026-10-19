@@ -95,7 +95,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             AvailablePictures.Clear();
             AvailableColours.Clear();
 
-            if (map?.mapModelData == null || map.mapModelData.Length < 16)
+            if (map?.MapModelData == null || map.MapModelData.Length < 16)
             {
                 Note = "This map has no model.";
                 Raise(nameof(Ready));
@@ -105,7 +105,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             _family = family;
             _areaId = areaId;
-            MapMesh mesh = MapMesh.Read(map.mapModelData, out string whynot);
+            MapMesh mesh = MapMesh.Read(map.MapModelData, out string whynot);
             if (mesh == null)
             {
                 Note = whynot;
@@ -126,14 +126,14 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex) { AppLogger.Error("MapGeometry.Scene: " + ex.Message); }
 
             float modelScale = 1f;
-            try { modelScale = map.mapModel?.models?.FirstOrDefault()?.modelScale ?? 1f; } catch { }
+            try { modelScale = map.MapModel?.Models?.FirstOrDefault()?.ModelScale ?? 1f; } catch { }   // without a model the default scale is used
             _toScene = Model3D?.CellToScene(0, 0, modelScale);
 
             LoadWhatTheAreaCarries(areaId);
 
             _before.Clear();
             Raise(nameof(CanUndo));
-            _wasBytes = map.mapModelData.Length;
+            _wasBytes = map.MapModelData.Length;
             _wasTriangles = mesh.Faces.Sum(f => Math.Max(0, f.Corners.Length - 2));
 
             Note = "Click a face to select it.";
@@ -151,8 +151,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 AreaData area = new AreaData(areaId);
-                string path = Path.Combine(gameDirs[DirNames.mapTextures].unpackedDir,
-                                           area.mapTileset.ToString("D4"));
+                string path = Path.Combine(GameDirs[DirNames.MapTextures].unpackedDir,
+                                           area.MapTileset.ToString("D4"));
                 if (!File.Exists(path)) return;
 
                 NSBTXLoader.LoadNsbtx(new MemoryStream(File.ReadAllBytes(path)),
@@ -160,13 +160,13 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (pictures != null)
                     foreach (NSBMDTexture t in pictures)
                     {
-                        if (string.IsNullOrEmpty(t.texname)) continue;
-                        AvailablePictures.Add(t.texname);
-                        _pictureFacts.Add((t.texname, t.width, t.height, t.format));
+                        if (string.IsNullOrEmpty(t.Texname)) continue;
+                        AvailablePictures.Add(t.Texname);
+                        _pictureFacts.Add((t.Texname, t.Width, t.Height, t.Format));
                     }
                 if (colours != null)
                     foreach (NSBMDPalette c in colours)
-                        if (!string.IsNullOrEmpty(c.palname)) AvailableColours.Add(c.palname);
+                        if (!string.IsNullOrEmpty(c.Palname)) AvailableColours.Add(c.Palname);
             }
             catch (Exception ex) { AppLogger.Error("MapGeometry.AreaPictures: " + ex.Message); }
         }
@@ -197,19 +197,19 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (PickedPicture < 0 || PickedPicture >= _pictureFacts.Count) return null;
 
-            List<NSBMDMaterial> mats = _map?.mapModel?.models?.FirstOrDefault()?.Materials;
+            List<NSBMDMaterial> mats = _map?.MapModel?.Models?.FirstOrDefault()?.Materials;
             if (mats == null || material < 0 || material >= mats.Count) return null;
 
             NSBMDMaterial wearing = mats[material];
             (string name, int width, int height, int format) chosen = _pictureFacts[PickedPicture];
 
-            if (wearing.width <= 0 || wearing.height <= 0) return null;
+            if (wearing.Width <= 0 || wearing.Height <= 0) return null;
 
-            if (chosen.width != wearing.width || chosen.height != wearing.height)
+            if (chosen.width != wearing.Width || chosen.height != wearing.Height)
                 return $"{chosen.name} is {chosen.width}x{chosen.height}, the old texture is "
-                     + $"{wearing.width}x{wearing.height}.";
+                     + $"{wearing.Width}x{wearing.Height}.";
 
-            if (chosen.format != wearing.format)
+            if (chosen.format != wearing.Format)
                 return $"{chosen.name} uses a different texture format from the old texture.";
 
             return null;
@@ -262,8 +262,8 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public void Reread()
         {
-            if (_map?.mapModelData == null || _mesh == null) return;
-            MapMesh mesh = MapMesh.Read(_map.mapModelData, out string whynot);
+            if (_map?.MapModelData == null || _mesh == null) return;
+            MapMesh mesh = MapMesh.Read(_map.MapModelData, out string whynot);
             if (mesh == null) { Warning = whynot; return; }
             _mesh = mesh;
             PickedFace = PickedCorner = -1;
@@ -276,8 +276,8 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void Remember()
         {
-            if (_map?.mapModelData == null) return;
-            _before.Add(((byte[])_map.mapModelData.Clone(), (byte[])(_map.bdhc ?? new byte[0]).Clone()));
+            if (_map?.MapModelData == null) return;
+            _before.Add(((byte[])_map.MapModelData.Clone(), (byte[])(_map.Bdhc ?? new byte[0]).Clone()));
             if (_before.Count > 64) _before.RemoveAt(0);
             Raise(nameof(CanUndo));
         }
@@ -291,7 +291,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             Raise(nameof(CanUndo));
 
             _map.LoadMapModel(model, showMessages: false);
-            _map.mapModelData = model;
+            _map.MapModelData = model;
             if (terrain.Length > 0) _map.ImportTerrain(terrain);
 
             _mesh = MapMesh.Read(model, out string whynot);
@@ -443,7 +443,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             Warning = null;
             if (MapFile.TooBigForTheGame(made.Length, 0) is string tooBigmade) { Told(tooBigmade); return; }
             _map.LoadMapModel(made, showMessages: false);
-            _map.mapModelData = made;
+            _map.MapModelData = made;
             Rebuild();
 
             Measure();
@@ -517,7 +517,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             Remember();
             _map.KeptPlates = _plates.Where(p => p.Mine).Select(p => p.Copy()).ToList();
             _map.ImportTerrain(made);
-            int blocked = BdhcBuild.BlockUngrounded(_map.bdhc, _map.collisions);
+            int blocked = BdhcBuild.BlockUngrounded(_map.Bdhc, _map.Collisions);
             if (blocked > 0) said += $" {blocked} squares without ground blocked.";
             Dirty = true;
             Note = said;
@@ -558,7 +558,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void ProposePlates()
         {
             if (_mesh == null || _map == null) return;
-            _proposal = BdhcBuild.Propose(_mesh, _map.collisions, _map.bdhc, _map.KeptPlates, Touched);
+            _proposal = BdhcBuild.Propose(_mesh, _map.Collisions, _map.Bdhc, _map.KeptPlates, Touched);
             int yours = _proposal.Count(p => p.Mine);
             PlateNote = $"{_proposal.Count} plates proposed" + (yours > 0 ? $", {yours} of yours kept." : ".");
             if (!_showPlates) ShowPlates = true; else RebuildPlates();
@@ -644,7 +644,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (_proposal == null)
             {
                 List<BdhcBuild.Piece> mine = _map?.KeptPlates ?? new List<BdhcBuild.Piece>();
-                _plates = BdhcBuild.Read(_map?.bdhc);
+                _plates = BdhcBuild.Read(_map?.Bdhc);
                 foreach (BdhcBuild.Piece p in _plates)
                     p.Mine = mine.Any(k => Math.Abs(k.MinX - p.MinX) < 0.01f && Math.Abs(k.MaxX - p.MaxX) < 0.01f
                                         && Math.Abs(k.MinZ - p.MinZ) < 0.01f && Math.Abs(k.MaxZ - p.MaxZ) < 0.01f
@@ -714,15 +714,15 @@ namespace DSPRE.Avalonia.ViewModels.World
             RebuildPlates();
             TerrainDisagrees = false;
             TerrainNote = "";
-            if (_mesh == null || _map?.bdhc == null) return;
+            if (_mesh == null || _map?.Bdhc == null) return;
 
-            if (!BdhcFile.TryParse(_map.bdhc, out BdhcFile walking))
+            if (!BdhcFile.TryParse(_map.Bdhc, out BdhcFile walking))
             {
                 TerrainNote = "Terrain can't be read.";
                 return;
             }
 
-            byte[] fromShape = BdhcBuild.ForMap(_mesh, _map.collisions, _map.bdhc, out _);
+            byte[] fromShape = BdhcBuild.ForMap(_mesh, _map.Collisions, _map.Bdhc, out _);
             if (fromShape == null || !BdhcFile.TryParse(fromShape, out BdhcFile drawn))
             {
                 TerrainNote = "Model has no walkable faces.";
@@ -765,12 +765,12 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (_mesh == null || _map == null) return;
 
-            byte[] made = BdhcBuild.ForMap(_mesh, _map.collisions, _map.bdhc, out string whynot, _map.KeptPlates, Touched);
+            byte[] made = BdhcBuild.ForMap(_mesh, _map.Collisions, _map.Bdhc, out string whynot, _map.KeptPlates, Touched);
             if (made == null) { Warning = whynot; return; }
 
             Remember();
             _map.ImportTerrain(made);
-            int blocked = BdhcBuild.BlockUngrounded(_map.bdhc, _map.collisions);
+            int blocked = BdhcBuild.BlockUngrounded(_map.Bdhc, _map.Collisions);
             if (blocked > 0) Note = $"Terrain rebuilt. {blocked} squares without ground blocked.";
             Dirty = true;
             Warning = null;
@@ -795,7 +795,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             Remember();
             if (MapFile.TooBigForTheGame(model.Length, 0) is string tooBigmodel) return tooBigmodel;
             _map.LoadMapModel(model, showMessages: false);
-            _map.mapModelData = model;
+            _map.MapModelData = model;
             _mesh = mesh;
             PickedFace = PickedCorner = -1;
             Dirty = true;
@@ -813,10 +813,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             try
             {
-                float scale = _map?.mapModel?.models?.FirstOrDefault()?.modelScale ?? 0f;
+                float scale = _map?.MapModel?.Models?.FirstOrDefault()?.ModelScale ?? 0f;
                 if (scale > 0f) return scale;
             }
-            catch { }
+            catch { }   // without a model the default scale is used
             return 64f;
         }
 
@@ -838,12 +838,12 @@ namespace DSPRE.Avalonia.ViewModels.World
 
                 try
                 {
-                    List<NSBMDMaterial> mats = _map?.mapModel?.models?.FirstOrDefault()?.Materials;
+                    List<NSBMDMaterial> mats = _map?.MapModel?.Models?.FirstOrDefault()?.Materials;
                     if (mats != null && face.Material >= 0 && face.Material < mats.Count)
                     {
                         NSBMDMaterial mat = mats[face.Material];
-                        paint.Width = Math.Max(1, mat.width);
-                        paint.Height = Math.Max(1, mat.height);
+                        paint.Width = Math.Max(1, mat.Width);
+                        paint.Height = Math.Max(1, mat.Height);
 
                         NsbmdTextureData picture2 = NsbmdTextureDecoder.Decode(mat);
                         if (picture2 != null && WritePicture(Path.Combine(folder, named + ".png"), picture2))
@@ -892,7 +892,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     IndexedPng.Write(indices, colours.ToArray(), picture.Width, picture.Height));
                 return true;
             }
-            catch { return false; }
+            catch (Exception ex) { AppLogger.WarnOnce("MapGeometryViewModel.WritePicture", ex); return false; }
         }
 
         private void Rebuild()
@@ -902,7 +902,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 Model3D = MatrixSceneBuilder.BuildFromPlaced(_family,
                     new[] { (0, 0, _map, _areaId, 0f, 0f, 0f) },
                     NsbmdGeometry.MatrixStitchMode.Grid);
-                float modelScale = _map.mapModel?.models?.FirstOrDefault()?.modelScale ?? 1f;
+                float modelScale = _map.MapModel?.Models?.FirstOrDefault()?.ModelScale ?? 1f;
                 _toScene = Model3D?.CellToScene(0, 0, modelScale);
             }
             catch (Exception ex) { AppLogger.Error("MapGeometry.Rebuild: " + ex.Message); }
@@ -910,10 +910,10 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void Measure()
         {
-            if (_mesh == null || _map?.mapModelData == null) { SizeNote = ""; return; }
+            if (_mesh == null || _map?.MapModelData == null) { SizeNote = ""; return; }
 
             int triangles = _mesh.Faces.Sum(f => Math.Max(0, f.Corners.Length - 2));
-            int bytes = _map.mapModelData.Length;
+            int bytes = _map.MapModelData.Length;
 
             string grown = "";
             if (_wasBytes > 0 && bytes > _wasBytes)
@@ -961,12 +961,12 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (material < 0) return null;
             try
             {
-                List<NSBMDMaterial> mats = _map?.mapModel?.models?.FirstOrDefault()?.Materials;
+                List<NSBMDMaterial> mats = _map?.MapModel?.Models?.FirstOrDefault()?.Materials;
                 if (mats == null || material >= mats.Count) return null;
-                string name = mats[material].texname;
+                string name = mats[material].Texname;
                 return string.IsNullOrEmpty(name) ? null : name;
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("MapGeometryViewModel.PictureFor", ex); return null; }
         }
 
         private static int IndexOf(ObservableCollection<string> among, string name)

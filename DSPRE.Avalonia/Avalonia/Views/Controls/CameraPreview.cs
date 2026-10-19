@@ -57,10 +57,10 @@ namespace DSPRE.Avalonia.Views.Controls
         {
             _camera = camera;
             _focus = focus;
-            if (headerId == _sceneHeader && _builtFor == RomInfo.workDir) { Frame(); return; }
+            if (headerId == _sceneHeader && _builtFor == RomInfo.WorkDir) { Frame(); return; }
 
             _sceneHeader = headerId;
-            _builtFor = RomInfo.workDir;
+            _builtFor = RomInfo.WorkDir;
             int request = ++_request;
             _ = BuildAsync(headerId, request);
         }
@@ -68,11 +68,11 @@ namespace DSPRE.Avalonia.Views.Controls
         /// <summary>Plays the field weather a header value gives, over the view.</summary>
         public void ShowWeather(int headerWeather)
         {
-            if (headerWeather == _weatherShown && _weatherFor == RomInfo.workDir) return;
+            if (headerWeather == _weatherShown && _weatherFor == RomInfo.WorkDir) return;
             _weatherShown = headerWeather;
-            _weatherFor = RomInfo.workDir;
+            _weatherFor = RomInfo.WorkDir;
             _weather.Show(headerWeather);
-            _fog = FieldWeather.For(RomInfo.gameFamily, headerWeather).FogSettings;
+            _fog = FieldWeather.For(RomInfo.GameFamily, headerWeather).FogSettings;
             Frame();
         }
 
@@ -113,20 +113,20 @@ namespace DSPRE.Avalonia.Views.Controls
             MatrixSceneBuilder.EnsureUnpacked();
             MapHeader header = MapHeader.GetMapHeader((ushort)headerId);
             if (header == null) return (null, "No preview for this header.", null);
-            GameMatrix matrix = new GameMatrix(header.matrixID);
+            GameMatrix matrix = new GameMatrix(header.MatrixID);
 
             HashSet<(int x, int y)> cells = matrix.CellsOfHeader(headerId);
             if (cells != null && FieldCatchAllHeader.IsCatchAll(cells.Count))
                 return (null, "This header has no place of its own to show.", null);
             // Without a headers section the whole matrix is the place, unless it is world-sized.
-            if (cells == null && matrix.width * matrix.height > 256)
+            if (cells == null && matrix.Width * matrix.Height > 256)
                 return (null, "No preview for this header.", null);
 
-            NsbmdRenderModel scene = MatrixSceneBuilder.Build(matrix, header.areaDataID, RomInfo.gameFamily, areaForMap: null, includeCells: cells);
+            NsbmdRenderModel scene = MatrixSceneBuilder.Build(matrix, header.AreaDataID, RomInfo.GameFamily, areaForMap: null, includeCells: cells);
             if (scene == null) return (null, "No maps to show.", null);
             // HGSS interior areas take their buildings from the interior set, and so their animations too.
             bool indoor = false;
-            try { indoor = RomInfo.gameFamily == RomInfo.GameFamilies.HGSS && new AreaData(header.areaDataID).areaType == AreaData.TYPE_INDOOR; } catch { }
+            try { indoor = RomInfo.GameFamily == RomInfo.GameFamilies.HGSS && new AreaData(header.AreaDataID).AreaType == AreaData.TYPE_INDOOR; } catch { }   // without the area data the area is treated as outdoors
             SceneBuildingAnimator buildings = null;
             try { buildings = new SceneBuildingAnimator(scene, indoor, FieldTimeOfDay.Now); }
             catch (Exception ex) { AppLogger.Warn("Building animations for the field view: " + ex.Message); }
@@ -142,18 +142,18 @@ namespace DSPRE.Avalonia.Views.Controls
                 return (0f, (ground - scene.Cy) * scene.Scale, 0f);
             }
 
-            int cellX = gx / MapFile.mapSize, cellZ = gz / MapFile.mapSize;
-            float inX = gx % MapFile.mapSize + 0.5f, inZ = gz % MapFile.mapSize + 0.5f;
+            int cellX = gx / MapFile.MapSize, cellZ = gz / MapFile.MapSize;
+            float inX = gx % MapFile.MapSize + 0.5f, inZ = gz % MapFile.MapSize + 0.5f;
             float rawX, rawZ;
             if (scene.TryCellPlacement(cellX, cellZ, out NsbmdRenderModel.CellPlacement p))
             {
-                rawX = p.OriginX + inX / MapFile.mapSize * p.Width;
-                rawZ = p.OriginZ + inZ / MapFile.mapSize * p.Height;
+                rawX = p.OriginX + inX / MapFile.MapSize * p.Width;
+                rawZ = p.OriginZ + inZ / MapFile.MapSize * p.Height;
             }
             else
             {
-                rawX = scene.CellBaseX + (cellX + inX / MapFile.mapSize) * scene.CellStrideX;
-                rawZ = scene.CellBaseZ + (cellZ + inZ / MapFile.mapSize) * scene.CellStrideZ;
+                rawX = scene.CellBaseX + (cellX + inX / MapFile.MapSize) * scene.CellStrideX;
+                rawZ = scene.CellBaseZ + (cellZ + inZ / MapFile.MapSize) * scene.CellStrideZ;
             }
             float rawY = scene.SurfaceY(rawX, rawZ);
             return ((rawX - scene.Cx) * scene.Scale, (rawY - scene.Cy) * scene.Scale, (rawZ - scene.Cz) * scene.Scale);
@@ -167,7 +167,7 @@ namespace DSPRE.Avalonia.Views.Controls
 
         private void ShowSpot(NsbmdRenderModel scene, (float x, float y, float z)? foot)
         {
-            FieldWeather.Spec spec = FieldWeather.For(RomInfo.gameFamily, Math.Max(0, _weatherShown));
+            FieldWeather.Spec spec = FieldWeather.For(RomInfo.GameFamily, Math.Max(0, _weatherShown));
             bool dark = spec.Kind == FieldWeather.Kind.HgFlash && _weatherShown >= 0;
             _gl.ClearColour = dark ? (0f, 0f, 0f) : (0.12f, 0.12f, 0.14f);
             NsbmdGlControl.LightSpot shape = dark ? SpotShape() : null;
@@ -186,17 +186,17 @@ namespace DSPRE.Avalonia.Views.Controls
 
         private static NsbmdGlControl.LightSpot SpotShape()
         {
-            if (_spotShapeFor == RomInfo.workDir) return _spotShape;
-            _spotShapeFor = RomInfo.workDir;
+            if (_spotShapeFor == RomInfo.WorkDir) return _spotShape;
+            _spotShapeFor = RomInfo.WorkDir;
             _spotShape = null;
             try
             {
-                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.fieldEffectModels });
-                string path = Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.fieldEffectModels].unpackedDir, FieldWeather.HgFlashSpotModel.ToString("D4"));
+                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.FieldEffectModels });
+                string path = Path.Combine(RomInfo.GameDirs[RomInfo.DirNames.FieldEffectModels].unpackedDir, FieldWeather.HgFlashSpotModel.ToString("D4"));
                 using FileStream file = File.OpenRead(path);
                 NSBMD nsbmd = global::LibNDSFormats.NSBMD.NSBMDLoader.LoadNSBMD(file);
                 nsbmd.MatchTextures();
-                NSBMDModel model = nsbmd.models[0];
+                NSBMDModel model = nsbmd.Models[0];
                 NsbmdTextureData tex = NsbmdTextureDecoder.Decode(model.Materials[0]);
                 NsbmdRenderModel built = NsbmdGeometry.BuildModel(model);
                 // Every quad of the grid carries its own texture coordinates, so the triangles go as they are.
@@ -246,7 +246,7 @@ namespace DSPRE.Avalonia.Views.Controls
             if (scene == null || cam == null) return;
 
             // One tile in the scene's own units, the same conversion the animated preview uses.
-            float tile = scene.CellStrideX / MapFile.mapSize;
+            float tile = scene.CellStrideX / MapFile.MapSize;
             float unit = tile * scene.Scale;
             (float x, float y, float z) = Target(scene, _focus);
 

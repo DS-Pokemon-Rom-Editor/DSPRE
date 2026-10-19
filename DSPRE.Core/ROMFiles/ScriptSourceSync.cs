@@ -29,9 +29,9 @@ namespace DSPRE.ROMFiles
         /// Editor. Its source is regenerated shortly after, in the background, so a save that writes
         /// several files costs one pass. The returned task completes when that pass has.
         /// </summary>
-        public static Task BinaryWritten(int fileId)
+        public static Task BinaryWrittenAsync(int fileId)
         {
-            if (!RomInfo.hasRotomProject || !RotomTool.IsAvailable || fileId < 0) return Task.CompletedTask;
+            if (!RomInfo.HasRotomProject || !RotomTool.IsAvailable || fileId < 0) return Task.CompletedTask;
 
             lock (Gate)
             {
@@ -71,7 +71,7 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public static async Task RefreshAsync(IEnumerable<int> fileIds)
         {
-            if (!RomInfo.hasRotomProject || !RotomTool.IsAvailable || fileIds == null) return;
+            if (!RomInfo.HasRotomProject || !RotomTool.IsAvailable || fileIds == null) return;
             List<int> ids = fileIds.Distinct().ToList();
             if (ids.Count == 0) return;
 

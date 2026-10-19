@@ -35,19 +35,19 @@ namespace DSPRE.ROMFiles
         private static readonly HashSet<string> Wanted = new HashSet<string>(System.Linq.Enumerable.Select(Kinds.Values, k => k.Model), StringComparer.Ordinal);
 
         private static Dictionary<string, int> _memberByName;
-        private static readonly Dictionary<int, byte[]> _files = new Dictionary<int, byte[]>();
+        private static readonly Dictionary<int, byte[]> Files = new Dictionary<int, byte[]>();
 
         /// <summary>Forgets what was read from the previous ROM.</summary>
         public static void Forget()
         {
             _memberByName = null;
-            _files.Clear();
+            Files.Clear();
         }
 
         /// <summary>Whether this overworld entry is drawn as a model in this game.</summary>
         public static bool IsModel(uint entry) =>
-            (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat)
-            && Kinds.TryGetValue(entry, out Kind kind) && (!kind.PlatinumOnly || gameFamily == GameFamilies.Plat);
+            (GameFamily == GameFamilies.DP || GameFamily == GameFamilies.Plat)
+            && Kinds.TryGetValue(entry, out Kind kind) && (!kind.PlatinumOnly || GameFamily == GameFamilies.Plat);
 
         /// <summary>Where the model is drawn from its square's centre, along the map's depth, in field units.</summary>
         public static float OffsetZ(uint entry) => Kinds.TryGetValue(entry, out Kind kind) ? kind.OffsetZ : 0f;
@@ -62,7 +62,7 @@ namespace DSPRE.ROMFiles
             byte[] file = FileFor(Kinds[entry].Model);
             if (file == null) return null;
             NSBMD model = NSBMDLoader.LoadNSBMD(new MemoryStream(file));
-            if (model?.models == null || model.models.Length == 0) return null;
+            if (model?.Models == null || model.Models.Length == 0) return null;
             try { model.MatchTextures(); }
             catch (Exception ex) when (ex is IndexOutOfRangeException || ex is ArgumentException || ex is NullReferenceException)
             {
@@ -73,12 +73,12 @@ namespace DSPRE.ROMFiles
 
         private static byte[] FileFor(string name)
         {
-            if (!gameDirs.ContainsKey(DirNames.fieldEffectModels)) return null;
+            if (!GameDirs.ContainsKey(DirNames.FieldEffectModels)) return null;
             if (_memberByName == null)
             {
                 _memberByName = new Dictionary<string, int>(StringComparer.Ordinal);
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.fieldEffectModels });
-                string dir = gameDirs[DirNames.fieldEffectModels].unpackedDir;
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.FieldEffectModels });
+                string dir = GameDirs[DirNames.FieldEffectModels].unpackedDir;
                 if (!Directory.Exists(dir)) return null;
                 foreach (string path in Directory.GetFiles(dir))
                 {
@@ -86,19 +86,19 @@ namespace DSPRE.ROMFiles
                     try
                     {
                         byte[] data = File.ReadAllBytes(path);
-                        if (data.Length < 4 || BitConverter.ToUInt32(data, 0) != NSBMD.NDS_TYPE_BMD0) continue;
+                        if (data.Length < 4 || BitConverter.ToUInt32(data, 0) != NSBMD.NdsTypeBmd0) continue;
                         NSBMD parsed = NSBMDLoader.LoadNSBMD(new MemoryStream(data));
-                        string modelName = parsed?.models != null && parsed.models.Length > 0 ? parsed.models[0].Name : null;
+                        string modelName = parsed?.Models != null && parsed.Models.Length > 0 ? parsed.Models[0].Name : null;
                         if (!string.IsNullOrEmpty(modelName) && Wanted.Contains(modelName) && !_memberByName.ContainsKey(modelName))
                         {
                             _memberByName[modelName] = member;
-                            _files[member] = data;
+                            Files[member] = data;
                         }
                     }
-                    catch (Exception ex) when (ex is IOException || ex is EndOfStreamException || ex is ArgumentException || ex is IndexOutOfRangeException) { }
+                    catch (Exception ex) when (ex is IOException || ex is EndOfStreamException || ex is ArgumentException || ex is IndexOutOfRangeException) { }   // a model that can't be read is left out of the name index
                 }
             }
-            return _memberByName.TryGetValue(name, out int found) && _files.TryGetValue(found, out byte[] bytes) ? bytes : null;
+            return _memberByName.TryGetValue(name, out int found) && Files.TryGetValue(found, out byte[] bytes) ? bytes : null;
         }
     }
 }

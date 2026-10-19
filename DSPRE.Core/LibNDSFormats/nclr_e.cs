@@ -2,37 +2,44 @@
 using System.Collections.Generic;
 using System.Drawing;
 
-namespace MKDS_Course_Editor {
+namespace MKDS_Course_Editor
+{
     // Historically a WinForms Form (Tinke/MKDS Course Editor palette editor), but DSPRE only ever
     // used its static color-format helpers (encodeColor/CColorFormat via convertir.cs), now a
     // plain class so the color math is core/cross-platform.
-    public class nclr_e {
-        int r = 255;
-        int g = 255;
-        int b = 255;
-        List<Color> colors = new List<Color>();
-        bool bpp8_ = false;
-        uint unknown1;
-        public nclr_e(Color[] c, bool bpp8, uint unknown) {
-            colors.AddRange(c);
-            bpp8_ = bpp8;
-            unknown1 = unknown;
+    public class nclr_e
+    {
+        int _r = 255;
+        int _g = 255;
+        int _b = 255;
+        List<Color> _colors = new List<Color>();
+        bool _bpp8 = false;
+        uint _unknown1;
+        public nclr_e(Color[] c, bool bpp8, uint unknown)
+        {
+            _colors.AddRange(c);
+            _bpp8 = bpp8;
+            _unknown1 = unknown;
         }
-        public nclr_e() {
+        public nclr_e()
+        {
 
         }
-        public int decodeColor(int value, CColorFormat format) {
-            int[] res = format.getResolution();
+        public int DecodeColor(int value, CColorFormat format)
+        {
+            int[] res = format.GetResolution();
             int rgb = Convert.ToInt32(0xff000000);
             int shift = 0;
             int length = res.Length / 2;
-            for (int i = 0; i < length; i++) {
+            for (int i = 0; i < length; i++)
+            {
                 int mode = res[length - i - 1];
                 int nshift = res[length * 2 - i - 1];
-                int mult = shiftList[nshift][1];
-                int and = shiftList[nshift][0];
+                int mult = ShiftList[nshift][1];
+                int and = ShiftList[nshift][0];
                 int n = (value >> shift & and) * mult;
-                switch (mode) {
+                switch (mode)
+                {
                     case 0: // '\0'
                         rgb |= n << 24;
                         break;
@@ -62,18 +69,21 @@ namespace MKDS_Course_Editor {
         3, 2, 1, 5, 5, 5
     });
 
-        public static int encodeColor(int value, CColorFormat format) {
-            int[] res = format.getResolution();
+        public static int EncodeColor(int value, CColorFormat format)
+        {
+            int[] res = format.GetResolution();
             int rgb = 0;
             int shift = 0;
             int length = res.Length / 2;
-            for (int i = 0; i < length; i++) {
+            for (int i = 0; i < length; i++)
+            {
                 int mode = res[length - i - 1];
                 int nshift = res[length * 2 - i - 1];
-                int mult = shiftList[nshift][1];
-                int and = shiftList[nshift][0];
+                int mult = ShiftList[nshift][1];
+                int and = ShiftList[nshift][0];
                 int n = 0;
-                switch (mode) {
+                switch (mode)
+                {
                     case 0: // '\0'
                         n = value >> 24 & 0xff;
                         break;
@@ -101,7 +111,7 @@ namespace MKDS_Course_Editor {
             return rgb;
         }
 
-        public static int[][] shiftList = new int[][] {
+        public static int[][] ShiftList = new int[][] {
             new int[] { 0, 0 },
             new int[] { 1, 255 },
             new int[] { 3, 85 },
@@ -113,47 +123,55 @@ namespace MKDS_Course_Editor {
             new int[] { 255, 1 }
         };
 
-        public class CColorFormat {
+        public class CColorFormat
+        {
 
-            public CColorFormat(String name, int id, int depth, int[] res) {
-                this.name = name;
-                this.id = id;
-                this.depth = depth;
-                this.res = res;
+            public CColorFormat(String name, int id, int depth, int[] res)
+            {
+                this._name = name;
+                this._id = id;
+                this._depth = depth;
+                this._res = res;
             }
 
-            public override string ToString() {
+            public override string ToString()
+            {
                 return GetName();
             }
 
-            public string GetName() {
-                return name;
+            public string GetName()
+            {
+                return _name;
             }
 
-            public int getId() {
-                return id;
+            public int GetId()
+            {
+                return _id;
             }
 
-            public int getDepth() {
-                return depth;
+            public int GetDepth()
+            {
+                return _depth;
             }
 
-            public int[] getResolution() {
-                return res;
+            public int[] GetResolution()
+            {
+                return _res;
             }
 
-            public int getWidth(int field) {
-                for (int i = 0; i < res.Length / 2; i++)
-                    if (res[i] == field)
-                        return res[i + res.Length / 2];
+            public int GetWidth(int field)
+            {
+                for (int i = 0; i < _res.Length / 2; i++)
+                    if (_res[i] == field)
+                        return _res[i + _res.Length / 2];
 
                 return 0;
             }
 
-            private String name;
-            private int id;
-            private int depth;
-            private int[] res;
+            private String _name;
+            private int _id;
+            private int _depth;
+            private int[] _res;
         }
 
     }

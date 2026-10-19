@@ -9,7 +9,7 @@ namespace DSPRE.ROMFiles
     public class LevelScriptFile
     {
         public int ID;
-        public BindingList<LevelScriptTrigger> bufferSet = new BindingList<LevelScriptTrigger>();
+        public BindingList<LevelScriptTrigger> BufferSet = new BindingList<LevelScriptTrigger>();
 
         // The bytes parse_file read and the triggers they held: an unchanged file is written back as the game has it,
         // since retail files differ in padding the triggers alone don't describe.
@@ -24,17 +24,17 @@ namespace DSPRE.ROMFiles
         public LevelScriptFile(int id)
         {
             this.ID = id;
-            string path1 = Filesystem.scripts;
+            string path1 = Filesystem.Scripts;
             string path = Path.Combine(path1, this.ID.ToString("D4"));
-            parse_file(path);
+            ParseFile(path);
         }
 
-        public void parse_file(string path)
+        public void ParseFile(string path)
         {
             _read = File.ReadAllBytes(path);
             _readTriggers = null;
             _tableEntryAt = 0;
-            parse_triggers(path);
+            ParseTriggers(path);
             _readTriggers = TriggerKeys();
         }
 
@@ -42,10 +42,10 @@ namespace DSPRE.ROMFiles
         public byte[] TriggerState()
         {
             List<byte> bytes = new List<byte>();
-            foreach (LevelScriptTrigger t in bufferSet)
+            foreach (LevelScriptTrigger t in BufferSet)
             {
                 VariableValueTrigger v = t as VariableValueTrigger;
-                foreach (int n in new[] { t.triggerType, t.scriptTriggered, v?.variableToWatch ?? 0, v?.expectedValue ?? 0 })
+                foreach (int n in new[] { t.TriggerType, t.ScriptTriggered, v?.VariableToWatch ?? 0, v?.ExpectedValue ?? 0 })
                     bytes.AddRange(BitConverter.GetBytes(n));
             }
             return bytes.ToArray();
@@ -53,11 +53,11 @@ namespace DSPRE.ROMFiles
 
         public void RestoreTriggers(byte[] state)
         {
-            bufferSet.Clear();
+            BufferSet.Clear();
             for (int at = 0; at + 16 <= state.Length; at += 16)
             {
                 int type = BitConverter.ToInt32(state, at), script = BitConverter.ToInt32(state, at + 4);
-                bufferSet.Add(type == LevelScriptTrigger.VARIABLEVALUE
+                BufferSet.Add(type == LevelScriptTrigger.VARIABLEVALUE
                     ? new VariableValueTrigger(script, BitConverter.ToInt32(state, at + 8), BitConverter.ToInt32(state, at + 12))
                     : new MapScreenLoadTrigger(type, script));
             }
@@ -66,14 +66,14 @@ namespace DSPRE.ROMFiles
         private List<string> TriggerKeys()
         {
             List<string> keys = new List<string>();
-            foreach (LevelScriptTrigger t in bufferSet)
+            foreach (LevelScriptTrigger t in BufferSet)
                 keys.Add(t is VariableValueTrigger v
-                    ? $"v{v.scriptTriggered}:{v.variableToWatch}:{v.expectedValue}"
-                    : $"s{t.triggerType}:{t.scriptTriggered}");
+                    ? $"v{v.ScriptTriggered}:{v.VariableToWatch}:{v.ExpectedValue}"
+                    : $"s{t.TriggerType}:{t.ScriptTriggered}");
             return keys;
         }
 
-        private void parse_triggers(string path)
+        private void ParseTriggers(string path)
         {
             FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             // Basic implementation to check if the file is a level script or not from ScriptFile.cs
@@ -151,7 +151,7 @@ namespace DSPRE.ROMFiles
 
                     //map screen load trigger doesn't have a value or variable
                     uint scriptToTrigger = br.ReadUInt32();
-                    bufferSet.Add(new MapScreenLoadTrigger(triggerType, (int)scriptToTrigger));
+                    BufferSet.Add(new MapScreenLoadTrigger(triggerType, (int)scriptToTrigger));
                     screenTriggers++;
 
                     //subtract scriptToTrigger length from conditionalStructureOffset
@@ -201,7 +201,7 @@ namespace DSPRE.ROMFiles
 
                     int varExpectedValue = br.ReadUInt16();
                     int scriptToTrigger = br.ReadUInt16();
-                    bufferSet.Add(new VariableValueTrigger(scriptToTrigger, variableID, varExpectedValue));
+                    BufferSet.Add(new VariableValueTrigger(scriptToTrigger, variableID, varExpectedValue));
                 }
             }
         }
@@ -210,7 +210,7 @@ namespace DSPRE.ROMFiles
         public string Problem()
         {
             int n = 0;
-            foreach (LevelScriptTrigger t in bufferSet)
+            foreach (LevelScriptTrigger t in BufferSet)
             {
                 n++;
                 if (t is VariableValueTrigger v && v.Problem() is string why)
@@ -226,12 +226,12 @@ namespace DSPRE.ROMFiles
             byte[] bytes = ToBytes(word_alignment_padding);
             // An identical file is left alone, so its Rotom source isn't regenerated for nothing.
             if (File.Exists(path) && File.ReadAllBytes(path).AsSpan().SequenceEqual(bytes)) return bytes.Length;
-            ArchiveMembers.Put(RomInfo.DirNames.scripts, id, bytes);
-            _ = ScriptSourceSync.BinaryWritten(id);
+            ArchiveMembers.Put(RomInfo.DirNames.Scripts, id, bytes);
+            _ = ScriptSourceSync.BinaryWrittenAsync(id);
             return bytes.Length;
         }
 
-        public long write_file(string path, bool word_alignment_padding = false)
+        public long WriteFile(string path, bool word_alignment_padding = false)
         {
             byte[] bytes = ToBytes(word_alignment_padding);
             // Create truncates: a shorter file written over a longer one must not keep its tail.
@@ -249,7 +249,7 @@ namespace DSPRE.ROMFiles
 
             List<MapScreenLoadTrigger> screen = new List<MapScreenLoadTrigger>();
             List<VariableValueTrigger> table = new List<VariableValueTrigger>();
-            foreach (LevelScriptTrigger item in bufferSet)
+            foreach (LevelScriptTrigger item in BufferSet)
             {
                 if (item is VariableValueTrigger v) table.Add(v);
                 else if (item is MapScreenLoadTrigger m) screen.Add(m);
@@ -268,8 +268,8 @@ namespace DSPRE.ROMFiles
                         bw.Write((UInt32)((screen.Count - tableAt) * 5 + 1));
                     }
                     if (i == screen.Count) break;
-                    bw.Write((byte)screen[i].triggerType);
-                    bw.Write((UInt32)screen[i].scriptTriggered);
+                    bw.Write((byte)screen[i].TriggerType);
+                    bw.Write((UInt32)screen[i].ScriptTriggered);
                 }
                 bw.Write((byte)0);
 
@@ -277,9 +277,9 @@ namespace DSPRE.ROMFiles
                 {
                     foreach (VariableValueTrigger item in table)
                     {
-                        bw.Write((UInt16)item.variableToWatch);
-                        bw.Write((UInt16)item.expectedValue);
-                        bw.Write((UInt16)item.scriptTriggered);
+                        bw.Write((UInt16)item.VariableToWatch);
+                        bw.Write((UInt16)item.ExpectedValue);
+                        bw.Write((UInt16)item.ScriptTriggered);
                     }
                     bw.Write((UInt16)0);
                 }

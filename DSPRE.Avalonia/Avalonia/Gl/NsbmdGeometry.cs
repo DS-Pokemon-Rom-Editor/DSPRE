@@ -269,7 +269,7 @@ namespace DSPRE.Avalonia.Gl
         // WinForms applied this scale before rendering map models; buildings already include it.
         private static float[] MapVertexScale(NSBMDModel model)
         {
-            float ms = model?.modelScale ?? 0f;
+            float ms = model?.ModelScale ?? 0f;
             if (ms == 0f) ms = 1f;
             float s = ms / 64f;
             return Mat4.Scale(s, s, s);
@@ -714,11 +714,11 @@ namespace DSPRE.Avalonia.Gl
                 if (obj.RestoreID != -1) running = stack[obj.RestoreID & 0x1f].Clone();
                 if (obj.StackID != -1)
                 {
-                    if (obj.visible)
+                    if (obj.Visible)
                     {
                         // A joint animation replaces a part's own matrix for this frame, keeping
                         // whatever the model says about anything the animation does not touch.
-                        float[] mtx = jointMatrix?.Invoke(node, obj) ?? obj.materix;
+                        float[] mtx = jointMatrix?.Invoke(node, obj) ?? obj.Materix;
                         MTX44 b = new MTX44(); b.SetValues(mtx);
                         running = running.MultMatrix(b);
                     }
@@ -752,12 +752,12 @@ namespace DSPRE.Avalonia.Gl
                     list = new List<float>();
                     byMat[key] = list;
                 }
-                bool coloured = InterpretPolyData(poly.PolyData, poly.StackID, stack, model.modelScale, mat, sceneTransform, list, r, g, b);
+                bool coloured = InterpretPolyData(poly.PolyData, poly.StackID, stack, model.ModelScale, mat, sceneTransform, list, r, g, b);
 
                 if (mat != null)
                 {
                     // The material's own diffuse counts only when it really sets the vertex colour, not the grey stand-in.
-                    bool sets = coloured || (mat.diffuseColor && c.R + c.G + c.B >= 0.05f * 255);
+                    bool sets = coloured || (mat.HasDiffuseColor && c.R + c.G + c.B >= 0.05f * 255);
                     if (sets && NsbmdCull.Modulates(mat.PolyAttrib, mat.PolyAttribMask)) target.MaterialShadeByKey[key] = true;
 
                     // Real per-material translucency (ported from WinForms PR #209) instead of hiding
@@ -768,7 +768,7 @@ namespace DSPRE.Avalonia.Gl
                         target.MaterialAlphaByKey[key] = MaterialAlpha(mat);
 
                     if (!target.MaterialTexMatrixByKey.ContainsKey(key))
-                        target.MaterialTexMatrixByKey[key] = MaterialTexMatrix(mat, model.texMtxMode);
+                        target.MaterialTexMatrixByKey[key] = MaterialTexMatrix(mat, model.TexMtxMode);
 
                     if (!target.MaterialNameByKey.ContainsKey(key) && !string.IsNullOrEmpty(mat.MaterialName))
                         target.MaterialNameByKey[key] = mat.MaterialName;
@@ -784,7 +784,7 @@ namespace DSPRE.Avalonia.Gl
                         NsbmdTextureData tex = NsbmdTextureDecoder.Decode(mat);
                         if (tex != null) target.Textures[key] = tex;
                         // The game draws these untextured; the magenta check is a Model Browser debugging aid.
-                        else if (mat.missingExternalTexture && ShowMissingTextures) target.Textures[key] = MissingTexture();
+                        else if (mat.MissingExternalTexture && ShowMissingTextures) target.Textures[key] = MissingTexture();
                     }
                 }
             }
@@ -858,14 +858,14 @@ namespace DSPRE.Avalonia.Gl
         private static float[] MaterialTexMatrix(NSBMDMaterial mat, byte mode)
         {
             // The loader's trailing placeholder material carries no parsed fields (all zero).
-            if (mat == null || (mat.scaleS == 0f && mat.scaleT == 0f)) return null;
-            if (mat.scaleS == 1f && mat.scaleT == 1f && mat.rot == 0f && mat.transS == 0f && mat.transT == 0f) return null;
+            if (mat == null || (mat.ScaleS == 0f && mat.ScaleT == 0f)) return null;
+            if (mat.ScaleS == 1f && mat.ScaleT == 1f && mat.Rot == 0f && mat.TransS == 0f && mat.TransT == 0f) return null;
             TextureSrtAnimation.Srt srt = new DSPRE.ROMFiles.TextureSrtAnimation.Srt
             {
-                ScaleS = mat.scaleS, ScaleT = mat.scaleT, SinRotation = mat.rot, CosRotation = mat.rotCos,
-                TranslateS = mat.transS, TranslateT = mat.transT,
+                ScaleS = mat.ScaleS, ScaleT = mat.ScaleT, SinRotation = mat.Rot, CosRotation = mat.RotCos,
+                TranslateS = mat.TransS, TranslateT = mat.TransT,
             };
-            float hw = mat.width > 0 && mat.height > 0 ? (float)mat.height / mat.width : 1f;
+            float hw = mat.Width > 0 && mat.Height > 0 ? (float)mat.Height / mat.Width : 1f;
             return srt.ToMatrix3(mode, hw);
         }
 
@@ -876,10 +876,10 @@ namespace DSPRE.Avalonia.Gl
             if (poly == null || poly.Length == 0) return false;
             bool coloured = false;
 
-            float texW = mat != null && mat.width > 0 ? mat.width : 1f;
-            float texH = mat != null && mat.height > 0 ? mat.height : 1f;
+            float texW = mat != null && mat.Width > 0 ? mat.Width : 1f;
+            float texH = mat != null && mat.Height > 0 ? mat.Height : 1f;
             // The material's scale is part of its texture matrix (NsbmdMeshPart.TexMatrix), applied when drawn.
-            int flipS = mat?.flipS ?? 0, flipT = mat?.flipT ?? 0;
+            int flipS = mat?.FlipS ?? 0, flipT = mat?.FlipT ?? 0;
 
             MTX44 cur = new MTX44(); cur.LoadIdentity();
             int stackId = polyStackId;
@@ -924,7 +924,7 @@ namespace DSPRE.Avalonia.Gl
                                 float tx = NSBMDGlRenderer.Sign(S32(poly, ref idx), 0x20) / 4096f / modelScale;
                                 float ty = NSBMDGlRenderer.Sign(S32(poly, ref idx), 0x20) / 4096f / modelScale;
                                 float tz = NSBMDGlRenderer.Sign(S32(poly, ref idx), 0x20) / 4096f / modelScale;
-                                cur.translate(tx, ty, tz); break;
+                                cur.Translate(tx, ty, tz); break;
                             }
                         case 0x20:
                             {

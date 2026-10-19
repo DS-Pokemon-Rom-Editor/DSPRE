@@ -68,12 +68,12 @@ namespace DSPRE.ROMFiles
         {
             data = null;
             error = null;
-            if (gameDirs == null || !gameDirs.ContainsKey(DirNames.pokedexAreas))
+            if (GameDirs == null || !GameDirs.ContainsKey(DirNames.PokedexAreas))
             { error = "This game has no Pokédex area archive."; return false; }
-            bool dppt = gameFamily != GameFamilies.HGSS;
+            bool dppt = GameFamily != GameFamilies.HGSS;
             int header = dppt ? 4 : 2, lists = dppt ? 10 : ListCount;
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.pokedexAreas });
-            string folder = gameDirs[DirNames.pokedexAreas].unpackedDir;
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.PokedexAreas });
+            string folder = GameDirs[DirNames.PokedexAreas].unpackedDir;
             int members = NarcAPI.Narc.MemberCount(folder);
             if (members < header + lists || (members - header) % lists != 0)
             { error = $"The Pokédex area archive has {members} members, which isn't {header} plus {lists} lists per species."; return false; }
@@ -106,12 +106,12 @@ namespace DSPRE.ROMFiles
                 {
                     int header = (int)BitConverter.ToUInt32(b, id * 4);
                     string place = "", label = $"Map {header}";
-                    try { place = HeaderLabels.LocationNameOf(MapHeader.GetMapHeader((ushort)header)); } catch { }
+                    try { place = HeaderLabels.LocationNameOf(MapHeader.GetMapHeader((ushort)header)); } catch { }   // a header that can't be read is listed by its number
                     if (names != null && header < names.Count)
                     {
                         string n = names[header].Replace("\0", "").Trim();
-                        int sep = n.IndexOf(MapHeader.nameSeparator, StringComparison.Ordinal);
-                        label = sep >= 0 ? n.Substring(sep + MapHeader.nameSeparator.Length).Trim() : n;
+                        int sep = n.IndexOf(MapHeader.NameSeparator, StringComparison.Ordinal);
+                        label = sep >= 0 ? n.Substring(sep + MapHeader.NameSeparator.Length).Trim() : n;
                     }
                     named.Add((id, place, label));
                 }

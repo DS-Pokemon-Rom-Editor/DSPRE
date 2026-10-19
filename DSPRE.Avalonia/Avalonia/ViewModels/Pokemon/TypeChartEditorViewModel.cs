@@ -254,13 +254,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task<bool> SaveChangesAsync()
         {
             if (_chart == null) return true;
-            if (HasProblem) { await DialogHelper.ShowError(Problem, "Type chart error"); return false; }
+            if (HasProblem) { await DialogHelper.ShowErrorAsync(Problem, "Type chart error"); return false; }
             if (_chart.FromSource)
             {
                 (bool saved, string error) = await HgEngineSave.RunAsync(() => { _chart.Save(); return null; });
                 if (!saved)
                 {
-                    if (error != null) await DialogHelper.ShowError("The type chart was not saved:\n" + error, "Type chart error");
+                    if (error != null) await DialogHelper.ShowErrorAsync("The type chart was not saved:\n" + error, "Type chart error");
                     return false;
                 }
             }
@@ -269,7 +269,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 try { _chart.Save(); }
                 catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
                 {
-                    await DialogHelper.ShowError("The type chart was not saved:\n" + e.Message, "Type chart error");
+                    await DialogHelper.ShowErrorAsync("The type chart was not saved:\n" + e.Message, "Type chart error");
                     return false;
                 }
             }
@@ -302,7 +302,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try { _chart = TypeChart.Load(); }
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException)
             {
-                _ = DialogHelper.ShowError("The saved type chart couldn't be read back:\n" + e.Message, "Type chart error");
+                _ = DialogHelper.ShowErrorAsync("The saved type chart couldn't be read back:\n" + e.Message, "Type chart error");
                 return;
             }
             _savedKey = Key();

@@ -56,9 +56,9 @@ namespace DSPRE
 
         private static bool IsProjectCode(string path)
         {
-            if (string.IsNullOrEmpty(workDir) || string.IsNullOrEmpty(path)) return false;
+            if (string.IsNullOrEmpty(WorkDir) || string.IsNullOrEmpty(path)) return false;
             string full = Path.GetFullPath(path);
-            string root = Path.GetFullPath(workDir).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
+            string root = Path.GetFullPath(WorkDir).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
             return full.StartsWith(root, StringComparison.OrdinalIgnoreCase) && HgEngineWriteGuard.TryIdentify(full, out int _);
         }
     }

@@ -47,7 +47,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         {
             RecentFolders.Clear();
             RecentRoms.Clear();
-            List<string> recents = SettingsManager.Settings?.recentProjects;
+            List<string> recents = SettingsManager.Settings?.RecentProjects;
             if (recents != null)
                 foreach (string r in recents) Add(r);
             OnPropertyChanged(nameof(HasRecents));

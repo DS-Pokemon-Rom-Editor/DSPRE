@@ -5,11 +5,11 @@ namespace DSPRE
     /// <summary>File indices of one trainer class: two per class on Diamond and Pearl, five on later games.</summary>
     public static class TrainerGraphicsLayout
     {
-        public static int Stride => gameFamily == GameFamilies.DP ? 2 : 5;
+        public static int Stride => GameFamily == GameFamilies.DP ? 2 : 5;
 
-        public static bool HasCells => gameFamily != GameFamilies.DP;
+        public static bool HasCells => GameFamily != GameFamilies.DP;
 
-        public static bool PixelsAreScrambled => gameFamily == GameFamilies.DP;
+        public static bool PixelsAreScrambled => GameFamily == GameFamilies.DP;
 
         public static int DrawingEntry(int trClassID) => trClassID * Stride;
 
@@ -25,7 +25,7 @@ namespace DSPRE
         public static int ScanEntry(int trClassID) => HasCells ? trClassID * Stride + 4 : -1;
 
         /// <summary>HGSS keys its trainer scans from the last word like DP; Platinum from the first.</summary>
-        public static bool ScanScrambledFromEnd => gameFamily != GameFamilies.Plat;
+        public static bool ScanScrambledFromEnd => GameFamily != GameFamilies.Plat;
 
         public static int ClassOf(int fileIndex) => fileIndex / Stride;
     }

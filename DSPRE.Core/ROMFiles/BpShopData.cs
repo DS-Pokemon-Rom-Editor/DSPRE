@@ -44,12 +44,12 @@ namespace DSPRE.ROMFiles
 
         public static string WhyNot()
         {
-            if (gameFamily == GameFamilies.HGSS)
+            if (GameFamily == GameFamilies.HGSS)
                 return "HeartGold and SoulSilver build their Battle Point exchange menus in scripts. Use the Script and Text editors.";
             BpShopSites sites = RomLocator.BpShopSites;
             if (sites == null) return "Only US Platinum (Rev 1) and Diamond are supported.";
             if (!IsDsRomProject && ARM9.CheckCompressionMark()) return "arm9 is still compressed. Convert this project to ds-rom format first.";
-            if (!File.Exists(arm9Path)) return "arm9 is missing from this project.";
+            if (!File.Exists(Arm9Path)) return "arm9 is missing from this project.";
             if (sites.ListPointers >= 0 && !File.Exists(OverlayUtils.GetPath(7))) return "Overlay 7 is missing from this project.";
             return null;
         }
@@ -70,7 +70,7 @@ namespace DSPRE.ROMFiles
             return File.ReadAllBytes(OverlayUtils.GetPath(7));
         }
 
-        private static byte[] ReadSynth() => File.Exists(Filesystem.expArmPath) ? File.ReadAllBytes(Filesystem.expArmPath) : null;
+        private static byte[] ReadSynth() => File.Exists(Filesystem.ExpArmPath) ? File.ReadAllBytes(Filesystem.ExpArmPath) : null;
 
         /// <summary>Resolves a RAM address to (bytes, offset, 0 arm9 / 1 overlay 7 / 2 synthetic overlay).</summary>
         private static (byte[] data, int offset, int where) Resolve(uint ram, int length, byte[] arm9, byte[] ov7, uint ov7Base, byte[] synth, string what)
@@ -103,7 +103,7 @@ namespace DSPRE.ROMFiles
 
         private void LoadPlatinum()
         {
-            byte[] arm9 = File.ReadAllBytes(arm9Path), ov7 = ReadOverlay7(), synth = ReadSynth();
+            byte[] arm9 = File.ReadAllBytes(Arm9Path), ov7 = ReadOverlay7(), synth = ReadSynth();
             uint ov7Base = OverlayUtils.OverlayTable.GetRAMAddress(7);
 
             (byte[] data, int offset, int where) right = Resolve(BitConverter.ToUInt32(arm9, _sites.ListPointers), 2, arm9, null, 0, synth, "TM counter list");
@@ -215,7 +215,7 @@ namespace DSPRE.ROMFiles
             if (!IsPlatinum || Expanded) return;
             if (MovedByPatch) throw new InvalidOperationException("The Battle Point lists were moved by a patch DSPRE doesn't know, so it won't move them.");
             if (!SyntheticOverlaySpace.Available()) throw new InvalidOperationException("Apply the ARM9 expansion in the ROM Patch Toolbox first.");
-            byte[] arm9 = File.ReadAllBytes(arm9Path), ov7 = ReadOverlay7(), synth = ReadSynth();
+            byte[] arm9 = File.ReadAllBytes(Arm9Path), ov7 = ReadOverlay7(), synth = ReadSynth();
             byte[] arm9Before = (byte[])arm9.Clone(), ov7Before = (byte[])ov7.Clone(), synthBefore = (byte[])synth.Clone();
             List<Entry> rows = PriceRows();
             byte[] block = BuildBlock(Left, Right, rows, out int leftAt, out int rightAt, out int pricesAt, fixedRoom: true);
@@ -224,7 +224,7 @@ namespace DSPRE.ROMFiles
             int at = SyntheticOverlaySpace.Place(synth, block.Length, SyntheticOverlaySpace.Reserved(synth));
             if (at < 0) throw new InvalidOperationException("No free space was found in the expanded ARM9 area for the Battle Point lists.");
             block.CopyTo(synth, at);
-            uint ram = synthOverlayLoadAddress + (uint)at;
+            uint ram = SynthOverlayLoadAddress + (uint)at;
             Put32(arm9, _sites.ListPointers, ram + (uint)rightAt);
             Put32(arm9, _sites.ListPointers + 4, ram + (uint)leftAt);
             Put32(ov7, _sites.PriceLiteral, ram + (uint)pricesAt);
@@ -232,15 +232,15 @@ namespace DSPRE.ROMFiles
             ov7[_sites.PriceCountCompare] = (byte)rows.Count;
             try
             {
-                DSUtils.WriteWholeFile(Filesystem.expArmPath, synth);
+                DSUtils.WriteWholeFile(Filesystem.ExpArmPath, synth);
                 DSUtils.WriteWholeFile(OverlayUtils.GetPath(7), ov7);
-                DSUtils.WriteWholeFile(arm9Path, arm9);
+                DSUtils.WriteWholeFile(Arm9Path, arm9);
             }
             catch
             {
-                DSUtils.WriteWholeFile(Filesystem.expArmPath, synthBefore);
+                DSUtils.WriteWholeFile(Filesystem.ExpArmPath, synthBefore);
                 DSUtils.WriteWholeFile(OverlayUtils.GetPath(7), ov7Before);
-                DSUtils.WriteWholeFile(arm9Path, arm9Before);
+                DSUtils.WriteWholeFile(Arm9Path, arm9Before);
                 throw;
             }
             _inPlace = false;
@@ -250,7 +250,7 @@ namespace DSPRE.ROMFiles
 
         private void SavePlatinum()
         {
-            byte[] arm9 = File.ReadAllBytes(arm9Path), ov7 = ReadOverlay7(), synth = ReadSynth();
+            byte[] arm9 = File.ReadAllBytes(Arm9Path), ov7 = ReadOverlay7(), synth = ReadSynth();
             byte[] arm9Before = (byte[])arm9.Clone(), ov7Before = (byte[])ov7.Clone(), synthBefore = (byte[])synth?.Clone();
             List<Entry> rows = PriceRows();
             bool synthChanged = false;
@@ -269,7 +269,7 @@ namespace DSPRE.ROMFiles
                 Array.Clear(synth, _blockStart, _blockLength);
                 block.CopyTo(synth, at);
                 synthChanged = true;
-                uint ram = synthOverlayLoadAddress + (uint)at;
+                uint ram = SynthOverlayLoadAddress + (uint)at;
                 Put32(arm9, _sites.ListPointers, ram + (uint)rightAt);
                 Put32(arm9, _sites.ListPointers + 4, ram + (uint)leftAt);
                 Put32(ov7, _sites.PriceLiteral, ram + (uint)pricesAt);
@@ -286,15 +286,15 @@ namespace DSPRE.ROMFiles
 
             try
             {
-                if (synthChanged) DSUtils.WriteWholeFile(Filesystem.expArmPath, synth);
+                if (synthChanged) DSUtils.WriteWholeFile(Filesystem.ExpArmPath, synth);
                 DSUtils.WriteWholeFile(OverlayUtils.GetPath(7), ov7);
-                DSUtils.WriteWholeFile(arm9Path, arm9);
+                DSUtils.WriteWholeFile(Arm9Path, arm9);
             }
             catch
             {
-                if (synthChanged) DSUtils.WriteWholeFile(Filesystem.expArmPath, synthBefore);
+                if (synthChanged) DSUtils.WriteWholeFile(Filesystem.ExpArmPath, synthBefore);
                 DSUtils.WriteWholeFile(OverlayUtils.GetPath(7), ov7Before);
-                DSUtils.WriteWholeFile(arm9Path, arm9Before);
+                DSUtils.WriteWholeFile(Arm9Path, arm9Before);
                 throw;
             }
         }
@@ -314,7 +314,7 @@ namespace DSPRE.ROMFiles
         // The counters' sizes live in script 0356, so the split stays fixed and only items and prices change.
         private void LoadDiamond()
         {
-            byte[] arm9 = File.ReadAllBytes(arm9Path);
+            byte[] arm9 = File.ReadAllBytes(Arm9Path);
             if (!SplitLooksVanilla(arm9)) throw new InvalidDataException("The Battle Point exchange code doesn't look like Diamond's; it may have been patched.");
             _split = arm9[_sites.ExchangeSplit];
             if (_split < 1 || _split >= ExchangeRows) throw new InvalidDataException("The Battle Point exchange split is outside its table.");
@@ -332,10 +332,10 @@ namespace DSPRE.ROMFiles
 
         private void SaveDiamond()
         {
-            byte[] arm9 = File.ReadAllBytes(arm9Path);
+            byte[] arm9 = File.ReadAllBytes(Arm9Path);
             if (!SplitLooksVanilla(arm9)) throw new InvalidOperationException("The Battle Point exchange code changed since the lists were read; reopen the editor.");
             WriteExchangeRows(arm9);
-            DSUtils.WriteWholeFile(arm9Path, arm9);
+            DSUtils.WriteWholeFile(Arm9Path, arm9);
         }
 
         // ---------------------------------------------------------------- checks

@@ -26,7 +26,7 @@ namespace DSPRE
 
         public static List<Entry> GetEntries()
         {
-            ScriptFile itemScript = new ScriptFile(RomInfo.itemScriptFileNumber);
+            ScriptFile itemScript = new ScriptFile(RomInfo.ItemScriptFileNumber);
             HashSet<int> used = GetUsedScriptNumbers();
             List<Entry> result = new List<Entry>();
 
@@ -52,12 +52,12 @@ namespace DSPRE
             for (int i = 0; i < fileCount; i++)
             {
                 EventFile ev = new EventFile(i);
-                foreach (Overworld ow in ev.overworlds)
+                foreach (Overworld ow in ev.Overworlds)
                 {
-                    bool isItem = ow.type == (ushort)Overworld.OwType.ITEM || (ow.scriptNumber >= ItemScrMin && ow.scriptNumber <= ItemScrMax);
+                    bool isItem = ow.Type == (ushort)Overworld.OwType.ITEM || (ow.ScriptNumber >= ItemScrMin && ow.ScriptNumber <= ItemScrMax);
                     if (isItem)
                     {
-                        used.Add(ow.scriptNumber);
+                        used.Add(ow.ScriptNumber);
                     }
                 }
             }
@@ -73,7 +73,7 @@ namespace DSPRE
         /// <summary>Platinum's Distortion World Griseous Orb, which overlay 9 names by script number rather than through an event file.</summary>
         private static int? ReadDistortionWorldItemScript()
         {
-            uint offset = RomInfo.distortionWorldItemScriptOffset;
+            uint offset = RomInfo.DistortionWorldItemScriptOffset;
             if (offset == 0) return null;
             if (OverlayUtils.IsCompressed(9)) OverlayUtils.Decompress(9);
             string path = OverlayUtils.GetPath(9);
@@ -86,15 +86,15 @@ namespace DSPRE
 
         private static void WriteDistortionWorldItemScript(int value)
         {
-            DSUtils.WriteToFile(OverlayUtils.GetPath(9), BitConverter.GetBytes((ushort)value), RomInfo.distortionWorldItemScriptOffset);
+            DSUtils.WriteToFile(OverlayUtils.GetPath(9), BitConverter.GetBytes((ushort)value), RomInfo.DistortionWorldItemScriptOffset);
         }
 
         public static void AddEntry(int itemId, int quantity)
         {
-            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.scripts });
+            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.Scripts });
 
-            ScriptFile itemScript = new ScriptFile(RomInfo.itemScriptFileNumber);
-            int insertAt = itemScript.allScripts.FindLastIndex(DSUtils.IsGroundItemScriptEntry) + 1;
+            ScriptFile itemScript = new ScriptFile(RomInfo.ItemScriptFileNumber);
+            int insertAt = itemScript.AllScripts.FindLastIndex(DSUtils.IsGroundItemScriptEntry) + 1;
             List<ScriptCommand> cmdList = new List<ScriptCommand>
             {
                 new ScriptCommand("SetVar 0x8008 " + itemId),
@@ -102,19 +102,19 @@ namespace DSPRE
                 new ScriptCommand("Jump Function_#1")
             };
             ScriptCommandContainer newEntry = new ScriptCommandContainer(uint.MaxValue, ScriptFile.ContainerTypes.Script, commandList: cmdList);
-            itemScript.allScripts.Insert(insertAt, newEntry);
+            itemScript.AllScripts.Insert(insertAt, newEntry);
             itemScript.RenumberContainers();
-            itemScript.SaveToFileDefaultDir(RomInfo.itemScriptFileNumber, showSuccessMessage: false);
+            itemScript.SaveToFileDefaultDir(RomInfo.ItemScriptFileNumber, showSuccessMessage: false);
 
-            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.eventFiles });
+            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.EventFiles });
             RemapItemReferences(n => n - ItemScrMin >= insertAt ? n + 1 : n);
         }
 
         /// <returns>null on success, or a user-facing error message if the entry is still in use.</returns>
         public static string RemoveEntry(int scriptIndex)
         {
-            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.scripts });
-            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.eventFiles });
+            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.Scripts });
+            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.EventFiles });
 
             int scriptNumber = ItemScrMin + scriptIndex;
             if (GetUsedScriptNumbers().Contains(scriptNumber))
@@ -122,10 +122,10 @@ namespace DSPRE
                 return "This entry is currently used by an Overworld Item event and can't be removed.\nChange or delete that event first.";
             }
 
-            ScriptFile itemScript = new ScriptFile(RomInfo.itemScriptFileNumber);
-            itemScript.allScripts.RemoveAt(scriptIndex);
+            ScriptFile itemScript = new ScriptFile(RomInfo.ItemScriptFileNumber);
+            itemScript.AllScripts.RemoveAt(scriptIndex);
             itemScript.RenumberContainers();
-            itemScript.SaveToFileDefaultDir(RomInfo.itemScriptFileNumber, showSuccessMessage: false);
+            itemScript.SaveToFileDefaultDir(RomInfo.ItemScriptFileNumber, showSuccessMessage: false);
 
             ShiftOverworldReferencesAfterRemoval(scriptNumber);
             return null;
@@ -146,12 +146,12 @@ namespace DSPRE
                 EventFile ev = new EventFile(i);
                 bool dirty = false;
 
-                foreach (Overworld ow in ev.overworlds)
+                foreach (Overworld ow in ev.Overworlds)
                 {
-                    bool isItem = ow.type == (ushort)Overworld.OwType.ITEM || (ow.scriptNumber >= ItemScrMin && ow.scriptNumber <= ItemScrMax);
+                    bool isItem = ow.Type == (ushort)Overworld.OwType.ITEM || (ow.ScriptNumber >= ItemScrMin && ow.ScriptNumber <= ItemScrMax);
                     if (!isItem) continue;
-                    int moved = Shifted(ow.scriptNumber);
-                    if (moved != ow.scriptNumber) { ow.scriptNumber = (ushort)moved; dirty = true; }
+                    int moved = Shifted(ow.ScriptNumber);
+                    if (moved != ow.ScriptNumber) { ow.ScriptNumber = (ushort)moved; dirty = true; }
                 }
 
                 if (dirty)
@@ -178,9 +178,9 @@ namespace DSPRE
 
             public Session()
             {
-                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.scripts, RomInfo.DirNames.eventFiles });
-                _script = new ScriptFile(RomInfo.itemScriptFileNumber);
-                for (int i = 0; i < _script.allScripts.Count; i++) _origin.Add(i);
+                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.Scripts, RomInfo.DirNames.EventFiles });
+                _script = new ScriptFile(RomInfo.ItemScriptFileNumber);
+                for (int i = 0; i < _script.AllScripts.Count; i++) _origin.Add(i);
                 _used = GetUsedScriptNumbers();
             }
 
@@ -197,7 +197,7 @@ namespace DSPRE
 
             public Snapshot Take() => new Snapshot
             {
-                Scripts = _script.allScripts.Select(c => (c, new List<ScriptCommand>(c.commands))).ToList(),
+                Scripts = _script.AllScripts.Select(c => (c, new List<ScriptCommand>(c.Commands))).ToList(),
                 Origin = new List<int?>(_origin),
                 Removed = new List<int>(_removed),
                 Changed = HasChanges,
@@ -205,11 +205,11 @@ namespace DSPRE
 
             public void Restore(Snapshot snapshot)
             {
-                _script.allScripts.Clear();
+                _script.AllScripts.Clear();
                 foreach ((ScriptCommandContainer container, List<ScriptCommand> commands) in snapshot.Scripts)
                 {
-                    container.commands = new List<ScriptCommand>(commands);
-                    _script.allScripts.Add(container);
+                    container.Commands = new List<ScriptCommand>(commands);
+                    _script.AllScripts.Add(container);
                 }
                 _origin.Clear();
                 _origin.AddRange(snapshot.Origin);
@@ -235,14 +235,14 @@ namespace DSPRE
 
             public void Add(int itemId, int quantity)
             {
-                int insertAt = _script.allScripts.FindLastIndex(DSUtils.IsGroundItemScriptEntry) + 1;
+                int insertAt = _script.AllScripts.FindLastIndex(DSUtils.IsGroundItemScriptEntry) + 1;
                 List<ScriptCommand> cmdList = new List<ScriptCommand>
                 {
                     new ScriptCommand("SetVar 0x8008 " + itemId),
                     new ScriptCommand("SetVar 0x8009 " + quantity),
                     new ScriptCommand("Jump Function_#1")
                 };
-                _script.allScripts.Insert(insertAt, new ScriptCommandContainer(uint.MaxValue, ScriptFile.ContainerTypes.Script, commandList: cmdList));
+                _script.AllScripts.Insert(insertAt, new ScriptCommandContainer(uint.MaxValue, ScriptFile.ContainerTypes.Script, commandList: cmdList));
                 _origin.Insert(insertAt, null);
                 HasChanges = true;
             }
@@ -250,29 +250,29 @@ namespace DSPRE
             /// <summary>Changes an entry's item and quantity in place, so events using it keep their script number.</summary>
             public void Update(int scriptIndex, int itemId, int quantity)
             {
-                if (scriptIndex < 0 || scriptIndex >= _script.allScripts.Count) return;
-                ScriptCommandContainer container = _script.allScripts[scriptIndex];
+                if (scriptIndex < 0 || scriptIndex >= _script.AllScripts.Count) return;
+                ScriptCommandContainer container = _script.AllScripts[scriptIndex];
                 if (!DSUtils.IsGroundItemScriptEntry(container)) return;
-                container.commands[0] = SetVarLike(container.commands[0], itemId);
-                container.commands[1] = SetVarLike(container.commands[1], quantity);
+                container.Commands[0] = SetVarLike(container.Commands[0], itemId);
+                container.Commands[1] = SetVarLike(container.Commands[1], quantity);
                 HasChanges = true;
             }
 
             // Rebuilt from text rather than patching parameter bytes, so the command's text form stays in step.
             private static ScriptCommand SetVarLike(ScriptCommand original, int value)
             {
-                ushort variable = BitConverter.ToUInt16(original.cmdParams[0], 0);
+                ushort variable = BitConverter.ToUInt16(original.CmdParams[0], 0);
                 return new ScriptCommand($"SetVar 0x{variable:X4} {value}");
             }
 
             /// <returns>null on success, or why the entry can't go.</returns>
             public string Remove(int scriptIndex)
             {
-                if (scriptIndex < 0 || scriptIndex >= _script.allScripts.Count) return null;
+                if (scriptIndex < 0 || scriptIndex >= _script.AllScripts.Count) return null;
                 int? origin = _origin[scriptIndex];
                 if (origin != null && _used.Contains(ItemScrMin + origin.Value))
                     return "An item event on the map still uses this entry. Change or delete that event first.";
-                _script.allScripts.RemoveAt(scriptIndex);
+                _script.AllScripts.RemoveAt(scriptIndex);
                 _origin.RemoveAt(scriptIndex);
                 if (origin != null) _removed.Add(ItemScrMin + origin.Value);
                 HasChanges = true;
@@ -298,7 +298,7 @@ namespace DSPRE
                 }
 
                 _script.RenumberContainers();
-                _script.SaveToFileDefaultDir(RomInfo.itemScriptFileNumber, showSuccessMessage: false);
+                _script.SaveToFileDefaultDir(RomInfo.ItemScriptFileNumber, showSuccessMessage: false);
                 RemapItemReferences(Remap);
                 _removed.Clear();
                 for (int i = 0; i < _origin.Count; i++) _origin[i] = i;

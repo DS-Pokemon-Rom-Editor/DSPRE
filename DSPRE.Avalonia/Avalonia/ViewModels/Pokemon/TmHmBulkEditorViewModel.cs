@@ -164,7 +164,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 _order = TMEditor.DisplayOrder();
             }
 
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData, DirNames.evolutions });
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.PersonalPokeData, DirNames.Evolutions });
 
             // DP's personalPokeData NARC has fewer files than the species-name text archive, which still
             // lists Platinum-introduced forms (501-507) DP never got data files for.
@@ -212,8 +212,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             for (int i = 0; i < _speciesCount; i++)
             {
                 PokemonPersonalData data = new PokemonPersonalData(i);
-                _compat[i] = new SortedSet<int>(data.machines.Select(m => (int)m));
-                _savedFileMachines[i] = FileMachines(data.machines);
+                _compat[i] = new SortedSet<int>(data.Machines.Select(m => (int)m));
+                _savedFileMachines[i] = FileMachines(data.Machines);
             }
             LoadExtraMaskTms();
         }
@@ -337,11 +337,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             for (int i = 0; i < evoCount; i++)
             {
                 EvolutionFile evo;
-                try { evo = new EvolutionFile(i); } catch { continue; }
+                try { evo = new EvolutionFile(i); } catch (Exception ex) { AppLogger.WarnOnce("TmHmBulkEditorViewModel.BuildFamilies", ex); continue; }
 
-                foreach (EvolutionData entry in evo.data)
-                    if (entry.method != EvolutionMethod.None && entry.target > 0 && entry.target < _speciesCount)
-                        Union(i, entry.target);
+                foreach (EvolutionData entry in evo.Data)
+                    if (entry.Method != EvolutionMethod.None && entry.Target > 0 && entry.Target < _speciesCount)
+                        Union(i, entry.Target);
             }
 
             Dictionary<int, List<int>> groups = new Dictionary<int, List<int>>();
@@ -637,7 +637,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (FromSource) TakeSourceSave(id);
                 else
                 {
-                    SortedSet<byte> onDisk = FileMachines(new PokemonPersonalData(id).machines);
+                    SortedSet<byte> onDisk = FileMachines(new PokemonPersonalData(id).Machines);
                     SortedSet<byte> bytes = new SortedSet<byte>(data.Where(m => m < FirstMaskMachine).Select(m => (byte)m));
                 ApplyDelta(bytes, _savedFileMachines[id], onDisk);
                 data.RemoveWhere(m => m < FirstMaskMachine);
@@ -697,16 +697,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     SortedSet<byte> now = FileMachines(data);
                     if (now.SetEquals(_savedFileMachines[id])) continue;
                     PokemonPersonalData fresh = new PokemonPersonalData(id);
-                    ApplyDelta(fresh.machines, _savedFileMachines[id], now);
+                    ApplyDelta(fresh.Machines, _savedFileMachines[id], now);
                     fresh.SaveToFileDefaultDir(id, false);
-                    _savedFileMachines[id] = FileMachines(fresh.machines);
+                    _savedFileMachines[id] = FileMachines(fresh.Machines);
                     written.Add(id);
                 }
             }
             catch (Exception e) when (e is System.IO.IOException || e is UnauthorizedAccessException || e is InvalidOperationException || e is ArgumentException)
             {
                 foreach (int id in written) AppEvents.RaisePersonalDataSaved(this, id);
-                _ = DialogHelper.ShowError("Not everything was saved: the TM/HM compatibility couldn't be written.\n" + e.Message, "TM / HM bulk editor error");
+                _ = DialogHelper.ShowErrorAsync("Not everything was saved: the TM/HM compatibility couldn't be written.\n" + e.Message, "TM / HM bulk editor error");
                 return;
             }
             foreach (int id in written) AppEvents.RaisePersonalDataSaved(this, id);

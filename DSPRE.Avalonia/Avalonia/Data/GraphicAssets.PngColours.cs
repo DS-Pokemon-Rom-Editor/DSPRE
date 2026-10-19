@@ -102,7 +102,7 @@ namespace DSPRE.Avalonia.Data
             PngColourCheck check = new PngColourCheck { KeepsNumbers = true };
             ScriptNarc narc = new ScriptNarc(a.Dir);
             check.PaletteEntry = FindColourIndex(a, narc, index);
-            if (ix.BitsPerPixel == 4) { try { check.Bank = a.ColourBank?.Invoke(index) ?? 0; } catch { } }
+            if (ix.BitsPerPixel == 4) { try { check.Bank = a.ColourBank?.Invoke(index) ?? 0; } catch { } }   // without a known bank the first bank is used
             Dictionary<int, List<string>> users = ix.BitsPerPixel == 4 && check.PaletteEntry >= 0
                 ? SlotUsers(a, narc, index, check.PaletteEntry, check.Bank) : new Dictionary<int, List<string>>();
             bool[] used = new bool[256];
@@ -158,7 +158,7 @@ namespace DSPRE.Avalonia.Data
             }
 
             int own = Identify(narc.Get(index)) == Kind.TileGraphic ? index : -1;
-            if (own < 0) { try { own = a.DrawingEntry?.Invoke(index) ?? -1; } catch { } }
+            if (own < 0) { try { own = a.DrawingEntry?.Invoke(index) ?? -1; } catch { } }   // without the game's pairing the drawing is found by searching
             if (own < 0) own = FindDrawingIndex(narc, index);
 
             for (int i = 0; i < narc.Count; i++)

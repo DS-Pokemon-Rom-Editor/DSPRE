@@ -379,8 +379,8 @@ namespace DSPRE.ROMFiles
     #endregion
     public class ItemData : RomFile
     {
-        public ushort price;
-        public HoldEffect holdEffect;
+        public ushort Price;
+        public HoldEffect HoldEffect;
         public byte HoldEffectParam;
         public byte PluckEffect;
         public byte FlingEffect;
@@ -388,14 +388,14 @@ namespace DSPRE.ROMFiles
         public byte NaturalGiftPower;
 
         // Bit-packed 16-bit value
-        public NaturalGiftType naturalGiftType; // 5 bits
+        public NaturalGiftType NaturalGiftType; // 5 bits
         public bool PreventToss;     // 1 bit
         public bool Selectable;      // 1 bit
-        public FieldPocket fieldPocket;     // 4 bits
-        public BattlePocket battlePocket;    // 5 bits
+        public FieldPocket FieldPocket;     // 4 bits
+        public BattlePocket BattlePocket;    // 5 bits
 
-        public FieldUseFunc fieldUseFunc;
-        public BattleUseFunc battleUseFunc;
+        public FieldUseFunc FieldUseFunc;
+        public BattleUseFunc BattleUseFunc;
         public byte PartyUse;
         public ItemPartyUseParam PartyUseParam;
 
@@ -403,30 +403,30 @@ namespace DSPRE.ROMFiles
 
         /// <summary>hg-engine's price_high, bits 16-19 of the price. include/item.h puts it in the low nibble of
         /// byte 0x22, which vanilla leaves as padding.</summary>
-        public byte priceHigh;
+        public byte PriceHigh;
         public const int MaxHgEnginePrice = 0xFFFFF;
-        private readonly bool hgEngineLayout;
+        private readonly bool _hgEngineLayout;
 
         /// <summary>Retail members end at byte 34; hg-engine's carry two more.</summary>
         public const int RetailSize = 34;
-        private readonly int memberLength = RetailSize + 2;
+        private readonly int _memberLength = RetailSize + 2;
 
         public int FullPrice
         {
-            get => price | (priceHigh << 16);
-            set { price = (ushort)(value & 0xFFFF); priceHigh = (byte)((value >> 16) & 0xF); }
+            get => Price | (PriceHigh << 16);
+            set { Price = (ushort)(value & 0xFFFF); PriceHigh = (byte)((value >> 16) & 0xF); }
         }
 
-        public ItemData(Stream stream, int ID) : this(stream, ID, RomInfo.isHGE) { }
+        public ItemData(Stream stream, int ID) : this(stream, ID, RomInfo.IsHGE) { }
 
         public ItemData(Stream stream, int ID, bool hgEngineLayout)
         {
             this.ID = ID;
-            this.hgEngineLayout = hgEngineLayout;
+            this._hgEngineLayout = hgEngineLayout;
             using (BinaryReader reader = new BinaryReader(stream))
             {
-                price = reader.ReadUInt16();
-                holdEffect = (HoldEffect)reader.ReadByte();
+                Price = reader.ReadUInt16();
+                HoldEffect = (HoldEffect)reader.ReadByte();
                 HoldEffectParam = reader.ReadByte();
                 PluckEffect = reader.ReadByte();
                 FlingEffect = reader.ReadByte();
@@ -434,14 +434,14 @@ namespace DSPRE.ROMFiles
                 NaturalGiftPower = reader.ReadByte();
 
                 ushort bitfield = reader.ReadUInt16();
-                naturalGiftType = (NaturalGiftType)(bitfield & 0b0001_1111);
+                NaturalGiftType = (NaturalGiftType)(bitfield & 0b0001_1111);
                 PreventToss = (bitfield & (1 << 5)) != 0;
                 Selectable = (bitfield & (1 << 6)) != 0;
-                fieldPocket = (FieldPocket)((bitfield >> 7) & 0b1111);
-                battlePocket = (BattlePocket)((bitfield >> 11) & 0b11111);
+                FieldPocket = (FieldPocket)((bitfield >> 7) & 0b1111);
+                BattlePocket = (BattlePocket)((bitfield >> 11) & 0b11111);
 
-                fieldUseFunc = (FieldUseFunc)reader.ReadByte();
-                battleUseFunc = (BattleUseFunc)reader.ReadByte();
+                FieldUseFunc = (FieldUseFunc)reader.ReadByte();
+                BattleUseFunc = (BattleUseFunc)reader.ReadByte();
                 PartyUse = reader.ReadByte();
 
                 reader.ReadByte(); // skip 1 byte padding_0D
@@ -449,21 +449,21 @@ namespace DSPRE.ROMFiles
                 PartyUseParam = new ItemPartyUseParam(reader);
 
                 byte[] tail = reader.ReadBytes(2); // padding_22, price_high on hg-engine
-                if (hgEngineLayout && tail.Length > 0) priceHigh = (byte)(tail[0] & 0xF);
-                memberLength = RetailSize + tail.Length;
+                if (hgEngineLayout && tail.Length > 0) PriceHigh = (byte)(tail[0] & 0xF);
+                _memberLength = RetailSize + tail.Length;
             }
         }
 
 
-        public ItemData(int ID) : this(new FileStream(Path.Combine(RomInfo.gameDirs[DirNames.itemData].unpackedDir, ID.ToString("D4")), FileMode.Open), ID) { }
+        public ItemData(int ID) : this(new FileStream(Path.Combine(RomInfo.GameDirs[DirNames.ItemData].unpackedDir, ID.ToString("D4")), FileMode.Open), ID) { }
 
         public override byte[] ToByteArray()
         {
             using (MemoryStream stream = new MemoryStream())
             using (BinaryWriter writer = new BinaryWriter(stream))
             {
-                writer.Write(price);
-                writer.Write((byte)holdEffect);
+                writer.Write(Price);
+                writer.Write((byte)HoldEffect);
                 writer.Write(HoldEffectParam);
                 writer.Write(PluckEffect);
                 writer.Write(FlingEffect);
@@ -472,23 +472,23 @@ namespace DSPRE.ROMFiles
 
                 ushort bitfield = 0;
                 // Bitfield packing
-                bitfield |= (ushort)((byte)naturalGiftType & 0b11111);         // Bits 0-4: NaturalGiftType
+                bitfield |= (ushort)((byte)NaturalGiftType & 0b11111);         // Bits 0-4: NaturalGiftType
                 if (PreventToss) bitfield |= (1 << 5);                        // Bit 5: PreventToss
                 if (Selectable) bitfield |= (1 << 6);                         // Bit 6: Selectable
-                bitfield |= (ushort)(((byte)fieldPocket & 0b1111) << 7);      // Bits 7-10: FieldPocket
-                bitfield |= (ushort)(((byte)battlePocket & 0b11111) << 11);   // Bits 11-15: BattlePocket
+                bitfield |= (ushort)(((byte)FieldPocket & 0b1111) << 7);      // Bits 7-10: FieldPocket
+                bitfield |= (ushort)(((byte)BattlePocket & 0b11111) << 11);   // Bits 11-15: BattlePocket
                 writer.Write(bitfield);
 
-                writer.Write((byte)fieldUseFunc);
-                writer.Write((byte)battleUseFunc);
+                writer.Write((byte)FieldUseFunc);
+                writer.Write((byte)BattleUseFunc);
                 writer.Write(PartyUse);
                 writer.Write((byte)0); // padding
 
                 PartyUseParam.WriteTo(writer);
 
                 // padding, price_high on hg-engine
-                byte[] tail = { hgEngineLayout ? (byte)(priceHigh & 0xF) : (byte)0, 0 };
-                writer.Write(tail, 0, memberLength - RetailSize);
+                byte[] tail = { _hgEngineLayout ? (byte)(PriceHigh & 0xF) : (byte)0, 0 };
+                writer.Write(tail, 0, _memberLength - RetailSize);
 
                 return stream.ToArray();
             }
@@ -496,7 +496,7 @@ namespace DSPRE.ROMFiles
 
         public void SaveToFileDefaultDir(int IDtoReplace, bool showSuccessMessage = true)
         {
-            SaveToFileDefaultDir(DirNames.itemData, IDtoReplace, showSuccessMessage);
+            SaveToFileDefaultDir(DirNames.ItemData, IDtoReplace, showSuccessMessage);
         }
         public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true)
         {

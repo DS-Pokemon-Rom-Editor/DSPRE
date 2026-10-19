@@ -214,7 +214,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             _musicDict.Clear();
             _musicAdded = false;
-            if ((!isHGE || _musicFromSource) && _metadata == TrainerClassMetadataDetectionState.Stock) SetupEncounterMusicTable();
+            if ((!IsHGE || _musicFromSource) && _metadata == TrainerClassMetadataDetectionState.Stock) SetupEncounterMusicTable();
         }
 
         // The external trainer class metadata patch (PR #272) moves gender, prize, eye-contact and battle music into
@@ -275,7 +275,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             ClassIntroPatch.Row row = rows[index];
             string summary = ClassIntroPatch.StyleNames[(int)row.Style];
             // Diamond and Pearl cut the face from a class's battle sprite and name no trainer.
-            bool dp = gameFamily == GameFamilies.DP;
+            bool dp = GameFamily == GameFamilies.DP;
             if (row.Style == ClassIntroPatch.Style.Gym)
                 summary += dp ? ", face from " + _introNames.Class(row.DpGymClass) : ", showing " + _introNames.Trainer(row.GymTrainer);
             else if (row.Style == ClassIntroPatch.Style.League)
@@ -309,11 +309,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private static string ReadWithArticle(int index)
         {
             // Japanese and Korean have no article bank.
-            if (HgEngineProject.IsActive || trainerClassWithArticleMessageNumber < 0) return null;
+            if (HgEngineProject.IsActive || TrainerClassWithArticleMessageNumber < 0) return null;
             try
             {
-                List<string> withArticle = new TextArchive(trainerClassWithArticleMessageNumber).messages;
-                List<string> names = new TextArchive(trainerClassMessageNumber).messages;
+                List<string> withArticle = new TextArchive(TrainerClassWithArticleMessageNumber).Messages;
+                List<string> names = new TextArchive(TrainerClassMessageNumber).Messages;
                 // Only trusted when it lines up with the class names.
                 return withArticle.Count == names.Count && index >= 0 && index < withArticle.Count ? withArticle[index] : null;
             }
@@ -427,12 +427,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     Dictionary<int, List<int>> map = new Dictionary<int, List<int>>();
                     try
                     {
-                        string dir = gameDirs[DirNames.trainerProperties].unpackedDir;
+                        string dir = GameDirs[DirNames.TrainerProperties].unpackedDir;
                         int count = NarcAPI.Narc.MemberCount(dir);
                         for (int i = 0; i < count; i++)
                         {
                             using FileStream fs = File.OpenRead(Path.Combine(dir, i.ToString("D4")));
-                            int cls = new TrainerProperties((ushort)i, fs).trainerClass;
+                            int cls = new TrainerProperties((ushort)i, fs).TrainerClass;
                             if (!map.TryGetValue(cls, out List<int> ids)) map[cls] = ids = new List<int>();
                             ids.Add(i);
                         }
@@ -505,7 +505,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         // Without a linked checkout an hg-engine build would overwrite the sprite edits.
         // An unsaved class has no sprite files of its own until Save copies them.
-        public bool CanEditSprite => (!isHGE || HgEngineProject.IsActive) && !PendingSelected;
+        public bool CanEditSprite => (!IsHGE || HgEngineProject.IsActive) && !PendingSelected;
 
         private bool PendingSelected => _pendingClass != null && _selectedIndex == PendingIndex;
 
@@ -533,7 +533,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 if (!HgEngineProject.IsActive) _metadata = TrainerClassMetadataStore.DetectCurrentRom(out _metadataNote);
 
                 // hg-engine repoints the eye-contact music table into its own code, so only its source can be read.
-                if ((!isHGE || _musicFromSource) && _metadata == TrainerClassMetadataDetectionState.Stock) SetupEncounterMusicTable();
+                if ((!IsHGE || _musicFromSource) && _metadata == TrainerClassMetadataDetectionState.Stock) SetupEncounterMusicTable();
 
                 StatusText = _metadata == TrainerClassMetadataDetectionState.Inconsistent ? _metadataNote : $"{ClassNames.Count} trainer classes.";
                 if (ClassNames.Count > 0)
@@ -542,7 +542,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                _ = DialogHelper.ShowError($"Failed to load trainer classes:\n{ex.Message}", "Trainer classes error");
+                _ = DialogHelper.ShowErrorAsync($"Failed to load trainer classes:\n{ex.Message}", "Trainer classes error");
             }
         }
 
@@ -557,7 +557,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _metadata = TrainerClassMetadataStore.DetectCurrentRom(out _metadataNote);
             if (_metadata == was) return;
             _musicDict.Clear();
-            if ((!isHGE || _musicFromSource) && _metadata == TrainerClassMetadataDetectionState.Stock) SetupEncounterMusicTable();
+            if ((!IsHGE || _musicFromSource) && _metadata == TrainerClassMetadataDetectionState.Stock) SetupEncounterMusicTable();
             StatusText = _metadata == TrainerClassMetadataDetectionState.Inconsistent ? _metadataNote : $"{ClassNames.Count} trainer classes.";
             OnPropertyChanged(nameof(ShowGender));
             OnPropertyChanged(nameof(ShowClassCopy));
@@ -619,7 +619,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 MusicMain = 0;
                 MusicAlt = 0;
             }
-            MusicAltEnabled = MusicEnabled && gameFamily == GameFamilies.HGSS;
+            MusicAltEnabled = MusicEnabled && GameFamily == GameFamilies.HGSS;
 
             LoadPtIntro(index);
             if (_metadata != TrainerClassMetadataDetectionState.Stock)
@@ -706,7 +706,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             MusicEnabled = _pendingClass.AddMusic;
             MusicMain = _pendingClass.MusicMain;
             MusicAlt = _pendingClass.MusicNight;
-            MusicAltEnabled = MusicEnabled && gameFamily == GameFamilies.HGSS;
+            MusicAltEnabled = MusicEnabled && GameFamily == GameFamilies.HGSS;
             // The add writes a gender and a prize multiplier for the new class.
             GenderLoaded = true;
             GenderIndex = _pendingClass.Gender;
@@ -741,7 +741,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (!added)
             {
                 StatusText = "The new trainer class was not added.";
-                _ = DialogHelper.ShowError(error, "Add trainer class");
+                _ = DialogHelper.ShowErrorAsync(error, "Add trainer class");
                 return false;
             }
 
@@ -808,9 +808,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 ushort alt = (ushort)MusicAlt;
                 EncounterMusicTable.WriteMusic(_musicWhere, new EncounterMusicTable.Row
                 {
-                    Offset = entry.entryOffset, Music = main, NightMusic = gameFamily == GameFamilies.HGSS ? alt : null,
+                    Offset = entry.entryOffset, Music = main, NightMusic = GameFamily == GameFamilies.HGSS ? alt : null,
                 });
-                _musicDict[idx] = (entry.entryOffset, main, gameFamily == GameFamilies.HGSS ? alt : entry.musicN);
+                _musicDict[idx] = (entry.entryOffset, main, GameFamily == GameFamilies.HGSS ? alt : entry.musicN);
             }
 
             if (_metadata != TrainerClassMetadataDetectionState.Stock)
@@ -845,9 +845,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 try
                 {
-                    TextArchive withArticle = new TextArchive(trainerClassWithArticleMessageNumber);
-                    withArticle.messages[savedIndex] = WithArticle;
-                    withArticle.SaveToExpandedDir(trainerClassWithArticleMessageNumber, showSuccessMessage: false);
+                    TextArchive withArticle = new TextArchive(TrainerClassWithArticleMessageNumber);
+                    withArticle.Messages[savedIndex] = WithArticle;
+                    withArticle.SaveToExpandedDir(TrainerClassWithArticleMessageNumber, showSuccessMessage: false);
                     _loadedWithArticle = WithArticle;
                 }
                 catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { failures.Add("Name with article: " + ex.Message); }
@@ -856,7 +856,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 failures.Add(nameError);
                 StatusText = $"Trainer class {savedIndex} was not fully saved.";
-                _ = DialogHelper.ShowError(string.Join("\n", failures), "Trainer classes error");
+                _ = DialogHelper.ShowErrorAsync(string.Join("\n", failures), "Trainer classes error");
                 return false;
             }
 
@@ -874,7 +874,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (failures.Count > 0)
             {
                 StatusText = $"Trainer class {savedIndex} was not fully saved.";
-                _ = DialogHelper.ShowError(string.Join("\n", failures), "Trainer classes error");
+                _ = DialogHelper.ShowErrorAsync(string.Join("\n", failures), "Trainer classes error");
                 return false;
             }
             _undo?.MarkSaved();
@@ -888,12 +888,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             error = null;
             HgEngineOwnedFile owned = HgEngineProject.IsActive
-                ? HgEngineOwnedFiles.Get(HgEngineOwnedFiles.ArchiveOf(DirNames.textArchives), trainerClassMessageNumber) : null;
+                ? HgEngineOwnedFiles.Get(HgEngineOwnedFiles.ArchiveOf(DirNames.TextArchives), TrainerClassMessageNumber) : null;
             if (owned == null)
             {
-                TextArchive ta = new TextArchive(trainerClassMessageNumber);
-                ta.messages[index] = name;
-                ta.SaveToExpandedDir(trainerClassMessageNumber, showSuccessMessage: false);
+                TextArchive ta = new TextArchive(TrainerClassMessageNumber);
+                ta.Messages[index] = name;
+                ta.SaveToExpandedDir(TrainerClassMessageNumber, showSuccessMessage: false);
                 return true;
             }
             if (owned.Ownership != HgEngineOwnership.EditableSource)
@@ -920,7 +920,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public void EnableMusic(ushort musicMain, ushort musicNight)
         {
             if (!CanEnableMusic) return;
-            bool hgss = gameFamily == GameFamilies.HGSS;
+            bool hgss = GameFamily == GameFamilies.HGSS;
             _musicDict[(byte)_selectedIndex] = (0, musicMain, hgss ? musicNight : (ushort?)null);
             _musicAdded = true;
 

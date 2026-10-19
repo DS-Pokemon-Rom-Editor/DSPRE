@@ -19,7 +19,7 @@ namespace DSPRE
         public const int PayloadSize = 0x2068;
 
         public static bool SupportsCurrentRom =>
-            RomInfo.gameLanguage == RomInfo.GameLanguages.English && RomInfo.gameFamily == RomInfo.GameFamilies.HGSS;
+            RomInfo.GameLanguage == RomInfo.GameLanguages.English && RomInfo.GameFamily == RomInfo.GameFamilies.HGSS;
 
         private sealed class Reloc { public byte Kind; public bool Blx; public uint Offset, Value; }
         private sealed class Span { public uint Offset; public byte[] Original, Patched; }
@@ -54,7 +54,7 @@ namespace DSPRE
 
         private static string PathOf(string target)
         {
-            if (target == "arm9/arm9.bin") return RomInfo.arm9Path;
+            if (target == "arm9/arm9.bin") return RomInfo.Arm9Path;
             int overlay = int.Parse(Path.GetFileNameWithoutExtension(target).Substring(2));
             return OverlayUtils.GetPath(overlay);
         }
@@ -95,10 +95,10 @@ namespace DSPRE
                 Target arm9 = Load().Targets.FirstOrDefault(t => t.Path == "arm9/arm9.bin");
                 Reloc pointer = arm9?.Relocs.FirstOrDefault(x => x.Kind != 2);
                 if (pointer == null) return null;
-                byte[] file = File.ReadAllBytes(RomInfo.arm9Path);
+                byte[] file = File.ReadAllBytes(RomInfo.Arm9Path);
                 if (pointer.Offset + 4 > file.Length) return null;
                 uint address = BitConverter.ToUInt32(file, (int)pointer.Offset) - pointer.Value;
-                return address >= RomInfo.synthOverlayLoadAddress && address - RomInfo.synthOverlayLoadAddress + PayloadSize <= RomInfo.synthOverlaySize ? address - RomInfo.synthOverlayLoadAddress : null;
+                return address >= RomInfo.SynthOverlayLoadAddress && address - RomInfo.SynthOverlayLoadAddress + PayloadSize <= RomInfo.SynthOverlaySize ? address - RomInfo.SynthOverlayLoadAddress : null;
             }
             catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is InvalidOperationException) { return null; }
         }
@@ -130,13 +130,13 @@ namespace DSPRE
         {
             Data d = Load();
             List<byte[]> records = BuildRecords();   // before the hooks retire the tables it reads
-            uint address = RomInfo.synthOverlayLoadAddress + payloadOffset;
+            uint address = RomInfo.SynthOverlayLoadAddress + payloadOffset;
             foreach (Target t in d.Targets)
             {
                 string path = PathOf(t.Path);
                 byte[] file = File.ReadAllBytes(path);
                 foreach (Span s in t.Spans) s.Patched.CopyTo(file, (int)s.Offset);
-                uint fileBase = t.Path == "arm9/arm9.bin" ? ARM9.address : OverlayUtils.OverlayTable.GetRAMAddress(OverlayOf(t.Path));
+                uint fileBase = t.Path == "arm9/arm9.bin" ? ARM9.Address : OverlayUtils.OverlayTable.GetRAMAddress(OverlayOf(t.Path));
                 foreach (Reloc x in t.Relocs)
                 {
                     byte[] bytes = x.Kind == 2 ? Branch(fileBase + x.Offset, address + x.Value, x.Blx) : BitConverter.GetBytes(address + x.Value);
@@ -144,7 +144,7 @@ namespace DSPRE
                 }
                 ArchiveMembers.Write(path, file);
             }
-            DSUtils.WriteToFile(Filesystem.expArmPath, BuildPayload(address), payloadOffset);
+            DSUtils.WriteToFile(Filesystem.ExpArmPath, BuildPayload(address), payloadOffset);
             WriteArchive(records);
             TrainerClassMetadataStore.Reset();
         }
@@ -197,17 +197,17 @@ namespace DSPRE
         {
             RomInfo.VsIntroSites sites = RomLocator.VsIntroSites ?? throw new InvalidDataException("This ROM's VS intro records are not mapped.");
             RomInfo.TrainerPrizeTable prize = RomLocator.TrainerPrizeTable ?? throw new InvalidDataException("This ROM's prize table is not mapped.");
-            RomInfo.FrontierBrainTable brains = RomInfo.frontierBrainTable ?? throw new InvalidDataException("This ROM's Frontier Brain table is not mapped.");
+            RomInfo.FrontierBrainTable brains = RomInfo.FrontierBrains ?? throw new InvalidDataException("This ROM's Frontier Brain table is not mapped.");
             BattleMusicTables music = BattleMusicTables.LoadRom() ?? throw new InvalidDataException("The battle music tables could not be read.");
             List<EncounterMusicTable.Row> eyeMusic = EncounterMusicTable.Read().Rows;
-            int classCount = RomInfo.vanillaTrainerClassCount;
+            int classCount = RomInfo.VanillaTrainerClassCount;
 
-            byte[] arm9 = File.ReadAllBytes(RomInfo.arm9Path);
+            byte[] arm9 = File.ReadAllBytes(RomInfo.Arm9Path);
             byte[] Ov(int n) { if (OverlayUtils.IsCompressed(n)) OverlayUtils.Decompress(n); return File.ReadAllBytes(OverlayUtils.GetPath(n)); }
             byte[] prizeOverlay = Ov(prize.Overlay), brainOverlay = Ov(brains.Overlay), recordOverlay = Ov(sites.RecordOverlay),
                 executiveOverlay = Ov(sites.ExecutiveOverlay);
 
-            byte[] genders = Slice(arm9, RomInfo.trainerClassGenderTableOffset, classCount, "gender table");
+            byte[] genders = Slice(arm9, RomInfo.TrainerClassGenderTableOffset, classCount, "gender table");
             ushort[] comboRows = music.Classes.Rows.Select(r => (ushort)((r.Class & 0x3FF) | (r.Combo << 10))).ToArray();
             if (!comboRows.SequenceEqual(ExpectedTrainerComboRows))
                 throw new InvalidDataException("The trainer-to-combo table is not the retail US HeartGold/SoulSilver one, which the patch's builder needs.");
@@ -317,15 +317,15 @@ namespace DSPRE
                 .Concat(BitConverter.GetBytes(total)).Concat(BitConverter.GetBytes((ushort)16)).Concat(BitConverter.GetBytes((ushort)3))
                 .Concat(btaf).Concat(btnf).Concat(gmifChunk).ToArray();
 
-            (string packed, string unpacked) = RomInfo.gameDirs[RomInfo.DirNames.trainerClassMetadata];
+            (string packed, string unpacked) = RomInfo.GameDirs[RomInfo.DirNames.TrainerClassMetadata];
             PlainFiles.WriteBytes(packed, narc);
             if (!Directory.Exists(unpacked)) return;
             ArchiveMembers.Batch members = new ArchiveMembers.Batch();
-            for (int i = 0; i < records.Count; i++) members.Put(RomInfo.DirNames.trainerClassMetadata, i, records[i]);
+            for (int i = 0; i < records.Count; i++) members.Put(RomInfo.DirNames.TrainerClassMetadata, i, records[i]);
             foreach (string f in Directory.GetFiles(unpacked))
             {
                 if (!int.TryParse(Path.GetFileName(f), out int id)) members.DeleteFile(f);
-                else if (id >= records.Count) members.Delete(RomInfo.DirNames.trainerClassMetadata, id);
+                else if (id >= records.Count) members.Delete(RomInfo.DirNames.TrainerClassMetadata, id);
             }
             if (!members.TryCommit(out string error)) throw new IOException(error);
             // The packed archive was built here, not by Narc.Save, so the drift check is told it matches.

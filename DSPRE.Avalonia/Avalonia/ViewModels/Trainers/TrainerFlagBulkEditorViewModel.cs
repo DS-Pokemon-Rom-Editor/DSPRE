@@ -35,7 +35,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             "AI: Weather", "AI: Harassment",
             "Double Battle"
         };
-        private const int AI_FLAG_COUNT = TrainerProperties.AI_COUNT;
+        private const int AiFlagCount = TrainerProperties.AiCount;
 
         private string[] _trainerNames;
         private string[] _trainerClassNames;
@@ -162,7 +162,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public TrainerFlagBulkEditorViewModel()
         {
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties });
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TrainerProperties });
 
             _trainerNames = DSPRE.TrainerNames.GetAll();
             _trainerClassNames = GetTrainerClassNames();
@@ -189,7 +189,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void LoadAllTrainerData()
         {
-            string dir = gameDirs[DirNames.trainerProperties].unpackedDir;
+            string dir = GameDirs[DirNames.TrainerProperties].unpackedDir;
             List<HgEngineSourceBlock> source = FromSource ? HgEngine.HgEngineTrainerSource.LoadAll() : null;
             _sourceAi.Clear();
             _sourceBattle.Clear();
@@ -219,8 +219,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _sourceAi[id] = ai;
             _sourceBattle[id] = battle;
             TrainerProperties tp = _trainerData[id];
-            for (int f = 0; f < AI_FLAG_COUNT; f++) tp.AI[f] = (ai & (1 << f)) != 0;
-            tp.doubleBattle = battle != 0;
+            for (int f = 0; f < AiFlagCount; f++) tp.AI[f] = (ai & (1 << f)) != 0;
+            tp.DoubleBattle = battle != 0;
         }
 
         private async System.Threading.Tasks.Task SaveSourceAsync()
@@ -233,17 +233,17 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 if (loaded.SequenceEqual(now)) continue;
                 if (!_sourceAi.TryGetValue(id, out int ai))
                 {
-                    await DialogHelper.ShowError($"Trainer {id}'s flags couldn't be read from Trainers.c, so nothing was saved.", "Trainer flag bulk editor error");
+                    await DialogHelper.ShowErrorAsync($"Trainer {id}'s flags couldn't be read from Trainers.c, so nothing was saved.", "Trainer flag bulk editor error");
                     return;
                 }
-                for (int f = 0; f < AI_FLAG_COUNT; f++)
+                for (int f = 0; f < AiFlagCount; f++)
                     if (now[f] != loaded[f]) ai = now[f] ? ai | (1 << f) : ai & ~(1 << f);
                 List<HgEngineFieldWrite> fields = new List<HgEngine.HgEngineFieldWrite>
                 {
                     new(AiPath, symbols?.TryGetFlagsExpression(ai, "F_", out string expr) == true ? expr : ai.ToString()),
                 };
-                if (now[AI_FLAG_COUNT] != loaded[AI_FLAG_COUNT])
-                    fields.Add(new(BattlePath, now[AI_FLAG_COUNT] ? "DOUBLE_BATTLE" : "SINGLE_BATTLE"));
+                if (now[AiFlagCount] != loaded[AiFlagCount])
+                    fields.Add(new(BattlePath, now[AiFlagCount] ? "DOUBLE_BATTLE" : "SINGLE_BATTLE"));
                 writes.Add((id, fields, now));
             }
 
@@ -257,7 +257,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 }
                 return null;
             });
-            if (!saved) { if (error != null) await DialogHelper.ShowError("Not everything was saved:\n" + error, "Trainer flag bulk editor error"); return; }
+            if (!saved) { if (error != null) await DialogHelper.ShowErrorAsync("Not everything was saved:\n" + error, "Trainer flag bulk editor error"); return; }
 
             List<HgEngineSourceBlock> source = HgEngine.HgEngineTrainerSource.LoadAll();
             foreach ((int id, List<HgEngineFieldWrite> _, bool[] now) in writes)
@@ -283,12 +283,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         }
 
         private bool GetFlag(TrainerProperties tp, int flagIndex) =>
-            flagIndex < AI_FLAG_COUNT ? tp.AI[flagIndex] : tp.doubleBattle;
+            flagIndex < AiFlagCount ? tp.AI[flagIndex] : tp.DoubleBattle;
 
         private void SetFlag(TrainerProperties tp, int flagIndex, bool value)
         {
-            if (flagIndex < AI_FLAG_COUNT) tp.AI[flagIndex] = value;
-            else tp.doubleBattle = value;
+            if (flagIndex < AiFlagCount) tp.AI[flagIndex] = value;
+            else tp.DoubleBattle = value;
         }
 
         private string TrainerLabel(int id) =>
@@ -309,7 +309,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             SortedDictionary<byte, List<int>> byClass = new SortedDictionary<byte, List<int>>();
             for (int i = 0; i < _trainerCount; i++)
             {
-                byte classId = _trainerData[i].trainerClass;
+                byte classId = _trainerData[i].TrainerClass;
                 if (!byClass.TryGetValue(classId, out List<int> list)) byClass[classId] = list = new List<int>();
                 list.Add(i);
             }
@@ -457,7 +457,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public void SaveAllChanges()
         {
             if (FromSource) { _ = SaveSourceAsync(); return; }
-            string dir = gameDirs[DirNames.trainerProperties].unpackedDir;
+            string dir = GameDirs[DirNames.TrainerProperties].unpackedDir;
             foreach ((int id, TrainerProperties tp) in _trainerData.ToList())
             {
                 bool[] loaded = _loadedFlags[id];

@@ -108,12 +108,12 @@ namespace DSPRE.Avalonia.Views.Text
         // ── Archive toolbar ──────────────────────────────────────────────────
         private void AddArchive_Click(object sender, RoutedEventArgs e) => VM?.AddArchive();
         private async void RemoveArchive_Click(object sender, RoutedEventArgs e)
-            => await RunSafe(() => VM?.RemoveArchiveAsync());
+            => await RunSafeAsync(() => VM?.RemoveArchiveAsync());
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
         private async void Import_Click(object sender, RoutedEventArgs e)
-            => await RunSafe(() => VM?.ImportAsync());
+            => await RunSafeAsync(() => VM?.ImportAsync());
         private async void Export_Click(object sender, RoutedEventArgs e)
-            => await RunSafe(() => VM?.ExportAsync());
+            => await RunSafeAsync(() => VM?.ExportAsync());
 
         // ── Line controls ────────────────────────────────────────────────────
         private void AddString_Click(object sender, RoutedEventArgs e) => VM?.AddString();
@@ -124,7 +124,7 @@ namespace DSPRE.Avalonia.Views.Text
         // ── Search / replace ─────────────────────────────────────────────────
         private void Search_Click(object sender, RoutedEventArgs e) => VM?.Search();
         private async void Replace_Click(object sender, RoutedEventArgs e)
-            => await RunSafe(() => VM?.ReplaceAsync());
+            => await RunSafeAsync(() => VM?.ReplaceAsync());
 
         private void Search_KeyDown(object sender, KeyEventArgs e)
         {
@@ -146,10 +146,10 @@ namespace DSPRE.Avalonia.Views.Text
         private void SearchResult_DoubleTapped(object sender, TappedEventArgs e)
         {
             if (SearchResultsList.SelectedItem is not TextSearchResultVM r || VM == null) return;
-            _ = RunSafe(() => VM.GoToResultAsync(r));
+            _ = RunSafeAsync(() => VM.GoToResultAsync(r));
         }
 
-        private static async Task RunSafe(System.Func<Task> action)
+        private static async Task RunSafeAsync(System.Func<Task> action)
         {
             Task task = action?.Invoke();
             if (task == null) return;
@@ -158,7 +158,7 @@ namespace DSPRE.Avalonia.Views.Text
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
         }
     }
 }

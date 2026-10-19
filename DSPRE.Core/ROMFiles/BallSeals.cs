@@ -32,15 +32,15 @@ namespace DSPRE.ROMFiles
         {
             BallSeal[] seals = new BallSeal[Count + 1];
             byte[] arm9;
-            try { arm9 = File.ReadAllBytes(arm9Path); }
-            catch { return Array.Empty<BallSeal>(); }
+            try { arm9 = File.ReadAllBytes(Arm9Path); }
+            catch (Exception ex) { AppLogger.WarnOnce("BallSeals.Read", ex); return Array.Empty<BallSeal>(); }
 
-            bool johto = gameFamily == GameFamilies.HGSS;
+            bool johto = GameFamily == GameFamilies.HGSS;
             int at = FindTable(arm9, johto);
             if (at < 0) return Array.Empty<BallSeal>();
 
             List<string> names = null;
-            try { names = new TextArchive(SealNamesTextNumber).messages; } catch { }
+            try { names = new TextArchive(SealNamesTextNumber).Messages; } catch (Exception ex) { AppLogger.Warn("Ball seal names: " + ex.Message); }
 
             for (int id = 1; id <= Count; id++)
             {

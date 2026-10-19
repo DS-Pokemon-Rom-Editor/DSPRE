@@ -1,9 +1,13 @@
-namespace DSPRE.ROMFiles {
-  public class MapScreenLoadTrigger : LevelScriptTrigger {
+namespace DSPRE.ROMFiles
+{
+  public class MapScreenLoadTrigger : LevelScriptTrigger
+  {
     public MapScreenLoadTrigger(int type, int scriptTriggered) : base(type, scriptTriggered) { }
 
-    public override string ToString() {
-      switch (triggerType) {
+    public override string ToString()
+    {
+      switch (TriggerType)
+      {
         case LevelScriptTrigger.MAPCHANGE:
           return base.ToString() + " upon entering the LS map.";
         case LevelScriptTrigger.SCREENRESET:
@@ -15,21 +19,25 @@ namespace DSPRE.ROMFiles {
       }
     }
 
-    public override bool Equals(object obj) {
+    public override bool Equals(object obj)
+    {
       // If the passed object is null
-      if (obj == null) {
+      if (obj == null)
+      {
         return false;
       }
 
-      if (obj is MapScreenLoadTrigger) {
+      if (obj is MapScreenLoadTrigger)
+      {
         return this.ToString() == ((MapScreenLoadTrigger)obj).ToString();
       }
 
       return false;
     }
 
-    public override int GetHashCode() {
-      return this.triggerType.GetHashCode() ^ scriptTriggered.GetHashCode();
+    public override int GetHashCode()
+    {
+      return this.TriggerType.GetHashCode() ^ ScriptTriggered.GetHashCode();
     }
   }
 }

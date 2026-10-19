@@ -27,19 +27,19 @@ namespace DSPRE.ROMFiles
         public static List<LevelScriptTrigger> OnArrival(LevelScriptFile file)
         {
             List<LevelScriptTrigger> found = new List<LevelScriptTrigger>();
-            if (file?.bufferSet == null) return found;
+            if (file?.BufferSet == null) return found;
             foreach (int kind in ArrivalOrder)
-                foreach (LevelScriptTrigger t in file.bufferSet)
-                    if (t != null && t.triggerType == kind) found.Add(t);
+                foreach (LevelScriptTrigger t in file.BufferSet)
+                    if (t != null && t.TriggerType == kind) found.Add(t);
             return found;
         }
 
         /// <summary>The entries that sit and watch a variable, checked on every step.</summary>
         public static List<VariableValueTrigger> Watchers(LevelScriptFile file)
         {
-            if (file?.bufferSet == null) return new List<VariableValueTrigger>();
-            return file.bufferSet.OfType<VariableValueTrigger>()
-                       .Where(t => t.triggerType == LevelScriptTrigger.VARIABLEVALUE)
+            if (file?.BufferSet == null) return new List<VariableValueTrigger>();
+            return file.BufferSet.OfType<VariableValueTrigger>()
+                       .Where(t => t.TriggerType == LevelScriptTrigger.VARIABLEVALUE)
                        .ToList();
         }
 
@@ -60,7 +60,7 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public static bool IsSatisfied(VariableValueTrigger t, Func<int, int> valueOf)
             => t != null && valueOf != null
-               && Resolve(t.variableToWatch, valueOf) == Resolve(t.expectedValue, valueOf);
+               && Resolve(t.VariableToWatch, valueOf) == Resolve(t.ExpectedValue, valueOf);
 
         private static int Resolve(int operand, Func<int, int> valueOf)
             => operand >= VariableValueTrigger.FirstVariable ? valueOf(operand) : operand;
@@ -69,14 +69,14 @@ namespace DSPRE.ROMFiles
         public static string WhenItRuns(LevelScriptTrigger trigger)
         {
             if (trigger == null) return "";
-            switch (trigger.triggerType)
+            switch (trigger.TriggerType)
             {
                 case LevelScriptTrigger.VARIABLEVALUE:
                     VariableValueTrigger v = trigger as VariableValueTrigger;
                     return v == null
                         ? "Every step, once a variable holds the right value"
-                        : $"Every step, once {FieldScriptValues.Describe(v.variableToWatch)} holds "
-                          + (v.expectedValue >= VariableValueTrigger.FirstVariable ? $"the value of {FieldScriptValues.Describe(v.expectedValue)}" : v.expectedValue.ToString());
+                        : $"Every step, once {FieldScriptValues.Describe(v.VariableToWatch)} holds "
+                          + (v.ExpectedValue >= VariableValueTrigger.FirstVariable ? $"the value of {FieldScriptValues.Describe(v.ExpectedValue)}" : v.ExpectedValue.ToString());
                 case LevelScriptTrigger.MAPCHANGE: return "On warping in, before the map loads";
                 case LevelScriptTrigger.SCREENRESET: return "While the map sets up, once the music starts";
                 case LevelScriptTrigger.LOADGAME: return "While the map sets up, before its data loads";

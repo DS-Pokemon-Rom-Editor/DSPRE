@@ -83,11 +83,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (IsHgeActive) { OnPropertyChanged(nameof(HasBattleLines)); return; }
             try
             {
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerTextTable, DirNames.trainerTextOffset });
-                TextArchive text = new TextArchive(trainerMessageTextNumber);
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TrainerTextTable, DirNames.TrainerTextOffset });
+                TextArchive text = new TextArchive(TrainerMessageTextNumber);
                 foreach (TrainerMessageTable.Entry e in TrainerMessageTable.Read().Where(e => e.TrainerId == trainer).OrderBy(e => e.TriggerId))
                     BattleLines.Add(new BattleLine(BattleMessageEditorViewModel.TriggerDescription(e.TriggerId),
-                        e.MessageId >= 0 && e.MessageId < text.messages.Count ? Shown(text.messages[e.MessageId]) : ""));
+                        e.MessageId >= 0 && e.MessageId < text.Messages.Count ? Shown(text.Messages[e.MessageId]) : ""));
             }
             catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is ArgumentException)
             {
@@ -138,7 +138,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void OnTextSaved(object sender, int archive)
         {
-            if (archive == trainerMessageTextNumber && _loadedTrainerId >= 0) LoadBattleLines(_loadedTrainerId);
+            if (archive == TrainerMessageTextNumber && _loadedTrainerId >= 0) LoadBattleLines(_loadedTrainerId);
         }
 
         // ── Prize money ─────────────────────────────────────────────────────────────
@@ -234,7 +234,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 if (IsHgeActive) return HgeLevelUpMoves(mon.DataSpeciesId, (int)mon.Level);
                 // Read before anything else unpacked them, the files are missing and the defaults would stay empty.
-                if (!_learnsetsUnpacked) { DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.learnsets }); _learnsetsUnpacked = true; }
+                if (!_learnsetsUnpacked) { DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.Learnsets }); _learnsetsUnpacked = true; }
                 return new LearnsetData(mon.SpeciesIndex).GetLearnsetAtLevel((int)mon.Level);
             }
             catch (Exception e) when (e is IOException || e is ArgumentException || e is IndexOutOfRangeException) { return null; }
@@ -314,7 +314,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         // What Trainers.c held that the editor could not read; saving leaves those values alone.
         private bool _hgeTrainerTypeKnown, _hgeAiFlagsKnown;
-        private readonly string[] _hgeItemRaw = new string[TrainerProperties.TRAINER_ITEMS];
+        private readonly string[] _hgeItemRaw = new string[TrainerProperties.TrainerItemCount];
 
         private bool TrainerDataTypeChecked(string flagName) =>
             TrainerDataTypeFlags.FirstOrDefault(f => f.Label == flagName)?.Checked == true;
@@ -447,7 +447,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private string _trainerName = "";
         public string TrainerName { get => _trainerName; set { if (Set(ref _trainerName, value) && !_suppress) SetDirty(); } }
         public int TrainerNameMaxLength { get; } = SafeNameMax();
-        private static int SafeNameMax() { try { return trainerNameMaxChars; } catch { return TrainerFile.CompressedNameLen(TrainerFile.defaultNameLen + 1); } }
+        private static int SafeNameMax() { try { return TrainerNameMaxChars; } catch (Exception ex) { AppLogger.WarnOnce("TrainerEditorViewModel.SafeNameMax", ex); return TrainerFile.CompressedNameLen(TrainerFile.DefaultNameLen + 1); } }
 
         private int _trainerClassIndex = -1;
         public int TrainerClassIndex
@@ -601,9 +601,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             SyncToTrainer();
             return new TrainerSnapshot
             {
-                Trp   = _trainer.trp.ToByteArray(),
+                Trp   = _trainer.Trp.ToByteArray(),
                 // Every slot, including those past the party count, so undo brings hidden ones back.
-                Party = _trainer.party.ToByteArray(TrainerFile.POKE_IN_PARTY),
+                Party = _trainer.Party.ToByteArray(TrainerFile.PokeInParty),
                 Name  = _trainerName,
             };
         }
@@ -613,10 +613,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (snap == null || _trainer == null || _loadedTrainerId < 0) return;
             _suppress = true;
             TrainerProperties trp = new TrainerProperties((ushort)_loadedTrainerId, new MemoryStream(snap.Trp));
-            byte partyCount = trp.partyCount;
-            trp.partyCount = TrainerFile.POKE_IN_PARTY;
+            byte partyCount = trp.PartyCount;
+            trp.PartyCount = TrainerFile.PokeInParty;
             _trainer = new TrainerFile(trp, new MemoryStream(snap.Party), snap.Name);
-            trp.partyCount = partyCount;
+            trp.PartyCount = partyCount;
             PopulateFromTrainer();
             _suppress = false;
 
@@ -687,7 +687,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         // Reconfigure controls without reloading party data or discarding unsaved edits.
         private void OnRomPatchStateChanged(object sender, EventArgs e)
         {
-            bool shiny = gameFamily == GameFamilies.HGSS && TrainerShinyPatch.DetectCurrentProject();
+            bool shiny = GameFamily == GameFamilies.HGSS && TrainerShinyPatch.DetectCurrentProject();
             if (shiny != _shinyPatch)
             {
                 _shinyPatch = shiny;
@@ -698,7 +698,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (customPokeballs != _customPokeballsPatch)
             {
                 _customPokeballsPatch = customPokeballs;
-                if (customPokeballs) DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemIcons });
+                if (customPokeballs) DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.ItemIcons });
                 ShowCapsuleNames();
             }
         }
@@ -719,17 +719,17 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             try
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> {
-                    DirNames.trainerProperties, DirNames.trainerParty, DirNames.trainerGraphics,
-                    DirNames.personalPokeData, DirNames.monIcons, DirNames.textArchives });
+                    DirNames.TrainerProperties, DirNames.TrainerParty, DirNames.TrainerGraphics,
+                    DirNames.PersonalPokeData, DirNames.MonIcons, DirNames.TextArchives });
                 SetMonIconsPalTableAddress();
 
-                _genderEditable = gameFamily == GameFamilies.HGSS || AIBackportEnabled;
-                _shinyPatch = gameFamily == GameFamilies.HGSS && TrainerShinyPatch.DetectCurrentProject();
+                _genderEditable = GameFamily == GameFamilies.HGSS || AIBackportEnabled;
+                _shinyPatch = GameFamily == GameFamilies.HGSS && TrainerShinyPatch.DetectCurrentProject();
                 _customPokeballsPatch = TrainerCustomPokeballsPatch.DetectCurrentProject();
-                if (_customPokeballsPatch) DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemIcons });
+                if (_customPokeballsPatch) DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.ItemIcons });
                 _abilityEditable = _genderEditable;
-                _ballEnabled = gameFamily != GameFamilies.DP;
-                _formVisible = gameFamily != GameFamilies.DP;
+                _ballEnabled = GameFamily != GameFamilies.DP;
+                _formVisible = GameFamily != GameFamilies.DP;
 
                 foreach (string n in GetPokemonNames()) PokemonNames.Add(n);
                 foreach (string n in GetAttackNames()) MoveNames.Add(n);
@@ -743,7 +743,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 TextArchive.Saved += OnTextSaved;
                 AppEvents.RomPatchStateChanged += OnRomPatchStateChanged;
                 AppEvents.ClassIntrosSaved += OnClassIntrosSaved;
-                _spriteSaved = AppEvents.WhenSaved(UpdateTrainerSprite, DirNames.trainerGraphics);
+                _spriteSaved = AppEvents.WhenSaved(UpdateTrainerSprite, DirNames.TrainerGraphics);
 
                 for (int i = 0; i < classNames.Length; i++) TrainerClassItems.Add($"[{i:D3}] {classNames[i]}");
 
@@ -782,7 +782,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     }
                 }
 
-                for (int i = 0; i < TrainerProperties.TRAINER_ITEMS; i++)
+                for (int i = 0; i < TrainerProperties.TrainerItemCount; i++)
                 {
                     TrainerItemSlotViewModel slot = new TrainerItemSlotViewModel(ItemNames);
                     slot.Changed += (s, e) => SetDirty();
@@ -792,7 +792,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 // hg-engine's real TrainerPokemonData struct has no gender field, nowhere to write a
                 // forced gender to, so the selector is hidden rather than shown-but-silently-ignored.
                 bool genderVisibleForMode = _genderEditable && !IsHgeActive;
-                for (int i = 0; i < TrainerFile.POKE_IN_PARTY; i++)
+                for (int i = 0; i < TrainerFile.PokeInParty; i++)
                 {
                     TrainerPartyMonViewModel mon = new TrainerPartyMonViewModel(i, PokemonNames, MoveNames, ItemNames,
                         _abilityNames, _abilities, _abilityEditable, genderVisibleForMode, _formVisible, _ballEnabled);
@@ -813,7 +813,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             catch (Exception ex)
             {
                 StatusText = $"Error loading trainers: {ex.Message}";
-                await DialogHelper.ShowError($"Failed to load trainers:\n{ex.Message}", "Trainer editor error");
+                await DialogHelper.ShowErrorAsync($"Failed to load trainers:\n{ex.Message}", "Trainer editor error");
             }
             finally { PopLoading(); }
         }
@@ -823,7 +823,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             // Form species sit past the name list.
             int count = Math.Max(PokemonNames.Count, GetPersonalFilesCount());
             _abilities = new (int, int)[count];
-            string dir = gameDirs[DirNames.personalPokeData].unpackedDir;
+            string dir = GameDirs[DirNames.PersonalPokeData].unpackedDir;
             for (int i = 0; i < count; i++)
             {
                 try
@@ -832,9 +832,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     if (!File.Exists(path)) { _abilities[i] = (0, 0); continue; }
                     // hg-engine widens both abilities to u16 at other offsets.
                     PokemonPersonalData personal = new PokemonPersonalData(new FileStream(path, FileMode.Open, FileAccess.Read));
-                    _abilities[i] = (personal.firstAbility, personal.secondAbility);
+                    _abilities[i] = (personal.FirstAbility, personal.SecondAbility);
                 }
-                catch { _abilities[i] = (0, 0); }
+                catch (Exception ex) { AppLogger.WarnOnce("TrainerEditorViewModel.LoadAbilities", ex); _abilities[i] = (0, 0); }
             }
 
             // The built copies trail Species.c until the next make.
@@ -862,8 +862,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 bool error = index >= trNames.Length;
                 _trainer = TrainerRecords.Load(index, error ? TrainerFile.NAME_NOT_FOUND : trNames[index]);
                 _loadedTrainerId = index;
-                _savedName = _trainer.name;
-                _savedClass = _trainer.trp.trainerClass;
+                _savedName = _trainer.Name;
+                _savedClass = _trainer.Trp.TrainerClass;
 
                 _suppress = true;
                 try { PopulateFromTrainer(); }
@@ -884,7 +884,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
             catch (Exception ex)
             {
-                _ = DialogHelper.ShowError($"Failed to load trainer {index}:\n{ex.Message}", "Trainer editor error");
+                _ = DialogHelper.ShowErrorAsync($"Failed to load trainer {index}:\n{ex.Message}", "Trainer editor error");
             }
         }
 
@@ -904,7 +904,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (!HgEngineTrainerSource.TryLoad(index, out HgEngineSourceBlock block, out string error))
             {
-                _ = DialogHelper.ShowError($"Failed to load trainer {index} from hg-engine source:\n{error}", "Trainer editor error");
+                _ = DialogHelper.ShowErrorAsync($"Failed to load trainer {index} from hg-engine source:\n{error}", "Trainer editor error");
                 return;
             }
             _trainer = null;   // no binary model for hg-engine trainers, see TryLoad's doc comment
@@ -1077,25 +1077,25 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         /// <summary>Pushes <see cref="_trainer"/> into the bound fields + party mons. Caller guards with _suppress.</summary>
         private void PopulateFromTrainer()
         {
-            TrainerProperties trp = _trainer.trp;
-            TrainerName = _trainer.name;
-            TrainerClassIndex = trp.trainerClass;
-            SetBattleType(trp.battleType);
-            ChooseMoves = trp.chooseMoves;
-            ChooseItems = trp.chooseItems;
+            TrainerProperties trp = _trainer.Trp;
+            TrainerName = _trainer.Name;
+            TrainerClassIndex = trp.TrainerClass;
+            SetBattleType(trp.BattleType);
+            ChooseMoves = trp.ChooseMoves;
+            ChooseItems = trp.ChooseItems;
             // Lower the minimum before a 0 arrives and raise it after it leaves, so the spinner never clamps it.
-            if (trp.partyCount == 0) SetEmptyPartyAsRead(true);
-            PartyCount = trp.partyCount;
-            if (trp.partyCount > 0) SetEmptyPartyAsRead(false);
+            if (trp.PartyCount == 0) SetEmptyPartyAsRead(true);
+            PartyCount = trp.PartyCount;
+            if (trp.PartyCount > 0) SetEmptyPartyAsRead(false);
 
-            for (int i = 0; i < TrainerItems.Count && i < trp.trainerItems.Length; i++)
-                TrainerItems[i].Load(trp.trainerItems[i]);
+            for (int i = 0; i < TrainerItems.Count && i < trp.TrainerItems.Length; i++)
+                TrainerItems[i].Load(trp.TrainerItems[i]);
 
             for (int i = 0; i < AiFlags.Count; i++)
                 AiFlags[i].Checked = trp.AI != null && i < trp.AI.Count && trp.AI[i];
 
             for (int i = 0; i < Party.Count; i++)
-                LoadMon(Party[i], _trainer.party[i]);
+                LoadMon(Party[i], _trainer.Party[i]);
 
             ApplyMovesEnabled();
             ApplyItemsEnabled();
@@ -1106,38 +1106,38 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void SyncToTrainer()
         {
             if (_trainer == null) return;
-            TrainerProperties trp = _trainer.trp;
-            trp.partyCount = (byte)_partyCount;
-            trp.chooseMoves = _chooseMoves;
-            trp.chooseItems = _chooseItems;
-            trp.battleType = _battleType;
-            trp.trainerClass = (byte)Math.Max(0, _trainerClassIndex);
+            TrainerProperties trp = _trainer.Trp;
+            trp.PartyCount = (byte)_partyCount;
+            trp.ChooseMoves = _chooseMoves;
+            trp.ChooseItems = _chooseItems;
+            trp.BattleType = _battleType;
+            trp.TrainerClass = (byte)Math.Max(0, _trainerClassIndex);
 
-            for (int i = 0; i < trp.trainerItems.Length && i < TrainerItems.Count; i++)
-                trp.trainerItems[i] = (ushort)Math.Max(0, TrainerItems[i].ItemIndex);
+            for (int i = 0; i < trp.TrainerItems.Length && i < TrainerItems.Count; i++)
+                trp.TrainerItems[i] = (ushort)Math.Max(0, TrainerItems[i].ItemIndex);
 
             for (int i = 0; i < AiFlags.Count && trp.AI != null && i < trp.AI.Count; i++)
                 trp.AI[i] = AiFlags[i].Checked;
 
-            for (int i = 0; i < TrainerFile.POKE_IN_PARTY; i++)
-                _trainer.party[i].moves = _chooseMoves ? new ushort[4] : null;
+            for (int i = 0; i < TrainerFile.PokeInParty; i++)
+                _trainer.Party[i].Moves = _chooseMoves ? new ushort[4] : null;
 
             // Slots past the party count are synced too, so undo keeps them; the party file stops at the count.
-            for (int i = 0; i < Party.Count && i < TrainerFile.POKE_IN_PARTY; i++)
+            for (int i = 0; i < Party.Count && i < TrainerFile.PokeInParty; i++)
             {
                 TrainerPartyMonViewModel mon = Party[i];
-                PartyPokemon p = _trainer.party[i];
-                p.pokeID = (ushort)Math.Max(0, mon.SpeciesIndex);
-                p.formID = (ushort)mon.FormId;
-                p.level = (ushort)mon.Level;
+                PartyPokemon p = _trainer.Party[i];
+                p.PokeID = (ushort)Math.Max(0, mon.SpeciesIndex);
+                p.FormID = (ushort)mon.FormId;
+                p.Level = (ushort)mon.Level;
 
                 if (_chooseMoves)
-                    p.moves = new ushort[] { (ushort)Math.Max(0, mon.Move1), (ushort)Math.Max(0, mon.Move2), (ushort)Math.Max(0, mon.Move3), (ushort)Math.Max(0, mon.Move4) };
+                    p.Moves = new ushort[] { (ushort)Math.Max(0, mon.Move1), (ushort)Math.Max(0, mon.Move2), (ushort)Math.Max(0, mon.Move3), (ushort)Math.Max(0, mon.Move4) };
 
                 // The party file only has room for an item when the trainer says it does.
-                p.heldItem = _chooseItems ? (ushort)Math.Max(0, mon.ItemIndex) : null;
+                p.HeldItem = _chooseItems ? (ushort)Math.Max(0, mon.ItemIndex) : null;
 
-                p.difficulty = (byte)mon.Difficulty;
+                p.Difficulty = (byte)mon.Difficulty;
 
                 // In every other game this byte is the high half of the u16 difficulty, so it is kept as read.
                 if (_genderEditable)
@@ -1145,39 +1145,39 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     // Bits the editor has no field for stay as they were read.
                     const PartyPokemon.GenderAndAbilityFlags Edited = PartyPokemon.GenderAndAbilityFlags.FORCE_MALE | PartyPokemon.GenderAndAbilityFlags.FORCE_FEMALE
                         | PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT1 | PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT2;
-                    PartyPokemon.GenderAndAbilityFlags flags = p.genderAndAbilityFlags & ~Edited;
+                    PartyPokemon.GenderAndAbilityFlags flags = p.GenderAndAbility & ~Edited;
                     if (mon.GenderIndex == 1) flags |= PartyPokemon.GenderAndAbilityFlags.FORCE_MALE;
                     else if (mon.GenderIndex == 2) flags |= PartyPokemon.GenderAndAbilityFlags.FORCE_FEMALE;
                     if (mon.AbilityIndex == 1) flags |= PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT1;
                     else if (mon.AbilityIndex == 2) flags |= PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT2;
-                    p.genderAndAbilityFlags = flags;
+                    p.GenderAndAbility = flags;
                     if (_shinyPatch) p.ForceShiny = mon.ForceShiny;
                 }
 
-                p.ballSeals = (ushort)mon.BallSeals;
+                p.BallSeals = (ushort)mon.BallSeals;
             }
         }
 
         private void LoadMon(TrainerPartyMonViewModel mon, PartyPokemon p)
         {
             int gender = 0;
-            if (p.genderAndAbilityFlags.HasFlag(PartyPokemon.GenderAndAbilityFlags.FORCE_MALE)) gender = 1;
-            else if (p.genderAndAbilityFlags.HasFlag(PartyPokemon.GenderAndAbilityFlags.FORCE_FEMALE)) gender = 2;
+            if (p.GenderAndAbility.HasFlag(PartyPokemon.GenderAndAbilityFlags.FORCE_MALE)) gender = 1;
+            else if (p.GenderAndAbility.HasFlag(PartyPokemon.GenderAndAbilityFlags.FORCE_FEMALE)) gender = 2;
 
             int ability = 0;
-            if (p.genderAndAbilityFlags.HasFlag(PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT1)) ability = 1;
-            else if (p.genderAndAbilityFlags.HasFlag(PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT2)) ability = 2;
+            if (p.GenderAndAbility.HasFlag(PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT1)) ability = 1;
+            else if (p.GenderAndAbility.HasFlag(PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT2)) ability = 2;
 
             int[] moves = null;
-            if (p.moves != null)
+            if (p.Moves != null)
             {
                 moves = new int[4];
-                for (int j = 0; j < 4 && j < p.moves.Length; j++) moves[j] = p.moves[j];
+                for (int j = 0; j < 4 && j < p.Moves.Length; j++) moves[j] = p.Moves[j];
             }
 
-            mon.Load(p.pokeID ?? 0, p.formID, Math.Max(1, (int)p.level), moves, p.heldItem ?? 0, gender, ability, p.difficulty, p.ballSeals,
+            mon.Load(p.PokeID ?? 0, p.FormID, Math.Max(1, (int)p.Level), moves, p.HeldItem ?? 0, gender, ability, p.Difficulty, p.BallSeals,
                      _genderEditable && p.ForceShiny);
-            mon.ShinyVisible = _genderEditable && gameFamily == GameFamilies.HGSS && !HgEngineProject.IsActive;
+            mon.ShinyVisible = _genderEditable && GameFamily == GameFamilies.HGSS && !HgEngineProject.IsActive;
             mon.ShinyEnabled = _shinyPatch;
         }
 
@@ -1263,19 +1263,19 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 if (Party[i].SpeciesIndex > 0) continue;
                 string error = $"Party slot {i + 1} has no Pokémon.";
                 StatusText = $"Trainer {_selectedTrainerIndex} was not saved: {error}";
-                _ = DialogHelper.ShowError($"Trainer {_selectedTrainerIndex} was not saved:\n{error}", "Trainer editor error");
+                _ = DialogHelper.ShowErrorAsync($"Trainer {_selectedTrainerIndex} was not saved:\n{error}", "Trainer editor error");
                 return;
             }
 
             SyncToTrainer();
-            bool listChanged = _savedName != _trainerName || _savedClass != _trainer.trp.trainerClass;
+            bool listChanged = _savedName != _trainerName || _savedClass != _trainer.Trp.TrainerClass;
 
-            TrainerRecords.Save(_selectedTrainerIndex, _trainer.trp, _trainer.party);
+            TrainerRecords.Save(_selectedTrainerIndex, _trainer.Trp, _trainer.Party);
 
             UpdateTrainerName(_trainerName);
 
             _savedName = _trainerName;
-            _savedClass = _trainer.trp.trainerClass;
+            _savedClass = _trainer.Trp.TrainerClass;
             if (listChanged)
             {
                 RefreshTrainerListEntry(_selectedTrainerIndex);
@@ -1309,7 +1309,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 if (error == null) return;
                 StatusText = $"Trainer {trainer} was not saved: {error}";
-                await DialogHelper.ShowError($"Trainer {trainer} was not saved:\n{error}", "Trainer editor error");
+                await DialogHelper.ShowErrorAsync($"Trainer {trainer} was not saved:\n{error}", "Trainer editor error");
                 return;
             }
 
@@ -1505,22 +1505,22 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             // something that looks like it worked but doesn't.
             if (IsHgeActive)
             {
-                _ = DialogHelper.ShowError("Adding new trainers isn't supported yet for hg-engine source-backed ROMs.", "Trainer editor error");
+                _ = DialogHelper.ShowErrorAsync("Adding new trainers isn't supported yet for hg-engine source-backed ROMs.", "Trainer editor error");
                 return;
             }
             if (HasUnsavedChanges)
             {
-                _ = DialogHelper.ShowError("Save or discard the current trainer's changes before adding another trainer.", "Trainer editor error");
+                _ = DialogHelper.ShowErrorAsync("Save or discard the current trainer's changes before adding another trainer.", "Trainer editor error");
                 return;
             }
             try
             {
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.scripts });
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.Scripts });
                 if (!TrainerRosterService.TryAddTrainer("Trainer", out int newIndex,
                     out string error))
                 {
                     StatusText = error;
-                    _ = DialogHelper.ShowError(error, "Add trainer");
+                    _ = DialogHelper.ShowErrorAsync(error, "Add trainer");
                     return;
                 }
 
@@ -1531,7 +1531,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     : $"Added trainer {newIndex}. {after.RefusalReason}";
                 SelectedTrainerIndex = newIndex;
             }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't add trainer:\n{ex.Message}", "Trainer editor error"); }
+            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't add trainer:\n{ex.Message}", "Trainer editor error"); }
         }
 
         /// <summary>Removes only the final appended trainer after every known reference source is clear.</summary>
@@ -1539,14 +1539,14 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (HgEngineProject.IsActive)
             {
-                await DialogHelper.ShowError(
+                await DialogHelper.ShowErrorAsync(
                     "Removing trainers isn't supported for hg-engine source-backed ROMs.",
                     "Trainer editor error");
                 return;
             }
             if (HasUnsavedChanges)
             {
-                await DialogHelper.ShowError(
+                await DialogHelper.ShowErrorAsync(
                     "Save or discard the current trainer's changes before removing a trainer.",
                     "Trainer editor error");
                 return;
@@ -1554,7 +1554,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (TrainerNames.Count == 0) return;
 
             int candidate = TrainerNames.Count - 1;
-            bool confirmed = await DialogHelper.AskYesNo(
+            bool confirmed = await DialogHelper.AskYesNoAsync(
                 $"Remove trainer {candidate}? Only the final trainer can be removed. " +
                 "DSPRE will cancel if an event, script, rematch table, battle message, or phonebook entry still uses it.",
                 "Delete trainer?");
@@ -1571,8 +1571,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 {
                     DSUtils.TryUnpackNarcs(new List<DirNames>
                     {
-                        DirNames.scripts, DirNames.eventFiles, DirNames.trainerTextTable,
-                        DirNames.trainerTextOffset
+                        DirNames.Scripts, DirNames.EventFiles, DirNames.TrainerTextTable,
+                        DirNames.TrainerTextOffset
                     });
                     removed = TrainerRosterService.TryRemoveLastAddedTrainer(out removedId,
                         out error);
@@ -1581,7 +1581,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 if (!removed)
                 {
                     StatusText = error;
-                    await DialogHelper.ShowError(error, "Trainer editor error");
+                    await DialogHelper.ShowErrorAsync(error, "Trainer editor error");
                     return;
                 }
 
@@ -1593,7 +1593,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Couldn't remove trainer:\n{ex.Message}",
+                await DialogHelper.ShowErrorAsync($"Couldn't remove trainer:\n{ex.Message}",
                     "Trainer editor error");
             }
             finally { PopLoading(); }
@@ -1604,14 +1604,14 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (_trainer == null) return;
             SyncToTrainer();
             FilePickerFileType filter = new FilePickerFileType("Gen IV Trainer File") { Patterns = new[] { "*.trf" } };
-            string path = await DialogHelper.SaveFile(_owner, "Export trainer", new[] { filter }, $"trainer_{_selectedTrainerIndex:D4}.trf");
+            string path = await DialogHelper.SaveFileAsync(_owner, "Export trainer", new[] { filter }, $"trainer_{_selectedTrainerIndex:D4}.trf");
             if (path == null) return;
             try
             {
                 PlainFiles.WriteBytes(path, _trainer.ToByteArray());
                 SaveNotice.Exported(path);
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Trainer editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Trainer editor error"); }
         }
 
         /// <summary>Loads a combined .trf (name + properties + party) into the CURRENTLY SELECTED
@@ -1621,7 +1621,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (_trainer == null || _selectedTrainerIndex < 0) return;
             FilePickerFileType filter = new FilePickerFileType("Gen IV Trainer File") { Patterns = new[] { "*.trf" } };
-            string path = await DialogHelper.OpenFile(_owner, "Import trainer", new[] { filter });
+            string path = await DialogHelper.OpenFileAsync(_owner, "Import trainer", new[] { filter });
             if (path == null) return;
             try
             {
@@ -1641,7 +1641,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 SetDirty();
                 SaveNotice.Imported($"trainer {_selectedTrainerIndex}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Trainer editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Trainer editor error"); }
         }
 
         public async Task ExportPropertiesAsync()
@@ -1649,32 +1649,32 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (_trainer == null) return;
             SyncToTrainer();
             FilePickerFileType filter = new FilePickerFileType("Gen IV Trainer Properties") { Patterns = new[] { "*.trp" } };
-            string path = await DialogHelper.SaveFile(_owner, "Export trainer properties", new[] { filter }, $"trainer_{_selectedTrainerIndex:D4}.trp");
+            string path = await DialogHelper.SaveFileAsync(_owner, "Export trainer properties", new[] { filter }, $"trainer_{_selectedTrainerIndex:D4}.trp");
             if (path == null) return;
             try
             {
-                PlainFiles.WriteBytes(path, _trainer.trp.ToByteArray());
+                PlainFiles.WriteBytes(path, _trainer.Trp.ToByteArray());
                 SaveNotice.Exported(path);
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Trainer editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Trainer editor error"); }
         }
 
         public async Task ReplacePropertiesAsync()
         {
             if (_trainer == null || _selectedTrainerIndex < 0) return;
             FilePickerFileType filter = new FilePickerFileType("Gen IV Trainer Properties") { Patterns = new[] { "*.trp" } };
-            string path = await DialogHelper.OpenFile(_owner, "Import trainer properties", new[] { filter });
+            string path = await DialogHelper.OpenFileAsync(_owner, "Import trainer properties", new[] { filter });
             if (path == null) return;
             try
             {
                 using FileStream fs = File.OpenRead(path);
-                _trainer.trp = new TrainerProperties((ushort)_selectedTrainerIndex, fs);
+                _trainer.Trp = new TrainerProperties((ushort)_selectedTrainerIndex, fs);
                 _suppress = true;
                 try { PopulateFromTrainer(); } finally { _suppress = false; }
                 SetDirty();
                 SaveNotice.Imported($"the properties of trainer {_selectedTrainerIndex}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Trainer editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Trainer editor error"); }
         }
 
         public async Task ExportPartyAsync()
@@ -1682,34 +1682,34 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (_trainer == null) return;
             SyncToTrainer();
             FilePickerFileType filter = new FilePickerFileType("Gen IV Party Data") { Patterns = new[] { "*.pdat" } };
-            string path = await DialogHelper.SaveFile(_owner, "Export trainer party", new[] { filter }, $"party_{_selectedTrainerIndex:D4}.pdat");
+            string path = await DialogHelper.SaveFileAsync(_owner, "Export trainer party", new[] { filter }, $"party_{_selectedTrainerIndex:D4}.pdat");
             if (path == null) return;
             try
             {
-                _trainer.party.exportCondensedData = true;
-                PlainFiles.WriteBytes(path, _trainer.party.ToByteArray());
-                _trainer.party.exportCondensedData = false;
+                _trainer.Party.ExportCondensedData = true;
+                PlainFiles.WriteBytes(path, _trainer.Party.ToByteArray());
+                _trainer.Party.ExportCondensedData = false;
                 SaveNotice.Exported(path);
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Trainer editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Trainer editor error"); }
         }
 
         public async Task ImportPartyAsync()
         {
             if (_trainer == null) return;
             FilePickerFileType filter = new FilePickerFileType("Gen IV Party Data") { Patterns = new[] { "*.pdat" } };
-            string path = await DialogHelper.OpenFile(_owner, "Import trainer party", new[] { filter });
+            string path = await DialogHelper.OpenFileAsync(_owner, "Import trainer party", new[] { filter });
             if (path == null) return;
             try
             {
                 using FileStream fs = File.OpenRead(path);
-                _trainer.party = new Party(readFirstByte: true, TrainerFile.POKE_IN_PARTY, fs, _trainer.trp);
+                _trainer.Party = new Party(readFirstByte: true, TrainerFile.PokeInParty, fs, _trainer.Trp);
                 _suppress = true;
                 try { PopulateFromTrainer(); } finally { _suppress = false; }
                 SetDirty();
                 SaveNotice.Imported($"the party of trainer {_selectedTrainerIndex}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Trainer editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Trainer editor error"); }
         }
 
         // ── Party order ───────────────────────────────────────────────────────────────
@@ -1751,7 +1751,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 }
                 list.Add((m.SpeciesIndex, (int)m.Level, gender, ability, (int)m.Difficulty));
             }
-            ushort tid = _trainer?.trp.trainerID ?? (ushort)Math.Max(0, _selectedTrainerIndex);
+            ushort tid = _trainer?.Trp.TrainerID ?? (ushort)Math.Max(0, _selectedTrainerIndex);
             return (tid, (byte)Math.Max(0, _trainerClassIndex), list);
         }
 
@@ -1761,7 +1761,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (!IsHgeActive)
             {
-                try { DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.learnsets }); }
+                try { DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.Learnsets }); }
                 catch (Exception ex) { AppLogger.Error("Learnsets could not be unpacked: " + ex.Message); return; }
             }
             for (int i = 0; i < (int)_partyCount && i < Party.Count; i++)
@@ -1846,10 +1846,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (_trainer == null) return;
             try
             {
-                _trainer.name = newName;
-                TextArchive ta = new TextArchive(trainerNamesMessageNumber);
-                ta.SetSimpleTrainerName(_trainer.trp.trainerID, newName);
-                ta.SaveToExpandedDir(trainerNamesMessageNumber, showSuccessMessage: false);
+                _trainer.Name = newName;
+                TextArchive ta = new TextArchive(TrainerNamesMessageNumber);
+                ta.SetSimpleTrainerName(_trainer.Trp.TrainerID, newName);
+                ta.SaveToExpandedDir(TrainerNamesMessageNumber, showSuccessMessage: false);
             }
             catch (Exception ex) { AppLogger.Error("Trainer name save failed: " + ex.Message); }
         }

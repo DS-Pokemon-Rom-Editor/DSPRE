@@ -16,9 +16,9 @@ namespace DSPRE.HgEngine
             public Entry(DateTime writeTimeUtc, string text) { WriteTimeUtc = writeTimeUtc; Text = text; }
         }
 
-        private static readonly Dictionary<string, Entry> _cache = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, Entry> Cache = new(StringComparer.OrdinalIgnoreCase);
 
-        internal static void ClearCache() => _cache.Clear();
+        internal static void ClearCache() => Cache.Clear();
 
         /// <summary>The one way DSPRE writes an hg-engine source file. It writes a temporary file and moves it into
         /// place, so a failed write can't leave the source half-written. It keeps the file's CRLF line endings
@@ -59,10 +59,10 @@ namespace DSPRE.HgEngine
             }
             catch
             {
-                try { if (File.Exists(temp)) File.Delete(temp); } catch (IOException) { }
+                try { if (File.Exists(temp)) File.Delete(temp); } catch (IOException) { }   // the temp file is only cleanup; the original failure is rethrown below
                 throw;
             }
-            _cache[path] = new Entry(File.GetLastWriteTimeUtc(path), output);
+            Cache[path] = new Entry(File.GetLastWriteTimeUtc(path), output);
         }
 
         public static string GetText(string path)
@@ -74,11 +74,11 @@ namespace DSPRE.HgEngine
         private static string DiskText(string path)
         {
             DateTime writeTime = File.GetLastWriteTimeUtc(path);
-            if (_cache.TryGetValue(path, out Entry cached) && cached.WriteTimeUtc == writeTime)
+            if (Cache.TryGetValue(path, out Entry cached) && cached.WriteTimeUtc == writeTime)
                 return cached.Text;
 
             string text = File.ReadAllText(path);
-            _cache[path] = new Entry(writeTime, text);
+            Cache[path] = new Entry(writeTime, text);
             return text;
         }
     }

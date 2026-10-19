@@ -89,11 +89,11 @@ namespace DSPRE.HgEngine
             // The engine still sends the vanilla form species to their fixed personal files.
             switch (speciesId)
             {
-                case DSPRE.ROMFiles.SpeciesFile.DEOXYS_ID_NUM: return form <= 3 ? 495 + form : speciesId;
-                case DSPRE.ROMFiles.SpeciesFile.WORMADAM_ID_NUM: return form <= 2 ? 498 + form : speciesId;
-                case DSPRE.ROMFiles.SpeciesFile.GIRATINA_ID_NUM: return form <= 1 ? 500 + form : speciesId;
-                case DSPRE.ROMFiles.SpeciesFile.SHAYMIN_ID_NUM: return form <= 1 ? 501 + form : speciesId;
-                case DSPRE.ROMFiles.SpeciesFile.ROTOM_ID_NUM: return form <= 5 ? 502 + form : speciesId;
+                case DSPRE.ROMFiles.SpeciesFile.DeoxysIdNum: return form <= 3 ? 495 + form : speciesId;
+                case DSPRE.ROMFiles.SpeciesFile.WormadamIdNum: return form <= 2 ? 498 + form : speciesId;
+                case DSPRE.ROMFiles.SpeciesFile.GiratinaIdNum: return form <= 1 ? 500 + form : speciesId;
+                case DSPRE.ROMFiles.SpeciesFile.ShayminIdNum: return form <= 1 ? 501 + form : speciesId;
+                case DSPRE.ROMFiles.SpeciesFile.RotomIdNum: return form <= 5 ? 502 + form : speciesId;
             }
             int target = form <= MaxFormSlots ? tableSlot(speciesId, form) : 0;
             return target > 0 ? target : speciesId;

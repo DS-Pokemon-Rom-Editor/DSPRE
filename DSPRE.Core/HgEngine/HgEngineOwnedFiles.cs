@@ -141,7 +141,7 @@ namespace DSPRE.HgEngine
         /// </summary>
         public static string ArchiveOf(RomInfo.DirNames dir)
         {
-            if (RomInfo.gameDirs == null || !RomInfo.gameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) paths)) return null;
+            if (RomInfo.GameDirs == null || !RomInfo.GameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) paths)) return null;
             return ArchiveOfPath(paths.packedDir);
         }
 
@@ -311,7 +311,7 @@ namespace DSPRE.HgEngine
 
         /// <summary>The field scripts hg-engine builds from its own source, which nothing else may write.</summary>
         public static IEnumerable<int> OwnedScriptIds() =>
-            FilesIn(ArchiveOf(RomInfo.DirNames.scripts)).Values
+            FilesIn(ArchiveOf(RomInfo.DirNames.Scripts)).Values
                 .Where(f => f.Ownership == HgEngineOwnership.EditableSource)
                 .Select(f => f.Id);
 

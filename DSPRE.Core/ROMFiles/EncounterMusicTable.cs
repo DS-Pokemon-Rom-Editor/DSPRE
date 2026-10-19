@@ -25,17 +25,17 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>The RAM address the code's pointer holds: arm9, or the synthetic overlay once a patch moved the table.</summary>
-        public static uint Address() => BitConverter.ToUInt32(ARM9.ReadBytes(RomInfo.encounterMusicTableOffsetToRAMAddress, 4), 0);
+        public static uint Address() => BitConverter.ToUInt32(ARM9.ReadBytes(RomInfo.EncounterMusicTableOffsetToRAMAddress, 4), 0);
 
         public static (Location Where, List<Row> Rows) Read()
         {
-            bool hgss = RomInfo.gameFamily == RomInfo.GameFamilies.HGSS;
+            bool hgss = RomInfo.GameFamily == RomInfo.GameFamilies.HGSS;
             uint ram = Address();
-            Location where = new Location { Repointed = ram >= RomInfo.synthOverlayLoadAddress };
-            where.Start = ram - (where.Repointed ? RomInfo.synthOverlayLoadAddress : ARM9.address);
-            where.Path = where.Repointed ? Filesystem.expArmPath : RomInfo.arm9Path;
+            Location where = new Location { Repointed = ram >= RomInfo.SynthOverlayLoadAddress };
+            where.Start = ram - (where.Repointed ? RomInfo.SynthOverlayLoadAddress : ARM9.Address);
+            where.Path = where.Repointed ? Filesystem.ExpArmPath : RomInfo.Arm9Path;
 
-            byte count = ARM9.ReadByte(RomInfo.encounterMusicCountSite);
+            byte count = ARM9.ReadByte(RomInfo.EncounterMusicCountSite);
             List<Row> rows = new List<Row>(count);
             using DSUtils.EasyReader reader = new DSUtils.EasyReader(where.Path, where.Start);
             for (int i = 0; i < count; i++)

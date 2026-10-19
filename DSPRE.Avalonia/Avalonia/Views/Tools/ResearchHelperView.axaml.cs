@@ -131,13 +131,13 @@ namespace DSPRE.Avalonia.Views.Tools
                     try
                     {
                         MapHeader h = MapHeader.GetMapHeader((ushort)i);
-                        if (h != null && h.eventFileID == r.EventFileID)
+                        if (h != null && h.EventFileID == r.EventFileID)
                         {
                             VM.NavigateToHeader(i);
                             return;
                         }
                     }
-                    catch { }
+                    catch { }   // a header that can't be read is skipped
                 }
                 VM.StatusText = $"Could not find header for event file {r.EventFileID}";
             }

@@ -132,8 +132,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             bool read = false;
             try
             {
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.encounters });
-                string path = Path.Combine(gameDirs[DirNames.encounters].unpackedDir, file.ToString("D4"));
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.Encounters });
+                string path = Path.Combine(GameDirs[DirNames.Encounters].unpackedDir, file.ToString("D4"));
                 EncounterFile enc;
                 if (DSPRE.HgEngine.HgEngineProject.IsActive)
                 {
@@ -145,13 +145,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 else
                 {
                     byte[] bytes = File.ReadAllBytes(path);
-                    enc = gameFamily == GameFamilies.HGSS
+                    enc = GameFamily == GameFamilies.HGSS
                         ? new EncounterFileHGSS(new MemoryStream(bytes)) : new EncounterFileDPPt(new MemoryStream(bytes));
                 }
                 // HGSS: walking, surfing and fishing swarms sit in slots 0, 1 and 3 (slot 2 is night fishing).
-                ushort[] mons = gameFamily == GameFamilies.HGSS
-                    ? new[] { enc.swarmPokemon[row.Method == 2 ? 3 : Math.Min((int)row.Method, 1)] }
-                    : enc.swarmPokemon.Take(2).Distinct().ToArray();
+                ushort[] mons = GameFamily == GameFamilies.HGSS
+                    ? new[] { enc.SwarmPokemon[row.Method == 2 ? 3 : Math.Min((int)row.Method, 1)] }
+                    : enc.SwarmPokemon.Take(2).Distinct().ToArray();
                 ids = mons.Where(m => m != 0).Select(m => (int)m).ToArray();
                 text = string.Join(", ", mons.Select(m => m < _pokemonNames.Length ? _pokemonNames[m] : $"#{m}"))
                     + $" (file {file})";
@@ -174,7 +174,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try
             {
                 MapHeader h = MapHeader.GetMapHeader(header);
-                return h == null || h.wildPokemon == nullEncounterID ? ushort.MaxValue : h.wildPokemon;
+                return h == null || h.WildPokemon == NullEncounterID ? ushort.MaxValue : h.WildPokemon;
             }
             catch (Exception e) when (e is IOException || e is ArgumentException) { return ushort.MaxValue; }
         }
@@ -272,7 +272,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             // The Wild editor may have changed a swarm species since the rows were read.
             _speciesCache.Clear();
-            if (HasProblem) { await DialogHelper.ShowError(Problem, "Swarms error"); return false; }
+            if (HasProblem) { await DialogHelper.ShowErrorAsync(Problem, "Swarms error"); return false; }
             if (_table.FromSource)
             {
                 (bool saved, string error) = await HgEngineSave.RunAsync(() =>
@@ -282,7 +282,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 });
                 if (!saved)
                 {
-                    if (error != null) await DialogHelper.ShowError("The swarms were not saved:\n" + error, "Swarms error");
+                    if (error != null) await DialogHelper.ShowErrorAsync("The swarms were not saved:\n" + error, "Swarms error");
                     return false;
                 }
             }
@@ -291,7 +291,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 try { _table.Save(HeaderNames.Length, h => EncounterFileOf(h) != ushort.MaxValue, HasSwarmSpecies); }
                 catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException || e is InvalidDataException)
                 {
-                    await DialogHelper.ShowError("The swarms were not saved:\n" + e.Message, "Swarms error");
+                    await DialogHelper.ShowErrorAsync("The swarms were not saved:\n" + e.Message, "Swarms error");
                     return false;
                 }
             }
@@ -309,7 +309,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try { _table = SwarmTable.Load(); }
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException || e is ArgumentException)
             {
-                _ = DialogHelper.ShowError("The saved swarms couldn't be read back:\n" + e.Message, "Swarms error");
+                _ = DialogHelper.ShowErrorAsync("The saved swarms couldn't be read back:\n" + e.Message, "Swarms error");
                 return;
             }
             _saved = _table.Snapshot();

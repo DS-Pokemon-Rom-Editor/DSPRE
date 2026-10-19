@@ -99,7 +99,7 @@ namespace DSPRE
                 ? baseFileName.Substring(0, baseFileName.Length - "_DSPRE_contents".Length)
                 : baseFileName;
 
-            if (SettingsManager.Settings?.automaticallyUpdateDBs == true)   // Settings may be unloaded when running headless
+            if (SettingsManager.Settings?.AutomaticallyUpdateDBs == true)   // Settings may be unloaded when running headless
             {
                 CheckForDatabaseUpdates();
             }
@@ -135,7 +135,7 @@ namespace DSPRE
                 // AppPaths.DatabasePath) or from a bundled databases/ folder copied by
                 // DatabaseSetup. On a fresh machine with no network, neither may exist, 
                 // degrade gracefully instead of failing the whole ROM load.
-                if (!File.Exists(databaseJsonPath) && SettingsManager.Settings?.automaticallyUpdateDBs != true)
+                if (!File.Exists(databaseJsonPath) && SettingsManager.Settings?.AutomaticallyUpdateDBs != true)
                 {
                     CheckForDatabaseUpdates();   // one clone attempt even when auto-update is off
                 }
@@ -170,7 +170,7 @@ namespace DSPRE
                 ScriptDatabaseJsonLoader.InitializeFromJson(targetJsonPath, gameVersion);
 
                 // Unpack text archives NARC if needed - required for reading Pokemon/Item/Move/Trainer names
-                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.textArchives });
+                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.TextArchives });
 
                 // Initialize enum dictionaries from ROM data (Pokemon, Items, Moves, Trainers)
                 Resources.ScriptDatabase.InitializePokemonNames();

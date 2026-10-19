@@ -118,7 +118,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             List<ExportPickItem> selected = IndividualSprites.Concat(SpriteSheets).Where(i => i.IsSelected).ToList();
             if (selected.Count == 0) { StatusText = "Nothing selected."; return; }
 
-            string path = await DialogHelper.SaveFile(_owner, "Export selected as ZIP",
+            string path = await DialogHelper.SaveFileAsync(_owner, "Export selected as ZIP",
                 new[] { DialogHelper.ZipFilter, DialogHelper.AllFilter },
                 $"mon{_sprite.CurrentId:D3}_sprites.zip");
             if (string.IsNullOrEmpty(path)) return;

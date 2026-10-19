@@ -28,7 +28,7 @@ namespace DSPRE.Avalonia.Views.Items
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) VM?.Discard();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) VM?.Discard();
         }
         private void Close_Click(object sender, RoutedEventArgs e) => Close();
         private void Undo_Click(object sender, RoutedEventArgs e) => VM?.Undo();

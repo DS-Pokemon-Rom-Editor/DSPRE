@@ -9,9 +9,9 @@ namespace DSPRE.ROMFiles
         /// <summary>A file loaded at <see cref="Base"/>, <see cref="Size"/> bytes long.</summary>
         public readonly record struct Region(string Name, uint Base, long Size);
 
-        public static Region Arm9(long size) => new Region("arm9", ARM9.address, size);
+        public static Region Arm9(long size) => new Region("arm9", ARM9.Address, size);
         public static Region Overlay(int overlay, long size) => new Region($"overlay {overlay}", OverlayUtils.OverlayTable.GetRAMAddress(overlay), size);
-        public static Region Synthetic(long size) => new Region("synthetic overlay", RomInfo.synthOverlayLoadAddress, size);
+        public static Region Synthetic(long size) => new Region("synthetic overlay", RomInfo.SynthOverlayLoadAddress, size);
 
         /// <summary>
         /// Which of <paramref name="regions"/> holds <paramref name="length"/> bytes from <paramref name="ram"/>, the first that

@@ -10,14 +10,14 @@ namespace DSPRE.ROMFiles
     public class ScriptCommand
     {
 
-        public ushort? id;
-        public List<byte[]> cmdParams;
-        public string name;
+        public ushort? Id;
+        public List<byte[]> CmdParams;
+        public string Name;
 
         public ScriptCommand(ushort id, List<byte[]> parameterData)
         {
-            this.id = id;
-            cmdParams = parameterData;
+            this.Id = id;
+            CmdParams = parameterData;
 
             Dictionary<ushort, ScriptCommandInfo> commandInfoDict = RomInfo.GetScriptCommandInfoDict();
             ScriptCommandInfo cmdInfo = null;
@@ -26,11 +26,11 @@ namespace DSPRE.ROMFiles
             // Get command name
             if (cmdInfo != null && !string.IsNullOrEmpty(cmdInfo.Name))
             {
-                name = cmdInfo.Name;
+                Name = cmdInfo.Name;
             }
-            else if (!RomInfo.ScriptCommandNamesDict.TryGetValue(id, out name))
+            else if (!RomInfo.ScriptCommandNamesDict.TryGetValue(id, out Name))
             {
-                name = $"CMD_{id:X3}";
+                Name = $"CMD_{id:X3}";
             }
 
             List<ScriptParameter.ParameterType> paramTypes = cmdInfo?.ParameterTypes;
@@ -41,14 +41,14 @@ namespace DSPRE.ROMFiles
                 for (int i = 0; i < Math.Min(paramTypes.Count, parameterData.Count); i++)
                 {
                     ScriptParameter param = new ScriptParameter(parameterData[i], paramTypes[i]);
-                    name += " " + param.DisplayValue;
+                    Name += " " + param.DisplayValue;
                 }
             }
             else if (parameterData != null)
             {
                 foreach (byte[] param in parameterData)
                 {
-                    name += " " + new ScriptParameter(param, ScriptParameter.ParameterType.Integer).DisplayValue;
+                    Name += " " + new ScriptParameter(param, ScriptParameter.ParameterType.Integer).DisplayValue;
                 }
             }
         }
@@ -57,15 +57,15 @@ namespace DSPRE.ROMFiles
         /// the command database. Used where a command is being described rather than assembled.</summary>
         public ScriptCommand(string commandName, List<byte[]> parameterData, ushort? commandId = null)
         {
-            name = commandName;
-            cmdParams = parameterData ?? new List<byte[]>();
-            id = commandId;
+            Name = commandName;
+            CmdParams = parameterData ?? new List<byte[]>();
+            Id = commandId;
         }
 
         public ScriptCommand(string wholeLine, int lineNumber = 0)
         {
-            name = wholeLine;
-            cmdParams = new List<byte[]>();
+            Name = wholeLine;
+            CmdParams = new List<byte[]>();
 
             string processedLine = ProcessBracketedItems(wholeLine);
             string[] nameParts = processedLine.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries); // Separate command code from parameters
@@ -73,13 +73,13 @@ namespace DSPRE.ROMFiles
 
             if (RomInfo.ScriptCommandNamesReverseDict.TryGetValue(nameParts[0].ToLower(), out ushort cmdID))
             {
-                id = cmdID;
+                Id = cmdID;
             }
             else
             {
                 try
                 {
-                    id = ushort.Parse(nameParts[0].PurgeSpecial(ScriptFile.specialChars), nameParts[0].GetNumberStyle());
+                    Id = ushort.Parse(nameParts[0].PurgeSpecial(ScriptFile.SpecialChars), nameParts[0].GetNumberStyle());
                 }
                 catch
                 {
@@ -101,17 +101,17 @@ namespace DSPRE.ROMFiles
             }
 
             /* Read parameters from remainder of the description */
-            byte[] parametersSizeArr = RomInfo.ScriptCommandParametersDict[(ushort)id];
+            byte[] parametersSizeArr = RomInfo.ScriptCommandParametersDict[(ushort)Id];
 
             int paramLength = 0;
             int paramsProcessed = 0;
 
             if (parametersSizeArr.Length > 0 && parametersSizeArr.First() == 0xFF)
             {
-                int firstParamValue = int.Parse(nameParts[1].PurgeSpecial(ScriptFile.specialChars), nameParts[1].GetNumberStyle());
+                int firstParamValue = int.Parse(nameParts[1].PurgeSpecial(ScriptFile.SpecialChars), nameParts[1].GetNumberStyle());
                 byte firstParamSize = parametersSizeArr[1];
 
-                cmdParams.Add(firstParamValue.ToByteArrayChooseSize(firstParamSize));
+                CmdParams.Add(firstParamValue.ToByteArrayChooseSize(firstParamSize));
                 paramsProcessed++;
 
                 int i = 2;
@@ -162,7 +162,7 @@ namespace DSPRE.ROMFiles
                     AppMessages.Error($"Command {nameParts[0]} is a special Script Command.\n" +
                                     $"The value of the first parameter must be a number in the range [0 - {optionsCount}].\n\n" +
                                     $"Line {lineNumber}: {wholeLine}", "Error");
-                    id = null;
+                    Id = null;
                     return;
                 }
             }
@@ -183,7 +183,7 @@ namespace DSPRE.ROMFiles
 
                     if (RomInfo.ScriptComparisonOperatorsReverseDict.TryGetValue(nameParts[i + 1].ToLower(), out cmdID))
                     { //Check succeeds when command is like "asdfg LESS" or "asdfg DIFFERENT"
-                        cmdParams.Add(new byte[] { (byte)cmdID });
+                        CmdParams.Add(new byte[] { (byte)cmdID });
                     }
                     else
                     { //Not a comparison
@@ -196,7 +196,7 @@ namespace DSPRE.ROMFiles
                             && !nameParts[i + 1].StartsWith("TRAINER_")
                             && !nameParts[i + 1].StartsWith("NPC_TRADE_"))
                         {
-                            nameParts[i + 1] = nameParts[i + 1].PurgeSpecial(ScriptFile.specialChars);
+                            nameParts[i + 1] = nameParts[i + 1].PurgeSpecial(ScriptFile.SpecialChars);
                         }
 
                         int result = 0;
@@ -210,51 +210,51 @@ namespace DSPRE.ROMFiles
                             try
                             {
                                 string paramToCheck = CheckAndCompareParam(nameParts[i + 1]);
-                                KeyValuePair<ushort, string> first = ScriptDatabase.specialOverworlds.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
+                                KeyValuePair<ushort, string> first = ScriptDatabase.SpecialOverworlds.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
                                 if (!string.IsNullOrWhiteSpace(first.Value))
                                 {
                                     result = first.Key;
                                 }
                                 else
                                 {
-                                    KeyValuePair<byte, string> direction = ScriptDatabase.overworldDirections.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
+                                    KeyValuePair<byte, string> direction = ScriptDatabase.OverworldDirections.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
                                     if (!string.IsNullOrWhiteSpace(direction.Value))
                                     {
                                         result = direction.Key;
                                     }
                                     else
                                     {
-                                        KeyValuePair<ushort, string> pokemon = ScriptDatabase.pokemonNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
+                                        KeyValuePair<ushort, string> pokemon = ScriptDatabase.PokemonNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
                                         if (!string.IsNullOrWhiteSpace(pokemon.Value))
                                         {
                                             result = pokemon.Key;
                                         }
                                         else
                                         {
-                                            KeyValuePair<ushort, string> item = ScriptDatabase.itemNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
+                                            KeyValuePair<ushort, string> item = ScriptDatabase.ItemNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
                                             if (!string.IsNullOrWhiteSpace(item.Value))
                                             {
                                                 result = item.Key;
                                             }
                                             else
                                             {
-                                                KeyValuePair<ushort, string> move = ScriptDatabase.moveNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
+                                                KeyValuePair<ushort, string> move = ScriptDatabase.MoveNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
                                                 if (!string.IsNullOrWhiteSpace(move.Value))
                                                 {
                                                     result = move.Key;
                                                 }
                                                 else
                                                 {
-                                                    KeyValuePair<ushort, string> sound = ScriptDatabase.soundNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
+                                                    KeyValuePair<ushort, string> sound = ScriptDatabase.SoundNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
                                                     if (!string.IsNullOrWhiteSpace(sound.Value))
                                                     {
                                                         result = sound.Key;
                                                     }
                                                     else
                                                     {
-                                                        KeyValuePair<ushort, string> trainerClass = ScriptDatabase.trainerClassNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
-                                                        KeyValuePair<ushort, string> trainer = ScriptDatabase.trainerNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
-                                                        KeyValuePair<ushort, string> trade = ScriptDatabase.npcTradeNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
+                                                        KeyValuePair<ushort, string> trainerClass = ScriptDatabase.TrainerClassNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
+                                                        KeyValuePair<ushort, string> trainer = ScriptDatabase.TrainerNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
+                                                        KeyValuePair<ushort, string> trade = ScriptDatabase.NpcTradeNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
                                                         // Class names also start with TRAINER_, so they are looked up first.
                                                         if (!string.IsNullOrWhiteSpace(trainerClass.Value))
                                                         {
@@ -272,7 +272,7 @@ namespace DSPRE.ROMFiles
                                                         {
                                                             AppMessages.Error($"Argument {paramToCheck} couldn't be parsed as a valid Condition, Overworld ID, Direction ID, Pokemon, Item, Move, Sound, Trainer, Trainer class, Trade, Script, Function or Action number.\n\n" +
                                                                 $"Line {lineNumber}: {wholeLine}", "Invalid identifier");
-                                                            id = null;
+                                                            Id = null;
                                                             return;
                                                         }
                                                     }
@@ -286,21 +286,21 @@ namespace DSPRE.ROMFiles
                             {
                                 AppMessages.Error($"{ex.Message}\n\nLine {lineNumber}: {wholeLine}",
                                     "Invalid syntax");
-                                id = null;
+                                Id = null;
                                 return;
                             }
                         }
 
                         try
                         {
-                            cmdParams.Add(result.ToByteArrayChooseSize(parametersSizeArr[i]));
+                            CmdParams.Add(result.ToByteArrayChooseSize(parametersSizeArr[i]));
                         }
                         catch (OverflowException)
                         {
                             string errorMsg = $"Argument {nameParts[i + 1]} at line {lineNumber} is not in the range [0, {Math.Pow(2, 8 * parametersSizeArr[i]) - 1}].";
-                            AppLogger.Error($"ScriptCommand parse error: {errorMsg} | Command: {nameParts[0]} (ID: 0x{id:X3}) | Full line: {wholeLine} | Expected param size: {parametersSizeArr[i]} bytes | This may indicate a database error for conditional commands.");
-                            AppMessages.Error(errorMsg + $"\n\nCommand: {nameParts[0]} (ID: 0x{id:X3})\nFull line: {wholeLine}\n\nNote: If this is a conditional command like UnionGroup, check your script command database for parameter size errors.", "Argument error");
-                            id = null;
+                            AppLogger.Error($"ScriptCommand parse error: {errorMsg} | Command: {nameParts[0]} (ID: 0x{Id:X3}) | Full line: {wholeLine} | Expected param size: {parametersSizeArr[i]} bytes | This may indicate a database error for conditional commands.");
+                            AppMessages.Error(errorMsg + $"\n\nCommand: {nameParts[0]} (ID: 0x{Id:X3})\nFull line: {wholeLine}\n\nNote: If this is a conditional command like UnionGroup, check your script command database for parameter size errors.", "Argument error");
+                            Id = null;
                         }
                     }
                 }
@@ -310,39 +310,39 @@ namespace DSPRE.ROMFiles
                 AppMessages.Error($"Wrong number of parameters for command {nameParts[0]} at line {lineNumber}.\n" +
                                 $"Received: {nameParts.Length - 1}\n" +
                                 $"Expected: {paramLength}", "Error");
-                id = null;
+                Id = null;
             }
 
-            if (id != null)
+            if (Id != null)
             {
                 Dictionary<ushort, ScriptCommandInfo> commandInfoDict = RomInfo.GetScriptCommandInfoDict();
                 ScriptCommandInfo cmdInfo = null;
-                commandInfoDict?.TryGetValue((ushort)id, out cmdInfo);
+                commandInfoDict?.TryGetValue((ushort)Id, out cmdInfo);
 
                 if (cmdInfo != null && !string.IsNullOrEmpty(cmdInfo.Name))
                 {
-                    name = cmdInfo.Name;
+                    Name = cmdInfo.Name;
                 }
-                else if (!RomInfo.ScriptCommandNamesDict.TryGetValue((ushort)id, out name))
+                else if (!RomInfo.ScriptCommandNamesDict.TryGetValue((ushort)Id, out Name))
                 {
-                    name = $"CMD_{id:X3}";
+                    Name = $"CMD_{Id:X3}";
                 }
 
                 List<ScriptParameter.ParameterType> paramTypes = cmdInfo?.ParameterTypes;
 
-                if (paramTypes != null && paramTypes.Count > 0 && cmdParams != null)
+                if (paramTypes != null && paramTypes.Count > 0 && CmdParams != null)
                 {
-                    for (int i = 0; i < Math.Min(paramTypes.Count, cmdParams.Count); i++)
+                    for (int i = 0; i < Math.Min(paramTypes.Count, CmdParams.Count); i++)
                     {
-                        ScriptParameter param = new ScriptParameter(cmdParams[i], paramTypes[i]);
-                        name += " " + param.DisplayValue;
+                        ScriptParameter param = new ScriptParameter(CmdParams[i], paramTypes[i]);
+                        Name += " " + param.DisplayValue;
                     }
                 }
-                else if (cmdParams != null)
+                else if (CmdParams != null)
                 {
-                    foreach (byte[] param in cmdParams)
+                    foreach (byte[] param in CmdParams)
                     {
-                        name += " " + new ScriptParameter(param, ScriptParameter.ParameterType.Integer).DisplayValue;
+                        Name += " " + new ScriptParameter(param, ScriptParameter.ParameterType.Integer).DisplayValue;
                     }
                 }
             }
@@ -404,80 +404,80 @@ namespace DSPRE.ROMFiles
         {
 
             // Check for Pokemon names first
-            KeyValuePair<ushort, string> pokemon = ScriptDatabase.pokemonNames.FirstOrDefault(x =>
+            KeyValuePair<ushort, string> pokemon = ScriptDatabase.PokemonNames.FirstOrDefault(x =>
                 x.Value.IgnoreCaseEquals(parameter));
             if (!string.IsNullOrWhiteSpace(pokemon.Value))
             {
                 return pokemon.Value;
             }
-            KeyValuePair<ushort, string> item = ScriptDatabase.itemNames.FirstOrDefault(x =>
+            KeyValuePair<ushort, string> item = ScriptDatabase.ItemNames.FirstOrDefault(x =>
                 x.Value.IgnoreCaseEquals(parameter));
             if (!string.IsNullOrWhiteSpace(item.Value))
             {
                 return item.Value;
             }
-            KeyValuePair<ushort, string> move = ScriptDatabase.moveNames.FirstOrDefault(x =>
+            KeyValuePair<ushort, string> move = ScriptDatabase.MoveNames.FirstOrDefault(x =>
                 x.Value.IgnoreCaseEquals(parameter));
             if (!string.IsNullOrWhiteSpace(move.Value))
             {
                 return move.Value;
             }
-            KeyValuePair<ushort, string> sound = ScriptDatabase.soundNames.FirstOrDefault(x =>
+            KeyValuePair<ushort, string> sound = ScriptDatabase.SoundNames.FirstOrDefault(x =>
                 x.Value.IgnoreCaseEquals(parameter));
             if (!string.IsNullOrWhiteSpace(sound.Value))
             {
                 return sound.Value;
             }
-            KeyValuePair<ushort, string> trainerClass = ScriptDatabase.trainerClassNames.FirstOrDefault(x =>
+            KeyValuePair<ushort, string> trainerClass = ScriptDatabase.TrainerClassNames.FirstOrDefault(x =>
                 x.Value.IgnoreCaseEquals(parameter));
             if (!string.IsNullOrWhiteSpace(trainerClass.Value))
             {
                 return trainerClass.Value;
             }
-            KeyValuePair<ushort, string> trainer = ScriptDatabase.trainerNames.FirstOrDefault(x =>
+            KeyValuePair<ushort, string> trainer = ScriptDatabase.TrainerNames.FirstOrDefault(x =>
                 x.Value.IgnoreCaseEquals(parameter));
             if (!string.IsNullOrWhiteSpace(trainer.Value))
             {
                 return trainer.Value;
             }
-            KeyValuePair<ushort, string> trade = ScriptDatabase.npcTradeNames.FirstOrDefault(x =>
+            KeyValuePair<ushort, string> trade = ScriptDatabase.NpcTradeNames.FirstOrDefault(x =>
                 x.Value.IgnoreCaseEquals(parameter));
             if (!string.IsNullOrWhiteSpace(trade.Value))
             {
                 return trade.Value;
             }
 
-            string closestItem = FindClosestMatch(parameter, ScriptDatabase.itemNames.Values);
+            string closestItem = FindClosestMatch(parameter, ScriptDatabase.ItemNames.Values);
             if (!string.IsNullOrWhiteSpace(closestItem))
             {
                 throw new ArgumentException($"'{parameter}' is not a valid Item.\nDid you mean {closestItem}?");
             }
-            string closestPokemon = FindClosestMatch(parameter, ScriptDatabase.pokemonNames.Values);
+            string closestPokemon = FindClosestMatch(parameter, ScriptDatabase.PokemonNames.Values);
             if (!string.IsNullOrWhiteSpace(closestPokemon))
             {
                 throw new ArgumentException($"'{parameter}' is not a valid Pokemon.\nDid you mean {closestPokemon}?");
             }
-            string closestMove = FindClosestMatch(parameter, ScriptDatabase.moveNames.Values);
+            string closestMove = FindClosestMatch(parameter, ScriptDatabase.MoveNames.Values);
             if (!string.IsNullOrWhiteSpace(closestMove))
             {
                 throw new ArgumentException($"'{parameter}' is not a valid Move.\nDid you mean {closestMove}?");
             }
-            string closestSound = FindClosestMatch(parameter, ScriptDatabase.soundNames.Values);
+            string closestSound = FindClosestMatch(parameter, ScriptDatabase.SoundNames.Values);
             if (!string.IsNullOrWhiteSpace(closestSound))
             {
                 throw new ArgumentException($"'{parameter}' is not a valid Sound name.\nDid you mean {closestSound}?");
             }
-            string closestTrainer = FindClosestMatch(parameter, ScriptDatabase.trainerNames.Values);
+            string closestTrainer = FindClosestMatch(parameter, ScriptDatabase.TrainerNames.Values);
             if (!string.IsNullOrWhiteSpace(closestTrainer))
             {
                 throw new ArgumentException($"'{parameter}' is not a valid Trainer.\nDid you mean {closestTrainer}?");
             }
-            string closestClass = FindClosestMatch(parameter, ScriptDatabase.trainerClassNames.Values);
+            string closestClass = FindClosestMatch(parameter, ScriptDatabase.TrainerClassNames.Values);
             if (!string.IsNullOrWhiteSpace(closestClass))
             {
                 throw new ArgumentException($"'{parameter}' is not a valid trainer class.\nDid you mean {closestClass}?");
             }
-            string closestTrade = FindClosestMatch(parameter, ScriptDatabase.npcTradeNames.Values);
+            string closestTrade = FindClosestMatch(parameter, ScriptDatabase.NpcTradeNames.Values);
             if (!string.IsNullOrWhiteSpace(closestTrade))
             {
                 throw new ArgumentException($"'{parameter}' is not a valid trade.\nDid you mean {closestTrade}?");

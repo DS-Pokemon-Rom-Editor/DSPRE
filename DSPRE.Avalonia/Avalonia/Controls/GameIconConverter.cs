@@ -29,7 +29,7 @@ namespace DSPRE.Avalonia.Controls
         {
             AppEvents.ArchiveMemberSaved += (_, dir) =>
             {
-                GameIconConverter saved = dir == RomInfo.DirNames.itemIcons ? Item : dir == RomInfo.DirNames.monIcons ? Pokemon : null;
+                GameIconConverter saved = dir == RomInfo.DirNames.ItemIcons ? Item : dir == RomInfo.DirNames.MonIcons ? Pokemon : null;
                 if (saved != null) global::Avalonia.Threading.Dispatcher.UIThread.Post(() => saved._cache.Clear());
             };
         }
@@ -40,11 +40,11 @@ namespace DSPRE.Avalonia.Controls
                 return value is string label ? Pokemon.Convert(SpeciesNamedIn(label), targetType, parameter, culture) : null;
             int id = value switch { int i => i, ushort u => u, short s => s, uint ui => (int)ui, decimal d => (int)d, string t when int.TryParse(t, out int n) => n, _ => -1 };
             if (id <= 0) return null;
-            if (_cachedFor != RomInfo.workDir)
+            if (_cachedFor != RomInfo.WorkDir)
             {
-                _cache.Clear(); _cachedFor = RomInfo.workDir;
-                try { DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { _kind switch { Kind.Item => RomInfo.DirNames.itemIcons, Kind.Pokemon => RomInfo.DirNames.monIcons, _ => RomInfo.DirNames.moveData } }); }
-                catch { }
+                _cache.Clear(); _cachedFor = RomInfo.WorkDir;
+                try { DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { _kind switch { Kind.Item => RomInfo.DirNames.ItemIcons, Kind.Pokemon => RomInfo.DirNames.MonIcons, _ => RomInfo.DirNames.MoveData } }); }
+                catch (Exception ex) { AppLogger.Warn("Game icon archives: " + ex.Message); }
             }
             // Move data can be edited while open, so moves are not cached here; MoveInfo is told about saves.
             if (_kind == Kind.MoveType) return Data.MoveInfo.Of(id) is Data.MoveInfo.Facts mf ? Data.TypeIcons.For(mf.Type) : null;
@@ -56,7 +56,7 @@ namespace DSPRE.Avalonia.Controls
                 RawImage raw = _kind == Kind.Item ? DSUtils.GetItemPicRaw(id, 32, 32) : DSUtils.GetPokePicRaw(id, 32, 32);
                 if (raw != null) icon = ImageConverter.ToAvaloniaBitmap(raw);
             }
-            catch { icon = null; }
+            catch (Exception ex) { AppLogger.WarnOnce("GameIconConverter.Convert", ex); icon = null; }
             _cache[id] = icon;
             return icon;
         }
@@ -64,7 +64,7 @@ namespace DSPRE.Avalonia.Controls
         // The longest ROM Pokémon name that appears in the label as a whole word, so "MIME JR." isn't read as "MR. MIME".
         private int SpeciesNamedIn(string label)
         {
-            if (_cachedFor != RomInfo.workDir || _names == null) { _names = RomInfo.GetPokemonNames(); _cachedFor = RomInfo.workDir; }
+            if (_cachedFor != RomInfo.WorkDir || _names == null) { _names = RomInfo.GetPokemonNames(); _cachedFor = RomInfo.WorkDir; }
             int best = 0, bestLength = 0;
             for (int i = 1; i < _names.Length; i++)
             {

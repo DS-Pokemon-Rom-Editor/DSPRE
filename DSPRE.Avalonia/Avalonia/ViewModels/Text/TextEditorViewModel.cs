@@ -227,7 +227,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public bool HexNumbering
         {
             get => _hexNumbering;
-            set { if (Set(ref _hexNumbering, value)) { RenumberLines(); SettingsManager.Settings.textEditorPreferHex = value; } }
+            set { if (Set(ref _hexNumbering, value)) { RenumberLines(); SettingsManager.Settings.TextEditorPreferHex = value; } }
         }
 
         // ── Search / replace inputs ──────────────────────────────────────────────
@@ -267,7 +267,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             foreach ((int id, List<string> lines) in _addedArchives)
             {
-                List<string> now = _current != null && _current.ID == id ? _current.messages : lines;
+                List<string> now = _current != null && _current.ID == id ? _current.Messages : lines;
                 new TextArchive(id, new List<string>(now)).SaveToExpandedDir(id, showSuccessMessage: false, sender: this);
                 (string binPath, string jsonPath) = TextArchive.GetFilePaths(id);
                 TextConverter.JSONToBin(jsonPath, binPath, CharMapManager.GetCharMapPath());
@@ -331,7 +331,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         // ── Runtime constructor ──────────────────────────────────────────────────
         public TextEditorViewModel(bool _)
         {
-            _hexNumbering = SettingsManager.Settings.textEditorPreferHex;
+            _hexNumbering = SettingsManager.Settings.TextEditorPreferHex;
             TextArchive.Saved += OnArchiveSavedElsewhere;
         }
 
@@ -404,13 +404,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
             try
             {
-                string unpackedPath = gameDirs[DirNames.textArchives].unpackedDir;
+                string unpackedPath = GameDirs[DirNames.TextArchives].unpackedDir;
                 string expandedPath = TextConverter.GetExpandedFolderPath();
 
                 if (!Directory.Exists(expandedPath))
                 {
                     Directory.CreateDirectory(expandedPath);
-                    DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.textArchives });
+                    DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TextArchives });
                 }
                 if (!Directory.Exists(unpackedPath))
                     Directory.CreateDirectory(unpackedPath);
@@ -439,7 +439,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             catch (Exception ex)
             {
                 StatusText = $"Error loading text archives: {ex.Message}";
-                await DialogHelper.ShowError($"Failed to load text archives:\n{ex.Message}", "Text editor error");
+                await DialogHelper.ShowErrorAsync($"Failed to load text archives:\n{ex.Message}", "Text editor error");
             }
             finally
             {
@@ -452,7 +452,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             if (_dirty && _current != null)
             {
-                DialogHelper.MsgResult r = await DialogHelper.AskYesNoCancel(
+                DialogHelper.MsgResult r = await DialogHelper.AskYesNoCancelAsync(
                     "There are unsaved changes to the currently loaded Text Archive.\nDo you want to save them?",
                     "Unsaved changes");
 
@@ -486,7 +486,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             using MemoryStream ms = new MemoryStream();
             using (BinaryWriter w = new BinaryWriter(ms, System.Text.Encoding.UTF8, leaveOpen: true))
-                foreach (string m in _current.messages) w.Write(m ?? "");
+                foreach (string m in _current.Messages) w.Write(m ?? "");
             return ms.ToArray();
         }
 
@@ -495,8 +495,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
             List<string> messages = new List<string>();
             using (BinaryReader r = new BinaryReader(new MemoryStream(state), System.Text.Encoding.UTF8))
                 while (r.BaseStream.Position < r.BaseStream.Length) messages.Add(r.ReadString());
-            _current.messages.Clear();
-            _current.messages.AddRange(messages);
+            _current.Messages.Clear();
+            _current.Messages.AddRange(messages);
             ShowLines();
             SetDirty();
             RefreshPreview();
@@ -510,9 +510,9 @@ namespace DSPRE.Avalonia.ViewModels.Text
             {
                 foreach (TextLineVM l in Lines) l.PropertyChanged -= OnLineChanged;
                 Lines.Clear();
-                for (int i = 0; i < _current.messages.Count; i++)
+                for (int i = 0; i < _current.Messages.Count; i++)
                 {
-                    TextLineVM line = new TextLineVM(i, _current.messages[i]);
+                    TextLineVM line = new TextLineVM(i, _current.Messages[i]);
                     line.PropertyChanged += OnLineChanged;
                     Lines.Add(line);
                 }
@@ -536,8 +536,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 {
                     if (HgEngineOwnedFiles.TryReadLines(_managedSource, out List<string> sourceLines, out string readError))
                     {
-                        _current.messages.Clear();
-                        _current.messages.AddRange(sourceLines);
+                        _current.Messages.Clear();
+                        _current.Messages.AddRange(sourceLines);
                     }
                     else
                     {
@@ -549,11 +549,11 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 _fieldBefore = null;
                 if (_fieldSource?.IsMain == true)
                 {
-                    if (HgEngineGeneratedText.TryReadLines(_fieldSource, _current.messages.Count, out string[] fieldLines, out string fieldError))
+                    if (HgEngineGeneratedText.TryReadLines(_fieldSource, _current.Messages.Count, out string[] fieldLines, out string fieldError))
                     {
                         for (int i = 0; i < fieldLines.Length; i++)
-                            if (fieldLines[i] != null) _current.messages[i] = fieldLines[i];
-                        _fieldBefore = new List<string>(_current.messages);
+                            if (fieldLines[i] != null) _current.Messages[i] = fieldLines[i];
+                        _fieldBefore = new List<string>(_current.Messages);
                     }
                     else
                     {
@@ -574,8 +574,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 OnPropertyChanged(nameof(CanRedo));
                 RefreshPreview();
                 StatusText = _managedSource != null
-                    ? $"Loaded {_managedSource.RelPath} ({_current.messages.Count} lines) from the hg-engine checkout."
-                    : $"Loaded Text Archive {id} ({_current.messages.Count} lines).";
+                    ? $"Loaded {_managedSource.RelPath} ({_current.Messages.Count} lines) from the hg-engine checkout."
+                    : $"Loaded Text Archive {id} ({_current.Messages.Count} lines).";
             }
             finally
             {
@@ -586,9 +586,9 @@ namespace DSPRE.Avalonia.ViewModels.Text
         private void OnLineChanged(object sender, PropertyChangedEventArgs e)
         {
             if (_isLoading || e.PropertyName != nameof(TextLineVM.Text)) return;
-            if (sender is TextLineVM line && _current != null && line.Index < _current.messages.Count)
+            if (sender is TextLineVM line && _current != null && line.Index < _current.Messages.Count)
             {
-                _current.messages[line.Index] = line.Text ?? "";
+                _current.Messages[line.Index] = line.Text ?? "";
                 SetDirty();
                 if (line.Index == _selectedLineIndex) RefreshPreview();
             }
@@ -608,7 +608,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             // A field-backed archive has exactly one line per entry.
             if (_current == null || _fieldSource != null) return;
-            _current.messages.Add("");
+            _current.Messages.Add("");
             TextLineVM line = new TextLineVM(Lines.Count, "");
             line.PropertyChanged += OnLineChanged;
             Lines.Add(line);
@@ -618,8 +618,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         public void RemoveString()
         {
-            if (_current == null || _current.messages.Count == 0 || _fieldSource != null) return;
-            _current.messages.RemoveAt(_current.messages.Count - 1);
+            if (_current == null || _current.Messages.Count == 0 || _fieldSource != null) return;
+            _current.Messages.RemoveAt(_current.Messages.Count - 1);
             TextLineVM last = Lines[Lines.Count - 1];
             last.PropertyChanged -= OnLineChanged;
             Lines.RemoveAt(Lines.Count - 1);
@@ -657,7 +657,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public async Task RemoveArchiveAsync()
         {
             if (ArchiveNames.Count == 0) return;
-            if (!await DialogHelper.AskYesNo("Delete the last text archive? It goes when you save.", "Delete text archive?"))
+            if (!await DialogHelper.AskYesNoAsync("Delete the last text archive? It goes when you save.", "Delete text archive?"))
                 return;
 
             int lastIndex = ArchiveNames.Count - 1;
@@ -708,7 +708,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (_current == null) return;
             if (_managedSource != null) { _ = SaveToHgEngineSourceAsync(); return; }
             if (_fieldSource?.IsMain == true) { _ = SaveToGeneratedFieldAsync(); return; }
-            if (_generatedSource != null) { _ = RefusedForManagedArchive("Saving"); return; }
+            if (_generatedSource != null) { _ = RefusedForManagedArchiveAsync("Saving"); return; }
 
             if (!_addedArchives.ContainsKey(_current.ID))
                 _current.SaveToExpandedDir(_current.ID, showSuccessMessage: false, sender: this);
@@ -722,18 +722,18 @@ namespace DSPRE.Avalonia.ViewModels.Text
         }
 
         // Import and export both go through the ROM's copy, which is not what a managed archive shows.
-        private async Task<bool> RefusedForManagedArchive(string what)
+        private async Task<bool> RefusedForManagedArchiveAsync(string what)
         {
             if (_generatedSource != null)
             {
-                await DialogHelper.ShowInfo(
+                await DialogHelper.ShowInfoAsync(
                     $"{what} works on the ROM's copy, and hg-engine regenerates this archive from its own " +
                     "data every build. Edit the data it comes from instead.",
                     "Generated by hg-engine");
                 return true;
             }
             if (_managedSource == null) return false;
-            await DialogHelper.ShowInfo(
+            await DialogHelper.ShowInfoAsync(
                 $"{what} works on the ROM's copy, and hg-engine builds this archive from " +
                 $"{_managedSource.RelPath}. Edit that file instead.",
                 "Managed by hg-engine");
@@ -759,7 +759,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                   "are overwritten. Edit the data it comes from instead."
                 : "";
 
-        private static string TextArchivePath => HgEngineOwnedFiles.ArchiveOf(DirNames.textArchives);
+        private static string TextArchivePath => HgEngineOwnedFiles.ArchiveOf(DirNames.TextArchives);
 
         private static string Marker(HgEngineOwnedFile owned) => owned?.Ownership switch
         {
@@ -776,10 +776,10 @@ namespace DSPRE.Avalonia.ViewModels.Text
         private async Task SaveToHgEngineSourceAsync()
         {
             HgEngineOwnedFile source = _managedSource;
-            if (!HgEngineOwnedFiles.TryWriteLines(source, _current.messages, out string error))
+            if (!HgEngineOwnedFiles.TryWriteLines(source, _current.Messages, out string error))
             {
                 StatusText = error;
-                await DialogHelper.ShowError(error, "Text editor error");
+                await DialogHelper.ShowErrorAsync(error, "Text editor error");
                 return;
             }
 
@@ -791,13 +791,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (HgEngineBuild.TryValidateTextArchive(source.RelPath, out string problems) && problems != null)
             {
                 StatusText = $"Saved {source.RelPath}, with problems its build will reject.";
-                await DialogHelper.ShowError(problems, "hg-engine text validator");
+                await DialogHelper.ShowErrorAsync(problems, "hg-engine text validator");
                 return;
             }
 
             if (HgEngineProject.SuppressManagedFileSaveNotice) return;
 
-            bool never = await DialogHelper.ShowNoticeWithOptOut(
+            bool never = await DialogHelper.ShowNoticeWithOptOutAsync(
                 $"This file is managed by hg-engine. {source.RelPath} has been saved, but you will need to " +
                 "compile, not just save the ROM, to see the change in game.",
                 "Managed by hg-engine");
@@ -807,7 +807,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         private async Task SaveToGeneratedFieldAsync()
         {
             HgEngineGeneratedText.Source source = _fieldSource;
-            List<string> lines = new List<string>(_current.messages);
+            List<string> lines = new List<string>(_current.Messages);
             List<string> before = _fieldBefore ?? lines;
             (bool saved, string error) = await HgEngineSave.RunAsync(() =>
                 HgEngineGeneratedText.TryWriteLines(source, lines, before, out string writeError) ? null : writeError);
@@ -816,7 +816,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 if (error != null)
                 {
                     StatusText = error;
-                    await DialogHelper.ShowError(error, "Text editor error");
+                    await DialogHelper.ShowErrorAsync(error, "Text editor error");
                 }
                 return;
             }
@@ -832,13 +832,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public async Task ImportAsync()
         {
             if (_current == null) return;
-            if (await RefusedForManagedArchive("Importing")) return;
+            if (await RefusedForManagedArchiveAsync("Importing")) return;
             FilePickerFileType[] filters = new[]
             {
                 new FilePickerFileType("JSON Text Archive") { Patterns = new[] { "*.json" } },
                 new FilePickerFileType("Binary Text Archive") { Patterns = new[] { "*.msg", "*.bin" } },
             };
-            string path = await DialogHelper.OpenFile(_owner, "Import text archive", filters);
+            string path = await DialogHelper.OpenFileAsync(_owner, "Import text archive", filters);
             if (path == null) return;
             if (_current == null) return;
 
@@ -846,13 +846,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
             {
                 // The lines replace the open archive's, as an edit Save keeps and Undo takes back.
                 List<string> lines = TextArchive.ReadMessagesFrom(path);
-                if (lines.SequenceEqual(_current.messages))
+                if (lines.SequenceEqual(_current.Messages))
                 {
                     StatusText = $"That file matches Text Archive {_current.ID} already.";
                     return;
                 }
-                _current.messages.Clear();
-                _current.messages.AddRange(lines);
+                _current.Messages.Clear();
+                _current.Messages.AddRange(lines);
                 ShowLines();
                 RefreshPreview();
                 SetDirty();
@@ -860,21 +860,21 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Text editor error");
+                await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Text editor error");
             }
         }
 
         public async Task ExportAsync()
         {
             if (_current == null) return;
-            if (await RefusedForManagedArchive("Exporting")) return;
+            if (await RefusedForManagedArchiveAsync("Exporting")) return;
             int id = _current.ID;
             FilePickerFileType[] filters = new[]
             {
                 new FilePickerFileType("JSON Text Archive") { Patterns = new[] { "*.json" } },
                 new FilePickerFileType("Binary Text Archive") { Patterns = new[] { "*.msg" } },
             };
-            string path = await DialogHelper.SaveFile(_owner, "Export text archive", filters, "Text Archive " + id);
+            string path = await DialogHelper.SaveFileAsync(_owner, "Export text archive", filters, "Text Archive " + id);
             if (path == null) return;
 
             string ext = Path.GetExtension(path).ToLowerInvariant();
@@ -900,7 +900,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Text editor error");
+                await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Text editor error");
             }
         }
 
@@ -922,11 +922,11 @@ namespace DSPRE.Avalonia.ViewModels.Text
             for (int i = first; i < last; i++)
             {
                 TextArchive file = new TextArchive(i);
-                for (int j = 0; j < file.messages.Count; j++)
+                for (int j = 0; j < file.Messages.Count; j++)
                 {
-                    if (match(file.messages[j]))
+                    if (match(file.Messages[j]))
                     {
-                        string preview = file.messages[j].Substring(0, Math.Min(file.messages[j].Length, 40));
+                        string preview = file.Messages[j].Substring(0, Math.Min(file.Messages[j].Length, 40));
                         SearchResults.Add(new TextSearchResultVM(i, j,
                             $"({i:D3}) - #{j:D2} --- {preview}"));
                     }
@@ -949,7 +949,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             else
             {
                 if (_current == null) return;
-                if (await RefusedForManagedArchive("Replacing")) return;
+                if (await RefusedForManagedArchiveAsync("Replacing")) return;
                 first = SelectedArchiveIndex; last = first + 1;
                 specify = $" in the current text bank only ({first})";
             }
@@ -957,7 +957,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
             string message = $"You are about to replace every occurrence of \"{SearchText}\" with \"{ReplaceText}\"{specify}." +
                              "\nThe operation can't be interrupted nor undone.\n\nProceed?";
-            if (!await DialogHelper.AskYesNo(message, "Replace text?")) return;
+            if (!await DialogHelper.AskYesNoAsync(message, "Replace text?")) return;
             if (!await SaveOrDiscardBeforeReloadAsync("Replacing")) return;
 
             SearchResults.Clear();

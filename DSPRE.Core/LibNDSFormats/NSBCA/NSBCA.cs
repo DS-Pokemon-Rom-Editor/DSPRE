@@ -4,16 +4,20 @@ using System.Linq;
 using System.Text;
 using System.IO;
 
-namespace MKDS_Course_Editor.NSBCA {
-    public class NSBCA {
-        public struct NSBCA_File {
+namespace MKDS_Course_Editor.NSBCA
+{
+    public class NSBCA
+    {
+        public struct NSBCA_File
+        {
             public header Header;
-            public struct header {
+            public struct header
+            {
                 public string ID;
                 public byte[] Magic;
-                public Int32 file_size;
-                public Int16 header_size;
-                public Int16 nSection;
+                public Int32 FileSize;
+                public Int16 HeaderSize;
+                public Int16 NSection;
                 public Int32[] Section_Offset;
             }
             public jnt0 JNT0;
@@ -22,34 +26,38 @@ namespace MKDS_Course_Editor.NSBCA {
                 public string ID;
                 public Int32 Size;
                 //3D Info Structure
-                public byte dummy;
-                public byte num_objs;
-                public short section_size;
-                public UnknownBlock unknownBlock;
-                public Info infoBlock;
-                public string[] names;
+                public byte Dummy;
+                public byte NumObjs;
+                public short SectionSize;
+                public UnknownBlock Unknown;
+                public Info InfoBlock;
+                public string[] Names;
 
-                public struct UnknownBlock {
-                    public short header_size;
-                    public short section_size;
-                    public int constant; // 0x017F
+                public struct UnknownBlock
+                {
+                    public short HeaderSize;
+                    public short SectionSize;
+                    public int Constant; // 0x017F
 
-                    public short[] unknown1;
-                    public short[] unknown2;
+                    public short[] Unknown1;
+                    public short[] Unknown2;
                 }
-                public struct Info {
-                    public short header_size;
-                    public short data_size;
+                public struct Info
+                {
+                    public short HeaderSize;
+                    public short DataSize;
 
                     public info[] Data;
 
-                    public struct info {
+                    public struct info
+                    {
                         public Int32 Objectoffset;
                     }
                 }
             }
             public J_AC[] JAC;
-            public struct J_AC {
+            public struct J_AC
+            {
                 public string ID;
                 public Int16 NrFrames;
                 public Int16 NrObjects;
@@ -63,23 +71,24 @@ namespace MKDS_Course_Editor.NSBCA {
                 public Int32[] ObjInfoOffset;
 
                 public objInfo[] ObjInfo;
-                public struct objInfo {
+                public struct objInfo
+                {
                     public Int16 Flag;
                     public byte Unknown1;
                     public byte ID;
 
-                    public int tStart;
-                    public int tEnd;
-                    public int rStart;
-                    public int rEnd;
-                    public int sStart;
-                    public int sEnd;
-                    public List<float>[] translate;
-                    public List<float>[] translate_keyframes;
-                    public List<float> rotate;
-                    public List<float>[] rotate_keyframes;
-                    public List<float>[][] scale;
-                    public List<float>[][] scale_keyframes;
+                    public int TStart;
+                    public int TEnd;
+                    public int RStart;
+                    public int REnd;
+                    public int SStart;
+                    public int SEnd;
+                    public List<float>[] Translate;
+                    public List<float>[] TranslateKeyframes;
+                    public List<float> Rotate;
+                    public List<float>[] RotateKeyframes;
+                    public List<float>[][] Scale;
+                    public List<float>[][] ScaleKeyframes;
                 }
             }
         }
@@ -205,62 +214,73 @@ namespace MKDS_Course_Editor.NSBCA {
         public static NSBCA_File Read(string Filename) => Read(File.ReadAllBytes(Filename));
 
         /// <summary>Parse from memory, for animations that live inside a NARC rather than on disk.</summary>
-        public static NSBCA_File Read(byte[] file_) {
-            if (file_[0] == 76 && file_[1] == 90 && file_[2] == 55 && file_[3] == 55) {
+        public static NSBCA_File Read(byte[] file_)
+        {
+            if (file_[0] == 76 && file_[1] == 90 && file_[2] == 55 && file_[3] == 55)
+            {
             }
             EndianBinaryReader er = new EndianBinaryReader(new MemoryStream(file_), Endianness.LittleEndian);
             NSBCA_File ns = new NSBCA_File();
             ns.Header.ID = er.ReadString(Encoding.ASCII, 4);
-            if (ns.Header.ID == "BCA0") {
+            if (ns.Header.ID == "BCA0")
+            {
                 ns.Header.Magic = er.ReadBytes(4);
-                ns.Header.file_size = er.ReadInt32();
-                ns.Header.header_size = er.ReadInt16();
-                ns.Header.nSection = er.ReadInt16();
-                ns.Header.Section_Offset = new Int32[ns.Header.nSection];
-                for (int i = 0; i < ns.Header.nSection; i++) {
+                ns.Header.FileSize = er.ReadInt32();
+                ns.Header.HeaderSize = er.ReadInt16();
+                ns.Header.NSection = er.ReadInt16();
+                ns.Header.Section_Offset = new Int32[ns.Header.NSection];
+                for (int i = 0; i < ns.Header.NSection; i++)
+                {
                     ns.Header.Section_Offset[i] = er.ReadInt32();
                 }
 
                 ns.JNT0.ID = er.ReadString(Encoding.ASCII, 4);
-                if (ns.JNT0.ID == "JNT0") {
+                if (ns.JNT0.ID == "JNT0")
+                {
                     ns.JNT0.Size = er.ReadInt32();
                     //3D Info Structure
-                    ns.JNT0.dummy = er.ReadByte();
-                    ns.JNT0.num_objs = er.ReadByte();
-                    ns.JNT0.section_size = er.ReadInt16();
-                    ns.JNT0.unknownBlock.header_size = er.ReadInt16();
-                    ns.JNT0.unknownBlock.section_size = er.ReadInt16();
-                    ns.JNT0.unknownBlock.constant = er.ReadInt32();
-                    ns.JNT0.unknownBlock.unknown1 = new short[ns.JNT0.num_objs];
-                    ns.JNT0.unknownBlock.unknown2 = new short[ns.JNT0.num_objs];
-                    for (int i = 0; i < ns.JNT0.num_objs; i++) {
-                        ns.JNT0.unknownBlock.unknown1[i] = er.ReadInt16();
-                        ns.JNT0.unknownBlock.unknown2[i] = er.ReadInt16();
+                    ns.JNT0.Dummy = er.ReadByte();
+                    ns.JNT0.NumObjs = er.ReadByte();
+                    ns.JNT0.SectionSize = er.ReadInt16();
+                    ns.JNT0.Unknown.HeaderSize = er.ReadInt16();
+                    ns.JNT0.Unknown.SectionSize = er.ReadInt16();
+                    ns.JNT0.Unknown.Constant = er.ReadInt32();
+                    ns.JNT0.Unknown.Unknown1 = new short[ns.JNT0.NumObjs];
+                    ns.JNT0.Unknown.Unknown2 = new short[ns.JNT0.NumObjs];
+                    for (int i = 0; i < ns.JNT0.NumObjs; i++)
+                    {
+                        ns.JNT0.Unknown.Unknown1[i] = er.ReadInt16();
+                        ns.JNT0.Unknown.Unknown2[i] = er.ReadInt16();
                     }
 
-                    ns.JNT0.infoBlock.header_size = er.ReadInt16();
-                    ns.JNT0.infoBlock.data_size = er.ReadInt16();
-                    ns.JNT0.infoBlock.Data = new NSBCA_File.jnt0.Info.info[ns.JNT0.num_objs];
-                    for (int i = 0; i < ns.JNT0.num_objs; i++) {
-                        ns.JNT0.infoBlock.Data[i].Objectoffset = er.ReadInt32();
+                    ns.JNT0.InfoBlock.HeaderSize = er.ReadInt16();
+                    ns.JNT0.InfoBlock.DataSize = er.ReadInt16();
+                    ns.JNT0.InfoBlock.Data = new NSBCA_File.jnt0.Info.info[ns.JNT0.NumObjs];
+                    for (int i = 0; i < ns.JNT0.NumObjs; i++)
+                    {
+                        ns.JNT0.InfoBlock.Data[i].Objectoffset = er.ReadInt32();
                     }
-                    ns.JNT0.names = new string[ns.JNT0.num_objs];
-                    for (int i = 0; i < ns.JNT0.num_objs; i++) {
-                        ns.JNT0.names[i] = er.ReadString(Encoding.ASCII, 16).Replace("\0", "");
+                    ns.JNT0.Names = new string[ns.JNT0.NumObjs];
+                    for (int i = 0; i < ns.JNT0.NumObjs; i++)
+                    {
+                        ns.JNT0.Names[i] = er.ReadString(Encoding.ASCII, 16).Replace("\0", "");
                     }
-                    ns.JAC = new NSBCA_File.J_AC[ns.JNT0.num_objs];
-                    for (int i = 0; i < ns.JNT0.num_objs; i++) {
-                        er.BaseStream.Position = ns.Header.Section_Offset[0] + ns.JNT0.infoBlock.Data[i].Objectoffset;
+                    ns.JAC = new NSBCA_File.J_AC[ns.JNT0.NumObjs];
+                    for (int i = 0; i < ns.JNT0.NumObjs; i++)
+                    {
+                        er.BaseStream.Position = ns.Header.Section_Offset[0] + ns.JNT0.InfoBlock.Data[i].Objectoffset;
                         ns.JAC[i].ID = er.ReadString(Encoding.ASCII, 4);
-                        if (ns.JAC[i].ID == "J" + (char)0x00 + "AC") {
+                        if (ns.JAC[i].ID == "J" + (char)0x00 + "AC")
+                        {
                             ns.JAC[i].NrFrames = er.ReadInt16();
                             ns.JAC[i].NrObjects = er.ReadInt16();
                             ns.JAC[i].Unknown1 = er.ReadInt32();
                             ns.JAC[i].Offset1 = er.ReadInt32();
                             ns.JAC[i].Offset2 = er.ReadInt32();
                             long curposs = er.BaseStream.Position;
-                            if (ns.JAC[i].Offset2 != ns.JAC[i].Offset1) {
-                                er.BaseStream.Position = ns.Header.Section_Offset[0] + ns.JNT0.infoBlock.Data[i].Objectoffset + ns.JAC[i].Offset1;
+                            if (ns.JAC[i].Offset2 != ns.JAC[i].Offset1)
+                            {
+                                er.BaseStream.Position = ns.Header.Section_Offset[0] + ns.JNT0.InfoBlock.Data[i].Objectoffset + ns.JAC[i].Offset1;
                                 ns.JAC[i].JointData = er.ReadBytes(ns.JAC[i].Offset2 - ns.JAC[i].Offset1);
                                 er.BaseStream.Position = curposs;
                             }
@@ -269,72 +289,79 @@ namespace MKDS_Course_Editor.NSBCA {
 
 
                             ns.JAC[i].ObjInfoOffset = new Int32[ns.JAC[i].NrObjects];
-                            for (int j = 0; j < ns.JAC[i].NrObjects; j++) {
+                            for (int j = 0; j < ns.JAC[i].NrObjects; j++)
+                            {
                                 ns.JAC[i].ObjInfoOffset[j] = er.ReadInt16();
                             }
 
                             ns.JAC[i].ObjInfo = new NSBCA_File.J_AC.objInfo[ns.JAC[i].NrObjects];
 
-                            for (int j = 0; j < ns.JAC[i].NrObjects; j++) {
-                                er.BaseStream.Position = ns.Header.Section_Offset[0] +/* ns.JNT0.section_size*/ns.JNT0.infoBlock.Data[i].Objectoffset + ns.JAC[i].ObjInfoOffset[j];// + 8;
+                            for (int j = 0; j < ns.JAC[i].NrObjects; j++)
+                            {
+                                er.BaseStream.Position = ns.Header.Section_Offset[0] +/* ns.JNT0.section_size*/ns.JNT0.InfoBlock.Data[i].Objectoffset + ns.JAC[i].ObjInfoOffset[j];// + 8;
                                 ns.JAC[i].ObjInfo[j].Flag = er.ReadInt16();
                                 ns.JAC[i].ObjInfo[j].Unknown1 = er.ReadByte();
                                 ns.JAC[i].ObjInfo[j].ID = er.ReadByte();
-                                ns.JAC[i].ObjInfo[j].translate = new List<float>[3];
-                                ns.JAC[i].ObjInfo[j].translate[0] = new List<float>();
-                                ns.JAC[i].ObjInfo[j].translate[1] = new List<float>();
-                                ns.JAC[i].ObjInfo[j].translate[2] = new List<float>();
-                                ns.JAC[i].ObjInfo[j].translate_keyframes = new List<float>[3];
-                                ns.JAC[i].ObjInfo[j].translate_keyframes[0] = new List<float>();
-                                ns.JAC[i].ObjInfo[j].translate_keyframes[1] = new List<float>();
-                                ns.JAC[i].ObjInfo[j].translate_keyframes[2] = new List<float>();
-                                ns.JAC[i].ObjInfo[j].rotate = new List<float>();
-                                ns.JAC[i].ObjInfo[j].rotate_keyframes = new List<float>[2];
-                                ns.JAC[i].ObjInfo[j].rotate_keyframes[0] = new List<float>();
-                                ns.JAC[i].ObjInfo[j].rotate_keyframes[1] = new List<float>();
-                                ns.JAC[i].ObjInfo[j].scale = new List<float>[3][];
-                                ns.JAC[i].ObjInfo[j].scale[0] = new List<float>[2];
-                                ns.JAC[i].ObjInfo[j].scale[1] = new List<float>[2];
-                                ns.JAC[i].ObjInfo[j].scale[2] = new List<float>[2];
-                                ns.JAC[i].ObjInfo[j].scale[0][0] = new List<float>();
-                                ns.JAC[i].ObjInfo[j].scale[0][1] = new List<float>();
-                                ns.JAC[i].ObjInfo[j].scale[1][0] = new List<float>();
-                                ns.JAC[i].ObjInfo[j].scale[1][1] = new List<float>();
-                                ns.JAC[i].ObjInfo[j].scale[2][0] = new List<float>();
-                                ns.JAC[i].ObjInfo[j].scale[2][1] = new List<float>();
-                                ns.JAC[i].ObjInfo[j].scale_keyframes = new List<float>[3][];
-                                ns.JAC[i].ObjInfo[j].scale_keyframes[0] = new List<float>[2];
-                                ns.JAC[i].ObjInfo[j].scale_keyframes[1] = new List<float>[2];
-                                ns.JAC[i].ObjInfo[j].scale_keyframes[2] = new List<float>[2];
-                                ns.JAC[i].ObjInfo[j].scale_keyframes[0][0] = new List<float>();
-                                ns.JAC[i].ObjInfo[j].scale_keyframes[0][1] = new List<float>();
-                                ns.JAC[i].ObjInfo[j].scale_keyframes[1][0] = new List<float>();
-                                ns.JAC[i].ObjInfo[j].scale_keyframes[1][1] = new List<float>();
-                                ns.JAC[i].ObjInfo[j].scale_keyframes[2][0] = new List<float>();
-                                ns.JAC[i].ObjInfo[j].scale_keyframes[2][1] = new List<float>();
+                                ns.JAC[i].ObjInfo[j].Translate = new List<float>[3];
+                                ns.JAC[i].ObjInfo[j].Translate[0] = new List<float>();
+                                ns.JAC[i].ObjInfo[j].Translate[1] = new List<float>();
+                                ns.JAC[i].ObjInfo[j].Translate[2] = new List<float>();
+                                ns.JAC[i].ObjInfo[j].TranslateKeyframes = new List<float>[3];
+                                ns.JAC[i].ObjInfo[j].TranslateKeyframes[0] = new List<float>();
+                                ns.JAC[i].ObjInfo[j].TranslateKeyframes[1] = new List<float>();
+                                ns.JAC[i].ObjInfo[j].TranslateKeyframes[2] = new List<float>();
+                                ns.JAC[i].ObjInfo[j].Rotate = new List<float>();
+                                ns.JAC[i].ObjInfo[j].RotateKeyframes = new List<float>[2];
+                                ns.JAC[i].ObjInfo[j].RotateKeyframes[0] = new List<float>();
+                                ns.JAC[i].ObjInfo[j].RotateKeyframes[1] = new List<float>();
+                                ns.JAC[i].ObjInfo[j].Scale = new List<float>[3][];
+                                ns.JAC[i].ObjInfo[j].Scale[0] = new List<float>[2];
+                                ns.JAC[i].ObjInfo[j].Scale[1] = new List<float>[2];
+                                ns.JAC[i].ObjInfo[j].Scale[2] = new List<float>[2];
+                                ns.JAC[i].ObjInfo[j].Scale[0][0] = new List<float>();
+                                ns.JAC[i].ObjInfo[j].Scale[0][1] = new List<float>();
+                                ns.JAC[i].ObjInfo[j].Scale[1][0] = new List<float>();
+                                ns.JAC[i].ObjInfo[j].Scale[1][1] = new List<float>();
+                                ns.JAC[i].ObjInfo[j].Scale[2][0] = new List<float>();
+                                ns.JAC[i].ObjInfo[j].Scale[2][1] = new List<float>();
+                                ns.JAC[i].ObjInfo[j].ScaleKeyframes = new List<float>[3][];
+                                ns.JAC[i].ObjInfo[j].ScaleKeyframes[0] = new List<float>[2];
+                                ns.JAC[i].ObjInfo[j].ScaleKeyframes[1] = new List<float>[2];
+                                ns.JAC[i].ObjInfo[j].ScaleKeyframes[2] = new List<float>[2];
+                                ns.JAC[i].ObjInfo[j].ScaleKeyframes[0][0] = new List<float>();
+                                ns.JAC[i].ObjInfo[j].ScaleKeyframes[0][1] = new List<float>();
+                                ns.JAC[i].ObjInfo[j].ScaleKeyframes[1][0] = new List<float>();
+                                ns.JAC[i].ObjInfo[j].ScaleKeyframes[1][1] = new List<float>();
+                                ns.JAC[i].ObjInfo[j].ScaleKeyframes[2][0] = new List<float>();
+                                ns.JAC[i].ObjInfo[j].ScaleKeyframes[2][1] = new List<float>();
                                 double[] speed = {
                 1.0D, 0.5D, 0.33333333333333331D
             };
-                                if (((ns.JAC[i].ObjInfo[j].Flag >> 1) & 1) == 0) {
+                                if (((ns.JAC[i].ObjInfo[j].Flag >> 1) & 1) == 0)
+                                {
                                     //struct.DModelAnimation.MTransformAni trans[] = new struct.DModelAnimation.MTransformAni[3];
                                     //string msg = new StringBuilder().Append(msg).Append("\n   -> Translate: ").ToString();
                                     //string[] type = { "X", "Y", "Z" };
-                                    for (int k = 0; k < 3; k++) {
+                                    for (int k = 0; k < 3; k++)
+                                    {
                                         //trans[k] = new struct.DModelAnimation.MTransformAni(this);
                                         int tflag = ns.JAC[i].ObjInfo[j].Flag >> 3 + k & 1;
                                         //msg = new StringBuilder().Append(msg).Append("\n    -> T").Append(type[k]).Append(tflag).Append("[").ToString();
-                                        if (tflag == 1) {
+                                        if (tflag == 1)
+                                        {
                                             int tvar = er.ReadInt32();
                                             //trans[k].setFrame((float)tvar / divide);
-                                            ns.JAC[i].ObjInfo[j].translate[k].Add((float)tvar / 4096f);
+                                            ns.JAC[i].ObjInfo[j].Translate[k].Add((float)tvar / 4096f);
                                             //msg = (new StringBuilder()).Append(msg).Append(tvar).ToString();
                                             continue;
-                                        } else {
+                                        }
+                                        else
+                                        {
                                             int param2 = er.ReadInt32();
                                             int startFrame = param2 & 0xffff;
-                                            ns.JAC[i].ObjInfo[j].tStart = startFrame;
+                                            ns.JAC[i].ObjInfo[j].TStart = startFrame;
                                             int endFrame = param2 >> 16 & 0xfff;
-                                            ns.JAC[i].ObjInfo[j].tEnd = endFrame;
+                                            ns.JAC[i].ObjInfo[j].TEnd = endFrame;
                                             int var2 = param2 >> 28 & 3;
                                             int speedId = param2 >> 30 & 3;
                                             int toffset = er.ReadInt32();
@@ -342,68 +369,79 @@ namespace MKDS_Course_Editor.NSBCA {
                                             int extra = (ns.JAC[i].Unknown1 != 3 ? 0 : ns.JAC[i].NrFrames - endFrame);
                                             int length = (int)Math.Ceiling((double)(ns.JAC[i].NrFrames + extra) * speed[speedId]);
                                             long curpos = er.BaseStream.Position;
-                                            for (int t = 0; t < length; t++) {
-                                                er.BaseStream.Position = ns.Header.Section_Offset[0] +/* ns.JNT0.section_size*/ns.JNT0.infoBlock.Data[i].Objectoffset + toffset + (t * width);
-                                                if (dataoffset == 0) {
+                                            for (int t = 0; t < length; t++)
+                                            {
+                                                er.BaseStream.Position = ns.Header.Section_Offset[0] +/* ns.JNT0.section_size*/ns.JNT0.InfoBlock.Data[i].Objectoffset + toffset + (t * width);
+                                                if (dataoffset == 0)
+                                                {
                                                     dataoffset = toffset;
                                                 }
                                                 float keyFrame = (width != 2 ? (float)er.ReadInt32() : (float)er.ReadInt16());
-                                                ns.JAC[i].ObjInfo[j].translate_keyframes[k].Add((float)LibNDSFormats.NSBMD.NSBMDGlRenderer.Sign((int)keyFrame, (width != 2 ? 32 : 16)) / 4096f);
+                                                ns.JAC[i].ObjInfo[j].TranslateKeyframes[k].Add((float)LibNDSFormats.NSBMD.NSBMDGlRenderer.Sign((int)keyFrame, (width != 2 ? 32 : 16)) / 4096f);
                                                 //m = (new StringBuilder()).append(m).append("\n     -> #").append(t).append(": ").append(keyFrame).toString();
                                             }
                                             er.BaseStream.Position = curpos;
                                         }
                                     }
                                 }
-                                if (((ns.JAC[i].ObjInfo[j].Flag >> 6) & 1) == 0) {
+                                if (((ns.JAC[i].ObjInfo[j].Flag >> 6) & 1) == 0)
+                                {
                                     int rflag = ns.JAC[i].ObjInfo[j].Flag >> 8 & 1;
-                                    if (rflag == 1) {
+                                    if (rflag == 1)
+                                    {
                                         //dataParser _tmp14 = pa;
                                         int rvar = er.ReadInt32(); //dataParser.getInt(data, jump, 4);
-                                        ns.JAC[i].ObjInfo[j].rotate.Add((float)rvar);
+                                        ns.JAC[i].ObjInfo[j].Rotate.Add((float)rvar);
                                         //msg = (new StringBuilder()).append(msg).append(rvar).toString();
                                         //jump += 4;
-                                    } else {
+                                    }
+                                    else
+                                    {
                                         int param2 = er.ReadInt32();
                                         int startFrame = param2 & 0xffff;
-                                        ns.JAC[i].ObjInfo[j].rStart = startFrame;
+                                        ns.JAC[i].ObjInfo[j].RStart = startFrame;
                                         int endFrame = param2 >> 16 & 0xfff;
-                                        ns.JAC[i].ObjInfo[j].rEnd = endFrame;
+                                        ns.JAC[i].ObjInfo[j].REnd = endFrame;
                                         int var2 = param2 >> 28 & 3;
                                         int speedId = param2 >> 30 & 3;
                                         int roffset = er.ReadInt32();
                                         int width = 2;//var2 != 0 ? 2 : 4;
                                         int length = (int)Math.Ceiling((double)(ns.JAC[i].NrFrames) * speed[speedId]);
                                         long curpos = er.BaseStream.Position;
-                                        for (int r = 0; r < length; r++) {
-                                            er.BaseStream.Position = ns.Header.Section_Offset[0] +/* ns.JNT0.section_size*/ns.JNT0.infoBlock.Data[i].Objectoffset + roffset + (r * width);
-                                            if (dataoffset == 0) {
+                                        for (int r = 0; r < length; r++)
+                                        {
+                                            er.BaseStream.Position = ns.Header.Section_Offset[0] +/* ns.JNT0.section_size*/ns.JNT0.InfoBlock.Data[i].Objectoffset + roffset + (r * width);
+                                            if (dataoffset == 0)
+                                            {
                                                 dataoffset = roffset;
                                             }
                                             int rvar6 = er.ReadInt16();
                                             int rindex = rvar6 & 0x7fff;
                                             int mode = rvar6 >> 15 & 1;
-                                            ns.JAC[i].ObjInfo[j].rotate_keyframes[0].Add(rindex);
-                                            ns.JAC[i].ObjInfo[j].rotate_keyframes[1].Add(mode);
+                                            ns.JAC[i].ObjInfo[j].RotateKeyframes[0].Add(rindex);
+                                            ns.JAC[i].ObjInfo[j].RotateKeyframes[1].Add(mode);
                                         }
                                         er.BaseStream.Position = curpos;
 
                                     }
                                 }
-                                if ((ns.JAC[i].ObjInfo[j].Flag >> 9 & 1) == 0) {
+                                if ((ns.JAC[i].ObjInfo[j].Flag >> 9 & 1) == 0)
+                                {
                                     //struct.DModelAnimation.MScaleAni scale[] = new struct.DModelAnimation.MScaleAni[3];
                                     //msg = (new StringBuilder()).append(msg).append("\n   -> Scale: ").toString();
-                                    for (int k = 0; k < 3; k++) {
+                                    for (int k = 0; k < 3; k++)
+                                    {
                                         //scale[k] = new struct.DModelAnimation.MScaleAni(this);
                                         int sflag = ns.JAC[i].ObjInfo[j].Flag >> 11 + k & 1;
                                         //msg = (new StringBuilder()).append(msg).append("\n    -> S").append(type[k]).append(sflag).append("[").toString();
-                                        if (sflag == 1) {
+                                        if (sflag == 1)
+                                        {
                                             //dataParser _tmp19 = pa;
                                             int svar1 = er.ReadInt32();//dataParser.getInt(data, jump, 4);
-                                            ns.JAC[i].ObjInfo[j].scale[k][0].Add((float)svar1 / 4096f);
+                                            ns.JAC[i].ObjInfo[j].Scale[k][0].Add((float)svar1 / 4096f);
                                             //dataParser _tmp20 = pa;
                                             int svar2 = er.ReadInt32();//dataParser.getSign(data, jump + 4, 4);
-                                            ns.JAC[i].ObjInfo[j].scale[k][1].Add((float)svar2 / 4096f);
+                                            ns.JAC[i].ObjInfo[j].Scale[k][1].Add((float)svar2 / 4096f);
 
                                             //int svar3 = er.ReadInt32();//dataParser.getSign(data, jump + 4, 4);
                                             //int svar4 = er.ReadInt32();//dataParser.getSign(data, jump + 4, 4);
@@ -414,49 +452,60 @@ namespace MKDS_Course_Editor.NSBCA {
                                             //msg = (new StringBuilder()).append(msg).append(svar1).append("|").append(svar2).toString();
                                             //jump += 8;
                                             continue;
-                                        } else {
+                                        }
+                                        else
+                                        {
                                             int param2 = er.ReadInt32();
                                             int startFrame = param2 & 0xffff;
-                                            ns.JAC[i].ObjInfo[j].sStart = startFrame;
+                                            ns.JAC[i].ObjInfo[j].SStart = startFrame;
                                             int endFrame = param2 >> 16 & 0xfff;
-                                            ns.JAC[i].ObjInfo[j].sEnd = endFrame;
+                                            ns.JAC[i].ObjInfo[j].SEnd = endFrame;
                                             int var2 = param2 >> 28 & 3;
                                             int speedId = param2 >> 30 & 3;
                                             int soffset = er.ReadInt32();
                                             int width = var2 != 0 ? 2 : 4;
                                             int length = (int)Math.Ceiling((double)(ns.JAC[i].NrFrames) * speed[speedId]);
                                             long curpos = er.BaseStream.Position;
-                                            for (int s = 0; s < length; s++) {
-                                                er.BaseStream.Position = ns.Header.Section_Offset[0] +/* ns.JNT0.section_size*/ns.JNT0.infoBlock.Data[i].Objectoffset + soffset + (s * width * 2);
-                                                if (dataoffset == 0) {
+                                            for (int s = 0; s < length; s++)
+                                            {
+                                                er.BaseStream.Position = ns.Header.Section_Offset[0] +/* ns.JNT0.section_size*/ns.JNT0.InfoBlock.Data[i].Objectoffset + soffset + (s * width * 2);
+                                                if (dataoffset == 0)
+                                                {
                                                     dataoffset = soffset;
                                                 }
-                                                ns.JAC[i].ObjInfo[j].scale_keyframes[k][0].Add((float)(width != 2 ? (float)er.ReadInt32() : (float)er.ReadInt16()) / 4096f);
-                                                ns.JAC[i].ObjInfo[j].scale_keyframes[k][1].Add((float)(width != 2 ? (float)er.ReadInt32() : (float)er.ReadInt16()) / 4096f);
+                                                ns.JAC[i].ObjInfo[j].ScaleKeyframes[k][0].Add((float)(width != 2 ? (float)er.ReadInt32() : (float)er.ReadInt16()) / 4096f);
+                                                ns.JAC[i].ObjInfo[j].ScaleKeyframes[k][1].Add((float)(width != 2 ? (float)er.ReadInt32() : (float)er.ReadInt16()) / 4096f);
                                             }
                                             er.BaseStream.Position = curpos;
                                         }
                                     }
                                 }
                             }
-                            if (dataoffset != 0) {
+                            if (dataoffset != 0)
+                            {
                                 curposs = er.BaseStream.Position;
-                                er.BaseStream.Position = ns.Header.Section_Offset[0] + ns.JNT0.infoBlock.Data[i].Objectoffset + ns.JAC[i].Offset2;
+                                er.BaseStream.Position = ns.Header.Section_Offset[0] + ns.JNT0.InfoBlock.Data[i].Objectoffset + ns.JAC[i].Offset2;
                                 ns.JAC[i].RotationData = er.ReadBytes((int)dataoffset - ns.JAC[i].Offset2);
                                 er.BaseStream.Position = curposs;
                             }
-                        } else {
+                        }
+                        else
+                        {
                             //MessageBox.Show("Error");
                             er.Close();
                             return ns;
                         }
                     }
-                } else {
+                }
+                else
+                {
                     //MessageBox.Show("Error");
                     er.Close();
                     return ns;
                 }
-            } else {
+            }
+            else
+            {
                 //MessageBox.Show("Error");
                 er.Close();
                 return ns;

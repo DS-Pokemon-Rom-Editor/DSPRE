@@ -14,7 +14,7 @@ namespace DSPRE
     {
         public static void Generate(string csvFilePath)
         {
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties, DirNames.trainerParty });
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TrainerProperties, DirNames.TrainerParty });
 
             string[] trcNames = RomInfo.GetTrainerClassNames();
             string[] pokeNames = RomInfo.GetPokemonNames();
@@ -32,8 +32,8 @@ namespace DSPRE
                 string suffix = Path.DirectorySeparatorChar + i.ToString("D4");
 
                 TrainerFile f;
-                using (FileStream propStream = new FileStream(RomInfo.gameDirs[DirNames.trainerProperties].unpackedDir + suffix, FileMode.Open, FileAccess.Read))
-                using (FileStream partyStream = new FileStream(RomInfo.gameDirs[DirNames.trainerParty].unpackedDir + suffix, FileMode.Open, FileAccess.Read))
+                using (FileStream propStream = new FileStream(RomInfo.GameDirs[DirNames.TrainerProperties].unpackedDir + suffix, FileMode.Open, FileAccess.Read))
+                using (FileStream partyStream = new FileStream(RomInfo.GameDirs[DirNames.TrainerParty].unpackedDir + suffix, FileMode.Open, FileAccess.Read))
                 {
                     f = new TrainerFile(
                         new TrainerProperties((ushort)i, propStream),
@@ -42,12 +42,12 @@ namespace DSPRE
                     );
                 }
 
-                if (f.party.CountNonEmptyMons() == 0)
+                if (f.Party.CountNonEmptyMons() == 0)
                 {
                     continue;
                 }
 
-                int classId = f.trp.trainerClass;
+                int classId = f.Trp.TrainerClass;
                 string className = classId < trcNames.Length ? trcNames[classId] : $"Class {classId}";
 
 
@@ -56,14 +56,14 @@ namespace DSPRE
                     innerDict = trainerUsage[className] = new Dictionary<string, int>();
                 }
 
-                for (int p = 0; p < f.trp.partyCount && p < TrainerFile.POKE_IN_PARTY; p++)
+                for (int p = 0; p < f.Trp.PartyCount && p < TrainerFile.PokeInParty; p++)
                 {
-                    PartyPokemon pp = f.party[p];
+                    PartyPokemon pp = f.Party[p];
                     if (pp.CheckEmpty())
                     {
                         continue;
                     }
-                    int species = (int)pp.pokeID;
+                    int species = (int)pp.PokeID;
                     string pokeName = species < pokeNames.Length ? pokeNames[species] : $"Species {species}";
 
                     if (innerDict.TryGetValue(pokeName, out int occurrences))

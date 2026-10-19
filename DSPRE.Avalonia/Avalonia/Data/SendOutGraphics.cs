@@ -16,12 +16,12 @@ namespace DSPRE.Avalonia.Data
         {
             List<(int, string)> list = new List<(int, string)>();
             string[] items = null;
-            try { items = GetItemNames(); } catch { }
+            try { items = GetItemNames(); } catch (Exception ex) { AppLogger.Warn("Send-out balls: item names: " + ex.Message); }
             string Name(int item, string fallback) =>
                 items != null && item > 0 && item < items.Length && !string.IsNullOrWhiteSpace(items[item]) ? items[item].Trim() : fallback;
 
             for (int ball = 1; ball <= 16; ball++) list.Add((ball, Name(ball, "Ball " + ball)));
-            if (gameFamily == GameFamilies.HGSS)
+            if (GameFamily == GameFamilies.HGSS)
                 for (int ball = 17; ball <= 24; ball++) list.Add((ball, Name(492 + ball - 17, "Ball " + ball)));
             return list;
         }
@@ -32,7 +32,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The four battle OBJ archive entries a thrown ball is drawn from.</summary>
         public static (int Ncgr, int Nclr, int Ncer, int Nanr) BallFiles(int ball)
         {
-            if (gameFamily == GameFamilies.HGSS)
+            if (GameFamily == GameFamilies.HGSS)
             {
                 int n = ball >= 1 && ball <= 27 ? ball : 4;
                 return (258 + 3 * n, 82 + n, 257 + 3 * n, 256 + 3 * n);
@@ -42,21 +42,21 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>The ball particle archive entry that bursts when this ball opens.</summary>
-        public static int BurstEntry(int ball) => ball >= 1 && ball <= (gameFamily == GameFamilies.HGSS ? 24 : 16) ? ball : 4;
+        public static int BurstEntry(int ball) => ball >= 1 && ball <= (GameFamily == GameFamilies.HGSS ? 24 : 16) ? ball : 4;
 
         /// <summary>Unpacks every archive a send-out reads. Slow, so call it off the UI thread.</summary>
         public static void Unpack()
         {
             List<DirNames> dirs = new List<DirNames>();
-            foreach (DirNames d in new[] { DirNames.battleObj, DirNames.ballParticles, DirNames.trainerGraphics, DirNames.trainerBackGraphics,
-                                      DirNames.trainerProperties, DirNames.wazaEffectSub, DirNames.wazaParticle })
-                if (gameDirs.ContainsKey(d)) dirs.Add(d);
+            foreach (DirNames d in new[] { DirNames.BattleObj, DirNames.BallParticles, DirNames.TrainerGraphics, DirNames.TrainerBackGraphics,
+                                      DirNames.TrainerProperties, DirNames.WazaEffectSub, DirNames.WazaParticle })
+                if (GameDirs.ContainsKey(d)) dirs.Add(d);
             DSUtils.TryUnpackNarcs(dirs);
         }
 
         private readonly Dictionary<int, (WeCellAnimRenderer Cells, CellSequence[] Seqs)> _balls = new();
         private readonly Dictionary<(int Ball, int Cell), AvaBitmap> _ballCells = new();
-        private readonly ScriptNarc _burstNarc = new ScriptNarc(DirNames.ballParticles);
+        private readonly ScriptNarc _burstNarc = new ScriptNarc(DirNames.BallParticles);
         private readonly Dictionary<int, SpaArchive> _bursts = new();
         private readonly Random _sealRandom = new();
 
@@ -76,8 +76,8 @@ namespace DSPRE.Avalonia.Data
             if (_balls.TryGetValue(ball, out (WeCellAnimRenderer Cells, CellSequence[] Seqs) loaded)) return loaded;
             WeCellAnimRenderer cells = new WeCellAnimRenderer();
             (int Ncgr, int Nclr, int Ncer, int Nanr) f = BallFiles(ball);
-            bool ok = gameDirs.ContainsKey(DirNames.battleObj)
-                   && cells.Load(DirNames.battleObj, f.Ncgr, DirNames.battleObj, f.Nclr, DirNames.battleObj, f.Ncer, DirNames.battleObj, f.Nanr);
+            bool ok = GameDirs.ContainsKey(DirNames.BattleObj)
+                   && cells.Load(DirNames.BattleObj, f.Ncgr, DirNames.BattleObj, f.Nclr, DirNames.BattleObj, f.Ncer, DirNames.BattleObj, f.Nanr);
             loaded = ok ? (cells, cells.BuildSequences()) : (null, Array.Empty<CellSequence>());
             _balls[ball] = loaded;
             return loaded;
@@ -141,7 +141,7 @@ namespace DSPRE.Avalonia.Data
         public void ForgetParticles(int entry) => _bursts.Remove(entry);
 
         /// <summary>The archives the trainer, ball and party-row pictures come from.</summary>
-        public static readonly DirNames[] PictureArchives = { DirNames.trainerGraphics, DirNames.trainerBackGraphics, DirNames.battleObj, DirNames.ballParticles };
+        public static readonly DirNames[] PictureArchives = { DirNames.TrainerGraphics, DirNames.TrainerBackGraphics, DirNames.BattleObj, DirNames.BallParticles };
 
         /// <summary>Forgets every picture read so far, after one of <see cref="PictureArchives"/> was saved; sounds are kept.</summary>
         public void ForgetPictures()
@@ -173,7 +173,7 @@ namespace DSPRE.Avalonia.Data
                         ? $"{id}: {entry.Substring(close + 1).Trim()}" : entry);
                 }
             }
-            catch { list.Clear(); }
+            catch (Exception ex) { AppLogger.WarnOnce("SendOutGraphics.TrainerList", ex); list.Clear(); }
             return list;
         }
 
@@ -200,14 +200,14 @@ namespace DSPRE.Avalonia.Data
                     if (trainerId >= 0 && trainerId < names.Length) name = names[trainerId];
                 }
             }
-            catch { }
+            catch (Exception ex) { AppLogger.Warn("Send-out trainer name: " + ex.Message); }
             string className = "";
             try
             {
                 string[] classes = GetTrainerClassNames();
                 if (cls >= 0 && cls < classes.Length) className = classes[cls];
             }
-            catch { }
+            catch (Exception ex) { AppLogger.Warn("Send-out trainer class name: " + ex.Message); }
             return (cls, className?.Trim() ?? "", name?.Trim() ?? "");
         }
 
@@ -225,7 +225,7 @@ namespace DSPRE.Avalonia.Data
                     if (bytes.Length > 1 && bytes[1] == youngster) return id;
                 }
             }
-            catch { }
+            catch (Exception ex) { AppLogger.Warn("Send-out youngster trainer: " + ex.Message); }
             return 1;
         }
 
@@ -233,7 +233,7 @@ namespace DSPRE.Avalonia.Data
         {
             if (_front == null || _frontClass != trainerClass)
             {
-                _front = LoadTrainer(trainerClass, DirNames.trainerGraphics);
+                _front = LoadTrainer(trainerClass, DirNames.TrainerGraphics);
                 _frontClass = trainerClass;
                 foreach ((bool, int) key in new List<(bool, int)>(_trainerBanks.Keys)) if (!key.Item1) _trainerBanks.Remove(key);
                 _trainerFrames.Clear();
@@ -275,7 +275,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The player's back sprite <paramref name="ticks"/> into its throw, or its resting pose for −1.</summary>
         public AvaBitmap PlayerTrainer(int ticks)
         {
-            TrainerClassSpriteRenderer r = _back ??= LoadTrainer(0, DirNames.trainerBackGraphics);
+            TrainerClassSpriteRenderer r = _back ??= LoadTrainer(0, DirNames.TrainerBackGraphics);
             if (r.FrameCount == 0) return null;
             int frame = r.DefaultFrame;
             if (ticks >= 0)
@@ -297,7 +297,7 @@ namespace DSPRE.Avalonia.Data
         private static TrainerClassSpriteRenderer LoadTrainer(int trainerClass, DirNames archive)
         {
             TrainerClassSpriteRenderer r = new TrainerClassSpriteRenderer();
-            if (gameDirs.ContainsKey(archive)) r.Load(trainerClass, archive);
+            if (GameDirs.ContainsKey(archive)) r.Load(trainerClass, archive);
             return r;
         }
 
@@ -312,8 +312,8 @@ namespace DSPRE.Avalonia.Data
         {
             if (_rowSeqs != null) return _rowSeqs;
             _row = new WeCellAnimRenderer();
-            bool ok = gameDirs.ContainsKey(DirNames.battleObj)
-                   && _row.Load(DirNames.battleObj, 340, DirNames.battleObj, 110, DirNames.battleObj, 341, DirNames.battleObj, 342);
+            bool ok = GameDirs.ContainsKey(DirNames.BattleObj)
+                   && _row.Load(DirNames.BattleObj, 340, DirNames.BattleObj, 110, DirNames.BattleObj, 341, DirNames.BattleObj, 342);
             _rowSeqs = ok ? _row.BuildSequences() : Array.Empty<CellSequence>();
             if (!ok) _row = null;
             return _rowSeqs;
@@ -374,16 +374,16 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The shiny sparkle on the battler at (<paramref name="x"/>, <paramref name="y"/>), or null.</summary>
         public BattleAnimPlayer Sparkle(bool enemySide, double x, double y)
         {
-            WazaSeqVersion version = gameFamily == GameFamilies.HGSS ? WazaSeqVersion.HGSS : WazaSeqVersion.Plat;
+            WazaSeqVersion version = GameFamily == GameFamilies.HGSS ? WazaSeqVersion.HGSS : WazaSeqVersion.Plat;
             if (!_sparkleTried)
             {
                 _sparkleTried = true;
-                _sparkleBytes = gameDirs.ContainsKey(DirNames.wazaEffectSub) ? new ScriptNarc(DirNames.wazaEffectSub).Get(ShinySparkleSubscript) : null;
+                _sparkleBytes = GameDirs.ContainsKey(DirNames.WazaEffectSub) ? new ScriptNarc(DirNames.WazaEffectSub).Get(ShinySparkleSubscript) : null;
             }
             if (_sparkleBytes == null) return null;
             List<WazaSeqCommand> cmds = BattleAnimScript.Parse(_sparkleBytes, version);
             if (cmds == null || cmds.Count == 0) return null;
-            _effectParticles ??= new ScriptNarc(DirNames.wazaParticle);
+            _effectParticles ??= new ScriptNarc(DirNames.WazaParticle);
             return new BattleAnimPlayer(cmds, version, _effectParticles, x, y, x, y, 256, 192, attackerIsEnemy: enemySide, selfTarget: true);
         }
 
@@ -392,7 +392,7 @@ namespace DSPRE.Avalonia.Data
         private readonly Dictionary<int, Task<short[]>> _numbered = new();
 
         /// <summary>Renders a sound effect by its sequence name in the background, once.</summary>
-        public Task<short[]> Sound(string seqName)
+        public Task<short[]> SoundAsync(string seqName)
         {
             if (_named.TryGetValue(seqName, out Task<short[]> task)) return task;
             return _named[seqName] = Task.Run(() =>
@@ -404,13 +404,13 @@ namespace DSPRE.Avalonia.Data
                     foreach (KeyValuePair<int, string> kv in sdat.SeqNames)
                         if (kv.Value == seqName) return SseqPlayer.Render(sdat, kv.Key);
                 }
-                catch { }
+                catch (Exception ex) { AppLogger.Warn("Send-out music: " + ex.Message); }
                 return null;
             });
         }
 
         /// <summary>Renders a sound effect by its sequence number in the background, once.</summary>
-        public Task<short[]> Sound(int seqId)
+        public Task<short[]> SoundAsync(int seqId)
         {
             if (_numbered.TryGetValue(seqId, out Task<short[]> task)) return task;
             return _numbered[seqId] = Task.Run(() =>
@@ -420,11 +420,11 @@ namespace DSPRE.Avalonia.Data
                     SdatArchive sdat = SoundArchive.Load();
                     return sdat != null ? SseqPlayer.Render(sdat, seqId) : null;
                 }
-                catch { return null; }
+                catch (Exception ex) { AppLogger.WarnOnce("SendOutGraphics.SoundAsync", ex); return null; }
             });
         }
 
-        public Task<short[]> BallOpenSound() => Sound("SEQ_SE_DP_BOWA2");
+        public Task<short[]> BallOpenSoundAsync() => SoundAsync("SEQ_SE_DP_BOWA2");
 
         // ── Battle music ─────────────────────────────────────────────────────────────────────────
         private BattleMusicTables _musicTables;
@@ -459,7 +459,7 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>Renders a battle theme once, starting where it is when the intro begins.</summary>
-        public Task<short[]> Music(int seqId)
+        public Task<short[]> MusicAsync(int seqId)
         {
             if (seqId < 0) return Task.FromResult<short[]>(null);
             if (_music.TryGetValue(seqId, out Task<short[]> task)) return task;
@@ -472,26 +472,26 @@ namespace DSPRE.Avalonia.Data
                     int skip = (int)(MusicLeadInSeconds * 32000) * 2;
                     return pcm == null || pcm.Length <= skip ? pcm : pcm[skip..];
                 }
-                catch { return null; }
+                catch (Exception ex) { AppLogger.WarnOnce("SendOutGraphics.MusicAsync", ex); return null; }
             });
         }
 
         /// <summary>Starts rendered music and returns a handle for <see cref="StopMusic"/>.</summary>
         public static object StartMusic(short[] pcm)
         {
-            try { return pcm != null && pcm.Length > 0 ? AudioOutput.Current.Start(pcm, 32000) : null; } catch { return null; }
+            try { return pcm != null && pcm.Length > 0 ? AudioOutput.Current.Start(pcm, 32000) : null; } catch (Exception ex) { AppLogger.WarnOnce("SendOutGraphics.StartMusic", ex); return null; }
         }
 
         public static void StopMusic(object handle)
         {
             if (handle == null) return;
-            try { AudioOutput.Current.Stop(handle); } catch { }
+            try { AudioOutput.Current.Stop(handle); } catch { }   // stopping a sound that already ended is harmless
         }
 
         /// <summary>Renders a species' cry in the background.</summary>
-        public static Task<short[]> Cry(int species) => Task.Run(() =>
+        public static Task<short[]> CryAsync(int species) => Task.Run(() =>
         {
-            try { return SoundArchive.RenderCry(species); } catch { return null; }
+            try { return SoundArchive.RenderCry(species); } catch (Exception ex) { AppLogger.WarnOnce("SendOutGraphics.CryAsync", ex); return null; }
         });
 
         public static void Play(Task<short[]> sound)
@@ -503,7 +503,7 @@ namespace DSPRE.Avalonia.Data
 
         private static void Start(short[] pcm)
         {
-            try { if (pcm != null && pcm.Length > 0) AudioOutput.Current.Play(pcm, 32000); } catch { }
+            try { if (pcm != null && pcm.Length > 0) AudioOutput.Current.Play(pcm, 32000); } catch { }   // a preview that can't play stays silent
         }
     }
 }

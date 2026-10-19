@@ -29,9 +29,9 @@ namespace DSPRE.Tests
             Skip.If(!Directory.Exists(platinum), "Platinum not unpacked here");
             SettingsManager.Load();
             new RomInfo("CPUE", platinum);
-            Skip.If(RomInfo.starterOverlayNumber < 0, "no starter overlay for this ROM");
+            Skip.If(RomInfo.StarterOverlayNumber < 0, "no starter overlay for this ROM");
 
-            byte[] original = ReadOverlayCopy(RomInfo.starterOverlayNumber);
+            byte[] original = ReadOverlayCopy(RomInfo.StarterOverlayNumber);
             int codeOffset = FindCodeOffset(original);
             _out.WriteLine($"routine at 0x{codeOffset:X}, already patched: {IsPatched(original, codeOffset)}");
 
@@ -73,7 +73,7 @@ namespace DSPRE.Tests
 
         private static int FindCodeOffset(byte[] data)
         {
-            byte[] prefix = DSUtils.StringToByteArray(RomInfo.starterGraphicsPrefix);
+            byte[] prefix = DSUtils.StringToByteArray(RomInfo.StarterGraphicsPrefix);
             List<int> matches = DSUtils.SearchBytes(data, prefix);
             Assert.NotEmpty(matches);
             return matches[0] + prefix.Length;

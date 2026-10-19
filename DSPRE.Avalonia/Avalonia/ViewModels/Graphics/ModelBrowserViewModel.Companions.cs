@@ -175,7 +175,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 for (int i = 0; i < narc.Count; i++)
                 {
                     byte[] b;
-                    try { b = narc.Get(i); } catch { continue; }
+                    try { b = narc.Get(i); } catch (Exception ex) { AppLogger.WarnOnce("ModelBrowserViewModel.FindCompanions", ex); continue; }
                     if (b == null) continue;
 
                     ModelAssets.Kind kind = ModelAssets.Identify(b);
@@ -264,7 +264,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     default: return Array.Empty<string>();
                 }
             }
-            catch { return Array.Empty<string>(); }
+            catch (Exception ex) { AppLogger.WarnOnce("ModelBrowserViewModel.NamesOf", ex); return Array.Empty<string>(); }
         }
 
         private static string Describe(ModelAssets.Match sure, string name, int index)
@@ -439,7 +439,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (!narc.Available) return "";
                 b = narc.Get(index);
             }
-            catch { return ""; }
+            catch (Exception ex) { AppLogger.WarnOnce("ModelBrowserViewModel.DescribeAnimation", ex); return ""; }
             if (b == null) return "";
 
             List<string> bits = new List<string>();
@@ -532,7 +532,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (!narc.Available) return "";
                 b = narc.Get(index);
             }
-            catch { return ""; }
+            catch (Exception ex) { AppLogger.WarnOnce("ModelBrowserViewModel.WhoClaimsIt", ex); return ""; }
             if (b == null) return "";
 
             IReadOnlyList<string> names = NamesOf(kind, b);
@@ -542,7 +542,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             foreach (ModelAssets.Archive other in ModelAssets.All)
             {
                 int n;
-                try { n = ModelAssets.Count(other); } catch { continue; }
+                try { n = ModelAssets.Count(other); } catch (Exception ex) { AppLogger.WarnOnce("ModelBrowserViewModel.WhoClaimsIt", ex); continue; }
                 foreach (ModelAssets.Unit u in ModelAssets.Units(other, n))
                 {
                     if (string.IsNullOrWhiteSpace(u.Name)) continue;

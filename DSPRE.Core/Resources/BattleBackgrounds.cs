@@ -34,7 +34,7 @@ namespace DSPRE.Resources
         }
 
         /// <summary>The names for the open game, or none when its values are not known.</summary>
-        public static IReadOnlyList<string> Names() => gameFamily switch
+        public static IReadOnlyList<string> Names() => GameFamily switch
         {
             GameFamilies.DP => Shared,
             GameFamilies.Plat => PlatinumNames,

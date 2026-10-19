@@ -20,7 +20,7 @@ namespace DSPRE.Avalonia.Views.Battle
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveChanges();
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) VM?.DiscardChanges();
         }
         private void Add_Click(object sender, RoutedEventArgs e) => VM?.AddRow();
         private void Remove_Click(object sender, RoutedEventArgs e) => VM?.RemoveRow();

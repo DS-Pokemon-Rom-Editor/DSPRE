@@ -22,7 +22,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private async void Discard_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) VM.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) VM.DiscardChanges();
         }
 
         private async void TradeID_Changed(object sender, NumericUpDownValueChangedEventArgs e)

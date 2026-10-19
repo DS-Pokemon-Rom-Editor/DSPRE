@@ -18,12 +18,12 @@ namespace DSPRE.Avalonia.Data
 
         private static string _loadedProjectDir;
 
-        private static string FilePath => string.IsNullOrEmpty(dspreDir) ? null : Path.Combine(dspreDir, "dspre_palette_colors.json");
+        private static string FilePath => string.IsNullOrEmpty(DspreDir) ? null : Path.Combine(DspreDir, "dspre_palette_colors.json");
 
         // Re-loads whenever the open ROM's working directory changes, same guard as LabelStore.Ensure.
         private static void Ensure()
         {
-            string pdir = string.IsNullOrEmpty(dspreDir) ? null : dspreDir;
+            string pdir = string.IsNullOrEmpty(DspreDir) ? null : DspreDir;
             if (pdir == _loadedProjectDir) return;
             _loadedProjectDir = pdir;
             Load();
@@ -56,9 +56,12 @@ namespace DSPRE.Avalonia.Data
 
         private sealed class PaletteColorFile
         {
-            public uint?[] favorites { get; set; }
-            public List<uint> lastUsed { get; set; }
+            public uint?[] Favorites { get; set; }
+            public List<uint> LastUsed { get; set; }
         }
+
+        // Files saved before the names went PascalCase use camelCase keys.
+        private static readonly JsonSerializerOptions ReadOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
         private static void Load()
         {
@@ -68,11 +71,11 @@ namespace DSPRE.Avalonia.Data
             try
             {
                 if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
-                PaletteColorFile file = JsonSerializer.Deserialize<PaletteColorFile>(File.ReadAllText(path));
-                if (file?.favorites != null)
-                    for (int i = 0; i < Math.Min(FavoriteSlots, file.favorites.Length); i++) Favorites[i] = file.favorites[i];
-                if (file?.lastUsed != null)
-                    LastUsed.AddRange(file.lastUsed.Take(LastUsedSlots));
+                PaletteColorFile file = JsonSerializer.Deserialize<PaletteColorFile>(File.ReadAllText(path), ReadOptions);
+                if (file?.Favorites != null)
+                    for (int i = 0; i < Math.Min(FavoriteSlots, file.Favorites.Length); i++) Favorites[i] = file.Favorites[i];
+                if (file?.LastUsed != null)
+                    LastUsed.AddRange(file.LastUsed.Take(LastUsedSlots));
             }
             catch (Exception ex) { AppLogger.Error("PaletteColorStore.Load: " + ex.Message); }
         }
@@ -83,7 +86,7 @@ namespace DSPRE.Avalonia.Data
             if (path == null) return;
             try
             {
-                PaletteColorFile file = new PaletteColorFile { favorites = Favorites, lastUsed = LastUsed };
+                PaletteColorFile file = new PaletteColorFile { Favorites = Favorites, LastUsed = LastUsed };
                 PlainFiles.WriteText(path, JsonSerializer.Serialize(file, new JsonSerializerOptions { WriteIndented = true }));
             }
             catch (Exception ex) { AppLogger.Error("PaletteColorStore.Save: " + ex.Message); }

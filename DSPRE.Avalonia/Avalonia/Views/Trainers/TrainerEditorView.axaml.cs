@@ -59,7 +59,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardTrainer();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) VM?.DiscardTrainer();
         }
 
         private void Undo_Click(object sender, RoutedEventArgs e) => VM?.Undo();
@@ -67,7 +67,7 @@ namespace DSPRE.Avalonia.Views.Trainers
 
         private void AddTrainer_Click(object sender, RoutedEventArgs e) => VM?.AddTrainer();
         private async void RemoveTrainer_Click(object sender, RoutedEventArgs e)
-            => await Safe(VM?.RemoveLastAddedTrainerAsync());
+            => await SafeAsync(VM?.RemoveLastAddedTrainerAsync());
 
         private void BattleMessages_Click(object sender, RoutedEventArgs e)
         {
@@ -82,14 +82,14 @@ namespace DSPRE.Avalonia.Views.Trainers
             MainTabs.SelectedIndex = 1;
         }
 
-        private async void ExportTrainer_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportTrainerAsync());
-        private async void ImportTrainer_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportTrainerAsync());
-        private async void ExportProperties_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportPropertiesAsync());
-        private async void ImportProperties_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ReplacePropertiesAsync());
-        private async void ExportParty_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportPartyAsync());
-        private async void ImportParty_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportPartyAsync());
+        private async void ExportTrainer_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportTrainerAsync());
+        private async void ImportTrainer_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportTrainerAsync());
+        private async void ExportProperties_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportPropertiesAsync());
+        private async void ImportProperties_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ReplacePropertiesAsync());
+        private async void ExportParty_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportPartyAsync());
+        private async void ImportParty_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportPartyAsync());
 
-        private static async Task Safe(Task task)
+        private static async Task SafeAsync(Task task)
         {
             if (task == null) return;
             try { await task; } catch { /* handled in VM */ }
@@ -106,7 +106,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         }
 
         private void PlaySprite_Click(object sender, RoutedEventArgs e) => VM?.TogglePlay();
-        private async void FindUses_Click(object sender, RoutedEventArgs e) => await Safe(VM?.FindUsesAsync());
+        private async void FindUses_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.FindUsesAsync());
 
         private void Use_DoubleTapped(object sender, global::Avalonia.Input.TappedEventArgs e)
         {

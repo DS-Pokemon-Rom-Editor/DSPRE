@@ -13,22 +13,34 @@ namespace DSPRE
     {
         private class OverlayYaml
         {
-            public bool table_signed { get; set; }
-            public List<OverlayEntry> overlays { get; set; }
+            [YamlMember(Alias = "table_signed")]
+            public bool TableSigned { get; set; }
+            [YamlMember(Alias = "overlays")]
+            public List<OverlayEntry> Overlays { get; set; }
         }
 
         private class OverlayEntry
         {
-            public int id { get; set; }
-            public uint base_address { get; set; }
-            public uint code_size { get; set; }
-            public uint bss_size { get; set; }
-            public uint ctor_start { get; set; }
-            public uint ctor_end { get; set; }
-            public int file_id { get; set; }
-            public bool compressed { get; set; }
-            public bool signed { get; set; }
-            public string file_name { get; set; }
+            [YamlMember(Alias = "id")]
+            public int Id { get; set; }
+            [YamlMember(Alias = "base_address")]
+            public uint BaseAddress { get; set; }
+            [YamlMember(Alias = "code_size")]
+            public uint CodeSize { get; set; }
+            [YamlMember(Alias = "bss_size")]
+            public uint BssSize { get; set; }
+            [YamlMember(Alias = "ctor_start")]
+            public uint CtorStart { get; set; }
+            [YamlMember(Alias = "ctor_end")]
+            public uint CtorEnd { get; set; }
+            [YamlMember(Alias = "file_id")]
+            public int FileId { get; set; }
+            [YamlMember(Alias = "compressed")]
+            public bool Compressed { get; set; }
+            [YamlMember(Alias = "signed")]
+            public bool Signed { get; set; }
+            [YamlMember(Alias = "file_name")]
+            public string FileName { get; set; }
         }
 
         private static OverlayYaml _cachedOverlayYaml;
@@ -46,7 +58,7 @@ namespace DSPRE
 
             try
             {
-                string yamlContent = File.ReadAllText(RomInfo.overlayTablePath);
+                string yamlContent = File.ReadAllText(RomInfo.OverlayTablePath);
                 IDeserializer deserializer = new DeserializerBuilder()
                     .IgnoreUnmatchedProperties()
                     .Build();
@@ -62,7 +74,7 @@ namespace DSPRE
 
         public static class OverlayTable
         {
-            private const int ENTRY_LEN = 32;
+            private const int EntryLen = 32;
 
             /**
             * Only checks if the overlay is CONFIGURED as compressed
@@ -72,12 +84,12 @@ namespace DSPRE
                 if (RomInfo.IsDsRomProject)
                 {
                     OverlayYaml yaml = LoadOverlayYaml();
-                    if (yaml?.overlays == null || ovNumber >= yaml.overlays.Count)
+                    if (yaml?.Overlays == null || ovNumber >= yaml.Overlays.Count)
                         return false;
-                    return yaml.overlays[ovNumber].compressed;
+                    return yaml.Overlays[ovNumber].Compressed;
                 }
 
-                using (DSUtils.EasyReader f = new EasyReader(RomInfo.overlayTablePath, ovNumber * ENTRY_LEN + 31))
+                using (DSUtils.EasyReader f = new EasyReader(RomInfo.OverlayTablePath, ovNumber * EntryLen + 31))
                 {
                     return (f.ReadByte() & 1) == 1;
                 }
@@ -91,7 +103,7 @@ namespace DSPRE
                     return;
                 }
 
-                DSUtils.WriteToFile(RomInfo.overlayTablePath, new byte[] { compressStatus ? (byte)1 : (byte)0 }, (uint)(ovNumber * ENTRY_LEN + 31));
+                DSUtils.WriteToFile(RomInfo.OverlayTablePath, new byte[] { compressStatus ? (byte)1 : (byte)0 }, (uint)(ovNumber * EntryLen + 31));
             }
 
             public static uint GetRAMAddress(int ovNumber)
@@ -99,12 +111,12 @@ namespace DSPRE
                 if (RomInfo.IsDsRomProject)
                 {
                     OverlayYaml yaml = LoadOverlayYaml();
-                    if (yaml?.overlays == null || ovNumber >= yaml.overlays.Count)
+                    if (yaml?.Overlays == null || ovNumber >= yaml.Overlays.Count)
                         return 0;
-                    return yaml.overlays[ovNumber].base_address;
+                    return yaml.Overlays[ovNumber].BaseAddress;
                 }
 
-                using (DSUtils.EasyReader f = new EasyReader(RomInfo.overlayTablePath, ovNumber * ENTRY_LEN + 4))
+                using (DSUtils.EasyReader f = new EasyReader(RomInfo.OverlayTablePath, ovNumber * EntryLen + 4))
                 {
                     return f.ReadUInt32();
                 }
@@ -115,12 +127,12 @@ namespace DSPRE
                 if (RomInfo.IsDsRomProject)
                 {
                     OverlayYaml yaml = LoadOverlayYaml();
-                    if (yaml?.overlays == null || ovNumber >= yaml.overlays.Count)
+                    if (yaml?.Overlays == null || ovNumber >= yaml.Overlays.Count)
                         return 0;
-                    return yaml.overlays[ovNumber].code_size + yaml.overlays[ovNumber].bss_size;
+                    return yaml.Overlays[ovNumber].CodeSize + yaml.Overlays[ovNumber].BssSize;
                 }
 
-                using (DSUtils.EasyReader f = new EasyReader(RomInfo.overlayTablePath, ovNumber * ENTRY_LEN + 8))
+                using (DSUtils.EasyReader f = new EasyReader(RomInfo.OverlayTablePath, ovNumber * EntryLen + 8))
                 {
                     return f.ReadUInt32();
                 }
@@ -132,12 +144,12 @@ namespace DSPRE
                 if (RomInfo.IsDsRomProject)
                 {
                     OverlayYaml yaml = LoadOverlayYaml();
-                    if (yaml?.overlays == null || ovNumber >= yaml.overlays.Count)
+                    if (yaml?.Overlays == null || ovNumber >= yaml.Overlays.Count)
                         return 0;
-                    return yaml.overlays[ovNumber].ctor_start;
+                    return yaml.Overlays[ovNumber].CtorStart;
                 }
 
-                using (DSUtils.EasyReader f = new EasyReader(RomInfo.overlayTablePath, ovNumber * ENTRY_LEN + 16))
+                using (DSUtils.EasyReader f = new EasyReader(RomInfo.OverlayTablePath, ovNumber * EntryLen + 16))
                 {
                     return f.ReadUInt32();
                 }
@@ -148,13 +160,13 @@ namespace DSPRE
                 if (RomInfo.IsDsRomProject)
                 {
                     OverlayYaml yaml = LoadOverlayYaml();
-                    return yaml?.overlays?.Count ?? 0;
+                    return yaml?.Overlays?.Count ?? 0;
                 }
 
-                using (FileStream fileStream = File.OpenRead(RomInfo.overlayTablePath))
+                using (FileStream fileStream = File.OpenRead(RomInfo.OverlayTablePath))
                 {
                     // Get the length of the file in bytes
-                    return (int)(fileStream.Length / ENTRY_LEN);
+                    return (int)(fileStream.Length / EntryLen);
                 }
             }
         }
@@ -164,9 +176,9 @@ namespace DSPRE
         {
             if (RomInfo.IsDsRomProject)
             {
-                return Path.Combine(workDir, "arm9_overlays", $"ov{overlayNumber:D3}.bin");
+                return Path.Combine(WorkDir, "arm9_overlays", $"ov{overlayNumber:D3}.bin");
             }
-            return Path.Combine(workDir, "overlay", $"overlay_{overlayNumber:D4}.bin");
+            return Path.Combine(WorkDir, "overlay", $"overlay_{overlayNumber:D4}.bin");
         }
 
         /**
@@ -206,9 +218,9 @@ namespace DSPRE
         {
             String overlayFilePath = GetPath(overlayNumber);
 
-            if (File.Exists(overlayFilePath + DSUtils.backupSuffix))
+            if (File.Exists(overlayFilePath + DSUtils.BackupSuffix))
             {
-                if (new FileInfo(overlayFilePath).Length <= new FileInfo(overlayFilePath + DSUtils.backupSuffix).Length)
+                if (new FileInfo(overlayFilePath).Length <= new FileInfo(overlayFilePath + DSUtils.BackupSuffix).Length)
                 { //if overlay is bigger than its backup
                     AppLogger.Info($"Overlay {overlayNumber} is already compressed.");
                     return;
@@ -217,8 +229,8 @@ namespace DSPRE
                 {
                     try
                     {
-                        DSUtils.WriteWholeFile(overlayFilePath, File.ReadAllBytes(overlayFilePath + DSUtils.backupSuffix));
-                        File.Delete(overlayFilePath + DSUtils.backupSuffix);
+                        DSUtils.WriteWholeFile(overlayFilePath, File.ReadAllBytes(overlayFilePath + DSUtils.BackupSuffix));
+                        File.Delete(overlayFilePath + DSUtils.BackupSuffix);
                     }
                     catch (InvalidOperationException refused)
                     {
@@ -228,7 +240,7 @@ namespace DSPRE
             }
             else
             {
-                string msg = $"Overlay File {overlayFilePath}{DSUtils.backupSuffix} couldn't be found and restored.";
+                string msg = $"Overlay File {overlayFilePath}{DSUtils.BackupSuffix} couldn't be found and restored.";
                 AppLogger.Debug(msg);
 
                 if (eventEditorIsReady)
@@ -252,7 +264,7 @@ namespace DSPRE
             {
                 AppMessages.Error("Overlay to decompress #" + overlayNumber + " doesn't exist",
                     "Overlay not found");
-                return ERR_OVERLAY_NOTFOUND;
+                return ErrOverlayNotfound;
             }
 
             Process compress = new Process();
@@ -261,7 +273,7 @@ namespace DSPRE
             {
                 compress.Dispose();
                 DSUtils.ReportToolUnavailable("blz");
-                return DSUtils.ERR_TOOL_UNAVAILABLE;
+                return DSUtils.ErrToolUnavailable;
             }
             AppMessages.PumpEvents();
             compress.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
@@ -284,20 +296,20 @@ namespace DSPRE
             {
                 AppMessages.Error($"File to decompress \"{overlayFilePath}\" doesn't exist",
                     "Overlay not found");
-                return ERR_OVERLAY_NOTFOUND;
+                return ErrOverlayNotfound;
             }
 
             if (makeBackup)
             {
-                if (File.Exists(overlayFilePath + backupSuffix))
+                if (File.Exists(overlayFilePath + BackupSuffix))
                 {
-                    File.Delete(overlayFilePath + backupSuffix);
+                    File.Delete(overlayFilePath + BackupSuffix);
                 }
-                PlainFiles.Copy(overlayFilePath, overlayFilePath + backupSuffix);
+                PlainFiles.Copy(overlayFilePath, overlayFilePath + BackupSuffix);
             }
 
             Process decompress = DSUtils.CreateDecompressProcess(overlayFilePath);
-            if (decompress == null) return DSUtils.ERR_TOOL_UNAVAILABLE;
+            if (decompress == null) return DSUtils.ErrToolUnavailable;
             decompress.Start();
             decompress.WaitForExit();
             return decompress.ExitCode;

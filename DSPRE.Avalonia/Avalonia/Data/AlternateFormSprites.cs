@@ -35,7 +35,7 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>The table for whichever game is open.</summary>
-        public static Form[] ForCurrentGame() => RomInfo.gameFamily switch
+        public static Form[] ForCurrentGame() => RomInfo.GameFamily switch
         {
             RomInfo.GameFamilies.DP => GetFormDataDP(),
             RomInfo.GameFamilies.Plat => GetFormDataPt(),
@@ -43,7 +43,7 @@ namespace DSPRE.Avalonia.Data
         };
 
         /// <summary>The Substitute doll and battle shadow, stored after the forms but not offered as forms.</summary>
-        public static Form[] ExtrasForCurrentGame() => RomInfo.isHGE ? Array.Empty<Form>() : RomInfo.gameFamily switch
+        public static Form[] ExtrasForCurrentGame() => RomInfo.IsHGE ? Array.Empty<Form>() : RomInfo.GameFamily switch
         {
             RomInfo.GameFamilies.DP => new Form[] { new("Substitute doll", 208, 209, 210, 210), new("Shadow", 211, 211, 212, 212) },
             RomInfo.GameFamilies.Plat => new Form[] { new("Substitute doll", 248, 249, 250, 250), new("Shadow", 251, 251, 252, 252) },

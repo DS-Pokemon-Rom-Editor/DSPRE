@@ -47,7 +47,7 @@ namespace DSPRE.ROMFiles
 
         public static string WhyNot(Kind kind)
         {
-            if (isHGE) return "hg-engine keeps these lists in its own source.";
+            if (IsHGE) return "hg-engine keeps these lists in its own source.";
             MoveListSites sites = RomLocator.MoveListSitesOf(TableOf(kind));
             if (sites == null) return "Works on " + DescribeDumps(RomLocator.MoveListDumps(TableOf(kind))) + ".";
             return RomLocator.WhyNot(TableOf(kind), sites.VanillaCapacity * 2);
@@ -91,7 +91,7 @@ namespace DSPRE.ROMFiles
 
             // The list ends at its first 0xFFFF, so a halfword is the least it can be.
             (int region, int offset) = RamAddress.Find(ram, 2, RamAddress.Overlay(spot.Overlay, ov.Length),
-                RamAddress.Synthetic(File.Exists(Filesystem.expArmPath) ? new FileInfo(Filesystem.expArmPath).Length : 0));
+                RamAddress.Synthetic(File.Exists(Filesystem.ExpArmPath) ? new FileInfo(Filesystem.ExpArmPath).Length : 0));
             if (region == 0)
             {
                 _path = _ovPath; _offset = offset;
@@ -101,7 +101,7 @@ namespace DSPRE.ROMFiles
             }
             else if (region == 1)
             {
-                _path = Filesystem.expArmPath; _offset = offset;
+                _path = Filesystem.ExpArmPath; _offset = offset;
                 Where = "in the expanded ARM9 area";
                 byte[] synth = File.ReadAllBytes(_path);
                 (long Start, long End) block = SyntheticOverlaySpace.Blocks(synth, MarkerOf(Which))
@@ -169,27 +169,27 @@ namespace DSPRE.ROMFiles
             BitConverter.GetBytes((uint)ExpandedCapacity).CopyTo(block, 0x14);
             for (int i = 0; i < Moves.Count; i++) BitConverter.GetBytes(Moves[i]).CopyTo(block, SyntheticOverlaySpace.HeaderSize + 2 * i);
 
-            byte[] synth = File.ReadAllBytes(Filesystem.expArmPath);
+            byte[] synth = File.ReadAllBytes(Filesystem.ExpArmPath);
             int at = SyntheticOverlaySpace.Place(synth, block.Length, SyntheticOverlaySpace.Reserved(synth));
             if (at < 0) throw new InvalidOperationException($"No free space was found in the expanded ARM9 area for the {NameOf(Which)} move list.");
             byte[] ov = File.ReadAllBytes(_ovPath);
             byte[] ovBefore = (byte[])ov.Clone(), synthBefore = (byte[])synth.Clone();
             block.CopyTo(synth, at);
-            uint ram = synthOverlayLoadAddress + (uint)(at + SyntheticOverlaySpace.HeaderSize);
+            uint ram = SynthOverlayLoadAddress + (uint)(at + SyntheticOverlaySpace.HeaderSize);
             BitConverter.GetBytes(ram).CopyTo(ov, _sites.PointerSite);
             ov[_sites.CountCompare] = (byte)Moves.Count;
             try
             {
-                DSUtils.WriteWholeFile(Filesystem.expArmPath, synth);
+                DSUtils.WriteWholeFile(Filesystem.ExpArmPath, synth);
                 DSUtils.WriteWholeFile(_ovPath, ov);
             }
             catch
             {
-                DSUtils.WriteWholeFile(Filesystem.expArmPath, synthBefore);
+                DSUtils.WriteWholeFile(Filesystem.ExpArmPath, synthBefore);
                 DSUtils.WriteWholeFile(_ovPath, ovBefore);
                 throw;
             }
-            _path = Filesystem.expArmPath;
+            _path = Filesystem.ExpArmPath;
             _offset = at + SyntheticOverlaySpace.HeaderSize;
             Capacity = ExpandedCapacity;
             InExpansion = true;

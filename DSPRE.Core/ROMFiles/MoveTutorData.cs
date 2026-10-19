@@ -42,15 +42,15 @@ namespace DSPRE.ROMFiles
 
         private MoveTutorData(bool platinum) { Platinum = platinum; }
 
-        private static string HgMaskPath => Path.Combine(dataPath, "fielddata", "wazaoshie", "waza_oshie.bin");
+        private static string HgMaskPath => Path.Combine(DataPath, "fielddata", "wazaoshie", "waza_oshie.bin");
 
         private static bool UsesSource => HgEngine.HgEngineProject.IsActive;
 
         public static string WhyNot()
         {
             if (UsesSource) return null;
-            if (gameFamily == GameFamilies.DP) return "Diamond and Pearl have no move tutors.";
-            bool pt = gameFamily == GameFamilies.Plat;
+            if (GameFamily == GameFamilies.DP) return "Diamond and Pearl have no move tutors.";
+            bool pt = GameFamily == GameFamilies.Plat;
             if (RomLocator.WhyNot(RomLocator.Thing.TutorPool, (pt ? 38 * 12 : 52 * 4)) is string why) return why;
             if (pt) return RomLocator.WhyNot(RomLocator.Thing.TutorCompatibility, Rows * 5);
             if (!File.Exists(HgMaskPath)) return "waza_oshie.bin is missing from this project.";
@@ -61,7 +61,7 @@ namespace DSPRE.ROMFiles
         {
             if (WhyNot() is string why) throw new InvalidOperationException(why);
             if (UsesSource) return LoadSource();
-            MoveTutorData data = new MoveTutorData(gameFamily == GameFamilies.Plat);
+            MoveTutorData data = new MoveTutorData(GameFamily == GameFamilies.Plat);
             byte[] pool = RomLocator.Read(RomLocator.Thing.TutorPool, data.PoolSize * data.RecordSize);
             byte[] masks = data.Platinum ? RomLocator.Read(RomLocator.Thing.TutorCompatibility, Rows * 5) : File.ReadAllBytes(HgMaskPath);
             data.Restore(pool, masks);

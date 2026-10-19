@@ -42,8 +42,8 @@ namespace DSPRE.HgEngine
                 MakeTargets = new[] { "build/narc/personal.narc", "build/narc/a033.narc" },
                 NarcByDir = new Dictionary<DirNames, string>
                 {
-                    [DirNames.personalPokeData] = "build/narc/personal.narc",
-                    [DirNames.learnsets] = "build/narc/a033.narc",
+                    [DirNames.PersonalPokeData] = "build/narc/personal.narc",
+                    [DirNames.Learnsets] = "build/narc/a033.narc",
                 },
             },
             new HgEngineDomainInfo
@@ -53,8 +53,8 @@ namespace DSPRE.HgEngine
                 MakeTargets = new[] { "build/narc/a055.narc" },
                 NarcByDir = new Dictionary<DirNames, string>
                 {
-                    [DirNames.trainerProperties] = "build/narc/a055.narc",
-                    [DirNames.trainerParty] = "build/narc/a056.narc",
+                    [DirNames.TrainerProperties] = "build/narc/a055.narc",
+                    [DirNames.TrainerParty] = "build/narc/a056.narc",
                 },
             },
             new HgEngineDomainInfo
@@ -62,21 +62,21 @@ namespace DSPRE.HgEngine
                 Domain = HgEngineDomain.Items,
                 SourceFileRelPath = "data/itemdata/itemdata.c",
                 MakeTargets = new[] { "build/narc/itemdata.narc" },
-                NarcByDir = new Dictionary<DirNames, string> { [DirNames.itemData] = "build/narc/itemdata.narc" },
+                NarcByDir = new Dictionary<DirNames, string> { [DirNames.ItemData] = "build/narc/itemdata.narc" },
             },
             new HgEngineDomainInfo
             {
                 Domain = HgEngineDomain.Moves,
                 SourceFileRelPath = "data/Moves.c",
                 MakeTargets = new[] { "build/narc/a011.narc" },
-                NarcByDir = new Dictionary<DirNames, string> { [DirNames.moveData] = "build/narc/a011.narc" },
+                NarcByDir = new Dictionary<DirNames, string> { [DirNames.MoveData] = "build/narc/a011.narc" },
             },
             new HgEngineDomainInfo
             {
                 Domain = HgEngineDomain.Encounters,
                 SourceFileRelPath = "data/Encounters.c",
                 MakeTargets = new[] { "build/narc/encounters.narc" },
-                NarcByDir = new Dictionary<DirNames, string> { [DirNames.encounters] = "build/narc/encounters.narc" },
+                NarcByDir = new Dictionary<DirNames, string> { [DirNames.Encounters] = "build/narc/encounters.narc" },
             },
             new HgEngineDomainInfo
             {
@@ -84,7 +84,7 @@ namespace DSPRE.HgEngine
                 Domain = HgEngineDomain.SpriteOffsets,
                 SourceFileRelPath = "data/SpriteOffsets.c",
                 MakeTargets = new[] { "build/narc/spriteoffsets.narc" },
-                NarcByDir = new Dictionary<DirNames, string> { [DirNames.pokemonSpriteOffsets] = "build/narc/spriteoffsets.narc" },
+                NarcByDir = new Dictionary<DirNames, string> { [DirNames.PokemonSpriteOffsets] = "build/narc/spriteoffsets.narc" },
             },
             new HgEngineDomainInfo
             {
@@ -94,8 +94,8 @@ namespace DSPRE.HgEngine
                 MakeTargets = new[] { "build/narc/pokegra.narc", "build/narc/otherpoke.narc" },
                 NarcByDir = new Dictionary<DirNames, string>
                 {
-                    [DirNames.pokemonBattleSprites] = "build/narc/pokegra.narc",
-                    [DirNames.otherPokemonBattleSprites] = "build/narc/otherpoke.narc",
+                    [DirNames.PokemonBattleSprites] = "build/narc/pokegra.narc",
+                    [DirNames.OtherPokemonBattleSprites] = "build/narc/otherpoke.narc",
                 },
                 SyncOncePerSession = true,
             },
@@ -107,8 +107,8 @@ namespace DSPRE.HgEngine
                 MakeTargets = new[] { "build/narc/trainer_gfx.narc", "build/narc/trainer_back_gfx.narc" },
                 NarcByDir = new Dictionary<DirNames, string>
                 {
-                    [DirNames.trainerGraphics] = "build/narc/trainer_gfx.narc",
-                    [DirNames.trainerBackGraphics] = "build/narc/trainer_back_gfx.narc",
+                    [DirNames.TrainerGraphics] = "build/narc/trainer_gfx.narc",
+                    [DirNames.TrainerBackGraphics] = "build/narc/trainer_back_gfx.narc",
                 },
                 SyncOncePerSession = true,
             },

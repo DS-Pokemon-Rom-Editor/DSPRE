@@ -98,10 +98,10 @@ namespace DSPRE.HgEngine
         public static void CompleteAdd(PendingMove pending)
         {
             HgEngineSymbolTable.ClearCache();
-            TextArchive names = new ROMFiles.TextArchive(RomInfo.attackNamesTextNumber);
-            while (names.messages.Count < pending.Id) names.messages.Add("");
-            names.messages.Insert(pending.Id, pending.DisplayName);
-            names.SaveToExpandedDir(RomInfo.attackNamesTextNumber, showSuccessMessage: false);
+            TextArchive names = new ROMFiles.TextArchive(RomInfo.AttackNamesTextNumber);
+            while (names.Messages.Count < pending.Id) names.Messages.Add("");
+            names.Messages.Insert(pending.Id, pending.DisplayName);
+            names.SaveToExpandedDir(RomInfo.AttackNamesTextNumber, showSuccessMessage: false);
         }
 
         private const string ConfigRelPath = "include/config.h";

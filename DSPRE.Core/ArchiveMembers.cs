@@ -17,7 +17,7 @@ namespace DSPRE
         /// <summary>The archive, the member, the bytes it held before (null when new) and now (null when deleted).</summary>
         public static event Action<DirNames, int, byte[], byte[]> Written;
 
-        public static string PathOf(DirNames dir, int id) => Path.Combine(gameDirs[dir].unpackedDir, id.ToString("D4"));
+        public static string PathOf(DirNames dir, int id) => Path.Combine(GameDirs[dir].unpackedDir, id.ToString("D4"));
 
         public static void Put(DirNames dir, int id, byte[] data)
         {
@@ -43,7 +43,7 @@ namespace DSPRE
         /// </summary>
         public static void ShiftUpFollowingCheckout(DirNames dir, int from)
         {
-            string folder = gameDirs[dir].unpackedDir;
+            string folder = GameDirs[dir].unpackedDir;
             int last = Directory.GetFiles(folder).Select(Path.GetFileName).Select(n => int.TryParse(n, out int i) ? i : -1).Max();
             for (int i = last; i >= from; i--) File.Move(PathOf(dir, i), PathOf(dir, i + 1));
         }
@@ -84,11 +84,11 @@ namespace DSPRE
         {
             dir = default;
             id = -1;
-            if (gameDirs == null || string.IsNullOrEmpty(path)) return false;
+            if (GameDirs == null || string.IsNullOrEmpty(path)) return false;
             string full = System.IO.Path.GetFullPath(path);
             if (!int.TryParse(System.IO.Path.GetFileName(full), out id)) return false;
             string folder = System.IO.Path.GetDirectoryName(full);
-            foreach (KeyValuePair<DirNames, (string packedDir, string unpackedDir)> d in gameDirs)
+            foreach (KeyValuePair<DirNames, (string packedDir, string unpackedDir)> d in GameDirs)
             {
                 if (string.IsNullOrEmpty(d.Value.unpackedDir)) continue;
                 if (!string.Equals(System.IO.Path.GetFullPath(d.Value.unpackedDir).TrimEnd('\\', '/'), folder, StringComparison.OrdinalIgnoreCase)) continue;

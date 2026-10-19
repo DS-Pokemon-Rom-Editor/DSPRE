@@ -70,7 +70,7 @@ namespace DSPRE.Avalonia
             "                ",
         };
 
-        private static readonly Dictionary<string, OverworldSprites.SpritePixels> _cache =
+        private static readonly Dictionary<string, OverworldSprites.SpritePixels> Cache =
             new Dictionary<string, OverworldSprites.SpritePixels>();
 
         /// <summary>The mark an emote action by this name puts up.</summary>
@@ -80,7 +80,7 @@ namespace DSPRE.Avalonia
                          : actionName != null && actionName.Contains("Double", StringComparison.Ordinal) ? Double
                          : Exclamation;
             string key = art == Question ? "?" : art == Double ? "!!" : "!";
-            if (_cache.TryGetValue(key, out OverworldSprites.SpritePixels hit)) return hit;
+            if (Cache.TryGetValue(key, out OverworldSprites.SpritePixels hit)) return hit;
 
             int h = art.Length, w = art[0].Length;
             byte[] rgba = new byte[w * h * 4];
@@ -99,7 +99,7 @@ namespace DSPRE.Avalonia
                 }
 
             OverworldSprites.SpritePixels pix = new OverworldSprites.SpritePixels { Rgba = rgba, Width = w, Height = h };
-            _cache[key] = pix;
+            Cache[key] = pix;
             return pix;
         }
     }

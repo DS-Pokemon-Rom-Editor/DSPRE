@@ -65,8 +65,8 @@ namespace DSPRE.Tests
             Assert.True(HgEngineMoveExpansion.TryPrepare(MovesHeader, MovesSource, "Moon Beam", null, out HgEngineMoveExpansion.PendingMove pending, out string header, out string source, out string error), error);
             MoveData move = EmptyMove();
             Assert.True(HgEngineSourceFields.TryRead(pending.Entry, HgEngineMoveSource.Fields, move, Lookup, out error), error);
-            Assert.Equal(5, move.pp);
-            Assert.Equal(MoveData.MoveSplit.STATUS, move.split);
+            Assert.Equal(5, move.Pp);
+            Assert.Equal(MoveData.MoveSplit.STATUS, move.Split);
 
             Assert.True(HgEngineMoveExpansion.TryBuildCommit(MovesHeader, MovesSource, pending, move, null, _ => Lookup,
                 out string committedHeader, out string committedSource, out error), error);
@@ -81,8 +81,8 @@ namespace DSPRE.Tests
             Assert.True(HgEngineMoveExpansion.TryPrepare(MovesHeader, MovesSource, "Moon Beam", null, out HgEngineMoveExpansion.PendingMove pending, out _, out string source, out string error), error);
             MoveData move = EmptyMove();
             Assert.True(HgEngineSourceFields.TryRead(pending.Entry, HgEngineMoveSource.Fields, move, Lookup, out error), error);
-            move.damage = 80;
-            move.pp = 15;
+            move.Damage = 80;
+            move.Pp = 15;
 
             Assert.True(HgEngineMoveExpansion.TryBuildCommit(MovesHeader, MovesSource, pending, move, null, _ => Lookup,
                 out _, out string committed, out error), error);
@@ -232,9 +232,9 @@ namespace DSPRE.Tests
         {
             MoveData pound = Read(ThreeMoves, "MOVE_POUND");
             MoveData slap = Read(ThreeMoves, "MOVE_DOUBLE_SLAP");
-            pound.damage = 45;
-            slap.damage = 20;
-            slap.pp = 15;
+            pound.Damage = 45;
+            slap.Damage = 20;
+            slap.Pp = 15;
 
             string text = ThreeMoves;
             Assert.True(HgEngineMoveSource.TryApply(ref text, new[] { ("MOVE_DOUBLE_SLAP", slap), ("MOVE_POUND", pound) }, _ => Lookup, out string error), error);
@@ -245,8 +245,8 @@ namespace DSPRE.Tests
             Assert.Equal(expected, text);
             Assert.Equal(3, Regex.Matches(text, @"\.power =").Count);
             Assert.Equal(3, Regex.Matches(text, @"\.pp =").Count);
-            Assert.Equal(50, Read(text, "MOVE_KARATE_CHOP").damage);
-            Assert.Equal(20, Read(text, "MOVE_DOUBLE_SLAP").damage);
+            Assert.Equal(50, Read(text, "MOVE_KARATE_CHOP").Damage);
+            Assert.Equal(20, Read(text, "MOVE_DOUBLE_SLAP").Damage);
 
             // Applying the same staged records again changes nothing.
             string again = text;
@@ -258,7 +258,7 @@ namespace DSPRE.Tests
         public void StagedImport_AMissingMoveWritesNothing()
         {
             MoveData pound = Read(ThreeMoves, "MOVE_POUND");
-            pound.damage = 99;
+            pound.Damage = 99;
             string text = ThreeMoves;
 
             Assert.False(HgEngineMoveSource.TryApply(ref text, new[] { ("MOVE_POUND", pound), ("MOVE_NOT_THERE", EmptyMove()) }, _ => Lookup, out string error));

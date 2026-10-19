@@ -27,7 +27,7 @@ namespace DSPRE.Avalonia
     public static class AvaloniaEditorLauncher
     {
         /// <summary>True once a ROM has been opened and <see cref="RomInfo"/> populated.</summary>
-        public static bool IsRomLoaded => gameFamily != GameFamilies.NULL;
+        public static bool IsRomLoaded => GameFamily != GameFamilies.NULL;
 
         /// <summary>
         /// The one chokepoint for opening an editor, shared with the menus through <see cref="EditorAvailability"/>: it
@@ -51,7 +51,7 @@ namespace DSPRE.Avalonia
                 string[] all = names();
                 return index >= 0 && index < all.Length && !string.IsNullOrWhiteSpace(all[index]) ? " at " + all[index].Trim() : "";
             }
-            catch { return ""; }
+            catch (System.Exception ex) { AppLogger.WarnOnce("AvaloniaEditorLauncher.At", ex); return ""; }
         }
 
         private static System.Threading.Tasks.Task RunBusyAsync(string busyText, string busyHint, System.Action work)
@@ -83,12 +83,12 @@ namespace DSPRE.Avalonia
             {
                 // The species list is counted from the personal data, which a fresh project has not unpacked yet.
                 await OpenBehindCardAsync("Opening Audio Editor…", "Reading the cries, music and sound effects.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData }),
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.PersonalPokeData }),
                     () =>
                     {
                         string[] names;
                         try { names = GetPokemonNamesWithForms(GetPersonalFilesCount()); }
-                        catch { names = System.Array.Empty<string>(); }
+                        catch (System.Exception ex) { AppLogger.WarnOnce("AvaloniaEditorLauncher.OpenAudioEditorAsync", ex); names = System.Array.Empty<string>(); }
                         AudioEditorViewModel vm = new ViewModels.Audio.AudioEditorViewModel(names);
                         if (showCryFor > 0) vm.ShowCryFor(showCryFor);
                         return new Views.Audio.AudioEditorView(vm);
@@ -96,7 +96,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("The Audio Editor could not be opened:" + System.Environment.NewLine + ex.Message, "Audio editor error");
+                await DialogHelper.ShowErrorAsync("The Audio Editor could not be opened:" + System.Environment.NewLine + ex.Message, "Audio editor error");
             }
         }
 
@@ -115,12 +115,12 @@ namespace DSPRE.Avalonia
                 await BusyOverlay.RunAsync("Opening Pokémon Editor" + (initialMon != 1 ? At(GetPokemonNames, initialMon) : "") + "…",
                     "Reading species data, learnsets, evolutions, the Pokédex and sprites.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> {
-                        DirNames.personalPokeData, DirNames.learnsets, DirNames.evolutions, DirNames.monIcons,
-                        DirNames.pokedexAreas, DirNames.pokedexData, DirNames.pokedexDataAltered, DirNames.footprintGraphics,
-                        DirNames.pokedexSearchSteps, DirNames.regionalDexSpecies, DirNames.regionalDexNumbers,
-                        DirNames.pokemonBattleSprites, DirNames.otherPokemonBattleSprites, DirNames.pokeHeight, DirNames.pokeHeightForms,
-                        DirNames.pokemonSpriteOffsets, DirNames.pokeYofs, DirNames.pokeShadowOfx, DirNames.pokeShadow,
-                        DirNames.pokeAnim, DirNames.pokeAnimDefs, DirNames.battleBg, DirNames.battleObj, DirNames.windowFrames }),
+                        DirNames.PersonalPokeData, DirNames.Learnsets, DirNames.Evolutions, DirNames.MonIcons,
+                        DirNames.PokedexAreas, DirNames.PokedexData, DirNames.PokedexDataAltered, DirNames.FootprintGraphics,
+                        DirNames.PokedexSearchSteps, DirNames.RegionalDexSpecies, DirNames.RegionalDexNumbers,
+                        DirNames.PokemonBattleSprites, DirNames.OtherPokemonBattleSprites, DirNames.PokeHeight, DirNames.PokeHeightForms,
+                        DirNames.PokemonSpriteOffsets, DirNames.PokeYofs, DirNames.PokeShadowOfx, DirNames.PokeShadow,
+                        DirNames.PokeAnim, DirNames.PokeAnimDefs, DirNames.BattleBg, DirNames.BattleObj, DirNames.WindowFrames }),
                     () =>
                     {
                         SetMonIconsPalTableAddress();
@@ -137,7 +137,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the Pokémon Editor: " + ex.Message, "Pokémon editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Pokémon Editor: " + ex.Message, "Pokémon editor error");
             }
         }
 
@@ -174,7 +174,7 @@ namespace DSPRE.Avalonia
             try
             {
                 await OpenBehindCardAsync("Opening Move Data Editor" + (initialIndex > 0 ? At(GetAttackNames, initialIndex) : "") + "…", "Reading every move.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.moveData }),
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.MoveData }),
                     () =>
                     {
                         MoveDataEditorView view = new MoveDataEditorView();
@@ -185,7 +185,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the Move Data Editor: " + ex.Message, "Move data editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Move Data Editor: " + ex.Message, "Move data editor error");
             }
         }
 
@@ -230,7 +230,7 @@ namespace DSPRE.Avalonia
             try
             {
                 await OpenBehindCardAsync("Opening Item Editor" + (initialIndex > 1 ? At(GetItemNames, initialIndex) : "") + "…", "Reading every item and its icon.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemData, DirNames.itemIcons }),
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.ItemData, DirNames.ItemIcons }),
                     () =>
                     {
                         ItemEditorViewModel vm = new ItemEditorViewModel(GetItemNames());
@@ -240,7 +240,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the Item Editor: " + ex.Message, "Item editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Item Editor: " + ex.Message, "Item editor error");
             }
         }
 
@@ -281,7 +281,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                _ = DialogHelper.ShowError("The Mart Editor could not be opened:" + System.Environment.NewLine + ex.Message,
+                _ = DialogHelper.ShowErrorAsync("The Mart Editor could not be opened:" + System.Environment.NewLine + ex.Message,
                     "Mart editor error");
             }
         }
@@ -295,7 +295,7 @@ namespace DSPRE.Avalonia
             try
             {
                 await OpenBehindCardAsync("Opening Trade Editor…", "Reading the in-game trades.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.tradeData }),
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TradeData }),
                     () =>
                     {
                         TradeEditorView view = new TradeEditorView();
@@ -306,7 +306,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the Trade Editor: " + ex.Message, "Trade editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Trade Editor: " + ex.Message, "Trade editor error");
             }
         }
 
@@ -322,13 +322,13 @@ namespace DSPRE.Avalonia
             try
             {
                 await OpenBehindCardAsync("Opening Text Editor…", "Reading every text archive.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.textArchives }),
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TextArchives }),
                     () => new EditorHostWindow("Text editor",
                         new TextEditorView(new TextEditorViewModel(true) { InitialIndex = initialIndex, InitialLine = initialLine }), 980, 640));
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the Text Editor: " + ex.Message, "Text editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Text Editor: " + ex.Message, "Text editor error");
             }
         }
 
@@ -357,7 +357,7 @@ namespace DSPRE.Avalonia
         public static string GoToScript(int scriptNumber, System.Func<int> pairedScriptFile, out bool opened)
         {
             opened = false;
-            CommonScriptId.Result result = CommonScriptId.Resolve(gameFamily, scriptNumber);
+            CommonScriptId.Result result = CommonScriptId.Resolve(GameFamily, scriptNumber);
             if (result.Kind == CommonScriptId.Kind.Resolved)
             {
                 OpenScriptEditor(result.ScriptArchiveId, result.ManualUserId);
@@ -393,8 +393,8 @@ namespace DSPRE.Avalonia
         {
             if (!IsRomLoaded) return;
             // On hg-engine only Headbutt, and Safari once a checkout is linked, are edited from source here.
-            bool headbuttOnly = RomInfo.isHGE;
-            if (headbuttOnly && (gameFamily != GameFamilies.HGSS || Refused("SpecialEncountersEditorView"))) return;
+            bool headbuttOnly = RomInfo.IsHGE;
+            if (headbuttOnly && (GameFamily != GameFamilies.HGSS || Refused("SpecialEncountersEditorView"))) return;
             new SpecialEncountersEditorView(new SpecialEncountersEditorViewModel(headbuttOnly, headbuttFile)).ShowManaged();
         }
 
@@ -418,7 +418,7 @@ namespace DSPRE.Avalonia
             }
             try
             {
-                if (whyNot() is string why) { _ = DialogHelper.ShowInfo(why, title); return; }
+                if (whyNot() is string why) { _ = DialogHelper.ShowInfoAsync(why, title); return; }
                 EditorHostWindow window = new EditorHostWindow(title, make(), width, height)
                 {
                     MinWidth = System.Math.Min(width, minWidth),
@@ -429,7 +429,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex) when (ex is System.IO.IOException || ex is System.IO.InvalidDataException || ex is System.InvalidOperationException
                                               || ex is System.ArgumentException || ex is System.UnauthorizedAccessException)
             {
-                _ = DialogHelper.ShowError(title + " could not be opened:\n" + ex.Message, title);
+                _ = DialogHelper.ShowErrorAsync(title + " could not be opened:\n" + ex.Message, title);
             }
         }
 
@@ -476,7 +476,7 @@ namespace DSPRE.Avalonia
             try
             {
                 await OpenBehindCardAsync("Opening TM/HM Bulk Editor…", "Reading which Pokémon learn each TM and HM.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData, DirNames.evolutions }),
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.PersonalPokeData, DirNames.Evolutions }),
                     () =>
                     {
                         TmHmBulkEditorViewModel vm = new TmHmBulkEditorViewModel(GetPokemonNames());
@@ -486,7 +486,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the TM/HM Bulk Editor: " + ex.Message, "TM / HM bulk editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the TM/HM Bulk Editor: " + ex.Message, "TM / HM bulk editor error");
             }
         }
 
@@ -508,23 +508,23 @@ namespace DSPRE.Avalonia
             try
             {
                 await OpenBehindCardAsync("Opening Wild Pokémon Editor…", "Reading this game's encounter files.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.encounters, DirNames.monIcons }), BuildWild);
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.Encounters, DirNames.MonIcons }), BuildWild);
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the Wild Pokémon Editor: " + ex.Message, "Wild Pokémon editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Wild Pokémon Editor: " + ex.Message, "Wild Pokémon editor error");
             }
 
             global::Avalonia.Controls.Window BuildWild()
             {
-                string path = gameDirs[DirNames.encounters].unpackedDir;
+                string path = GameDirs[DirNames.Encounters].unpackedDir;
                 string[] names = GetPokemonNames();
                 int headerCount = GetHeaderCount();
                 // Standalone instances aren't shared with the embedded Maps-workspace tab, so each one must
                 // unsubscribe its own AppEvents.NamesChanged hook when its window closes (EditorHostWindow has
                 // no generic post-close hook for this; the embedded tab's single long-lived instance never
                 // needs Detach at all, matching every other embedded-editor VM's lifetime).
-                if (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat)
+                if (GameFamily == GameFamilies.DP || GameFamily == GameFamilies.Plat)
                 {
                     WildEditorDPPtViewModel vm = new WildEditorDPPtViewModel(path, names, initialIndex, headerCount);
                     EditorHostWindow window = new EditorHostWindow("Wild Pokémon editor (DPPt)", new WildEditorDPPtView(vm), 1000, 680) { MinWidth = 960, MinHeight = 520 };
@@ -595,7 +595,7 @@ namespace DSPRE.Avalonia
         {
             if (Refused(typeof(TView).Name)) return;
             if (BringForward<TView, TModel>(vm => goTo?.Invoke(vm))) return;
-            if (VsIntroTables.WhyNot() is string why) { _ = DialogHelper.ShowInfo(why, title); return; }
+            if (VsIntroTables.WhyNot() is string why) { _ = DialogHelper.ShowInfoAsync(why, title); return; }
 
             TModel vm = make();
             try
@@ -607,7 +607,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex) when (ex is System.IO.IOException || ex is System.IO.InvalidDataException
                                               || ex is System.InvalidOperationException || ex is System.UnauthorizedAccessException)
             {
-                _ = DialogHelper.ShowError(title + " could not be opened:\n" + ex.Message, title);
+                _ = DialogHelper.ShowErrorAsync(title + " could not be opened:\n" + ex.Message, title);
             }
         }
 
@@ -626,12 +626,12 @@ namespace DSPRE.Avalonia
             try
             {
                 await OpenBehindCardAsync("Opening Trainer Editor" + (initialIndex > 0 ? At(GetSimpleTrainerNames, initialIndex) : "") + "…", "Reading every trainer, party and trainer sprite.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties, DirNames.trainerParty, DirNames.trainerGraphics }),
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TrainerProperties, DirNames.TrainerParty, DirNames.TrainerGraphics }),
                     () => new TrainerEditorView(new TrainerEditorViewModel(true) { InitialIndex = initialIndex }));
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the Trainer Editor: " + ex.Message, "Trainer editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Trainer Editor: " + ex.Message, "Trainer editor error");
             }
         }
 
@@ -644,7 +644,7 @@ namespace DSPRE.Avalonia
             try
             {
                 await OpenBehindCardAsync("Opening Trainer Sprite Editor…", "Reading the trainer class sprites.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerGraphics }),
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TrainerGraphics }),
                     () =>
                     {
                         TrainerSpriteEditorView window = new TrainerSpriteEditorView(new TrainerSpriteEditorViewModel(initialClassIndex));
@@ -654,7 +654,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the Trainer Sprite Editor: " + ex.Message, "Trainer sprite editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Trainer Sprite Editor: " + ex.Message, "Trainer sprite editor error");
             }
         }
 
@@ -672,7 +672,7 @@ namespace DSPRE.Avalonia
                 "Reading every trainer's AI flags.",
                 () =>
                 {
-                    DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties });
+                    DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TrainerProperties });
                     vm = new TrainerFlagBulkEditorViewModel();
                 },
                 () => vm == null ? null : new EditorHostWindow("Trainer flag bulk editor", new TrainerFlagBulkEditorView(vm), 1050, 700));
@@ -737,14 +737,14 @@ namespace DSPRE.Avalonia
                     "Reading the phone book, contact names, trainers, maps and items.",
                     () =>
                     {
-                        DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties });
+                        DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TrainerProperties });
                         vm = new PokegearPhoneBookViewModel(initialEntry);
                     },
                     () => vm == null ? null : new EditorHostWindow("Pokégear phone book", new PokegearPhoneBookView(vm), 1320, 700));
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("The Pokégear Phone Book could not be opened:" + System.Environment.NewLine + ex.Message, "Pokégear phone book error");
+                await DialogHelper.ShowErrorAsync("The Pokégear Phone Book could not be opened:" + System.Environment.NewLine + ex.Message, "Pokégear phone book error");
             }
         }
 
@@ -757,12 +757,12 @@ namespace DSPRE.Avalonia
             try
             {
                 await OpenBehindCardAsync("Opening Starter Editor…", "Finding the starter script.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.scripts, DirNames.personalPokeData }),
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.Scripts, DirNames.PersonalPokeData }),
                     () => new StarterEditorView());
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the Starter Editor: " + ex.Message, "Starter editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Starter Editor: " + ex.Message, "Starter editor error");
             }
         }
 
@@ -772,7 +772,7 @@ namespace DSPRE.Avalonia
             if (Refused("FlyEditorView")) return;
             if (RomInfo.FlyTableUnverified)
             {
-                _ = DialogHelper.ShowError("The Fly / Warp Editor isn't checked against Japanese Pearl yet, so it stays closed rather than risk writing the wrong place.", "Fly / warp editor error");
+                _ = DialogHelper.ShowErrorAsync("The Fly / Warp Editor isn't checked against Japanese Pearl yet, so it stays closed rather than risk writing the wrong place.", "Fly / warp editor error");
                 return;
             }
             new FlyEditorView(HeaderLabels.Friendly().ToList()).ShowManaged();
@@ -807,7 +807,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenCellAnimationPicker failed: " + ex.Message);
-                await DialogHelper.ShowInfo("The animations could not be listed. " + ex.Message,
+                await DialogHelper.ShowInfoAsync("The animations could not be listed. " + ex.Message,
                                             "Cell animations");
             }
         }
@@ -839,7 +839,7 @@ namespace DSPRE.Avalonia
             if (Refused("CellAnimationEditorView")) return;
             if (animation < 0)
             {
-                _ = DialogHelper.ShowInfo("There is no animation file here to open.", "Cell animation");
+                _ = DialogHelper.ShowInfoAsync("There is no animation file here to open.", "Cell animation");
                 return;
             }
             // A second window on the same file would go stale and save over the first.
@@ -864,7 +864,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenCellAnimationEditor failed: " + ex.Message);
-                _ = DialogHelper.ShowInfo("That animation could not be opened. " + ex.Message,
+                _ = DialogHelper.ShowInfoAsync("That animation could not be opened. " + ex.Message,
                                           "Cell animation");
             }
         }
@@ -917,12 +917,12 @@ namespace DSPRE.Avalonia
             try
             {
                 await OpenBehindCardAsync("Opening Naming Screen Editor…", "Reading the naming screen's graphics.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.nameInputGraphics }),
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.NameInputGraphics }),
                     () => new TrainerSpriteEditorView(new TrainerSpriteEditorViewModel(48, TrainerSpriteSet.NamingIcons)));
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the Naming Screen Editor: " + ex.Message, "Naming screen editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Naming Screen Editor: " + ex.Message, "Naming screen editor error");
             }
         }
 
@@ -937,7 +937,7 @@ namespace DSPRE.Avalonia
                                               bool orthographic = false)
         {
             if (Refused("ParticleEditorView")) return;
-            if (gameDirs.ContainsKey(archive)) DSUtils.TryUnpackNarcs(new List<DirNames> { archive });
+            if (GameDirs.ContainsKey(archive)) DSUtils.TryUnpackNarcs(new List<DirNames> { archive });
             OpenParticleEditor(Data.ArchiveFiles.Mapped(archive), entry, what, changed, orthographic);
         }
 
@@ -966,7 +966,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenParticleEditor failed: " + ex.Message);
-                _ = DialogHelper.ShowInfo("These particles could not be opened. " + ex.Message, "Particles");
+                _ = DialogHelper.ShowInfoAsync("These particles could not be opened. " + ex.Message, "Particles");
             }
         }
 
@@ -982,9 +982,9 @@ namespace DSPRE.Avalonia
                 await OpenBehindCardAsync("Looking for particles…", "Reading every archive in the ROM.", () =>
                 {
                     DSUtils.TryUnpackNarcs(new List<DirNames> {
-                        DirNames.wazaParticle, DirNames.ballParticles, DirNames.wazaEffectScripts, DirNames.wazaEffectSub,
-                        DirNames.encounterEffectGraphics }
-                        .Where(d => gameDirs.ContainsKey(d)).ToList());
+                        DirNames.WazaParticle, DirNames.BallParticles, DirNames.WazaEffectScripts, DirNames.WazaEffectSub,
+                        DirNames.EncounterEffectGraphics }
+                        .Where(d => GameDirs.ContainsKey(d)).ToList());
                     vm.Gather();
                 },
                 () => { vm.Ready(); return new Views.Graphics.ParticleLibraryView(vm); });
@@ -992,7 +992,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenParticleLibrary failed: " + ex.Message);
-                await DialogHelper.ShowInfo("The particles could not be listed. " + ex.Message, "Particles");
+                await DialogHelper.ShowInfoAsync("The particles could not be listed. " + ex.Message, "Particles");
             }
         }
 
@@ -1010,9 +1010,9 @@ namespace DSPRE.Avalonia
                 await OpenBehindCardAsync("Opening Ball Capsules…", "Reading the seals and their effects.", () =>
                 {
                     DSUtils.TryUnpackNarcs(new List<DirNames> {
-                        DirNames.personalPokeData, DirNames.pokemonBattleSprites, DirNames.otherPokemonBattleSprites,
-                        DirNames.monIcons, DirNames.sealGraphics, DirNames.trainerCapsules, DirNames.fonts, DirNames.windowFrames }
-                        .Where(d => gameDirs.ContainsKey(d)).ToList());
+                        DirNames.PersonalPokeData, DirNames.PokemonBattleSprites, DirNames.OtherPokemonBattleSprites,
+                        DirNames.MonIcons, DirNames.SealGraphics, DirNames.TrainerCapsules, DirNames.Fonts, DirNames.WindowFrames }
+                        .Where(d => GameDirs.ContainsKey(d)).ToList());
                     Data.SendOutGraphics.Unpack();
                     usedBy = Data.TrainerCapsuleCatalog.UsedBy();
                 },
@@ -1028,7 +1028,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenBallCapsuleEditor failed: " + ex.Message);
-                await DialogHelper.ShowError("The Ball Capsule editor could not be opened: " + ex.Message, "Ball Capsules error");
+                await DialogHelper.ShowErrorAsync("The Ball Capsule editor could not be opened: " + ex.Message, "Ball Capsules error");
             }
         }
 
@@ -1037,7 +1037,7 @@ namespace DSPRE.Avalonia
             if (Refused("BannerEditorView")) return;
             if (!RomInfo.IsDsRomProject)
             {
-                await DialogHelper.ShowInfo(
+                await DialogHelper.ShowInfoAsync(
                     "Editing the game icon and banner titles requires a ds-rom-format project.\n" +
                     "Use File → Convert to ds-rom format, then reopen this editor.",
                     "ds-rom project required");
@@ -1192,7 +1192,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the Overworld Editor: " + ex.Message, "Overworld editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Overworld Editor: " + ex.Message, "Overworld editor error");
             }
         }
 
@@ -1225,7 +1225,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("The hg-engine ROM review could not be opened:" + System.Environment.NewLine + ex.Message, "hg-engine ROM review");
+                await DialogHelper.ShowErrorAsync("The hg-engine ROM review could not be opened:" + System.Environment.NewLine + ex.Message, "hg-engine ROM review");
             }
         }
 
@@ -1247,7 +1247,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("The Distortion World editor could not be opened:" + System.Environment.NewLine + ex.Message, "Distortion World error");
+                await DialogHelper.ShowErrorAsync("The Distortion World editor could not be opened:" + System.Environment.NewLine + ex.Message, "Distortion World error");
             }
         }
 
@@ -1394,7 +1394,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenGraphicsBrowser failed: " + ex.Message);
-                await DialogHelper.ShowInfo("The graphics list could not be opened. Open a ROM first.", "Graphics");
+                await DialogHelper.ShowInfoAsync("The graphics list could not be opened. Open a ROM first.", "Graphics");
             }
         }
 
@@ -1420,9 +1420,9 @@ namespace DSPRE.Avalonia
                 return;
             }
             int first = -1;
-            foreach (ScreenGraphicsLayouts.Entry e in Data.ScreenGraphicsLayouts.For(RomInfo.DirNames.pokedexGraphics))
+            foreach (ScreenGraphicsLayouts.Entry e in Data.ScreenGraphicsLayouts.For(RomInfo.DirNames.PokedexGraphics))
                 if (e.Kind == "NSCR" && e.Drawing >= 0) { first = e.Index; break; }
-            OpenGraphicAt(RomInfo.DirNames.pokedexGraphics, System.Math.Max(0, first), preferAssembled: true);
+            OpenGraphicAt(RomInfo.DirNames.PokedexGraphics, System.Math.Max(0, first), preferAssembled: true);
         }
 
         /// <summary>Opens the Pokémon summary screen's pages, put together with a sample Pokémon.</summary>
@@ -1441,14 +1441,14 @@ namespace DSPRE.Avalonia
             try
             {
                 await OpenBehindCardAsync("Opening Summary screen…", "Reading the summary pages and where the game puts their text.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.summaryGraphics, DirNames.summarySprites, DirNames.pokemonBattleSprites,
-                                                                      DirNames.monIcons, DirNames.battleObj, DirNames.personalPokeData, DirNames.moveData, DirNames.fonts }),
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.SummaryGraphics, DirNames.SummarySprites, DirNames.PokemonBattleSprites,
+                                                                      DirNames.MonIcons, DirNames.BattleObj, DirNames.PersonalPokeData, DirNames.MoveData, DirNames.Fonts }),
                     () => new Views.Graphics.SummaryScreenEditorView(new ViewModels.Graphics.ScreenPagesEditorViewModel(new Data.SummaryBook(), null)));
             }
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenSummaryScreen failed: " + ex.Message);
-                _ = DialogHelper.ShowInfo("That window could not be opened.", "Summary screen");
+                _ = DialogHelper.ShowInfoAsync("That window could not be opened.", "Summary screen");
             }
         }
 
@@ -1466,7 +1466,7 @@ namespace DSPRE.Avalonia
                 GraphicAssets.Archive a = Data.GraphicAssets.All.FirstOrDefault(x => x.Dir == archive);
                 if (a == null)
                 {
-                    await DialogHelper.ShowInfo("That kind of graphic is not one this window lists yet.", "Graphics");
+                    await DialogHelper.ShowInfoAsync("That kind of graphic is not one this window lists yet.", "Graphics");
                     return;
                 }
 
@@ -1494,7 +1494,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenGraphicAt failed: " + ex.Message);
-                await DialogHelper.ShowInfo("The graphics list could not be opened. Open a ROM first.", "Graphics");
+                await DialogHelper.ShowInfoAsync("The graphics list could not be opened. Open a ROM first.", "Graphics");
             }
         }
 
@@ -1507,12 +1507,12 @@ namespace DSPRE.Avalonia
             try
             {
                 await OpenBehindCardAsync("Opening Trainer Back Sprite Editor…", "Reading the player back sprites.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerBackGraphics }),
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TrainerBackGraphics }),
                     () => new TrainerSpriteEditorView(new TrainerSpriteEditorViewModel(initialSprite, TrainerSpriteSet.Backs)));
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowError("Couldn't open the Trainer Back Sprite Editor: " + ex.Message, "Trainer back sprite editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Trainer Back Sprite Editor: " + ex.Message, "Trainer back sprite editor error");
             }
         }
 
@@ -1521,10 +1521,10 @@ namespace DSPRE.Avalonia
         {
             switch (archive)
             {
-                case RomInfo.DirNames.pokemonBattleSprites:
+                case RomInfo.DirNames.PokemonBattleSprites:
                     return ("Pokémon Editor", () => { _ = OpenPokemonEditorAsync(fileIndex / 6); });
 
-                case RomInfo.DirNames.monIcons:
+                case RomInfo.DirNames.MonIcons:
                 {
                         PokemonIconFiles.Icon icon = DSPRE.ROMFiles.PokemonIconFiles.Describe(fileIndex);
                     if (icon == null) return null;
@@ -1532,32 +1532,32 @@ namespace DSPRE.Avalonia
                     return ("Pokémon Editor", () => { _ = OpenPokemonEditorAsync(entry); });
                 }
 
-                case RomInfo.DirNames.trainerGraphics:
+                case RomInfo.DirNames.TrainerGraphics:
                     return ("Trainer Sprite Editor", () => OpenTrainerSpriteEditor(TrainerGraphicsLayout.ClassOf(fileIndex)));
 
-                case RomInfo.DirNames.trainerBackGraphics:
+                case RomInfo.DirNames.TrainerBackGraphics:
                     return ("Trainer Back Sprite Editor", () => OpenTrainerBackSpriteEditor(TrainerGraphicsLayout.ClassOf(fileIndex)));
 
-                case RomInfo.DirNames.itemIcons:
+                case RomInfo.DirNames.ItemIcons:
                 {
                     int item = ItemUsingDrawing(fileIndex);
                     if (item < 0) return null;
                     return ("Item Editor", () => OpenItemEditor(item));
                 }
 
-                case RomInfo.DirNames.battleBg:
+                case RomInfo.DirNames.BattleBg:
                     return ("Battle scenes", OpenBattleSceneBrowser);
 
-                case RomInfo.DirNames.dungeonCutinGraphics:
+                case RomInfo.DirNames.DungeonCutinGraphics:
                     return ("Dungeon Cutin Editor", OpenDungeonCutinEditor);
 
-                case RomInfo.DirNames.trainerCardGraphics:
+                case RomInfo.DirNames.TrainerCardGraphics:
                     return ("Trainer Card Editor", OpenTrainerCardEditor);
 
-                case RomInfo.DirNames.sealGraphics:
+                case RomInfo.DirNames.SealGraphics:
                     return ("Ball Capsules", OpenBallCapsuleEditor);
 
-                case RomInfo.DirNames.encounterEffectGraphics:
+                case RomInfo.DirNames.EncounterEffectGraphics:
                     return ("VS Intro Editor", OpenVsIntroEditor);
 
                 default:
@@ -1574,7 +1574,7 @@ namespace DSPRE.Avalonia
                 for (int item = 0; item < names.Length; item++)
                     if (Data.GraphicAssets.DrawingForItem(item) == fileIndex) return item;
             }
-            catch { }
+            catch (System.Exception ex) { AppLogger.Warn("Item for drawing lookup: " + ex.Message); }
             return -1;
         }
 
@@ -1594,7 +1594,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenTilesetBuilder failed: " + ex.Message);
-                _ = DialogHelper.ShowInfo("That window could not be opened.", "Picture to background");
+                _ = DialogHelper.ShowInfoAsync("That window could not be opened.", "Picture to background");
             }
         }
 
@@ -1609,7 +1609,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenFontEditor failed: " + ex.Message);
-                _ = DialogHelper.ShowInfo("The fonts could not be opened. Open a ROM first.",
+                _ = DialogHelper.ShowInfoAsync("The fonts could not be opened. Open a ROM first.",
                                           "Font editor");
             }
         }
@@ -1622,13 +1622,13 @@ namespace DSPRE.Avalonia
             try
             {
                 await OpenBehindCardAsync("Opening HP bar layout…", "Reading the HP bars and the battle code that writes into them.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.battleObj, DirNames.battleBg, DirNames.windowFrames, DirNames.fonts }),
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.BattleObj, DirNames.BattleBg, DirNames.WindowFrames, DirNames.Fonts }),
                     () => new Views.Graphics.HpBarLayoutEditorView());
             }
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenHpBarLayoutEditor failed: " + ex.Message);
-                _ = DialogHelper.ShowInfo("That window could not be opened.", "HP bar layout");
+                _ = DialogHelper.ShowInfoAsync("That window could not be opened.", "HP bar layout");
             }
         }
 
@@ -1642,13 +1642,13 @@ namespace DSPRE.Avalonia
             {
                 await OpenBehindCardAsync("Opening Battle Screen…", "Reading battle backgrounds, gauges, text boxes and fonts.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> {
-                        DirNames.battleObj, DirNames.battleBg, DirNames.windowFrames, DirNames.fonts }),
+                        DirNames.BattleObj, DirNames.BattleBg, DirNames.WindowFrames, DirNames.Fonts }),
                     () => new Views.Battle.BattleScreenEditorView());
             }
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenBattleScreenEditor failed: " + ex.Message);
-                await DialogHelper.ShowInfo("The battle screen could not be opened. " + ex.Message,
+                await DialogHelper.ShowInfoAsync("The battle screen could not be opened. " + ex.Message,
                                             "Battle screen");
             }
         }
@@ -1664,7 +1664,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenBattleSceneBrowser failed: " + ex.Message);
-                _ = DialogHelper.ShowInfo("The battle scenes could not be opened. Open a ROM first.",
+                _ = DialogHelper.ShowInfoAsync("The battle scenes could not be opened. Open a ROM first.",
                                           "Battle scenes");
             }
         }
@@ -1687,7 +1687,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenModelBrowser failed: " + ex.Message);
-                await DialogHelper.ShowInfo("The models list could not be opened. Open a ROM first.", "Models");
+                await DialogHelper.ShowInfoAsync("The models list could not be opened. Open a ROM first.", "Models");
             }
         }
 

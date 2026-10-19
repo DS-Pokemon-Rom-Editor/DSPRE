@@ -31,14 +31,14 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (sender is not Control { Tag: int number } || ViewModel == null) return;
             (byte R, byte G, byte B)? now = ViewModel.PaletteColours.FirstOrDefault(s => s.Number == number)?.Fill is global::Avalonia.Media.ISolidColorBrush brush
                 ? (brush.Color.R, brush.Color.G, brush.Color.B) : null;
-            (byte R, byte G, byte B)? picked = await DialogHelper.PickColour(this, "Change colour " + number, now);
+            (byte R, byte G, byte B)? picked = await DialogHelper.PickColourAsync(this, "Change colour " + number, now);
             if (picked == null) return;
             string err = ViewModel.SetPaletteColour(number, picked.Value.R, picked.Value.G, picked.Value.B);
-            if (err != null) await DialogHelper.ShowError(err, "Change colour");
+            if (err != null) await DialogHelper.ShowErrorAsync(err, "Change colour");
         }
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) ViewModel?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) ViewModel?.DiscardChanges();
         }
 
         /// <summary>Empties the search box, which is what the button beside it is for.</summary>
@@ -53,12 +53,12 @@ namespace DSPRE.Avalonia.Views.Graphics
             GraphicsBrowserViewModel vm = ViewModel;
             if (vm?.Selected == null) return;
 
-            string path = await DialogHelper.SaveFile(this, "Export PNG",
+            string path = await DialogHelper.SaveFileAsync(this, "Export PNG",
                 new[] { Png }, vm.SuggestedFileName(".png"));
             if (path == null) return;
 
             string err = vm.SavePicture(path);
-            if (err != null) { await DialogHelper.ShowError(err, "Graphics error"); return; }
+            if (err != null) { await DialogHelper.ShowErrorAsync(err, "Graphics error"); return; }
             SaveNotice.Exported(path);
         }
 
@@ -67,17 +67,17 @@ namespace DSPRE.Avalonia.Views.Graphics
             GraphicsBrowserViewModel vm = ViewModel;
             if (vm?.Selected == null)
             {
-                await DialogHelper.ShowInfo("Pick something on the left first.", "Export file");
+                await DialogHelper.ShowInfoAsync("Pick something on the left first.", "Export file");
                 return;
             }
 
-            string path = await DialogHelper.SaveFile(this, "Export file",
+            string path = await DialogHelper.SaveFileAsync(this, "Export file",
                 new[] { new FilePickerFileType("The file as it is in the ROM") { Patterns = new[] { "*.*" } } },
                 vm.SuggestedFileName(".bin"));
             if (path == null) return;
 
             string err = vm.SaveFileAsItIs(path);
-            if (err != null) { await DialogHelper.ShowError(err, "Graphics error"); return; }
+            if (err != null) { await DialogHelper.ShowErrorAsync(err, "Graphics error"); return; }
             SaveNotice.Exported(path);
         }
 
@@ -90,16 +90,16 @@ namespace DSPRE.Avalonia.Views.Graphics
             // here another way, so say it plainly rather than doing nothing.
             if (!vm.CanReplace)
             {
-                await DialogHelper.ShowInfo(vm.ReplaceHelp, "Import PNG");
+                await DialogHelper.ShowInfoAsync(vm.ReplaceHelp, "Import PNG");
                 return;
             }
 
-            string path = await DialogHelper.OpenFile(this, "Import PNG", new[] { Png });
+            string path = await DialogHelper.OpenFileAsync(this, "Import PNG", new[] { Png });
             if (path == null) return;
 
             (Data.GraphicAssets.Archive target, int at) = vm.ImportTarget;
             string err, note;
-            Data.BattleGaugeComposer.Kind? bar = target?.Dir == RomInfo.DirNames.battleObj ? Data.HpBarFit.KindOf(at) : null;
+            Data.BattleGaugeComposer.Kind? bar = target?.Dir == RomInfo.DirNames.BattleObj ? Data.HpBarFit.KindOf(at) : null;
             HpBarImportPrompt.Choice barChoice = HpBarImportPrompt.Choice.PictureOnly;
             Data.HpBarFit.Plan plan = null;
             if (bar != null)
@@ -117,7 +117,7 @@ namespace DSPRE.Avalonia.Views.Graphics
                 if (choice == PngColourPrompt.Choice.Cancel) return;
                 err = vm.Replace(path, choice, check, out note);
             }
-            if (err != null) { vm.StatusText = err; await DialogHelper.ShowError(err, "Graphics error"); return; }
+            if (err != null) { vm.StatusText = err; await DialogHelper.ShowErrorAsync(err, "Graphics error"); return; }
             SaveNotice.Imported(vm.Selected.Name ?? $"{vm.Selected.Archive.Title} {vm.Selected.Index}", path);
 
             // A background shares its pieces, so painting one square changes every square drawn from the
@@ -125,7 +125,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (!string.IsNullOrEmpty(note))
             {
                 vm.StatusText = note;
-                await DialogHelper.ShowInfo(note, "Import PNG");
+                await DialogHelper.ShowInfoAsync(note, "Import PNG");
             }
         }
 
@@ -140,7 +140,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             if (!vm.CanReplace)
             {
-                await DialogHelper.ShowInfo(vm.ReplaceHelp, "Paint");
+                await DialogHelper.ShowInfoAsync(vm.ReplaceHelp, "Paint");
                 return;
             }
 

@@ -37,26 +37,26 @@ namespace DSPRE.ROMFiles
 
         public static IReadOnlyList<BuildingModelTextureSet> ReadCurrentRom()
         {
-            if (gameDirs == null
-                || !gameDirs.ContainsKey(DirNames.areaData)
-                || !gameDirs.ContainsKey(DirNames.buildingConfigFiles)
-                || !gameDirs.ContainsKey(DirNames.buildingTextures))
+            if (GameDirs == null
+                || !GameDirs.ContainsKey(DirNames.AreaData)
+                || !GameDirs.ContainsKey(DirNames.BuildingConfigFiles)
+                || !GameDirs.ContainsKey(DirNames.BuildingTextures))
                 return Array.Empty<BuildingModelTextureSet>();
 
             DSUtils.TryUnpackNarcs(new List<DirNames>
             {
-                DirNames.areaData, DirNames.buildingConfigFiles, DirNames.buildingTextures,
+                DirNames.AreaData, DirNames.BuildingConfigFiles, DirNames.BuildingTextures,
             });
 
             Dictionary<(int set, bool indoor), List<int>> areas = new Dictionary<(int set, bool indoor), List<int>>();
-            foreach (string path in NumberedFiles(gameDirs[DirNames.areaData].unpackedDir))
+            foreach (string path in NumberedFiles(GameDirs[DirNames.AreaData].unpackedDir))
             {
                 if (!TryFileId(path, out int areaId)) continue;
                 try
                 {
                     using FileStream input = File.OpenRead(path);
                     AreaData area = new AreaData(input);
-                    (int, bool IsIndoor) key = ((int)area.buildingsTileset, area.IsIndoor);
+                    (int, bool IsIndoor) key = ((int)area.BuildingsTileset, area.IsIndoor);
                     if (!areas.TryGetValue(key, out List<int> ids)) areas[key] = ids = new List<int>();
                     ids.Add(areaId);
                 }
@@ -67,7 +67,7 @@ namespace DSPRE.ROMFiles
             }
 
             List<BuildingModelTextureSet> result = new List<BuildingModelTextureSet>();
-            foreach (string path in NumberedFiles(gameDirs[DirNames.buildingConfigFiles].unpackedDir))
+            foreach (string path in NumberedFiles(GameDirs[DirNames.BuildingConfigFiles].unpackedDir))
             {
                 if (!TryFileId(path, out int setId)) continue;
                 IReadOnlyList<int> models;

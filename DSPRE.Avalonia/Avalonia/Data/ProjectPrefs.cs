@@ -17,7 +17,7 @@ namespace DSPRE.Avalonia.Data
         private static Dictionary<string, string> _values = new();
         private static string _loadedFor;
 
-        private static string PathNow => string.IsNullOrEmpty(dspreDir) ? null : Path.Combine(dspreDir, "dspre_prefs.json");
+        private static string PathNow => string.IsNullOrEmpty(DspreDir) ? null : Path.Combine(DspreDir, "dspre_prefs.json");
 
         private static void Ensure()
         {

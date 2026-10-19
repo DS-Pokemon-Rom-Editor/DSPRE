@@ -46,10 +46,10 @@ namespace DSPRE.Tests
             U16(18, 0xAAAA);   // param2
 
             Overworld ow = new Overworld(new MemoryStream(bytes));
-            Assert.Equal(0x0107, ow.overlayTableEntry);
-            Assert.Equal(0x00AB, ow.sightRange);
-            Assert.Equal(0x9999, ow.param1);
-            Assert.Equal(0xAAAA, ow.param2);
+            Assert.Equal(0x0107, ow.OverlayTableEntry);
+            Assert.Equal(0x00AB, ow.SightRange);
+            Assert.Equal(0x9999, ow.Param1);
+            Assert.Equal(0xAAAA, ow.Param2);
             _out.WriteLine("param0 read from offset 0x0E as sightRange");
         }
 
@@ -70,11 +70,11 @@ namespace DSPRE.Tests
                 EventFile ev;
                 try { ev = new EventFile(i); } catch { continue; }
                 read++;
-                foreach (Overworld ow in ev.overworlds)
+                foreach (Overworld ow in ev.Overworlds)
                 {
-                    if (ow.overlayTableEntry < 0x0106 || ow.overlayTableEntry > 0x0114) continue;
+                    if (ow.OverlayTableEntry < 0x0106 || ow.OverlayTableEntry > 0x0114) continue;
                     trees++;
-                    beds.Add(ow.sightRange);
+                    beds.Add(ow.SightRange);
                 }
             }
 

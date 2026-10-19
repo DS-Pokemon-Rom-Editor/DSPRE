@@ -25,8 +25,8 @@ namespace DSPRE
             if (!SupportsCurrentRom || !RomInfo.IsDsRomProject || !PatchToolboxLogic.CheckFilesArm9ExpansionApplied()) return false;
             try
             {
-                byte[] arm9 = File.ReadAllBytes(RomInfo.arm9Path);
-                byte[] synthetic = File.Exists(Filesystem.expArmPath) ? File.ReadAllBytes(Filesystem.expArmPath) : null;
+                byte[] arm9 = File.ReadAllBytes(RomInfo.Arm9Path);
+                byte[] synthetic = File.Exists(Filesystem.ExpArmPath) ? File.ReadAllBytes(Filesystem.ExpArmPath) : null;
                 return Inspect(RomLocator.TrainerShinySites, arm9, synthetic);
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
@@ -40,19 +40,19 @@ namespace DSPRE
         {
             RomInfo.TrainerShinySites sites = RomLocator.TrainerShinySites;
             if (sites == null || !Matches(arm9, sites.Mask, PatchedMask)) return null;
-            if (!TryReadBl(arm9, sites.Hook, ARM9.address + (uint)sites.Hook, out uint target)) return null;
-            long offset = (long)target - RomInfo.synthOverlayLoadAddress;
-            if (offset < 0 || offset + PayloadLength > RomInfo.synthOverlaySize) return null;
+            if (!TryReadBl(arm9, sites.Hook, ARM9.Address + (uint)sites.Hook, out uint target)) return null;
+            long offset = (long)target - RomInfo.SynthOverlayLoadAddress;
+            if (offset < 0 || offset + PayloadLength > RomInfo.SynthOverlaySize) return null;
             return (offset, offset + PayloadLength);
         }
 
         private static bool Inspect(RomInfo.TrainerShinySites sites, byte[] arm9, byte[] synthetic)
         {
             if (!Matches(arm9, sites.Mask, PatchedMask)) return false;
-            if (!TryReadBl(arm9, sites.Hook, ARM9.address + (uint)sites.Hook, out uint target)) return false;
+            if (!TryReadBl(arm9, sites.Hook, ARM9.Address + (uint)sites.Hook, out uint target)) return false;
 
-            long offset = (long)target - RomInfo.synthOverlayLoadAddress;
-            if ((target & 3) != 0 || offset < 0 || offset + PayloadLength > RomInfo.synthOverlaySize ||
+            long offset = (long)target - RomInfo.SynthOverlayLoadAddress;
+            if ((target & 3) != 0 || offset < 0 || offset + PayloadLength > RomInfo.SynthOverlaySize ||
                 synthetic == null || offset + PayloadLength > synthetic.Length)
                 return false;
 
@@ -109,7 +109,7 @@ namespace DSPRE
         public static string WhyNotApplicable(byte[] arm9)
         {
             RomInfo.TrainerShinySites sites = RomLocator.TrainerShinySites;
-            bool freesRecords = TryReadBl(arm9, sites.Hook, ARM9.address + (uint)sites.Hook, out uint callee) && callee == sites.CallTargets[^1];
+            bool freesRecords = TryReadBl(arm9, sites.Hook, ARM9.Address + (uint)sites.Hook, out uint callee) && callee == sites.CallTargets[^1];
             if (!freesRecords || !Matches(arm9, sites.Mask, OriginalMask))
                 return "The ARM9 code this patch hooks has already been changed.";
             return null;
@@ -119,9 +119,9 @@ namespace DSPRE
         public static void Apply(uint payloadOffset)
         {
             RomInfo.TrainerShinySites sites = RomLocator.TrainerShinySites;
-            uint address = RomInfo.synthOverlayLoadAddress + payloadOffset;
-            DSUtils.WriteToFile(Filesystem.expArmPath, BuildPayload(address), payloadOffset);
-            ARM9.WriteBytes(PatchToolboxLogic.BuildThumbBl(ARM9.address + (uint)sites.Hook, address), (uint)sites.Hook);
+            uint address = RomInfo.SynthOverlayLoadAddress + payloadOffset;
+            DSUtils.WriteToFile(Filesystem.ExpArmPath, BuildPayload(address), payloadOffset);
+            ARM9.WriteBytes(PatchToolboxLogic.BuildThumbBl(ARM9.Address + (uint)sites.Hook, address), (uint)sites.Hook);
             ARM9.WriteBytes(PatchedMask, (uint)sites.Mask);
         }
 

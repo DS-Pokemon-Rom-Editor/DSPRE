@@ -38,7 +38,7 @@ namespace DSPRE.Avalonia
                 return true;
             }
 
-            await DialogHelper.ShowError(
+            await DialogHelper.ShowErrorAsync(
                 $"Could not save {vm.UnsavedChangesDescription} before {action}:\n{failure}",
                 "Couldn't save");
             return false;

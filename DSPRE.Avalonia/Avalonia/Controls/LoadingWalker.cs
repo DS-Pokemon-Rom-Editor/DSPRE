@@ -73,11 +73,11 @@ namespace DSPRE.Avalonia.Controls
             try
             {
                 if (!AvaloniaEditorLauncher.IsRomLoaded) return false;
-                if (!RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.OWSprites, out (string packedDir, string unpackedDir) dirs)) return false;
+                if (!RomInfo.GameDirs.TryGetValue(RomInfo.DirNames.OWSprites, out (string packedDir, string unpackedDir) dirs)) return false;
                 if (!Directory.Exists(dirs.unpackedDir) || Directory.GetFiles(dirs.unpackedDir).Length == 0) return false;
 
                 _pace = Pace.Walk;
-                if (RomInfo.gameFamily != RomInfo.GameFamilies.HGSS)
+                if (RomInfo.GameFamily != RomInfo.GameFamilies.HGSS)
                 {
                     // DP and Platinum have no followers, so the player comes by instead.
                     int first = Pick.Next(Players.Length);

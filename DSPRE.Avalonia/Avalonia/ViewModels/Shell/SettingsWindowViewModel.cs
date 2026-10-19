@@ -124,12 +124,12 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(EmulatorPath));
         }
 
-        public async Task ChangeEmulatorPathCommand(Window owner)
+        public async Task ChangeEmulatorPathCommandAsync(Window owner)
         {
             List<FilePickerFileType> filters = OperatingSystem.IsWindows()
                 ? new System.Collections.Generic.List<global::Avalonia.Platform.Storage.FilePickerFileType> { new("Programs") { Patterns = new[] { "*.exe" } } }
                 : null;
-            string path = await DialogHelper.OpenFile(owner, "Choose the emulator", filters);
+            string path = await DialogHelper.OpenFileAsync(owner, "Choose the emulator", filters);
             if (path == null) return;
             EmulatorKind kind = SelectedEmulator ?? Emulators.Guess(path) ?? EmulatorKind.BizHawk;
             _emulatorPaths[kind.ToString()] = path;
@@ -145,19 +145,19 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         }
 
         // ── The save Build and Run offers to start the open project from ──
-        public bool HasProject => AvaloniaEditorLauncher.IsRomLoaded && !string.IsNullOrEmpty(RomInfo.workDir);
+        public bool HasProject => AvaloniaEditorLauncher.IsRomLoaded && !string.IsNullOrEmpty(RomInfo.WorkDir);
 
         private string _testSavePath = "";
         public string TestSavePath { get => _testSavePath; set => Set(ref _testSavePath, value ?? ""); }
 
-        public async Task ChooseTestSaveCommand(Window owner)
+        public async Task ChooseTestSaveCommandAsync(Window owner)
         {
             List<FilePickerFileType> filters = new()
             {
                 new("Save files") { Patterns = new[] { "*.sav", "*.SaveRAM", "*.dsv", "*.bin" } },
                 new("All files") { Patterns = new[] { "*" } },
             };
-            string path = await DialogHelper.OpenFile(owner, "Choose a save", filters);
+            string path = await DialogHelper.OpenFileAsync(owner, "Choose a save", filters);
             if (path != null) TestSavePath = path;
         }
 
@@ -211,31 +211,31 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             }
             VersionLabel = $"DSPRE Version {AppInfo.GetDSPREVersion()}";
 
-            ExportPath       = SettingsManager.Settings.exportPath        ?? string.Empty;
-            MapImportPath    = SettingsManager.Settings.mapImportStarterPoint ?? string.Empty;
-            OpenDefaultRom   = SettingsManager.Settings.openDefaultRom    ?? string.Empty;
-            NeverAskForOpening = SettingsManager.Settings.neverAskForOpening;
-            AutoCheckUpdates = SettingsManager.Settings.automaticallyCheckForUpdates;
-            AutoUpdateDBs    = SettingsManager.Settings.automaticallyUpdateDBs;
-            ShowWelcomeOnStartup = SettingsManager.Settings.showWelcomeOnStartup;
-            ShowGuidedTourNextLoad = !SettingsManager.Settings.guidedTourShown;
-            UiScale           = (decimal)SettingsManager.Settings.uiScale;
+            ExportPath       = SettingsManager.Settings.ExportPath        ?? string.Empty;
+            MapImportPath    = SettingsManager.Settings.MapImportStarterPoint ?? string.Empty;
+            OpenDefaultRom   = SettingsManager.Settings.OpenDefaultRom    ?? string.Empty;
+            NeverAskForOpening = SettingsManager.Settings.NeverAskForOpening;
+            AutoCheckUpdates = SettingsManager.Settings.AutomaticallyCheckForUpdates;
+            AutoUpdateDBs    = SettingsManager.Settings.AutomaticallyUpdateDBs;
+            ShowWelcomeOnStartup = SettingsManager.Settings.ShowWelcomeOnStartup;
+            ShowGuidedTourNextLoad = !SettingsManager.Settings.GuidedTourShown;
+            UiScale           = (decimal)SettingsManager.Settings.UiScale;
             _themeIndex       = ThemeManager.IsDark ? 0 : 1;
 
-            CamPanSpeed      = (decimal)SettingsManager.Settings.camPanSpeed;
-            CamOrbitSpeed    = (decimal)SettingsManager.Settings.camOrbitSpeed;
-            CamZoomSpeed     = (decimal)SettingsManager.Settings.camZoomSpeed;
-            CamInvertPanX    = SettingsManager.Settings.camInvertPanX;
-            CamInvertPanY    = SettingsManager.Settings.camInvertPanY;
-            CamInvertOrbitX  = SettingsManager.Settings.camInvertOrbitX;
-            CamInvertOrbitY  = SettingsManager.Settings.camInvertOrbitY;
-            CamInvertZoom    = SettingsManager.Settings.camInvertZoom;
+            CamPanSpeed      = (decimal)SettingsManager.Settings.CamPanSpeed;
+            CamOrbitSpeed    = (decimal)SettingsManager.Settings.CamOrbitSpeed;
+            CamZoomSpeed     = (decimal)SettingsManager.Settings.CamZoomSpeed;
+            CamInvertPanX    = SettingsManager.Settings.CamInvertPanX;
+            CamInvertPanY    = SettingsManager.Settings.CamInvertPanY;
+            CamInvertOrbitX  = SettingsManager.Settings.CamInvertOrbitX;
+            CamInvertOrbitY  = SettingsManager.Settings.CamInvertOrbitY;
+            CamInvertZoom    = SettingsManager.Settings.CamInvertZoom;
 
-            foreach (KeyValuePair<string, string> kv in SettingsManager.Settings.emulatorPaths ?? new System.Collections.Generic.Dictionary<string, string>())
+            foreach (KeyValuePair<string, string> kv in SettingsManager.Settings.EmulatorPaths ?? new System.Collections.Generic.Dictionary<string, string>())
                 _emulatorPaths[kv.Key] = kv.Value;
-            _emulatorIndex = Enum.TryParse(SettingsManager.Settings.preferredEmulator, out EmulatorKind preferred)
+            _emulatorIndex = Enum.TryParse(SettingsManager.Settings.PreferredEmulator, out EmulatorKind preferred)
                 ? Array.IndexOf(Emulators.All, preferred) + 1 : 0;
-            _testSavePath = HasProject ? TestSaves.For(RomInfo.workDir) ?? "" : "";
+            _testSavePath = HasProject ? TestSaves.For(RomInfo.WorkDir) ?? "" : "";
 
             // snapshot for unsaved-changes detection
             _oldExportPath      = ExportPath;
@@ -247,31 +247,31 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         // Commands (called from code-behind)
         // ----------------------------------------------------------------
 
-        public async Task SaveCommand(Window owner)
+        public async Task SaveCommandAsync(Window owner)
         {
-            SettingsManager.Settings.exportPath              = ExportPath;
-            SettingsManager.Settings.mapImportStarterPoint  = MapImportPath;
-            SettingsManager.Settings.openDefaultRom         = OpenDefaultRom;
-            SettingsManager.Settings.neverAskForOpening     = NeverAskForOpening;
-            SettingsManager.Settings.automaticallyCheckForUpdates = AutoCheckUpdates;
-            SettingsManager.Settings.automaticallyUpdateDBs = AutoUpdateDBs;
-            SettingsManager.Settings.showWelcomeOnStartup   = ShowWelcomeOnStartup;
-            SettingsManager.Settings.guidedTourShown        = !ShowGuidedTourNextLoad;
-            if (ShowGuidedTourNextLoad) SettingsManager.Settings.editorToursShown?.Clear();
-            SettingsManager.Settings.uiScale                = (double)UiScale;
+            SettingsManager.Settings.ExportPath              = ExportPath;
+            SettingsManager.Settings.MapImportStarterPoint  = MapImportPath;
+            SettingsManager.Settings.OpenDefaultRom         = OpenDefaultRom;
+            SettingsManager.Settings.NeverAskForOpening     = NeverAskForOpening;
+            SettingsManager.Settings.AutomaticallyCheckForUpdates = AutoCheckUpdates;
+            SettingsManager.Settings.AutomaticallyUpdateDBs = AutoUpdateDBs;
+            SettingsManager.Settings.ShowWelcomeOnStartup   = ShowWelcomeOnStartup;
+            SettingsManager.Settings.GuidedTourShown        = !ShowGuidedTourNextLoad;
+            if (ShowGuidedTourNextLoad) SettingsManager.Settings.EditorToursShown?.Clear();
+            SettingsManager.Settings.UiScale                = (double)UiScale;
 
-            SettingsManager.Settings.camPanSpeed     = (float)CamPanSpeed;
-            SettingsManager.Settings.camOrbitSpeed   = (float)CamOrbitSpeed;
-            SettingsManager.Settings.camZoomSpeed    = (float)CamZoomSpeed;
-            SettingsManager.Settings.camInvertPanX   = CamInvertPanX;
-            SettingsManager.Settings.camInvertPanY   = CamInvertPanY;
-            SettingsManager.Settings.camInvertOrbitX = CamInvertOrbitX;
-            SettingsManager.Settings.camInvertOrbitY = CamInvertOrbitY;
-            SettingsManager.Settings.camInvertZoom   = CamInvertZoom;
+            SettingsManager.Settings.CamPanSpeed     = (float)CamPanSpeed;
+            SettingsManager.Settings.CamOrbitSpeed   = (float)CamOrbitSpeed;
+            SettingsManager.Settings.CamZoomSpeed    = (float)CamZoomSpeed;
+            SettingsManager.Settings.CamInvertPanX   = CamInvertPanX;
+            SettingsManager.Settings.CamInvertPanY   = CamInvertPanY;
+            SettingsManager.Settings.CamInvertOrbitX = CamInvertOrbitX;
+            SettingsManager.Settings.CamInvertOrbitY = CamInvertOrbitY;
+            SettingsManager.Settings.CamInvertZoom   = CamInvertZoom;
 
-            SettingsManager.Settings.emulatorPaths = new System.Collections.Generic.Dictionary<string, string>(_emulatorPaths);
-            SettingsManager.Settings.preferredEmulator = SelectedEmulator?.ToString() ?? "";
-            if (HasProject) TestSaves.Remember(RomInfo.workDir, TestSavePath);
+            SettingsManager.Settings.EmulatorPaths = new System.Collections.Generic.Dictionary<string, string>(_emulatorPaths);
+            SettingsManager.Settings.PreferredEmulator = SelectedEmulator?.ToString() ?? "";
+            if (HasProject) TestSaves.Remember(RomInfo.WorkDir, TestSavePath);
 
             _oldExportPath      = ExportPath;
             _oldMapImportPath   = MapImportPath;
@@ -281,28 +281,28 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             SaveNotice.Saved("settings");
         }
 
-        public async Task ChangeExportPathCommand(Window owner)
+        public async Task ChangeExportPathCommandAsync(Window owner)
         {
-            string path = await DialogHelper.OpenFolder(owner, "Select ROM export path");
+            string path = await DialogHelper.OpenFolderAsync(owner, "Select ROM export path");
             if (path != null)
                 ExportPath = path;
         }
 
-        public async Task ChangeMapImportPathCommand(Window owner)
+        public async Task ChangeMapImportPathCommandAsync(Window owner)
         {
-            string path = await DialogHelper.OpenFolder(owner, "Select initial map import path");
+            string path = await DialogHelper.OpenFolderAsync(owner, "Select initial map import path");
             if (path != null)
                 MapImportPath = path;
         }
 
-        public async Task ChangeOpenDefaultRomCommand(Window owner)
+        public async Task ChangeOpenDefaultRomCommandAsync(Window owner)
         {
-            string path = await DialogHelper.OpenFolder(owner, "Select default ROM folder");
+            string path = await DialogHelper.OpenFolderAsync(owner, "Select default ROM folder");
             if (path == null) return;
 
             if (!path.EndsWith("DSPRE_contents"))
             {
-                bool proceed = await DialogHelper.AskYesNo(
+                bool proceed = await DialogHelper.AskYesNoAsync(
                     "The folder you selected does not appear to be a DSPRE folder (DSPRE_contents), are you sure you want to proceed?",
                     "Warning");
                 if (!proceed) return;
@@ -327,7 +327,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
             if (!dirty) return true;
 
-            return await DialogHelper.AskYesNo(
+            return await DialogHelper.AskYesNoAsync(
                 "You still have unsaved modifications, are you sure you want to quit?",
                 "Exit");
         }

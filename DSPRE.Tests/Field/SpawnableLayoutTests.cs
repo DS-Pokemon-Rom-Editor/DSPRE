@@ -23,21 +23,21 @@ namespace DSPRE.Tests
         {
             Spawnable s = new Spawnable(new MemoryStream(Record(14, 1, 682, 393, 7, 4)));
 
-            Assert.Equal(14, s.scriptNumber);
-            Assert.Equal(1, s.type);
-            Assert.Equal(682 % 32, s.xMapPosition);
-            Assert.Equal(682 / 32, s.xMatrixPosition);
-            Assert.Equal(393 % 32, s.yMapPosition);
-            Assert.Equal(393 / 32, s.yMatrixPosition);
-            Assert.Equal(7, s.zPosition);      // the real height field, not gz's top half
-            Assert.Equal(4, s.dir);
+            Assert.Equal(14, s.ScriptNumber);
+            Assert.Equal(1, s.Type);
+            Assert.Equal(682 % 32, s.XMapPosition);
+            Assert.Equal(682 / 32, s.XMatrixPosition);
+            Assert.Equal(393 % 32, s.YMapPosition);
+            Assert.Equal(393 / 32, s.YMatrixPosition);
+            Assert.Equal(7, s.ZPosition);      // the real height field, not gz's top half
+            Assert.Equal(4, s.Dir);
         }
 
         [Fact]
         public void HeightWriteDoesNotDisturbTheGridCoordinates()
         {
             Spawnable s = new Spawnable(new MemoryStream(Record(14, 1, 682, 393, 0, 4)));
-            s.zPosition = 7;
+            s.ZPosition = 7;
             byte[] outBytes = s.ToByteArray();
 
             Assert.Equal(0x14, outBytes.Length);

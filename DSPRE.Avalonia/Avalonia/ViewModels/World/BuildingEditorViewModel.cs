@@ -40,7 +40,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public ObservableCollection<string> Buildings { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> Textures { get; } = new ObservableCollection<string>();
 
-        public bool IsHGSS => gameFamily == GameFamilies.HGSS;
+        public bool IsHGSS => GameFamily == GameFamilies.HGSS;
 
         private bool _interior;
         public bool Interior { get => _interior; set { if (Set(ref _interior, value)) { RefreshBuildings(); SelectedBuildingIndex = Buildings.Count > 0 ? 0 : -1; } } }
@@ -86,16 +86,16 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>Building model to select once loaded (set before SetupAsync; e.g. from a "Go to Building #N" jump).</summary>
         public int InitialIndex { get; set; }
 
-        private DirNames Archive => _interior ? DirNames.interiorBuildingModels : DirNames.exteriorBuildingModels;
-        private string BuildingDir() => gameDirs[Archive].unpackedDir;
+        private DirNames Archive => _interior ? DirNames.InteriorBuildingModels : DirNames.ExteriorBuildingModels;
+        private string BuildingDir() => GameDirs[Archive].unpackedDir;
 
         public async Task SetupAsync(Window owner)
         {
             _owner = owner;
             try
             {
-                List<DirNames> dirs = new List<DirNames> { DirNames.exteriorBuildingModels, DirNames.buildingTextures };
-                if (IsHGSS) dirs.Add(DirNames.interiorBuildingModels);
+                List<DirNames> dirs = new List<DirNames> { DirNames.ExteriorBuildingModels, DirNames.BuildingTextures };
+                if (IsHGSS) dirs.Add(DirNames.InteriorBuildingModels);
                 DSUtils.TryUnpackNarcs(dirs);
 
                 _suppress = true;
@@ -124,7 +124,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowError($"Failed to set up Building Editor:\n{ex.Message}", "Building editor error");
+                await DialogHelper.ShowErrorAsync($"Failed to set up Building Editor:\n{ex.Message}", "Building editor error");
             }
         }
 
@@ -150,8 +150,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (_currentData == null) { ModelLoaded?.Invoke(this, EventArgs.Empty); return; }
                 NSBMD nsbmd = NSBMDLoader.LoadNSBMD(new MemoryStream(_currentData));
                 BindTextures(nsbmd, _currentData, _texIndex, out bool painted);
-                if (nsbmd.models != null && nsbmd.models.Length > 0)
-                    Model3D = NsbmdGeometry.BuildModel(nsbmd.models[0]);
+                if (nsbmd.Models != null && nsbmd.Models.Length > 0)
+                    Model3D = NsbmdGeometry.BuildModel(nsbmd.Models[0]);
                 StatusText = painted
                     ? $"Building {index}."
                     : $"Building {index}, shown unpainted: pick a texture pack above to see its colours.";
@@ -177,11 +177,11 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
                 else
                 {
-                    string tp = Path.Combine(gameDirs[DirNames.buildingTextures].unpackedDir, (texIndex - 1).ToString("D4"));
+                    string tp = Path.Combine(GameDirs[DirNames.BuildingTextures].unpackedDir, (texIndex - 1).ToString("D4"));
                     if (!File.Exists(tp)) { painted = false; return; }
                     tex = File.ReadAllBytes(tp);
                 }
-                nsbmd.materials = NSBTXLoader.LoadNsbtx(new MemoryStream(tex), out nsbmd.Textures, out nsbmd.Palettes);
+                nsbmd.Materials = NSBTXLoader.LoadNsbtx(new MemoryStream(tex), out nsbmd.Textures, out nsbmd.Palettes);
                 nsbmd.MatchTextures();
             }
             catch (Exception ex) { painted = false; AppLogger.Error("Building texture bind failed: " + ex.Message); }
@@ -191,7 +191,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (_selBuilding < 0) return;
             FilePickerFileType filter = new FilePickerFileType("Model (.nsbmd)") { Patterns = new[] { "*.nsbmd", "*.bin", "*.*" } };
-            string path = await DialogHelper.OpenFile(_owner, "Import building model", new[] { filter });
+            string path = await DialogHelper.OpenFileAsync(_owner, "Import building model", new[] { filter });
             if (path == null) return;
             try
             {
@@ -199,17 +199,17 @@ namespace DSPRE.Avalonia.ViewModels.World
                 _pending.Change(step => step.Put(Archive, _selBuilding, model));
                 SaveNotice.Imported($"building model {_selBuilding}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Building editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Building editor error"); }
         }
 
         public async Task ExportAsync()
         {
             if (_selBuilding < 0) return;
             FilePickerFileType filter = new FilePickerFileType("Model (.nsbmd)") { Patterns = new[] { "*.nsbmd" } };
-            string path = await DialogHelper.SaveFile(_owner, "Export building model", new[] { filter }, $"building_{_selBuilding:D4}.nsbmd");
+            string path = await DialogHelper.SaveFileAsync(_owner, "Export building model", new[] { filter }, $"building_{_selBuilding:D4}.nsbmd");
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _pending.ReadMember(Archive, _selBuilding)); SaveNotice.Exported(path); }
-            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Building editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Building editor error"); }
         }
     }
 }

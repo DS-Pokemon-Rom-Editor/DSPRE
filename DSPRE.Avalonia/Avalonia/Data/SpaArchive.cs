@@ -389,15 +389,15 @@ namespace DSPRE.Avalonia.Data
             {
                 NSBMDMaterial mat = new NSBMDMaterial
                 {
-                    format = fmt, width = w, height = h,
-                    texdata = texdata, paldata = pal, spdata = spdata,
-                    color0 = color0Transparent ? 1 : 0,
-                    repeatS = 0, repeatT = 0, flipS = 0, flipT = 0,
+                    Format = fmt, Width = w, Height = h,
+                    Texdata = texdata, Paldata = pal, Spdata = spdata,
+                    Color0 = color0Transparent ? 1 : 0,
+                    RepeatS = 0, RepeatT = 0, FlipS = 0, FlipT = 0,
                 };
                 NsbmdTextureData dec = NsbmdTextureDecoder.Decode(mat);
                 if (dec != null) return new SpaTexture { Width = dec.Width, Height = dec.Height, Rgba = dec.Rgba, Format = fmt };
             }
-            catch { }
+            catch { }   // a texture that can't be decoded is shown blank
             return new SpaTexture { Width = w, Height = h, Rgba = null, Format = fmt };
         }
 

@@ -128,7 +128,7 @@ namespace DSPRE.Avalonia.Data
         private static List<CellPlacement.Piece> PiecesFor(Archive a, ScriptNarc narc, int index, int bpp)
         {
             int layout = -1;
-            try { layout = a.CellPlacementEntry?.Invoke(index) ?? -1; } catch { }
+            try { layout = a.CellPlacementEntry?.Invoke(index) ?? -1; } catch { }   // without a cell placement the drawing is shown as plain tiles
             byte[] ncer = layout >= 0 && layout != index ? narc.Get(layout) : null;
             return ncer == null ? null : CellPlacement.Pieces(Unsqueeze(ncer), bpp);
         }
@@ -138,7 +138,7 @@ namespace DSPRE.Avalonia.Data
             a.ScrambledEntry?.Invoke(index) ?? a.ScrambledNow?.Invoke() ?? a.ScrambledPixels;
 
         private static bool FromEnd(Archive a) =>
-            a.ScrambleFromEnd?.Invoke() ?? RomInfo.gameFamily == RomInfo.GameFamilies.DP;
+            a.ScrambleFromEnd?.Invoke() ?? RomInfo.GameFamily == RomInfo.GameFamilies.DP;
 
         /// <summary>
         /// Where the pixels are in a drawing, what shape they make, and whether they are stored in eight by
@@ -148,7 +148,7 @@ namespace DSPRE.Avalonia.Data
         private static int WidthFor(Archive a, int index)
         {
             int said = 0;
-            try { said = a.PixelWidthOf?.Invoke(index) ?? 0; } catch { }
+            try { said = a.PixelWidthOf?.Invoke(index) ?? 0; } catch { }   // without a known width the width is worked out from the size
             if (said > 0) return said;
             return a.PixelWidth > 0 ? a.PixelWidth : SourcePngWidth(a, index);
         }
@@ -281,7 +281,7 @@ namespace DSPRE.Avalonia.Data
                 for (int i = 0; colours != null && i < count && i < colours.Length; i++)
                     gameOrder.TryAdd(Key555(colours[i].r, colours[i].g, colours[i].b), i);
             }
-            catch { }
+            catch (Exception ex) { AppLogger.Warn("PNG import: game colour order: " + ex.Message); }
 
             int pixels = p.Width * p.Height;
             List<uint> drawn = new List<uint>();
@@ -328,7 +328,7 @@ namespace DSPRE.Avalonia.Data
                 if (kind == Kind.CellLayout) return true;
                 return kind == Kind.TileGraphic && (a.ArrangementEntry?.Invoke(index) ?? -1) >= 0;
             }
-            catch { return false; }
+            catch (Exception ex) { AppLogger.WarnOnce("GraphicAssets.SavedAsWholePicture", ex); return false; }
         }
 
         /// <summary>Saves the entry exactly as it sits in the ROM. Always possible, and the only way to
@@ -431,7 +431,7 @@ namespace DSPRE.Avalonia.Data
             if (kind == Kind.TileGraphic)
             {
                 int arranged = -1;
-                try { arranged = a.ArrangementEntry?.Invoke(index) ?? -1; } catch { }
+                try { arranged = a.ArrangementEntry?.Invoke(index) ?? -1; } catch { }   // without an arrangement the drawing is treated as loose tiles
                 wholeBackground = arranged >= 0;
             }
             if (!assembledSprite && !wholeBackground) return Skipped;

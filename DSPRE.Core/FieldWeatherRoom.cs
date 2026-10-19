@@ -31,8 +31,8 @@ namespace DSPRE
         /// <summary>The check for a header's weather and area, or null where it has not been measured.</summary>
         public static Result Check(int weather, int areaDataId)
         {
-            if (gameFamily != GameFamilies.Plat) return null;
-            FieldWeather.Spec spec = FieldWeather.For(gameFamily, weather);
+            if (GameFamily != GameFamilies.Plat) return null;
+            FieldWeather.Spec spec = FieldWeather.For(GameFamily, weather);
             long needed = 0;
             try
             {
@@ -64,28 +64,28 @@ namespace DSPRE
         {
             DSUtils.TryUnpackNarcs(new List<DirNames>
             {
-                DirNames.areaData, DirNames.mapTextures, DirNames.buildingTextures, DirNames.buildingConfigFiles,
-                DirNames.exteriorBuildingModels, DirNames.buildingAnimations, DirNames.buildingAnimListOut,
+                DirNames.AreaData, DirNames.MapTextures, DirNames.BuildingTextures, DirNames.BuildingConfigFiles,
+                DirNames.ExteriorBuildingModels, DirNames.BuildingAnimations, DirNames.BuildingAnimListOut,
             });
             AreaData area = new ROMFiles.AreaData((byte)areaDataId);
 
-            byte[] list = File.ReadAllBytes(Member(DirNames.buildingConfigFiles, area.buildingsTileset));
+            byte[] list = File.ReadAllBytes(Member(DirNames.BuildingConfigFiles, area.BuildingsTileset));
             int count = BitConverter.ToUInt16(list, 0);
-            int animLists = NarcAPI.Narc.MemberCount(gameDirs[DirNames.buildingAnimListOut].unpackedDir);
+            int animLists = NarcAPI.Narc.MemberCount(GameDirs[DirNames.BuildingAnimListOut].unpackedDir);
             long cost = Block(list.Length);
             bool dummyListed = false;
             for (int i = 0; i < count; i++)
             {
                 int model = BitConverter.ToUInt16(list, 2 + 2 * i);
                 dummyListed |= model == 0;
-                cost += Block(Length(DirNames.exteriorBuildingModels, model));
+                cost += Block(Length(DirNames.ExteriorBuildingModels, model));
                 if (model < animLists) cost += AnimationCost(model);
             }
             // The dummy box is always loaded.
-            if (!dummyListed) cost += Block(Length(DirNames.exteriorBuildingModels, 0));
+            if (!dummyListed) cost += Block(Length(DirNames.ExteriorBuildingModels, 0));
 
-            cost += Block(KeptTextureSize(Member(DirNames.mapTextures, area.mapTileset)));
-            string buildingTextures = Member(DirNames.buildingTextures, area.buildingsTileset);
+            cost += Block(KeptTextureSize(Member(DirNames.MapTextures, area.MapTileset)));
+            string buildingTextures = Member(DirNames.BuildingTextures, area.BuildingsTileset);
             cost += Block(count > 0 ? KeptTextureSize(buildingTextures) : new FileInfo(buildingTextures).Length);
             return cost;
         }
@@ -93,14 +93,14 @@ namespace DSPRE
         // bm_anime_list: has-animations, flags, bicycle-slope, pad, then four animation ids ending at -1.
         private static long AnimationCost(int model)
         {
-            byte[] entry = File.ReadAllBytes(Member(DirNames.buildingAnimListOut, model));
+            byte[] entry = File.ReadAllBytes(Member(DirNames.BuildingAnimListOut, model));
             if (entry.Length < 20 || entry[0] == 0 || (entry[1] & 1) != 0) return 0;
             long cost = 0;
             for (int i = 0; i < 4; i++)
             {
                 int id = BitConverter.ToInt32(entry, 4 + 4 * i);
                 if (id == -1) break;
-                cost += Block(Length(DirNames.buildingAnimations, id));
+                cost += Block(Length(DirNames.BuildingAnimations, id));
             }
             return cost;
         }
@@ -137,7 +137,7 @@ namespace DSPRE
             finally { narc.Free(); }
         }
 
-        private static string Member(DirNames dir, int id) => Path.Combine(gameDirs[dir].unpackedDir, id.ToString("D4"));
+        private static string Member(DirNames dir, int id) => Path.Combine(GameDirs[dir].unpackedDir, id.ToString("D4"));
 
         private static long Length(DirNames dir, int id) => new FileInfo(Member(dir, id)).Length;
     }

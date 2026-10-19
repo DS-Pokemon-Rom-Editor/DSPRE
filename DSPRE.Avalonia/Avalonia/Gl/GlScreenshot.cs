@@ -14,7 +14,7 @@ namespace DSPRE.Avalonia.Gl
         /// <summary>Asks where to save, then captures the view's next frame there. <paramref name="saved"/> gets the path.</summary>
         public static async Task SaveAsync(NsbmdGlControl view, Window owner, string namePrefix, Action<string> saved)
         {
-            string path = await DialogHelper.SaveFile(owner, "Save map view screenshot",
+            string path = await DialogHelper.SaveFileAsync(owner, "Save map view screenshot",
                 new[] { new FilePickerFileType("PNG image") { Patterns = new[] { "*.png" } } },
                 $"{namePrefix}_{DateTime.Now:yyyyMMdd_HHmmss}.png");
             if (path == null) return;
@@ -28,7 +28,7 @@ namespace DSPRE.Avalonia.Gl
                 }
                 catch (Exception ex) when (ex is InvalidOperationException || ex is System.IO.IOException || ex is UnauthorizedAccessException)
                 {
-                    _ = DialogHelper.ShowError($"Could not save the screenshot:\n{ex.Message}", "Screenshot error");
+                    _ = DialogHelper.ShowErrorAsync($"Could not save the screenshot:\n{ex.Message}", "Screenshot error");
                 }
             });
         }

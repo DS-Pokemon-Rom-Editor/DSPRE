@@ -61,7 +61,7 @@ namespace DSPRE.Avalonia.Data
 
         public VsIntroPreview(Func<int, byte[]> member, FieldFont font)
         {
-            _member = i => { try { return i < 0 ? null : GraphicAssets.Unsqueeze(member(i)); } catch { return null; } };
+            _member = i => { try { return i < 0 ? null : GraphicAssets.Unsqueeze(member(i)); } catch (Exception ex) { AppLogger.WarnOnce("VsIntroPreview.ctor", ex); return null; } };
             _font = font;
         }
 

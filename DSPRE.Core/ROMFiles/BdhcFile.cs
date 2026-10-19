@@ -107,8 +107,9 @@ namespace DSPRE.ROMFiles
                     return true;
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.WarnOnce("BdhcFile.TryParse", ex);
                 bdhc = null;
                 return false;
             }

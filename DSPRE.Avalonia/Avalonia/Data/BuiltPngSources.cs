@@ -35,7 +35,7 @@ namespace DSPRE.Avalonia.Data
             // Only an hg-engine checkout builds PNGs from members; elsewhere the count would only slow bulk saves.
             if (data != null && HgEngine.HgEngineProject.IsActive)
             {
-                string unpacked = gameDirs[dir].unpackedDir;
+                string unpacked = GameDirs[dir].unpackedDir;
                 int count = NarcAPI.Narc.MemberCount(unpacked);
                 Write(dir, HgEngineOwnedFiles.ArchiveOf(dir), member, count, before, data);
             }

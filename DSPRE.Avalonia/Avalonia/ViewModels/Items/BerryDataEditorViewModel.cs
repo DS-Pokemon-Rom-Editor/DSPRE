@@ -144,7 +144,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         {
             List<int> changed = Enumerable.Range(0, _berries.Count).Where(BerryChanged).ToList();
             foreach (int b in changed)
-                if (_berries[b].Problem() is string p) { await DialogHelper.ShowError($"{BerryNames[b]}: {p}", "Berry data error"); return false; }
+                if (_berries[b].Problem() is string p) { await DialogHelper.ShowErrorAsync($"{BerryNames[b]}: {p}", "Berry data error"); return false; }
             try
             {
                 foreach (int b in changed) { _berries[b].Save(b); _saved[b] = _berries[b].ToBytes(); }
@@ -152,7 +152,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
             {
                 RaiseFields();   // berries saved before the failure lose their mark
-                await DialogHelper.ShowError("The berry data was not saved:\n" + e.Message, "Berry data error");
+                await DialogHelper.ShowErrorAsync("The berry data was not saved:\n" + e.Message, "Berry data error");
                 return false;
             }
             RaiseFields();

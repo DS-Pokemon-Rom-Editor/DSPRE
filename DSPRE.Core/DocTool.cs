@@ -33,16 +33,16 @@ namespace DSPRE
             EnsureEventEditorPrereqs();
 
             DSUtils.TryUnpackNarcs(new List<DirNames> {
-                DirNames.personalPokeData,
-                DirNames.learnsets,
-                DirNames.evolutions,
-                DirNames.trainerParty,
-                DirNames.trainerProperties,
-                DirNames.moveData,
-                DirNames.itemData,
-                DirNames.encounters,
-                DirNames.scripts,
-                DirNames.eventFiles
+                DirNames.PersonalPokeData,
+                DirNames.Learnsets,
+                DirNames.Evolutions,
+                DirNames.TrainerParty,
+                DirNames.TrainerProperties,
+                DirNames.MoveData,
+                DirNames.ItemData,
+                DirNames.Encounters,
+                DirNames.Scripts,
+                DirNames.EventFiles
             });
 
             string[] pokeNames = RomInfo.GetPokemonNamesWithForms(RomInfo.GetPersonalFilesCount());
@@ -82,8 +82,8 @@ namespace DSPRE
 
             // Match the core unpack set from EventEditor.SetupEventEditor (minus UI stuff)
             DSUtils.TryUnpackNarcs(new List<DirNames> {
-                DirNames.areaData,
-                DirNames.trainerProperties,
+                DirNames.AreaData,
+                DirNames.TrainerProperties,
             });
 
             RomInfo.SetOWtable();
@@ -93,7 +93,7 @@ namespace DSPRE
 
         private static void ExportEncountersToJson(string outputPath)
         {
-            string encountersDir = RomInfo.gameDirs[RomInfo.DirNames.encounters].unpackedDir;
+            string encountersDir = RomInfo.GameDirs[RomInfo.DirNames.Encounters].unpackedDir;
 
             List<string> files = Directory.GetFiles(encountersDir)
                 .Where(p => int.TryParse(Path.GetFileName(p), out _))
@@ -106,11 +106,11 @@ namespace DSPRE
             var root = new
             {
                 generatedAt = DateTime.UtcNow,
-                projectName = RomInfo.projectName,
-                romID = RomInfo.romID,
-                gameFamily = RomInfo.gameFamily.ToString(),
-                gameVersion = RomInfo.gameVersion.ToString(),
-                gameLanguage = RomInfo.gameLanguage.ToString(),
+                projectName = RomInfo.ProjectName,
+                romID = RomInfo.RomID,
+                gameFamily = RomInfo.GameFamily.ToString(),
+                gameVersion = RomInfo.GameVersion.ToString(),
+                gameLanguage = RomInfo.GameLanguage.ToString(),
                 encounters = new List<object>()
             };
 
@@ -120,12 +120,12 @@ namespace DSPRE
 
                 object encObj;
 
-                if (RomInfo.gameFamily == RomInfo.GameFamilies.DP ||
-                    RomInfo.gameFamily == RomInfo.GameFamilies.Plat)
+                if (RomInfo.GameFamily == RomInfo.GameFamilies.DP ||
+                    RomInfo.GameFamily == RomInfo.GameFamilies.Plat)
                 {
                     encObj = ExportDPPt(fileId, path, pokeNames);
                 }
-                else if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)
+                else if (RomInfo.GameFamily == RomInfo.GameFamilies.HGSS)
                 {
                     encObj = ExportHGSS(fileId, path, pokeNames);
                 }
@@ -159,48 +159,48 @@ namespace DSPRE
 
                 rates = new
                 {
-                    walking = enc.walkingRate,
-                    surf = enc.surfRate,
-                    oldRod = enc.oldRodRate,
-                    goodRod = enc.goodRodRate,
-                    superRod = enc.superRodRate
+                    walking = enc.WalkingRate,
+                    surf = enc.SurfRate,
+                    oldRod = enc.OldRodRate,
+                    goodRod = enc.GoodRodRate,
+                    superRod = enc.SuperRodRate
                 },
 
                 walking = ExportWalkingDPPtNamed(enc, pokeNames),
 
                 timeSpecific = new
                 {
-                    day = ExportU32SpeciesNamed(enc.dayPokemon, pokeNames),
-                    night = ExportU32SpeciesNamed(enc.nightPokemon, pokeNames)
+                    day = ExportU32SpeciesNamed(enc.DayPokemon, pokeNames),
+                    night = ExportU32SpeciesNamed(enc.NightPokemon, pokeNames)
                 },
 
-                radar = ExportU32SpeciesNamed(enc.radarPokemon, pokeNames),
+                radar = ExportU32SpeciesNamed(enc.RadarPokemon, pokeNames),
 
                 dualSlot = new
                 {
-                    ruby = ExportU32SpeciesNamed(enc.rubyPokemon, pokeNames),
-                    sapphire = ExportU32SpeciesNamed(enc.sapphirePokemon, pokeNames),
-                    emerald = ExportU32SpeciesNamed(enc.emeraldPokemon, pokeNames),
-                    fireRed = ExportU32SpeciesNamed(enc.fireRedPokemon, pokeNames),
-                    leafGreen = ExportU32SpeciesNamed(enc.leafGreenPokemon, pokeNames)
+                    ruby = ExportU32SpeciesNamed(enc.RubyPokemon, pokeNames),
+                    sapphire = ExportU32SpeciesNamed(enc.SapphirePokemon, pokeNames),
+                    emerald = ExportU32SpeciesNamed(enc.EmeraldPokemon, pokeNames),
+                    fireRed = ExportU32SpeciesNamed(enc.FireRedPokemon, pokeNames),
+                    leafGreen = ExportU32SpeciesNamed(enc.LeafGreenPokemon, pokeNames)
                 },
 
                 // (keep formRates/unownTable as-is; those are not species ids in DSPRE’s UI)
 
-                swarms = ExportU16Named(enc.swarmPokemon, pokeNames),
+                swarms = ExportU16Named(enc.SwarmPokemon, pokeNames),
 
 
 
                 forms = new
                 {
-                    formRates = ExportU32(enc.formRates), // 5
-                    unownTable = enc.unownTable
+                    formRates = ExportU32(enc.FormRates), // 5
+                    unownTable = enc.UnownTable
                 },
 
-                surf = ExportMinMaxU16Named(enc.surfPokemon, enc.surfMinLevels, enc.surfMaxLevels, pokeNames),
-                oldRod = ExportMinMaxU16Named(enc.oldRodPokemon, enc.oldRodMinLevels, enc.oldRodMaxLevels, pokeNames),
-                goodRod = ExportMinMaxU16Named(enc.goodRodPokemon, enc.goodRodMinLevels, enc.goodRodMaxLevels, pokeNames),
-                superRod = ExportMinMaxU16Named(enc.superRodPokemon, enc.superRodMinLevels, enc.superRodMaxLevels, pokeNames),
+                surf = ExportMinMaxU16Named(enc.SurfPokemon, enc.SurfMinLevels, enc.SurfMaxLevels, pokeNames),
+                oldRod = ExportMinMaxU16Named(enc.OldRodPokemon, enc.OldRodMinLevels, enc.OldRodMaxLevels, pokeNames),
+                goodRod = ExportMinMaxU16Named(enc.GoodRodPokemon, enc.GoodRodMinLevels, enc.GoodRodMaxLevels, pokeNames),
+                superRod = ExportMinMaxU16Named(enc.SuperRodPokemon, enc.SuperRodMinLevels, enc.SuperRodMaxLevels, pokeNames),
             };
         }
 
@@ -222,11 +222,11 @@ namespace DSPRE
             List<object> slots = new List<object>(12);
             for (int i = 0; i < 12; i++)
             {
-                int speciesId = unchecked((int)enc.walkingPokemon[i]);
+                int speciesId = unchecked((int)enc.WalkingPokemon[i]);
                 slots.Add(new
                 {
                     slot = i,
-                    level = enc.walkingLevels[i],
+                    level = enc.WalkingLevels[i],
                     species = speciesId,
                     speciesName = NameForSpecies(speciesId, pokeNames)
                 });
@@ -240,7 +240,7 @@ namespace DSPRE
 
             for (int i = 0; i < 12; i++)
             {
-                uint raw = enc.walkingPokemon[i];
+                uint raw = enc.WalkingPokemon[i];
 
                 ushort species = (ushort)(raw & 0xFFFF);
                 byte minLv = (byte)((raw >> 16) & 0xFF);
@@ -253,7 +253,7 @@ namespace DSPRE
                     species,
                     minLv,
                     maxLv,
-                    levelTableEntry = enc.walkingLevels[i]
+                    levelTableEntry = enc.WalkingLevels[i]
                 });
             }
 
@@ -273,34 +273,34 @@ namespace DSPRE
 
                 rates = new
                 {
-                    walking = enc.walkingRate,
-                    surf = enc.surfRate,
-                    rockSmash = enc.rockSmashRate,
-                    oldRod = enc.oldRodRate,
-                    goodRod = enc.goodRodRate,
-                    superRod = enc.superRodRate
+                    walking = enc.WalkingRate,
+                    surf = enc.SurfRate,
+                    rockSmash = enc.RockSmashRate,
+                    oldRod = enc.OldRodRate,
+                    goodRod = enc.GoodRodRate,
+                    superRod = enc.SuperRodRate
                 },
 
-                walkingLevels = ExportU8(enc.walkingLevels), // 12
+                walkingLevels = ExportU8(enc.WalkingLevels), // 12
 
                 grass = new
                 {
-                    morning = ExportU16Named(enc.morningPokemon, pokeNames),
-                    day = ExportU16Named(enc.dayPokemon, pokeNames),
-                    night = ExportU16Named(enc.nightPokemon, pokeNames)
+                    morning = ExportU16Named(enc.MorningPokemon, pokeNames),
+                    day = ExportU16Named(enc.DayPokemon, pokeNames),
+                    night = ExportU16Named(enc.NightPokemon, pokeNames)
                 },
 
-                surf = ExportMinMaxU16Named(enc.surfPokemon, enc.surfMinLevels, enc.surfMaxLevels, pokeNames),
-                rockSmash = ExportMinMaxU16Named(enc.rockSmashPokemon, enc.rockSmashMinLevels, enc.rockSmashMaxLevels, pokeNames),
-                oldRod = ExportMinMaxU16Named(enc.oldRodPokemon, enc.oldRodMinLevels, enc.oldRodMaxLevels, pokeNames),
-                goodRod = ExportMinMaxU16Named(enc.goodRodPokemon, enc.goodRodMinLevels, enc.goodRodMaxLevels, pokeNames),
-                superRod = ExportMinMaxU16Named(enc.superRodPokemon, enc.superRodMinLevels, enc.superRodMaxLevels, pokeNames),
+                surf = ExportMinMaxU16Named(enc.SurfPokemon, enc.SurfMinLevels, enc.SurfMaxLevels, pokeNames),
+                rockSmash = ExportMinMaxU16Named(enc.RockSmashPokemon, enc.RockSmashMinLevels, enc.RockSmashMaxLevels, pokeNames),
+                oldRod = ExportMinMaxU16Named(enc.OldRodPokemon, enc.OldRodMinLevels, enc.OldRodMaxLevels, pokeNames),
+                goodRod = ExportMinMaxU16Named(enc.GoodRodPokemon, enc.GoodRodMinLevels, enc.GoodRodMaxLevels, pokeNames),
+                superRod = ExportMinMaxU16Named(enc.SuperRodPokemon, enc.SuperRodMinLevels, enc.SuperRodMaxLevels, pokeNames),
 
-                swarms = ExportU16Named(enc.swarmPokemon, pokeNames),
+                swarms = ExportU16Named(enc.SwarmPokemon, pokeNames),
                 pokegearMusic = new
                 {
-                    hoenn = ExportU16Named(enc.hoennMusicPokemon, pokeNames),
-                    sinnoh = ExportU16Named(enc.sinnohMusicPokemon, pokeNames)
+                    hoenn = ExportU16Named(enc.HoennMusicPokemon, pokeNames),
+                    sinnoh = ExportU16Named(enc.SinnohMusicPokemon, pokeNames)
                 }
             };
         }
@@ -389,7 +389,7 @@ namespace DSPRE
 
             // Make sure text archives + name dictionaries are available so ScriptCommand.name
             // can render friendly enums (TRAINER_, SPECIES_, ITEM_, MOVE_, etc.) consistently.
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.textArchives });
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TextArchives });
 
             Resources.ScriptDatabase.InitializePokemonNames();
             Resources.ScriptDatabase.InitializeItemNames();
@@ -409,7 +409,7 @@ namespace DSPRE
                     ScriptFile sf = new ScriptFile(i, readFunctions: true, readActions: false);
 
                     // Skip “level scripts” / empty script files
-                    if (sf.isLevelScript || sf.hasNoScripts)
+                    if (sf.IsLevelScript || sf.HasNoScripts)
                         continue;
 
                     // Emit Scripts + Functions only
@@ -443,11 +443,11 @@ namespace DSPRE
 
                     sw.WriteLine(
                         $"{headerId}," +
-                        $"{h.scriptFileID}," +
-                        $"{h.eventFileID}," +
+                        $"{h.ScriptFileID}," +
+                        $"{h.EventFileID}," +
                         $"{mapNameIndex}," +
-                        $"{h.wildPokemon}," +
-                        $"{h.weatherID}"
+                        $"{h.WildPokemon}," +
+                        $"{h.WeatherID}"
                     );
                 }
             }
@@ -456,16 +456,16 @@ namespace DSPRE
         private static int GetMapNameIndex(MapHeader h)
         {
             // DP: locationName is ushort; Pt/HGSS: locationName is byte :contentReference[oaicite:5]{index=5} :contentReference[oaicite:6]{index=6}
-            if (h is HeaderDP dp) return dp.locationName;     // read as UInt16 in DP :contentReference[oaicite:7]{index=7}
-            if (h is HeaderPt pt) return pt.locationName;     // read as Byte in Pt :contentReference[oaicite:8]{index=8}
-            if (h is HeaderHGSS hgss) return hgss.locationName; // read as Byte in HGSS :contentReference[oaicite:9]{index=9}
+            if (h is HeaderDP dp) return dp.LocationName;     // read as UInt16 in DP :contentReference[oaicite:7]{index=7}
+            if (h is HeaderPt pt) return pt.LocationName;     // read as Byte in Pt :contentReference[oaicite:8]{index=8}
+            if (h is HeaderHGSS hgss) return hgss.LocationName; // read as Byte in HGSS :contentReference[oaicite:9]{index=9}
 
             return -1; // should not happen, but keeps export robust
         }
 
         private static void ExportEventSpawnablesToCSV(string eventSpawnablesPath)
         {
-            string eventsDir = RomInfo.gameDirs[DirNames.eventFiles].unpackedDir;
+            string eventsDir = RomInfo.GameDirs[DirNames.EventFiles].unpackedDir;
 
             if (!Directory.Exists(eventsDir))
                 throw new DirectoryNotFoundException($"Event files directory not found: {eventsDir}");
@@ -492,10 +492,10 @@ namespace DSPRE
                         ev = new EventFile(fs);
                     }
 
-                    for (int i = 0; i < ev.spawnables.Count; i++)
+                    for (int i = 0; i < ev.Spawnables.Count; i++)
                     {
-                        Spawnable sp = ev.spawnables[i];
-                        sw.WriteLine($"{eventFileId},{i},{sp.scriptNumber}");
+                        Spawnable sp = ev.Spawnables[i];
+                        sw.WriteLine($"{eventFileId},{i},{sp.ScriptNumber}");
                     }
                 }
             }
@@ -504,7 +504,7 @@ namespace DSPRE
 
         private static void ExportEventOverworldsToCSV(string eventOverworldsPath)
         {
-            string eventsDir = RomInfo.gameDirs[DirNames.eventFiles].unpackedDir;
+            string eventsDir = RomInfo.GameDirs[DirNames.EventFiles].unpackedDir;
 
             if (!Directory.Exists(eventsDir))
                 throw new DirectoryNotFoundException($"Event files directory not found: {eventsDir}");
@@ -535,26 +535,26 @@ namespace DSPRE
                         ev = new EventFile(fs);
                     }
 
-                    for (int i = 0; i < ev.overworlds.Count; i++)
+                    for (int i = 0; i < ev.Overworlds.Count; i++)
                     {
-                        Overworld ow = ev.overworlds[i];
+                        Overworld ow = ev.Overworlds[i];
 
                         // Combined coordinates (same scheme used in serialization)
-                        int xCoord = ow.xMapPosition + (MapFile.mapSize * ow.xMatrixPosition);
-                        int yCoord = ow.yMapPosition + (MapFile.mapSize * ow.yMatrixPosition);
+                        int xCoord = ow.XMapPosition + (MapFile.MapSize * ow.XMatrixPosition);
+                        int yCoord = ow.YMapPosition + (MapFile.MapSize * ow.YMatrixPosition);
 
-                        bool isAlias = ow.scriptNumber == 0xFFFF;
+                        bool isAlias = ow.ScriptNumber == 0xFFFF;
 
                         // Match EventEditor.GetOverworldImage(...) logic:
                         // - If 3D overworld dict contains entry, there is no OWSprites file id.
                         // - Else use OverworldTable -> (spriteID, properties)
                         string owSpriteIdStr = "";
-                        if (RomInfo.ow3DSpriteDict.TryGetValue(ow.overlayTableEntry, out _))
+                        if (RomInfo.Ow3DSpriteDict.TryGetValue(ow.OverlayTableEntry, out _))
                         {
                             // 3D overworld (image comes from Resources). No OWSprites sprite ID.
                             owSpriteIdStr = "";
                         }
-                        else if (RomInfo.OverworldTable.TryGetValue(ow.overlayTableEntry, out (uint spriteID, ushort properties) result))
+                        else if (RomInfo.OverworldTable.TryGetValue(ow.OverlayTableEntry, out (uint spriteID, ushort properties) result))
                         {
                             owSpriteIdStr = result.spriteID.ToString();
                         }
@@ -566,11 +566,11 @@ namespace DSPRE
 
                         sw.WriteLine(
                             $"{eventFileId},{i}," +
-                            $"{ow.owID},{ow.overlayTableEntry},{owSpriteIdStr}," +
-                            $"{ow.movement},{ow.type},{ow.flag},{ow.scriptNumber}," +
-                            $"{ow.orientation},{ow.sightRange},{ow.param1},{ow.param2},{ow.xRange},{ow.yRange}," +
-                            $"{ow.xMatrixPosition},{ow.yMatrixPosition},{ow.xMapPosition},{ow.yMapPosition}," +
-                            $"{xCoord},{yCoord},{ow.zPosition},{(isAlias ? 1 : 0)}"
+                            $"{ow.OwID},{ow.OverlayTableEntry},{owSpriteIdStr}," +
+                            $"{ow.Movement},{ow.Type},{ow.Flag},{ow.ScriptNumber}," +
+                            $"{ow.Orientation},{ow.SightRange},{ow.Param1},{ow.Param2},{ow.XRange},{ow.YRange}," +
+                            $"{ow.XMatrixPosition},{ow.YMatrixPosition},{ow.XMapPosition},{ow.YMapPosition}," +
+                            $"{xCoord},{yCoord},{ow.ZPosition},{(isAlias ? 1 : 0)}"
                         );
                     }
                 }
@@ -591,14 +591,14 @@ namespace DSPRE
             {
                 curPersonalData = new PokemonPersonalData(i);
 
-                string type1String = (int)curPersonalData.type1 < typeNames.Length ? typeNames[(int)curPersonalData.type1] : "UnknownType_" + (int)curPersonalData.type1;
-                string type2String = (int)curPersonalData.type2 < typeNames.Length ? typeNames[(int)curPersonalData.type2] : "UnknownType_" + (int)curPersonalData.type2;
+                string type1String = (int)curPersonalData.Type1 < typeNames.Length ? typeNames[(int)curPersonalData.Type1] : "UnknownType_" + (int)curPersonalData.Type1;
+                string type2String = (int)curPersonalData.Type2 < typeNames.Length ? typeNames[(int)curPersonalData.Type2] : "UnknownType_" + (int)curPersonalData.Type2;
 
                 sw.WriteLine($"{i},{pokeNames[i]},{type1String},{type2String}," +
-                    $"{curPersonalData.baseHP},{curPersonalData.baseAtk},{curPersonalData.baseDef}, " +
-                    $"{curPersonalData.baseSpAtk},{curPersonalData.baseSpDef},{curPersonalData.baseSpeed}," +
-                    $"{abilityNames[curPersonalData.firstAbility]},{abilityNames[curPersonalData.secondAbility]}," +
-                    $"{itemNames[curPersonalData.item1]},{itemNames[curPersonalData.item2]}");
+                    $"{curPersonalData.BaseHP},{curPersonalData.BaseAtk},{curPersonalData.BaseDef}, " +
+                    $"{curPersonalData.BaseSpAtk},{curPersonalData.BaseSpDef},{curPersonalData.BaseSpeed}," +
+                    $"{abilityNames[curPersonalData.FirstAbility]},{abilityNames[curPersonalData.SecondAbility]}," +
+                    $"{itemNames[curPersonalData.Item1]},{itemNames[curPersonalData.Item2]}");
             }
 
             sw.Close();
@@ -627,7 +627,7 @@ namespace DSPRE
 
                     int entryIndex = 0;
                     // Write up to 20 entries
-                    foreach ((byte level, ushort move) entry in curLearnsetData.list)
+                    foreach ((byte level, ushort move) entry in curLearnsetData.List)
                     {
                         if (entryIndex >= 20)
                             break;
@@ -665,9 +665,9 @@ namespace DSPRE
                 int i = set.Species;
                 string speciesName = "SPECIES_UNKNOWN";
 
-                if (ScriptDatabase.pokemonNames.ContainsKey((ushort)i))
+                if (ScriptDatabase.PokemonNames.ContainsKey((ushort)i))
                 {
-                    speciesName = $"{ScriptDatabase.pokemonNames[(ushort)i].ToUpper().Replace(" ", "_")}";
+                    speciesName = $"{ScriptDatabase.PokemonNames[(ushort)i].ToUpper().Replace(" ", "_")}";
                 }
                 else if (i < pokeNames.Length)
                 {
@@ -681,9 +681,9 @@ namespace DSPRE
                     if (entry.Move == 0) continue; // Skip empty moves
 
                     string moveName = "MOVE_UNKNOWN";
-                    if (ScriptDatabase.moveNames.ContainsKey((ushort)entry.Move))
+                    if (ScriptDatabase.MoveNames.ContainsKey((ushort)entry.Move))
                     {
-                        moveName = $"{ScriptDatabase.moveNames[(ushort)entry.Move].ToUpper().Replace(" ", "_")}";
+                        moveName = $"{ScriptDatabase.MoveNames[(ushort)entry.Move].ToUpper().Replace(" ", "_")}";
                     }
 
                     levelMoves.Add(new Dictionary<string, object>
@@ -716,9 +716,9 @@ namespace DSPRE
 
                 sw.Write($"{i},{pokeNames[i]}");
 
-                foreach (EvolutionData entry in curEvolutionFile.data)
+                foreach (EvolutionData entry in curEvolutionFile.Data)
                 {
-                    EvolutionParamMeaning meaning = EvolutionFile.evoDescriptions[entry.method];
+                    EvolutionParamMeaning meaning = EvolutionFile.EvoDescriptions[entry.Method];
 
                     string paramString = "";
 
@@ -728,26 +728,26 @@ namespace DSPRE
                             paramString = "Ignored";
                             break;
                         case EvolutionParamMeaning.FromLevel:
-                            paramString = entry.param.ToString();
+                            paramString = entry.Param.ToString();
                             break;
                         case EvolutionParamMeaning.ItemName:
-                            paramString = itemNames[entry.param];
+                            paramString = itemNames[entry.Param];
                             break;
                         case EvolutionParamMeaning.MoveName:
-                            paramString = moveNames[entry.param];
+                            paramString = moveNames[entry.Param];
                             break;
                         case EvolutionParamMeaning.PokemonName:
-                            paramString = pokeNames[entry.param];
+                            paramString = pokeNames[entry.Param];
                             break;
                         case EvolutionParamMeaning.BeautyValue:
-                            paramString = entry.param.ToString();
+                            paramString = entry.Param.ToString();
                             break;
                     }
-                    if (entry.target == 0)
+                    if (entry.Target == 0)
                     {
                         break;
                     }
-                    sw.Write($",[{entry.method}|{paramString}|{pokeNames[entry.target]}]");
+                    sw.Write($",[{entry.Method}|{paramString}|{pokeNames[entry.Target]}]");
                 }
 
                 sw.WriteLine();
@@ -775,7 +775,7 @@ namespace DSPRE
             FileStream curTrainerParty = null;
             StreamWriter sw = new StreamWriter(trainerDataPath);
 
-            int trainerCount = NarcAPI.Narc.MemberCount(RomInfo.gameDirs[DirNames.trainerProperties].unpackedDir);
+            int trainerCount = NarcAPI.Narc.MemberCount(RomInfo.GameDirs[DirNames.TrainerProperties].unpackedDir);
             bool shinyPatch = TrainerShinyPatch.DetectCurrentProject();
 
             for (int i = 1; i < trainerCount; i++)
@@ -783,18 +783,18 @@ namespace DSPRE
                 string suffix = Path.DirectorySeparatorChar + i.ToString("D4");
 
                 curTrainerProperties = new TrainerProperties((ushort)i,
-                    new FileStream(RomInfo.gameDirs[DirNames.trainerProperties].unpackedDir + suffix, FileMode.Open));
+                    new FileStream(RomInfo.GameDirs[DirNames.TrainerProperties].unpackedDir + suffix, FileMode.Open));
 
-                curTrainerParty = new FileStream(RomInfo.gameDirs[DirNames.trainerParty].unpackedDir + suffix, FileMode.Open);
+                curTrainerParty = new FileStream(RomInfo.GameDirs[DirNames.TrainerParty].unpackedDir + suffix, FileMode.Open);
 
                 curTrainerFile = new TrainerFile(curTrainerProperties, curTrainerParty, trainerNames[i]);
 
                 string trainerName = trainerNames[i];
-                string trainerClass = trainerClassNames[curTrainerProperties.trainerClass];
-                string[] trainerItems = curTrainerProperties.trainerItems.Select(item => item != 0 ? itemNames[(int)item] : "None").ToArray();
+                string trainerClass = trainerClassNames[curTrainerProperties.TrainerClass];
+                string[] trainerItems = curTrainerProperties.TrainerItems.Select(item => item != 0 ? itemNames[(int)item] : "None").ToArray();
 
                 // Create array of party pokemon
-                PartyPokemon[] partyPokemon = new PartyPokemon[curTrainerProperties.partyCount];
+                PartyPokemon[] partyPokemon = new PartyPokemon[curTrainerProperties.PartyCount];
 
                 // Now that we have the party pokemons, we can declare the arrays to store the data
                 string[] monNames = new string[partyPokemon.Length];
@@ -808,33 +808,33 @@ namespace DSPRE
                 {
                     // This assumes that the non-empty mons are at the beginning of the party array which they should be
                     // if there is some way for this not to be the case, the program will crash
-                    partyPokemon[j] = curTrainerFile.party[j];
+                    partyPokemon[j] = curTrainerFile.Party[j];
                     // Type cast can be done because CountNonEmptyMons() only returns non-empty mons i.e. mons with non-null pokeID
-                    monNames[j] = pokeNames[(int)partyPokemon[j].pokeID];
-                    monFlags[j] = partyPokemon[j].genderAndAbilityFlags;
+                    monNames[j] = pokeNames[(int)partyPokemon[j].PokeID];
+                    monFlags[j] = partyPokemon[j].GenderAndAbility;
 
                     // Need to account for the case where the mon has no held item
-                    if (partyPokemon[j].heldItem != null)
+                    if (partyPokemon[j].HeldItem != null)
                     {
-                        items[j] = itemNames[(int)partyPokemon[j].heldItem];
+                        items[j] = itemNames[(int)partyPokemon[j].HeldItem];
                     }
                     else
                     {
                         items[j] = "None";
                     }
 
-                    levels[j] = partyPokemon[j].level;
-                    ivs[j] = partyPokemon[j].difficulty * 31 / 255;
+                    levels[j] = partyPokemon[j].Level;
+                    ivs[j] = partyPokemon[j].Difficulty * 31 / 255;
 
                     // Need to account for the case where the mon has no moves
-                    if (partyPokemon[j].moves == null)
+                    if (partyPokemon[j].Moves == null)
                     {
-                        LearnsetData learnset = new LearnsetData((int)partyPokemon[j].pokeID);
+                        LearnsetData learnset = new LearnsetData((int)partyPokemon[j].PokeID);
                         moves[j] = learnset.GetLearnsetAtLevel(levels[j]).Select(move => moveNames[move]).ToArray();
                     }
                     else
                     {
-                        moves[j] = partyPokemon[j].moves.Select(move => moveNames[move]).ToArray();
+                        moves[j] = partyPokemon[j].Moves.Select(move => moveNames[move]).ToArray();
                     }
 
                 }
@@ -846,7 +846,7 @@ namespace DSPRE
                 // This function sets the monGenders, abilities and natures arrays
                 // We hide this away in a function because it's a bit complex
                 // and we don't want to clutter the main function more than it already is
-                SetMonGendersAndAbilitiesAndNature(i, curTrainerProperties.trainerClass, partyPokemon, monFlags, ref abilityNames, ref monGenders, ref abilities, ref natures, shinyPatch);
+                SetMonGendersAndAbilitiesAndNature(i, curTrainerProperties.TrainerClass, partyPokemon, monFlags, ref abilityNames, ref monGenders, ref abilities, ref natures, shinyPatch);
 
 
                 sw.Write(TrainerToDocFormat(i, trainerName, trainerClass, trainerItems, monNames, monGenders, items, abilities, levels, natures, ivs, moves));
@@ -861,7 +861,7 @@ namespace DSPRE
             StreamWriter sw = new StreamWriter(moveDataPath);
 
             string[] moveFlags = Enum.GetNames(typeof(MoveData.MoveFlags));
-            string[] battleSeqDesc = PokeDatabase.MoveData.battleSequenceDescriptions;
+            string[] battleSeqDesc = PokeDatabase.MoveData.BattleSequenceDescriptions;
 
             sw.WriteLine("Move ID,Move Name,Move Type,Move Split,Power,Accuracy,Priority,Side Effect Probability,PP,Range,Flags,Effect Description");
 
@@ -871,20 +871,20 @@ namespace DSPRE
 
                 // Lambda magic to select the flags that are set, skipping the first enum entry (no flags)
                 string moveFlagsString = string.Join("|", moveFlags.Skip(1).Select((flag, index)
-                    => (curMoveDataFile.flagField & (1 << index)) != 0 ? flag : "").Where(flag => !string.IsNullOrEmpty(flag)));
+                    => (curMoveDataFile.FlagField & (1 << index)) != 0 ? flag : "").Where(flag => !string.IsNullOrEmpty(flag)));
 
                 // Use user-friendly range name from MoveData
-                string attackRangeString = MoveData.GetAttackRangeName(curMoveDataFile.target);
+                string attackRangeString = MoveData.GetAttackRangeName(curMoveDataFile.Target);
 
-                string battleSeqDescString = curMoveDataFile.battleeffect < battleSeqDesc.Length ?
-                    battleSeqDesc[curMoveDataFile.battleeffect] : "UnknownEffect_" + curMoveDataFile.battleeffect;
+                string battleSeqDescString = curMoveDataFile.Battleeffect < battleSeqDesc.Length ?
+                    battleSeqDesc[curMoveDataFile.Battleeffect] : "UnknownEffect_" + curMoveDataFile.Battleeffect;
 
-                string typeString = (int)curMoveDataFile.movetype < typeNames.Length ?
-                    typeNames[(int)curMoveDataFile.movetype] : "UnknownType_" + (int)curMoveDataFile.movetype;
+                string typeString = (int)curMoveDataFile.Movetype < typeNames.Length ?
+                    typeNames[(int)curMoveDataFile.Movetype] : "UnknownType_" + (int)curMoveDataFile.Movetype;
 
-                sw.WriteLine($"{i},{moveNames[i]},{typeString},{curMoveDataFile.split}," +
-                             $"{curMoveDataFile.damage},{curMoveDataFile.accuracy},{curMoveDataFile.priority}," +
-                             $"{curMoveDataFile.sideEffectProbability},{curMoveDataFile.pp}," +
+                sw.WriteLine($"{i},{moveNames[i]},{typeString},{curMoveDataFile.Split}," +
+                             $"{curMoveDataFile.Damage},{curMoveDataFile.Accuracy},{curMoveDataFile.Priority}," +
+                             $"{curMoveDataFile.SideEffectProbability},{curMoveDataFile.Pp}," +
                              $"{attackRangeString},[{moveFlagsString}],{battleSeqDescString}");
             }
 
@@ -900,7 +900,7 @@ namespace DSPRE
             sw.Write("ID,Name");
 
             string[] machineMoveNames = TMEditor.ReadMachineMoveNames();
-            int totalTMs = PokemonPersonalData.tmsCount + PokemonPersonalData.hmsCount;
+            int totalTMs = PokemonPersonalData.TmsCount + PokemonPersonalData.HmsCount;
 
             // Write Header (List of all TMs/HMs)
             for (int i = 0; i < totalTMs; i++)
@@ -921,7 +921,7 @@ namespace DSPRE
                 for (byte b = 0; b < totalTMs; b++)
                 {
                     sw.Write(b == 0 ? "" : ",");
-                    sw.Write(curPersonalData.machines.Contains(b) ? "true" : "false");
+                    sw.Write(curPersonalData.Machines.Contains(b) ? "true" : "false");
                 }
 
                 sw.WriteLine("]");
@@ -1002,12 +1002,12 @@ namespace DSPRE
             for (int j = 0; j < partyPokemon.Length; j++)
             {
 
-                byte baseGenderRatio = new PokemonPersonalData((int)partyPokemon[j].pokeID).genderVec;
+                byte baseGenderRatio = new PokemonPersonalData((int)partyPokemon[j].PokeID).GenderVec;
                 byte genderOverride = (byte)((byte)monFlags[j] & 0x0F); // Get the lower 4 bits
                 byte abilityOverride = (byte)TrainerShinyPatch.AbilityOverride((byte)monFlags[j], shinyPatch);
 
-                uint PID = DVCalculator.generatePID((uint)trainerID, (uint)trainerClassID, (uint)partyPokemon[j].pokeID, (byte)partyPokemon[j].level, baseGenderRatio, genderOverride, abilityOverride, partyPokemon[j].difficulty);
-                natures[j] = DVCalculator.Natures[DVCalculator.getNatureFromPID(PID)].Split(':')[0];
+                uint PID = DVCalculator.GeneratePID((uint)trainerID, (uint)trainerClassID, (uint)partyPokemon[j].PokeID, (byte)partyPokemon[j].Level, baseGenderRatio, genderOverride, abilityOverride, partyPokemon[j].Difficulty);
+                natures[j] = DVCalculator.Natures[DVCalculator.GetNatureFromPID(PID)].Split(':')[0];
 
                 switch (genderOverride)
                 {
@@ -1025,10 +1025,10 @@ namespace DSPRE
                 switch (PID % 2) // Lowest bit of PID determines the ability
                 {
                     case 0:
-                        abilities[j] = abilityNames[new PokemonPersonalData((int)partyPokemon[j].pokeID).firstAbility];
+                        abilities[j] = abilityNames[new PokemonPersonalData((int)partyPokemon[j].PokeID).FirstAbility];
                         break;
                     case 1:
-                        abilities[j] = abilityNames[new PokemonPersonalData((int)partyPokemon[j].pokeID).secondAbility];
+                        abilities[j] = abilityNames[new PokemonPersonalData((int)partyPokemon[j].PokeID).SecondAbility];
                         break;
                 }
             }

@@ -15,7 +15,7 @@ namespace DSPRE
             try
             {
                 string sourceDbPath = Path.Combine(AppContext.BaseDirectory, "databases");
-                if (Directory.Exists(sourceDbPath) && !SettingsManager.Settings.databasesPulled)
+                if (Directory.Exists(sourceDbPath) && !SettingsManager.Settings.DatabasesPulled)
                 {
                     if (!Directory.Exists(AppPaths.DatabasePath))
                     {
@@ -33,7 +33,7 @@ namespace DSPRE
                     // dir may be read-only, e.g. a system-wide install on Linux) and update settings.
                     try { Directory.Delete(sourceDbPath, true); }
                     catch (Exception delEx) { AppLogger.Warn($"Could not remove bundled databases folder: {delEx.Message}"); }
-                    SettingsManager.Settings.databasesPulled = true;
+                    SettingsManager.Settings.DatabasesPulled = true;
                 }
             }
             catch (Exception ex)

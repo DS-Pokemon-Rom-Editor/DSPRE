@@ -16,7 +16,7 @@ namespace DSPRE
         /// </summary>
         public static IReadOnlyList<string> Friendly()
         {
-            string rom = RomInfo.workDir ?? "";
+            string rom = RomInfo.WorkDir ?? "";
             if (_friendly != null && _forRom == rom) return _friendly;
 
             List<string> built = new List<string>();
@@ -53,7 +53,7 @@ namespace DSPRE
                     built.Add($"{i:D3} {name}");
                 }
             }
-            catch { }
+            catch (Exception ex) { AppLogger.Warn("Header list names: " + ex.Message); }
 
             // Something asks for these while the ROM is still opening, before the place names can be
             // read. Keeping that answer would leave every editor showing bare codes for the session.
@@ -71,14 +71,14 @@ namespace DSPRE
                 List<string> places = RomInfo.GetLocationNames();
                 int at = header switch
                 {
-                    HeaderDP dp => dp.locationName,
-                    HeaderPt pt => pt.locationName,
-                    HeaderHGSS hg => hg.locationName,
+                    HeaderDP dp => dp.LocationName,
+                    HeaderPt pt => pt.LocationName,
+                    HeaderHGSS hg => hg.LocationName,
                     _ => -1,
                 };
                 return at >= 0 && places != null && at < places.Count ? places[at] : "";
             }
-            catch { return ""; }
+            catch (Exception ex) { AppLogger.WarnOnce("HeaderLabels.LocationNameOf", ex); return ""; }
         }
 
         /// <summary>Whether headers are read from their own files rather than out of arm9. Having a

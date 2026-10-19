@@ -46,7 +46,7 @@ namespace DSPRE.ROMFiles
         {
             get
             {
-                (string workDir, bool IsActive) key = (workDir, HgEngine.HgEngineProject.IsActive);
+                (string workDir, bool IsActive) key = (WorkDir, HgEngine.HgEngineProject.IsActive);
                 if (_cache == null || _cacheFor != key)
                 {
                     // An unreadable table is empty rather than read again on every use.

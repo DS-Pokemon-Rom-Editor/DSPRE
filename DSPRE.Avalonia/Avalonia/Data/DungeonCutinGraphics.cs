@@ -22,7 +22,7 @@ namespace DSPRE.Avalonia.Data
         public const int MaxPaletteColors = 176; // 11 palettes of 16
         public const int MaxDimension = 256;      // keeps screen-block addressing a single 32x32-tile block
 
-        private readonly ScriptNarc _narc = new ScriptNarc(DirNames.dungeonCutinGraphics);
+        private readonly ScriptNarc _narc = new ScriptNarc(DirNames.DungeonCutinGraphics);
         private readonly PendingArchiveWrites _pending;
         private int? _templateNclr, _templateNcgr, _templateNscr;
 
@@ -71,7 +71,7 @@ namespace DSPRE.Avalonia.Data
 
             NitroBgCodec.BgImage bg;
             try { bg = NitroBgCodec.Composite(chr, pal, scr); }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("DungeonCutinGraphics.Composite", ex); return null; }
 
             RawImage raw = new RawImage(bg.Width, bg.Height);
             byte[] src = bg.Rgba, dst = raw.Bgra;
@@ -111,12 +111,12 @@ namespace DSPRE.Avalonia.Data
                 byte[] ncgrBytes = DSPRE.ROMFiles.Lz77.Compress(ncgrPlain);
                 byte[] nscrBytes = DSPRE.ROMFiles.Lz77.Compress(nscrPlain);
 
-                int next = _pending.Count(DirNames.dungeonCutinGraphics);
+                int next = _pending.Count(DirNames.DungeonCutinGraphics);
                 (newPaletteIdx, newTilesIdx, newScreenIdx) = (next, next + 1, next + 2);
                 int p = newPaletteIdx, t = newTilesIdx, s = newScreenIdx;
-                _pending.Change(step => step.Put(DirNames.dungeonCutinGraphics, p, nclrBytes)
-                                            .Put(DirNames.dungeonCutinGraphics, t, ncgrBytes)
-                                            .Put(DirNames.dungeonCutinGraphics, s, nscrBytes));
+                _pending.Change(step => step.Put(DirNames.DungeonCutinGraphics, p, nclrBytes)
+                                            .Put(DirNames.DungeonCutinGraphics, t, ncgrBytes)
+                                            .Put(DirNames.DungeonCutinGraphics, s, nscrBytes));
                 return true;
             }
             catch (Exception ex)

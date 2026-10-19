@@ -20,20 +20,20 @@ namespace DSPRE.Avalonia.Data
         public static VsIntroNames Read()
         {
             VsIntroNames n = new VsIntroNames();
-            try { n.Trainers = GetSimpleTrainerNames(); } catch { }
-            try { n.Classes = GetTrainerClassNames(); } catch { }
-            try { n.Species = GetPokemonNames(); } catch { }
+            try { n.Trainers = GetSimpleTrainerNames(); } catch (Exception ex) { AppLogger.Warn("VS intro names: trainers: " + ex.Message); }
+            try { n.Classes = GetTrainerClassNames(); } catch (Exception ex) { AppLogger.Warn("VS intro names: classes: " + ex.Message); }
+            try { n.Species = GetPokemonNames(); } catch (Exception ex) { AppLogger.Warn("VS intro names: species: " + ex.Message); }
             try
             {
                 SdatArchive sdat = SoundArchive.Load();
                 if (sdat?.SeqNames != null) n._sequences = new Dictionary<int, string>(sdat.SeqNames);
             }
-            catch { }
-            if (gameFamily == GameFamilies.DP)
+            catch (Exception ex) { AppLogger.Warn("VS intro names: sequences: " + ex.Message); }
+            if (GameFamily == GameFamilies.DP)
             {
                 try
                 {
-                    DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties });
+                    DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TrainerProperties });
                     for (int i = 1; i < n.Trainers.Length; i++)
                     {
                         string path = Filesystem.GetTrainerPropertiesPath(i);
@@ -42,7 +42,7 @@ namespace DSPRE.Avalonia.Data
                         if (b.Length > 1 && !n._firstOfClass.ContainsKey(b[1])) n._firstOfClass[b[1]] = i;
                     }
                 }
-                catch { }
+                catch { }   // a trainer that can't be read is skipped
             }
             return n;
         }

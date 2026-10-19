@@ -51,10 +51,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// </summary>
         public static string ArchiveLabel(ArchiveFiles narc, int member)
         {
-            if (narc.Dir != DirNames.synthOverlay) return narc.Name;
-            bool hgss = gameFamily == GameFamilies.HGSS;
+            if (narc.Dir != DirNames.SynthOverlay) return narc.Name;
+            bool hgss = GameFamily == GameFamilies.HGSS;
             string archive = hgss ? "map screen overlay (a/0/2/8)" : "weather effects";
-            if (RomPatchState.flag_arm9Expanded && member == RomPatchState.expandedARMfileID) return $"expanded ARM9 area, kept in the {archive} archive";
+            if (RomPatchState.FlagArm9Expanded && member == RomPatchState.ExpandedARMfileID) return $"expanded ARM9 area, kept in the {archive} archive";
             if (hgss && member >= HgEngine.HgEngineCodeAddons.VanillaMembers) return $"added to the {archive} archive";
             return archive;
         }
@@ -237,21 +237,21 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             List<CellAnimationFound> found = new List<CellAnimationFound>();
             HashSet<string> mappedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (DirNames dir in gameDirs?.Keys.ToList() ?? new List<DirNames>())
+            foreach (DirNames dir in GameDirs?.Keys.ToList() ?? new List<DirNames>())
             {
-                try { mappedFiles.Add(Path.GetFullPath(Path.Combine(workDir ?? "", gameDirs[dir].packedDir))); } catch { }
+                try { mappedFiles.Add(Path.GetFullPath(Path.Combine(WorkDir ?? "", GameDirs[dir].packedDir))); } catch { }   // a folder path that can't be resolved is not listed
                 // That slot holds map headers once the dynamic headers patch is applied, not graphics.
-                if (dir == DirNames.dynamicHeaders) continue;
+                if (dir == DirNames.DynamicHeaders) continue;
                 found.AddRange(InArchive(dir));
             }
 
-            if (string.IsNullOrEmpty(dataPath) || !Directory.Exists(dataPath)) return found;
-            foreach (string path in Directory.EnumerateFiles(dataPath, "*", SearchOption.AllDirectories).OrderBy(p => p, StringComparer.Ordinal))
+            if (string.IsNullOrEmpty(DataPath) || !Directory.Exists(DataPath)) return found;
+            foreach (string path in Directory.EnumerateFiles(DataPath, "*", SearchOption.AllDirectories).OrderBy(p => p, StringComparer.Ordinal))
             {
                 string full;
-                try { full = Path.GetFullPath(path); } catch { continue; }
+                try { full = Path.GetFullPath(path); } catch (Exception ex) { AppLogger.WarnOnce("CellAnimationPickerViewModel.Everywhere", ex); continue; }
                 if (mappedFiles.Contains(full) || !StartsLikeANarc(full)) continue;
-                string name = Path.GetRelativePath(dataPath, full).Replace('\\', '/');
+                string name = Path.GetRelativePath(DataPath, full).Replace('\\', '/');
                 found.AddRange(InArchive(ArchiveFiles.Loose(full, name)));
             }
             return found;
@@ -265,7 +265,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 byte[] head = new byte[4];
                 return s.Read(head, 0, 4) == 4 && head[0] == 'N' && head[1] == 'A' && head[2] == 'R' && head[3] == 'C';
             }
-            catch { return false; }
+            catch (Exception ex) { AppLogger.WarnOnce("CellAnimationPickerViewModel.StartsLikeANarc", ex); return false; }
         }
 
         /// <summary>Every animation in one archive, with the files each one draws from.</summary>
@@ -274,7 +274,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public static List<CellAnimationFound> InArchive(ArchiveFiles narc)
         {
             List<CellAnimationFound> found = new List<CellAnimationFound>();
-            try { if (!narc.Available) return found; } catch { return found; }
+            try { if (!narc.Available) return found; } catch (Exception ex) { AppLogger.WarnOnce("CellAnimationPickerViewModel.InArchive", ex); return found; }
             DirNames dir = narc.Dir ?? default;
 
             // What each file in this archive is, so neighbours can be recognised.
@@ -288,7 +288,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     bytes[i] = NitroBgCodec.Inflate(narc.Get(i));
                     kinds[i] = GraphicAssets.Identify(bytes[i]);
                 }
-                catch { kinds[i] = GraphicAssets.Kind.Unknown; }
+                catch (Exception ex) { AppLogger.WarnOnce("CellAnimationPickerViewModel.InArchive", ex); kinds[i] = GraphicAssets.Kind.Unknown; }
             }
 
             // This archive's own entry hooks, where it has them, beat a guess from neighbouring files.
@@ -305,7 +305,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (!banksAt.TryGetValue(at, out List<DsBgScreen.Oam[]> banks))
                 {
                     try { banks = DsBgScreen.ReadCells(bytes[at]); }
-                    catch { banks = new List<DsBgScreen.Oam[]>(); }
+                    catch (Exception ex) { AppLogger.WarnOnce("CellAnimationPickerViewModel.InArchive", ex); banks = new List<DsBgScreen.Oam[]>(); }
                     banksAt[at] = banks;
                 }
                 return banks;
@@ -317,14 +317,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (!tilesAt.TryGetValue(at, out int tiles))
                 {
                     try { tiles = NitroBgCodec.ReadCharacters(bytes[at]).Length / 32; }
-                    catch { tiles = 0; }
+                    catch (Exception ex) { AppLogger.WarnOnce("CellAnimationPickerViewModel.InArchive", ex); tiles = 0; }
                     tilesAt[at] = tiles;
                 }
                 return tiles;
             }
 
             // Every party icon shares one animation, so it is offered once per Pokemon with its own drawing and colour bank.
-            if (narc.Dir == DirNames.monIcons)
+            if (narc.Dir == DirNames.MonIcons)
             {
                 const int IconAnimation = 1, IconLayout = 2, IconPalette = 0;
                 NanrFile iconFile = IconAnimation < count && kinds[IconAnimation] == GraphicAssets.Kind.CellAnimation
@@ -332,14 +332,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (iconFile != null)
                 {
                     string[] names;
-                    try { names = GetPokemonNames(); } catch { names = Array.Empty<string>(); }
+                    try { names = GetPokemonNames(); } catch (Exception ex) { AppLogger.WarnOnce("CellAnimationPickerViewModel.InArchive", ex); names = Array.Empty<string>(); }
                     int banks = BanksOf(IconLayout).Count;
                     for (int f = PokemonIconFiles.SharedFiles + 1; f < count; f++)
                     {
                         PokemonIconFiles.Icon icon = PokemonIconFiles.Describe(f);
                         if (icon == null) continue;
                         int row;
-                        try { row = DSUtils.GetMonIconPaletteId(f - PokemonIconFiles.SharedFiles); } catch { row = 0; }
+                        try { row = DSUtils.GetMonIconPaletteId(f - PokemonIconFiles.SharedFiles); } catch (Exception ex) { AppLogger.WarnOnce("CellAnimationPickerViewModel.InArchive", ex); row = 0; }
                         found.Add(new CellAnimationFound
                         {
                             Archive = dir, Source = narc, ArchiveName = CellAnimationFound.ArchiveLabel(narc, IconAnimation),
@@ -357,7 +357,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             for (int i = 0; i < count; i++)
             {
-                if (narc.Dir == DirNames.monIcons) break;
+                if (narc.Dir == DirNames.MonIcons) break;
                 if (kinds[i] != GraphicAssets.Kind.CellAnimation) continue;
                 NanrFile file = NanrFile.Read(bytes[i]);
                 if (file == null) continue;
@@ -390,7 +390,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (colours < 0) colours = Nearest(kinds, i, GraphicAssets.Kind.Palette);
 
                 int paletteRow = 0;
-                try { if (sprites >= 0 && described?.ColourBank != null) paletteRow = Math.Max(0, described.ColourBank(sprites)); } catch { }
+                try { if (sprites >= 0 && described?.ColourBank != null) paletteRow = Math.Max(0, described.ColourBank(sprites)); } catch { }   // without a known bank the first palette row is used
 
                 found.Add(new CellAnimationFound
                 {
@@ -422,7 +422,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             if (entry == null) return -1;
             int at;
-            try { at = entry(from); } catch { return -1; }
+            try { at = entry(from); } catch (Exception ex) { AppLogger.WarnOnce("CellAnimationPickerViewModel.Declared", ex); return -1; }
             if (at < 0 || at >= kinds.Length || at == from) return -1;
             return kinds[at] == want ? at : -1;
         }

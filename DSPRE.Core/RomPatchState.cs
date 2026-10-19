@@ -12,13 +12,13 @@ namespace DSPRE
         // Must not throw during type init (that would poison the whole class): before a ROM is
         // loaded, RomInfo.gameFamily isn't set and the DB lookup fails. ResetFlags() re-evaluates
         // this on every ROM (re)load.
-        public static uint expandedARMfileID = SafeExpandedARMfileID();
+        public static uint ExpandedARMfileID = SafeExpandedARMfileID();
 
         private static uint SafeExpandedARMfileID()
         {
             try
             {
-                return ToolboxDB.syntheticOverlayFileNumbersDB.TryGetValue(RomInfo.gameFamily, out uint id) ? id : 0u;
+                return ToolboxDB.SyntheticOverlayFileNumbersDB.TryGetValue(RomInfo.GameFamily, out uint id) ? id : 0u;
             }
             catch
             {
@@ -26,23 +26,23 @@ namespace DSPRE
             }
         }
 
-        public static bool flag_standardizedItems { get; set; } = false;
-        public static bool flag_arm9Expanded { get; set; } = false;
-        public static bool flag_BDHCamPatchApplied { get; set; } = false;
-        public static bool flag_BuildingRotationPatchApplied { get; set; } = false;
-        public static bool flag_DynamicHeadersPatchApplied { get; set; } = false;
-        public static bool flag_MatrixExpansionApplied { get; set; } = false;
+        public static bool FlagStandardizedItems { get; set; } = false;
+        public static bool FlagArm9Expanded { get; set; } = false;
+        public static bool FlagBDHCamPatchApplied { get; set; } = false;
+        public static bool FlagBuildingRotationPatchApplied { get; set; } = false;
+        public static bool FlagDynamicHeadersPatchApplied { get; set; } = false;
+        public static bool FlagMatrixExpansionApplied { get; set; } = false;
 
-        public static bool flag_TrainerNamesExpanded { get; set; } = false;
+        public static bool FlagTrainerNamesExpanded { get; set; } = false;
 
         /// <summary>Whether hzla's PlatPatches "overworld sprites" expansion (marker "OWTBLXPANDV1"
         /// in the synthetic-overlay file) has been detected on the loaded ROM. DSPRE only detects
         /// this patch, it never applies it. Platinum-only.</summary>
-        public static bool flag_OverworldSpriteExpansionApplied { get; set; } = false;
-        public static uint overworldExpansionUsedCount { get; set; } = 0;
-        public static uint overworldExpansionCapacity { get; set; } = 0;
+        public static bool FlagOverworldSpriteExpansionApplied { get; set; } = false;
+        public static uint OverworldExpansionUsedCount { get; set; } = 0;
+        public static uint OverworldExpansionCapacity { get; set; } = 0;
 
-        public static readonly int expandedTrainerNameLength = 12;
+        public static readonly int ExpandedTrainerNameLength = 12;
 
         /// <summary>
         /// Resets all static patch flags to their default values.
@@ -50,23 +50,23 @@ namespace DSPRE
         /// </summary>
         public static void ResetFlags()
         {
-            flag_standardizedItems = false;
-            flag_arm9Expanded = false;
-            flag_BDHCamPatchApplied = false;
-            flag_BuildingRotationPatchApplied = false;
-            flag_DynamicHeadersPatchApplied = false;
-            flag_MatrixExpansionApplied = false;
-            flag_TrainerNamesExpanded = false;
-            flag_OverworldSpriteExpansionApplied = false;
-            overworldExpansionUsedCount = 0;
-            overworldExpansionCapacity = 0;
+            FlagStandardizedItems = false;
+            FlagArm9Expanded = false;
+            FlagBDHCamPatchApplied = false;
+            FlagBuildingRotationPatchApplied = false;
+            FlagDynamicHeadersPatchApplied = false;
+            FlagMatrixExpansionApplied = false;
+            FlagTrainerNamesExpanded = false;
+            FlagOverworldSpriteExpansionApplied = false;
+            OverworldExpansionUsedCount = 0;
+            OverworldExpansionCapacity = 0;
 
             // The static field initializer only runs once, so re-evaluate when the game family changes.
             try
             {
-                if (ToolboxDB.syntheticOverlayFileNumbersDB.ContainsKey(RomInfo.gameFamily))
+                if (ToolboxDB.SyntheticOverlayFileNumbersDB.ContainsKey(RomInfo.GameFamily))
                 {
-                    expandedARMfileID = ToolboxDB.syntheticOverlayFileNumbersDB[RomInfo.gameFamily];
+                    ExpandedARMfileID = ToolboxDB.SyntheticOverlayFileNumbersDB[RomInfo.GameFamily];
                 }
             }
             catch

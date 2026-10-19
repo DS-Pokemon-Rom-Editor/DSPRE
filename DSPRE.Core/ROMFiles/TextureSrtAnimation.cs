@@ -70,7 +70,7 @@ namespace DSPRE.ROMFiles
         private TextureSrtAnimation(NSBTA.NSBTA_File file)
         {
             _file = file;
-            MaterialNames = file.MAT.names ?? Array.Empty<string>();
+            MaterialNames = file.MAT.Names ?? Array.Empty<string>();
             for (int i = 0; i < MaterialNames.Count; i++)
                 _byName[MaterialNames[i]] = i;
 
@@ -94,8 +94,8 @@ namespace DSPRE.ROMFiles
         private IEnumerable<decimal[]> Tracks(int material)
         {
             NSBTA.NSBTA_File.srtData d = _file.SRTData[material];
-            yield return d.scaleS; yield return d.scaleT;
-            yield return d.translateS; yield return d.translateT;
+            yield return d.ScaleS; yield return d.ScaleT;
+            yield return d.TranslateS; yield return d.TranslateT;
         }
 
         /// <summary>Index of the material this animation drives, or -1 when it doesn't touch it.</summary>
@@ -117,21 +117,21 @@ namespace DSPRE.ROMFiles
             NSBTA.NSBTA_File.srtData d = _file.SRTData[material];
             Srt srt = new Srt
             {
-                ScaleS = At(d.scaleS, frame, 1f),
-                ScaleT = At(d.scaleT, frame, 1f),
+                ScaleS = At(d.ScaleS, frame, 1f),
+                ScaleT = At(d.ScaleT, frame, 1f),
                 SinRotation = 0f,
                 CosRotation = 1f,
-                TranslateS = At(d.translateS, frame, 0f),
-                TranslateT = At(d.translateT, frame, 0f),
+                TranslateS = At(d.TranslateS, frame, 0f),
+                TranslateT = At(d.TranslateT, frame, 0f),
             };
 
             // A rotating material stores a sine and a cosine per frame, side by side.
-            if (d.rotate != null && d.rotate.Length > 2)
+            if (d.Rotate != null && d.Rotate.Length > 2)
             {
-                int pairs = d.rotate.Length / 2;
+                int pairs = d.Rotate.Length / 2;
                 int i = (frame % pairs) * 2;
-                srt.SinRotation = (float)d.rotate[i];
-                srt.CosRotation = (float)d.rotate[i + 1];
+                srt.SinRotation = (float)d.Rotate[i];
+                srt.CosRotation = (float)d.Rotate[i + 1];
             }
             return srt;
         }
@@ -142,7 +142,7 @@ namespace DSPRE.ROMFiles
         public bool IsStatic(int material)
         {
             if (material < 0 || material >= MaterialNames.Count) return true;
-            decimal[] rot = _file.SRTData[material].rotate;
+            decimal[] rot = _file.SRTData[material].Rotate;
             if (rot != null && rot.Length > 2) return false;
             return Tracks(material).All(t => t == null || t.Length <= 1);
         }

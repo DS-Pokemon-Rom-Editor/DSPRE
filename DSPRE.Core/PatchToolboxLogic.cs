@@ -83,11 +83,11 @@ namespace DSPRE
 
         private static byte[] BuildBuildingRotationPayload(BuildingRotationPatchData data, uint payloadAddress)
         {
-            byte[] payload = (byte[])data.payload.Clone();
+            byte[] payload = (byte[])data.Payload.Clone();
             byte[] branchBytes = BuildThumbBl(
-                payloadAddress + BuildingRotationPatchData.payloadInternalBranchOffset,
-                data.rotationMatrixFunctionAddress);
-            Array.Copy(branchBytes, 0, payload, (int)BuildingRotationPatchData.payloadInternalBranchOffset, branchBytes.Length);
+                payloadAddress + BuildingRotationPatchData.PayloadInternalBranchOffset,
+                data.RotationMatrixFunctionAddress);
+            Array.Copy(branchBytes, 0, payload, (int)BuildingRotationPatchData.PayloadInternalBranchOffset, branchBytes.Length);
             return payload;
         }
 
@@ -95,7 +95,7 @@ namespace DSPRE
 
         /// <summary>Why the ARM9 expansion can't be applied to this ROM, or null when it can (or already is).</summary>
         public static string Arm9ExpansionWhyNot() =>
-            RomInfo.isHGE ? HgEngine.HgEngineSyntheticOverlay.ToolboxReason
+            RomInfo.IsHGE ? HgEngine.HgEngineSyntheticOverlay.ToolboxReason
             : !ARM9PatchData.Supported
                 ? "The ARM9 expansion isn't available for this game's language."
             : null;
@@ -111,13 +111,13 @@ namespace DSPRE
         private static bool Arm9ExpansionIn(ARM9PatchData data)
         {
 
-            byte[] branchCode = DSUtils.HexStringToByteArray(data.branchString);
-            byte[] branchCodeRead = ARM9.ReadBytes(data.branchOffset, data.branchString.Length / 3 + 1); //Read branchCode
+            byte[] branchCode = DSUtils.HexStringToByteArray(data.BranchString);
+            byte[] branchCodeRead = ARM9.ReadBytes(data.BranchOffset, data.BranchString.Length / 3 + 1); //Read branchCode
             if (branchCodeRead.Length != branchCode.Length || !branchCodeRead.SequenceEqual(branchCode))
                 return false;
 
-            byte[] initCode = DSUtils.HexStringToByteArray(data.initString);
-            byte[] initCodeRead = ARM9.ReadBytes(data.initOffset, data.initString.Length / 3 + 1); //Read initCode
+            byte[] initCode = DSUtils.HexStringToByteArray(data.InitString);
+            byte[] initCodeRead = ARM9.ReadBytes(data.InitOffset, data.InitString.Length / 3 + 1); //Read initCode
             if (initCodeRead.Length != initCode.Length || !initCodeRead.SequenceEqual(initCode))
                 return false;
 
@@ -133,36 +133,36 @@ namespace DSPRE
 
             // HGSS ties this patch to overlay 1, whose compression state a legacy ndstool project
             // can't reliably track (see RomInfo.IsDsRomProject), require ds-rom format there.
-            if (RomInfo.gameFamily == GameFamilies.HGSS && !RomInfo.IsDsRomProject)
+            if (RomInfo.GameFamily == GameFamilies.HGSS && !RomInfo.IsDsRomProject)
             {
                 return false;
             }
 
             BDHCAMPatchData data = new BDHCAMPatchData();
 
-            byte[] branchCode = DSUtils.HexStringToByteArray(data.branchString);
-            byte[] branchCodeRead = ARM9.ReadBytes(data.branchOffset, branchCode.Length);
+            byte[] branchCode = DSUtils.HexStringToByteArray(data.BranchString);
+            byte[] branchCodeRead = ARM9.ReadBytes(data.BranchOffset, branchCode.Length);
 
             if (branchCode.Length != branchCodeRead.Length || !branchCode.SequenceEqual(branchCodeRead))
             {
                 return false;
             }
 
-            string overlayFilePath = OverlayUtils.GetPath(data.overlayNumber);
+            string overlayFilePath = OverlayUtils.GetPath(data.OverlayNumber);
 
-            byte[] overlayCode1 = DSUtils.HexStringToByteArray(data.overlayString1);
-            byte[] overlayCode1Read = DSUtils.ReadFromFile(overlayFilePath, data.overlayOffset1, overlayCode1.Length);
+            byte[] overlayCode1 = DSUtils.HexStringToByteArray(data.OverlayString1);
+            byte[] overlayCode1Read = DSUtils.ReadFromFile(overlayFilePath, data.OverlayOffset1, overlayCode1.Length);
             if (overlayCode1.Length != overlayCode1Read.Length || !overlayCode1.SequenceEqual(overlayCode1Read))
                 return false;
 
-            byte[] overlayCode2 = DSUtils.HexStringToByteArray(data.overlayString2);
-            byte[] overlayCode2Read = DSUtils.ReadFromFile(overlayFilePath, data.overlayOffset2, overlayCode2.Length); //Write new overlayCode1
+            byte[] overlayCode2 = DSUtils.HexStringToByteArray(data.OverlayString2);
+            byte[] overlayCode2Read = DSUtils.ReadFromFile(overlayFilePath, data.OverlayOffset2, overlayCode2.Length); //Write new overlayCode1
             if (overlayCode2.Length != overlayCode2Read.Length || !overlayCode2.SequenceEqual(overlayCode2Read))
                 return false; //0 means BDHCAM patch has not been applied
 
-            String fullFilePath = Filesystem.expArmPath;
-            byte[] subroutineRead = DSUtils.ReadFromFile(fullFilePath, BDHCAMPatchData.BDHCamSubroutineOffset, data.subroutine.Length); //Write new overlayCode1
-            if (data.subroutine.Length != subroutineRead.Length || !data.subroutine.SequenceEqual(subroutineRead))
+            String fullFilePath = Filesystem.ExpArmPath;
+            byte[] subroutineRead = DSUtils.ReadFromFile(fullFilePath, BDHCAMPatchData.BDHCamSubroutineOffset, data.Subroutine.Length); //Write new overlayCode1
+            if (data.Subroutine.Length != subroutineRead.Length || !data.Subroutine.SequenceEqual(subroutineRead))
                 return false; //0 means BDHCAM patch has not been applied
 
             return true;
@@ -170,7 +170,7 @@ namespace DSPRE
 
         public static bool CheckFilesMatrixExpansionApplied()
         {
-            foreach (KeyValuePair<uint[], string> kv in ToolboxDB.matrixExpansionDB)
+            foreach (KeyValuePair<uint[], string> kv in ToolboxDB.MatrixExpansionDB)
             {
                 foreach (uint offset in kv.Key)
                 {
@@ -186,15 +186,15 @@ namespace DSPRE
 
         public static bool CheckScriptsStandardizedItemNumbers()
         {
-            ScriptFile itemScript = new ScriptFile(RomInfo.itemScriptFileNumber);
-            if (itemScript.allScripts.Count - 1 < new TextArchive(RomInfo.itemNamesTextNumber).messages.Count)
+            ScriptFile itemScript = new ScriptFile(RomInfo.ItemScriptFileNumber);
+            if (itemScript.AllScripts.Count - 1 < new TextArchive(RomInfo.ItemNamesTextNumber).Messages.Count)
             {
                 return false;
             }
 
-            for (ushort i = 0; i < itemScript.allScripts.Count - 1; i++)
+            for (ushort i = 0; i < itemScript.AllScripts.Count - 1; i++)
             {
-                if (BitConverter.ToUInt16(itemScript.allScripts[i].commands[0].cmdParams[1], 0) != i || BitConverter.ToUInt16(itemScript.allScripts[i].commands[1].cmdParams[1], 0) != 1)
+                if (BitConverter.ToUInt16(itemScript.AllScripts[i].Commands[0].CmdParams[1], 0) != i || BitConverter.ToUInt16(itemScript.AllScripts[i].Commands[1].CmdParams[1], 0) != 1)
                 {
                     return false;
                 }
@@ -206,7 +206,7 @@ namespace DSPRE
         {
             if (!DynamicHeadersPatchData.SupportsCurrentRom) return false;
             DynamicHeadersPatchData data = new DynamicHeadersPatchData();
-            ushort initValue = BitConverter.ToUInt16(ARM9.ReadBytes(data.initOffset, 0x2), 0);
+            ushort initValue = BitConverter.ToUInt16(ARM9.ReadBytes(data.InitOffset, 0x2), 0);
             return initValue == 0xB500;
         }
 
@@ -256,12 +256,12 @@ namespace DSPRE
 
             List<(string searchString, string replaceString, bool caseSensitive)> renamePairs = new List<(string searchString, string replaceString, bool caseSensitive)>();
 
-            foreach (int ID in RomInfo.pokemonNamesTextNumbers)
+            foreach (int ID in RomInfo.PokemonNamesTextNumbers)
             {
                 TextArchive pokeName = new TextArchive(ID);
-                for (int i = 1; i < pokeName.messages.Count; i++)
+                for (int i = 1; i < pokeName.Messages.Count; i++)
                 {
-                    string current = pokeName.messages[i];
+                    string current = pokeName.Messages[i];
                     if (string.IsNullOrEmpty(current))
                     {
                         continue;
@@ -270,7 +270,7 @@ namespace DSPRE
                     string sentenceCased = SentenceCaseName(current);
                     if (sentenceCased != current)
                     {
-                        pokeName.messages[i] = sentenceCased;
+                        pokeName.Messages[i] = sentenceCased;
                         renamePairs.Add((current, sentenceCased, true));
                     }
                 }
@@ -296,10 +296,10 @@ namespace DSPRE
 
             List<(string searchString, string replaceString, bool caseSensitive)> renamePairs = new List<(string searchString, string replaceString, bool caseSensitive)>();
 
-            TextArchive itemNames = new TextArchive(RomInfo.itemNamesTextNumber);
-            for (int i = 1; i < itemNames.messages.Count; i++)
+            TextArchive itemNames = new TextArchive(RomInfo.ItemNamesTextNumber);
+            for (int i = 1; i < itemNames.Messages.Count; i++)
             {
-                string current = itemNames.messages[i];
+                string current = itemNames.Messages[i];
                 if (string.IsNullOrEmpty(current))
                 {
                     continue;
@@ -308,11 +308,11 @@ namespace DSPRE
                 string sentenceCased = SentenceCaseName(current);
                 if (sentenceCased != current)
                 {
-                    itemNames.messages[i] = sentenceCased;
+                    itemNames.Messages[i] = sentenceCased;
                     renamePairs.Add((current, sentenceCased, true));
                 }
             }
-            itemNames.SaveToExpandedDir(RomInfo.itemNamesTextNumber, showSuccessMessage: false);
+            itemNames.SaveToExpandedDir(RomInfo.ItemNamesTextNumber, showSuccessMessage: false);
 
             int archivesUpdated = renamePairs.Count > 0 ? DSUtils.ReplaceTextEverywhere(renamePairs, wholeWord: true) : 0;
             ShowInfo($"Item names have been converted to Sentence Case.\nOther text banks updated: {archivesUpdated}", "Names converted");
@@ -322,7 +322,7 @@ namespace DSPRE
         /// <summary>Apply the BDHCam / Dynamic Cameras routine (Plat/HGSS EN/ES). Requires a ds-rom-format project on HGSS.</summary>
         public static bool ApplyBDHCamPatch()
         {
-            if (RomInfo.gameFamily == GameFamilies.HGSS && !RomInfo.IsDsRomProject)
+            if (RomInfo.GameFamily == GameFamilies.HGSS && !RomInfo.IsDsRomProject)
             {
                 ShowError("Convert this project to ds-rom format before applying the Dynamic Cameras patch.", "ds-rom project required");
                 return false;
@@ -330,9 +330,9 @@ namespace DSPRE
 
             BDHCAMPatchData data = new BDHCAMPatchData();
 
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay });
-            if (AlreadyApplied(RomPatchState.flag_BDHCamPatchApplied || Probe(CheckFilesBDHCamPatchApplied))) return false;
-            string expandedCheckPath = Filesystem.expArmPath;
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.SynthOverlay });
+            if (AlreadyApplied(RomPatchState.FlagBDHCamPatchApplied || Probe(CheckFilesBDHCamPatchApplied))) return false;
+            string expandedCheckPath = Filesystem.ExpArmPath;
             if (!File.Exists(expandedCheckPath) || new FileInfo(expandedCheckPath).Length < 0x16000)
             {
                 ShowError("Apply the ARM9 expansion patch first, the synthetic overlay file is missing or not fully expanded.", "ARM9 Expansion Required");
@@ -340,7 +340,7 @@ namespace DSPRE
             }
 
             // The routine only works at its own offset, so it can't move out of another block's way.
-            long camStart = BDHCAMPatchData.BDHCamSubroutineOffset, camEnd = camStart + data.subroutine.Length;
+            long camStart = BDHCAMPatchData.BDHCamSubroutineOffset, camEnd = camStart + data.Subroutine.Length;
             if (SyntheticOverlaySpace.Reserved(File.ReadAllBytes(expandedCheckPath)).Any(r => r.Start < camEnd && camStart < r.End))
             {
                 ShowError("Another patch or a table DSPRE moved already uses 0x" + camStart.ToString("X") + " to 0x" + (camEnd - 1).ToString("X") +
@@ -350,33 +350,33 @@ namespace DSPRE
 
             if (!ConfirmYesNo("This process will apply the following changes:\n\n" +
             "- Backup ARM9 file (arm9.bin" + BackupSuffix + " will be created)." + "\n\n" +
-            "- Backup Overlay" + data.overlayNumber + " file (overlay" + data.overlayNumber + ".bin" + BackupSuffix + " will be created)." + "\n\n" +
-            "- Replace " + (data.branchString.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + data.branchOffset.ToString("X") + " with " + '\n' + data.branchString + "\n\n" +
-            "- Replace " + (data.overlayString1.Length / 3 + 1) + " bytes of data at overlay" + data.overlayNumber + " offset 0x" + data.overlayOffset1.ToString("X") + " with " + '\n' + data.overlayString1 + "\n\n" +
-            "- Replace " + (data.overlayString2.Length / 3 + 1) + " bytes of data at overlay" + data.overlayNumber + " offset 0x" + data.overlayOffset2.ToString("X") + " with " + '\n' + data.overlayString2 + "\n\n" +
-            "- Modify file #" + RomPatchState.expandedARMfileID + " inside " + '\n' + RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + '\n' + "to insert the BDHCAM routine (any data between 0x" + BDHCAMPatchData.BDHCamSubroutineOffset.ToString("X") + " and 0x" + (BDHCAMPatchData.BDHCamSubroutineOffset + data.subroutine.Length).ToString("X") + " will be overwritten)." + "\n\n" +
+            "- Backup Overlay" + data.OverlayNumber + " file (overlay" + data.OverlayNumber + ".bin" + BackupSuffix + " will be created)." + "\n\n" +
+            "- Replace " + (data.BranchString.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + data.BranchOffset.ToString("X") + " with " + '\n' + data.BranchString + "\n\n" +
+            "- Replace " + (data.OverlayString1.Length / 3 + 1) + " bytes of data at overlay" + data.OverlayNumber + " offset 0x" + data.OverlayOffset1.ToString("X") + " with " + '\n' + data.OverlayString1 + "\n\n" +
+            "- Replace " + (data.OverlayString2.Length / 3 + 1) + " bytes of data at overlay" + data.OverlayNumber + " offset 0x" + data.OverlayOffset2.ToString("X") + " with " + '\n' + data.OverlayString2 + "\n\n" +
+            "- Modify file #" + RomPatchState.ExpandedARMfileID + " inside " + '\n' + RomInfo.GameDirs[DirNames.SynthOverlay].unpackedDir + '\n' + "to insert the BDHCAM routine (any data between 0x" + BDHCAMPatchData.BDHCamSubroutineOffset.ToString("X") + " and 0x" + (BDHCAMPatchData.BDHCamSubroutineOffset + data.Subroutine.Length).ToString("X") + " will be overwritten)." + "\n\n" +
             "Do you wish to continue?" + CreditNote("bdhcam"), "Confirm to proceed"))
             {
                 ShowInfo("No changes have been made.", "Operation canceled");
                 return false;
             }
 
-            PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
-            string overlayBackupPath = OverlayUtils.GetPath(data.overlayNumber);
+            PlainFiles.Copy(RomInfo.Arm9Path, RomInfo.Arm9Path + BackupSuffix, overwrite: true);
+            string overlayBackupPath = OverlayUtils.GetPath(data.OverlayNumber);
             PlainFiles.Copy(overlayBackupPath, overlayBackupPath + BackupSuffix, overwrite: true);
 
             try
             {
                 /* Write to overlayfile */
-                string overlayFilePath = OverlayUtils.GetPath(data.overlayNumber);
-                if (OverlayUtils.IsCompressed(data.overlayNumber))
+                string overlayFilePath = OverlayUtils.GetPath(data.OverlayNumber);
+                if (OverlayUtils.IsCompressed(data.OverlayNumber))
                 {
-                    int decompressResult = OverlayUtils.Decompress(data.overlayNumber, makeBackup: false);
+                    int decompressResult = OverlayUtils.Decompress(data.OverlayNumber, makeBackup: false);
                     if (decompressResult != 0)
                     {
-                        AppLogger.Error($"Could not decompress overlay {data.overlayNumber}; BDHCAM patch was not applied.");
+                        AppLogger.Error($"Could not decompress overlay {data.OverlayNumber}; BDHCAM patch was not applied.");
                         DSUtils.WriteWholeFile(overlayFilePath, File.ReadAllBytes(overlayBackupPath + BackupSuffix));
-                        if (decompressResult != DSUtils.ERR_TOOL_UNAVAILABLE)
+                        if (decompressResult != DSUtils.ErrToolUnavailable)
                         {
                             ShowError("The target overlay could not be decompressed, so no changes were made.",
                                 "Decompression failed");
@@ -385,12 +385,12 @@ namespace DSPRE
                     }
                 }
 
-                ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.branchString), data.branchOffset); //Write new branchOffset
-                DSUtils.WriteToFile(overlayFilePath, DSUtils.HexStringToByteArray(data.overlayString1), data.overlayOffset1); //Write new overlayCode1
-                DSUtils.WriteToFile(overlayFilePath, DSUtils.HexStringToByteArray(data.overlayString2), data.overlayOffset2); //Write new overlayCode2
+                ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.BranchString), data.BranchOffset); //Write new branchOffset
+                DSUtils.WriteToFile(overlayFilePath, DSUtils.HexStringToByteArray(data.OverlayString1), data.OverlayOffset1); //Write new overlayCode1
+                DSUtils.WriteToFile(overlayFilePath, DSUtils.HexStringToByteArray(data.OverlayString2), data.OverlayOffset2); //Write new overlayCode2
 
                 /*Write Expanded ARM9 File*/
-                DSUtils.WriteToFile(Filesystem.expArmPath, data.subroutine, BDHCAMPatchData.BDHCamSubroutineOffset);
+                DSUtils.WriteToFile(Filesystem.ExpArmPath, data.Subroutine, BDHCAMPatchData.BDHCamSubroutineOffset);
             }
             catch
             {
@@ -398,7 +398,7 @@ namespace DSPRE
                 return false;
             }
 
-            RomPatchState.flag_BDHCamPatchApplied = true;
+            RomPatchState.FlagBDHCamPatchApplied = true;
 
             ShowInfo("The BDHCAM patch has been applied.", "Patch applied");
             return true;
@@ -413,33 +413,33 @@ namespace DSPRE
             }
 
             BuildingRotationPatchData data = new BuildingRotationPatchData();
-            string overlayFilePath = OverlayUtils.GetPath(data.overlayNumber);
+            string overlayFilePath = OverlayUtils.GetPath(data.OverlayNumber);
 
-            byte[] hookBytes = DSUtils.ReadFromFile(overlayFilePath, data.hookOverlayOffset, 4);
-            if (!TryGetThumbBlTarget(data.hookRuntimeAddress, hookBytes, out uint targetAddress))
+            byte[] hookBytes = DSUtils.ReadFromFile(overlayFilePath, data.HookOverlayOffset, 4);
+            if (!TryGetThumbBlTarget(data.HookRuntimeAddress, hookBytes, out uint targetAddress))
             {
                 return false;
             }
 
-            if (targetAddress < synthOverlayLoadAddress)
+            if (targetAddress < SynthOverlayLoadAddress)
             {
                 return false;
             }
 
-            uint payloadOffset = targetAddress - synthOverlayLoadAddress;
-            string expandedPath = Filesystem.expArmPath;
+            uint payloadOffset = targetAddress - SynthOverlayLoadAddress;
+            string expandedPath = Filesystem.ExpArmPath;
             if (!File.Exists(expandedPath))
             {
                 return false;
             }
 
             long fileLength = new FileInfo(expandedPath).Length;
-            if ((long)payloadOffset + data.payload.Length > fileLength)
+            if ((long)payloadOffset + data.Payload.Length > fileLength)
             {
                 return false;
             }
 
-            byte[] payloadRead = DSUtils.ReadFromFile(expandedPath, payloadOffset, data.payload.Length);
+            byte[] payloadRead = DSUtils.ReadFromFile(expandedPath, payloadOffset, data.Payload.Length);
             return payloadRead.SequenceEqual(BuildBuildingRotationPayload(data, targetAddress));
         }
 
@@ -457,7 +457,7 @@ namespace DSPRE
                 return false;
             }
 
-            if (!RomPatchState.flag_arm9Expanded && !CheckFilesArm9ExpansionApplied())
+            if (!RomPatchState.FlagArm9Expanded && !CheckFilesArm9ExpansionApplied())
             {
                 ShowError("Apply the ARM9 Expansion patch before applying the Building Rotation patch.", "ARM9 Expansion Required");
                 return false;
@@ -474,33 +474,33 @@ namespace DSPRE
                 return false;
             }
 
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay });
-            if (AlreadyApplied(RomPatchState.flag_BuildingRotationPatchApplied || Probe(CheckFilesBuildingRotationPatchApplied))) return false;
-            string expandedPath = Filesystem.expArmPath;
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.SynthOverlay });
+            if (AlreadyApplied(RomPatchState.FlagBuildingRotationPatchApplied || Probe(CheckFilesBuildingRotationPatchApplied))) return false;
+            string expandedPath = Filesystem.ExpArmPath;
             if (!File.Exists(expandedPath) || new FileInfo(expandedPath).Length < 0x16000)
             {
                 ShowError("Apply the ARM9 expansion patch first, the synthetic overlay file is missing or not fully expanded.", "ARM9 Expansion Required");
                 return false;
             }
 
-            int blockLength = SyntheticOverlaySpace.HeaderSize + data.payload.Length;
+            int blockLength = SyntheticOverlaySpace.HeaderSize + data.Payload.Length;
             if (PlacementNote(new[] { blockLength }, out int[] offsets) is not string placement) return false;
 
             uint payloadOffset = (uint)offsets[0] + SyntheticOverlaySpace.HeaderSize;
-            uint payloadAddress = synthOverlayLoadAddress + payloadOffset;
-            byte[] branchBytes = BuildThumbBl(data.hookRuntimeAddress, payloadAddress);
+            uint payloadAddress = SynthOverlayLoadAddress + payloadOffset;
+            byte[] branchBytes = BuildThumbBl(data.HookRuntimeAddress, payloadAddress);
             byte[] payloadBytes = BuildBuildingRotationPayload(data, payloadAddress);
 
             if (!ConfirmYesNo("Buildings use the rotation values already stored for them when they are placed.\n\n" +
-                "Four bytes at overlay " + data.overlayNumber + " offset 0x" + data.hookOverlayOffset.ToString("X") + " branch to the routine." +
-                placement + BackupNote("overlay " + data.overlayNumber + " and the synthetic overlay") +
+                "Four bytes at overlay " + data.OverlayNumber + " offset 0x" + data.HookOverlayOffset.ToString("X") + " branch to the routine." +
+                placement + BackupNote("overlay " + data.OverlayNumber + " and the synthetic overlay") +
                 "\n\nApply this patch?" + CreditNote("buildingRotation"), "Confirm to proceed"))
             {
                 ShowInfo("No changes have been made.", "Operation canceled");
                 return false;
             }
 
-            string overlayFilePath = OverlayUtils.GetPath(data.overlayNumber);
+            string overlayFilePath = OverlayUtils.GetPath(data.OverlayNumber);
             PlainFiles.Copy(overlayFilePath, overlayFilePath + BackupSuffix, overwrite: true);
             PlainFiles.Copy(expandedPath, expandedPath + BackupSuffix, overwrite: true);
 
@@ -508,15 +508,15 @@ namespace DSPRE
             {
                 DSUtils.WriteToFile(expandedPath, SyntheticOverlaySpace.Header(SyntheticOverlaySpace.BuildingRotationMarker, blockLength), (uint)offsets[0]);
                 DSUtils.WriteToFile(expandedPath, payloadBytes, payloadOffset);
-                DSUtils.WriteToFile(overlayFilePath, branchBytes, data.hookOverlayOffset);
+                DSUtils.WriteToFile(overlayFilePath, branchBytes, data.HookOverlayOffset);
             }
             catch
             {
-                ShowError("Operation failed. It is strongly advised that you restore the Overlay " + data.overlayNumber + " backup.", "Something went wrong");
+                ShowError("Operation failed. It is strongly advised that you restore the Overlay " + data.OverlayNumber + " backup.", "Something went wrong");
                 return false;
             }
 
-            RomPatchState.flag_BuildingRotationPatchApplied = true;
+            RomPatchState.FlagBuildingRotationPatchApplied = true;
 
             ShowInfo("The Building Rotation patch has been applied.", "Patch applied");
             return true;
@@ -530,7 +530,7 @@ namespace DSPRE
                 return false;
             }
             if (AlreadyApplied(Probe(TrainerCustomPokeballsPatch.DetectCurrentProject))) return false;
-            if (TrainerCustomPokeballsPatch.WhyNotApplicable(RomInfo.romID, File.ReadAllBytes(RomInfo.arm9Path)) is string why)
+            if (TrainerCustomPokeballsPatch.WhyNotApplicable(RomInfo.RomID, File.ReadAllBytes(RomInfo.Arm9Path)) is string why)
             {
                 ShowError(why, "Trainer custom Poké Balls");
                 return false;
@@ -545,7 +545,7 @@ namespace DSPRE
                 return false;
             }
             ARM9.DecompressIfMarked();
-            PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(RomInfo.Arm9Path, RomInfo.Arm9Path + BackupSuffix, overwrite: true);
             try { TrainerCustomPokeballsPatch.Apply(); }
             catch (Exception ex)
             {
@@ -569,20 +569,20 @@ namespace DSPRE
                 ShowError("The trainer shiny patch supports US HeartGold and SoulSilver and Italian HeartGold.", "Unsupported");
                 return false;
             }
-            if (!RomPatchState.flag_arm9Expanded && !CheckFilesArm9ExpansionApplied())
+            if (!RomPatchState.FlagArm9Expanded && !CheckFilesArm9ExpansionApplied())
             {
                 ShowError("Apply the ARM9 Expansion patch before applying the trainer shiny patch.", "ARM9 Expansion Required");
                 return false;
             }
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay });
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.SynthOverlay });
             if (AlreadyApplied(Probe(TrainerShinyPatch.DetectCurrentProject))) return false;
-            if (TrainerShinyPatch.WhyNotApplicable(File.ReadAllBytes(RomInfo.arm9Path)) is string why)
+            if (TrainerShinyPatch.WhyNotApplicable(File.ReadAllBytes(RomInfo.Arm9Path)) is string why)
             {
                 ShowError(why, "Trainer shiny patch");
                 return false;
             }
 
-            string expandedPath = Filesystem.expArmPath;
+            string expandedPath = Filesystem.ExpArmPath;
             if (!File.Exists(expandedPath) || new FileInfo(expandedPath).Length < 0x16000)
             {
                 ShowError("Apply the ARM9 expansion patch first, the synthetic overlay file is missing or not fully expanded.", "ARM9 Expansion Required");
@@ -602,7 +602,7 @@ namespace DSPRE
             }
 
             ARM9.DecompressIfMarked();
-            PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(RomInfo.Arm9Path, RomInfo.Arm9Path + BackupSuffix, overwrite: true);
             PlainFiles.Copy(expandedPath, expandedPath + BackupSuffix, overwrite: true);
             try
             {
@@ -631,12 +631,12 @@ namespace DSPRE
                 ShowError("The trainer class metadata patch supports US HeartGold and SoulSilver.", "Unsupported");
                 return false;
             }
-            if (!RomPatchState.flag_arm9Expanded && !CheckFilesArm9ExpansionApplied())
+            if (!RomPatchState.FlagArm9Expanded && !CheckFilesArm9ExpansionApplied())
             {
                 ShowError("Apply the ARM9 Expansion patch before applying the trainer class metadata patch.", "ARM9 Expansion Required");
                 return false;
             }
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay });
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.SynthOverlay });
             if (AlreadyApplied(Probe(() => TrainerClassMetadataStore.DetectCurrentRom(out _) == TrainerClassMetadataDetectionState.SchemaV1))) return false;
             if (TrainerClassMetadataPatch.WhyNotApplicable() is string why)
             {
@@ -644,7 +644,7 @@ namespace DSPRE
                 return false;
             }
 
-            string expandedPath = Filesystem.expArmPath;
+            string expandedPath = Filesystem.ExpArmPath;
             if (!File.Exists(expandedPath) || new FileInfo(expandedPath).Length < 0x16000)
             {
                 ShowError("Apply the ARM9 expansion patch first, the synthetic overlay file is missing or not fully expanded.", "ARM9 Expansion Required");
@@ -669,12 +669,12 @@ namespace DSPRE
             }
 
             ARM9.DecompressIfMarked();
-            PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(RomInfo.Arm9Path, RomInfo.Arm9Path + BackupSuffix, overwrite: true);
             foreach (int overlay in new[] { 1, 12, 80, 115, 117, 118, 119, 120 })
                 PlainFiles.Copy(OverlayUtils.GetPath(overlay), OverlayUtils.GetPath(overlay) + BackupSuffix, overwrite: true);
-            if (File.Exists(Filesystem.expArmPath)) PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            if (File.Exists(Filesystem.ExpArmPath)) PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
             // Not beside the archive: ds-rom packs every file under files/, so a copy there would join the ROM.
-            (string metadataArchive, string metadataUnpacked) = RomInfo.gameDirs[DirNames.trainerClassMetadata];
+            (string metadataArchive, string metadataUnpacked) = RomInfo.GameDirs[DirNames.TrainerClassMetadata];
             string metadataBackup = Path.Combine(Path.GetDirectoryName(metadataUnpacked), "a155.narc" + BackupSuffix);
             if (File.Exists(metadataArchive))
             {
@@ -698,7 +698,7 @@ namespace DSPRE
         /// <summary>Rearrange item scripts to ascending index order and fix ground-item references. Not supported on hg-engine ROMs.</summary>
         public static bool ApplyItemStandardizePatch()
         {
-            if (RomInfo.isHGE)
+            if (RomInfo.IsHGE)
             {
                 ShowError("This patch isn't supported on hg-engine ROMs.", "Unsupported");
                 return false;
@@ -712,20 +712,20 @@ namespace DSPRE
                 return false;
             }
 
-            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.scripts });
-            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.eventFiles });
+            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.Scripts });
+            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.EventFiles });
 
-            if (AlreadyApplied(RomPatchState.flag_standardizedItems || Probe(CheckScriptsStandardizedItemNumbers))) return false;
+            if (AlreadyApplied(RomPatchState.FlagStandardizedItems || Probe(CheckScriptsStandardizedItemNumbers))) return false;
 
             // Load item script file data
-            ScriptFile itemScriptFile = new ScriptFile(RomInfo.itemScriptFileNumber);
+            ScriptFile itemScriptFile = new ScriptFile(RomInfo.ItemScriptFileNumber);
 
             // Create map for: script no. -> vanilla item
-            int[] vanillaItemsArray = new int[itemScriptFile.allScripts.Count - 1];
+            int[] vanillaItemsArray = new int[itemScriptFile.AllScripts.Count - 1];
 
-            for (int i = 0; i < itemScriptFile.allScripts.Count - 1; i++)
+            for (int i = 0; i < itemScriptFile.AllScripts.Count - 1; i++)
             {
-                vanillaItemsArray[i] = BitConverter.ToInt16(itemScriptFile.allScripts[i].commands[0].cmdParams[1], 0);
+                vanillaItemsArray[i] = BitConverter.ToInt16(itemScriptFile.AllScripts[i].Commands[0].CmdParams[1], 0);
             }
             ;
 
@@ -739,17 +739,17 @@ namespace DSPRE
 
                 EventFile eventFile = new EventFile(i);
 
-                for (int j = 0; j < eventFile.overworlds.Count; j++)
+                for (int j = 0; j < eventFile.Overworlds.Count; j++)
                 {
                     // If ow is marked as an item, or in the rare case it is not but script no. falls within item script range:
-                    bool isItem = eventFile.overworlds[j].type == (ushort)Overworld.OwType.ITEM
-                                  || (eventFile.overworlds[j].scriptNumber >= itemScrMin
-                                  && eventFile.overworlds[j].scriptNumber <= itemScrMax);
+                    bool isItem = eventFile.Overworlds[j].Type == (ushort)Overworld.OwType.ITEM
+                                  || (eventFile.Overworlds[j].ScriptNumber >= itemScrMin
+                                  && eventFile.Overworlds[j].ScriptNumber <= itemScrMax);
 
                     if (isItem)
                     {
-                        int itemScriptID = eventFile.overworlds[j].scriptNumber - (itemScrMin - 1);
-                        eventFile.overworlds[j].scriptNumber = (ushort)(itemScrMin + vanillaItemsArray[itemScriptID - 1]);
+                        int itemScriptID = eventFile.Overworlds[j].ScriptNumber - (itemScrMin - 1);
+                        eventFile.Overworlds[j].ScriptNumber = (ushort)(itemScrMin + vanillaItemsArray[itemScriptID - 1]);
                         dirty = true;
                     }
                 }
@@ -778,10 +778,10 @@ namespace DSPRE
             }
 
             // Sort scripts in the Script File according to item indices
-            int itemCount = new TextArchive(RomInfo.itemNamesTextNumber).messages.Count;
-            ScriptCommandContainer executeGive = new ScriptCommandContainer((uint)itemCount + 1, itemScriptFile.allScripts[itemScriptFile.allScripts.Count - 1]);
+            int itemCount = new TextArchive(RomInfo.ItemNamesTextNumber).Messages.Count;
+            ScriptCommandContainer executeGive = new ScriptCommandContainer((uint)itemCount + 1, itemScriptFile.AllScripts[itemScriptFile.AllScripts.Count - 1]);
 
-            itemScriptFile.allScripts.Clear();
+            itemScriptFile.AllScripts.Clear();
 
             for (ushort i = 0; i < itemCount; i++)
             {
@@ -791,31 +791,31 @@ namespace DSPRE
                     new ScriptCommand("Jump Function_#1")
                 };
 
-                itemScriptFile.allScripts.Add(new ScriptCommandContainer((ushort)(i + 1), ScriptFile.ContainerTypes.Script, commandList: cmdList));
+                itemScriptFile.AllScripts.Add(new ScriptCommandContainer((ushort)(i + 1), ScriptFile.ContainerTypes.Script, commandList: cmdList));
             }
 
-            itemScriptFile.allScripts.Add(executeGive);
-            itemScriptFile.allFunctions[0].usedScriptID = itemCount + 1;
+            itemScriptFile.AllScripts.Add(executeGive);
+            itemScriptFile.AllFunctions[0].UsedScriptID = itemCount + 1;
 
-            itemScriptFile.SaveToFileDefaultDir(RomInfo.itemScriptFileNumber, showSuccessMessage: false);
+            itemScriptFile.SaveToFileDefaultDir(RomInfo.ItemScriptFileNumber, showSuccessMessage: false);
             ShowInfo("The item scripts now follow item number order.", "Patch applied");
 
-            RomPatchState.flag_standardizedItems = true;
+            RomPatchState.FlagStandardizedItems = true;
             return true;
         }
 
         /// <summary>Expand the ARM9's usable memory (synthetic overlay). Enables BDHCam on Plat/HGSS.</summary>
         public static bool ApplyARM9ExpansionPatch()
         {
-            if (AlreadyApplied(RomPatchState.flag_arm9Expanded || Probe(CheckFilesArm9ExpansionApplied))) return false;
+            if (AlreadyApplied(RomPatchState.FlagArm9Expanded || Probe(CheckFilesArm9ExpansionApplied))) return false;
 
             ARM9PatchData data = new ARM9PatchData();
 
             if (!ConfirmYesNo("Confirming this process will apply the following changes:\n\n" +
                     "- Backup ARM9 file (arm9.bin" + BackupSuffix + " will be created)." + "\n\n" +
-                    "- Replace " + (data.branchString.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + data.branchOffset.ToString("X") + " with " + '\n' + data.branchString + "\n\n" +
-                    "- Replace " + (data.initString.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + data.initOffset.ToString("X") + " with " + '\n' + data.initString + "\n\n" +
-                    "- Modify file #" + RomPatchState.expandedARMfileID + " inside " + '\n' + RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + '\n' + " to accommodate for 88KB of data (no backup)." + "\n\n" +
+                    "- Replace " + (data.BranchString.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + data.BranchOffset.ToString("X") + " with " + '\n' + data.BranchString + "\n\n" +
+                    "- Replace " + (data.InitString.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + data.InitOffset.ToString("X") + " with " + '\n' + data.InitString + "\n\n" +
+                    "- Modify file #" + RomPatchState.ExpandedARMfileID + " inside " + '\n' + RomInfo.GameDirs[DirNames.SynthOverlay].unpackedDir + '\n' + " to accommodate for 88KB of data (no backup)." + "\n\n" +
                     "If you do not understand the implications of these changes and how they can affect your game do NOT continue. You can and will break the game if you do not know what you are doing here.\n\n" +
                     "Do you wish to continue?" + CreditNote("arm9"), "Confirm to proceed"))
             {
@@ -823,20 +823,20 @@ namespace DSPRE
                 return false;
             }
 
-            PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(RomInfo.Arm9Path, RomInfo.Arm9Path + BackupSuffix, overwrite: true);
 
             try
             {
-                ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.branchString), data.branchOffset); //Write new branchOffset
-                ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.initString), data.initOffset); //Write new initOffset
+                ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.BranchString), data.BranchOffset); //Write new branchOffset
+                ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.InitString), data.InitOffset); //Write new initOffset
 
                 // The synthetic overlay's backing NARC has to actually be unpacked on disk before its
                 // file #0 can be checked/created, on a fresh project (Header Editor never opened) this
                 // directory doesn't exist yet, which used to make the block below a silent no-op while
                 // still reporting success.
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay });
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.SynthOverlay });
 
-                string fullFilePath = Filesystem.expArmPath;
+                string fullFilePath = Filesystem.ExpArmPath;
 
                 // Do a file size check first just in case the file is already expanded so we don't nuke existing data
                 if (File.Exists(fullFilePath))
@@ -860,7 +860,7 @@ namespace DSPRE
                     }
                 }
 
-                RomPatchState.flag_arm9Expanded = true;
+                RomPatchState.FlagArm9Expanded = true;
 
                 ShowInfo("The ARM9's usable memory has been expanded.", "Patch applied");
                 return true;
@@ -878,7 +878,7 @@ namespace DSPRE
         /// <summary>Expand Matrix 0 up to twice its size (HGSS EN/ES).</summary>
         public static bool ApplyMatrixExpansionPatch()
         {
-            if (AlreadyApplied(RomPatchState.flag_MatrixExpansionApplied || Probe(CheckFilesMatrixExpansionApplied))) return false;
+            if (AlreadyApplied(RomPatchState.FlagMatrixExpansionApplied || Probe(CheckFilesMatrixExpansionApplied))) return false;
 
             string listOfChanges = "";
             if (!(MatrixExpansionCode is int code0))
@@ -887,7 +887,7 @@ namespace DSPRE
                 return false;
             }
 
-            foreach (KeyValuePair<uint[], string> kv in ToolboxDB.matrixExpansionDB)
+            foreach (KeyValuePair<uint[], string> kv in ToolboxDB.MatrixExpansionDB)
             {
                 listOfChanges += " - Replace " + (kv.Value.Length / 3 + 1) + " bytes of data at arm9 offset";
                 if (kv.Key.Length > 1)
@@ -913,10 +913,10 @@ namespace DSPRE
             }
 
             ARM9.DecompressIfMarked();
-            BackUp(RomInfo.arm9Path);
+            BackUp(RomInfo.Arm9Path);
             try
             {
-                foreach (KeyValuePair<uint[], string> kv in ToolboxDB.matrixExpansionDB)
+                foreach (KeyValuePair<uint[], string> kv in ToolboxDB.MatrixExpansionDB)
                 {
                     foreach (uint offset in kv.Key)
                     {
@@ -929,7 +929,7 @@ namespace DSPRE
                 ShowError("Operation failed. It is strongly advised that you restore the arm9 backup (arm9.bin" + BackupSuffix + ").", "Something went wrong");
                 return false;
             }
-            RomPatchState.flag_MatrixExpansionApplied = true;
+            RomPatchState.FlagMatrixExpansionApplied = true;
             ShowInfo("Matrix 0 can now be freely expanded up to twice its size.", "Patch applied");
             return true;
         }
@@ -939,27 +939,27 @@ namespace DSPRE
         {
             // A second run would split the already-patched table over the headers it moved out.
             if (!DynamicHeadersPatchData.SupportsCurrentRom) return false;
-            if (AlreadyApplied(RomPatchState.flag_DynamicHeadersPatchApplied || Probe(CheckFilesDynamicHeadersPatchApplied))) return false;
+            if (AlreadyApplied(RomPatchState.FlagDynamicHeadersPatchApplied || Probe(CheckFilesDynamicHeadersPatchApplied))) return false;
 
             DynamicHeadersPatchData data = new DynamicHeadersPatchData();
-            (string packedDir, string unpackedDir) headersDir = RomInfo.gameDirs[DirNames.dynamicHeaders];
+            (string packedDir, string unpackedDir) headersDir = RomInfo.GameDirs[DirNames.DynamicHeaders];
 
             // Every HGSS dump has this read, Japanese and Spanish included.
-            bool specialCase = RomInfo.gameFamily == GameFamilies.HGSS;
+            bool specialCase = RomInfo.GameFamily == GameFamilies.HGSS;
             string specialCaseChanges = "";
 
             if (specialCase)
             {
-                specialCaseChanges = "- Replace " + (data.specialCaseData1.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + (data.specialCaseOffset1 + data.initOffset).ToString("X") + " with " + '\n' + data.specialCaseData1 + "\n\n" +
-                    "- Replace " + (data.specialCaseData2.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + (data.specialCaseOffset2 + data.initOffset).ToString("X") + " with " + '\n' + data.specialCaseData2 + "\n\n" +
-                    "- Replace " + (data.specialCaseData3.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + (data.specialCaseOffset3 + data.initOffset).ToString("X") + " with " + '\n' + data.specialCaseData3 + "\n\n";
+                specialCaseChanges = "- Replace " + (data.SpecialCaseData1.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + (data.SpecialCaseOffset1 + data.InitOffset).ToString("X") + " with " + '\n' + data.SpecialCaseData1 + "\n\n" +
+                    "- Replace " + (data.SpecialCaseData2.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + (data.SpecialCaseOffset2 + data.InitOffset).ToString("X") + " with " + '\n' + data.SpecialCaseData2 + "\n\n" +
+                    "- Replace " + (data.SpecialCaseData3.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + (data.SpecialCaseOffset3 + data.InitOffset).ToString("X") + " with " + '\n' + data.SpecialCaseData3 + "\n\n";
             }
 
             if (!ConfirmYesNo("Confirming this process will apply the following changes:\n\n" +
                 "- Backup ARM9 file (arm9.bin" + BackupSuffix + " will be created)." + "\n\n" +
                 "- NARC file at " + headersDir.packedDir + " will become the new header container." + "\n\n" +
                 "- The default ARM9 header table will be split into multiple files (one per header), each one saved into NARC " + headersDir.packedDir + " upon saving the ROM." + "\n\n" +
-                "- Replace " + (data.initString.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + data.initOffset.ToString("X") + " with " + '\n' + data.initString + "\n\n" +
+                "- Replace " + (data.InitString.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + data.InitOffset.ToString("X") + " with " + '\n' + data.InitString + "\n\n" +
                 "- Neutralize instances of (HeaderID * 0x18) so the base offset which the data is read from is always 0x0." + "\n\n" +
                 "- Change pointers to header fields, from(ARM9_HEADER_TABLE_OFFSET + n) to simply(0 + n)" + "\n\n" +
                 specialCaseChanges +
@@ -969,25 +969,25 @@ namespace DSPRE
                 return false;
             }
 
-            PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(RomInfo.Arm9Path, RomInfo.Arm9Path + BackupSuffix, overwrite: true);
 
             try
             {
-                ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.initString), data.initOffset);
+                ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.InitString), data.InitOffset);
 
-                foreach (Tuple<uint, uint> reference in DynamicHeadersPatchData.dynamicHeadersPointersDB[RomInfo.gameFamily])
+                foreach (Tuple<uint, uint> reference in DynamicHeadersPatchData.DynamicHeadersPointersDB[RomInfo.GameFamily])
                 {
-                    ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.REFERENCE_STRING), (uint)(reference.Item1 + data.initOffset));
-                    uint pointerValue = BitConverter.ToUInt32(ARM9.ReadBytes((uint)(reference.Item2 + data.initOffset), 4), 0) - RomInfo.headerTableOffset - ARM9.address;
-                    ARM9.WriteBytes(BitConverter.GetBytes(pointerValue), (uint)(reference.Item2 + data.initOffset));
+                    ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.REFERENCE_STRING), (uint)(reference.Item1 + data.InitOffset));
+                    uint pointerValue = BitConverter.ToUInt32(ARM9.ReadBytes((uint)(reference.Item2 + data.InitOffset), 4), 0) - RomInfo.HeaderTableOffset - ARM9.Address;
+                    ARM9.WriteBytes(BitConverter.GetBytes(pointerValue), (uint)(reference.Item2 + data.InitOffset));
                 }
 
                 if (specialCase)
                 {
 
-                    ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.specialCaseData1), (uint)(data.specialCaseOffset1 + data.initOffset));
-                    ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.specialCaseData2), (uint)(data.specialCaseOffset2 + data.initOffset));
-                    ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.specialCaseData3), (uint)(data.specialCaseOffset3 + data.initOffset));
+                    ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.SpecialCaseData1), (uint)(data.SpecialCaseOffset1 + data.InitOffset));
+                    ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.SpecialCaseData2), (uint)(data.SpecialCaseOffset2 + data.InitOffset));
+                    ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.SpecialCaseData3), (uint)(data.SpecialCaseOffset3 + data.InitOffset));
                 }
 
                 // Clear the dynamic headers directory in 'unpacked'
@@ -1005,7 +1005,7 @@ namespace DSPRE
                     DSUtils.WriteToFile(Path.Combine(headersDir.unpackedDir, i.ToString("D4")), headerData);
                 }
 
-                RomPatchState.flag_DynamicHeadersPatchApplied = true;
+                RomPatchState.FlagDynamicHeadersPatchApplied = true;
 
                 ShowInfo("The headers are now dynamically allocated in memory.", "Patch applied");
                 return true;
@@ -1055,10 +1055,10 @@ namespace DSPRE
                 TrainerClassTableExpansion.MaxClasses + " classes, and points the ARM9 and overlay 16 at them. Adding a class then writes into that room." + placement + BackupNote("the ARM9, overlay 16 and the synthetic overlay") +
                 "\n\nApply this patch?" + CreditNote("trainerClassTablesExpanded"), "Confirm to proceed"))
                 return false;
-            PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(RomInfo.Arm9Path, RomInfo.Arm9Path + BackupSuffix, overwrite: true);
             string prizeOverlay = OverlayUtils.GetPath(RomLocator.TrainerPrizeTable.Overlay);
             PlainFiles.Copy(prizeOverlay, prizeOverlay + BackupSuffix, overwrite: true);
-            PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
             string error = null;
             bool moved = false;
             SyntheticOverlaySpace.PlaceAt(offsets, () => moved = TrainerClassTableExpansion.MoveClassTables(out error));
@@ -1080,8 +1080,8 @@ namespace DSPRE
                 TrainerClassTableExpansion.MaxClasses + "), and points the ARM9 at it. Giving a class music then writes into that room and raises the entry count." + placement + BackupNote("the ARM9 and the synthetic overlay") +
                 "\n\nApply this patch?" + CreditNote("trainerEncounterBgmRepointed"), "Confirm to proceed"))
                 return false;
-            PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
-            PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(RomInfo.Arm9Path, RomInfo.Arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
             string error = null;
             bool moved = false;
             SyntheticOverlaySpace.PlaceAt(offsets, () => moved = TrainerClassTableExpansion.MoveEncounterMusicTable(out error));
@@ -1099,14 +1099,14 @@ namespace DSPRE
             if (AlreadyApplied(Probe(() => PickupSlotsPatch.IsApplied))) return false;
             if (PickupSlotsPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
             if (PlacementNote(new[] { PickupSlotsPatch.BlockLength }, out int[] offsets) is not string placement) return false;
-            int overlay = RomInfo.pickupTableOverlayNumber;
+            int overlay = RomInfo.PickupTableOverlayNumber;
             if (!ConfirmYesNo("Each Pickup level range gets its own nine items and two rare items. Pickup gives the same items as before " +
                 "until you change them in Item tables." + placement + BackupNote($"overlay {overlay} and the synthetic overlay") +
                 "\n\nApply this patch?" + CreditNote("pickupSlots"), "Confirm to proceed"))
                 return false;
             string overlayPath = OverlayUtils.GetPath(overlay);
             PlainFiles.Copy(overlayPath, overlayPath + BackupSuffix, overwrite: true);
-            PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
             PickupSlotsPatch.Apply(offsets[0]);
             ShowInfo("Every Pickup level range now has its own items.", "Patch applied");
             return true;
@@ -1118,7 +1118,7 @@ namespace DSPRE
             if (ClassIntroPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
             if (PlacementNote(new[] { ClassIntroPatch.BlockLength }, out int[] offsets) is not string placement) return false;
             int overlay = RomLocator.VsIntroSites.RecordOverlay;
-            string look = RomInfo.gameFamily == RomInfo.GameFamilies.DP ? "its own face, cut from any class's battle sprite" : "its own portrait, name and colours";
+            string look = RomInfo.GameFamily == RomInfo.GameFamilies.DP ? "its own face, cut from any class's battle sprite" : "its own portrait, name and colours";
             if (!ConfirmYesNo("Each trainer class gets its own VS intro: a style, the battle music, and for gym leader and Elite Four " +
                 $"styles {look}, edited in the VS intro editor. Every class keeps the intro it has now until you " +
                 "change it." + placement + BackupNote($"the ARM9, overlay {overlay} and the synthetic overlay") +
@@ -1126,8 +1126,8 @@ namespace DSPRE
                 return false;
             string overlayPath = OverlayUtils.GetPath(overlay);
             PlainFiles.Copy(overlayPath, overlayPath + BackupSuffix, overwrite: true);
-            PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
-            PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(RomInfo.Arm9Path, RomInfo.Arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
             ClassIntroPatch.Apply(offsets[0]);
             ShowInfo("Every trainer class now has its own VS intro. Edit them in the VS intro editor.", "Patch applied");
             return true;
@@ -1145,7 +1145,7 @@ namespace DSPRE
                 return false;
             string overlayPath = OverlayUtils.GetPath(overlay);
             PlainFiles.Copy(overlayPath, overlayPath + BackupSuffix, overwrite: true);
-            PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
             BattleGaugeTextPatch.Apply(offsets[0]);
             ShowInfo("Patch applied.", "Patch applied");
             return true;
@@ -1153,8 +1153,8 @@ namespace DSPRE
 
         private static PatchState VsClassTableProbe()
         {
-            if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
-            if (RomInfo.gameFamily != GameFamilies.HGSS) return Unsupported("HeartGold and SoulSilver only");
+            if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+            if (RomInfo.GameFamily != GameFamilies.HGSS) return Unsupported("HeartGold and SoulSilver only");
             if (VsIntroTables.WhyNot() != null) return UnsupportedVersion(RomLocator.VsIntroClassTableDumps);
             try
             {
@@ -1178,8 +1178,8 @@ namespace DSPRE
                 BackupNote("the ARM9 and the synthetic overlay") +
                 "\n\nApply this patch?" + CreditNote("vsClassTableExpanded"), "Confirm to proceed"))
                 return false;
-            PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
-            PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(RomInfo.Arm9Path, RomInfo.Arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
             try { SyntheticOverlaySpace.PlaceAt(offsets, tables.MakeClassRoom); }
             catch (Exception e) when (e is IOException || e is InvalidOperationException || e is UnauthorizedAccessException)
             {
@@ -1199,14 +1199,14 @@ namespace DSPRE
                 return false;
             }
 
-            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { DirNames.areaData });
+            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { DirNames.AreaData });
 
-            string[] adFiles = Directory.GetFiles(gameDirs[DirNames.areaData].unpackedDir);
+            string[] adFiles = Directory.GetFiles(GameDirs[DirNames.AreaData].unpackedDir);
             foreach (string s in adFiles)
             {
                 AreaData a = new AreaData(new FileStream(s, FileMode.Open))
                 {
-                    groundAnimation = 0xFFFF
+                    GroundAnimation = 0xFFFF
                 };
                 a.SaveToFile(s, showSuccessMessage: false);
             }
@@ -1218,9 +1218,9 @@ namespace DSPRE
         /// <summary>Extend the Trainer Name max length.</summary>
         public static bool ApplyExpandTrainerNamesPatch()
         {
-            if (AlreadyApplied(RomPatchState.flag_TrainerNamesExpanded || RomInfo.trainerNameMaxLen > TrainerFile.defaultNameLen)) return false;
+            if (AlreadyApplied(RomPatchState.FlagTrainerNamesExpanded || RomInfo.TrainerNameMaxLen > TrainerFile.DefaultNameLen)) return false;
 
-            if (!ConfirmYesNo($"Applying this patch will set the Trainer Name max length to {RomPatchState.expandedTrainerNameLength - 1} usable characters." +
+            if (!ConfirmYesNo($"Applying this patch will set the Trainer Name max length to {RomPatchState.ExpandedTrainerNameLength - 1} usable characters." +
                 BackupNote("the ARM9") + "\n\nAre you sure you want to proceed?" + CreditNote("trainerNames"), "Confirm to proceed"))
             {
                 ShowInfo("No changes have been made.", "Operation canceled");
@@ -1230,13 +1230,13 @@ namespace DSPRE
             try
             {
                 ARM9.DecompressIfMarked();
-                BackUp(RomInfo.arm9Path);
-                using (ARM9.Writer wr = new ARM9.Writer(RomInfo.trainerNameLenOffset))
+                BackUp(RomInfo.Arm9Path);
+                using (ARM9.Writer wr = new ARM9.Writer(RomInfo.TrainerNameLenOffset))
                 {
-                    wr.Write((byte)RomPatchState.expandedTrainerNameLength);
+                    wr.Write((byte)RomPatchState.ExpandedTrainerNameLength);
                 }
 
-                RomPatchState.flag_TrainerNamesExpanded = true;
+                RomPatchState.FlagTrainerNamesExpanded = true;
                 ShowInfo("Trainer Names have been extended.", "Patch applied");
                 return true;
             }
@@ -1261,8 +1261,8 @@ namespace DSPRE
         /// <summary>Move the ScrCommands table + count into the expanded ARM9 file (HGSS EN/ES).</summary>
         public static bool ApplyScrcmdRepointPatch()
         {
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay });
-            string expandedPath = Filesystem.expArmPath;
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.SynthOverlay });
+            string expandedPath = Filesystem.ExpArmPath;
             if (!File.Exists(expandedPath))
             {
                 ShowError("Apply the ARM9 expansion patch first, the synthetic overlay file is missing.", "ARM9 not expanded");
@@ -1300,7 +1300,7 @@ namespace DSPRE
 
             try
             {
-                PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+                PlainFiles.Copy(RomInfo.Arm9Path, RomInfo.Arm9Path + BackupSuffix, overwrite: true);
                 PlainFiles.Copy(expandedPath, expandedPath + BackupSuffix, overwrite: true);
                 DSUtils.WriteToFile(expandedPath, SyntheticOverlaySpace.Header(SyntheticOverlaySpace.CommandTableMarker, blockLength), (uint)offsets[0]);
                 RepointCommandTable(blockOffset, commandTablePayload);
@@ -1327,13 +1327,13 @@ namespace DSPRE
                 using (ARM9.Reader r = new ARM9.Reader(pointerOffset))
                 {
                     uint cmdTable = r.ReadUInt32();
-                    if (cmdTable < synthOverlayLoadAddress)
+                    if (cmdTable < SynthOverlayLoadAddress)
                     {
                         return -1;
                     }
 
-                    uint offset = cmdTable - synthOverlayLoadAddress;
-                    string expandedPath = Filesystem.expArmPath;
+                    uint offset = cmdTable - SynthOverlayLoadAddress;
+                    string expandedPath = Filesystem.ExpArmPath;
                     if (File.Exists(expandedPath))
                     {
                         long fileLength = new FileInfo(expandedPath).Length;
@@ -1346,8 +1346,9 @@ namespace DSPRE
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.WarnOnce("PatchToolboxLogic.GetCommandTableOffset", ex);
                 return -1;
             }
             return -1; // No table in expanded arm9 file
@@ -1362,28 +1363,28 @@ namespace DSPRE
         {
             List<(long Start, long End)> ranges = new List<(long Start, long End)>();
             byte[] arm9 = null;
-            try { arm9 = File.ReadAllBytes(RomInfo.arm9Path); } catch { }
+            try { arm9 = File.ReadAllBytes(RomInfo.Arm9Path); } catch (Exception ex) { AppLogger.Warn("Hand-placed ranges: ARM9 unreadable: " + ex.Message); }
 
             try
             {
                 if (BuildingRotationPatchData.SupportsCurrentRom())
                 {
                     BuildingRotationPatchData data = new BuildingRotationPatchData();
-                    byte[] hook = DSUtils.ReadFromFile(OverlayUtils.GetPath(data.overlayNumber), data.hookOverlayOffset, 4);
-                    if (TryGetThumbBlTarget(data.hookRuntimeAddress, hook, out uint target) && target >= synthOverlayLoadAddress)
+                    byte[] hook = DSUtils.ReadFromFile(OverlayUtils.GetPath(data.OverlayNumber), data.HookOverlayOffset, 4);
+                    if (TryGetThumbBlTarget(data.HookRuntimeAddress, hook, out uint target) && target >= SynthOverlayLoadAddress)
                     {
-                        long offset = target - synthOverlayLoadAddress;
-                        if (offset + data.payload.Length <= RomInfo.synthOverlaySize) ranges.Add((offset, offset + data.payload.Length));
+                        long offset = target - SynthOverlayLoadAddress;
+                        if (offset + data.Payload.Length <= RomInfo.SynthOverlaySize) ranges.Add((offset, offset + data.Payload.Length));
                     }
                 }
             }
-            catch { }
+            catch (Exception ex) { AppLogger.Warn("Hand-placed ranges: building rotation: " + ex.Message); }
 
             try
             {
                 if (arm9 != null && TrainerShinyPatch.InstalledRange(arm9) is (long Start, long End) shiny) ranges.Add(shiny);
             }
-            catch { }
+            catch (Exception ex) { AppLogger.Warn("Hand-placed ranges: trainer shiny patch: " + ex.Message); }
 
             try
             {
@@ -1393,25 +1394,25 @@ namespace DSPRE
                     long block = table - ScrcmdTableOffsetInBlock;
                     // Commands added after the move lengthen the table, and the block's count says by how much.
                     uint count = ScrcmdOriginalCommandCount;
-                    byte[] stored = DSUtils.ReadFromFile(Filesystem.expArmPath, (uint)(block + ScrcmdCountOffsetInBlock), 4);
+                    byte[] stored = DSUtils.ReadFromFile(Filesystem.ExpArmPath, (uint)(block + ScrcmdCountOffsetInBlock), 4);
                     if (stored.Length == 4) count = Math.Max(count, BitConverter.ToUInt32(stored, 0));
-                    long end = Math.Min(table + 4L * count, RomInfo.synthOverlaySize);
+                    long end = Math.Min(table + 4L * count, RomInfo.SynthOverlaySize);
                     ranges.Add((block, end));
                 }
             }
-            catch { }
+            catch (Exception ex) { AppLogger.Warn("Hand-placed ranges: synthetic overlay table: " + ex.Message); }
 
             try
             {
                 if (arm9 != null && BDHCAMPatchData.SupportsCurrentRom())
                 {
                     BDHCAMPatchData data = new BDHCAMPatchData();
-                    byte[] branch = DSUtils.HexStringToByteArray(data.branchString);
-                    if (data.branchOffset + branch.Length <= arm9.Length && arm9.AsSpan((int)data.branchOffset, branch.Length).SequenceEqual(branch))
-                        ranges.Add((BDHCAMPatchData.BDHCamSubroutineOffset, BDHCAMPatchData.BDHCamSubroutineOffset + data.subroutine.Length));
+                    byte[] branch = DSUtils.HexStringToByteArray(data.BranchString);
+                    if (data.BranchOffset + branch.Length <= arm9.Length && arm9.AsSpan((int)data.BranchOffset, branch.Length).SequenceEqual(branch))
+                        ranges.Add((BDHCAMPatchData.BDHCamSubroutineOffset, BDHCAMPatchData.BDHCamSubroutineOffset + data.Subroutine.Length));
                 }
             }
-            catch { }
+            catch (Exception ex) { AppLogger.Warn("Hand-placed ranges: BDHC camera patch: " + ex.Message); }
 
             return ranges;
         }
@@ -1427,21 +1428,22 @@ namespace DSPRE
                     return false;
                 }
 
-                uint expectedCountPointer = synthOverlayLoadAddress + (uint)tableOffset - ScrcmdTableOffsetInBlock + ScrcmdCountOffsetInBlock;
+                uint expectedCountPointer = SynthOverlayLoadAddress + (uint)tableOffset - ScrcmdTableOffsetInBlock + ScrcmdCountOffsetInBlock;
                 using (ARM9.Reader r = new ARM9.Reader(GetCustomScrcmdDBInt("commandCountPointerOffset")))
                 {
                     return r.ReadUInt32() == expectedCountPointer;
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.WarnOnce("PatchToolboxLogic.CheckScrcmdCommandCountPointerValid", ex);
                 return false;
             }
         }
 
         private static bool CheckScrcmdBlockMarkers(int blockOffset)
         {
-            string expandedPath = Filesystem.expArmPath;
+            string expandedPath = Filesystem.ExpArmPath;
             if (!File.Exists(expandedPath))
             {
                 return false;
@@ -1465,7 +1467,7 @@ namespace DSPRE
         private static int GetCustomScrcmdDBInt(string keyPrefix)
         {
             ResourceManager customcmdDB = new ResourceManager("DSPRE.Resources.ROMToolboxDB.CustomScrCmdDB", Assembly.GetExecutingAssembly());
-            string value = customcmdDB.GetString(keyPrefix + "_" + RomInfo.gameVersion + "_" + RomInfo.gameLanguage);
+            string value = customcmdDB.GetString(keyPrefix + "_" + RomInfo.GameVersion + "_" + RomInfo.GameLanguage);
             if (value == null)
             {
                 throw new NotSupportedException();
@@ -1477,7 +1479,7 @@ namespace DSPRE
         /// <summary>Builds the moved block: COUN marker + command count + TABL marker + the vanilla command table.</summary>
         private static byte[] BuildCommandTablePayload()
         {
-            byte[] originalTable = DSUtils.ReadFromFile(RomInfo.arm9Path, (uint)GetCustomScrcmdDBInt("originalTableOffset"), ScrcmdOriginalTableLength);
+            byte[] originalTable = DSUtils.ReadFromFile(RomInfo.Arm9Path, (uint)GetCustomScrcmdDBInt("originalTableOffset"), ScrcmdOriginalTableLength);
             using (MemoryStream stream = new MemoryStream())
             using (BinaryWriter writer = new BinaryWriter(stream))
             {
@@ -1499,16 +1501,16 @@ namespace DSPRE
 
         private static void RepointCommandTable(uint blockOffset, byte[] commandTablePayload)
         {
-            string expandedPath = Filesystem.expArmPath;
+            string expandedPath = Filesystem.ExpArmPath;
             DSUtils.WriteToFile(expandedPath, commandTablePayload, blockOffset);
 
             using (ARM9.Writer wr = new ARM9.Writer())
             {
                 wr.BaseStream.Position = GetCustomScrcmdDBInt("pointerOffset");
-                wr.Write(synthOverlayLoadAddress + blockOffset + ScrcmdTableOffsetInBlock);
+                wr.Write(SynthOverlayLoadAddress + blockOffset + ScrcmdTableOffsetInBlock);
 
                 wr.BaseStream.Position = GetCustomScrcmdDBInt("commandCountPointerOffset");
-                wr.Write(synthOverlayLoadAddress + blockOffset + ScrcmdCountOffsetInBlock);
+                wr.Write(SynthOverlayLoadAddress + blockOffset + ScrcmdCountOffsetInBlock);
             }
         }
 
@@ -1614,13 +1616,13 @@ namespace DSPRE
 
         /// <summary>Whether this project should still be offered credits after a save.</summary>
         public static bool CreditsOfferDue() =>
-            !string.IsNullOrEmpty(RomInfo.workDir) && !SettingsManager.Settings.patchCreditsHandled.Contains(RomInfo.workDir);
+            !string.IsNullOrEmpty(RomInfo.WorkDir) && !SettingsManager.Settings.PatchCreditsHandled.Contains(RomInfo.WorkDir);
 
         /// <summary>Stops the after-save credits offer for this project.</summary>
         public static void MarkCreditsHandled()
         {
             if (!CreditsOfferDue()) return;
-            SettingsManager.Settings.patchCreditsHandled.Add(RomInfo.workDir);
+            SettingsManager.Settings.PatchCreditsHandled.Add(RomInfo.WorkDir);
             SettingsManager.Save();
         }
 
@@ -1705,9 +1707,9 @@ namespace DSPRE
                 "Rearrange item scripts into ascending index order and fix ground-item references.",
                 () =>
                 {
-                    if (RomInfo.isHGE) return Unsupported("Unsupported on hg-engine ROMs");
-                    DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.scripts });
-                    bool applied = RomPatchState.flag_standardizedItems || CheckScriptsStandardizedItemNumbers();
+                    if (RomInfo.IsHGE) return Unsupported("Unsupported on hg-engine ROMs");
+                    DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.Scripts });
+                    bool applied = RomPatchState.FlagStandardizedItems || CheckScriptsStandardizedItemNumbers();
                     return applied ? PatchState.Applied : PatchState.Available;
                 }));
 
@@ -1751,9 +1753,9 @@ namespace DSPRE
                 "Adds about 88 KB of usable ARM9 memory, the synthetic overlay. Every patch here that says it requires the ARM9 expansion puts its code or tables there. Advanced, can break the game if misused.",
                 () =>
                 {
-                    if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+                    if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
                     if (!ARM9PatchData.Supported) return UnsupportedVersion(ARM9PatchData.SupportedDumps);
-                    bool applied = RomPatchState.flag_arm9Expanded || CheckFilesArm9ExpansionApplied();
+                    bool applied = RomPatchState.FlagArm9Expanded || CheckFilesArm9ExpansionApplied();
                     return applied ? PatchState.Applied : PatchState.Available;
                 }));
 
@@ -1761,11 +1763,11 @@ namespace DSPRE
                 "Install the BDHCam camera subroutine (Platinum / HGSS, EN or ES). Requires the ARM9 expansion patch first.",
                 () =>
                 {
-                    if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+                    if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
                     if (!ScrcmdLikeLangOk()) return UnsupportedVersion(ScrcmdLikeDumps());
-                    if (RomInfo.gameFamily == GameFamilies.HGSS && !RomInfo.IsDsRomProject) return Unsupported("Convert to ds-rom");
+                    if (RomInfo.GameFamily == GameFamilies.HGSS && !RomInfo.IsDsRomProject) return Unsupported("Convert to ds-rom");
                     if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
-                    bool applied = RomPatchState.flag_BDHCamPatchApplied || CheckFilesBDHCamPatchApplied();
+                    bool applied = RomPatchState.FlagBDHCamPatchApplied || CheckFilesBDHCamPatchApplied();
                     return applied ? PatchState.Applied : PatchState.Available;
                 }));
 
@@ -1773,11 +1775,11 @@ namespace DSPRE
                 "Enables the game to recognise the rotation of buildings placed in the Map Editor. Requires the ARM9 expansion patch and a ds-rom-format project.",
                 () =>
                 {
-                    if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+                    if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
                     if (!RomInfo.IsDsRomProject) return Unsupported("Convert to ds-rom");
                     if (!BuildingRotationPatchData.SupportsCurrentRom()) return UnsupportedVersion(RomLocator.WorksOn(RomLocator.BuildingRotationSitesIn));
                     if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
-                    bool applied = RomPatchState.flag_BuildingRotationPatchApplied || CheckFilesBuildingRotationPatchApplied();
+                    bool applied = RomPatchState.FlagBuildingRotationPatchApplied || CheckFilesBuildingRotationPatchApplied();
                     return applied ? PatchState.Applied : PatchState.Available;
                 }));
 
@@ -1785,7 +1787,7 @@ namespace DSPRE
                 "Party members ticked Shiny in the Trainer editor are shiny in battle (HeartGold/SoulSilver). Requires the ARM9 expansion patch and a ds-rom-format project.",
                 () =>
                 {
-                    if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+                    if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
                     if (!TrainerShinyPatch.SupportsCurrentRom) return UnsupportedVersion(RomLocator.WorksOn(RomLocator.TrainerShinySitesIn));
                     if (!RomInfo.IsDsRomProject) return Unsupported("Convert to ds-rom");
                     if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
@@ -1796,7 +1798,7 @@ namespace DSPRE
                 "Gives every trainer class its own record for gender, prize, eye-contact and battle music and VS intro, edited in the Trainer Classes window and the VS intro editor (US HeartGold/SoulSilver). Requires the ARM9 expansion patch and a ds-rom-format project.",
                 () =>
                 {
-                    if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+                    if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
                     if (!TrainerClassMetadataPatch.SupportsCurrentRom) return UnsupportedVersion(RomInfo.WithTwins(new[] { ("IPKE", 0), ("IPGE", 0) }));
                     if (!RomInfo.IsDsRomProject) return Unsupported("Convert to ds-rom");
                     if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
@@ -1821,9 +1823,9 @@ namespace DSPRE
                 () =>
                 {
                     // Its offsets are known for the US, European and Japanese ARM9s only.
-                    if (RomInfo.gameFamily == GameFamilies.DP || RomInfo.gameLanguage == GameLanguages.Korean)
+                    if (RomInfo.GameFamily == GameFamilies.DP || RomInfo.GameLanguage == GameLanguages.Korean)
                         return UnsupportedVersion(RomInfo.KnownDumps.Where(d => (d.id.StartsWith("CPU") || d.id.StartsWith("IP")) && d.id[3] != 'K'));
-                    bool applied = RomPatchState.flag_DynamicHeadersPatchApplied || CheckFilesDynamicHeadersPatchApplied();
+                    bool applied = RomPatchState.FlagDynamicHeadersPatchApplied || CheckFilesDynamicHeadersPatchApplied();
                     return applied ? PatchState.Applied : PatchState.Available;
                 }));
 
@@ -1831,10 +1833,10 @@ namespace DSPRE
                 "Allow Matrix 0 to be freely expanded up to twice its size (HGSS, EN or ES).",
                 () =>
                 {
-                    if (RomInfo.gameFamily != GameFamilies.HGSS) return Unsupported("HGSS only");
-                    if (RomInfo.gameLanguage != GameLanguages.English && RomInfo.gameLanguage != GameLanguages.Spanish)
+                    if (RomInfo.GameFamily != GameFamilies.HGSS) return Unsupported("HGSS only");
+                    if (RomInfo.GameLanguage != GameLanguages.English && RomInfo.GameLanguage != GameLanguages.Spanish)
                         return UnsupportedVersion(RomInfo.KnownDumps.Where(d => d.id.StartsWith("IP") && (d.id[3] == 'E' || d.id[3] == 'S')));
-                    bool applied = RomPatchState.flag_MatrixExpansionApplied || CheckFilesMatrixExpansionApplied();
+                    bool applied = RomPatchState.FlagMatrixExpansionApplied || CheckFilesMatrixExpansionApplied();
                     return applied ? PatchState.Applied : PatchState.Available;
                 }));
 
@@ -1842,8 +1844,8 @@ namespace DSPRE
                 "Move the script command table into the expanded ARM9 file so custom commands can be installed (HGSS, EN or ES). Requires the ARM9 expansion patch.",
                 () =>
                 {
-                    if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
-                    if (!ScrcmdLikeLangOk() || RomInfo.gameFamily != GameFamilies.HGSS)
+                    if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+                    if (!ScrcmdLikeLangOk() || RomInfo.GameFamily != GameFamilies.HGSS)
                         return UnsupportedVersion(ScrcmdLikeDumps().Where(d => d.id.StartsWith("IP")));
                     if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
                     return IsScrcmdRepointApplied() ? PatchState.Applied : PatchState.Available;
@@ -1851,17 +1853,17 @@ namespace DSPRE
 
             list.Add(Status("disableTextures",
                 "Set the Dynamic Textures field of every AreaData to 0xFFFF, disabling texture animations (HGSS).",
-                () => RomInfo.gameFamily == GameFamilies.HGSS ? PatchState.Available : UnsupportedVersion(RomInfo.KnownDumps.Where(d => d.id.StartsWith("IP")))));
+                () => RomInfo.GameFamily == GameFamilies.HGSS ? PatchState.Available : UnsupportedVersion(RomInfo.KnownDumps.Where(d => d.id.StartsWith("IP")))));
 
             list.Add(Status("trainerNames",
-                $"Raise the trainer-name max length to {RomPatchState.expandedTrainerNameLength - 1} usable characters.",
+                $"Raise the trainer-name max length to {RomPatchState.ExpandedTrainerNameLength - 1} usable characters.",
                 () =>
                 {
-                    if (RomPatchState.flag_TrainerNamesExpanded) return AppliedHere();
-                    if (RomInfo.trainerNameLenOffset < 0) return UnsupportedVersion(RomLocator.WorksOn(RomLocator.Thing.TrainerNameLength));
-                    if (RomInfo.trainerNameMaxLen > TrainerFile.defaultNameLen)
+                    if (RomPatchState.FlagTrainerNamesExpanded) return AppliedHere();
+                    if (RomInfo.TrainerNameLenOffset < 0) return UnsupportedVersion(RomLocator.WorksOn(RomLocator.Thing.TrainerNameLength));
+                    if (RomInfo.TrainerNameMaxLen > TrainerFile.DefaultNameLen)
                     {
-                        RomPatchState.flag_TrainerNamesExpanded = true;
+                        RomPatchState.FlagTrainerNamesExpanded = true;
                         return AppliedHere();
                     }
                     return PatchState.Available;
@@ -1901,7 +1903,7 @@ namespace DSPRE
                 "Each Pickup level range gets its own nine items and two rare items. Requires the ARM9 expansion patch.",
                 () =>
                 {
-                    if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+                    if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
                     if (!PickupSlotsPatch.SupportsCurrentRom) return UnsupportedVersion(RomLocator.WorksOn(RomLocator.PickupSlotSitesIn));
                     if (PickupSlotsPatch.IsApplied) return PatchState.Applied;
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
@@ -1911,8 +1913,8 @@ namespace DSPRE
                 "Each trainer class gets its own VS intro: style, battle music, and for gym leader and Elite Four styles its own look, edited in the VS intro editor (Diamond, Pearl and Platinum). Requires the ARM9 expansion patch.",
                 () =>
                 {
-                    if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
-                    if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) return Unsupported("Diamond, Pearl and Platinum only");
+                    if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+                    if (RomInfo.GameFamily == RomInfo.GameFamilies.HGSS) return Unsupported("Diamond, Pearl and Platinum only");
                     if (!ClassIntroPatch.SupportsCurrentRom) return UnsupportedVersion(ClassIntroPatch.SupportedDumps);
                     if (ClassIntroPatch.IsApplied) return PatchState.Applied;
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
@@ -1922,7 +1924,7 @@ namespace DSPRE
                 "Removes the white box behind the name, level and HP in battle. Requires the ARM9 expansion patch.",
                 () =>
                 {
-                    if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+                    if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
                     if (!BattleGaugeTextPatch.SupportsCurrentRom) return UnsupportedVersion(RomLocator.HpBarTextDumps);
                     if (BattleGaugeTextPatch.IsApplied) return PatchState.Applied;
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
@@ -1932,11 +1934,11 @@ namespace DSPRE
                 "Choose a Poké Ball for each trainer party member instead of ball capsule seals. ARM9 only; no expansion required.",
                 () =>
                 {
-                    if (RomInfo.isHGE) return Unsupported("Not compatible with hg-engine");
+                    if (RomInfo.IsHGE) return Unsupported("Not compatible with hg-engine");
                     if (!TrainerCustomPokeballsPatch.SupportsCurrentRom)
                         return UnsupportedVersion(RomInfo.KnownDumps.Where(d => TrainerCustomPokeballsPatch.Supports(d.id)));
                     if (TrainerCustomPokeballsPatch.DetectCurrentProject()) return PatchState.Applied;
-                    return TrainerCustomPokeballsPatch.WhyNotApplicable(RomInfo.romID, File.ReadAllBytes(RomInfo.arm9Path)) == null
+                    return TrainerCustomPokeballsPatch.WhyNotApplicable(RomInfo.RomID, File.ReadAllBytes(RomInfo.Arm9Path)) == null
                         ? PatchState.Available : Unsupported("Capsule routine modified");
                 }));
 
@@ -1954,7 +1956,7 @@ namespace DSPRE
                 Link = "https://github.com/hzla/PlatPatches",
                 Description = "Applied with hzla's own tool, not DSPRE. DSPRE finds them in the ROM and its editors use what they add.",
             };
-            if (RomInfo.gameFamily != GameFamilies.Plat || RomInfo.isHGE)
+            if (RomInfo.GameFamily != GameFamilies.Plat || RomInfo.IsHGE)
             {
                 info.State = PatchState.Unsupported;
                 info.Reason = "Platinum only";
@@ -1976,15 +1978,15 @@ namespace DSPRE
         {
             string note;
             try { note = detect(); }
-            catch { note = null; }
+            catch (Exception ex) { AppLogger.WarnOnce("PatchToolboxLogic.Part", ex); note = null; }
             return new PatchPart { Key = key, Title = title, Applied = note != null, Note = note };
         }
 
-        private static bool Arm9Expanded() => RomPatchState.flag_arm9Expanded || CheckFilesArm9ExpansionApplied();
+        private static bool Arm9Expanded() => RomPatchState.FlagArm9Expanded || CheckFilesArm9ExpansionApplied();
 
         private static PatchState MartExpansionProbe()
         {
-            if (RomInfo.isHGE) return Unsupported("hg-engine keeps the marts in its own source");
+            if (RomInfo.IsHGE) return Unsupported("hg-engine keeps the marts in its own source");
             if (!RomInfo.IsMartEditorAvailable())
                 return UnsupportedVersion(RomLocator.WorksOnAll(RomLocator.Thing.MartCommonCount, RomLocator.Thing.MartCommonPointer, RomLocator.Thing.MartSpecialtyPointer));
             if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
@@ -2004,8 +2006,8 @@ namespace DSPRE
                 $"{MartData.RoomyItems} items each, and points the ARM9's two mart pointers at it." + placement + BackupNote("the ARM9 and the synthetic overlay") +
                 "\n\nApply this patch?" + CreditNote("martsExpanded"), "Confirm to proceed"))
                 return false;
-            PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
-            PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(RomInfo.Arm9Path, RomInfo.Arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
             try { SyntheticOverlaySpace.PlaceAt(offsets, marts.MoveToRoomyLayout); }
             catch (Exception e) when (e is IOException || e is InvalidOperationException || e is UnauthorizedAccessException)
             {
@@ -2018,7 +2020,7 @@ namespace DSPRE
 
         private static PatchState BpShopExpansionProbe()
         {
-            if (RomInfo.isHGE || RomInfo.gameFamily != RomInfo.GameFamilies.Plat) return Unsupported("Platinum only");
+            if (RomInfo.IsHGE || RomInfo.GameFamily != RomInfo.GameFamilies.Plat) return Unsupported("Platinum only");
             if (BpShopData.WhyNot() is string bpWhy) return NotHere(RomLocator.BpShopDumps.Where(d => d.id.StartsWith("CPU")), bpWhy);
             if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
             try
@@ -2033,7 +2035,7 @@ namespace DSPRE
         /// <summary>Moves the saved Battle Point lists into the expanded ARM9 area, after backing up what it changes.</summary>
         public static bool ApplyBpShopExpansion()
         {
-            if (RomInfo.gameFamily != RomInfo.GameFamilies.Plat) { ShowError("The Battle Point lists can be expanded in Platinum only.", "Patch not applied"); return false; }
+            if (RomInfo.GameFamily != RomInfo.GameFamilies.Plat) { ShowError("The Battle Point lists can be expanded in Platinum only.", "Patch not applied"); return false; }
             BpShopData shop;
             try { shop = BpShopData.Load(); }
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException) { ShowError(e.Message, "Patch not applied"); return false; }
@@ -2043,9 +2045,9 @@ namespace DSPRE
                 $"and {BpShopData.MaxPriceRows} prices, and points the exchange code in the ARM9 and the price lookup in overlay 7 at it." + placement + BackupNote("the ARM9, overlay 7 and the synthetic overlay") +
                 "\n\nApply this patch?" + CreditNote("bpShopExpanded"), "Confirm to proceed"))
                 return false;
-            PlainFiles.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(RomInfo.Arm9Path, RomInfo.Arm9Path + BackupSuffix, overwrite: true);
             PlainFiles.Copy(OverlayUtils.GetPath(7), OverlayUtils.GetPath(7) + BackupSuffix, overwrite: true);
-            PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
             try { SyntheticOverlaySpace.PlaceAt(offsets, shop.MoveToExpansion); }
             catch (Exception e) when (e is IOException || e is InvalidOperationException || e is UnauthorizedAccessException)
             {
@@ -2058,7 +2060,7 @@ namespace DSPRE
 
         private static PatchState SwarmTableExpansionProbe()
         {
-            if (RomInfo.isHGE) return Unsupported("hg-engine keeps the swarms in its own source");
+            if (RomInfo.IsHGE) return Unsupported("hg-engine keeps the swarms in its own source");
             if (SwarmTable.WhyNot() is string swarmWhy) return NotHere(RomLocator.SwarmDumps, swarmWhy);
             if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
             try { return SwarmTable.Load().Expanded ? PatchState.Applied : PatchState.Available; }
@@ -2079,7 +2081,7 @@ namespace DSPRE
                 "\n\nApply this patch?" + CreditNote("swarmTableExpanded"), "Confirm to proceed"))
                 return false;
             PlainFiles.Copy(table.CodePath, table.CodePath + BackupSuffix, overwrite: true);
-            PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
             try { SyntheticOverlaySpace.PlaceAt(offsets, table.MoveToExpansion); }
             catch (Exception e) when (e is IOException || e is InvalidOperationException || e is UnauthorizedAccessException)
             {
@@ -2092,7 +2094,7 @@ namespace DSPRE
 
         private static PatchState TypeChartExpansionProbe()
         {
-            if (RomInfo.isHGE) return Unsupported("hg-engine keeps the chart in its own source");
+            if (RomInfo.IsHGE) return Unsupported("hg-engine keeps the chart in its own source");
             if (TypeChart.WhyNot() is string chartWhy) return NotHere(RomLocator.WorksOn(RomLocator.Thing.TypeChartPointers), chartWhy);
             if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
             try { return TypeChart.Load().InExpansion ? PatchState.Applied : PatchState.Available; }
@@ -2109,11 +2111,11 @@ namespace DSPRE
             if (PlacementNote(new[] { TypeChart.ExpansionBlockLength }, out int[] offsets) is not string placement) return false;
             if (!ConfirmYesNo($"This copies the saved type chart into its own block in the synthetic overlay with room for {TypeChart.ExpandedCapacity - 2} matchups, " +
                 "points the battle code at it and raises Conversion 2's count to match"
-                + (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS ? "." : ", and writes the chart into the Pokétch's copy.") + placement + BackupNote("the battle overlay and the synthetic overlay") +
+                + (RomInfo.GameFamily == RomInfo.GameFamilies.HGSS ? "." : ", and writes the chart into the Pokétch's copy.") + placement + BackupNote("the battle overlay and the synthetic overlay") +
                 "\n\nApply this patch?" + CreditNote("typeChartExpanded"), "Confirm to proceed"))
                 return false;
             PlainFiles.Copy(chart.CodePath, chart.CodePath + BackupSuffix, overwrite: true);
-            PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
             try { SyntheticOverlaySpace.PlaceAt(offsets, chart.MoveToExpansion); }
             catch (Exception e) when (e is IOException || e is InvalidOperationException || e is UnauthorizedAccessException)
             {
@@ -2126,8 +2128,8 @@ namespace DSPRE
 
         private static PatchState VsIntroTimingsProbe()
         {
-            if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
-            if (RomInfo.gameLanguage != RomInfo.GameLanguages.English || (RomInfo.romID != "IPKE" && RomInfo.romID != "IPGE"))
+            if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+            if (RomInfo.GameLanguage != RomInfo.GameLanguages.English || (RomInfo.RomID != "IPKE" && RomInfo.RomID != "IPGE"))
                 return UnsupportedVersion(RomInfo.WithTwins(new[] { ("IPKE", 0), ("IPGE", 0) }));
             if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
             if (TrainerClassMetadataPatch.InstalledOffset() == null) return Unsupported("Requires trainer class metadata");
@@ -2152,7 +2154,7 @@ namespace DSPRE
                 string path = VsIntroTimingAddon.OverlayFilePath(overlay);
                 PlainFiles.Copy(path, path + BackupSuffix, overwrite: true);
             }
-            PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
             try { SyntheticOverlaySpace.PlaceAt(offsets, () => VsIntroTimingAddon.Install()); }
             catch (Exception e) when (e is InvalidOperationException || e is IOException || e is UnauthorizedAccessException)
             {
@@ -2165,7 +2167,7 @@ namespace DSPRE
 
         private static PatchState RegionalDexCountProbe()
         {
-            if (RomInfo.isHGE) return Unsupported("hg-engine sets these counts in its own source");
+            if (RomInfo.IsHGE) return Unsupported("hg-engine sets these counts in its own source");
             if (RegionalDexCount.WhyNot() is string dexWhy)
                 return NotHere(RomLocator.WorksOnAll(RomLocator.Thing.RegionalDexCompletion, RomLocator.Thing.RegionalDexRatingLast), dexWhy);
             List<ushort> order = RegionalDexCount.SavedOrder();
@@ -2178,7 +2180,7 @@ namespace DSPRE
 
         private static PatchState EvolutionSlotsProbe()
         {
-            if (RomInfo.isHGE) return Unsupported("hg-engine sets its evolution slots in its own source");
+            if (RomInfo.IsHGE) return Unsupported("hg-engine sets its evolution slots in its own source");
             if (EvolutionSlots.WhyNot() is string evoWhy)
                 return NotHere(RomLocator.WorksOnAll(RomLocator.Thing.EvolutionSlotBuffer, RomLocator.Thing.EvolutionSlotLoopLevel,
                     RomLocator.Thing.EvolutionSlotLoopTrade, RomLocator.Thing.EvolutionSlotLoopItem), evoWhy);
@@ -2190,13 +2192,13 @@ namespace DSPRE
         {
             if (EvolutionSlots.WhyNot() is string why) { ShowError(why, "Patch not applied"); return false; }
             if (AlreadyApplied(EvolutionSlots.Expanded)) return false;
-            string backupDir = Path.Combine(RomInfo.dspreDir, "backups", "evolutions-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"));
+            string backupDir = Path.Combine(RomInfo.DspreDir, "backups", "evolutions-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"));
             if (!ConfirmYesNo($"Every Pokémon gets room for {EvolutionSlots.Max} evolutions instead of {EvolutionSlots.Current()}. Four bytes in the ARM9's " +
                 $"evolution check change, and every evolution file is padded with empty slots to {EvolutionSlots.FileSize(EvolutionSlots.Max)} bytes." +
                 BackupNote("the ARM9") + " The evolution files are copied to " + backupDir + "." +
                 "\n\nApply this patch?" + CreditNote("evolutionSlots"), "Confirm to proceed"))
                 return false;
-            BackUp(RomInfo.arm9Path);
+            BackUp(RomInfo.Arm9Path);
             try { EvolutionSlots.Expand(backupDir); }
             catch (Exception e) when (e is IOException || e is InvalidOperationException || e is UnauthorizedAccessException)
             {
@@ -2219,7 +2221,7 @@ namespace DSPRE
             if (!ConfirmYesNo($"The regional Pokédex holds {order.Count} species. The game will count it complete at {next.Completion} " +
                 $"(now {now.Completion}) and the professor's rating will follow." + BackupNote("the ARM9") + "\n\nApply this patch?" + CreditNote("regionalDexCount"), "Confirm to proceed"))
                 return false;
-            BackUp(RomInfo.arm9Path);
+            BackUp(RomInfo.Arm9Path);
             RegionalDexCount.Apply(order);
             ShowInfo("The game's regional Pokédex size now matches the regional order.", "Patch applied");
             return true;
@@ -2227,7 +2229,7 @@ namespace DSPRE
 
         private static PatchState MoveListProbe(MoveCategoryTable.Kind kind)
         {
-            if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+            if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
             if (MoveCategoryTable.WhyNot(kind) is string listWhy) return NotHere(RomLocator.MoveListDumps(MoveCategoryTable.TableOf(kind)), listWhy);
             if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
             return MoveCategoryTable.Expanded(kind) ? PatchState.Applied : PatchState.Available;
@@ -2251,7 +2253,7 @@ namespace DSPRE
             try
             {
                 MoveCategoryTable table = MoveCategoryTable.Load(kind);
-                BackUp(table.CodePath, Filesystem.expArmPath);
+                BackUp(table.CodePath, Filesystem.ExpArmPath);
                 SyntheticOverlaySpace.PlaceAt(offsets, table.MoveToExpansion);
                 ShowInfo($"The {name} move list now has room for {MoveCategoryTable.ExpandedCapacity} moves. Mark moves in the Move Data editor.", "Patch applied");
                 return true;
@@ -2302,13 +2304,13 @@ namespace DSPRE
         private static bool Probe(Func<bool> check)
         {
             try { return check(); }
-            catch { return false; }
+            catch (Exception ex) { AppLogger.WarnOnce("PatchToolboxLogic.Probe", ex); return false; }
         }
 
         // Language/version gate shared by BDHCam and the script-command patches (Plat/HGSS, EN or ES).
         private static bool ScrcmdLikeLangOk() =>
-            (RomInfo.gameFamily == GameFamilies.HGSS || RomInfo.gameFamily == GameFamilies.Plat)
-            && (RomInfo.gameLanguage == GameLanguages.English || RomInfo.gameLanguage == GameLanguages.Spanish);
+            (RomInfo.GameFamily == GameFamilies.HGSS || RomInfo.GameFamily == GameFamilies.Plat)
+            && (RomInfo.GameLanguage == GameLanguages.English || RomInfo.GameLanguage == GameLanguages.Spanish);
 
         // Small helpers so GetPatchStatuses stays declarative and a single check throwing can't
         // take down the whole catalogue (a status probe should never be fatal).
@@ -2323,7 +2325,7 @@ namespace DSPRE
         private static PatchState NotHere(IEnumerable<(string id, int rev)> works, string why)
         {
             List<(string id, int rev)> list = works.ToList();
-            return list.Contains((RomInfo.romID, RomInfo.romRevision)) ? Unsupported(why) : UnsupportedVersion(list);
+            return list.Contains((RomInfo.RomID, RomInfo.RomRevision)) ? Unsupported(why) : UnsupportedVersion(list);
         }
 
         // Platinum, HeartGold and SoulSilver in English or Spanish, as ScrcmdLikeLangOk checks.
@@ -2336,7 +2338,7 @@ namespace DSPRE
         // these patches are its doing and earn no credit here.
         private static PatchState AppliedHere()
         {
-            if (RomInfo.isHGE) _reason_text = AppliedByHgEngine;
+            if (RomInfo.IsHGE) _reason_text = AppliedByHgEngine;
             return PatchState.Applied;
         }
 
@@ -2354,6 +2356,7 @@ namespace DSPRE
             }
             catch (Exception ex)
             {
+                AppLogger.WarnOnce("PatchToolboxLogic.Status", ex);
                 info.State = PatchState.Unsupported;
                 info.Reason = "Unavailable (" + ex.GetType().Name + ")";
             }

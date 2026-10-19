@@ -36,7 +36,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) ViewModel.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) ViewModel.DiscardChanges();
         }
 
         private async void AddSpecies_Click(object sender, RoutedEventArgs e)
@@ -57,7 +57,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
             string path = files.Count > 0 ? files[0].TryGetLocalPath() : null;
             if (path == null) return;
             string error = ViewModel.PokewalkerVM.Import(picture, path);
-            if (error != null) await DialogHelper.ShowError(error, "Pokémon editor error", this);
+            if (error != null) await DialogHelper.ShowErrorAsync(error, "Pokémon editor error", this);
             else SaveNotice.Imported("the Pokéwalker picture", path);
         }
 
@@ -74,7 +74,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
             string path = file?.TryGetLocalPath();
             if (path == null) return;
             string error = ViewModel.PokewalkerVM.Export(picture, path);
-            if (error != null) await DialogHelper.ShowError(error, "Pokémon editor error", this);
+            if (error != null) await DialogHelper.ShowErrorAsync(error, "Pokémon editor error", this);
             else SaveNotice.Exported(path);
         }
 
@@ -89,7 +89,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
             string path = files.Count > 0 ? files[0].TryGetLocalPath() : null;
             if (path == null) return;
             string error = ViewModel.PokedexVM.ImportFootprint(path);
-            if (error != null) await DialogHelper.ShowError(error, "Pokémon editor error", this);
+            if (error != null) await DialogHelper.ShowErrorAsync(error, "Pokémon editor error", this);
             else SaveNotice.Imported("the footprint", path);
         }
 
@@ -105,7 +105,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
             string path = file?.TryGetLocalPath();
             if (path == null) return;
             string error = ViewModel.PokedexVM.ExportFootprint(path);
-            if (error != null) await DialogHelper.ShowError(error, "Pokémon editor error", this);
+            if (error != null) await DialogHelper.ShowErrorAsync(error, "Pokémon editor error", this);
             else SaveNotice.Exported(path);
         }
 
@@ -171,10 +171,10 @@ namespace DSPRE.Avalonia.Views.Pokemon
         {
             LearnsetEditorViewModel vm = ViewModel.LearnsetVM;
             FilePickerFileType filter = new global::Avalonia.Platform.Storage.FilePickerFileType("CSV") { Patterns = new[] { "*.csv" } };
-            string path = await DialogHelper.SaveFile(this, "Export learnset (CSV)", new[] { filter }, $"learnset_{vm.CurrentId:D4}.csv");
+            string path = await DialogHelper.SaveFileAsync(this, "Export learnset (CSV)", new[] { filter }, $"learnset_{vm.CurrentId:D4}.csv");
             if (path == null) return;
             try { PlainFiles.WriteText(path, vm.BuildCsv()); SaveNotice.Exported(path); }
-            catch (System.Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Pokémon editor error"); }
+            catch (System.Exception ex) { await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Pokémon editor error"); }
         }
     }
 }

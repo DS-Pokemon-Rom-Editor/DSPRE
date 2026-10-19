@@ -5,9 +5,12 @@ using System.Text;
 using System.Collections.Generic;
 using static DSPRE.RomInfo;
 
-namespace DSPRE {
-    public class MoveData : RomFile {
-        public enum AttackRange : ushort {
+namespace DSPRE
+{
+    public class MoveData : RomFile
+    {
+        public enum AttackRange : ushort
+        {
             SELECTION = 0,
             VARIABLE = (1 << 0),
             RANDOM = (1 << 1),
@@ -21,12 +24,14 @@ namespace DSPRE {
             ACUPRESSURE = (1 << 9),
             ME_FIRST = (1 << 10)
         };
-        public enum MoveSplit : byte {
+        public enum MoveSplit : byte
+        {
             PHYSICAL = 0,
             SPECIAL,
             STATUS,
         };
-        public enum ContestCondition : byte {
+        public enum ContestCondition : byte
+        {
             COOL = 0,
             BEAUTIFUL,
             CUTE,
@@ -39,7 +44,8 @@ namespace DSPRE {
         public static readonly byte[] ContestEffectAppeal =
             { 0, 20, 20, 0, 20, 30, 10, 20, 0, 0, 20, 0, 0, 20, 20, 20, 0, 20, 20, 20, 10, 0, 20, 10 };
 
-        public enum MoveFlags : byte {
+        public enum MoveFlags : byte
+        {
             NONE = 0,
             CONTACT = (1 << 0),
             PROTECT = (1 << 1),
@@ -70,16 +76,21 @@ namespace DSPRE {
         /// <summary>
         /// Gets the user-friendly name for an attack range value.
         /// </summary>
-        public static string GetAttackRangeName(ushort targetValue) {
-            foreach ((ushort value, string name, string description) range in AttackRangeDescriptions) {
-                if (range.value == targetValue) {
+        public static string GetAttackRangeName(ushort targetValue)
+        {
+            foreach ((ushort value, string name, string description) range in AttackRangeDescriptions)
+            {
+                if (range.value == targetValue)
+                {
                     return range.name;
                 }
             }
             // If no exact match, build a combined string for multiple flags (shouldn't happen in vanilla)
             List<string> names = new List<string>();
-            for (int i = 0; i < AttackRangeDescriptions.Length; i++) {
-                if (AttackRangeDescriptions[i].value != 0 && (targetValue & AttackRangeDescriptions[i].value) != 0) {
+            for (int i = 0; i < AttackRangeDescriptions.Length; i++)
+            {
+                if (AttackRangeDescriptions[i].value != 0 && (targetValue & AttackRangeDescriptions[i].value) != 0)
+                {
                     names.Add(AttackRangeDescriptions[i].name);
                 }
             }
@@ -87,65 +98,70 @@ namespace DSPRE {
         }
 
 
-        public ushort battleeffect;
-        public MoveSplit split;
-        public byte damage;
+        public ushort Battleeffect;
+        public MoveSplit Split;
+        public byte Damage;
 
-        public PokemonType movetype;
-        public byte accuracy;
-        public byte pp;
-        public byte sideEffectProbability;
+        public PokemonType Movetype;
+        public byte Accuracy;
+        public byte Pp;
+        public byte SideEffectProbability;
 
-        public ushort target;
-        public sbyte priority;
-        public byte flagField;
+        public ushort Target;
+        public sbyte Priority;
+        public byte FlagField;
 
-        public byte contestAppeal;
-        public ContestCondition contestConditionType;
+        public byte ContestAppeal;
+        public ContestCondition ContestConditionType;
         // The record's last halfword, unused by the game; kept as found.
-        private ushort trailing;
+        private ushort _trailing;
 
-        public MoveData(Stream stream) {
-            using (BinaryReader reader = new BinaryReader(stream)) {
-                this.battleeffect = reader.ReadUInt16();
-                this.split = (MoveSplit)reader.ReadByte();
-                this.damage = reader.ReadByte();
+        public MoveData(Stream stream)
+        {
+            using (BinaryReader reader = new BinaryReader(stream))
+            {
+                this.Battleeffect = reader.ReadUInt16();
+                this.Split = (MoveSplit)reader.ReadByte();
+                this.Damage = reader.ReadByte();
 
-                this.movetype = (PokemonType)reader.ReadByte();
-                this.accuracy = reader.ReadByte();
-                this.pp = reader.ReadByte();
-                this.sideEffectProbability = reader.ReadByte();
-                this.target = reader.ReadUInt16(); //bitfield
-                this.priority = reader.ReadSByte();
-                this.flagField = reader.ReadByte();
+                this.Movetype = (PokemonType)reader.ReadByte();
+                this.Accuracy = reader.ReadByte();
+                this.Pp = reader.ReadByte();
+                this.SideEffectProbability = reader.ReadByte();
+                this.Target = reader.ReadUInt16(); //bitfield
+                this.Priority = reader.ReadSByte();
+                this.FlagField = reader.ReadByte();
 
-                this.contestAppeal = reader.ReadByte();
-                this.contestConditionType = (ContestCondition)reader.ReadByte();
-                if (reader.BaseStream.Length - reader.BaseStream.Position >= 2) this.trailing = reader.ReadUInt16();
+                this.ContestAppeal = reader.ReadByte();
+                this.ContestConditionType = (ContestCondition)reader.ReadByte();
+                if (reader.BaseStream.Length - reader.BaseStream.Position >= 2) this._trailing = reader.ReadUInt16();
             }
         }
 
-        public MoveData(int ID) : this(new FileStream(Path.Combine(RomInfo.gameDirs[DirNames.moveData].unpackedDir, ID.ToString("D4")), FileMode.Open)) { }
+        public MoveData(int ID) : this(new FileStream(Path.Combine(RomInfo.GameDirs[DirNames.MoveData].unpackedDir, ID.ToString("D4")), FileMode.Open)) { }
 
-        public override byte[] ToByteArray() {
-            using (MemoryStream memoryStream = new MemoryStream()) {
-                using (BinaryWriter writer = new BinaryWriter(memoryStream)) {
-                    writer.Write(this.battleeffect);
-                    writer.Write((byte)this.split);
-                    writer.Write(this.damage);
+        public override byte[] ToByteArray()
+        {
+            using (MemoryStream memoryStream = new MemoryStream())
+            {
+                using (BinaryWriter writer = new BinaryWriter(memoryStream))
+                {
+                    writer.Write(this.Battleeffect);
+                    writer.Write((byte)this.Split);
+                    writer.Write(this.Damage);
 
-                    writer.Write((byte)this.movetype);
-                    writer.Write(this.accuracy);
-                    writer.Write(this.pp);
-                    writer.Write(this.sideEffectProbability);
-                    writer.Write((ushort)this.target);
-                    writer.Write(this.priority);
-                    writer.Write(this.flagField);
+                    writer.Write((byte)this.Movetype);
+                    writer.Write(this.Accuracy);
+                    writer.Write(this.Pp);
+                    writer.Write(this.SideEffectProbability);
+                    writer.Write((ushort)this.Target);
+                    writer.Write(this.Priority);
+                    writer.Write(this.FlagField);
 
-                    writer.Write(this.contestAppeal);
-                    writer.Write((byte)this.contestConditionType);
+                    writer.Write(this.ContestAppeal);
+                    writer.Write((byte)this.ContestConditionType);
 
-                    writer.Write(this.trailing);
+                    writer.Write(this._trailing);
                 }
 
                 return memoryStream.ToArray();
@@ -153,40 +169,58 @@ namespace DSPRE {
         }
 
 
-        public void SaveToFileDefaultDir(int IDtoReplace, bool showSuccessMessage = true) {
-            SaveToFileDefaultDir(DirNames.moveData, IDtoReplace, showSuccessMessage);
+        public void SaveToFileDefaultDir(int IDtoReplace, bool showSuccessMessage = true)
+        {
+            SaveToFileDefaultDir(DirNames.MoveData, IDtoReplace, showSuccessMessage);
         }
-        public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true) {
+        public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true)
+        {
             SaveToFileExplorePath("Gen IV Move Data", "bin", suggestedFileName, showSuccessMessage);
         }
 
-        public static void UpdateFromText(MoveData m, string[] split) {
+        public static void UpdateFromText(MoveData m, string[] split)
+        {
             int target = 1;
-            if (split.Length < target + 1) {
+            if (split.Length < target + 1)
+            {
                 return;
-            } else {
-                if (!Enum.TryParse(split[target], true, out m.movetype)) {
+            }
+            else
+            {
+                if (!Enum.TryParse(split[target], true, out m.Movetype))
+                {
                     AppMessages.Error($"Malformed entry: \"{string.Join(" ", split)}\".\nMove type is unreadable: \"{split[target]}\"", "Parser error");
                     return;
                 }
                 target++;
 
-                if (split.Length < target + 1) {
+                if (split.Length < target + 1)
+                {
                     return;
-                } else {
-                    if (!Enum.TryParse(split[target], true, out m.split)) {
+                }
+                else
+                {
+                    if (!Enum.TryParse(split[target], true, out m.Split))
+                    {
                         AppMessages.Error($"Malformed entry: \"{string.Join(" ", split)}\".\nMove split is unreadable: \"{split[target]}\"", "Parser error");
                         return;
                     }
                     target++;
 
-                    if (split.Length < target + 1) {
+                    if (split.Length < target + 1)
+                    {
                         return;
-                    } else {
-                        if (!byte.TryParse(split[target], out m.damage)) {
-                            if (split[target].StartsWith("-") || split[target].StartsWith("—")) {
-                                m.damage = 0;
-                            } else {
+                    }
+                    else
+                    {
+                        if (!byte.TryParse(split[target], out m.Damage))
+                        {
+                            if (split[target].StartsWith("-") || split[target].StartsWith("—"))
+                            {
+                                m.Damage = 0;
+                            }
+                            else
+                            {
                                 AppMessages.Error($"Malformed entry: \"{string.Join(" ", split)}\".\nMove power is unreadable: \"{split[target]}\"", "Parser error");
                                 return;
                             }
@@ -194,23 +228,34 @@ namespace DSPRE {
                         }
                         target++;
 
-                        if (split.Length < target + 1) {
+                        if (split.Length < target + 1)
+                        {
                             return;
-                        } else {
-                            if (!byte.TryParse(split[target].Replace('%', ' '), out m.accuracy)) {
-                                if (split[target].StartsWith("-") || split[target].StartsWith("—")) {
-                                    m.accuracy = 0;
-                                } else {
+                        }
+                        else
+                        {
+                            if (!byte.TryParse(split[target].Replace('%', ' '), out m.Accuracy))
+                            {
+                                if (split[target].StartsWith("-") || split[target].StartsWith("—"))
+                                {
+                                    m.Accuracy = 0;
+                                }
+                                else
+                                {
                                     AppMessages.Error($"Malformed entry: \"{string.Join(" ", split)}\".\nMove accuracy is unreadable: \"{split[target]}\"", "Parser error");
                                     return;
                                 }
                             }
                             target++;
 
-                            if (split.Length < target + 1) {
+                            if (split.Length < target + 1)
+                            {
                                 return;
-                            } else {
-                                if (!byte.TryParse(split[target].Replace('%', ' '), out m.pp)) {
+                            }
+                            else
+                            {
+                                if (!byte.TryParse(split[target].Replace('%', ' '), out m.Pp))
+                                {
                                     AppMessages.Error($"Malformed entry: \"{string.Join(" ", split)}\".\nMove PP count is unreadable: \"{split[target]}\"", "Parser error");
                                     return;
                                 }
@@ -223,64 +268,73 @@ namespace DSPRE {
             return;
         }
 
-        public override string ToString() {
+        public override string ToString()
+        {
             StringBuilder sb = new StringBuilder();
-            sb.Append(movetype.ToString());
+            sb.Append(Movetype.ToString());
             sb.Append('\t');
 
-            sb.Append(split.ToString());
+            sb.Append(Split.ToString());
             sb.Append('\t');
 
-            if (damage == 0) {
+            if (Damage == 0)
+            {
                 sb.Append("-");
-            } else {
-                sb.Append(damage);
+            }
+            else
+            {
+                sb.Append(Damage);
             }
             sb.Append('\t');
 
-            if (accuracy == 0) {
+            if (Accuracy == 0)
+            {
                 sb.Append("-");
-            } else {
-                sb.Append(accuracy);
+            }
+            else
+            {
+                sb.Append(Accuracy);
                 sb.Append('%');
             }
             sb.Append('\t');
 
-            sb.Append(pp);
+            sb.Append(Pp);
 
             return sb.ToString();
         }
 
-        public override bool Equals(object obj) {
+        public override bool Equals(object obj)
+        {
             return obj is MoveData data &&
-                   battleeffect == data.battleeffect &&
-                   split == data.split &&
-                   damage == data.damage &&
-                   movetype == data.movetype &&
-                   accuracy == data.accuracy &&
-                   pp == data.pp &&
-                   sideEffectProbability == data.sideEffectProbability &&
-                   target == data.target &&
-                   priority == data.priority &&
-                   flagField == data.flagField &&
-                   contestAppeal == data.contestAppeal &&
-                   contestConditionType == data.contestConditionType;
+                   Battleeffect == data.Battleeffect &&
+                   Split == data.Split &&
+                   Damage == data.Damage &&
+                   Movetype == data.Movetype &&
+                   Accuracy == data.Accuracy &&
+                   Pp == data.Pp &&
+                   SideEffectProbability == data.SideEffectProbability &&
+                   Target == data.Target &&
+                   Priority == data.Priority &&
+                   FlagField == data.FlagField &&
+                   ContestAppeal == data.ContestAppeal &&
+                   ContestConditionType == data.ContestConditionType;
         }
 
-        public override int GetHashCode() {
+        public override int GetHashCode()
+        {
             int hashCode = -1756630415;
-            hashCode = hashCode * -1521134295 + battleeffect.GetHashCode();
-            hashCode = hashCode * -1521134295 + split.GetHashCode();
-            hashCode = hashCode * -1521134295 + damage.GetHashCode();
-            hashCode = hashCode * -1521134295 + movetype.GetHashCode();
-            hashCode = hashCode * -1521134295 + accuracy.GetHashCode();
-            hashCode = hashCode * -1521134295 + pp.GetHashCode();
-            hashCode = hashCode * -1521134295 + sideEffectProbability.GetHashCode();
-            hashCode = hashCode * -1521134295 + target.GetHashCode();
-            hashCode = hashCode * -1521134295 + priority.GetHashCode();
-            hashCode = hashCode * -1521134295 + flagField.GetHashCode();
-            hashCode = hashCode * -1521134295 + contestAppeal.GetHashCode();
-            hashCode = hashCode * -1521134295 + contestConditionType.GetHashCode();
+            hashCode = hashCode * -1521134295 + Battleeffect.GetHashCode();
+            hashCode = hashCode * -1521134295 + Split.GetHashCode();
+            hashCode = hashCode * -1521134295 + Damage.GetHashCode();
+            hashCode = hashCode * -1521134295 + Movetype.GetHashCode();
+            hashCode = hashCode * -1521134295 + Accuracy.GetHashCode();
+            hashCode = hashCode * -1521134295 + Pp.GetHashCode();
+            hashCode = hashCode * -1521134295 + SideEffectProbability.GetHashCode();
+            hashCode = hashCode * -1521134295 + Target.GetHashCode();
+            hashCode = hashCode * -1521134295 + Priority.GetHashCode();
+            hashCode = hashCode * -1521134295 + FlagField.GetHashCode();
+            hashCode = hashCode * -1521134295 + ContestAppeal.GetHashCode();
+            hashCode = hashCode * -1521134295 + ContestConditionType.GetHashCode();
             return hashCode;
         }
     }

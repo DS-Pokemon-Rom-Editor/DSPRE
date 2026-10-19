@@ -68,11 +68,12 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                     Results.Add(new AddressRow("ARM9", $"0x{(addr - ARM9LoadAddress):X4}"));
                 }
 
-                if (addr >= RomInfo.synthOverlayLoadAddress)
-                    Results.Add(new AddressRow("SynthOVL", $"0x{addr - RomInfo.synthOverlayLoadAddress:X4}"));
+                if (addr >= RomInfo.SynthOverlayLoadAddress)
+                    Results.Add(new AddressRow("SynthOVL", $"0x{addr - RomInfo.SynthOverlayLoadAddress:X4}"));
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.WarnOnce("AddressHelperViewModel.SearchCommand", ex);
                 StatusText = "No overlay found for that address.";
             }
         }

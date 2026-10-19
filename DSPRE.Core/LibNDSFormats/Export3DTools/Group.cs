@@ -6,27 +6,27 @@
 
     public class Group
     {
-        private List<Polygon> PolygonList = new List<Polygon>();
+        private List<Polygon> _polygonList = new List<Polygon>();
 
         public void Add(Polygon g)
         {
-            this.PolygonList.Add(g);
+            this._polygonList.Add(g);
         }
 
         public IEnumerator<Polygon> GetEnumerator()
         {
-            return this.PolygonList.GetEnumerator();
+            return this._polygonList.GetEnumerator();
         }
 
         public Polygon this[int i]
         {
             get
             {
-                return this.PolygonList[i];
+                return this._polygonList[i];
             }
             set
             {
-                this.PolygonList[i] = value;
+                this._polygonList[i] = value;
             }
         }
 
@@ -34,7 +34,7 @@
         {
             get
             {
-                return this.PolygonList.ToArray();
+                return this._polygonList.ToArray();
             }
         }
     }

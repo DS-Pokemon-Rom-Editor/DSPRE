@@ -19,7 +19,7 @@ namespace DSPRE
         /// <summary>The save remembered for a project folder, or null.</summary>
         public static string For(string project)
         {
-            Dictionary<string, string> saves = SettingsManager.Settings?.testSaves;
+            Dictionary<string, string> saves = SettingsManager.Settings?.TestSaves;
             return project != null && saves != null && saves.TryGetValue(Key(project), out string path) ? path : null;
         }
 
@@ -28,9 +28,9 @@ namespace DSPRE
         {
             DspreSettings settings = SettingsManager.Settings;
             if (settings == null || project == null) return;
-            settings.testSaves ??= new Dictionary<string, string>();
-            if (string.IsNullOrWhiteSpace(save)) settings.testSaves.Remove(Key(project));
-            else settings.testSaves[Key(project)] = save;
+            settings.TestSaves ??= new Dictionary<string, string>();
+            if (string.IsNullOrWhiteSpace(save)) settings.TestSaves.Remove(Key(project));
+            else settings.TestSaves[Key(project)] = save;
             SettingsManager.Save();
         }
 

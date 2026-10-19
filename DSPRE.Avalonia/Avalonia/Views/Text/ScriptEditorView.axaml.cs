@@ -267,9 +267,9 @@ namespace DSPRE.Avalonia.Views.Text
             }
         }
 
-        private async void Save_Click(object sender, RoutedEventArgs e) => await Safe(VM?.SaveAsync());
-        private async void Import_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportAsync());
-        private async void Export_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportAsync());
+        private async void Save_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.SaveAsync());
+        private async void Import_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportAsync());
+        private async void Export_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportAsync());
         private void Add_Click(object sender, RoutedEventArgs e) => VM?.AddScriptFile();
 
         private async void RemoveLast_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.RemoveLastScriptFileAsync(); }
@@ -308,7 +308,7 @@ namespace DSPRE.Avalonia.Views.Text
             if (e.Key != Key.S || (e.KeyModifiers & KeyModifiers.Control) == 0) return;
 
             e.Handled = true;
-            await Safe(VM?.SaveAsync());
+            await SafeAsync(VM?.SaveAsync());
         }
 
         private async void RotomEditor_KeyDown(object sender, KeyEventArgs e)
@@ -322,11 +322,11 @@ namespace DSPRE.Avalonia.Views.Text
             if (e.Key == Key.F12)
             {
                 e.Handled = true;
-                await GoToDefinitionAtCaret();
+                await GoToDefinitionAtCaretAsync();
                 return;
             }
 
-            await HandleCompletionShortcut(e);
+            await HandleCompletionShortcutAsync(e);
         }
 
         private void RotomEditor_KeyUp(object sender, KeyEventArgs e)
@@ -365,7 +365,7 @@ namespace DSPRE.Avalonia.Views.Text
 
             e.Handled = true;
             CloseHoverTip();
-            await GoToDefinitionAt(line, column);
+            await GoToDefinitionAtAsync(line, column);
         }
 
         private async void RotomEditor_PointerHover(object sender, EventArgs e)
@@ -535,16 +535,16 @@ namespace DSPRE.Avalonia.Views.Text
             }
         }
 
-        private async Task GoToDefinitionAtCaret()
+        private async Task GoToDefinitionAtCaretAsync()
         {
             TextDocument document = RotomEditor.Document;
             if (document == null) return;
 
             TextLocation location = document.GetLocation(RotomEditor.CaretOffset);
-            await GoToDefinitionAt(location.Line, location.Column);
+            await GoToDefinitionAtAsync(location.Line, location.Column);
         }
 
-        private async Task GoToDefinitionAt(int line, int column)
+        private async Task GoToDefinitionAtAsync(int line, int column)
         {
             ScriptEditorViewModel vm = VM;
             if (vm == null) return;
@@ -575,8 +575,9 @@ namespace DSPRE.Avalonia.Views.Text
                 column = Math.Max(1, Math.Min(position.Value.Column, documentLine.Length + 1));
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.WarnOnce("ScriptEditorView.TryGetEditorPosition", ex);
                 return false;
             }
         }
@@ -736,7 +737,7 @@ namespace DSPRE.Avalonia.Views.Text
             RotomEditor.Focus();
         }
 
-        private static async Task Safe(Task task)
+        private static async Task SafeAsync(Task task)
         {
             if (task == null) return;
             try { await task; }
@@ -745,7 +746,7 @@ namespace DSPRE.Avalonia.Views.Text
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
         }
     }
 }

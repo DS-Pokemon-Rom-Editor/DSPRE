@@ -29,9 +29,9 @@ namespace DSPRE.Avalonia
 
         private static Dictionary<string, Uri> _index;
         private static Dictionary<string, Uri> _gifIndex;
-        private static readonly Dictionary<string, AvaloniaBitmap> _bitmapCache = new(StringComparer.OrdinalIgnoreCase);
-        private static readonly Dictionary<string, RawImage> _rawCache = new(StringComparer.OrdinalIgnoreCase);
-        private static readonly Dictionary<string, IGifSource> _gifSourceCache = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, AvaloniaBitmap> BitmapCache = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, RawImage> RawCache = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, IGifSource> GifSourceCache = new(StringComparer.OrdinalIgnoreCase);
 
         private static Dictionary<string, Uri> Index
         {
@@ -99,7 +99,7 @@ namespace DSPRE.Avalonia
         public static AvaloniaBitmap GetBitmap(string name)
         {
             if (string.IsNullOrEmpty(name)) return null;
-            if (_bitmapCache.TryGetValue(name, out AvaloniaBitmap cached)) return cached;
+            if (BitmapCache.TryGetValue(name, out AvaloniaBitmap cached)) return cached;
 
             AvaloniaBitmap bmp = null;
             Uri uri = Resolve(name);
@@ -112,7 +112,7 @@ namespace DSPRE.Avalonia
                 }
                 catch (Exception ex) { AppLogger.Error($"Resource image '{name}' failed to decode: {ex.Message}"); }
             }
-            _bitmapCache[name] = bmp;
+            BitmapCache[name] = bmp;
             return bmp;
         }
 
@@ -120,7 +120,7 @@ namespace DSPRE.Avalonia
         public static IGifSource GetGifSource(string name)
         {
             if (string.IsNullOrEmpty(name)) return null;
-            if (_gifSourceCache.TryGetValue(name, out IGifSource cached)) return cached;
+            if (GifSourceCache.TryGetValue(name, out IGifSource cached)) return cached;
 
             IGifSource source = null;
             Uri uri = ResolveGif(name);
@@ -135,7 +135,7 @@ namespace DSPRE.Avalonia
                 }
                 catch (Exception ex) { AppLogger.Error($"Resource gif '{name}' failed to decode: {ex.Message}"); }
             }
-            _gifSourceCache[name] = source;
+            GifSourceCache[name] = source;
             return source;
         }
 
@@ -159,7 +159,7 @@ namespace DSPRE.Avalonia
         public static RawImage GetRaw(string name)
         {
             if (string.IsNullOrEmpty(name)) return null;
-            if (_rawCache.TryGetValue(name, out RawImage cached)) return cached;
+            if (RawCache.TryGetValue(name, out RawImage cached)) return cached;
 
             RawImage raw = null;
             Uri uri = Resolve(name);
@@ -172,7 +172,7 @@ namespace DSPRE.Avalonia
                 }
                 catch (Exception ex) { AppLogger.Error($"Resource image '{name}' failed to decode: {ex.Message}"); }
             }
-            _rawCache[name] = raw;
+            RawCache[name] = raw;
             return raw;
         }
     }

@@ -24,32 +24,32 @@ namespace DSPRE
 
     public static class DVCalculator
     {
-        private static uint state;
-        private static uint genderMod;
-        public static void setSeed(uint seed)
+        private static uint _state;
+        private static uint _genderMod;
+        public static void SetSeed(uint seed)
         {
 
-            DVCalculator.state = seed;
+            DVCalculator._state = seed;
 
         }
 
         // this code is partially lifted from turtleisaac's Pokeditor
         // See https://github.com/turtleisaac/PokEditor-v2/blob/72ca6ab641f616b8be9a87624b81896baa45f947/src/com/turtleisaac/pokeditor/utilities/TrainerPersonalityCalculator.java
         // and the pokeplatinum / pokeheartgold projects See: https://github.com/pret
-        public static uint getNextRandom()
+        public static uint GetNextRandom()
         {
-            state = 1103515245 * state + 24691;
+            _state = 1103515245 * _state + 24691;
 
             // Upper 16 bit are random value
-            return state >> 16;
+            return _state >> 16;
         }
 
         public static void ResetGenderMod(bool maleOrMulti)
         {            
-             genderMod = maleOrMulti ? 136u : 120u;   
+             _genderMod = maleOrMulti ? 136u : 120u;   
         }
 
-        public static void filterHighestDV(ref List<DVIVNatureTriplet> natures)
+        public static void FilterHighestDV(ref List<DVIVNatureTriplet> natures)
         {
             Dictionary<string, DVIVNatureTriplet> result = new Dictionary<string, DVIVNatureTriplet>();
             foreach (DVIVNatureTriplet triplet in natures)
@@ -62,11 +62,11 @@ namespace DSPRE
             natures = new List<DVIVNatureTriplet>(result.Values);
         }
 
-        public static uint generatePID(uint trainerIdx, uint trainerClassIdx, uint pokeIdx, byte pokeLevel, byte baseGenderRatio, int genderOverride, int abilityOverride, byte difficultyValue)
+        public static uint GeneratePID(uint trainerIdx, uint trainerClassIdx, uint pokeIdx, byte pokeLevel, byte baseGenderRatio, int genderOverride, int abilityOverride, byte difficultyValue)
         {
             uint newSeed = (uint)(trainerIdx + pokeIdx + pokeLevel + difficultyValue);
 
-            setSeed(newSeed);
+            SetSeed(newSeed);
 
             // A class with no rolls shifts the seed itself into the personality.
             uint random = newSeed;
@@ -74,17 +74,17 @@ namespace DSPRE
             while (trainerClassIdx > 0)
             {
                 trainerClassIdx--;
-                random = getNextRandom();
+                random = GetNextRandom();
             }
-            if (RomInfo.gameFamily == GameFamilies.HGSS || RomInfo.AIBackportEnabled)
+            if (RomInfo.GameFamily == GameFamilies.HGSS || RomInfo.AIBackportEnabled)
                 UpdateGenderMod((ushort)pokeIdx, baseGenderRatio, genderOverride, abilityOverride);
 
-            uint PID = (random << 8) + genderMod;
+            uint PID = (random << 8) + _genderMod;
 
             return (uint)PID;
         }
 
-        public static int getNatureFromPID(uint PID)
+        public static int GetNatureFromPID(uint PID)
         {
             return (int) (PID % 100) % 25;
         }
@@ -94,46 +94,46 @@ namespace DSPRE
             if (genderOverride > 0 || abilityOverride > 0)
             {
                 if (RomInfo.OutdatedAIBackportEnabled)
-                    genderMod = pokeId;
+                    _genderMod = pokeId;
 
                 // Code from here on is HGSS exclusive
                 if (genderOverride == 1)
                 {
-                    genderMod = baseGenderRatio + 2u;
+                    _genderMod = baseGenderRatio + 2u;
                 }
 
                 else if (genderOverride == 2)
                 {
-                    genderMod = baseGenderRatio - 2u;
+                    _genderMod = baseGenderRatio - 2u;
                 }
 
                 // Force Ability 1 --> Force lowest bit to 0
                 if (abilityOverride == 1)
                 {
-                    genderMod = (uint)(genderMod & ~1);
+                    _genderMod = (uint)(_genderMod & ~1);
                 }
 
                 // Force Ability 2 --> Force lowest bit to 1
                 else if (abilityOverride == 2)
                 {
-                    genderMod = (uint)(genderMod | 1);
+                    _genderMod = (uint)(_genderMod | 1);
                 }
             }
         }
 
-        public static List<DVIVNatureTriplet> getAllNatures(uint trainerIdx, uint trainerClassIdx, uint pokeIdx, byte pokeLevel, byte baseGenderRatio, int genderOverride, int abilityOverride)
+        public static List<DVIVNatureTriplet> GetAllNatures(uint trainerIdx, uint trainerClassIdx, uint pokeIdx, byte pokeLevel, byte baseGenderRatio, int genderOverride, int abilityOverride)
         {
             List<DVIVNatureTriplet> natureDict = new List<DVIVNatureTriplet>();
 
             int DV;
             int natureIdx;
-            uint genderModLocal = genderMod;
+            uint genderModLocal = _genderMod;
 
             for (DV = 255; DV >= 0; DV--)
             {
-                natureIdx = getNatureFromPID(generatePID(trainerIdx, trainerClassIdx, pokeIdx, pokeLevel, baseGenderRatio, genderOverride, abilityOverride, (byte) DV));
+                natureIdx = GetNatureFromPID(GeneratePID(trainerIdx, trainerClassIdx, pokeIdx, pokeLevel, baseGenderRatio, genderOverride, abilityOverride, (byte) DV));
 
-                genderMod = genderModLocal;
+                _genderMod = genderModLocal;
 
                 natureDict.Add(new DVIVNatureTriplet(DV, DV * 31 / 255, Natures[natureIdx]));
 
@@ -153,7 +153,7 @@ namespace DSPRE
             for (int i = 0; i < party.Count; i++)
             {
                 PartyMon p = party[i];
-                pids[i] = generatePID(trainer, trainerClass, (uint)p.Species, (byte)p.Level, new PokemonPersonalData(p.Species).genderVec, p.Gender, p.Ability, (byte)p.Dv);
+                pids[i] = GeneratePID(trainer, trainerClass, (uint)p.Species, (byte)p.Level, new PokemonPersonalData(p.Species).GenderVec, p.Gender, p.Ability, (byte)p.Dv);
             }
             return pids;
         }
@@ -162,13 +162,13 @@ namespace DSPRE
         public static List<DVIVNatureTriplet> SlotOptions(uint trainer, uint trainerClass, bool maleTrainer, IReadOnlyList<PartyMon> party, int index, bool highestOnly)
         {
             ResetGenderMod(maleTrainer);
-            if (RomInfo.gameFamily == GameFamilies.HGSS || RomInfo.AIBackportEnabled)
+            if (RomInfo.GameFamily == GameFamilies.HGSS || RomInfo.AIBackportEnabled)
                 for (int i = 0; i < index && i < party.Count; i++)
-                    UpdateGenderMod((ushort)party[i].Species, new PokemonPersonalData(party[i].Species).genderVec, party[i].Gender, party[i].Ability);
+                    UpdateGenderMod((ushort)party[i].Species, new PokemonPersonalData(party[i].Species).GenderVec, party[i].Gender, party[i].Ability);
             PartyMon p = party[index];
-            List<DVIVNatureTriplet> triplets = getAllNatures(trainer, trainerClass, (uint)p.Species, (byte)p.Level,
-                new PokemonPersonalData(p.Species).genderVec, p.Gender, p.Ability);
-            if (highestOnly) filterHighestDV(ref triplets);
+            List<DVIVNatureTriplet> triplets = GetAllNatures(trainer, trainerClass, (uint)p.Species, (byte)p.Level,
+                new PokemonPersonalData(p.Species).GenderVec, p.Gender, p.Ability);
+            if (highestOnly) FilterHighestDV(ref triplets);
             return triplets;
         }
 
@@ -205,15 +205,15 @@ namespace DSPRE
         {
 
             // true represents male, false represents female
-            private static List<bool> trainerClassGenders = new List<bool>();
+            private static List<bool> _trainerClassGenders = new List<bool>();
 
-            private static bool tableLoaded = false;
+            private static bool _tableLoaded = false;
 
             /// <summary>Forgets the table read from the previous ROM.</summary>
             public static void Invalidate()
             {
-                trainerClassGenders.Clear();
-                tableLoaded = false;
+                _trainerClassGenders.Clear();
+                _tableLoaded = false;
             }
 
             public static bool GetTrainerClassGender(int trainerClassID)
@@ -234,22 +234,22 @@ namespace DSPRE
                     return gender != 1;
                 }
 
-                if (!tableLoaded)
+                if (!_tableLoaded)
                 {
                     ReadTrainerClassGenderTable();
                 }
-                return trainerClassGenders[trainerClassID];
+                return _trainerClassGenders[trainerClassID];
             }
                 
             public static void ReadTrainerClassGenderTable()
             {
-                uint offset = RomInfo.trainerClassGenderTableOffset;
-                uint length = (uint)RomInfo.vanillaTrainerClassCount;
+                uint offset = RomInfo.TrainerClassGenderTableOffset;
+                uint length = (uint)RomInfo.VanillaTrainerClassCount;
                 if (offset == 0 || length == 0)
                 {
                     AppMessages.Error("Couldn't load trainer class gender table from arm9." +
                         "\nTrainers will default to male when calculating natures.", "Error");
-                    tableLoaded = true;
+                    _tableLoaded = true;
                     return;
                 }
 
@@ -257,9 +257,9 @@ namespace DSPRE
 
                 for (int i = 0; i < table.Length; i++)
                 {
-                    trainerClassGenders.Add(table[i] == 1 ? false : true);
+                    _trainerClassGenders.Add(table[i] == 1 ? false : true);
                 }
-                tableLoaded = true;
+                _tableLoaded = true;
 
             }
         }         

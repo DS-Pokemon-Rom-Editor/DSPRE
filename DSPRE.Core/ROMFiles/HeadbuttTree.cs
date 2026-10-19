@@ -1,8 +1,10 @@
 using System.IO;
 
-namespace DSPRE.ROMFiles {
-    public class HeadbuttTree {
-        public bool picked = false;
+namespace DSPRE.ROMFiles
+{
+    public class HeadbuttTree
+    {
+        public bool Picked = false;
 
         private ushort _globalX;
         private ushort _globalY;
@@ -11,94 +13,117 @@ namespace DSPRE.ROMFiles {
         private ushort _mapX;
         private ushort _mapY;
 
-        public bool IsUnused { 
-            get { 
-                return globalX == ushort.MaxValue && globalY == ushort.MaxValue; 
+        public bool IsUnused
+        { 
+            get
+            { 
+                return GlobalX == ushort.MaxValue && GlobalY == ushort.MaxValue; 
             } 
         }
 
-        public enum Types {
+        public enum Types
+        {
             Normal,
             Special,
         }
 
-        public HeadbuttTree(ushort globalX = ushort.MaxValue, ushort globalY = ushort.MaxValue) {
-            this.globalX = globalX;
-            this.globalY = globalY;
+        public HeadbuttTree(ushort globalX = ushort.MaxValue, ushort globalY = ushort.MaxValue)
+        {
+            this.GlobalX = globalX;
+            this.GlobalY = globalY;
         }
 
-        public HeadbuttTree(HeadbuttTree original) {
-            this.globalX = original.globalX;
-            this.globalY = original.globalY;
+        public HeadbuttTree(HeadbuttTree original)
+        {
+            this.GlobalX = original.GlobalX;
+            this.GlobalY = original.GlobalY;
         }
 
-        public ushort globalX {
+        public ushort GlobalX
+        {
             get { return _globalX; }
-            set {
+            set
+            {
                 _globalX = value;
-                _matrixX = (ushort)(_globalX / MapFile.mapSize);
-                _mapX = (ushort)(_globalX % MapFile.mapSize);
+                _matrixX = (ushort)(_globalX / MapFile.MapSize);
+                _mapX = (ushort)(_globalX % MapFile.MapSize);
             }
         }
 
-        public ushort globalY {
+        public ushort GlobalY
+        {
             get { return _globalY; }
-            set {
+            set
+            {
                 _globalY = value;
-                _matrixY = (ushort)(_globalY / MapFile.mapSize);
-                _mapY = (ushort)(_globalY % MapFile.mapSize);
+                _matrixY = (ushort)(_globalY / MapFile.MapSize);
+                _mapY = (ushort)(_globalY % MapFile.MapSize);
             }
         }
 
-        public ushort matrixX {
-            get {
+        public ushort MatrixX
+        {
+            get
+            {
                 return _matrixX;
             }
-            set {
+            set
+            {
                 _matrixX = value;
-                _globalX = (ushort)(_matrixX * MapFile.mapSize + _mapX);
-                _mapX = (ushort)(_globalX % MapFile.mapSize);
+                _globalX = (ushort)(_matrixX * MapFile.MapSize + _mapX);
+                _mapX = (ushort)(_globalX % MapFile.MapSize);
             }
         }
 
-        public ushort matrixY {
-            get {
+        public ushort MatrixY
+        {
+            get
+            {
                 return _matrixY;
             }
-            set {
+            set
+            {
                 _matrixY = value;
-                _globalY = (ushort)(_matrixY * MapFile.mapSize + _mapY);
-                _mapY = (ushort)(_globalY % MapFile.mapSize);
+                _globalY = (ushort)(_matrixY * MapFile.MapSize + _mapY);
+                _mapY = (ushort)(_globalY % MapFile.MapSize);
             }
         }
 
-        public ushort mapX {
-            get {
+        public ushort MapX
+        {
+            get
+            {
                 return _mapX;
             }
-            set {
+            set
+            {
                 _mapX = value;
-                _globalX = (ushort)(_matrixX * MapFile.mapSize + _mapX);
-                _matrixX = (ushort)(_globalX / MapFile.mapSize);
+                _globalX = (ushort)(_matrixX * MapFile.MapSize + _mapX);
+                _matrixX = (ushort)(_globalX / MapFile.MapSize);
             }
         }
 
-        public ushort mapY {
-            get {
+        public ushort MapY
+        {
+            get
+            {
                 return _mapY;
             }
-            set {
+            set
+            {
                 _mapY = value;
-                _globalY = (ushort)(_matrixY * MapFile.mapSize + _mapY);
-                _matrixY = (ushort)(_globalY / MapFile.mapSize);
+                _globalY = (ushort)(_matrixY * MapFile.MapSize + _mapY);
+                _matrixY = (ushort)(_globalY / MapFile.MapSize);
             }
         }
 
-        public override string ToString() {
-            if (IsUnused) {
+        public override string ToString()
+        {
+            if (IsUnused)
+            {
                 return "Unused Tree";
             }
-            return $"Tree at Global X: {globalX}, Global Y: {globalY}";
+            return $"Tree at Global X: {GlobalX}, Global Y: {GlobalY}";
         }
     }
 }

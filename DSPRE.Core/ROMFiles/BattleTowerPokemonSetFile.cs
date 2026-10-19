@@ -2,9 +2,11 @@ using System;
 using System.ComponentModel;
 using System.IO;
 
-namespace DSPRE.ROMFiles {
+namespace DSPRE.ROMFiles
+{
     // Battle Tower Pokemon set: species/moves/nature/EVs/item/form. 16 bytes, one file per set.
-    public class BattleTowerPokemonSet {
+    public class BattleTowerPokemonSet
+    {
         public ushort Species { get; set; }
         public ushort[] Moves { get; set; } = new ushort[4];
         public byte EvFlags { get; set; }
@@ -26,9 +28,11 @@ namespace DSPRE.ROMFiles {
 
         public BattleTowerPokemonSet() { }
 
-        public BattleTowerPokemonSet(BinaryReader br) {
+        public BattleTowerPokemonSet(BinaryReader br)
+        {
             Species = br.ReadUInt16();
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 4; i++)
+            {
                 Moves[i] = br.ReadUInt16();
             }
             EvFlags = br.ReadByte();
@@ -37,13 +41,16 @@ namespace DSPRE.ROMFiles {
             Form = br.ReadUInt16();
         }
 
-        public void Write(BinaryWriter bw, bool keepUnread = true) {
-            if (keepUnread && UnreadBytes != null) {
+        public void Write(BinaryWriter bw, bool keepUnread = true)
+        {
+            if (keepUnread && UnreadBytes != null)
+            {
                 bw.Write(UnreadBytes);
                 return;
             }
             bw.Write(Species);
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 4; i++)
+            {
                 bw.Write(Moves[i]);
             }
             bw.Write(EvFlags);
@@ -52,28 +59,34 @@ namespace DSPRE.ROMFiles {
             bw.Write(Form);
         }
 
-        public override string ToString() {
+        public override string ToString()
+        {
             string[] pokemonNames = RomInfo.GetPokemonNames();
             return Species < pokemonNames.Length ? pokemonNames[Species] : $"Pokemon {Species}";
         }
     }
 
-    public class BattleTowerPokemonSetFile : RomFile {
-        public const int ENTRY_SIZE = 16;
+    public class BattleTowerPokemonSetFile : RomFile
+    {
+        public const int EntrySize = 16;
 
         public BindingList<BattleTowerPokemonSet> Sets { get; private set; } = new BindingList<BattleTowerPokemonSet>();
 
         public BattleTowerPokemonSetFile() { }
 
-        public BattleTowerPokemonSetFile(bool load) {
-            if (load) {
+        public BattleTowerPokemonSetFile(bool load)
+        {
+            if (load)
+            {
                 LoadFromNarc();
             }
         }
 
-        private void LoadFromNarc() {
-            string narcDir = Filesystem.battleTowerPokemon;
-            if (string.IsNullOrEmpty(narcDir) || !Directory.Exists(narcDir)) {
+        private void LoadFromNarc()
+        {
+            string narcDir = Filesystem.BattleTowerPokemon;
+            if (string.IsNullOrEmpty(narcDir) || !Directory.Exists(narcDir))
+            {
                 return;
             }
 
@@ -81,85 +94,110 @@ namespace DSPRE.ROMFiles {
             string[] files = Directory.GetFiles(narcDir);
             Array.Sort(files, StringComparer.OrdinalIgnoreCase);
 
-            foreach (string filePath in files) {
+            foreach (string filePath in files)
+            {
                 using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
-                using (BinaryReader br = new BinaryReader(fs)) {
+                using (BinaryReader br = new BinaryReader(fs))
+                {
                     // A short file still takes its slot, since trainers refer to sets by index.
-                    Sets.Add(fs.Length < ENTRY_SIZE
+                    Sets.Add(fs.Length < EntrySize
                         ? new BattleTowerPokemonSet { UnreadBytes = br.ReadBytes((int)fs.Length) }
                         : new BattleTowerPokemonSet(br));
                 }
             }
         }
 
-        public override byte[] ToByteArray() {
+        public override byte[] ToByteArray()
+        {
             using (MemoryStream ms = new MemoryStream())
-            using (BinaryWriter bw = new BinaryWriter(ms)) {
-                foreach (BattleTowerPokemonSet set in Sets) {
+            using (BinaryWriter bw = new BinaryWriter(ms))
+            {
+                foreach (BattleTowerPokemonSet set in Sets)
+                {
                     set.Write(bw, keepUnread: false);
                 }
                 return ms.ToArray();
             }
         }
 
-        public bool SaveToNarc(bool showSuccessMessage = true) {
-            try {
-                string narcDir = Filesystem.battleTowerPokemon;
-                if (string.IsNullOrEmpty(narcDir) || !Directory.Exists(narcDir)) {
+        public bool SaveToNarc(bool showSuccessMessage = true)
+        {
+            try
+            {
+                string narcDir = Filesystem.BattleTowerPokemon;
+                if (string.IsNullOrEmpty(narcDir) || !Directory.Exists(narcDir))
+                {
                     AppMessages.Error("Battle Tower Pokemon set directory not found.", "Error");
                     return false;
                 }
 
-                for (int i = 0; i < Sets.Count; i++) {
+                for (int i = 0; i < Sets.Count; i++)
+                {
                     using (MemoryStream ms = new MemoryStream())
-                    using (BinaryWriter bw = new BinaryWriter(ms)) {
+                    using (BinaryWriter bw = new BinaryWriter(ms))
+                    {
                         Sets[i].Write(bw);
-                        ArchiveMembers.Put(RomInfo.DirNames.battleTowerPokemon, i, ms.ToArray());
+                        ArchiveMembers.Put(RomInfo.DirNames.BattleTowerPokemon, i, ms.ToArray());
                     }
                 }
 
-                if (showSuccessMessage) {
+                if (showSuccessMessage)
+                {
                     AppMessages.Info("Battle Tower Pokemon sets saved successfully!", "Success");
                 }
                 return true;
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 AppMessages.Error($"Error saving Battle Tower Pokemon sets: {ex.Message}", "Error");
                 return false;
             }
         }
 
-        public bool ExportToFile(string path, bool showSuccessMessage = true) {
-            try {
+        public bool ExportToFile(string path, bool showSuccessMessage = true)
+        {
+            try
+            {
                 ArchiveMembers.Write(path, ToByteArray());
 
-                if (showSuccessMessage) {
+                if (showSuccessMessage)
+                {
                     AppMessages.Info("Battle Tower Pokemon sets exported successfully!", "Success");
                 }
                 return true;
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 AppMessages.Error($"Error exporting Battle Tower Pokemon sets: {ex.Message}", "Error");
                 return false;
             }
         }
 
-        public bool ImportFromFile(string path) {
-            try {
+        public bool ImportFromFile(string path)
+        {
+            try
+            {
                 using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read))
-                using (BinaryReader br = new BinaryReader(fs)) {
+                using (BinaryReader br = new BinaryReader(fs))
+                {
                     Sets.Clear();
-                    while (fs.Position + ENTRY_SIZE <= fs.Length) {
+                    while (fs.Position + EntrySize <= fs.Length)
+                    {
                         Sets.Add(new BattleTowerPokemonSet(br));
                     }
                 }
                 return true;
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 AppMessages.Error($"Error importing Battle Tower Pokemon sets: {ex.Message}", "Error");
                 return false;
             }
         }
 
-        public static bool IsAvailable() {
-            return !RomInfo.isHGE && RomInfo.gameDirs.ContainsKey(RomInfo.DirNames.battleTowerPokemon);
+        public static bool IsAvailable()
+        {
+            return !RomInfo.IsHGE && RomInfo.GameDirs.ContainsKey(RomInfo.DirNames.BattleTowerPokemon);
         }
     }
 }

@@ -78,19 +78,19 @@ namespace DSPRE.Avalonia.Views.Graphics
         private void Save_Click(object sender, RoutedEventArgs e) => ViewModel?.SaveChanges();
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) ViewModel?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) ViewModel?.DiscardChanges();
         }
 
-        private async void SaveDae_Click(object sender, RoutedEventArgs e) => await Save(glb: false);
-        private async void SaveGlb_Click(object sender, RoutedEventArgs e) => await Save(glb: true);
+        private async void SaveDae_Click(object sender, RoutedEventArgs e) => await SaveAsync(glb: false);
+        private async void SaveGlb_Click(object sender, RoutedEventArgs e) => await SaveAsync(glb: true);
 
-        private async System.Threading.Tasks.Task Save(bool glb)
+        private async System.Threading.Tasks.Task SaveAsync(bool glb)
         {
             ModelBrowserViewModel vm = ViewModel;
             if (vm?.Selected == null) return;
             if (!vm.CanSaveModel)
             {
-                await DialogHelper.ShowInfo(vm.SaveModelHelp, "Export model");
+                await DialogHelper.ShowInfoAsync(vm.SaveModelHelp, "Export model");
                 return;
             }
 
@@ -99,12 +99,12 @@ namespace DSPRE.Avalonia.Views.Graphics
                 ? new FilePickerFileType("glTF model") { Patterns = new[] { "*.glb" } }
                 : new FilePickerFileType("Collada model") { Patterns = new[] { "*.dae" } };
 
-            string path = await DialogHelper.SaveFile(this, "Export model",
+            string path = await DialogHelper.SaveFileAsync(this, "Export model",
                 new[] { type }, vm.SuggestedFileName(ext));
             if (path == null) return;
 
             string err = vm.SaveAsThreeD(path, glb, out string written);
-            if (err != null) { await DialogHelper.ShowError(err, "Models and textures error"); return; }
+            if (err != null) { await DialogHelper.ShowErrorAsync(err, "Models and textures error"); return; }
             if (written == null) return;
             SaveNotice.Exported(written);
             vm.StatusText = "The model and its pictures are exported; its animations are separate entries.";
@@ -115,16 +115,16 @@ namespace DSPRE.Avalonia.Views.Graphics
             ModelBrowserViewModel vm = ViewModel;
             if (vm?.Selected == null)
             {
-                await DialogHelper.ShowInfo("Pick something on the left first.", "Import");
+                await DialogHelper.ShowInfoAsync("Pick something on the left first.", "Import");
                 return;
             }
             if (!vm.CanPutFileIn)
             {
-                await DialogHelper.ShowInfo(vm.PutFileInHelp, "Import");
+                await DialogHelper.ShowInfoAsync(vm.PutFileInHelp, "Import");
                 return;
             }
 
-            string path = await DialogHelper.OpenFile(this, "Import",
+            string path = await DialogHelper.OpenFileAsync(this, "Import",
                 new[]
                 {
                     new FilePickerFileType("3D files")
@@ -140,13 +140,13 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (err != null)
             {
                 vm.StatusText = err;
-                await DialogHelper.ShowError(err, "Models and textures error");
+                await DialogHelper.ShowErrorAsync(err, "Models and textures error");
                 return;
             }
 
             SaveNotice.Imported(vm.Selected.Name ?? $"{vm.Selected.Archive.Title} {vm.Selected.Index}", path);
             vm.StatusText = note ?? "";
-            if (note != null) await DialogHelper.ShowInfo(note, "Import");
+            if (note != null) await DialogHelper.ShowInfoAsync(note, "Import");
         }
 
         private async void SaveRaw_Click(object sender, RoutedEventArgs e)
@@ -154,17 +154,17 @@ namespace DSPRE.Avalonia.Views.Graphics
             ModelBrowserViewModel vm = ViewModel;
             if (vm?.Selected == null)
             {
-                await DialogHelper.ShowInfo("Pick something on the left first.", "Export file");
+                await DialogHelper.ShowInfoAsync("Pick something on the left first.", "Export file");
                 return;
             }
 
-            string path = await DialogHelper.SaveFile(this, "Export file",
+            string path = await DialogHelper.SaveFileAsync(this, "Export file",
                 new[] { new FilePickerFileType("The file as it is in the ROM") { Patterns = new[] { "*.*" } } },
                 vm.SuggestedFileName(".bin"));
             if (path == null) return;
 
             string err = vm.SaveFileAsItIs(path);
-            if (err != null) { await DialogHelper.ShowError(err, "Models and textures error"); return; }
+            if (err != null) { await DialogHelper.ShowErrorAsync(err, "Models and textures error"); return; }
             SaveNotice.Exported(path);
         }
     }

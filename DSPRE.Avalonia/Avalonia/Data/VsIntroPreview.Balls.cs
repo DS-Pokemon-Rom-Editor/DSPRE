@@ -47,7 +47,7 @@ namespace DSPRE.Avalonia.Data
                     cell = file.CellOf(sequence, file.FrameAt(sequence, ticks * 2));
                 }
             }
-            catch { }
+            catch { }   // without the animation the first cell is shown
             if (cell < 0 || cell >= cells.Count) cell = 0;
             ushort[] all = NitroBgCodec.ReadColours(_member(m[0]));
             return (cells[cell], tiles, p => DsBgScreen.Row(all, firstRow ? 0 : p % Math.Max(1, all.Length / 16)));

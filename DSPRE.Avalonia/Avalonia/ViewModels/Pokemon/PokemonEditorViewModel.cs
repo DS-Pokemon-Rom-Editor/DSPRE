@@ -267,7 +267,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (id > 0 && HgEngineProject.IsActive && HgEnginePokemonIcons.TryGetIconPath(id, out string iconPath))
             {
                 try { MonIconBitmap = ImageConverter.LoadHgeIconFirstFrame(iconPath); }
-                catch { MonIconBitmap = null; }
+                catch (System.Exception ex) { AppLogger.WarnOnce("PokemonEditorViewModel.LoadMon", ex); MonIconBitmap = null; }
             }
             else if (id > 0 && !HgEngineProject.IsActive)
             {
@@ -276,7 +276,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     RawImage gdiImg = DSPRE.DSUtils.GetPokePicRaw(DSPRE.DSUtils.ResolveIconId(id), 40, 40);
                     MonIconBitmap = gdiImg != null ? ImageConverter.ToAvaloniaBitmap(gdiImg) : null;
                 }
-                catch { MonIconBitmap = null; }
+                catch (System.Exception ex) { AppLogger.WarnOnce("PokemonEditorViewModel.LoadMon", ex); MonIconBitmap = null; }
             }
 
             // Update title
@@ -383,13 +383,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task AddNewFakemonAsync(Window owner)
         {
             if (!HgEngineProject.IsActive || _pendingSpecies != null) return;
-            string name = await DialogHelper.PromptText("New species' display name:", "Add new Pokémon", owner: owner);
+            string name = await DialogHelper.PromptTextAsync("New species' display name:", "Add new Pokémon", owner: owner);
             if (name == null || _pendingSpecies != null) return;
 
             // Checked now so a name the checkout can't take is refused before it looks added.
             if (!HgEngineSpeciesExpansion.TryPlanFakemon(name, out HgEngineSpeciesExpansion.FakemonPlan plan, out string error))
             {
-                await DialogHelper.ShowError($"Could not add the species:\n{error}", "Add new Pokémon", owner);
+                await DialogHelper.ShowErrorAsync($"Could not add the species:\n{error}", "Add new Pokémon", owner);
                 return;
             }
 
@@ -428,13 +428,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 HgEngineSpeciesExpansion.TryWriteFakemon(name, out written, out string writeError) ? null : writeError);
             if (!saved)
             {
-                if (error != null) await DialogHelper.ShowError($"Could not add the species:\n{error}", "Add new Pokémon", _owner);
+                if (error != null) await DialogHelper.ShowErrorAsync($"Could not add the species:\n{error}", "Add new Pokémon", _owner);
                 return -1;
             }
 
             HgEngineSpeciesExpansion.FinishFakemon(written);
             DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> {
-                RomInfo.DirNames.personalPokeData, RomInfo.DirNames.learnsets, RomInfo.DirNames.evolutions });
+                RomInfo.DirNames.PersonalPokeData, RomInfo.DirNames.Learnsets, RomInfo.DirNames.Evolutions });
             DropPendingSpecies();
 
             // In-place update (ListSync), not Clear+Add: Clear briefly empties the collection, which

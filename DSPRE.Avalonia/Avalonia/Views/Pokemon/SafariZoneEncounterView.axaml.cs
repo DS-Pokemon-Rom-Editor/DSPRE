@@ -14,11 +14,11 @@ namespace DSPRE.Avalonia.Views.Pokemon
             InitializeComponent();
         }
 
-        private async void Save_Click(object sender, RoutedEventArgs e) => await Safe(VM?.SaveAsync());
-        private async void SaveAs_Click(object sender, RoutedEventArgs e) => await Safe(VM?.SaveAsAsync());
-        private async void Import_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportAsync());
+        private async void Save_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.SaveAsync());
+        private async void SaveAs_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.SaveAsAsync());
+        private async void Import_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportAsync());
 
-        private static async Task Safe(Task task)
+        private static async Task SafeAsync(Task task)
         {
             if (task == null) return;
             // The view models report their own failures; log anything that still gets this far so a
@@ -29,7 +29,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
         }
     }
 }

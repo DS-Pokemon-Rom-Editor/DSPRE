@@ -5,7 +5,8 @@ using static DSPRE.RomInfo;
 using System;
 using System.Drawing;
 
-namespace DSPRE.ROMFiles {
+namespace DSPRE.ROMFiles
+{
     /* ----------------------- MAP FILE DATA STRUCTURE (DPPtHGSS):--------------------------
 
     0x0  //  uint:       Length of permissions section (always 2048)
@@ -44,35 +45,38 @@ namespace DSPRE.ROMFiles {
     /// <summary>
     /// Class to store map data in Pokémon NDS games
     /// </summary>
-    public class MapFile : RomFile {
+    public class MapFile : RomFile
+    {
         #region Fields
 
         public static readonly string NSBMDFilter = "NSBMD File (*.nsbmd)|*.nsbmd";
 
-        public bool correctnessFlag = true;
-        public static readonly byte mapSize = 32;
-        public static readonly byte buildingHeaderSize = 48;
-        public static readonly byte[] blankBGS = new byte[] { 0x34, 0x12, 0x00, 0x00 };
+        public bool CorrectnessFlag = true;
+        public static readonly byte MapSize = 32;
+        public static readonly byte BuildingHeaderSize = 48;
+        public static readonly byte[] BlankBGS = new byte[] { 0x34, 0x12, 0x00, 0x00 };
 
-        public List<Building> buildings;
+        public List<Building> Buildings;
         /// <summary>Bytes after the last whole building record, written back unchanged.</summary>
-        public byte[] buildingsTail = Array.Empty<byte>();
-        public NSBMD mapModel;
-        public byte[,] collisions = new byte[mapSize, mapSize];
-        public byte[,] types = new byte[mapSize, mapSize];
-        public byte[] mapModelData;
-        public byte[] bdhc;
+        public byte[] BuildingsTail = Array.Empty<byte>();
+        public NSBMD MapModel;
+        public byte[,] Collisions = new byte[MapSize, MapSize];
+        public byte[,] Types = new byte[MapSize, MapSize];
+        public byte[] MapModelData;
+        public byte[] Bdhc;
 
         /// <summary>Terrain plates the user made or edited while this map is open; rebuilds keep them.</summary>
         public List<Models.BdhcBuild.Piece> KeptPlates = new List<Models.BdhcBuild.Piece>();
-        public byte[] bgs = blankBGS;
+        public byte[] Bgs = BlankBGS;
         #endregion
 
         #region Constructors (1)
         public MapFile(string path, GameFamilies gFamily, bool discardMoveperms = false, bool showMessages = true) : this (new FileStream(path, FileMode.Open), gFamily, discardMoveperms, showMessages) {}
-        public MapFile(int mapNumber, GameFamilies gFamily, bool discardMoveperms = false, bool showMessages = true) : this(Path.Combine(RomInfo.gameDirs[DirNames.maps].unpackedDir, mapNumber.ToString("D4")), gFamily, discardMoveperms, showMessages) { }
-        public MapFile(Stream data, GameFamilies gFamily, bool discardMoveperms = false, bool showMessages = true) {
-            using (BinaryReader reader = new BinaryReader(data)) {
+        public MapFile(int mapNumber, GameFamilies gFamily, bool discardMoveperms = false, bool showMessages = true) : this(Path.Combine(RomInfo.GameDirs[DirNames.Maps].unpackedDir, mapNumber.ToString("D4")), gFamily, discardMoveperms, showMessages) { }
+        public MapFile(Stream data, GameFamilies gFamily, bool discardMoveperms = false, bool showMessages = true)
+        {
+            using (BinaryReader reader = new BinaryReader(data))
+            {
                 /* Read sections lengths */
                 int permissionsSectionLength = reader.ReadInt32();
                 int buildingsSectionLength = reader.ReadInt32();
@@ -80,16 +84,21 @@ namespace DSPRE.ROMFiles {
                 int bdhcSectionLength = reader.ReadInt32();
 
                 /* Read background sounds section */
-                if (gFamily == GameFamilies.HGSS) { //Map must be loaded as HGSS
+                if (gFamily == GameFamilies.HGSS)
+                { //Map must be loaded as HGSS
                     ushort bgsSignature = reader.ReadUInt16();
-                    if (bgsSignature == 0x1234) {
+                    if (bgsSignature == 0x1234)
+                    {
                         ushort bgsDataLength = reader.ReadUInt16();
 
                         reader.BaseStream.Position -= 4; //go back so that the signature "0x1234" + size can be read and stored
                         ImportSoundPlates(reader.ReadBytes(bgsDataLength + 4));
-                    } else {
-                        correctnessFlag = false;
-                        if (showMessages) {
+                    }
+                    else
+                    {
+                        CorrectnessFlag = false;
+                        if (showMessages)
+                        {
                             AppMessages.Error("The header section of this map's BackGround Sound data is corrupted.",
                             "BGS Error");
                         }
@@ -97,9 +106,12 @@ namespace DSPRE.ROMFiles {
                 }
 
                 /* Read permission data */
-                if (discardMoveperms) {
+                if (discardMoveperms)
+                {
                     reader.BaseStream.Position += permissionsSectionLength;
-                } else {
+                }
+                else
+                {
                     ImportPermissions(reader.ReadBytes(permissionsSectionLength));
                 }
 
@@ -107,9 +119,10 @@ namespace DSPRE.ROMFiles {
                 ImportBuildings(reader.ReadBytes(buildingsSectionLength));
 
                 /* Read nsbmd model */
-                if ( !LoadMapModel(reader.ReadBytes(nsbmdSectionLength), showMessages) ) { //Assign result to flag
-                    correctnessFlag = false;
-                    mapModel = null;
+                if ( !LoadMapModel(reader.ReadBytes(nsbmdSectionLength), showMessages) )
+                { //Assign result to flag
+                    CorrectnessFlag = false;
+                    MapModel = null;
                 };
 
                 /* Read bdhc data */
@@ -119,35 +132,45 @@ namespace DSPRE.ROMFiles {
         #endregion
 
         #region Methods
-        public byte[] BuildingsToByteArray() {
-            MemoryStream newData = new MemoryStream(buildingHeaderSize * buildings.Count + buildingsTail.Length);
-            using (BinaryWriter writer = new BinaryWriter(newData)) {
-                for (int i = 0; i < buildings.Count; i++) {
-                    writer.Write(buildings[i].ToRecord());
+        public byte[] BuildingsToByteArray()
+        {
+            MemoryStream newData = new MemoryStream(BuildingHeaderSize * Buildings.Count + BuildingsTail.Length);
+            using (BinaryWriter writer = new BinaryWriter(newData))
+            {
+                for (int i = 0; i < Buildings.Count; i++)
+                {
+                    writer.Write(Buildings[i].ToRecord());
                 }
-                writer.Write(buildingsTail);
+                writer.Write(BuildingsTail);
             }
             return newData.ToArray();
         }
-        public byte[] CollisionsToByteArray() {
+        public byte[] CollisionsToByteArray()
+        {
             MemoryStream newData = new MemoryStream();
-            using (BinaryWriter writer = new BinaryWriter(newData)) {
-                for (int i = 0; i < mapSize; i++) {
-                    for (int j = 0; j < mapSize; j++) {
-                        writer.Write(types[i, j]);
-                        writer.Write(collisions[i, j]);
+            using (BinaryWriter writer = new BinaryWriter(newData))
+            {
+                for (int i = 0; i < MapSize; i++)
+                {
+                    for (int j = 0; j < MapSize; j++)
+                    {
+                        writer.Write(Types[i, j]);
+                        writer.Write(Collisions[i, j]);
                     }
                 }
             }
             return newData.ToArray();
         }
-        public void ImportBuildings(byte[] newData) {
-            buildings = new List<Building>();
-            using (BinaryReader reader = new BinaryReader(new MemoryStream(newData))) {
-                for (int i = 0; i < newData.Length / buildingHeaderSize; i++) {
-                    buildings.Add(new Building(new MemoryStream(reader.ReadBytes(buildingHeaderSize))));
+        public void ImportBuildings(byte[] newData)
+        {
+            Buildings = new List<Building>();
+            using (BinaryReader reader = new BinaryReader(new MemoryStream(newData)))
+            {
+                for (int i = 0; i < newData.Length / BuildingHeaderSize; i++)
+                {
+                    Buildings.Add(new Building(new MemoryStream(reader.ReadBytes(BuildingHeaderSize))));
                 }
-                buildingsTail = reader.ReadBytes(newData.Length % buildingHeaderSize);
+                BuildingsTail = reader.ReadBytes(newData.Length % BuildingHeaderSize);
             }
         }
 
@@ -179,7 +202,7 @@ namespace DSPRE.ROMFiles {
         public static string ReadImport(byte[] data, GameFamilies family, out MapFile map, out byte[] model, out bool converted)
         {
             map = null; model = null; converted = false;
-            if (data != null && data.Length >= 4 && BitConverter.ToUInt32(data, 0) == NSBMD.NDS_TYPE_BMD0)
+            if (data != null && data.Length >= 4 && BitConverter.ToUInt32(data, 0) == NSBMD.NdsTypeBmd0)
             {
                 // A map's textures come from its area's pack, so any carried in the file are left out, as on load.
                 byte[] bare = data.Length > 0x10 && BitConverter.ToInt16(data, 0xE) > 1 ? NSBUtils.GetModelWithoutTextures(data) : data;
@@ -189,7 +212,7 @@ namespace DSPRE.ROMFiles {
             }
             map = data == null ? null : ReadForGame(data, family, out converted);
             if (map == null) return "That file is neither a map nor an NSBMD model.";
-            string tooBig = TooBigForTheGame(map.mapModelData.Length, map.bdhc?.Length ?? 0);
+            string tooBig = TooBigForTheGame(map.MapModelData.Length, map.Bdhc?.Length ?? 0);
             if (tooBig != null) map = null;
             return tooBig;
         }
@@ -200,17 +223,17 @@ namespace DSPRE.ROMFiles {
         /// </summary>
         public void TakeContentsOf(MapFile other, GameFamilies family)
         {
-            LoadMapModel(other.mapModelData, showMessages: false);
+            LoadMapModel(other.MapModelData, showMessages: false);
             ImportPermissions(other.CollisionsToByteArray());
             ImportBuildings(other.BuildingsToByteArray());
-            ImportTerrain(other.bdhc);
-            bgs = family == GameFamilies.HGSS ? other.bgs : blankBGS;
+            ImportTerrain(other.Bdhc);
+            Bgs = family == GameFamilies.HGSS ? other.Bgs : BlankBGS;
         }
 
         /// <summary>Why a model file can't be this map's model, or null when it can.</summary>
         public static string CannotUseModel(byte[] model)
         {
-            if (model == null || model.Length < 4 || BitConverter.ToUInt32(model, 0) != NSBMD.NDS_TYPE_BMD0) return "That file is not an NSBMD model.";
+            if (model == null || model.Length < 4 || BitConverter.ToUInt32(model, 0) != NSBMD.NdsTypeBmd0) return "That file is not an NSBMD model.";
             return TooBigForTheGame(model.Length, 0);
         }
 
@@ -219,7 +242,7 @@ namespace DSPRE.ROMFiles {
             try
             {
                 MapFile map = new MapFile(new MemoryStream(data), family, discardMoveperms: false, showMessages: false);
-                return map.correctnessFlag && map.mapModelData != null ? map : null;
+                return map.CorrectnessFlag && map.MapModelData != null ? map : null;
             }
             catch (Exception ex) when (ex is EndOfStreamException || ex is ArgumentException || ex is IOException || ex is OverflowException)
             {
@@ -235,89 +258,112 @@ namespace DSPRE.ROMFiles {
                 ? $"The terrain is {terrainBytes:n0} bytes; the game loads at most {TerrainRoom:n0} per map."
             : null;
 
-        public bool LoadMapModel(byte[] newData, bool showMessages = true) {
-            using (BinaryReader modelReader = new BinaryReader(new MemoryStream(newData))) {
+        public bool LoadMapModel(byte[] newData, bool showMessages = true)
+        {
+            using (BinaryReader modelReader = new BinaryReader(new MemoryStream(newData)))
+            {
 
-                if (modelReader.ReadUInt32() != NSBMD.NDS_TYPE_BMD0) {
-                    if (showMessages) {
+                if (modelReader.ReadUInt32() != NSBMD.NdsTypeBmd0)
+                {
+                    if (showMessages)
+                    {
                         AppMessages.Error("Please select an NSBMD file.", "Invalid File");
                     }
                     return false;
                 }
 
                 modelReader.BaseStream.Position = 0xE;
-                if (modelReader.ReadInt16() > 1) { // If NSBMD contains more than one segment, it means there are embedded textures we must remove
-                    mapModelData = NSBUtils.GetModelWithoutTextures(newData);
-                } else {
+                if (modelReader.ReadInt16() > 1)
+                { // If NSBMD contains more than one segment, it means there are embedded textures we must remove
+                    MapModelData = NSBUtils.GetModelWithoutTextures(newData);
+                }
+                else
+                {
                     modelReader.BaseStream.Position = 0x0;
-                    mapModelData = modelReader.ReadBytes((int)modelReader.BaseStream.Length);
+                    MapModelData = modelReader.ReadBytes((int)modelReader.BaseStream.Length);
                 }
 
-                mapModel = NSBMDLoader.LoadNSBMD(new MemoryStream(mapModelData));
+                MapModel = NSBMDLoader.LoadNSBMD(new MemoryStream(MapModelData));
             }
             return true;
         }
 
-        public void ImportPermissions(byte[] newData) {
-            using (BinaryReader reader = new BinaryReader(new MemoryStream(newData))) {
-                for (int i = 0; i < 32; i++) {
-                    for (int j = 0; j < 32; j++) {
-                        types[i, j] = reader.ReadByte(); // Read permission type (e.g. surfing water, grass, sand etc.)
-                        collisions[i, j] = reader.ReadByte(); // Read walkability (00 for walkable and 80 for blocked)                        
+        public void ImportPermissions(byte[] newData)
+        {
+            using (BinaryReader reader = new BinaryReader(new MemoryStream(newData)))
+            {
+                for (int i = 0; i < 32; i++)
+                {
+                    for (int j = 0; j < 32; j++)
+                    {
+                        Types[i, j] = reader.ReadByte(); // Read permission type (e.g. surfing water, grass, sand etc.)
+                        Collisions[i, j] = reader.ReadByte(); // Read walkability (00 for walkable and 80 for blocked)                        
                     }
                 }
             }
         }
-        public void ImportSoundPlates(byte[] newData) {
-            using (BinaryReader reader = new BinaryReader(new MemoryStream(newData))) {
-                bgs = reader.ReadBytes((int)newData.Length);
+        public void ImportSoundPlates(byte[] newData)
+        {
+            using (BinaryReader reader = new BinaryReader(new MemoryStream(newData)))
+            {
+                Bgs = reader.ReadBytes((int)newData.Length);
             }
         }
-        public void ImportTerrain(byte[] newData) {
-            using (BinaryReader reader = new BinaryReader(new MemoryStream(newData))) {
-                bdhc = reader.ReadBytes((int)newData.Length);
+        public void ImportTerrain(byte[] newData)
+        {
+            using (BinaryReader reader = new BinaryReader(new MemoryStream(newData)))
+            {
+                Bdhc = reader.ReadBytes((int)newData.Length);
             }
         }
-        public override byte[] ToByteArray() {
+        public override byte[] ToByteArray()
+        {
             MemoryStream newData = new MemoryStream();
-            using (BinaryWriter writer = new BinaryWriter(newData)) {
+            using (BinaryWriter writer = new BinaryWriter(newData))
+            {
                 /* Write section lengths */
-                writer.Write(collisions.Length + types.Length);
+                writer.Write(Collisions.Length + Types.Length);
 
-                writer.Write(buildings.Count * buildingHeaderSize + buildingsTail.Length);
-                writer.Write(mapModelData.Length);
-                writer.Write(bdhc.Length);
+                writer.Write(Buildings.Count * BuildingHeaderSize + BuildingsTail.Length);
+                writer.Write(MapModelData.Length);
+                writer.Write(Bdhc.Length);
 
                 /* Write soundplate section for HG/SS */
-                if (RomInfo.gameFamily == GameFamilies.HGSS) {
-                    writer.Write(bgs);
+                if (RomInfo.GameFamily == GameFamilies.HGSS)
+                {
+                    writer.Write(Bgs);
                 }
 
                 /* Write sections */
                 writer.Write(CollisionsToByteArray());
                 writer.Write(BuildingsToByteArray());
-                writer.Write(mapModelData);
-                writer.Write(bdhc);
+                writer.Write(MapModelData);
+                writer.Write(Bdhc);
             }
             return newData.ToArray();
         }
 
-        public SortedSet<byte> GetUsedTypes() {
+        public SortedSet<byte> GetUsedTypes()
+        {
             SortedSet<byte> sortedBytes = new SortedSet<byte>();
 
-            for (int i = 0; i < mapSize; i++) {
-                for (int j = 0; j < mapSize; j++) {
-                    sortedBytes.Add(types[i, j]);
+            for (int i = 0; i < MapSize; i++)
+            {
+                for (int j = 0; j < MapSize; j++)
+                {
+                    sortedBytes.Add(Types[i, j]);
                 }
             }
 
             return sortedBytes;
         }
 
-        public void SaveToFileDefaultDir(int IDtoReplace, bool showSuccessMessage = true) {
-            SaveToFileDefaultDir(DirNames.maps, IDtoReplace, showSuccessMessage);
+        public void SaveToFileDefaultDir(int IDtoReplace, bool showSuccessMessage = true)
+        {
+            SaveToFileDefaultDir(DirNames.Maps, IDtoReplace, showSuccessMessage);
         }
-        public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true) {
+        public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true)
+        {
             SaveToFileExplorePath("Gen IV Map Bin", "bin", suggestedFileName, showSuccessMessage);
         }
         #endregion
@@ -326,160 +372,183 @@ namespace DSPRE.ROMFiles {
     /// <summary>
     /// Class to store building data from Pokémon NDS games
     /// </summary>
-    public class Building {
+    public class Building
+    {
         #region Fields (11)
         public NSBMD NSBMDFile;
-        public uint modelID { get; set; }
-        public short xPosition { get; set; }
-        public short yPosition { get; set; }
-        public short zPosition { get; set; }
-        public ushort xFraction { get; set; }
-        public ushort yFraction { get; set; }
-        public ushort zFraction { get; set; }
-        public ushort xRotation { get; set; }
-        public ushort yRotation { get; set; }
-        public ushort zRotation { get; set; }
-        public uint width { get; set; }
-        public uint height { get; set; }
-        public uint length { get; set; }
+        public uint ModelID { get; set; }
+        public short XPosition { get; set; }
+        public short YPosition { get; set; }
+        public short ZPosition { get; set; }
+        public ushort XFraction { get; set; }
+        public ushort YFraction { get; set; }
+        public ushort ZFraction { get; set; }
+        public ushort XRotation { get; set; }
+        public ushort YRotation { get; set; }
+        public ushort ZRotation { get; set; }
+        public uint Width { get; set; }
+        public uint Height { get; set; }
+        public uint Length { get; set; }
 
         // The record as read, so bytes DSPRE does not edit (the scales' fractions and the trailing
         // pokeplatinum MapPropFile.dummy28 words) are written back unchanged.
-        private byte[] record;
+        private byte[] _record;
         #endregion Fields
 
         #region Constructors (2)
-        public Building(Stream data) {
-            using (BinaryReader source = new BinaryReader(data)) {
-                record = source.ReadBytes(MapFile.buildingHeaderSize);
+        public Building(Stream data)
+        {
+            using (BinaryReader source = new BinaryReader(data))
+            {
+                _record = source.ReadBytes(MapFile.BuildingHeaderSize);
             }
-            if (record.Length < MapFile.buildingHeaderSize) {
-                Array.Resize(ref record, MapFile.buildingHeaderSize);
+            if (_record.Length < MapFile.BuildingHeaderSize)
+            {
+                Array.Resize(ref _record, MapFile.BuildingHeaderSize);
             }
-            using (BinaryReader reader = new BinaryReader(new MemoryStream(record))) {
-                modelID = reader.ReadUInt32();
+            using (BinaryReader reader = new BinaryReader(new MemoryStream(_record)))
+            {
+                ModelID = reader.ReadUInt32();
 
-                xFraction = reader.ReadUInt16();
-                xPosition = reader.ReadInt16();
-                yFraction = reader.ReadUInt16();
-                yPosition = reader.ReadInt16();
-                zFraction = reader.ReadUInt16();
-                zPosition = reader.ReadInt16();
+                XFraction = reader.ReadUInt16();
+                XPosition = reader.ReadInt16();
+                YFraction = reader.ReadUInt16();
+                YPosition = reader.ReadInt16();
+                ZFraction = reader.ReadUInt16();
+                ZPosition = reader.ReadInt16();
                 
-                xRotation = reader.ReadUInt16();
+                XRotation = reader.ReadUInt16();
                 reader.BaseStream.Position += 0x2;
-                yRotation = reader.ReadUInt16();
+                YRotation = reader.ReadUInt16();
                 reader.BaseStream.Position += 0x2;
-                zRotation = reader.ReadUInt16();
+                ZRotation = reader.ReadUInt16();
                 reader.BaseStream.Position += 0x2;
 
                 reader.BaseStream.Position += 0x1;
 
-                width = reader.ReadUInt16();
+                Width = reader.ReadUInt16();
                 reader.BaseStream.Position += 0x2;
-                height = reader.ReadUInt16();
+                Height = reader.ReadUInt16();
                 reader.BaseStream.Position += 0x2;
-                length = reader.ReadUInt16();
+                Length = reader.ReadUInt16();
                 
                 //reader.BaseStream.Position += 0x2;
             }
         }
-        public Building() {
-            modelID = 0;
-            xFraction = 0;
-            xPosition = 0;
-            yFraction = 0;
-            yPosition = 1;
-            zFraction = 0;
-            zPosition = 0;
+        public Building()
+        {
+            ModelID = 0;
+            XFraction = 0;
+            XPosition = 0;
+            YFraction = 0;
+            YPosition = 1;
+            ZFraction = 0;
+            ZPosition = 0;
 
-            xRotation = yRotation = zRotation = 0;
-            width = 16;
-            height = 16;
-            length = 16;
+            XRotation = YRotation = ZRotation = 0;
+            Width = 16;
+            Height = 16;
+            Length = 16;
         }
 
-        public Building(Building toCopy) {
-            modelID = toCopy.modelID;
-            xFraction = toCopy.xFraction;
-            xPosition = toCopy.xPosition;
-            yFraction = toCopy.yFraction;
-            yPosition = (short)(toCopy.yPosition + 1);
-            zFraction = toCopy.zFraction;
-            zPosition = toCopy.zPosition;
+        public Building(Building toCopy)
+        {
+            ModelID = toCopy.ModelID;
+            XFraction = toCopy.XFraction;
+            XPosition = toCopy.XPosition;
+            YFraction = toCopy.YFraction;
+            YPosition = (short)(toCopy.YPosition + 1);
+            ZFraction = toCopy.ZFraction;
+            ZPosition = toCopy.ZPosition;
 
-            xRotation = toCopy.xRotation;
-            yRotation = toCopy.yRotation;
-            zRotation = toCopy.zRotation;
+            XRotation = toCopy.XRotation;
+            YRotation = toCopy.YRotation;
+            ZRotation = toCopy.ZRotation;
 
-            width = toCopy.width;
-            height = toCopy.height;
-            length = toCopy.length;
-            record = (byte[])toCopy.record?.Clone();
+            Width = toCopy.Width;
+            Height = toCopy.Height;
+            Length = toCopy.Length;
+            _record = (byte[])toCopy._record?.Clone();
         }
         #endregion Constructors
 
         /// <summary>The 48-byte record: the edited fields laid over the bytes it was read from.</summary>
-        public byte[] ToRecord() {
-            byte[] bytes = record != null ? (byte[])record.Clone() : new byte[MapFile.buildingHeaderSize];
-            using (BinaryWriter writer = new BinaryWriter(new MemoryStream(bytes))) {
-                writer.Write(modelID);
-                writer.Write(xFraction);
-                writer.Write(xPosition);
-                writer.Write(yFraction);
-                writer.Write(yPosition);
-                writer.Write(zFraction);
-                writer.Write(zPosition);
+        public byte[] ToRecord()
+        {
+            byte[] bytes = _record != null ? (byte[])_record.Clone() : new byte[MapFile.BuildingHeaderSize];
+            using (BinaryWriter writer = new BinaryWriter(new MemoryStream(bytes)))
+            {
+                writer.Write(ModelID);
+                writer.Write(XFraction);
+                writer.Write(XPosition);
+                writer.Write(YFraction);
+                writer.Write(YPosition);
+                writer.Write(ZFraction);
+                writer.Write(ZPosition);
 
-                writer.Write((int)xRotation);
-                writer.Write((int)yRotation);
-                writer.Write((int)zRotation);
+                writer.Write((int)XRotation);
+                writer.Write((int)YRotation);
+                writer.Write((int)ZRotation);
 
                 // Each scale is read as the whole part of its fx32, one byte into the word.
                 writer.BaseStream.Position = 0x1D;
-                writer.Write((ushort)width);
+                writer.Write((ushort)Width);
                 writer.BaseStream.Position = 0x21;
-                writer.Write((ushort)height);
+                writer.Write((ushort)Height);
                 writer.BaseStream.Position = 0x25;
-                writer.Write((ushort)length);
+                writer.Write((ushort)Length);
             }
             return bytes;
         }
-        public static ushort DegToU16(float deg) {
+        public static ushort DegToU16(float deg)
+        {
             return (ushort)(deg * 65536 / 360);
         }
-        public static float U16ToDeg(ushort u16) {
+        public static float U16ToDeg(ushort u16)
+        {
             return (float)u16 * 360 / 65536;
         }
-        public void LoadModelData(string dir) {
-            LoadModelDataFromID((int)modelID, dir);
+        public void LoadModelData(string dir)
+        {
+            LoadModelDataFromID((int)ModelID, dir);
         }
 
-        public void LoadModelData(bool interior) {
-            string modelPath = Filesystem.GetBuildingModelPath(interior, (int)modelID);
+        public void LoadModelData(bool interior)
+        {
+            string modelPath = Filesystem.GetBuildingModelPath(interior, (int)ModelID);
 
-            if (string.IsNullOrWhiteSpace(modelPath) || !File.Exists(modelPath)) {
-                AppMessages.Error("Building " + modelID + " could not be found in\n" + '"' + Path.GetDirectoryName(modelPath) + '"', "Building not found");
+            if (string.IsNullOrWhiteSpace(modelPath) || !File.Exists(modelPath))
+            {
+                AppMessages.Error("Building " + ModelID + " could not be found in\n" + '"' + Path.GetDirectoryName(modelPath) + '"', "Building not found");
                 return;
             }
 
-            try {
-                using (Stream fs = new FileStream(modelPath, FileMode.Open)) {
+            try
+            {
+                using (Stream fs = new FileStream(modelPath, FileMode.Open))
+                {
                     this.NSBMDFile = NSBMDLoader.LoadNSBMD(fs);
                 }
-            } catch (FileNotFoundException) {
-                AppMessages.Error("Building " + modelID + " could not be found in\n" + '"' + Path.GetDirectoryName(modelPath) + '"', "Building not found");
+            }
+            catch (FileNotFoundException)
+            {
+                AppMessages.Error("Building " + ModelID + " could not be found in\n" + '"' + Path.GetDirectoryName(modelPath) + '"', "Building not found");
             }
         }
 
-        public void LoadModelDataFromID(int modelID, string bmDir) {
+        public void LoadModelDataFromID(int modelID, string bmDir)
+        {
             string modelPath = Path.Combine(bmDir, modelID.ToString("D4"));
 
-            try {
-                using (Stream fs = new FileStream(modelPath, FileMode.Open)) {
+            try
+            {
+                using (Stream fs = new FileStream(modelPath, FileMode.Open))
+                {
                     this.NSBMDFile = NSBMDLoader.LoadNSBMD(fs);
                 }
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 AppLogger.Error($"Error loading building model ID {modelID} from path \"{modelPath}\": {ex.Message}");
                 AppMessages.Error($"Building \"{modelID}\" could not be found at path \"{modelPath}\".\n" +
                     $"Map may not display correctly.", "Building not found");

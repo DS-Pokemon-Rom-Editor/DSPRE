@@ -27,7 +27,7 @@ namespace DSPRE.ROMFiles
         private TexturePatternAnimation(NSBTP.NSBTP_File file)
         {
             _file = file;
-            MaterialNames = file.PAT0.names ?? Array.Empty<string>();
+            MaterialNames = file.PAT0.Names ?? Array.Empty<string>();
             for (int i = 0; i < MaterialNames.Count; i++)
                 _byName[MaterialNames[i]] = i;
 
@@ -73,7 +73,7 @@ namespace DSPRE.ROMFiles
                 if (k.Start > frame) break;
                 chosen = k;
             }
-            return new Swap { TextureName = chosen.texName, PaletteName = chosen.palName };
+            return new Swap { TextureName = chosen.TexName, PaletteName = chosen.PalName };
         }
 
         public Swap Evaluate(string materialName, int frame) => Evaluate(IndexOf(materialName), frame);
@@ -84,7 +84,7 @@ namespace DSPRE.ROMFiles
             NSBTP.NSBTP_File.animData.keyFrame[][] frames = Frames;
             if (material < 0 || material >= frames.Length) yield break;
             foreach (NSBTP.NSBTP_File.animData.keyFrame k in frames[material])
-                yield return new Swap { TextureName = k.texName, PaletteName = k.palName };
+                yield return new Swap { TextureName = k.TexName, PaletteName = k.PalName };
         }
 
         /// <summary>True when a material never actually changes texture, so it can be skipped.</summary>

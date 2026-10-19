@@ -41,7 +41,7 @@ namespace DSPRE.ROMFiles
         /// <summary>What an upgrade has to do, or null when the project is already on this rotom.</summary>
         public static async Task<Assessment> AssessAsync()
         {
-            if (!RomInfo.hasRotomProject || !RotomTool.IsAvailable || !File.Exists(StatePath)) return null;
+            if (!RomInfo.HasRotomProject || !RotomTool.IsAvailable || !File.Exists(StatePath)) return null;
             string current = await CurrentVersionAsync().ConfigureAwait(false);
 
             List<RecordedScript> recordedScripts = RecordedScripts(out string recorded);

@@ -28,8 +28,8 @@ namespace DSPRE.ROMFiles
         public static string[] NamesOf(int species)
         {
             if (!Labels.TryGetValue(species, out string[] names)) return null;
-            if (species == 172 && gameFamily != GameFamilies.HGSS) return null;
-            if ((species == 479 || species == 487 || species == 492) && gameFamily == GameFamilies.DP) return null;
+            if (species == 172 && GameFamily != GameFamilies.HGSS) return null;
+            if ((species == 479 || species == 487 || species == 492) && GameFamily == GameFamilies.DP) return null;
             return names;
         }
     }

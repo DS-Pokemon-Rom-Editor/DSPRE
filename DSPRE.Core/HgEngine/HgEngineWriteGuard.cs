@@ -47,7 +47,7 @@ namespace DSPRE.HgEngine
         {
             try
             {
-                string dir = Filesystem.synthOverlay;
+                string dir = Filesystem.SynthOverlay;
                 string parent = Path.GetDirectoryName(Path.GetFullPath(filePath));
                 return !string.IsNullOrEmpty(dir) && parent != null
                     && string.Equals(parent.TrimEnd('\\', '/'), Path.GetFullPath(dir).TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase);

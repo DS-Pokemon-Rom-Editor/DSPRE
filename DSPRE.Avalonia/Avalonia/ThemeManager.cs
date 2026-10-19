@@ -32,7 +32,7 @@ namespace DSPRE.Avalonia
                 Application.Current.RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
             if (DSPRE.SettingsManager.Settings != null)
             {
-                DSPRE.SettingsManager.Settings.darkTheme = dark;
+                DSPRE.SettingsManager.Settings.DarkTheme = dark;
                 DSPRE.SettingsManager.Save();
             }
             ApplyTitleBars();
@@ -45,7 +45,7 @@ namespace DSPRE.Avalonia
         {
             DspreSettings s = DSPRE.SettingsManager.Settings;
             if (s != null && Application.Current != null)
-                Application.Current.RequestedThemeVariant = s.darkTheme ? ThemeVariant.Dark : ThemeVariant.Light;
+                Application.Current.RequestedThemeVariant = s.DarkTheme ? ThemeVariant.Dark : ThemeVariant.Light;
             WatchTitleBars();
         }
 
@@ -93,7 +93,7 @@ namespace DSPRE.Avalonia
                 // A window already on screen keeps its old caption until the frame is redrawn.
                 if (window.IsVisible) SetWindowPos(handle, IntPtr.Zero, 0, 0, 0, 0, FrameChanged);
             }
-            catch (Exception ex) when (ex is DllNotFoundException || ex is EntryPointNotFoundException) { }
+            catch (Exception ex) when (ex is DllNotFoundException || ex is EntryPointNotFoundException) { }   // older Windows versions have no dark title bar
         }
     }
 }

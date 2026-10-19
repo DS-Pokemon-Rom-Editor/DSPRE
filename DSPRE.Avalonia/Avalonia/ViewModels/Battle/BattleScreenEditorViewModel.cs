@@ -436,7 +436,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private static Bitmap ToBitmap(byte[] rgba)
         {
             try { return ImageConverter.FromRgba(rgba, BattleScreenRenderer.ScreenWidth, BattleScreenRenderer.ScreenHeight); }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleScreenEditorViewModel.ToBitmap", ex); return null; }
         }
     }
 }

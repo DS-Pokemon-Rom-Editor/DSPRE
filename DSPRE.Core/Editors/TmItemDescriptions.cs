@@ -14,11 +14,11 @@ namespace DSPRE.Editors
     {
         public const string PatchTemplate = "It teaches the move {0}.\\nIt can be used on a Pokemon.";
 
-        public static int Bank => RomInfo.itemDescriptionsTextNumber;
+        public static int Bank => RomInfo.ItemDescriptionsTextNumber;
 
         public static string WhyNot() =>
-            RomInfo.isHGE && !HgEngine.HgEngineProject.IsActive ? "Open the hg-engine folder to change its item text."
-            : !RomInfo.isHGE && Bank <= 0 ? "Item descriptions aren't located for this game version."
+            RomInfo.IsHGE && !HgEngine.HgEngineProject.IsActive ? "Open the hg-engine folder to change its item text."
+            : !RomInfo.IsHGE && Bank <= 0 ? "Item descriptions aren't located for this game version."
             : !FieldFontCharacters.Ready || FieldFont.LoadSystemFont() == null ? "The game font couldn't be read."
             : null;
 
@@ -35,7 +35,7 @@ namespace DSPRE.Editors
         /// </summary>
         public static bool TryLocate(int item, out int bank, out int line)
         {
-            if (RomInfo.isHGE) return HgEngine.HgEngineItemText.TryLocate(item, "DESCRIPTION", out bank, out line);
+            if (RomInfo.IsHGE) return HgEngine.HgEngineItemText.TryLocate(item, "DESCRIPTION", out bank, out line);
             bank = Bank;
             line = item;
             return bank > 0 && item >= 0;
@@ -49,7 +49,7 @@ namespace DSPRE.Editors
 
             Dictionary<int, EditableTextBank> banks = new Dictionary<int, EditableTextBank>();
             EditableTextBank BankOf(int id) => banks.TryGetValue(id, out EditableTextBank b) ? b : banks[id] = new EditableTextBank(id);
-            List<string> moveDescriptions = new TextArchive(RomInfo.moveDescriptionsTextNumbers).messages;
+            List<string> moveDescriptions = new TextArchive(RomInfo.MoveDescriptionsTextNumbers).Messages;
             string[] moveNames = RomInfo.GetAttackNames();
             (int Width, int Lines) layout = Layout(BankOf);
             FieldFont font = FieldFont.LoadSystemFont();

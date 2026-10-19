@@ -91,16 +91,16 @@ namespace DSPRE.Avalonia.Views.Tools
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveChanges();
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) VM?.DiscardChanges();
         }
         private void Add_Click(object sender, RoutedEventArgs e) => VM?.AddTest();
 
         private async void Delete_Click(object sender, RoutedEventArgs e)
         {
             if (VM?.Selected == null) return;
-            if (!await DialogHelper.AskYesNo($"Delete {VM.Selected} from the checkout?", "Delete battle test?", this)) return;
+            if (!await DialogHelper.AskYesNoAsync($"Delete {VM.Selected} from the checkout?", "Delete battle test?", this)) return;
             string error = VM.DeleteSelected();
-            if (error != null) await DialogHelper.ShowError(error, "Battle tests error", this);
+            if (error != null) await DialogHelper.ShowErrorAsync(error, "Battle tests error", this);
         }
     }
 }

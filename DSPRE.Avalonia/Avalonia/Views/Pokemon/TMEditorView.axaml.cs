@@ -24,19 +24,19 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) ViewModel.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) ViewModel.DiscardChanges();
         }
 
         private void AutoPaletteButton_Click(object sender, RoutedEventArgs e)
             => ViewModel.AutoPaletteCommand();
 
         private async void AutoPaletteAllButton_Click(object sender, RoutedEventArgs e)
-            => await ViewModel.AutoPaletteAllCommand(this);
+            => await ViewModel.AutoPaletteAllCommandAsync(this);
 
         private async void ExportButton_Click(object sender, RoutedEventArgs e)
-            => await ViewModel.ExportCommand(this);
+            => await ViewModel.ExportCommandAsync(this);
 
         private async void ImportButton_Click(object sender, RoutedEventArgs e)
-            => await ViewModel.ImportCommand(this);
+            => await ViewModel.ImportCommandAsync(this);
     }
 }

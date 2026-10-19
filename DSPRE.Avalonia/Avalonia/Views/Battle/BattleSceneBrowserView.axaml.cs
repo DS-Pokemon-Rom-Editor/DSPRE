@@ -26,16 +26,16 @@ namespace DSPRE.Avalonia.Views.Battle
             BattleSceneBrowserViewModel vm = ViewModel;
             if (vm?.Selected == null)
             {
-                _ = DialogHelper.ShowInfo("Pick a set of scenery on the left first.", "Battle scenes");
+                _ = DialogHelper.ShowInfoAsync("Pick a set of scenery on the left first.", "Battle scenes");
                 return;
             }
             int file = vm.FileFor(piece);
             if (file < 0)
             {
-                _ = DialogHelper.ShowInfo("There is no file to open for that.", "Battle scenes");
+                _ = DialogHelper.ShowInfoAsync("There is no file to open for that.", "Battle scenes");
                 return;
             }
-            AvaloniaEditorLauncher.OpenGraphicAt(DSPRE.RomInfo.DirNames.battleBg, file);
+            AvaloniaEditorLauncher.OpenGraphicAt(DSPRE.RomInfo.DirNames.BattleBg, file);
             vm.StatusText = $"Opened file {file} in the Graphics window.";
         }
     }

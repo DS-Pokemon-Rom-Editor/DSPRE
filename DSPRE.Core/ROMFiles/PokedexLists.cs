@@ -37,11 +37,11 @@ namespace DSPRE.ROMFiles
             "Insectoid", "Head and body", "Head and arms", "Head and legs", "Tentacles", "Fins", "Head only", "Multiple bodies",
         };
 
-        private int MemberCount => gameFamily == GameFamilies.HGSS ? 102 : 58;
+        private int MemberCount => GameFamily == GameFamilies.HGSS ? 102 : 58;
         // HGSS adds a list per letter (and 18 empty ones) before its types and puts the letter groups last.
-        private int TypesFrom => gameFamily == GameFamilies.HGSS ? 62 : 27;
-        private int ShapesFrom => gameFamily == GameFamilies.HGSS ? 79 : 44;
-        private int GroupsFrom => gameFamily == GameFamilies.HGSS ? 93 : 18;
+        private int TypesFrom => GameFamily == GameFamilies.HGSS ? 62 : 27;
+        private int ShapesFrom => GameFamily == GameFamilies.HGSS ? 79 : 44;
+        private int GroupsFrom => GameFamily == GameFamilies.HGSS ? 93 : 18;
 
         private sealed class Copy
         {
@@ -62,7 +62,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Why the lists can't be edited in this project, or null.</summary>
         public static string WhyNot()
         {
-            if (gameDirs == null || !gameDirs.ContainsKey(DirNames.pokedexData)) return "This game's Pokédex data isn't known to DSPRE.";
+            if (GameDirs == null || !GameDirs.ContainsKey(DirNames.PokedexData)) return "This game's Pokédex data isn't known to DSPRE.";
             if (HgEngine.HgEngineProject.IsActive) return "hg-engine builds these lists from data/PokedexSort.c, which the Pokédex data tab keeps up to date.";
             return null;
         }
@@ -73,12 +73,12 @@ namespace DSPRE.ROMFiles
             error = WhyNot();
             if (error != null) return false;
             PokedexLists l = new PokedexLists();
-            List<DirNames> dirs = new List<DirNames> { DirNames.pokedexData };
-            if (gameDirs.ContainsKey(DirNames.pokedexDataAltered)) dirs.Add(DirNames.pokedexDataAltered);
+            List<DirNames> dirs = new List<DirNames> { DirNames.PokedexData };
+            if (GameDirs.ContainsKey(DirNames.PokedexDataAltered)) dirs.Add(DirNames.PokedexDataAltered);
             DSUtils.TryUnpackNarcs(dirs);
             foreach (DirNames dir in dirs)
             {
-                string folder = gameDirs[dir].unpackedDir;
+                string folder = GameDirs[dir].unpackedDir;
                 byte[][] members = new byte[l.MemberCount][];
                 for (int i = 0; i < members.Length; i++)
                 {
@@ -115,7 +115,7 @@ namespace DSPRE.ROMFiles
                 new ListInfo { Member = Tallest, Name = "Tallest first", Group = Group.Order },
                 new ListInfo { Member = Shortest, Name = "Shortest first", Group = Group.Order },
             };
-            if (gameFamily == GameFamilies.HGSS)
+            if (GameFamily == GameFamilies.HGSS)
             {
                 for (int i = 0; i < 26; i++)
                     l.Add(new ListInfo { Member = 18 + i, Name = "Letter " + (char)('A' + i), Group = Group.Letter, Key = 'A' + i });
@@ -303,23 +303,23 @@ namespace DSPRE.ROMFiles
         private void SaveRegionalNumbers()
         {
             List<ushort> order = RegionalOrder;
-            List<DirNames> dirs = new[] { DirNames.regionalDexNumbers, DirNames.regionalDexSpecies }.Where(gameDirs.ContainsKey).ToList();
+            List<DirNames> dirs = new[] { DirNames.RegionalDexNumbers, DirNames.RegionalDexSpecies }.Where(GameDirs.ContainsKey).ToList();
             DSUtils.TryUnpackNarcs(dirs);
 
-            if (gameDirs.ContainsKey(DirNames.regionalDexNumbers))
+            if (GameDirs.ContainsKey(DirNames.RegionalDexNumbers))
             {
-                string path = Path.Combine(gameDirs[DirNames.regionalDexNumbers].unpackedDir, "0000");
+                string path = Path.Combine(GameDirs[DirNames.RegionalDexNumbers].unpackedDir, "0000");
                 if (File.Exists(path))
                 {
                     // One entry per species; species past the end keep whatever the file holds.
                     ushort[] numbers = new ushort[Math.Max(new FileInfo(path).Length / 2, SpeciesCount)];
                     for (int i = 0; i < order.Count; i++) numbers[order[i]] = (ushort)(i + 1);
-                    WriteIfChanged(DirNames.regionalDexNumbers, path, ToBytes(numbers));
+                    WriteIfChanged(DirNames.RegionalDexNumbers, path, ToBytes(numbers));
                 }
             }
-            if (gameDirs.ContainsKey(DirNames.regionalDexSpecies))
+            if (GameDirs.ContainsKey(DirNames.RegionalDexSpecies))
             {
-                string path = Path.Combine(gameDirs[DirNames.regionalDexSpecies].unpackedDir, "0000");
+                string path = Path.Combine(GameDirs[DirNames.RegionalDexSpecies].unpackedDir, "0000");
                 if (File.Exists(path))
                 {
                     // The game reads up to the regional count its code holds, which can be more than a shortened
@@ -327,7 +327,7 @@ namespace DSPRE.ROMFiles
                     int length = Math.Max(order.Count + 1, (int)(new FileInfo(path).Length / 2));
                     ushort[] species = new ushort[length];
                     for (int i = 0; i < order.Count; i++) species[i + 1] = order[i];
-                    WriteIfChanged(DirNames.regionalDexSpecies, path, ToBytes(species));
+                    WriteIfChanged(DirNames.RegionalDexSpecies, path, ToBytes(species));
                 }
             }
         }
@@ -343,12 +343,12 @@ namespace DSPRE.ROMFiles
         {
             ushort[] Read(DirNames d)
             {
-                if (!gameDirs.ContainsKey(d)) return null;
+                if (!GameDirs.ContainsKey(d)) return null;
                 DSUtils.TryUnpackNarcs(new List<DirNames> { d });
-                string path = Path.Combine(gameDirs[d].unpackedDir, "0000");
+                string path = Path.Combine(GameDirs[d].unpackedDir, "0000");
                 return File.Exists(path) ? ToList(File.ReadAllBytes(path)).ToArray() : null;
             }
-            return (Read(DirNames.regionalDexNumbers), Read(DirNames.regionalDexSpecies));
+            return (Read(DirNames.RegionalDexNumbers), Read(DirNames.RegionalDexSpecies));
         }
     }
 }

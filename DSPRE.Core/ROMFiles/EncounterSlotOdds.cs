@@ -169,7 +169,7 @@ namespace DSPRE.ROMFiles
                 // Only a legacy project can still hold a compressed overlay; a label lookup won't decompress it.
                 if (methods.Any(m => OverlayUtils.IsStillCompressed(m.Overlay))) return RetailPercents(methodName);
                 // Re-read only when a selector overlay changed on disk.
-                string key = romID + ":" + string.Join(",", methods.Select(m => m.Overlay).Distinct()
+                string key = RomID + ":" + string.Join(",", methods.Select(m => m.Overlay).Distinct()
                     .Select(ov => OverlayUtils.GetPath(ov)).Select(p => p + File.GetLastWriteTimeUtc(p).Ticks));
                 if (_cache.key != key) _cache = (key, Load());
                 return _cache.odds.Methods.FirstOrDefault(m => m.Name == methodName)?.Percents;
@@ -181,7 +181,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Retail chances, for versions whose slot code DSPRE can't read.</summary>
         private static int[] RetailPercents(string methodName)
         {
-            if (gameFamily == GameFamilies.HGSS)
+            if (GameFamily == GameFamilies.HGSS)
                 return methodName switch
                 {
                     "Walking" => new[] { 20, 20, 10, 10, 10, 10, 5, 5, 4, 4, 1, 1 },

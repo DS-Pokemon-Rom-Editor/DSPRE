@@ -29,18 +29,18 @@ namespace DSPRE.Avalonia.Views.Shell
             _ => null,
         };
 
-        private async Task Open(Func<MainWindowView, Task> open)
+        private async Task OpenAsync(Func<MainWindowView, Task> open)
         {
             MainWindowView main = Main;
             Opening?.Invoke(this, EventArgs.Empty);
             if (main != null) await open(main);
         }
 
-        private async void OpenRom_Click(object sender, RoutedEventArgs e) => await Open(m => m.OpenRomInteractiveAsync());
-        private async void OpenFolder_Click(object sender, RoutedEventArgs e) => await Open(m => m.OpenFolderInteractiveAsync());
-        private async void OpenHgEngineFolder_Click(object sender, RoutedEventArgs e) => await Open(m => m.OpenHgEngineFolderInteractiveAsync());
+        private async void OpenRom_Click(object sender, RoutedEventArgs e) => await OpenAsync(m => m.OpenRomInteractiveAsync());
+        private async void OpenFolder_Click(object sender, RoutedEventArgs e) => await OpenAsync(m => m.OpenFolderInteractiveAsync());
+        private async void OpenHgEngineFolder_Click(object sender, RoutedEventArgs e) => await OpenAsync(m => m.OpenHgEngineFolderInteractiveAsync());
 
-        private async void Recent_DoubleTapped(object sender, TappedEventArgs e) => await OpenSelected(sender);
+        private async void Recent_DoubleTapped(object sender, TappedEventArgs e) => await OpenSelectedAsync(sender);
 
         // The list handles Enter itself, so the handler has to see handled events too.
         private void RecentList_Loaded(object sender, RoutedEventArgs e)
@@ -54,13 +54,13 @@ namespace DSPRE.Avalonia.Views.Shell
         {
             if (e.Key != Key.Enter) return;
             e.Handled = true;
-            await OpenSelected(sender);
+            await OpenSelectedAsync(sender);
         }
 
-        private async Task OpenSelected(object sender)
+        private async Task OpenSelectedAsync(object sender)
         {
             if ((sender as ListBox)?.SelectedItem is not RecentProjectsViewModel.RecentEntry entry) return;
-            await Open(m => m.OpenRecentAsync(entry.Path));
+            await OpenAsync(m => m.OpenRecentAsync(entry.Path));
         }
     }
 }

@@ -141,17 +141,17 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             IsAvailable = true;
             OnPropertyChanged(nameof(IsNotAvailable));
 
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.encounterExtended });
-            if (string.IsNullOrEmpty(Filesystem.encounterExtended) || !Directory.Exists(Filesystem.encounterExtended))
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.EncounterExtended });
+            if (string.IsNullOrEmpty(Filesystem.EncounterExtended) || !Directory.Exists(Filesystem.EncounterExtended))
             {
-                await DialogHelper.ShowError(
+                await DialogHelper.ShowErrorAsync(
                     "Honey Tree encounter files not found.\nExpected location: arc/encdata_ex.narc", "Special encounters editor error");
                 IsAvailable = false;
                 OnPropertyChanged(nameof(IsNotAvailable));
                 return;
             }
 
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.monIcons });
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.MonIcons });
             SetMonIconsPalTableAddress();
 
             SpeciesNames.Clear();
@@ -175,7 +175,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                _ = DialogHelper.ShowError($"Error loading Honey Tree encounters: {ex.Message}", "Special encounters editor error");
+                _ = DialogHelper.ShowErrorAsync($"Error loading Honey Tree encounters: {ex.Message}", "Special encounters editor error");
             }
         }
 
@@ -268,7 +268,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 RawImage gdi = DSUtils.GetPokePicRaw(species, 64, 64);
                 PokemonIcon = ImageConverter.ToAvaloniaBitmap(gdi);
             }
-            catch { PokemonIcon = null; }
+            catch (Exception ex) { AppLogger.WarnOnce("HoneyTreeEncounterViewModel.UpdateIcon", ex); PokemonIcon = null; }
         }
 
         // ── Save / export / import ─────────────────────────────────────────────────
@@ -286,7 +286,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_file == null) return;
             FilePickerFileType filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
-            string path = await DialogHelper.SaveFile(_owner, "Export Honey Tree encounters",
+            string path = await DialogHelper.SaveFileAsync(_owner, "Export Honey Tree encounters",
                 new[] { filter }, "honey_tree_encounters.bin");
             if (path == null) return;
             if (_file.ExportToFile(path, showSuccessMessage: false)) SaveNotice.Exported(path);
@@ -296,7 +296,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_file == null) return;
             FilePickerFileType filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
-            string path = await DialogHelper.OpenFile(_owner, "Import Honey Tree encounters", new[] { filter });
+            string path = await DialogHelper.OpenFileAsync(_owner, "Import Honey Tree encounters", new[] { filter });
             if (path == null) return;
 
             try
@@ -315,13 +315,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Error importing file: {ex.Message}", "Special encounters editor error");
+                await DialogHelper.ShowErrorAsync($"Error importing file: {ex.Message}", "Special encounters editor error");
             }
         }
 
         public void Locate()
         {
-            string path = Filesystem.encounterExtended;
+            string path = Filesystem.EncounterExtended;
             if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
                 SystemShell.RevealInFileManager(path);
         }

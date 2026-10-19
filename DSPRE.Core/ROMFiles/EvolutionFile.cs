@@ -4,8 +4,10 @@ using System.IO;
 using System.Runtime.InteropServices;
 using static DSPRE.RomInfo;
 
-namespace DSPRE {
-    public enum EvolutionMethod : short {
+namespace DSPRE
+{
+    public enum EvolutionMethod : short
+    {
         None = 0,
         Friendship220 = 1,
         Friendship220_Day = 2,
@@ -36,7 +38,8 @@ namespace DSPRE {
         Loc_Route217 = LevelingUp_Female + 3
     }
 
-    public enum EvolutionParamMeaning {
+    public enum EvolutionParamMeaning
+    {
         Ignored,
         FromLevel,
         ItemName,
@@ -46,40 +49,46 @@ namespace DSPRE {
         CustomNumber,   // a raw number within the field's range, used by custom/added evolution methods
     }
     
-    public struct EvolutionData {
-        public EvolutionMethod method;
-        public short param;
-        public short target;
+    public struct EvolutionData
+    {
+        public EvolutionMethod Method;
+        public short Param;
+        public short Target;
 
-        public bool isValid() => method != EvolutionMethod.None && Problem() == null;
+        public bool IsValid() => Method != EvolutionMethod.None && Problem() == null;
 
         /// <summary>Why this evolution can't be written, or null. An empty slot (no method) has none.
         /// A method whose target is handled by the hack's own code passes <paramref name="needsTarget"/> false.</summary>
-        public string Problem(bool needsTarget = true) {
-            if (method == EvolutionMethod.None) {
+        public string Problem(bool needsTarget = true)
+        {
+            if (Method == EvolutionMethod.None)
+            {
                 return null;
             }
 
-            if ((method == EvolutionMethod.LevelingUp ||
-                 method == EvolutionMethod.LevelingUp_Male ||
-                 method == EvolutionMethod.LevelingUp_Female) && (param <= 0 || param > 100)) {
+            if ((Method == EvolutionMethod.LevelingUp ||
+                 Method == EvolutionMethod.LevelingUp_Male ||
+                 Method == EvolutionMethod.LevelingUp_Female) && (Param <= 0 || Param > 100))
+            {
                 return "needs a level from 1 to 100";
             }
 
-            if (needsTarget && target <= 0) {
+            if (needsTarget && Target <= 0)
+            {
                 return "has no target Pokémon";
             }
 
             return null;
         }
     }
-    public class EvolutionFile : RomFile {
+    public class EvolutionFile : RomFile
+    {
         /// <summary>The game's slot count; <see cref="EvolutionSlots.Current"/> is this ROM's.</summary>
-        public const int numEvolutions = EvolutionSlots.Vanilla;
+        public const int NumEvolutions = EvolutionSlots.Vanilla;
 
-        public EvolutionData[] data;
+        public EvolutionData[] Data;
 
-        public static readonly Dictionary<EvolutionMethod, EvolutionParamMeaning> evoDescriptions = new Dictionary<EvolutionMethod, EvolutionParamMeaning>() {
+        public static readonly Dictionary<EvolutionMethod, EvolutionParamMeaning> EvoDescriptions = new Dictionary<EvolutionMethod, EvolutionParamMeaning>() {
             [EvolutionMethod.None] =    EvolutionParamMeaning.Ignored,
 
             [EvolutionMethod.Friendship220] =       EvolutionParamMeaning.Ignored,
@@ -118,37 +127,46 @@ namespace DSPRE {
             [EvolutionMethod.Loc_Route217] =         EvolutionParamMeaning.Ignored,
         };
 
-        public EvolutionFile(Stream stream) {
-            data = new EvolutionData[EvolutionSlots.Current()];
+        public EvolutionFile(Stream stream)
+        {
+            Data = new EvolutionData[EvolutionSlots.Current()];
 
-            using (BinaryReader reader = new BinaryReader(stream)) {
-                for (int i = 0; i < data.Length && stream.Length - stream.Position >= EvolutionSlots.RecordSize; i++) {
-                    data[i].method = (EvolutionMethod)reader.ReadInt16();
-                    data[i].param = reader.ReadInt16();
-                    data[i].target = reader.ReadInt16();
+            using (BinaryReader reader = new BinaryReader(stream))
+            {
+                for (int i = 0; i < Data.Length && stream.Length - stream.Position >= EvolutionSlots.RecordSize; i++)
+                {
+                    Data[i].Method = (EvolutionMethod)reader.ReadInt16();
+                    Data[i].Param = reader.ReadInt16();
+                    Data[i].Target = reader.ReadInt16();
                 }
             }
         }
 
-        public EvolutionFile(int ID) : this(new FileStream(Path.Combine(RomInfo.gameDirs[DirNames.evolutions].unpackedDir, ID.ToString("D4")), FileMode.Open)) { }
+        public EvolutionFile(int ID) : this(new FileStream(Path.Combine(RomInfo.GameDirs[DirNames.Evolutions].unpackedDir, ID.ToString("D4")), FileMode.Open)) { }
 
         public EvolutionFile() { }
 
-        public override byte[] ToByteArray() {
-            using (MemoryStream memoryStream = new MemoryStream()) {
-                using (BinaryWriter writer = new BinaryWriter(memoryStream)) {
+        public override byte[] ToByteArray()
+        {
+            using (MemoryStream memoryStream = new MemoryStream())
+            {
+                using (BinaryWriter writer = new BinaryWriter(memoryStream))
+                {
                     // Callers check Problem() first, so only empty slots are left out.
-                    foreach (EvolutionData evData in data) {
-                        if (evData.method != EvolutionMethod.None) {
-                            writer.Write((short)evData.method);
-                            writer.Write(evData.param);
-                            writer.Write(evData.target);
+                    foreach (EvolutionData evData in Data)
+                    {
+                        if (evData.Method != EvolutionMethod.None)
+                        {
+                            writer.Write((short)evData.Method);
+                            writer.Write(evData.Param);
+                            writer.Write(evData.Target);
                         }
                     }
 
                     // The game reads the file whole into a buffer of every slot, so it must fill it.
                     int minSize = EvolutionSlots.FileSize(EvolutionSlots.Current());
-                    if (memoryStream.Length < minSize) {
+                    if (memoryStream.Length < minSize)
+                    {
                         memoryStream.SetLength(minSize);
                     }
 
@@ -157,10 +175,12 @@ namespace DSPRE {
             }
         }
 
-        public void SaveToFileDefaultDir(int IDtoReplace, bool showSuccessMessage = true) {
-            SaveToFileDefaultDir(DirNames.evolutions, IDtoReplace, showSuccessMessage);
+        public void SaveToFileDefaultDir(int IDtoReplace, bool showSuccessMessage = true)
+        {
+            SaveToFileDefaultDir(DirNames.Evolutions, IDtoReplace, showSuccessMessage);
         }
-        public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true) {
+        public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true)
+        {
             SaveToFileExplorePath("Gen IV Evolution data", "bin", suggestedFileName, showSuccessMessage);
         }
     }

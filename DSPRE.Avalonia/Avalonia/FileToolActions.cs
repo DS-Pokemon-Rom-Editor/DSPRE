@@ -25,13 +25,13 @@ namespace DSPRE.Avalonia
 
         // ── NARC Utility ───────────────────────────────────────────────────────────
 
-        public static async Task UnpackNarcToFolder(Window owner)
+        public static async Task UnpackNarcToFolderAsync(Window owner)
         {
-            string narcPath = await DialogHelper.OpenFile(owner, "Select an archive to unpack", new[] { NarcFilter, DialogHelper.AllFilter });
+            string narcPath = await DialogHelper.OpenFileAsync(owner, "Select an archive to unpack", new[] { NarcFilter, DialogHelper.AllFilter });
             if (string.IsNullOrEmpty(narcPath)) return;
 
             string ownFolder = ProjectUnpackedFolderFor(narcPath);
-            if (ownFolder != null && !await DialogHelper.AskYesNo(
+            if (ownFolder != null && !await DialogHelper.AskYesNoAsync(
                     "This is one of the open project's archives, and DSPRE already keeps it unpacked here:" + Br + Br + ownFolder + Br + Br
                     + "That folder has the changes made in DSPRE. The archive only gets them when the ROM is saved." + Br + Br
                     + "Unpack the archive anyway?", "Already unpacked by DSPRE", owner))
@@ -40,30 +40,30 @@ namespace DSPRE.Avalonia
             Narc userFile = Narc.Open(narcPath);
             if (userFile is null)
             {
-                await DialogHelper.ShowError("The file you selected is not a valid archive.", "Cannot proceed");
+                await DialogHelper.ShowErrorAsync("The file you selected is not a valid archive.", "Cannot proceed");
                 return;
             }
 
-            string destParent = await DialogHelper.OpenFolder(owner, "Choose where to save the archive's files (a subfolder is created)");
+            string destParent = await DialogHelper.OpenFolderAsync(owner, "Choose where to save the archive's files (a subfolder is created)");
             if (string.IsNullOrEmpty(destParent)) return;
 
             string finalExtractedPath = Path.Combine(destParent, Path.GetFileNameWithoutExtension(narcPath));
             if (Directory.Exists(finalExtractedPath) && Directory.EnumerateFileSystemEntries(finalExtractedPath).Any())
             {
-                if (!await DialogHelper.AskYesNo("Folder \"" + finalExtractedPath + "\" already exists and is not empty.\n" +
+                if (!await DialogHelper.AskYesNoAsync("Folder \"" + finalExtractedPath + "\" already exists and is not empty.\n" +
                     "Delete its contents and unpack here?", "Folder not empty", owner))
                     return;
                 try { Directory.Delete(finalExtractedPath, true); }
                 catch (System.Exception ex) when (ex is IOException || ex is System.UnauthorizedAccessException)
                 {
-                    await DialogHelper.ShowError("Could not delete \"" + finalExtractedPath + "\":\n" + ex.Message, "Archive not unpacked", owner);
+                    await DialogHelper.ShowErrorAsync("Could not delete \"" + finalExtractedPath + "\":\n" + ex.Message, "Archive not unpacked", owner);
                     return;
                 }
             }
             userFile.ExtractToFolder(finalExtractedPath);
-            if (await DialogHelper.AskYesNo("The contents of " + narcPath + " have been extracted to:\n" + finalExtractedPath + Br + Br
+            if (await DialogHelper.AskYesNoAsync("The contents of " + narcPath + " have been extracted to:\n" + finalExtractedPath + Br + Br
                     + "Rename the files by their contents?", "Archive unpacked", owner))
-                await RenameByContentIn(owner, finalExtractedPath, ask: false);
+                await RenameByContentInAsync(owner, finalExtractedPath, ask: false);
         }
 
         // ── Batch rename and name lists ──────────────────────────────────────────────
@@ -71,24 +71,24 @@ namespace DSPRE.Avalonia
 
         private static string FileCount(int n) => n + " file" + (n == 1 ? "" : "s");
 
-        public static async Task RenameByList(Window owner)
+        public static async Task RenameByListAsync(Window owner)
         {
-            string folder = await DialogHelper.OpenFolder(owner, "Choose the folder whose files to rename");
+            string folder = await DialogHelper.OpenFolderAsync(owner, "Choose the folder whose files to rename");
             if (string.IsNullOrEmpty(folder)) return;
             int files = FileListTools.FilesInOrder(folder).Length;
-            if (files == 0) { await DialogHelper.ShowInfo("That folder has no files.", "Batch rename"); return; }
-            string listPath = await DialogHelper.OpenFile(owner, "Choose the list of names", new[] { ListFilter, DialogHelper.AllFilter });
+            if (files == 0) { await DialogHelper.ShowInfoAsync("That folder has no files.", "Batch rename"); return; }
+            string listPath = await DialogHelper.OpenFileAsync(owner, "Choose the list of names", new[] { ListFilter, DialogHelper.AllFilter });
             if (string.IsNullOrEmpty(listPath)) return;
 
             List<string> names = FileListTools.ReadList(File.ReadAllLines(listPath));
-            if (names.Count == 0) { await DialogHelper.ShowError("The list has no names, only comments or empty lines.", "Batch rename error", owner); return; }
+            if (names.Count == 0) { await DialogHelper.ShowErrorAsync("The list has no names, only comments or empty lines.", "Batch rename error", owner); return; }
             int count = Math.Min(files, names.Count);
             string note = names.Count > files ? Br + Br + $"The list has {names.Count} names for {FileCount(files)}; the rest of the list is not used."
                         : names.Count < files ? Br + Br + $"The list has names for {count} of the {FileCount(files)}; the others keep their names." : "";
-            if (!await DialogHelper.AskYesNo($"Rename {FileCount(count)} in \"{folder}\", in name order, to the names in the list? "
+            if (!await DialogHelper.AskYesNoAsync($"Rename {FileCount(count)} in \"{folder}\", in name order, to the names in the list? "
                     + "A name already taken gets a number added." + note, "Batch rename", owner))
                 return;
-            bool isolate = names.Count < files && await DialogHelper.AskYesNo(
+            bool isolate = names.Count < files && await DialogHelper.AskYesNoAsync(
                 $"Move the {FileCount(files - count)} the list does not name into a \"{FileListTools.IsolatedFolderName}\" subfolder?", "Batch rename", owner);
             try
             {
@@ -97,75 +97,75 @@ namespace DSPRE.Avalonia
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError("Renaming stopped part way:\n" + ex.Message, "Batch rename error", owner);
+                await DialogHelper.ShowErrorAsync("Renaming stopped part way:\n" + ex.Message, "Batch rename error", owner);
             }
         }
 
-        public static async Task RenameByContent(Window owner)
+        public static async Task RenameByContentAsync(Window owner)
         {
-            string folder = await DialogHelper.OpenFolder(owner, "Choose the folder whose files to rename");
-            if (!string.IsNullOrEmpty(folder)) await RenameByContentIn(owner, folder, ask: true);
+            string folder = await DialogHelper.OpenFolderAsync(owner, "Choose the folder whose files to rename");
+            if (!string.IsNullOrEmpty(folder)) await RenameByContentInAsync(owner, folder, ask: true);
         }
 
-        private static async Task RenameByContentIn(Window owner, string folder, bool ask)
+        private static async Task RenameByContentInAsync(Window owner, string folder, bool ask)
         {
             int files = FileListTools.FilesInOrder(folder).Length;
-            if (files == 0) { await DialogHelper.ShowInfo("That folder has no files.", "Batch rename"); return; }
-            if (ask && !await DialogHelper.AskYesNo($"Rename the {FileCount(files)} in \"{folder}\" by their contents? "
+            if (files == 0) { await DialogHelper.ShowInfoAsync("That folder has no files.", "Batch rename"); return; }
+            if (ask && !await DialogHelper.AskYesNoAsync($"Rename the {FileCount(files)} in \"{folder}\" by their contents? "
                     + "A name already taken gets a number added.", "Batch rename", owner))
                 return;
             List<string> list;
             try { list = FileListTools.RenameByContent(folder); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError("Renaming stopped part way:\n" + ex.Message, "Batch rename error", owner);
+                await DialogHelper.ShowErrorAsync("Renaming stopped part way:\n" + ex.Message, "Batch rename error", owner);
                 return;
             }
             int named = list.Count - FileListTools.ListHeader("").Count;
-            if (named == 0) { await DialogHelper.ShowInfo("None of the files' contents were recognised.", "Batch rename"); return; }
-            if (!await DialogHelper.AskYesNo($"Renamed {FileCount(named)} by their contents. Save a list of the new names?", "Batch rename", owner)) return;
-            await SaveList(owner, list, Path.GetFileName(folder));
+            if (named == 0) { await DialogHelper.ShowInfoAsync("None of the files' contents were recognised.", "Batch rename"); return; }
+            if (!await DialogHelper.AskYesNoAsync($"Renamed {FileCount(named)} by their contents. Save a list of the new names?", "Batch rename", owner)) return;
+            await SaveListAsync(owner, list, Path.GetFileName(folder));
         }
 
-        public static async Task ListFromFolder(Window owner)
+        public static async Task ListFromFolderAsync(Window owner)
         {
-            string folder = await DialogHelper.OpenFolder(owner, "Choose the folder to list");
+            string folder = await DialogHelper.OpenFolderAsync(owner, "Choose the folder to list");
             if (string.IsNullOrEmpty(folder)) return;
-            if (FileListTools.FilesInOrder(folder).Length == 0) { await DialogHelper.ShowInfo("That folder has no files.", "Name list"); return; }
-            await SaveList(owner, FileListTools.FolderList(folder), Path.GetFileName(folder));
+            if (FileListTools.FilesInOrder(folder).Length == 0) { await DialogHelper.ShowInfoAsync("That folder has no files.", "Name list"); return; }
+            await SaveListAsync(owner, FileListTools.FolderList(folder), Path.GetFileName(folder));
         }
 
-        public static async Task ListFromEnum(Window owner)
+        public static async Task ListFromEnumAsync(Window owner)
         {
-            string source = await DialogHelper.OpenFile(owner, "Choose a C file with an enum, one entry per line", new[] { DialogHelper.AllFilter });
+            string source = await DialogHelper.OpenFileAsync(owner, "Choose a C file with an enum, one entry per line", new[] { DialogHelper.AllFilter });
             if (string.IsNullOrEmpty(source)) return;
             List<string> list;
             try { list = FileListTools.EnumList(File.ReadAllLines(source), Path.GetFileNameWithoutExtension(source)); }
-            catch (FormatException ex) { await DialogHelper.ShowError("The enum could not be read: " + ex.Message, "Name list error", owner); return; }
-            await SaveList(owner, list, Path.GetFileNameWithoutExtension(source));
+            catch (FormatException ex) { await DialogHelper.ShowErrorAsync("The enum could not be read: " + ex.Message, "Name list error", owner); return; }
+            await SaveListAsync(owner, list, Path.GetFileNameWithoutExtension(source));
         }
 
-        private static async Task SaveList(Window owner, List<string> list, string name)
+        private static async Task SaveListAsync(Window owner, List<string> list, string name)
         {
-            string dest = await DialogHelper.SaveFile(owner, "Save the list", new[] { ListFilter }, name + ".list");
+            string dest = await DialogHelper.SaveFileAsync(owner, "Save the list", new[] { ListFilter }, name + ".list");
             if (string.IsNullOrEmpty(dest)) return;
             try { PlainFiles.WriteLines(dest, list); SaveNotice.Exported(dest); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError("The list could not be saved:\n" + ex.Message, "Name list error", owner);
+                await DialogHelper.ShowErrorAsync("The list could not be saved:\n" + ex.Message, "Name list error", owner);
             }
         }
 
-        public static async Task PackFolderToNarc(Window owner)
+        public static async Task PackFolderToNarcAsync(Window owner)
         {
-            string folder = await DialogHelper.OpenFolder(owner, "Select the folder to pack into an archive");
+            string folder = await DialogHelper.OpenFolderAsync(owner, "Select the folder to pack into an archive");
             if (string.IsNullOrEmpty(folder)) return;
 
-            string dest = await DialogHelper.SaveFile(owner, "Save archive as", new[] { NarcFilter }, Path.GetFileName(folder) + ".narc");
+            string dest = await DialogHelper.SaveFileAsync(owner, "Save archive as", new[] { NarcFilter }, Path.GetFileName(folder) + ".narc");
             if (string.IsNullOrEmpty(dest)) return;
 
             string ownFolder = ProjectUnpackedFolderFor(dest);
-            if (ownFolder != null && !await DialogHelper.AskYesNo(
+            if (ownFolder != null && !await DialogHelper.AskYesNoAsync(
                     "This is one of the open project's archives. DSPRE builds it from this folder when the ROM is saved:" + Br + Br + ownFolder + Br + Br
                     + "Putting the files in that folder instead is usually what you want. "
                     + "If you replace the archive, DSPRE asks which copy to keep the next time it checks it." + Br + Br
@@ -184,11 +184,11 @@ namespace DSPRE.Avalonia
         /// </summary>
         private static string ProjectUnpackedFolderFor(string archivePath)
         {
-            if (!AvaloniaEditorLauncher.IsRomLoaded || RomInfo.gameDirs == null || string.IsNullOrEmpty(archivePath)) return null;
+            if (!AvaloniaEditorLauncher.IsRomLoaded || RomInfo.GameDirs == null || string.IsNullOrEmpty(archivePath)) return null;
             string target;
             try { target = Path.GetFullPath(archivePath); }
             catch (System.Exception e) when (e is System.ArgumentException || e is System.NotSupportedException || e is PathTooLongException) { return null; }
-            foreach ((string packedDir, string unpackedDir) paths in RomInfo.gameDirs.Values)
+            foreach ((string packedDir, string unpackedDir) paths in RomInfo.GameDirs.Values)
             {
                 if (string.IsNullOrEmpty(paths.packedDir) || string.IsNullOrEmpty(paths.unpackedDir)) continue;
                 if (!string.Equals(Path.GetFullPath(paths.packedDir), target, System.StringComparison.OrdinalIgnoreCase)) continue;
@@ -200,21 +200,21 @@ namespace DSPRE.Avalonia
 
         // ── NSBMD Utility ──────────────────────────────────────────────────────────
 
-        public static async Task SaveTexturesFromNsbmd(Window owner)
+        public static async Task SaveTexturesFromNsbmdAsync(Window owner)
         {
-            string modelPath = await DialogHelper.OpenFile(owner, "Select a textured model", new[] { NsbmdFilter, DialogHelper.AllFilter });
+            string modelPath = await DialogHelper.OpenFileAsync(owner, "Select a textured model", new[] { NsbmdFilter, DialogHelper.AllFilter });
             if (string.IsNullOrEmpty(modelPath)) return;
 
             byte[] modelFile = DSUtils.ReadFromFile(modelPath);
             int header = NSBUtils.CheckNSBMDHeader(modelFile);
             if (header < 0) return;
-            if (header == NSBUtils.NSBMD_DOESNTHAVE_TEXTURE)
+            if (header == NSBUtils.NsbmdDoesnthaveTexture)
             {
-                await DialogHelper.ShowInfo("This model has no textures.", "No textures to extract");
+                await DialogHelper.ShowInfoAsync("This model has no textures.", "No textures to extract");
                 return;
             }
 
-            string dest = await DialogHelper.SaveFile(owner, "Save textures as", new[] { NsbtxFilter },
+            string dest = await DialogHelper.SaveFileAsync(owner, "Save textures as", new[] { NsbtxFilter },
                 Path.GetFileNameWithoutExtension(modelPath) + ".nsbtx");
             if (string.IsNullOrEmpty(dest)) return;
 
@@ -222,23 +222,23 @@ namespace DSPRE.Avalonia
             SaveNotice.Exported(dest);
         }
 
-        public static async Task RemoveTexturesFromNsbmd(Window owner)
+        public static async Task RemoveTexturesFromNsbmdAsync(Window owner)
         {
-            string modelPath = await DialogHelper.OpenFile(owner, "Select a textured model", new[] { NsbmdFilter, DialogHelper.AllFilter });
+            string modelPath = await DialogHelper.OpenFileAsync(owner, "Select a textured model", new[] { NsbmdFilter, DialogHelper.AllFilter });
             if (string.IsNullOrEmpty(modelPath)) return;
 
             byte[] modelFile = DSUtils.ReadFromFile(modelPath);
             int header = NSBUtils.CheckNSBMDHeader(modelFile);
             if (header < 0) return;
-            if (header == NSBUtils.NSBMD_DOESNTHAVE_TEXTURE)
+            if (header == NSBUtils.NsbmdDoesnthaveTexture)
             {
-                await DialogHelper.ShowInfo("This model already has no textures.", "No textures to remove");
+                await DialogHelper.ShowInfoAsync("This model already has no textures.", "No textures to remove");
                 return;
             }
 
-            if (await DialogHelper.AskYesNo("Save the removed textures to a file as well?", "Save textures?"))
+            if (await DialogHelper.AskYesNoAsync("Save the removed textures to a file as well?", "Save textures?"))
             {
-                string texDest = await DialogHelper.SaveFile(owner, "Save textures as", new[] { NsbtxFilter },
+                string texDest = await DialogHelper.SaveFileAsync(owner, "Save textures as", new[] { NsbtxFilter },
                     Path.GetFileNameWithoutExtension(modelPath) + ".nsbtx");
                 if (!string.IsNullOrEmpty(texDest))
                 {
@@ -246,7 +246,7 @@ namespace DSPRE.Avalonia
                 }
             }
 
-            string dest = await DialogHelper.SaveFile(owner, "Save model without textures as", new[] { NsbmdFilter },
+            string dest = await DialogHelper.SaveFileAsync(owner, "Save model without textures as", new[] { NsbmdFilter },
                 Path.GetFileNameWithoutExtension(modelPath) + "_untextured.nsbmd");
             if (string.IsNullOrEmpty(dest)) return;
 
@@ -254,29 +254,29 @@ namespace DSPRE.Avalonia
             SaveNotice.Exported(dest);
         }
 
-        public static async Task AddTexturesToNsbmd(Window owner)
+        public static async Task AddTexturesToNsbmdAsync(Window owner)
         {
-            string modelPath = await DialogHelper.OpenFile(owner, "Select the model", new[] { NsbmdFilter, DialogHelper.AllFilter });
+            string modelPath = await DialogHelper.OpenFileAsync(owner, "Select the model", new[] { NsbmdFilter, DialogHelper.AllFilter });
             if (string.IsNullOrEmpty(modelPath)) return;
 
             byte[] modelFile = File.ReadAllBytes(modelPath);
             int header = NSBUtils.CheckNSBMDHeader(modelFile);
             if (header < 0) return;
-            if (header == NSBUtils.NSBMD_HAS_TEXTURE)
+            if (header == NSBUtils.NsbmdHasTexture)
             {
-                if (!await DialogHelper.AskYesNo("This model already has textures.\nDo you want to replace them?", "Textures found"))
+                if (!await DialogHelper.AskYesNoAsync("This model already has textures.\nDo you want to replace them?", "Textures found"))
                 {
                     return;
                 }
             }
 
-            string nsbtxPath = await DialogHelper.OpenFile(owner, "Select the new texture file", new[] { NsbtxFilter, DialogHelper.AllFilter });
+            string nsbtxPath = await DialogHelper.OpenFileAsync(owner, "Select the new texture file", new[] { NsbtxFilter, DialogHelper.AllFilter });
             if (string.IsNullOrEmpty(nsbtxPath)) return;
 
             byte[] textureFile = File.ReadAllBytes(nsbtxPath);
             if (!NSBUtils.IsNSBTX(textureFile))
             {
-                await DialogHelper.ShowError("Please select an NSBTX file.", "Model texture tools error", owner);
+                await DialogHelper.ShowErrorAsync("Please select an NSBTX file.", "Model texture tools error", owner);
                 return;
             }
 
@@ -286,7 +286,7 @@ namespace DSPRE.Avalonia
                 baseName = baseName.Substring(0, baseName.Length - "_untextured".Length);
             }
 
-            string dest = await DialogHelper.SaveFile(owner, "Save textured model as", new[] { NsbmdFilter }, baseName + "_textured.nsbmd");
+            string dest = await DialogHelper.SaveFileAsync(owner, "Save textured model as", new[] { NsbmdFilter }, baseName + "_textured.nsbmd");
             if (string.IsNullOrEmpty(dest)) return;
 
             DSUtils.WriteToFile(dest, NSBUtils.BuildNSBMDwithTextures(modelFile, textureFile), fmode: FileMode.Create);

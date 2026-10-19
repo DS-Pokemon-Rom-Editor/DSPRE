@@ -35,7 +35,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _ciSaved.Clear();
             List<Row> rows = ClassIntroPatch.ReadRows() ?? throw new InvalidOperationException("The class intros patch could not be read.");
             foreach (Row r in rows) { _ciRows.Add(r); _ciSaved.Add((byte[])r.Bytes.Clone()); }
-            try { _ciClassNames = GetTrainerClassNames(); } catch { _ciClassNames = Array.Empty<string>(); }
+            try { _ciClassNames = GetTrainerClassNames(); } catch (Exception ex) { AppLogger.WarnOnce("VsIntroEditorViewModel.LoadCiRows", ex); _ciClassNames = Array.Empty<string>(); }
         }
 
         private int CiClassCount => Math.Clamp(_ciClassNames.Length, 1, ClassIntroPatch.Classes);
@@ -344,7 +344,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
             {
-                await DialogHelper.ShowError("The class intros were not saved:\n" + e.Message, Title);
+                await DialogHelper.ShowErrorAsync("The class intros were not saved:\n" + e.Message, Title);
                 Raise(nameof(HasUnsavedChanges));
                 return false;
             }
@@ -367,7 +367,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void ReloadCiNames()
         {
             _names = VsIntroNames.Read();
-            try { _ciClassNames = GetTrainerClassNames(); } catch { }
+            try { _ciClassNames = GetTrainerClassNames(); } catch (Exception ex) { AppLogger.Warn("VS intro editor: class names: " + ex.Message); }
             ListSync.Apply(CiClassNames, Enumerable.Range(0, CiClassCount)
                 .Select(i => $"[{i:D3}] {(i < _ciClassNames.Length ? _ciClassNames[i] : "")}").ToList());
             TrainerChoices.Clear();

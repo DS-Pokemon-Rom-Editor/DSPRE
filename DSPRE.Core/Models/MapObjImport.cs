@@ -22,7 +22,7 @@ namespace DSPRE.Models
                 foreach (string line in File.ReadLines(path).Take(5))
                     if (line.StartsWith("# Written by DSPRE", StringComparison.Ordinal)) return Measure.Dspre;
             }
-            catch { }
+            catch { }   // an unreadable file is treated as a Map Studio export, the default
             return Measure.MapStudio;
         }
 

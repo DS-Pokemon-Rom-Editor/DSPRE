@@ -16,7 +16,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The icon for a move category (0 physical, 1 special, 2 status), or null.</summary>
         public static Bitmap Category(int category)
         {
-            string rom = RomInfo.workDir;
+            string rom = RomInfo.WorkDir;
             if (_cachedFor != rom) { Cache.Clear(); CategoryCache.Clear(); _cachedFor = rom; }
             if (CategoryCache.TryGetValue(category, out Bitmap known)) return known;
             Bitmap icon = category >= 0 && category < BattleObjects.KindOrder.Length ? Render(BattleObjects.KindOrder[category]) : null;
@@ -29,12 +29,12 @@ namespace DSPRE.Avalonia.Data
             try
             {
                 int index = BattleObjects.Find(thing, "Drawing");
-                GraphicAssets.Archive archive = GraphicAssets.All.FirstOrDefault(a => a.Dir == DirNames.battleObj);
+                GraphicAssets.Archive archive = GraphicAssets.All.FirstOrDefault(a => a.Dir == DirNames.BattleObj);
                 if (index < 0 || archive == null) return null;
                 GraphicAssets.Preview p = GraphicAssets.Render(archive, index);
                 return p.Rgba != null ? ImageConverter.FromRgba(p.Rgba, p.Width, p.Height) : null;
             }
-            catch { return null; }
+            catch (System.Exception ex) { AppLogger.WarnOnce("TypeIcons.Render", ex); return null; }
         }
 
         /// <summary>
@@ -43,7 +43,7 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public static Bitmap For(int type)
         {
-            string rom = RomInfo.workDir;
+            string rom = RomInfo.WorkDir;
             if (_cachedFor != rom) { Cache.Clear(); CategoryCache.Clear(); _cachedFor = rom; }
             if (Cache.TryGetValue(type, out Bitmap known)) return known;
 

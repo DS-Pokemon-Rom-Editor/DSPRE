@@ -84,14 +84,14 @@ namespace DSPRE.HgEngine
         }
 
         // Their plaintext folders are the editors' own state, rebuilt from the archive only on request.
-        private static readonly HashSet<RomInfo.DirNames> KeptAfterBuild = new() { RomInfo.DirNames.textArchives, RomInfo.DirNames.scripts };
+        private static readonly HashSet<RomInfo.DirNames> KeptAfterBuild = new() { RomInfo.DirNames.TextArchives, RomInfo.DirNames.Scripts };
 
         /// <summary>The packed archives the project has unpacked, by hash, taken just before make runs.</summary>
         public static Dictionary<RomInfo.DirNames, string> SnapshotUnpackedArchives()
         {
             Dictionary<RomInfo.DirNames, string> hashes = new Dictionary<RomInfo.DirNames, string>();
-            if (RomInfo.gameDirs == null) return hashes;
-            foreach ((RomInfo.DirNames dir, (string packedDir, string unpackedDir) paths) in RomInfo.gameDirs)
+            if (RomInfo.GameDirs == null) return hashes;
+            foreach ((RomInfo.DirNames dir, (string packedDir, string unpackedDir) paths) in RomInfo.GameDirs)
             {
                 if (KeptAfterBuild.Contains(dir) || !Directory.Exists(paths.unpackedDir) || !File.Exists(paths.packedDir)) continue;
                 try { hashes[dir] = Sha1Of(paths.packedDir); }
@@ -114,7 +114,7 @@ namespace DSPRE.HgEngine
             List<RomInfo.DirNames> changed = new List<RomInfo.DirNames>();
             foreach ((RomInfo.DirNames dir, string hash) in before)
             {
-                (string packedDir, string unpackedDir) paths = RomInfo.gameDirs[dir];
+                (string packedDir, string unpackedDir) paths = RomInfo.GameDirs[dir];
                 try
                 {
                     if (!File.Exists(paths.packedDir) || Sha1Of(paths.packedDir) == hash) continue;

@@ -17,8 +17,8 @@ namespace DSPRE.ROMFiles
         #region Fields
 
         public int ID { get;}
-        public List<string> messages;
-        private UInt16 key = 0;
+        public List<string> Messages;
+        private UInt16 _key = 0;
 
         #endregion Fields
 
@@ -30,7 +30,7 @@ namespace DSPRE.ROMFiles
 
             if (msg != null)
             {
-                messages = msg;
+                Messages = msg;
                 return;
             }
 
@@ -64,14 +64,14 @@ namespace DSPRE.ROMFiles
             if (!ReadFromBinFile(jsonPath, binPath))
             {
                 AppMessages.Error($"Failed to read messages from .bin file {ID:D4}. Contents were replaced with empty message!", "Error");
-                messages = new List<string> { "" };
+                Messages = new List<string> { "" };
                 return;
             }
         }
 
         public static (string binPath, string jsonPath) GetFilePaths(int ID)
         {
-            string baseDir = gameDirs[DirNames.textArchives].unpackedDir;
+            string baseDir = GameDirs[DirNames.TextArchives].unpackedDir;
             string binPath = Path.Combine(baseDir, $"{ID:D4}");
             string expandedDir = TextConverter.GetExpandedFolderPath();
             string jsonPath = Path.Combine(expandedDir, $"{ID:D4}.json");
@@ -92,13 +92,13 @@ namespace DSPRE.ROMFiles
                 return true;
             }
 
-            if (!Directory.Exists(gameDirs[DirNames.textArchives].unpackedDir))
+            if (!Directory.Exists(GameDirs[DirNames.TextArchives].unpackedDir))
             {
-                Directory.CreateDirectory(gameDirs[DirNames.textArchives].unpackedDir);
-                AppLogger.Info($"Text Archive: Unpacked folder was unexpectedly missing. Created directory at {gameDirs[DirNames.textArchives].unpackedDir}");
+                Directory.CreateDirectory(GameDirs[DirNames.TextArchives].unpackedDir);
+                AppLogger.Info($"Text Archive: Unpacked folder was unexpectedly missing. Created directory at {GameDirs[DirNames.TextArchives].unpackedDir}");
             }
 
-            if (SettingsManager.Settings.convertLegacyText)
+            if (SettingsManager.Settings.ConvertLegacyText)
             {
                 if (!ConvertLegacyText())
                 {
@@ -110,7 +110,7 @@ namespace DSPRE.ROMFiles
             }
 
             AppLogger.Info("Building .bin files for Text Archives from expanded directory...");
-            if (!TextConverter.FolderToBin(expandedDir, gameDirs[DirNames.textArchives].unpackedDir,
+            if (!TextConverter.FolderToBin(expandedDir, GameDirs[DirNames.TextArchives].unpackedDir,
                     CharMapManager.GetCharMapPath(), out string encodeError))
             {
                 error = "Text archives could not be encoded:\n" + encodeError;
@@ -170,7 +170,7 @@ namespace DSPRE.ROMFiles
         public List<string> GetSimpleTrainerNames()
         {
             List<string> simpleMessages = new List<string>();
-            foreach (string msg in messages)
+            foreach (string msg in Messages)
             {
                 string simpleMsg = TextConverter.GetSimpleTrainerName(msg);
                 simpleMessages.Add(simpleMsg);
@@ -186,20 +186,20 @@ namespace DSPRE.ROMFiles
                 return false;
             }
 
-            if (messageIndex >= messages.Count)
+            if (messageIndex >= Messages.Count)
             {
-                messages.Add("{TRAINER_NAME:" + newSimpleName + "}");
+                Messages.Add("{TRAINER_NAME:" + newSimpleName + "}");
                 return true;
             }
 
-            string currentMessage = messages[messageIndex];
+            string currentMessage = Messages[messageIndex];
             string updatedMessage = TextConverter.ReplaceTrainerName(currentMessage, newSimpleName);
             if (updatedMessage == currentMessage)
             {
                 // No change made
                 return false;
             }
-            messages[messageIndex] = updatedMessage;
+            Messages[messageIndex] = updatedMessage;
             return true;
         }
 
@@ -218,7 +218,7 @@ namespace DSPRE.ROMFiles
             try
             {
                 if (!read.TryReadJsonFile(json)) throw new InvalidDataException("That file holds no text archive.");
-                return read.messages;
+                return read.Messages;
             }
             finally
             {
@@ -245,10 +245,11 @@ namespace DSPRE.ROMFiles
                 // Read key if present
                 if (root.TryGetProperty("key", out JsonElement keyElement))
                 {
-                    key = (UInt16)keyElement.GetInt32();
+                    _key = (UInt16)keyElement.GetInt32();
                 }
-                else {
-                    key = 0;
+                else
+                {
+                    _key = 0;
                     AppLogger.Warn($"No 'key' property found in JSON file {jsonPath}. Defaulting to 0.");
                 }
 
@@ -256,29 +257,29 @@ namespace DSPRE.ROMFiles
                 if (root.TryGetProperty("messages", out JsonElement messagesElement) && 
                     messagesElement.ValueKind == JsonValueKind.Array)
                 {
-                    messages = new List<string>();
+                    Messages = new List<string>();
                     
                     foreach (JsonElement messageElement in messagesElement.EnumerateArray())
                     {
-                        string langCode = TextConverter.langCodes[RomInfo.gameLanguage];
+                        string langCode = TextConverter.LangCodes[RomInfo.GameLanguage];
                         JsonElement textElement;
 
                         // Try to get the message in the current game language
                         if (messageElement.TryGetProperty(langCode, out textElement))
                         {
                             string parsedMessage = ParseMessageValue(textElement);
-                            messages.Add(parsedMessage);
+                            Messages.Add(parsedMessage);
                         }
                         // Fallback to en_US if current language not present
                         else if (messageElement.TryGetProperty("en_US", out textElement))
                         {
                             string parsedMessage = ParseMessageValue(textElement);
-                            messages.Add(parsedMessage);
+                            Messages.Add(parsedMessage);
                         }
                         else
                         {
                             // If neither language is present, add an empty string
-                            messages.Add("");
+                            Messages.Add("");
                         }
                     }
                     
@@ -330,7 +331,7 @@ namespace DSPRE.ROMFiles
                 }
 
                 string keyHex = firstLine.Substring(7).Trim();
-                if (!UInt16.TryParse(keyHex.Replace("0x", ""), System.Globalization.NumberStyles.HexNumber, null, out key))
+                if (!UInt16.TryParse(keyHex.Replace("0x", ""), System.Globalization.NumberStyles.HexNumber, null, out _key))
                 {
                     AppLogger.Error($"Text file {txtPath} has an invalid key format. Bin file will be reextracted.");
                     return false;
@@ -356,7 +357,7 @@ namespace DSPRE.ROMFiles
                 // Remove the first line (the key) from the messages
                 lines.RemoveAt(0);
 
-                messages = lines;
+                Messages = lines;
                 return true;
             }
             catch (Exception ex)
@@ -422,7 +423,7 @@ namespace DSPRE.ROMFiles
 
         public override string ToString()
         {
-            return string.Join(Environment.NewLine, messages);
+            return string.Join(Environment.NewLine, Messages);
         }
 
         /// <summary>
@@ -448,7 +449,7 @@ namespace DSPRE.ROMFiles
             }
 
             PlainFiles.WriteBytes(jsonPath, ToExpandedJsonBytes(IDtoReplace));
-            AppLogger.Debug($"Saved {messages.Count} messages to {jsonPath}");
+            AppLogger.Debug($"Saved {Messages.Count} messages to {jsonPath}");
             RaiseSaved(sender, IDtoReplace);
 
             if (showSuccessMessage)
@@ -493,11 +494,11 @@ namespace DSPRE.ROMFiles
         {
             string jsonPath = GetFilePaths(IDtoReplace).jsonPath;
 
-            string langCode = TextConverter.langCodes[RomInfo.gameLanguage];
+            string langCode = TextConverter.LangCodes[RomInfo.GameLanguage];
             
             // Read existing JSON if it exists to preserve other languages
             Dictionary<string, JsonElement> existingMessages = new Dictionary<string, JsonElement>();
-            UInt16 existingKey = key;
+            UInt16 existingKey = _key;
             
             if (File.Exists(jsonPath))
             {
@@ -553,7 +554,7 @@ namespace DSPRE.ROMFiles
                     writer.WriteStartArray("messages");
 
                     int messageIndex = 0;
-                    foreach (string message in messages)
+                    foreach (string message in Messages)
                     {
                         writer.WriteStartObject();
                         

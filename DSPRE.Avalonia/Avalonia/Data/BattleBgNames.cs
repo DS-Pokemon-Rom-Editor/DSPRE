@@ -312,7 +312,7 @@ namespace DSPRE.Avalonia.Data
             string packed;
             try
             {
-                packed = DSPRE.RomInfo.gameFamily switch
+                packed = DSPRE.RomInfo.GameFamily switch
                 {
                     DSPRE.RomInfo.GameFamilies.HGSS => Johto,
                     DSPRE.RomInfo.GameFamilies.Plat => Platinum,
@@ -320,7 +320,7 @@ namespace DSPRE.Avalonia.Data
                     _ => null,
                 };
             }
-            catch { return System.Array.Empty<string>(); }
+            catch (System.Exception ex) { AppLogger.WarnOnce("BattleBgNames.Names", ex); return System.Array.Empty<string>(); }
             return packed == null
                 ? System.Array.Empty<string>()
                 : packed.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);

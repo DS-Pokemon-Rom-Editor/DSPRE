@@ -24,7 +24,7 @@ namespace DSPRE.Tests.Models
             Skip.If(!Directory.Exists(project), $"{game} test project not configured");
 
             new RomInfo(code, project);
-            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.maps });
+            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.Maps });
 
             int withBuildings = 0;
             long buildings = 0;
@@ -32,14 +32,14 @@ namespace DSPRE.Tests.Models
             foreach (int id in new[] { 0, 3, 11, 40, 90, 150 })
             {
                 MapFile map;
-                try { map = new MapFile(id, RomInfo.gameFamily, discardMoveperms: false, showMessages: false); }
+                try { map = new MapFile(id, RomInfo.GameFamily, discardMoveperms: false, showMessages: false); }
                 catch { continue; }
-                if (map.mapModelData == null || map.buildings == null || map.buildings.Count == 0) continue;
+                if (map.MapModelData == null || map.Buildings == null || map.Buildings.Count == 0) continue;
 
                 byte[] wasBuildings = map.BuildingsToByteArray();
-                int wasCount = map.buildings.Count;
+                int wasCount = map.Buildings.Count;
 
-                MapMesh mesh = MapMesh.Read(map.mapModelData, out string whynot);
+                MapMesh mesh = MapMesh.Read(map.MapModelData, out string whynot);
                 Assert.True(mesh != null, $"map {id}: {whynot}");
 
                 Func<int, string> pictureOf = m =>
@@ -55,13 +55,13 @@ namespace DSPRE.Tests.Models
                 Assert.True(built != null, $"map {id}: {why}");
 
                 map.LoadMapModel(built, showMessages: false);
-                map.mapModelData = built;
+                map.MapModelData = built;
 
-                Assert.Equal(wasCount, map.buildings.Count);
+                Assert.Equal(wasCount, map.Buildings.Count);
                 Assert.True(wasBuildings.SequenceEqual(map.BuildingsToByteArray()),
                     $"map {id}: the buildings changed when only the shape was rebuilt from tiles.");
 
-                MapMesh after = MapMesh.Read(map.mapModelData, out _);
+                MapMesh after = MapMesh.Read(map.MapModelData, out _);
                 Assert.NotNull(after);
 
                 withBuildings++;
@@ -79,17 +79,17 @@ namespace DSPRE.Tests.Models
             Skip.If(!Directory.Exists(TestRoms.Platinum), "Platinum test project not configured");
 
             new RomInfo("CPUE", TestRoms.Platinum);
-            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.maps });
+            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.Maps });
 
-            MapFile map = new MapFile(0, RomInfo.gameFamily, discardMoveperms: false, showMessages: false);
-            Skip.If(map.buildings == null || map.buildings.Count == 0, "That map carries no buildings.");
+            MapFile map = new MapFile(0, RomInfo.GameFamily, discardMoveperms: false, showMessages: false);
+            Skip.If(map.Buildings == null || map.Buildings.Count == 0, "That map carries no buildings.");
 
-            MapMesh mesh = MapMesh.Read(map.mapModelData, out _);
+            MapMesh mesh = MapMesh.Read(map.MapModelData, out _);
             List<BdhcBuild.Piece> pieces = BdhcBuild.PiecesOf(mesh, mesh.ModelScale);
             Assert.NotEmpty(pieces);
 
             _out.WriteLine($"{mesh.Faces.Count} faces of the map's own shape became {pieces.Count} "
-                         + $"pieces of ground, with {map.buildings.Count} buildings taking no part.");
+                         + $"pieces of ground, with {map.Buildings.Count} buildings taking no part.");
 
             Assert.True(pieces.Count <= mesh.Faces.Count);
         }

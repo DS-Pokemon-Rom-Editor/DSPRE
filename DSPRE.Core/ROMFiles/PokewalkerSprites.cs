@@ -30,7 +30,7 @@ namespace DSPRE.ROMFiles
         public static PokewalkerSprites Load(int pictureCount, out string error)
         {
             error = null;
-            if (RomInfo.gameFamily != RomInfo.GameFamilies.HGSS) { error = "The Pokéwalker is in HeartGold and SoulSilver."; return null; }
+            if (RomInfo.GameFamily != RomInfo.GameFamilies.HGSS) { error = "The Pokéwalker is in HeartGold and SoulSilver."; return null; }
             try
             {
                 return HgEngineProject.IsActive ? FromHgEngine(pictureCount, out error) : FromRom(pictureCount, out error);

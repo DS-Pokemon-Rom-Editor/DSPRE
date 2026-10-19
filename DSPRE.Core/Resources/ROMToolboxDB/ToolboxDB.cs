@@ -5,21 +5,24 @@ using System.Reflection;
 using System.Resources;
 using static DSPRE.RomInfo;
 
-namespace DSPRE.Resources.ROMToolboxDB {
-    public class ToolboxDB {
-        internal class ARM9PatchData {
-            internal string initString;
-            internal string branchString;
+namespace DSPRE.Resources.ROMToolboxDB
+{
+    public class ToolboxDB
+    {
+        internal class ARM9PatchData
+        {
+            internal string InitString;
+            internal string BranchString;
 
-            internal uint branchOffset;
-            internal uint initOffset;
+            internal uint BranchOffset;
+            internal uint InitOffset;
 
-            internal string y9String;
+            internal string Y9String;
 
             // What DSPRE wrote, and where, before every dump's sites were measured into RomLocator.Arm9ExpansionSitesIn.
             // Only recognising those installs reads it: some places differ from the measured ones (Pearl took Diamond's,
             // and German HGSS's loader offset was mistyped), and HGSS English and Spanish called the loader through r5.
-            public static Dictionary<string, string> arm9ExpansionCodeDB = new Dictionary<string, string>() {
+            public static Dictionary<string, string> Arm9ExpansionCodeDB = new Dictionary<string, string>() {
                 // Branches
                 // DP
                 ["branchString" + "_" + RomInfo.GameFamilies.DP + "_" + RomInfo.GameLanguages.English]      = "05 F1 5C FF",
@@ -69,7 +72,7 @@ namespace DSPRE.Resources.ROMToolboxDB {
                 ["initString" + "_" + RomInfo.GameFamilies.HGSS + "_" + RomInfo.GameLanguages.Japanese] = "FC B5 04 48 1C 21 00 22 F6 F6 08 FF 00 20 03 21 FC BD 00 00 00 80 3C 02 00",
 
             };
-            public static Dictionary<string, uint> arm9ExpansionOffsetsDB = new Dictionary<string, uint>() {
+            public static Dictionary<string, uint> Arm9ExpansionOffsetsDB = new Dictionary<string, uint>() {
                 // Branch offsets
                 ["branchOffset" + "_" + RomInfo.GameFamilies.DP]    = 0x02000C80, //Valid also for P
                 ["branchOffset" + "_" + RomInfo.GameFamilies.Plat]  = 0x02000CB4, 
@@ -100,10 +103,10 @@ namespace DSPRE.Resources.ROMToolboxDB {
                 ["initOffset" + "_" + RomInfo.GameFamilies.HGSS + "_" + RomInfo.GameLanguages.Japanese] = 0x02110604,
             };
 
-            private static string Key(string field) => field + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage;
+            private static string Key(string field) => field + "_" + RomInfo.GameFamily + "_" + RomInfo.GameLanguage;
 
             /// <summary>Whether an older DSPRE had a per-language install for this ROM.</summary>
-            internal static bool HasLanguageEntry => arm9ExpansionCodeDB.ContainsKey(Key(nameof(branchString)));
+            internal static bool HasLanguageEntry => Arm9ExpansionCodeDB.ContainsKey(Key(nameof(BranchString)));
 
             /// <summary>Whether DSPRE can apply the expansion to this ROM.</summary>
             internal static bool Supported => RomLocator.Arm9ExpansionSites != null || HasLanguageEntry;
@@ -111,58 +114,60 @@ namespace DSPRE.Resources.ROMToolboxDB {
             /// <summary>The dumps with measured sites or a per-language entry, the two ways <see cref="Supported"/> passes.</summary>
             internal static List<(string id, int rev)> SupportedDumps =>
                 RomLocator.WorksOn(RomLocator.Arm9ExpansionSitesIn)
-                    .Concat(RomInfo.KnownDumps.Where(d => arm9ExpansionCodeDB.ContainsKey(nameof(branchString) + "_" + RomInfo.FamilyOfCode(d.id) + "_" + RomInfo.LanguageOfCode(d.id))))
+                    .Concat(RomInfo.KnownDumps.Where(d => Arm9ExpansionCodeDB.ContainsKey(nameof(BranchString) + "_" + RomInfo.FamilyOfCode(d.id) + "_" + RomInfo.LanguageOfCode(d.id))))
                     .Distinct().ToList();
 
             /// <summary>The expansion for this ROM: its measured sites where it has them, else the per-language entry.</summary>
             internal ARM9PatchData() : this(RomLocator.Arm9ExpansionSites == null) { }
 
             /// <param name="languageEntry">The per-language entry even where measured sites exist, to recognise an older apply.</param>
-            internal ARM9PatchData(bool languageEntry) {
+            internal ARM9PatchData(bool languageEntry)
+            {
                 if (!languageEntry && RomLocator.Arm9ExpansionSites is Arm9ExpansionSites sites)
                 {
                     // push {r2-r7, lr}; ldr r0, =synthetic overlay; movs r1, #archive; movs r2, #member; bl file loader;
                     // movs r0, #0; movs r1, #3 (the boot pair it replaced); pop {r2-r7, pc}; .word synthetic overlay.
-                    List<byte> loader = new List<byte> { 0xFC, 0xB5, 0x04, 0x48, RomInfo.synthOverlayArchiveId, 0x21,
-                        (byte)syntheticOverlayFileNumbersDB[RomInfo.gameFamily], 0x22 };
-                    loader.AddRange(PatchToolboxLogic.BuildThumbBl(ARM9.address + sites.Loader + 8, sites.FileLoader));
+                    List<byte> loader = new List<byte> { 0xFC, 0xB5, 0x04, 0x48, RomInfo.SynthOverlayArchiveId, 0x21,
+                        (byte)SyntheticOverlayFileNumbersDB[RomInfo.GameFamily], 0x22 };
+                    loader.AddRange(PatchToolboxLogic.BuildThumbBl(ARM9.Address + sites.Loader + 8, sites.FileLoader));
                     loader.AddRange(new byte[] { 0x00, 0x20, 0x03, 0x21, 0xFC, 0xBD, 0x00, 0x00 });
-                    loader.AddRange(BitConverter.GetBytes(RomInfo.synthOverlayLoadAddress));
+                    loader.AddRange(BitConverter.GetBytes(RomInfo.SynthOverlayLoadAddress));
                     loader.Add(0x00);
-                    branchOffset = sites.Boot;
-                    initOffset = sites.Loader;
-                    branchString = Hex(PatchToolboxLogic.BuildThumbBl(ARM9.address + sites.Boot, ARM9.address + sites.Loader));
-                    initString = Hex(loader);
+                    BranchOffset = sites.Boot;
+                    InitOffset = sites.Loader;
+                    BranchString = Hex(PatchToolboxLogic.BuildThumbBl(ARM9.Address + sites.Boot, ARM9.Address + sites.Loader));
+                    InitString = Hex(loader);
                     return;
                 }
-                if (RomInfo.gameFamily == GameFamilies.HGSS && RomInfo.gameLanguage == GameLanguages.Japanese)
+                if (RomInfo.GameFamily == GameFamilies.HGSS && RomInfo.GameLanguage == GameLanguages.Japanese)
                 {
-                    branchOffset = arm9ExpansionOffsetsDB[nameof(branchOffset) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage] - ARM9.address;
+                    BranchOffset = Arm9ExpansionOffsetsDB[nameof(BranchOffset) + "_" + RomInfo.GameFamily + "_" + RomInfo.GameLanguage] - ARM9.Address;
                 }
                 else
                 {
-                    branchOffset = arm9ExpansionOffsetsDB[nameof(branchOffset) + "_" + RomInfo.gameFamily] - ARM9.address;
+                    BranchOffset = Arm9ExpansionOffsetsDB[nameof(BranchOffset) + "_" + RomInfo.GameFamily] - ARM9.Address;
                 }
-                initOffset = arm9ExpansionOffsetsDB[nameof(initOffset) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage] - ARM9.address;
-                branchString = arm9ExpansionCodeDB[nameof(branchString) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage];
-                initString = arm9ExpansionCodeDB[nameof(initString) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage];
+                InitOffset = Arm9ExpansionOffsetsDB[nameof(InitOffset) + "_" + RomInfo.GameFamily + "_" + RomInfo.GameLanguage] - ARM9.Address;
+                BranchString = Arm9ExpansionCodeDB[nameof(BranchString) + "_" + RomInfo.GameFamily + "_" + RomInfo.GameLanguage];
+                InitString = Arm9ExpansionCodeDB[nameof(InitString) + "_" + RomInfo.GameFamily + "_" + RomInfo.GameLanguage];
             }
 
             private static string Hex(IEnumerable<byte> bytes) => string.Join(" ", bytes.Select(b => b.ToString("X2")));
         }
-        internal class BDHCAMPatchData {
-            internal byte overlayNumber;
+        internal class BDHCAMPatchData
+        {
+            internal byte OverlayNumber;
 
-            internal uint branchOffset;
-            internal string branchString;
+            internal uint BranchOffset;
+            internal string BranchString;
 
-            internal uint overlayOffset1;
-            internal uint overlayOffset2;
+            internal uint OverlayOffset1;
+            internal uint OverlayOffset2;
 
-            internal string overlayString1;
-            internal string overlayString2;
+            internal string OverlayString1;
+            internal string OverlayString2;
 
-            internal byte[] subroutine;
+            internal byte[] Subroutine;
 
             public static Dictionary<string, string> BDHCamCodeDB = new Dictionary<string, string>() {
                 ["branchString" + "_" + RomInfo.GameFamilies.Plat + "_" + RomInfo.GameLanguages.English] = "B9 F3 E2 F8",
@@ -181,38 +186,42 @@ namespace DSPRE.Resources.ROMToolboxDB {
                     new BDHCAMPatchData();
                     return true;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    AppLogger.WarnOnce("BDHCAMPatchData.SupportsCurrentRom", ex);
                     return false;
                 }
             }
 
-            internal BDHCAMPatchData() {
+            internal BDHCAMPatchData()
+            {
                 RomInfo.BdhcamSites sites = RomLocator.BdhcamSites ?? throw new NotSupportedException();
-                string codeKey = RomInfo.gameFamily == GameFamilies.HGSS
-                    ? nameof(branchString) + "_" + RomInfo.gameFamily
-                    : nameof(branchString) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage;
-                if (!BDHCamCodeDB.TryGetValue(codeKey, out branchString)) throw new NotSupportedException();
-                overlayNumber = (byte)sites.Overlay;
-                branchOffset = sites.Branch;
-                overlayOffset1 = sites.Hook1;
-                overlayOffset2 = sites.Hook2;
-                overlayString1 = BDHCamCodeDB[nameof(overlayString1)];
-                overlayString2 = BDHCamCodeDB[nameof(overlayString2)];
-                subroutine = (byte[])new ResourceManager("DSPRE.Resources.ROMToolboxDB.BDHCAMPatchDB", Assembly.GetExecutingAssembly()).GetObject(RomInfo.romID + "_cam");
-                if (subroutine == null) {
+                string codeKey = RomInfo.GameFamily == GameFamilies.HGSS
+                    ? nameof(BranchString) + "_" + RomInfo.GameFamily
+                    : nameof(BranchString) + "_" + RomInfo.GameFamily + "_" + RomInfo.GameLanguage;
+                if (!BDHCamCodeDB.TryGetValue(codeKey, out BranchString)) throw new NotSupportedException();
+                OverlayNumber = (byte)sites.Overlay;
+                BranchOffset = sites.Branch;
+                OverlayOffset1 = sites.Hook1;
+                OverlayOffset2 = sites.Hook2;
+                OverlayString1 = BDHCamCodeDB[nameof(OverlayString1)];
+                OverlayString2 = BDHCamCodeDB[nameof(OverlayString2)];
+                Subroutine = (byte[])new ResourceManager("DSPRE.Resources.ROMToolboxDB.BDHCAMPatchDB", Assembly.GetExecutingAssembly()).GetObject(RomInfo.RomID + "_cam");
+                if (Subroutine == null)
+                {
                     throw new NotSupportedException();
                 }
             }
         }
-        internal class BuildingRotationPatchData {
-            internal byte overlayNumber;
-            internal uint hookOverlayOffset;
-            internal uint hookRuntimeAddress;
-            internal uint rotationMatrixFunctionAddress;
-            internal const uint payloadInternalBranchOffset = 0x08;
+        internal class BuildingRotationPatchData
+        {
+            internal byte OverlayNumber;
+            internal uint HookOverlayOffset;
+            internal uint HookRuntimeAddress;
+            internal uint RotationMatrixFunctionAddress;
+            internal const uint PayloadInternalBranchOffset = 0x08;
 
-            internal byte[] payload;
+            internal byte[] Payload;
 
             internal static bool SupportsCurrentRom()
             {
@@ -221,8 +230,9 @@ namespace DSPRE.Resources.ROMToolboxDB {
                     new BuildingRotationPatchData();
                     return true;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    AppLogger.WarnOnce("BuildingRotationPatchData.SupportsCurrentRom", ex);
                     return false;
                 }
             }
@@ -230,11 +240,11 @@ namespace DSPRE.Resources.ROMToolboxDB {
             internal BuildingRotationPatchData()
             {
                 RomInfo.BuildingRotationSites sites = RomLocator.BuildingRotationSites ?? throw new NotSupportedException();
-                overlayNumber = (byte)sites.Overlay;
-                hookOverlayOffset = sites.Hook;
-                hookRuntimeAddress = OverlayUtils.OverlayTable.GetRAMAddress(sites.Overlay) + sites.Hook;
-                rotationMatrixFunctionAddress = sites.RotationRoutine;
-                payload = LoadPayload();
+                OverlayNumber = (byte)sites.Overlay;
+                HookOverlayOffset = sites.Hook;
+                HookRuntimeAddress = OverlayUtils.OverlayTable.GetRAMAddress(sites.Overlay) + sites.Hook;
+                RotationMatrixFunctionAddress = sites.RotationRoutine;
+                Payload = LoadPayload();
             }
 
             // Japanese DP's field code keeps the building in r4 and the matrix at sp+0x24, and its hook replaces
@@ -248,9 +258,9 @@ namespace DSPRE.Resources.ROMToolboxDB {
 
             private byte[] LoadPayload()
             {
-                if (RomInfo.gameFamily == GameFamilies.DP && RomInfo.gameLanguage == GameLanguages.Japanese) return (byte[])JapaneseDpPayload.Clone();
+                if (RomInfo.GameFamily == GameFamilies.DP && RomInfo.GameLanguage == GameLanguages.Japanese) return (byte[])JapaneseDpPayload.Clone();
                 // One routine per family; only its call into the rotation routine differs by dump, and that is rebuilt on apply.
-                string key = RomInfo.gameFamily switch { GameFamilies.DP => "ADAE", GameFamilies.Plat => "CPUE", _ => "IPKE" };
+                string key = RomInfo.GameFamily switch { GameFamilies.DP => "ADAE", GameFamilies.Plat => "CPUE", _ => "IPKE" };
                 byte[] payload = (byte[])new ResourceManager("DSPRE.Resources.ROMToolboxDB.BuildingRotationPatchDB", Assembly.GetExecutingAssembly()).GetObject(key + "_rotation");
                 if (payload == null)
                 {
@@ -260,23 +270,26 @@ namespace DSPRE.Resources.ROMToolboxDB {
                 return payload;
             }
         }
-        internal class DynamicHeadersPatchData {
-            internal uint initOffset;
-            internal string initString;
+        internal class DynamicHeadersPatchData
+        {
+            internal uint InitOffset;
+            internal string InitString;
             internal string REFERENCE_STRING = "19 00 C0 46";
 
             // HGSS: one header read loads the table address between its (mov r1, #0x18) and its mul, so it is undone by
             // hand. Distances from the init site, like the pointer table below.
-            internal int specialCaseOffset1 = 0x2BA;
-            internal int specialCaseOffset2 = 0x2BE;
-            internal int specialCaseOffset3 = 0x2D4;
+            internal int SpecialCaseOffset1 = 0x2BA;
+            internal int SpecialCaseOffset2 = 0x2BE;
+            internal int SpecialCaseOffset3 = 0x2D4;
 
-            internal string specialCaseData1 = "19 00";
-            internal string specialCaseData2 = "C0 46";
-            internal string specialCaseData3 = "00 00 00 00";
+            internal string SpecialCaseData1 = "19 00";
+            internal string SpecialCaseData2 = "C0 46";
+            internal string SpecialCaseData3 = "00 00 00 00";
 
-            public static string getDynamicHeadersInitString(string romID) {
-                switch (romID) {
+            public static string GetDynamicHeadersInitString(string romID)
+            {
+                switch (romID)
+                {
                     case "CPUE":
                         return "00 B5 01 1C 94 20 00 22 CC F7 48 FD 03 1C DE F7 C7 F8 00 BD";
                     case "CPUS":
@@ -297,7 +310,7 @@ namespace DSPRE.Resources.ROMToolboxDB {
             }
             // Format: the (headerID * 0x18) instruction and the (ARM9_HEADER_TABLE_OFFSET + n) literal, as distances from the
             // init site (RomLocator.Thing.DynamicHeadersInit), which every dump keeps the same.
-            public static Dictionary<GameFamilies, Tuple<uint, uint>[]> dynamicHeadersPointersDB = new Dictionary<GameFamilies, Tuple<uint, uint>[]>() {
+            public static Dictionary<GameFamilies, Tuple<uint, uint>[]> DynamicHeadersPointersDB = new Dictionary<GameFamilies, Tuple<uint, uint>[]>() {
                 [GameFamilies.Plat] = new Tuple<uint, uint>[] {
                     new Tuple<uint, uint>(0x1A, 0x24),
                     new Tuple<uint, uint>(0x2E, 0x38),
@@ -352,20 +365,21 @@ namespace DSPRE.Resources.ROMToolboxDB {
 
             internal static bool SupportsCurrentRom => RomLocator.Where(RomLocator.Thing.DynamicHeadersInit) != null;
 
-            internal DynamicHeadersPatchData() {
-                initOffset = (uint)(RomLocator.Where(RomLocator.Thing.DynamicHeadersInit)?.Offset ?? throw new NotSupportedException());
-                initString = getDynamicHeadersInitString(RomInfo.romID);
+            internal DynamicHeadersPatchData()
+            {
+                InitOffset = (uint)(RomLocator.Where(RomLocator.Thing.DynamicHeadersInit)?.Offset ?? throw new NotSupportedException());
+                InitString = GetDynamicHeadersInitString(RomInfo.RomID);
             }
         }
 
-        public static Dictionary<GameFamilies, uint> syntheticOverlayFileNumbersDB = new Dictionary<GameFamilies, uint>() {
+        public static Dictionary<GameFamilies, uint> SyntheticOverlayFileNumbersDB = new Dictionary<GameFamilies, uint>() {
             [GameFamilies.DP] = 9,
             [GameFamilies.Plat] = 9,
             [GameFamilies.HGSS] = 0,
         };
 
         // Distances from RomLocator.Thing.MatrixExpansionCode, and what goes there.
-        public static Dictionary<uint[], string> matrixExpansionDB = new Dictionary<uint[], string>() {
+        public static Dictionary<uint[], string> MatrixExpansionDB = new Dictionary<uint[], string>() {
             [new uint[] { 0x0 }] = "FF 01",
             [new uint[] { 0x2 }] = "76 01",
             [new uint[] { 0x9A }] = "C9 01",

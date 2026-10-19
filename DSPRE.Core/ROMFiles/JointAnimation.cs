@@ -38,8 +38,8 @@ namespace DSPRE.ROMFiles
             NSBCA.NSBCA_File.J_AC jac = file.JAC[animation];
             FrameCount = Math.Max(1, (int)jac.NrFrames);
             Count = file.JAC.Length;
-            Name = file.JNT0.names != null && animation < file.JNT0.names.Length
-                ? (file.JNT0.names[animation] ?? "").Trim() : null;
+            Name = file.JNT0.Names != null && animation < file.JNT0.Names.Length
+                ? (file.JNT0.Names[animation] ?? "").Trim() : null;
             AnimatedObjects = (jac.ObjInfo ?? Array.Empty<NSBCA.NSBCA_File.J_AC.objInfo>())
                 .Where(Drives).Select(o => (int)o.ID).Distinct().ToArray();
         }
@@ -52,9 +52,9 @@ namespace DSPRE.ROMFiles
             try
             {
                 NSBCA.NSBCA_File file = NSBCA.Read(data);
-                return file.JNT0.names?.Select(n => (n ?? "").Trim()).ToArray() ?? Array.Empty<string>();
+                return file.JNT0.Names?.Select(n => (n ?? "").Trim()).ToArray() ?? Array.Empty<string>();
             }
-            catch { return Array.Empty<string>(); }
+            catch (Exception ex) { AppLogger.WarnOnce("JointAnimation.NamesIn", ex); return Array.Empty<string>(); }
         }
 
         /// <summary>Reads one, or null when the file is some other kind of animation.</summary>
@@ -64,7 +64,7 @@ namespace DSPRE.ROMFiles
             if (Encoding.ASCII.GetString(data, 0, 4) != "BCA0") return null;
 
             NSBCA.NSBCA_File file;
-            try { file = NSBCA.Read(data); } catch { return null; }
+            try { file = NSBCA.Read(data); } catch (Exception ex) { AppLogger.WarnOnce("JointAnimation.Load", ex); return null; }
             if (file.JAC == null || animation < 0 || animation >= file.JAC.Length) return null;
             if (file.JAC[animation].ObjInfo == null) return null;
             return new JointAnimation(file, animation);
@@ -77,15 +77,15 @@ namespace DSPRE.ROMFiles
             HasTranslation(o) || HasRotation(o) || HasScale(o);
 
         private static bool HasTranslation(NSBCA.NSBCA_File.J_AC.objInfo o) =>
-            (o.translate?.Any(l => l != null && l.Count > 0) ?? false)
-            || (o.translate_keyframes?.Any(l => l != null && l.Count > 0) ?? false);
+            (o.Translate?.Any(l => l != null && l.Count > 0) ?? false)
+            || (o.TranslateKeyframes?.Any(l => l != null && l.Count > 0) ?? false);
 
         private static bool HasRotation(NSBCA.NSBCA_File.J_AC.objInfo o) =>
-            (o.rotate_keyframes?[0]?.Count ?? 0) > 0;
+            (o.RotateKeyframes?[0]?.Count ?? 0) > 0;
 
         private static bool HasScale(NSBCA.NSBCA_File.J_AC.objInfo o) =>
-            (o.scale?.Any(x => x != null && x[0] != null && x[0].Count > 0) ?? false)
-            || (o.scale_keyframes?.Any(x => x != null && x[0] != null && x[0].Count > 0) ?? false);
+            (o.Scale?.Any(x => x != null && x[0] != null && x[0].Count > 0) ?? false)
+            || (o.ScaleKeyframes?.Any(x => x != null && x[0] != null && x[0].Count > 0) ?? false);
 
         /// <summary>
         /// The matrix to use for one model part on one frame, or null when this animation leaves that part
@@ -116,24 +116,24 @@ namespace DSPRE.ROMFiles
                             modelObject.TransVect[1] * modelScale,
                             modelObject.TransVect[2] * modelScale };
             if (r == null && modelObject != null && modelObject.IsRotated)
-                r = modelObject.rotate_mtx;
-            if (s == null && modelObject != null && modelObject.IsScaled && modelObject.scale != null)
-                s = new[] { modelObject.scale[0], modelObject.scale[1], modelObject.scale[2] };
+                r = modelObject.RotateMtx;
+            if (s == null && modelObject != null && modelObject.IsScaled && modelObject.Scale != null)
+                s = new[] { modelObject.Scale[0], modelObject.Scale[1], modelObject.Scale[2] };
 
             if (modelScale <= 0f) modelScale = 1f;
 
-            float[] m = NSBMDGlRenderer.loadIdentity();
+            float[] m = NSBMDGlRenderer.LoadIdentity();
             if (t != null)
-                m = NSBMDGlRenderer.multMatrix(m, Translate(t[0] / modelScale, t[1] / modelScale, t[2] / modelScale));
-            if (r != null) m = NSBMDGlRenderer.multMatrix(m, r);
+                m = NSBMDGlRenderer.MultMatrix(m, Translate(t[0] / modelScale, t[1] / modelScale, t[2] / modelScale));
+            if (r != null) m = NSBMDGlRenderer.MultMatrix(m, r);
             if (s != null)
-                m = NSBMDGlRenderer.multMatrix(m, NSBMDGlRenderer.scale(NSBMDGlRenderer.loadIdentity(), s[0], s[1], s[2]));
+                m = NSBMDGlRenderer.MultMatrix(m, NSBMDGlRenderer.Scale(NSBMDGlRenderer.LoadIdentity(), s[0], s[1], s[2]));
             return m;
         }
 
         private static float[] Translate(float x, float y, float z)
         {
-            float[] m = NSBMDGlRenderer.loadIdentity();
+            float[] m = NSBMDGlRenderer.LoadIdentity();
             m[12] = x; m[13] = y; m[14] = z;
             return m;
         }
@@ -142,7 +142,7 @@ namespace DSPRE.ROMFiles
         {
             if (!HasTranslation(o)) return null;
             float[] v = new float[3];
-            for (int k = 0; k < 3; k++) v[k] = Track(o.translate?[k], o.translate_keyframes?[k], frame, 0f);
+            for (int k = 0; k < 3; k++) v[k] = Track(o.Translate?[k], o.TranslateKeyframes?[k], frame, 0f);
             return v;
         }
 
@@ -151,7 +151,7 @@ namespace DSPRE.ROMFiles
             if (!HasScale(o)) return null;
             float[] v = new float[3];
             for (int k = 0; k < 3; k++)
-                v[k] = Track(o.scale?[k]?[0], o.scale_keyframes?[k]?[0], frame, 1f);
+                v[k] = Track(o.Scale?[k]?[0], o.ScaleKeyframes?[k]?[0], frame, 1f);
 
             // A scale of zero would squash the part out of existence, which is not something the games
             // do; where one turns up it means that axis is not really being scaled, so leave it alone.
@@ -170,8 +170,8 @@ namespace DSPRE.ROMFiles
         /// <summary>The turn for one frame, read out of the animation's pivot pool. </summary>
         private static float[] Rotation(NSBCA.NSBCA_File.J_AC jac, NSBCA.NSBCA_File.J_AC.objInfo o, int frame)
         {
-            List<float> indices = o.rotate_keyframes?[0];
-            List<float> modes = o.rotate_keyframes?[1];
+            List<float> indices = o.RotateKeyframes?[0];
+            List<float> modes = o.RotateKeyframes?[1];
             if (indices == null || indices.Count == 0) return null;
 
             int at = frame % indices.Count;
@@ -187,7 +187,7 @@ namespace DSPRE.ROMFiles
             short a = BitConverter.ToInt16(pool, off + 2);
             short b = BitConverter.ToInt16(pool, off + 4);
 
-            return NSBMD.mtxPivot(new[] { a / 4096f, b / 4096f }, packed & 0xF, (packed >> 4) & 0xF);
+            return NSBMD.MtxPivot(new[] { a / 4096f, b / 4096f }, packed & 0xF, (packed >> 4) & 0xF);
         }
     }
 }

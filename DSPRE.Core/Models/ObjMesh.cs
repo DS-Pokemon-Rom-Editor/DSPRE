@@ -260,7 +260,7 @@ namespace DSPRE.Models
                 {
                     if (current != null)
                         try { current.Look = MaterialLook.FromRecord(Convert.FromHexString(line.Substring(7).Trim())); }
-                        catch (FormatException) { }
+                        catch (FormatException) { }   // a look line that isn't hex leaves the material's default look
                     continue;
                 }
                 if (line.StartsWith("# picture ", StringComparison.Ordinal))

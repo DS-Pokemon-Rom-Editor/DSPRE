@@ -22,28 +22,28 @@ namespace DSPRE.Avalonia.Data
         private readonly Dictionary<int, List<string>> _banks = new();
 
         public DexSample(int species = 0) =>
-            Species = species > 0 ? species : gameFamily == GameFamilies.DP ? DiamondPearlSpecies : DefaultSpecies;
+            Species = species > 0 ? species : GameFamily == GameFamilies.DP ? DiamondPearlSpecies : DefaultSpecies;
 
         public string Text(ScreenText t, string variant)
         {
             int species = Species + t.Offset;
             switch (t.Kind)
             {
-                case ScreenTextKind.Message: return Fill(Line(pokedexMessagesTextNumber, t.Line), t.Args);
+                case ScreenTextKind.Message: return Fill(Line(PokedexMessagesTextNumber, t.Line), t.Args);
                 case ScreenTextKind.SpeciesName:
                     string[] names = null;
-                    try { names = GetPokemonNames(); } catch { }
+                    try { names = GetPokemonNames(); } catch (Exception ex) { AppLogger.Warn("Pokedex sample: species names: " + ex.Message); }
                     return names != null && species >= 0 && species < names.Length ? names[species] : null;
                 case ScreenTextKind.Number: return species.ToString("D3");
-                case ScreenTextKind.Category: return Line(pokedexCategoryTextNumber, species);
-                case ScreenTextKind.Height: return Line(pokedexHeightTextNumber, species);
-                case ScreenTextKind.Weight: return Line(pokedexWeightTextNumber, species);
-                case ScreenTextKind.Entry: return Line(pokedexEntryTextNumber, species);
+                case ScreenTextKind.Category: return Line(PokedexCategoryTextNumber, species);
+                case ScreenTextKind.Height: return Line(PokedexHeightTextNumber, species);
+                case ScreenTextKind.Weight: return Line(PokedexWeightTextNumber, species);
+                case ScreenTextKind.Entry: return Line(PokedexEntryTextNumber, species);
                 case ScreenTextKind.Count: return t.Sample.ToString("D3");
-                case ScreenTextKind.ForeignEntry: return Line(Pick(pokedexForeignEntryTextNumbers, t.Line), ForeignLine(species, t.Line));
-                case ScreenTextKind.ForeignName: return Line(Pick(pokedexForeignNameTextNumbers, t.Line), ForeignLine(species, t.Line));
-                case ScreenTextKind.ForeignCategory: return Line(Pick(pokedexForeignCategoryTextNumbers, t.Line), ForeignLine(species, t.Line));
-                case ScreenTextKind.PlayerName: return Line(playerCharacterNamesTextNumber, Female(variant) ? 1 : 0);
+                case ScreenTextKind.ForeignEntry: return Line(Pick(PokedexForeignEntryTextNumbers, t.Line), ForeignLine(species, t.Line));
+                case ScreenTextKind.ForeignName: return Line(Pick(PokedexForeignNameTextNumbers, t.Line), ForeignLine(species, t.Line));
+                case ScreenTextKind.ForeignCategory: return Line(Pick(PokedexForeignCategoryTextNumbers, t.Line), ForeignLine(species, t.Line));
+                case ScreenTextKind.PlayerName: return Line(PlayerCharacterNamesTextNumber, Female(variant) ? 1 : 0);
                 case ScreenTextKind.SearchHeight: return SearchStepText(t.Sample, height: true);
                 case ScreenTextKind.SearchWeight: return SearchStepText(t.Sample, height: false);
                 case ScreenTextKind.Place:
@@ -51,7 +51,7 @@ namespace DSPRE.Avalonia.Data
                     // The list's cursor sits on its first entry, "show all", which is the third row.
                     int entry = t.Line - 2;
                     if (entry < 0) return null;
-                    if (entry == 0) return Line(pokedexMessagesTextNumber, variant == "Kanto" ? 135 : 134);
+                    if (entry == 0) return Line(PokedexMessagesTextNumber, variant == "Kanto" ? 135 : 134);
                     List<string> places = Habitat(variant)?.Places;
                     return places != null && entry - 1 < places.Count ? places[entry - 1] : null;
                 }
@@ -78,14 +78,14 @@ namespace DSPRE.Avalonia.Data
 
         private int ForeignLine(int species, int language)
         {
-            if (gameFamily != GameFamilies.DP) return species;
-            if (pokedexForeignSpeciesTableOffset < 0 || language < 0 || language >= DiamondPearlLanguages.Length) return -1;
+            if (GameFamily != GameFamilies.DP) return species;
+            if (PokedexForeignSpeciesTableOffset < 0 || language < 0 || language >= DiamondPearlLanguages.Length) return -1;
             if (_foreignSpecies == null)
             {
                 try
                 {
-                    byte[] table = ARM9.ReadBytes((uint)pokedexForeignSpeciesTableOffset, pokedexForeignSpeciesCount * 2);
-                    _foreignSpecies = Enumerable.Range(0, pokedexForeignSpeciesCount)
+                    byte[] table = ARM9.ReadBytes((uint)PokedexForeignSpeciesTableOffset, PokedexForeignSpeciesCount * 2);
+                    _foreignSpecies = Enumerable.Range(0, PokedexForeignSpeciesCount)
                         .Select(i => (int)BitConverter.ToUInt16(table, i * 2)).ToArray();
                 }
                 catch (Exception ex) { AppLogger.Warn("Pokédex foreign species: " + ex.Message); _foreignSpecies = Array.Empty<int>(); }
@@ -93,7 +93,7 @@ namespace DSPRE.Avalonia.Data
             int slot = Array.IndexOf(_foreignSpecies, species);
             if (slot < 0) return -1;
             // Japanese DP lists only the five other languages, in the order of its tabs.
-            return gameLanguage == GameLanguages.Japanese ? slot * 5 + language : slot * 6 + DiamondPearlLanguages[language];
+            return GameLanguage == GameLanguages.Japanese ? slot * 5 + language : slot * 6 + DiamondPearlLanguages[language];
         }
 
         private string Line(int bank, int line)
@@ -101,7 +101,7 @@ namespace DSPRE.Avalonia.Data
             if (bank < 0 || line < 0) return null;
             if (!_banks.TryGetValue(bank, out List<string> lines))
             {
-                try { lines = new TextArchive(bank).messages; } catch { lines = null; }
+                try { lines = new TextArchive(bank).Messages; } catch (Exception ex) { AppLogger.WarnOnce("DexSample.Line", ex); lines = null; }
                 _banks[bank] = lines;
             }
             if (lines == null || line >= lines.Count) return null;
@@ -119,21 +119,21 @@ namespace DSPRE.Avalonia.Data
                 {
                     case ScreenMonKind.Front:
                     {
-                        GraphicAssets.Archive sprites = GraphicAssets.All.First(a => a.Dir == DirNames.pokemonBattleSprites);
+                        GraphicAssets.Archive sprites = GraphicAssets.All.First(a => a.Dir == DirNames.PokemonBattleSprites);
                         // Six files a species: back female, back male, front female, front male, colours, shiny.
                         GraphicAssets.Preview p = GraphicAssets.Render(sprites, species * 6 + 3);
                         return Frame(p, 80, 80);
                     }
                     case ScreenMonKind.Back:
                     {
-                        GraphicAssets.Archive sprites = GraphicAssets.All.First(a => a.Dir == DirNames.pokemonBattleSprites);
+                        GraphicAssets.Archive sprites = GraphicAssets.All.First(a => a.Dir == DirNames.PokemonBattleSprites);
                         GraphicAssets.Preview p = GraphicAssets.Render(sprites, species * 6 + 1);
                         return Frame(p, 80, 80);
                     }
                     case ScreenMonKind.Icon:
                     {
                         // Party icons follow seven shared files, one per species, two frames tall.
-                        GraphicAssets.Archive icons = GraphicAssets.All.First(a => a.Dir == DirNames.monIcons);
+                        GraphicAssets.Archive icons = GraphicAssets.All.First(a => a.Dir == DirNames.MonIcons);
                         GraphicAssets.Preview p = GraphicAssets.Render(icons, species + 7);
                         return Frame(p, 32, 32);
                     }
@@ -141,7 +141,7 @@ namespace DSPRE.Avalonia.Data
                     {
                         int entry = GraphicAssets.FootprintEntry(species);
                         if (entry < 0) return null;
-                        GraphicAssets.Archive feet = GraphicAssets.All.First(a => a.Dir == DirNames.footprintGraphics);
+                        GraphicAssets.Archive feet = GraphicAssets.All.First(a => a.Dir == DirNames.FootprintGraphics);
                         GraphicAssets.Preview p = GraphicAssets.Render(feet, entry);
                         return p?.Rgba == null ? null : new ScreenPicture { Rgba = p.Rgba, Width = p.Width, Height = p.Height };
                     }
@@ -166,7 +166,7 @@ namespace DSPRE.Avalonia.Data
 
         public DexHabitatData Habitat(string variant)
         {
-            if (variant == "Area unknown" && gameFamily != GameFamilies.HGSS) return null;
+            if (variant == "Area unknown" && GameFamily != GameFamilies.HGSS) return null;
             if (_habitats.TryGetValue(variant ?? "", out DexHabitatData known)) return known;
             DexHabitatData built = BuildHabitat(variant);
             _habitats[variant ?? ""] = built;
@@ -183,7 +183,7 @@ namespace DSPRE.Avalonia.Data
             try
             {
                 if (variant == "Area unknown") return DexHabitatBuilder.HgssPlayerOnly(kanto: false);
-                return gameFamily == GameFamilies.HGSS
+                return GameFamily == GameFamilies.HGSS
                     ? DexHabitatBuilder.BuildHgss(Species, time, kanto: variant == "Kanto")
                     : DexHabitatBuilder.Build(Species, time, national: true);
             }
@@ -210,7 +210,7 @@ namespace DSPRE.Avalonia.Data
                 PokemonScale = female ? m.FemalePokemonScale : m.MalePokemonScale,
                 TrainerOffset = female ? m.FemaleTrainerYOffset : m.MaleTrainerYOffset,
                 TrainerScale = female ? m.FemaleTrainerScale : m.MaleTrainerScale,
-                Tilt = gameFamily == GameFamilies.HGSS ? HgssTilt(m.Weight, female) : DpptTilt(m.Weight, female),
+                Tilt = GameFamily == GameFamilies.HGSS ? HgssTilt(m.Weight, female) : DpptTilt(m.Weight, female),
             };
         }
 
@@ -273,11 +273,11 @@ namespace DSPRE.Avalonia.Data
             {
                 try
                 {
-                    byte[] raw = System.IO.File.ReadAllBytes(System.IO.Path.Combine(gameDirs[DirNames.pokedexSearchSteps].unpackedDir, "0000"));
+                    byte[] raw = System.IO.File.ReadAllBytes(System.IO.Path.Combine(GameDirs[DirNames.PokedexSearchSteps].unpackedDir, "0000"));
                     _searchSteps = new ushort[raw.Length / 2];
                     Buffer.BlockCopy(raw, 0, _searchSteps, 0, _searchSteps.Length * 2);
                 }
-                catch { _searchSteps = Array.Empty<ushort>(); }
+                catch (Exception ex) { AppLogger.WarnOnce("DexSample.SearchStep", ex); _searchSteps = Array.Empty<ushort>(); }
             }
             int at = step * 2 + (height ? 0 : 1);
             return step >= 0 && at < _searchSteps.Length ? _searchSteps[at] : -1;
@@ -285,7 +285,7 @@ namespace DSPRE.Avalonia.Data
 
         // English games show feet and inches or pounds (pokeheartgold ov18_021EFD00, ov18_021EFDB4), the others the
         // stored metres and kilograms.
-        private static bool Imperial => gameLanguage == GameLanguages.English;
+        private static bool Imperial => GameLanguage == GameLanguages.English;
 
         private static int Inches(int decimetres) => decimetres == 999 ? 1188 : (decimetres * 10000 / 254 + 5) / 10;
 
@@ -298,10 +298,10 @@ namespace DSPRE.Avalonia.Data
             if (height && Imperial)
             {
                 int inches = Inches(value);
-                return Fill(Line(pokedexMessagesTextNumber, 175), new[] { (inches / 12).ToString(), (inches % 12).ToString("D2") });
+                return Fill(Line(PokedexMessagesTextNumber, 175), new[] { (inches / 12).ToString(), (inches % 12).ToString("D2") });
             }
             int tenths = !height && Imperial ? TenthsOfPounds(value) : value;
-            return Fill(Line(pokedexMessagesTextNumber, 38), new[] { (tenths / 10).ToString(), (tenths % 10).ToString() });
+            return Fill(Line(PokedexMessagesTextNumber, 38), new[] { (tenths / 10).ToString(), (tenths % 10).ToString() });
         }
 
         // The knobs' digit sprites (pokeheartgold ov18_021F38F0 and ov18_021F36D4 for height, ov18_021F39C4 and
@@ -351,11 +351,11 @@ namespace DSPRE.Avalonia.Data
             try
             {
                 PokemonPersonalData data = new PokemonPersonalData(Species);
-                int type = slot == 1 ? (int)data.type1 : (int)data.type2;
-                if (slot == 2 && data.type2 == data.type1) return -1;
+                int type = slot == 1 ? (int)data.Type1 : (int)data.Type2;
+                if (slot == 2 && data.Type2 == data.Type1) return -1;
                 return type >= 0 && type < DexTypeOrder.Length ? DexTypeOrder[type] : -1;
             }
-            catch { return -1; }
+            catch (Exception ex) { AppLogger.WarnOnce("DexSample.TypeSlot", ex); return -1; }
         }
     }
 }

@@ -294,7 +294,7 @@ namespace DSPRE.ROMFiles
 
         /// <param name="messageLookup">Turns a message id into its text. Null just names the id instead.</param>
         public ScriptWalker(ScriptFile file, Func<int, string> messageLookup = null)
-            : this(file?.allScripts, file?.allFunctions, messageLookup, ActionsFrom(file)) { }
+            : this(file?.AllScripts, file?.AllFunctions, messageLookup, ActionsFrom(file)) { }
 
         /// <summary>Walks a set of scripts and functions directly, without needing the file they live in.</summary>
         public ScriptWalker(IReadOnlyList<ScriptCommandContainer> scripts,
@@ -311,7 +311,7 @@ namespace DSPRE.ROMFiles
             };
         }
 
-        private static Func<int, IReadOnlyList<ScriptAction>> ActionsFrom(ScriptFile file) => ActionsById(file?.allActions);
+        private static Func<int, IReadOnlyList<ScriptAction>> ActionsFrom(ScriptFile file) => ActionsById(file?.AllActions);
 
         /// <summary>
         /// Finds a movement by the number a Movement command carries. That is the movement's own id, which
@@ -320,7 +320,7 @@ namespace DSPRE.ROMFiles
         public static Func<int, IReadOnlyList<ScriptAction>> ActionsById(IReadOnlyList<ScriptActionContainer> actions)
         {
             if (actions == null) return null;
-            return number => number < 0 ? null : actions.FirstOrDefault(a => a.manualUserID == (uint)number)?.commands;
+            return number => number < 0 ? null : actions.FirstOrDefault(a => a.ManualUserID == (uint)number)?.Commands;
         }
 
         /// <summary>The movement a number names in the file the script is running from now.</summary>
@@ -377,13 +377,13 @@ namespace DSPRE.ROMFiles
                 return false;
             }
 
-            if (_current == null || _index < 0 || _index >= (_current.commands?.Count ?? 0))
+            if (_current == null || _index < 0 || _index >= (_current.Commands?.Count ?? 0))
             {
                 if (!PopReturn()) { Add(ScriptStepKind.Ended, "The script ends here.", null); Finished = true; }
                 return !Finished;
             }
 
-            Step(_current.commands[_index]);
+            Step(_current.Commands[_index]);
             return !Finished && Pending == null;
         }
 
@@ -925,7 +925,7 @@ namespace DSPRE.ROMFiles
                 return;
             }
 
-            Add(ScriptStepKind.Command, $"Runs {cmd.name}.", name);
+            Add(ScriptStepKind.Command, $"Runs {cmd.Name}.", name);
             _index++;
         }
 
@@ -956,7 +956,7 @@ namespace DSPRE.ROMFiles
                 case "CMD_610": return new ScriptEffect(ScriptEffectKind.CameraChange, (int)Value(cmd, 0));
                 case "ShakeCamera":
                     // Platinum's command of that name takes one number and is not the HGSS screen shake.
-                    if ((cmd?.cmdParams?.Count ?? 0) < 4) return null;
+                    if ((cmd?.CmdParams?.Count ?? 0) < 4) return null;
                     return new ScriptEffect(ScriptEffectKind.CameraShake,
                         (int)Value(cmd, 0), (int)Value(cmd, 1), (int)Value(cmd, 2), (int)Value(cmd, 3));
 
@@ -987,12 +987,12 @@ namespace DSPRE.ROMFiles
         {
             try
             {
-                Dictionary<ushort, string> names = ScriptDatabase.soundNames;
+                Dictionary<ushort, string> names = ScriptDatabase.SoundNames;
                 if (names != null && names.TryGetValue((ushort)id, out string n) && !string.IsNullOrWhiteSpace(n))
                     return $"{id} ({n})";
                 return id.ToString();
             }
-            catch { return id.ToString(); }
+            catch (Exception ex) { AppLogger.WarnOnce("ScriptWalker.SoundName", ex); return id.ToString(); }
         }
 
         private static string PokemonName(int species) => RomInfo.PokemonName(species);
@@ -1024,7 +1024,7 @@ namespace DSPRE.ROMFiles
                     return e.B == 1 ? $"Puts {Display(cmd, 0)} on the map." : $"Takes {Display(cmd, 0)} off the map.";
                 case ScriptEffectKind.CameraObject:
                     return e.C == 1 ? "Puts the camera on its own." : "Hands the camera back to the player.";
-                default: return $"Runs {cmd.name}.";
+                default: return $"Runs {cmd.Name}.";
             }
         }
 
@@ -1040,11 +1040,11 @@ namespace DSPRE.ROMFiles
             foreach (ScriptAction action in actions)
             {
                 if (action == null) continue;
-                string step = action.name;
+                string step = action.Name;
                 if (string.IsNullOrEmpty(step)) continue;
                 if (step.StartsWith("End", StringComparison.OrdinalIgnoreCase)) break;
 
-                int times = action.repetitionCount ?? 1;
+                int times = action.RepetitionCount ?? 1;
                 parts.Add(times > 1 ? $"{step} ×{times}" : step);
                 if (parts.Count >= 12) { parts.Add("…"); break; }
             }
@@ -1095,11 +1095,11 @@ namespace DSPRE.ROMFiles
         {
             try
             {
-                Dictionary<ushort, string> names = ScriptDatabase.itemNames;
+                Dictionary<ushort, string> names = ScriptDatabase.ItemNames;
                 return names != null && names.TryGetValue((ushort)item, out string n) && !string.IsNullOrWhiteSpace(n)
                     ? n : $"item {item}";
             }
-            catch { return $"item {item}"; }
+            catch (Exception ex) { AppLogger.WarnOnce("ScriptWalker.ItemName", ex); return $"item {item}"; }
         }
 
         private void AskVariable(ScriptCommand cmd, int number, string subject, string prompt)
@@ -1170,13 +1170,13 @@ namespace DSPRE.ROMFiles
         private string CommandName(ScriptCommand cmd)
         {
             if (cmd == null) return null;
-            if (cmd.id != null)
+            if (cmd.Id != null)
             {
-                string legacy = LegacyNameOf?.Invoke(cmd.id.Value);
+                string legacy = LegacyNameOf?.Invoke(cmd.Id.Value);
                 if (!string.IsNullOrEmpty(legacy)) return legacy;
             }
             // ScriptCommand.name is the command plus its formatted parameters; the command is the first word.
-            string full = cmd.name ?? "";
+            string full = cmd.Name ?? "";
             int space = full.IndexOf(' ');
             return space < 0 ? full : full.Substring(0, space);
         }
@@ -1189,12 +1189,12 @@ namespace DSPRE.ROMFiles
                 Dictionary<ushort, ScriptCommandInfo> info = RomInfo.GetScriptCommandInfoDict();
                 return info != null && info.TryGetValue(id, out ScriptCommandInfo c) ? c?.LegacyName : null;
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("ScriptWalker.DefaultLegacyName", ex); return null; }
         }
 
         private static long Value(ScriptCommand cmd, int param)
         {
-            List<byte[]> data = cmd?.cmdParams;
+            List<byte[]> data = cmd?.CmdParams;
             if (data == null || param < 0 || param >= data.Count) return 0;
             byte[] b = data[param];
             if (b == null) return 0;
@@ -1235,7 +1235,7 @@ namespace DSPRE.ROMFiles
 
         private static string Display(ScriptCommand cmd, int param)
         {
-            string full = cmd?.name ?? "";
+            string full = cmd?.Name ?? "";
             string[] parts = full.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             return param + 1 < parts.Length ? parts[param + 1].TrimEnd(',') : Value(cmd, param).ToString();
         }
@@ -1282,10 +1282,10 @@ namespace DSPRE.ROMFiles
         };
 
         private static ScriptCommandContainer FindScript(ScriptSource source, int number)
-            => source?.Scripts?.FirstOrDefault(s => s.manualUserID == (uint)number);
+            => source?.Scripts?.FirstOrDefault(s => s.ManualUserID == (uint)number);
 
         private static ScriptCommandContainer FindFunction(ScriptSource source, int number)
-            => source?.Functions?.FirstOrDefault(f => f.manualUserID == (uint)number);
+            => source?.Functions?.FirstOrDefault(f => f.ManualUserID == (uint)number);
 
         private void Add(ScriptStepKind kind, string text, string command, ScriptEffect effect = null)
         {
@@ -1295,7 +1295,7 @@ namespace DSPRE.ROMFiles
                 Text = text,
                 CommandName = command,
                 Effect = effect,
-                Location = _current == null ? "" : $"{_current.containerType} {_current.manualUserID}, line {_index + 1}",
+                Location = _current == null ? "" : $"{_current.ContainerType} {_current.ManualUserID}, line {_index + 1}",
             });
         }
     }

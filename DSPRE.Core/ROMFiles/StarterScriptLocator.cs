@@ -81,7 +81,7 @@ namespace DSPRE.ROMFiles
         public static Result Locate(string rememberedKey, string knownFingerprint)
         {
             Result result = new Result();
-            if (RomInfo.starterHeldItemScriptFileID < 0)
+            if (RomInfo.StarterHeldItemScriptFileID < 0)
             {
                 result.Outcome = Outcome.NotApplicable;
                 return result;
@@ -126,18 +126,18 @@ namespace DSPRE.ROMFiles
         /// <summary>The known slot in an untouched ROM, or null when it does not hold what it should.</summary>
         public static Candidate ReadVanillaSlot()
         {
-            if (RomInfo.starterCommandScriptNumber < 0 || RomInfo.starterCommandIndex < 0) return null;
+            if (RomInfo.StarterCommandScriptNumber < 0 || RomInfo.StarterCommandIndex < 0) return null;
 
-            ScriptFile f = TryParse(RomInfo.starterHeldItemScriptFileID);
-            if (f?.allScripts == null) return null;
+            ScriptFile f = TryParse(RomInfo.StarterHeldItemScriptFileID);
+            if (f?.AllScripts == null) return null;
 
-            ScriptCommandContainer container = f.allScripts.FirstOrDefault(c => c.manualUserID == (uint)RomInfo.starterCommandScriptNumber);
-            List<ScriptCommand> cmds = container?.commands;
-            if (cmds == null || RomInfo.starterCommandIndex >= cmds.Count) return null;
+            ScriptCommandContainer container = f.AllScripts.FirstOrDefault(c => c.ManualUserID == (uint)RomInfo.StarterCommandScriptNumber);
+            List<ScriptCommand> cmds = container?.Commands;
+            if (cmds == null || RomInfo.StarterCommandIndex >= cmds.Count) return null;
 
-            Candidate made = Describe(RomInfo.starterHeldItemScriptFileID, false,
-                                RomInfo.starterCommandScriptNumber, RomInfo.starterCommandIndex,
-                                cmds[RomInfo.starterCommandIndex]);
+            Candidate made = Describe(RomInfo.StarterHeldItemScriptFileID, false,
+                                RomInfo.StarterCommandScriptNumber, RomInfo.StarterCommandIndex,
+                                cmds[RomInfo.StarterCommandIndex]);
             return made != null && made.FromVariable ? made : null;
         }
 
@@ -145,9 +145,9 @@ namespace DSPRE.ROMFiles
         public static List<Candidate> FindCandidates()
         {
             List<Candidate> found = new List<Candidate>();
-            if (!RomInfo.gameDirs.ContainsKey(RomInfo.DirNames.scripts)) return found;
+            if (!RomInfo.GameDirs.ContainsKey(RomInfo.DirNames.Scripts)) return found;
 
-            string dir = RomInfo.gameDirs[RomInfo.DirNames.scripts].unpackedDir;
+            string dir = RomInfo.GameDirs[RomInfo.DirNames.Scripts].unpackedDir;
             if (!Directory.Exists(dir)) return found;
 
             int count = NarcAPI.Narc.MemberCount(dir);
@@ -155,8 +155,8 @@ namespace DSPRE.ROMFiles
             {
                 ScriptFile f = TryParse(id);
                 if (f == null) continue;
-                Collect(found, id, f.allScripts, false);
-                Collect(found, id, f.allFunctions, true);
+                Collect(found, id, f.AllScripts, false);
+                Collect(found, id, f.AllFunctions, true);
             }
 
             // The script's own slot is how the starter arrives, so that ranks above a saved variable,
@@ -174,11 +174,11 @@ namespace DSPRE.ROMFiles
             if (containers == null) return;
             foreach (ScriptCommandContainer c in containers)
             {
-                List<ScriptCommand> cmds = c.commands;
+                List<ScriptCommand> cmds = c.Commands;
                 if (cmds == null) continue;
                 for (int i = 0; i < cmds.Count; i++)
                 {
-                    Candidate made = Describe(fileId, functions, (int)c.manualUserID, i, cmds[i]);
+                    Candidate made = Describe(fileId, functions, (int)c.ManualUserID, i, cmds[i]);
                     if (made != null) into.Add(made);
                 }
             }
@@ -190,12 +190,12 @@ namespace DSPRE.ROMFiles
         /// </summary>
         private static Candidate Describe(int fileId, bool inFunction, int containerId, int index, ScriptCommand cmd)
         {
-            string name = cmd?.name;
+            string name = cmd?.Name;
             if (string.IsNullOrEmpty(name)) return null;
             if (!name.StartsWith("GivePokemon", StringComparison.OrdinalIgnoreCase)) return null;
             if (name.StartsWith("GivePokemonEgg", StringComparison.OrdinalIgnoreCase)) return null;
 
-            List<byte[]> ps = cmd.cmdParams;
+            List<byte[]> ps = cmd.CmdParams;
             if (ps == null || ps.Count < 3) return null;
 
             return new Candidate
@@ -222,7 +222,7 @@ namespace DSPRE.ROMFiles
         private static ScriptFile TryParse(int id)
         {
             try { return new ScriptFile(id); }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("StarterScriptLocator.TryParse", ex); return null; }
         }
     }
 }

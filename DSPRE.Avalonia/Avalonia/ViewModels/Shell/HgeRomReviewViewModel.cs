@@ -52,7 +52,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         private bool _repairStaged;
 
         /// <summary>hg-engine owns neither archive, so the unpacked copies are the ROM's own bytes.</summary>
-        public static void Unpack() => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.monIcons, DirNames.synthOverlay });
+        public static void Unpack() => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.MonIcons, DirNames.SynthOverlay });
 
         public HgeRomReviewViewModel()
         {
@@ -116,7 +116,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         private void LoadSpecies()
         {
             string[] names;
-            try { names = GetPokemonNames(); } catch { names = Array.Empty<string>(); }
+            try { names = GetPokemonNames(); } catch (Exception ex) { AppLogger.WarnOnce("HgeRomReviewViewModel.LoadSpecies", ex); names = Array.Empty<string>(); }
 
             // A linked checkout's count is the one its editors use.
             int count;
@@ -124,7 +124,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             {
                 count = HgEngineProject.IsActive ? GetPersonalFilesCount() : HgEngineCodeAddons.SpeciesCountFromRom();
             }
-            catch { count = 0; }
+            catch (Exception ex) { AppLogger.WarnOnce("HgeRomReviewViewModel.LoadSpecies", ex); count = 0; }
             if (count <= 0) count = names.Length;
 
             for (int id = 0; id < count; id++)
@@ -259,7 +259,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
             if (HgEngineProject.IsActive)
             {
-                ScriptNarc fromCheckout = new ScriptNarc(DirNames.pokemonBattleSprites);
+                ScriptNarc fromCheckout = new ScriptNarc(DirNames.PokemonBattleSprites);
                 if (fromCheckout.Available && fromCheckout.Count > 0)
                 {
                     _spriteSourceNote = "From your checkout's build of pokegra.narc.";
@@ -268,7 +268,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                 _spriteSourceNote = "Your checkout's pokegra.narc could not be read, so these come from the ROM's a/0/0/4.";
             }
 
-            return _spriteArchive = new ScriptNarc(DirNames.pokemonBattleSprites, fromPacked: true);
+            return _spriteArchive = new ScriptNarc(DirNames.PokemonBattleSprites, fromPacked: true);
         }
 
         // Read packed so one follower does not unpack an archive of nearly two thousand files.
@@ -385,7 +385,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         /// <summary>Single-gender species leave the female members empty.</summary>
         private void LoadSprites(int species, SpeciesView view)
         {
-            GraphicAssets.Archive archive = GraphicAssets.All.FirstOrDefault(a => a.Dir == DirNames.pokemonBattleSprites);
+            GraphicAssets.Archive archive = GraphicAssets.All.FirstOrDefault(a => a.Dir == DirNames.PokemonBattleSprites);
             if (archive == null) return;
 
             ScriptNarc source = SpriteArchive();
@@ -488,7 +488,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         {
             if (!_repairStaged || _layout == null) return;
 
-            if (!HgEngineCodeAddonRepair.TryRepair(Filesystem.synthOverlay, _layout.StaleMembers, out string error))
+            if (!HgEngineCodeAddonRepair.TryRepair(Filesystem.SynthOverlay, _layout.StaleMembers, out string error))
             {
                 AppMessages.Error("The archive could not be repaired. " + error, "hg-engine ROM review");
                 return;

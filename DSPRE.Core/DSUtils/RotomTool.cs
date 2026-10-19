@@ -22,7 +22,7 @@ namespace DSPRE
             public System.Collections.Generic.List<int> KeptBinaries { get; set; } = new System.Collections.Generic.List<int>();
         }
 
-        public static string ProjectRoot => RomInfo.dspreDir?.TrimEnd('\\', '/') ?? "";
+        public static string ProjectRoot => RomInfo.DspreDir?.TrimEnd('\\', '/') ?? "";
         public static string ExePath => DSUtils.ToolPath("rotom");
         public static string LspPath => DSUtils.ToolPath("rotom-lsp");
         public static bool IsAvailable => File.Exists(ExePath);
@@ -97,7 +97,7 @@ namespace DSPRE
             {
                 if (RomInfo.HgEngineDsRomMetaDir != null)
                 {
-                    Stage(RomInfo.arm9Path, Path.Combine(ProjectRoot, "arm9.bin"), staged);
+                    Stage(RomInfo.Arm9Path, Path.Combine(ProjectRoot, "arm9.bin"), staged);
                     Stage(Path.Combine(RomInfo.HgEngineDsRomMetaDir, "config.yaml"), Path.Combine(ProjectRoot, "config.yaml"), staged);
                     // rotom reads the game from header.yaml, which config.yaml points at.
                     Stage(Path.Combine(RomInfo.HgEngineDsRomMetaDir, "header.yaml"), Path.Combine(ProjectRoot, "header.yaml"), staged);
@@ -307,7 +307,7 @@ namespace DSPRE
                     }
                 }
             }
-            catch (JsonException) { }
+            catch (JsonException) { }   // output that isn't Rotom's JSON report is shown as plain text instead
 
             if (lines.Count == 0)
             {
@@ -348,7 +348,7 @@ namespace DSPRE
                         return failed == 0 ? $"{ok} file(s) compiled." : $"{ok} compiled, {failed} failed.";
                     }
                 }
-                catch { }
+                catch { }   // output that isn't Rotom's JSON report is summarised as plain text instead
             }
 
             string output = !string.IsNullOrWhiteSpace(result.Stderr) ? result.Stderr : result.Stdout;
@@ -377,7 +377,7 @@ namespace DSPRE
                     stdoutSummarizedAsJson = doc.RootElement.TryGetProperty("successes", out _)
                         && doc.RootElement.TryGetProperty("failures", out _);
                 }
-                catch { }
+                catch { }   // output that isn't JSON is shown as it is
             }
 
             if (!stdoutSummarizedAsJson && !string.IsNullOrWhiteSpace(result.Stdout))

@@ -26,7 +26,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Why the slot count can't be read or set in this ROM, or null.</summary>
         public static string WhyNot()
         {
-            if (isHGE) return "hg-engine sets its evolution slots in its own source.";
+            if (IsHGE) return "hg-engine sets its evolution slots in its own source.";
             if (RomLocator.Where(RomLocator.Thing.EvolutionSlotBuffer) == null) return "Works on " + RomInfo.DescribeDumps(RomLocator.WorksOn(RomLocator.Thing.EvolutionSlotBuffer)) + ".";
             foreach (RomLocator.Thing t in Loops.Prepend(RomLocator.Thing.EvolutionSlotBuffer))
                 if (RomLocator.WhyNot(t, 2) is string why) return why;
@@ -52,8 +52,8 @@ namespace DSPRE.ROMFiles
         public static void Expand(string backupDir)
         {
             if (WhyNot() is string why) throw new InvalidOperationException(why);
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.evolutions });
-            string dir = gameDirs[DirNames.evolutions].unpackedDir;
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.Evolutions });
+            string dir = GameDirs[DirNames.Evolutions].unpackedDir;
             string[] files = Directory.GetFiles(dir);
             int size = FileSize(Max);
             string tooLong = files.FirstOrDefault(f => new FileInfo(f).Length > size);
@@ -66,7 +66,7 @@ namespace DSPRE.ROMFiles
                 byte[] data = File.ReadAllBytes(f);
                 if (data.Length == size) continue;
                 Array.Resize(ref data, size);
-                ArchiveMembers.Put(DirNames.evolutions, int.Parse(Path.GetFileName(f)), data);
+                ArchiveMembers.Put(DirNames.Evolutions, int.Parse(Path.GetFileName(f)), data);
             }
             RomLocator.Write(RomLocator.Thing.EvolutionSlotBuffer, new[] { (byte)(Max * RecordSize) });
             foreach (RomLocator.Thing t in Loops) RomLocator.Write(t, new[] { (byte)Max });

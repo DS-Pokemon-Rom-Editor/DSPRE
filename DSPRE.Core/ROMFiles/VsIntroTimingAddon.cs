@@ -98,7 +98,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Why the add-on can't be used on this ROM, or null.</summary>
         public static string WhyNot()
         {
-            if (gameLanguage != GameLanguages.English || (romID != "IPKE" && romID != "IPGE"))
+            if (GameLanguage != GameLanguages.English || (RomID != "IPKE" && RomID != "IPGE"))
                 return "Intro timings are for English HeartGold and SoulSilver.";
             if (TrainerClassMetadataPatch.InstalledOffset() == null) return "Apply the trainer class metadata patch first.";
             if (!SyntheticOverlaySpace.Available()) return "Apply the ARM9 expansion in the ROM Patch Toolbox first.";
@@ -111,8 +111,8 @@ namespace DSPRE.ROMFiles
         {
             uint? offset = TrainerClassMetadataPatch.InstalledOffset();
             if (offset == null) return false;
-            byte[] synth = File.ReadAllBytes(Filesystem.expArmPath);
-            byte[] expected = TrainerClassMetadataPatch.BuildPayload(RomInfo.synthOverlayLoadAddress + offset.Value);
+            byte[] synth = File.ReadAllBytes(Filesystem.ExpArmPath);
+            byte[] expected = TrainerClassMetadataPatch.BuildPayload(RomInfo.SynthOverlayLoadAddress + offset.Value);
             return offset.Value + ActiveClassInPayload <= synth.Length
                 && synth.AsSpan((int)offset.Value, ActiveClassInPayload).SequenceEqual(expected.AsSpan(0, ActiveClassInPayload));
         }
@@ -136,7 +136,7 @@ namespace DSPRE.ROMFiles
         public static VsIntroTimingAddon Load()
         {
             if (WhyNot() != null) return null;
-            byte[] synth = File.ReadAllBytes(Filesystem.expArmPath);
+            byte[] synth = File.ReadAllBytes(Filesystem.ExpArmPath);
             int block = FindBlock(synth);
             if (block < 0) return null;
             int at = block + SyntheticOverlaySpace.HeaderSize + TableAt;
@@ -148,7 +148,7 @@ namespace DSPRE.ROMFiles
         {
             string why = WhyNot();
             if (why != null) throw new InvalidOperationException(why);
-            byte[] synth = File.ReadAllBytes(Filesystem.expArmPath);
+            byte[] synth = File.ReadAllBytes(Filesystem.ExpArmPath);
             if (FindBlock(synth) >= 0) return Load();
 
             Dictionary<int, byte[]> overlays = Sites.Select(s => s.Overlay).Distinct().ToDictionary(ov => ov, ov => File.ReadAllBytes(OverlayFile(ov)));
@@ -161,12 +161,12 @@ namespace DSPRE.ROMFiles
             BitConverter.GetBytes(1u).CopyTo(block, 0x0C);
             BitConverter.GetBytes((uint)block.Length).CopyTo(block, 0x10);
             Code.CopyTo(block, SyntheticOverlaySpace.HeaderSize);
-            uint activeClass = RomInfo.synthOverlayLoadAddress + TrainerClassMetadataPatch.InstalledOffset().Value + ActiveClassInPayload;
+            uint activeClass = RomInfo.SynthOverlayLoadAddress + TrainerClassMetadataPatch.InstalledOffset().Value + ActiveClassInPayload;
             BitConverter.GetBytes(activeClass).CopyTo(block, SyntheticOverlaySpace.HeaderSize + ClassWordAt);
 
             int at = SyntheticOverlaySpace.Place(synth, block.Length, SyntheticOverlaySpace.Reserved(synth));
             if (at < 0) throw new InvalidOperationException("No free space was found in the expanded ARM9 area for the intro timings.");
-            uint code = synthOverlayLoadAddress + (uint)(at + SyntheticOverlaySpace.HeaderSize);
+            uint code = SynthOverlayLoadAddress + (uint)(at + SyntheticOverlaySpace.HeaderSize);
 
             byte[] synthBefore = (byte[])synth.Clone();
             Dictionary<int, byte[]> overlaysBefore = overlays.ToDictionary(kv => kv.Key, kv => (byte[])kv.Value.Clone());
@@ -178,12 +178,12 @@ namespace DSPRE.ROMFiles
             }
             try
             {
-                DSUtils.WriteWholeFile(Filesystem.expArmPath, synth);
+                DSUtils.WriteWholeFile(Filesystem.ExpArmPath, synth);
                 foreach (KeyValuePair<int, byte[]> kv in overlays) DSUtils.WriteWholeFile(OverlayUtils.GetPath(kv.Key), kv.Value);
             }
             catch
             {
-                DSUtils.WriteWholeFile(Filesystem.expArmPath, synthBefore);
+                DSUtils.WriteWholeFile(Filesystem.ExpArmPath, synthBefore);
                 foreach (KeyValuePair<int, byte[]> kv in overlaysBefore) DSUtils.WriteWholeFile(OverlayUtils.GetPath(kv.Key), kv.Value);
                 throw;
             }
@@ -226,7 +226,7 @@ namespace DSPRE.ROMFiles
             for (int c = 0; c < Classes; c++)
                 if (include(c)) Array.Copy(_table, c * FieldsPerClass, written, c * FieldsPerClass, FieldsPerClass);
             if (written.AsSpan().SequenceEqual(_saved)) return;
-            DSUtils.WriteToFile(Filesystem.expArmPath, written, (uint)(_block + SyntheticOverlaySpace.HeaderSize + TableAt));
+            DSUtils.WriteToFile(Filesystem.ExpArmPath, written, (uint)(_block + SyntheticOverlaySpace.HeaderSize + TableAt));
             written.CopyTo(_saved, 0);
         }
     }

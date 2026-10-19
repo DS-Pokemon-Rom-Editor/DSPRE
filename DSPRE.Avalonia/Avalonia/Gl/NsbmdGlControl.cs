@@ -561,9 +561,9 @@ namespace DSPRE.Avalonia.Gl
         public void OrbitByDrag(float screenDx, float screenDy)
         {
             DspreSettings c = Cam;
-            float spd = (c?.camOrbitSpeed ?? 1f) * 0.5f;
-            Yaw   += screenDx * spd * ((c?.camInvertOrbitX ?? false) ? -1f : 1f);
-            Pitch += screenDy * spd * ((c?.camInvertOrbitY ?? false) ? -1f : 1f);
+            float spd = (c?.CamOrbitSpeed ?? 1f) * 0.5f;
+            Yaw   += screenDx * spd * ((c?.CamInvertOrbitX ?? false) ? -1f : 1f);
+            Pitch += screenDy * spd * ((c?.CamInvertOrbitY ?? false) ? -1f : 1f);
         }
 
         /// <summary>Pan (slide) the camera pivot from a mouse drag, in raw screen-pixel deltas. The default
@@ -571,16 +571,16 @@ namespace DSPRE.Avalonia.Gl
         public void PanByDrag(float screenDx, float screenDy)
         {
             DspreSettings c = Cam;
-            float spd = c?.camPanSpeed ?? 1f;
-            PanByScreen(screenDx * spd * ((c?.camInvertPanX ?? false) ? -1f : 1f),
-                        screenDy * spd * ((c?.camInvertPanY ?? false) ? -1f : 1f));
+            float spd = c?.CamPanSpeed ?? 1f;
+            PanByScreen(screenDx * spd * ((c?.CamInvertPanX ?? false) ? -1f : 1f),
+                        screenDy * spd * ((c?.CamInvertPanY ?? false) ? -1f : 1f));
         }
 
         /// <summary>Zoom from a mouse-wheel notch (raw wheel delta-Y).</summary>
         public void ZoomByWheel(float wheelDeltaY)
         {
             DspreSettings c = Cam;
-            Distance -= wheelDeltaY * 0.4f * (c?.camZoomSpeed ?? 1f) * ((c?.camInvertZoom ?? false) ? -1f : 1f);
+            Distance -= wheelDeltaY * 0.4f * (c?.CamZoomSpeed ?? 1f) * ((c?.CamInvertZoom ?? false) ? -1f : 1f);
         }
 
         /// <summary>Sets the orbit camera to a fixed orientation (degrees), e.g. a top-down or side view.</summary>
@@ -890,7 +890,7 @@ namespace DSPRE.Avalonia.Gl
                 if (_haveEditVbo && _editVbo != 0) _f?.DeleteBuffers(1, new[] { _editVbo });
                 if (_vao != 0) _f?.DeleteVertexArrays(1, new[] { _vao });
             }
-            catch { }
+            catch { }   // the GL context may already be gone when the control is torn down
             _f = null; _program = _vao = _overlayVbo = _markerVbo = _spriteVbo = _gizmoVbo = 0;
             _highlightDirty = true;
             _haveEditVbo = false; _editVbo = 0;
@@ -1304,7 +1304,7 @@ namespace DSPRE.Avalonia.Gl
                 Action<byte[], int, int> cb = _captureCb; _captureCb = null;
                 byte[] px = null;
                 try { px = new byte[pw * ph * 4]; _f.ReadPixels(0, 0, pw, ph, GlFunctions.GL_RGBA, GlFunctions.GL_UNSIGNED_BYTE, px); }
-                catch { px = null; }
+                catch (Exception ex) { AppLogger.WarnOnce("NsbmdGlControl.OnOpenGlRender", ex); px = null; }
                 int cw = pw, ch = ph;
                 global::Avalonia.Threading.Dispatcher.UIThread.Post(() => cb(px, cw, ch));
             }

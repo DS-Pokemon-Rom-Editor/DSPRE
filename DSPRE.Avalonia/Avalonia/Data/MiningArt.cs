@@ -12,13 +12,13 @@ namespace DSPRE.Avalonia.Data
     /// </summary>
     internal static class MiningArt
     {
-        private static string Member(int id) => Path.Combine(gameDirs[DirNames.undergroundParts].unpackedDir, id.ToString("D4"));
+        private static string Member(int id) => Path.Combine(GameDirs[DirNames.UndergroundParts].unpackedDir, id.ToString("D4"));
 
-        public static void Unpack() => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.undergroundParts });
+        public static void Unpack() => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.UndergroundParts });
 
         public static int MemberCount()
         {
-            string dir = gameDirs[DirNames.undergroundParts].unpackedDir;
+            string dir = GameDirs[DirNames.UndergroundParts].unpackedDir;
             return NarcAPI.Narc.MemberCount(dir);
         }
 

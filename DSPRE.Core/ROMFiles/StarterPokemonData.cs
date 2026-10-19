@@ -51,7 +51,7 @@ namespace DSPRE.ROMFiles
                 AppLogger.Warn("StarterPokemonData: " + error);
                 return (int[])VanillaHgssStarters.Clone();
             }
-            if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)
+            if (RomInfo.GameFamily == RomInfo.GameFamilies.HGSS)
             {
                 ARM9.DecompressIfMarked();
                 byte[] arm9 = ARM9.ReadBytes(0);
@@ -81,12 +81,12 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public static int GetStarterScriptNumber()
         {
-            if (RomInfo.starterHeldItemScriptFileID < 0) return -1;
-            string path = Filesystem.GetScriptPath(RomInfo.starterHeldItemScriptFileID);
+            if (RomInfo.StarterHeldItemScriptFileID < 0) return -1;
+            string path = Filesystem.GetScriptPath(RomInfo.StarterHeldItemScriptFileID);
             if (!File.Exists(path)) return -1;
 
             byte[] d;
-            try { d = File.ReadAllBytes(path); } catch { return -1; }
+            try { d = File.ReadAllBytes(path); } catch (Exception ex) { AppLogger.WarnOnce("StarterPokemonData.GetStarterScriptNumber", ex); return -1; }
 
             // The header is a run of relative offsets, one per script, ended by the 0xFD13 marker.
             List<int> starts = new List<int>();
@@ -101,7 +101,7 @@ namespace DSPRE.ROMFiles
             if (starts.Count == 0) return -1;
 
             // The script whose range covers the byte the held item sits at.
-            int target = (int)RomInfo.starterHeldItemOffset;
+            int target = (int)RomInfo.StarterHeldItemOffset;
             List<(int start, int i)> byStart = starts.Select((start, i) => (start, i)).OrderBy(x => x.start).ToList();
             for (int n = 0; n < byStart.Count; n++)
             {
@@ -114,10 +114,10 @@ namespace DSPRE.ROMFiles
         /// <summary>Reads the DP/Pt starter's held item (HGSS starters never carry one, returns 0).</summary>
         public static int GetHeldItem()
         {
-            if (RomInfo.starterHeldItemScriptFileID < 0) return 0;
-            string path = Filesystem.GetScriptPath(RomInfo.starterHeldItemScriptFileID);
+            if (RomInfo.StarterHeldItemScriptFileID < 0) return 0;
+            string path = Filesystem.GetScriptPath(RomInfo.StarterHeldItemScriptFileID);
             if (!File.Exists(path)) return 0;
-            byte[] data = DSUtils.ReadFromFile(path, RomInfo.starterHeldItemOffset, 2);
+            byte[] data = DSUtils.ReadFromFile(path, RomInfo.StarterHeldItemOffset, 2);
             return data == null || data.Length < 2 ? 0 : ReadWord(data, 0);
         }
 
@@ -128,12 +128,12 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public static void SetHeldItem(int itemId)
         {
-            if (RomInfo.starterHeldItemScriptFileID < 0) return;
-            string path = Filesystem.GetScriptPath(RomInfo.starterHeldItemScriptFileID);
+            if (RomInfo.StarterHeldItemScriptFileID < 0) return;
+            string path = Filesystem.GetScriptPath(RomInfo.StarterHeldItemScriptFileID);
             if (!File.Exists(path)) return;
             byte[] bytes = new byte[2];
             WriteWord(bytes, 0, itemId);
-            DSUtils.WriteToFile(path, bytes, RomInfo.starterHeldItemOffset);
+            DSUtils.WriteToFile(path, bytes, RomInfo.StarterHeldItemOffset);
         }
 
         /// <summary>
@@ -169,7 +169,7 @@ namespace DSPRE.ROMFiles
             // a text archive that fails to decode, ...) must not make it look like the save itself failed.
             RunBestEffort("starter cries", () =>
             {
-                if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS && !HgEngine.HgEngineStarters.Available) PatchStarterCries(newSpecies);
+                if (RomInfo.GameFamily == RomInfo.GameFamilies.HGSS && !HgEngine.HgEngineStarters.Available) PatchStarterCries(newSpecies);
             });
             List<int> touched = scriptFilesTouched;
             RunBestEffort("rival/tag-battle scripts", () => touched.AddRange(PatchRivalAndTagBattleScripts(oldSpecies, newSpecies)));
@@ -194,7 +194,7 @@ namespace DSPRE.ROMFiles
 
         private static bool SetSpeciesAndGraphics(int[] newSpecies)
         {
-            if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)
+            if (RomInfo.GameFamily == RomInfo.GameFamilies.HGSS)
             {
                 ARM9.DecompressIfMarked();
                 byte[] arm9 = ARM9.ReadBytes(0);
@@ -239,14 +239,14 @@ namespace DSPRE.ROMFiles
         /// </summary>
         internal static void PatchDpPtSelectionSceneAsm(byte[] starterData, int[] newSpecies)
         {
-            if (RomInfo.starterSceneSpeciesLiterals is int[] literals)
+            if (RomInfo.StarterSceneSpeciesLiterals is int[] literals)
             {
                 PatchSelectionSceneLiterals(starterData, literals, newSpecies);
                 return;
             }
-            if (string.IsNullOrEmpty(RomInfo.starterGraphicsPrefix)) return;
+            if (string.IsNullOrEmpty(RomInfo.StarterGraphicsPrefix)) return;
             int offset = RomLocator.Where(RomLocator.Thing.StarterScene)?.Offset ?? -1;
-            if (!Follows(starterData, offset, DSUtils.StringToByteArray(RomInfo.starterGraphicsPrefix)))
+            if (!Follows(starterData, offset, DSUtils.StringToByteArray(RomInfo.StarterGraphicsPrefix)))
             {
                 AppLogger.Warn("StarterPokemonData: the selection scene's code isn't where this ROM keeps it, so the scene " +
                     "keeps its old models. The overlay may already be modified by another tool.");
@@ -394,7 +394,7 @@ namespace DSPRE.ROMFiles
         {
             List<int> touched = new List<int>();
 
-            if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)
+            if (RomInfo.GameFamily == RomInfo.GameFamilies.HGSS)
             {
                 byte[] magic = BuildPatternWithSpeciesAt(HgssRivalScriptMagicTemplate, 8, oldSpecies[0]);
                 foreach (int fileId in HgssFilesWithRivalScript)
@@ -417,7 +417,7 @@ namespace DSPRE.ROMFiles
                         WriteWord(data, secondBase + 4, newSpecies[1]);
                     }
 
-                    ArchiveMembers.Put(RomInfo.DirNames.scripts, fileId, data);
+                    ArchiveMembers.Put(RomInfo.DirNames.Scripts, fileId, data);
                     touched.Add(fileId);
                 }
                 return touched;
@@ -425,7 +425,7 @@ namespace DSPRE.ROMFiles
 
             // DP/Pt rival scripts: a series of IfJump commands following the two starter species; the jump
             // target tells apart a genuine rival script from a coincidental byte match.
-            bool isPlat = RomInfo.gameFamily == RomInfo.GameFamilies.Plat;
+            bool isPlat = RomInfo.GameFamily == RomInfo.GameFamilies.Plat;
             int[] rivalFiles = isPlat ? PtFilesWithRivalScript : DpFilesWithRivalScript;
             byte[] rivalMagic = BuildPatternWithSpeciesAt(DpptRivalScriptMagicTemplate, 8, oldSpecies[0]);
             foreach (int fileId in rivalFiles)
@@ -452,7 +452,7 @@ namespace DSPRE.ROMFiles
                 }
                 if (changed)
                 {
-                    ArchiveMembers.Put(RomInfo.DirNames.scripts, fileId, data);
+                    ArchiveMembers.Put(RomInfo.DirNames.Scripts, fileId, data);
                     touched.Add(fileId);
                 }
             }
@@ -495,7 +495,7 @@ namespace DSPRE.ROMFiles
                 }
                 if (changed)
                 {
-                    ArchiveMembers.Put(RomInfo.DirNames.scripts, fileId, data);
+                    ArchiveMembers.Put(RomInfo.DirNames.Scripts, fileId, data);
                     touched.Add(fileId);
                 }
             }
@@ -504,7 +504,7 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// Rotom-format projects (<see cref="RomInfo.hasRotomProject"/>) keep a decompiled <c>.rotom</c> text
+        /// Rotom-format projects (<see cref="RomInfo.HasRotomProject"/>) keep a decompiled <c>.rotom</c> text
         /// source per script file (<c>expanded/scripts/&lt;id&gt;.rotom</c>) that the Script Editor reads
         /// directly off disk, it is only ever decompiled from the binary ONCE, the very first time the
         /// project has no <c>.rotom</c> files at all, and never reconciled against the binary again after
@@ -535,7 +535,7 @@ namespace DSPRE.ROMFiles
         /// </summary>
         private static void PatchStarterText(int[] oldSpecies, int[] newSpecies)
         {
-            if (RomInfo.starterScreenTextNumber < 0) return;
+            if (RomInfo.StarterScreenTextNumber < 0) return;
 
             string[] pokemonNames = RomInfo.GetPokemonNames();
             string[] typeNames = RomInfo.GetTypeNames();
@@ -545,35 +545,35 @@ namespace DSPRE.ROMFiles
             string OldType(int i) => TypeNameOf(oldSpecies[i], typeNames);
             string NewType(int i) => TypeNameOf(newSpecies[i], typeNames);
 
-            TextArchive archive = new TextArchive(RomInfo.starterScreenTextNumber);
+            TextArchive archive = new TextArchive(RomInfo.StarterScreenTextNumber);
 
-            if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)
+            if (RomInfo.GameFamily == RomInfo.GameFamilies.HGSS)
             {
                 for (int i = 0; i < 3; i++)
                 {
-                    ReplaceIn(archive.messages, i + 1, OldName(i), NewName(i));
-                    ReplaceIn(archive.messages, i + 1, OldType(i), NewType(i));
-                    ReplaceIn(archive.messages, i + 4, OldName(i), NewName(i));
-                    ReplaceIn(archive.messages, i + 4, OldType(i), NewType(i));
+                    ReplaceIn(archive.Messages, i + 1, OldName(i), NewName(i));
+                    ReplaceIn(archive.Messages, i + 1, OldType(i), NewType(i));
+                    ReplaceIn(archive.Messages, i + 4, OldName(i), NewName(i));
+                    ReplaceIn(archive.Messages, i + 4, OldType(i), NewType(i));
                 }
             }
             else
             {
-                TextArchive pokedexArchive = RomInfo.starterPokedexSpeciesTextNumber >= 0
-                    ? new TextArchive(RomInfo.starterPokedexSpeciesTextNumber) : null;
+                TextArchive pokedexArchive = RomInfo.StarterPokedexSpeciesTextNumber >= 0
+                    ? new TextArchive(RomInfo.StarterPokedexSpeciesTextNumber) : null;
 
                 for (int i = 0; i < 3; i++)
                 {
-                    ReplaceIn(archive.messages, i + 1, OldName(i), NewName(i));
+                    ReplaceIn(archive.Messages, i + 1, OldName(i), NewName(i));
                     if (pokedexArchive != null
-                        && oldSpecies[i] < pokedexArchive.messages.Count && newSpecies[i] < pokedexArchive.messages.Count)
+                        && oldSpecies[i] < pokedexArchive.Messages.Count && newSpecies[i] < pokedexArchive.Messages.Count)
                     {
-                        ReplaceIn(archive.messages, i + 1, pokedexArchive.messages[oldSpecies[i]], pokedexArchive.messages[newSpecies[i]]);
+                        ReplaceIn(archive.Messages, i + 1, pokedexArchive.Messages[oldSpecies[i]], pokedexArchive.Messages[newSpecies[i]]);
                     }
                 }
             }
 
-            archive.SaveToExpandedDir(RomInfo.starterScreenTextNumber, showSuccessMessage: false);
+            archive.SaveToExpandedDir(RomInfo.StarterScreenTextNumber, showSuccessMessage: false);
         }
 
         private static string TypeNameOf(int species, string[] typeNames)
@@ -581,7 +581,7 @@ namespace DSPRE.ROMFiles
             try
             {
                 PokemonPersonalData personal = new PokemonPersonalData(species);
-                int typeIndex = (int)personal.type1;
+                int typeIndex = (int)personal.Type1;
                 return typeIndex >= 0 && typeIndex < typeNames.Length ? typeNames[typeIndex] : null;
             }
             catch (IOException)

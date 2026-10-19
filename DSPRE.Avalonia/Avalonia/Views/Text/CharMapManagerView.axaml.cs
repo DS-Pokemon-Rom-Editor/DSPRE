@@ -20,28 +20,28 @@ namespace DSPRE.Avalonia.Views.Text
         }
 
         private async void AddAlias_Click(object sender, RoutedEventArgs e)
-            => await _vm.AddAliasCommand();
+            => await _vm.AddAliasCommandAsync();
 
         private async void RemoveAlias_Click(object sender, RoutedEventArgs e)
-            => await _vm.RemoveAliasCommand();
+            => await _vm.RemoveAliasCommandAsync();
 
         private async void Save_Click(object sender, RoutedEventArgs e)
-            => await _vm.SaveCommand();
+            => await _vm.SaveCommandAsync();
 
         private async void CreateMap_Click(object sender, RoutedEventArgs e)
-            => await _vm.CreateMapCommand();
+            => await _vm.CreateMapCommandAsync();
 
         private async void DeleteMap_Click(object sender, RoutedEventArgs e)
-            => await _vm.DeleteMapCommand();
+            => await _vm.DeleteMapCommandAsync();
 
         private async void Reload_Click(object sender, RoutedEventArgs e)
-            => await _vm.ReloadCommand();
+            => await _vm.ReloadCommandAsync();
 
         private async void OpenFile_Click(object sender, RoutedEventArgs e)
-            => await _vm.OpenFileCommand();
+            => await _vm.OpenFileCommandAsync();
 
         private async void Rebase_Click(object sender, RoutedEventArgs e)
-            => await _vm.RebaseCommand();
+            => await _vm.RebaseCommandAsync();
 
         private void Search_Click(object sender, RoutedEventArgs e)
             => _vm.SearchCommand();
@@ -66,7 +66,7 @@ namespace DSPRE.Avalonia.Views.Text
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
         }
     }
 }

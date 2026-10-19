@@ -4,7 +4,8 @@ using System.IO;
 using System.Text;
 using static DSPRE.RomInfo;
 
-namespace DSPRE.ROMFiles {
+namespace DSPRE.ROMFiles
+{
    /* ---------------------- MATRIX DATA STRUCTURE (DPPtHGSS):-----------------------------
 
    0x0  //  byte:       Matrix width (a.k.a row length) (x)
@@ -22,21 +23,22 @@ namespace DSPRE.ROMFiles {
     /// <summary>
     /// Class to store map matrix data from Pok�mon NDS games
     /// </summary>
-    public class GameMatrix: RomFile {
+    public class GameMatrix: RomFile
+    {
         #region Fields (8)
         public static readonly string DefaultFilter = "Game Matrix File (*.mtx)|*.mtx";
 
 
-        public bool hasHeadersSection { get; set; }
-        public bool hasHeightsSection { get; set; }
-        public string name { get; set; }
-        public byte width { get; set; }
-        public byte height { get; set; }
-        public int? id { get; } = null;
+        public bool HasHeadersSection { get; set; }
+        public bool HasHeightsSection { get; set; }
+        public string Name { get; set; }
+        public byte Width { get; set; }
+        public byte Height { get; set; }
+        public int? Id { get; } = null;
 
-        public ushort[,] headers;
-        public byte[,] altitudes;
-        public ushort[,] maps;
+        public ushort[,] Headers;
+        public byte[,] Altitudes;
+        public ushort[,] Maps;
 
         public static readonly ushort EMPTY = 65535;
         #endregion Fields
@@ -44,89 +46,104 @@ namespace DSPRE.ROMFiles {
         /// <summary>The squares this header owns, or null when the matrix has no headers section to say.</summary>
         public HashSet<(int x, int y)> CellsOfHeader(int headerId)
         {
-            if (!hasHeadersSection || headerId < 0) return null;
+            if (!HasHeadersSection || headerId < 0) return null;
             HashSet<(int x, int y)> set = new HashSet<(int x, int y)>();
-            for (int y = 0; y < height; y++)
-                for (int x = 0; x < width; x++)
-                    if (headers[y, x] == headerId)
+            for (int y = 0; y < Height; y++)
+                for (int x = 0; x < Width; x++)
+                    if (Headers[y, x] == headerId)
                         set.Add((x, y));
             return set.Count > 0 ? set : null;
         }
 
         #region Constructors(1)
-        public GameMatrix(Stream data) {
-            using (BinaryReader reader = new BinaryReader(data)) {
+        public GameMatrix(Stream data)
+        {
+            using (BinaryReader reader = new BinaryReader(data))
+            {
                 /* Read matrix size and sections included */
-                width = reader.ReadByte();
-                height = reader.ReadByte();
+                Width = reader.ReadByte();
+                Height = reader.ReadByte();
 
-                if (reader.ReadBoolean()) {
-                    hasHeadersSection = true;
+                if (reader.ReadBoolean())
+                {
+                    HasHeadersSection = true;
                 }
 
-                if (reader.ReadBoolean()) {
-                    hasHeightsSection = true;
+                if (reader.ReadBoolean())
+                {
+                    HasHeightsSection = true;
                 }
 
                 /* Read matrix's name */
                 byte nameLength = reader.ReadByte();
-                name = Encoding.UTF8.GetString(reader.ReadBytes(nameLength));
+                Name = Encoding.UTF8.GetString(reader.ReadBytes(nameLength));
 
                 /* Initialize section arrays */
-                headers = new ushort[height, width];
-                altitudes = new byte[height, width];
-                maps = new ushort[height, width];
+                Headers = new ushort[Height, Width];
+                Altitudes = new byte[Height, Width];
+                Maps = new ushort[Height, Width];
 
                 /* Read sections */
-                if (hasHeadersSection) {
-                    for (int i = 0; i < height; i++) {
-                        for (int j = 0; j < width; j++) {
-                            headers[i, j] = reader.ReadUInt16();
+                if (HasHeadersSection)
+                {
+                    for (int i = 0; i < Height; i++)
+                    {
+                        for (int j = 0; j < Width; j++)
+                        {
+                            Headers[i, j] = reader.ReadUInt16();
                         }
                     }
                 }
 
-                if (hasHeightsSection) {
-                    for (int i = 0; i < height; i++) {
-                        for (int j = 0; j < width; j++) {
-                            altitudes[i, j] = reader.ReadByte();
+                if (HasHeightsSection)
+                {
+                    for (int i = 0; i < Height; i++)
+                    {
+                        for (int j = 0; j < Width; j++)
+                        {
+                            Altitudes[i, j] = reader.ReadByte();
                         }
                     }
                 }
 
-                for (int i = 0; i < height; i++) {
-                    for (int j = 0; j < width; j++) {
-                        maps[i, j] = reader.ReadUInt16();
+                for (int i = 0; i < Height; i++)
+                {
+                    for (int j = 0; j < Width; j++)
+                    {
+                        Maps[i, j] = reader.ReadUInt16();
                     }
                 }
             }
         }
-        public GameMatrix(int ID) : this (new FileStream(Path.Combine(RomInfo.gameDirs[DirNames.matrices].unpackedDir, ID.ToString("D4")), FileMode.Open)) {
-            this.id = ID;
+        public GameMatrix(int ID) : this (new FileStream(Path.Combine(RomInfo.GameDirs[DirNames.Matrices].unpackedDir, ID.ToString("D4")), FileMode.Open))
+        {
+            this.Id = ID;
         }
 
-        public GameMatrix(GameMatrix copy, int newID) { 
-            this.id = newID;
-            this.name = copy.name;
-            this.width = copy.width;
-            this.height = copy.height;
+        public GameMatrix(GameMatrix copy, int newID)
+        { 
+            this.Id = newID;
+            this.Name = copy.Name;
+            this.Width = copy.Width;
+            this.Height = copy.Height;
 
-            this.hasHeadersSection = copy.hasHeadersSection;
-            this.hasHeightsSection = copy.hasHeightsSection;
+            this.HasHeadersSection = copy.HasHeadersSection;
+            this.HasHeightsSection = copy.HasHeightsSection;
 
-            this.maps = (ushort[,])copy.maps.Clone();
-            this.altitudes = (byte[,])copy.altitudes.Clone();
-            this.headers = (ushort[,])copy.headers.Clone();
+            this.Maps = (ushort[,])copy.Maps.Clone();
+            this.Altitudes = (byte[,])copy.Altitudes.Clone();
+            this.Headers = (ushort[,])copy.Headers.Clone();
         }
 
-        public GameMatrix() {
-            this.name = "newMatrix";
-            this.hasHeadersSection = false;
-            this.hasHeightsSection = false;
+        public GameMatrix()
+        {
+            this.Name = "newMatrix";
+            this.HasHeadersSection = false;
+            this.HasHeightsSection = false;
 
-            this.width = 1;
-            this.height = 1;
-            this.maps = new ushort[1, 1] { { 0 } };
+            this.Width = 1;
+            this.Height = 1;
+            this.Maps = new ushort[1, 1] { { 0 } };
         }
         #endregion
 
@@ -139,96 +156,123 @@ namespace DSPRE.ROMFiles {
             ushort[,] newMaps = new ushort[newHeight, newWidth];
 
             /* Copy existing headers and altitudes rows into new arrays. If new matrix is greater in any dimension, new entries will be zero */
-            if (hasHeadersSection) {
-                for (int i = 0; i < Math.Min(height, newHeight); i++) {
-                    for (int j = 0; j < Math.Min(width, newWidth); j++) {
-                        newHeaders[i, j] = headers[i, j];
+            if (HasHeadersSection)
+            {
+                for (int i = 0; i < Math.Min(Height, newHeight); i++)
+                {
+                    for (int j = 0; j < Math.Min(Width, newWidth); j++)
+                    {
+                        newHeaders[i, j] = Headers[i, j];
                     }
                 }
             }
 
-            if (hasHeightsSection) {
-                for (int i = 0; i < Math.Min(height, newHeight); i++) {
-                    for (int j = 0; j < Math.Min(width, newWidth); j++) {
-                        newAltitudes[i, j] = altitudes[i, j];
+            if (HasHeightsSection)
+            {
+                for (int i = 0; i < Math.Min(Height, newHeight); i++)
+                {
+                    for (int j = 0; j < Math.Min(Width, newWidth); j++)
+                    {
+                        newAltitudes[i, j] = Altitudes[i, j];
                     }
                 }
             }
 
             /* Copy existing map rows into new array, and fill eventual new ones with Matrix.EMPTY (FF FF) */
-            for (int i = 0; i < Math.Min(height, newHeight); i++) {
-                for (int j = 0; j < Math.Min(width, newWidth); j++) {
-                    newMaps[i, j] = maps[i, j];
+            for (int i = 0; i < Math.Min(Height, newHeight); i++)
+            {
+                for (int j = 0; j < Math.Min(Width, newWidth); j++)
+                {
+                    newMaps[i, j] = Maps[i, j];
                 }
             }
 
-            if (newHeight > height) {
-                for (int i = height; i < newHeight; i++) {
-                    for (int j = 0; j < newWidth; j++) {
+            if (newHeight > Height)
+            {
+                for (int i = Height; i < newHeight; i++)
+                {
+                    for (int j = 0; j < newWidth; j++)
+                    {
                         newMaps[i, j] = GameMatrix.EMPTY;
                     }
                 }
             }
 
-            if (newWidth > width) {
-                for (int j = width; j < newWidth; j++) {
-                    for (int i = 0; i < newHeight; i++) {
+            if (newWidth > Width)
+            {
+                for (int j = Width; j < newWidth; j++)
+                {
+                    for (int i = 0; i < newHeight; i++)
+                    {
                         newMaps[i, j] = GameMatrix.EMPTY;
                     }
                 }
             }
 
             /* Substitute old arrays with new arrays */
-            headers = newHeaders;
-            altitudes = newAltitudes;
-            maps = newMaps;
+            Headers = newHeaders;
+            Altitudes = newAltitudes;
+            Maps = newMaps;
 
             /* Set new width and height */
-            height = (byte)newHeight;
-            width = (byte)newWidth;
+            Height = (byte)newHeight;
+            Width = (byte)newWidth;
         }
 
-        public override string ToString() {
-            return (this.id == null ? "" : id.ToString()) + ": " + this.name;
+        public override string ToString()
+        {
+            return (this.Id == null ? "" : Id.ToString()) + ": " + this.Name;
         }
-        public override byte[] ToByteArray() {
+        public override byte[] ToByteArray()
+        {
             MemoryStream newData = new MemoryStream();
-            using (BinaryWriter writer = new BinaryWriter(newData)) {
-                writer.Write(width);
-                writer.Write(height);
-                writer.Write(hasHeadersSection);
-                writer.Write(hasHeightsSection);
-                writer.Write(name);
+            using (BinaryWriter writer = new BinaryWriter(newData))
+            {
+                writer.Write(Width);
+                writer.Write(Height);
+                writer.Write(HasHeadersSection);
+                writer.Write(HasHeightsSection);
+                writer.Write(Name);
 
-                if (hasHeadersSection) {
-                    for (int i = 0; i < height; i++) {
-                        for (int j = 0; j < width; j++) {
-                            writer.Write(headers[i, j]);
+                if (HasHeadersSection)
+                {
+                    for (int i = 0; i < Height; i++)
+                    {
+                        for (int j = 0; j < Width; j++)
+                        {
+                            writer.Write(Headers[i, j]);
                         }
                     }
                 }
 
-                if (hasHeightsSection) {
-                    for (int i = 0; i < height; i++) {
-                        for (int j = 0; j < width; j++) {
-                            writer.Write(altitudes[i, j]);
+                if (HasHeightsSection)
+                {
+                    for (int i = 0; i < Height; i++)
+                    {
+                        for (int j = 0; j < Width; j++)
+                        {
+                            writer.Write(Altitudes[i, j]);
                         }
                     }
                 }
 
-                for (int i = 0; i < height; i++) {
-                    for (int j = 0; j < width; j++) {
-                        writer.Write(maps[i, j]);
+                for (int i = 0; i < Height; i++)
+                {
+                    for (int j = 0; j < Width; j++)
+                    {
+                        writer.Write(Maps[i, j]);
                     }
                 }
 
             }
             return newData.ToArray();
         }
-        public void SaveToFileDefaultDir(int IDtoReplace, bool showSuccessMessage = true) {
-            SaveToFileDefaultDir(DirNames.matrices, IDtoReplace, showSuccessMessage);
+        public void SaveToFileDefaultDir(int IDtoReplace, bool showSuccessMessage = true)
+        {
+            SaveToFileDefaultDir(DirNames.Matrices, IDtoReplace, showSuccessMessage);
         }
-        public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true) {
+        public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true)
+        {
             SaveToFileExplorePath("Gen IV Matrix File", "mtx", suggestedFileName, showSuccessMessage);
         }
         #endregion

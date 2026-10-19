@@ -56,14 +56,14 @@ namespace DSPRE
         }
 
         public static bool IsSupported =>
-            RomInfo.gameFamily == RomInfo.GameFamilies.HGSS &&
-            RomInfo.pokegearRematchOverlayNumber >= 0;
+            RomInfo.GameFamily == RomInfo.GameFamilies.HGSS &&
+            RomInfo.PokegearRematchOverlayNumber >= 0;
 
         private static RematchTable.Descriptor Descriptor => new RematchTable.Descriptor
         {
             Name = "Pokégear rematch table",
-            OverlayNumber = RomInfo.pokegearRematchOverlayNumber,
-            FallbackOffset = RomInfo.pokegearRematchFallbackTableOffset,
+            OverlayNumber = RomInfo.PokegearRematchOverlayNumber,
+            FallbackOffset = RomInfo.PokegearRematchFallbackTableOffset,
             FixedRowCount = 0,
             DeriveOffset = true,
         };

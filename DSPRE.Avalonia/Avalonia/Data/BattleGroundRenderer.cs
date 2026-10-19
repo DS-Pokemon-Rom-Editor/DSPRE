@@ -8,7 +8,7 @@ namespace DSPRE.Avalonia.Data
 {
     /// <summary>
     /// Decodes the real in-game battle ground "tray" the Pokémon stand on (the terrain platforms) from
-    /// <c>battle/graphic/pl_batt_obj.narc</c> (<see cref="DirNames.battleObj"/>, Platinum).
+    /// <c>battle/graphic/pl_batt_obj.narc</c> (<see cref="DirNames.BattleObj"/>, Platinum).
     /// The OAM cell layout (NCER) is SHARED across every terrain (platform 0's mine/enemy cell), only the tiles (NCGR)
     /// and palette (NCLR, day/eve/night) change per <c>terrain id</c>; the game's own tables
     /// remap the terrain id to a platform graphic set. Renders bank 0 of the shared cell with each terrain's
@@ -29,7 +29,7 @@ namespace DSPRE.Avalonia.Data
             { "Gravel", "Sand", "Lawn", "Pool", "Rock", "Cave", "Snow", "Water", "Ice", "Floor", "Marsh",
               "Unused", "Will", "Koga", "Bruno", "Karen", "Lance", "Distortion World",
               "Battle Tower", "Battle Factory", "Battle Arcade", "Battle Castle", "Battle Hall", "Giratina" };
-        public static string[] TerrainNames => gameFamily switch
+        public static string[] TerrainNames => GameFamily switch
         {
             GameFamilies.DP => DpTerrainNames,
             GameFamilies.HGSS => HgssTerrainNames,
@@ -42,8 +42,8 @@ namespace DSPRE.Avalonia.Data
             { 2, 7, 0, 10, 4, 9, 5, 1, 3, 6, 8, 10, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 };
         private static readonly int[] PtHgssEnemyGfx =
             { 2, 7, 0, 10, 4, 9, 5, 1, 3, 6, 8, 8, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 };
-        private static int[] MineGfx => gameFamily == GameFamilies.DP ? DpGroundGfx : PtHgssMineGfx;
-        private static int[] EnemyGfx => gameFamily == GameFamilies.DP ? DpGroundGfx : PtHgssEnemyGfx;
+        private static int[] MineGfx => GameFamily == GameFamilies.DP ? DpGroundGfx : PtHgssMineGfx;
+        private static int[] EnemyGfx => GameFamily == GameFamilies.DP ? DpGroundGfx : PtHgssEnemyGfx;
 
 
         // Cell origin on screen; a 256 canvas drawn at pos - 128 puts its centre there.
@@ -81,7 +81,7 @@ namespace DSPRE.Avalonia.Data
 
         private const int TerrainIce = 8, BackdropIndoors1 = 6;
 
-        private readonly ScriptNarc _narc = new ScriptNarc(DirNames.battleObj);
+        private readonly ScriptNarc _narc = new ScriptNarc(DirNames.BattleObj);
         public bool Available => _narc.Available;
 
         /// <summary>Builds the (mine, enemy) ground platforms for a terrain (a terrain id), or (null,null) if the

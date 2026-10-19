@@ -43,7 +43,7 @@ namespace DSPRE.Avalonia
                     using XmlReader reader = XmlReader.Create(new StringReader(Xshd));
                     _cached = HighlightingLoader.Load(reader, HighlightingManager.Instance);
                 }
-                catch { _cached = null; }
+                catch (System.Exception ex) { AppLogger.WarnOnce("JsonSyntax.Definition", ex); _cached = null; }
                 return _cached;
             }
         }

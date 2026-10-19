@@ -20,11 +20,11 @@ namespace DSPRE.ROMFiles
         public static string NameOf(int value)
         {
             if (value < 0 || value > ushort.MaxValue) return null;
-            if (DSPRE.Resources.ScriptDatabase.varNames.TryGetValue((ushort)value, out string n)) return n;
+            if (DSPRE.Resources.ScriptDatabase.VarNames.TryGetValue((ushort)value, out string n)) return n;
             if (value < ScriptFirst || value > LastSpecial) return null;
 
             // Spelled as the database spells them for each game, for when no database is loaded.
-            bool johto = RomInfo.gameFamily == RomInfo.GameFamilies.HGSS;
+            bool johto = RomInfo.GameFamily == RomInfo.GameFamilies.HGSS;
             return value switch
             {
                 0x800c => johto ? "VAR_SPECIAL_RESULT" : "VAR_RESULT",

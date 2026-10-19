@@ -59,7 +59,7 @@ namespace DSPRE.AvaloniaShell
 
         private static void ApplyUiScaleOverride()
         {
-            double scale = DSPRE.SettingsManager.Settings?.uiScale ?? 0;
+            double scale = DSPRE.SettingsManager.Settings?.UiScale ?? 0;
             if (scale >= 0.5 && scale <= 8 &&
                 string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AVALONIA_GLOBAL_SCALE_FACTOR")))
             {

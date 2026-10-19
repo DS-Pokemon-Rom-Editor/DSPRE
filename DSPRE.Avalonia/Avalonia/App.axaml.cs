@@ -92,7 +92,7 @@ namespace DSPRE
                 {
                     global::Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
                     {
-                        await DSPRE.Avalonia.DialogHelper.ShowError(
+                        await DSPRE.Avalonia.DialogHelper.ShowErrorAsync(
                             "DSPRE needs Wine to run its bundled tools (ndstool, blz, apicula) on Linux, "
                             + "but Wine wasn't found on PATH.\n\n"
                             + "Install it (e.g. \"sudo apt install wine\") and start DSPRE again.",
@@ -114,12 +114,12 @@ namespace DSPRE
 
                 // RomInfo warnings → an Avalonia dialog (marshalled to the UI thread; loads run off-thread).
                 DSPRE.RomInfo.ShowWarning = (msg, title) =>
-                    global::Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = DSPRE.Avalonia.DialogHelper.ShowError(msg, title));
+                    global::Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = DSPRE.Avalonia.DialogHelper.ShowErrorAsync(msg, title));
 
                 // A write hg-engine's build would undo is refused rather than silently dropped.
                 DSPRE.HgEngine.HgEngineWriteGuard.OnRefused = msg =>
                     global::Avalonia.Threading.Dispatcher.UIThread.Post(
-                        () => _ = DSPRE.Avalonia.DialogHelper.ShowError(msg, "Built by hg-engine"));
+                        () => _ = DSPRE.Avalonia.DialogHelper.ShowErrorAsync(msg, "Built by hg-engine"));
 
                 // Archive members saved from Core keep hg-engine's PNGs in step and reach open editors.
                 DSPRE.ArchiveMembers.Written += DSPRE.Avalonia.Data.BuiltPngSources.OnMemberWritten;
@@ -130,7 +130,7 @@ namespace DSPRE
                 // Velopack update check (cross-platform), unless the host already provided one.
                 if (DSPRE.Avalonia.ShellIntegration.CheckForUpdatesHook == null)
                     DSPRE.Avalonia.ShellIntegration.CheckForUpdatesHook = DSPRE.Avalonia.AppUpdater.CheckForUpdates;
-                if (SettingsManager.Settings?.automaticallyCheckForUpdates == true)
+                if (SettingsManager.Settings?.AutomaticallyCheckForUpdates == true)
                     DSPRE.Avalonia.ShellIntegration.CheckForUpdates(silent: true);
 
                 MainWindowView main = new DSPRE.Avalonia.Views.Shell.MainWindowView(new DSPRE.Avalonia.ViewModels.Shell.MainWindowViewModel(true));
@@ -142,7 +142,7 @@ namespace DSPRE
                 // "Open Default ROM" setting: auto-open it at boot (asking first unless
                 // "Open without asking" is also set). The welcome window is skipped when the
                 // default ROM opens, and shown as usual when it doesn't.
-                string defaultRom = SettingsManager.Settings?.openDefaultRom;
+                string defaultRom = SettingsManager.Settings?.OpenDefaultRom;
                 bool haveDefaultRom = !string.IsNullOrWhiteSpace(defaultRom) &&
                     (System.IO.File.Exists(defaultRom) || System.IO.Directory.Exists(defaultRom));
 
@@ -150,7 +150,7 @@ namespace DSPRE
                 // relaunchable from Tools → Welcome & Tutorial and from Settings.
                 void ShowWelcomeIfEnabled()
                 {
-                    if (SettingsManager.Settings?.showWelcomeOnStartup != false)
+                    if (SettingsManager.Settings?.ShowWelcomeOnStartup != false)
                         DSPRE.Avalonia.Views.Shell.WelcomeView.ShowWelcome(main);
                 }
 
@@ -158,8 +158,8 @@ namespace DSPRE
                 {
                     global::Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
                     {
-                        bool open = SettingsManager.Settings.neverAskForOpening ||
-                            await DSPRE.Avalonia.DialogHelper.AskYesNo(
+                        bool open = SettingsManager.Settings.NeverAskForOpening ||
+                            await DSPRE.Avalonia.DialogHelper.AskYesNoAsync(
                                 $"Open the default ROM?\n\n{defaultRom}", "DSPRE");
                         if (open) await main.OpenRecentAsync(defaultRom);
                         else ShowWelcomeIfEnabled();
@@ -168,11 +168,11 @@ namespace DSPRE
                 else if (!string.IsNullOrWhiteSpace(defaultRom))
                 {
                     // Moved or deleted since it was chosen: say so once and stop trying it on every launch.
-                    SettingsManager.Settings.openDefaultRom = "";
+                    SettingsManager.Settings.OpenDefaultRom = "";
                     SettingsManager.Save();
                     global::Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
                     {
-                        await DSPRE.Avalonia.DialogHelper.ShowInfo(
+                        await DSPRE.Avalonia.DialogHelper.ShowInfoAsync(
                             $"The default ROM is no longer there, so it was removed from Settings:\n\n{defaultRom}", "DSPRE");
                         ShowWelcomeIfEnabled();
                     });

@@ -104,14 +104,14 @@ namespace DSPRE.ROMFiles
         /// <summary>Where this ROM keeps the sheet, or null; <see cref="WhyNot"/> says why.</summary>
         public static Found Locate()
         {
-            string forRom = RomInfo.workDir ?? "";
+            string forRom = RomInfo.WorkDir ?? "";
             if (_foundFor == forRom) return _found;
             _foundFor = forRom;
             _found = null;
             _why = null;
 
             Family family;
-            switch (RomInfo.gameFamily)
+            switch (RomInfo.GameFamily)
             {
                 case RomInfo.GameFamilies.DP: family = Family.DiamondPearl; break;
                 case RomInfo.GameFamilies.Plat:
@@ -129,7 +129,7 @@ namespace DSPRE.ROMFiles
                 if (bytes == null) continue;
                 uint ram;
                 try { ram = OverlayUtils.OverlayTable.GetRAMAddress(ov); }
-                catch { continue; }
+                catch (Exception ex) { AppLogger.WarnOnce("BattleGaugePieces.Locate", ex); continue; }
 
                 for (int i = 0; i + SheetGetter.Length + 6 <= bytes.Length; i += 2)
                 {
@@ -458,7 +458,7 @@ namespace DSPRE.ROMFiles
                 string path = OverlayUtils.GetPath(number);
                 return File.Exists(path) ? File.ReadAllBytes(path) : null;
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleGaugePieces.ReadOverlay", ex); return null; }
         }
 
         private static string Patch(int overlay, int at, byte[] with)

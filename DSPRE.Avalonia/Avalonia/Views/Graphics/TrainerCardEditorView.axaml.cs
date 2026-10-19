@@ -23,17 +23,17 @@ namespace DSPRE.Avalonia.Views.Graphics
             EditorWindowChrome.Attach(this, _vm);
         }
 
-        private async void ImportCardFront_Click(object sender, RoutedEventArgs e) => await ImportPng(_vm.ImportCardFront);
-        private async void ImportCardBack_Click(object sender, RoutedEventArgs e) => await ImportPng(_vm.ImportCardBack);
-        private async void ImportTrainerMale_Click(object sender, RoutedEventArgs e) => await ImportPng(_vm.ImportTrainerMale);
-        private async void ImportTrainerFemale_Click(object sender, RoutedEventArgs e) => await ImportPng(_vm.ImportTrainerFemale);
+        private async void ImportCardFront_Click(object sender, RoutedEventArgs e) => await ImportPngAsync(_vm.ImportCardFront);
+        private async void ImportCardBack_Click(object sender, RoutedEventArgs e) => await ImportPngAsync(_vm.ImportCardBack);
+        private async void ImportTrainerMale_Click(object sender, RoutedEventArgs e) => await ImportPngAsync(_vm.ImportTrainerMale);
+        private async void ImportTrainerFemale_Click(object sender, RoutedEventArgs e) => await ImportPngAsync(_vm.ImportTrainerFemale);
 
-        private async void ExportCardFront_Click(object sender, RoutedEventArgs e) => await ExportPng(_vm.ExportCardFront, "card_front.png");
-        private async void ExportCardBack_Click(object sender, RoutedEventArgs e) => await ExportPng(_vm.ExportCardBack, "card_back.png");
-        private async void ExportTrainerMale_Click(object sender, RoutedEventArgs e) => await ExportPng(_vm.ExportTrainerMale, "trainer_male.png");
-        private async void ExportTrainerFemale_Click(object sender, RoutedEventArgs e) => await ExportPng(_vm.ExportTrainerFemale, "trainer_female.png");
+        private async void ExportCardFront_Click(object sender, RoutedEventArgs e) => await ExportPngAsync(_vm.ExportCardFront, "card_front.png");
+        private async void ExportCardBack_Click(object sender, RoutedEventArgs e) => await ExportPngAsync(_vm.ExportCardBack, "card_back.png");
+        private async void ExportTrainerMale_Click(object sender, RoutedEventArgs e) => await ExportPngAsync(_vm.ExportTrainerMale, "trainer_male.png");
+        private async void ExportTrainerFemale_Click(object sender, RoutedEventArgs e) => await ExportPngAsync(_vm.ExportTrainerFemale, "trainer_female.png");
 
-        private async System.Threading.Tasks.Task ImportPng(System.Func<string, string> import)
+        private async System.Threading.Tasks.Task ImportPngAsync(System.Func<string, string> import)
         {
             IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
@@ -47,11 +47,11 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = import(path);
             if (error != null)
-                await DialogHelper.ShowError($"Import failed: {error}", "Trainer card editor error", this);
+                await DialogHelper.ShowErrorAsync($"Import failed: {error}", "Trainer card editor error", this);
             else SaveNotice.Imported(null, path);
         }
 
-        private async System.Threading.Tasks.Task ExportPng(System.Func<string, string> export, string suggestedName)
+        private async System.Threading.Tasks.Task ExportPngAsync(System.Func<string, string> export, string suggestedName)
         {
             IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
@@ -65,7 +65,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = export(path);
             if (error != null)
-                await DialogHelper.ShowError($"Export failed: {error}", "Trainer card editor error", this);
+                await DialogHelper.ShowErrorAsync($"Export failed: {error}", "Trainer card editor error", this);
             else SaveNotice.Exported(path);
         }
 
@@ -83,7 +83,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = _vm.ImportRankPalette(path);
             if (error != null)
-                await DialogHelper.ShowError($"Import failed: {error}", "Trainer card editor error", this);
+                await DialogHelper.ShowErrorAsync($"Import failed: {error}", "Trainer card editor error", this);
             else SaveNotice.Imported(null, path);
         }
 
@@ -101,7 +101,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = _vm.ExportRankPalette(path);
             if (error != null)
-                await DialogHelper.ShowError($"Export failed: {error}", "Trainer card editor error", this);
+                await DialogHelper.ShowErrorAsync($"Export failed: {error}", "Trainer card editor error", this);
             else SaveNotice.Exported(path);
         }
         /// <summary>Hands the card to the Graphics window, where its drawing, its two arrangements and
@@ -111,11 +111,11 @@ namespace DSPRE.Avalonia.Views.Graphics
             int drawing = Data.GraphicUnits.TrainerCardDrawing();
             if (drawing < 0)
             {
-                _ = DialogHelper.ShowInfo("This game does not lay its trainer card out in a way DSPRE knows.",
+                _ = DialogHelper.ShowInfoAsync("This game does not lay its trainer card out in a way DSPRE knows.",
                                           "Open in Graphics");
                 return;
             }
-            AvaloniaEditorLauncher.OpenGraphicAt(DSPRE.RomInfo.DirNames.trainerCardGraphics, drawing);
+            AvaloniaEditorLauncher.OpenGraphicAt(DSPRE.RomInfo.DirNames.TrainerCardGraphics, drawing);
         }
 
 
@@ -123,7 +123,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void RevertChanges_Click(object sender, RoutedEventArgs e)
         {
-            if (!await DialogHelper.ConfirmDiscard(this)) return;
+            if (!await DialogHelper.ConfirmDiscardAsync(this)) return;
             _vm.RevertChanges();
         }
     }

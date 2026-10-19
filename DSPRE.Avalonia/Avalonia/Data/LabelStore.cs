@@ -39,32 +39,32 @@ namespace DSPRE.Avalonia.Data
     /// </summary>
     public static class LabelStore
     {
-        private static readonly Dictionary<string, LabelCategory> _cats = new();
-        private static readonly Dictionary<string, Dictionary<int, string>> _global = new();
-        private static readonly Dictionary<string, Dictionary<int, string>> _project = new();
-        private static readonly Dictionary<string, Dictionary<int, int>> _globalAttr = new();
-        private static readonly Dictionary<string, Dictionary<int, int>> _projectAttr = new();
+        private static readonly Dictionary<string, LabelCategory> Cats = new();
+        private static readonly Dictionary<string, Dictionary<int, string>> Global = new();
+        private static readonly Dictionary<string, Dictionary<int, string>> Project = new();
+        private static readonly Dictionary<string, Dictionary<int, int>> GlobalAttr = new();
+        private static readonly Dictionary<string, Dictionary<int, int>> ProjectAttr = new();
         private static bool _builtinsRegistered;
         private static bool _globalLoaded;
         private static string _loadedProjectDir;
 
-        public static IReadOnlyCollection<LabelCategory> Categories { get { Ensure(); return _cats.Values; } }
-        public static LabelCategory GetCategory(string key) { Ensure(); return _cats.TryGetValue(key, out LabelCategory c) ? c : null; }
+        public static IReadOnlyCollection<LabelCategory> Categories { get { Ensure(); return Cats.Values; } }
+        public static LabelCategory GetCategory(string key) { Ensure(); return Cats.TryGetValue(key, out LabelCategory c) ? c : null; }
 
         private static string GlobalPath => Path.Combine(AppPaths.DatabasePath, "labels.global.json");
-        private static string ProjectPath => string.IsNullOrEmpty(dspreDir) ? null : Path.Combine(dspreDir, "dspre_labels.json");
+        private static string ProjectPath => string.IsNullOrEmpty(DspreDir) ? null : Path.Combine(DspreDir, "dspre_labels.json");
 
         /// <summary>Lazily registers built-ins, loads the global file once, and (re)loads the project file
         /// whenever the open ROM's working directory changes.</summary>
         private static void Ensure()
         {
             if (!_builtinsRegistered) { RegisterBuiltins(); _builtinsRegistered = true; }
-            if (!_globalLoaded) { Load(GlobalPath, _global, _globalAttr); _globalLoaded = true; }
-            string pdir = string.IsNullOrEmpty(dspreDir) ? null : dspreDir;
-            if (pdir != _loadedProjectDir) { Load(ProjectPath, _project, _projectAttr); _loadedProjectDir = pdir; }
+            if (!_globalLoaded) { Load(GlobalPath, Global, GlobalAttr); _globalLoaded = true; }
+            string pdir = string.IsNullOrEmpty(DspreDir) ? null : DspreDir;
+            if (pdir != _loadedProjectDir) { Load(ProjectPath, Project, ProjectAttr); _loadedProjectDir = pdir; }
         }
 
-        private static void Register(LabelCategory c) => _cats[c.Key] = c;
+        private static void Register(LabelCategory c) => Cats[c.Key] = c;
 
         /// <summary>The routine names as the games' own source has them, before anybody renames one.</summary>
         private static string[] BuildRoutineDefaults()
@@ -168,7 +168,7 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>The open game's camera label category.</summary>
-        public static string CameraKey => CameraKeyFor(gameFamily);
+        public static string CameraKey => CameraKeyFor(GameFamily);
 
         public static string CameraKeyFor(GameFamilies family) => family switch
         {
@@ -176,7 +176,7 @@ namespace DSPRE.Avalonia.Data
         };
 
         /// <summary>The open game's weather label category.</summary>
-        public static string WeatherKey => gameFamily switch
+        public static string WeatherKey => GameFamily switch
         {
             GameFamilies.DP => "field_weather_dp", GameFamilies.Plat => "field_weather_pt", _ => "field_weather_hgss",
         };
@@ -188,7 +188,7 @@ namespace DSPRE.Avalonia.Data
             string[] names = Enum.GetNames<EvolutionMethod>();
             int[] arr = new int[names.Length];
             for (int i = 0; i < names.Length; i++)
-                arr[i] = EvolutionFile.evoDescriptions.TryGetValue((EvolutionMethod)i, out EvolutionParamMeaning meaning) ? (int)meaning : 0;
+                arr[i] = EvolutionFile.EvoDescriptions.TryGetValue((EvolutionMethod)i, out EvolutionParamMeaning meaning) ? (int)meaning : 0;
             return arr;
         }
 
@@ -214,10 +214,10 @@ namespace DSPRE.Avalonia.Data
         public static IReadOnlyList<string> Get(string key)
         {
             Ensure();
-            if (!_cats.TryGetValue(key, out LabelCategory cat)) return Array.Empty<string>();
+            if (!Cats.TryGetValue(key, out LabelCategory cat)) return Array.Empty<string>();
             int count = cat.Defaults.Count;
-            if (_global.TryGetValue(key, out Dictionary<int, string> gl)) count = Math.Max(count, MaxIndex(gl) + 1);
-            if (_project.TryGetValue(key, out Dictionary<int, string> pj)) count = Math.Max(count, MaxIndex(pj) + 1);
+            if (Global.TryGetValue(key, out Dictionary<int, string> gl)) count = Math.Max(count, MaxIndex(gl) + 1);
+            if (Project.TryGetValue(key, out Dictionary<int, string> pj)) count = Math.Max(count, MaxIndex(pj) + 1);
             count = Math.Min(Math.Max(count, 0), cat.Cap);
             List<string> list = new List<string>(count);
             for (int i = 0; i < count; i++) list.Add(Resolve(cat, key, i));
@@ -228,7 +228,7 @@ namespace DSPRE.Avalonia.Data
         public static string GetLabel(string key, int index)
         {
             Ensure();
-            return _cats.TryGetValue(key, out LabelCategory cat) ? Resolve(cat, key, index) : index.ToString();
+            return Cats.TryGetValue(key, out LabelCategory cat) ? Resolve(cat, key, index) : index.ToString();
         }
 
         /// <summary>The built-in default at an index (ignores overrides), shown as a hint in the editor.</summary>
@@ -241,8 +241,8 @@ namespace DSPRE.Avalonia.Data
 
         private static string Resolve(LabelCategory cat, string key, int i)
         {
-            if (_project.TryGetValue(key, out Dictionary<int, string> pj) && pj.TryGetValue(i, out string pv) && !string.IsNullOrEmpty(pv)) return pv;
-            if (_global.TryGetValue(key, out Dictionary<int, string> gl) && gl.TryGetValue(i, out string gv) && !string.IsNullOrEmpty(gv)) return gv;
+            if (Project.TryGetValue(key, out Dictionary<int, string> pj) && pj.TryGetValue(i, out string pv) && !string.IsNullOrEmpty(pv)) return pv;
+            if (Global.TryGetValue(key, out Dictionary<int, string> gl) && gl.TryGetValue(i, out string gv) && !string.IsNullOrEmpty(gv)) return gv;
             string d = i < cat.Defaults.Count ? cat.Defaults[i] : null;   // null = value-gap or beyond defaults
             return string.IsNullOrEmpty(d) ? $"{cat.Singular} {i}" : d;
         }
@@ -257,7 +257,7 @@ namespace DSPRE.Avalonia.Data
         public static void SetLabel(string key, int index, string value, bool global)
         {
             Ensure();
-            Dictionary<string, Dictionary<int, string>> map = global ? _global : _project;
+            Dictionary<string, Dictionary<int, string>> map = global ? Global : Project;
             if (!map.TryGetValue(key, out Dictionary<int, string> d)) { d = new Dictionary<int, string>(); map[key] = d; }
             // Blank, or the same as what this layer falls back to, keeps no entry. Added entries past the defaults
             // stay even when unrenamed, because they are what extends the list.
@@ -270,15 +270,15 @@ namespace DSPRE.Avalonia.Data
 
         private static string FallbackLabel(string key, int index, bool global)
         {
-            if (!global && _global.TryGetValue(key, out Dictionary<int, string> gl) && gl.TryGetValue(index, out string gv) && !string.IsNullOrEmpty(gv))
+            if (!global && Global.TryGetValue(key, out Dictionary<int, string> gl) && gl.TryGetValue(index, out string gv) && !string.IsNullOrEmpty(gv))
                 return gv;
             return GetDefault(key, index);
         }
 
         public static void ResetCategory(string key, bool global)
         {
-            (global ? _global : _project).Remove(key);
-            (global ? _globalAttr : _projectAttr).Remove(key);
+            (global ? Global : Project).Remove(key);
+            (global ? GlobalAttr : ProjectAttr).Remove(key);
         }
 
         // ── Per-entry attribute (e.g. evolution param meaning) ────────────────────────────
@@ -287,8 +287,8 @@ namespace DSPRE.Avalonia.Data
         public static int GetAttr(string key, int index)
         {
             Ensure();
-            if (_projectAttr.TryGetValue(key, out Dictionary<int, int> pj) && pj.TryGetValue(index, out int pv)) return pv;
-            if (_globalAttr.TryGetValue(key, out Dictionary<int, int> gl) && gl.TryGetValue(index, out int gv)) return gv;
+            if (ProjectAttr.TryGetValue(key, out Dictionary<int, int> pj) && pj.TryGetValue(index, out int pv)) return pv;
+            if (GlobalAttr.TryGetValue(key, out Dictionary<int, int> gl) && gl.TryGetValue(index, out int gv)) return gv;
             LabelCategory cat = GetCategory(key);
             if (cat?.AttrDefaults != null && index >= 0 && index < cat.AttrDefaults.Count) return cat.AttrDefaults[index];
             return 0;
@@ -297,10 +297,10 @@ namespace DSPRE.Avalonia.Data
         public static void SetAttr(string key, int index, int value, bool global)
         {
             Ensure();
-            Dictionary<string, Dictionary<int, int>> map = global ? _globalAttr : _projectAttr;
+            Dictionary<string, Dictionary<int, int>> map = global ? GlobalAttr : ProjectAttr;
             if (!map.TryGetValue(key, out Dictionary<int, int> d)) { d = new Dictionary<int, int>(); map[key] = d; }
             int fallback;
-            if (!global && _globalAttr.TryGetValue(key, out Dictionary<int, int> gl) && gl.TryGetValue(index, out int gv)) fallback = gv;
+            if (!global && GlobalAttr.TryGetValue(key, out Dictionary<int, int> gl) && gl.TryGetValue(index, out int gv)) fallback = gv;
             else
             {
                 LabelCategory cat = GetCategory(key);
@@ -315,34 +315,34 @@ namespace DSPRE.Avalonia.Data
         // The Label editor edits a DRAFT that other editors never see; only Commit (= Save) promotes it to
         // the real store + persists + raises LabelsChanged. This stops unsaved edits leaking into editors
         // that read GetAttr/Get live (e.g. the evolution param meaning).
-        private static readonly Dictionary<(bool g, string k, int i), string> _draftLabels = new();
-        private static readonly Dictionary<(bool g, string k, int i), int> _draftAttrs = new();
-        private static readonly HashSet<(bool g, string k)> _draftResets = new();
+        private static readonly Dictionary<(bool g, string k, int i), string> DraftLabels = new();
+        private static readonly Dictionary<(bool g, string k, int i), int> DraftAttrs = new();
+        private static readonly HashSet<(bool g, string k)> DraftResets = new();
 
-        public static bool HasDraft => _draftLabels.Count > 0 || _draftAttrs.Count > 0 || _draftResets.Count > 0;
+        public static bool HasDraft => DraftLabels.Count > 0 || DraftAttrs.Count > 0 || DraftResets.Count > 0;
 
-        public static void DraftSetLabel(string key, int idx, string value, bool global) { Ensure(); _draftLabels[(global, key, idx)] = value ?? ""; }
-        public static void DraftSetAttr(string key, int idx, int value, bool global) { Ensure(); _draftAttrs[(global, key, idx)] = value; }
+        public static void DraftSetLabel(string key, int idx, string value, bool global) { Ensure(); DraftLabels[(global, key, idx)] = value ?? ""; }
+        public static void DraftSetAttr(string key, int idx, int value, bool global) { Ensure(); DraftAttrs[(global, key, idx)] = value; }
         public static void DraftReset(string key, bool global)
         {
             Ensure();
-            _draftResets.Add((global, key));
-            foreach ((bool g, string k, int i) k in _draftLabels.Keys.Where(k => k.g == global && k.k == key).ToList()) _draftLabels.Remove(k);
-            foreach ((bool g, string k, int i) k in _draftAttrs.Keys.Where(k => k.g == global && k.k == key).ToList()) _draftAttrs.Remove(k);
+            DraftResets.Add((global, key));
+            foreach ((bool g, string k, int i) k in DraftLabels.Keys.Where(k => k.g == global && k.k == key).ToList()) DraftLabels.Remove(k);
+            foreach ((bool g, string k, int i) k in DraftAttrs.Keys.Where(k => k.g == global && k.k == key).ToList()) DraftAttrs.Remove(k);
         }
 
         /// <summary>A label as the Label editor should DISPLAY it (committed value overlaid with the draft).</summary>
         public static string GetDraftLabel(string key, int idx, bool global)
         {
-            if (_draftLabels.TryGetValue((global, key, idx), out string v)) return string.IsNullOrEmpty(v) ? GetDefault(key, idx) : v;
-            if (_draftResets.Contains((global, key))) return GetDefault(key, idx);
+            if (DraftLabels.TryGetValue((global, key, idx), out string v)) return string.IsNullOrEmpty(v) ? GetDefault(key, idx) : v;
+            if (DraftResets.Contains((global, key))) return GetDefault(key, idx);
             return GetLabel(key, idx);
         }
 
         public static int GetDraftAttr(string key, int idx, bool global)
         {
-            if (_draftAttrs.TryGetValue((global, key, idx), out int v)) return v;
-            if (_draftResets.Contains((global, key)))
+            if (DraftAttrs.TryGetValue((global, key, idx), out int v)) return v;
+            if (DraftResets.Contains((global, key)))
             {
                 LabelCategory c = GetCategory(key);
                 return c?.AttrDefaults != null && idx >= 0 && idx < c.AttrDefaults.Count ? c.AttrDefaults[idx] : 0;
@@ -353,8 +353,8 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Entry count for the editor including any draft-added indices.</summary>
         public static int DraftCount(string key, bool global)
         {
-            int n = _draftResets.Contains((global, key)) ? (GetCategory(key)?.Defaults.Count ?? 0) : Count(key);
-            foreach ((bool g, string k, int i) k in _draftLabels.Keys) if (k.g == global && k.k == key) n = Math.Max(n, k.i + 1);
+            int n = DraftResets.Contains((global, key)) ? (GetCategory(key)?.Defaults.Count ?? 0) : Count(key);
+            foreach ((bool g, string k, int i) k in DraftLabels.Keys) if (k.g == global && k.k == key) n = Math.Max(n, k.i + 1);
             return Math.Min(n, GetCategory(key)?.Cap ?? 256);
         }
 
@@ -362,39 +362,39 @@ namespace DSPRE.Avalonia.Data
         public static void CommitDraft()
         {
             Ensure();
-            foreach ((bool g, string k) r in _draftResets) ResetCategory(r.k, r.g);
-            foreach (KeyValuePair<(bool g, string k, int i), string> kv in _draftLabels) SetLabel(kv.Key.k, kv.Key.i, kv.Value, kv.Key.g);
-            foreach (KeyValuePair<(bool g, string k, int i), int> kv in _draftAttrs) SetAttr(kv.Key.k, kv.Key.i, kv.Value, kv.Key.g);
+            foreach ((bool g, string k) r in DraftResets) ResetCategory(r.k, r.g);
+            foreach (KeyValuePair<(bool g, string k, int i), string> kv in DraftLabels) SetLabel(kv.Key.k, kv.Key.i, kv.Value, kv.Key.g);
+            foreach (KeyValuePair<(bool g, string k, int i), int> kv in DraftAttrs) SetAttr(kv.Key.k, kv.Key.i, kv.Value, kv.Key.g);
             bool g = false, p = false;
             void Note(bool global) { if (global) g = true; else p = true; }
-            foreach ((bool g, string k, int i) k in _draftLabels.Keys) Note(k.g);
-            foreach ((bool g, string k, int i) k in _draftAttrs.Keys) Note(k.g);
-            foreach ((bool g, string k) k in _draftResets) Note(k.g);
+            foreach ((bool g, string k, int i) k in DraftLabels.Keys) Note(k.g);
+            foreach ((bool g, string k, int i) k in DraftAttrs.Keys) Note(k.g);
+            foreach ((bool g, string k) k in DraftResets) Note(k.g);
             DiscardDraft();
             if (p) Save(false);
             if (g) Save(true);
         }
 
-        public static void DiscardDraft() { _draftLabels.Clear(); _draftAttrs.Clear(); _draftResets.Clear(); }
+        public static void DiscardDraft() { DraftLabels.Clear(); DraftAttrs.Clear(); DraftResets.Clear(); }
 
         // The Label editor's undo: the whole draft as one value.
         private sealed record DraftState(List<object[]> Labels, List<object[]> Attrs, List<object[]> Resets);
 
         public static byte[] DraftSnapshot() => JsonSerializer.SerializeToUtf8Bytes(new DraftState(
-            _draftLabels.OrderBy(kv => (kv.Key.g, kv.Key.k, kv.Key.i)).Select(kv => new object[] { kv.Key.g, kv.Key.k, kv.Key.i, kv.Value }).ToList(),
-            _draftAttrs.OrderBy(kv => (kv.Key.g, kv.Key.k, kv.Key.i)).Select(kv => new object[] { kv.Key.g, kv.Key.k, kv.Key.i, kv.Value }).ToList(),
-            _draftResets.OrderBy(r => (r.g, r.k)).Select(r => new object[] { r.g, r.k }).ToList()));
+            DraftLabels.OrderBy(kv => (kv.Key.g, kv.Key.k, kv.Key.i)).Select(kv => new object[] { kv.Key.g, kv.Key.k, kv.Key.i, kv.Value }).ToList(),
+            DraftAttrs.OrderBy(kv => (kv.Key.g, kv.Key.k, kv.Key.i)).Select(kv => new object[] { kv.Key.g, kv.Key.k, kv.Key.i, kv.Value }).ToList(),
+            DraftResets.OrderBy(r => (r.g, r.k)).Select(r => new object[] { r.g, r.k }).ToList()));
 
         public static void RestoreDraft(byte[] snapshot)
         {
             using JsonDocument doc = JsonDocument.Parse(snapshot);
             DiscardDraft();
             foreach (JsonElement e in doc.RootElement.GetProperty("Labels").EnumerateArray())
-                _draftLabels[(e[0].GetBoolean(), e[1].GetString(), e[2].GetInt32())] = e[3].GetString();
+                DraftLabels[(e[0].GetBoolean(), e[1].GetString(), e[2].GetInt32())] = e[3].GetString();
             foreach (JsonElement e in doc.RootElement.GetProperty("Attrs").EnumerateArray())
-                _draftAttrs[(e[0].GetBoolean(), e[1].GetString(), e[2].GetInt32())] = e[3].GetInt32();
+                DraftAttrs[(e[0].GetBoolean(), e[1].GetString(), e[2].GetInt32())] = e[3].GetInt32();
             foreach (JsonElement e in doc.RootElement.GetProperty("Resets").EnumerateArray())
-                _draftResets.Add((e[0].GetBoolean(), e[1].GetString()));
+                DraftResets.Add((e[0].GetBoolean(), e[1].GetString()));
         }
 
         public static void Save(bool global)
@@ -406,11 +406,11 @@ namespace DSPRE.Avalonia.Data
             {
                 LabelFile file = new LabelFile
                 {
-                    labels = StringKeyed(global ? _global : _project),
-                    attrs  = StringKeyed(global ? _globalAttr : _projectAttr),
+                    Labels = StringKeyed(global ? Global : Project),
+                    Attrs  = StringKeyed(global ? GlobalAttr : ProjectAttr),
                 };
                 // Nothing overridden: leave no file behind rather than an empty one.
-                if (file.labels.Count == 0 && file.attrs.Count == 0)
+                if (file.Labels.Count == 0 && file.Attrs.Count == 0)
                 {
                     if (File.Exists(path)) File.Delete(path);
                     return;
@@ -436,8 +436,8 @@ namespace DSPRE.Avalonia.Data
         // (cat:{idx:label} at the root) are still read as labels for backward compatibility.
         private sealed class LabelFile
         {
-            public Dictionary<string, Dictionary<string, string>> labels { get; set; }
-            public Dictionary<string, Dictionary<string, int>> attrs { get; set; }
+            public Dictionary<string, Dictionary<string, string>> Labels { get; set; }
+            public Dictionary<string, Dictionary<string, int>> Attrs { get; set; }
         }
 
         private static void Load(string path, Dictionary<string, Dictionary<int, string>> labels, Dictionary<string, Dictionary<int, int>> attrs)
@@ -447,11 +447,11 @@ namespace DSPRE.Avalonia.Data
             {
                 if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
                 string json = File.ReadAllText(path);
-                LabelFile file = JsonSerializer.Deserialize<LabelFile>(json);
-                if (file?.labels != null)
+                LabelFile file = JsonSerializer.Deserialize<LabelFile>(json, ReadOptions);
+                if (file?.Labels != null)
                 {
-                    foreach (KeyValuePair<string, Dictionary<string, string>> kv in file.labels) labels[CurrentKey(kv.Key)] = IntKeyed(kv.Value);
-                    if (file.attrs != null) foreach (KeyValuePair<string, Dictionary<string, int>> kv in file.attrs) attrs[CurrentKey(kv.Key)] = IntKeyed(kv.Value);
+                    foreach (KeyValuePair<string, Dictionary<string, string>> kv in file.Labels) labels[CurrentKey(kv.Key)] = IntKeyed(kv.Value);
+                    if (file.Attrs != null) foreach (KeyValuePair<string, Dictionary<string, int>> kv in file.Attrs) attrs[CurrentKey(kv.Key)] = IntKeyed(kv.Value);
                 }
                 else   // old flat format (root = cat → idx → label)
                 {
@@ -461,6 +461,9 @@ namespace DSPRE.Avalonia.Data
             }
             catch (Exception ex) { AppLogger.Error("LabelStore.Load: " + ex.Message); }
         }
+
+        // Files saved before the names went PascalCase use camelCase keys.
+        private static readonly JsonSerializerOptions ReadOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
         // Label files saved by earlier beta builds use the old key.
         private static string CurrentKey(string key) => key == "west_routines" ? "battle_anim_funcs" : key;

@@ -36,7 +36,7 @@ namespace DSPRE.Avalonia
                 bool keep = false;
                 if (lost.Count > 0)
                 {
-                    DialogHelper.MsgResult answer = await DialogHelper.AskThreeWay(Describe(lost), "Comments in source", "Keep comments", "Delete comments");
+                    DialogHelper.MsgResult answer = await DialogHelper.AskThreeWayAsync(Describe(lost), "Comments in source", "Keep comments", "Delete comments");
                     if (answer == DialogHelper.MsgResult.Cancel) return (false, null);
                     keep = answer == DialogHelper.MsgResult.Yes;
                 }

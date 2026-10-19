@@ -165,7 +165,7 @@ namespace DSPRE.ROMFiles
 
         private VsIntroTables(VsIntroSites sites, BattleMusicTables music)
         {
-            Family = gameFamily; Sites = sites; Music = music;
+            Family = GameFamily; Sites = sites; Music = music;
         }
 
         // ── Availability and loading ─────────────────────────────────────────────────────────────
@@ -173,13 +173,13 @@ namespace DSPRE.ROMFiles
         /// <summary>Why this ROM's intros can't be edited, or null.</summary>
         public static string WhyNot()
         {
-            if (isHGE && !HgEngine.HgEngineProject.IsActive) return "Open the hg-engine folder to edit its VS intros.";
-            if (gameFamily != GameFamilies.DP && gameFamily != GameFamilies.Plat && gameFamily != GameFamilies.HGSS)
+            if (IsHGE && !HgEngine.HgEngineProject.IsActive) return "Open the hg-engine folder to edit its VS intros.";
+            if (GameFamily != GameFamilies.DP && GameFamily != GameFamilies.Plat && GameFamily != GameFamilies.HGSS)
                 return "This game has no VS intros DSPRE knows about.";
-            if (gameLanguage != GameLanguages.English) return "VS intros are not supported for this language yet. Only US English games can be edited.";
+            if (GameLanguage != GameLanguages.English) return "VS intros are not supported for this language yet. Only US English games can be edited.";
             VsIntroSites sites = RomLocator.VsIntroSites;
             if (sites == null) return "This version isn't supported yet.";
-            if (!File.Exists(arm9Path)) return "arm9 is missing from this project.";
+            if (!File.Exists(Arm9Path)) return "arm9 is missing from this project.";
             if (!IsDsRomProject && ARM9.CheckCompressionMark()) return "arm9 is still compressed. Convert this project to ds-rom format first.";
             foreach (int ov in new[] { sites.TaskOverlay, sites.RecordOverlay, sites.ExecutiveOverlay })
                 if (ov >= 0 && !File.Exists(OverlayUtils.GetPath(ov))) return $"Overlay {ov} is missing from this project.";
@@ -194,11 +194,11 @@ namespace DSPRE.ROMFiles
             VsIntroSites sites = RomLocator.VsIntroSites;
 
             // hg-engine's EXPAND_MUSIC_TABLES builds the combo, class and Pokemon tables from src/music_tables.c.
-            bool source = isHGE && HgEngine.HgEngineMusicTables.TablesInSource;
+            bool source = IsHGE && HgEngine.HgEngineMusicTables.TablesInSource;
             BattleMusicTables music = (source ? HgEngine.HgEngineMusicTables.ReadBattle() : BattleMusicTables.LoadRom()) ?? throw Mismatch("the battle music tables");
             if (!music.MusicPointerAgrees) throw Mismatch("the music half of the intro table");
             VsIntroTables t = new VsIntroTables(sites, music) { FromSource = source };
-            bool hgss = gameFamily == GameFamilies.HGSS;
+            bool hgss = GameFamily == GameFamilies.HGSS;
 
             if (!source && hgss && sites.ComboMusicCount >= 0 && ARM9.ReadByte((uint)sites.ComboMusicCount) != music.Combos.Rows.Count)
                 throw Mismatch("the intro table's length");
@@ -212,7 +212,7 @@ namespace DSPRE.ROMFiles
             else if (!ClassIntroPatch.IsApplied)
             {
                 BattleMusicTables.ClassJumpTable jumps = music.ClassJumps ?? throw Mismatch("the trainer class switch");
-                t._jumps = t.AddRegion(arm9Path, jumps.Start, 2 * jumps.Count);
+                t._jumps = t.AddRegion(Arm9Path, jumps.Start, 2 * jumps.Count);
             }
             else t.ClassesInPatch = true;
 
@@ -306,7 +306,7 @@ namespace DSPRE.ROMFiles
             // The trainer class metadata patch empties the class table and leaves it no pointer; there is nothing to read.
             if (length == 0)
             {
-                Region empty = new Region { Path = arm9Path, Offset = 0, Now = Array.Empty<byte>(), Saved = Array.Empty<byte>() };
+                Region empty = new Region { Path = Arm9Path, Offset = 0, Now = Array.Empty<byte>(), Saved = Array.Empty<byte>() };
                 _regions.Add(empty);
                 return empty;
             }
@@ -382,7 +382,7 @@ namespace DSPRE.ROMFiles
                     uint literal = BitConverter.ToUInt32(code, (int)k);
                     if (address.TryGetValue(literal, out found)) break;
                     // The class intros patch points Volkner's and Aaron's routines at the battle's class record.
-                    if (ClassesInPatch && literal >= synthOverlayLoadAddress) { classBuffer = true; break; }
+                    if (ClassesInPatch && literal >= SynthOverlayLoadAddress) { classBuffer = true; break; }
                 }
                 if (classBuffer) continue;
                 if (found == null) throw Mismatch("the intro records");
@@ -625,7 +625,7 @@ namespace DSPRE.ROMFiles
             if (HasChanges) return "Save or discard your changes first.";
             if (!SyntheticOverlaySpace.Available()) return "Apply the ARM9 expansion first.";
             // cmp r2, #count: the count is the low byte, 0x2A the opcode.
-            byte[] cmp = ARM9.ReadBytes(vsTrainerEntryTableOffsetToSizeLimiter, 2);
+            byte[] cmp = ARM9.ReadBytes(VsTrainerEntryTableOffsetToSizeLimiter, 2);
             if (cmp[1] != 0x2A || cmp[0] != ClassRowCount) return "The class search doesn't look like the game's, so DSPRE won't move its table.";
             return null;
         }
@@ -652,33 +652,33 @@ namespace DSPRE.ROMFiles
             BitConverter.GetBytes((uint)MostClassRows).CopyTo(block, 0x14);
             rows.CopyTo(block, SyntheticOverlaySpace.HeaderSize);
 
-            byte[] synth = File.ReadAllBytes(Filesystem.expArmPath);
+            byte[] synth = File.ReadAllBytes(Filesystem.ExpArmPath);
             int at = SyntheticOverlaySpace.Place(synth, block.Length, SyntheticOverlaySpace.Reserved(synth));
             if (at < 0) throw new InvalidOperationException("No free space was found in the expanded ARM9 area for the class table.");
 
-            uint pointerAt = vsTrainerEntryTableOffsetToRAMAddress, limitAt = vsTrainerEntryTableOffsetToSizeLimiter;
-            byte[] arm9 = File.ReadAllBytes(arm9Path);
+            uint pointerAt = VsTrainerEntryTableOffsetToRAMAddress, limitAt = VsTrainerEntryTableOffsetToSizeLimiter;
+            byte[] arm9 = File.ReadAllBytes(Arm9Path);
             byte[] blockBefore = synth.AsSpan(at, block.Length).ToArray(), pointerBefore = arm9.AsSpan((int)pointerAt, 4).ToArray();
             byte limitBefore = arm9[limitAt];
-            uint ram = synthOverlayLoadAddress + (uint)(at + SyntheticOverlaySpace.HeaderSize);
+            uint ram = SynthOverlayLoadAddress + (uint)(at + SyntheticOverlaySpace.HeaderSize);
             try
             {
-                DSUtils.WriteToFile(Filesystem.expArmPath, block, (uint)at);
-                DSUtils.WriteToFile(arm9Path, BitConverter.GetBytes(ram), pointerAt);
-                DSUtils.WriteToFile(arm9Path, new[] { (byte)MostClassRows }, limitAt);
+                DSUtils.WriteToFile(Filesystem.ExpArmPath, block, (uint)at);
+                DSUtils.WriteToFile(Arm9Path, BitConverter.GetBytes(ram), pointerAt);
+                DSUtils.WriteToFile(Arm9Path, new[] { (byte)MostClassRows }, limitAt);
             }
             catch
             {
-                DSUtils.WriteToFile(Filesystem.expArmPath, blockBefore, (uint)at);
-                DSUtils.WriteToFile(arm9Path, pointerBefore, pointerAt);
-                DSUtils.WriteToFile(arm9Path, new[] { limitBefore }, limitAt);
+                DSUtils.WriteToFile(Filesystem.ExpArmPath, blockBefore, (uint)at);
+                DSUtils.WriteToFile(Arm9Path, pointerBefore, pointerAt);
+                DSUtils.WriteToFile(Arm9Path, new[] { limitBefore }, limitAt);
                 throw;
             }
 
             Music.Classes.Repointed = true;
-            Music.Classes.Path = Filesystem.expArmPath;
+            Music.Classes.Path = Filesystem.ExpArmPath;
             Music.Classes.Start = (uint)(at + SyntheticOverlaySpace.HeaderSize);
-            _classRows.Path = Filesystem.expArmPath;
+            _classRows.Path = Filesystem.ExpArmPath;
             _classRows.Offset = at + SyntheticOverlaySpace.HeaderSize;
             _classRows.Now = (byte[])rows.Clone();
             _classRows.Saved = (byte[])rows.Clone();

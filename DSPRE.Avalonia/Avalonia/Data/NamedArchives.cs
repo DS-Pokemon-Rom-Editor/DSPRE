@@ -10,9 +10,9 @@ namespace DSPRE.Avalonia.Data
     public static class NamedArchives
     {
         /// <summary>HeartGold keeps field weather in its own archive; the other games in synthOverlay.</summary>
-        public static DirNames WeatherDir => gameFamily == GameFamilies.HGSS ? DirNames.weatherGraphics : DirNames.synthOverlay;
+        public static DirNames WeatherDir => GameFamily == GameFamilies.HGSS ? DirNames.WeatherGraphics : DirNames.SynthOverlay;
 
-        private static bool IsWeather(DirNames dir) => dir == DirNames.weatherGraphics || dir == DirNames.synthOverlay;
+        private static bool IsWeather(DirNames dir) => dir == DirNames.WeatherGraphics || dir == DirNames.SynthOverlay;
 
         /// <summary>The names for one archive in the game that is open, or empty when there are none.</summary>
         public static IReadOnlyList<string> Names(DirNames dir)
@@ -20,20 +20,20 @@ namespace DSPRE.Avalonia.Data
             string packed = null;
             try
             {
-                bool johto = gameFamily == GameFamilies.HGSS;
+                bool johto = GameFamily == GameFamilies.HGSS;
                 if (dir == WeatherDir)
                     packed = johto ? ArchiveEntryNames.WeatherHeartGold : ArchiveEntryNames.WeatherPlatinum;
-                else if (dir == DirNames.fonts)
+                else if (dir == DirNames.Fonts)
                     packed = johto ? ArchiveEntryNames.FontHeartGold : ArchiveEntryNames.FontPlatinum;
             }
-            catch { }
+            catch (Exception ex) { AppLogger.Warn("Named archives: " + ex.Message); }
 
             if (packed == null) return Array.Empty<string>();
             List<string> names = packed.Split(' ', StringSplitOptions.RemoveEmptyEntries)
                               .Select(n => n == "-" ? "" : n)
                               .ToList();
             // Diamond and Pearl lack the two three-file weather sets Platinum keeps at entries 55 to 60.
-            if (dir == DirNames.synthOverlay && gameFamily == GameFamilies.DP && names.Count >= 61)
+            if (dir == DirNames.SynthOverlay && GameFamily == GameFamilies.DP && names.Count >= 61)
                 names.RemoveRange(55, 6);
             return names;
         }
@@ -50,7 +50,7 @@ namespace DSPRE.Avalonia.Data
                 return Pretty(thing);
             }
 
-            if (dir == DirNames.fonts)
+            if (dir == DirNames.Fonts)
             {
                 foreach ((string name, string says) in Fonts)
                     if (thing.Equals(name, StringComparison.Ordinal)) return says;

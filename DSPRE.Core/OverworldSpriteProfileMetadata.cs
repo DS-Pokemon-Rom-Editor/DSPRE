@@ -109,7 +109,7 @@ namespace DSPRE
 
             try
             {
-                if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS && HgEngine.HgEngineProject.IsActive)
+                if (RomInfo.GameFamily == RomInfo.GameFamilies.HGSS && HgEngine.HgEngineProject.IsActive)
                 {
                     if (!HgEngine.HgEngineOverworlds.TryReadTable(out List<HgEngineOverworlds.Entry> rows, out error)) return false;
                     HgEngineOverworlds.Entry target = rows.Find(r => r.Tag == targetAppearanceId);
@@ -118,10 +118,10 @@ namespace DSPRE
                     patch = new OverworldSpriteProfileMetadataPatch(target.Tag, target.Properties, source.Properties);
                     return true;
                 }
-                if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)
+                if (RomInfo.GameFamily == RomInfo.GameFamilies.HGSS)
                     return TryCreateHgssPatch(RomInfo.OWtablePath, RomInfo.OWTableOffset, targetAppearanceId, sourceAppearanceId, out patch, out error);
 
-                if (RomInfo.gameFamily == RomInfo.GameFamilies.Plat || RomInfo.gameFamily == RomInfo.GameFamilies.DP)
+                if (RomInfo.GameFamily == RomInfo.GameFamilies.Plat || RomInfo.GameFamily == RomInfo.GameFamilies.DP)
                 {
                     if (OverworldSpriteTableExpansion.IsApplied)
                         return TryCreateExpandedDppPatch(targetAppearanceId, sourceAppearanceId, out patch, out error);

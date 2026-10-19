@@ -68,8 +68,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (TextArchiveId < 0) return none;
 
             System.Collections.Generic.List<string> lines;
-            try { lines = new TextArchive(TextArchiveId).messages; }
-            catch { return none; }
+            try { lines = new TextArchive(TextArchiveId).Messages; }
+            catch (Exception ex) { AppLogger.WarnOnce("EventEditorViewModel.GatherStringVars", ex); return none; }
             if (lines == null) return none;
 
             // Which scripts show which message. A script that could not be read is skipped rather than
@@ -80,23 +80,23 @@ namespace DSPRE.Avalonia.ViewModels.World
                 MapHeader header = _headerId < 0 ? null : MapHeader.GetMapHeader((ushort)_headerId);
                 if (header != null)
                 {
-                    ScriptFile sf = new ScriptFile(header.scriptFileID);
-                    for (int i = 0; i < (sf.allScripts?.Count ?? 0); i++)
+                    ScriptFile sf = new ScriptFile(header.ScriptFileID);
+                    for (int i = 0; i < (sf.AllScripts?.Count ?? 0); i++)
                     {
                         int scriptNumber = i + 1;          // scripts are counted from one
-                        foreach (ScriptCommand cmd in sf.allScripts[i].commands ?? new System.Collections.Generic.List<ScriptCommand>())
+                        foreach (ScriptCommand cmd in sf.AllScripts[i].Commands ?? new System.Collections.Generic.List<ScriptCommand>())
                         {
                             // A command's name carries its parameters too ("Message 0x6"), so compare the
                             // first word. Several commands put something in the box, not just Message.
-                            string full = cmd?.name ?? "";
+                            string full = cmd?.Name ?? "";
                             int space = full.IndexOf(' ');
                             string name = space > 0 ? full.Substring(0, space) : full;
                             if (name.IndexOf("Message", System.StringComparison.Ordinal) < 0) continue;
                             if (name == "CloseMessage" || name == "OpenMessage"
                              || name == "GetCommonMessageArchive" || name == "FreezeMessage") continue;
-                            if (cmd.cmdParams == null || cmd.cmdParams.Count == 0) continue;
+                            if (cmd.CmdParams == null || cmd.CmdParams.Count == 0) continue;
                             // A parameter arrives as its raw bytes, smallest first.
-                            byte[] raw = cmd.cmdParams[0];
+                            byte[] raw = cmd.CmdParams[0];
                             if (raw == null || raw.Length == 0) continue;
                             int id = raw.Length >= 2 ? raw[0] | (raw[1] << 8) : raw[0];
                             if (id < 0 || id >= lines.Count) continue;
@@ -106,7 +106,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     }
                 }
             }
-            catch { }
+            catch (Exception ex) { AppLogger.Warn("Event editor: overworld sprite table: " + ex.Message); }
 
             List<(int, string)> numbered = new System.Collections.Generic.List<(int, string)>(lines.Count);
             for (int i = 0; i < lines.Count; i++) numbered.Add((i, lines[i]));
@@ -150,10 +150,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (_file == null || !_showOw) return "";
             StringBuilder key = new StringBuilder();
-            foreach (Overworld ow in _file.overworlds)
-                if (Overworld3DObjects.IsModel(ow.overlayTableEntry))
-                    key.Append(ow.overlayTableEntry).Append(',').Append(ow.xMatrixPosition).Append(',').Append(ow.yMatrixPosition).Append(',')
-                       .Append(ow.xMapPosition).Append(',').Append(ow.yMapPosition).Append(',').Append(ow.zPosition).Append(';');
+            foreach (Overworld ow in _file.Overworlds)
+                if (Overworld3DObjects.IsModel(ow.OverlayTableEntry))
+                    key.Append(ow.OverlayTableEntry).Append(',').Append(ow.XMatrixPosition).Append(',').Append(ow.YMatrixPosition).Append(',')
+                       .Append(ow.XMapPosition).Append(',').Append(ow.YMapPosition).Append(',').Append(ow.ZPosition).Append(';');
             return key.ToString();
         }
 
@@ -183,31 +183,31 @@ namespace DSPRE.Avalonia.ViewModels.World
             List<PlacedBuilding> placed = new List<PlacedBuilding>();
             if (_file == null || !_showOw) return placed;
             BdhcFile terrain = null;
-            if (map?.bdhc != null && BdhcFile.TryParse(map.bdhc, out BdhcFile parsed)) terrain = parsed;
-            foreach (Overworld ow in _file.overworlds)
+            if (map?.Bdhc != null && BdhcFile.TryParse(map.Bdhc, out BdhcFile parsed)) terrain = parsed;
+            foreach (Overworld ow in _file.Overworlds)
             {
-                if (ow.xMatrixPosition != cellX || ow.yMatrixPosition != cellY || !Overworld3DObjects.IsModel(ow.overlayTableEntry)) continue;
-                NSBMD nsbmd = Overworld3DObjects.Load(ow.overlayTableEntry);
+                if (ow.XMatrixPosition != cellX || ow.YMatrixPosition != cellY || !Overworld3DObjects.IsModel(ow.OverlayTableEntry)) continue;
+                NSBMD nsbmd = Overworld3DObjects.Load(ow.OverlayTableEntry);
                 if (nsbmd == null) continue;
-                NSBMDModel model = nsbmd.models[0];
+                NSBMDModel model = nsbmd.Models[0];
 
                 float unit = NsbmdGeometry.TileSize / 16f;   // one field unit
-                float localX = (ow.xMapPosition + 0.5f) * NsbmdGeometry.TileSize;
-                float localZ = (ow.yMapPosition + 0.5f) * NsbmdGeometry.TileSize + Overworld3DObjects.OffsetZ(ow.overlayTableEntry) * unit;
+                float localX = (ow.XMapPosition + 0.5f) * NsbmdGeometry.TileSize;
+                float localZ = (ow.YMapPosition + 0.5f) * NsbmdGeometry.TileSize + Overworld3DObjects.OffsetZ(ow.OverlayTableEntry) * unit;
                 // The same ground the markers stand on: the terrain nearest the event's own height.
                 float y = 0f;
                 if (terrain != null && terrain.TryGetHeight(localX, localZ, HeightHint(ow) - altitudeY, out float ground)) y = ground;
                 float x = localX - NsbmdGeometry.MapStride / 2f;
                 float z = localZ - NsbmdGeometry.MapStride / 2f;
 
-                float scale = (model.modelScale == 0 ? 1f : model.modelScale) / 64f;
+                float scale = (model.ModelScale == 0 ? 1f : model.ModelScale) / 64f;
                 placed.Add(new PlacedBuilding
                 {
                     Model = model,
                     Transform = Mat4.Multiply(Mat4.Scale(scale, scale, scale), Mat4.Translate(x / scale, y / scale, z / scale)),
-                    ModelId = -1 - (int)ow.overlayTableEntry,
-                    TileX = cellX * MapFile.mapSize + ow.xMapPosition,
-                    TileZ = cellY * MapFile.mapSize + ow.yMapPosition,
+                    ModelId = -1 - (int)ow.OverlayTableEntry,
+                    TileX = cellX * MapFile.MapSize + ow.XMapPosition,
+                    TileZ = cellY * MapFile.MapSize + ow.YMapPosition,
                 });
             }
             return placed;
@@ -248,9 +248,9 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool HasOwSpritePreview => _owSpritePreview != null;
 
         /// <summary>Whether a script picks this overworld's sprite at run time, so the preview is only a stand-in.</summary>
-        public bool IsDynamicSprite => _ow != null && IsVariableOverworld(_ow.overlayTableEntry);
+        public bool IsDynamicSprite => _ow != null && IsVariableOverworld(_ow.OverlayTableEntry);
         public string DynamicSpriteTip => IsDynamicSprite
-            ? $"Dynamic: a script picks this sprite while playing, from variable 0x{0x4020 + _ow.overlayTableEntry - FirstVariableOverworld:X4}. Shown as a stand-in."
+            ? $"Dynamic: a script picks this sprite while playing, from variable 0x{0x4020 + _ow.OverlayTableEntry - FirstVariableOverworld:X4}. Shown as a stand-in."
             : null;
 
         /// <summary>The model shown in the sprite box for an entry the game draws as a model, or null.</summary>
@@ -285,7 +285,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (v == _owRawType) return;
                 _owRawType = v;
                 SetOwKind(KindOfType(v));
-                if (!_suppress && _ow != null) { _ow.type = v; Dirty(); }
+                if (!_suppress && _ow != null) { _ow.Type = v; Dirty(); }
                 RaiseOwTypeInfoChanged();
             }
         }
@@ -314,7 +314,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private static OwKind KindOfType(ushort t)
             => t == (ushort)Overworld.OwType.ITEM ? OwKind.Item
-             : (OverworldEventTypes.Find(RomInfo.gameFamily, t)?.IsTrainer == true ? OwKind.Trainer : OwKind.Normal);
+             : (OverworldEventTypes.Find(RomInfo.GameFamily, t)?.IsTrainer == true ? OwKind.Trainer : OwKind.Normal);
 
         private void RaiseOwTypeInfoChanged()
         {
@@ -328,13 +328,13 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public decimal OwParam1
         {
-            get => _ow?.param1 ?? 0;
-            set { if (_ow == null || _suppress) return; if (_ow.param1 == (ushort)value) return; _ow.param1 = (ushort)value; Dirty(); OnPropertyChanged(nameof(OwParam1)); }
+            get => _ow?.Param1 ?? 0;
+            set { if (_ow == null || _suppress) return; if (_ow.Param1 == (ushort)value) return; _ow.Param1 = (ushort)value; Dirty(); OnPropertyChanged(nameof(OwParam1)); }
         }
         public decimal OwParam2
         {
-            get => _ow?.param2 ?? 0;
-            set { if (_ow == null || _suppress) return; if (_ow.param2 == (ushort)value) return; _ow.param2 = (ushort)value; Dirty(); OnPropertyChanged(nameof(OwParam2)); }
+            get => _ow?.Param2 ?? 0;
+            set { if (_ow == null || _suppress) return; if (_ow.Param2 == (ushort)value) return; _ow.Param2 = (ushort)value; Dirty(); OnPropertyChanged(nameof(OwParam2)); }
         }
 
         // Script is normally locked when Trainer/Item drives it, but if the current script number
@@ -357,7 +357,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             get
             {
                 if (_ow == null) return false;
-                int sprite = _ow.overlayTableEntry;
+                int sprite = _ow.OverlayTableEntry;
                 return sprite >= FirstApricornSprite && sprite <= LastApricornSprite;
             }
         }
@@ -368,12 +368,12 @@ namespace DSPRE.Avalonia.ViewModels.World
             + "moves the tree to another bed and it comes out a different apricorn. The sprite chosen "
             + "above is only what it looks like before the game replaces it.";
 
-        /// <summary>HG Engine (community HeartGold decompilation, <see cref="RomInfo.isHGE"/>) uses a
+        /// <summary>HG Engine (community HeartGold decompilation, <see cref="RomInfo.IsHGE"/>) uses a
         /// single generic item script (always exactly 7000) whose behavior reads the item ID straight
         /// out of the event's own param0/sightRange field, instead of vanilla's one-script-per-item
         /// scheme (script = 7000 + dropdown index). So the Item panel shows a different control
         /// depending on which engine the loaded ROM actually runs.</summary>
-        public bool IsHGE => RomInfo.isHGE;
+        public bool IsHGE => RomInfo.IsHGE;
         public bool OwItemFieldsVisibleVanilla => _owKind == OwKind.Item && !IsHGE;
         public bool OwItemFieldsVisibleHGE => _owKind == OwKind.Item && IsHGE;
 
@@ -417,11 +417,11 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// later switches this event back to Standard/Trainer kind.</summary>
         public decimal OwItemIdHGE
         {
-            get => _ow?.sightRange ?? 0;
+            get => _ow?.SightRange ?? 0;
             set
             {
                 if (_ow == null || _suppress || _owKind != OwKind.Item) return;
-                _ow.sightRange = (ushort)value;
+                _ow.SightRange = (ushort)value;
                 _owSight = value;
                 ForceOwScript(7000); // always exactly 7000 under HG Engine, never 7000+index
                 OnPropertyChanged(nameof(OwItemIdHGE));
@@ -447,7 +447,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// (WinForms always forces the script number when the type/trainer/item selection changes).</summary>
         private void ForceOwScript(ushort value)
         {
-            if (_ow != null) _ow.scriptNumber = value;
+            if (_ow != null) _ow.ScriptNumber = value;
             _owScript = value;
             OnPropertyChanged(nameof(OwScript));
             OnPropertyChanged(nameof(OwScriptIndex)); OnPropertyChanged(nameof(OwScriptIndexOutOfRange));
@@ -482,13 +482,13 @@ namespace DSPRE.Avalonia.ViewModels.World
             _owKind = kind;
             RaiseOwKindChanged();
             if (!changed || _suppress || _ow == null) return;
-            if (previous == OwKind.Normal) _owNormalScript = _ow.scriptNumber;
+            if (previous == OwKind.Normal) _owNormalScript = _ow.ScriptNumber;
 
             switch (kind)
             {
                 case OwKind.Normal:
                     // A message id or a hand-written script number belongs to the user and must survive a type change.
-                    if (ScriptOwnedBy(previous, _ow.scriptNumber)) ForceOwScript(_owNormalScript ?? 0);
+                    if (ScriptOwnedBy(previous, _ow.ScriptNumber)) ForceOwScript(_owNormalScript ?? 0);
                     break;
                 case OwKind.Item:
                     if (IsHGE)
@@ -509,11 +509,11 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void PopulateOwEventTypes()
         {
-            _owTypeTable = OverworldEventTypes.For(RomInfo.gameFamily);
+            _owTypeTable = OverworldEventTypes.For(RomInfo.GameFamily);
             OwEventTypes.Clear();
             foreach (OverworldEventType t in _owTypeTable) OwEventTypes.Add(t.ToString());
 
-            _owMoveTable = OverworldMovements.For(RomInfo.gameFamily);
+            _owMoveTable = OverworldMovements.For(RomInfo.GameFamily);
             OwMovementNames.Clear();
             foreach (OverworldMovement m in _owMoveTable) OwMovementNames.Add(m.ToString());
         }
@@ -602,7 +602,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
                 else
                 {
-                    ScriptFile itemScript = new ScriptFile(RomInfo.itemScriptFileNumber);
+                    ScriptFile itemScript = new ScriptFile(RomInfo.ItemScriptFileNumber);
                     foreach ((int scriptIndex, int itemId, int quantity) entry in DSUtils.GetGroundItemScriptEntries(itemScript))
                     {
                         string name = entry.itemId < itemNames.Length ? itemNames[entry.itemId] : ("Item " + entry.itemId);
@@ -621,7 +621,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             PopulateOwItemEntries();
             if (_ow == null || _owKind != OwKind.Item || IsHGE) return;
 
-            int itemIdx = _ow.scriptNumber - 7000;
+            int itemIdx = _ow.ScriptNumber - 7000;
             _owItemIndex = (itemIdx >= 0 && itemIdx < OwItemEntries.Count) ? itemIdx : -1;
             OnPropertyChanged(nameof(OwItemIndex));
             OnPropertyChanged(nameof(OwItemIndexOutOfRange));
@@ -680,8 +680,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 Set(ref _xMap, value);
                 if (_suppress || _current == null) return;
                 short v = (short)value;
-                if (_current.xMapPosition == v) return;
-                _current.xMapPosition = v; Dirty(); RefreshMarkers();
+                if (_current.XMapPosition == v) return;
+                _current.XMapPosition = v; Dirty(); RefreshMarkers();
             }
         }
         public decimal YMap
@@ -692,8 +692,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 Set(ref _yMap, value);
                 if (_suppress || _current == null) return;
                 short v = (short)value;
-                if (_current.yMapPosition == v) return;
-                _current.yMapPosition = v; Dirty(); RefreshMarkers();
+                if (_current.YMapPosition == v) return;
+                _current.YMapPosition = v; Dirty(); RefreshMarkers();
             }
         }
         // Only overworlds store z as 16.16 fixed point (1 tile = 65536 units). Triggers and spawnables
@@ -713,14 +713,14 @@ namespace DSPRE.Avalonia.ViewModels.World
             _ => (int)Math.Clamp(v, int.MinValue, int.MaxValue),
         };
         /// <summary>The event's height in the same units the 3D scene uses, whichever way its z is stored.</summary>
-        private static float HeightHint(Event e) => ZIsFixedPointFor(e) ? e.zPosition / 262144f : e.zPosition * 0.25f;
+        private static float HeightHint(Event e) => ZIsFixedPointFor(e) ? e.ZPosition / 262144f : e.ZPosition * 0.25f;
         /// <summary>What the height would be in tiles if it were read the way an overworld's is. </summary>
         public string ZPosNote
         {
             get
             {
-                if (_current == null || ZIsFixedPoint || _current.zPosition == 0) return "";
-                double tiles = _current.zPosition / 65536.0;
+                if (_current == null || ZIsFixedPoint || _current.ZPosition == 0) return "";
+                double tiles = _current.ZPosition / 65536.0;
                 return $"= {tiles:0.###} tiles";
             }
         }
@@ -739,8 +739,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 Set(ref _zPos, value);
                 if (_suppress || _current == null) return;
                 int v = FromDisplayZ(value);
-                if (_current.zPosition == v) return;
-                _current.zPosition = v; Dirty(); RefreshMarkers(); OnPropertyChanged(nameof(ZPosNote));
+                if (_current.ZPosition == v) return;
+                _current.ZPosition = v; Dirty(); RefreshMarkers(); OnPropertyChanged(nameof(ZPosNote));
             }
         }
         public decimal XMatrix
@@ -751,8 +751,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 Set(ref _xMat, value);
                 if (_suppress || _current == null) return;
                 ushort v = (ushort)value;
-                if (_current.xMatrixPosition == v) return;
-                _current.xMatrixPosition = v; Dirty(); DisplayMap();
+                if (_current.XMatrixPosition == v) return;
+                _current.XMatrixPosition = v; Dirty(); DisplayMap();
             }
         }
         public decimal YMatrix
@@ -763,8 +763,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 Set(ref _yMat, value);
                 if (_suppress || _current == null) return;
                 ushort v = (ushort)value;
-                if (_current.yMatrixPosition == v) return;
-                _current.yMatrixPosition = v; Dirty(); DisplayMap();
+                if (_current.YMatrixPosition == v) return;
+                _current.YMatrixPosition = v; Dirty(); DisplayMap();
             }
         }
 
@@ -777,15 +777,15 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 if (Set(ref _spScript, value) && !_suppress && _spawn != null)
                 {
-                    _spawn.scriptNumber = (ushort)value; Dirty();
+                    _spawn.ScriptNumber = (ushort)value; Dirty();
                     OnPropertyChanged(nameof(SpScriptIndex)); OnPropertyChanged(nameof(SpScriptIndexOutOfRange)); OnPropertyChanged(nameof(SpScriptCommonInfo)); OnPropertyChanged(nameof(SpScriptHasCommonInfo)); OnPropertyChanged(nameof(SpScriptCommonName)); OnPropertyChanged(nameof(SpScriptGenericWarningVisible)); RaiseSpHidden();
                 }
             }
         }
-        public decimal SpType { get => _spType; set { if (Set(ref _spType, value) && !_suppress && _spawn != null) { _spawn.type = (ushort)value; Dirty(); RaiseSpHidden(); } } }
-        public decimal SpDir { get => _spDir; set { if (Set(ref _spDir, value) && !_suppress && _spawn != null) { _spawn.dir = (ushort)value; Dirty(); } } }
-        public IReadOnlyList<string> SpawnableTypeNames => DSPRE.Resources.PokeDatabase.EventEditor.Spawnables.typesArray;
-        public IReadOnlyList<string> SpawnableDirectionNames => DSPRE.Resources.PokeDatabase.EventEditor.Spawnables.orientationsArray;
+        public decimal SpType { get => _spType; set { if (Set(ref _spType, value) && !_suppress && _spawn != null) { _spawn.Type = (ushort)value; Dirty(); RaiseSpHidden(); } } }
+        public decimal SpDir { get => _spDir; set { if (Set(ref _spDir, value) && !_suppress && _spawn != null) { _spawn.Dir = (ushort)value; Dirty(); } } }
+        public IReadOnlyList<string> SpawnableTypeNames => DSPRE.Resources.PokeDatabase.EventEditor.Spawnables.TypesArray;
+        public IReadOnlyList<string> SpawnableDirectionNames => DSPRE.Resources.PokeDatabase.EventEditor.Spawnables.OrientationsArray;
 
         public int SpScriptIndex
         {
@@ -819,7 +819,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex) { AppLogger.Error("PopulateHiddenItemEntries: " + ex.Message); }
         }
 
-        public bool SpIsHiddenItem => _spawn != null && (int)_spType == Spawnable.TYPE_HIDDENITEM && _hiddenScripts.Count > 0;
+        public bool SpIsHiddenItem => _spawn != null && (int)_spType == Spawnable.TypeHiddenitem && _hiddenScripts.Count > 0;
 
         public int SpHiddenIndex
         {
@@ -846,18 +846,18 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         // ── Overworld fields ────────────────────────────────────────────────────────
         private decimal _owId, _owSprite, _owMove, _owType, _owFlag, _owScript, _owOrient, _owSight, _owXr, _owYr;
-        public decimal OwId { get => _owId; set { if (Set(ref _owId, value) && !_suppress && _ow != null) { _ow.owID = (ushort)value; Dirty(); } } }
+        public decimal OwId { get => _owId; set { if (Set(ref _owId, value) && !_suppress && _ow != null) { _ow.OwID = (ushort)value; Dirty(); } } }
         public decimal OwSprite
         {
             get => _owSprite;
-            set { if (Set(ref _owSprite, value) && !_suppress && _ow != null) { _ow.overlayTableEntry = (ushort)value; Dirty(); RefreshMarkers(); UpdateOwSpritePreview();
+            set { if (Set(ref _owSprite, value) && !_suppress && _ow != null) { _ow.OverlayTableEntry = (ushort)value; Dirty(); RefreshMarkers(); UpdateOwSpritePreview();
                   // Whether this is an apricorn tree is decided by the sprite, so the panel has to
                   // follow when the sprite changes.
                   OnPropertyChanged(nameof(OwIsApricornTree)); } }
         }
-        public decimal OwMovement { get => _owMove; set { if (Set(ref _owMove, value) && !_suppress && _ow != null) { _ow.movement = (ushort)value; Dirty(); } } }
-        public decimal OwType { get => _owType; set { if (Set(ref _owType, value) && !_suppress && _ow != null) { _ow.type = (ushort)value; Dirty(); } } }
-        public decimal OwFlag { get => _owFlag; set { if (Set(ref _owFlag, value) && !_suppress && _ow != null) { _ow.flag = (ushort)value; Dirty(); } } }
+        public decimal OwMovement { get => _owMove; set { if (Set(ref _owMove, value) && !_suppress && _ow != null) { _ow.Movement = (ushort)value; Dirty(); } } }
+        public decimal OwType { get => _owType; set { if (Set(ref _owType, value) && !_suppress && _ow != null) { _ow.Type = (ushort)value; Dirty(); } } }
+        public decimal OwFlag { get => _owFlag; set { if (Set(ref _owFlag, value) && !_suppress && _ow != null) { _ow.Flag = (ushort)value; Dirty(); } } }
         public decimal OwScript
         {
             get => _owScript;
@@ -865,7 +865,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 if (Set(ref _owScript, value) && !_suppress && _ow != null)
                 {
-                    _ow.scriptNumber = (ushort)value; Dirty();
+                    _ow.ScriptNumber = (ushort)value; Dirty();
                     OnPropertyChanged(nameof(OwScriptIndex)); OnPropertyChanged(nameof(OwScriptIndexOutOfRange));
                     OnPropertyChanged(nameof(OwScriptCommonInfo));
             OnPropertyChanged(nameof(OwScriptHasCommonInfo)); OnPropertyChanged(nameof(OwScriptCommonName));
@@ -898,7 +898,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// file may still be a valid common/global script rather than a mistake.</summary>
         private static string CommonScriptInfo(int scriptNumber)
         {
-            CommonScriptId.Result result = CommonScriptId.Resolve(RomInfo.gameFamily, scriptNumber);
+            CommonScriptId.Result result = CommonScriptId.Resolve(RomInfo.GameFamily, scriptNumber);
             if (result.Kind != CommonScriptId.Kind.Resolved) return null;
             // Unnamed, the range is the card's title, so this line only says where the script is.
             return CommonScriptLabels.Of(scriptNumber) != null
@@ -928,19 +928,19 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             SelectedEventIndex = eventFile;
             // The switch waits on a prompt when this file has unsaved edits; only pick the overworld once it's loaded.
-            if (_selectedIndex == eventFile && owIndex >= 0 && owIndex < (_file?.overworlds.Count ?? 0)) SelectedOverworldIndex = owIndex;
+            if (_selectedIndex == eventFile && owIndex >= 0 && owIndex < (_file?.Overworlds.Count ?? 0)) SelectedOverworldIndex = owIndex;
         }
 
         /// <summary>Shows one spawnable of one event file, asked for from another editor.</summary>
         public void GoToSpawnable(int eventFile, int spawnIndex)
         {
             SelectedEventIndex = eventFile;
-            if (_selectedIndex == eventFile && spawnIndex >= 0 && spawnIndex < (_file?.spawnables.Count ?? 0)) SelectEvent(3, spawnIndex);
+            if (_selectedIndex == eventFile && spawnIndex >= 0 && spawnIndex < (_file?.Spawnables.Count ?? 0)) SelectEvent(3, spawnIndex);
         }
 
-        public void GoToOverworldScript() { if (_ow != null) GoToScript(_ow.scriptNumber); }
-        public void GoToTriggerScript()   { if (_trig != null) GoToScript(_trig.scriptNumber); }
-        public void GoToSpawnableScript() { if (_spawn != null) GoToScript(_spawn.scriptNumber); }
+        public void GoToOverworldScript() { if (_ow != null) GoToScript(_ow.ScriptNumber); }
+        public void GoToTriggerScript()   { if (_trig != null) GoToScript(_trig.ScriptNumber); }
+        public void GoToSpawnableScript() { if (_spawn != null) GoToScript(_spawn.ScriptNumber); }
 
         public bool OwScriptHasCommonInfo => !string.IsNullOrEmpty(OwScriptCommonInfo);
 
@@ -949,7 +949,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public string SpScriptCommonName => SpScriptHasCommonInfo ? CommonScriptName((int)_spScript) : null;
 
         private static string CommonScriptName(int scriptNumber) =>
-            CommonScriptLabels.Of(scriptNumber) ?? CommonScriptId.Resolve(RomInfo.gameFamily, scriptNumber).Name;
+            CommonScriptLabels.Of(scriptNumber) ?? CommonScriptId.Resolve(RomInfo.GameFamily, scriptNumber).Name;
 
         /// <summary>The script number of the overworld (0), trigger (1) or spawnable (2) on show.</summary>
         public int ShownScript(int kind) => kind switch { 0 => (int)_owScript, 1 => (int)_trScript, _ => (int)_spScript };
@@ -966,22 +966,22 @@ namespace DSPRE.Avalonia.ViewModels.World
         public decimal OwOrientation
         {
             get => _owOrient;
-            set { if (Set(ref _owOrient, value) && !_suppress && _ow != null) { _ow.orientation = (short)value; Dirty(); RefreshMarkers(); UpdateOwSpritePreview(); } }
+            set { if (Set(ref _owOrient, value) && !_suppress && _ow != null) { _ow.Orientation = (short)value; Dirty(); RefreshMarkers(); UpdateOwSpritePreview(); } }
         }
-        public decimal OwSight { get => _owSight; set { if (Set(ref _owSight, value) && !_suppress && _ow != null) { _ow.sightRange = (ushort)value; Dirty(); } } }
-        public decimal OwXRange { get => _owXr; set { if (Set(ref _owXr, value) && !_suppress && _ow != null) { _ow.xRange = (short)value; Dirty(); } } }
-        public decimal OwYRange { get => _owYr; set { if (Set(ref _owYr, value) && !_suppress && _ow != null) { _ow.yRange = (short)value; Dirty(); } } }
+        public decimal OwSight { get => _owSight; set { if (Set(ref _owSight, value) && !_suppress && _ow != null) { _ow.SightRange = (ushort)value; Dirty(); } } }
+        public decimal OwXRange { get => _owXr; set { if (Set(ref _owXr, value) && !_suppress && _ow != null) { _ow.XRange = (short)value; Dirty(); } } }
+        public decimal OwYRange { get => _owYr; set { if (Set(ref _owYr, value) && !_suppress && _ow != null) { _ow.YRange = (short)value; Dirty(); } } }
 
         // Dropdown-friendly wrappers: the sprite entry list is the sparse set of valid overlay-table
         // keys (RomInfo.overworldTableKeys), so its ComboBox index isn't the same as the raw value;
         // movement/orientation are plain 0..N index=value lists so they pass straight through.
         public int OwSpriteIndex
         {
-            get => overworldTableKeys == null ? -1 : Array.IndexOf(overworldTableKeys, (uint)_owSprite);
+            get => OverworldTableKeys == null ? -1 : Array.IndexOf(OverworldTableKeys, (uint)_owSprite);
             set
             {
-                if (overworldTableKeys == null || value < 0 || value >= overworldTableKeys.Length) return;
-                OwSprite = overworldTableKeys[value];
+                if (OverworldTableKeys == null || value < 0 || value >= OverworldTableKeys.Length) return;
+                OwSprite = OverworldTableKeys[value];
                 OnPropertyChanged();
             }
         }
@@ -1014,9 +1014,9 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             global::Avalonia.Media.Imaging.Bitmap bmp = null;
             NsbmdRenderModel model = null;
-            if (_ow != null && Overworld3DObjects.IsModel(_ow.overlayTableEntry))
+            if (_ow != null && Overworld3DObjects.IsModel(_ow.OverlayTableEntry))
             {
-                try { if (Overworld3DObjects.Load(_ow.overlayTableEntry) is NSBMD nsbmd) model = NsbmdGeometry.BuildModel(nsbmd.models[0]); }
+                try { if (Overworld3DObjects.Load(_ow.OverlayTableEntry) is NSBMD nsbmd) model = NsbmdGeometry.BuildModel(nsbmd.Models[0]); }
                 catch (Exception ex) when (ex is IOException || ex is ArgumentException || ex is IndexOutOfRangeException)
                 {
                     AppLogger.Error("UpdateOwSpritePreview model: " + ex.Message);
@@ -1032,7 +1032,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 try
                 {
-                    OverworldSprites.SpritePixels pix = OverworldSprites.Get(_ow.overlayTableEntry, (ushort)Math.Max((short)0, _ow.orientation));
+                    OverworldSprites.SpritePixels pix = OverworldSprites.Get(_ow.OverlayTableEntry, (ushort)Math.Max((short)0, _ow.Orientation));
                     if (pix != null && pix.Width > 0 && pix.Height > 0)
                     {
                         byte[] bgra = new byte[pix.Rgba.Length];
@@ -1054,20 +1054,20 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         // ── Warp fields ───────────────────────────────────────────────────────────────
         private decimal _warpHeader, _warpAnchor, _warpHeight;
-        public decimal WarpHeader { get => _warpHeader; set { if (Set(ref _warpHeader, value)) { OnPropertyChanged(nameof(WarpHeaderName)); if (!_suppress && _warp != null) { _warp.header = (ushort)value; Dirty(); } } } }
+        public decimal WarpHeader { get => _warpHeader; set { if (Set(ref _warpHeader, value)) { OnPropertyChanged(nameof(WarpHeaderName)); if (!_suppress && _warp != null) { _warp.Header = (ushort)value; Dirty(); } } } }
         private IReadOnlyList<string> _headerNames;
         public string WarpHeaderName
         {
             get
             {
-                try { _headerNames ??= HeaderLabels.Friendly(); } catch { return ""; }
+                try { _headerNames ??= HeaderLabels.Friendly(); } catch (Exception ex) { AppLogger.WarnOnce("EventEditorViewModel.WarpHeaderName", ex); return ""; }
                 if (_headerNames == null) return "";
                 int i = (int)_warpHeader;
                 return i >= 0 && i < _headerNames.Count ? _headerNames[i].Trim() : "No such header";
             }
         }
-        public decimal WarpAnchor { get => _warpAnchor; set { if (Set(ref _warpAnchor, value) && !_suppress && _warp != null) { _warp.anchor = (ushort)value; Dirty(); } } }
-        public decimal WarpHeight { get => _warpHeight; set { if (Set(ref _warpHeight, value) && !_suppress && _warp != null) { _warp.height = (uint)value; Dirty(); } } }
+        public decimal WarpAnchor { get => _warpAnchor; set { if (Set(ref _warpAnchor, value) && !_suppress && _warp != null) { _warp.Anchor = (ushort)value; Dirty(); } } }
+        public decimal WarpHeight { get => _warpHeight; set { if (Set(ref _warpHeight, value) && !_suppress && _warp != null) { _warp.Height = (uint)value; Dirty(); } } }
 
         // ── Trigger fields ──────────────────────────────────────────────────────────
         private decimal _trScript, _trW, _trH, _trVarVal, _trVar;
@@ -1078,7 +1078,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 if (Set(ref _trScript, value) && !_suppress && _trig != null)
                 {
-                    _trig.scriptNumber = (ushort)value; Dirty();
+                    _trig.ScriptNumber = (ushort)value; Dirty();
                     OnPropertyChanged(nameof(TrScriptIndex)); OnPropertyChanged(nameof(TrScriptIndexOutOfRange)); OnPropertyChanged(nameof(TrScriptCommonInfo)); OnPropertyChanged(nameof(TrScriptHasCommonInfo)); OnPropertyChanged(nameof(TrScriptCommonName)); OnPropertyChanged(nameof(TrScriptGenericWarningVisible));
                 }
             }
@@ -1089,17 +1089,17 @@ namespace DSPRE.Avalonia.ViewModels.World
             set { if (value >= 0 && value < _availableScriptIds.Count) TrScript = _availableScriptIds[value]; }
         }
         public bool TrScriptIndexOutOfRange => _trig != null && TrScriptIndex < 0;
-        public decimal TrWidth { get => _trW; set { if (Set(ref _trW, value) && !_suppress && _trig != null) { _trig.widthX = (ushort)value; Dirty(); } } }
-        public decimal TrHeight { get => _trH; set { if (Set(ref _trH, value) && !_suppress && _trig != null) { _trig.heightY = (ushort)value; Dirty(); } } }
+        public decimal TrWidth { get => _trW; set { if (Set(ref _trW, value) && !_suppress && _trig != null) { _trig.WidthX = (ushort)value; Dirty(); } } }
+        public decimal TrHeight { get => _trH; set { if (Set(ref _trH, value) && !_suppress && _trig != null) { _trig.HeightY = (ushort)value; Dirty(); } } }
         public decimal TrVarValue
         {
             get => _trVarVal;
-            set { if (Set(ref _trVarVal, value) && !_suppress && _trig != null) { _trig.expectedVarValue = (ushort)value; Dirty(); } OnPropertyChanged(nameof(TrVarValueHex)); }
+            set { if (Set(ref _trVarVal, value) && !_suppress && _trig != null) { _trig.ExpectedVarValue = (ushort)value; Dirty(); } OnPropertyChanged(nameof(TrVarValueHex)); }
         }
         public decimal TrVar
         {
             get => _trVar;
-            set { if (Set(ref _trVar, value) && !_suppress && _trig != null) { _trig.variableWatched = (ushort)value; Dirty(); } OnPropertyChanged(nameof(TrVarHex)); }
+            set { if (Set(ref _trVar, value) && !_suppress && _trig != null) { _trig.VariableWatched = (ushort)value; Dirty(); } OnPropertyChanged(nameof(TrVarHex)); }
         }
 
         // Script variables are normally written in hex, so the two variable fields can be typed either way.
@@ -1135,7 +1135,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         // Added, removed and saved event files wait here until Save.
-        private readonly StagedArchive _archive = new(DirNames.eventFiles);
+        private readonly StagedArchive _archive = new(DirNames.EventFiles);
 
         private void ListEventFiles()
         {
@@ -1178,10 +1178,10 @@ namespace DSPRE.Avalonia.ViewModels.World
             int Keep(int i, int count) => i < count ? i : count - 1;
             List<Action> order = new List<Action>
             {
-                () => SelectedSpawnableIndex = Keep(spawn, _file.spawnables.Count),
-                () => SelectedOverworldIndex = Keep(ow, _file.overworlds.Count),
-                () => SelectedWarpIndex = Keep(warp, _file.warps.Count),
-                () => SelectedTriggerIndex = Keep(trig, _file.triggers.Count),
+                () => SelectedSpawnableIndex = Keep(spawn, _file.Spawnables.Count),
+                () => SelectedOverworldIndex = Keep(ow, _file.Overworlds.Count),
+                () => SelectedWarpIndex = Keep(warp, _file.Warps.Count),
+                () => SelectedTriggerIndex = Keep(trig, _file.Triggers.Count),
             };
             int last = active is Overworld ? 1 : active is Warp ? 2 : active is Trigger ? 3 : 0;
             for (int i = 0; i < order.Count; i++) if (i != last) order[i]();
@@ -1236,7 +1236,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private bool _showOw = true, _showWarp = true, _showTrig = true, _showSpawn = true, _showGrid;
 
         // Flat 2D view.
-        private bool _flat2D = SettingsManager.Settings?.eventEditorFlat2D ?? false;
+        private bool _flat2D = SettingsManager.Settings?.EventEditorFlat2D ?? false;
         public bool Flat2D
         {
             get => _flat2D;
@@ -1245,7 +1245,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (!Set(ref _flat2D, value)) return;
                 if (SettingsManager.Settings != null)
                 {
-                    SettingsManager.Settings.eventEditorFlat2D = value;
+                    SettingsManager.Settings.EventEditorFlat2D = value;
                     SettingsManager.Save();
                 }
                 ViewModeChanged?.Invoke(this, EventArgs.Empty);
@@ -1263,7 +1263,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// expensive per-tile collision scan that would otherwise repeat on every event add/move for a
         /// large header, so bigger matrices skip it rather than pay that cost every refresh. The
         /// checkbox is disabled instead of silently doing nothing so the limit is visible.</summary>
-        public bool GridToggleEnabled => _matrix != null && _matrix.width * _matrix.height <= 4;
+        public bool GridToggleEnabled => _matrix != null && _matrix.Width * _matrix.Height <= 4;
 
         private bool _stitchGrid = true;
         public bool StitchGrid { get => _stitchGrid; set { if (Set(ref _stitchGrid, value)) DisplayMap(); } }
@@ -1282,7 +1282,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         // A saved map can move buildings and terrain under the events, so the scene is drawn again.
         private void OnMapSavedElsewhere(object sender, int mapIndex)
         {
-            if (_matrix?.maps == null || Model3D == null || !_matrix.maps.Cast<ushort>().Contains((ushort)mapIndex)) return;
+            if (_matrix?.Maps == null || Model3D == null || !_matrix.Maps.Cast<ushort>().Contains((ushort)mapIndex)) return;
             global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
             {
                 DisplayMap();
@@ -1302,7 +1302,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         // Keeping these edits means saving them over what the other window wrote, so ask.
         private async Task OfferReloadAsync(int id)
         {
-            bool reload = await DialogHelper.AskYesNo(
+            bool reload = await DialogHelper.AskYesNoAsync(
                 $"Event file {id} was saved in another window.\n\nLoad it and drop the changes made here?", "Event file changed", _owner);
             if (id != _selectedIndex) return;
             if (!reload) { StatusText = $"Event file {id} was saved in another window. Saving here will overwrite it."; return; }
@@ -1317,36 +1317,36 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> {
-                    DirNames.eventFiles, DirNames.maps, DirNames.exteriorBuildingModels,
-                    DirNames.buildingTextures, DirNames.mapTextures, DirNames.matrices,
-                    DirNames.areaData, DirNames.dynamicHeaders, DirNames.OWSprites,
+                    DirNames.EventFiles, DirNames.Maps, DirNames.ExteriorBuildingModels,
+                    DirNames.BuildingTextures, DirNames.MapTextures, DirNames.Matrices,
+                    DirNames.AreaData, DirNames.DynamicHeaders, DirNames.OWSprites,
                     // Needed by PopulateOwTrainerAndItemEntries below (Trainer/Item dropdowns).
-                    DirNames.trainerProperties, DirNames.scripts, DirNames.textArchives });
-                if (gameFamily == GameFamilies.HGSS)
-                    DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.interiorBuildingModels });
+                    DirNames.TrainerProperties, DirNames.Scripts, DirNames.TextArchives });
+                if (GameFamily == GameFamilies.HGSS)
+                    DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.InteriorBuildingModels });
                 _eventToHeader = BuildEventHeaderLookup();
                 // Overworld sprite lookups are populated during ROM/event setup in WinForms;
                 // ensure they exist for the 3D sprite billboards here (SetOWtable must run first).
-                try { if (ow3DSpriteDict == null) Set3DOverworldsDict(); } catch (Exception ex) { AppLogger.Error("Set3DOverworldsDict: " + ex.Message); }
+                try { if (Ow3DSpriteDict == null) Set3DOverworldsDict(); } catch (Exception ex) { AppLogger.Error("Set3DOverworldsDict: " + ex.Message); }
                 try { if (OverworldTable == null) { SetOWtable(); ReadOWTable(); } } catch (Exception ex) { AppLogger.Error("ReadOWTable: " + ex.Message); }
                 OwSpriteEntries.Clear();
-                if (overworldTableKeys != null)
-                    foreach (uint key in overworldTableKeys) OwSpriteEntries.Add(OverworldLabels.Of(key));
+                if (OverworldTableKeys != null)
+                    foreach (uint key in OverworldTableKeys) OwSpriteEntries.Add(OverworldLabels.Of(key));
                 PopulateOwEventTypes();
                 PopulateOwTrainerAndItemEntries();
                 ListEventFiles();
                 int count = EventNames.Count;
                 StatusText = $"{count} event files.";
                 if (count > 0) SelectedEventIndex = Math.Min(Math.Max(0, InitialIndex), count - 1);
-                if (InitialOverworldIndex >= 0 && InitialOverworldIndex < _file?.overworlds.Count)
+                if (InitialOverworldIndex >= 0 && InitialOverworldIndex < _file?.Overworlds.Count)
                     SelectedOverworldIndex = InitialOverworldIndex;
-                if (InitialSpawnableIndex >= 0 && InitialSpawnableIndex < _file?.spawnables.Count)
+                if (InitialSpawnableIndex >= 0 && InitialSpawnableIndex < _file?.Spawnables.Count)
                     SelectEvent(3, InitialSpawnableIndex);
             }
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowError($"Failed to set up Event Editor:\n{ex.Message}", "Event editor error");
+                await DialogHelper.ShowErrorAsync($"Failed to set up Event Editor:\n{ex.Message}", "Event editor error");
             }
         }
 
@@ -1366,7 +1366,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 StatusText = $"Loaded event file {index}.";
                 OnPropertyChanged(nameof(UnsavedChangesDescription));
             }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Failed to load event file {index}:\n{ex.Message}", "Event editor error"); }
+            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Failed to load event file {index}:\n{ex.Message}", "Event editor error"); }
         }
 
         private void RefreshLists()
@@ -1375,10 +1375,10 @@ namespace DSPRE.Avalonia.ViewModels.World
             Spawnables.Clear(); Overworlds.Clear(); Warps.Clear(); Triggers.Clear();
             if (_file != null)
             {
-                for (int i = 0; i < _file.spawnables.Count; i++) Spawnables.Add($"Spawnable {i:D2}");
-                for (int i = 0; i < _file.overworlds.Count; i++) Overworlds.Add($"Overworld {i:D2}");
-                for (int i = 0; i < _file.warps.Count; i++) Warps.Add($"Warp {i:D2}");
-                for (int i = 0; i < _file.triggers.Count; i++) Triggers.Add($"Trigger {i:D2}");
+                for (int i = 0; i < _file.Spawnables.Count; i++) Spawnables.Add($"Spawnable {i:D2}");
+                for (int i = 0; i < _file.Overworlds.Count; i++) Overworlds.Add($"Overworld {i:D2}");
+                for (int i = 0; i < _file.Warps.Count; i++) Warps.Add($"Warp {i:D2}");
+                for (int i = 0; i < _file.Triggers.Count; i++) Triggers.Add($"Trigger {i:D2}");
             }
             _suppress = false;
         }
@@ -1387,19 +1387,19 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             _current = e;
             if (e == null) return;
-            XMap = e.xMapPosition; YMap = e.yMapPosition; ZPos = ToDisplayZ(e.zPosition);
+            XMap = e.XMapPosition; YMap = e.YMapPosition; ZPos = ToDisplayZ(e.ZPosition);
             OnPropertyChanged(nameof(ZPosNote));
-            XMatrix = e.xMatrixPosition; YMatrix = e.yMatrixPosition;
+            XMatrix = e.XMatrixPosition; YMatrix = e.YMatrixPosition;
         }
 
         private void LoadSpawnable(int i)
         {
-            _spawn = (_file != null && i >= 0 && i < _file.spawnables.Count) ? _file.spawnables[i] : null;
+            _spawn = (_file != null && i >= 0 && i < _file.Spawnables.Count) ? _file.Spawnables[i] : null;
             OnPropertyChanged(nameof(HasSpawn));
             if (_spawn == null) { if (_current is Spawnable) _current = null; return; }
             _suppress = true;
             LoadPosition(_spawn);
-            SpScript = _spawn.scriptNumber; SpType = _spawn.type; SpDir = _spawn.dir;
+            SpScript = _spawn.ScriptNumber; SpType = _spawn.Type; SpDir = _spawn.Dir;
             _suppress = false;
             OnPropertyChanged(nameof(SpScriptIndex)); OnPropertyChanged(nameof(SpScriptIndexOutOfRange)); OnPropertyChanged(nameof(SpScriptCommonInfo)); OnPropertyChanged(nameof(SpScriptHasCommonInfo)); OnPropertyChanged(nameof(SpScriptCommonName)); OnPropertyChanged(nameof(SpScriptGenericWarningVisible)); RaiseSpHidden();
             RefreshMarkers();
@@ -1407,37 +1407,37 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void LoadOverworld(int i)
         {
-            _ow = (_file != null && i >= 0 && i < _file.overworlds.Count) ? _file.overworlds[i] : null;
+            _ow = (_file != null && i >= 0 && i < _file.Overworlds.Count) ? _file.Overworlds[i] : null;
             OnPropertyChanged(nameof(HasOw));
             if (_ow == null) { if (_current is Overworld) _current = null; UpdateOwSpritePreview(); return; }
             _suppress = true;
             LoadPosition(_ow);
-            OwId = _ow.owID; OwSprite = _ow.overlayTableEntry; OwMovement = _ow.movement; OwType = _ow.type;
-            OwFlag = _ow.flag; OwScript = _ow.scriptNumber; OwOrientation = _ow.orientation; OwSight = _ow.sightRange;
-            OwXRange = _ow.xRange; OwYRange = _ow.yRange;
+            OwId = _ow.OwID; OwSprite = _ow.OverlayTableEntry; OwMovement = _ow.Movement; OwType = _ow.Type;
+            OwFlag = _ow.Flag; OwScript = _ow.ScriptNumber; OwOrientation = _ow.Orientation; OwSight = _ow.SightRange;
+            OwXRange = _ow.XRange; OwYRange = _ow.YRange;
             OnPropertyChanged(nameof(OwSpriteIndex)); OnPropertyChanged(nameof(OwMovementIndex));
             OnPropertyChanged(nameof(OwMovementUnknown)); OnPropertyChanged(nameof(OwMovementUnknownNote)); OnPropertyChanged(nameof(OwOrientationIndex));
             OnPropertyChanged(nameof(OwScriptIndex)); OnPropertyChanged(nameof(OwScriptIndexOutOfRange));
 
             // Derive the Standard/Trainer/Item radio selection and locked-script dropdown index from
             // the raw type/scriptNumber. Expanded rosters keep the direct one-based trainer mapping.
-            _owRawType = _ow.type;
+            _owRawType = _ow.Type;
             _owNormalScript = null;
-            if (KindOfType(_ow.type) == OwKind.Trainer)
+            if (KindOfType(_ow.Type) == OwKind.Trainer)
             {
                 _owKind = OwKind.Trainer;
-                bool partner = _ow.scriptNumber >= 4999;
-                int idx = partner ? _ow.scriptNumber - 4999 : _ow.scriptNumber - 2999;
+                bool partner = _ow.ScriptNumber >= 4999;
+                int idx = partner ? _ow.ScriptNumber - 4999 : _ow.ScriptNumber - 2999;
                 // Out of range (past the end of the current trainer roster) → leave unselected (-1) rather
                 // than clamping into a wrong trainer; OwTrainerIndexOutOfRange surfaces this in the UI.
                 _owTrainerIndex = (idx >= 0 && idx < OwTrainerEntries.Count) ? idx : -1;
                 _owPartnerTrainer = partner;
             }
-            else if (_ow.type == (ushort)Overworld.OwType.ITEM
-                     || (_ow.scriptNumber >= GroundItemScriptsLogic.ItemScrMin && _ow.scriptNumber < GroundItemScriptsLogic.ItemScrMax))
+            else if (_ow.Type == (ushort)Overworld.OwType.ITEM
+                     || (_ow.ScriptNumber >= GroundItemScriptsLogic.ItemScrMin && _ow.ScriptNumber < GroundItemScriptsLogic.ItemScrMax))
             {
                 _owKind = OwKind.Item;
-                int itemIdx = _ow.scriptNumber - 7000;
+                int itemIdx = _ow.ScriptNumber - 7000;
                 _owItemIndex = (itemIdx >= 0 && itemIdx < OwItemEntries.Count) ? itemIdx : -1;
             }
             else
@@ -1456,25 +1456,25 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void LoadWarp(int i)
         {
-            _warp = (_file != null && i >= 0 && i < _file.warps.Count) ? _file.warps[i] : null;
+            _warp = (_file != null && i >= 0 && i < _file.Warps.Count) ? _file.Warps[i] : null;
             OnPropertyChanged(nameof(HasWarp));
             if (_warp == null) { if (_current is Warp) _current = null; return; }
             _suppress = true;
             LoadPosition(_warp);
-            WarpHeader = _warp.header; WarpAnchor = _warp.anchor; WarpHeight = _warp.height;
+            WarpHeader = _warp.Header; WarpAnchor = _warp.Anchor; WarpHeight = _warp.Height;
             _suppress = false;
             RefreshMarkers();
         }
 
         private void LoadTrigger(int i)
         {
-            _trig = (_file != null && i >= 0 && i < _file.triggers.Count) ? _file.triggers[i] : null;
+            _trig = (_file != null && i >= 0 && i < _file.Triggers.Count) ? _file.Triggers[i] : null;
             OnPropertyChanged(nameof(HasTrig));
             if (_trig == null) { if (_current is Trigger) _current = null; return; }
             _suppress = true;
             LoadPosition(_trig);
-            TrScript = _trig.scriptNumber; TrWidth = _trig.widthX; TrHeight = _trig.heightY;
-            TrVarValue = _trig.expectedVarValue; TrVar = _trig.variableWatched;
+            TrScript = _trig.ScriptNumber; TrWidth = _trig.WidthX; TrHeight = _trig.HeightY;
+            TrVarValue = _trig.ExpectedVarValue; TrVar = _trig.VariableWatched;
             _suppress = false;
             OnPropertyChanged(nameof(TrScriptIndex)); OnPropertyChanged(nameof(TrScriptIndexOutOfRange)); OnPropertyChanged(nameof(TrScriptCommonInfo)); OnPropertyChanged(nameof(TrScriptHasCommonInfo)); OnPropertyChanged(nameof(TrScriptCommonName)); OnPropertyChanged(nameof(TrScriptGenericWarningVisible));
             RefreshMarkers();
@@ -1484,41 +1484,41 @@ namespace DSPRE.Avalonia.ViewModels.World
         // New events go on the cell the view is showing, not (0,0) which is usually another header's map.
         private (int x, int y) NewEventCell()
         {
-            if (_current != null) return (_current.xMatrixPosition, _current.yMatrixPosition);
+            if (_current != null) return (_current.XMatrixPosition, _current.YMatrixPosition);
             HashSet<(int x, int y)> cells = HeaderCells();
             if (cells != null)
                 foreach ((int x, int y) c in cells) return c;
             return (0, 0);
         }
 
-        public void AddSpawnable() { if (_file == null) return; (int cx, int cy) = NewEventCell(); _file.spawnables.Add(new Spawnable(cx, cy)); RefreshLists(); Dirty(); SelectedSpawnableIndex = _file.spawnables.Count - 1; }
-        public void RemoveSpawnable() { if (_file == null || _selSpawn < 0 || _selSpawn >= _file.spawnables.Count) return; _file.spawnables.RemoveAt(_selSpawn); RefreshLists(); Dirty(); SelectedSpawnableIndex = -1; RefreshMarkers(); }
+        public void AddSpawnable() { if (_file == null) return; (int cx, int cy) = NewEventCell(); _file.Spawnables.Add(new Spawnable(cx, cy)); RefreshLists(); Dirty(); SelectedSpawnableIndex = _file.Spawnables.Count - 1; }
+        public void RemoveSpawnable() { if (_file == null || _selSpawn < 0 || _selSpawn >= _file.Spawnables.Count) return; _file.Spawnables.RemoveAt(_selSpawn); RefreshLists(); Dirty(); SelectedSpawnableIndex = -1; RefreshMarkers(); }
         public void AddOverworld()
         {
             if (_file == null) return;
             (int cx, int cy) = NewEventCell();
-            _file.overworlds.Add(new Overworld(FreeOverworldId(), cx, cy));
-            RefreshLists(); Dirty(); SelectedOverworldIndex = _file.overworlds.Count - 1;
+            _file.Overworlds.Add(new Overworld(FreeOverworldId(), cx, cy));
+            RefreshLists(); Dirty(); SelectedOverworldIndex = _file.Overworlds.Count - 1;
         }
-        public void RemoveOverworld() { if (_file == null || _selOw < 0 || _selOw >= _file.overworlds.Count) return; _file.overworlds.RemoveAt(_selOw); RefreshLists(); Dirty(); SelectedOverworldIndex = -1; RefreshMarkers(); }
-        public void AddWarp() { if (_file == null) return; (int cx, int cy) = NewEventCell(); _file.warps.Add(new Warp(cx, cy)); RefreshLists(); Dirty(); SelectedWarpIndex = _file.warps.Count - 1; }
-        public void RemoveWarp() { if (_file == null || _selWarp < 0 || _selWarp >= _file.warps.Count) return; _file.warps.RemoveAt(_selWarp); RefreshLists(); Dirty(); SelectedWarpIndex = -1; RefreshMarkers(); }
-        public void AddTrigger() { if (_file == null) return; (int cx, int cy) = NewEventCell(); _file.triggers.Add(new Trigger(cx, cy)); RefreshLists(); Dirty(); SelectedTriggerIndex = _file.triggers.Count - 1; }
-        public void RemoveTrigger() { if (_file == null || _selTrig < 0 || _selTrig >= _file.triggers.Count) return; _file.triggers.RemoveAt(_selTrig); RefreshLists(); Dirty(); SelectedTriggerIndex = -1; RefreshMarkers(); }
+        public void RemoveOverworld() { if (_file == null || _selOw < 0 || _selOw >= _file.Overworlds.Count) return; _file.Overworlds.RemoveAt(_selOw); RefreshLists(); Dirty(); SelectedOverworldIndex = -1; RefreshMarkers(); }
+        public void AddWarp() { if (_file == null) return; (int cx, int cy) = NewEventCell(); _file.Warps.Add(new Warp(cx, cy)); RefreshLists(); Dirty(); SelectedWarpIndex = _file.Warps.Count - 1; }
+        public void RemoveWarp() { if (_file == null || _selWarp < 0 || _selWarp >= _file.Warps.Count) return; _file.Warps.RemoveAt(_selWarp); RefreshLists(); Dirty(); SelectedWarpIndex = -1; RefreshMarkers(); }
+        public void AddTrigger() { if (_file == null) return; (int cx, int cy) = NewEventCell(); _file.Triggers.Add(new Trigger(cx, cy)); RefreshLists(); Dirty(); SelectedTriggerIndex = _file.Triggers.Count - 1; }
+        public void RemoveTrigger() { if (_file == null || _selTrig < 0 || _selTrig >= _file.Triggers.Count) return; _file.Triggers.RemoveAt(_selTrig); RefreshLists(); Dirty(); SelectedTriggerIndex = -1; RefreshMarkers(); }
 
         // ── Duplicate selected (copy ctors) ──────────────────────────────────────────────
-        public void DuplicateSpawnable() { if (_file == null || _spawn == null) return; _file.spawnables.Add(new Spawnable(_spawn)); RefreshLists(); Dirty(); SelectedSpawnableIndex = _file.spawnables.Count - 1; }
+        public void DuplicateSpawnable() { if (_file == null || _spawn == null) return; _file.Spawnables.Add(new Spawnable(_spawn)); RefreshLists(); Dirty(); SelectedSpawnableIndex = _file.Spawnables.Count - 1; }
         // Scripts and hide flags find an overworld by its id, so a copy needs its own.
-        public void DuplicateOverworld() { if (_file == null || _ow == null) return; _file.overworlds.Add(new Overworld(_ow) { owID = (ushort)FreeOverworldId() }); RefreshLists(); Dirty(); SelectedOverworldIndex = _file.overworlds.Count - 1; }
+        public void DuplicateOverworld() { if (_file == null || _ow == null) return; _file.Overworlds.Add(new Overworld(_ow) { OwID = (ushort)FreeOverworldId() }); RefreshLists(); Dirty(); SelectedOverworldIndex = _file.Overworlds.Count - 1; }
 
         private int FreeOverworldId()
         {
             int id = 0;
-            while (_file.overworlds.Any(o => o.owID == id)) id++;
+            while (_file.Overworlds.Any(o => o.OwID == id)) id++;
             return id;
         }
-        public void DuplicateWarp() { if (_file == null || _warp == null) return; _file.warps.Add(new Warp(_warp)); RefreshLists(); Dirty(); SelectedWarpIndex = _file.warps.Count - 1; }
-        public void DuplicateTrigger() { if (_file == null || _trig == null) return; _file.triggers.Add(new Trigger(_trig)); RefreshLists(); Dirty(); SelectedTriggerIndex = _file.triggers.Count - 1; }
+        public void DuplicateWarp() { if (_file == null || _warp == null) return; _file.Warps.Add(new Warp(_warp)); RefreshLists(); Dirty(); SelectedWarpIndex = _file.Warps.Count - 1; }
+        public void DuplicateTrigger() { if (_file == null || _trig == null) return; _file.Triggers.Add(new Trigger(_trig)); RefreshLists(); Dirty(); SelectedTriggerIndex = _file.Triggers.Count - 1; }
 
         /// <summary>Follow the selected warp to its destination: switch to that header's event file.</summary>
         public void TestWarp()
@@ -1526,19 +1526,19 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (_warp == null) return;
             try
             {
-                MapHeader h = MapHeader.GetMapHeader(_warp.header);
-                if (h == null) { StatusText = $"Destination header {_warp.header} not found."; return; }
-                int dest = h.eventFileID;
-                if (dest < 0 || dest >= EventNames.Count) { StatusText = $"Header {_warp.header} → event file {dest} (out of range)."; return; }
+                MapHeader h = MapHeader.GetMapHeader(_warp.Header);
+                if (h == null) { StatusText = $"Destination header {_warp.Header} not found."; return; }
+                int dest = h.EventFileID;
+                if (dest < 0 || dest >= EventNames.Count) { StatusText = $"Header {_warp.Header} → event file {dest} (out of range)."; return; }
                 SelectedEventIndex = dest;
-                StatusText = $"Warp leads to header {_warp.header} → event file {dest}.";
+                StatusText = $"Warp leads to header {_warp.Header} → event file {dest}.";
             }
             catch (Exception ex) { StatusText = "Test warp failed: " + ex.Message; }
         }
 
         // ── Sort overworlds by OW id ─────────────────────────────────────────────────────
-        public void SortOverworldsAsc() { if (_file == null) return; _file.overworlds.Sort((a, b) => a.owID.CompareTo(b.owID)); RefreshLists(); Dirty(); }
-        public void SortOverworldsDesc() { if (_file == null) return; _file.overworlds.Sort((a, b) => b.owID.CompareTo(a.owID)); RefreshLists(); Dirty(); }
+        public void SortOverworldsAsc() { if (_file == null) return; _file.Overworlds.Sort((a, b) => a.OwID.CompareTo(b.OwID)); RefreshLists(); Dirty(); }
+        public void SortOverworldsDesc() { if (_file == null) return; _file.Overworlds.Sort((a, b) => b.OwID.CompareTo(a.OwID)); RefreshLists(); Dirty(); }
 
         // ── Event file add / remove ──────────────────────────────────────────────────────
         public void AddEventFile()
@@ -1551,7 +1551,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = $"Added event file {newId}.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't add event file:\n{ex.Message}", "Event editor error"); }
+            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't add event file:\n{ex.Message}", "Event editor error"); }
         }
 
         public async Task RemoveLastEventFileAsync()
@@ -1563,11 +1563,11 @@ namespace DSPRE.Avalonia.ViewModels.World
             List<(ushort Header, string Name)> uses = HeaderLinks.HeadersLinking(HeaderLinks.Kind.Event, last);
             if (uses.Count > 0)
             {
-                await DialogHelper.ShowInfo($"Event file {last} stays: these headers still use it." + Environment.NewLine + HeaderLinks.Describe(uses)
+                await DialogHelper.ShowInfoAsync($"Event file {last} stays: these headers still use it." + Environment.NewLine + HeaderLinks.Describe(uses)
                     + Environment.NewLine + "Point them at another event file first.", "Event editor");
                 return;
             }
-            if (!await DialogHelper.AskYesNo($"Delete the last event file ({last})?", "Delete event file?")) return;
+            if (!await DialogHelper.AskYesNoAsync($"Delete the last event file ({last})?", "Delete event file?")) return;
             try
             {
                 if (_selectedIndex == last) SelectedEventIndex = last - 1;
@@ -1576,14 +1576,14 @@ namespace DSPRE.Avalonia.ViewModels.World
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = $"Removed event file {last}.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't remove event file:\n{ex.Message}", "Event editor error"); }
+            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't remove event file:\n{ex.Message}", "Event editor error"); }
         }
 
         // ── 3D map view + event markers ─────────────────────────────────────────────────
 
         /// <summary>
         /// Builds the reverse map: event-file index → (matrix, area data) via the header that
-        /// references it (<see cref="MapHeader.eventFileID"/>). This is the real ROM linkage
+        /// references it (<see cref="MapHeader.EventFileID"/>). This is the real ROM linkage
         /// the WinForms editor uses to pick the correct map + texture packs for an event file.
         /// </summary>
         private static Dictionary<int, (ushort, byte, ushort, ushort)> BuildEventHeaderLookup()
@@ -1598,8 +1598,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                     {
                         MapHeader header = MapHeader.GetMapHeader(h);
                         if (header == null) continue;
-                        if (!lookup.ContainsKey(header.eventFileID))
-                            lookup[header.eventFileID] = (header.matrixID, header.areaDataID, header.scriptFileID, h);
+                        if (!lookup.ContainsKey(header.EventFileID))
+                            lookup[header.EventFileID] = (header.MatrixID, header.AreaDataID, header.ScriptFileID, h);
                     }
                     catch { /* skip bad header */ }
                 }
@@ -1667,7 +1667,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
         }
         // Bound before any ROM is open, when there are no area data files to count.
-        public decimal MaxViewArea => RomInfo.gameDirs?.ContainsKey(RomInfo.DirNames.areaData) == true
+        public decimal MaxViewArea => RomInfo.GameDirs?.ContainsKey(RomInfo.DirNames.AreaData) == true
             ? Math.Clamp(Filesystem.GetAreaDataCount() - 1, 0, byte.MaxValue) : 0;
 
         private void ShowOnChosen()
@@ -1689,7 +1689,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         // ── Scripts available to this event file (the header's paired script file) ────────
-        /// <summary>The scripts defined in the header's paired script file (via <see cref="MapHeader.scriptFileID"/>),
+        /// <summary>The scripts defined in the header's paired script file (via <see cref="MapHeader.ScriptFileID"/>),
         /// so Overworld/Trigger/Spawnable "Script" fields can be picked from a dropdown of what's actually
         /// callable here instead of a free-form number. Values are each script's <c>manualUserID</c>, the
         /// number these events' <c>scriptNumber</c> fields reference, after "No script" for 0.</summary>
@@ -1709,10 +1709,10 @@ namespace DSPRE.Avalonia.ViewModels.World
                 try
                 {
                     ScriptFile scriptFile = new ScriptFile(scriptFileId);
-                    foreach (ScriptCommandContainer container in scriptFile.allScripts)
+                    foreach (ScriptCommandContainer container in scriptFile.AllScripts)
                     {
-                        _availableScriptIds.Add(container.manualUserID);
-                        AvailableScripts.Add($"Script {container.manualUserID} ({container.commands?.Count ?? 0} cmds)");
+                        _availableScriptIds.Add(container.ManualUserID);
+                        AvailableScripts.Add($"Script {container.ManualUserID} ({container.Commands?.Count ?? 0} cmds)");
                     }
                 }
                 catch (Exception ex) { AppLogger.Error("PopulateAvailableScripts: " + ex.Message); }
@@ -1768,17 +1768,17 @@ namespace DSPRE.Avalonia.ViewModels.World
                 {
                     // No headers section to go on: small matrices render whole, big ones fall back to
                     // the events' own bounding box so a world-sized matrix isn't loaded entirely.
-                    int total = _matrix.width * _matrix.height;
+                    int total = _matrix.Width * _matrix.Height;
                     include = total <= 256 ? null : EventCells();
                     scopeName = "events";
                 }
 
                 _builtModelObjects = ModelObjectsNow();
-                Model3D = MatrixSceneBuilder.Build(_matrix, _areaDataId, gameFamily, areaForMap: null, includeCells: include, mode: StitchMode,
+                Model3D = MatrixSceneBuilder.Build(_matrix, _areaDataId, GameFamily, areaForMap: null, includeCells: include, mode: StitchMode,
                                                    extrasForCell: ModelObjectsOn);
                 string scope = include == null ? "full" : $"{include.Count} maps, {scopeName}";
                 MapInfo = Model3D != null
-                    ? $"Matrix {_matrixId}  ·  {_matrix.width}×{_matrix.height} ({scope})  ·  area {_areaDataId}"
+                    ? $"Matrix {_matrixId}  ·  {_matrix.Width}×{_matrix.Height} ({scope})  ·  area {_areaDataId}"
                     : $"Matrix {_matrixId}: no renderable maps.";
             }
             catch (Exception ex)
@@ -1804,15 +1804,15 @@ namespace DSPRE.Avalonia.ViewModels.World
             int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
             void Note(Event e)
             {
-                int x = e.xMatrixPosition, y = e.yMatrixPosition;
-                if (x < 0 || y < 0 || x >= _matrix.width || y >= _matrix.height) return;
+                int x = e.XMatrixPosition, y = e.YMatrixPosition;
+                if (x < 0 || y < 0 || x >= _matrix.Width || y >= _matrix.Height) return;
                 minX = Math.Min(minX, x); maxX = Math.Max(maxX, x);
                 minY = Math.Min(minY, y); maxY = Math.Max(maxY, y);
             }
-            foreach (Overworld e in _file.overworlds) Note(e);
-            foreach (Warp e in _file.warps) Note(e);
-            foreach (Trigger e in _file.triggers) Note(e);
-            foreach (Spawnable e in _file.spawnables) Note(e);
+            foreach (Overworld e in _file.Overworlds) Note(e);
+            foreach (Warp e in _file.Warps) Note(e);
+            foreach (Trigger e in _file.Triggers) Note(e);
+            foreach (Spawnable e in _file.Spawnables) Note(e);
             if (maxX < minX) return set;   // no events
 
             const int MaxSpan = 12;        // cap the bounding box per axis (keeps loads sane)
@@ -1873,12 +1873,12 @@ namespace DSPRE.Avalonia.ViewModels.World
                     AddMarker(v, m, rawX, EventY(rawX, rawZ, e), rawZ, half * tileX, half * tileZ, c);
                 }
 
-                if (_showGrid && _matrix != null && _matrix.width * _matrix.height <= 4)
+                if (_showGrid && _matrix != null && _matrix.Width * _matrix.Height <= 4)
                 {
-                    int n = MapFile.mapSize;
+                    int n = MapFile.MapSize;
                     float inset = tileX * 0.07f;
-                    for (int gcy = 0; gcy < _matrix.height; gcy++)
-                        for (int gcx = 0; gcx < _matrix.width; gcx++)
+                    for (int gcy = 0; gcy < _matrix.Height; gcy++)
+                        for (int gcx = 0; gcx < _matrix.Width; gcx++)
                         {
                             if (!m.TryCellPlacement(gcx, gcy, out NsbmdRenderModel.CellPlacement gp)) continue;
                             long key = ((long)gcy << 32) | (uint)gcx;
@@ -1887,10 +1887,10 @@ namespace DSPRE.Avalonia.ViewModels.World
                                 col = null;
                                 try
                                 {
-                                    int map = _matrix.maps[gcy, gcx];
-                                    if (map != GameMatrix.EMPTY) col = new MapFile(map, gameFamily, false, false).collisions;
+                                    int map = _matrix.Maps[gcy, gcx];
+                                    if (map != GameMatrix.EMPTY) col = new MapFile(map, GameFamily, false, false).Collisions;
                                 }
-                                catch { }
+                                catch { }   // a map that can't be read has no collisions to show
                                 _collisionCache[key] = col;
                             }
                             if (col == null) continue;
@@ -1909,9 +1909,9 @@ namespace DSPRE.Avalonia.ViewModels.World
                         }
                 }
 
-                if (_showWarp) foreach (Warp e in _file.warps) Quad(e, MarkerColor(1));
-                if (_showTrig) foreach (Trigger e in _file.triggers) Quad(e, MarkerColor(2));
-                if (_showSpawn) foreach (Spawnable e in _file.spawnables) Quad(e, MarkerColor(3));
+                if (_showWarp) foreach (Warp e in _file.Warps) Quad(e, MarkerColor(1));
+                if (_showTrig) foreach (Trigger e in _file.Triggers) Quad(e, MarkerColor(2));
+                if (_showSpawn) foreach (Spawnable e in _file.Spawnables) Quad(e, MarkerColor(3));
 
                 // Overworlds → real sprite billboards (foot anchored on the surface). Selected
                 // overworlds also get a white ground ring so the selection is obvious.
@@ -1919,20 +1919,20 @@ namespace DSPRE.Avalonia.ViewModels.World
                 bool modelsAsBuilt = ModelObjectsAsBuilt;
                 if (!modelsAsBuilt) RebuildForModelObjectsSoon();
                 if (_showOw)
-                    foreach (Overworld ow in _file.overworlds)
+                    foreach (Overworld ow in _file.Overworlds)
                     {
                         bool sel = ReferenceEquals(ow, _current);
                         if (sel) Quad(ow, (1f, 1f, 1f));
                         // Already in the scene as its model; a ring marks it when picked.
-                        if (Overworld3DObjects.IsModel(ow.overlayTableEntry) && modelsAsBuilt) continue;
+                        if (Overworld3DObjects.IsModel(ow.OverlayTableEntry) && modelsAsBuilt) continue;
 
-                        OverworldSprites.SpritePixels pix = OverworldSprites.Get(ow.overlayTableEntry, (ushort)Math.Max((short)0, ow.orientation));
+                        OverworldSprites.SpritePixels pix = OverworldSprites.Get(ow.OverlayTableEntry, (ushort)Math.Max((short)0, ow.Orientation));
                         (float x, float y, float z) foot = Foot(ow);
                         if (pix != null && pix.Width > 0 && pix.Height > 0)
                         {
                             float halfH = spriteH * 0.5f;
                             // A script picks a dynamic overworld's sprite while playing; the outline says the picture is a stand-in.
-                            if (IsVariableOverworld(ow.overlayTableEntry))
+                            if (IsVariableOverworld(ow.OverlayTableEntry))
                             {
                                 int plain = pix.Height;
                                 pix = OverworldSprites.Outlined(pix);
@@ -1966,19 +1966,19 @@ namespace DSPRE.Avalonia.ViewModels.World
         // ── Event world placement (shared by markers + the move gizmo) ────────────────────
         private (float x, float z) EventCellRaw(NsbmdRenderModel m, Event e)
         {
-            if (m.TryCellPlacement(e.xMatrixPosition, e.yMatrixPosition, out NsbmdRenderModel.CellPlacement p))
-                return (p.OriginX + (e.xMapPosition + 0.5f) / MapTiles * p.Width,
-                        p.OriginZ + (e.yMapPosition + 0.5f) / MapTiles * p.Height);
-            return (m.CellBaseX + (e.xMatrixPosition + (e.xMapPosition + 0.5f) / MapTiles) * m.CellStrideX,
-                    m.CellBaseZ + (e.yMatrixPosition + (e.yMapPosition + 0.5f) / MapTiles) * m.CellStrideZ);
+            if (m.TryCellPlacement(e.XMatrixPosition, e.YMatrixPosition, out NsbmdRenderModel.CellPlacement p))
+                return (p.OriginX + (e.XMapPosition + 0.5f) / MapTiles * p.Width,
+                        p.OriginZ + (e.YMapPosition + 0.5f) / MapTiles * p.Height);
+            return (m.CellBaseX + (e.XMatrixPosition + (e.XMapPosition + 0.5f) / MapTiles) * m.CellStrideX,
+                    m.CellBaseZ + (e.YMatrixPosition + (e.YMapPosition + 0.5f) / MapTiles) * m.CellStrideZ);
         }
 
         private float EventSurfaceY(NsbmdRenderModel m, float rawX, float rawZ, Event e)
         {
             // A height hint only; BDHC/mesh lookup chooses the actual floor near it.
             float yHint = HeightHint(e);
-            if (m.TryBdhcSurfaceY(e.xMatrixPosition, e.yMatrixPosition, rawX, rawZ, yHint, out float bdhcY)) return bdhcY;
-            return e.zPosition == 0 ? m.SurfaceY(rawX, rawZ) : m.SurfaceY(rawX, rawZ, yHint);
+            if (m.TryBdhcSurfaceY(e.XMatrixPosition, e.YMatrixPosition, rawX, rawZ, yHint, out float bdhcY)) return bdhcY;
+            return e.ZPosition == 0 ? m.SurfaceY(rawX, rawZ) : m.SurfaceY(rawX, rawZ, yHint);
         }
 
         // ── Animated preview handoff ──────────────────────────────────────────────────────
@@ -1990,19 +1990,19 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             get
             {
-                try { return _headerId < 0 ? 0 : MapHeader.GetMapHeader((ushort)_headerId).cameraAngleID; }
-                catch { return 0; }
+                try { return _headerId < 0 ? 0 : MapHeader.GetMapHeader((ushort)_headerId).CameraAngleID; }
+                catch (Exception ex) { AppLogger.WarnOnce("EventEditorViewModel.CameraId", ex); return 0; }
             }
         }
 
         /// <summary>The two music numbers this header carries, day and night.</summary>
-        public int MusicDayId => HeaderValue(h => h.musicDayID);
-        public int MusicNightId => HeaderValue(h => h.musicNightID);
+        public int MusicDayId => HeaderValue(h => h.MusicDayID);
+        public int MusicNightId => HeaderValue(h => h.MusicNightID);
 
         private int HeaderValue(Func<MapHeader, int> pick)
         {
             try { return _headerId < 0 ? 0 : pick(MapHeader.GetMapHeader((ushort)_headerId)); }
-            catch { return 0; }
+            catch (Exception ex) { AppLogger.WarnOnce("EventEditorViewModel.HeaderValue", ex); return 0; }
         }
 
         /// <summary>The movements in this header's script file, so the preview can play them out.</summary>
@@ -2012,15 +2012,15 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 MapHeader header = _headerId < 0 ? null : MapHeader.GetMapHeader((ushort)_headerId);
                 if (header == null) return null;
-                return ScriptWalker.ActionsById(new ScriptFile(header.scriptFileID)?.allActions)?.Invoke(movementNumber);
+                return ScriptWalker.ActionsById(new ScriptFile(header.ScriptFileID)?.AllActions)?.Invoke(movementNumber);
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("EventEditorViewModel.ActionsFor", ex); return null; }
         }
 
         /// <summary>The area the scene belongs to, which is what names its terrain animation.</summary>
         public AreaData Area
         {
-            get { try { return new AreaData(_areaDataId); } catch { return null; } }
+            get { try { return new AreaData(_areaDataId); } catch (Exception ex) { AppLogger.WarnOnce("EventEditorViewModel.Area", ex); return null; } }
         }
 
         /// <summary>Where the maps this event file spans are closed off, for the preview to walk against.</summary>
@@ -2036,15 +2036,15 @@ namespace DSPRE.Avalonia.ViewModels.World
                     byte[,] col = null, types = null;
                     try
                     {
-                        int map = _matrix.maps[y, x];
+                        int map = _matrix.Maps[y, x];
                         if (map != GameMatrix.EMPTY)
                         {
-                            MapFile mf = new MapFile(map, gameFamily, false, false);
-                            col = mf.collisions;
-                            types = mf.types;
+                            MapFile mf = new MapFile(map, GameFamily, false, false);
+                            col = mf.Collisions;
+                            types = mf.Types;
                         }
                     }
-                    catch { }
+                    catch { }   // a map that can't be read has no collisions to show
                     _collisionCache[key] = col;
                     grid.Add(x, y, col);
                     grid.AddTypes(x, y, types);
@@ -2150,7 +2150,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 // A script id above 2000 does not live in the map's own file at all: the games keep whole
                 // separate files for common scripts, trainers, hidden items and the rest, and read the id
                 // relative to where that range starts (SetScriptDataSub in script.c).
-                CommonScriptId.Result common = CommonScriptId.Resolve(gameFamily, scriptNumber);
+                CommonScriptId.Result common = CommonScriptId.Resolve(GameFamily, scriptNumber);
 
                 int scriptArchive, textArchive;
                 if (common.Kind == CommonScriptId.Kind.Resolved)
@@ -2162,18 +2162,18 @@ namespace DSPRE.Avalonia.ViewModels.World
                 {
                     MapHeader header = MapHeader.GetMapHeader((ushort)_headerId);
                     if (header == null) return null;
-                    scriptArchive = header.scriptFileID;
-                    textArchive = header.textArchiveID;
+                    scriptArchive = header.ScriptFileID;
+                    textArchive = header.TextArchiveID;
                 }
 
                 ScriptFile file = new ScriptFile(scriptArchive);
                 TextArchive text = null;
-                try { text = new TextArchive(textArchive); } catch { }
+                try { text = new TextArchive(textArchive); } catch (Exception ex) { AppLogger.Warn("Event editor: script text: " + ex.Message); }
 
-                return new ScriptWalker(file.allScripts, file.allFunctions,
-                    id => text?.messages != null && id >= 0 && id < text.messages.Count ? text.messages[id] : null,
+                return new ScriptWalker(file.AllScripts, file.AllFunctions,
+                    id => text?.Messages != null && id >= 0 && id < text.Messages.Count ? text.Messages[id] : null,
                     // The file's movements sit alongside its scripts, so a Movement can say what it does.
-                    ScriptWalker.ActionsById(file.allActions));
+                    ScriptWalker.ActionsById(file.AllActions));
             }
             catch (Exception ex) { AppLogger.Error("Script walker failed: " + ex.Message); return null; }
         }
@@ -2188,9 +2188,9 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 if (!_previewArchives.TryGetValue(archive, out TextArchive text))
                     _previewArchives[archive] = text = new TextArchive(archive);
-                return text?.messages != null && id >= 0 && id < text.messages.Count ? text.messages[id] : null;
+                return text?.Messages != null && id >= 0 && id < text.Messages.Count ? text.Messages[id] : null;
             }
-            catch { _previewArchives[archive] = null; return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("EventEditorViewModel.PreviewMessage", ex); _previewArchives[archive] = null; return null; }
         }
 
         /// <summary>Hands the preview what it needs to follow scripts out of the map's own files.</summary>
@@ -2200,28 +2200,28 @@ namespace DSPRE.Avalonia.ViewModels.World
             _previewArchives.Clear();
             _previewCommonScripts.Clear();
 
-            preview.Family = gameFamily;
+            preview.Family = GameFamily;
             preview.ArchiveText = PreviewMessage;
-            preview.MenuText = id => PreviewMessage(fieldMenuEntriesArchive, id);
+            preview.MenuText = id => PreviewMessage(FieldMenuEntriesArchive, id);
             preview.SharedArchive = which =>
-                which >= 0 && which < fieldSharedMessageArchives.Length ? fieldSharedMessageArchives[which] : -1;
+                which >= 0 && which < RomInfo.FieldSharedMessageArchives.Length ? RomInfo.FieldSharedMessageArchives[which] : -1;
             preview.CommonScripts = id =>
             {
                 if (_previewCommonScripts.TryGetValue(id, out ScriptSource cached)) return cached;
                 ScriptSource source = null;
                 try
                 {
-                    CommonScriptId.Result common = CommonScriptId.Resolve(gameFamily, id);
+                    CommonScriptId.Result common = CommonScriptId.Resolve(GameFamily, id);
                     if (common.Kind == CommonScriptId.Kind.Resolved)
                     {
                         ScriptFile file = new ScriptFile(common.ScriptArchiveId);
                         int textArchive = common.TextArchiveId;
                         source = new ScriptSource
                         {
-                            Scripts = file.allScripts,
-                            Functions = file.allFunctions,
+                            Scripts = file.AllScripts,
+                            Functions = file.AllFunctions,
                             Messages = m => PreviewMessage(textArchive, m),
-                            Actions = ScriptWalker.ActionsById(file.allActions),
+                            Actions = ScriptWalker.ActionsById(file.AllActions),
                             StartId = common.ManualUserId,
                         };
                     }
@@ -2235,14 +2235,14 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>The number to start the walker at. </summary>
         public int WalkerStartId(int scriptNumber)
         {
-            CommonScriptId.Result common = CommonScriptId.Resolve(gameFamily, scriptNumber);
+            CommonScriptId.Result common = CommonScriptId.Resolve(GameFamily, scriptNumber);
             return common.Kind == CommonScriptId.Kind.Resolved ? common.ManualUserId : scriptNumber;
         }
 
         /// <summary>Which file a script id really lives in, for the viewer to say so.</summary>
         public string ScriptHome(int scriptNumber)
         {
-            CommonScriptId.Result common = CommonScriptId.Resolve(gameFamily, scriptNumber);
+            CommonScriptId.Result common = CommonScriptId.Resolve(GameFamily, scriptNumber);
             switch (common.Kind)
             {
                 case CommonScriptId.Kind.Resolved:
@@ -2308,7 +2308,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             NsbmdRenderModel m = Model3D;
             if (_walkTile == null || m == null || m.CellStrideX == 0) return;
 
-            int n = MapFile.mapSize;
+            int n = MapFile.MapSize;
             int gcx = FloorDiv(_walkTile.Value.x, n), gcy = FloorDiv(_walkTile.Value.z, n);
             if (!m.TryCellPlacement(gcx, gcy, out NsbmdRenderModel.CellPlacement cp)) return;
 
@@ -2353,10 +2353,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         public IEnumerable<(int type, int index, float nx, float ny, float nz)> EventAnchorsNorm()
         {
             if (_file == null || Model3D == null) yield break;
-            if (_showOw) for (int i = 0; i < _file.overworlds.Count; i++) if (EventAnchorNorm(_file.overworlds[i], out float x, out float y, out float z)) yield return (0, i, x, y, z);
-            if (_showWarp) for (int i = 0; i < _file.warps.Count; i++) if (EventAnchorNorm(_file.warps[i], out float x, out float y, out float z)) yield return (1, i, x, y, z);
-            if (_showTrig) for (int i = 0; i < _file.triggers.Count; i++) if (EventAnchorNorm(_file.triggers[i], out float x, out float y, out float z)) yield return (2, i, x, y, z);
-            if (_showSpawn) for (int i = 0; i < _file.spawnables.Count; i++) if (EventAnchorNorm(_file.spawnables[i], out float x, out float y, out float z)) yield return (3, i, x, y, z);
+            if (_showOw) for (int i = 0; i < _file.Overworlds.Count; i++) if (EventAnchorNorm(_file.Overworlds[i], out float x, out float y, out float z)) yield return (0, i, x, y, z);
+            if (_showWarp) for (int i = 0; i < _file.Warps.Count; i++) if (EventAnchorNorm(_file.Warps[i], out float x, out float y, out float z)) yield return (1, i, x, y, z);
+            if (_showTrig) for (int i = 0; i < _file.Triggers.Count; i++) if (EventAnchorNorm(_file.Triggers[i], out float x, out float y, out float z)) yield return (2, i, x, y, z);
+            if (_showSpawn) for (int i = 0; i < _file.Spawnables.Count; i++) if (EventAnchorNorm(_file.Spawnables[i], out float x, out float y, out float z)) yield return (3, i, x, y, z);
         }
 
         public void SelectEvent(int type, int index)
@@ -2389,8 +2389,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 if (ZIsFixedPoint)
                 {
-                    long nz = _current.zPosition + (long)Math.Round(rawDelta * 262144f);
-                    _current.zPosition = (int)Math.Max(int.MinValue, Math.Min(int.MaxValue, nz));
+                    long nz = _current.ZPosition + (long)Math.Round(rawDelta * 262144f);
+                    _current.ZPosition = (int)Math.Max(int.MinValue, Math.Min(int.MaxValue, nz));
                 }
                 else
                 {
@@ -2399,13 +2399,13 @@ namespace DSPRE.Avalonia.ViewModels.World
                     int step = (int)_dragAccumY;
                     if (step == 0) return;
                     _dragAccumY -= step;
-                    long nz = _current.zPosition + step;
-                    _current.zPosition = _current is Trigger
+                    long nz = _current.ZPosition + step;
+                    _current.ZPosition = _current is Trigger
                         ? (int)Math.Clamp(nz, ushort.MinValue, ushort.MaxValue)
                         : (int)Math.Max(int.MinValue, Math.Min(int.MaxValue, nz));
                 }
             }
-            else if (m.TryCellPlacement(_current.xMatrixPosition, _current.yMatrixPosition, out NsbmdRenderModel.CellPlacement p))
+            else if (m.TryCellPlacement(_current.XMatrixPosition, _current.YMatrixPosition, out NsbmdRenderModel.CellPlacement p))
             {
                 if (axis == 0)
                 {
@@ -2423,9 +2423,9 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
             }
             _suppress = true;
-            XMap = _current.xMapPosition; YMap = _current.yMapPosition; ZPos = ToDisplayZ(_current.zPosition);
+            XMap = _current.XMapPosition; YMap = _current.YMapPosition; ZPos = ToDisplayZ(_current.ZPosition);
             OnPropertyChanged(nameof(ZPosNote));
-            XMatrix = _current.xMatrixPosition; YMatrix = _current.yMatrixPosition;
+            XMatrix = _current.XMatrixPosition; YMatrix = _current.YMatrixPosition;
             _suppress = false;
             Dirty();
             RefreshMarkers();   // also raises GizmoTargetChanged
@@ -2439,8 +2439,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (dx != 0) { int s = dx; StepEventTile(ref s, isX: true); }
             if (dz != 0) { int s = dz; StepEventTile(ref s, isX: false); }
             _suppress = true;
-            XMap = _current.xMapPosition; YMap = _current.yMapPosition;
-            XMatrix = _current.xMatrixPosition; YMatrix = _current.yMatrixPosition;
+            XMap = _current.XMapPosition; YMap = _current.YMapPosition;
+            XMatrix = _current.XMatrixPosition; YMatrix = _current.YMatrixPosition;
             _suppress = false;
             Dirty();
             RefreshMarkers();
@@ -2452,14 +2452,14 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// maps over into the neighbouring matrix cell at the 0/31 edges.</summary>
         private void StepEventTile(ref int step, bool isX)
         {
-            int tile = isX ? _current.xMapPosition : _current.yMapPosition;
-            int mat = isX ? _current.xMatrixPosition : _current.yMatrixPosition;
+            int tile = isX ? _current.XMapPosition : _current.YMapPosition;
+            int mat = isX ? _current.XMatrixPosition : _current.YMatrixPosition;
             tile += step;
             while (tile < 0) { mat--; tile += MapTiles; }
             while (tile >= MapTiles) { mat++; tile -= MapTiles; }
             if (mat < 0) { mat = 0; tile = 0; }
-            if (isX) { _current.xMapPosition = (short)tile; _current.xMatrixPosition = (ushort)mat; }
-            else { _current.yMapPosition = (short)tile; _current.yMatrixPosition = (ushort)mat; }
+            if (isX) { _current.XMapPosition = (short)tile; _current.XMatrixPosition = (ushort)mat; }
+            else { _current.YMapPosition = (short)tile; _current.YMatrixPosition = (ushort)mat; }
         }
 
         private static void AddMarker(List<float> v, NsbmdRenderModel m, float cx, float cy, float cz,
@@ -2509,13 +2509,13 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (_selectedIndex < 0 || _file == null) return;
             FilePickerFileType filter = new FilePickerFileType("Event file") { Patterns = new[] { "*.ev", "*.bin", "*.*" } };
-            string path = await DialogHelper.OpenFile(_owner, "Import event file", new[] { filter });
+            string path = await DialogHelper.OpenFileAsync(_owner, "Import event file", new[] { filter });
             if (path == null) return;
             EventFile source;
             try { using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read)) source = new EventFile(fs); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException)
             {
-                await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Event editor error");
+                await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Event editor error");
                 return;
             }
 
@@ -2523,7 +2523,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (EventCount(source) == 0)
             {
                 if (EventCount(_file) == 0) { StatusText = "That file has no events."; return; }
-                if (!await DialogHelper.AskYesNo("That file has no events. Importing it removes every event in this one.", "Import events", _owner)) return;
+                if (!await DialogHelper.AskYesNoAsync("That file has no events. Importing it removes every event in this one.", "Import events", _owner)) return;
                 choice = EventImportChoice.All(source, clearFirst: true);
             }
             else if (EventCount(_file) == 0) choice = EventImportChoice.All(source, clearFirst: false);
@@ -2534,18 +2534,18 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
 
             ClearSelection();
-            if (choice.ClearFirst) { _file.overworlds.Clear(); _file.warps.Clear(); _file.triggers.Clear(); _file.spawnables.Clear(); }
+            if (choice.ClearFirst) { _file.Overworlds.Clear(); _file.Warps.Clear(); _file.Triggers.Clear(); _file.Spawnables.Clear(); }
             int renumbered = 0;
             foreach (int i in choice.Overworlds)
             {
-                Overworld ow = source.overworlds[i];
+                Overworld ow = source.Overworlds[i];
                 // Scripts and hide flags find an overworld by its id, so two can't share one.
-                if (_file.overworlds.Any(o => o.owID == ow.owID)) { ow.owID = (ushort)FreeOverworldId(); renumbered++; }
-                _file.overworlds.Add(ow);
+                if (_file.Overworlds.Any(o => o.OwID == ow.OwID)) { ow.OwID = (ushort)FreeOverworldId(); renumbered++; }
+                _file.Overworlds.Add(ow);
             }
-            foreach (int i in choice.Warps) _file.warps.Add(source.warps[i]);
-            foreach (int i in choice.Triggers) _file.triggers.Add(source.triggers[i]);
-            foreach (int i in choice.Spawnables) _file.spawnables.Add(source.spawnables[i]);
+            foreach (int i in choice.Warps) _file.Warps.Add(source.Warps[i]);
+            foreach (int i in choice.Triggers) _file.Triggers.Add(source.Triggers[i]);
+            foreach (int i in choice.Spawnables) _file.Spawnables.Add(source.Spawnables[i]);
             RefreshLists(); Dirty(); RefreshMarkers();
             int count = choice.Overworlds.Length + choice.Warps.Length + choice.Triggers.Length + choice.Spawnables.Length;
             SaveNotice.Imported($"{count} events", path);
@@ -2553,7 +2553,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         private static int EventCount(EventFile f) =>
-            (f.overworlds?.Count ?? 0) + (f.warps?.Count ?? 0) + (f.triggers?.Count ?? 0) + (f.spawnables?.Count ?? 0);
+            (f.Overworlds?.Count ?? 0) + (f.Warps?.Count ?? 0) + (f.Triggers?.Count ?? 0) + (f.Spawnables?.Count ?? 0);
 
         // The previous events must not stay editable through the shared boxes or the gizmo.
         private void ClearSelection()
@@ -2578,7 +2578,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             sb.AppendLine($"Event file:  {_selectedIndex}");
             sb.AppendLine($"Matrix id:   {_matrixId}    Area data: {_areaDataId}");
             sb.AppendLine($"Stitch mode: {(_stitchGrid ? "Grid" : "Continuous")} (both now use the DS-true fixed 32-tile grid)");
-            if (_matrix != null) sb.AppendLine($"Matrix size: {_matrix.width} x {_matrix.height}");
+            if (_matrix != null) sb.AppendLine($"Matrix size: {_matrix.Width} x {_matrix.Height}");
             sb.AppendLine("Units: 1 matrix cell = 32 tiles; Grid stride = 8.0 raw units (0.25/tile).");
             sb.AppendLine();
 
@@ -2597,10 +2597,10 @@ namespace DSPRE.Avalonia.ViewModels.World
             sb.AppendLine("  cell    map | originX  originZ |  width  height | rightGap bottomGap   (gap<0 = OVERLAP)");
             if (_matrix != null && m.CellPlacements != null)
             {
-                for (int cy = 0; cy < _matrix.height; cy++)
-                    for (int cx = 0; cx < _matrix.width; cx++)
+                for (int cy = 0; cy < _matrix.Height; cy++)
+                    for (int cx = 0; cx < _matrix.Width; cx++)
                     {
-                        int map; try { map = _matrix.maps[cy, cx]; } catch { continue; }
+                        int map; try { map = _matrix.Maps[cy, cx]; } catch (Exception ex) { AppLogger.WarnOnce("EventEditorViewModel.BuildDebugReport", ex); continue; }
                         if (map == GameMatrix.EMPTY) continue;
                         if (!m.TryCellPlacement(cx, cy, out NsbmdRenderModel.CellPlacement p)) { sb.AppendLine($"({cx,2},{cy,2}) {map,5} | (no placement in scene)"); continue; }
                         string rg = m.TryCellPlacement(cx + 1, cy, out NsbmdRenderModel.CellPlacement pr) ? (pr.OriginX - (p.OriginX + p.Width)).ToString("F3") : "  -";
@@ -2621,16 +2621,16 @@ namespace DSPRE.Avalonia.ViewModels.World
                     {
                         (float rx, float rz) = EventCellRaw(m, e);
                         float yHint = HeightHint(e);
-                        bool bdhc = m.TryBdhcSurfaceY(e.xMatrixPosition, e.yMatrixPosition, rx, rz, yHint, out float sy);
+                        bool bdhc = m.TryBdhcSurfaceY(e.XMatrixPosition, e.YMatrixPosition, rx, rz, yHint, out float sy);
                         if (!bdhc) sy = EventSurfaceY(m, rx, rz, e);
-                        sb.AppendLine($"{type,-10} {i,3} | ({e.xMatrixPosition},{e.yMatrixPosition})  ({e.xMapPosition,2},{e.yMapPosition,2}) | {e.zPosition,8} {yHint,7:F3} | {rx,7:F3} {rz,7:F3} {sy,8:F3} {(bdhc ? "bdhc" : "mesh")}");
+                        sb.AppendLine($"{type,-10} {i,3} | ({e.XMatrixPosition},{e.YMatrixPosition})  ({e.XMapPosition,2},{e.YMapPosition,2}) | {e.ZPosition,8} {yHint,7:F3} | {rx,7:F3} {rz,7:F3} {sy,8:F3} {(bdhc ? "bdhc" : "mesh")}");
                         i++;
                     }
                 }
-                Dump("overworld", _file.overworlds);
-                Dump("warp", _file.warps);
-                Dump("trigger", _file.triggers);
-                Dump("spawnable", _file.spawnables);
+                Dump("overworld", _file.Overworlds);
+                Dump("warp", _file.Warps);
+                Dump("trigger", _file.Triggers);
+                Dump("spawnable", _file.Spawnables);
             }
 
             return sb.ToString();
@@ -2640,10 +2640,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (_file == null) return;
             FilePickerFileType filter = new FilePickerFileType("Event file") { Patterns = new[] { "*.ev" } };
-            string path = await DialogHelper.SaveFile(_owner, "Export event file", new[] { filter }, $"event_{_selectedIndex:D4}.ev");
+            string path = await DialogHelper.SaveFileAsync(_owner, "Export event file", new[] { filter }, $"event_{_selectedIndex:D4}.ev");
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _file.ToByteArray()); SaveNotice.Exported(path); }
-            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Event editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Event editor error"); }
         }
     }
 
@@ -2656,10 +2656,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         public static EventImportChoice All(EventFile f, bool clearFirst) => new EventImportChoice
         {
             ClearFirst = clearFirst,
-            Overworlds = Enumerable.Range(0, f.overworlds?.Count ?? 0).ToArray(),
-            Warps = Enumerable.Range(0, f.warps?.Count ?? 0).ToArray(),
-            Triggers = Enumerable.Range(0, f.triggers?.Count ?? 0).ToArray(),
-            Spawnables = Enumerable.Range(0, f.spawnables?.Count ?? 0).ToArray(),
+            Overworlds = Enumerable.Range(0, f.Overworlds?.Count ?? 0).ToArray(),
+            Warps = Enumerable.Range(0, f.Warps?.Count ?? 0).ToArray(),
+            Triggers = Enumerable.Range(0, f.Triggers?.Count ?? 0).ToArray(),
+            Spawnables = Enumerable.Range(0, f.Spawnables?.Count ?? 0).ToArray(),
         };
     }
 }

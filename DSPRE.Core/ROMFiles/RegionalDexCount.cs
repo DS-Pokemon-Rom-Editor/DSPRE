@@ -17,7 +17,7 @@ namespace DSPRE.ROMFiles
 
         public readonly record struct Counts(int Completion, int RatingLast, int LookupBound);
 
-        private static int[] IgnoredMythicals => gameFamily switch
+        private static int[] IgnoredMythicals => GameFamily switch
         {
             GameFamilies.DP => new[] { 490 },        // Manaphy
             GameFamilies.HGSS => new[] { 151, 251 }, // Mew, Celebi
@@ -25,7 +25,7 @@ namespace DSPRE.ROMFiles
         };
 
         // The US retail counts.
-        public static Counts Retail => gameFamily switch
+        public static Counts Retail => GameFamily switch
         {
             GameFamilies.DP => new Counts(150, 149, 151),
             GameFamilies.Plat => new Counts(210, 209, 210),

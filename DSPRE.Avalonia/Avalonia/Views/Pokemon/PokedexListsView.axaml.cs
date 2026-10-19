@@ -27,7 +27,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
             (DSPRE.ROMFiles.RegionalDexCount.Counts Now, DSPRE.ROMFiles.RegionalDexCount.Counts Next, string Problem)? offer = VM.RegionalCountOffer();
             if (offer == null) return;
             (DSPRE.ROMFiles.RegionalDexCount.Counts now, DSPRE.ROMFiles.RegionalDexCount.Counts next, string problem) = offer.Value;
-            if (problem != null) { await DialogHelper.ShowError(problem, "Regional Pokédex size"); return; }
+            if (problem != null) { await DialogHelper.ShowErrorAsync(problem, "Regional Pokédex size"); return; }
             await PatchHandover.OfferAsync("regionalDexCount",
                 $"The game counts the regional Pokédex complete at {now.Completion} species and the saved order now gives {next.Completion}. Matching them",
                 "Regional Pokédex size");
@@ -35,7 +35,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (!await DialogHelper.ConfirmDiscard(this)) return;
+            if (!await DialogHelper.ConfirmDiscardAsync(this)) return;
             VM?.DiscardChanges();
             Say(null);
         }
@@ -43,11 +43,11 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private async void Rebuild_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null) return;
-            if (!await DialogHelper.AskTwoWay("Build every sort list again from the species' names, types, heights, weights and body shapes? "
+            if (!await DialogHelper.AskTwoWayAsync("Build every sort list again from the species' names, types, heights, weights and body shapes? "
                                               + "Changes made to them by hand are replaced. The regional order is kept.",
                                               "Rebuild sort lists", "Rebuild", "Cancel")) return;
             string err = VM.RebuildLists(out bool changed);
-            if (err != null) await DialogHelper.ShowError(err, "Rebuild sort lists");
+            if (err != null) await DialogHelper.ShowErrorAsync(err, "Rebuild sort lists");
             else Say(changed ? "Rebuilt. Save to keep them." : "The sort lists already match the species' data.");
         }
 

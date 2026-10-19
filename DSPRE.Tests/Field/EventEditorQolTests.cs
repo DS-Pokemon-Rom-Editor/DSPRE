@@ -20,16 +20,16 @@ namespace DSPRE.Tests
         public void RemoveOverworldDeletesSelectionAndMarksFileDirty()
         {
             EventFile events = new EventFile();
-            events.overworlds.Add(new Overworld(0, 0, 0));
-            events.overworlds.Add(new Overworld(1, 0, 0));
+            events.Overworlds.Add(new Overworld(0, 0, 0));
+            events.Overworlds.Add(new Overworld(1, 0, 0));
 
             EventEditorViewModel vm = ViewModelFor(events);
             vm.SelectedOverworldIndex = 0;
 
             vm.RemoveOverworld();
 
-            Assert.Single(events.overworlds);
-            Assert.Equal((ushort)1, events.overworlds[0].owID);
+            Assert.Single(events.Overworlds);
+            Assert.Equal((ushort)1, events.Overworlds[0].OwID);
             Assert.Equal(-1, vm.SelectedOverworldIndex);
             Assert.False(vm.HasOw);
             Assert.True(vm.HasUnsavedChanges);
@@ -38,20 +38,20 @@ namespace DSPRE.Tests
         [Fact]
         public void DuplicateOverworldCopiesSelectionAndSelectsTheCopy()
         {
-            Overworld original = new Overworld(7, 2, 3) { scriptNumber = 42 };
+            Overworld original = new Overworld(7, 2, 3) { ScriptNumber = 42 };
             EventFile events = new EventFile();
-            events.overworlds.Add(original);
+            events.Overworlds.Add(original);
 
             EventEditorViewModel vm = ViewModelFor(events);
             vm.SelectedOverworldIndex = 0;
 
             vm.DuplicateOverworld();
 
-            Assert.Equal(2, events.overworlds.Count);
-            Overworld copy = events.overworlds[1];
+            Assert.Equal(2, events.Overworlds.Count);
+            Overworld copy = events.Overworlds[1];
             Assert.NotSame(original, copy);
             // Scripts and hide flags find an overworld by its id, so the copy takes the smallest free one.
-            Assert.Equal(0, copy.owID);
+            Assert.Equal(0, copy.OwID);
             Assert.Equal(original.ToByteArray()[2..], copy.ToByteArray()[2..]);
             Assert.Equal(1, vm.SelectedOverworldIndex);
             Assert.True(vm.HasUnsavedChanges);

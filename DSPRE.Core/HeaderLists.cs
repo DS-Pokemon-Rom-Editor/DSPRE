@@ -12,19 +12,19 @@ namespace DSPRE
     {
         public static List<string> GetHeaderListBoxNames()
         {
-            if (string.IsNullOrWhiteSpace(RomInfo.internalNamesPath))
+            if (string.IsNullOrWhiteSpace(RomInfo.InternalNamesPath))
             {
                 return null;
             }
 
             List<string> headerListBoxNames = new List<string>();
 
-            using (DSUtils.EasyReader reader = new DSUtils.EasyReader(RomInfo.internalNamesPath))
+            using (DSUtils.EasyReader reader = new DSUtils.EasyReader(RomInfo.InternalNamesPath))
             {
                 int headerCount = RomInfo.GetHeaderCount();
                 for (int i = 0; i < headerCount; i++)
                 {
-                    byte[] row = reader.ReadBytes(RomInfo.internalNameLength);
+                    byte[] row = reader.ReadBytes(RomInfo.InternalNameLength);
                     string internalName = Encoding.ASCII.GetString(row); //.TrimEnd();
                     headerListBoxNames.Add(MapHeader.BuildName(i, internalName));
                 }
@@ -37,12 +37,12 @@ namespace DSPRE
         {
             List<string> internalNames = new List<string>();
 
-            using (DSUtils.EasyReader reader = new DSUtils.EasyReader(RomInfo.internalNamesPath))
+            using (DSUtils.EasyReader reader = new DSUtils.EasyReader(RomInfo.InternalNamesPath))
             {
                 int headerCount = RomInfo.GetHeaderCount();
                 for (int i = 0; i < headerCount; i++)
                 {
-                    byte[] row = reader.ReadBytes(RomInfo.internalNameLength);
+                    byte[] row = reader.ReadBytes(RomInfo.InternalNameLength);
                     string internalName = Encoding.ASCII.GetString(row); //.TrimEnd();
                     internalNames.Add(internalName.TrimEnd('\0'));
                 }

@@ -8,7 +8,8 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace DSPRE.Resources.ROMToolboxDB {
+namespace DSPRE.Resources.ROMToolboxDB
+{
     using System;
     
     
@@ -22,27 +23,32 @@ namespace DSPRE.Resources.ROMToolboxDB {
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    internal class BDHCAMPatchDB {
+    internal class BDHCAMPatchDB
+    {
         
-        private static global::System.Resources.ResourceManager resourceMan;
+        private static global::System.Resources.ResourceManager _resourceMan;
         
-        private static global::System.Globalization.CultureInfo resourceCulture;
+        private static global::System.Globalization.CultureInfo _resourceCulture;
         
         [global::System.Diagnostics.CodeAnalysis.SuppressMessageAttribute("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
-        internal BDHCAMPatchDB() {
+        internal BDHCAMPatchDB()
+        {
         }
         
         /// <summary>
         ///   Restituisce l'istanza di ResourceManager nella cache utilizzata da questa classe.
         /// </summary>
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
-        internal static global::System.Resources.ResourceManager ResourceManager {
-            get {
-                if (object.ReferenceEquals(resourceMan, null)) {
+        internal static global::System.Resources.ResourceManager ResourceManager
+        {
+            get
+            {
+                if (object.ReferenceEquals(_resourceMan, null))
+                {
                     global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("DSPRE.Resources.ROMToolboxDB.BDHCAMPatchDB", typeof(BDHCAMPatchDB).Assembly);
-                    resourceMan = temp;
+                    _resourceMan = temp;
                 }
-                return resourceMan;
+                return _resourceMan;
             }
         }
         
@@ -51,21 +57,26 @@ namespace DSPRE.Resources.ROMToolboxDB {
         ///   ricerche di risorse eseguite utilizzando questa classe di risorse fortemente tipizzata.
         /// </summary>
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
-        internal static global::System.Globalization.CultureInfo Culture {
-            get {
-                return resourceCulture;
+        internal static global::System.Globalization.CultureInfo Culture
+        {
+            get
+            {
+                return _resourceCulture;
             }
-            set {
-                resourceCulture = value;
+            set
+            {
+                _resourceCulture = value;
             }
         }
         
         /// <summary>
         ///   Cerca una risorsa localizzata di tipo System.Byte[].
         /// </summary>
-        internal static byte[] CPUE_cam {
-            get {
-                object obj = ResourceManager.GetObject("CPUE_cam", resourceCulture);
+        internal static byte[] CPUE_cam
+        {
+            get
+            {
+                object obj = ResourceManager.GetObject("CPUE_cam", _resourceCulture);
                 return ((byte[])(obj));
             }
         }
@@ -73,9 +84,11 @@ namespace DSPRE.Resources.ROMToolboxDB {
         /// <summary>
         ///   Cerca una risorsa localizzata di tipo System.Byte[].
         /// </summary>
-        internal static byte[] CPUS_cam {
-            get {
-                object obj = ResourceManager.GetObject("CPUS_cam", resourceCulture);
+        internal static byte[] CPUS_cam
+        {
+            get
+            {
+                object obj = ResourceManager.GetObject("CPUS_cam", _resourceCulture);
                 return ((byte[])(obj));
             }
         }
@@ -83,9 +96,11 @@ namespace DSPRE.Resources.ROMToolboxDB {
         /// <summary>
         ///   Cerca una risorsa localizzata di tipo System.Byte[].
         /// </summary>
-        internal static byte[] IPGE_cam {
-            get {
-                object obj = ResourceManager.GetObject("IPGE_cam", resourceCulture);
+        internal static byte[] IPGE_cam
+        {
+            get
+            {
+                object obj = ResourceManager.GetObject("IPGE_cam", _resourceCulture);
                 return ((byte[])(obj));
             }
         }
@@ -93,9 +108,11 @@ namespace DSPRE.Resources.ROMToolboxDB {
         /// <summary>
         ///   Cerca una risorsa localizzata di tipo System.Byte[].
         /// </summary>
-        internal static byte[] IPGS_cam {
-            get {
-                object obj = ResourceManager.GetObject("IPGS_cam", resourceCulture);
+        internal static byte[] IPGS_cam
+        {
+            get
+            {
+                object obj = ResourceManager.GetObject("IPGS_cam", _resourceCulture);
                 return ((byte[])(obj));
             }
         }
@@ -103,9 +120,11 @@ namespace DSPRE.Resources.ROMToolboxDB {
         /// <summary>
         ///   Cerca una risorsa localizzata di tipo System.Byte[].
         /// </summary>
-        internal static byte[] IPKE_cam {
-            get {
-                object obj = ResourceManager.GetObject("IPKE_cam", resourceCulture);
+        internal static byte[] IPKE_cam
+        {
+            get
+            {
+                object obj = ResourceManager.GetObject("IPKE_cam", _resourceCulture);
                 return ((byte[])(obj));
             }
         }
@@ -113,9 +132,11 @@ namespace DSPRE.Resources.ROMToolboxDB {
         /// <summary>
         ///   Cerca una risorsa localizzata di tipo System.Byte[].
         /// </summary>
-        internal static byte[] IPKS_cam {
-            get {
-                object obj = ResourceManager.GetObject("IPKS_cam", resourceCulture);
+        internal static byte[] IPKS_cam
+        {
+            get
+            {
+                object obj = ResourceManager.GetObject("IPKS_cam", _resourceCulture);
                 return ((byte[])(obj));
             }
         }

@@ -60,7 +60,7 @@ namespace DSPRE.ROMFiles
 
         public bool SaveToFile()
         {
-            ArchiveMembers.Put(RomInfo.DirNames.rockSmash, ID, ToByteArray());
+            ArchiveMembers.Put(RomInfo.DirNames.RockSmash, ID, ToByteArray());
             return true;
         }
 

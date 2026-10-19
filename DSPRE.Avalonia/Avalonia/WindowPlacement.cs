@@ -25,7 +25,7 @@ namespace DSPRE.Avalonia
             {
                 string why = BetaEditors.WhyNot(editorName);
                 AppLogger.Info("Beta editor not opened: " + editorName);
-                _ = DialogHelper.ShowInfo(why, "Not available yet");
+                _ = DialogHelper.ShowInfoAsync(why, "Not available yet");
                 return;
             }
 

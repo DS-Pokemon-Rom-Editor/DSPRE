@@ -30,7 +30,7 @@ namespace DSPRE.ROMFiles
         {
             get
             {
-                int size = MapFile.mapSize;
+                int size = MapFile.MapSize;
                 foreach (KeyValuePair<(int cellX, int cellY), byte[,]> kv in _cells)
                 {
                     int baseX = kv.Key.cellX * size, baseZ = kv.Key.cellY * size;
@@ -57,7 +57,7 @@ namespace DSPRE.ROMFiles
         /// <summary>The tile kind, or 0 when that map is not loaded.</summary>
         public byte TypeAt(int tileX, int tileZ)
         {
-            int size = MapFile.mapSize;
+            int size = MapFile.MapSize;
             int cellX = FloorDiv(tileX, size), cellZ = FloorDiv(tileZ, size);
             if (!_types.TryGetValue((cellX, cellZ), out byte[,] grid)) return 0;
 
@@ -71,7 +71,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Whether a tile is closed off, in tiles across the whole matrix. </summary>
         public bool IsBlocked(int tileX, int tileZ)
         {
-            int size = MapFile.mapSize;
+            int size = MapFile.MapSize;
             int cellX = FloorDiv(tileX, size), cellZ = FloorDiv(tileZ, size);
             if (!_cells.TryGetValue((cellX, cellZ), out byte[,] grid)) return true;
 

@@ -4,7 +4,7 @@ namespace DSPRE
     public static class SpriteScrambling
     {
         public static void Unscramble(byte[] data, int off, int size) =>
-            Unscramble(data, off, size, RomInfo.gameFamily == RomInfo.GameFamilies.DP);
+            Unscramble(data, off, size, RomInfo.GameFamily == RomInfo.GameFamilies.DP);
 
         /// <summary>Direction given explicitly: HGSS trainer scans are keyed from the end like DP sprites.</summary>
         public static void Unscramble(byte[] data, int off, int size, bool fromEnd)
@@ -39,7 +39,7 @@ namespace DSPRE
         }
 
         public static void Scramble(byte[] data, int off, int size, ushort seed) =>
-            Scramble(data, off, size, seed, RomInfo.gameFamily == RomInfo.GameFamilies.DP);
+            Scramble(data, off, size, seed, RomInfo.GameFamily == RomInfo.GameFamilies.DP);
 
         public static void Scramble(byte[] data, int off, int size, ushort seed, bool fromEnd)
         {
@@ -76,7 +76,7 @@ namespace DSPRE
 
         /// <summary>The seed word, needed to scramble the sprite again.</summary>
         public static ushort Seed(byte[] data, int off, int size) =>
-            Seed(data, off, size, RomInfo.gameFamily == RomInfo.GameFamilies.DP);
+            Seed(data, off, size, RomInfo.GameFamily == RomInfo.GameFamilies.DP);
 
         public static ushort Seed(byte[] data, int off, int size, bool fromEnd)
         {

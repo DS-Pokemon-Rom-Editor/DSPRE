@@ -122,13 +122,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 RawImage raw = DSUtils.GetItemPicRaw(_heldItem, 32, 32);
                 HeldItemIcon = raw != null ? DSPRE.Avalonia.ImageConverter.ToAvaloniaBitmap(raw) : null;
             }
-            catch { HeldItemIcon = null; }
+            catch (Exception ex) { AppLogger.WarnOnce("StarterEditorViewModel.RefreshHeldItemIcon", ex); HeldItemIcon = null; }
         }
 
         // Diamond and Pearl set the held item and the level inside a script command, and DSPRE cannot
         // read those scripts reliably yet, so it says where they are instead of offering a control that
         // would write to the wrong place. Platinum keeps the same layout but does parse.
-        private static bool IsDiamondOrPearl => RomInfo.gameFamily == RomInfo.GameFamilies.DP;
+        private static bool IsDiamondOrPearl => RomInfo.GameFamily == RomInfo.GameFamilies.DP;
 
         // Platinum keeps the level and the held item in the script that hands the starter over, so
         // both are editable there once that command has been found.
@@ -152,7 +152,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         /// <summary>HGSS starters never carry a held item, and DP keep theirs out of reach.</summary>
         public bool IsHeldItemSupported =>
-            RomInfo.gameFamily != RomInfo.GameFamilies.HGSS && !IsDiamondOrPearl;
+            RomInfo.GameFamily != RomInfo.GameFamilies.HGSS && !IsDiamondOrPearl;
 
         /// <summary>Shown instead of the held item and level fields on Diamond and Pearl.</summary>
         public bool HasScriptNote => IsDiamondOrPearl;
@@ -162,7 +162,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get
             {
                 if (!IsDiamondOrPearl) return null;
-                int file = RomInfo.starterHeldItemScriptFileID;
+                int file = RomInfo.StarterHeldItemScriptFileID;
                 int number = DSPRE.ROMFiles.StarterPokemonData.GetStarterScriptNumber();
                 string where = number > 0
                     ? $"script file {file}, script {number}"
@@ -189,7 +189,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return;
             }
 
-            DSUtils.TryUnpackNarcs(new System.Collections.Generic.List<RomInfo.DirNames> { RomInfo.DirNames.monIcons, RomInfo.DirNames.itemIcons });
+            DSUtils.TryUnpackNarcs(new System.Collections.Generic.List<RomInfo.DirNames> { RomInfo.DirNames.MonIcons, RomInfo.DirNames.ItemIcons });
             RomInfo.SetMonIconsPalTableAddress();
 
             foreach (string n in RomInfo.GetPokemonNames()) PokemonNames.Add(n);
@@ -199,7 +199,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             AppEvents.NamesChanged -= OnNamesChanged;
             AppEvents.NamesChanged += OnNamesChanged;
             _iconsSaved = AppEvents.WhenSaved(() => { RefreshStarterIcon(1); RefreshStarterIcon(2); RefreshStarterIcon(3); RefreshHeldItemIcon(); },
-                                              RomInfo.DirNames.monIcons, RomInfo.DirNames.itemIcons);
+                                              RomInfo.DirNames.MonIcons, RomInfo.DirNames.ItemIcons);
 
             _loading = false;
         }
@@ -282,23 +282,23 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private static string KnownFingerprint()
         {
-            Dictionary<string, string> map = SettingsManager.Settings?.starterCommandFingerprint;
+            Dictionary<string, string> map = SettingsManager.Settings?.StarterCommandFingerprint;
             return map != null && map.TryGetValue(ProjectKey(), out string f) ? f : null;
         }
 
         private static void RememberFingerprint(string fingerprint)
         {
             if (SettingsManager.Settings == null || KnownFingerprint() == fingerprint) return;
-            SettingsManager.Settings.starterCommandFingerprint ??= new System.Collections.Generic.Dictionary<string, string>();
-            SettingsManager.Settings.starterCommandFingerprint[ProjectKey()] = fingerprint;
+            SettingsManager.Settings.StarterCommandFingerprint ??= new System.Collections.Generic.Dictionary<string, string>();
+            SettingsManager.Settings.StarterCommandFingerprint[ProjectKey()] = fingerprint;
             SettingsManager.Save();
         }
 
-        private static string ProjectKey() => RomInfo.workDir ?? "";
+        private static string ProjectKey() => RomInfo.WorkDir ?? "";
 
         private static string RememberedChoice()
         {
-            Dictionary<string, string> map = SettingsManager.Settings?.starterCommandChoice;
+            Dictionary<string, string> map = SettingsManager.Settings?.StarterCommandChoice;
             return map != null && map.TryGetValue(ProjectKey(), out string key) ? key : null;
         }
 
@@ -326,8 +326,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _command = chosen;
             if (_saved != null) _saved = _saved with { Level = chosen.Level };   // the level this command holds on disk
             StarterLevel = chosen.Level;
-            SettingsManager.Settings.starterCommandChoice ??= new System.Collections.Generic.Dictionary<string, string>();
-            SettingsManager.Settings.starterCommandChoice[ProjectKey()] = chosen.Key;
+            SettingsManager.Settings.StarterCommandChoice ??= new System.Collections.Generic.Dictionary<string, string>();
+            SettingsManager.Settings.StarterCommandChoice[ProjectKey()] = chosen.Key;
             CommandsHaveChanged = false;
             SettingsManager.Save();
             OnPropertyChanged(nameof(IsLevelSupported));
@@ -379,7 +379,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (IsHeldItemSupported && !throughTheScript)
             {
                 StarterPokemonData.SetHeldItem(HeldItem);
-                if (RomInfo.starterHeldItemScriptFileID >= 0) touchedScripts.Add(RomInfo.starterHeldItemScriptFileID);
+                if (RomInfo.StarterHeldItemScriptFileID >= 0) touchedScripts.Add(RomInfo.StarterHeldItemScriptFileID);
             }
 
             MarkClean();
@@ -392,7 +392,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             // The species bytes above are already on disk. What is left shells out to rotom, and
             // awaiting it here would freeze the app: SaveChanges runs straight off a Click handler.
-            if ((touchedScripts.Count > 0 && RomInfo.hasRotomProject) || throughTheScript)
+            if ((touchedScripts.Count > 0 && RomInfo.HasRotomProject) || throughTheScript)
                 _ = FinishSavingAsync(touchedScripts, throughTheScript);
         }
 
@@ -412,7 +412,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     BusyText = "Saving the script…";
                     await SaveThroughTheScriptAsync();
                 }
-                if (touchedScripts.Count > 0 && RomInfo.hasRotomProject)
+                if (touchedScripts.Count > 0 && RomInfo.HasRotomProject)
                 {
                     BusyText = "Reparsing scripts…";
                     try { await StarterPokemonData.RefreshRotomSourcesAsync(touchedScripts); }

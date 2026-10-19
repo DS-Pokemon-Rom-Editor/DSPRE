@@ -13,7 +13,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Offset from a stored seal position, in case-screen coordinates, to the overview picture's ball.</summary>
         public const int PlacedToBoardX = -56, PlacedToBoardY = 16;
 
-        private static bool Johto => gameFamily == GameFamilies.HGSS;
+        private static bool Johto => GameFamily == GameFamilies.HGSS;
         private static int StickerLayout => Johto ? 38 : 93;
         private static int StickerAnimation => Johto ? 36 : 1;
         private static int StickerColours => Johto ? 6 : 293;
@@ -21,7 +21,7 @@ namespace DSPRE.Avalonia.Data
         private static int BoardColours => Johto ? 1 : 287;
         private static int BoardOverview => Johto ? 11 : 283;
 
-        public static bool HasStickers => gameDirs != null && gameDirs.ContainsKey(DirNames.sealGraphics);
+        public static bool HasStickers => GameDirs != null && GameDirs.ContainsKey(DirNames.SealGraphics);
 
         /// <summary>The sticker at 32 by 32, centred, or null.</summary>
         public static AvaBitmap Sticker(BallSeal seal) => StickerCells(seal)?.RenderCell(0, 32, 32);
@@ -31,8 +31,8 @@ namespace DSPRE.Avalonia.Data
         {
             if (seal == null || !HasStickers) return null;
             WeCellAnimRenderer renderer = new WeCellAnimRenderer();
-            return renderer.Load(DirNames.sealGraphics, seal.Sprite, DirNames.sealGraphics, StickerColours,
-                                 DirNames.sealGraphics, StickerLayout, DirNames.sealGraphics, StickerAnimation)
+            return renderer.Load(DirNames.SealGraphics, seal.Sprite, DirNames.SealGraphics, StickerColours,
+                                 DirNames.SealGraphics, StickerLayout, DirNames.SealGraphics, StickerAnimation)
                 ? renderer : null;
         }
 
@@ -42,7 +42,7 @@ namespace DSPRE.Avalonia.Data
             if (!HasStickers) return null;
             try
             {
-                ScriptNarc narc = new ScriptNarc(DirNames.sealGraphics);
+                ScriptNarc narc = new ScriptNarc(DirNames.SealGraphics);
                 NitroBgCodec.BgImage ball = NitroBgCodec.Composite(NitroBgCodec.Inflate(narc.Get(BoardDrawing)), NitroBgCodec.Inflate(narc.Get(BoardColours)),
                                                   NitroBgCodec.Inflate(narc.Get(BoardOverview)), transparentZero: false);
                 if (ball?.Rgba == null) return null;

@@ -17,7 +17,7 @@ namespace DSPRE.Tests.Editors
         [MemberData(nameof(Cameras))]
         public void Writing_back_the_shown_values_keeps_every_byte(GameCamera cam)
         {
-            bool hgss = cam.xOffset != null;
+            bool hgss = cam.XOffset != null;
             CameraRowVM row = new CameraRowVM(0);
             row.LoadFrom(cam);
 
@@ -66,10 +66,10 @@ namespace DSPRE.Tests.Editors
             row.ViewIndex = 1;
             GameCamera cam = row.ToGameCamera(false);
 
-            Assert.Equal(-0x2000, cam.vertRot);
-            Assert.Equal(0x71c, cam.fov);   // half of 20 degrees
-            Assert.Equal(40u * 16 * 4096, cam.distance);
-            Assert.Equal(GameCamera.ORTHO, cam.perspMode);
+            Assert.Equal(-0x2000, cam.VertRot);
+            Assert.Equal(0x71c, cam.Fov);   // half of 20 degrees
+            Assert.Equal(40u * 16 * 4096, cam.Distance);
+            Assert.Equal(GameCamera.ORTHO, cam.PerspMode);
         }
     }
 }

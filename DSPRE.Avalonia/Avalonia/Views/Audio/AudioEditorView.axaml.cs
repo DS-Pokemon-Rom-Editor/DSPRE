@@ -44,7 +44,7 @@ namespace DSPRE.Avalonia.Views.Audio
             AddHandler(KeyDownEvent, OnPlayKeys, RoutingStrategies.Tunnel);
             // Arriving from the Pokemon editor, the cry is already picked before this window exists, so
             // nothing has told it to draw yet.
-            Opened += (_, _) => { if (vm.Selected != null) _ = DrawSelected(); };
+            Opened += (_, _) => { if (vm.Selected != null) _ = DrawSelectedAsync(); };
             Closed += (_, _) => { _playhead.Stop(); AudioOutput.Current.Stop(); vm.PropertyChanged -= OnViewModelChanged; };
         }
 
@@ -54,10 +54,10 @@ namespace DSPRE.Avalonia.Views.Audio
         {
             // Staging, saving and discarding change what the picked row sounds like.
             if (e.PropertyName == nameof(AudioEditorViewModel.Selected)
-             || e.PropertyName == nameof(AudioEditorViewModel.HasUnsavedChanges)) _ = DrawSelected();
+             || e.PropertyName == nameof(AudioEditorViewModel.HasUnsavedChanges)) _ = DrawSelectedAsync();
         }
 
-        private async Task DrawSelected()
+        private async Task DrawSelectedAsync()
         {
             _rendering?.Cancel();
             CancellationTokenSource mine = _rendering = new CancellationTokenSource();
@@ -76,7 +76,7 @@ namespace DSPRE.Avalonia.Views.Audio
             short[] pcm;
             try
             {
-                pcm = await Task.Run(() => { try { return vm.RenderSelected(); } catch { return null; } }, token);
+                pcm = await Task.Run(() => { try { return vm.RenderSelected(); } catch (Exception ex) { AppLogger.WarnOnce("AudioEditorView.DrawSelectedAsync", ex); return null; } }, token);
             }
             catch (OperationCanceledException)
             {
@@ -90,7 +90,7 @@ namespace DSPRE.Avalonia.Views.Audio
             if (_playWhenDrawn) { _playWhenDrawn = false; PlayFromStart(); }
 
             // The notes come from the sequence itself rather than from the sound, so a cry has none.
-            IReadOnlyList<SseqPlayer.Note> notes = await Task.Run(() => { try { return vm.ReadSelectedNotes(); } catch { return null; } }, token);
+            IReadOnlyList<SseqPlayer.Note> notes = await Task.Run(() => { try { return vm.ReadSelectedNotes(); } catch (Exception ex) { AppLogger.WarnOnce("AudioEditorView.DrawSelectedAsync", ex); return null; } }, token);
             if (token.IsCancellationRequested) return;
             Notes.SetNotes(notes, Wave.Seconds);
 
@@ -223,11 +223,11 @@ namespace DSPRE.Avalonia.Views.Audio
             if (sf2 == null)
             {
                 vm.StatusText = whynot;
-                await DialogHelper.ShowInfo(whynot, "Export SoundFont");
+                await DialogHelper.ShowInfoAsync(whynot, "Export SoundFont");
                 return;
             }
 
-            string path = await DialogHelper.SaveFile(this, "Save these instruments as a SoundFont",
+            string path = await DialogHelper.SaveFileAsync(this, "Save these instruments as a SoundFont",
                 new[] { new FilePickerFileType("SoundFont") { Patterns = new[] { "*.sf2" } } },
                 vm.SuggestedSoundFontName());
             if (path == null) return;
@@ -241,7 +241,7 @@ namespace DSPRE.Avalonia.Views.Audio
             catch (System.Exception ex)
             {
                 AppLogger.Error("ExportSoundFont failed: " + ex);
-                await DialogHelper.ShowError("That SoundFont could not be written: " + ex.Message,
+                await DialogHelper.ShowErrorAsync("That SoundFont could not be written: " + ex.Message,
                                              "Audio editor error", this);
             }
         }
@@ -255,11 +255,11 @@ namespace DSPRE.Avalonia.Views.Audio
             if (midi == null)
             {
                 vm.StatusText = whynot;
-                await DialogHelper.ShowInfo(whynot, "Export MIDI");
+                await DialogHelper.ShowInfoAsync(whynot, "Export MIDI");
                 return;
             }
 
-            string path = await DialogHelper.SaveFile(this, "Save these notes as a MIDI",
+            string path = await DialogHelper.SaveFileAsync(this, "Save these notes as a MIDI",
                 new[] { new FilePickerFileType("MIDI file") { Patterns = new[] { "*.mid" } } },
                 vm.SuggestedMidiName());
             if (path == null) return;
@@ -274,7 +274,7 @@ namespace DSPRE.Avalonia.Views.Audio
             {
                 AppLogger.Error("Audio MIDI export failed: " + ex.Message);
                 vm.StatusText = "That file could not be written.";
-                await DialogHelper.ShowError("That file could not be written:\n" + ex.Message, "Audio editor error");
+                await DialogHelper.ShowErrorAsync("That file could not be written:\n" + ex.Message, "Audio editor error");
             }
         }
 
@@ -283,7 +283,7 @@ namespace DSPRE.Avalonia.Views.Audio
             AudioEditorViewModel vm = ViewModel;
             if (vm?.Selected == null) return;
 
-            string path = await DialogHelper.SaveFile(this, "Save this sound",
+            string path = await DialogHelper.SaveFileAsync(this, "Save this sound",
                 new[] { new FilePickerFileType("WAV sound") { Patterns = new[] { "*.wav" } } },
                 vm.SuggestedFileName());
             if (path == null) return;
@@ -295,7 +295,7 @@ namespace DSPRE.Avalonia.Views.Audio
                 if (vm.Selected.IsCry)
                 {
                     if (!vm.ExportSelectedSample(path))
-                        await DialogHelper.ShowInfo("This ROM has no cry for that Pokémon.", "Save sound");
+                        await DialogHelper.ShowInfoAsync("This ROM has no cry for that Pokémon.", "Save sound");
                     else SaveNotice.Exported(path);
                     return;
                 }
@@ -305,20 +305,20 @@ namespace DSPRE.Avalonia.Views.Audio
                 if (vm.Selected.IsSample)
                 {
                     if (!vm.ExportSelectedSample(path))
-                        await DialogHelper.ShowInfo("There is nothing in that one to save.", "Save sound");
+                        await DialogHelper.ShowInfoAsync("There is nothing in that one to save.", "Save sound");
                     else SaveNotice.Exported(path);
                     return;
                 }
 
                 if (_pcm == null || _pcm.Length == 0)
                 {
-                    await DialogHelper.ShowInfo("Nothing came out of that one.", "Save sound");
+                    await DialogHelper.ShowInfoAsync("Nothing came out of that one.", "Save sound");
                     return;
                 }
                 SseqPlayer.WriteWav(path, _pcm, Rate);
                 SaveNotice.Exported(path);
             }
-            catch (Exception ex) { await DialogHelper.ShowError("It could not be saved:\n" + ex.Message, "Audio editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync("It could not be saved:\n" + ex.Message, "Audio editor error"); }
         }
 
         private async void Import_Click(object sender, RoutedEventArgs e)
@@ -331,12 +331,12 @@ namespace DSPRE.Avalonia.Views.Audio
 
             // Replacing a shared sound changes everything that plays it, so say so before it happens
             // rather than leaving somebody to find out by playing a tune that now sounds wrong.
-            if (sample && !await DialogHelper.AskYesNo(
+            if (sample && !await DialogHelper.AskYesNoAsync(
                     "This sound may be used by more than one tune or sound effect, and all of them will "
                     + "play the new one.\n\nPut a WAV in over it?", title, this))
                 return;
 
-            string path = await DialogHelper.OpenFile(this,
+            string path = await DialogHelper.OpenFileAsync(this,
                 sample ? "Choose a sound to import" : "Choose a cry to import",
                 new[] { new FilePickerFileType("WAV sound") { Patterns = new[] { "*.wav" } } });
             if (path == null) return;
@@ -358,20 +358,20 @@ namespace DSPRE.Avalonia.Views.Audio
                         : SoundArchive.PrepareCry(item.Number, path, out why);
                     if (held != null) { vm.StageSample(item, held); SaveNotice.Imported(item.Name, path); return; }
                 }
-                await DialogHelper.ShowInfo(why ?? "That could not be imported.", title);
+                await DialogHelper.ShowInfoAsync(why ?? "That could not be imported.", title);
             }
-            catch (Exception ex) { await DialogHelper.ShowError("It could not be imported:\n" + ex.Message, "Audio editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync("It could not be imported:\n" + ex.Message, "Audio editor error"); }
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e)
         {
             string problem = ViewModel?.Save();
-            if (problem != null) await DialogHelper.ShowError(problem, "Save", this);
+            if (problem != null) await DialogHelper.ShowErrorAsync(problem, "Save", this);
         }
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) ViewModel?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) ViewModel?.DiscardChanges();
         }
 
     }

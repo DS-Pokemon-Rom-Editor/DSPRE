@@ -67,75 +67,75 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         // --- Import handlers ---------------------------------------------------------
         private async void ImportFemaleBackNormal_Click(object sender, RoutedEventArgs e)
-            => await VM.ImportSprite(0, OwnerWindow);
+            => await VM.ImportSpriteAsync(0, OwnerWindow);
         private async void ImportMaleBackNormal_Click(object sender, RoutedEventArgs e)
-            => await VM.ImportSprite(1, OwnerWindow);
+            => await VM.ImportSpriteAsync(1, OwnerWindow);
         private async void ImportFemaleFrontNormal_Click(object sender, RoutedEventArgs e)
-            => await VM.ImportSprite(2, OwnerWindow);
+            => await VM.ImportSpriteAsync(2, OwnerWindow);
         private async void ImportMaleFrontNormal_Click(object sender, RoutedEventArgs e)
-            => await VM.ImportSprite(3, OwnerWindow);
+            => await VM.ImportSpriteAsync(3, OwnerWindow);
 
         // --- Export handlers ---------------------------------------------------------
         private async void ExportFemaleBackNormal_Click(object sender, RoutedEventArgs e)
-            => await VM.ExportSprite(0, OwnerWindow);
+            => await VM.ExportSpriteAsync(0, OwnerWindow);
         private async void ExportMaleBackNormal_Click(object sender, RoutedEventArgs e)
-            => await VM.ExportSprite(1, OwnerWindow);
+            => await VM.ExportSpriteAsync(1, OwnerWindow);
         private async void ExportFemaleFrontNormal_Click(object sender, RoutedEventArgs e)
-            => await VM.ExportSprite(2, OwnerWindow);
+            => await VM.ExportSpriteAsync(2, OwnerWindow);
         private async void ExportMaleFrontNormal_Click(object sender, RoutedEventArgs e)
-            => await VM.ExportSprite(3, OwnerWindow);
+            => await VM.ExportSpriteAsync(3, OwnerWindow);
 
         // --- Shiny import handlers (derive palette only; artwork is shared with Normal) ---------
         private async void ImportFemaleBackShiny_Click(object sender, RoutedEventArgs e)
-            => await VM.ImportShinyPalette(0, OwnerWindow);
+            => await VM.ImportShinyPaletteAsync(0, OwnerWindow);
         private async void ImportMaleBackShiny_Click(object sender, RoutedEventArgs e)
-            => await VM.ImportShinyPalette(1, OwnerWindow);
+            => await VM.ImportShinyPaletteAsync(1, OwnerWindow);
         private async void ImportFemaleFrontShiny_Click(object sender, RoutedEventArgs e)
-            => await VM.ImportShinyPalette(2, OwnerWindow);
+            => await VM.ImportShinyPaletteAsync(2, OwnerWindow);
         private async void ImportMaleFrontShiny_Click(object sender, RoutedEventArgs e)
-            => await VM.ImportShinyPalette(3, OwnerWindow);
+            => await VM.ImportShinyPaletteAsync(3, OwnerWindow);
 
         // --- Shiny export handlers ----------------------------------------------------
         private async void ExportFemaleBackShiny_Click(object sender, RoutedEventArgs e)
-            => await VM.ExportSprite(0, OwnerWindow, shiny: true);
+            => await VM.ExportSpriteAsync(0, OwnerWindow, shiny: true);
         private async void ExportMaleBackShiny_Click(object sender, RoutedEventArgs e)
-            => await VM.ExportSprite(1, OwnerWindow, shiny: true);
+            => await VM.ExportSpriteAsync(1, OwnerWindow, shiny: true);
         private async void ExportFemaleFrontShiny_Click(object sender, RoutedEventArgs e)
-            => await VM.ExportSprite(2, OwnerWindow, shiny: true);
+            => await VM.ExportSpriteAsync(2, OwnerWindow, shiny: true);
         private async void ExportMaleFrontShiny_Click(object sender, RoutedEventArgs e)
-            => await VM.ExportSprite(3, OwnerWindow, shiny: true);
+            => await VM.ExportSpriteAsync(3, OwnerWindow, shiny: true);
 
         // --- Mono-gender / genderless sprite gap -------------------------------------
         private async void AddOppositeGenderSprites_Click(object sender, RoutedEventArgs e)
-            => await VM.AddOppositeGenderSprites(OwnerWindow);
+            => await VM.AddOppositeGenderSpritesAsync(OwnerWindow);
 
         // --- Sprite sheet (Back+Front, one gender, art only) --------------------------
         private async void ImportFemaleSheet_Click(object sender, RoutedEventArgs e)
-            => await VM.ImportSpriteSheet(OwnerWindow, female: true);
+            => await VM.ImportSpriteSheetAsync(OwnerWindow, female: true);
         private async void ImportMaleSheet_Click(object sender, RoutedEventArgs e)
-            => await VM.ImportSpriteSheet(OwnerWindow, female: false);
+            => await VM.ImportSpriteSheetAsync(OwnerWindow, female: false);
         private async void ExportFemaleSheet_Click(object sender, RoutedEventArgs e)
-            => await VM.ExportSpriteSheet(OwnerWindow, female: true);
+            => await VM.ExportSpriteSheetAsync(OwnerWindow, female: true);
         private async void ExportMaleSheet_Click(object sender, RoutedEventArgs e)
-            => await VM.ExportSpriteSheet(OwnerWindow, female: false);
+            => await VM.ExportSpriteSheetAsync(OwnerWindow, female: false);
         private async void ImportFemaleShinySheet_Click(object sender, RoutedEventArgs e)
-            => await VM.ImportShinySpriteSheet(OwnerWindow, female: true);
+            => await VM.ImportShinySpriteSheetAsync(OwnerWindow, female: true);
         private async void ImportMaleShinySheet_Click(object sender, RoutedEventArgs e)
-            => await VM.ImportShinySpriteSheet(OwnerWindow, female: false);
+            => await VM.ImportShinySpriteSheetAsync(OwnerWindow, female: false);
         private async void ExportFemaleShinySheet_Click(object sender, RoutedEventArgs e)
-            => await VM.ExportSpriteSheet(OwnerWindow, female: true, shiny: true);
+            => await VM.ExportSpriteSheetAsync(OwnerWindow, female: true, shiny: true);
         private async void ExportMaleShinySheet_Click(object sender, RoutedEventArgs e)
-            => await VM.ExportSpriteSheet(OwnerWindow, female: false, shiny: true);
+            => await VM.ExportSpriteSheetAsync(OwnerWindow, female: false, shiny: true);
 
         // --- Both-genders sheet (only shown when the species genuinely has separate male/female art) ---
         private async void ImportFullSheet_Click(object sender, RoutedEventArgs e)
-            => await VM.ImportFullSheet(OwnerWindow);
+            => await VM.ImportFullSheetAsync(OwnerWindow);
         private async void ExportFullSheet_Click(object sender, RoutedEventArgs e)
-            => await VM.ExportFullSheet(OwnerWindow);
+            => await VM.ExportFullSheetAsync(OwnerWindow);
         private async void ImportShinyFullSheet_Click(object sender, RoutedEventArgs e)
-            => await VM.ImportShinyFullSheet(OwnerWindow);
+            => await VM.ImportShinyFullSheetAsync(OwnerWindow);
         private async void ExportShinyFullSheet_Click(object sender, RoutedEventArgs e)
-            => await VM.ExportFullSheet(OwnerWindow, shiny: true);
+            => await VM.ExportFullSheetAsync(OwnerWindow, shiny: true);
 
         // --- Palette swatch color editor -----------------------------------------------
         private void PaletteSwatch_Click(object sender, RoutedEventArgs e)

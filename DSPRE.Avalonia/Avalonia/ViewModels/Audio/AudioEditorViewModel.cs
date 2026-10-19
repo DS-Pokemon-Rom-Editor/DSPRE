@@ -722,7 +722,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             if (item == null || item.IsCry || item.IsSample) return null;
             SdatArchive sdat = SoundArchive.Load();
             if (sdat == null) return null;
-            try { return SseqPlayer.ReadNotes(sdat, item.Number); } catch { return null; }
+            try { return SseqPlayer.ReadNotes(sdat, item.Number); } catch (Exception ex) { AppLogger.WarnOnce("AudioEditorViewModel.ReadSelectedNotes", ex); return null; }
         }
 
         /// <summary>How far into a sequence a saved MIDI reads.</summary>
@@ -822,7 +822,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             if (sdat == null) { whynot = "This game's sound archive could not be read."; return null; }
             System.Collections.Generic.IReadOnlyList<SseqPlayer.Note> notes;
             try { notes = SseqPlayer.ReadNotes(sdat, item.Number, WholeTuneSeconds); }
-            catch { notes = null; }
+            catch (Exception ex) { AppLogger.WarnOnce("AudioEditorViewModel.BuildMidi", ex); notes = null; }
             if (notes == null) { whynot = "This sequence could not be read."; return null; }
             if (notes.Count == 0) { whynot = "This sequence plays no notes, so a MIDI of it would be empty."; return null; }
             byte[] midi = MidiFile.FromNotes(notes, item.Name);

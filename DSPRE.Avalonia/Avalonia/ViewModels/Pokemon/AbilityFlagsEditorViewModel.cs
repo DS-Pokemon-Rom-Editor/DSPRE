@@ -82,7 +82,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 Flags.Add(new FlagItem { Key = key, Label = Labels.TryGetValue(key, out string l) ? l : Humanize(key), Changed = OnFlagChanged });
 
             string[] names = Array.Empty<string>();
-            try { names = RomInfo.GetAbilityNames(); } catch (Exception e) when (e is System.IO.IOException || e is ArgumentException) { }
+            try { names = RomInfo.GetAbilityNames(); } catch (Exception e) when (e is System.IO.IOException || e is ArgumentException) { }   // without ability names the flags show their keys
             HgEngineSymbolTable table = HgEngineSymbolTable.Load("include/constants/ability.h");
             for (int id = 0; table != null && table.TryGetNameWithPrefix(id, "ABILITY_", out string symbol); id++)
                 _all.Add(new AbilityRow { Id = id, Name = id < names.Length && names[id].Trim().Length > 0 ? names[id] : Humanize(symbol.Substring(8).ToLowerInvariant()) });
@@ -184,7 +184,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             (bool saved, string error) = await HgEngineSave.RunAsync(() => HgEngineAbilityFlags.TryWrite(changes, out string writeError) ? null : writeError);
             if (!saved)
             {
-                if (error != null) await DialogHelper.ShowError($"The ability flags were not saved:\n{error}", "Ability flags error");
+                if (error != null) await DialogHelper.ShowErrorAsync($"The ability flags were not saved:\n{error}", "Ability flags error");
                 return false;
             }
             foreach ((int id, HashSet<string> set) in changes) _saved[id] = new HashSet<string>(set);

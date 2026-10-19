@@ -38,7 +38,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public ObservableCollection<string> AreaNames { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> AreaTypes { get; } = new ObservableCollection<string> { "Indoor", "Outdoor" };
-        public bool IsHGSS => gameFamily == GameFamilies.HGSS;
+        public bool IsHGSS => GameFamily == GameFamilies.HGSS;
 
         private int _selectedIndex = -1;
         public int SelectedIndex
@@ -73,8 +73,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         public int InitialIndex { get; set; }
 
         private decimal _mapTileset, _buildingsTileset, _thirdField, _lightType;
-        public decimal MapTileset { get => _mapTileset; set { if (Set(ref _mapTileset, value) && _area != null) { _area.mapTileset = (ushort)value; OnPropertyChanged(nameof(MapTexturePlaces)); if (!_suppress) Dirty(); } } }
-        public decimal BuildingsTileset { get => _buildingsTileset; set { if (Set(ref _buildingsTileset, value) && _area != null) { _area.buildingsTileset = (ushort)value; OnPropertyChanged(nameof(BuildingTexturePlaces)); if (!_suppress) Dirty(); } } }
+        public decimal MapTileset { get => _mapTileset; set { if (Set(ref _mapTileset, value) && _area != null) { _area.MapTileset = (ushort)value; OnPropertyChanged(nameof(MapTexturePlaces)); if (!_suppress) Dirty(); } } }
+        public decimal BuildingsTileset { get => _buildingsTileset; set { if (Set(ref _buildingsTileset, value) && _area != null) { _area.BuildingsTileset = (ushort)value; OnPropertyChanged(nameof(BuildingTexturePlaces)); if (!_suppress) Dirty(); } } }
 
         // Texture packs have no names, so each is shown by the places whose area data uses it.
         public string MapTexturePlaces => PlacesUsingPack((int)_mapTileset, buildings: false);
@@ -95,8 +95,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             for (int i = 0; i < count; i++)
             {
                 _areaPacks[i] = (-1, -1);
-                try { AreaData a = new AreaData(new MemoryStream(_archive.Read(i))); _areaPacks[i] = (a.mapTileset, a.buildingsTileset); }
-                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException) { }
+                try { AreaData a = new AreaData(new MemoryStream(_archive.Read(i))); _areaPacks[i] = (a.MapTileset, a.BuildingsTileset); }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException) { }   // an area that can't be read shows no packs
                 _areaPlaces[i] = new List<string>();
                 if (!byArea.TryGetValue(i, out List<ushort> headers)) continue;
                 foreach (ushort h in headers)
@@ -125,7 +125,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             // Location 0 is the game's placeholder place for unused headers; real places go first.
             string placeholder = null;
             try { List<string> names = GetLocationNames(); if (names != null && names.Count > 0) placeholder = names[0]?.Trim(); }
-            catch (Exception e) when (e is IOException || e is InvalidOperationException) { }
+            catch (Exception e) when (e is IOException || e is InvalidOperationException) { }   // without location names no placeholder is moved last
             if (!string.IsNullOrEmpty(placeholder) && places.Remove(placeholder)) places.Add(placeholder);
             const int Shown = 3;
             return string.Join(", ", places.Take(Shown)) + (places.Count > Shown ? $" +{places.Count - Shown}" : "");
@@ -143,7 +143,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             set
             {
                 if (!Set(ref _thirdField, value) || _area == null) return;
-                if (IsHGSS) _area.groundAnimation = (ushort)value; else _area.movingModelSet = (ushort)value;
+                if (IsHGSS) _area.GroundAnimation = (ushort)value; else _area.MovingModelSet = (ushort)value;
                 OnPropertyChanged(nameof(ThirdFieldNote));
                 if (!_suppress) Dirty();
             }
@@ -159,7 +159,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (!Set(ref _lightType, value)) return;
                 OnPropertyChanged(nameof(LightTypeIndex));
                 OnPropertyChanged(nameof(LightTypeNote));
-                if (_area != null) { _area.lightType = (ushort)value; if (!_suppress) Dirty(); }
+                if (_area != null) { _area.LightType = (ushort)value; if (!_suppress) Dirty(); }
             }
         }
 
@@ -174,7 +174,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public string LightTypeNote => Data.AreaLightTypes.NoteFor((int)_lightType);
 
         private int _areaTypeIndex;
-        public int AreaTypeIndex { get => _areaTypeIndex; set { if (Set(ref _areaTypeIndex, value) && _area != null) { _area.areaType = (byte)(value == 0 ? 0 : 1); if (!_suppress) Dirty(); } } }
+        public int AreaTypeIndex { get => _areaTypeIndex; set { if (Set(ref _areaTypeIndex, value) && _area != null) { _area.AreaType = (byte)(value == 0 ? 0 : 1); if (!_suppress) Dirty(); } } }
 
         private string _statusText = "Not loaded";
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
@@ -198,7 +198,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         // Added, removed and saved entries wait here until Save.
-        private readonly StagedArchive _archive = new(DirNames.areaData);
+        private readonly StagedArchive _archive = new(DirNames.AreaData);
 
         private void ListAreas()
         {
@@ -250,11 +250,11 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>Pushes <see cref="_area"/> into the bound fields. Caller guards with _suppress.</summary>
         private void PopulateFromArea()
         {
-            MapTileset = _area.mapTileset;
-            BuildingsTileset = _area.buildingsTileset;
-            ThirdField = IsHGSS ? _area.groundAnimation : _area.movingModelSet;
-            LightType = _area.lightType;
-            AreaTypeIndex = _area.areaType == 0 ? 0 : 1;
+            MapTileset = _area.MapTileset;
+            BuildingsTileset = _area.BuildingsTileset;
+            ThirdField = IsHGSS ? _area.GroundAnimation : _area.MovingModelSet;
+            LightType = _area.LightType;
+            AreaTypeIndex = _area.AreaType == 0 ? 0 : 1;
             OnPropertyChanged(nameof(MapTexturePlaces));
             OnPropertyChanged(nameof(BuildingTexturePlaces));
         }
@@ -287,7 +287,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             OnPropertyChanged(nameof(LightTypeNote));
             try
             {
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.areaData });
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.AreaData });
                 ListAreas();
                 int count = AreaNames.Count;
                 StatusText = $"{count} area data entries.";
@@ -296,7 +296,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowError($"Failed to set up Area Data Editor:\n{ex.Message}", "Area data error");
+                await DialogHelper.ShowErrorAsync($"Failed to set up Area Data Editor:\n{ex.Message}", "Area data error");
             }
         }
 
@@ -315,7 +315,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 StatusText = $"Loaded area data {index}.";
                 OnPropertyChanged(nameof(UnsavedChangesDescription));
             }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Failed to load area data {index}:\n{ex.Message}", "Area data error"); }
+            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Failed to load area data {index}:\n{ex.Message}", "Area data error"); }
         }
 
         // ── Import / export of the shown entry ──────────────────────────────────────────
@@ -328,12 +328,12 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task ExportAsync(Window owner)
         {
             if (_area == null || _selectedIndex < 0) return;
-            string path = await DialogHelper.SaveFile(owner, "Export area data", AreaFiles, $"area_data_{_selectedIndex:D4}.bin");
+            string path = await DialogHelper.SaveFileAsync(owner, "Export area data", AreaFiles, $"area_data_{_selectedIndex:D4}.bin");
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _area.ToByteArray()); SaveNotice.Exported(path); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Area data error");
+                await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Area data error");
             }
         }
 
@@ -341,19 +341,19 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task ImportAsync(Window owner)
         {
             if (_area == null || _selectedIndex < 0) return;
-            string path = await DialogHelper.OpenFile(owner, "Import area data", AreaFiles);
+            string path = await DialogHelper.OpenFileAsync(owner, "Import area data", AreaFiles);
             if (path == null) return;
             byte[] data;
             try { data = File.ReadAllBytes(path); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Area data error");
+                await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Area data error");
                 return;
             }
             // Every game's entry is eight bytes; anything else is some other file.
             if (data.Length != _area.ToByteArray().Length)
             {
-                await DialogHelper.ShowError($"That file is {data.Length} bytes; an area data entry is {_area.ToByteArray().Length}.", "Area data error");
+                await DialogHelper.ShowErrorAsync($"That file is {data.Length} bytes; an area data entry is {_area.ToByteArray().Length}.", "Area data error");
                 return;
             }
             _area = new AreaData(new MemoryStream(data));
@@ -377,7 +377,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task AddAsync()
         {
             int count = AreaNames.Count;
-            if (count >= 256) { await DialogHelper.ShowError("Headers can only point at area data 0 to 255.", "Area data error"); return; }
+            if (count >= 256) { await DialogHelper.ShowErrorAsync("Headers can only point at area data 0 to 255.", "Area data error"); return; }
             _archive.Add(_archive.Read(0));
             _removedAreas.Clear();
             AreaNames.Add("Area data " + count);
@@ -389,8 +389,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task RemoveLastAsync()
         {
             int last = AreaNames.Count - 1;
-            if (last <= 0) { await DialogHelper.ShowError("There has to be at least one area data entry.", "Area data error"); return; }
-            if (!await DialogHelper.AskYesNo($"Remove area data {last}? Only the last entry can be removed. Ctrl+Z puts it back.", "Delete area data?"))
+            if (last <= 0) { await DialogHelper.ShowErrorAsync("There has to be at least one area data entry.", "Area data error"); return; }
+            if (!await DialogHelper.AskYesNoAsync($"Remove area data {last}? Only the last entry can be removed. Ctrl+Z puts it back.", "Delete area data?"))
                 return;
             if (_selectedIndex == last && _dirty) SetClean();
             _removedAreas.Push(_archive.Read(last));
@@ -425,8 +425,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void Save()
         {
             if (_area == null || _selectedIndex < 0) return;
-            try { _archive.Save(_selectedIndex, _area.ToByteArray()); if (_areaPacks != null && _selectedIndex < _areaPacks.Length) _areaPacks[_selectedIndex] = (_area.mapTileset, _area.buildingsTileset); SetClean(); _history.MarkSaved(); RaiseUndoState(); StatusText = $"Saved area data {_selectedIndex}."; SaveNotice.Saved(UnsavedChangesDescription); AppEvents.RaiseAreaDataSaved(this, _selectedIndex); }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Save failed:\n{ex.Message}", "Area data error"); }
+            try { _archive.Save(_selectedIndex, _area.ToByteArray()); if (_areaPacks != null && _selectedIndex < _areaPacks.Length) _areaPacks[_selectedIndex] = (_area.MapTileset, _area.BuildingsTileset); SetClean(); _history.MarkSaved(); RaiseUndoState(); StatusText = $"Saved area data {_selectedIndex}."; SaveNotice.Saved(UnsavedChangesDescription); AppEvents.RaiseAreaDataSaved(this, _selectedIndex); }
+            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Save failed:\n{ex.Message}", "Area data error"); }
         }
     }
 }

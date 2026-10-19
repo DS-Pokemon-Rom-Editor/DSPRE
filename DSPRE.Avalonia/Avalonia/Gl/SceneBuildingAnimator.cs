@@ -57,7 +57,7 @@ namespace DSPRE.Avalonia.Gl
                         if (!scene.MaterialNameByKey.TryGetValue(k, out string name)) continue;
                         int m = anim.IndexOf(name);
                         if (m < 0 || anim.IsStatic(m)) continue;
-                        _scrolled[k] = (anim, m, b.Model?.texMtxMode ?? 0);
+                        _scrolled[k] = (anim, m, b.Model?.TexMtxMode ?? 0);
                         moves = true;
                     }
                 foreach (TexturePatternAnimation anim in BuildingAnimationSet.PatternsFor(b.ModelId, indoor, timeOfDay))
@@ -136,7 +136,7 @@ namespace DSPRE.Avalonia.Gl
                 {
                     int at = frame % Math.Max(1, anim.FrameCount);
                     Dictionary<int, float[]> rebuilt = NsbmdGeometry.RebuildBuilding(_scene, building,
-                        (objectId, part) => anim.MatrixFor(objectId, at, part, building.Model?.modelScale ?? 1f));
+                        (objectId, part) => anim.MatrixFor(objectId, at, part, building.Model?.ModelScale ?? 1f));
                     foreach (KeyValuePair<int, float[]> kv in rebuilt) moved[kv.Key] = kv.Value;
                 }
                 float unit = NsbmdGeometry.TileSize / 16f;

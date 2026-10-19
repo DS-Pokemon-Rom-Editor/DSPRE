@@ -7,16 +7,16 @@ namespace DSPRE.ROMFiles
     /// <summary>Distortion World tables that live in code: moving platforms and static props.</summary>
     public static class TornWorldCodeTables
     {
-        public static int OverlayNumber => RomInfo.tornWorldCode.Overlay;
-        private static uint[] MovingPlatformFloors => RomInfo.tornWorldCode.MovingPlatformFloors;
-        private static uint[] PropFloors => RomInfo.tornWorldCode.PropFloors;
+        public static int OverlayNumber => RomInfo.TornWorldCode.Overlay;
+        private static uint[] MovingPlatformFloors => RomInfo.TornWorldCode.MovingPlatformFloors;
+        private static uint[] PropFloors => RomInfo.TornWorldCode.PropFloors;
 
         private const int MovingPlatformSize = 24;
         private const int PropSize = 16;
-        private static int PropKindCount => RomInfo.tornWorldCode.PropKinds;
-        private static int AnimationKindCount => RomInfo.tornWorldCode.AnimationKinds;
-        private static int HoverStepCount => RomInfo.tornWorldCode.HoverSteps;
-        private static int ElevatorPathCount => RomInfo.tornWorldCode.ElevatorPaths;
+        private static int PropKindCount => RomInfo.TornWorldCode.PropKinds;
+        private static int AnimationKindCount => RomInfo.TornWorldCode.AnimationKinds;
+        private static int HoverStepCount => RomInfo.TornWorldCode.HoverSteps;
+        private static int ElevatorPathCount => RomInfo.TornWorldCode.ElevatorPaths;
         private const int ElevatorPathSize = 32;
         private const int FixedOne = 0x1000;
 
@@ -122,10 +122,10 @@ namespace DSPRE.ROMFiles
         public static Tables Read(out string error)
         {
             error = null;
-            string project = RomInfo.workDir ?? "";
+            string project = RomInfo.WorkDir ?? "";
             if (_cached != null && _cachedFor == project) return _cached;
 
-            if (RomInfo.gameVersion != RomInfo.GameVersions.Platinum)
+            if (RomInfo.GameVersion != RomInfo.GameVersions.Platinum)
             {
                 error = "Only Platinum has a Distortion World.";
                 return null;

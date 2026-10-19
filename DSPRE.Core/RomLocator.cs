@@ -127,16 +127,16 @@ namespace DSPRE
         public static Spot WhereIn(Thing thing, GameVersions game, GameLanguages language, int revision) =>
             Lookups[thing](game, language, revision);
 
-        public static Spot Where(Thing thing) => romID == null ? null : WhereIn(thing, gameVersion, gameLanguage, romRevision);
+        public static Spot Where(Thing thing) => RomID == null ? null : WhereIn(thing, GameVersion, GameLanguage, RomRevision);
 
-        public static string PathOf(Spot spot) => spot.Overlay < 0 ? arm9Path : OverlayUtils.GetPath(spot.Overlay);
+        public static string PathOf(Spot spot) => spot.Overlay < 0 ? Arm9Path : OverlayUtils.GetPath(spot.Overlay);
 
         /// <summary>The known dumps <paramref name="thing"/> has a place in, from the same switch <see cref="Where"/> reads.</summary>
         public static List<(string id, int rev)> WorksOn(Thing thing) =>
             KnownDumps.Where(d => GameOfCode(d.id) is GameVersions g && WhereIn(thing, g, LanguageOfCode(d.id), d.rev) != null).ToList();
 
         private static T Here<T>(System.Func<GameVersions, GameLanguages, int, T> lookup) where T : class =>
-            romID == null ? null : lookup(gameVersion, gameLanguage, romRevision);
+            RomID == null ? null : lookup(GameVersion, GameLanguage, RomRevision);
 
         /// <summary>The known dumps a site lookup has an answer for.</summary>
         public static List<(string id, int rev)> WorksOn<T>(System.Func<GameVersions, GameLanguages, int, T> lookup) where T : class =>
@@ -182,10 +182,10 @@ namespace DSPRE
         public static FollowerTableSites FollowerTables => Here(FollowerTablesIn);
 
         /// <summary>Platinum: the arm9 literal pointing at the trainer class gender table, or 0 where it isn't known.</summary>
-        public static uint TrainerClassGenderPointer => romID == null ? 0 : TrainerClassGenderPointerIn(gameVersion, gameLanguage, romRevision) ?? 0;
+        public static uint TrainerClassGenderPointer => RomID == null ? 0 : TrainerClassGenderPointerIn(GameVersion, GameLanguage, RomRevision) ?? 0;
 
         /// <summary>HGSS arm9 file offset of sPokeathlonPerformanceArcIdxs, the first Pokéathlon record of each species; -1 elsewhere.</summary>
-        public static int PokeathlonMemberTable => romID == null ? -1 : PokeathlonMemberTableIn(gameVersion, gameLanguage, romRevision) ?? -1;
+        public static int PokeathlonMemberTable => RomID == null ? -1 : PokeathlonMemberTableIn(GameVersion, GameLanguage, RomRevision) ?? -1;
 
         // Each selector is the US one moved: every boundary keeps its distance from its method's first compare.
         private static SlotOddsMethod[] HgssSlotOdds(int walking, int surfing, int fishing, int rockSmash, int headbutt) => new[]

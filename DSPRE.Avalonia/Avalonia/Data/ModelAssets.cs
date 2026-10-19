@@ -55,28 +55,28 @@ namespace DSPRE.Avalonia.Data
                 What = "Everything that stands about on the map: people, signs, items and the rest.",
                 DeepEditor = "Overworld Editor" },
 
-            new Archive { Dir = DirNames.exteriorBuildingModels, Title = "Outdoor buildings", TextureArchive = DirNames.buildingTextures, AnimationArchive = DirNames.buildingAnimations, In = Group.Buildings,
+            new Archive { Dir = DirNames.ExteriorBuildingModels, Title = "Outdoor buildings", TextureArchive = DirNames.BuildingTextures, AnimationArchive = DirNames.BuildingAnimations, In = Group.Buildings,
                 What = "The buildings as seen from the outside on the world map.",
                 DeepEditor = "Building Editor" },
-            new Archive { Dir = DirNames.interiorBuildingModels, Title = "Indoor buildings", TextureArchive = DirNames.buildingTextures, AnimationArchive = DirNames.buildingAnimations, Indoor = true, In = Group.Buildings,
+            new Archive { Dir = DirNames.InteriorBuildingModels, Title = "Indoor buildings", TextureArchive = DirNames.BuildingTextures, AnimationArchive = DirNames.BuildingAnimations, Indoor = true, In = Group.Buildings,
                 What = "The insides of buildings you can walk into.", DeepEditor = "Building Editor" },
-            new Archive { Dir = DirNames.buildingTextures, Title = "Building textures", In = Group.Buildings,
+            new Archive { Dir = DirNames.BuildingTextures, Title = "Building textures", In = Group.Buildings,
                 What = "The pictures painted onto the buildings.", DeepEditor = "Map & Building Textures editor" },
-            new Archive { Dir = DirNames.buildingAnimations, Title = "Building animations", In = Group.Buildings,
+            new Archive { Dir = DirNames.BuildingAnimations, Title = "Building animations", In = Group.Buildings,
                 What = "Doors opening, windmills turning, and the rest of what buildings do." },
 
-            new Archive { Dir = DirNames.mapTextures, Title = "Map textures", In = Group.Maps,
+            new Archive { Dir = DirNames.MapTextures, Title = "Map textures", In = Group.Maps,
                 What = "The pictures painted onto the ground and scenery of each map.",
                 DeepEditor = "Map & Building Textures editor" },
-            new Archive { Dir = DirNames.groundAnimations, Title = "Ground animations", In = Group.Maps,
+            new Archive { Dir = DirNames.GroundAnimations, Title = "Ground animations", In = Group.Maps,
                 What = "Water and other ground that moves." },
 
-            new Archive { Dir = DirNames.titleScreenGraphics, Title = "Title screen", In = Group.Other,
+            new Archive { Dir = DirNames.TitleScreenGraphics, Title = "Title screen", In = Group.Other,
                 What = "The logo and background of the game's own title screen.",
                 DeepEditor = "Title Screen Editor" },
-            new Archive { Dir = DirNames.bagGraphics, Title = "Bag", In = Group.Other, OnlyThreeD = true,
+            new Archive { Dir = DirNames.BagGraphics, Title = "Bag", In = Group.Other, OnlyThreeD = true,
                 What = "The bag on the bag screen, one for the boy and one for the girl, with each pocket opening." },
-            new Archive { Dir = DirNames.openingDemoGraphics, Title = "Opening movie", In = Group.Other, OnlyThreeD = true,
+            new Archive { Dir = DirNames.OpeningDemoGraphics, Title = "Opening movie", In = Group.Other, OnlyThreeD = true,
                 What = "The 3D pieces of the opening movie." },
         };
 
@@ -217,7 +217,7 @@ namespace DSPRE.Avalonia.Data
                 byte[] tex = NSBUtils.GetTexturesFromTexturedNSBMD(model);
                 return tex != null && tex.Length > 4 ? tex : null;
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("ModelAssets.EmbeddedTextures", ex); return null; }
         }
 
         /// <summary>The picture set sitting right after a model in the same archive. Overworld people keep
@@ -267,17 +267,17 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Compares the names a model requests with the names a texture bundle actually contains.</summary>
         public static TextureCoverage Coverage(NSBMD model, byte[] bundle)
         {
-            if (model?.models == null || bundle == null) return new TextureCoverage();
+            if (model?.Models == null || bundle == null) return new TextureCoverage();
             try
             {
                 using MemoryStream input = new MemoryStream(bundle);
                 NSBTXLoader.LoadNsbtx(input, out List<NSBMDTexture> textures, out List<NSBMDPalette> palettes);
-                HashSet<string> haveTextures = new HashSet<string>(textures.Select(t => t.texname), StringComparer.Ordinal);
-                HashSet<string> havePalettes = new HashSet<string>(palettes.Select(p => p.palname), StringComparer.Ordinal);
-                HashSet<string> wantTextures = new HashSet<string>(model.models.SelectMany(m => m.Textures)
-                    .Select(t => t.texname).Where(n => !string.IsNullOrEmpty(n)), StringComparer.Ordinal);
-                HashSet<string> wantPalettes = new HashSet<string>(model.models.SelectMany(m => m.Palettes)
-                    .Select(p => p.palname).Where(n => !string.IsNullOrEmpty(n)), StringComparer.Ordinal);
+                HashSet<string> haveTextures = new HashSet<string>(textures.Select(t => t.Texname), StringComparer.Ordinal);
+                HashSet<string> havePalettes = new HashSet<string>(palettes.Select(p => p.Palname), StringComparer.Ordinal);
+                HashSet<string> wantTextures = new HashSet<string>(model.Models.SelectMany(m => m.Textures)
+                    .Select(t => t.Texname).Where(n => !string.IsNullOrEmpty(n)), StringComparer.Ordinal);
+                HashSet<string> wantPalettes = new HashSet<string>(model.Models.SelectMany(m => m.Palettes)
+                    .Select(p => p.Palname).Where(n => !string.IsNullOrEmpty(n)), StringComparer.Ordinal);
                 return new TextureCoverage
                 {
                     RequiredTextures = wantTextures.Count,
@@ -286,7 +286,7 @@ namespace DSPRE.Avalonia.Data
                     MatchedPalettes = wantPalettes.Count(havePalettes.Contains),
                 };
             }
-            catch { return new TextureCoverage(); }
+            catch (Exception ex) { AppLogger.WarnOnce("ModelAssets.Coverage", ex); return new TextureCoverage(); }
         }
 
         /// <summary>Reads the pictures and palettes in a texture-only entry.</summary>
@@ -305,7 +305,7 @@ namespace DSPRE.Avalonia.Data
                 NSBTXLoader.LoadNsbtx(input, out textures, out palettes);
                 return textures.Count > 0;
             }
-            catch { return false; }
+            catch (Exception ex) { AppLogger.WarnOnce("ModelAssets.LoadTextureBundle", ex); return false; }
         }
 
         /// <summary>The pictures to draw a model with. A chosen set wins; otherwise whatever the model
@@ -322,7 +322,7 @@ namespace DSPRE.Avalonia.Data
             if (nsbmd == null || textures == null || textures.Length <= 4) return false;
             try
             {
-                nsbmd.materials = NSBTXLoader.LoadNsbtx(new MemoryStream(textures), out nsbmd.Textures, out nsbmd.Palettes);
+                nsbmd.Materials = NSBTXLoader.LoadNsbtx(new MemoryStream(textures), out nsbmd.Textures, out nsbmd.Palettes);
                 nsbmd.MatchTextures();
                 return true;
             }
@@ -400,7 +400,7 @@ namespace DSPRE.Avalonia.Data
             for (int i = 0; i < fileCount; i++)
             {
                 byte[] b;
-                try { b = narc.Get(i); } catch { b = null; }
+                try { b = narc.Get(i); } catch (Exception ex) { AppLogger.WarnOnce("ModelAssets.Units", ex); b = null; }
                 Kind kind = Identify(b);
 
                 if (kind == Kind.Model)
@@ -461,7 +461,7 @@ namespace DSPRE.Avalonia.Data
                 using MemoryStream ms = new MemoryStream(file);
                 NSBTXLoader.LoadNsbtx(ms, out List<NSBMDTexture> textures, out _);
                 NSBMDTexture first = textures?.FirstOrDefault();
-                string name = first?.texname?.Trim();
+                string name = first?.Texname?.Trim();
                 if (string.IsNullOrEmpty(name)) return null;
                 foreach (char c in name) if (c < 32 || c > 126) return null;
 
@@ -472,7 +472,7 @@ namespace DSPRE.Avalonia.Data
                     name = name.Substring(0, dot);
                 return name;
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("ModelAssets.FirstTextureName", ex); return null; }
         }
 
         /// <summary>
@@ -724,15 +724,15 @@ namespace DSPRE.Avalonia.Data
         }
 
         private static bool HoldsTextureSets(Archive a) =>
-            a.Dir == DirNames.buildingTextures || a.Dir == DirNames.mapTextures;
+            a.Dir == DirNames.BuildingTextures || a.Dir == DirNames.MapTextures;
 
         /// <summary>Why an entry is empty, where the game's own tables say.</summary>
         private static string EmptyNote(Archive a, int index)
         {
-            if (a.Dir != DirNames.buildingTextures) return "This entry is empty.";
+            if (a.Dir != DirNames.BuildingTextures) return "This entry is empty.";
             IReadOnlyList<int> areas;
             try { areas = BuildingModelTextureSets.AreasThatNeverReadSet(index); }
-            catch { return "This entry is empty."; }
+            catch (Exception ex) { AppLogger.WarnOnce("ModelAssets.EmptyNote", ex); return "This entry is empty."; }
             if (areas.Count == 0) return "This entry is empty.";
             string which = areas.Count == 1 ? $"area {areas[0]}" : "areas " + string.Join(", ", areas);
             return $"No building textures: no buildings in {which}.";

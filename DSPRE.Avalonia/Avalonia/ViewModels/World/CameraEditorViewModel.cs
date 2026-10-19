@@ -55,27 +55,27 @@ namespace DSPRE.Avalonia.ViewModels.World
         public decimal Distance
         {
             get => Tiles(_distance);
-            set { if (value != Distance) Set(ref _distance, (uint)Math.Clamp(FromTiles(value), 0, uint.MaxValue), _loaded?.distance ?? 0, value, v => Tiles(v)); }
+            set { if (value != Distance) Set(ref _distance, (uint)Math.Clamp(FromTiles(value), 0, uint.MaxValue), _loaded?.Distance ?? 0, value, v => Tiles(v)); }
         }
 
         /// <summary>How far the camera looks down. The table stores it negated.</summary>
         public decimal Tilt
         {
             get => -Degrees(_vertRot);
-            set { if (value != Tilt) Set(ref _vertRot, Angle(-value), _loaded?.vertRot ?? 0, value, v => -Degrees(v)); }
+            set { if (value != Tilt) Set(ref _vertRot, Angle(-value), _loaded?.VertRot ?? 0, value, v => -Degrees(v)); }
         }
 
         public decimal Turn
         {
             get => Degrees(_horiRot);
-            set { if (value != Turn) Set(ref _horiRot, Angle(value), _loaded?.horiRot ?? 0, value, v => Degrees(v)); }
+            set { if (value != Turn) Set(ref _horiRot, Angle(value), _loaded?.HoriRot ?? 0, value, v => Degrees(v)); }
         }
 
         /// <summary>How far the picture tilts, which is half the stored angle.</summary>
         public decimal Roll
         {
             get => Math.Round(Degrees(_zRot) / 2m, 2, MidpointRounding.AwayFromZero);
-            set { if (value != Roll) Set(ref _zRot, Angle(value * 2m), _loaded?.zRot ?? 0, value, v => Math.Round(Degrees(v) / 2m, 2, MidpointRounding.AwayFromZero)); }
+            set { if (value != Roll) Set(ref _zRot, Angle(value * 2m), _loaded?.ZRot ?? 0, value, v => Math.Round(Degrees(v) / 2m, 2, MidpointRounding.AwayFromZero)); }
         }
 
         /// <summary>0 perspective, 1 flat.</summary>
@@ -89,37 +89,37 @@ namespace DSPRE.Avalonia.ViewModels.World
         public decimal FieldOfView
         {
             get => Math.Round(_fov * 2m / RawPerDegree, 2, MidpointRounding.AwayFromZero);
-            set { if (value != FieldOfView) Set(ref _fov, (ushort)Math.Clamp((int)Math.Round(value / 2m * RawPerDegree), 0, ushort.MaxValue), _loaded?.fov ?? 0, value, v => Math.Round(v * 2m / RawPerDegree, 2, MidpointRounding.AwayFromZero)); }
+            set { if (value != FieldOfView) Set(ref _fov, (ushort)Math.Clamp((int)Math.Round(value / 2m * RawPerDegree), 0, ushort.MaxValue), _loaded?.Fov ?? 0, value, v => Math.Round(v * 2m / RawPerDegree, 2, MidpointRounding.AwayFromZero)); }
         }
 
         public decimal NearClip
         {
             get => Tiles(_nearClip);
-            set { if (value != NearClip) Set(ref _nearClip, (uint)Math.Clamp(FromTiles(value), 0, uint.MaxValue), _loaded?.nearClip ?? 0, value, v => Tiles(v)); }
+            set { if (value != NearClip) Set(ref _nearClip, (uint)Math.Clamp(FromTiles(value), 0, uint.MaxValue), _loaded?.NearClip ?? 0, value, v => Tiles(v)); }
         }
 
         public decimal FarClip
         {
             get => Tiles(_farClip);
-            set { if (value != FarClip) Set(ref _farClip, (uint)Math.Clamp(FromTiles(value), 0, uint.MaxValue), _loaded?.farClip ?? 0, value, v => Tiles(v)); }
+            set { if (value != FarClip) Set(ref _farClip, (uint)Math.Clamp(FromTiles(value), 0, uint.MaxValue), _loaded?.FarClip ?? 0, value, v => Tiles(v)); }
         }
 
         public decimal ShiftX
         {
             get => Tiles(_xOffset);
-            set { if (value != ShiftX) Set(ref _xOffset, (int)Math.Clamp(FromTiles(value), int.MinValue, int.MaxValue), _loaded?.xOffset ?? 0, value, v => Tiles(v)); }
+            set { if (value != ShiftX) Set(ref _xOffset, (int)Math.Clamp(FromTiles(value), int.MinValue, int.MaxValue), _loaded?.XOffset ?? 0, value, v => Tiles(v)); }
         }
 
         public decimal ShiftY
         {
             get => Tiles(_yOffset);
-            set { if (value != ShiftY) Set(ref _yOffset, (int)Math.Clamp(FromTiles(value), int.MinValue, int.MaxValue), _loaded?.yOffset ?? 0, value, v => Tiles(v)); }
+            set { if (value != ShiftY) Set(ref _yOffset, (int)Math.Clamp(FromTiles(value), int.MinValue, int.MaxValue), _loaded?.YOffset ?? 0, value, v => Tiles(v)); }
         }
 
         public decimal ShiftZ
         {
             get => Tiles(_zOffset);
-            set { if (value != ShiftZ) Set(ref _zOffset, (int)Math.Clamp(FromTiles(value), int.MinValue, int.MaxValue), _loaded?.zOffset ?? 0, value, v => Tiles(v)); }
+            set { if (value != ShiftZ) Set(ref _zOffset, (int)Math.Clamp(FromTiles(value), int.MinValue, int.MaxValue), _loaded?.ZOffset ?? 0, value, v => Tiles(v)); }
         }
 
         /// <summary>The camera's name, which the header editor shows beside the number.</summary>
@@ -139,19 +139,19 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void LoadFrom(GameCamera cam)
         {
             _loaded  = cam;
-            Unk1     = cam.unk1;
-            Unk2     = cam.unk2;
-            _distance = cam.distance;
-            _vertRot  = cam.vertRot;
-            _horiRot  = cam.horiRot;
-            _zRot     = cam.zRot;
-            _isOrtho  = cam.perspMode == GameCamera.ORTHO;
-            _fov      = cam.fov;
-            _nearClip = cam.nearClip;
-            _farClip  = cam.farClip;
-            _xOffset  = cam.xOffset ?? 0;
-            _yOffset  = cam.yOffset ?? 0;
-            _zOffset  = cam.zOffset ?? 0;
+            Unk1     = cam.Unk1;
+            Unk2     = cam.Unk2;
+            _distance = cam.Distance;
+            _vertRot  = cam.VertRot;
+            _horiRot  = cam.HoriRot;
+            _zRot     = cam.ZRot;
+            _isOrtho  = cam.PerspMode == GameCamera.ORTHO;
+            _fov      = cam.Fov;
+            _nearClip = cam.NearClip;
+            _farClip  = cam.FarClip;
+            _xOffset  = cam.XOffset ?? 0;
+            _yOffset  = cam.YOffset ?? 0;
+            _zOffset  = cam.ZOffset ?? 0;
             Changed();
         }
 
@@ -193,7 +193,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool IsHgss { get => _isHgss; private set { _isHgss = value; Notify(); Notify(nameof(ShowsRoll)); } }
 
         /// <summary>Diamond and Pearl never apply the roll.</summary>
-        public bool ShowsRoll => RomInfo.gameFamily != GameFamilies.DP;
+        public bool ShowsRoll => RomInfo.GameFamily != GameFamilies.DP;
 
         private bool _isReady;
         public bool IsReady { get => _isReady; private set { _isReady = value; Notify(); } }
@@ -322,7 +322,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public DSPRE.ROMFiles.FieldCameraEntry SelectedEntry =>
             _selectedCamera == null ? null
             : DSPRE.ROMFiles.FieldCamera.FromGameCamera(_selectedCamera.Index, _selectedCamera.Name,
-                _selectedCamera.ToGameCamera(IsHgss), RomInfo.gameFamily);
+                _selectedCamera.ToGameCamera(IsHgss), RomInfo.GameFamily);
 
         // ── Internal state ───────────────────────────────────────────────────
         private uint   _overlayCameraTblOffset;
@@ -357,14 +357,14 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 RomInfo.PrepareCameraData();
-                IsHgss = RomInfo.gameFamily == GameFamilies.HGSS;
+                IsHgss = RomInfo.GameFamily == GameFamilies.HGSS;
 
                 // A legacy ndstool project can't reliably track overlay compression state (see
                 // RomInfo.IsDsRomProject); ds-rom handles it automatically during unpack/build.
-                if (RomInfo.gameFamily == GameFamilies.HGSS && !RomInfo.IsDsRomProject && RomInfo.cameraTblOverlayNumber == 1)
+                if (RomInfo.GameFamily == GameFamilies.HGSS && !RomInfo.IsDsRomProject && RomInfo.CameraTblOverlayNumber == 1)
                 {
                     StatusText = "Convert this project to ds-rom format before using the Camera Editor for this ROM.";
-                    await DialogHelper.ShowInfo(StatusText, "ds-rom project required");
+                    await DialogHelper.ShowInfoAsync(StatusText, "ds-rom project required");
                     IsReady = false;
                     return;
                 }
@@ -372,7 +372,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 GameCameraTable.Location location = GameCameraTable.Locate();
                 if (!location.PointersAgree)
                 {
-                    await DialogHelper.ShowInfo(
+                    await DialogHelper.ShowInfoAsync(
                         "The game keeps more than one pointer to the camera table and they disagree.\n" +
                         "Camera values might be wrong.",
                         "Possible errors");
@@ -401,7 +401,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex)
             {
                 StatusText = $"Error loading camera data: {ex.Message}";
-                await DialogHelper.ShowError($"Failed to load camera data:\n{ex.Message}", "Camera editor error");
+                await DialogHelper.ShowErrorAsync($"Failed to load camera data:\n{ex.Message}", "Camera editor error");
             }
         }
 
@@ -410,7 +410,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             try
             {
-                string overlayPath = OverlayUtils.GetPath(RomInfo.cameraTblOverlayNumber);
+                string overlayPath = OverlayUtils.GetPath(RomInfo.CameraTblOverlayNumber);
                 WriteCameraTable(overlayPath, _overlayCameraTblOffset);
                 _undo?.MarkSaved();
                 IsDirty = false;
@@ -420,7 +420,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Save failed:\n{ex.Message}", "Camera editor error");
+                await DialogHelper.ShowErrorAsync($"Save failed:\n{ex.Message}", "Camera editor error");
             }
         }
 
@@ -428,8 +428,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task ExportTableAsync()
         {
             FilePickerFileType filter = new FilePickerFileType("Camera Table File") { Patterns = new[] { "*.bin" } };
-            string suggested = System.IO.Path.GetFileNameWithoutExtension(RomInfo.projectName) + " - CameraTable.bin";
-            string path = await DialogHelper.SaveFile(_owner, "Export camera table", new[] { filter }, suggested);
+            string suggested = System.IO.Path.GetFileNameWithoutExtension(RomInfo.ProjectName) + " - CameraTable.bin";
+            string path = await DialogHelper.SaveFileAsync(_owner, "Export camera table", new[] { filter }, suggested);
             if (path == null) return;
 
             try
@@ -439,31 +439,31 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Camera editor error");
+                await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Camera editor error");
             }
         }
 
         public async Task ImportTableAsync()
         {
             FilePickerFileType filter = new FilePickerFileType("Camera Table File") { Patterns = new[] { "*.bin" } };
-            string path = await DialogHelper.OpenFile(_owner, "Import camera table", new[] { filter });
+            string path = await DialogHelper.OpenFileAsync(_owner, "Import camera table", new[] { filter });
             if (path == null) return;
 
             try
             {
                 long len = new FileInfo(path).Length;
-                if (len % RomInfo.cameraSize != 0)
+                if (len % RomInfo.CameraSize != 0)
                 {
-                    await DialogHelper.ShowError(
-                        $"Not a {RomInfo.gameFamily} camera table file.\n" +
-                        $"File length must be a multiple of {RomInfo.cameraSize}.", "Camera editor error");
+                    await DialogHelper.ShowErrorAsync(
+                        $"Not a {RomInfo.GameFamily} camera table file.\n" +
+                        $"File length must be a multiple of {RomInfo.CameraSize}.", "Camera editor error");
                     return;
                 }
 
-                int nCameras = (int)(len / RomInfo.cameraSize);
+                int nCameras = (int)(len / RomInfo.CameraSize);
                 for (int i = 0; i < nCameras && i < Cameras.Count; i++)
                 {
-                    byte[] data = DSUtils.ReadFromFile(path, i * RomInfo.cameraSize, RomInfo.cameraSize);
+                    byte[] data = DSUtils.ReadFromFile(path, i * RomInfo.CameraSize, RomInfo.CameraSize);
                     GameCamera cam = new GameCamera(data);
                     Cameras[i].LoadFrom(cam);
                 }
@@ -473,7 +473,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Camera editor error");
+                await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Camera editor error");
             }
         }
 
@@ -483,8 +483,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             int index = SelectedCamera?.Index ?? -1;
             if (index < 0 || index >= Cameras.Count) return;
             FilePickerFileType filter = new FilePickerFileType("Camera File") { Patterns = new[] { "*.bin" } };
-            string suggested = System.IO.Path.GetFileNameWithoutExtension(RomInfo.projectName) + $" - Camera {index}.bin";
-            string path = await DialogHelper.SaveFile(_owner, $"Export Camera {index}", new[] { filter }, suggested);
+            string suggested = System.IO.Path.GetFileNameWithoutExtension(RomInfo.ProjectName) + $" - Camera {index}.bin";
+            string path = await DialogHelper.SaveFileAsync(_owner, $"Export Camera {index}", new[] { filter }, suggested);
             if (path == null) return;
 
             try
@@ -495,7 +495,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Camera editor error");
+                await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Camera editor error");
             }
         }
 
@@ -504,7 +504,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             int index = SelectedCamera?.Index ?? -1;
             if (index < 0 || index >= Cameras.Count) return;
             FilePickerFileType filter = new FilePickerFileType("Camera File") { Patterns = new[] { "*.bin" } };
-            string path = await DialogHelper.OpenFile(_owner, $"Import Camera {index}", new[] { filter });
+            string path = await DialogHelper.OpenFileAsync(_owner, $"Import Camera {index}", new[] { filter });
             if (path == null) return;
 
             try
@@ -517,7 +517,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Camera editor error");
+                await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Camera editor error");
             }
         }
 
@@ -538,7 +538,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             CameraRowVM row = SelectedCamera;
             if (row == null) return;
-            string name = await DialogHelper.PromptText($"Camera {row.Index}", "Rename camera", row.Name, _owner);
+            string name = await DialogHelper.PromptTextAsync($"Camera {row.Index}", "Rename camera", row.Name, _owner);
             if (name == null || name.Trim() == row.Name) return;
             DSPRE.Avalonia.Data.LabelStore.SetLabel(DSPRE.Avalonia.Data.LabelStore.CameraKey, row.Index, name, global: false);
             DSPRE.Avalonia.Data.LabelStore.Save(global: false);

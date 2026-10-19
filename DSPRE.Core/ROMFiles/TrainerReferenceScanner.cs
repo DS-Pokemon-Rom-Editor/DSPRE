@@ -119,15 +119,15 @@ namespace DSPRE.ROMFiles
             EventFile events, ISet<int> trainerIds,
             ICollection<TrainerReference> references)
         {
-            for (int i = 0; i < events.overworlds.Count; i++)
+            for (int i = 0; i < events.Overworlds.Count; i++)
             {
-                Overworld overworld = events.overworlds[i];
-                if (OverworldEventTypes.Find(family, overworld.type)?.IsTrainer != true) continue;
-                if (TrainerScripts.TrainerIdFor(overworld.scriptNumber) is not int trainerId) continue;
+                Overworld overworld = events.Overworlds[i];
+                if (OverworldEventTypes.Find(family, overworld.Type)?.IsTrainer != true) continue;
+                if (TrainerScripts.TrainerIdFor(overworld.ScriptNumber) is not int trainerId) continue;
                 if (!trainerIds.Contains(trainerId)) continue;
 
                 references.Add(new TrainerReference("Event",
-                    $"event file {eventFileId}, overworld {overworld.owID}")
+                    $"event file {eventFileId}, overworld {overworld.OwID}")
                     { TrainerId = trainerId, SourceId = eventFileId, Index = i });
             }
         }
@@ -147,9 +147,9 @@ namespace DSPRE.ROMFiles
             };
             if (parameterMap == null) return;
 
-            FindScriptContainerReferences(scriptFileId, "script", scriptFile.allScripts,
+            FindScriptContainerReferences(scriptFileId, "script", scriptFile.AllScripts,
                 parameterMap, trainerIds, references);
-            FindScriptContainerReferences(scriptFileId, "function", scriptFile.allFunctions,
+            FindScriptContainerReferences(scriptFileId, "function", scriptFile.AllFunctions,
                 parameterMap, trainerIds, references);
         }
 
@@ -218,7 +218,7 @@ namespace DSPRE.ROMFiles
             out string error)
         {
             error = null;
-            string directory = RomInfo.gameDirs[RomInfo.DirNames.eventFiles].unpackedDir;
+            string directory = RomInfo.GameDirs[RomInfo.DirNames.EventFiles].unpackedDir;
             if (!Directory.Exists(directory))
             {
                 error = "The event archive must be unpacked before removing a trainer.";
@@ -230,7 +230,7 @@ namespace DSPRE.ROMFiles
                 foreach ((int id, string path) in NumberedFiles(directory))
                 {
                     using FileStream input = File.OpenRead(path);
-                    FindEventReferences(RomInfo.gameFamily, id, new EventFile(input), trainerIds,
+                    FindEventReferences(RomInfo.GameFamily, id, new EventFile(input), trainerIds,
                         references);
                 }
                 return true;
@@ -246,7 +246,7 @@ namespace DSPRE.ROMFiles
             out string error)
         {
             error = null;
-            string directory = RomInfo.gameDirs[RomInfo.DirNames.scripts].unpackedDir;
+            string directory = RomInfo.GameDirs[RomInfo.DirNames.Scripts].unpackedDir;
             if (!Directory.Exists(directory))
             {
                 error = "The script archive must be unpacked before removing a trainer.";
@@ -258,13 +258,13 @@ namespace DSPRE.ROMFiles
                 foreach ((int id, _) in NumberedFiles(directory))
                 {
                     ScriptFile scriptFile = new ScriptFile(id, readFunctions: true, readActions: false);
-                    if (scriptFile.parseFailedDueToInvalidCommand)
+                    if (scriptFile.ParseFailedDueToInvalidCommand)
                     {
                         error = $"Script file {id} did not parse completely, so trainer removal was cancelled.";
                         return false;
                     }
-                    FindScriptReferences(RomInfo.gameFamily, id, scriptFile, trainerIds, references);
-                    if (trainerClass >= 0) FindClassNameReferences(RomInfo.gameFamily, id, scriptFile, trainerClass, references);
+                    FindScriptReferences(RomInfo.GameFamily, id, scriptFile, trainerIds, references);
+                    if (trainerClass >= 0) FindClassNameReferences(RomInfo.GameFamily, id, scriptFile, trainerClass, references);
                 }
                 return true;
             }
@@ -279,7 +279,7 @@ namespace DSPRE.ROMFiles
             ICollection<TrainerReference> references, out string error)
         {
             string path = Path.Combine(
-                RomInfo.gameDirs[RomInfo.DirNames.trainerTextTable].unpackedDir, "0000");
+                RomInfo.GameDirs[RomInfo.DirNames.TrainerTextTable].unpackedDir, "0000");
             if (!File.Exists(path))
             {
                 error = "The trainer battle-message table must be unpacked before removing a trainer.";
@@ -371,7 +371,7 @@ namespace DSPRE.ROMFiles
             ICollection<TrainerReference> references, out string error)
         {
             error = null;
-            if (RomInfo.gameFamily != RomInfo.GameFamilies.HGSS) return true;
+            if (RomInfo.GameFamily != RomInfo.GameFamilies.HGSS) return true;
 
             string path = PokegearPhoneBook.FilePath;
             if (!File.Exists(path))
@@ -391,20 +391,20 @@ namespace DSPRE.ROMFiles
             if (containers == null) return;
             foreach (ScriptCommandContainer container in containers)
             {
-                if (container?.commands == null) continue;
-                for (int commandIndex = 0; commandIndex < container.commands.Count; commandIndex++)
+                if (container?.Commands == null) continue;
+                for (int commandIndex = 0; commandIndex < container.Commands.Count; commandIndex++)
                 {
-                    ScriptCommand command = container.commands[commandIndex];
-                    if (!command.id.HasValue || command.cmdParams == null ||
-                        !parameterMap.TryGetValue(command.id.Value, out int[] parameterIndexes))
+                    ScriptCommand command = container.Commands[commandIndex];
+                    if (!command.Id.HasValue || command.CmdParams == null ||
+                        !parameterMap.TryGetValue(command.Id.Value, out int[] parameterIndexes))
                     {
                         continue;
                     }
 
                     foreach (int parameterIndex in parameterIndexes)
                     {
-                        if (parameterIndex >= command.cmdParams.Count) continue;
-                        byte[] parameter = command.cmdParams[parameterIndex];
+                        if (parameterIndex >= command.CmdParams.Count) continue;
+                        byte[] parameter = command.CmdParams[parameterIndex];
                         uint value = parameter.Length switch
                         {
                             1 => parameter[0],
@@ -415,10 +415,10 @@ namespace DSPRE.ROMFiles
                         if (value <= int.MaxValue && trainerIds.Contains((int)value))
                         {
                             references.Add(new TrainerReference("Script",
-                                $"file {scriptFileId}, {containerKind} {container.manualUserID}, " +
-                                $"command {commandIndex + 1} ({command.name}), parameter {parameterIndex + 1}")
+                                $"file {scriptFileId}, {containerKind} {container.ManualUserID}, " +
+                                $"command {commandIndex + 1} ({command.Name}), parameter {parameterIndex + 1}")
                                 {
-                                    TrainerId = (int)value, SourceId = scriptFileId, Index = (int)container.manualUserID,
+                                    TrainerId = (int)value, SourceId = scriptFileId, Index = (int)container.ManualUserID,
                                     InFunction = containerKind == "function",
                                 });
                         }
@@ -440,20 +440,20 @@ namespace DSPRE.ROMFiles
             ScriptFile scriptFile, int trainerClass, ICollection<TrainerReference> references)
         {
             if (TextTrainerClassCommand(family) is not ushort command) return;
-            foreach ((string kind, List<ScriptCommandContainer> containers) in new[] { ("script", scriptFile.allScripts), ("function", scriptFile.allFunctions) })
+            foreach ((string kind, List<ScriptCommandContainer> containers) in new[] { ("script", scriptFile.AllScripts), ("function", scriptFile.AllFunctions) })
             {
                 if (containers == null) continue;
                 foreach (ScriptCommandContainer container in containers)
                 {
-                    if (container?.commands == null) continue;
-                    for (int i = 0; i < container.commands.Count; i++)
+                    if (container?.Commands == null) continue;
+                    for (int i = 0; i < container.Commands.Count; i++)
                     {
-                        ScriptCommand c = container.commands[i];
-                        if (c.id != command || c.cmdParams == null || c.cmdParams.Count < 2 || c.cmdParams[1].Length < 2) continue;
-                        if (BinaryPrimitives.ReadUInt16LittleEndian(c.cmdParams[1]) != trainerClass) continue;
+                        ScriptCommand c = container.Commands[i];
+                        if (c.Id != command || c.CmdParams == null || c.CmdParams.Count < 2 || c.CmdParams[1].Length < 2) continue;
+                        if (BinaryPrimitives.ReadUInt16LittleEndian(c.CmdParams[1]) != trainerClass) continue;
                         references.Add(new TrainerReference("Script",
-                            $"file {scriptFileId}, {kind} {container.manualUserID}, command {i + 1} ({c.name}) prints the class name")
-                            { SourceId = scriptFileId, Index = (int)container.manualUserID, InFunction = kind == "function" });
+                            $"file {scriptFileId}, {kind} {container.ManualUserID}, command {i + 1} ({c.Name}) prints the class name")
+                            { SourceId = scriptFileId, Index = (int)container.ManualUserID, InFunction = kind == "function" });
                     }
                 }
             }

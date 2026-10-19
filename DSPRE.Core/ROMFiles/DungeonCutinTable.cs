@@ -33,9 +33,9 @@ namespace DSPRE.ROMFiles
         /// <summary>Where the table starts in arm9, as the code's pointer says, or -1 when this game has none.</summary>
         public static long TableOffset()
         {
-            if (RomInfo.dungeonCutinTableOffsetToRAMAddress == 0) return -1;
-            uint ram = BitConverter.ToUInt32(ARM9.ReadBytes(RomInfo.dungeonCutinTableOffsetToRAMAddress, 4), 0);
-            return ram >= ARM9.address ? ram - ARM9.address : -1;
+            if (RomInfo.DungeonCutinTableOffsetToRAMAddress == 0) return -1;
+            uint ram = BitConverter.ToUInt32(ARM9.ReadBytes(RomInfo.DungeonCutinTableOffsetToRAMAddress, 4), 0);
+            return ram >= ARM9.Address ? ram - ARM9.Address : -1;
         }
 
         /// <summary>Reads the table, or an empty list when this game has none. Only HeartGold and

@@ -17,20 +17,20 @@ namespace DSPRE.Avalonia.Data
         public static Facts? Of(int move)
         {
             if (move <= 0) return null;
-            string rom = RomInfo.workDir;
+            string rom = RomInfo.WorkDir;
             if (_cachedFor != rom)
             {
                 Cache.Clear(); _cachedFor = rom;
-                try { DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.moveData }); } catch { }
+                try { DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.MoveData }); } catch (Exception ex) { AppLogger.Warn("Move data archive: " + ex.Message); }
             }
             if (Cache.TryGetValue(move, out Facts? known)) return known;
             Facts? facts = null;
             try
             {
                 MoveData data = new MoveData(move);
-                facts = new Facts((int)data.movetype, (int)data.split, data.damage, data.accuracy, data.pp);
+                facts = new Facts((int)data.Movetype, (int)data.Split, data.Damage, data.Accuracy, data.Pp);
             }
-            catch (Exception e) when (e is System.IO.IOException || e is UnauthorizedAccessException || e is ArgumentException || e is KeyNotFoundException) { }
+            catch (Exception e) when (e is System.IO.IOException || e is UnauthorizedAccessException || e is ArgumentException || e is KeyNotFoundException) { }   // a move that can't be read shows no facts
             Cache[move] = facts;
             return facts;
         }
@@ -41,7 +41,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The move a TM or HM item teaches, or 0 for any other item.</summary>
         public static int TaughtByItem(int item)
         {
-            string rom = RomInfo.workDir;
+            string rom = RomInfo.WorkDir;
             if (_taughtBy == null || _taughtFor != rom)
             {
                 Dictionary<int, int> map = new Dictionary<int, int>();
@@ -50,7 +50,7 @@ namespace DSPRE.Avalonia.Data
                     int[] moves = TMEditor.ReadMachineMoves();
                     for (int m = 0; m < moves.Length; m++) map[TMEditor.MachineItemId(m)] = moves[m];
                 }
-                catch (Exception e) when (e is System.IO.IOException || e is InvalidOperationException || e is IndexOutOfRangeException) { }
+                catch (Exception e) when (e is System.IO.IOException || e is InvalidOperationException || e is IndexOutOfRangeException) { }   // without the machine table no item names gain a move
                 _taughtBy = map; _taughtFor = rom;
             }
             return _taughtBy.TryGetValue(item, out int move) ? move : 0;

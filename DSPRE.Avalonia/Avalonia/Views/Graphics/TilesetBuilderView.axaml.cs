@@ -26,10 +26,10 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void Open_Click(object sender, RoutedEventArgs e)
         {
-            string path = await DialogHelper.OpenFile(this, "Pick a PNG to make a background from", PngOnly);
+            string path = await DialogHelper.OpenFileAsync(this, "Pick a PNG to make a background from", PngOnly);
             if (path == null) return;
             string why = VM?.Open(path);
-            if (why != null) await DialogHelper.ShowError(why, "That picture could not be opened", this);
+            if (why != null) await DialogHelper.ShowErrorAsync(why, "That picture could not be opened", this);
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e)
@@ -38,21 +38,21 @@ namespace DSPRE.Avalonia.Views.Graphics
             try
             {
                 string suggested = System.IO.Path.GetFileNameWithoutExtension(VM.PictureName) + ".NCLR";
-                string path = await DialogHelper.SaveFile(this, "Name the three files", ColourList, suggested);
+                string path = await DialogHelper.SaveFileAsync(this, "Name the three files", ColourList, suggested);
                 if (path == null) return;
                 // The picker only asks about the .NCLR; the two files written beside it get the same question.
                 string stem = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(path) ?? "", System.IO.Path.GetFileNameWithoutExtension(path));
                 List<string> there = new List<string>();
                 foreach (string ext in new[] { ".NCGR", ".NSCR" }) if (System.IO.File.Exists(stem + ext)) there.Add(System.IO.Path.GetFileName(stem + ext));
-                if (there.Count > 0 && !await DialogHelper.AskYesNo(string.Join(" and ", there) + (there.Count == 1 ? " already exists beside it. Replace it?" : " already exist beside it. Replace them?"), "Replace files", this)) return;
+                if (there.Count > 0 && !await DialogHelper.AskYesNoAsync(string.Join(" and ", there) + (there.Count == 1 ? " already exists beside it. Replace it?" : " already exist beside it. Replace them?"), "Replace files", this)) return;
                 string why = VM.Save(path);
-                if (why != null) await DialogHelper.ShowError(why, "Those files could not be written", this);
+                if (why != null) await DialogHelper.ShowErrorAsync(why, "Those files could not be written", this);
                 else SaveNotice.Exported(path);
             }
             catch (System.Exception ex)
             {
                 AppLogger.Error("TilesetBuilder save failed: " + ex);
-                await DialogHelper.ShowError("Those files could not be written: " + ex.Message,
+                await DialogHelper.ShowErrorAsync("Those files could not be written: " + ex.Message,
                                              "Those files could not be written", this);
             }
         }

@@ -18,7 +18,7 @@ namespace DSPRE.Avalonia.Views.Tools
         }
 
         private async void Save_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-            => await VM.SaveChangesCore();
+            => await VM.SaveChangesCoreAsync();
 
         private void DecompressAll_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
             => VM.ToggleAllCompressed();
@@ -28,7 +28,7 @@ namespace DSPRE.Avalonia.Views.Tools
 
         private async void Discard_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) VM.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) VM.DiscardChanges();
         }
     }
 }

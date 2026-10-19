@@ -127,7 +127,7 @@ namespace DSPRE.Avalonia.Views.Text
         }
 
         // Ctrl+Space asks for completion wherever the caret is.
-        private async Task<bool> HandleCompletionShortcut(KeyEventArgs e)
+        private async Task<bool> HandleCompletionShortcutAsync(KeyEventArgs e)
         {
             if (e.Key != Key.Space || (e.KeyModifiers & KeyModifiers.Control) == 0 || VM == null) return false;
             e.Handled = true;

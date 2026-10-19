@@ -32,8 +32,8 @@ namespace DSPRE.ROMFiles
         public static void Start()
         {
             Stop();
-            if (string.IsNullOrEmpty(RomInfo.dspreDir)) return;
-            string expanded = Path.GetFullPath(Path.Combine(RomInfo.dspreDir, "expanded"));
+            if (string.IsNullOrEmpty(RomInfo.DspreDir)) return;
+            string expanded = Path.GetFullPath(Path.Combine(RomInfo.DspreDir, "expanded"));
             if (!Directory.Exists(expanded)) return;
 
             _scriptsDir = Path.Combine(expanded, "scripts");
@@ -140,7 +140,7 @@ namespace DSPRE.ROMFiles
                     TextArchive.RaiseSaved(null, id);
 
             List<string> scripts = changed.Where(p => IsUnder(p, _scriptsDir)).ToList();
-            if (scripts.Count == 0 || !RomInfo.hasRotomProject || !RotomTool.IsAvailable) return;
+            if (scripts.Count == 0 || !RomInfo.HasRotomProject || !RotomTool.IsAvailable) return;
             try
             {
                 AppLogger.Info("Compiling script sources edited outside DSPRE: " + string.Join(", ", scripts.Select(Path.GetFileName)));

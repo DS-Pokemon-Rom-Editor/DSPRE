@@ -32,7 +32,7 @@ namespace DSPRE.Avalonia.Views.Tools
         private async void GenerateCredits_Click(object sender, RoutedEventArgs e)
         {
             if (VM != null)
-                await DialogHelper.ShowCopyableText(VM.CreditsText(), "Credits", this);
+                await DialogHelper.ShowCopyableTextAsync(VM.CreditsText(), "Credits", this);
         }
 
         private async void OpenLink_Click(object sender, RoutedEventArgs e)
@@ -50,7 +50,7 @@ namespace DSPRE.Avalonia.Views.Tools
         private async void Notes_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Control c && c.DataContext is PatchRowViewModel row)
-                await DialogHelper.ShowInfo(row.Notes, row.Title);
+                await DialogHelper.ShowInfoAsync(row.Notes, row.Title);
         }
 
         private void Requires_Click(object sender, RoutedEventArgs e)

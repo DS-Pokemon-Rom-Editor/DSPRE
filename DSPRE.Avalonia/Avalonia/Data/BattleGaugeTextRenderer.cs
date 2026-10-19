@@ -36,12 +36,12 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         private static System.Drawing.Color[] Palette()
         {
-            string forRom = RomInfo.workDir ?? "";
+            string forRom = RomInfo.WorkDir ?? "";
             if (_paletteFor == forRom) return _palette;
             _paletteFor = forRom;
             _palette = null;
 
-            ScriptNarc narc = new ScriptNarc(RomInfo.DirNames.battleObj);
+            ScriptNarc narc = new ScriptNarc(RomInfo.DirNames.BattleObj);
             if (!narc.Available) return null;
 
             int colours = BattleObjects.Find("HpBar.Shared", "Colours");
@@ -122,7 +122,7 @@ namespace DSPRE.Avalonia.Data
 
             FieldFont font;
             try { font = FieldFont.LoadSystemFont(); }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleGaugeTextRenderer.Name", ex); return null; }
             if (font == null) return null;
 
             Drawn made = Blank(widthInTiles * 8, 16);

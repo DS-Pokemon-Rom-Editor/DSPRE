@@ -12,32 +12,32 @@ namespace DSPRE.ROMFiles
         public byte Ability2;
         public byte GenderRatioMaleToFemale;
 
-        public const int GENDER_RATIO_BYTE_OFFSET = 16;
-        public const int ABILITY1_BYTE_OFFSET = 22;
+        public const int GenderRatioByteOffset = 16;
+        public const int Ability1ByteOffset = 22;
 
-        public const int GENDER_RATIO_MALE = 0;
-        public const int GENDER_RATIO_FEMALE = 254;
-        public const int GENDER_RATIO_GENDERLESS = 255;
+        public const int GenderRatioMale = 0;
+        public const int GenderRatioFemale = 254;
+        public const int GenderRatioGenderless = 255;
 
-        public const int PICHU_ID_NUM = 172;
-        public const int UNOWN_ID_NUM = 201;
-        public const int CASTFORM_ID_NUM = 351;
-        public const int DEOXYS_ID_NUM = 386;
-        public const int BURMY_ID_NUM = 412;
-        public const int WORMADAM_ID_NUM = 413;
-        public const int SHELLOS_ID_NUM = 422;
-        public const int GASTRODON_ID_NUM = 423;
-        public const int ROTOM_ID_NUM = 479;
-        public const int GIRATINA_ID_NUM = 487;
-        public const int SHAYMIN_ID_NUM = 492;
+        public const int PichuIdNum = 172;
+        public const int UnownIdNum = 201;
+        public const int CastformIdNum = 351;
+        public const int DeoxysIdNum = 386;
+        public const int BurmyIdNum = 412;
+        public const int WormadamIdNum = 413;
+        public const int ShellosIdNum = 422;
+        public const int GastrodonIdNum = 423;
+        public const int RotomIdNum = 479;
+        public const int GiratinaIdNum = 487;
+        public const int ShayminIdNum = 492;
 
         public SpeciesFile(FileStream pokeData)
         {
             BinaryReader pokeDataReader = new BinaryReader(pokeData);
-            pokeDataReader.BaseStream.Position = GENDER_RATIO_BYTE_OFFSET;
+            pokeDataReader.BaseStream.Position = GenderRatioByteOffset;
             GenderRatioMaleToFemale = pokeDataReader.ReadByte();
 
-            pokeDataReader.BaseStream.Position = ABILITY1_BYTE_OFFSET;
+            pokeDataReader.BaseStream.Position = Ability1ByteOffset;
             Ability1 = pokeDataReader.ReadByte();
             Ability2 = pokeDataReader.ReadByte();
 

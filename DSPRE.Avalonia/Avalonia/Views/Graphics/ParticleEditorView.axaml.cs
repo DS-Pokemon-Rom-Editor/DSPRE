@@ -25,20 +25,20 @@ namespace DSPRE.Avalonia.Views.Graphics
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveChanges();
         private async void Revert_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) VM?.DiscardChanges();
         }
 
         private async void Colour_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as Control)?.DataContext is not ParticleFieldRow row) return;
-            (byte R, byte G, byte B)? picked = await DialogHelper.PickColour(this, row.Label);
+            (byte R, byte G, byte B)? picked = await DialogHelper.PickColourAsync(this, row.Label);
             if (picked is { } c) row.SetColour(c.R, c.G, c.B);
         }
 
         private async void ReplaceTexture_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as Control)?.DataContext is not ParticleTextureRow row || VM == null) return;
-            string path = await DialogHelper.OpenFile(this, $"Replace texture {row.Index + 1}", new[] { Png });
+            string path = await DialogHelper.OpenFileAsync(this, $"Replace texture {row.Index + 1}", new[] { Png });
             if (path == null) return;
             VM.ReplaceTexture(row.Index, path, out bool ok);
             if (ok) SaveNotice.Imported($"texture {row.Index + 1}", path);

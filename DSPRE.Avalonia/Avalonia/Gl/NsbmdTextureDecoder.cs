@@ -21,23 +21,23 @@ namespace DSPRE.Avalonia.Gl
     {
         public static NsbmdTextureData Decode(NSBMDMaterial m)
         {
-            if (m == null || m.format == 0) return null;
-            if (m.paldata == null && m.format != 7) return null;
-            if (m.texdata == null || m.width <= 0 || m.height <= 0) return null;
+            if (m == null || m.Format == 0) return null;
+            if (m.Paldata == null && m.Format != 7) return null;
+            if (m.Texdata == null || m.Width <= 0 || m.Height <= 0) return null;
 
-            int pixels = m.width * m.height;
+            int pixels = m.Width * m.Height;
             RGBA[] img = new RGBA[pixels];
-            RGBA[] pal = m.paldata;
+            RGBA[] pal = m.Paldata;
 
             try
             {
-                switch (m.format)
+                switch (m.Format)
                 {
                     case 1: // A3I5
                         for (int j = 0; j < pixels; j++)
                         {
-                            int index = m.texdata[j] & 0x1f;
-                            int a = m.texdata[j] >> 5;
+                            int index = m.Texdata[j] & 0x1f;
+                            int a = m.Texdata[j] >> 5;
                             a = ((a * 4) + (a / 2)) * 8;
                             img[j] = pal[index]; img[j].A = (byte)a;
                         }
@@ -45,42 +45,42 @@ namespace DSPRE.Avalonia.Gl
                     case 2: // 4-colour palette
                         for (int j = 0; j < pixels; j++)
                         {
-                            uint idx = m.texdata[j / 4];
+                            uint idx = m.Texdata[j / 4];
                             idx = (idx >> ((j % 4) << 1)) & 3;
-                            img[j] = TransparentZero(pal, (int)idx, m.color0 != 0);
+                            img[j] = TransparentZero(pal, (int)idx, m.Color0 != 0);
                         }
                         break;
                     case 3: // 16-colour palette
                         for (int j = 0; j < pixels; j++)
                         {
                             int mi = j / 2;
-                            if (mi >= m.texdata.Length) continue;
-                            int idx = (m.texdata[mi] >> ((j % 2) << 2)) & 0x0f;
-                            img[j] = TransparentZero(pal, idx, m.color0 != 0);
+                            if (mi >= m.Texdata.Length) continue;
+                            int idx = (m.Texdata[mi] >> ((j % 2) << 2)) & 0x0f;
+                            img[j] = TransparentZero(pal, idx, m.Color0 != 0);
                         }
                         break;
                     case 4: // 256-colour palette
                         for (int j = 0; j < pixels; j++)
                         {
-                            int idx = m.texdata[j];
-                            img[j] = TransparentZero(pal, idx, m.color0 != 0);
+                            int idx = m.Texdata[j];
+                            img[j] = TransparentZero(pal, idx, m.Color0 != 0);
                         }
                         break;
                     case 5: // 4x4-texel compressed
-                        Convert4x4(m.texdata, m.width, m.height, m.spdata, pal, img);
+                        Convert4x4(m.Texdata, m.Width, m.Height, m.Spdata, pal, img);
                         break;
                     case 6: // A5I3
                         for (int j = 0; j < pixels; j++)
                         {
-                            int index = m.texdata[j] & 0x7;
-                            int a = (m.texdata[j] >> 3) * 8;
+                            int index = m.Texdata[j] & 0x7;
+                            int a = (m.Texdata[j] >> 3) * 8;
                             img[j] = pal[index]; img[j].A = (byte)a;
                         }
                         break;
                     case 7: // direct BGR555
                         for (int j = 0; j < pixels; j++)
                         {
-                            int p = m.texdata[j * 2] + (m.texdata[j * 2 + 1] << 8);
+                            int p = m.Texdata[j * 2] + (m.Texdata[j * 2 + 1] << 8);
                             img[j].R = (byte)((p & 0x1f) << 3);
                             img[j].G = (byte)(((p >> 5) & 0x1f) << 3);
                             img[j].B = (byte)(((p >> 10) & 0x1f) << 3);
@@ -90,7 +90,7 @@ namespace DSPRE.Avalonia.Gl
                     default: return null;
                 }
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("NsbmdTextureDecoder.Decode", ex); return null; }
 
             byte[] rgba = new byte[pixels * 4];
             for (int k = 0; k < pixels; k++)
@@ -103,9 +103,9 @@ namespace DSPRE.Avalonia.Gl
 
             return new NsbmdTextureData
             {
-                Rgba = rgba, Width = m.width, Height = m.height,
-                WrapS = WrapOf(m.repeatS, m.flipS),
-                WrapT = WrapOf(m.repeatT, m.flipT),
+                Rgba = rgba, Width = m.Width, Height = m.Height,
+                WrapS = WrapOf(m.RepeatS, m.FlipS),
+                WrapT = WrapOf(m.RepeatT, m.FlipT),
             };
         }
 

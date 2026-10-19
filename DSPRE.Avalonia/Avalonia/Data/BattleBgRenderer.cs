@@ -20,9 +20,9 @@ namespace DSPRE.Avalonia.Data
 
         // Scenery behind the platforms, not the move-effect BGs above. A wrong palette base still lands on a
         // valid palette, so a mix-up shows wrong colours instead of failing.
-        public static int BackdropCount => RomInfo.gameFamily == RomInfo.GameFamilies.DP ? 12 : 23;
+        public static int BackdropCount => RomInfo.GameFamily == RomInfo.GameFamilies.DP ? 12 : 23;
         private const int BackdropChr0 = 3, BackdropScr = 2;
-        private static int BackdropPal0 => RomInfo.gameFamily switch
+        private static int BackdropPal0 => RomInfo.GameFamily switch
         {
             RomInfo.GameFamilies.HGSS => 176,
             RomInfo.GameFamilies.DP => 158,
@@ -33,7 +33,7 @@ namespace DSPRE.Avalonia.Data
         /// The trade sequence's four tile maps (normal, flipped, and both 512 wide) that lay the traded Pokémon's
         /// picture out as a background. The picture is made at runtime, so the archive holds no drawing for them.
         /// </summary>
-        public static int TradePokemonMaps0 => RomInfo.gameFamily switch
+        public static int TradePokemonMaps0 => RomInfo.GameFamily switch
         {
             RomInfo.GameFamilies.HGSS => 266,
             RomInfo.GameFamilies.DP => 198,
@@ -56,10 +56,10 @@ namespace DSPRE.Avalonia.Data
             // Guard against a wrong palette index quietly reading non-palette bytes (e.g. another NSCR) as
             // colours, which renders as garbled noise instead of failing; fall back to placeholder art instead.
             if (chr == null || pal == null || scr == null || NitroBgCodec.Find(pal, "TTLP", 0) < 0) return null;
-            try { return Composite(chr, pal, scr); } catch { return null; }
+            try { return Composite(chr, pal, scr); } catch (Exception ex) { AppLogger.WarnOnce("BattleBgRenderer.BuildBackdrop", ex); return null; }
         }
 
-        private readonly ScriptNarc _narc = new ScriptNarc(DirNames.battleBg);
+        private readonly ScriptNarc _narc = new ScriptNarc(DirNames.BattleBg);
 
         /// <summary>Builds the BG image for a background id; reverse=true uses the enemy-side tilemap. Null if unavailable.</summary>
         public BgImage Build(int bgId, bool reverse = false) => Build(bgId, reverse ? 1 : 0);
@@ -78,7 +78,7 @@ namespace DSPRE.Avalonia.Data
             byte[] pal = Inflate(_narc.Get(row[1]));
             byte[] scr = Inflate(_narc.Get(row[2 + Math.Clamp(screen, 0, 2)]));
             if (chr == null || pal == null || scr == null) return null;
-            try { return Composite(chr, pal, scr); } catch { return null; }
+            try { return Composite(chr, pal, scr); } catch (Exception ex) { AppLogger.WarnOnce("BattleBgRenderer.Build", ex); return null; }
         }
 
         // ── NITRO container parsing: delegates to the shared NitroBgCodec ────────────────────────────

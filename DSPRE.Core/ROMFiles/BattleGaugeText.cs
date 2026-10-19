@@ -70,7 +70,7 @@ namespace DSPRE.ROMFiles
             DigitShadow = 1,
         };
 
-        private static Layout Current => RomInfo.gameFamily == RomInfo.GameFamilies.DP ? DiamondPearl : PlatinumAndJohto;
+        private static Layout Current => RomInfo.GameFamily == RomInfo.GameFamilies.DP ? DiamondPearl : PlatinumAndJohto;
 
         private static readonly Dictionary<Status, int> StatusWords = new()
         {
@@ -180,7 +180,7 @@ namespace DSPRE.ROMFiles
         private static string _why;
 
         /// <summary>Which entry of the font archive holds the number font, or -1 when we do not know.</summary>
-        private static int NumberFontEntry => RomInfo.gameFamily switch
+        private static int NumberFontEntry => RomInfo.GameFamily switch
         {
             RomInfo.GameFamilies.DP => 4,
             RomInfo.GameFamilies.Plat => 4,
@@ -190,7 +190,7 @@ namespace DSPRE.ROMFiles
 
         private static Pieces Read()
         {
-            string forRom = RomInfo.workDir ?? "";
+            string forRom = RomInfo.WorkDir ?? "";
             if (_readFor == forRom) return _read;
             _readFor = forRom;
             _read = null;
@@ -228,15 +228,15 @@ namespace DSPRE.ROMFiles
 
         private static byte[] ReadNumberFont(int entry)
         {
-            if (!RomInfo.gameDirs.ContainsKey(RomInfo.DirNames.fonts))
+            if (!RomInfo.GameDirs.ContainsKey(RomInfo.DirNames.Fonts))
             {
                 _why = "This ROM has no font archive.";
                 return null;
             }
 
             // Not every editor that draws a gauge unpacks the fonts first, and a failed read is kept for the ROM.
-            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.fonts });
-            string dir = RomInfo.gameDirs[RomInfo.DirNames.fonts].unpackedDir;
+            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.Fonts });
+            string dir = RomInfo.GameDirs[RomInfo.DirNames.Fonts].unpackedDir;
             if (!Directory.Exists(dir)) { _why = "The font archive is not unpacked."; return null; }
 
             string[] files = Directory.GetFiles(dir).OrderBy(f => f, StringComparer.Ordinal).ToArray();

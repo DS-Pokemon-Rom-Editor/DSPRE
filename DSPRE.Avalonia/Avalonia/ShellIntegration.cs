@@ -13,7 +13,7 @@ namespace DSPRE.Avalonia
         public static void CheckForUpdates(bool silent)
         {
             if (CheckForUpdatesHook != null) CheckForUpdatesHook(silent);
-            else if (!silent) _ = DialogHelper.ShowInfo("Update checking isn't available in this build.", "Check for updates");
+            else if (!silent) _ = DialogHelper.ShowInfoAsync("Update checking isn't available in this build.", "Check for updates");
         }
     }
 }

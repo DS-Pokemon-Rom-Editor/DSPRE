@@ -134,7 +134,7 @@ namespace DSPRE.Avalonia.Views.World
                 FileTypeFilter = new[] { new FilePickerFileType("Model") { Patterns = new[] { "*.obj" } } },
             });
             if (files == null || files.Count == 0) return;
-            if (!await DSPRE.Avalonia.DialogHelper.AskYesNo(
+            if (!await DSPRE.Avalonia.DialogHelper.AskYesNoAsync(
                     "Replace the map model with this OBJ?",
                     "Import map model")) return;
             VM.Told(VM.ImportFrom(files[0].Path.LocalPath));

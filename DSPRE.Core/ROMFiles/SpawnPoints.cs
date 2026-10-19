@@ -18,7 +18,7 @@ namespace DSPRE.ROMFiles
             foreach (FlyTable.Row row in FlyTable.Read())
             {
                 // HGSS rows say which of their points the game uses; the warp unlock point is always there.
-                bool hgss = gameFamily == GameFamilies.HGSS;
+                bool hgss = GameFamily == GameFamilies.HGSS;
                 if (!hgss || row.IsBlackoutSpawn) points.Add(new Point("Blackout point", row.HeaderIdGameOver, row.LocalX, row.LocalY, false));
                 if (!hgss || row.IsFlyPoint) points.Add(new Point("Fly point", row.HeaderIdFly, row.GlobalX, row.GlobalY, true));
                 if (hgss) points.Add(new Point("Warp unlock point", row.HeaderIdUnlockWarp, row.GlobalXUnlock, row.GlobalYUnlock, true));

@@ -93,25 +93,25 @@ namespace DSPRE
                             case (int)TextOperators.IsExactly:
                                 if (intNames[i].Equals(valToSearch))
                                 {
-                                    result.Add(i.ToString("D3") + MapHeader.nameSeparator + intNames[i]);
+                                    result.Add(i.ToString("D3") + MapHeader.NameSeparator + intNames[i]);
                                 }
                                 break;
                             case (int)TextOperators.IsNot:
                                 if (!intNames[i].Equals(valToSearch))
                                 {
-                                    result.Add(i.ToString("D3") + MapHeader.nameSeparator + intNames[i]);
+                                    result.Add(i.ToString("D3") + MapHeader.NameSeparator + intNames[i]);
                                 }
                                 break;
                             case (int)TextOperators.Contains:
                                 if (SearchMatch.Contains(intNames[i], valToSearch))
                                 {
-                                    result.Add(i.ToString("D3") + MapHeader.nameSeparator + intNames[i]);
+                                    result.Add(i.ToString("D3") + MapHeader.NameSeparator + intNames[i]);
                                 }
                                 break;
                             case (int)TextOperators.DoesNotContain:
                                 if (!SearchMatch.Contains(intNames[i], valToSearch))
                                 {
-                                    result.Add(i.ToString("D3") + MapHeader.nameSeparator + intNames[i]);
+                                    result.Add(i.ToString("D3") + MapHeader.NameSeparator + intNames[i]);
                                 }
                                 break;
                             default:
@@ -143,9 +143,9 @@ namespace DSPRE
                     byte[] arm9Headers = null;
                     if (!dynamicHeaders && finalID > startID)
                     {
-                        long headerOffset = RomInfo.headerTableOffset + (long)MapHeader.length * startID;
-                        long headerBytes = (long)MapHeader.length * (finalID - startID);
-                        arm9Headers = DSUtils.ReadFromFile(RomInfo.arm9Path, headerOffset, headerBytes);
+                        long headerOffset = RomInfo.HeaderTableOffset + (long)MapHeader.Length * startID;
+                        long headerBytes = (long)MapHeader.Length * (finalID - startID);
+                        arm9Headers = DSUtils.ReadFromFile(RomInfo.Arm9Path, headerOffset, headerBytes);
                     }
 
                     for (ushort i = startID; i < finalID; i++)
@@ -154,15 +154,15 @@ namespace DSPRE
                         MapHeader h;
                         if (dynamicHeaders)
                         {
-                            h = MapHeader.LoadFromFile(Path.Combine(RomInfo.gameDirs[DirNames.dynamicHeaders].unpackedDir, i.ToString("D4")), i, 0);
+                            h = MapHeader.LoadFromFile(Path.Combine(RomInfo.GameDirs[DirNames.DynamicHeaders].unpackedDir, i.ToString("D4")), i, 0);
                         }
                         else
                         {
-                            int headerOffset = (i - startID) * MapHeader.length;
-                            if (arm9Headers != null && headerOffset + MapHeader.length <= arm9Headers.Length)
+                            int headerOffset = (i - startID) * MapHeader.Length;
+                            if (arm9Headers != null && headerOffset + MapHeader.Length <= arm9Headers.Length)
                             {
-                                byte[] headerData = new byte[MapHeader.length];
-                                Buffer.BlockCopy(arm9Headers, headerOffset, headerData, 0, MapHeader.length);
+                                byte[] headerData = new byte[MapHeader.Length];
+                                Buffer.BlockCopy(arm9Headers, headerOffset, headerData, 0, MapHeader.Length);
                                 h = MapHeader.LoadFromByteArray(headerData, i);
                             }
                             else
@@ -178,37 +178,37 @@ namespace DSPRE
                             case (int)NumOperators.Less:
                                 if (headerField < numToSearch)
                                 {
-                                    result.Add(i.ToString("D3") + MapHeader.nameSeparator + intNames[i]);
+                                    result.Add(i.ToString("D3") + MapHeader.NameSeparator + intNames[i]);
                                 }
                                 break;
                             case (int)NumOperators.Equal:
                                 if (headerField == numToSearch)
                                 {
-                                    result.Add(i.ToString("D3") + MapHeader.nameSeparator + intNames[i]);
+                                    result.Add(i.ToString("D3") + MapHeader.NameSeparator + intNames[i]);
                                 }
                                 break;
                             case (int)NumOperators.Greater:
                                 if (headerField > numToSearch)
                                 {
-                                    result.Add(i.ToString("D3") + MapHeader.nameSeparator + intNames[i]);
+                                    result.Add(i.ToString("D3") + MapHeader.NameSeparator + intNames[i]);
                                 }
                                 break;
                             case (int)NumOperators.LessOrEqual:
                                 if (headerField <= numToSearch)
                                 {
-                                    result.Add(i.ToString("D3") + MapHeader.nameSeparator + intNames[i]);
+                                    result.Add(i.ToString("D3") + MapHeader.NameSeparator + intNames[i]);
                                 }
                                 break;
                             case (int)NumOperators.GreaterOrEqual:
                                 if (headerField >= numToSearch)
                                 {
-                                    result.Add(i.ToString("D3") + MapHeader.nameSeparator + intNames[i]);
+                                    result.Add(i.ToString("D3") + MapHeader.NameSeparator + intNames[i]);
                                 }
                                 break;
                             case (int)NumOperators.Different:
                                 if (headerField != numToSearch)
                                 {
-                                    result.Add(i.ToString("D3") + MapHeader.nameSeparator + intNames[i]);
+                                    result.Add(i.ToString("D3") + MapHeader.NameSeparator + intNames[i]);
                                 }
                                 break;
                             default:

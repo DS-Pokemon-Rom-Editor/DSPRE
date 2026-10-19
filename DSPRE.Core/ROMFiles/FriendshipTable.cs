@@ -27,7 +27,7 @@ namespace DSPRE.ROMFiles
         public sbyte[,] Values { get; } = new sbyte[Events, Bands];
 
         /// <summary>Events the game never reads from this table; items use their own item data.</summary>
-        public static bool IsUnused(int e) => e == 1 || e == 2 || (e == 9 && gameFamily == GameFamilies.HGSS);
+        public static bool IsUnused(int e) => e == 1 || e == 2 || (e == 9 && GameFamily == GameFamilies.HGSS);
 
         public static string WhyNot() => RomLocator.WhyNot(RomLocator.Thing.FriendshipChanges, Size);
 

@@ -45,7 +45,7 @@ namespace DSPRE.ROMFiles
                 uint[] colours = ReadColours(pal);
                 return tiles == null || colours == null ? null : new FieldWindowFrame(tiles, colours, paletteEntry);
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("FieldWindowFrame.Load", ex); return null; }
         }
 
         /// <summary>
@@ -66,7 +66,7 @@ namespace DSPRE.ROMFiles
                 uint[] colours = ReadColours(pal);
                 return tiles == null || colours == null ? null : new FieldWindowFrame(tiles, colours, palette);
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("FieldWindowFrame.LoadStandard", ex); return null; }
         }
 
         /// <summary>The corners, edges and middle of the standard border.</summary>
@@ -123,11 +123,11 @@ namespace DSPRE.ROMFiles
         {
             try
             {
-                if (RomInfo.systemFontPaletteEntry < 0) return null;
-                byte[] pal = fontMember(RomInfo.systemFontPaletteEntry);
+                if (RomInfo.SystemFontPaletteEntry < 0) return null;
+                byte[] pal = fontMember(RomInfo.SystemFontPaletteEntry);
                 return pal == null ? null : ReadColours(pal);
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("FieldWindowFrame.LoadSystemFontColours", ex); return null; }
         }
 
         /// <summary>The paper the writing sits on, as 0xAARRGGBB. </summary>

@@ -127,7 +127,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             (bool saved, string error) = await HgEngineSave.RunAsync(() => HgEngineConfig.TryWrite(_settings, out string e) ? null : e);
             if (!saved)
             {
-                if (error != null) await DialogHelper.ShowError("The settings were not saved:\n" + error, "hg-engine settings");
+                if (error != null) await DialogHelper.ShowErrorAsync("The settings were not saved:\n" + error, "hg-engine settings");
                 return false;
             }
             Load();

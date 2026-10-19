@@ -32,7 +32,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (err != null)
             {
                 vm.StatusText = err;
-                await DialogHelper.ShowInfo(err, "Save");
+                await DialogHelper.ShowInfoAsync(err, "Save");
                 return;
             }
             vm.StatusText = "Saved. Save the ROM to keep it.";
@@ -115,21 +115,21 @@ namespace DSPRE.Avalonia.Views.Graphics
             GraphicPainterViewModel vm = ViewModel;
             if (vm?.SelectedSwatch == null)
             {
-                await DialogHelper.ShowInfo(vm?.ChangeColourHelp ?? "Pick a colour below first.",
+                await DialogHelper.ShowInfoAsync(vm?.ChangeColourHelp ?? "Pick a colour below first.",
                                             "Change this colour");
                 return;
             }
             int number = vm.SelectedSwatch.Number;
             (byte R, byte G, byte B)? now = vm.SelectedSwatch.Fill is global::Avalonia.Media.ISolidColorBrush brush
                 ? (brush.Color.R, brush.Color.G, brush.Color.B) : null;
-            (byte R, byte G, byte B)? picked = await DialogHelper.PickColour(this, "Change colour " + number, now);
+            (byte R, byte G, byte B)? picked = await DialogHelper.PickColourAsync(this, "Change colour " + number, now);
             if (picked == null) return;
             vm.SetColour(number, picked.Value.R, picked.Value.G, picked.Value.B);
         }
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
         }
     }
 }

@@ -15,3 +15,8 @@ dotnet_diagnostic.RS0030.severity = error
 [{DSPRE.Core/DSUtils/DSUtils.cs,DSPRE.Core/ArchiveMembers.cs,DSPRE.Core/PlainFiles.cs}]
 dotnet_diagnostic.RS0030.severity = none
 
+# Layout: braces on their own line, four spaces.
+[{DSPRE.Core,DSPRE.Avalonia,DSPRE.Tests}/**.cs]
+indent_style = space
+indent_size = 4
+csharp_new_line_before_open_brace = all

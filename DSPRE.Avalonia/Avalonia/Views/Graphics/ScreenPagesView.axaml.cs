@@ -50,11 +50,11 @@ namespace DSPRE.Avalonia.Views.Graphics
             GraphicAssets.Archive archive = ScreenPagesEditorViewModel.ArchiveOf(part);
             if (archive == null) return;
             string name = VM.Title.ToLowerInvariant().Replace(' ', '_').Replace("é", "e");
-            string path = await DialogHelper.SaveFile(Owner, "Save as a PNG", new[] { Png }, $"{name}_{part.Member}.png");
+            string path = await DialogHelper.SaveFileAsync(Owner, "Save as a PNG", new[] { Png }, $"{name}_{part.Member}.png");
             if (path == null) return;
             string trouble;
             using (VM.Reading()) trouble = GraphicAssets.ExportPng(archive, part.Member, path);
-            if (trouble != null) await DialogHelper.ShowError(trouble, ErrorTitle);
+            if (trouble != null) await DialogHelper.ShowErrorAsync(trouble, ErrorTitle);
             else SaveNotice.Exported(path);
         }
 
@@ -63,21 +63,21 @@ namespace DSPRE.Avalonia.Views.Graphics
             ScreenPartRow part = VM?.SelectedPart;
             GraphicAssets.Archive archive = ScreenPagesEditorViewModel.ArchiveOf(part);
             if (archive == null) return;
-            string path = await DialogHelper.OpenFile(Owner, "Import PNG", new[] { Png });
+            string path = await DialogHelper.OpenFileAsync(Owner, "Import PNG", new[] { Png });
             if (path == null) return;
             (PngColourPrompt.Choice choice, GraphicAssets.PngColourCheck check) = await PngColourPrompt.AskAsync(Owner, archive, part.Member, path);
             if (choice == PngColourPrompt.Choice.Cancel) return;
             string note = null;
             string trouble = VM.Import(() => PngColourPrompt.Import(archive, part.Member, path, choice, check, out note));
-            if (trouble != null) { await DialogHelper.ShowError(trouble, ErrorTitle); return; }
-            if (!string.IsNullOrEmpty(note)) await DialogHelper.ShowInfo(note, VM.Title);
+            if (trouble != null) { await DialogHelper.ShowErrorAsync(trouble, ErrorTitle); return; }
+            if (!string.IsNullOrEmpty(note)) await DialogHelper.ShowInfoAsync(note, VM.Title);
             SaveNotice.Imported(part.Name.ToLowerInvariant() + " " + part.Member, path);
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveChanges();
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) VM?.DiscardChanges();
         }
         private void Undo_Click(object sender, RoutedEventArgs e) => VM?.Undo();
         private void Redo_Click(object sender, RoutedEventArgs e) => VM?.Redo();

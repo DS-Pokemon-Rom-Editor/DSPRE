@@ -39,7 +39,7 @@ namespace DSPRE.Avalonia
                 ? "This " + what
                 : editor.UnsavedChangesDescription;
 
-            DialogHelper.MsgResult choice = await DialogHelper.AskThreeWay(
+            DialogHelper.MsgResult choice = await DialogHelper.AskThreeWayAsync(
                 $"{subject} has unsaved changes.\n\n{question ?? $"Save them before switching to another {what}?"}",
                 "Unsaved changes", "Save", "Discard");
 
@@ -56,7 +56,7 @@ namespace DSPRE.Avalonia
 
             // A failed save must not be treated as permission to move on, or the edit is lost
             // precisely when the user asked for it to be kept.
-            await DialogHelper.ShowError(
+            await DialogHelper.ShowErrorAsync(
                 $"Could not save {subject}:\n{failure}\n\nStaying on the current {what}.",
                 "Couldn't save", owner);
             return false;
@@ -99,7 +99,7 @@ namespace DSPRE.Avalonia
         /// version, false to keep the edits here, which then overwrite it when saved.
         /// </summary>
         public static Task<bool> TakeSavedVersionAsync(string subject)
-            => DialogHelper.AskTwoWay(
+            => DialogHelper.AskTwoWayAsync(
                 $"{subject} was saved in another editor, and has unsaved changes here.\n\nWhich version do you want to keep?",
                 "Saved elsewhere", "The saved one", "Mine");
     }

@@ -222,7 +222,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 Title = "TM/HM Editor (Preview)";
                 return;
             }
-            TryUnpackNarcs(new List<DirNames> { DirNames.moveData });
+            TryUnpackNarcs(new List<DirNames> { DirNames.MoveData });
 
             PopulateMoveNames();
             PopulateTypeNames();
@@ -264,10 +264,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             SetDirty(true);
         }
 
-        public async Task AutoPaletteAllCommand(Window owner)
+        public async Task AutoPaletteAllCommandAsync(Window owner)
         {
             if (!_palettesKnown) return;
-            bool confirmed = await DialogHelper.AskYesNo(
+            bool confirmed = await DialogHelper.AskYesNoAsync(
                 "This will set the palette of all TMs and HMs based on their move types.\n" +
                 "If any of the moves have custom types (e.g. Fairy) they will receive the Normal type palette instead and " +
                 "may need to be manually corrected.\nDo you want to continue?",
@@ -291,9 +291,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             SetDirty(true);
         }
 
-        public async Task ExportCommand(Window owner)
+        public async Task ExportCommandAsync(Window owner)
         {
-            string path = await DialogHelper.SaveFile(
+            string path = await DialogHelper.SaveFileAsync(
                 owner,
                 "Export machine data",
                 new[] { DialogHelper.CsvFilter, DialogHelper.AllFilter },
@@ -311,11 +311,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             catch (Exception ex)
             {
                 AppLogger.Error($"TM Editor: Failed to export machine data. Exception: {ex.Message}");
-                await DialogHelper.ShowError($"The machines could not be exported:\n{ex.Message}", "TM / HM editor error");
+                await DialogHelper.ShowErrorAsync($"The machines could not be exported:\n{ex.Message}", "TM / HM editor error");
             }
         }
 
-        public async Task ImportCommand(Window owner)
+        public async Task ImportCommandAsync(Window owner)
         {
             MachineCsv importer = new MachineCsv(MachineLabels(), MoveNames.ToArray(), _curMachineMoves, _curMachinePalettes, _palettesKnown,
                 palette => TypeIndexToPalette(PaletteToTypeIndex(palette)) == palette);
@@ -407,16 +407,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private async Task UpdateDescriptionsAsync(List<(int Machine, int OldMove, int NewMove)> moved)
         {
             string labels = string.Join(", ", moved.Take(6).Select(m => TMEditor.MachineLabelFromIndex(m.Machine))) + (moved.Count > 6 ? "…" : "");
-            if (!await DialogHelper.AskYesNo($"Rewrite the item descriptions of {labels} for their new moves?", "TM / HM editor")) return;
+            if (!await DialogHelper.AskYesNoAsync($"Rewrite the item descriptions of {labels} for their new moves?", "TM / HM editor")) return;
             try
             {
                 TmItemDescriptions.Result result = TmItemDescriptions.Update(moved);
                 if (result.Kept.Count > 0)
-                    await DialogHelper.ShowInfo("Too long for the bag, left as they were: " + string.Join(", ", result.Kept) + ".", "TM / HM editor");
+                    await DialogHelper.ShowInfoAsync("Too long for the bag, left as they were: " + string.Join(", ", result.Kept) + ".", "TM / HM editor");
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
             {
-                await DialogHelper.ShowError("The descriptions were not rewritten:\n" + e.Message, "TM / HM editor error");
+                await DialogHelper.ShowErrorAsync("The descriptions were not rewritten:\n" + e.Message, "TM / HM editor error");
             }
         }
 
@@ -441,7 +441,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException || ex is ArgumentException)
             {
                 AppLogger.Error($"TM Editor: Failed to save machine moves or palettes. Exception: {ex.Message}");
-                _ = DialogHelper.ShowError("The TMs and HMs were not saved:\n" + ex.Message, "TM / HM editor error");
+                _ = DialogHelper.ShowErrorAsync("The TMs and HMs were not saved:\n" + ex.Message, "TM / HM editor error");
                 return false;
             }
             return true;
@@ -459,7 +459,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private int GetMoveType(int moveId)
         {
             MoveData moveData = new MoveData(moveId);
-            return (int)moveData.movetype;
+            return (int)moveData.Movetype;
         }
 
         private static int PaletteToTypeIndex(int paletteID) => TMEditor.PaletteToTypeIndex(paletteID);

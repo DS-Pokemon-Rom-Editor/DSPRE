@@ -30,7 +30,7 @@ namespace DSPRE.Tests
 
             vm.ZPos = 13;
 
-            Assert.Equal(13, t.zPosition);
+            Assert.Equal(13, t.ZPosition);
         }
 
         [Fact]
@@ -41,7 +41,7 @@ namespace DSPRE.Tests
 
             vm.ZPos = 7;
 
-            Assert.Equal(7, s.zPosition);
+            Assert.Equal(7, s.ZPosition);
         }
 
         [Fact]
@@ -52,7 +52,7 @@ namespace DSPRE.Tests
 
             vm.ZPos = 3;
 
-            Assert.Equal(3 * 65536, o.zPosition);
+            Assert.Equal(3 * 65536, o.ZPosition);
         }
 
         [Fact]
@@ -63,7 +63,7 @@ namespace DSPRE.Tests
             Trigger first = new Trigger(0, 0);
             EventEditorViewModel vm = VmWithSelected(first);
             vm.ZPos = 5;
-            Assert.Equal(5, first.zPosition);
+            Assert.Equal(5, first.ZPosition);
 
             Trigger second = new Trigger(0, 0);
             typeof(EventEditorViewModel)
@@ -72,7 +72,7 @@ namespace DSPRE.Tests
 
             vm.ZPos = 5;
 
-            Assert.Equal(5, second.zPosition);
+            Assert.Equal(5, second.ZPosition);
         }
     }
 }

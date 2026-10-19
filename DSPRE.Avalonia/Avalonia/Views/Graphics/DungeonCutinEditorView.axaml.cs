@@ -44,20 +44,20 @@ namespace DSPRE.Avalonia.Views.Graphics
                 ? DSPRE.ROMFiles.DungeonCutinTable.DrawingFor(row, DSPRE.ROMFiles.DungeonCutinTable.TimeOfDay.Noon) : -1;
             if (drawing < 0)
             {
-                _ = DialogHelper.ShowInfo("Pick a splash screen first.", "Open in Graphics");
+                _ = DialogHelper.ShowInfoAsync("Pick a splash screen first.", "Open in Graphics");
                 return;
             }
-            AvaloniaEditorLauncher.OpenGraphicAt(DSPRE.RomInfo.DirNames.dungeonCutinGraphics, drawing);
+            AvaloniaEditorLauncher.OpenGraphicAt(DSPRE.RomInfo.DirNames.DungeonCutinGraphics, drawing);
         }
 
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) (DataContext as DungeonCutinEditorViewModel)?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) (DataContext as DungeonCutinEditorViewModel)?.DiscardChanges();
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e)
-            => await _vm.SaveCommand();
+            => await _vm.SaveCommandAsync();
 
         private async void Export_Click(object sender, RoutedEventArgs e)
         {
@@ -73,7 +73,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = await _vm.ExportCsvAsync(path);
             if (error != null)
-                await DialogHelper.ShowError($"Export failed: {error}", "Dungeon cutin editor error", this);
+                await DialogHelper.ShowErrorAsync($"Export failed: {error}", "Dungeon cutin editor error", this);
             else SaveNotice.Exported(path);
         }
 
@@ -92,19 +92,19 @@ namespace DSPRE.Avalonia.Views.Graphics
             await _vm.ImportCsvAsync(this, path);
         }
 
-        private async void ImportMorning_Click(object sender, RoutedEventArgs e) => await ImportTimezone(DungeonCutinTimezone.Morning);
-        private async void ImportNoon_Click(object sender, RoutedEventArgs e) => await ImportTimezone(DungeonCutinTimezone.Noon);
-        private async void ImportEvening_Click(object sender, RoutedEventArgs e) => await ImportTimezone(DungeonCutinTimezone.Evening);
-        private async void ImportNight_Click(object sender, RoutedEventArgs e) => await ImportTimezone(DungeonCutinTimezone.Night);
+        private async void ImportMorning_Click(object sender, RoutedEventArgs e) => await ImportTimezoneAsync(DungeonCutinTimezone.Morning);
+        private async void ImportNoon_Click(object sender, RoutedEventArgs e) => await ImportTimezoneAsync(DungeonCutinTimezone.Noon);
+        private async void ImportEvening_Click(object sender, RoutedEventArgs e) => await ImportTimezoneAsync(DungeonCutinTimezone.Evening);
+        private async void ImportNight_Click(object sender, RoutedEventArgs e) => await ImportTimezoneAsync(DungeonCutinTimezone.Night);
 
-        private async void ExportMorning_Click(object sender, RoutedEventArgs e) => await ExportTimezone(DungeonCutinTimezone.Morning);
-        private async void ExportNoon_Click(object sender, RoutedEventArgs e) => await ExportTimezone(DungeonCutinTimezone.Noon);
-        private async void ExportEvening_Click(object sender, RoutedEventArgs e) => await ExportTimezone(DungeonCutinTimezone.Evening);
-        private async void ExportNight_Click(object sender, RoutedEventArgs e) => await ExportTimezone(DungeonCutinTimezone.Night);
+        private async void ExportMorning_Click(object sender, RoutedEventArgs e) => await ExportTimezoneAsync(DungeonCutinTimezone.Morning);
+        private async void ExportNoon_Click(object sender, RoutedEventArgs e) => await ExportTimezoneAsync(DungeonCutinTimezone.Noon);
+        private async void ExportEvening_Click(object sender, RoutedEventArgs e) => await ExportTimezoneAsync(DungeonCutinTimezone.Evening);
+        private async void ExportNight_Click(object sender, RoutedEventArgs e) => await ExportTimezoneAsync(DungeonCutinTimezone.Night);
 
-        private async System.Threading.Tasks.Task ImportTimezone(DungeonCutinTimezone tz)
+        private async System.Threading.Tasks.Task ImportTimezoneAsync(DungeonCutinTimezone tz)
         {
-            if (_vm.SelectedRow == null) { await DialogHelper.ShowError("Select a row first.", "Dungeon cutin editor error", this); return; }
+            if (_vm.SelectedRow == null) { await DialogHelper.ShowErrorAsync("Select a row first.", "Dungeon cutin editor error", this); return; }
 
             IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
@@ -118,13 +118,13 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = _vm.ImportTimezoneImage(tz, path);
             if (error != null)
-                await DialogHelper.ShowError($"Import failed: {error}", "Dungeon cutin editor error", this);
+                await DialogHelper.ShowErrorAsync($"Import failed: {error}", "Dungeon cutin editor error", this);
             else SaveNotice.Imported($"the {tz.ToString().ToLowerInvariant()} picture", path);
         }
 
-        private async System.Threading.Tasks.Task ExportTimezone(DungeonCutinTimezone tz)
+        private async System.Threading.Tasks.Task ExportTimezoneAsync(DungeonCutinTimezone tz)
         {
-            if (_vm.SelectedRow == null) { await DialogHelper.ShowError("Select a row first.", "Dungeon cutin editor error", this); return; }
+            if (_vm.SelectedRow == null) { await DialogHelper.ShowErrorAsync("Select a row first.", "Dungeon cutin editor error", this); return; }
 
             IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
@@ -138,7 +138,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = _vm.ExportTimezoneImage(tz, path);
             if (error != null)
-                await DialogHelper.ShowError($"Export failed: {error}", "Dungeon cutin editor error", this);
+                await DialogHelper.ShowErrorAsync($"Export failed: {error}", "Dungeon cutin editor error", this);
             else SaveNotice.Exported(path);
         }
     }

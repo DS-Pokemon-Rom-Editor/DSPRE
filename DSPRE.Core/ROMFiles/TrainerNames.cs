@@ -25,8 +25,8 @@ namespace DSPRE
             List<string> trainerList = new List<string>();
 
             /* Store all trainer names and classes */
-            TextArchive trainerClasses = new TextArchive(RomInfo.trainerClassMessageNumber);
-            TextArchive trainerNames = new TextArchive(RomInfo.trainerNamesMessageNumber);
+            TextArchive trainerClasses = new TextArchive(RomInfo.TrainerClassMessageNumber);
+            TextArchive trainerNames = new TextArchive(RomInfo.TrainerNamesMessageNumber);
 
             List<string> simpleNames = trainerNames.GetSimpleTrainerNames();
             int trainerCount = Filesystem.GetTrainerPropertiesCount();
@@ -36,7 +36,7 @@ namespace DSPRE
                 int classMessageID = BitConverter.ToUInt16(DSUtils.ReadFromFile(path, startOffset: 1, 2), 0);
                 string currentTrainerName = i < simpleNames.Count ? simpleNames[i] : TrainerFile.NAME_NOT_FOUND;
                 // hg-engine allows class ids with no name in the class text.
-                string className = classMessageID < trainerClasses.messages.Count ? trainerClasses.messages[classMessageID] : $"Class {classMessageID}";
+                string className = classMessageID < trainerClasses.Messages.Count ? trainerClasses.Messages[classMessageID] : $"Class {classMessageID}";
 
                 trainerList.Add("[" + i.ToString("D2") + "] " + className + " " + currentTrainerName);
             }

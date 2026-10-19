@@ -70,7 +70,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Why the last script-archive file can't be removed, or null.</summary>
         public static string WhyKeepLastScriptFile(int id)
         {
-            string archiveDir = gameDirs[DirNames.scripts].unpackedDir;
+            string archiveDir = GameDirs[DirNames.Scripts].unpackedDir;
             int members = Directory.Exists(archiveDir) ? Directory.GetFiles(archiveDir).Count(f => int.TryParse(Path.GetFileName(f), out _)) : 0;
             if (members - 1 > id)
                 return $"The script archive has {members} files but the sources stop at {id}; check the project's scripts folder.";
@@ -90,7 +90,7 @@ namespace DSPRE.ROMFiles
                 foreach (string file in Directory.EnumerateFiles(root, id.ToString("D4") + ".*", SearchOption.AllDirectories))
                     File.Delete(file);
             }
-            string member = Path.Combine(gameDirs[DirNames.scripts].unpackedDir, id.ToString("D4"));
+            string member = Path.Combine(GameDirs[DirNames.Scripts].unpackedDir, id.ToString("D4"));
             ArchiveMembers.Delete(member);
         }
 
@@ -99,13 +99,13 @@ namespace DSPRE.ROMFiles
         /// <summary>Gives every header up to this one an empty headbutt file (HGSS keys them by header). Returns how many.</summary>
         public static int FillHeadbuttFiles(int headerCount)
         {
-            if (gameFamily != GameFamilies.HGSS || !gameDirs.ContainsKey(DirNames.headbutt)) return 0;
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.headbutt });
+            if (GameFamily != GameFamilies.HGSS || !GameDirs.ContainsKey(DirNames.Headbutt)) return 0;
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.Headbutt });
             int made = 0;
             for (int id = Filesystem.GetHeadbuttCount(); id < headerCount; id++)
             {
                 // Two zero tree-group counts: a map with no headbutt trees.
-                ArchiveMembers.Put(DirNames.headbutt, id, new byte[4]);
+                ArchiveMembers.Put(DirNames.Headbutt, id, new byte[4]);
                 made++;
             }
             return made;

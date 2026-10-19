@@ -29,8 +29,8 @@ namespace DSPRE.ROMFiles
     }
 
     /// <summary>
-    /// The game's Pokédex data archives (<see cref="DirNames.pokedexData"/>, and in Platinum and HGSS the
-    /// <see cref="DirNames.pokedexDataAltered"/> copy that differs only in Giratina's forme). Members 0-10 hold one
+    /// The game's Pokédex data archives (<see cref="DirNames.PokedexData"/>, and in Platinum and HGSS the
+    /// <see cref="DirNames.PokedexDataAltered"/> copy that differs only in Giratina's forme). Members 0-10 hold one
     /// value per species: height and weight (u32), body shape (u8), then the female trainer, female Pokémon, male
     /// trainer and male Pokémon scales (u16) and Y offsets (s16). The sort lists built from them are left to
     /// <see cref="PokedexLists"/>, which rebuilds them only when asked.
@@ -66,18 +66,18 @@ namespace DSPRE.ROMFiles
         {
             archive = null;
             error = null;
-            if (gameDirs == null || !gameDirs.ContainsKey(DirNames.pokedexData)) { error = "This game's Pokédex data isn't mapped."; return false; }
+            if (GameDirs == null || !GameDirs.ContainsKey(DirNames.PokedexData)) { error = "This game's Pokédex data isn't mapped."; return false; }
 
-            int memberCount = gameFamily == GameFamilies.HGSS ? 102 : 58;
+            int memberCount = GameFamily == GameFamilies.HGSS ? 102 : 58;
 
-            List<DirNames> dirs = new List<DirNames> { DirNames.pokedexData };
-            if (gameDirs.ContainsKey(DirNames.pokedexDataAltered)) dirs.Add(DirNames.pokedexDataAltered);
+            List<DirNames> dirs = new List<DirNames> { DirNames.PokedexData };
+            if (GameDirs.ContainsKey(DirNames.PokedexDataAltered)) dirs.Add(DirNames.PokedexDataAltered);
             DSUtils.TryUnpackNarcs(dirs);
 
             List<Copy> copies = new List<Copy>();
             foreach (DirNames dir in dirs)
             {
-                string folder = gameDirs[dir].unpackedDir;
+                string folder = GameDirs[dir].unpackedDir;
                 byte[][] members = new byte[memberCount][];
                 for (int i = 0; i < memberCount; i++)
                 {
@@ -105,7 +105,7 @@ namespace DSPRE.ROMFiles
         }
 
         private Copy CopyFor(int species, bool originGiratina) =>
-            HasOriginGiratina && species == SpeciesFile.GIRATINA_ID_NUM && !originGiratina ? _copies[1] : _copies[0];
+            HasOriginGiratina && species == SpeciesFile.GiratinaIdNum && !originGiratina ? _copies[1] : _copies[0];
 
         /// <summary>The species' values; for Giratina, <paramref name="originGiratina"/> picks the forme where the
         /// game has both.</summary>
@@ -144,7 +144,7 @@ namespace DSPRE.ROMFiles
             string why = WhyNot(v);
             if (why != null) throw new ArgumentException(why);
 
-            Copy[] targets = HasOriginGiratina && species == SpeciesFile.GIRATINA_ID_NUM ? new[] { CopyFor(species, originGiratina) } : _copies.ToArray();
+            Copy[] targets = HasOriginGiratina && species == SpeciesFile.GiratinaIdNum ? new[] { CopyFor(species, originGiratina) } : _copies.ToArray();
             foreach (Copy c in targets)
             {
                 Put(c, 0, species * 4, BitConverter.GetBytes((uint)v.Height));

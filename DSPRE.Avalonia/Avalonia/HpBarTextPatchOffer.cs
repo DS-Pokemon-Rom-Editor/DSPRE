@@ -11,7 +11,7 @@ namespace DSPRE.Avalonia
         public const string Tip =
             "The \"Clear battle text background\" patch removes the white box behind the name, level and HP in battle.";
 
-        public static bool CanOffer => !RomInfo.isHGE && BattleGaugeTextPatch.SupportsCurrentRom && !BattleGaugeTextPatch.IsApplied;
+        public static bool CanOffer => !RomInfo.IsHGE && BattleGaugeTextPatch.SupportsCurrentRom && !BattleGaugeTextPatch.IsApplied;
 
         public static void Open() => AvaloniaEditorLauncher.OpenPatchToolboxAt("hpBarText");
     }

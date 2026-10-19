@@ -20,11 +20,13 @@
 using System;
 using System.IO;
 
-namespace LibNDSFormats {
+namespace LibNDSFormats
+{
     /// <summary>
     /// Utility class.
     /// </summary>
-    public static class Utils {
+    public static class Utils
+    {
         #region Methods (1) 
 
         // Public Methods (1) 
@@ -34,7 +36,8 @@ namespace LibNDSFormats {
         /// </summary>
         /// <param name="reader">Binary reader to use.</param>
         /// <returns>Trimmed string.</returns>
-        public static string ReadNSBMDString(EndianBinaryReader reader) {
+        public static string ReadNSBMDString(EndianBinaryReader reader)
+        {
             string str = new String(reader.ReadChars(System.Text.Encoding.ASCII, 16));
             str = str.Replace("\0", "");
 
@@ -47,7 +50,8 @@ namespace LibNDSFormats {
         /// <param name="bytes">Byte array.</param>
         /// <param name="s">Offset in array.</param>
         /// <returns>2 Bytes as ushort.</returns>
-        public static ushort Read2BytesAsushort(byte[] bytes, int offset) {
+        public static ushort Read2BytesAsushort(byte[] bytes, int offset)
+        {
             int result = 0;
             for (int i = 0; i < 2; ++i)
                 result |= bytes[offset + i] << (8 * (i));
@@ -60,7 +64,8 @@ namespace LibNDSFormats {
         /// <param name="bytes">Byte array.</param>
         /// <param name="s">Offset in array.</param>
         /// <returns>2 Bytes as Int16.</returns>
-        public static Int16 Read2BytesAsInt16(byte[] bytes, int offset) {
+        public static Int16 Read2BytesAsInt16(byte[] bytes, int offset)
+        {
             int result = 0;
             for (int i = 0; i < 2; ++i)
                 result |= bytes[offset + i] << (8 * (i));
@@ -73,7 +78,8 @@ namespace LibNDSFormats {
         /// <param name="bytes">Byte array.</param>
         /// <param name="s">Offset in array.</param>
         /// <returns>3 Bytes as Int32.</returns>
-        public static int Read3BytesAsInt24(byte[] bytes, int offset) {
+        public static int Read3BytesAsInt24(byte[] bytes, int offset)
+        {
             int result = 0;
             for (int i = 0; i < 3; ++i)
                 result |= bytes[offset + i] << (8 * i);
@@ -86,7 +92,8 @@ namespace LibNDSFormats {
         /// <param name="bytes">Byte array.</param>
         /// <param name="s">Offset in array.</param>
         /// <returns>4 Bytes as Int32.</returns>
-        public static int Read4BytesAsInt32(byte[] bytes, int offset) {
+        public static int Read4BytesAsInt32(byte[] bytes, int offset)
+        {
             int result = 0;
             for (int i = 0; i < 4; ++i)
                 result |= bytes[offset + i] << (8 * i);
@@ -98,7 +105,8 @@ namespace LibNDSFormats {
         /// <param name="bytes">Byte array.</param>
         /// <param name="s">Offset in array.</param>
         /// <returns>4 Bytes as Int32.</returns>
-        public static float Read4BytesAsFloat(byte[] bytes, int offset) {
+        public static float Read4BytesAsFloat(byte[] bytes, int offset)
+        {
             int result = 0;
             for (int i = 0; i < 4; ++i)
                 result |= bytes[offset + i] << (8 * i);
@@ -111,9 +119,11 @@ namespace LibNDSFormats {
         /// <param name="bytes">Byte array.</param>
         /// <param name="s">Offset in array.</param>
         /// <returns>4 Bytes as Int32.</returns>
-        public static UInt32 Read4BytesAsUInt32(byte[] bytes, int offset) {
+        public static UInt32 Read4BytesAsUInt32(byte[] bytes, int offset)
+        {
             UInt32 result = 0;
-            for (int i = 0; i < 4; ++i) {
+            for (int i = 0; i < 4; ++i)
+            {
                 result |= (uint)(bytes[offset + i] << (8 * i));
             }
 

@@ -102,7 +102,7 @@ namespace DSPRE.Avalonia
                         int[] slots = picks.Select(p => p.SelectedItem is Control c && c.Tag is int n ? n : -1).ToArray();
                         if (slots.Any(n => n < 0) || slots.Distinct().Count() != slots.Length)
                         {
-                            await DialogHelper.ShowInfo("Pick a different colour number for each new colour.", "Colours not in the palette");
+                            await DialogHelper.ShowInfoAsync("Pick a different colour number for each new colour.", "Colours not in the palette");
                             return;
                         }
                         check.Slots = slots.ToList();

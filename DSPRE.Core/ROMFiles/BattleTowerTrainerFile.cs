@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 
-namespace DSPRE.ROMFiles {
+namespace DSPRE.ROMFiles
+{
     // Battle Tower trainer: class ID + a list of Pokemon-set indices they can randomly
     // draw from. Variable length (4 + 2*SetIDs.Count bytes), one file per trainer.
-    public class BattleTowerTrainer {
+    public class BattleTowerTrainer
+    {
         public ushort TrainerType { get; set; }
         public List<ushort> SetIDs { get; set; } = new List<ushort>();
         public string Name { get; set; } = "";
@@ -16,31 +18,38 @@ namespace DSPRE.ROMFiles {
 
         public BattleTowerTrainer() { }
 
-        public static BattleTowerTrainer Read(BinaryReader br) {
+        public static BattleTowerTrainer Read(BinaryReader br)
+        {
             BattleTowerTrainer t = new BattleTowerTrainer();
             t.TrainerType = br.ReadUInt16();
             ushort numSets = br.ReadUInt16();
-            for (int i = 0; i < numSets; i++) {
+            for (int i = 0; i < numSets; i++)
+            {
                 t.SetIDs.Add(br.ReadUInt16());
             }
             return t;
         }
 
-        public void Write(BinaryWriter bw, bool keepUnread = true) {
-            if (keepUnread && UnreadBytes != null) {
+        public void Write(BinaryWriter bw, bool keepUnread = true)
+        {
+            if (keepUnread && UnreadBytes != null)
+            {
                 bw.Write(UnreadBytes);
                 return;
             }
             bw.Write(TrainerType);
             bw.Write((ushort)SetIDs.Count);
-            foreach (ushort id in SetIDs) {
+            foreach (ushort id in SetIDs)
+            {
                 bw.Write(id);
             }
         }
 
-        public byte[] ToByteArray() {
+        public byte[] ToByteArray()
+        {
             using (MemoryStream ms = new MemoryStream())
-            using (BinaryWriter bw = new BinaryWriter(ms)) {
+            using (BinaryWriter bw = new BinaryWriter(ms))
+            {
                 Write(bw);
                 // The game's trainer files end on a 4-byte boundary; keeping it leaves unedited trainers byte for byte.
                 while (ms.Length % 4 != 0) bw.Write((byte)0);
@@ -48,27 +57,33 @@ namespace DSPRE.ROMFiles {
             }
         }
 
-        public override string ToString() {
+        public override string ToString()
+        {
             string[] classNames = RomInfo.GetTrainerClassNames();
             string className = TrainerType < classNames.Length ? classNames[TrainerType] : $"Class {TrainerType}";
             return string.IsNullOrEmpty(Name) ? className : $"{className} {Name}";
         }
     }
 
-    public class BattleTowerTrainerFile : RomFile {
+    public class BattleTowerTrainerFile : RomFile
+    {
         public BindingList<BattleTowerTrainer> Trainers { get; private set; } = new BindingList<BattleTowerTrainer>();
 
         public BattleTowerTrainerFile() { }
 
-        public BattleTowerTrainerFile(bool load) {
-            if (load) {
+        public BattleTowerTrainerFile(bool load)
+        {
+            if (load)
+            {
                 LoadFromNarc();
             }
         }
 
-        private void LoadFromNarc() {
-            string narcDir = Filesystem.battleTowerTrainers;
-            if (string.IsNullOrEmpty(narcDir) || !Directory.Exists(narcDir)) {
+        private void LoadFromNarc()
+        {
+            string narcDir = Filesystem.BattleTowerTrainers;
+            if (string.IsNullOrEmpty(narcDir) || !Directory.Exists(narcDir))
+            {
                 return;
             }
 
@@ -78,22 +93,27 @@ namespace DSPRE.ROMFiles {
 
             List<string> names = null;
             List<string> messages = null;
-            try { names = new TextArchive(RomInfo.battleTowerTrainerNamesMessageNumber).messages; } catch { }
-            try { messages = new TextArchive(RomInfo.battleTowerTrainerMessagesNumber).messages; } catch { }
+            try { names = new TextArchive(RomInfo.BattleTowerTrainerNamesMessageNumber).Messages; } catch (Exception ex) { AppLogger.Warn("Battle Tower trainer names: " + ex.Message); }
+            try { messages = new TextArchive(RomInfo.BattleTowerTrainerMessagesNumber).Messages; } catch (Exception ex) { AppLogger.Warn("Battle Tower trainer messages: " + ex.Message); }
 
-            for (int i = 0; i < files.Length; i++) {
+            for (int i = 0; i < files.Length; i++)
+            {
                 using (FileStream fs = new FileStream(files[i], FileMode.Open, FileAccess.Read))
-                using (BinaryReader br = new BinaryReader(fs)) {
+                using (BinaryReader br = new BinaryReader(fs))
+                {
                     // A short file still takes its slot, so later trainers keep their ids.
                     BattleTowerTrainer trainer = fs.Length < 4
                         ? new BattleTowerTrainer { UnreadBytes = br.ReadBytes((int)fs.Length) }
                         : BattleTowerTrainer.Read(br);
 
-                    if (names != null && i < names.Count) {
+                    if (names != null && i < names.Count)
+                    {
                         trainer.Name = names[i];
                     }
-                    if (messages != null) {
-                        for (int m = 0; m < 3; m++) {
+                    if (messages != null)
+                    {
+                        for (int m = 0; m < 3; m++)
+                        {
                             int idx = i * 3 + m;
                             trainer.Messages[m] = idx < messages.Count ? messages[idx] : "";
                         }
@@ -104,83 +124,110 @@ namespace DSPRE.ROMFiles {
             }
         }
 
-        public override byte[] ToByteArray() {
+        public override byte[] ToByteArray()
+        {
             using (MemoryStream ms = new MemoryStream())
-            using (BinaryWriter bw = new BinaryWriter(ms)) {
-                foreach (BattleTowerTrainer trainer in Trainers) {
+            using (BinaryWriter bw = new BinaryWriter(ms))
+            {
+                foreach (BattleTowerTrainer trainer in Trainers)
+                {
                     trainer.Write(bw, keepUnread: false);
                 }
                 return ms.ToArray();
             }
         }
 
-        public bool SaveToNarc(bool showSuccessMessage = true) {
-            try {
-                string narcDir = Filesystem.battleTowerTrainers;
-                if (string.IsNullOrEmpty(narcDir) || !Directory.Exists(narcDir)) {
+        public bool SaveToNarc(bool showSuccessMessage = true)
+        {
+            try
+            {
+                string narcDir = Filesystem.BattleTowerTrainers;
+                if (string.IsNullOrEmpty(narcDir) || !Directory.Exists(narcDir))
+                {
                     AppMessages.Error("Battle Tower trainer directory not found.", "Error");
                     return false;
                 }
 
                 // Read-modify-write, same as TrainerEditor's own name/class archive saves,
                 // so the archive's existing encryption key is preserved.
-                TextArchive namesArchive = new TextArchive(RomInfo.battleTowerTrainerNamesMessageNumber);
-                TextArchive messagesArchive = new TextArchive(RomInfo.battleTowerTrainerMessagesNumber);
+                TextArchive namesArchive = new TextArchive(RomInfo.BattleTowerTrainerNamesMessageNumber);
+                TextArchive messagesArchive = new TextArchive(RomInfo.BattleTowerTrainerMessagesNumber);
 
-                for (int i = 0; i < Trainers.Count; i++) {
-                    ArchiveMembers.Put(RomInfo.DirNames.battleTowerTrainers, i, Trainers[i].ToByteArray());
+                for (int i = 0; i < Trainers.Count; i++)
+                {
+                    ArchiveMembers.Put(RomInfo.DirNames.BattleTowerTrainers, i, Trainers[i].ToByteArray());
 
-                    if (i < namesArchive.messages.Count) {
-                        namesArchive.messages[i] = Trainers[i].Name ?? "";
-                    } else {
-                        namesArchive.messages.Add(Trainers[i].Name ?? "");
+                    if (i < namesArchive.Messages.Count)
+                    {
+                        namesArchive.Messages[i] = Trainers[i].Name ?? "";
                     }
-                    for (int m = 0; m < 3; m++) {
+                    else
+                    {
+                        namesArchive.Messages.Add(Trainers[i].Name ?? "");
+                    }
+                    for (int m = 0; m < 3; m++)
+                    {
                         int idx = i * 3 + m;
-                        if (idx < messagesArchive.messages.Count) {
-                            messagesArchive.messages[idx] = Trainers[i].Messages[m] ?? "";
-                        } else {
-                            messagesArchive.messages.Add(Trainers[i].Messages[m] ?? "");
+                        if (idx < messagesArchive.Messages.Count)
+                        {
+                            messagesArchive.Messages[idx] = Trainers[i].Messages[m] ?? "";
+                        }
+                        else
+                        {
+                            messagesArchive.Messages.Add(Trainers[i].Messages[m] ?? "");
                         }
                     }
                 }
 
-                namesArchive.SaveToExpandedDir(RomInfo.battleTowerTrainerNamesMessageNumber, showSuccessMessage: false);
-                messagesArchive.SaveToExpandedDir(RomInfo.battleTowerTrainerMessagesNumber, showSuccessMessage: false);
+                namesArchive.SaveToExpandedDir(RomInfo.BattleTowerTrainerNamesMessageNumber, showSuccessMessage: false);
+                messagesArchive.SaveToExpandedDir(RomInfo.BattleTowerTrainerMessagesNumber, showSuccessMessage: false);
 
-                if (showSuccessMessage) {
+                if (showSuccessMessage)
+                {
                     AppMessages.Info("Battle Tower trainers saved successfully!", "Success");
                 }
                 return true;
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 AppMessages.Error($"Error saving Battle Tower trainers: {ex.Message}", "Error");
                 return false;
             }
         }
 
-        public bool ExportToFile(string path, bool showSuccessMessage = true) {
-            try {
+        public bool ExportToFile(string path, bool showSuccessMessage = true)
+        {
+            try
+            {
                 ArchiveMembers.Write(path, ToByteArray());
 
-                if (showSuccessMessage) {
+                if (showSuccessMessage)
+                {
                     AppMessages.Info("Battle Tower trainers exported successfully!", "Success");
                 }
                 return true;
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 AppMessages.Error($"Error exporting Battle Tower trainers: {ex.Message}", "Error");
                 return false;
             }
         }
 
-        public bool ImportFromFile(string path) {
-            try {
+        public bool ImportFromFile(string path)
+        {
+            try
+            {
                 using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read))
-                using (BinaryReader br = new BinaryReader(fs)) {
+                using (BinaryReader br = new BinaryReader(fs))
+                {
                     BindingList<BattleTowerTrainer> oldTrainers = Trainers;
                     Trainers = new BindingList<BattleTowerTrainer>();
-                    while (fs.Position + 4 <= fs.Length) {
+                    while (fs.Position + 4 <= fs.Length)
+                    {
                         BattleTowerTrainer trainer = BattleTowerTrainer.Read(br);
-                        if (Trainers.Count < oldTrainers.Count) {
+                        if (Trainers.Count < oldTrainers.Count)
+                        {
                             trainer.Name = oldTrainers[Trainers.Count].Name;
                             trainer.Messages = oldTrainers[Trainers.Count].Messages;
                         }
@@ -188,14 +235,17 @@ namespace DSPRE.ROMFiles {
                     }
                 }
                 return true;
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 AppMessages.Error($"Error importing Battle Tower trainers: {ex.Message}", "Error");
                 return false;
             }
         }
 
-        public static bool IsAvailable() {
-            return !RomInfo.isHGE && RomInfo.gameDirs.ContainsKey(RomInfo.DirNames.battleTowerTrainers);
+        public static bool IsAvailable()
+        {
+            return !RomInfo.IsHGE && RomInfo.GameDirs.ContainsKey(RomInfo.DirNames.BattleTowerTrainers);
         }
     }
 }

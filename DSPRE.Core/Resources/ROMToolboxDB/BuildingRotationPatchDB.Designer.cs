@@ -8,89 +8,112 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace DSPRE.Resources.ROMToolboxDB {
+namespace DSPRE.Resources.ROMToolboxDB
+{
     using System;
     
     
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    internal class BuildingRotationPatchDB {
+    internal class BuildingRotationPatchDB
+    {
         
-        private static global::System.Resources.ResourceManager resourceMan;
+        private static global::System.Resources.ResourceManager _resourceMan;
         
-        private static global::System.Globalization.CultureInfo resourceCulture;
+        private static global::System.Globalization.CultureInfo _resourceCulture;
         
         [global::System.Diagnostics.CodeAnalysis.SuppressMessageAttribute("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
-        internal BuildingRotationPatchDB() {
+        internal BuildingRotationPatchDB()
+        {
         }
         
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
-        internal static global::System.Resources.ResourceManager ResourceManager {
-            get {
-                if (object.ReferenceEquals(resourceMan, null)) {
+        internal static global::System.Resources.ResourceManager ResourceManager
+        {
+            get
+            {
+                if (object.ReferenceEquals(_resourceMan, null))
+                {
                     global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("DSPRE.Resources.ROMToolboxDB.BuildingRotationPatchDB", typeof(BuildingRotationPatchDB).Assembly);
-                    resourceMan = temp;
+                    _resourceMan = temp;
                 }
-                return resourceMan;
+                return _resourceMan;
             }
         }
         
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
-        internal static global::System.Globalization.CultureInfo Culture {
-            get {
-                return resourceCulture;
+        internal static global::System.Globalization.CultureInfo Culture
+        {
+            get
+            {
+                return _resourceCulture;
             }
-            set {
-                resourceCulture = value;
+            set
+            {
+                _resourceCulture = value;
             }
         }
         
-        internal static byte[] ADAE_rotation {
-            get {
-                object obj = ResourceManager.GetObject("ADAE_rotation", resourceCulture);
+        internal static byte[] ADAE_rotation
+        {
+            get
+            {
+                object obj = ResourceManager.GetObject("ADAE_rotation", _resourceCulture);
                 return ((byte[])(obj));
             }
         }
 
-        internal static byte[] APAE_rotation {
-            get {
-                object obj = ResourceManager.GetObject("APAE_rotation", resourceCulture);
+        internal static byte[] APAE_rotation
+        {
+            get
+            {
+                object obj = ResourceManager.GetObject("APAE_rotation", _resourceCulture);
                 return ((byte[])(obj));
             }
         }
 
-        internal static byte[] APAF_rotation {
-            get {
-                object obj = ResourceManager.GetObject("APAF_rotation", resourceCulture);
+        internal static byte[] APAF_rotation
+        {
+            get
+            {
+                object obj = ResourceManager.GetObject("APAF_rotation", _resourceCulture);
                 return ((byte[])(obj));
             }
         }
 
-        internal static byte[] CPUE_rotation {
-            get {
-                object obj = ResourceManager.GetObject("CPUE_rotation", resourceCulture);
+        internal static byte[] CPUE_rotation
+        {
+            get
+            {
+                object obj = ResourceManager.GetObject("CPUE_rotation", _resourceCulture);
                 return ((byte[])(obj));
             }
         }
 
-        internal static byte[] IPGE_rotation {
-            get {
-                object obj = ResourceManager.GetObject("IPGE_rotation", resourceCulture);
+        internal static byte[] IPGE_rotation
+        {
+            get
+            {
+                object obj = ResourceManager.GetObject("IPGE_rotation", _resourceCulture);
                 return ((byte[])(obj));
             }
         }
 
-        internal static byte[] IPKI_rotation {
-            get {
-                object obj = ResourceManager.GetObject("IPKI_rotation", resourceCulture);
+        internal static byte[] IPKI_rotation
+        {
+            get
+            {
+                object obj = ResourceManager.GetObject("IPKI_rotation", _resourceCulture);
                 return ((byte[])(obj));
             }
         }
 
-        internal static byte[] IPKE_rotation {
-            get {
-                object obj = ResourceManager.GetObject("IPKE_rotation", resourceCulture);
+        internal static byte[] IPKE_rotation
+        {
+            get
+            {
+                object obj = ResourceManager.GetObject("IPKE_rotation", _resourceCulture);
                 return ((byte[])(obj));
             }
         }

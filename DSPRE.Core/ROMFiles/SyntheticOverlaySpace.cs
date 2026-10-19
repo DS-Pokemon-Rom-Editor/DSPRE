@@ -38,10 +38,10 @@ namespace DSPRE.ROMFiles
         /// <summary>Whether the ARM9 expansion is applied and its overlay is large enough to hold tables.</summary>
         public static bool Available()
         {
-            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.synthOverlay });
-            return (RomPatchState.flag_arm9Expanded || PatchToolboxLogic.CheckFilesArm9ExpansionApplied())
-                && File.Exists(Filesystem.expArmPath)
-                && new FileInfo(Filesystem.expArmPath).Length >= RomInfo.synthOverlaySize;
+            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.SynthOverlay });
+            return (RomPatchState.FlagArm9Expanded || PatchToolboxLogic.CheckFilesArm9ExpansionApplied())
+                && File.Exists(Filesystem.ExpArmPath)
+                && new FileInfo(Filesystem.ExpArmPath).Length >= RomInfo.SynthOverlaySize;
         }
 
         /// <summary>Byte ranges already owned by a marked block.</summary>
@@ -75,16 +75,16 @@ namespace DSPRE.ROMFiles
             ranges.AddRange(PatchToolboxLogic.HandPlacedRanges());
             ranges.AddRange(TrainerClassTableExpansion.MovedTableRanges());
             // The class metadata patch's payload has zero-filled scratch words an all-zero search would take for free space.
-            if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS && TrainerClassMetadataPatch.InstalledOffset() is uint tcm)
+            if (RomInfo.GameFamily == RomInfo.GameFamilies.HGSS && TrainerClassMetadataPatch.InstalledOffset() is uint tcm)
                 ranges.Add((tcm, tcm + TrainerClassMetadataPatch.PayloadSize));
             // PlatPatches installs item payloads at fixed offsets and refuses when they are occupied.
-            if (RomInfo.gameFamily == RomInfo.GameFamilies.Plat && data.Length > PlatPatchesFixedStart)
+            if (RomInfo.GameFamily == RomInfo.GameFamilies.Plat && data.Length > PlatPatchesFixedStart)
                 ranges.Add((PlatPatchesFixedStart, Math.Min(PlatPatchesFixedEnd, data.Length)));
             return ranges;
         }
 
-        public static int PlatPatchesFixedStart => RomInfo.platPatchesFixedStart;
-        public static int PlatPatchesFixedEnd => RomInfo.synthOverlaySize;
+        public static int PlatPatchesFixedStart => RomInfo.PlatPatchesFixedStart;
+        public static int PlatPatchesFixedEnd => RomInfo.SynthOverlaySize;
 
         // PlatPatches' blocks store no length and their unused rows read as zero, so each is reserved by its full layout.
         private static readonly (string Marker, int Length)[] PlatPatchesLayouts =
@@ -112,7 +112,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Where blocks of these lengths would go, in order, as <see cref="Place"/> would choose; null when one doesn't fit.</summary>
         public static int[] Plan(params int[] lengths)
         {
-            byte[] data = File.ReadAllBytes(Filesystem.expArmPath);
+            byte[] data = File.ReadAllBytes(Filesystem.ExpArmPath);
             List<(long Start, long End)> reserved = Reserved(data);
             int[] offsets = new int[lengths.Length];
             for (int i = 0; i < lengths.Length; i++)

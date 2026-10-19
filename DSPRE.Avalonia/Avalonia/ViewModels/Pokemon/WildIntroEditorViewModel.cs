@@ -34,7 +34,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Load()
         {
             _t = VsIntroTables.Load(Part.Wild);
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.textArchives });
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TextArchives });
             _names = VsIntroNames.Read();
         }
 
@@ -211,7 +211,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 (bool saved, string error) = await HgEngineSave.RunAsync(() => { _t.Save(); return null; });
                 if (!saved)
                 {
-                    if (error != null) await DialogHelper.ShowError("The wild Pokémon intros were not saved:\n" + error, Title);
+                    if (error != null) await DialogHelper.ShowErrorAsync("The wild Pokémon intros were not saved:\n" + error, Title);
                     return false;
                 }
             }
@@ -220,7 +220,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 try { _t.Save(); }
                 catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
                 {
-                    await DialogHelper.ShowError("The wild Pokémon intros were not saved:\n" + e.Message, Title);
+                    await DialogHelper.ShowErrorAsync("The wild Pokémon intros were not saved:\n" + e.Message, Title);
                     return false;
                 }
             }
@@ -236,7 +236,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try { _t = VsIntroTables.Load(Part.Wild); }
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException)
             {
-                _ = DialogHelper.ShowError("The saved wild Pokémon intros couldn't be read back:\n" + e.Message, Title);
+                _ = DialogHelper.ShowErrorAsync("The saved wild Pokémon intros couldn't be read back:\n" + e.Message, Title);
                 return;
             }
             int sp = SpeciesRows.IndexOf(_species), co = ComboRows.IndexOf(_combo);

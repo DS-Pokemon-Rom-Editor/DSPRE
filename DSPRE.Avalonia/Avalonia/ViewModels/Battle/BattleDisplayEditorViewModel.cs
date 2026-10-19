@@ -36,9 +36,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// <summary>True on the Gen-IV families whose battle-sprite offsets we have (DP, Platinum, HGSS).
         /// The view disables its controls and shows <see cref="UnavailableText"/> otherwise. These NARCs
         /// are language-independent and the party-palette table is version-resolved, so no language gate.</summary>
-        public bool IsAvailable => gameFamily == GameFamilies.DP
-                                || gameFamily == GameFamilies.Plat
-                                || gameFamily == GameFamilies.HGSS;
+        public bool IsAvailable => GameFamily == GameFamilies.DP
+                                || GameFamily == GameFamilies.Plat
+                                || GameFamily == GameFamilies.HGSS;
         public string UnavailableText =>
             "Battle Display editing is supported on Diamond / Pearl, Platinum, and HeartGold / SoulSilver.";
 
@@ -85,7 +85,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 _hgeSpecies = HgEngineSymbolTable.Load("include/constants/species.h");
                 _hgeFormTable = HgEngineFormRegistry.LoadAll();
             }
-            catch { _hgeSpecies = null; _hgeFormTable = null; }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleDisplayEditorViewModel.EnsureHgeFormLookup", ex); _hgeSpecies = null; _hgeFormTable = null; }
         }
 
         private void LoadFormOptions(int baseId)
@@ -193,7 +193,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 }
                 HasArenaGraphics = ok;
             }
-            catch { HasArenaGraphics = false; }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleDisplayEditorViewModel.ApplyArena", ex); HasArenaGraphics = false; }
             RenderGauges();
         }
 
@@ -209,11 +209,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public double PlayerHealthFillLeft => Data.BattleGaugeComposer.HealthFillLeft(Data.BattleGaugeComposer.Kind.PlayerSingle);
 
         // HGSS gauges are cream frames with dark text; DPPt frames are dark with white text.
-        public IBrush GaugeTextBrush => gameFamily == GameFamilies.HGSS
+        public IBrush GaugeTextBrush => GameFamily == GameFamilies.HGSS
             ? new SolidColorBrush(global::Avalonia.Media.Color.FromRgb(0x50, 0x50, 0x50))
             : new SolidColorBrush(global::Avalonia.Media.Color.FromRgb(0xF8, 0xF8, 0xF8));
 
-        private static string[] SafeSpeciesNames() { try { return GetPokemonNames(); } catch { return Array.Empty<string>(); } }
+        private static string[] SafeSpeciesNames() { try { return GetPokemonNames(); } catch (Exception ex) { AppLogger.WarnOnce("BattleDisplayEditorViewModel.SafeSpeciesNames", ex); return Array.Empty<string>(); } }
         public string GaugeNameText
         {
             get
@@ -243,7 +243,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 GaugeEnemyImage = Data.GaugeTextImages.Bar(false, GaugeNameText, 5)
                                ?? GaugeToBitmap(r.BuildGauge(false));
             }
-            catch { GaugePlayerImage = GaugeEnemyImage = null; }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleDisplayEditorViewModel.RenderGauges", ex); GaugePlayerImage = GaugeEnemyImage = null; }
             OnPropertyChanged(nameof(HasRealGauges));
             OnPropertyChanged(nameof(PlaceholderGaugesVisible));
             OnPropertyChanged(nameof(PlayerGaugeImageLeft));
@@ -618,7 +618,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 RawImage gdi = DSPRE.DSUtils.GetPokePicRaw(IconIdFor(_currentId), 64, 64, paletteIdOverride: _partyPaletteIndex);
                 IconPreview = gdi != null ? DSPRE.Avalonia.ImageConverter.ToAvaloniaBitmap(gdi) : null;
             }
-            catch { IconPreview = null; IconFrameCount = 1; }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleDisplayEditorViewModel.RefreshPreview", ex); IconPreview = null; IconFrameCount = 1; }
         }
 
         private static RawImage CropIconFrame(RawImage full, int frame)
@@ -645,7 +645,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (!IsAvailable || _currentId < 0) return null;
             if (_pendingIconGraphic != null) return _pendingIconGraphic;
             try { return DSPRE.DSUtils.GetMonIconGraphicRaw(IconIdFor(_currentId), _partyPaletteIndex); }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleDisplayEditorViewModel.ExportIconGraphic", ex); return null; }
         }
 
         /// <summary>Exports the icon as a genuine indexed PNG (real embedded 16-color palette table,
@@ -661,7 +661,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     return null;
                 return DSPRE.Avalonia.IndexedPngWriter.Encode4Bpp(indices, w, h, palette);
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleDisplayEditorViewModel.ExportIconGraphicIndexedPng", ex); return null; }
         }
 
         /// <summary>Validates and stages a replacement icon graphic; written to disk on Save(). Returns
@@ -687,7 +687,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // Platinum and HGSS keep offsets, animation and frame runs in one record. Everything that edits it
         // goes through this one cache, because each write saves the whole archive from its own copy.
         private OffsetNarc _recordNarc;
-        private static bool RecordFamily => gameFamily == GameFamilies.Plat || gameFamily == GameFamilies.HGSS;
+        private static bool RecordFamily => GameFamily == GameFamilies.Plat || GameFamily == GameFamilies.HGSS;
 
         private void EnsureSource()
         {
@@ -695,15 +695,15 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _srcTried = true;
             try
             {
-                if (RecordFamily) _recordNarc = new OffsetNarc(DirNames.pokemonSpriteOffsets, SpeciesSpriteData.Size);
-                _src = gameFamily switch
+                if (RecordFamily) _recordNarc = new OffsetNarc(DirNames.PokemonSpriteOffsets, SpeciesSpriteData.Size);
+                _src = GameFamily switch
                 {
                     GameFamilies.HGSS or GameFamilies.Plat => new CombinedTailSource(_recordNarc, withHeights: true),
-                    GameFamilies.DP => new SeparateByteSource(DirNames.pokeYofs, DirNames.pokeShadowOfx, DirNames.pokeShadow),
+                    GameFamilies.DP => new SeparateByteSource(DirNames.PokeYofs, DirNames.PokeShadowOfx, DirNames.PokeShadow),
                     _ => null,
                 };
             }
-            catch { _src = null; }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleDisplayEditorViewModel.EnsureSource", ex); _src = null; }
         }
 
         private SpeciesSpriteData ReadRecord()
@@ -791,7 +791,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             if (_formNarcTried) return;
             _formNarcTried = true;
-            _formHeightNarc = new OffsetNarc(DirNames.pokeHeightForms, 1);
+            _formHeightNarc = new OffsetNarc(DirNames.PokeHeightForms, 1);
         }
 
         private void LoadFormHeights()
@@ -810,7 +810,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 OnPropertyChanged(nameof(FormFrontHeight)); OnPropertyChanged(nameof(FormBackHeight));
                 HasFormHeights = true;
             }
-            catch { HasFormHeights = false; }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleDisplayEditorViewModel.LoadFormHeights", ex); HasFormHeights = false; }
         }
 
         private void SaveFormHeights()
@@ -835,7 +835,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         // ── Battle-sprite animation: movement script numbers, start delays and cry delays ──────────────
         // Platinum and HGSS read these from the sprite record, hg-engine from SpriteOffsets.c, DP from pokeanm.
-        private const int ANIM_REC_LEN = 28, ANIM_PAT_OFFSET = 8, ANIM_PAT_MAX = 10;
+        private const int AnimRecLen = 28, AnimPatOffset = 8, AnimPatMax = 10;
         private OffsetNarc _animNarc;
         private bool _animNarcTried;
 
@@ -852,13 +852,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// <summary>DP's pattern (frame) steps. Platinum, HGSS and hg-engine use the frame runs instead.</summary>
         public ObservableCollection<AnimPatternStep> AnimSteps { get; } = new ObservableCollection<AnimPatternStep>();
 
-        public bool CanAddAnimStep => AnimSteps.Count < ANIM_PAT_MAX;
+        public bool CanAddAnimStep => AnimSteps.Count < AnimPatMax;
 
         private void EnsureAnimNarc()
         {
             if (_animNarcTried) return;
             _animNarcTried = true;
-            if (IsAvailable) _animNarc = new OffsetNarc(DirNames.pokeAnim, ANIM_REC_LEN);
+            if (IsAvailable) _animNarc = new OffsetNarc(DirNames.PokeAnim, AnimRecLen);
         }
 
         private void LoadAnim(int id)
@@ -876,14 +876,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             EnsureAnimNarc();
             byte[] r = _animNarc?.GetRecord(BaseSpeciesIdFor(id));
-            if (r == null || r.Length < ANIM_REC_LEN) { OnPropertyChanged(nameof(CanAddAnimStep)); return; }
+            if (r == null || r.Length < AnimRecLen) { OnPropertyChanged(nameof(CanAddAnimStep)); return; }
             _animFrontProg = r[0]; _animFrontWait = r[1];
             for (int i = 0; i < 3; i++) AddBackStep(r[2 + i * 2], r[3 + i * 2]);
-            for (int i = 0; i < ANIM_PAT_MAX; i++)
+            for (int i = 0; i < AnimPatMax; i++)
             {
-                sbyte patno = (sbyte)r[ANIM_PAT_OFFSET + i * 2];
+                sbyte patno = (sbyte)r[AnimPatOffset + i * 2];
                 if (patno == -1) break;   // -1 ends; lower values are loops back, which the player follows
-                AddPatternStep(patno, r[ANIM_PAT_OFFSET + i * 2 + 1]);
+                AddPatternStep(patno, r[AnimPatOffset + i * 2 + 1]);
             }
             RecomputePatternSlots();
             OnPropertyChanged(nameof(AnimFrontProgNum)); OnPropertyChanged(nameof(AnimFrontWait)); OnPropertyChanged(nameof(CanAddAnimStep));
@@ -960,16 +960,16 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (_animNarc == null) return;
             int animId = BaseSpeciesIdFor(_currentId);
             byte[] r = _animNarc.GetRecord(animId);
-            if (r == null || r.Length < ANIM_REC_LEN) return;
+            if (r == null || r.Length < AnimRecLen) return;
             r[0] = (byte)_animFrontProg; r[1] = (byte)_animFrontWait;
             for (int i = 0; i < 3 && i < AnimBack.Count; i++) { r[2 + i * 2] = (byte)AnimBack[i].Number; r[3 + i * 2] = (byte)AnimBack[i].Wait; }
-            for (int i = 0; i < ANIM_PAT_MAX; i++)
+            for (int i = 0; i < AnimPatMax; i++)
             {
-                if (i < AnimSteps.Count) { r[ANIM_PAT_OFFSET + i * 2] = (byte)(sbyte)AnimSteps[i].Frame; r[ANIM_PAT_OFFSET + i * 2 + 1] = (byte)AnimSteps[i].Wait; }
+                if (i < AnimSteps.Count) { r[AnimPatOffset + i * 2] = (byte)(sbyte)AnimSteps[i].Frame; r[AnimPatOffset + i * 2 + 1] = (byte)AnimSteps[i].Wait; }
                 else
                 {
                     // The game stops at the first -1, so an existing terminator and whatever follows it stay as read.
-                    if (r[ANIM_PAT_OFFSET + i * 2] != 0xFF) { r[ANIM_PAT_OFFSET + i * 2] = 0xFF; r[ANIM_PAT_OFFSET + i * 2 + 1] = 0; }
+                    if (r[AnimPatOffset + i * 2] != 0xFF) { r[AnimPatOffset + i * 2] = 0xFF; r[AnimPatOffset + i * 2 + 1] = 0; }
                     break;
                 }
             }
@@ -982,7 +982,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         public void AddAnimStep()
         {
-            if (AnimSteps.Count >= ANIM_PAT_MAX) return;
+            if (AnimSteps.Count >= AnimPatMax) return;
             AddPatternStep(0, 4);
             OnPropertyChanged(nameof(CanAddAnimStep));
             if (!_loading) { SetDirty(); RecomputePatternSlots(); }
@@ -1176,7 +1176,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 await System.Threading.Tasks.Task.Run(() =>
                 {
-                    DSPRE.DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties, DirNames.textArchives });
+                    DSPRE.DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TrainerProperties, DirNames.TextArchives });
                     list = SendOutGraphics.TrainerList();
                     if (_trainerIndex < 0) initial = SendOutGraphics.DefaultTrainer();
                 });
@@ -1215,7 +1215,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // Diamond and Pearl pick one of three back animations by nature.
         private static readonly byte[] DpBackSlotForNature =
             { 0, 2, 0, 0, 0, 1, 1, 1, 0, 1, 2, 0, 1, 0, 0, 2, 2, 2, 2, 1, 1, 2, 1, 2, 1 };
-        public bool CanPickNature => gameFamily == GameFamilies.DP && !HgEngineProject.IsActive;
+        public bool CanPickNature => GameFamily == GameFamilies.DP && !HgEngineProject.IsActive;
         public IReadOnlyList<string> NatureOptions { get; } = DVCalculator.Natures.Select(n => n.Split(':')[0]).ToArray();
         private int _natureIndex;
         public int NatureIndex { get => _natureIndex; set { if (value >= 0 && Set(ref _natureIndex, value)) StopPlayback(); } }
@@ -1231,7 +1231,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private bool _kantoMusic;
         /// <summary>HGSS plays the Kanto versions of its standard themes in Kanto.</summary>
         public bool KantoMusic { get => _kantoMusic; set { if (Set(ref _kantoMusic, value)) { StopPlayback(); RefreshMusic(); } } }
-        public bool ShowKantoMusic => gameFamily == GameFamilies.HGSS;
+        public bool ShowKantoMusic => GameFamily == GameFamilies.HGSS;
 
         private string _battleMusicText = "";
         public string BattleMusicText { get => _battleMusicText; private set => Set(ref _battleMusicText, value); }
@@ -1334,7 +1334,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             if (_animDefsTried) return;
             _animDefsTried = true;
-            if (IsAvailable) _animDefsNarc = new OffsetNarc(DirNames.pokeAnimDefs, 1);
+            if (IsAvailable) _animDefsNarc = new OffsetNarc(DirNames.PokeAnimDefs, 1);
         }
 
         /// <summary>Plays or stops the chosen sides' movement scripts.</summary>
@@ -1410,7 +1410,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             catch (Exception ex) { AppLogger.Error("Battle music lookup failed: " + ex.Message); }
             if (version != _musicVersion) return null;
             BattleMusicText = name;
-            return seq >= 0 && _playMusic ? gfx.Music(seq) : null;
+            return seq >= 0 && _playMusic ? gfx.MusicAsync(seq) : null;
         }
 
         // Renders the current theme ahead of the next play.
@@ -1424,7 +1424,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             if (!_sound || !_playMusic || _gfx == null) return;
             int seq = _gfx.BattleMusic(IsTrainerBattle, Math.Max(0, _trainer.Class), _currentId, _kantoMusic);
-            Task<short[]> music = seq >= 0 ? _gfx.Music(seq) : null;
+            Task<short[]> music = seq >= 0 ? _gfx.MusicAsync(seq) : null;
             if (music != null && music.IsCompletedSuccessfully) _musicHandle = SendOutGraphics.StartMusic(music.Result);
         }
 
@@ -1492,7 +1492,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 Speed = (TextSpeed)_textSpeedIndex,
                 EnemyCryDelay = _animFrontCryDelay,
                 PlayerCryDelay = _animBackCryDelay,
-                CryZeroIsEight = gameFamily == GameFamilies.HGSS,
+                CryZeroIsEight = GameFamily == GameFamilies.HGSS,
                 TrainerSequences = trainer ? _gfx.EnemyTrainerSequenceCount(trainerClass) : 1,
                 TrainerLandingTicks = trainer ? _gfx.EnemyTrainerSequenceTicks(trainerClass, 1) : 0,
                 Text = MessageFor,
@@ -1510,8 +1510,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             for (int i = 0; i < 6; i++) { _enemyRowActors[i] = new CellActor(rowSeqs, 0); _playerRowActors[i] = new CellActor(rowSeqs, 3); }
             if (_sound)
             {
-                _cry = SendOutGraphics.Cry(_currentId);
-                _ballOpenSound = _gfx.BallOpenSound();
+                _cry = SendOutGraphics.CryAsync(_currentId);
+                _ballOpenSound = _gfx.BallOpenSoundAsync();
             }
             StartMusic();
             // The first tick shows at once; after that the timer steps it.
@@ -1521,7 +1521,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void StopSounds()
         {
-            try { AudioOutput.Current.Stop(); } catch { }
+            try { AudioOutput.Current.Stop(); } catch { }   // stopping a sound that already ended is harmless
         }
 
         /// <summary>The Ball Capsule used on send-out, whose seals replace the ball burst; null for the plain burst.</summary>
@@ -1591,7 +1591,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (s.PlayerCry) PlaySound(_cry);
             if (s.EnemySparkleStarts) _enemySparkle = StartSparkle(enemySide: true);
             if (s.PlayerSparkleStarts) _playerSparkle = StartSparkle(enemySide: false);
-            foreach (string name in s.Sounds) PlaySound(_gfx.Sound(name));
+            foreach (string name in s.Sounds) PlaySound(_gfx.SoundAsync(name));
 
             ApplySendOut();
             PushFrames();
@@ -1620,7 +1620,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             double x = enemySide ? EnemyLeft + 40 : PlayerLeft + 40;
             double y = enemySide ? EnemyTop + 40 : PlayerTop + 40;
             BattleAnimPlayer player = _gfx.Sparkle(enemySide, x, y);
-            if (player != null) player.PlaySound = id => PlaySound(_gfx.Sound(id));
+            if (player != null) player.PlaySound = id => PlaySound(_gfx.SoundAsync(id));
             return player;
         }
 
@@ -1889,13 +1889,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// <summary>Remembered between sessions and preview-only: it never changes what is saved.</summary>
         public int FrameRateIndex
         {
-            get => DSPRE.SettingsManager.Settings?.battlePreviewFps == 60 ? 1 : 0;
+            get => DSPRE.SettingsManager.Settings?.BattlePreviewFps == 60 ? 1 : 0;
             set
             {
                 int fps = value == 1 ? 60 : 30;
-                if (DSPRE.SettingsManager.Settings == null || DSPRE.SettingsManager.Settings.battlePreviewFps == fps) return;
-                DSPRE.SettingsManager.Settings.battlePreviewFps = fps;
-                try { DSPRE.SettingsManager.Save(); } catch { }
+                if (DSPRE.SettingsManager.Settings == null || DSPRE.SettingsManager.Settings.BattlePreviewFps == fps) return;
+                DSPRE.SettingsManager.Settings.BattlePreviewFps = fps;
+                try { DSPRE.SettingsManager.Save(); } catch (Exception ex) { AppLogger.Warn("Saving the battle preview frame rate: " + ex.Message); }
                 OnPropertyChanged(nameof(FrameRateIndex));
                 if (IsPlaying) { _ticksRun = 0; _clock.Restart(); }
             }
@@ -2055,7 +2055,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 HasHeights = rec.HasHeights;
                 HasSpriteData = true;
             }
-            catch { HasSpriteData = false; }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleDisplayEditorViewModel.LoadSpriteData", ex); HasSpriteData = false; }
         }
 
         // Heights come from data/HeightTable.c, a separate file from the sprite-offset block above.
@@ -2220,7 +2220,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (IsAvailable)
             {
                 ApplyArena();
-                try { LoadBallOptions(); } catch { }
+                try { LoadBallOptions(); } catch (Exception ex) { AppLogger.Warn("Battle display: ball options: " + ex.Message); }
             }
         }
 
@@ -2252,7 +2252,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 }
                 _partyPaletteIndex = (pal >= 0 && pal < PartyPalettes.Count) ? pal : 0;
             }
-            catch { _partyPaletteIndex = 0; }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleDisplayEditorViewModel.LoadMon", ex); _partyPaletteIndex = 0; }
             _savedPartyPaletteIndex = _partyPaletteIndex;
             OnPropertyChanged(nameof(PartyPaletteIndex));
             RefreshPreview();
@@ -2328,7 +2328,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (error != null)
             {
                 AppLogger.Error("Battle Display save failed: " + error);
-                _ = DSPRE.Avalonia.DialogHelper.ShowError("The Battle Display tab could not be saved: " + error, "Pokémon editor error");
+                _ = DSPRE.Avalonia.DialogHelper.ShowErrorAsync("The Battle Display tab could not be saved: " + error, "Pokémon editor error");
                 return;
             }
             _savedPartyPaletteIndex = _partyPaletteIndex;

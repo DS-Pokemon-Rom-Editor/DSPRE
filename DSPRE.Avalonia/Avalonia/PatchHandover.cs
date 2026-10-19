@@ -16,7 +16,7 @@ namespace DSPRE.Avalonia
         public static async Task OfferAsync(string key, string need, string title)
         {
             string patchTitle = PatchToolboxLogic.PatchTitles.TryGetValue(key, out string named) ? named : key;
-            bool open = await DialogHelper.AskTwoWay(
+            bool open = await DialogHelper.AskTwoWayAsync(
                 $"{need} needs the \"{patchTitle}\" patch. It changes the game's code, so it is applied from the ROM Patch Toolbox, "
                 + "where its notes say what it changes and what it backs up. Come back here once it is applied.",
                 title, "Open in Patch Toolbox", "Cancel");

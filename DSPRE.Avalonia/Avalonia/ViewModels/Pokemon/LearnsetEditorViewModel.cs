@@ -159,15 +159,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_current == null) return;
             if (_loadError != null)
             {
-                await DialogHelper.ShowError("The learnset could not be read.\n" + _loadError, "Import CSV", owner);
+                await DialogHelper.ShowErrorAsync("The learnset could not be read.\n" + _loadError, "Import CSV", owner);
                 return;
             }
             LearnsetCsv importer = new LearnsetCsv(RomInfo.GetPokemonNames(), _moveNamesArr, _currentId + 1, _currentId, _ => (Moves(), null));
             CsvImportSession session = await CsvImportReviewView.ReviewAsync(owner, importer);
             if (session == null) return;
             if (!importer.Result(session.Accepted).TryGetValue(_currentId, out List<LearnsetCsv.Move> moves)) return;
-            _current.list.Clear();
-            foreach (LearnsetCsv.Move m in moves) _current.list.Add(((byte)m.Level, (ushort)m.MoveId));
+            _current.List.Clear();
+            foreach (LearnsetCsv.Move m in moves) _current.List.Add(((byte)m.Level, (ushort)m.MoveId));
             RefreshEntries();
             SelectedEntryIndex = -1;
             SetDirty();
@@ -188,7 +188,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             Entries.Clear();
             if (_current != null)
             {
-                foreach ((byte level, ushort move) in _current.list)
+                foreach ((byte level, ushort move) in _current.List)
                 {
                     LearnsetEntryRow row = new LearnsetEntryRow { Level = level, MoveIndex = move };
                     row.UpdateDisplay(_moveNamesArr);
@@ -221,16 +221,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private byte[] LearnsetState()
         {
-            byte[] bytes = new byte[_current.list.Count * 3];
+            byte[] bytes = new byte[_current.List.Count * 3];
             int i = 0;
-            foreach ((byte level, ushort move) in _current.list) { bytes[i++] = level; bytes[i++] = (byte)move; bytes[i++] = (byte)(move >> 8); }
+            foreach ((byte level, ushort move) in _current.List) { bytes[i++] = level; bytes[i++] = (byte)move; bytes[i++] = (byte)(move >> 8); }
             return bytes;
         }
 
         private void ApplyLearnsetState(byte[] state)
         {
-            _current.list.Clear();
-            for (int i = 0; i + 2 < state.Length; i += 3) _current.list.Add((state[i], (ushort)(state[i + 1] | state[i + 2] << 8)));
+            _current.List.Clear();
+            for (int i = 0; i + 2 < state.Length; i += 3) _current.List.Add((state[i], (ushort)(state[i + 1] | state[i + 2] << 8)));
             RefreshEntries();
             SelectedEntryIndex = -1;
         }
@@ -260,7 +260,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             LearnsetData data = new LearnsetData(new System.IO.MemoryStream(bytes.ToArray()), wide: true);
             // The list drops repeated rows, so a save would silently remove them.
-            if (error == null && data.list.Count != moves.Count)
+            if (error == null && data.List.Count != moves.Count)
                 error = "learnsets.json repeats a level and move.";
             return data;
         }
@@ -270,11 +270,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_current == null || _addLevel < 1 || _addLevel > 100 || _addMoveIndex <= 0) return;
             (byte, ushort) entry = ((byte)_addLevel, (ushort)_addMoveIndex);
-            if (_current.list.Contains(entry)) { StatusText = "That entry is already there."; return; }
+            if (_current.List.Contains(entry)) { StatusText = "That entry is already there."; return; }
 
-            int insertAt = _current.list.FindIndex(x => x.level > entry.Item1 || (x.level == entry.Item1 && x.move > entry.Item2));
-            if (insertAt < 0) _current.list.Add(entry);
-            else              _current.list.Insert(insertAt, entry);
+            int insertAt = _current.List.FindIndex(x => x.level > entry.Item1 || (x.level == entry.Item1 && x.move > entry.Item2));
+            if (insertAt < 0) _current.List.Add(entry);
+            else              _current.List.Insert(insertAt, entry);
 
             RefreshEntries();
             SetDirty();
@@ -286,13 +286,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_current == null || !CanEdit || _addLevel < 1 || _addLevel > 100 || _addMoveIndex <= 0) return;
             (byte, ushort) entry = ((byte)_addLevel, (ushort)_addMoveIndex);
-            if (_current.list[_selectedEntryIndex] == entry) return;
-            if (_current.list.Contains(entry)) { StatusText = "That entry is already there."; return; }
+            if (_current.List[_selectedEntryIndex] == entry) return;
+            if (_current.List.Contains(entry)) { StatusText = "That entry is already there."; return; }
 
-            _current.list.RemoveAt(_selectedEntryIndex);
-            int insertAt = _current.list.FindIndex(x => x.level > entry.Item1 || (x.level == entry.Item1 && x.move > entry.Item2));
-            if (insertAt < 0) { _current.list.Add(entry); insertAt = _current.list.Count - 1; }
-            else              _current.list.Insert(insertAt, entry);
+            _current.List.RemoveAt(_selectedEntryIndex);
+            int insertAt = _current.List.FindIndex(x => x.level > entry.Item1 || (x.level == entry.Item1 && x.move > entry.Item2));
+            if (insertAt < 0) { _current.List.Add(entry); insertAt = _current.List.Count - 1; }
+            else              _current.List.Insert(insertAt, entry);
 
             RefreshEntries();
             Reselect(insertAt);
@@ -303,7 +303,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void DeleteEntry()
         {
             if (_current == null || !CanEdit) return;
-            _current.list.RemoveAt(_selectedEntryIndex);
+            _current.List.RemoveAt(_selectedEntryIndex);
             RefreshEntries();
             SetDirty();
         }
@@ -336,11 +336,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (_loadError != null)
                 {
                     StatusText = "Not saved: " + _loadError;
-                    _ = DialogHelper.ShowError("The learnset could not be saved.\n" + _loadError, "Pokémon editor error");
+                    _ = DialogHelper.ShowErrorAsync("The learnset could not be saved.\n" + _loadError, "Pokémon editor error");
                     return;
                 }
-                List<(int level, int move)> entries = new System.Collections.Generic.List<(int level, int move)>(_current.list.Count);
-                foreach ((byte level, ushort move) in _current.list) entries.Add((level, move));
+                List<(int level, int move)> entries = new System.Collections.Generic.List<(int level, int move)>(_current.List.Count);
+                foreach ((byte level, ushort move) in _current.List) entries.Add((level, move));
                 string error;
                 bool ok;
                 try { ok = DSPRE.HgEngine.HgEngineLearnsets.TrySaveLevelMoves(_currentId, entries, out error); }
@@ -349,7 +349,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (!ok)
                 {
                     StatusText = "Not saved: " + error;
-                    _ = DialogHelper.ShowError("The learnset could not be saved.\n" + error, "Pokémon editor error");
+                    _ = DialogHelper.ShowErrorAsync("The learnset could not be saved.\n" + error, "Pokémon editor error");
                     return;
                 }
             }
@@ -367,7 +367,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void RefreshEntries()
         {
             Entries.Clear();
-            foreach ((byte level, ushort move) in _current.list)
+            foreach ((byte level, ushort move) in _current.List)
             {
                 LearnsetEntryRow row = new LearnsetEntryRow { Level = level, MoveIndex = move };
                 row.UpdateDisplay(_moveNamesArr);
@@ -388,9 +388,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void SwapEntries(int a, int b)
         {
             if (_current == null) return;
-            (byte level, ushort move) tmp = _current.list[a];
-            _current.list[a] = _current.list[b];
-            _current.list[b] = tmp;
+            (byte level, ushort move) tmp = _current.List[a];
+            _current.List[a] = _current.List[b];
+            _current.List[b] = tmp;
             RefreshEntries();
         }
 

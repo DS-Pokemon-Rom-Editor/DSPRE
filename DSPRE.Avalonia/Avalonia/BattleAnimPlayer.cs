@@ -121,7 +121,7 @@ namespace DSPRE.Avalonia
         private byte[] _bgRgba; private int _bgW, _bgH, _bgWrapW, _bgWrapH;
         private const int WET02_START_Y_OFS = 128;
         private const int WET02_STOP_Y_HI = 512, WET02_STOP_Y_LO = -412;
-        private const int FX_BG_WRAP = 512;
+        private const int FxBgWrap = 512;
         private double _bgX, _bgY, _bgSpdX, _bgSpdY;
 
         private int _bgHoldLeft = -1;
@@ -608,8 +608,8 @@ namespace DSPRE.Avalonia
 
         private SpaSimulator FindEmitter(int idx) => _emitSlots.TryGetValue(idx, out SpaSimulator s) ? s : _lastSim;
 
-        private static readonly HashSet<int> _startPos = new HashSet<int> { 1, 4, 6, 8, 10, 14, 16, 18, 20, 22, 24, 26, 34 };
-        private static bool IsStartPos(int pos) => _startPos.Contains(pos);
+        private static readonly HashSet<int> StartPos = new HashSet<int> { 1, 4, 6, 8, 10, 14, 16, 18, 20, 22, 24, 26, 34 };
+        private static bool IsStartPos(int pos) => StartPos.Contains(pos);
 
         private void SpawnOperator(int ptc, int emitterNo)
         {
@@ -655,8 +655,8 @@ namespace DSPRE.Avalonia
             {
                 int t = sClient == 0 ? 0 : 1;
                 (int x, int y) p = pos == 30 ? Pos226[t] : pos == 32 ? Pos225[t] : Pos145[t];
-                anchorX = PARTICLE_ORIGIN_X + p.x / 172.0;
-                anchorY = PARTICLE_ORIGIN_Y - p.y / 172.0;
+                anchorX = ParticleOriginX + p.x / 172.0;
+                anchorY = ParticleOriginY - p.y / 172.0;
             }
             double sx = anchorX + em.PosX + posOfsX, sy = anchorY - em.PosY - posOfsY;
             double driftX = 0, driftY = 0, magOX = double.NaN, magOY = double.NaN, convOX = double.NaN, convOY = double.NaN;
@@ -672,8 +672,8 @@ namespace DSPRE.Avalonia
                 if (fldFracD != 1 || fldFracN != 1)
                 {
                     double f = (double)fldFracN / fldFracD;
-                    tgX = PARTICLE_ORIGIN_X + f * (tgX - PARTICLE_ORIGIN_X);
-                    tgY = PARTICLE_ORIGIN_Y + f * (tgY - PARTICLE_ORIGIN_Y);
+                    tgX = ParticleOriginX + f * (tgX - ParticleOriginX);
+                    tgY = ParticleOriginY + f * (tgY - ParticleOriginY);
                 }
                 double rX = tgX - sx, rY = sy - tgY;
                 double rZ = ZOfVis(fldTgt == 2 ? _atVis : _dfVis) - (ZOfVis(src == 0 ? _atVis : _dfVis) + em.PosZ);
@@ -712,7 +712,7 @@ namespace DSPRE.Avalonia
             TrackSim(ptc, sim);
         }
 
-        private const double PARTICLE_ORIGIN_X = 120, PARTICLE_ORIGIN_Y = 96;
+        private const double ParticleOriginX = 120, ParticleOriginY = 96;
         private static readonly (int x, int y)[] Pos145 = { (-5760, -4352), (9488, -1984) };
         private static readonly (int x, int y)[] Pos225 = { (-4608, -4480), (7624, 2248) };
         private static readonly (int x, int y)[] Pos226 = { (-11020, -3488), (10880, 7656) };
@@ -2004,8 +2004,8 @@ namespace DSPRE.Avalonia
             BattleBgRenderer.BgImage img = _bgRenderer.Build(bgId, reverse: _attackerIsEnemy);
             if (img == null) return;
             _bgRgba = img.Rgba; _bgW = img.Width; _bgH = img.Height;
-            _bgWrapW = overlay ? FX_BG_WRAP : _bgW;
-            _bgWrapH = overlay ? FX_BG_WRAP : _bgH;
+            _bgWrapW = overlay ? FxBgWrap : _bgW;
+            _bgWrapH = overlay ? FxBgWrap : _bgH;
             _bgX = posX; _bgY = posY; _bgSpdX = spdX; _bgSpdY = spdY;
             _bgHoldLeft = -1;
             _bgOpacity = 0; _bgPeak = peak; _bgFadeFrames = Math.Max(1, fadeFrames);
@@ -2080,9 +2080,9 @@ namespace DSPRE.Avalonia
             switch (callback)
             {
                 case 18:
-                    return (PARTICLE_ORIGIN_X, PARTICLE_ORIGIN_Y, 0, 0, 0);
+                    return (ParticleOriginX, ParticleOriginY, 0, 0, 0);
                 case 0:
-                    return (PARTICLE_ORIGIN_X, PARTICLE_ORIGIN_Y, 0, 0, 0);
+                    return (ParticleOriginX, ParticleOriginY, 0, 0, 0);
                 case 1: case 3: case 19: case 21:
                     return (_atX, _atY, 0, 0, ZOfVis(_atVis));
                 case 5: case 7: case 8: case 9: case 10: case 11:

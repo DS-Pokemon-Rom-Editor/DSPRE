@@ -14,94 +14,94 @@ namespace DSPRE
 
     public class DspreSettings
     {
-        public byte menuLayout { get; set; } = 2;
-        public bool textEditorPreferHex { get; set; } = false;
-        public int scriptEditorFormatPreference { get; set; } = 0;
+        public byte MenuLayout { get; set; } = 2;
+        public bool TextEditorPreferHex { get; set; } = false;
+        public int ScriptEditorFormatPreference { get; set; } = 0;
         // Which of the move-animation editor's three ways of reading a script was last used:
         // 0 guided, 1 script, 2 raw.
-        public int moveAnimationViewMode { get; set; } = 0;
+        public int MoveAnimationViewMode { get; set; } = 0;
 
         /// <summary>Battle Display preview only: animation ticks per second, 30 as in game or 60.</summary>
-        public int battlePreviewFps { get; set; } = 30;
+        public int BattlePreviewFps { get; set; } = 30;
         // Flat 2D event view, off by default so the 3D scene stays the first impression.
-        public bool eventEditorFlat2D { get; set; } = false;
-        public bool mapEditorFlat2D { get; set; } = false;
-        public string exportPath { get; set; } = "";
-        public string mapImportStarterPoint { get; set; } = "";
-        public string openDefaultRom { get; set; } = "";
+        public bool EventEditorFlat2D { get; set; } = false;
+        public bool MapEditorFlat2D { get; set; } = false;
+        public string ExportPath { get; set; } = "";
+        public string MapImportStarterPoint { get; set; } = "";
+        public string OpenDefaultRom { get; set; } = "";
 
         /// <summary>The emulator Build and Run uses without asking, as an EmulatorKind name; empty asks each time.</summary>
-        public string preferredEmulator { get; set; } = "";
+        public string PreferredEmulator { get; set; } = "";
         /// <summary>Where each emulator the user has pointed DSPRE at lives, by EmulatorKind name.</summary>
-        public Dictionary<string, string> emulatorPaths { get; set; } = new Dictionary<string, string>();
+        public Dictionary<string, string> EmulatorPaths { get; set; } = new Dictionary<string, string>();
         /// <summary>The save Build and Run offers to start each project from, keyed by project folder.</summary>
-        public Dictionary<string, string> testSaves { get; set; } = new Dictionary<string, string>();
+        public Dictionary<string, string> TestSaves { get; set; } = new Dictionary<string, string>();
         /// <summary>Whether Build and Run on a linked hg-engine checkout runs make first.</summary>
-        public bool buildAndRunCompiles { get; set; } = true;
+        public bool BuildAndRunCompiles { get; set; } = true;
 
         /// <summary>
         /// Which give-a-Pokemon command the starter editor was told to treat as the starter, keyed by
         /// project folder, and what the set of candidates looked like at the time. The fingerprint is
         /// how a newly added one gets noticed without asking on every open.
         /// </summary>
-        public Dictionary<string, string> starterCommandChoice { get; set; } = new Dictionary<string, string>();
-        public Dictionary<string, string> starterCommandFingerprint { get; set; } = new Dictionary<string, string>();
-        public bool neverAskForOpening { get; set; } = false;
-        public bool databasesPulled { get; set; } = false;
-        public bool automaticallyCheckForUpdates { get; set; } = true;
-        public bool automaticallyUpdateDBs { get; set; } = true;
-        public bool convertLegacyText { get; set; } = true;
-        public string rotomEditorTheme { get; set; } = "OneDark";
+        public Dictionary<string, string> StarterCommandChoice { get; set; } = new Dictionary<string, string>();
+        public Dictionary<string, string> StarterCommandFingerprint { get; set; } = new Dictionary<string, string>();
+        public bool NeverAskForOpening { get; set; } = false;
+        public bool DatabasesPulled { get; set; } = false;
+        public bool AutomaticallyCheckForUpdates { get; set; } = true;
+        public bool AutomaticallyUpdateDBs { get; set; } = true;
+        public bool ConvertLegacyText { get; set; } = true;
+        public string RotomEditorTheme { get; set; } = "OneDark";
 
         /// <summary>The light or dark skin, so the choice survives closing the program.</summary>
-        public bool darkTheme { get; set; } = true;
+        public bool DarkTheme { get; set; } = true;
 
         /// <summary>Avalonia scale override (0 = use the platform scale).</summary>
-        public double uiScale { get; set; } = 0;
+        public double UiScale { get; set; } = 0;
 
         // 3D-view camera behaviour (mouse). Speeds are multipliers (1.0 = default); invert flags flip an axis.
-        public float camPanSpeed { get; set; } = 1.0f;
-        public float camOrbitSpeed { get; set; } = 1.0f;
-        public float camZoomSpeed { get; set; } = 1.0f;
-        public bool camInvertPanX { get; set; } = false;
-        public bool camInvertPanY { get; set; } = true;
-        public bool camInvertOrbitX { get; set; } = false;
-        public bool camInvertOrbitY { get; set; } = false;
-        public bool camInvertZoom { get; set; } = false;
+        public float CamPanSpeed { get; set; } = 1.0f;
+        public float CamOrbitSpeed { get; set; } = 1.0f;
+        public float CamZoomSpeed { get; set; } = 1.0f;
+        public bool CamInvertPanX { get; set; } = false;
+        public bool CamInvertPanY { get; set; } = true;
+        public bool CamInvertOrbitX { get; set; } = false;
+        public bool CamInvertOrbitY { get; set; } = false;
+        public bool CamInvertZoom { get; set; } = false;
 
         /// <summary>Show the Welcome &amp; Tutorial window when the Avalonia shell starts.</summary>
-        public bool showWelcomeOnStartup { get; set; } = true;
+        public bool ShowWelcomeOnStartup { get; set; } = true;
 
         /// <summary>Whether the first-time guided tour has already run (or been skipped). While false,
         /// the tour starts automatically after the next successful ROM load in the Avalonia shell.</summary>
-        public bool guidedTourShown { get; set; } = false;
+        public bool GuidedTourShown { get; set; } = false;
 
         /// <summary>Editors whose first-open tour has run; the rest show theirs the next time they open.</summary>
-        public List<string> editorToursShown { get; set; } = new List<string>();
+        public List<string> EditorToursShown { get; set; } = new List<string>();
 
         /// <summary>Project folders that generated patch credits or declined the offer after saving.</summary>
-        public List<string> patchCreditsHandled { get; set; } = new List<string>();
+        public List<string> PatchCreditsHandled { get; set; } = new List<string>();
 
         /// <summary>Main-window placement, saved on close and restored at startup (0 = unset).</summary>
-        public double mainWindowWidth { get; set; } = 0;
-        public double mainWindowHeight { get; set; } = 0;
-        public bool mainWindowMaximized { get; set; } = false;
+        public double MainWindowWidth { get; set; } = 0;
+        public double MainWindowHeight { get; set; } = 0;
+        public bool MainWindowMaximized { get; set; } = false;
 
         /// <summary>Side panel widths the user dragged to in the Map and Event editors (0 = default).</summary>
-        public double mapEditorSidePanelWidth { get; set; } = 0;
-        public double eventEditorSidePanelWidth { get; set; } = 0;
+        public double MapEditorSidePanelWidth { get; set; } = 0;
+        public double EventEditorSidePanelWidth { get; set; } = 0;
 
         /// <summary>How the map model editor's tile palette pictures tiles: 0 automatic, 1 angled, 2 from above.</summary>
-        public int mapTilesView { get; set; } = 0;
+        public int MapTilesView { get; set; } = 0;
 
         /// <summary>Most-recently-opened projects (.nds files or extracted folders), newest first.</summary>
-        public List<string> recentProjects { get; set; } = new List<string>();
+        public List<string> RecentProjects { get; set; } = new List<string>();
 
         /// <summary>Menu items pinned beside the menus, by their place in the menus ("Trainers > Trainer editor").</summary>
-        public List<string> favouriteMenuItems { get; set; } = new List<string>();
+        public List<string> FavouriteMenuItems { get; set; } = new List<string>();
 
         /// <summary>Set once the default pins have been offered, so pins removed later stay removed.</summary>
-        public bool favouritesSeeded { get; set; }
+        public bool FavouritesSeeded { get; set; }
     }
 
     public static class SettingsManager
@@ -142,7 +142,7 @@ namespace DSPRE
         public static void RecordRecentProject(string path)
         {
             if (Settings == null || string.IsNullOrWhiteSpace(path)) return;
-            List<string> list = Settings.recentProjects ?? (Settings.recentProjects = new List<string>());
+            List<string> list = Settings.RecentProjects ?? (Settings.RecentProjects = new List<string>());
             list.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
             list.Insert(0, path);
             if (list.Count > MaxRecentProjects)
@@ -155,8 +155,8 @@ namespace DSPRE
         /// <summary>Removes a stale entry (deleted/moved project) from the recent list.</summary>
         public static void RemoveRecentProject(string path)
         {
-            if (Settings?.recentProjects == null) return;
-            Settings.recentProjects.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
+            if (Settings?.RecentProjects == null) return;
+            Settings.RecentProjects.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
             Save();
         }
     }

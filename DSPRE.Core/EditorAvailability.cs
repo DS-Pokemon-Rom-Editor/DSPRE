@@ -42,7 +42,7 @@ namespace DSPRE
         private const string LinkHint = "File > Open hg-engine folder";
 
         private static Func<string> Unless(Func<bool> supported, string why) => () => supported() ? null : why;
-        private static bool Family(params GameFamilies[] families) => Array.IndexOf(families, gameFamily) >= 0;
+        private static bool Family(params GameFamilies[] families) => Array.IndexOf(families, GameFamily) >= 0;
         private static string NoSpot(RomLocator.Thing table) =>
             RomLocator.Where(table) == null ? "Works on " + DescribeDumps(RomLocator.WorksOnAll(table)) + "." : null;
 
@@ -105,7 +105,7 @@ namespace DSPRE
             ["TMEditorView"] = new Rule { Title = "The TM Editor", Hge = HgEngine.NeedsLink },
             ["BattleScriptEditorView"] = new Rule
             {
-                Title = "The Battle Script Editor", Hge = HgEngine.NeedsLink, BuiltArchives = new[] { DirNames.wazaParticle },
+                Title = "The Battle Script Editor", Hge = HgEngine.NeedsLink, BuiltArchives = new[] { DirNames.WazaParticle },
                 Unsupported = Unless(() => Family(GameFamilies.Plat, GameFamilies.HGSS), "The Battle Script Editor supports Platinum, HeartGold and SoulSilver."),
             },
             ["ItemTableEditorView"] = new Rule
@@ -117,7 +117,7 @@ namespace DSPRE
             ["TableEditorView"] = new Rule
             {
                 Title = "Music & Battle Tables", Hge = HgEngine.NeedsLink,
-                Unsupported = Unless(() => gameFamily != GameFamilies.DP || BattleMusicTables.IsSupported, "Music & Battle Tables does not support this Diamond or Pearl ROM."),
+                Unsupported = Unless(() => GameFamily != GameFamilies.DP || BattleMusicTables.IsSupported, "Music & Battle Tables does not support this Diamond or Pearl ROM."),
             },
             ["BattleTowerEditorView"] = new Rule
             {
@@ -170,7 +170,7 @@ namespace DSPRE
                                      "The Summary Screen editor works on English Platinum, HeartGold and SoulSilver."),
             },
             ["NamingScreenEditor"] = new Rule { Title = "The Naming Screen Editor", Hge = HgEngine.NeedsLink, Beta = "TrainerSpriteEditorView" },
-            ["ParticleEditorView"] = new Rule { Title = "The Particle Editor", Hge = HgEngine.NeedsLink, BuiltArchives = new[] { DirNames.wazaParticle } },
+            ["ParticleEditorView"] = new Rule { Title = "The Particle Editor", Hge = HgEngine.NeedsLink, BuiltArchives = new[] { DirNames.WazaParticle } },
             ["ParticleLibraryView"] = new Rule { Title = "The Particle Library", Hge = HgEngine.NeedsLink },
             ["BallCapsuleEditorView"] = new Rule { Title = "The Ball Capsule Editor", Hge = HgEngine.NeedsLink },
             ["BannerEditorView"] = new Rule { Title = "The Game Icon & Banner editor", Hge = HgEngine.NeedsLink },
@@ -187,12 +187,12 @@ namespace DSPRE
             ["BattleScreenEditorView"] = new Rule
             {
                 Title = "The Battle Screen Editor", Hge = HgEngine.NeedsLink,
-                BuiltArchives = new[] { DirNames.battleObj, DirNames.windowFrames, DirNames.fonts },
+                BuiltArchives = new[] { DirNames.BattleObj, DirNames.WindowFrames, DirNames.Fonts },
             },
             ["HpBarLayoutEditorView"] = new Rule
             {
                 Title = "The HP bar layout editor", Hge = HgEngine.NeedsLink,
-                BuiltArchives = new[] { DirNames.battleObj, DirNames.fonts },
+                BuiltArchives = new[] { DirNames.BattleObj, DirNames.Fonts },
                 Unsupported = Unless(() => ROMFiles.BattleGaugePieces.Locate()?.HasSlots == true,
                                      "The HP bar tables were not found in this ROM's battle code."),
             },
@@ -201,7 +201,7 @@ namespace DSPRE
             ["GraphicsBrowserView"] = new Rule { Title = "The graphics list", Hge = HgEngine.NeedsLink, NeedsRom = false },
             ["ModelBrowserView"] = new Rule { Title = "The models list", Hge = HgEngine.NeedsLink, NeedsRom = false },
             ["TilesetBuilderView"] = new Rule { Title = "Picture to Background", Hge = HgEngine.NeedsLink, NeedsRom = false },
-            ["FontEditorView"] = new Rule { Title = "The Font Editor", Hge = HgEngine.NeedsLink, NeedsRom = false, BuiltArchives = new[] { DirNames.fonts } },
+            ["FontEditorView"] = new Rule { Title = "The Font Editor", Hge = HgEngine.NeedsLink, NeedsRom = false, BuiltArchives = new[] { DirNames.Fonts } },
             ["BattleSceneBrowserView"] = new Rule { Title = "The battle scenes list", Hge = HgEngine.NeedsLink, NeedsRom = false },
 
             ["HgEngineFormEditorView"] = new Rule { Title = "The Form Editor", Hge = HgEngine.LinkedOnly },
@@ -213,18 +213,18 @@ namespace DSPRE
             ["HgeRomReviewView"] = new Rule
             {
                 Title = "The hg-engine ROM Review",
-                Unsupported = Unless(() => isHGE, "This review reads hg-engine's own archives, and this ROM is not an hg-engine build."),
+                Unsupported = Unless(() => IsHGE, "This review reads hg-engine's own archives, and this ROM is not an hg-engine build."),
             },
             ["DistortionWorldView"] = new Rule
             {
                 Title = "The Distortion World editor",
-                Unsupported = Unless(() => gameFamily == GameFamilies.Plat, "The Distortion World only exists in Platinum."),
+                Unsupported = Unless(() => GameFamily == GameFamilies.Plat, "The Distortion World only exists in Platinum."),
             },
         };
 
         public const string NoRom = "Open a ROM first.";
 
-        public static bool RomOpen => gameFamily != GameFamilies.NULL;
+        public static bool RomOpen => GameFamily != GameFamilies.NULL;
 
         /// <summary>Why the editor can't open now, or null when it can. Editors with no rule only need an open ROM.</summary>
         public static string WhyNot(string editor)
@@ -236,12 +236,12 @@ namespace DSPRE
             string title = rule.Title;
             switch (rule.Hge)
             {
-                case HgEngine.NeedsLink when isHGE && !HgEngineProject.IsActive:
+                case HgEngine.NeedsLink when IsHGE && !HgEngineProject.IsActive:
                     return $"{title} is not available for an hg-engine ROM opened on its own. Open its hg-engine folder instead ({LinkHint}).";
-                case HgEngine.Source when isHGE && !HgEngineProject.IsActive:
+                case HgEngine.Source when IsHGE && !HgEngineProject.IsActive:
                     return $"{title} is disabled for hg-engine ROMs: hg-engine manages this data itself and would overwrite any changes " +
                         $"made here on its next build. Open its hg-engine folder ({LinkHint}) to edit it from source instead.";
-                case HgEngine.Closed when isHGE:
+                case HgEngine.Closed when IsHGE:
                     return rule.HgeReason != null ? $"{title} is disabled for hg-engine ROMs: {rule.HgeReason}"
                         : $"{title} is disabled for hg-engine ROMs: hg-engine manages this data itself and would overwrite any changes made here on its next build.";
                 case HgEngine.LinkedOnly when !HgEngineProject.IsActive:

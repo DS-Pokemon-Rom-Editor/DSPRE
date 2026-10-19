@@ -88,7 +88,7 @@ namespace DSPRE.Avalonia.Data
             public double HealthLeft = 1.0;
         }
 
-        private readonly ScriptNarc _bg = new ScriptNarc(DirNames.battleBg);
+        private readonly ScriptNarc _bg = new ScriptNarc(DirNames.BattleBg);
         private BattleGroundRenderer _ground;
         private BattleBgRenderer _backdrop;
 
@@ -164,7 +164,7 @@ namespace DSPRE.Avalonia.Data
             {
                 Name = "Backdrop",
                 What = "The sky and ground behind the battle.",
-                Archive = DirNames.battleBg,
+                Archive = DirNames.BattleBg,
             };
 
             // Which files this backdrop is made of, so the editor can hand them over. Without these
@@ -198,14 +198,14 @@ namespace DSPRE.Avalonia.Data
             (int MineDrawing, int EnemyDrawing, int MineLayout, int EnemyLayout, int PaletteDay)? files = BattleGroundRenderer.TerrainFiles(o.TerrainId);
             (BattleGroundRenderer.GroundImage mine, BattleGroundRenderer.GroundImage enemy) both;
             try { both = r.Build(o.TerrainId, o.TimeOfDay); }
-            catch { both = (null, null); }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleScreenRenderer.AddGround", ex); both = (null, null); }
             foreach (bool player in new[] { false, true })
             {
                 Piece piece = new Piece
                 {
                     Name = player ? "Your ground" : "Their ground",
                     What = "The tray the Pokémon stands on.",
-                    Archive = DirNames.battleObj,
+                    Archive = DirNames.BattleObj,
                     Drawing = files.HasValue ? (player ? files.Value.MineDrawing : files.Value.EnemyDrawing) : -1,
                     Layout = files.HasValue ? (player ? files.Value.MineLayout : files.Value.EnemyLayout) : -1,
                     Colours = files.HasValue ? files.Value.PaletteDay + o.TimeOfDay : -1,
@@ -232,7 +232,7 @@ namespace DSPRE.Avalonia.Data
                 {
                     Name = BattleGaugeComposer.NameOf(kind),
                     What = "The name, level and health of one Pokémon.",
-                    Archive = DirNames.battleObj,
+                    Archive = DirNames.BattleObj,
                     Drawing = BattleObjects.Find(thing, "Drawing"),
                     Layout = BattleObjects.Find(thing, "As it appears"),
                     Colours = BattleObjects.Find("HpBar.Shared", "Colours"),
@@ -311,7 +311,7 @@ namespace DSPRE.Avalonia.Data
                 Name = "Message box",
                 What = "The box battle text is written in. Which of the twenty frames it uses is the "
                      + "player's own setting, the same one the field uses.",
-                Archive = DirNames.windowFrames,
+                Archive = DirNames.WindowFrames,
                 Top = MessageTop,
                 SharedNote = "This frame is the one the whole game writes in, field and battle alike.",
             };
@@ -395,7 +395,7 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>Which menus this game has.</summary>
         public static IReadOnlyList<TouchMenu> MenusForGame() =>
-            RomInfo.gameFamily == GameFamilies.DP
+            RomInfo.GameFamily == GameFamilies.DP
                 ? new[] { TouchMenu.Background, TouchMenu.Command, TouchMenu.Fight, TouchMenu.Target, TouchMenu.YesNo }
                 : new[] { TouchMenu.Background, TouchMenu.Command, TouchMenu.Fight, TouchMenu.Target, TouchMenu.YesNo, TouchMenu.Playback };
 
@@ -423,7 +423,7 @@ namespace DSPRE.Avalonia.Data
             (byte r, byte g, byte b)[] colours = PanelColours(ResolveBackdrop(o), o.Menu);
             // Layer 1 is blended over every layer under it. Platinum and HeartGold weigh it 8/16 over 12/16;
             // Diamond and Pearl ask for 27 and 4, and the hardware caps a weight at 16.
-            (int own, int below) blend = RomInfo.gameFamily == GameFamilies.DP ? (16, 4) : (8, 12);
+            (int own, int below) blend = RomInfo.GameFamily == GameFamilies.DP ? (16, 4) : (8, 12);
             foreach (PanelLayer layer in LayersOf(o.Menu).OrderByDescending(l => l.Priority).ThenByDescending(l => l.BgNumber))
             {
                 Piece piece = AddPanelLayer(pieces, layer.Name, layer.Screen, layer.What, colours, opaque: layer == Background);
@@ -447,7 +447,7 @@ namespace DSPRE.Avalonia.Data
             (byte r, byte g, byte b)[] all = new (byte r, byte g, byte b)[256];
             for (int i = 0; i < all.Length && i < count; i++) all[i] = wide[i];
 
-            if (RomInfo.gameFamily != GameFamilies.DP)
+            if (RomInfo.GameFamily != GameFamilies.DP)
             {
                 string tint = backdrop >= 0 && backdrop <= 17 ? $"TouchScreen.Tint.{backdrop}:Colours" : null;
                 int sceneAt = tint == null ? -1 : BattleBgNames.Find(tint);
@@ -480,7 +480,7 @@ namespace DSPRE.Avalonia.Data
         {
             Piece piece = new Piece
             {
-                Name = name, What = what, Touch = true, Archive = DirNames.battleBg,
+                Name = name, What = what, Touch = true, Archive = DirNames.BattleBg,
                 // Every layer of the panel is drawn from the one sheet of tiles, so there is no
                 // saying which layer a painted picture should go back into.
                 CannotEditBecause = "All the touch screen layers share one sheet of tiles, so a "

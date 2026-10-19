@@ -120,7 +120,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private bool DetectClassRecords()
         {
-            IsClassRecords = gameFamily == GameFamilies.HGSS &&
+            IsClassRecords = GameFamily == GameFamilies.HGSS &&
                 TrainerClassMetadataStore.DetectCurrentRom(out _) == TrainerClassMetadataDetectionState.SchemaV1;
             return IsClassRecords;
         }
@@ -138,7 +138,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 _records.Add(record);
                 _savedRecords.Add(record.ToByteArray());
             }
-            try { _classNames = GetTrainerClassNames(); } catch { _classNames = Array.Empty<string>(); }
+            try { _classNames = GetTrainerClassNames(); } catch (Exception ex) { AppLogger.WarnOnce("VsIntroEditorViewModel.LoadClassRecords", ex); _classNames = Array.Empty<string>(); }
         }
 
         /// <summary>Reads the classes again; an unsaved edit stays only if its class is unchanged on disk.</summary>
@@ -593,7 +593,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (failures.Count > 0)
             {
                 string done = saved.Count > 0 ? "Saved: " + string.Join(", ", saved) + ".\n\n" : "";
-                await DialogHelper.ShowError(done + "Not saved, still unsaved:\n" + string.Join("\n", failures), Title);
+                await DialogHelper.ShowErrorAsync(done + "Not saved, still unsaved:\n" + string.Join("\n", failures), Title);
                 return false;
             }
             SaveNotice.Saved(UnsavedChangesDescription);

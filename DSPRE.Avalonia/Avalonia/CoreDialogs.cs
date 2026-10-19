@@ -22,11 +22,11 @@ namespace DSPRE.Avalonia
         {
             // Message boxes are fire-and-forget: marshal to the UI thread and don't block the caller.
             DSPRE.AppMessages.ErrorHook = (msg, title) =>
-                Dispatcher.UIThread.Post(() => _ = DialogHelper.ShowError(msg, Coalesce(title, "Error")));
+                Dispatcher.UIThread.Post(() => _ = DialogHelper.ShowErrorAsync(msg, Coalesce(title, "Error")));
             DSPRE.AppMessages.InfoHook = (msg, title) =>
-                Dispatcher.UIThread.Post(() => _ = DialogHelper.ShowInfo(msg, Coalesce(title, "Information")));
+                Dispatcher.UIThread.Post(() => _ = DialogHelper.ShowInfoAsync(msg, Coalesce(title, "Information")));
             DSPRE.AppMessages.WarningHook = (msg, title) =>
-                Dispatcher.UIThread.Post(() => _ = DialogHelper.ShowError(msg, Coalesce(title, "Warning")));
+                Dispatcher.UIThread.Post(() => _ = DialogHelper.ShowErrorAsync(msg, Coalesce(title, "Warning")));
 
             // Save picker must return synchronously (the core export APIs are sync); pump a nested
             // Avalonia dispatcher frame while the async picker runs.
@@ -83,7 +83,7 @@ namespace DSPRE.Avalonia
             }).ContinueWith(t =>
             {
                 try { path = t.Result?.TryGetLocalPath(); }
-                catch { path = null; }
+                catch (Exception ex) { AppLogger.WarnOnce("CoreDialogs.PickSaveFileSync", ex); path = null; }
                 finally { done = true; }
             }, uiScheduler);
 
@@ -111,7 +111,7 @@ namespace DSPRE.Avalonia
                     IReadOnlyList<IStorageFolder> folders = t.Result;
                     path = folders != null && folders.Count > 0 ? folders[0].TryGetLocalPath() : null;
                 }
-                catch { path = null; }
+                catch (Exception ex) { AppLogger.WarnOnce("CoreDialogs.PickFolderSync", ex); path = null; }
                 finally { done = true; }
             }, uiScheduler);
 

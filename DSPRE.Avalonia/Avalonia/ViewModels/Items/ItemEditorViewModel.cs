@@ -80,7 +80,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             MaxItemDataId = GetItemDataFileCount() - 1;
             PopulateIconPaletteDropdowns();
 
-            if (!RomInfo.isHGE)
+            if (!RomInfo.IsHGE)
             {
                 int bad = ItemTable.Limits().FirstBadRow;
                 if (bad >= 0) TableLimitNote = $"Items from {bad} on have no valid table row.";
@@ -157,7 +157,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             {
                 if (!Set(ref _selectedIconImage, value)) return;
                 if (_isLoading || value == null) return;
-                _currentEntry.itemIcon = uint.Parse(value);
+                _currentEntry.ItemIcon = uint.Parse(value);
                 UpdateIcon();
                 SetEntryDirty();
             }
@@ -171,7 +171,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             {
                 if (!Set(ref _selectedIconPalette, value)) return;
                 if (_isLoading || value == null) return;
-                _currentEntry.itemPalette = uint.Parse(value);
+                _currentEntry.ItemPalette = uint.Parse(value);
                 UpdateIcon();
                 SetEntryDirty();
             }
@@ -214,11 +214,11 @@ namespace DSPRE.Avalonia.ViewModels.Items
             catch (Exception ex)
             {
                 AppLogger.Error($"Item Editor: item data {dataId} could not be read: {ex}");
-                _itemDataId = (int)_currentEntry.itemData;
+                _itemDataId = (int)_currentEntry.ItemData;
                 OnPropertyChanged(nameof(ItemDataId));
                 return;
             }
-            _currentEntry.itemData = (uint)dataId;
+            _currentEntry.ItemData = (uint)dataId;
             ApplyItemData(data, loadError);
             UpdateSharedDataNote(_selectedItemIndex);
             SetEntryDirty();
@@ -230,7 +230,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             get => _itemIcon;
             private set { if (Set(ref _itemIcon, value)) OnPropertyChanged(nameof(IconUnavailable)); }
         }
-        public bool IconUnavailable => ItemIcon == null && RomInfo.isHGE;
+        public bool IconUnavailable => ItemIcon == null && RomInfo.IsHGE;
 
         // ── Hold Effect ──────────────────────────────────────────────────────
         private int _holdEffectIndex;
@@ -241,7 +241,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             {
                 if (!Set(ref _holdEffectIndex, value)) return;
                 if (_isLoading || _currentData == null || value < 0) return;
-                _currentData.holdEffect = (HoldEffect)value;
+                _currentData.HoldEffect = (HoldEffect)value;
                 SetDataDirty();
             }
         }
@@ -268,7 +268,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             {
                 if (!Set(ref _fieldPocketIndex, value)) return;
                 if (_isLoading || _currentData == null || value < 0) return;
-                _currentData.fieldPocket = (FieldPocket)value;
+                _currentData.FieldPocket = (FieldPocket)value;
                 SetDataDirty();
             }
         }
@@ -293,7 +293,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             if (_hpRestoreBattlePocket)       bp |= BattlePocket.HpRestore;
             if (_statusHealersBattlePocket)   bp |= BattlePocket.StatusHealers;
             if (_ppRestoreBattlePocket)       bp |= BattlePocket.PpRestore;
-            _currentData.battlePocket = bp;
+            _currentData.BattlePocket = bp;
         }
 
         // ── Checks ───────────────────────────────────────────────────────────
@@ -332,7 +332,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             set { if (Set(ref _price, value) && !_isLoading && _currentData != null) { _currentData.FullPrice = value; SetDataDirty(); } }
         }
         // hg-engine's item record adds price_high, so prices there run to 20 bits.
-        public int PriceMaximum => RomInfo.isHGE ? ItemData.MaxHgEnginePrice : ushort.MaxValue;
+        public int PriceMaximum => RomInfo.IsHGE ? ItemData.MaxHgEnginePrice : ushort.MaxValue;
 
         // ── Move Related ─────────────────────────────────────────────────────
         private int _naturalGiftTypeIndex;
@@ -343,7 +343,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             {
                 if (!Set(ref _naturalGiftTypeIndex, value)) return;
                 if (_isLoading || _currentData == null || value < 0) return;
-                _currentData.naturalGiftType = (NaturalGiftType)value;
+                _currentData.NaturalGiftType = (NaturalGiftType)value;
                 SetDataDirty();
             }
         }
@@ -380,7 +380,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             {
                 if (!Set(ref _fieldUseFuncIndex, value)) return;
                 if (_isLoading || _currentData == null || value < 0) return;
-                _currentData.fieldUseFunc = (FieldUseFunc)value;
+                _currentData.FieldUseFunc = (FieldUseFunc)value;
                 SetDataDirty();
             }
         }
@@ -393,7 +393,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             {
                 if (!Set(ref _battleUseFuncIndex, value)) return;
                 if (_isLoading || _currentData == null || value < 0) return;
-                _currentData.battleUseFunc = (BattleUseFunc)value;
+                _currentData.BattleUseFunc = (BattleUseFunc)value;
                 SetDataDirty();
             }
         }
@@ -581,7 +581,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         private async Task ConfirmDropPendingAsync(int newIndex)
         {
-            if (!await DialogHelper.AskYesNo("The new item is not saved. Discard it and proceed?", "Unsaved changes"))
+            if (!await DialogHelper.AskYesNoAsync("The new item is not saved. Discard it and proceed?", "Unsaved changes"))
             {
                 RecordSwitchGuard.SnapBack(() => _selectedItemIndex, v => _selectedItemIndex = v, () => OnPropertyChanged(nameof(SelectedItemIndex)));
                 return;
@@ -602,13 +602,13 @@ namespace DSPRE.Avalonia.ViewModels.Items
             (bool saved, string error) = await HgEngineSave.RunAsync(() => HgEngineItemExpansion.TryCommitItem(pending, data, out string commitError) ? null : commitError);
             if (!saved)
             {
-                if (error != null) await DialogHelper.ShowError($"{pending.DisplayName} was not saved.\n{error}", "Item editor error");
+                if (error != null) await DialogHelper.ShowErrorAsync($"{pending.DisplayName} was not saved.\n{error}", "Item editor error");
                 return false;
             }
 
             HgEngineItemExpansion.CompleteAdd(pending);
             _pendingItem = null;
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemData });
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.ItemData });
             data.SaveToFileDefaultDir(pending.Id, false);
             MaxItemDataId = GetItemDataFileCount() - 1;
             OnPropertyChanged(nameof(MaxItemDataId));
@@ -625,13 +625,13 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public async Task ExportToFileAsync(Window owner)
         {
             if (_currentData == null) return;
-            string path = await DialogHelper.SaveFile(owner, "Export item data",
+            string path = await DialogHelper.SaveFileAsync(owner, "Export item data",
                 new[] { new FilePickerFileType("Gen IV item data") { Patterns = new[] { "*.bin" } } }, $"itemdata_{_itemDataId:D4}.bin");
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _currentData.ToByteArray()); SaveNotice.Exported(path); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError($"Export failed:\n{e.Message}", "Item editor error", owner);
+                await DialogHelper.ShowErrorAsync($"Export failed:\n{e.Message}", "Item editor error", owner);
             }
         }
 
@@ -639,7 +639,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public async Task ImportFromFileAsync(Window owner)
         {
             if (_currentData == null) return;
-            string path = await DialogHelper.OpenFile(owner, "Import item data",
+            string path = await DialogHelper.OpenFileAsync(owner, "Import item data",
                 new[] { new FilePickerFileType("Gen IV item data") { Patterns = new[] { "*.bin" } } });
             if (path == null) return;
 
@@ -647,13 +647,13 @@ namespace DSPRE.Avalonia.ViewModels.Items
             try { bytes = File.ReadAllBytes(path); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError($"The file could not be read.\n{e.Message}", "Import item data", owner);
+                await DialogHelper.ShowErrorAsync($"The file could not be read.\n{e.Message}", "Import item data", owner);
                 return;
             }
             // Retail members are 34 bytes and hg-engine's 36; either fits, at the length this item's member already has.
             if (bytes.Length != ItemDataSize && bytes.Length != ItemData.RetailSize)
             {
-                await DialogHelper.ShowError($"That file is {bytes.Length} bytes. Item data files are {ItemData.RetailSize} or {ItemDataSize} bytes.",
+                await DialogHelper.ShowErrorAsync($"That file is {bytes.Length} bytes. Item data files are {ItemData.RetailSize} or {ItemDataSize} bytes.",
                                              "Import item data", owner);
                 return;
             }
@@ -678,19 +678,19 @@ namespace DSPRE.Avalonia.ViewModels.Items
             if (!HgEngineProject.IsActive) return;
             if (_pendingItem != null)
             {
-                await DialogHelper.ShowError("Save or discard the new item first.", "Add new item", owner);
+                await DialogHelper.ShowErrorAsync("Save or discard the new item first.", "Add new item", owner);
                 return;
             }
             if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, owner, "item", "Save them before adding a new item?")) return;
 
-            string name = await DialogHelper.PromptText("New item's display name:", "Add new item", owner: owner);
+            string name = await DialogHelper.PromptTextAsync("New item's display name:", "Add new item", owner: owner);
             if (name == null) return;
 
             ItemData data = new ItemData(new MemoryStream(new byte[ItemDataSize]), 0);
             if (!HgEngineItemExpansion.TryPrepareItem(name, out HgEngineItemExpansion.PendingItem pending, out string error)
                 || !HgEngineItemExpansion.TryReadTemplate(pending, data, out error))
             {
-                await DialogHelper.ShowError($"Could not add the item:\n{error}", "Add new item", owner);
+                await DialogHelper.ShowErrorAsync($"Could not add the item:\n{error}", "Add new item", owner);
                 return;
             }
             data.ID = pending.Id;
@@ -746,20 +746,20 @@ namespace DSPRE.Avalonia.ViewModels.Items
         private ItemSnapshot Snapshot() => new ItemSnapshot
         {
             Data       = _currentData?.ToByteArray(),
-            Icon       = _currentEntry.itemIcon,
-            Palette    = _currentEntry.itemPalette,
-            ItemDataId = _currentEntry.itemData,
-            Agb        = _currentEntry.itemAGB,
+            Icon       = _currentEntry.ItemIcon,
+            Palette    = _currentEntry.ItemPalette,
+            ItemDataId = _currentEntry.ItemData,
+            Agb        = _currentEntry.ItemAGB,
         };
 
         private void ApplyState(ItemSnapshot snap)
         {
             if (snap == null || _currentData == null) return;
             _isLoading = true;
-            _currentEntry.itemIcon    = snap.Icon;
-            _currentEntry.itemPalette = snap.Palette;
-            _currentEntry.itemData    = snap.ItemDataId;
-            _currentEntry.itemAGB     = snap.Agb;
+            _currentEntry.ItemIcon    = snap.Icon;
+            _currentEntry.ItemPalette = snap.Palette;
+            _currentEntry.ItemData    = snap.ItemDataId;
+            _currentEntry.ItemAGB     = snap.Agb;
             if (snap.Data != null) _currentData = new ItemData(new MemoryStream(snap.Data), (int)snap.ItemDataId);
             RefreshEntryBoundProps();
             PopulateFromCurrentData();
@@ -784,11 +784,11 @@ namespace DSPRE.Avalonia.ViewModels.Items
         /// <summary>Refreshes the icon/palette/itemData bound props from <see cref="_currentEntry"/>.</summary>
         private void RefreshEntryBoundProps()
         {
-            string iconID = _currentEntry.itemIcon.ToString("D4");
-            string palID  = _currentEntry.itemPalette.ToString("D4");
+            string iconID = _currentEntry.ItemIcon.ToString("D4");
+            string palID  = _currentEntry.ItemPalette.ToString("D4");
             _selectedIconImage   = IconImages.Contains(iconID) ? iconID : null;
             _selectedIconPalette = IconPalettes.Contains(palID) ? palID  : null;
-            _itemDataId          = (int)_currentEntry.itemData;
+            _itemDataId          = (int)_currentEntry.ItemData;
             OnPropertyChanged(nameof(SelectedIconImage));
             OnPropertyChanged(nameof(SelectedIconPalette));
             OnPropertyChanged(nameof(ItemDataId));
@@ -802,8 +802,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
         // Follows the data id being edited, not the saved one, so pointing an item elsewhere updates it at once.
         private void UpdateSharedDataNote(int id)
         {
-            if (RomInfo.isHGE || PlatPatches.Items() == null) { SharedDataNote = ""; return; }
-            List<int> others = ItemTable.SharingData(id, (int)_currentEntry.itemData, ItemNames.Count);
+            if (RomInfo.IsHGE || PlatPatches.Items() == null) { SharedDataNote = ""; return; }
+            List<int> others = ItemTable.SharingData(id, (int)_currentEntry.ItemData, ItemNames.Count);
             if (others.Count == 0) { SharedDataNote = ""; return; }
             string names = string.Join(", ", others.Take(4).Select(i => i < ItemNames.Count ? ItemNames[i] : $"Item {i}"));
             SharedDataNote = $"Shares its item data with {names}{(others.Count > 4 ? $" and {others.Count - 4} more" : "")}; editing it changes those too.";
@@ -819,12 +819,12 @@ namespace DSPRE.Avalonia.ViewModels.Items
             try
             {
                 entry = ReadTableEntry(id);
-                (data, loadError) = ReadItemData((int)entry.itemData);
+                (data, loadError) = ReadItemData((int)entry.ItemData);
             }
             catch (Exception ex)
             {
                 AppLogger.Error($"Item Editor: item {id} could not be read: {ex}");
-                _ = DialogHelper.ShowError($"Item {id} could not be read.\n{ex.Message}", "Item editor error");
+                _ = DialogHelper.ShowErrorAsync($"Item {id} could not be read.\n{ex.Message}", "Item editor error");
                 return false;
             }
 
@@ -853,7 +853,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         private static (ItemData data, string loadError) ReadItemData(int dataId)
         {
-            string path = Path.Combine(RomInfo.gameDirs[DirNames.itemData].unpackedDir, dataId.ToString("D4"));
+            string path = Path.Combine(RomInfo.GameDirs[DirNames.ItemData].unpackedDir, dataId.ToString("D4"));
             if (!HgEngineProject.IsActive) return (ReadBuiltItemData(path, dataId), null);
             // The built copy only fills a field the entry lacks, which the save then reports.
             ItemData data = File.Exists(path) ? ReadBuiltItemData(path, dataId) : new ItemData(new MemoryStream(new byte[ItemDataSize]), dataId);
@@ -879,19 +879,19 @@ namespace DSPRE.Avalonia.ViewModels.Items
             // Hold effect: combo bound by index == byte value; extend the list if the value is beyond the
             // known labels (a hacked/undefined effect) so it still has a slot.
             // Resynced before the index is set, since shrinking the list can push -1 through the binding.
-            ResetAndCover(HoldEffectNames, HoldEffectKey, (int)_currentData.holdEffect);
-            _holdEffectIndex = (int)_currentData.holdEffect;
+            ResetAndCover(HoldEffectNames, HoldEffectKey, (int)_currentData.HoldEffect);
+            _holdEffectIndex = (int)_currentData.HoldEffect;
             _holdEffectParam = _currentData.HoldEffectParam;
             OnPropertyChanged(nameof(HoldEffectIndex));
             OnPropertyChanged(nameof(HoldEffectParam));
 
             // Field pocket
-            _fieldPocketIndex = (int)_currentData.fieldPocket;
+            _fieldPocketIndex = (int)_currentData.FieldPocket;
             EnsureCovers(FieldPocketNames, "item_field_pockets", _fieldPocketIndex);
             OnPropertyChanged(nameof(FieldPocketIndex));
 
             // Battle pocket flags
-            BattlePocket bp = _currentData.battlePocket;
+            BattlePocket bp = _currentData.BattlePocket;
             _pokeBallsBattlePocket     = (bp & BattlePocket.PokeBalls)     != 0;
             _battleItemsBattlePocket   = (bp & BattlePocket.BattleItems)   != 0;
             _hpRestoreBattlePocket     = (bp & BattlePocket.HpRestore)     != 0;
@@ -917,7 +917,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             OnPropertyChanged(nameof(Price));
 
             // Move related
-            _naturalGiftTypeIndex = (int)_currentData.naturalGiftType;
+            _naturalGiftTypeIndex = (int)_currentData.NaturalGiftType;
             EnsureCovers(NaturalGiftTypeNames, "item_natural_gift", _naturalGiftTypeIndex);
             _naturalGiftPower    = _currentData.NaturalGiftPower;
             _flingEffect         = _currentData.FlingEffect;
@@ -932,11 +932,11 @@ namespace DSPRE.Avalonia.ViewModels.Items
             OnPropertyChanged(nameof(PluckEffect));
 
             // Functions: combos bound by index == byte value; extend lists for unknown/raw values.
-            ResetAndCover(FieldUseFuncNames, FieldUseKey, (int)_currentData.fieldUseFunc);
-            _fieldUseFuncIndex = (int)_currentData.fieldUseFunc;
+            ResetAndCover(FieldUseFuncNames, FieldUseKey, (int)_currentData.FieldUseFunc);
+            _fieldUseFuncIndex = (int)_currentData.FieldUseFunc;
             OnPropertyChanged(nameof(FieldUseFuncIndex));
 
-            _battleUseFuncIndex = (int)_currentData.battleUseFunc;
+            _battleUseFuncIndex = (int)_currentData.BattleUseFunc;
             EnsureCovers(BattleUseFuncNames, "item_battle_use", _battleUseFuncIndex);
             OnPropertyChanged(nameof(BattleUseFuncIndex));
 
@@ -959,10 +959,10 @@ namespace DSPRE.Avalonia.ViewModels.Items
             _friendshipLowValue = p.FriendshipLowValue; _friendshipMidValue = p.FriendshipMidValue;
             _friendshipHighValue = p.FriendshipHighValue;
 
-            foreach (string name in _partyPropNames) OnPropertyChanged(name);
+            foreach (string name in PartyPropNames) OnPropertyChanged(name);
         }
 
-        private static readonly string[] _partyPropNames =
+        private static readonly string[] PartyPropNames =
         {
             nameof(SlpHeal),   nameof(PsnHeal),   nameof(BrnHeal),   nameof(FrzHeal),
             nameof(PrzHeal),   nameof(CfsHeal),   nameof(InfHeal),   nameof(GuardSpec),
@@ -986,7 +986,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         private void SaveTableEntry()
         {
-            if (RomInfo.isHGE)
+            if (RomInfo.IsHGE)
             {
                 // hg-engine has no item table to write (see ItemTable.Read). Item data itself still saves
                 // normally (SaveItemData, keyed directly by item id).
@@ -1005,20 +1005,20 @@ namespace DSPRE.Avalonia.ViewModels.Items
         private async System.Threading.Tasks.Task<bool> SaveItemDataAsync()
         {
             if (_currentData == null) return true;
-            int item = (int)_currentEntry.itemData;
+            int item = (int)_currentEntry.ItemData;
             ItemData data = _currentData;
             if (HgEngineProject.IsActive)
             {
                 if (SourceLoadError != null)
                 {
-                    await DialogHelper.ShowError($"Item {item} was not saved.\n{SourceLoadError}", "Item editor error");
+                    await DialogHelper.ShowErrorAsync($"Item {item} was not saved.\n{SourceLoadError}", "Item editor error");
                     return false;
                 }
                 // The source is what the next sync rebuilds from, so a save that can't reach it is no save.
                 (bool saved, string error) = await HgEngineSave.RunAsync(() => HgEngineItemSource.TryWrite(item, data, out string writeError) ? null : writeError);
                 if (!saved)
                 {
-                    if (error != null) await DialogHelper.ShowError($"Item {item} was not saved.\n{error}", "Item editor error");
+                    if (error != null) await DialogHelper.ShowErrorAsync($"Item {item} was not saved.\n{error}", "Item editor error");
                     return false;
                 }
             }
@@ -1032,16 +1032,16 @@ namespace DSPRE.Avalonia.ViewModels.Items
         private void UpdateIcon()
         {
             if (Design.IsDesignMode) return;
-            if (_currentEntry.itemIcon == uint.MaxValue || _currentEntry.itemPalette == uint.MaxValue)
+            if (_currentEntry.ItemIcon == uint.MaxValue || _currentEntry.ItemPalette == uint.MaxValue)
             {
                 ItemIcon = null;   // hg-engine: no reliable icon/palette index for this item, see ReadTableEntry
                 return;
             }
             try
             {
-                string dir     = RomInfo.gameDirs[DirNames.itemIcons].unpackedDir;
-                string palFile = _currentEntry.itemPalette.ToString("D4");
-                string imgFile = _currentEntry.itemIcon.ToString("D4");
+                string dir     = RomInfo.GameDirs[DirNames.ItemIcons].unpackedDir;
+                string palFile = _currentEntry.ItemPalette.ToString("D4");
+                string imgFile = _currentEntry.ItemIcon.ToString("D4");
                 byte[] drawing = File.ReadAllBytes(Path.Combine(dir, imgFile));
                 (int width, int height) = NitroBgCodec.ReadDrawingHeader(drawing) is NitroBgCodec.DrawingHeader head ? NitroBgCodec.DrawingSize(head) : (32, 32);
                 RawImage raw = CellRenderer.Draw(NcerFile.Read(File.ReadAllBytes(Path.Combine(dir, "0001"))), 0, drawing,
@@ -1053,7 +1053,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         private void PopulateIconPaletteDropdowns()
         {
-            string dir = RomInfo.gameDirs[DirNames.itemIcons].unpackedDir;
+            string dir = RomInfo.GameDirs[DirNames.ItemIcons].unpackedDir;
             string[] files  = Directory.GetFiles(dir, "*", SearchOption.TopDirectoryOnly);
             uint idx   = 0;
             foreach (string file in files)
@@ -1078,14 +1078,14 @@ namespace DSPRE.Avalonia.ViewModels.Items
             DSPRE.Avalonia.Data.LabelStore.Sync(BattleUseFuncNames,   "item_battle_use");
             DSPRE.Avalonia.Data.LabelStore.Sync(NaturalGiftTypeNames, "item_natural_gift");
             AppEvents.LabelsChanged -= OnLabelsChanged; AppEvents.LabelsChanged += OnLabelsChanged;
-            _iconSaved ??= AppEvents.WhenSaved(UpdateIcon, DirNames.itemIcons);
+            _iconSaved ??= AppEvents.WhenSaved(UpdateIcon, DirNames.ItemIcons);
         }
 
         private IDisposable _iconSaved;
 
         // DP has no GiratinaBoost and a shorter field-use table than Pt, which is shorter than HGSS's.
-        private static string HoldEffectKey => RomInfo.gameFamily == GameFamilies.DP ? "item_hold_effects_dp" : "item_hold_effects";
-        private static string FieldUseKey => RomInfo.gameFamily switch
+        private static string HoldEffectKey => RomInfo.GameFamily == GameFamilies.DP ? "item_hold_effects_dp" : "item_hold_effects";
+        private static string FieldUseKey => RomInfo.GameFamily switch
         {
             GameFamilies.DP => "item_field_use_dp",
             GameFamilies.Plat => "item_field_use_pt",
@@ -1112,11 +1112,11 @@ namespace DSPRE.Avalonia.ViewModels.Items
             PopulateEnumCollections();   // re-sync labels
             if (_currentData != null)    // re-extend for the current item's (possibly raw) values
             {
-                EnsureCovers(HoldEffectNames,      HoldEffectKey,        (int)_currentData.holdEffect);
-                EnsureCovers(FieldPocketNames,     "item_field_pockets", (int)_currentData.fieldPocket);
-                EnsureCovers(FieldUseFuncNames,    FieldUseKey,          (int)_currentData.fieldUseFunc);
-                EnsureCovers(BattleUseFuncNames,   "item_battle_use",    (int)_currentData.battleUseFunc);
-                EnsureCovers(NaturalGiftTypeNames, "item_natural_gift",  (int)_currentData.naturalGiftType);
+                EnsureCovers(HoldEffectNames,      HoldEffectKey,        (int)_currentData.HoldEffect);
+                EnsureCovers(FieldPocketNames,     "item_field_pockets", (int)_currentData.FieldPocket);
+                EnsureCovers(FieldUseFuncNames,    FieldUseKey,          (int)_currentData.FieldUseFunc);
+                EnsureCovers(BattleUseFuncNames,   "item_battle_use",    (int)_currentData.BattleUseFunc);
+                EnsureCovers(NaturalGiftTypeNames, "item_natural_gift",  (int)_currentData.NaturalGiftType);
             }
             Repoke(_holdEffectIndex,      nameof(HoldEffectIndex),      v => _holdEffectIndex = v);
             Repoke(_fieldPocketIndex,     nameof(FieldPocketIndex),     v => _fieldPocketIndex = v);
@@ -1138,6 +1138,6 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public void Detach() { AppEvents.LabelsChanged -= OnLabelsChanged; _iconSaved?.Dispose(); _iconSaved = null; }
 
         private static int GetItemDataFileCount() =>
-            NarcAPI.Narc.MemberCount(RomInfo.gameDirs[DirNames.itemData].unpackedDir);
+            NarcAPI.Narc.MemberCount(RomInfo.GameDirs[DirNames.ItemData].unpackedDir);
     }
 }

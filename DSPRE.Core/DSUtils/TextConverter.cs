@@ -14,7 +14,7 @@ namespace DSPRE
 {
     internal class TextConverter
     {   
-        public static readonly Dictionary<RomInfo.GameLanguages, string> langCodes = new Dictionary<RomInfo.GameLanguages, string>
+        public static readonly Dictionary<RomInfo.GameLanguages, string> LangCodes = new Dictionary<RomInfo.GameLanguages, string>
         {
             { RomInfo.GameLanguages.English, "en_US" },
             { RomInfo.GameLanguages.French, "fr_FR" },
@@ -28,7 +28,7 @@ namespace DSPRE
         public static string GetExpandedFolderPath()
         {
             // ToDo: Don't hardcode "expanded" and "textArchives" folders
-            return Path.Combine(RomInfo.dspreDir, "expanded", "textArchives");
+            return Path.Combine(RomInfo.DspreDir, "expanded", "textArchives");
         }
 
         public static void BinToJSON(string inputFilePath, string outputFilePath, string charMapPath)
@@ -91,7 +91,7 @@ namespace DSPRE
             // chatot already wrote a null code into these archives; newer JSON makes the next build retry them.
             foreach (string path in offending)
             {
-                try { File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddSeconds(2)); } catch { }
+                try { File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddSeconds(2)); } catch { }   // only nudges the next build to retry; a file that can't be touched is retried later anyway
             }
 
             error = string.Join("\n", problems.Distinct());
@@ -141,7 +141,7 @@ namespace DSPRE
             List<(string, int)> hits = new List<(string, int)>();
             // The code sits in braces, so a word that happens to share its name in plain text is not it.
             string code = "{" + token;
-            string lang = langCodes.TryGetValue(RomInfo.gameLanguage, out string l) ? l : "en_US";
+            string lang = LangCodes.TryGetValue(RomInfo.GameLanguage, out string l) ? l : "en_US";
             foreach (string path in jsonFiles)
             {
                 try
@@ -161,7 +161,7 @@ namespace DSPRE
                         index++;
                     }
                 }
-                catch { }
+                catch (Exception ex) { AppLogger.Warn("Text converter: reading archive names: " + ex.Message); }
             }
             return hits;
         }
@@ -217,7 +217,7 @@ namespace DSPRE
                 // If no language was specified read from the langcodes dictionary
                 if (string.IsNullOrEmpty(lang))
                 {
-                    lang = langCodes[RomInfo.gameLanguage];
+                    lang = LangCodes[RomInfo.GameLanguage];
                 }
 
                 chatot.StartInfo.Arguments += $" --lang {lang}";

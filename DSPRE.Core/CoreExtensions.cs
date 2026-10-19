@@ -2,42 +2,53 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace DSPRE {
+namespace DSPRE
+{
     /// <summary>
     /// UI-free extension methods used throughout the ROM core (scripts, text, data files).
     /// Moved here from the WinForms-coupled <c>Extensions</c> class so the core stays
     /// cross-platform; call sites are unchanged (same namespace, extension resolution is
     /// class-name-agnostic).
     /// </summary>
-    public static class CoreExtensions {
-        public static int IndexOfFirstNumber(this string str) {
+    public static class CoreExtensions
+    {
+        public static int IndexOfFirstNumber(this string str)
+        {
             return str.IndexOfAny("0123456789".ToCharArray());
         }
-        public static bool ContainsNumber(this string str) {
+        public static bool ContainsNumber(this string str)
+        {
             return str.IndexOfFirstNumber() > 0;
         }
-        public static T[] SubArray<T>(this T[] array, int offset, int length) {
+        public static T[] SubArray<T>(this T[] array, int offset, int length)
+        {
             T[] result = new T[length];
             Array.Copy(array, offset, result, 0, length);
             return result;
         }
-        public static void Move<T>(this IList<T> l, int currentIndex, int newIndex) {
+        public static void Move<T>(this IList<T> l, int currentIndex, int newIndex)
+        {
             T item = l[currentIndex];
             l.RemoveAt(currentIndex);
             l.Insert(newIndex, item);
         }
-        public static Dictionary<string, ushort> Reverse (this Dictionary<ushort, string> source) {
+        public static Dictionary<string, ushort> Reverse (this Dictionary<ushort, string> source)
+        {
             Dictionary<string, ushort> dictionary = new Dictionary<string, ushort>(StringComparer.InvariantCultureIgnoreCase);
-            foreach (KeyValuePair<ushort, string> entry in source) {
+            foreach (KeyValuePair<ushort, string> entry in source)
+            {
                 string newKey = entry.Value;
-                if (!dictionary.ContainsKey(newKey)) {
+                if (!dictionary.ContainsKey(newKey))
+                {
                     dictionary.Add(newKey, entry.Key);
                 }
             }
             return dictionary;
         }
-        public static byte[] ToByteArrayChooseSize(this int num, byte size) {
-            switch (size) {
+        public static byte[] ToByteArrayChooseSize(this int num, byte size)
+        {
+            switch (size)
+            {
                 case 1:
                     return new byte[] { checked((byte)num) };
                 case 2:
@@ -49,34 +60,46 @@ namespace DSPRE {
                     throw new InvalidOperationException();
             }
         }
-        public static string PurgeSpecial(this string str, char[] special) {
-            foreach (char c in special) {
+        public static string PurgeSpecial(this string str, char[] special)
+        {
+            foreach (char c in special)
+            {
                 int pos = str.IndexOf(c);
-                if (pos >= 0) {
+                if (pos >= 0)
+                {
                     return str.Substring(pos + 1);
                 }
             }
             return str;
         }
-        public static NumberStyles GetNumberStyle(this string s) {
+        public static NumberStyles GetNumberStyle(this string s)
+        {
             int posOfPrefix = s.IndexOf("0x", StringComparison.InvariantCultureIgnoreCase);
-            if (posOfPrefix >= 0) {
-                foreach (char c in s.Substring(posOfPrefix + 2)) {
-                    if (!char.IsDigit(c) && char.ToUpper(c) > 'F') {
+            if (posOfPrefix >= 0)
+            {
+                foreach (char c in s.Substring(posOfPrefix + 2))
+                {
+                    if (!char.IsDigit(c) && char.ToUpper(c) > 'F')
+                    {
                         return NumberStyles.None;
                     }
                 }
                 return NumberStyles.HexNumber;
-            } else {
-                foreach (char c in s) {
-                    if (!char.IsDigit(c)) {
+            }
+            else
+            {
+                foreach (char c in s)
+                {
+                    if (!char.IsDigit(c))
+                    {
                         return NumberStyles.None;
                     }
                 }
                 return NumberStyles.Integer;
             }
         }
-        public static bool IgnoreCaseEquals(this string str, string other) {
+        public static bool IgnoreCaseEquals(this string str, string other)
+        {
             return str.Equals(other, StringComparison.InvariantCultureIgnoreCase);
         }
 

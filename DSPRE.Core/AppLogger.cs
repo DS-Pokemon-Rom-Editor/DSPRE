@@ -22,8 +22,8 @@ namespace DSPRE
 
  public static class AppLogger
     {
-        private static readonly object _fileLock = new object();
-        private static readonly ConcurrentQueue<string> _recentLogBuffer = new ConcurrentQueue<string>();
+        private static readonly object FileLock = new object();
+        private static readonly ConcurrentQueue<string> RecentLogBuffer = new ConcurrentQueue<string>();
         private static string _logFilePath;
         private const int MaxLogFileLines = 2000;
         private static int _writesSinceLastTrim = 0;
@@ -49,7 +49,7 @@ namespace DSPRE
 
             if (_logFilePath != null)   // not Initialize()d yet → in-memory buffer only
             {
-                lock (_fileLock)
+                lock (FileLock)
                 {
                     File.AppendAllText(_logFilePath, timestamped + Environment.NewLine);
 
@@ -62,8 +62,8 @@ namespace DSPRE
                 }
             }
 
-            _recentLogBuffer.Enqueue(timestamped);
-            while (_recentLogBuffer.Count > MaxLogFileLines && _recentLogBuffer.TryDequeue(out _)) { }
+            RecentLogBuffer.Enqueue(timestamped);
+            while (RecentLogBuffer.Count > MaxLogFileLines && RecentLogBuffer.TryDequeue(out _)) { }
         }
 
         private static void TrimLogFile()
@@ -84,9 +84,18 @@ namespace DSPRE
         public static void Error(string message) => Log(LogLevel.Error, message);
         public static void Fatal(string message) => Log(LogLevel.Fatal, message);
 
+        private static readonly ConcurrentDictionary<string, bool> WarnedAt = new ConcurrentDictionary<string, bool>();
+
+        /// <summary>Logs a failure DSPRE recovered from, the first time it happens at <paramref name="where"/>, so a
+        /// fallback that runs every frame doesn't flood the log.</summary>
+        public static void WarnOnce(string where, Exception e)
+        {
+            if (WarnedAt.TryAdd(where, true)) Warn(where + ": " + e.Message);
+        }
+
         public static string GetRecentLogs()
         {
-            return string.Join(Environment.NewLine, _recentLogBuffer);
+            return string.Join(Environment.NewLine, RecentLogBuffer);
         }
 
     }

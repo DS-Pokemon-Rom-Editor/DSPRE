@@ -167,10 +167,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             Changed();
         }
         public string UnsavedChangesDescription => "Dungeon cut-ins";
-        void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommand();
+        void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommandAsync();
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
-            await SaveCommand();
+            await SaveCommandAsync();
             return !HasUnsavedChanges;
         }
         public void DiscardChanges()
@@ -305,7 +305,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         // ── Commands ──────────────────────────────────────────────────────────
-        public async Task SaveCommand()
+        public async Task SaveCommandAsync()
         {
             try
             {
@@ -319,7 +319,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowError($"Could not save: {ex.Message}", "Dungeon cutin editor error");
+                await DialogHelper.ShowErrorAsync($"Could not save: {ex.Message}", "Dungeon cutin editor error");
             }
         }
 

@@ -57,14 +57,14 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         public async Task BrowseAsync(Window owner)
         {
-            string path = await DialogHelper.OpenFolder(owner, HgEngineProject.HostIsPosix
+            string path = await DialogHelper.OpenFolderAsync(owner, HgEngineProject.HostIsPosix
                 ? "Select your hg-engine checkout"
                 : "Select your hg-engine checkout (a WSL folder, e.g. \\\\wsl.localhost\\Ubuntu\\home\\you\\hg-engine)");
             if (string.IsNullOrEmpty(path)) return;
 
             if (!HgEngineProject.TryLink(path, out string error))
             {
-                await DialogHelper.ShowError(error, "Couldn't link hg-engine checkout", owner);
+                await DialogHelper.ShowErrorAsync(error, "Couldn't link hg-engine checkout", owner);
                 return;
             }
             RaiseAll();
@@ -81,7 +81,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             if (HgEngineProject.HostIsPosix) return HgEngineShell.Native;
             if (HgEngineProject.IsWslPath(path)) return HgEngineShell.Wsl;
 
-            DialogHelper.MsgResult choice = await DialogHelper.AskThreeWay(
+            DialogHelper.MsgResult choice = await DialogHelper.AskThreeWayAsync(
                 path + "\n\nThis checkout is on a Windows drive. Which toolchain builds it?\n\n"
                 + "MSYS2 is the setup hg-engine's README describes for Windows, and builds natively.\n\n"
                 + "WSL also works, reaching the folder through /mnt, but make will be noticeably slower.",

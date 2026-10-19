@@ -44,8 +44,9 @@ namespace DSPRE
                 PlainFiles.WriteText(filePath, BuildCrashReport(ex), Encoding.UTF8);
                 return filePath;
             }
-            catch
+            catch (Exception logError)
             {
+                AppLogger.WarnOnce("CrashReporter.LogHandled", logError);
                 return null;
             }
         }
@@ -62,7 +63,7 @@ namespace DSPRE
             }
             catch
             {
-
+                // The crash report is best effort; there is nowhere left to report this failure.
             }
 
             if (AppMessages.Confirm(

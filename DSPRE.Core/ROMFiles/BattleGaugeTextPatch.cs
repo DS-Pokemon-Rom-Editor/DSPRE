@@ -78,13 +78,13 @@ namespace DSPRE.ROMFiles
         {
             get
             {
-                if (!SupportsCurrentRom || !File.Exists(Filesystem.expArmPath)) return false;
+                if (!SupportsCurrentRom || !File.Exists(Filesystem.ExpArmPath)) return false;
                 try
                 {
                     uint code = PatchedCode(ReadOverlay());
-                    long block = (long)code - RomInfo.synthOverlayLoadAddress - CodeStart;
-                    if (code == 0 || block < 0 || block + BlockLength > new FileInfo(Filesystem.expArmPath).Length) return false;
-                    return Encoding.ASCII.GetString(DSUtils.ReadFromFile(Filesystem.expArmPath, (uint)block, Marker.Length)) == Marker;
+                    long block = (long)code - RomInfo.SynthOverlayLoadAddress - CodeStart;
+                    if (code == 0 || block < 0 || block + BlockLength > new FileInfo(Filesystem.ExpArmPath).Length) return false;
+                    return Encoding.ASCII.GetString(DSUtils.ReadFromFile(Filesystem.ExpArmPath, (uint)block, Marker.Length)) == Marker;
                 }
                 catch (Exception ex) when (ex is IOException || ex is ArgumentException) { return false; }
             }
@@ -111,7 +111,7 @@ namespace DSPRE.ROMFiles
             byte[] ov = ReadOverlay();
             uint getter = CallAt(ov, Sites.Hooks[0] + 2).Value.Target, copy = CallAt(ov, Sites.Copies[0]).Value.Target;
 
-            uint code = RomInfo.synthOverlayLoadAddress + (uint)blockOffset + (uint)CodeStart;
+            uint code = RomInfo.SynthOverlayLoadAddress + (uint)blockOffset + (uint)CodeStart;
             byte[] block = new byte[BlockLength];
             Encoding.ASCII.GetBytes(Marker).CopyTo(block, 0);
             BitConverter.GetBytes(1u).CopyTo(block, 0x0C);
@@ -120,7 +120,7 @@ namespace DSPRE.ROMFiles
             BitConverter.GetBytes(getter | 1).CopyTo(block, CodeStart + ProxyGetterAt);
             BitConverter.GetBytes(code + OffsetAt).CopyTo(block, CodeStart + OffsetAtAt);
             BitConverter.GetBytes(copy).CopyTo(block, CodeStart + CopyAt);
-            DSUtils.WriteToFile(Filesystem.expArmPath, block, (uint)blockOffset);
+            DSUtils.WriteToFile(Filesystem.ExpArmPath, block, (uint)blockOffset);
 
             string path = OverlayUtils.GetPath(Sites.Overlay);
             foreach (int hook in Sites.Hooks)

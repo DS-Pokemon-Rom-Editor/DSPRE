@@ -8,19 +8,19 @@ using static DSPRE.RomInfo;
 namespace DSPRE.HgEngine
 {
     /// <summary>Rebuilds hg-engine-owned domains from source and re-extracts their narc(s) into the
-    /// normal <see cref="RomInfo.gameDirs"/> unpacked-dir paths, so every editor ViewModel keeps reading
+    /// normal <see cref="RomInfo.GameDirs"/> unpacked-dir paths, so every editor ViewModel keeps reading
     /// the same unpacked-dir files unchanged, just sourced from hg-engine's compiler instead of the
     /// packed ROM.</summary>
     public static class HgEngineSync
     {
-        private static readonly object _buildLock = new();
+        private static readonly object BuildLock = new();
 
         // Skips the make invocation when nothing changed since the last sync; a DSPRE write always
         // updates the source file's mtime, so this never serves stale data after a save.
-        private static readonly Dictionary<HgEngineDomain, DateTime[]> _lastSyncedMtimes = new();
-        private static readonly HashSet<HgEngineDomain> _syncedOnceThisSession = new();
+        private static readonly Dictionary<HgEngineDomain, DateTime[]> LastSyncedMtimes = new();
+        private static readonly HashSet<HgEngineDomain> SyncedOnceThisSession = new();
 
-        internal static void ClearSyncState() { _lastSyncedMtimes.Clear(); _syncedOnceThisSession.Clear(); _splitLearnsetsFrom = default; }
+        internal static void ClearSyncState() { LastSyncedMtimes.Clear(); SyncedOnceThisSession.Clear(); _splitLearnsetsFrom = default; }
 
         private static string[] ExtraInputsFor(HgEngineDomainInfo domain) =>
             domain.Domain == HgEngineDomain.Species ? new[] { "data/learnsets/learnsets.json" } : Array.Empty<string>();
@@ -32,9 +32,9 @@ namespace DSPRE.HgEngine
             // An hg-engine folder project reads base/root, which already holds what the last make built.
             if (RomInfo.IsHgEngineBaseProject)
             {
-                if (!ids.Contains(DirNames.learnsets)) return ids;
+                if (!ids.Contains(DirNames.Learnsets)) return ids;
                 if (!SplitBuiltLearnsets(out string learnsetError)) AppLogger.Error($"hg-engine learnsets: {learnsetError}");
-                return ids.Where(id => id != DirNames.learnsets).ToList();
+                return ids.Where(id => id != DirNames.Learnsets).ToList();
             }
 
             List<DirNames> remaining = new List<DirNames>();
@@ -65,15 +65,15 @@ namespace DSPRE.HgEngine
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
 
-            lock (_buildLock)
+            lock (BuildLock)
             {
                 bool stillExtracted;
                 DateTime[] currentMtimes = Array.Empty<DateTime>();
 
                 if (domain.SyncOncePerSession)
                 {
-                    stillExtracted = _syncedOnceThisSession.Contains(domain.Domain) && domain.NarcByDir.Keys.All(dir =>
-                        gameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) p) && Directory.Exists(p.unpackedDir) && Directory.GetFiles(p.unpackedDir).Length > 0);
+                    stillExtracted = SyncedOnceThisSession.Contains(domain.Domain) && domain.NarcByDir.Keys.All(dir =>
+                        GameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) p) && Directory.Exists(p.unpackedDir) && Directory.GetFiles(p.unpackedDir).Length > 0);
                 }
                 else
                 {
@@ -82,9 +82,9 @@ namespace DSPRE.HgEngine
                         .Select(p => SafeMtime(Path.Combine(HgEngineProject.RepoPathUnc, p.Replace('/', Path.DirectorySeparatorChar))))
                         .ToArray();
 
-                    bool unchanged = _lastSyncedMtimes.TryGetValue(domain.Domain, out DateTime[] cached) && cached.SequenceEqual(currentMtimes);
+                    bool unchanged = LastSyncedMtimes.TryGetValue(domain.Domain, out DateTime[] cached) && cached.SequenceEqual(currentMtimes);
                     stillExtracted = unchanged && domain.NarcByDir.Keys.All(dir =>
-                        gameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) p) && Directory.Exists(p.unpackedDir) && Directory.GetFiles(p.unpackedDir).Length > 0);
+                        GameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) p) && Directory.Exists(p.unpackedDir) && Directory.GetFiles(p.unpackedDir).Length > 0);
                 }
 
                 if (stillExtracted) return true;
@@ -99,7 +99,7 @@ namespace DSPRE.HgEngine
 
                 foreach (KeyValuePair<DirNames, string> kv in domain.NarcByDir)
                 {
-                    if (!gameDirs.TryGetValue(kv.Key, out (string packedDir, string unpackedDir) paths))
+                    if (!GameDirs.TryGetValue(kv.Key, out (string packedDir, string unpackedDir) paths))
                         continue;
 
                     string narcPath = Path.Combine(HgEngineProject.RepoPathUnc, kv.Value.Replace('/', Path.DirectorySeparatorChar));
@@ -111,7 +111,7 @@ namespace DSPRE.HgEngine
 
                     // hg-engine repurposes this narc slot with a completely different binary layout
                     // (one combined table, not one file per species). See HgEngineLearnsets.
-                    if (kv.Key == DirNames.learnsets)
+                    if (kv.Key == DirNames.Learnsets)
                     {
                         if (speciesCount < 0) speciesCount = ResolveSpeciesCount(domain);
                         if (speciesCount <= 0)
@@ -136,11 +136,11 @@ namespace DSPRE.HgEngine
                     opened.ExtractToFolder(paths.unpackedDir);
 
                     // Some ViewModels read gameDirs[...].packedDir's narc file directly instead of unpackedDir; refresh both.
-                    try { PlainFiles.Copy(narcPath, paths.packedDir, overwrite: true); } catch (IOException) { }
+                    try { PlainFiles.Copy(narcPath, paths.packedDir, overwrite: true); } catch (IOException) { }   // the packed copy is a convenience for older readers; the unpacked folder is already current
                 }
 
-                if (domain.SyncOncePerSession) _syncedOnceThisSession.Add(domain.Domain);
-                else _lastSyncedMtimes[domain.Domain] = currentMtimes;
+                if (domain.SyncOncePerSession) SyncedOnceThisSession.Add(domain.Domain);
+                else LastSyncedMtimes[domain.Domain] = currentMtimes;
                 return true;
             }
         }
@@ -154,13 +154,13 @@ namespace DSPRE.HgEngine
         private static bool SplitBuiltLearnsets(out string error)
         {
             error = null;
-            (string packed, string unpacked) = gameDirs[DirNames.learnsets];
+            (string packed, string unpacked) = GameDirs[DirNames.Learnsets];
             if (!File.Exists(packed)) { error = $"{packed} is missing."; return false; }
             (DateTime, long Length) stamp = (File.GetLastWriteTimeUtc(packed), new FileInfo(packed).Length);
-            lock (_buildLock)
+            lock (BuildLock)
             {
                 if (stamp == _splitLearnsetsFrom && Directory.Exists(unpacked) && Directory.GetFiles(unpacked).Length > 0) return true;
-                Narc personal = File.Exists(gameDirs[DirNames.personalPokeData].packedDir) ? Narc.Open(gameDirs[DirNames.personalPokeData].packedDir) : null;
+                Narc personal = File.Exists(GameDirs[DirNames.PersonalPokeData].packedDir) ? Narc.Open(GameDirs[DirNames.PersonalPokeData].packedDir) : null;
                 if (personal == null) { error = "Could not read the species count from the personal data archive."; return false; }
                 if (!HgEngineLearnsets.Sync(packed, HgEngineProject.RepoPathUnc, unpacked, personal.ElementCount, out error)) return false;
                 _splitLearnsetsFrom = stamp;
@@ -171,7 +171,7 @@ namespace DSPRE.HgEngine
         private static DateTime SafeMtime(string path)
         {
             try { return File.Exists(path) ? File.GetLastWriteTimeUtc(path) : DateTime.MinValue; }
-            catch { return DateTime.MinValue; }
+            catch (Exception ex) { AppLogger.WarnOnce("HgEngineSync.SafeMtime", ex); return DateTime.MinValue; }
         }
 
         /// <summary>Species count for the learnsets transform: the personalPokeData narc's element count
@@ -179,13 +179,13 @@ namespace DSPRE.HgEngine
         /// falls back to whatever's already unpacked.</summary>
         private static int ResolveSpeciesCount(HgEngineDomainInfo domain)
         {
-            if (domain.NarcByDir.TryGetValue(DirNames.personalPokeData, out string personalRel))
+            if (domain.NarcByDir.TryGetValue(DirNames.PersonalPokeData, out string personalRel))
             {
                 string personalPath = Path.Combine(HgEngineProject.RepoPathUnc, personalRel.Replace('/', Path.DirectorySeparatorChar));
                 Narc personal = File.Exists(personalPath) ? Narc.Open(personalPath) : null;
                 if (personal != null) return personal.ElementCount;
             }
-            return gameDirs.TryGetValue(DirNames.personalPokeData, out (string packedDir, string unpackedDir) p) && Directory.Exists(p.unpackedDir)
+            return GameDirs.TryGetValue(DirNames.PersonalPokeData, out (string packedDir, string unpackedDir) p) && Directory.Exists(p.unpackedDir)
                 ? NarcAPI.Narc.MemberCount(p.unpackedDir)
                 : -1;
         }

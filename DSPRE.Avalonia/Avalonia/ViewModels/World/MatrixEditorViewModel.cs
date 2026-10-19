@@ -37,8 +37,8 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public ObservableCollection<string> MatrixNames { get; } = new ObservableCollection<string>();
 
-        public int Width => _matrix?.width ?? 0;
-        public int Height => _matrix?.height ?? 0;
+        public int Width => _matrix?.Width ?? 0;
+        public int Height => _matrix?.Height ?? 0;
 
         // New cells get no map; shrinking drops the cut-off cells, which undo brings back.
         public decimal SizeWidth { get => Width; set => Resize((int)value, Height); }
@@ -48,14 +48,14 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>The matrix's own name. Stored with a one-byte length, so it is cut to fit 127 bytes.</summary>
         public string MatrixName
         {
-            get => _matrix?.name ?? "";
+            get => _matrix?.Name ?? "";
             set
             {
                 if (_matrix == null || _suppress) return;
                 string name = value ?? "";
                 while (System.Text.Encoding.UTF8.GetByteCount(name) > 127) name = name.Substring(0, name.Length - 1);
-                if (name == _matrix.name) return;
-                _matrix.name = name;
+                if (name == _matrix.Name) return;
+                _matrix.Name = name;
                 MarkDirty();
             }
         }
@@ -67,11 +67,11 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 if (_matrix == null) return "";
                 bool patched = false;
-                try { patched = RomPatchState.flag_MatrixExpansionApplied || (gameFamily == GameFamilies.HGSS && PatchToolboxLogic.CheckFilesMatrixExpansionApplied()); }
-                catch { }
-                int max = MatrixMaxCells(patched), cells = _matrix.width * _matrix.height;
+                try { patched = RomPatchState.FlagMatrixExpansionApplied || (GameFamily == GameFamilies.HGSS && PatchToolboxLogic.CheckFilesMatrixExpansionApplied()); }
+                catch { }   // the expansion check falls back to unpatched limits
+                int max = MatrixMaxCells(patched), cells = _matrix.Width * _matrix.Height;
                 if (cells <= max) return "";
-                string fix = gameFamily == GameFamilies.HGSS && !patched ? " Apply Expand Matrix 0 in the ROM Patch Toolbox to double it." : "";
+                string fix = GameFamily == GameFamilies.HGSS && !patched ? " Apply Expand Matrix 0 in the ROM Patch Toolbox to double it." : "";
                 return $"{cells} cells: the game holds at most {max}, so a bigger matrix corrupts memory.{fix}";
             }
         }
@@ -85,20 +85,20 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (_matrix == null || _suppress) return;
             width = Math.Clamp(width, 1, 255);
             height = Math.Clamp(height, 1, 255);
-            if (width == _matrix.width && height == _matrix.height) return;
+            if (width == _matrix.Width && height == _matrix.Height) return;
             _matrix.ResizeMatrix(height, width);
             RebuildLegend();
             MarkDirty();
             StatusText = $"Matrix {_selectedIndex} is now {width}×{height}.";
             RaiseLoaded();
         }
-        public bool HasHeaders => _matrix?.hasHeadersSection ?? false;
-        public bool HasHeights => _matrix?.hasHeightsSection ?? false;
-        public bool CanAddHeaders => _matrix != null && !_matrix.hasHeadersSection;
-        public bool CanAddHeights => _matrix != null && !_matrix.hasHeightsSection;
+        public bool HasHeaders => _matrix?.HasHeadersSection ?? false;
+        public bool HasHeights => _matrix?.HasHeightsSection ?? false;
+        public bool CanAddHeaders => _matrix != null && !_matrix.HasHeadersSection;
+        public bool CanAddHeights => _matrix != null && !_matrix.HasHeightsSection;
 
         // Cell accessors used by the grid controls (col = x, row = y → array[row, col]).
-        public int GetMap(int c, int r) => _matrix.maps[r, c];
+        public int GetMap(int c, int r) => _matrix.Maps[r, c];
 
         /// <summary>The header being worked on, whose cells the grid outlines and centres on; -1 for none.</summary>
         private int _focusHeader = -1;
@@ -107,11 +107,11 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>Which header a cell belongs to; without a header section only the focus header's matrix counts.</summary>
         public int HeaderOfCell(int c, int r)
         {
-            if (_matrix == null || c < 0 || r < 0 || c >= _matrix.width || r >= _matrix.height) return -1;
-            if (_matrix.hasHeadersSection) return _matrix.headers[r, c];
-            if (_matrix.maps[r, c] == GameMatrix.EMPTY || _focusHeader < 0) return -1;
-            try { return MapHeader.GetMapHeader((ushort)_focusHeader)?.matrixID == _selectedIndex ? _focusHeader : -1; }
-            catch { return -1; }
+            if (_matrix == null || c < 0 || r < 0 || c >= _matrix.Width || r >= _matrix.Height) return -1;
+            if (_matrix.HasHeadersSection) return _matrix.Headers[r, c];
+            if (_matrix.Maps[r, c] == GameMatrix.EMPTY || _focusHeader < 0) return -1;
+            try { return MapHeader.GetMapHeader((ushort)_focusHeader)?.MatrixID == _selectedIndex ? _focusHeader : -1; }
+            catch (Exception ex) { AppLogger.WarnOnce("MatrixEditorViewModel.HeaderOfCell", ex); return -1; }
         }
 
         // ── What kind of place each cell is ─────────────────────────────────────────
@@ -143,8 +143,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (h == null) return PlaceKind.None;
             if (id == 0) return PlaceKind.OutOfBounds;
-            int type = h is HeaderHGSS hg ? hg.locationType : h.locationSpecifier;
-            int popup = h is HeaderPt pt ? pt.areaIcon : h is HeaderHGSS hgp ? hgp.areaIcon : 0;
+            int type = h is HeaderHGSS hg ? hg.LocationType : h.LocationSpecifier;
+            int popup = h is HeaderPt pt ? pt.AreaIcon : h is HeaderHGSS hgp ? hgp.AreaIcon : 0;
             switch (type)
             {
                 case 1: return PlaceKind.Town;
@@ -160,8 +160,8 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private int HeaderForColour(int c, int r)
         {
-            if (_matrix == null || _matrix.maps[r, c] == GameMatrix.EMPTY) return -1;
-            return _matrix.hasHeadersSection ? _matrix.headers[r, c] : _headerOfWholeMatrix;
+            if (_matrix == null || _matrix.Maps[r, c] == GameMatrix.EMPTY) return -1;
+            return _matrix.HasHeadersSection ? _matrix.Headers[r, c] : _headerOfWholeMatrix;
         }
 
         /// <summary>The colour of the kind of place a cell is, or null for a cell with no map.</summary>
@@ -171,7 +171,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (h < 0) return null;
             if (!_kindOfHeader.TryGetValue(h, out PlaceKind kind))
             {
-                try { kind = KindOf(h, MapHeader.GetMapHeader((ushort)h)); } catch { kind = PlaceKind.None; }
+                try { kind = KindOf(h, MapHeader.GetMapHeader((ushort)h)); } catch (Exception ex) { AppLogger.WarnOnce("MatrixEditorViewModel.CellColour", ex); kind = PlaceKind.None; }
                 _kindOfHeader[h] = kind;
             }
             foreach ((PlaceKind Kind, string Name, Color Colour) k in Kinds) if (k.Kind == kind) return k.Colour;
@@ -190,15 +190,15 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             _kindOfHeader.Clear();
             _headerOfWholeMatrix = -1;
-            if (_matrix != null && !_matrix.hasHeadersSection)
+            if (_matrix != null && !_matrix.HasHeadersSection)
             {
                 // A matrix without a header section belongs to whichever header uses it.
                 try
                 {
                     for (int h = 0; h < GetHeaderCount(); h++)
-                        if (MapHeader.GetMapHeader((ushort)h)?.matrixID == _selectedIndex) { _headerOfWholeMatrix = h; break; }
+                        if (MapHeader.GetMapHeader((ushort)h)?.MatrixID == _selectedIndex) { _headerOfWholeMatrix = h; break; }
                 }
-                catch { }
+                catch { }   // a header that can't be read is skipped
             }
             HashSet<Color> seen = new HashSet<global::Avalonia.Media.Color>();
             for (int r = 0; r < Height; r++)
@@ -215,18 +215,18 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private bool _paintMode;
         public bool PaintMode { get => _paintMode; set { if (_paintMode == value) return; _paintMode = value; OnPropertyChanged(); } }
-        public void SetMap(int c, int r, int v) => _matrix.maps[r, c] = (ushort)v;
-        public int GetHeader(int c, int r) => _matrix.headers[r, c];
-        public void SetHeader(int c, int r, int v) => _matrix.headers[r, c] = (ushort)v;
-        public int GetHeight(int c, int r) => _matrix.altitudes[r, c];
-        public void SetHeight(int c, int r, int v) => _matrix.altitudes[r, c] = (byte)v;
+        public void SetMap(int c, int r, int v) => _matrix.Maps[r, c] = (ushort)v;
+        public int GetHeader(int c, int r) => _matrix.Headers[r, c];
+        public void SetHeader(int c, int r, int v) => _matrix.Headers[r, c] = (ushort)v;
+        public int GetHeight(int c, int r) => _matrix.Altitudes[r, c];
+        public void SetHeight(int c, int r, int v) => _matrix.Altitudes[r, c] = (byte)v;
 
         // ── Selected cell (for "Set spawn to selection") ─────────────────────────────────
         private int _selCol, _selRow;
         public int SelCol => _selCol;
         public int SelRow => _selRow;
         public void SetSelectedCell(int c, int r) { _selCol = c; _selRow = r; }
-        public bool InBounds => _matrix != null && _selCol >= 0 && _selRow >= 0 && _selCol < _matrix.width && _selRow < _matrix.height;
+        public bool InBounds => _matrix != null && _selCol >= 0 && _selRow >= 0 && _selCol < _matrix.Width && _selRow < _matrix.Height;
 
         /// <summary>
         /// The header the selected cell belongs to. Without a header section that is the header using this
@@ -237,14 +237,14 @@ namespace DSPRE.Avalonia.ViewModels.World
             get
             {
                 if (!InBounds) return null;
-                if (_matrix.hasHeadersSection) return (ushort)_matrix.headers[_selRow, _selCol];
+                if (_matrix.HasHeadersSection) return (ushort)_matrix.Headers[_selRow, _selCol];
                 List<int> users = new List<int>();
                 try
                 {
                     for (int h = 0; h < GetHeaderCount(); h++)
-                        if (MapHeader.GetMapHeader((ushort)h)?.matrixID == _selectedIndex) users.Add(h);
+                        if (MapHeader.GetMapHeader((ushort)h)?.MatrixID == _selectedIndex) users.Add(h);
                 }
-                catch { return null; }
+                catch (Exception ex) { AppLogger.WarnOnce("MatrixEditorViewModel.SpawnHeaderNumber", ex); return null; }
                 if (_focusHeader >= 0 && users.Contains(_focusHeader)) return (ushort)_focusHeader;
                 return users.Count == 1 ? (ushort)users[0] : null;
             }
@@ -265,7 +265,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool HasUnsavedChanges => _dirty || _archive.IsDirty;
 
         // Added, removed and saved matrices wait here until Save.
-        private readonly DSPRE.Avalonia.Data.StagedArchive _archive = new(DirNames.matrices);
+        private readonly DSPRE.Avalonia.Data.StagedArchive _archive = new(DirNames.Matrices);
 
         private GameMatrix ReadMatrix(int id)
         {
@@ -312,13 +312,13 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             _undo = _matrix == null ? null : new ByteStateUndo(() => _matrix.ToByteArray(), state =>
             {
-                int? id = _matrix.id;
+                int? id = _matrix.Id;
                 GameMatrix restored;
                 using (MemoryStream ms = new MemoryStream(state)) restored = new GameMatrix(ms);
                 _matrix = id is int keep ? new GameMatrix(restored, keep) : restored;
                 RebuildLegend();
                 MarkDirty();
-                StatusText = $"Matrix {_selectedIndex} is {_matrix.width}×{_matrix.height}.";
+                StatusText = $"Matrix {_selectedIndex} is {_matrix.Width}×{_matrix.Height}.";
                 RaiseLoaded();
             }, () => { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); });
             OnPropertyChanged(nameof(CanUndo));
@@ -378,7 +378,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             _owner = owner;
             try
             {
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.matrices });
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.Matrices });
                 ListMatrices();
                 int count = MatrixNames.Count;
                 StatusText = $"{count} matrices.";
@@ -387,7 +387,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowError($"Failed to set up Matrix Editor:\n{ex.Message}", "Matrix editor error");
+                await DialogHelper.ShowErrorAsync($"Failed to set up Matrix Editor:\n{ex.Message}", "Matrix editor error");
             }
         }
 
@@ -404,7 +404,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex)
             {
-                _ = DialogHelper.ShowError($"Failed to load matrix {index}:\n{ex.Message}", "Matrix editor error");
+                _ = DialogHelper.ShowErrorAsync($"Failed to load matrix {index}:\n{ex.Message}", "Matrix editor error");
             }
         }
 
@@ -421,16 +421,16 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public void AddHeaderSection()
         {
-            if (_matrix == null || _matrix.hasHeadersSection) return;
-            _matrix.hasHeadersSection = true;
+            if (_matrix == null || _matrix.HasHeadersSection) return;
+            _matrix.HasHeadersSection = true;
             MarkDirty();
             RaiseLoaded();
         }
 
         public void AddHeightsSection()
         {
-            if (_matrix == null || _matrix.hasHeightsSection) return;
-            _matrix.hasHeightsSection = true;
+            if (_matrix == null || _matrix.HasHeightsSection) return;
+            _matrix.HasHeightsSection = true;
             MarkDirty();
             RaiseLoaded();
         }
@@ -438,10 +438,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>Drops the header section, after asking: every cell then uses the header that loads the matrix.</summary>
         public async System.Threading.Tasks.Task RemoveHeaderSectionAsync()
         {
-            if (_matrix == null || !_matrix.hasHeadersSection) return;
-            if (!await DialogHelper.AskYesNo("Remove this matrix's header section? Every cell will then use the header that loads the matrix.",
+            if (_matrix == null || !_matrix.HasHeadersSection) return;
+            if (!await DialogHelper.AskYesNoAsync("Remove this matrix's header section? Every cell will then use the header that loads the matrix.",
                                              "Remove header section?", _owner)) return;
-            _matrix.hasHeadersSection = false;
+            _matrix.HasHeadersSection = false;
             MarkDirty();
             RaiseLoaded();
         }
@@ -449,10 +449,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>Drops the height section, after asking: every map then sits at height 0.</summary>
         public async System.Threading.Tasks.Task RemoveHeightsSectionAsync()
         {
-            if (_matrix == null || !_matrix.hasHeightsSection) return;
-            if (!await DialogHelper.AskYesNo("Remove this matrix's height section? Every map will then sit at height 0.",
+            if (_matrix == null || !_matrix.HasHeightsSection) return;
+            if (!await DialogHelper.AskYesNoAsync("Remove this matrix's height section? Every map will then sit at height 0.",
                                              "Remove height section?", _owner)) return;
-            _matrix.hasHeightsSection = false;
+            _matrix.HasHeightsSection = false;
             MarkDirty();
             RaiseLoaded();
         }
@@ -488,7 +488,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError($"Couldn't add a matrix:\n{ex.Message}", "Matrix editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't add a matrix:\n{ex.Message}", "Matrix editor error");
             }
         }
 
@@ -496,17 +496,17 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task RemoveLastMatrixAsync()
         {
             int count = MatrixNames.Count;
-            if (count <= 1) { await DialogHelper.ShowInfo("At least one matrix must stay.", "Matrix editor"); return; }
+            if (count <= 1) { await DialogHelper.ShowInfoAsync("At least one matrix must stay.", "Matrix editor"); return; }
             int last = count - 1;
             // A header still pointing at the matrix would load garbage, so it stays while one does.
             List<(ushort Header, string Name)> uses = HeaderLinks.HeadersLinking(HeaderLinks.Kind.Matrix, last);
             if (uses.Count > 0)
             {
-                await DialogHelper.ShowInfo($"Matrix {last} stays: these headers still use it." + Environment.NewLine + HeaderLinks.Describe(uses)
+                await DialogHelper.ShowInfoAsync($"Matrix {last} stays: these headers still use it." + Environment.NewLine + HeaderLinks.Describe(uses)
                     + Environment.NewLine + "Point them at another matrix first.", "Matrix editor");
                 return;
             }
-            if (!await DialogHelper.AskYesNo($"Delete the last matrix ({last})?", "Delete matrix?")) return;
+            if (!await DialogHelper.AskYesNoAsync($"Delete the last matrix ({last})?", "Delete matrix?")) return;
             try
             {
                 if (_selectedIndex == last) { SetClean(); SelectedMatrixIndex = last - 1; }
@@ -517,7 +517,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError($"Couldn't remove matrix {last}:\n{ex.Message}", "Matrix editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't remove matrix {last}:\n{ex.Message}", "Matrix editor error");
             }
         }
 
@@ -525,7 +525,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (_selectedIndex < 0) return;
             FilePickerFileType filter = new FilePickerFileType("Matrix file") { Patterns = new[] { "*.mtx", "*.bin", "*.*" } };
-            string path = await DialogHelper.OpenFile(_owner, "Import matrix", new[] { filter });
+            string path = await DialogHelper.OpenFileAsync(_owner, "Import matrix", new[] { filter });
             if (path == null) return;
             try
             {
@@ -534,17 +534,17 @@ namespace DSPRE.Avalonia.ViewModels.World
                 SaveNotice.Imported($"matrix {_selectedIndex}", path);
                 RaiseLoaded();
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Matrix editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Matrix editor error"); }
         }
 
         public async Task ExportAsync()
         {
             if (_matrix == null) return;
             FilePickerFileType filter = new FilePickerFileType("Matrix file") { Patterns = new[] { "*.mtx" } };
-            string path = await DialogHelper.SaveFile(_owner, "Export matrix", new[] { filter }, $"matrix_{_selectedIndex:D4}.mtx");
+            string path = await DialogHelper.SaveFileAsync(_owner, "Export matrix", new[] { filter }, $"matrix_{_selectedIndex:D4}.mtx");
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _matrix.ToByteArray()); SaveNotice.Exported(path); }
-            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Matrix editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Matrix editor error"); }
         }
     }
 }

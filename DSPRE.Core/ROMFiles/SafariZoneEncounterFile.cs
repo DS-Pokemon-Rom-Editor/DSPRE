@@ -1,8 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 
-namespace DSPRE.ROMFiles {
-  public class SafariZoneEncounterFile : RomFile {
+namespace DSPRE.ROMFiles
+{
+  public class SafariZoneEncounterFile : RomFile
+  {
     public static Dictionary<int, string> Names = new Dictionary<int, string>() {
       {0, "Plains"},
       {1, "Meadow"},
@@ -20,81 +22,90 @@ namespace DSPRE.ROMFiles {
 
     public int ID;
     
-    public SafariZoneEncounterGroup grassEncounterGroup = new SafariZoneEncounterGroup();
-    public SafariZoneEncounterGroup surfEncounterGroup = new SafariZoneEncounterGroup();
-    public SafariZoneEncounterGroup oldRodEncounterGroup = new SafariZoneEncounterGroup();
-    public SafariZoneEncounterGroup goodRodEncounterGroup = new SafariZoneEncounterGroup();
-    public SafariZoneEncounterGroup superRodEncounterGroup = new SafariZoneEncounterGroup();
+    public SafariZoneEncounterGroup GrassEncounterGroup = new SafariZoneEncounterGroup();
+    public SafariZoneEncounterGroup SurfEncounterGroup = new SafariZoneEncounterGroup();
+    public SafariZoneEncounterGroup OldRodEncounterGroup = new SafariZoneEncounterGroup();
+    public SafariZoneEncounterGroup GoodRodEncounterGroup = new SafariZoneEncounterGroup();
+    public SafariZoneEncounterGroup SuperRodEncounterGroup = new SafariZoneEncounterGroup();
 
-    public SafariZoneEncounterFile(int id) {
+    public SafariZoneEncounterFile(int id)
+    {
       this.ID = id;
       string path = Filesystem.GetSafariZonePath(id);
-      parse_file(path);
+      ParseFile(path);
     }
 
-    public SafariZoneEncounterFile(string path) {
-      parse_file(path);
+    public SafariZoneEncounterFile(string path)
+    {
+      ParseFile(path);
     }
 
     /// <summary>A file read from bytes already in memory, laid out as on disk.</summary>
-    public SafariZoneEncounterFile(int id, byte[] data) {
+    public SafariZoneEncounterFile(int id, byte[] data)
+    {
       this.ID = id;
-      parse(new MemoryStream(data));
+      Parse(new MemoryStream(data));
     }
 
-    public void parse_file(string path) => parse(new FileStream(path, FileMode.Open));
+    public void ParseFile(string path) => Parse(new FileStream(path, FileMode.Open));
 
-    private void parse(Stream fs) {
-      using (BinaryReader br = new BinaryReader(fs)) {
+    private void Parse(Stream fs)
+    {
+      using (BinaryReader br = new BinaryReader(fs))
+      {
         if (br.BaseStream.Length < 5){ return; }
         //#1 Section - Object Arrangement Allocation
-        grassEncounterGroup.readObjectSlots(br);
-        surfEncounterGroup.readObjectSlots(br);
-        oldRodEncounterGroup.readObjectSlots(br);
-        goodRodEncounterGroup.readObjectSlots(br);
-        superRodEncounterGroup.readObjectSlots(br);
+        GrassEncounterGroup.ReadObjectSlots(br);
+        SurfEncounterGroup.ReadObjectSlots(br);
+        OldRodEncounterGroup.ReadObjectSlots(br);
+        GoodRodEncounterGroup.ReadObjectSlots(br);
+        SuperRodEncounterGroup.ReadObjectSlots(br);
 
         br.ReadByte();
         br.ReadByte();
         br.ReadByte();
 
-        grassEncounterGroup.readGroup(br);
-        surfEncounterGroup.readGroup(br);
-        oldRodEncounterGroup.readGroup(br);
-        goodRodEncounterGroup.readGroup(br);
-        superRodEncounterGroup.readGroup(br);
+        GrassEncounterGroup.ReadGroup(br);
+        SurfEncounterGroup.ReadGroup(br);
+        OldRodEncounterGroup.ReadGroup(br);
+        GoodRodEncounterGroup.ReadGroup(br);
+        SuperRodEncounterGroup.ReadGroup(br);
       }
     }
 
-    public override byte[] ToByteArray() {
+    public override byte[] ToByteArray()
+    {
       MemoryStream newData = new MemoryStream();
-      using (BinaryWriter bw = new BinaryWriter(newData)) {
-        grassEncounterGroup.writeObjectSlots(bw);
-        surfEncounterGroup.writeObjectSlots(bw);
-        oldRodEncounterGroup.writeObjectSlots(bw);
-        goodRodEncounterGroup.writeObjectSlots(bw);
-        superRodEncounterGroup.writeObjectSlots(bw);
+      using (BinaryWriter bw = new BinaryWriter(newData))
+      {
+        GrassEncounterGroup.WriteObjectSlots(bw);
+        SurfEncounterGroup.WriteObjectSlots(bw);
+        OldRodEncounterGroup.WriteObjectSlots(bw);
+        GoodRodEncounterGroup.WriteObjectSlots(bw);
+        SuperRodEncounterGroup.WriteObjectSlots(bw);
 
         bw.Write((byte)0);
         bw.Write((byte)0);
         bw.Write((byte)0);
 
-        grassEncounterGroup.writeGroup(bw);
-        surfEncounterGroup.writeGroup(bw);
-        oldRodEncounterGroup.writeGroup(bw);
-        goodRodEncounterGroup.writeGroup(bw);
-        superRodEncounterGroup.writeGroup(bw);
+        GrassEncounterGroup.WriteGroup(bw);
+        SurfEncounterGroup.WriteGroup(bw);
+        OldRodEncounterGroup.WriteGroup(bw);
+        GoodRodEncounterGroup.WriteGroup(bw);
+        SuperRodEncounterGroup.WriteGroup(bw);
       }
       return newData.ToArray();
     }
 
     // The editor says nothing of its own when a save works, so don't pop the base class's message.
-    public bool SaveToFile() {
+    public bool SaveToFile()
+    {
       string path = Filesystem.GetSafariZonePath(ID);
       return SaveToFile(path, showSuccessMessage: false);
     }
 
-    public bool SaveToFile(int id) {
+    public bool SaveToFile(int id)
+    {
       string path = Filesystem.GetSafariZonePath(id);
       return SaveToFile(path, showSuccessMessage: false);
     }

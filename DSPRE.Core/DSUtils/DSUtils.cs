@@ -15,21 +15,25 @@ using System.Text;
 using System.Threading.Tasks;
 using static DSPRE.RomInfo;
 
-namespace DSPRE {
-    public static class DSUtils {
+namespace DSPRE
+{
+    public static class DSUtils
+    {
 
-        public const int ERR_OVERLAY_NOTFOUND = -1;
-        public const int ERR_OVERLAY_ALREADY_UNCOMPRESSED = -2;
-        public const int ERR_TOOL_UNAVAILABLE = -3;
+        public const int ErrOverlayNotfound = -1;
+        public const int ErrOverlayAlreadyUncompressed = -2;
+        public const int ErrToolUnavailable = -3;
 
-        public static int ReplaceTextEverywhere(string searchString, string replaceString, bool caseSensitive) {
+        public static int ReplaceTextEverywhere(string searchString, string replaceString, bool caseSensitive)
+        {
             return ReplaceTextEverywhere(new[] { (searchString, replaceString, caseSensitive) });
         }
 
         // Advancing past each replacement instead of rescanning from 0 avoids looping forever when a
         // replacement text itself matches its own search text, e.g. renaming "PIKABLU" to "Pikablu".
         public static int ReplaceTextEverywhere(IEnumerable<(string searchString, string replaceString, bool caseSensitive)> replacements,
-            bool wholeWord = false) {
+            bool wholeWord = false)
+        {
             return ReplaceTextInArchives(replacements, 0, Filesystem.GetTextArchivesCount(), wholeWord: wholeWord).Count;
         }
 
@@ -38,31 +42,38 @@ namespace DSPRE {
         /// returns the ids it saved. <paramref name="skip"/> leaves an archive untouched.
         /// </summary>
         public static List<int> ReplaceTextInArchives(IEnumerable<(string searchString, string replaceString, bool caseSensitive)> replacements,
-            int first, int last, Func<int, bool> skip = null, object sender = null, bool wholeWord = false) {
+            int first, int last, Func<int, bool> skip = null, object sender = null, bool wholeWord = false)
+        {
             List<int> edited = new List<int>();
             List<(string searchString, string replaceString, bool caseSensitive)> pairs = replacements.Where(r => !string.IsNullOrEmpty(r.searchString) && r.searchString != r.replaceString).ToList();
-            if (pairs.Count == 0) {
+            if (pairs.Count == 0)
+            {
                 return edited;
             }
 
             last = Math.Min(last, Filesystem.GetTextArchivesCount());
-            for (int i = Math.Max(0, first); i < last; i++) {
-                if (skip != null && skip(i)) {
+            for (int i = Math.Max(0, first); i < last; i++)
+            {
+                if (skip != null && skip(i))
+                {
                     continue;
                 }
 
                 TextArchive archive = new DSPRE.ROMFiles.TextArchive(i);
                 bool changed = false;
 
-                for (int j = 0; j < archive.messages.Count; j++) {
-                    string text = archive.messages[j];
-                    foreach ((string searchString, string replaceString, bool caseSensitive) pair in pairs) {
+                for (int j = 0; j < archive.Messages.Count; j++)
+                {
+                    string text = archive.Messages[j];
+                    foreach ((string searchString, string replaceString, bool caseSensitive) pair in pairs)
+                    {
                         text = ReplaceInText(text, pair.searchString, pair.replaceString, pair.caseSensitive, ref changed, wholeWord);
                     }
-                    archive.messages[j] = text;
+                    archive.Messages[j] = text;
                 }
 
-                if (changed) {
+                if (changed)
+                {
                     archive.SaveToExpandedDir(i, showSuccessMessage: false, sender: sender);
                     edited.Add(i);
                 }
@@ -72,15 +83,19 @@ namespace DSPRE {
         }
 
         public static string ReplaceInText(string text, string searchString, string replaceString, bool caseSensitive, ref bool changed,
-            bool wholeWord = false) {
-            if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(searchString)) {
+            bool wholeWord = false)
+        {
+            if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(searchString))
+            {
                 return text;
             }
             StringComparison comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
             int searchFrom = 0;
             int posFound;
-            while ((posFound = text.IndexOf(searchString, searchFrom, comparison)) >= 0) {
-                if (wholeWord && !IsWordAt(text, posFound, searchString.Length)) {
+            while ((posFound = text.IndexOf(searchString, searchFrom, comparison)) >= 0)
+            {
+                if (wholeWord && !IsWordAt(text, posFound, searchString.Length))
+                {
                     searchFrom = posFound + 1;
                     continue;
                 }
@@ -92,7 +107,8 @@ namespace DSPRE {
         }
 
         // A letter right after a backslash is an escape such as \n, so a name may start straight after it.
-        private static bool IsWordAt(string text, int start, int length) {
+        private static bool IsWordAt(string text, int start, int length)
+        {
             int end = start + length;
             bool before = start == 0 || !char.IsLetterOrDigit(text[start - 1])
                 || (start >= 2 && text[start - 2] == '\\');
@@ -101,53 +117,64 @@ namespace DSPRE {
         }
 
         // Anything longer than the 3-command "give item" template is the shared execution routine, not a pickable entry.
-        public static bool IsGroundItemScriptEntry(DSPRE.ROMFiles.ScriptCommandContainer container) {
-            return container.commands != null && container.commands.Count <= 4
-                && container.commands.Count >= 2
-                && container.commands[0].cmdParams != null && container.commands[0].cmdParams.Count >= 2
-                && container.commands[1].cmdParams != null && container.commands[1].cmdParams.Count >= 2;
+        public static bool IsGroundItemScriptEntry(DSPRE.ROMFiles.ScriptCommandContainer container)
+        {
+            return container.Commands != null && container.Commands.Count <= 4
+                && container.Commands.Count >= 2
+                && container.Commands[0].CmdParams != null && container.Commands[0].CmdParams.Count >= 2
+                && container.Commands[1].CmdParams != null && container.Commands[1].CmdParams.Count >= 2;
         }
 
-        public static List<(int scriptIndex, int itemId, int quantity)> GetGroundItemScriptEntries(DSPRE.ROMFiles.ScriptFile itemScript) {
+        public static List<(int scriptIndex, int itemId, int quantity)> GetGroundItemScriptEntries(DSPRE.ROMFiles.ScriptFile itemScript)
+        {
             List<(int scriptIndex, int itemId, int quantity)> result = new List<(int scriptIndex, int itemId, int quantity)>();
 
-            for (int i = 0; i < itemScript.allScripts.Count; i++) {
-                ScriptCommandContainer container = itemScript.allScripts[i];
-                if (!IsGroundItemScriptEntry(container)) {
+            for (int i = 0; i < itemScript.AllScripts.Count; i++)
+            {
+                ScriptCommandContainer container = itemScript.AllScripts[i];
+                if (!IsGroundItemScriptEntry(container))
+                {
                     continue;
                 }
 
-                int itemId = BitConverter.ToUInt16(container.commands[0].cmdParams[1], 0);
-                int quantity = BitConverter.ToUInt16(container.commands[1].cmdParams[1], 0);
+                int itemId = BitConverter.ToUInt16(container.Commands[0].CmdParams[1], 0);
+                int quantity = BitConverter.ToUInt16(container.Commands[1].CmdParams[1], 0);
                 result.Add((i, itemId, quantity));
             }
 
             return result;
         }
 
-        public const string backupSuffix = ".backup";
+        public const string BackupSuffix = ".backup";
 
         public static readonly string NDSRomFilter = "NDS File (*.nds)|*.nds";
-        public class EasyReader : BinaryReader {
-            public EasyReader(string path, long pos = 0) : base(File.OpenRead(path)) {
+        public class EasyReader : BinaryReader
+        {
+            public EasyReader(string path, long pos = 0) : base(File.OpenRead(path))
+            {
                 this.BaseStream.Position = pos;
             }
         }
-        public class EasyWriter : BinaryWriter {
-            public EasyWriter(string path, long pos = 0, FileMode fmode = FileMode.OpenOrCreate) : base(new FileStream(path, fmode, FileAccess.Write, FileShare.None)) {
+        public class EasyWriter : BinaryWriter
+        {
+            public EasyWriter(string path, long pos = 0, FileMode fmode = FileMode.OpenOrCreate) : base(new FileStream(path, fmode, FileAccess.Write, FileShare.None))
+            {
                 this.BaseStream.Position = pos;
             }
-            public void EditSize(int increment) {
+            public void EditSize(int increment)
+            {
                 this.BaseStream.SetLength(this.BaseStream.Length + increment);
             }
         }
 
         /// <summary>Writes <paramref name="byteCount"/> bytes of <paramref name="toOutput"/> from <paramref name="firstByte"/> (the rest when null) at <paramref name="writeAt"/>.</summary>
-        public static void WriteToFile(string filepath, byte[] toOutput, uint writeAt = 0, int firstByte = 0, int? byteCount = null, FileMode fmode = FileMode.OpenOrCreate) {
+        public static void WriteToFile(string filepath, byte[] toOutput, uint writeAt = 0, int firstByte = 0, int? byteCount = null, FileMode fmode = FileMode.OpenOrCreate)
+        {
             int length = byteCount ?? toOutput.Length - firstByte;
             if (HgEngineWriteGuard.Refuses(filepath, writeAt, length)) return;
 
-            using (EasyWriter writer = new EasyWriter(filepath, writeAt, fmode)) {
+            using (EasyWriter writer = new EasyWriter(filepath, writeAt, fmode))
+            {
                 writer.Write(toOutput, firstByte, length);
             }
         }
@@ -156,7 +183,8 @@ namespace DSPRE {
         /// that changes, and a refusal throws so a caller writing several files can put the others back. Writing goes
         /// through a temporary file, so a failed write never leaves half a file.
         /// </summary>
-        public static void WriteWholeFile(string filepath, byte[] bytes) {
+        public static void WriteWholeFile(string filepath, byte[] bytes)
+        {
             byte[] now = File.Exists(filepath) ? File.ReadAllBytes(filepath) : Array.Empty<byte>();
             int first = 0;
             while (first < bytes.Length && first < now.Length && bytes[first] == now[first]) first++;
@@ -167,11 +195,13 @@ namespace DSPRE {
                 throw new InvalidOperationException($"hg-engine owns part of {Path.GetFileName(filepath)}, so nothing was written.");
 
             string temp = filepath + ".dspre.tmp";
-            try {
+            try
+            {
                 File.WriteAllBytes(temp, bytes);
                 File.Move(temp, filepath, true);
             }
-            finally {
+            finally
+            {
                 if (File.Exists(temp)) File.Delete(temp);
             }
         }
@@ -180,24 +210,30 @@ namespace DSPRE {
         // The table lives at RomInfo.monIconPalTableAddress; which file + offset depends on the overlay
         // setup, exactly as GetPokePicRaw resolves it when rendering icons. Reused here for the editor.
         // Requires RomInfo.SetMonIconsPalTableAddress() to have been called first.
-        public static bool TryResolveMonIconPalTable(out string path, out int baseOffset) {
+        public static bool TryResolveMonIconPalTable(out string path, out int baseOffset)
+        {
             path = null; baseOffset = 0;
-            if ((int)(RomInfo.monIconPalTableAddress - RomInfo.synthOverlayLoadAddress) >= 0) {
-                baseOffset = (int)(RomInfo.monIconPalTableAddress - RomInfo.synthOverlayLoadAddress);
-                path = Filesystem.expArmPath;
-            } else {
-                baseOffset = (int)(RomInfo.monIconPalTableAddress - ARM9.address);
-                path = RomInfo.arm9Path;
+            if ((int)(RomInfo.MonIconPalTableAddress - RomInfo.SynthOverlayLoadAddress) >= 0)
+            {
+                baseOffset = (int)(RomInfo.MonIconPalTableAddress - RomInfo.SynthOverlayLoadAddress);
+                path = Filesystem.ExpArmPath;
+            }
+            else
+            {
+                baseOffset = (int)(RomInfo.MonIconPalTableAddress - ARM9.Address);
+                path = RomInfo.Arm9Path;
             }
             return path != null && baseOffset >= 0;
         }
 
         /// <summary>Reads the party-icon palette id (0/1/2) for a species, or 0 if unavailable.</summary>
-        public static int GetMonIconPaletteId(int species) {
+        public static int GetMonIconPaletteId(int species)
+        {
             // A linked checkout owns this table, so its source is what the next build will use. Failing
             // that, an hg-engine build keeps it in a/0/2/8 and never writes the vanilla ARM9 one, so
             // reading the member its code reads is the only way to show what the game shows.
-            if (RomInfo.isHGE) {
+            if (RomInfo.IsHGE)
+            {
                 if (HgEngine.HgEngineIconPalette.TryGetPaletteId(species, out int fromSource)) return fromSource;
                 return HgEngine.HgEngineCodeAddons.ReadIconPaletteId(species, out int hgeId)
                     == HgEngine.HgEngineCodeAddons.PaletteStatus.Ok ? hgeId : 0;
@@ -207,39 +243,53 @@ namespace DSPRE {
         }
 
         /// <summary>Writes the party-icon palette id (0/1/2) for a species into the resolved table file.</summary>
-        public static void SetMonIconPaletteId(int species, byte palId) {
+        public static void SetMonIconPaletteId(int species, byte palId)
+        {
             // hg-engine owns its copy of this table, so the vanilla one is not the place to write it.
-            if (RomInfo.isHGE) return;
+            if (RomInfo.IsHGE) return;
             if (!TryResolveMonIconPalTable(out string path, out int baseOff)) return;
             WriteToFile(path, new[] { palId }, (uint)(baseOff + species));
         }
 
-        public static byte[] ReadFromFile(string filepath, long startOffset = 0, long numberOfBytes = 0) {
+        public static byte[] ReadFromFile(string filepath, long startOffset = 0, long numberOfBytes = 0)
+        {
             byte[] buffer = null;
 
-            using (EasyReader reader = new EasyReader(filepath, startOffset)) {
-                try {
+            using (EasyReader reader = new EasyReader(filepath, startOffset))
+            {
+                try
+                {
                     buffer = reader.ReadBytes(numberOfBytes == 0 ? (int)(reader.BaseStream.Length - reader.BaseStream.Position) : (int)numberOfBytes);
-                } catch (EndOfStreamException) {
+                }
+                catch (EndOfStreamException)
+                {
                     AppLogger.Error("Stream ended");
                 }
             }
 
             return buffer;
         }
-        public static byte[] ReadFromByteArray(byte[] input, long readFrom = 0, long numberOfBytes = 0) {
+        public static byte[] ReadFromByteArray(byte[] input, long readFrom = 0, long numberOfBytes = 0)
+        {
             byte[] buffer = null;
 
-            using (BinaryReader reader = new BinaryReader(new MemoryStream(input))) {
+            using (BinaryReader reader = new BinaryReader(new MemoryStream(input)))
+            {
                 reader.BaseStream.Position = readFrom;
 
-                try {
-                    if (numberOfBytes == 0) {
+                try
+                {
+                    if (numberOfBytes == 0)
+                    {
                         buffer = reader.ReadBytes((int)(input.Length - reader.BaseStream.Position));
-                    } else {
+                    }
+                    else
+                    {
                         buffer = reader.ReadBytes((int)numberOfBytes);
                     }
-                } catch (EndOfStreamException) {
+                }
+                catch (EndOfStreamException)
+                {
                     AppLogger.Error("Stream ended");
                 }
             }
@@ -248,16 +298,21 @@ namespace DSPRE {
 
         /// <summary>Returns every offset in <paramref name="haystack"/> where <paramref name="needle"/> occurs
         /// (naive scan; needles here are short fixed byte patterns, not large enough to need Boyer-Moore).</summary>
-        public static List<int> SearchBytes(byte[] haystack, byte[] needle) {
+        public static List<int> SearchBytes(byte[] haystack, byte[] needle)
+        {
             List<int> matches = new List<int>();
-            if (haystack == null || needle == null || needle.Length == 0 || needle.Length > haystack.Length) {
+            if (haystack == null || needle == null || needle.Length == 0 || needle.Length > haystack.Length)
+            {
                 return matches;
             }
 
-            for (int i = 0; i <= haystack.Length - needle.Length; i++) {
+            for (int i = 0; i <= haystack.Length - needle.Length; i++)
+            {
                 bool isMatch = true;
-                for (int j = 0; j < needle.Length; j++) {
-                    if (haystack[i + j] != needle[j]) {
+                for (int j = 0; j < needle.Length; j++)
+                {
+                    if (haystack[i + j] != needle[j])
+                    {
                         isMatch = false;
                         break;
                     }
@@ -470,7 +525,8 @@ namespace DSPRE {
             return "Z:" + value.Replace('/', '\\');
         }
 
-        public static Process CreateDecompressProcess(string path) {
+        public static Process CreateDecompressProcess(string path)
+        {
             Process decompress = new Process();
             decompress.StartInfo.Arguments = @" -d " + '"' + path + '"';
             if (!ConfigureToolStartInfo(decompress.StartInfo, "blz"))
@@ -488,7 +544,7 @@ namespace DSPRE {
         public static string WorkDirPathFromFile(string filePath)
         {
             filePath = Path.GetFullPath(filePath);
-            return Path.Combine(Path.GetDirectoryName(filePath), Path.GetFileNameWithoutExtension(filePath) + RomInfo.folderSuffix);
+            return Path.Combine(Path.GetDirectoryName(filePath), Path.GetFileNameWithoutExtension(filePath) + RomInfo.FolderSuffix);
         }
 
         public static bool UnpackRom(string ndsFileName, string workDir)
@@ -654,7 +710,7 @@ namespace DSPRE {
 
         public static bool RepackROMDsRom(string ndsFileName)
         {
-            string configPath = Path.Combine(workDir, "config.yaml");
+            string configPath = Path.Combine(WorkDir, "config.yaml");
 
             if (!File.Exists(configPath))
             {
@@ -725,7 +781,8 @@ namespace DSPRE {
             return true;
         }
 
-        public static bool RepackROM(string ndsFileName) {
+        public static bool RepackROM(string ndsFileName)
+        {
             // Route to ds-rom if this is a ds-rom project
             if (RomInfo.IsDsRomProject)
             {
@@ -735,14 +792,14 @@ namespace DSPRE {
             // RomInfo's paths, so an hg-engine checkout's own tree (root/, overarm9.bin) packs too.
             Process repack = new Process();
             repack.StartInfo.Arguments = "-c " + '"' + ndsFileName + '"'
-                + " -9 " + '"' + arm9Path + '"'
-                + " -7 " + '"' + arm7Path + '"'
-                + " -y9 " + '"' + overlayTablePath + '"'
-                + " -y7 " + '"' + y7Path + '"'
-                + " -d " + '"' + dataPath + '"'
-                + " -y " + '"' + overlayPath + '"'
-                + " -t " + '"' + bannerPath + '"'
-                + " -h " + '"' + headerPath + '"';
+                + " -9 " + '"' + Arm9Path + '"'
+                + " -7 " + '"' + Arm7Path + '"'
+                + " -y9 " + '"' + OverlayTablePath + '"'
+                + " -y7 " + '"' + Y7Path + '"'
+                + " -d " + '"' + DataPath + '"'
+                + " -y " + '"' + OverlayPath + '"'
+                + " -t " + '"' + BannerPath + '"'
+                + " -h " + '"' + HeaderPath + '"';
             if (!ConfigureToolStartInfo(repack.StartInfo, "ndstool"))
             {
                 ReportToolUnavailable("ndstool");
@@ -1062,7 +1119,8 @@ namespace DSPRE {
     private static string ProjectFolderPath(string workDir) =>
         Path.TrimEndingDirectorySeparator(Path.GetFullPath(workDir));
 
-    public static byte[] StringToByteArray(String hex) {
+    public static byte[] StringToByteArray(String hex)
+    {
             //Ummm what?
             int NumberChars = hex.Length;
             byte[] bytes = new byte[NumberChars / 2];
@@ -1070,7 +1128,8 @@ namespace DSPRE {
                 bytes[i / 2] = Convert.ToByte(hex.Substring(i, 2), 16);
             return bytes;
         }
-        public static byte[] HexStringToByteArray(string hexString) {
+        public static byte[] HexStringToByteArray(string hexString)
+        {
             //FC B5 05 48 C0 46 41 21 
             //09 22 02 4D A8 47 00 20 
             //03 21 FC BD F1 64 00 02 
@@ -1081,8 +1140,10 @@ namespace DSPRE {
             hexString = hexString.Trim();
 
             byte[] b = new byte[hexString.Length / 3 + 1];
-            for (int i = 0; i < hexString.Length; i += 2) {
-                if (hexString[i] == ' ') {
+            for (int i = 0; i < hexString.Length; i += 2)
+            {
+                if (hexString[i] == ' ')
+                {
                     hexString = hexString.Substring(1, hexString.Length - 1);
                 }
 
@@ -1098,8 +1159,10 @@ namespace DSPRE {
         /// <summary>The lock an archive's extraction holds, for readers that must not see a half-written folder.</summary>
         internal static object UnpackLockFor(DirNames id) => UnpackLocks.GetOrAdd(id, _ => new object());
 
-        public static void TryUnpackNarcs(List<DirNames> IDs) {
-            if (gameDirs == null || gameDirs.Count == 0) {
+        public static void TryUnpackNarcs(List<DirNames> IDs)
+        {
+            if (GameDirs == null || GameDirs.Count == 0)
+            {
                 return;
             }
             // hg-engine-owned domains are always rebuilt fresh from source (cheap: 0.5-3s each), never
@@ -1109,15 +1172,19 @@ namespace DSPRE {
             NarcSync.SettleIfFree(IDs);
             Parallel.ForEach(IDs, id => {
                 lock (UnpackLocks.GetOrAdd(id, _ => new object()))
-                if (gameDirs.TryGetValue(id, out (string packedPath, string unpackedPath) paths)) {
+                if (GameDirs.TryGetValue(id, out (string packedPath, string unpackedPath) paths))
+                {
                     DirectoryInfo di = new DirectoryInfo(paths.unpackedPath);
 
-                    if (di.Exists && di.GetFiles().Length > 0) {
+                    if (di.Exists && di.GetFiles().Length > 0)
+                    {
                         return;
                     }
 
-                    if (!File.Exists(paths.packedPath)) {
-                        if (IsOptionalNarc(id, gameFamily)) {
+                    if (!File.Exists(paths.packedPath))
+                    {
+                        if (IsOptionalNarc(id, GameFamily))
+                        {
                             AppLogger.Debug($"Skipping optional NARC at {paths.packedPath}; it is not present in this project.");
                             return;
                         }
@@ -1138,15 +1205,17 @@ namespace DSPRE {
                 }
             });
         }
-        public static void ForceUnpackNarcs(List<DirNames> IDs) {
+        public static void ForceUnpackNarcs(List<DirNames> IDs)
+        {
             IDs = HgEngineSync.SyncOwnedAndReturnRemaining(IDs);
             Parallel.ForEach(IDs, id => {
                 lock (UnpackLocks.GetOrAdd(id, _ => new object()))
-                if (gameDirs.TryGetValue(id, out (string packedPath, string unpackedPath) paths)) {
+                if (GameDirs.TryGetValue(id, out (string packedPath, string unpackedPath) paths))
+                {
 
                     if (!File.Exists(paths.packedPath))
                     {
-                        if (IsOptionalNarc(id, gameFamily))
+                        if (IsOptionalNarc(id, GameFamily))
                         {
                             AppLogger.Debug($"Skipping optional NARC at {paths.packedPath}; it is not present in this project.");
                             return;
@@ -1157,7 +1226,8 @@ namespace DSPRE {
 
                     Narc opened = Narc.Open(paths.packedPath);
 
-                    if (opened is null) {
+                    if (opened is null)
+                    {
                         throw new NullReferenceException();
                     }
 
@@ -1167,7 +1237,7 @@ namespace DSPRE {
         }
 
         internal static bool IsOptionalNarc(DirNames id, GameFamilies family) =>
-            id == DirNames.eggMoves && family != GameFamilies.HGSS;
+            id == DirNames.EggMoves && family != GameFamilies.HGSS;
 
         /// <summary>
         /// Placeholder mon icon returned by <see cref="GetPokePicRaw"/> when the real icon can't be decoded. The app
@@ -1177,20 +1247,22 @@ namespace DSPRE {
 
         /// <summary>Alt-form pseudo-ids (personalExtraFiles list position, vanilla-only) aren't icon indices;
         /// <summary>Alt-form pseudo-ids aren't icon indices; resolves one to the real icon id.</summary>
-        public static int ResolveIconId(int id) {
+        public static int ResolveIconId(int id)
+        {
             string[] names = GetPokemonNames();
             // Bad Egg has no icon of its own; shows the plain egg icon.
             if (id == names.Length - 1) id = names.Length - 2;
             int excess = id - names.Length;
-            PokeDatabase.PersonalData.PersonalExtraFiles[] extras = DSPRE.Resources.PokeDatabase.PersonalData.personalExtraFiles;
-            return (excess >= 0 && excess < extras.Length) ? extras[excess].iconId : id;
+            PokeDatabase.PersonalData.PersonalExtraFiles[] extras = DSPRE.Resources.PokeDatabase.PersonalData.ExtraFiles;
+            return (excess >= 0 && excess < extras.Length) ? extras[excess].IconId : id;
         }
 
         /// <summary>Sprite-offset and animation NARCs hold one record per real species; alt-form pseudo-ids share their base species' record.</summary>
-        public static int ResolveBaseSpeciesId(int id) {
+        public static int ResolveBaseSpeciesId(int id)
+        {
             int excess = id - GetPokemonNames().Length;
-            PokeDatabase.PersonalData.PersonalExtraFiles[] extras = DSPRE.Resources.PokeDatabase.PersonalData.personalExtraFiles;
-            return (excess >= 0 && excess < extras.Length) ? extras[excess].monId : id;
+            PokeDatabase.PersonalData.PersonalExtraFiles[] extras = DSPRE.Resources.PokeDatabase.PersonalData.ExtraFiles;
+            return (excess >= 0 && excess < extras.Length) ? extras[excess].MonId : id;
         }
 
         /// <summary>
@@ -1198,7 +1270,8 @@ namespace DSPRE {
         /// with form icons, in the same order in DP, Pt and HGSS (DP stops after Gastrodon). The species itself when
         /// the form has no icon of its own, or the ROM lacks it.
         /// </summary>
-        public static int MonIconIndex(int species, int form, out int paletteIndex) {
+        public static int MonIconIndex(int species, int form, out int paletteIndex)
+        {
             paletteIndex = species;
             if (form <= 0) return species;
             (int first, int forms) = species switch {
@@ -1215,7 +1288,7 @@ namespace DSPRE {
             };
             if (first < 0 || form > forms) return species;
             int index = first + form - 1;
-            string dir = gameDirs[DirNames.monIcons].unpackedDir;
+            string dir = GameDirs[DirNames.MonIcons].unpackedDir;
             if (!File.Exists(Path.Combine(dir, (index + 7).ToString("D4"))) && !File.Exists(Path.Combine(dir, (index + 7).ToString("D5"))))
                 return species;
             // The game reads Unown's palette one slot back, from the unused Unown A icon's; they all match anyway.
@@ -1224,13 +1297,15 @@ namespace DSPRE {
         }
 
         /// <summary>A species' party icon in the given form.</summary>
-        public static RawImage GetFormPokePicRaw(int species, int form, int w, int h) {
+        public static RawImage GetFormPokePicRaw(int species, int form, int w, int h)
+        {
             int index = MonIconIndex(species, form, out int palette);
             return index == species ? GetPokePicRaw(species, w, h) : GetPokePicRaw(index, w, h, GetMonIconPaletteId(palette));
         }
 
         /// <summary>The mon icon composed into a <see cref="RawImage"/>.</summary>
-        public static RawImage GetPokePicRaw(int species, int w, int h, int paletteIdOverride = -1) {
+        public static RawImage GetPokePicRaw(int species, int w, int h, int paletteIdOverride = -1)
+        {
             MonIcon icon = LoadMonIconParts(species, paletteIdOverride);
             if (icon.Header == null) return MonIconFallbackHook?.Invoke();
             return CellRenderer.Draw(icon.Cells, 0, icon.Drawing, icon.Colours, w, h);
@@ -1240,13 +1315,15 @@ namespace DSPRE {
         /// (item icon table entry → palette/sprite/cell files in the itemIcons NARC), returned as a
         /// <see cref="RawImage"/> instead of a System.Drawing Image. Returns null (not a placeholder) on
         /// failure, callers that want a fallback icon supply their own, same as PokemonIconCache.</summary>
-        public static RawImage GetItemPicRaw(int itemId, int w, int h) {
-            try {
+        public static RawImage GetItemPicRaw(int itemId, int w, int h)
+        {
+            try
+            {
                 if (!DSPRE.ROMFiles.ItemTable.Exists(itemId)) return null;
                 ItemNarcTableEntry entry = DSPRE.ROMFiles.ItemTable.Read(itemId);   // PlatPatches' expanded items resolve through its overflow table
-                int itemIconId = (int)entry.itemIcon;
-                int itemPaletteId = (int)entry.itemPalette;
-                string itemIconsDir = gameDirs[DirNames.itemIcons].unpackedDir;
+                int itemIconId = (int)entry.ItemIcon;
+                int itemPaletteId = (int)entry.ItemPalette;
+                string itemIconsDir = GameDirs[DirNames.ItemIcons].unpackedDir;
 
                 ushort[] colours = NitroBgCodec.ReadColours(File.ReadAllBytes(Path.Combine(itemIconsDir, itemPaletteId.ToString("D4"))));
                 byte[] drawing = File.ReadAllBytes(Path.Combine(itemIconsDir, itemIconId.ToString("D4")));
@@ -1254,7 +1331,10 @@ namespace DSPRE {
                 if (cells == null || NitroBgCodec.ReadDrawingHeader(drawing) == null) return null;
 
                 return CellRenderer.Draw(cells, 0, drawing, colours, w, h);
-            } catch (Exception) {
+            }
+            catch (Exception ex)
+            {
+                AppLogger.WarnOnce("DSUtils.GetItemPicRaw", ex);
                 return null;
             }
         }
@@ -1273,7 +1353,8 @@ namespace DSPRE {
         /// height from tile count), the exact bitmap an icon-graphic editor should export/reimport.
         /// Rendered with the currently-assigned (or overridden) palette bank.
         /// </summary>
-        public static RawImage GetMonIconGraphicRaw(int species, int paletteIdOverride = -1) {
+        public static RawImage GetMonIconGraphicRaw(int species, int paletteIdOverride = -1)
+        {
             MonIcon icon = LoadMonIconParts(species, paletteIdOverride);
             return DecodeMonIconTiles(icon.Tiles(), icon.FirstRow());
         }
@@ -1283,7 +1364,8 @@ namespace DSPRE {
         /// flattened BGRA (see its own doc comment) so it can't carry an indexed image; callers that want
         /// a genuine indexed PNG (preserving the real 16-color palette table, not just its resolved
         /// pixels) need this instead.</summary>
-        public static bool TryGetMonIconIndexedPixels(int species, int paletteIdOverride, out byte[] indices, out int width, out int height, out Color[] palette) {
+        public static bool TryGetMonIconIndexedPixels(int species, int paletteIdOverride, out byte[] indices, out int width, out int height, out Color[] palette)
+        {
             MonIcon icon = LoadMonIconParts(species, paletteIdOverride);
             indices = null; width = 0; height = 0; palette = null;
             if (!icon.SixteenColour) return false;
@@ -1317,7 +1399,8 @@ namespace DSPRE {
             return true;
         }
 
-        private static RawImage DecodeMonIconTiles(byte[] tiles, Color[] palette) {
+        private static RawImage DecodeMonIconTiles(byte[] tiles, Color[] palette)
+        {
             int tileBytes = MonIconTileSize * MonIconTileSize * 4 / 8;   // 32 bytes/tile @ 4bpp
             int totalTiles = tileBytes > 0 ? tiles.Length / tileBytes : 0;
             int tilesTall = Math.Max(1, totalTiles / MonIconTilesWide);
@@ -1344,7 +1427,8 @@ namespace DSPRE {
             return raw;
         }
 
-        private static string ValidateMonIconGraphicCore(MonIcon icon, RawImage newImage) {
+        private static string ValidateMonIconGraphicCore(MonIcon icon, RawImage newImage)
+        {
             if (newImage == null || newImage.IsEmpty) return "The image is empty.";
             if (!icon.SixteenColour)
                 return "This icon isn't a 16-color image; graphic editing isn't supported for this format.";
@@ -1361,7 +1445,8 @@ namespace DSPRE {
         /// <summary>Checks whether <paramref name="newImage"/> could replace a species' icon graphic
         /// (right pixel dimensions, 16-color format) without writing anything. Returns null if OK, else
         /// a user-facing error string.</summary>
-        public static string ValidateMonIconGraphic(int species, RawImage newImage) {
+        public static string ValidateMonIconGraphic(int species, RawImage newImage)
+        {
             return ValidateMonIconGraphicCore(LoadMonIconParts(species, -1), newImage);
         }
 
@@ -1373,7 +1458,8 @@ namespace DSPRE {
         /// transparent slot). Writes the NCGR back to disk immediately. Returns null on success, or a
         /// user-facing error string.
         /// </summary>
-        public static string SetMonIconGraphic(int species, int paletteIdOverride, RawImage newImage) {
+        public static string SetMonIconGraphic(int species, int paletteIdOverride, RawImage newImage)
+        {
             MonIcon icon = LoadMonIconParts(species, paletteIdOverride);
 
             string error = ValidateMonIconGraphicCore(icon, newImage);
@@ -1389,7 +1475,8 @@ namespace DSPRE {
             return null;
         }
 
-        private static byte[] EncodeMonIconTiles(int length, Color[] palette, RawImage newImage) {
+        private static byte[] EncodeMonIconTiles(int length, Color[] palette, RawImage newImage)
+        {
             byte[] newTiles = new byte[length];
             int w = newImage.Width;
             int tilesTall = newImage.Height / MonIconTileSize;
@@ -1416,9 +1503,11 @@ namespace DSPRE {
             return newTiles;
         }
 
-        private static byte NearestPaletteIndex(Color[] palette, byte r, byte g, byte b) {
+        private static byte NearestPaletteIndex(Color[] palette, byte r, byte g, byte b)
+        {
             int best = 0, bestDist = int.MaxValue;
-            for (int i = 0; i < palette.Length; i++) {
+            for (int i = 0; i < palette.Length; i++)
+            {
                 int dr = palette[i].R - r, dg = palette[i].G - g, db = palette[i].B - b;
                 int dist = dr * dr + dg * dg + db * db;
                 if (dist < bestDist) { bestDist = dist; best = i; }
@@ -1427,7 +1516,8 @@ namespace DSPRE {
         }
 
         /// <summary>A party icon's drawing, colours with the chosen row moved to the front, and the shared cells.</summary>
-        private sealed class MonIcon {
+        private sealed class MonIcon
+        {
             public byte[] Drawing;
             public string DrawingPath;
             public NitroBgCodec.DrawingHeader? Header;
@@ -1438,9 +1528,11 @@ namespace DSPRE {
 
             public byte[] Tiles() => Header is NitroBgCodec.DrawingHeader h ? Drawing.AsSpan(h.DataAt, h.DataSize).ToArray() : Array.Empty<byte>();
 
-            public Color[] FirstRow() {
+            public Color[] FirstRow()
+            {
                 Color[] row = new Color[Math.Min(16, Colours.Length)];
-                for (int i = 0; i < row.Length; i++) {
+                for (int i = 0; i < row.Length; i++)
+                {
                     (byte r, byte g, byte b) = NitroBgCodec.Colour(Colours[i]);
                     row[i] = Color.FromArgb(r, g, b);
                 }
@@ -1449,14 +1541,16 @@ namespace DSPRE {
         }
 
         // Loads the mon-icon palette, drawing and cells for GetPokePicRaw.
-        private static MonIcon LoadMonIconParts(int species, int paletteIdOverride) {
-            string dir = gameDirs[DirNames.monIcons].unpackedDir;
+        private static MonIcon LoadMonIconParts(int species, int paletteIdOverride)
+        {
+            string dir = GameDirs[DirNames.MonIcons].unpackedDir;
             string digits = File.Exists(Path.Combine(dir, "0000")) || !File.Exists(Path.Combine(dir, "00000")) ? "D4" : "D5";   // some extreme future proofing
             ushort[] colours = NitroBgCodec.ReadColours(File.ReadAllBytes(Path.Combine(dir, 0.ToString(digits))));
 
             // Palette id: caller override (preview) or the value stored in the ARM9 table.
             int paletteId = paletteIdOverride >= 0 ? paletteIdOverride : GetMonIconPaletteId(species);
-            if (paletteId != 0 && paletteId < colours.Length / 16) {
+            if (paletteId != 0 && paletteId < colours.Length / 16)
+            {
                 Array.Copy(colours, paletteId * 16, colours, 0, 16); // update pal 0 to be the new pal
             }
 

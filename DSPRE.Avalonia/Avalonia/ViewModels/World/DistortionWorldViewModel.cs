@@ -26,8 +26,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             public string Label { get; set; }
         }
 
-        private readonly ScriptNarc _archive = new ScriptNarc(DirNames.tornWorld);
-        private readonly ScriptNarc _attributes = new ScriptNarc(DirNames.tornWorldAttributes);
+        private readonly ScriptNarc _archive = new ScriptNarc(DirNames.TornWorld);
+        private readonly ScriptNarc _attributes = new ScriptNarc(DirNames.TornWorldAttributes);
         private TornWorldMapTable _table;
         private readonly HashSet<int> _editedMembers = new HashSet<int>();
         private readonly HashSet<int> _editedGrids = new HashSet<int>();
@@ -39,9 +39,9 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         /// <summary>The archives this editor reads; the launcher runs it behind the busy overlay first.</summary>
         public static void Unpack() => DSUtils.TryUnpackNarcs(new List<DirNames> {
-            DirNames.maps, DirNames.exteriorBuildingModels, DirNames.buildingTextures,
-            DirNames.mapTextures, DirNames.matrices, DirNames.areaData, DirNames.eventFiles,
-            DirNames.fieldEffectModels });
+            DirNames.Maps, DirNames.ExteriorBuildingModels, DirNames.BuildingTextures,
+            DirNames.MapTextures, DirNames.Matrices, DirNames.AreaData, DirNames.EventFiles,
+            DirNames.FieldEffectModels });
 
         public DistortionWorldViewModel()
         {
@@ -85,19 +85,19 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (_selectedMapCell < 0 || _selectedMapCell >= MapCells.Count)
             {
-                MapModel.Open(null, 0, gameFamily, null);
+                MapModel.Open(null, 0, GameFamily, null);
                 return;
             }
 
             MapCellRow row = MapCells[_selectedMapCell];
             if (!_shapeEdited.TryGetValue(row.MapId, out MapFile map))
             {
-                try { map = new MapFile(row.MapId, gameFamily, discardMoveperms: false, showMessages: false); }
+                try { map = new MapFile(row.MapId, GameFamily, discardMoveperms: false, showMessages: false); }
                 catch (Exception ex) { AppLogger.Error("DistortionWorld.OpenShape: " + ex.Message); return; }
                 _shapeEdited[row.MapId] = map;
             }
 
-            MapModel.Open(map, row.AreaId, gameFamily, $"Map {row.MapId}");
+            MapModel.Open(map, row.AreaId, GameFamily, $"Map {row.MapId}");
         }
 
         private IEnumerable<KeyValuePair<int, MapFile>> ChangedShapes =>
@@ -213,7 +213,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             bool blocked = CollisionCells[r, c] != 0;
             byte behaviour = BehaviourCells[r, c];
 
-            string name = TilePermissions.BehaviourLabel(behaviour, gameFamily);
+            string name = TilePermissions.BehaviourLabel(behaviour, GameFamily);
 
             HoverNote = past
                 ? $"x {worldX}, y {worldY}, z {worldZ}  ·  outside"
@@ -253,7 +253,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void FillPainters()
         {
             BehaviourPainters.Clear();
-            foreach (TileBehaviour b in TilePermissions.BehavioursFor(gameFamily))
+            foreach (TileBehaviour b in TilePermissions.BehavioursFor(GameFamily))
                 BehaviourPainters.Add(new Painter(b.Value, b.Label));
             _behaviourPainterIndex = 0;
             Raise(nameof(BehaviourPainterIndex));
@@ -314,7 +314,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private static IReadOnlyList<string> HeaderNames()
         {
-            try { return HeaderLabels.Friendly(); } catch { return null; }
+            try { return HeaderLabels.Friendly(); } catch (Exception ex) { AppLogger.WarnOnce("DistortionWorldViewModel.HeaderNames", ex); return null; }
         }
 
         private int _shownFloorIndex = -1;
@@ -433,40 +433,40 @@ namespace DSPRE.Avalonia.ViewModels.World
                 {
                     TornWorldMapTable.Floor floor = floors[index].Floor;
                     MapHeader header;
-                    try { header = MapHeader.GetMapHeader((ushort)floor.HeaderId); } catch { header = null; }
+                    try { header = MapHeader.GetMapHeader((ushort)floor.HeaderId); } catch (Exception ex) { AppLogger.WarnOnce("DistortionWorldViewModel.BuildScene", ex); header = null; }
                     if (header == null) continue;
 
                     if (Area == null)
                     {
-                        CameraId = header.cameraAngleID;
-                        MusicDayId = header.musicDayID;
-                        MusicNightId = header.musicNightID;
-                        try { Area = new AreaData(header.areaDataID); } catch { Area = null; }
-                        try { Events = new EventFile(header.eventFileID); } catch { Events = null; }
+                        CameraId = header.CameraAngleID;
+                        MusicDayId = header.MusicDayID;
+                        MusicNightId = header.MusicNightID;
+                        try { Area = new AreaData(header.AreaDataID); } catch (Exception ex) { AppLogger.WarnOnce("DistortionWorldViewModel.BuildScene", ex); Area = null; }
+                        try { Events = new EventFile(header.EventFileID); } catch (Exception ex) { AppLogger.WarnOnce("DistortionWorldViewModel.BuildScene", ex); Events = null; }
                     }
 
-                    GameMatrix matrix = new GameMatrix(header.matrixID);
-                    for (int y = 0; y < matrix.height; y++)
-                        for (int x = 0; x < matrix.width; x++)
+                    GameMatrix matrix = new GameMatrix(header.MatrixID);
+                    for (int y = 0; y < matrix.Height; y++)
+                        for (int x = 0; x < matrix.Width; x++)
                         {
-                            if (matrix.maps[y, x] == GameMatrix.EMPTY) continue;
-                            if (matrix.hasHeadersSection && matrix.headers[y, x] != floor.HeaderId) continue;
+                            if (matrix.Maps[y, x] == GameMatrix.EMPTY) continue;
+                            if (matrix.HasHeadersSection && matrix.Headers[y, x] != floor.HeaderId) continue;
 
-                            float altitude = ((matrix.hasHeightsSection ? matrix.altitudes[y, x] : 0) + floor.OffsetAltitude)
+                            float altitude = ((matrix.HasHeightsSection ? matrix.Altitudes[y, x] : 0) + floor.OffsetAltitude)
                                            * (NsbmdGeometry.TileSize / 2f);
 
                             MapCells.Add(new MapCellRow
                             {
-                                MapId = matrix.maps[y, x],
-                                AreaId = header.areaDataID,
-                                Label = $"Map {matrix.maps[y, x]}  ·  {floor.HeaderId} at {x},{y}",
+                                MapId = matrix.Maps[y, x],
+                                AreaId = header.AreaDataID,
+                                Label = $"Map {matrix.Maps[y, x]}  ·  {floor.HeaderId} at {x},{y}",
                             });
 
                             cells.Add((index * GridBand + x, y,
-                                       new MapFile(matrix.maps[y, x], gameFamily, discardMoveperms: false),
-                                       header.areaDataID, altitude,
-                                       (floor.OffsetX + x * MapFile.mapSize) * NsbmdGeometry.TileSize,
-                                       (floor.OffsetZ + y * MapFile.mapSize) * NsbmdGeometry.TileSize));
+                                       new MapFile(matrix.Maps[y, x], GameFamily, discardMoveperms: false),
+                                       header.AreaDataID, altitude,
+                                       (floor.OffsetX + x * MapFile.MapSize) * NsbmdGeometry.TileSize,
+                                       (floor.OffsetZ + y * MapFile.MapSize) * NsbmdGeometry.TileSize));
                         }
                 }
 
@@ -486,7 +486,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                         c.originZ - (c.gridY - leastY) * NsbmdGeometry.MapStride))
                     .ToList();
 
-                Model3D = MatrixSceneBuilder.BuildFromPlaced(gameFamily, placed,
+                Model3D = MatrixSceneBuilder.BuildFromPlaced(GameFamily, placed,
                     NsbmdGeometry.MatrixStitchMode.Grid, standing);
             }
             catch (Exception ex)
@@ -517,13 +517,13 @@ namespace DSPRE.Avalonia.ViewModels.World
             int localX = tileX - floor.OffsetX, localZ = tileZ - floor.OffsetZ;
             if (localX < 0 || localZ < 0) return false;
 
-            int across = localX / MapFile.mapSize, down = localZ / MapFile.mapSize;
+            int across = localX / MapFile.MapSize, down = localZ / MapFile.MapSize;
             if (!_cellAltitude.TryGetValue((floorIndex * GridBand + across, down), out altitude)) return false;
 
-            col = localX % MapFile.mapSize;
-            row = localZ % MapFile.mapSize;
-            originX = (floor.OffsetX + across * MapFile.mapSize) * NsbmdGeometry.TileSize;
-            originZ = (floor.OffsetZ + down * MapFile.mapSize) * NsbmdGeometry.TileSize;
+            col = localX % MapFile.MapSize;
+            row = localZ % MapFile.MapSize;
+            originX = (floor.OffsetX + across * MapFile.MapSize) * NsbmdGeometry.TileSize;
+            originZ = (floor.OffsetZ + down * MapFile.MapSize) * NsbmdGeometry.TileSize;
             return true;
         }
 
@@ -586,8 +586,8 @@ namespace DSPRE.Avalonia.ViewModels.World
 
                     if (!surface.IsGround && surface.Kind != TornWorldFile.PlatformKind.Floor) TurnedSurfaces++;
 
-                    for (int row = 0; row < MapFile.mapSize; row++)
-                        for (int col = 0; col < MapFile.mapSize; col++)
+                    for (int row = 0; row < MapFile.MapSize; row++)
+                        for (int col = 0; col < MapFile.MapSize; col++)
                         {
                             if (!surface.CanWalk(col, row)) continue;
                             WalkableTiles++;
@@ -602,10 +602,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         private bool TrySurface(float tileX, float tileZ, out TornWorldSurfaces.Surface surface,
             out int col, out int row)
         {
-            int patchX = (int)Math.Floor(tileX / MapFile.mapSize);
-            int patchY = (int)Math.Floor(tileZ / MapFile.mapSize);
-            col = (int)Math.Floor(tileX) - patchX * MapFile.mapSize;
-            row = (int)Math.Floor(tileZ) - patchY * MapFile.mapSize;
+            int patchX = (int)Math.Floor(tileX / MapFile.MapSize);
+            int patchY = (int)Math.Floor(tileZ / MapFile.MapSize);
+            col = (int)Math.Floor(tileX) - patchX * MapFile.MapSize;
+            row = (int)Math.Floor(tileZ) - patchY * MapFile.MapSize;
             return _surfaces.TryGetValue((patchX, patchY), out surface);
         }
 
@@ -616,22 +616,22 @@ namespace DSPRE.Avalonia.ViewModels.World
             TornWorldSurfaces.Surface chosen = _selectedPlatformIndex >= 0 && _selectedPlatformIndex < SurfaceRows.Count
                 ? SurfaceRows[_selectedPlatformIndex].Surface : null;
             if (chosen != null && !chosen.IsGround)
-                for (int row = 0; row < MapFile.mapSize; row++)
-                    for (int col = 0; col < MapFile.mapSize; col++)
+                for (int row = 0; row < MapFile.MapSize; row++)
+                    for (int col = 0; col < MapFile.MapSize; col++)
                         if (chosen.CanWalk(col, row)) standing.Add(chosen.WalkTile(col, row));
 
             if (standing.Count == 0)
             foreach (TornWorldSurfaces.Surface surface in _surfaces.Values)
             {
                 if (!surface.IsGround) continue;
-                for (int row = 0; row < MapFile.mapSize; row++)
-                    for (int col = 0; col < MapFile.mapSize; col++)
+                for (int row = 0; row < MapFile.MapSize; row++)
+                    for (int col = 0; col < MapFile.MapSize; col++)
                         if (surface.CanWalk(col, row)) standing.Add(surface.WalkTile(col, row));
             }
             if (standing.Count == 0)
                 foreach (TornWorldSurfaces.Surface surface in _surfaces.Values)
-                    for (int row = 0; row < MapFile.mapSize; row++)
-                        for (int col = 0; col < MapFile.mapSize; col++)
+                    for (int row = 0; row < MapFile.MapSize; row++)
+                        for (int col = 0; col < MapFile.MapSize; col++)
                             if (surface.CanWalk(col, row)) standing.Add(surface.WalkTile(col, row));
 
             if (standing.Count == 0) return null;
@@ -844,7 +844,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 if (surface.FloorIndex != floorIndex || !surface.IsGround) continue;
                 int col = worldX - surface.GroundX, row = worldZ - surface.GroundZ;
-                if (col >= 0 && row >= 0 && col < MapFile.mapSize && row < MapFile.mapSize) return surface.WalkTile(col, row);
+                if (col >= 0 && row >= 0 && col < MapFile.MapSize && row < MapFile.MapSize) return surface.WalkTile(col, row);
             }
             return null;
         }
@@ -1014,7 +1014,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             col = worldX - ground.GroundX;
             row = worldZ - ground.GroundZ;
-            return col >= 0 && row >= 0 && col < MapFile.mapSize && row < MapFile.mapSize;
+            return col >= 0 && row >= 0 && col < MapFile.MapSize && row < MapFile.MapSize;
         }
 
         private static string Name(TornWorldFile.PlatformKind kind)
@@ -1105,8 +1105,8 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             if (surface.IsGround)
             {
-                int patchX = (int)Math.Floor(tileX / MapFile.mapSize);
-                int patchY = (int)Math.Floor(tileZ / MapFile.mapSize);
+                int patchX = (int)Math.Floor(tileX / MapFile.MapSize);
+                int patchY = (int)Math.Floor(tileZ / MapFile.MapSize);
                 if (scene.TryBdhcSurfaceY(patchX, patchY, rawX, rawZ, rawY, out float surfaceY)) rawY = surfaceY;
             }
 
@@ -1191,23 +1191,23 @@ namespace DSPRE.Avalonia.ViewModels.World
             float y = HeightOf(tileY) - altitude + offY * unit;
 
             // sPropScaleByKind only sizes the culling box (IsPropInView); props are drawn unscaled.
-            float scale = (model.modelScale == 0 ? 1f : model.modelScale) / 64f;
+            float scale = (model.ModelScale == 0 ? 1f : model.ModelScale) / 64f;
             float[] transform = Mat4.Multiply(Mat4.Scale(scale, scale, scale),
                                           Mat4.Translate(x / scale, y / scale, z / scale));
 
-            int gridX = floorIndex * GridBand + (tileX - floor.OffsetX) / MapFile.mapSize;
-            int gridY = (tileZ - floor.OffsetZ) / MapFile.mapSize;
+            int gridX = floorIndex * GridBand + (tileX - floor.OffsetX) / MapFile.MapSize;
+            int gridY = (tileZ - floor.OffsetZ) / MapFile.MapSize;
 
             if (info.Platform != null && info.Platform.IsElevator)
-                _elevatorTiles[(gridX * MapFile.mapSize + col, gridY * MapFile.mapSize + row)] = info;
+                _elevatorTiles[(gridX * MapFile.MapSize + col, gridY * MapFile.MapSize + row)] = info;
 
             standing.Add((gridX, gridY, new PlacedBuilding
             {
                 Model = model,
                 Transform = transform,
                 ModelId = modelId,
-                TileX = gridX * MapFile.mapSize + col,
-                TileZ = gridY * MapFile.mapSize + row,
+                TileX = gridX * MapFile.MapSize + col,
+                TileZ = gridY * MapFile.MapSize + row,
             }));
             return modelId;
         }
@@ -1283,11 +1283,11 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             try
             {
-                if (!gameDirs.ContainsKey(DirNames.fieldEffectModels)) return null;
-                string path = System.IO.Path.Combine(gameDirs[DirNames.fieldEffectModels].unpackedDir, member.ToString("D4"));
+                if (!GameDirs.ContainsKey(DirNames.FieldEffectModels)) return null;
+                string path = System.IO.Path.Combine(GameDirs[DirNames.FieldEffectModels].unpackedDir, member.ToString("D4"));
                 return System.IO.File.Exists(path) ? System.IO.File.ReadAllBytes(path) : null;
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("DistortionWorldViewModel.FieldEffectMember", ex); return null; }
         }
 
         private readonly Dictionary<int, NSBMDModel> _propModels = new Dictionary<int, NSBMDModel>();
@@ -1300,17 +1300,17 @@ namespace DSPRE.Avalonia.ViewModels.World
             NSBMDModel model = null;
             try
             {
-                if (gameDirs.ContainsKey(DirNames.fieldEffectModels))
+                if (GameDirs.ContainsKey(DirNames.FieldEffectModels))
                 {
-                    string path = System.IO.Path.Combine(gameDirs[DirNames.fieldEffectModels].unpackedDir, member.ToString("D4"));
+                    string path = System.IO.Path.Combine(GameDirs[DirNames.FieldEffectModels].unpackedDir, member.ToString("D4"));
                     if (System.IO.File.Exists(path))
                     {
                         using FileStream file = new System.IO.FileStream(path, System.IO.FileMode.Open, System.IO.FileAccess.Read);
                         NSBMD nsbmd = NSBMDLoader.LoadNSBMD(file);
-                        if (nsbmd?.models != null && nsbmd.models.Length > 0)
+                        if (nsbmd?.Models != null && nsbmd.Models.Length > 0)
                         {
                             try { nsbmd.MatchTextures(); } catch { /* it draws untextured */ }
-                            model = nsbmd.models[0];
+                            model = nsbmd.Models[0];
                         }
                     }
                 }
@@ -1802,7 +1802,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             _shapeChanged.Clear();
             _shapeEdited.Clear();
-            MapModel.Open(null, 0, gameFamily, null);
+            MapModel.Open(null, 0, GameFamily, null);
             _gridCache.Clear();
             _shownGrids.Clear();
             _shownFloorIndex = -1;

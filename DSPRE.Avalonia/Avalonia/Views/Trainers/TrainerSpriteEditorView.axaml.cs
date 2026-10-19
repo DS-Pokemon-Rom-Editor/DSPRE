@@ -76,7 +76,7 @@ namespace DSPRE.Avalonia.Views.Trainers
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) VM?.DiscardChanges();
         }
         private void ZoomIn_Click(object sender, RoutedEventArgs e) => VM?.ZoomIn();
         private void ZoomOut_Click(object sender, RoutedEventArgs e) => VM?.ZoomOut();
@@ -131,7 +131,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         {
             string error = VM?.SaveAll();
             if (error != null)
-                await DialogHelper.ShowError($"Save failed: {error}", owner: this);
+                await DialogHelper.ShowErrorAsync($"Save failed: {error}", owner: this);
         }
 
         /// <summary>Opens the Graphics window at this sprite's drawing, the first of its five files.</summary>
@@ -159,14 +159,14 @@ namespace DSPRE.Avalonia.Views.Trainers
 
             string error = VM?.ImportPng(path);
             if (error != null)
-                await DialogHelper.ShowError($"Import failed: {error}", "Trainer sprite editor error", this);
+                await DialogHelper.ShowErrorAsync($"Import failed: {error}", "Trainer sprite editor error", this);
             else SaveNotice.Imported(null, path);
         }
 
         private async void CopyFrameToOtherSet_Click(object sender, RoutedEventArgs e)
         {
             string error = VM?.CopyFrameToOtherSet();
-            if (error != null) await DialogHelper.ShowError(error, owner: this);
+            if (error != null) await DialogHelper.ShowErrorAsync(error, owner: this);
         }
 
         private async void Export_Click(object sender, RoutedEventArgs e)
@@ -185,7 +185,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             if (path == null) return;
 
             if (VM?.ExportPng(path) == false)
-                await DialogHelper.ShowError("Export failed.", "Trainer sprite editor error", this);
+                await DialogHelper.ShowErrorAsync("Export failed.", "Trainer sprite editor error", this);
             else SaveNotice.Exported(path);
         }
 
@@ -234,7 +234,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             string path = file?.TryGetLocalPath();
             if (path == null) return;
             string error = animation == null ? VM.ExportFramesSheet(path) : VM.ExportAnimationSheet(animation.Value, path);
-            if (error != null) await DialogHelper.ShowError($"Export failed: {error}", "Trainer sprite editor error", this);
+            if (error != null) await DialogHelper.ShowErrorAsync($"Export failed: {error}", "Trainer sprite editor error", this);
         }
 
         private async System.Threading.Tasks.Task ImportSheetAsync(bool animation)
@@ -251,7 +251,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             TrainerSheetImportViewModel wizard = VM.OpenSheetImport(animation, path, out string why);
             if (wizard == null)
             {
-                await DialogHelper.ShowError($"Import failed: {why}", "Trainer sprite editor error", this);
+                await DialogHelper.ShowErrorAsync($"Import failed: {why}", "Trainer sprite editor error", this);
                 return;
             }
             if (await new TrainerSheetImportView(wizard).ShowDialog<bool>(this)) VM.ApplySheetImport(wizard);
@@ -316,14 +316,14 @@ namespace DSPRE.Avalonia.Views.Trainers
         {
             string error = VM?.SaveAnimJson();
             if (error != null)
-                await DialogHelper.ShowError($"Save failed: {error}", owner: this);
+                await DialogHelper.ShowErrorAsync($"Save failed: {error}", owner: this);
         }
 
         private async void CreateAnimJson_Click(object sender, RoutedEventArgs e)
         {
             string error = VM?.CreateAnimJson();
             if (error != null)
-                await DialogHelper.ShowError($"Create failed: {error}", owner: this);
+                await DialogHelper.ShowErrorAsync($"Create failed: {error}", owner: this);
         }
 
         // ── Structured animation editor: sequence + frame list + play-once preview ───────────────
@@ -334,7 +334,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             if ((sender as Control)?.DataContext is not AnimFrameRowViewModel row) return;
             string error = VM?.RemoveAnimFrame(row);
             if (error != null)
-                await DialogHelper.ShowError(error, owner: this);
+                await DialogHelper.ShowErrorAsync(error, owner: this);
         }
 
         private void MoveFrameUp_Click(object sender, RoutedEventArgs e)
@@ -355,7 +355,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         {
             string error = VM?.RemoveAnimSequence();
             if (error != null)
-                await DialogHelper.ShowError(error, owner: this);
+                await DialogHelper.ShowErrorAsync(error, owner: this);
         }
 
         private async void PlayAnimPreview_Click(object sender, RoutedEventArgs e)

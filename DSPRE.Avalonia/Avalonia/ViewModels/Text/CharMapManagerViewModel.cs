@@ -79,21 +79,21 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         // ── Commands ──────────────────────────────────────────────────────────
 
-        public async Task AddAliasCommand()
+        public async Task AddAliasCommandAsync()
         {
             if (_currentMap == null) return;
 
             string alias = NewAliasText.Trim();
             if (string.IsNullOrEmpty(alias))
             {
-                await DialogHelper.ShowError("Alias name cannot be empty.", "Invalid alias");
+                await DialogHelper.ShowErrorAsync("Alias name cannot be empty.", "Invalid alias");
                 return;
             }
 
             // Warn about un-bracketed single-character aliases
             if (alias.Length == 1)
             {
-                DialogHelper.MsgResult result = await DialogHelper.AskYesNoCancel(
+                DialogHelper.MsgResult result = await DialogHelper.AskYesNoCancelAsync(
                     "Unbracketed single character aliases may cause encoding issues.\nEnclose in brackets?",
                     "Single character alias");
                 if (result == DialogHelper.MsgResult.Yes)
@@ -106,13 +106,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
             if (_currentMap.FindCode(alias) != null)
             {
-                await DialogHelper.ShowError("This alias or character already exists in the charmap.", "Duplicate alias");
+                await DialogHelper.ShowErrorAsync("This alias or character already exists in the charmap.", "Duplicate alias");
                 return;
             }
 
             if (SelectedCodeIndex < 0)
             {
-                await DialogHelper.ShowError("Please select a character code to alias.", "No code selected");
+                await DialogHelper.ShowErrorAsync("Please select a character code to alias.", "No code selected");
                 return;
             }
 
@@ -140,12 +140,12 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
         }
 
-        public async Task RemoveAliasCommand()
+        public async Task RemoveAliasCommandAsync()
         {
             if (_currentMap == null) return;
             if (SelectedAliasIndex < 0)
             {
-                await DialogHelper.ShowError("Please select an alias to remove.", "No alias selected");
+                await DialogHelper.ShowErrorAsync("Please select an alias to remove.", "No alias selected");
                 return;
             }
 
@@ -155,7 +155,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
             if (code == null)
             {
-                await DialogHelper.ShowError("Could not find the code for this alias.", "Alias not found");
+                await DialogHelper.ShowErrorAsync("Could not find the code for this alias.", "Alias not found");
                 return;
             }
 
@@ -167,11 +167,11 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             else
             {
-                await DialogHelper.ShowError("Failed to remove alias.", "Char map manager error");
+                await DialogHelper.ShowErrorAsync("Failed to remove alias.", "Char map manager error");
             }
         }
 
-        public async Task SaveCommand()
+        public async Task SaveCommandAsync()
         {
             if (_currentMap == null) return;
             try
@@ -183,15 +183,15 @@ namespace DSPRE.Avalonia.ViewModels.Text
             catch (Exception ex)
             {
                 AppLogger.Error("Failed to save custom charmap: " + ex);
-                await DialogHelper.ShowError("Failed to save custom charmap: " + ex.Message, "Char map manager error");
+                await DialogHelper.ShowErrorAsync("Failed to save custom charmap: " + ex.Message, "Char map manager error");
             }
         }
 
-        public async Task CreateMapCommand()
+        public async Task CreateMapCommandAsync()
         {
-            if (File.Exists(CharMapManager.customCharmapFilePath))
+            if (File.Exists(CharMapManager.CustomCharmapFilePath))
             {
-                bool overwrite = await DialogHelper.AskYesNo(
+                bool overwrite = await DialogHelper.AskYesNoAsync(
                     "A custom charmap already exists. Overwrite it?", "Custom charmap exists");
                 if (!overwrite) return;
             }
@@ -204,13 +204,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             else
             {
-                await DialogHelper.ShowError("Failed to create custom charmap.", "Char map manager error");
+                await DialogHelper.ShowErrorAsync("Failed to create custom charmap.", "Char map manager error");
             }
         }
 
-        public async Task DeleteMapCommand()
+        public async Task DeleteMapCommandAsync()
         {
-            bool confirm = await DialogHelper.AskYesNo(
+            bool confirm = await DialogHelper.AskYesNoAsync(
                 "Are you sure you want to delete the custom charmap? This cannot be undone.",
                 "Delete custom character map?");
             if (!confirm) return;
@@ -225,15 +225,15 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             else
             {
-                await DialogHelper.ShowError("Failed to delete custom charmap.", "Char map manager error");
+                await DialogHelper.ShowErrorAsync("Failed to delete custom charmap.", "Char map manager error");
             }
         }
 
-        public async Task ReloadCommand()
+        public async Task ReloadCommandAsync()
         {
             if (_dirty)
             {
-                if (!await DialogHelper.AskTwoWay("Discard the unsaved changes and reload the character map?",
+                if (!await DialogHelper.AskTwoWayAsync("Discard the unsaved changes and reload the character map?",
                                                   "Unsaved changes", "Discard", "Cancel"))
                     return;
             }
@@ -241,28 +241,28 @@ namespace DSPRE.Avalonia.ViewModels.Text
             PopulateListsFromMap();
         }
 
-        public async Task OpenFileCommand()
+        public async Task OpenFileCommandAsync()
         {
-            if (!File.Exists(CharMapManager.customCharmapFilePath))
+            if (!File.Exists(CharMapManager.CustomCharmapFilePath))
             {
-                await DialogHelper.ShowInfo("No custom charmap file exists to open.", "File not found");
+                await DialogHelper.ShowInfoAsync("No custom charmap file exists to open.", "File not found");
                 return;
             }
-            SystemShell.OpenWithDefaultApp(CharMapManager.customCharmapFilePath);
+            SystemShell.OpenWithDefaultApp(CharMapManager.CustomCharmapFilePath);
         }
 
-        public async Task RebaseCommand()
+        public async Task RebaseCommandAsync()
         {
-            if (!File.Exists(CharMapManager.customCharmapFilePath))
+            if (!File.Exists(CharMapManager.CustomCharmapFilePath))
             {
-                await DialogHelper.ShowInfo("No custom charmap exists to merge. Please create one first.",
+                await DialogHelper.ShowInfoAsync("No custom charmap exists to merge. Please create one first.",
                     "No custom charmap");
                 return;
             }
 
             if (!CharMapManager.IsCustomMapOutdated())
             {
-                bool proceed = await DialogHelper.AskYesNo(
+                bool proceed = await DialogHelper.AskYesNoAsync(
                     "The custom charmap is already up to date. Rebase anyway?", "Rebase charmap");
                 if (!proceed) return;
             }
@@ -280,21 +280,21 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 string summary = result.GetSummary();
                 if (result.Conflicts.Count > 0)
                 {
-                    bool viewConflicts = await DialogHelper.AskYesNo(
+                    bool viewConflicts = await DialogHelper.AskYesNoAsync(
                         "Charmap Merge Summary:\n" + summary +
                         "\n\nThere were conflicts. View them?", "Merge result");
                     if (viewConflicts)
-                        await DialogHelper.ShowInfo(result.GetConflictDetails(), "Merge conflicts");
+                        await DialogHelper.ShowInfoAsync(result.GetConflictDetails(), "Merge conflicts");
                 }
                 else
                 {
-                    await DialogHelper.ShowInfo("Rebased the character map.\n\n" + summary, "Rebase");
+                    await DialogHelper.ShowInfoAsync("Rebased the character map.\n\n" + summary, "Rebase");
                 }
             }
             catch (Exception ex)
             {
                 AppLogger.Error("Failed to rebase charmap: " + ex);
-                await DialogHelper.ShowError("Failed to rebase charmap: " + ex.Message, "Char map manager error");
+                await DialogHelper.ShowErrorAsync("Failed to rebase charmap: " + ex.Message, "Char map manager error");
             }
         }
 
@@ -335,7 +335,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         public async Task<bool> SaveChangesAsync()
         {
-            await SaveCommand();
+            await SaveCommandAsync();
             return !_dirty;
         }
 
@@ -354,7 +354,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         private void LoadCharMap()
         {
-            if (!File.Exists(CharMapManager.customCharmapFilePath))
+            if (!File.Exists(CharMapManager.CustomCharmapFilePath))
             {
                 _currentMap = null;
                 HasMap = false;
@@ -362,7 +362,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             try
             {
-                _currentMap = CharMapManager.DeserializeCharMap(CharMapManager.customCharmapFilePath);
+                _currentMap = CharMapManager.DeserializeCharMap(CharMapManager.CustomCharmapFilePath);
                 HasMap = true;
                 SetDirty(false);
             }
@@ -412,7 +412,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 "Reply Yes for option 1 (Prefer Custom), No for option 2 (Prefer Base).\n" +
                 "(Cancel to use Replace Base)";
 
-            DialogHelper.MsgResult r = await DialogHelper.AskYesNoCancel(message, "Merge strategy");
+            DialogHelper.MsgResult r = await DialogHelper.AskYesNoCancelAsync(message, "Merge strategy");
             return r == DialogHelper.MsgResult.Yes   ? MergeStrategy.PreferCustom
                  : r == DialogHelper.MsgResult.No    ? MergeStrategy.PreferBase
                  : MergeStrategy.ReplaceBase;

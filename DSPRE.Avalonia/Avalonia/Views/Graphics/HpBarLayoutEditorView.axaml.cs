@@ -83,16 +83,16 @@ namespace DSPRE.Avalonia.Views.Graphics
         private void TextBackgroundPatch_Click(object sender, RoutedEventArgs e) => VM?.OpenTextBackgroundPatch();
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) VM?.DiscardChanges();
         }
 
         private async void Import_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null) return;
-            string path = await DialogHelper.OpenFile(this, "Import PNG",
+            string path = await DialogHelper.OpenFileAsync(this, "Import PNG",
                 new[] { new FilePickerFileType("PNG image") { Patterns = new[] { "*.png" } } });
             if (path == null) return;
-            GraphicAssets.Archive archive = GraphicAssets.All.FirstOrDefault(a => a.Dir == RomInfo.DirNames.battleObj);
+            GraphicAssets.Archive archive = GraphicAssets.All.FirstOrDefault(a => a.Dir == RomInfo.DirNames.BattleObj);
             HpBarImportPrompt.Choice choice;
             HpBarFit.Plan plan;
             // The preview fits the picture to the layout as it stands here, saved or not.
@@ -100,7 +100,7 @@ namespace DSPRE.Avalonia.Views.Graphics
                 (choice, plan) = await HpBarImportPrompt.AskAsync(this, archive, VM.LayoutIndex, VM.Kind, path);
             if (choice != HpBarImportPrompt.Choice.Fit) return;
             string trouble = VM.ImportFitted(path, plan);
-            if (trouble != null) await DialogHelper.ShowError(trouble, "HP bar layout error");
+            if (trouble != null) await DialogHelper.ShowErrorAsync(trouble, "HP bar layout error");
             else SaveNotice.Imported("the bar picture", path);
         }
     }

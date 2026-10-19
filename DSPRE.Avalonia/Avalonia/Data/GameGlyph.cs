@@ -17,7 +17,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The mask for <paramref name="c"/> as the character map names it, or null when the font lacks it.</summary>
         public static Bitmap Mask(char c)
         {
-            string rom = RomInfo.workDir;
+            string rom = RomInfo.WorkDir;
             if (_cachedFor != rom) { Cache.Clear(); _font = null; _cachedFor = rom; }
             if (Cache.TryGetValue(c, out Bitmap known)) return known;
             Bitmap mask = null;
@@ -41,7 +41,7 @@ namespace DSPRE.Avalonia.Data
                     mask = ImageConverter.FromRgba(rgba, w, h);
                 }
             }
-            catch { mask = null; }
+            catch (System.Exception ex) { AppLogger.WarnOnce("GameGlyph.Mask", ex); mask = null; }
             Cache[c] = mask;
             return mask;
         }

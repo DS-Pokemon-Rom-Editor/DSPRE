@@ -25,7 +25,7 @@ namespace DSPRE.Avalonia
         /// Asks for a colour as three numbers from 0 to 255, with a square showing what they make.
         /// </summary>
         /// <param name="start">The colour the boxes start at, usually the one being changed.</param>
-        public static async Task<(byte R, byte G, byte B)?> PickColour(Window owner, string title, (byte R, byte G, byte B)? start = null)
+        public static async Task<(byte R, byte G, byte B)?> PickColourAsync(Window owner, string title, (byte R, byte G, byte B)? start = null)
         {
             byte r = 0, g = 0, b = 0;
             (byte, byte, byte)? answer = null;
@@ -93,29 +93,29 @@ namespace DSPRE.Avalonia
         // Message Boxes (built from plain Avalonia Window, no 3rd-party dep)
         // ----------------------------------------------------------------
 
-        public static Task ShowInfo(string message, string title = "Information")
-            => ShowMsg(message, title, MsgButtons.Ok);
+        public static Task ShowInfoAsync(string message, string title = "Information")
+            => ShowMsgAsync(message, title, MsgButtons.Ok);
 
-        public static Task ShowError(string message, string title = "Error", Window owner = null)
-            => ShowMsg(message, title, MsgButtons.Ok, owner: owner);
+        public static Task ShowErrorAsync(string message, string title = "Error", Window owner = null)
+            => ShowMsgAsync(message, title, MsgButtons.Ok, owner: owner);
 
         /// <summary>
         /// Error box with a "Copy details" button: <paramref name="details"/> (e.g. the full
         /// exception text) goes to the clipboard so users can paste it into a bug report.
         /// </summary>
-        public static Task ShowError(string message, string title, string details)
-            => ShowMsg(message, title, MsgButtons.Ok, details);
+        public static Task ShowErrorAsync(string message, string title, string details)
+            => ShowMsgAsync(message, title, MsgButtons.Ok, details);
 
         /// <returns>true = Yes, false = No</returns>
-        public static async Task<bool> AskYesNo(string message, string title = "Confirm", Window owner = null)
+        public static async Task<bool> AskYesNoAsync(string message, string title = "Confirm", Window owner = null)
         {
-            MsgResult result = await ShowMsg(message, title, MsgButtons.YesNo, owner: owner);
+            MsgResult result = await ShowMsgAsync(message, title, MsgButtons.YesNo, owner: owner);
             return result == MsgResult.Yes;
         }
 
         /// <returns>MsgResult.Yes / No / Cancel</returns>
-        public static Task<MsgResult> AskYesNoCancel(string message, string title = "Confirm")
-            => ShowMsg(message, title, MsgButtons.YesNoCancel);
+        public static Task<MsgResult> AskYesNoCancelAsync(string message, string title = "Confirm")
+            => ShowMsgAsync(message, title, MsgButtons.YesNoCancel);
 
         /// <summary>
         /// Where an ownerless dialog should attach. The window the user is actually working in, not the
@@ -126,35 +126,35 @@ namespace DSPRE.Avalonia
         => OwnerWindow.Current;
 
         /// <summary>Notice the user can turn off. True when they asked not to see it again.</summary>
-        public static async Task<bool> ShowNoticeWithOptOut(string message, string title,
+        public static async Task<bool> ShowNoticeWithOptOutAsync(string message, string title,
                                                             string dismiss = "OK",
                                                             string never = "Don't show this again")
-            => await ShowMsg(message, title, MsgButtons.YesNo, labels: (dismiss, never, null)) == MsgResult.No;
+            => await ShowMsgAsync(message, title, MsgButtons.YesNo, labels: (dismiss, never, null)) == MsgResult.No;
 
         /// <summary>Two-way question whose buttons say what they do. True for <paramref name="yes"/>.</summary>
-        public static async Task<bool> AskTwoWay(string message, string title, string yes, string no)
-            => await ShowMsg(message, title, MsgButtons.YesNo, labels: (yes, no, null)) == MsgResult.Yes;
+        public static async Task<bool> AskTwoWayAsync(string message, string title, string yes, string no)
+            => await ShowMsgAsync(message, title, MsgButtons.YesNo, labels: (yes, no, null)) == MsgResult.Yes;
 
         /// <summary>Asked by every Discard button: a discard cannot be undone.</summary>
-        public static async Task<bool> ConfirmDiscard(global::Avalonia.Visual from)
-            => await ShowMsg("Discard your unsaved changes?", "Discard", MsgButtons.YesNo,
+        public static async Task<bool> ConfirmDiscardAsync(global::Avalonia.Visual from)
+            => await ShowMsgAsync("Discard your unsaved changes?", "Discard", MsgButtons.YesNo,
                              owner: TopLevel.GetTopLevel(from) as Window, labels: ("Discard", "Keep", null)) == MsgResult.Yes;
 
         /// <summary>Three-way question whose buttons say what they do instead of Yes and No.</summary>
-        public static Task<MsgResult> AskThreeWay(string message, string title,
+        public static Task<MsgResult> AskThreeWayAsync(string message, string title,
                                                   string yes, string no, string cancel = "Cancel")
-            => ShowMsg(message, title, MsgButtons.YesNoCancel, labels: (yes, no, cancel));
+            => ShowMsgAsync(message, title, MsgButtons.YesNoCancel, labels: (yes, no, cancel));
 
         /// <summary>Two-way question with a checkbox under the text. Returns which button was pressed and the box's state.</summary>
-        public static async Task<(bool Yes, bool Checked)> AskWithCheck(string message, string title, string yes, string no,
+        public static async Task<(bool Yes, bool Checked)> AskWithCheckAsync(string message, string title, string yes, string no,
                                                                          string check, bool isChecked, Window owner = null)
         {
-            (bool answer, bool[] ticked) = await AskWithChecks(message, title, yes, no, new[] { (check, isChecked) }, owner);
+            (bool answer, bool[] ticked) = await AskWithChecksAsync(message, title, yes, no, new[] { (check, isChecked) }, owner);
             return (answer, ticked[0]);
         }
 
         /// <summary>A question with a check box per option; the ticks come back in the same order.</summary>
-        public static async Task<(bool Yes, bool[] Checked)> AskWithChecks(string message, string title, string yes, string no,
+        public static async Task<(bool Yes, bool[] Checked)> AskWithChecksAsync(string message, string title, string yes, string no,
                                                                            (string Label, bool IsChecked)[] options, Window owner = null)
         {
             bool answer = false;
@@ -213,7 +213,7 @@ namespace DSPRE.Avalonia
         }
 
         /// <summary>Shows text the user can select and copy, with a Copy button for all of it.</summary>
-        public static async Task ShowCopyableText(string text, string title, Window owner = null)
+        public static async Task ShowCopyableTextAsync(string text, string title, Window owner = null)
         {
             Window win = new Window
             {
@@ -270,7 +270,7 @@ namespace DSPRE.Avalonia
 
         /// <summary>Prompts for a single line of free text. Returns null if cancelled or closed without
         /// confirming; an empty string is a valid (non-null) confirmed answer.</summary>
-        public static async Task<string> PromptText(string message, string title = "Enter a value", string defaultValue = "", Window owner = null)
+        public static async Task<string> PromptTextAsync(string message, string title = "Enter a value", string defaultValue = "", Window owner = null)
         {
             TaskCompletionSource<string> tcs = new TaskCompletionSource<string>();
 
@@ -337,7 +337,7 @@ namespace DSPRE.Avalonia
         // ----------------------------------------------------------------
 
         /// <summary>Opens a file-open dialog. Returns null if cancelled.</summary>
-        public static async Task<string> OpenFile(
+        public static async Task<string> OpenFileAsync(
             Window owner,
             string title,
             IReadOnlyList<FilePickerFileType> filters = null)
@@ -354,7 +354,7 @@ namespace DSPRE.Avalonia
         }
 
         /// <summary>Opens a folder-picker dialog. Returns null if cancelled.</summary>
-        public static async Task<string> OpenFolder(Window owner, string title)
+        public static async Task<string> OpenFolderAsync(Window owner, string title)
         {
             FolderPickerOpenOptions opts = new FolderPickerOpenOptions
             {
@@ -367,7 +367,7 @@ namespace DSPRE.Avalonia
         }
 
         /// <summary>Opens a file-save dialog. Returns null if cancelled.</summary>
-        public static async Task<string> SaveFile(
+        public static async Task<string> SaveFileAsync(
             Window owner,
             string title,
             IReadOnlyList<FilePickerFileType> filters = null,
@@ -409,7 +409,7 @@ namespace DSPRE.Avalonia
 
         private enum MsgButtons { Ok, YesNo, YesNoCancel }
 
-        private static async Task<MsgResult> ShowMsg(string message, string title, MsgButtons buttons, string details = null, Window owner = null,
+        private static async Task<MsgResult> ShowMsgAsync(string message, string title, MsgButtons buttons, string details = null, Window owner = null,
                                                      (string Yes, string No, string Cancel)? labels = null)
         {
             TaskCompletionSource<MsgResult> tcs = new TaskCompletionSource<MsgResult>();

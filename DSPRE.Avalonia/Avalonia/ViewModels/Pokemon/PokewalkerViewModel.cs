@@ -46,7 +46,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool IsUnavailable => _unavailable != null;
 
         /// <summary>Only HeartGold and SoulSilver have a Pokéwalker.</summary>
-        public static bool GameHasPokewalker => gameFamily == GameFamilies.HGSS && gameDirs != null && gameDirs.ContainsKey(DirNames.pokewalkerSprites);
+        public static bool GameHasPokewalker => GameFamily == GameFamilies.HGSS && GameDirs != null && GameDirs.ContainsKey(DirNames.PokewalkerSprites);
 
         // Edited members, keyed by archive and member; the loaded bytes are kept to tell what changed.
         private Dictionary<(DirNames, int), byte[]> _state = new(), _loaded = new();
@@ -76,8 +76,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (!GameHasPokewalker) return "The Pokéwalker is in HeartGold and SoulSilver.";
             PokewalkerSprites index = GraphicAssets.PokewalkerIndex();
             if (index == null) return "This ROM's Pokéwalker pictures couldn't be matched to Pokémon.";
-            GraphicAssets.Archive art = GraphicAssets.All.First(x => x.Dir == DirNames.pokewalkerSprites);
-            GraphicAssets.Archive icons = GraphicAssets.All.First(x => x.Dir == DirNames.pokewalkerIcons);
+            GraphicAssets.Archive art = GraphicAssets.All.First(x => x.Dir == DirNames.PokewalkerSprites);
+            GraphicAssets.Archive icons = GraphicAssets.All.First(x => x.Dir == DirNames.PokewalkerIcons);
 
             int forms = index.FormCount(species);
             if (forms > 0)
@@ -185,7 +185,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 (bool saved, string error) = await HgEngineSave.RunAsync(WriteChanged);
                 if (!saved)
                 {
-                    if (error != null) await DialogHelper.ShowError($"The Pokéwalker pictures were not saved:\n{error}", "Pokéwalker error");
+                    if (error != null) await DialogHelper.ShowErrorAsync($"The Pokéwalker pictures were not saved:\n{error}", "Pokéwalker error");
                     return;
                 }
             }

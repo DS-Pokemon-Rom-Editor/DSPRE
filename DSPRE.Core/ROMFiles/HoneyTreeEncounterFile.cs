@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 
-namespace DSPRE.ROMFiles {
+namespace DSPRE.ROMFiles
+{
     /// <summary>
     /// Represents a single Honey Tree encounter slot.
     /// Structure: 2 bytes species ID + 2 bytes padding (00 00)
     /// </summary>
-    public class HoneyTreeEncounter {
+    public class HoneyTreeEncounter
+    {
         public ushort Species { get; set; }
 
         /// <summary>
@@ -16,22 +18,26 @@ namespace DSPRE.ROMFiles {
         /// </summary>
         public ushort Padding { get; set; }
 
-        public HoneyTreeEncounter() {
+        public HoneyTreeEncounter()
+        {
             Species = 0;
             Padding = 0;
         }
 
-        public HoneyTreeEncounter(BinaryReader br) {
+        public HoneyTreeEncounter(BinaryReader br)
+        {
             Species = br.ReadUInt16();
             Padding = br.ReadUInt16();
         }
 
-        public void Write(BinaryWriter bw) {
+        public void Write(BinaryWriter bw)
+        {
             bw.Write(Species);
             bw.Write(Padding);
         }
 
-        public override string ToString() {
+        public override string ToString()
+        {
             string[] pokemonNames = RomInfo.GetPokemonNames();
             string name = Species < pokemonNames.Length ? pokemonNames[Species] : $"Pokemon {Species}";
             return name;
@@ -42,7 +48,8 @@ namespace DSPRE.ROMFiles {
     /// Represents a Honey Tree encounter group with its 6 slots.
     /// Slot encounter rates are fixed: 40%, 20%, 20%, 10%, 5%, 5%
     /// </summary>
-    public class HoneyTreeEncounterGroup {
+    public class HoneyTreeEncounterGroup
+    {
         public string Name { get; }
         public string Description { get; }
         public BindingList<HoneyTreeEncounter> Encounters { get; }
@@ -52,9 +59,10 @@ namespace DSPRE.ROMFiles {
         /// </summary>
         public static readonly int[] SlotRates = { 40, 20, 20, 10, 5, 5 };
 
-        public const int SLOTS_PER_GROUP = 6;
+        public const int SlotsPerGroup = 6;
 
-        public HoneyTreeEncounterGroup(string name, string description) {
+        public HoneyTreeEncounterGroup(string name, string description)
+        {
             Name = name;
             Description = description;
             Encounters = new BindingList<HoneyTreeEncounter>();
@@ -81,10 +89,11 @@ namespace DSPRE.ROMFiles {
     /// 
     /// Group C contains Munchlax (only obtainable on player's 4 special trees).
     /// </summary>
-    public class HoneyTreeEncounterFile : RomFile {
-        public const int ENTRY_SIZE = 4; // 2 bytes species + 2 bytes padding
-        public const int SLOTS_PER_GROUP = 6;
-        public const int GROUP_COUNT = 3;
+    public class HoneyTreeEncounterFile : RomFile
+    {
+        public const int EntrySize = 4; // 2 bytes species + 2 bytes padding
+        public const int SlotsPerGroup = 6;
+        public const int GroupCount = 3;
 
         /// <summary>
         /// File indices in encdata_ex.narc for Diamond/Platinum.
@@ -101,7 +110,8 @@ namespace DSPRE.ROMFiles {
         /// <summary>
         /// Creates a new empty Honey Tree encounter file with proper structure.
         /// </summary>
-        public HoneyTreeEncounterFile() {
+        public HoneyTreeEncounterFile()
+        {
             Groups = new List<HoneyTreeEncounterGroup> {
                 new HoneyTreeEncounterGroup("Group A (Common)", 
                     "Most common group (70% on normal trees, 20% on Munchlax trees)."),
@@ -116,8 +126,10 @@ namespace DSPRE.ROMFiles {
         /// <summary>
         /// Loads the Honey Tree encounter files from the unpacked NARC directory.
         /// </summary>
-        public HoneyTreeEncounterFile(bool load) : this() {
-            if (load) {
+        public HoneyTreeEncounterFile(bool load) : this()
+        {
+            if (load)
+            {
                 LoadFromNarc();
             }
         }
@@ -125,27 +137,34 @@ namespace DSPRE.ROMFiles {
         /// <summary>
         /// Gets the file indices for the current game version.
         /// </summary>
-        public static int[] GetFileIndices() {
-            if (RomInfo.gameVersion == RomInfo.GameVersions.Pearl) {
+        public static int[] GetFileIndices()
+        {
+            if (RomInfo.GameVersion == RomInfo.GameVersions.Pearl)
+            {
                 return PearlFileIndices;
             }
             return DiamondPlatinumFileIndices;
         }
 
-        private void LoadFromNarc() {
-            string narcDir = Filesystem.encounterExtended;
-            if (string.IsNullOrEmpty(narcDir) || !Directory.Exists(narcDir)) {
+        private void LoadFromNarc()
+        {
+            string narcDir = Filesystem.EncounterExtended;
+            if (string.IsNullOrEmpty(narcDir) || !Directory.Exists(narcDir))
+            {
                 return;
             }
 
             int[] fileIndices = GetFileIndices();
 
-            for (int groupIndex = 0; groupIndex < GROUP_COUNT; groupIndex++) {
+            for (int groupIndex = 0; groupIndex < GroupCount; groupIndex++)
+            {
                 string filePath = Filesystem.GetPath(narcDir, fileIndices[groupIndex]);
                 
-                if (!File.Exists(filePath)) {
+                if (!File.Exists(filePath))
+                {
                     // Fill with empty encounters if file doesn't exist
-                    while (Groups[groupIndex].Encounters.Count < SLOTS_PER_GROUP) {
+                    while (Groups[groupIndex].Encounters.Count < SlotsPerGroup)
+                    {
                         Groups[groupIndex].Encounters.Add(new HoneyTreeEncounter());
                     }
                     continue;
@@ -154,26 +173,33 @@ namespace DSPRE.ROMFiles {
                 Groups[groupIndex].Encounters.Clear();
 
                 using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
-                using (BinaryReader br = new BinaryReader(fs)) {
-                    for (int slot = 0; slot < SLOTS_PER_GROUP && fs.Position + ENTRY_SIZE <= fs.Length; slot++) {
+                using (BinaryReader br = new BinaryReader(fs))
+                {
+                    for (int slot = 0; slot < SlotsPerGroup && fs.Position + EntrySize <= fs.Length; slot++)
+                    {
                         Groups[groupIndex].Encounters.Add(new HoneyTreeEncounter(br));
                     }
                 }
 
                 // Ensure exactly 6 slots
-                while (Groups[groupIndex].Encounters.Count < SLOTS_PER_GROUP) {
+                while (Groups[groupIndex].Encounters.Count < SlotsPerGroup)
+                {
                     Groups[groupIndex].Encounters.Add(new HoneyTreeEncounter());
                 }
             }
         }
 
-        public override byte[] ToByteArray() {
+        public override byte[] ToByteArray()
+        {
             // This method returns all groups concatenated, but for saving
             // we need to save each group to its respective file.
             using (MemoryStream ms = new MemoryStream())
-            using (BinaryWriter bw = new BinaryWriter(ms)) {
-                foreach (HoneyTreeEncounterGroup group in Groups) {
-                    foreach (HoneyTreeEncounter encounter in group.Encounters) {
+            using (BinaryWriter bw = new BinaryWriter(ms))
+            {
+                foreach (HoneyTreeEncounterGroup group in Groups)
+                {
+                    foreach (HoneyTreeEncounter encounter in group.Encounters)
+                    {
                         encounter.Write(bw);
                     }
                 }
@@ -184,14 +210,18 @@ namespace DSPRE.ROMFiles {
         /// <summary>
         /// Converts a single group to byte array.
         /// </summary>
-        public byte[] GroupToByteArray(int groupIndex) {
-            if (groupIndex < 0 || groupIndex >= Groups.Count) {
+        public byte[] GroupToByteArray(int groupIndex)
+        {
+            if (groupIndex < 0 || groupIndex >= Groups.Count)
+            {
                 return new byte[0];
             }
 
             using (MemoryStream ms = new MemoryStream())
-            using (BinaryWriter bw = new BinaryWriter(ms)) {
-                foreach (HoneyTreeEncounter encounter in Groups[groupIndex].Encounters) {
+            using (BinaryWriter bw = new BinaryWriter(ms))
+            {
+                foreach (HoneyTreeEncounter encounter in Groups[groupIndex].Encounters)
+                {
                     encounter.Write(bw);
                 }
                 return ms.ToArray();
@@ -201,25 +231,32 @@ namespace DSPRE.ROMFiles {
         /// <summary>
         /// Saves all Honey Tree encounter groups to the NARC directory.
         /// </summary>
-        public bool SaveToNarc(bool showSuccessMessage = true) {
-            try {
-                string narcDir = Filesystem.encounterExtended;
-                if (string.IsNullOrEmpty(narcDir) || !Directory.Exists(narcDir)) {
+        public bool SaveToNarc(bool showSuccessMessage = true)
+        {
+            try
+            {
+                string narcDir = Filesystem.EncounterExtended;
+                if (string.IsNullOrEmpty(narcDir) || !Directory.Exists(narcDir))
+                {
                     AppMessages.Error("Honey Tree encounter directory not found.", "Error");
                     return false;
                 }
 
                 int[] fileIndices = GetFileIndices();
 
-                for (int groupIndex = 0; groupIndex < GROUP_COUNT; groupIndex++) {
-                    ArchiveMembers.Put(RomInfo.DirNames.encounterExtended, fileIndices[groupIndex], GroupToByteArray(groupIndex));
+                for (int groupIndex = 0; groupIndex < GroupCount; groupIndex++)
+                {
+                    ArchiveMembers.Put(RomInfo.DirNames.EncounterExtended, fileIndices[groupIndex], GroupToByteArray(groupIndex));
                 }
 
-                if (showSuccessMessage) {
+                if (showSuccessMessage)
+                {
                     AppMessages.Info("Honey Tree encounters saved successfully!", "Success");
                 }
                 return true;
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 AppMessages.Error($"Error saving Honey Tree encounters: {ex.Message}", "Error");
                 return false;
             }
@@ -228,16 +265,21 @@ namespace DSPRE.ROMFiles {
         /// <summary>
         /// Exports all groups to a single file.
         /// </summary>
-        public bool ExportToFile(string path, bool showSuccessMessage = true) {
-            try {
+        public bool ExportToFile(string path, bool showSuccessMessage = true)
+        {
+            try
+            {
                 byte[] data = ToByteArray();
                 ArchiveMembers.Write(path, data);
 
-                if (showSuccessMessage) {
+                if (showSuccessMessage)
+                {
                     AppMessages.Info("Honey Tree encounters exported successfully!", "Success");
                 }
                 return true;
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 AppMessages.Error($"Error exporting Honey Tree encounters: {ex.Message}", "Error");
                 return false;
             }
@@ -246,23 +288,31 @@ namespace DSPRE.ROMFiles {
         /// <summary>
         /// Imports all groups from a single file.
         /// </summary>
-        public bool ImportFromFile(string path) {
-            try {
+        public bool ImportFromFile(string path)
+        {
+            try
+            {
                 using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read))
-                using (BinaryReader br = new BinaryReader(fs)) {
-                    foreach (HoneyTreeEncounterGroup group in Groups) {
+                using (BinaryReader br = new BinaryReader(fs))
+                {
+                    foreach (HoneyTreeEncounterGroup group in Groups)
+                    {
                         group.Encounters.Clear();
-                        for (int slot = 0; slot < SLOTS_PER_GROUP && fs.Position + ENTRY_SIZE <= fs.Length; slot++) {
+                        for (int slot = 0; slot < SlotsPerGroup && fs.Position + EntrySize <= fs.Length; slot++)
+                        {
                             group.Encounters.Add(new HoneyTreeEncounter(br));
                         }
                         // Ensure exactly 6 slots
-                        while (group.Encounters.Count < SLOTS_PER_GROUP) {
+                        while (group.Encounters.Count < SlotsPerGroup)
+                        {
                             group.Encounters.Add(new HoneyTreeEncounter());
                         }
                     }
                 }
                 return true;
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 AppMessages.Error($"Error importing Honey Tree encounters: {ex.Message}", "Error");
                 return false;
             }
@@ -271,9 +321,10 @@ namespace DSPRE.ROMFiles {
         /// <summary>
         /// Checks if Honey Tree encounters are available (DPPt only, not HGSS).
         /// </summary>
-        public static bool IsAvailable() {
-            return RomInfo.gameFamily == RomInfo.GameFamilies.DP || 
-                   RomInfo.gameFamily == RomInfo.GameFamilies.Plat;
+        public static bool IsAvailable()
+        {
+            return RomInfo.GameFamily == RomInfo.GameFamilies.DP || 
+                   RomInfo.GameFamily == RomInfo.GameFamilies.Plat;
         }
     }
 }

@@ -35,7 +35,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             GraphicAssets.Archive archive = ArchiveOf(piece);
             if (archive == null)
             {
-                await DialogHelper.ShowError("This piece's archive is not one the painter can open.", "Bottom screen error");
+                await DialogHelper.ShowErrorAsync("This piece's archive is not one the painter can open.", "Bottom screen error");
                 return;
             }
 
@@ -52,13 +52,13 @@ namespace DSPRE.Avalonia.Views.Graphics
             GraphicAssets.Archive archive = ArchiveOf(piece);
             if (archive == null) return;
 
-            string path = await DialogHelper.SaveFile(this, "Save this piece as a PNG",
+            string path = await DialogHelper.SaveFileAsync(this, "Save this piece as a PNG",
                 new[] { Png }, Safe(piece.Name) + ".png");
             if (path == null) return;
 
             string trouble;
             using (VM.Reading()) trouble = GraphicAssets.ExportPng(archive, piece.Drawing, path);
-            if (trouble != null) await DialogHelper.ShowError(trouble, "Bottom screen error");
+            if (trouble != null) await DialogHelper.ShowErrorAsync(trouble, "Bottom screen error");
             else SaveNotice.Exported(path);
         }
 
@@ -69,7 +69,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             GraphicAssets.Archive archive = ArchiveOf(piece);
             if (archive == null) return;
 
-            string path = await DialogHelper.OpenFile(this, "Import PNG", new[] { Png });
+            string path = await DialogHelper.OpenFileAsync(this, "Import PNG", new[] { Png });
             if (path == null) return;
 
             (PngColourPrompt.Choice choice, GraphicAssets.PngColourCheck check) = await PngColourPrompt.AskAsync(this, archive, piece.Drawing, path);
@@ -77,8 +77,8 @@ namespace DSPRE.Avalonia.Views.Graphics
             string note = null;
             string trouble = VM.Import(() => PngColourPrompt.Import(archive, piece.Drawing, path, choice, check, out note)
                                               ?? VM.WhyOverRoom(piece));
-            if (trouble != null) { await DialogHelper.ShowError(trouble, "Bottom screen error"); return; }
-            if (!string.IsNullOrEmpty(note)) await DialogHelper.ShowInfo(note, "Bottom screen");
+            if (trouble != null) { await DialogHelper.ShowErrorAsync(trouble, "Bottom screen error"); return; }
+            if (!string.IsNullOrEmpty(note)) await DialogHelper.ShowInfoAsync(note, "Bottom screen");
             SaveNotice.Imported(piece.Name, path);
         }
 
@@ -98,7 +98,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveChanges();
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) VM?.DiscardChanges();
         }
         private void Undo_Click(object sender, RoutedEventArgs e) => VM?.Undo();
 

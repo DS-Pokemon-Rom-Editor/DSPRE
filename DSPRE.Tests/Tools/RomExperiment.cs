@@ -91,7 +91,7 @@ namespace DSPRE.Tests
         {
             foreach (DirNames archive in archives)
             {
-                (string packedDir, string unpackedDir) directory = gameDirs[archive];
+                (string packedDir, string unpackedDir) directory = GameDirs[archive];
                 Narc.FromFolder(directory.unpackedDir).Save(directory.packedDir);
             }
         }
@@ -152,7 +152,7 @@ namespace DSPRE.Tests
             string name = Path.GetFileNameWithoutExtension(Path.TrimEndingDirectorySeparator(projectPath));
             if (string.IsNullOrEmpty(name)) return;
             string folder = Path.Combine(AppPaths.DatabasePath, "edited_databases", name);
-            try { if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true); } catch { }
+            try { if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true); } catch { }   // a locked folder is removed on the next run
         }
 
         private static void CopyTree(string source, string destination)

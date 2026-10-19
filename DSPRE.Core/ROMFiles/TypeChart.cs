@@ -136,8 +136,8 @@ namespace DSPRE.ROMFiles
 
             (int region, int offset) = RamAddress.Find(ram, RecordSize,
                 RamAddress.Overlay(spot.Overlay, ov.Length),
-                RamAddress.Synthetic(File.Exists(Filesystem.expArmPath) ? new FileInfo(Filesystem.expArmPath).Length : 0),
-                RamAddress.Arm9(new FileInfo(arm9Path).Length));
+                RamAddress.Synthetic(File.Exists(Filesystem.ExpArmPath) ? new FileInfo(Filesystem.ExpArmPath).Length : 0),
+                RamAddress.Arm9(new FileInfo(Arm9Path).Length));
             _offset = offset;
             switch (region)
             {
@@ -146,12 +146,12 @@ namespace DSPRE.ROMFiles
                     Where = offset == spot.Offset ? $"in overlay {spot.Overlay}" : $"moved within overlay {spot.Overlay}";
                     break;
                 case 1:
-                    _path = Filesystem.expArmPath;
+                    _path = Filesystem.ExpArmPath;
                     Where = "in the expanded ARM9 area";
                     InExpansion = SyntheticOverlaySpace.Blocks(File.ReadAllBytes(_path), Marker).Any(b => _offset == b.Start + SyntheticOverlaySpace.HeaderSize);
                     break;
                 case 2:
-                    _path = arm9Path;
+                    _path = Arm9Path;
                     Where = "moved into arm9";
                     break;
                 default:
@@ -265,13 +265,13 @@ namespace DSPRE.ROMFiles
             BitConverter.GetBytes((uint)ExpandedCapacity).CopyTo(block, 0x14);
             chart.CopyTo(block, SyntheticOverlaySpace.HeaderSize);
 
-            byte[] synth = File.ReadAllBytes(Filesystem.expArmPath);
+            byte[] synth = File.ReadAllBytes(Filesystem.ExpArmPath);
             int at = SyntheticOverlaySpace.Place(synth, block.Length, SyntheticOverlaySpace.Reserved(synth));
             if (at < 0) { Capacity = oldCapacity; throw new InvalidOperationException("No free space was found in the expanded ARM9 area for the type chart."); }
             byte[] ov = File.ReadAllBytes(_ovPath);
             byte[] ovBefore = (byte[])ov.Clone(), synthBefore = (byte[])synth.Clone();
             block.CopyTo(synth, at);
-            uint ram = synthOverlayLoadAddress + (uint)(at + SyntheticOverlaySpace.HeaderSize);
+            uint ram = SynthOverlayLoadAddress + (uint)(at + SyntheticOverlaySpace.HeaderSize);
             foreach (int o in sites.col0) BitConverter.GetBytes(ram).CopyTo(ov, o);
             foreach (int o in sites.col1) BitConverter.GetBytes(ram + 1).CopyTo(ov, o);
             foreach (int o in sites.col2) BitConverter.GetBytes(ram + 2).CopyTo(ov, o);
@@ -279,17 +279,17 @@ namespace DSPRE.ROMFiles
             ov[sites.countModulus] = ExpandedCapacity;
             try
             {
-                DSUtils.WriteWholeFile(Filesystem.expArmPath, synth);
+                DSUtils.WriteWholeFile(Filesystem.ExpArmPath, synth);
                 DSUtils.WriteWholeFile(_ovPath, ov);
             }
             catch
             {
-                DSUtils.WriteWholeFile(Filesystem.expArmPath, synthBefore);
+                DSUtils.WriteWholeFile(Filesystem.ExpArmPath, synthBefore);
                 DSUtils.WriteWholeFile(_ovPath, ovBefore);
                 Capacity = oldCapacity;
                 throw;
             }
-            _path = Filesystem.expArmPath;
+            _path = Filesystem.ExpArmPath;
             _offset = at + SyntheticOverlaySpace.HeaderSize;
             InExpansion = true;
             Where = "in the expanded ARM9 area";
@@ -304,7 +304,7 @@ namespace DSPRE.ROMFiles
             {
                 if (WhyNot() != null) return null;
                 TypeChart chart = Load();
-                if (chart._path != Filesystem.expArmPath || chart.InExpansion) return null;
+                if (chart._path != Filesystem.ExpArmPath || chart.InExpansion) return null;
                 return (chart._offset, chart._offset + (long)chart.Capacity * RecordSize);
             }
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException) { return null; }

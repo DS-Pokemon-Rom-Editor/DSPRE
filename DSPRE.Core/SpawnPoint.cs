@@ -15,30 +15,30 @@ namespace DSPRE
 
         public static SpawnPoint Read() => new SpawnPoint
         {
-            Header = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.arm9spawnOffset, 2), 0),
-            GlobalX = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.arm9spawnOffset + 8, 2), 0),
-            GlobalY = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.arm9spawnOffset + 12, 2), 0),
-            Direction = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.arm9spawnOffset + 16, 2), 0),
+            Header = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.Arm9spawnOffset, 2), 0),
+            GlobalX = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.Arm9spawnOffset + 8, 2), 0),
+            GlobalY = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.Arm9spawnOffset + 12, 2), 0),
+            Direction = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.Arm9spawnOffset + 16, 2), 0),
             Money = ReadMoney(),
         };
 
         public static uint ReadMoney() =>
-            BitConverter.ToUInt32(DSUtils.ReadFromFile(MoneyOverlay(), RomInfo.initialMoneyOverlayOffset, 4), 0);
+            BitConverter.ToUInt32(DSUtils.ReadFromFile(MoneyOverlay(), RomInfo.InitialMoneyOverlayOffset, 4), 0);
 
         public void Write()
         {
-            ARM9.WriteBytes(BitConverter.GetBytes(Header), RomInfo.arm9spawnOffset);
-            ARM9.WriteBytes(BitConverter.GetBytes(GlobalX), RomInfo.arm9spawnOffset + 8);
-            ARM9.WriteBytes(BitConverter.GetBytes(GlobalY), RomInfo.arm9spawnOffset + 12);
-            ARM9.WriteBytes(BitConverter.GetBytes(Direction), RomInfo.arm9spawnOffset + 16);
-            DSUtils.WriteToFile(MoneyOverlay(), BitConverter.GetBytes(Money), RomInfo.initialMoneyOverlayOffset);
+            ARM9.WriteBytes(BitConverter.GetBytes(Header), RomInfo.Arm9spawnOffset);
+            ARM9.WriteBytes(BitConverter.GetBytes(GlobalX), RomInfo.Arm9spawnOffset + 8);
+            ARM9.WriteBytes(BitConverter.GetBytes(GlobalY), RomInfo.Arm9spawnOffset + 12);
+            ARM9.WriteBytes(BitConverter.GetBytes(Direction), RomInfo.Arm9spawnOffset + 16);
+            DSUtils.WriteToFile(MoneyOverlay(), BitConverter.GetBytes(Money), RomInfo.InitialMoneyOverlayOffset);
         }
 
         private static string MoneyOverlay()
         {
-            if (OverlayUtils.IsStillCompressed(RomInfo.initialMoneyOverlayNumber))
-                OverlayUtils.Decompress(RomInfo.initialMoneyOverlayNumber);
-            return OverlayUtils.GetPath(RomInfo.initialMoneyOverlayNumber);
+            if (OverlayUtils.IsStillCompressed(RomInfo.InitialMoneyOverlayNumber))
+                OverlayUtils.Decompress(RomInfo.InitialMoneyOverlayNumber);
+            return OverlayUtils.GetPath(RomInfo.InitialMoneyOverlayNumber);
         }
     }
 }

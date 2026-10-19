@@ -12,9 +12,9 @@ namespace DSPRE.ROMFiles
 
             public int PatchX, PatchY;
 
-            public byte[,] Collisions = new byte[MapFile.mapSize, MapFile.mapSize];
+            public byte[,] Collisions = new byte[MapFile.MapSize, MapFile.MapSize];
 
-            public byte[,] Types = new byte[MapFile.mapSize, MapFile.mapSize];
+            public byte[,] Types = new byte[MapFile.MapSize, MapFile.MapSize];
 
             public TornWorldFile.PlatformKind Kind = TornWorldFile.PlatformKind.Floor;
 
@@ -30,7 +30,7 @@ namespace DSPRE.ROMFiles
             public int[,] GroundLift;
 
             public bool CanWalk(int col, int row)
-                => col >= 0 && row >= 0 && col < MapFile.mapSize && row < MapFile.mapSize
+                => col >= 0 && row >= 0 && col < MapFile.MapSize && row < MapFile.MapSize
                    && (Collisions[row, col] & MapCollisionGrid.BlockedBit) == 0;
 
             public (int x, int y, int z) WorldAt(int col, int row)
@@ -88,11 +88,11 @@ namespace DSPRE.ROMFiles
                     }
                 }
 
-                return col >= 0 && row >= 0 && col < MapFile.mapSize && row < MapFile.mapSize;
+                return col >= 0 && row >= 0 && col < MapFile.MapSize && row < MapFile.MapSize;
             }
 
             public (int x, int z) WalkTile(int col, int row)
-                => (PatchX * MapFile.mapSize + col, PatchY * MapFile.mapSize + row);
+                => (PatchX * MapFile.MapSize + col, PatchY * MapFile.MapSize + row);
         }
 
         public static List<Surface> ForFloor(TornWorldMapTable.Floor floor, TornWorldFile data,
@@ -106,17 +106,17 @@ namespace DSPRE.ROMFiles
                 for (int across = 0; across < cellsAcross; across++)
                 {
                     MapFile map = mapAt?.Invoke(across, down);
-                    if (map?.collisions == null) continue;
+                    if (map?.Collisions == null) continue;
 
                     surfaces.Add(new Surface
                     {
                         FloorIndex = floorIndex,
                         PatchX = floorIndex * gridBand + across,
                         PatchY = down,
-                        Collisions = (byte[,])map.collisions.Clone(),
-                        Types = map.types != null ? (byte[,])map.types.Clone() : new byte[MapFile.mapSize, MapFile.mapSize],
-                        GroundX = floor.OffsetX + across * MapFile.mapSize,
-                        GroundZ = floor.OffsetZ + down * MapFile.mapSize,
+                        Collisions = (byte[,])map.Collisions.Clone(),
+                        Types = map.Types != null ? (byte[,])map.Types.Clone() : new byte[MapFile.MapSize, MapFile.MapSize],
+                        GroundX = floor.OffsetX + across * MapFile.MapSize,
+                        GroundZ = floor.OffsetZ + down * MapFile.MapSize,
                         GroundY = floor.OffsetAltitude,
                         GroundLift = TerrainLift(map),
                     });
@@ -155,8 +155,8 @@ namespace DSPRE.ROMFiles
             int reachDown = (upright ? platform.Bounds.SizeY : platform.Bounds.SizeX) + 1;
             int reachAcross = platform.Bounds.SizeZ + 1;
 
-            int columns = Math.Max(0, Math.Min(Math.Min(MapFile.mapSize, platform.TilesVertical), reachDown));
-            int rows = Math.Max(0, Math.Min(Math.Min(MapFile.mapSize, platform.TilesHorizontal), reachAcross));
+            int columns = Math.Max(0, Math.Min(Math.Min(MapFile.MapSize, platform.TilesVertical), reachDown));
+            int rows = Math.Max(0, Math.Min(Math.Min(MapFile.MapSize, platform.TilesHorizontal), reachAcross));
             return (columns, rows);
         }
 
@@ -166,8 +166,8 @@ namespace DSPRE.ROMFiles
 
         public static void Fill(Surface surface, TornWorldFile.FloatingPlatform platform, ushort[] grid)
         {
-            for (int row = 0; row < MapFile.mapSize; row++)
-                for (int col = 0; col < MapFile.mapSize; col++)
+            for (int row = 0; row < MapFile.MapSize; row++)
+                for (int col = 0; col < MapFile.MapSize; col++)
                 {
                     surface.Collisions[row, col] = MapCollisionGrid.BlockedBit;
                     surface.Types[row, col] = 0;
@@ -241,8 +241,8 @@ namespace DSPRE.ROMFiles
             int total = 0;
             if (surfaces == null) return 0;
             foreach (Surface surface in surfaces)
-                for (int row = 0; row < MapFile.mapSize; row++)
-                    for (int col = 0; col < MapFile.mapSize; col++)
+                for (int row = 0; row < MapFile.MapSize; row++)
+                    for (int col = 0; col < MapFile.MapSize; col++)
                         if (surface.CanWalk(col, row)) total++;
             return total;
         }
@@ -251,9 +251,9 @@ namespace DSPRE.ROMFiles
         // with no terrain under it leaves the player at the height they had, so it takes its nearest neighbour's.
         private static int[,] TerrainLift(MapFile map)
         {
-            int n = MapFile.mapSize;
+            int n = MapFile.MapSize;
             int[,] lift = new int[n, n];
-            if (map?.bdhc == null || !BdhcFile.TryParse(map.bdhc, out BdhcFile terrain)) return lift;
+            if (map?.Bdhc == null || !BdhcFile.TryParse(map.Bdhc, out BdhcFile terrain)) return lift;
 
             bool[,] found = new bool[n, n];
             for (int row = 0; row < n; row++)

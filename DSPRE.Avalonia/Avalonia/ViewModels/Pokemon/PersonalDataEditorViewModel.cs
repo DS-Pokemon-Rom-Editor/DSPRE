@@ -48,10 +48,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public string UnsavedChangesDescription =>
             _pending.Count > 0 ? $"Personal data of {_pending.Count + (_dirty ? 1 : 0)} Pokémon"
             : _current != null ? $"Personal data of {(_currentId < PokemonNames.Count ? PokemonNames[_currentId] : $"Pokémon {_currentId}")}" : "Personal data";
-        void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommand();
+        void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommandAsync();
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
-            await SaveCommand();
+            await SaveCommandAsync();
             return !HasUnsavedChanges;
         }
         public void DiscardChanges()
@@ -190,32 +190,32 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         // ── Base stats
-        private int _baseHP;   public int BaseHP   { get => _baseHP;   set { if (Set(ref _baseHP,   value) && !_loading) { _current.baseHP    = (byte)value; SetDirty(); } } }
-        private int _baseAtk;  public int BaseAtk  { get => _baseAtk;  set { if (Set(ref _baseAtk,  value) && !_loading) { _current.baseAtk   = (byte)value; SetDirty(); } } }
-        private int _baseDef;  public int BaseDef  { get => _baseDef;  set { if (Set(ref _baseDef,  value) && !_loading) { _current.baseDef   = (byte)value; SetDirty(); } } }
-        private int _baseSpe;  public int BaseSpe  { get => _baseSpe;  set { if (Set(ref _baseSpe,  value) && !_loading) { _current.baseSpeed  = (byte)value; SetDirty(); } } }
-        private int _baseSpA;  public int BaseSpA  { get => _baseSpA;  set { if (Set(ref _baseSpA,  value) && !_loading) { _current.baseSpAtk = (byte)value; SetDirty(); } } }
-        private int _baseSpD;  public int BaseSpD  { get => _baseSpD;  set { if (Set(ref _baseSpD,  value) && !_loading) { _current.baseSpDef = (byte)value; SetDirty(); } } }
+        private int _baseHP;   public int BaseHP   { get => _baseHP;   set { if (Set(ref _baseHP,   value) && !_loading) { _current.BaseHP    = (byte)value; SetDirty(); } } }
+        private int _baseAtk;  public int BaseAtk  { get => _baseAtk;  set { if (Set(ref _baseAtk,  value) && !_loading) { _current.BaseAtk   = (byte)value; SetDirty(); } } }
+        private int _baseDef;  public int BaseDef  { get => _baseDef;  set { if (Set(ref _baseDef,  value) && !_loading) { _current.BaseDef   = (byte)value; SetDirty(); } } }
+        private int _baseSpe;  public int BaseSpe  { get => _baseSpe;  set { if (Set(ref _baseSpe,  value) && !_loading) { _current.BaseSpeed  = (byte)value; SetDirty(); } } }
+        private int _baseSpA;  public int BaseSpA  { get => _baseSpA;  set { if (Set(ref _baseSpA,  value) && !_loading) { _current.BaseSpAtk = (byte)value; SetDirty(); } } }
+        private int _baseSpD;  public int BaseSpD  { get => _baseSpD;  set { if (Set(ref _baseSpD,  value) && !_loading) { _current.BaseSpDef = (byte)value; SetDirty(); } } }
 
         // ── EV yields ─────────────────────────────────────────────────────────
-        private int _evHP;  public int EvHP  { get => _evHP;  set { if (Set(ref _evHP,  value) && !_loading) { _current.evHP    = (byte)value; SetDirty(); } } }
-        private int _evAtk; public int EvAtk { get => _evAtk; set { if (Set(ref _evAtk, value) && !_loading) { _current.evAtk   = (byte)value; SetDirty(); } } }
-        private int _evDef; public int EvDef { get => _evDef; set { if (Set(ref _evDef, value) && !_loading) { _current.evDef   = (byte)value; SetDirty(); } } }
-        private int _evSpe; public int EvSpe { get => _evSpe; set { if (Set(ref _evSpe, value) && !_loading) { _current.evSpeed = (byte)value; SetDirty(); } } }
-        private int _evSpA; public int EvSpA { get => _evSpA; set { if (Set(ref _evSpA, value) && !_loading) { _current.evSpAtk = (byte)value; SetDirty(); } } }
-        private int _evSpD; public int EvSpD { get => _evSpD; set { if (Set(ref _evSpD, value) && !_loading) { _current.evSpDef = (byte)value; SetDirty(); } } }
+        private int _evHP;  public int EvHP  { get => _evHP;  set { if (Set(ref _evHP,  value) && !_loading) { _current.EvHP    = (byte)value; SetDirty(); } } }
+        private int _evAtk; public int EvAtk { get => _evAtk; set { if (Set(ref _evAtk, value) && !_loading) { _current.EvAtk   = (byte)value; SetDirty(); } } }
+        private int _evDef; public int EvDef { get => _evDef; set { if (Set(ref _evDef, value) && !_loading) { _current.EvDef   = (byte)value; SetDirty(); } } }
+        private int _evSpe; public int EvSpe { get => _evSpe; set { if (Set(ref _evSpe, value) && !_loading) { _current.EvSpeed = (byte)value; SetDirty(); } } }
+        private int _evSpA; public int EvSpA { get => _evSpA; set { if (Set(ref _evSpA, value) && !_loading) { _current.EvSpAtk = (byte)value; SetDirty(); } } }
+        private int _evSpD; public int EvSpD { get => _evSpD; set { if (Set(ref _evSpD, value) && !_loading) { _current.EvSpDef = (byte)value; SetDirty(); } } }
 
         // ── Types ─────────────────────────────────────────────────────────────
-        private int _type1Index; public int Type1Index { get => _type1Index; set { if (Set(ref _type1Index, value) && !_loading && _current != null && value >= 0) { _current.type1 = (PokemonType)value; SetDirty(); } } }
-        private int _type2Index; public int Type2Index { get => _type2Index; set { if (Set(ref _type2Index, value) && !_loading && _current != null && value >= 0) { _current.type2 = (PokemonType)value; SetDirty(); } } }
+        private int _type1Index; public int Type1Index { get => _type1Index; set { if (Set(ref _type1Index, value) && !_loading && _current != null && value >= 0) { _current.Type1 = (PokemonType)value; SetDirty(); } } }
+        private int _type2Index; public int Type2Index { get => _type2Index; set { if (Set(ref _type2Index, value) && !_loading && _current != null && value >= 0) { _current.Type2 = (PokemonType)value; SetDirty(); } } }
 
         // ── Abilities ─────────────────────────────────────────────────────────
-        private int _ability1Index; public int Ability1Index { get => _ability1Index; set { if (Set(ref _ability1Index, value) && !_loading && _current != null && value >= 0) { _current.firstAbility  = (ushort)value; SetDirty(); } } }
-        private int _ability2Index; public int Ability2Index { get => _ability2Index; set { if (Set(ref _ability2Index, value) && !_loading && _current != null && value >= 0) { _current.secondAbility = (ushort)value; SetDirty(); } } }
+        private int _ability1Index; public int Ability1Index { get => _ability1Index; set { if (Set(ref _ability1Index, value) && !_loading && _current != null && value >= 0) { _current.FirstAbility  = (ushort)value; SetDirty(); } } }
+        private int _ability2Index; public int Ability2Index { get => _ability2Index; set { if (Set(ref _ability2Index, value) && !_loading && _current != null && value >= 0) { _current.SecondAbility = (ushort)value; SetDirty(); } } }
 
         // ── Held items ────────────────────────────────────────────────────────
-        private int _item1Index; public int Item1Index { get => _item1Index; set { if (!Set(ref _item1Index, value)) return; RaiseHeldItemOdds(); if (!_loading && _current != null) { _current.item1 = (ushort)value; SetDirty(); } } }
-        private int _item2Index; public int Item2Index { get => _item2Index; set { if (!Set(ref _item2Index, value)) return; RaiseHeldItemOdds(); if (!_loading && _current != null) { _current.item2 = (ushort)value; SetDirty(); } } }
+        private int _item1Index; public int Item1Index { get => _item1Index; set { if (!Set(ref _item1Index, value)) return; RaiseHeldItemOdds(); if (!_loading && _current != null) { _current.Item1 = (ushort)value; SetDirty(); } } }
+        private int _item2Index; public int Item2Index { get => _item2Index; set { if (!Set(ref _item2Index, value)) return; RaiseHeldItemOdds(); if (!_loading && _current != null) { _current.Item2 = (ushort)value; SetDirty(); } } }
 
         // The game's own odds table, so the chances follow any edit made in the Wild Held Items editor.
         private DSPRE.ROMFiles.WildHeldItemOdds _heldItemOdds;
@@ -248,18 +248,18 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         // ── Misc numeric ──────────────────────────────────────────────────────
-        private int _catchRate;       public int CatchRate       { get => _catchRate;       set { if (Set(ref _catchRate,       value) && !_loading) { _current.catchRate       = (byte)value; SetDirty(); } } }
-        private int _baseExp;         public int BaseExp         { get => _baseExp;         set { if (Set(ref _baseExp,         value) && !_loading) { _current.givenExp        = (byte)value; SetDirty(); } } }
-        private int _genderVec;       public int GenderVec       { get => _genderVec;       set { if (Set(ref _genderVec,       value) && !_loading) { _current.genderVec       = (byte)value; GenderLabel = GetGenderText(value); SetDirty(); } } }
-        private int _eggSteps;        public int EggSteps        { get => _eggSteps;        set { if (Set(ref _eggSteps,        value) && !_loading) { _current.eggSteps        = (byte)value; SetDirty(); } } }
-        private int _baseFriendship;  public int BaseFriendship  { get => _baseFriendship;  set { if (Set(ref _baseFriendship,  value) && !_loading) { _current.baseFriendship  = (byte)value; SetDirty(); } } }
-        private int _escapeRate;      public int EscapeRate      { get => _escapeRate;      set { if (Set(ref _escapeRate,      value) && !_loading) { _current.escapeRate      = (byte)value; SetDirty(); } } }
+        private int _catchRate;       public int CatchRate       { get => _catchRate;       set { if (Set(ref _catchRate,       value) && !_loading) { _current.CatchRate       = (byte)value; SetDirty(); } } }
+        private int _baseExp;         public int BaseExp         { get => _baseExp;         set { if (Set(ref _baseExp,         value) && !_loading) { _current.GivenExp        = (byte)value; SetDirty(); } } }
+        private int _genderVec;       public int GenderVec       { get => _genderVec;       set { if (Set(ref _genderVec,       value) && !_loading) { _current.GenderVec       = (byte)value; GenderLabel = GetGenderText(value); SetDirty(); } } }
+        private int _eggSteps;        public int EggSteps        { get => _eggSteps;        set { if (Set(ref _eggSteps,        value) && !_loading) { _current.EggSteps        = (byte)value; SetDirty(); } } }
+        private int _baseFriendship;  public int BaseFriendship  { get => _baseFriendship;  set { if (Set(ref _baseFriendship,  value) && !_loading) { _current.BaseFriendship  = (byte)value; SetDirty(); } } }
+        private int _escapeRate;      public int EscapeRate      { get => _escapeRate;      set { if (Set(ref _escapeRate,      value) && !_loading) { _current.EscapeRate      = (byte)value; SetDirty(); } } }
 
         // ── Combo selectors ───────────────────────────────────────────────────
-        private int _growthCurveIndex; public int GrowthCurveIndex { get => _growthCurveIndex; set { if (Set(ref _growthCurveIndex, value) && !_loading && _current != null) { _current.growthCurve = (PokemonGrowthCurve)value; SetDirty(); } } }
-        private int _dexColorIndex;    public int DexColorIndex    { get => _dexColorIndex;    set { if (Set(ref _dexColorIndex,    value) && !_loading && _current != null) { _current.color        = (PokemonDexColor)value;    SetDirty(); } } }
-        private int _eggGroup1Index;   public int EggGroup1Index   { get => _eggGroup1Index;   set { if (Set(ref _eggGroup1Index,   value) && !_loading && _current != null) { _current.eggGroup1   = (byte)value; SetDirty(); } } }
-        private int _eggGroup2Index;   public int EggGroup2Index   { get => _eggGroup2Index;   set { if (Set(ref _eggGroup2Index,   value) && !_loading && _current != null) { _current.eggGroup2   = (byte)value; SetDirty(); } } }
+        private int _growthCurveIndex; public int GrowthCurveIndex { get => _growthCurveIndex; set { if (Set(ref _growthCurveIndex, value) && !_loading && _current != null) { _current.GrowthCurve = (PokemonGrowthCurve)value; SetDirty(); } } }
+        private int _dexColorIndex;    public int DexColorIndex    { get => _dexColorIndex;    set { if (Set(ref _dexColorIndex,    value) && !_loading && _current != null) { _current.Color        = (PokemonDexColor)value;    SetDirty(); } } }
+        private int _eggGroup1Index;   public int EggGroup1Index   { get => _eggGroup1Index;   set { if (Set(ref _eggGroup1Index,   value) && !_loading && _current != null) { _current.EggGroup1   = (byte)value; SetDirty(); } } }
+        private int _eggGroup2Index;   public int EggGroup2Index   { get => _eggGroup2Index;   set { if (Set(ref _eggGroup2Index,   value) && !_loading && _current != null) { _current.EggGroup2   = (byte)value; SetDirty(); } } }
         private int _hatchResultIndex; public int HatchResultIndex { get => _hatchResultIndex; set { if (Set(ref _hatchResultIndex, value) && !_loading)                     SetDirty(); } }
         // pms.narc has one entry per personal file, and form entries hatch as themselves.
         public int HatchResultMaximum => Math.Max(0, PokemonNames.Count - 1);
@@ -269,7 +269,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool FlipFlag
         {
             get => _flipFlag;
-            set { if (Set(ref _flipFlag, value) && !_loading && _current != null) { _current.flip = value; SetDirty(); } }
+            set { if (Set(ref _flipFlag, value) && !_loading && _current != null) { _current.Flip = value; SetDirty(); } }
         }
 
         // ── Labels ────────────────────────────────────────────────────────────
@@ -569,7 +569,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (preview != null)
             {
                 try { frames = DSPRE.Avalonia.ImageConverter.LoadHgeOverworldFrames(preview); }
-                catch { frames = Array.Empty<Bitmap>(); }
+                catch (Exception ex) { AppLogger.WarnOnce("PersonalDataEditorViewModel.RefreshOwPending", ex); frames = Array.Empty<Bitmap>(); }
             }
             SetOwFrames(frames);
         }
@@ -801,7 +801,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             AppEvents.LabelsChanged += OnLabelsChanged;
             AppEvents.PersonalDataSaved -= OnPersonalDataSaved;
             AppEvents.PersonalDataSaved += OnPersonalDataSaved;
-            _iconSaved = AppEvents.WhenSaved(() => { if (_current != null) ShowMonIcon(); }, DirNames.monIcons);
+            _iconSaved = AppEvents.WhenSaved(() => { if (_current != null) ShowMonIcon(); }, DirNames.MonIcons);
             DSPRE.ROMFiles.WildHeldItemOdds.Saved -= OnHeldItemOddsSaved;
             DSPRE.ROMFiles.WildHeldItemOdds.Saved += OnHeldItemOddsSaved;
         }
@@ -827,11 +827,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
 
             PokemonPersonalData saved = new PokemonPersonalData(new MemoryStream(_savedSnapshot.Data));
-            SortedSet<byte> was = new SortedSet<byte>(saved.machines.Where(m => m < FirstMaskMachine));
-            SortedSet<byte> now = new SortedSet<byte>(onDisk.machines.Where(m => m < FirstMaskMachine));
-            foreach (byte m in was) if (!now.Contains(m)) _current.machines.Remove(m);
-            foreach (byte m in now) if (!was.Contains(m)) _current.machines.Add(m);
-            saved.machines = new SortedSet<byte>(now.Concat(saved.machines.Where(m => m >= FirstMaskMachine)));
+            SortedSet<byte> was = new SortedSet<byte>(saved.Machines.Where(m => m < FirstMaskMachine));
+            SortedSet<byte> now = new SortedSet<byte>(onDisk.Machines.Where(m => m < FirstMaskMachine));
+            foreach (byte m in was) if (!now.Contains(m)) _current.Machines.Remove(m);
+            foreach (byte m in now) if (!was.Contains(m)) _current.Machines.Add(m);
+            saved.Machines = new SortedSet<byte>(now.Concat(saved.Machines.Where(m => m >= FirstMaskMachine)));
 
             PlatPatches.ExtraTms t = PlatPatches.Tms();
             if (t != null)
@@ -887,7 +887,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         // ── Commands ──────────────────────────────────────────────────────────
 
-        public async Task SaveCommand()
+        public async Task SaveCommandAsync()
         {
             if (_current == null) return;
             string sourceError = null;
@@ -922,37 +922,37 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 // Operations that did finish are no longer pending.
                 if (partlySaved) _history.Capture(Snapshot(), coalesce: true);
                 string lead = partlySaved ? $"Species {_currentId} was only partly saved:" : $"Species {_currentId} was not saved:";
-                await DSPRE.Avalonia.DialogHelper.ShowError($"{lead}\n{sourceError}", "Personal data error");
+                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"{lead}\n{sourceError}", "Personal data error");
                 return;
             }
             string athlonProblem = PokeathlonSaveProblem();
             if (athlonProblem != null)
             {
-                await DSPRE.Avalonia.DialogHelper.ShowError($"Species {_currentId} was not saved:\n{athlonProblem}", "Personal data error");
+                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"Species {_currentId} was not saved:\n{athlonProblem}", "Personal data error");
                 return;
             }
             string followerError = SaveRetailFollower();
             if (followerError != null)
             {
-                await DSPRE.Avalonia.DialogHelper.ShowError($"The follower of species {_currentId} was not saved:\n{followerError}", "Personal data error");
+                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"The follower of species {_currentId} was not saved:\n{followerError}", "Personal data error");
                 return;
             }
             string athlonError = SavePokeathlon();
             if (athlonError != null)
             {
-                await DSPRE.Avalonia.DialogHelper.ShowError($"The Pokéathlon stats of species {_currentId} were not saved:\n{athlonError}", "Personal data error");
+                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"The Pokéathlon stats of species {_currentId} were not saved:\n{athlonError}", "Personal data error");
                 return;
             }
             string maskError = SaveExtraMaskTms();
             if (maskError != null)
             {
-                await DSPRE.Avalonia.DialogHelper.ShowError($"The TM121+ compatibility of species {_currentId} was not saved:\n{maskError}", "Personal data error");
+                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"The TM121+ compatibility of species {_currentId} was not saved:\n{maskError}", "Personal data error");
                 return;
             }
             string machineError = SaveSourceMachineMoves();
             if (machineError != null)
             {
-                await DSPRE.Avalonia.DialogHelper.ShowError($"The machine moves of species {_currentId} were not saved:\n{machineError}", "Personal data error");
+                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"The machine moves of species {_currentId} were not saved:\n{machineError}", "Personal data error");
                 return;
             }
             if (!HgEngineProject.IsActive) FinishPending();
@@ -1085,9 +1085,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         };
 
         /// <summary>Every Pokémon's personal data as this editor holds it, unsaved edits included.</summary>
-        public async Task ExportCommand(Window owner)
+        public async Task ExportCommandAsync(Window owner)
         {
-            string path = await DialogHelper.SaveFile(owner, "Export personal data to CSV",
+            string path = await DialogHelper.SaveFileAsync(owner, "Export personal data to CSV",
                 new[] { DialogHelper.CsvFilter, DialogHelper.AllFilter }, "PersonalData.csv");
             if (path == null) return;
             try
@@ -1103,14 +1103,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     PersonalDataCsv.Write(writer, CsvLists(), rows);
                 SaveNotice.Exported(path);
                 if (unread.Count > 0)
-                    await DialogHelper.ShowInfo($"{unread.Count} Pokémon could not be read and were left out: {string.Join(", ", unread.Take(10))}{(unread.Count > 10 ? ", ..." : "")}",
+                    await DialogHelper.ShowInfoAsync($"{unread.Count} Pokémon could not be read and were left out: {string.Join(", ", unread.Take(10))}{(unread.Count > 10 ? ", ..." : "")}",
                         "Pokémon left out");
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"Error: {ex.Message}", "Pokémon editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Error: {ex.Message}", "Pokémon editor error"); }
         }
 
         /// <summary>Imports the Pokémon in the file. Changes stay unsaved until Save.</summary>
-        public async Task ImportCommand(Window owner)
+        public async Task ImportCommandAsync(Window owner)
         {
             if (_current == null) return;
             PersonalDataCsv importer = new PersonalDataCsv(CsvLists(), GetPersonalFilesCount(), HeldData);
@@ -1172,7 +1172,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_sourceMachineMoves != null)
                 return index < _machineMoveIds.Length && (_sourceMachineMoves.Contains(_machineMoveIds[index]) || _sourceLevelUpMoves.Contains(_machineMoveIds[index]));
-            return index >= FirstMaskMachine ? _extraMaskTms.Contains(index) : _current.machines.Contains((byte)index);
+            return index >= FirstMaskMachine ? _extraMaskTms.Contains(index) : _current.Machines.Contains((byte)index);
         }
 
         /// <summary>On hg-engine a machine whose move is also learned by level-up is always compatible.</summary>
@@ -1190,7 +1190,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return;
             }
             if (index >= FirstMaskMachine) { if (on) _extraMaskTms.Add(index); else _extraMaskTms.Remove(index); return; }
-            if (on) _current.machines.Add((byte)index); else _current.machines.Remove((byte)index);
+            if (on) _current.Machines.Add((byte)index); else _current.Machines.Remove((byte)index);
         }
 
         /// <summary>Reads the current Pokémon's machine moves and level-up moves from learnsets.json on an hg-engine folder.</summary>
@@ -1258,7 +1258,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private HgssFollowers.Model[] _followerModels = Array.Empty<HgssFollowers.Model>();
         private FollowerStaged[] _followers, _followersLoaded;
 
-        public bool ShowRetailFollower => RomInfo.gameFamily == GameFamilies.HGSS && !HgEngineProject.IsActive;
+        public bool ShowRetailFollower => RomInfo.GameFamily == GameFamilies.HGSS && !HgEngineProject.IsActive;
         public bool RetailFollowerEditable => ShowRetailFollower && _followerWhyNot == null && _followerModels.Length > 0;
         public string RetailFollowerNote => !ShowRetailFollower ? "" : _followerWhyNot ?? (_followerModels.Length == 0 ? "This Pokémon has no follower." : "");
         public bool HasRetailFollowerNote => RetailFollowerNote.Length > 0;
@@ -1417,7 +1417,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private int _athlonSpecies;
         private byte[][] _athlon, _athlonLoaded;
 
-        public bool ShowPokeathlon => RomInfo.gameFamily == GameFamilies.HGSS && !HgEngineProject.IsActive && BetaEditors.Enabled;
+        public bool ShowPokeathlon => RomInfo.GameFamily == GameFamilies.HGSS && !HgEngineProject.IsActive && BetaEditors.Enabled;
         public bool PokeathlonEditable => ShowPokeathlon && _athlonWhyNot == null && _athlon != null && _athlon.Length > 0;
         public string PokeathlonNote => !ShowPokeathlon ? "" : _athlonWhyNot ?? (_athlon == null || _athlon.Length == 0 ? "This Pokémon has no Pokéathlon stats." : "");
         public bool HasPokeathlonNote => PokeathlonNote.Length > 0;
@@ -1533,11 +1533,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         internal static (int species, int form) AthlonSpeciesOf(int personalId)
         {
             if (personalId >= 1 && personalId <= PokeathlonPerformance.LastSpecies) return (personalId, 0);
-            PokeDatabase.PersonalData.PersonalExtraFiles[] extras = DSPRE.Resources.PokeDatabase.PersonalData.personalExtraFiles;
+            PokeDatabase.PersonalData.PersonalExtraFiles[] extras = DSPRE.Resources.PokeDatabase.PersonalData.ExtraFiles;
             int k = personalId - GetPokemonNames().Length;
             if (k < 0 || k >= extras.Length) return (0, 0);
-            int form = Array.IndexOf(PokeathlonPerformance.FormNamesOf(extras[k].monId), extras[k].description);
-            return form < 0 ? (0, 0) : (extras[k].monId, form);
+            int form = Array.IndexOf(PokeathlonPerformance.FormNamesOf(extras[k].MonId), extras[k].Description);
+            return form < 0 ? (0, 0) : (extras[k].MonId, form);
         }
 
         private void LoadPokeathlon()
@@ -1643,7 +1643,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 RawImage drawingImg = DSUtils.GetPokePicRaw(DSUtils.ResolveIconId(_currentId), 64, 64);
                 MonIconBitmap = ImageConverter.ToAvaloniaBitmap(drawingImg);
             }
-            catch { MonIconBitmap = null; }
+            catch (Exception ex) { AppLogger.WarnOnce("PersonalDataEditorViewModel.ShowMonIcon", ex); MonIconBitmap = null; }
         }
 
         internal void LoadMon(int id)
@@ -1689,30 +1689,30 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>Pushes <see cref="_current"/> into the bound fields + machine lists. Caller guards with _loading.</summary>
         private void PopulateFromCurrent()
         {
-            BaseHP  = _current.baseHP;  BaseAtk = _current.baseAtk; BaseDef = _current.baseDef;
-            BaseSpe = _current.baseSpeed; BaseSpA = _current.baseSpAtk; BaseSpD = _current.baseSpDef;
-            EvHP  = _current.evHP;  EvAtk = _current.evAtk; EvDef = _current.evDef;
-            EvSpe = _current.evSpeed; EvSpA = _current.evSpAtk; EvSpD = _current.evSpDef;
+            BaseHP  = _current.BaseHP;  BaseAtk = _current.BaseAtk; BaseDef = _current.BaseDef;
+            BaseSpe = _current.BaseSpeed; BaseSpA = _current.BaseSpAtk; BaseSpD = _current.BaseSpDef;
+            EvHP  = _current.EvHP;  EvAtk = _current.EvAtk; EvDef = _current.EvDef;
+            EvSpe = _current.EvSpeed; EvSpA = _current.EvSpAtk; EvSpD = _current.EvSpDef;
 
-            _type1Index = (int)_current.type1; OnPropertyChanged(nameof(Type1Index));
-            _type2Index = (int)_current.type2; OnPropertyChanged(nameof(Type2Index));
-            _ability1Index = _current.firstAbility;  OnPropertyChanged(nameof(Ability1Index));
-            _ability2Index = _current.secondAbility; OnPropertyChanged(nameof(Ability2Index));
-            _item1Index = _current.item1; OnPropertyChanged(nameof(Item1Index));
-            _item2Index = _current.item2; OnPropertyChanged(nameof(Item2Index));
+            _type1Index = (int)_current.Type1; OnPropertyChanged(nameof(Type1Index));
+            _type2Index = (int)_current.Type2; OnPropertyChanged(nameof(Type2Index));
+            _ability1Index = _current.FirstAbility;  OnPropertyChanged(nameof(Ability1Index));
+            _ability2Index = _current.SecondAbility; OnPropertyChanged(nameof(Ability2Index));
+            _item1Index = _current.Item1; OnPropertyChanged(nameof(Item1Index));
+            _item2Index = _current.Item2; OnPropertyChanged(nameof(Item2Index));
             RaiseHeldItemOdds();
 
-            CatchRate = _current.catchRate; BaseExp = _current.givenExp;
-            GenderVec = _current.genderVec; EggSteps = _current.eggSteps;
-            BaseFriendship = _current.baseFriendship; EscapeRate = _current.escapeRate;
+            CatchRate = _current.CatchRate; BaseExp = _current.GivenExp;
+            GenderVec = _current.GenderVec; EggSteps = _current.EggSteps;
+            BaseFriendship = _current.BaseFriendship; EscapeRate = _current.EscapeRate;
 
-            _growthCurveIndex = (int)_current.growthCurve; OnPropertyChanged(nameof(GrowthCurveIndex));
-            _dexColorIndex    = (int)_current.color;        OnPropertyChanged(nameof(DexColorIndex));
-            _eggGroup1Index   = _current.eggGroup1;         OnPropertyChanged(nameof(EggGroup1Index));
-            _eggGroup2Index   = _current.eggGroup2;         OnPropertyChanged(nameof(EggGroup2Index));
+            _growthCurveIndex = (int)_current.GrowthCurve; OnPropertyChanged(nameof(GrowthCurveIndex));
+            _dexColorIndex    = (int)_current.Color;        OnPropertyChanged(nameof(DexColorIndex));
+            _eggGroup1Index   = _current.EggGroup1;         OnPropertyChanged(nameof(EggGroup1Index));
+            _eggGroup2Index   = _current.EggGroup2;         OnPropertyChanged(nameof(EggGroup2Index));
 
-            _flipFlag = _current.flip; OnPropertyChanged(nameof(FlipFlag));
-            GenderLabel = GetGenderText(_current.genderVec);
+            _flipFlag = _current.Flip; OnPropertyChanged(nameof(FlipFlag));
+            GenderLabel = GetGenderText(_current.GenderVec);
 
             RebuildMachineLists();
         }
@@ -1752,7 +1752,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private static int GetHatchResult(int monId)
         {
-            string path = Path.Combine(dataPath, @"poketool/personal/pms.narc");
+            string path = Path.Combine(DataPath, @"poketool/personal/pms.narc");
             if (!File.Exists(path)) return 0;
             using FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read);
             int offset = monId * 2;
@@ -1764,7 +1764,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private static void WriteHatchResult(int monId, int value)
         {
-            string path = Path.Combine(dataPath, @"poketool/personal/pms.narc");
+            string path = Path.Combine(DataPath, @"poketool/personal/pms.narc");
             if (!File.Exists(path)) return;
             using FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Write);
             int offset = monId * 2;

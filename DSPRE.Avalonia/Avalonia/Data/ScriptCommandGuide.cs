@@ -67,7 +67,7 @@ namespace DSPRE.Avalonia.Data
         public static IReadOnlyList<GuideEntry> ForMovements()
         {
             List<GuideEntry> list = new List<GuideEntry>();
-            foreach (KeyValuePair<ushort, DSPRE.Resources.MovementCommandInfo> kv in DSPRE.Resources.ScriptDatabase.movementsDict)
+            foreach (KeyValuePair<ushort, DSPRE.Resources.MovementCommandInfo> kv in DSPRE.Resources.ScriptDatabase.MovementsDict)
                 list.Add(new GuideEntry(kv.Value.Name, $"0x{kv.Key:X4}", "", kv.Value.Description ?? ""));
             list.Sort((a, b) => string.CompareOrdinal(a.Title, b.Title));
             return list;
@@ -76,7 +76,7 @@ namespace DSPRE.Avalonia.Data
         public static IReadOnlyList<GuideEntry> ForComparisonOperators()
         {
             List<GuideEntry> list = new List<GuideEntry>();
-            foreach (KeyValuePair<ushort, string> kv in DSPRE.Resources.ScriptDatabase.comparisonOperatorsDict)
+            foreach (KeyValuePair<ushort, string> kv in DSPRE.Resources.ScriptDatabase.ComparisonOperatorsDict)
                 list.Add(new GuideEntry(kv.Value, kv.Key.ToString(), "", ""));
             list.Sort((a, b) => string.CompareOrdinal(a.Title, b.Title));
             return list;

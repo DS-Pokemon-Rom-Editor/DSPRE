@@ -19,7 +19,7 @@ namespace DSPRE.Avalonia.Views.Shell
         /// <summary>Asks for a CSV file and reviews it. The session to apply, or null when cancelled.</summary>
         public static async Task<CsvImportSession> ReviewAsync(Window owner, CsvImporter importer)
         {
-            string path = await DialogHelper.OpenFile(owner, $"{importer.Title} CSV",
+            string path = await DialogHelper.OpenFileAsync(owner, $"{importer.Title} CSV",
                 new[] { DialogHelper.CsvFilter, DialogHelper.AllFilter });
             if (path == null) return null;
             return await ReviewAsync(owner, CsvImportSession.Open(importer, path));

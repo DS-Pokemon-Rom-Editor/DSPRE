@@ -50,26 +50,26 @@ namespace DSPRE.ROMFiles
                     + "roster and its shared trainer script are both built from source.");
             }
 
-            if (!TrainerScriptDescriptor.TryFor(gameFamily, out TrainerScriptDescriptor scriptDescriptor))
+            if (!TrainerScriptDescriptor.TryFor(GameFamily, out TrainerScriptDescriptor scriptDescriptor))
             {
-                return Refuse($"The {gameFamily} shared trainer-script bank is not supported.");
+                return Refuse($"The {GameFamily} shared trainer-script bank is not supported.");
             }
 
-            if (!TrainerScriptExecutableDescriptor.TryFor(gameVersion, gameLanguage,
+            if (!TrainerScriptExecutableDescriptor.TryFor(GameVersion, GameLanguage,
                 out TrainerScriptExecutableDescriptor executableDescriptor, out string executableError))
             {
                 return Refuse(executableError);
             }
 
-            if (!TrainerRosterCapacity.TryFor(gameVersion, gameLanguage,
+            if (!TrainerRosterCapacity.TryFor(GameVersion, GameLanguage,
                 out TrainerRosterCapacity capacity, out string capacityError))
             {
                 return Refuse(capacityError);
             }
 
-            string propertiesDir = gameDirs[DirNames.trainerProperties].unpackedDir;
-            string partyDir = gameDirs[DirNames.trainerParty].unpackedDir;
-            string partyNarcPath = gameDirs[DirNames.trainerParty].packedDir;
+            string propertiesDir = GameDirs[DirNames.TrainerProperties].unpackedDir;
+            string partyDir = GameDirs[DirNames.TrainerParty].unpackedDir;
+            string partyNarcPath = GameDirs[DirNames.TrainerParty].packedDir;
             if (!Directory.Exists(propertiesDir) || !File.Exists(partyNarcPath))
             {
                 return Refuse("The trainer properties and packed party archive must be available first.");
@@ -88,8 +88,8 @@ namespace DSPRE.ROMFiles
             {
                 return Refuse(narcError, trainerCount);
             }
-            TextArchive names = new TextArchive(trainerNamesMessageNumber);
-            int nameCount = names.messages?.Count ?? 0;
+            TextArchive names = new TextArchive(TrainerNamesMessageNumber);
+            int nameCount = names.Messages?.Count ?? 0;
             if (trainerCount <= 0 || trainerCount != partyCount || trainerCount != nameCount)
             {
                 return Refuse(
@@ -99,7 +99,7 @@ namespace DSPRE.ROMFiles
 
             ScriptFile sharedScripts = new ScriptFile(scriptDescriptor.SharedScriptArchiveId,
                 readFunctions: true, readActions: true);
-            if (sharedScripts.parseFailedDueToInvalidCommand)
+            if (sharedScripts.ParseFailedDueToInvalidCommand)
             {
                 return Refuse("The shared trainer-script file did not parse completely.",
                     trainerCount, partyCount, nameCount);
@@ -119,7 +119,7 @@ namespace DSPRE.ROMFiles
             foreach (TrainerScriptPatchTarget target in executableDescriptor.Targets)
             {
                 string path = target.File == TrainerScriptExecutableFile.Arm9
-                    ? arm9Path
+                    ? Arm9Path
                     : OverlayUtils.GetPath(target.OverlayNumber);
                 if (!File.Exists(path))
                 {
@@ -152,7 +152,7 @@ namespace DSPRE.ROMFiles
             trainerId = -1;
             error = null;
             string trainerName = string.IsNullOrWhiteSpace(name) ? "Trainer" : name.Trim();
-            int trainerNameLimit = trainerNameMaxChars;
+            int trainerNameLimit = TrainerNameMaxChars;
             if (trainerName.Length > trainerNameLimit)
             {
                 error = $"Trainer names are limited to {trainerNameLimit} characters in this ROM.";
@@ -166,25 +166,25 @@ namespace DSPRE.ROMFiles
                 return false;
             }
 
-            string partyDir = gameDirs[DirNames.trainerParty].unpackedDir;
+            string partyDir = GameDirs[DirNames.TrainerParty].unpackedDir;
             if (!Directory.Exists(partyDir))
             {
                 error = "The trainer-party archive must be unpacked before adding a trainer.";
                 return false;
             }
 
-            TrainerScriptDescriptor.TryFor(gameFamily, out TrainerScriptDescriptor scriptDescriptor);
-            TrainerScriptExecutableDescriptor.TryFor(gameVersion, gameLanguage,
+            TrainerScriptDescriptor.TryFor(GameFamily, out TrainerScriptDescriptor scriptDescriptor);
+            TrainerScriptExecutableDescriptor.TryFor(GameVersion, GameLanguage,
                 out TrainerScriptExecutableDescriptor executableDescriptor, out _);
 
             ScriptFile sharedScripts = new ScriptFile(scriptDescriptor.SharedScriptArchiveId,
                 readFunctions: true, readActions: true);
-            if (sharedScripts.plaintextParseFailed)
+            if (sharedScripts.PlaintextParseFailed)
             {
                 error = "The shared trainer-script .script file has edits that do not parse. Fix it first.";
                 return false;
             }
-            if (sharedScripts.parseFailedDueToInvalidCommand ||
+            if (sharedScripts.ParseFailedDueToInvalidCommand ||
                 !TrainerScriptLayout.TryInsertGenericAliasBeforeSpecial(sharedScripts, out error))
             {
                 error ??= "The shared trainer-script file did not parse completely.";
@@ -206,7 +206,7 @@ namespace DSPRE.ROMFiles
             foreach (TrainerScriptPatchTarget target in executableDescriptor.Targets)
             {
                 string path = target.File == TrainerScriptExecutableFile.Arm9
-                    ? arm9Path
+                    ? Arm9Path
                     : OverlayUtils.GetPath(target.OverlayNumber);
                 byte[] source = File.ReadAllBytes(path);
                 if (!TrainerScriptExecutableDescriptor.TryPatchTarget(source, oldSpecialNumber,
@@ -219,24 +219,24 @@ namespace DSPRE.ROMFiles
             }
 
             trainerId = analysis.TrainerRecordCount;
-            batch.Put(DirNames.trainerProperties, trainerId,
-                new TrainerProperties((ushort)trainerId, 1) { trainerClass = TrainerProperties.NewTrainerClass }.ToByteArray());
+            batch.Put(DirNames.TrainerProperties, trainerId,
+                new TrainerProperties((ushort)trainerId, 1) { TrainerClass = TrainerProperties.NewTrainerClass }.ToByteArray());
             // One Pokemon, so battling the new trainer never reads an empty party.
-            batch.Put(DirNames.trainerParty, trainerId, new PartyPokemon { pokeID = 1, level = 5 }.ToByteArray());
+            batch.Put(DirNames.TrainerParty, trainerId, new PartyPokemon { PokeID = 1, Level = 5 }.ToByteArray());
 
-            TextArchive trainerNames = new TextArchive(trainerNamesMessageNumber);
-            if (trainerNames.messages.Count != trainerId ||
+            TextArchive trainerNames = new TextArchive(TrainerNamesMessageNumber);
+            if (trainerNames.Messages.Count != trainerId ||
                 !trainerNames.SetSimpleTrainerName(trainerId, trainerName))
             {
                 error = "The trainer-name archive could not append the new trainer name.";
                 trainerId = -1;
                 return false;
             }
-            (string binPath, string jsonPath) namePaths = TextArchive.GetFilePaths(trainerNamesMessageNumber);
-            batch.PutFile(namePaths.jsonPath, trainerNames.ToExpandedJsonBytes(trainerNamesMessageNumber));
+            (string binPath, string jsonPath) namePaths = TextArchive.GetFilePaths(TrainerNamesMessageNumber);
+            batch.PutFile(namePaths.jsonPath, trainerNames.ToExpandedJsonBytes(TrainerNamesMessageNumber));
 
             (string binPath, string txtPath) scriptPaths = ScriptFile.GetFilePaths(scriptDescriptor.SharedScriptArchiveId);
-            batch.Put(DirNames.scripts, scriptDescriptor.SharedScriptArchiveId, expandedScript);
+            batch.Put(DirNames.Scripts, scriptDescriptor.SharedScriptArchiveId, expandedScript);
             if (!TryAddPlaintextMutation(batch, sharedScripts, scriptPaths.txtPath, "expanded", out error))
             {
                 trainerId = -1;
@@ -259,7 +259,7 @@ namespace DSPRE.ROMFiles
             ScriptFile scripts, string txtPath, string what, out string error)
         {
             error = null;
-            if (RomInfo.hasRotomProject) return true;
+            if (RomInfo.HasRotomProject) return true;
             string plaintext = scripts.ToPlainText(includeActions: true);
             if (string.IsNullOrWhiteSpace(plaintext))
             {
@@ -273,8 +273,8 @@ namespace DSPRE.ROMFiles
         private static void AfterCommit(int sharedScriptId)
         {
             ScriptFile.ClearPlaintextCache();
-            _ = ScriptSourceSync.BinaryWritten(sharedScriptId);
-            TextArchive.RaiseSaved(null, trainerNamesMessageNumber);
+            _ = ScriptSourceSync.BinaryWrittenAsync(sharedScriptId);
+            TextArchive.RaiseSaved(null, TrainerNamesMessageNumber);
         }
 
         public static bool TryRemoveLastAddedTrainer(out int trainerId, out string error)
@@ -288,7 +288,7 @@ namespace DSPRE.ROMFiles
                 error = analysis.RefusalReason;
                 return false;
             }
-            if (!TrainerRosterCapacity.TryFor(gameVersion, gameLanguage,
+            if (!TrainerRosterCapacity.TryFor(GameVersion, GameLanguage,
                 out TrainerRosterCapacity capacity, out error))
             {
                 return false;
@@ -320,18 +320,18 @@ namespace DSPRE.ROMFiles
                 return false;
             }
 
-            TrainerScriptDescriptor.TryFor(gameFamily, out TrainerScriptDescriptor scriptDescriptor);
-            TrainerScriptExecutableDescriptor.TryFor(gameVersion, gameLanguage,
+            TrainerScriptDescriptor.TryFor(GameFamily, out TrainerScriptDescriptor scriptDescriptor);
+            TrainerScriptExecutableDescriptor.TryFor(GameVersion, GameLanguage,
                 out TrainerScriptExecutableDescriptor executableDescriptor, out _);
             ScriptFile sharedScripts = new ScriptFile(scriptDescriptor.SharedScriptArchiveId,
                 readFunctions: true, readActions: true);
-            if (sharedScripts.plaintextParseFailed)
+            if (sharedScripts.PlaintextParseFailed)
             {
                 error = "The shared trainer-script .script file has edits that do not parse. Fix it first.";
                 trainerId = -1;
                 return false;
             }
-            if (sharedScripts.parseFailedDueToInvalidCommand ||
+            if (sharedScripts.ParseFailedDueToInvalidCommand ||
                 !TrainerScriptLayout.TryRemoveGenericAliasBeforeSpecial(sharedScripts, out error))
             {
                 error ??= "The shared trainer-script file did not parse completely.";
@@ -355,7 +355,7 @@ namespace DSPRE.ROMFiles
             foreach (TrainerScriptPatchTarget target in executableDescriptor.Targets)
             {
                 string path = target.File == TrainerScriptExecutableFile.Arm9
-                    ? arm9Path
+                    ? Arm9Path
                     : OverlayUtils.GetPath(target.OverlayNumber);
                 byte[] source = File.ReadAllBytes(path);
                 if (!TrainerScriptExecutableDescriptor.TryPatchTarget(source, oldSpecialNumber,
@@ -368,22 +368,22 @@ namespace DSPRE.ROMFiles
                 batch.PutCode(path, patched);
             }
 
-            batch.Delete(DirNames.trainerProperties, trainerId);
-            batch.Delete(DirNames.trainerParty, trainerId);
+            batch.Delete(DirNames.TrainerProperties, trainerId);
+            batch.Delete(DirNames.TrainerParty, trainerId);
 
-            TextArchive trainerNames = new TextArchive(trainerNamesMessageNumber);
-            if (trainerNames.messages.Count != analysis.TrainerNameCount)
+            TextArchive trainerNames = new TextArchive(TrainerNamesMessageNumber);
+            if (trainerNames.Messages.Count != analysis.TrainerNameCount)
             {
                 error = "The trainer-name archive changed during removal analysis.";
                 trainerId = -1;
                 return false;
             }
-            trainerNames.messages.RemoveAt(trainerId);
-            (string binPath, string jsonPath) namePaths = TextArchive.GetFilePaths(trainerNamesMessageNumber);
-            batch.PutFile(namePaths.jsonPath, trainerNames.ToExpandedJsonBytes(trainerNamesMessageNumber));
+            trainerNames.Messages.RemoveAt(trainerId);
+            (string binPath, string jsonPath) namePaths = TextArchive.GetFilePaths(TrainerNamesMessageNumber);
+            batch.PutFile(namePaths.jsonPath, trainerNames.ToExpandedJsonBytes(TrainerNamesMessageNumber));
 
             (string binPath, string txtPath) scriptPaths = ScriptFile.GetFilePaths(scriptDescriptor.SharedScriptArchiveId);
-            batch.Put(DirNames.scripts, scriptDescriptor.SharedScriptArchiveId, contractedScript);
+            batch.Put(DirNames.Scripts, scriptDescriptor.SharedScriptArchiveId, contractedScript);
             if (!TryAddPlaintextMutation(batch, sharedScripts, scriptPaths.txtPath, "contracted", out error))
             {
                 trainerId = -1;

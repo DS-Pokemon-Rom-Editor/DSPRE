@@ -93,8 +93,8 @@ namespace DSPRE.Avalonia
             try { _ = new RomInfo(gameCode, folder); }   // populates the static RomInfo.* (gameFamily, workDir, gameDirs, …)
             catch (Exception ex) { error = "Failed to initialise ROM data: " + ex.Message; AppLogger.Error(error); return false; }
 
-            if (gameFamily == GameFamilies.NULL) { error = "Unsupported ROM (Gen IV Pokémon only)."; return false; }
-            AppLogger.Info($"ROM loaded: {RomInfo.romID} ({RomInfo.projectName})");
+            if (GameFamily == GameFamilies.NULL) { error = "Unsupported ROM (Gen IV Pokémon only)."; return false; }
+            AppLogger.Info($"ROM loaded: {RomInfo.RomID} ({RomInfo.ProjectName})");
             if (recordRecent) SettingsManager.RecordRecentProject(folder);
             return true;
         }
@@ -143,7 +143,7 @@ namespace DSPRE.Avalonia
                 byte[] b = File.ReadAllBytes(Path.Combine(folder, "header.bin"));
                 return b.Length >= 16 ? Encoding.ASCII.GetString(b, 12, 4) : null;
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("AvaloniaRomLoader.ReadGameCode", ex); return null; }
         }
     }
 }

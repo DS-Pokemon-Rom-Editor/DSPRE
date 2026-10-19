@@ -5,12 +5,15 @@ using System.IO;
 using System.Linq;
 using static DSPRE.RomInfo;
 
-namespace DSPRE.ROMFiles {
+namespace DSPRE.ROMFiles
+{
     /// <summary>
     /// Classes to store event data in Pokémon NDS games
     /// </summary>
-    public class EventFile : RomFile {
-        public enum serializationOrder {
+    public class EventFile : RomFile
+    {
+        public enum serializationOrder
+        {
             Spawnables,
             Overworlds,
             Warps,
@@ -24,109 +27,127 @@ namespace DSPRE.ROMFiles {
         public const ushort NoScript = 0;
 
         public int ID { get; set; } = -1;
-        public List<Spawnable> spawnables = new List<Spawnable>();
-        public List<Overworld> overworlds = new List<Overworld>();
-        public List<Warp> warps = new List<Warp>();
-        public List<Trigger> triggers = new List<Trigger>();
+        public List<Spawnable> Spawnables = new List<Spawnable>();
+        public List<Overworld> Overworlds = new List<Overworld>();
+        public List<Warp> Warps = new List<Warp>();
+        public List<Trigger> Triggers = new List<Trigger>();
         #endregion
 
         #region Constructors (1)
-        public EventFile(Stream data) {
-            using (BinaryReader reader = new BinaryReader(data)) {
+        public EventFile(Stream data)
+        {
+            using (BinaryReader reader = new BinaryReader(data))
+            {
                 /* Read spawnables */
                 uint spawnablesCount = reader.ReadUInt32();
-                for (int i = 0; i < spawnablesCount; i++) {
-                    spawnables.Add(new Spawnable(new MemoryStream(reader.ReadBytes(0x14))));
+                for (int i = 0; i < spawnablesCount; i++)
+                {
+                    Spawnables.Add(new Spawnable(new MemoryStream(reader.ReadBytes(0x14))));
                 }
 
                 /* Read overworlds */
                 uint overworldsCount = reader.ReadUInt32();
-                for (int i = 0; i < overworldsCount; i++) {
-                    overworlds.Add(new Overworld(new MemoryStream(reader.ReadBytes(0x20))));
+                for (int i = 0; i < overworldsCount; i++)
+                {
+                    Overworlds.Add(new Overworld(new MemoryStream(reader.ReadBytes(0x20))));
                 }
 
                 /* Read warps */
                 uint warpsCount = reader.ReadUInt32();
-                for (int i = 0; i < warpsCount; i++) {
-                    warps.Add(new Warp(new MemoryStream(reader.ReadBytes(0xC))));
+                for (int i = 0; i < warpsCount; i++)
+                {
+                    Warps.Add(new Warp(new MemoryStream(reader.ReadBytes(0xC))));
                 }
 
                 /* Read triggers */
                 uint triggersCount = reader.ReadUInt32();
-                for (int i = 0; i < triggersCount; i++) {
-                    triggers.Add(new Trigger(new MemoryStream(reader.ReadBytes(0x10))));
+                for (int i = 0; i < triggersCount; i++)
+                {
+                    Triggers.Add(new Trigger(new MemoryStream(reader.ReadBytes(0x10))));
                 }
             }
         }
-        public EventFile(int ID) : this(new FileStream(Path.Combine(RomInfo.gameDirs[DirNames.eventFiles].unpackedDir, ID.ToString("D4")), FileMode.Open)) {
+        public EventFile(int ID) : this(new FileStream(Path.Combine(RomInfo.GameDirs[DirNames.EventFiles].unpackedDir, ID.ToString("D4")), FileMode.Open))
+        {
                     this.ID = ID;
                 }
         public EventFile() { }
         #endregion
 
         #region Methods (1)
-        public override string ToString() {
+        public override string ToString()
+        {
             return base.ToString();
         }
-        public override byte[] ToByteArray() {
+        public override byte[] ToByteArray()
+        {
             MemoryStream newData = new MemoryStream();
-            using (BinaryWriter writer = new BinaryWriter(newData)) {
+            using (BinaryWriter writer = new BinaryWriter(newData))
+            {
                 /* Write spawnables */
-                writer.Write((uint)spawnables.Count);
-                for (int i = 0; i < spawnables.Count; i++) {
-                    writer.Write(spawnables[i].ToByteArray());
+                writer.Write((uint)Spawnables.Count);
+                for (int i = 0; i < Spawnables.Count; i++)
+                {
+                    writer.Write(Spawnables[i].ToByteArray());
                 }
 
                 /* Write overworlds */
-                writer.Write((uint)overworlds.Count);
-                for (int i = 0; i < overworlds.Count; i++) {
-                    writer.Write(overworlds[i].ToByteArray());
+                writer.Write((uint)Overworlds.Count);
+                for (int i = 0; i < Overworlds.Count; i++)
+                {
+                    writer.Write(Overworlds[i].ToByteArray());
                 }
 
                 /* Write warps */
-                writer.Write((uint)warps.Count);
-                for (int i = 0; i < warps.Count; i++) {
-                    writer.Write(warps[i].ToByteArray());
+                writer.Write((uint)Warps.Count);
+                for (int i = 0; i < Warps.Count; i++)
+                {
+                    writer.Write(Warps[i].ToByteArray());
                 }
 
                 /* Write triggers */
-                writer.Write((uint)triggers.Count);
-                for (int i = 0; i < triggers.Count; i++) {
-                    writer.Write(triggers[i].ToByteArray());
+                writer.Write((uint)Triggers.Count);
+                for (int i = 0; i < Triggers.Count; i++)
+                {
+                    writer.Write(Triggers[i].ToByteArray());
                 }
             }
             return newData.ToArray();
         }
-        public void SaveToFileDefaultDir(int IDtoReplace, bool showSuccessMessage = true) {
-            SaveToFileDefaultDir(DirNames.eventFiles, IDtoReplace, showSuccessMessage);
+        public void SaveToFileDefaultDir(int IDtoReplace, bool showSuccessMessage = true)
+        {
+            SaveToFileDefaultDir(DirNames.EventFiles, IDtoReplace, showSuccessMessage);
         }
-        public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true) {
+        public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true)
+        {
             SaveToFileExplorePath("Gen IV Event File", "ev", suggestedFileName, showSuccessMessage);
         }
 
-        internal bool isEmpty() => (spawnables is null || spawnables.Count == 0) &&
-                (overworlds is null || overworlds.Count == 0) &&
-                (warps is null || warps.Count == 0) &&
-                (triggers is null || triggers.Count == 0);
+        internal bool IsEmpty() => (Spawnables is null || Spawnables.Count == 0) &&
+                (Overworlds is null || Overworlds.Count == 0) &&
+                (Warps is null || Warps.Count == 0) &&
+                (Triggers is null || Triggers.Count == 0);
         #endregion
 
     }
 
-    public abstract class Event {
-        public enum EventType : byte {
+    public abstract class Event
+    {
+        public enum EventType : byte
+        {
             Spawnable,
             Overworld,
             Warp,
             Trigger
         }
         #region Fields (6)
-        public EventType evType;
+        public EventType EvType;
 
-        public short xMapPosition;
-        public short yMapPosition;
-        public int zPosition; //fixed point!
-        public ushort xMatrixPosition;
-        public ushort yMatrixPosition;
+        public short XMapPosition;
+        public short YMapPosition;
+        public int ZPosition; //fixed point!
+        public ushort XMatrixPosition;
+        public ushort YMatrixPosition;
         #endregion
 
         #region Methods (1)
@@ -134,407 +155,446 @@ namespace DSPRE.ROMFiles {
         #endregion
     }
 
-    public class Spawnable : Event {
-        public const int TYPE_MISC = 0;
-        public const int TYPE_BOARD = 1;
-        public const int TYPE_HIDDENITEM = 2;
+    public class Spawnable : Event
+    {
+        public const int TypeMisc = 0;
+        public const int TypeBoard = 1;
+        public const int TypeHiddenitem = 2;
 
         #region Fields (7)
-        public ushort scriptNumber;
-        public ushort type;
-        public ushort dir;
-        public ushort unknown5;
+        public ushort ScriptNumber;
+        public ushort Type;
+        public ushort Dir;
+        public ushort Unknown5;
         #endregion
 
         #region Constructors (2)
-        public Spawnable(Stream data) {
-            evType = EventType.Spawnable;
-            using (BinaryReader reader = new BinaryReader(data)) {
+        public Spawnable(Stream data)
+        {
+            EvType = EventType.Spawnable;
+            using (BinaryReader reader = new BinaryReader(data))
+            {
                 // Record layout: u16 script, u16 type, s32 x, s32 z, s32 height, u16 dir, u16 padding.
-                scriptNumber = reader.ReadUInt16();
-                type = reader.ReadUInt16();
+                ScriptNumber = reader.ReadUInt16();
+                Type = reader.ReadUInt16();
 
                 /* Decompose x coordinate in matrix and map positions */
                 int xPosition = reader.ReadInt32();
-                xMapPosition = (short)(xPosition % MapFile.mapSize);
-                xMatrixPosition = (ushort)(xPosition / MapFile.mapSize);
+                XMapPosition = (short)(xPosition % MapFile.MapSize);
+                XMatrixPosition = (ushort)(xPosition / MapFile.MapSize);
 
                 /* Decompose y coordinate in matrix and map positions */
                 int yPosition = reader.ReadInt32();
-                yMapPosition = (short)(yPosition % MapFile.mapSize);
-                yMatrixPosition = (ushort)(yPosition / MapFile.mapSize);
+                YMapPosition = (short)(yPosition % MapFile.MapSize);
+                YMatrixPosition = (ushort)(yPosition / MapFile.MapSize);
 
-                zPosition = reader.ReadInt32();
-                dir = reader.ReadUInt16();
-                unknown5 = reader.ReadUInt16();
+                ZPosition = reader.ReadInt32();
+                Dir = reader.ReadUInt16();
+                Unknown5 = reader.ReadUInt16();
             }
         }
-        public Spawnable(int xMatrixPosition, int yMatrixPosition) {
-            evType = EventType.Spawnable;
+        public Spawnable(int xMatrixPosition, int yMatrixPosition)
+        {
+            EvType = EventType.Spawnable;
 
-            scriptNumber = 0;
-            type = 0;
-            unknown5 = 0;
-            dir = 0;
+            ScriptNumber = 0;
+            Type = 0;
+            Unknown5 = 0;
+            Dir = 0;
 
-            xMapPosition = 0;
-            yMapPosition = 0;
-            zPosition = 0;
-            this.xMatrixPosition = (ushort)xMatrixPosition;
-            this.yMatrixPosition = (ushort)yMatrixPosition;
+            XMapPosition = 0;
+            YMapPosition = 0;
+            ZPosition = 0;
+            this.XMatrixPosition = (ushort)xMatrixPosition;
+            this.YMatrixPosition = (ushort)yMatrixPosition;
         }
-        public Spawnable(Spawnable toCopy) {
-            evType = EventType.Spawnable;
+        public Spawnable(Spawnable toCopy)
+        {
+            EvType = EventType.Spawnable;
 
-            scriptNumber = toCopy.scriptNumber;
-            type = toCopy.type;
-            unknown5 = toCopy.unknown5;
-            dir = toCopy.dir;
+            ScriptNumber = toCopy.ScriptNumber;
+            Type = toCopy.Type;
+            Unknown5 = toCopy.Unknown5;
+            Dir = toCopy.Dir;
 
-            xMapPosition = toCopy.xMapPosition;
-            yMapPosition = toCopy.yMapPosition;
-            zPosition = toCopy.zPosition;
-            this.xMatrixPosition = toCopy.xMatrixPosition;
-            this.yMatrixPosition = toCopy.yMatrixPosition;
+            XMapPosition = toCopy.XMapPosition;
+            YMapPosition = toCopy.YMapPosition;
+            ZPosition = toCopy.ZPosition;
+            this.XMatrixPosition = toCopy.XMatrixPosition;
+            this.YMatrixPosition = toCopy.YMatrixPosition;
         }
         #endregion
 
         #region Methods (1)
-        public override byte[] ToByteArray() {
-            using (BinaryWriter writer = new BinaryWriter(new MemoryStream())) {
-                writer.Write(scriptNumber);
-                writer.Write(type);
-                writer.Write((int)(xMapPosition + MapFile.mapSize * xMatrixPosition));
-                writer.Write((int)(yMapPosition + MapFile.mapSize * yMatrixPosition));
-                writer.Write(zPosition);
-                writer.Write(dir);
-                writer.Write(unknown5);
+        public override byte[] ToByteArray()
+        {
+            using (BinaryWriter writer = new BinaryWriter(new MemoryStream()))
+            {
+                writer.Write(ScriptNumber);
+                writer.Write(Type);
+                writer.Write((int)(XMapPosition + MapFile.MapSize * XMatrixPosition));
+                writer.Write((int)(YMapPosition + MapFile.MapSize * YMatrixPosition));
+                writer.Write(ZPosition);
+                writer.Write(Dir);
+                writer.Write(Unknown5);
 
                 return ((MemoryStream)writer.BaseStream).ToArray();
             }
         }
-        public override string ToString() {
+        public override string ToString()
+        {
             string msg = "";
-            switch (this.type) {
-                case TYPE_MISC:
-                    msg += $"Misc, {PokeDatabase.EventEditor.Spawnables.orientationsArray[dir].ToLower()}";
+            switch (this.Type)
+            {
+                case TypeMisc:
+                    msg += $"Misc, {PokeDatabase.EventEditor.Spawnables.OrientationsArray[Dir].ToLower()}";
                     break;
 
-                case TYPE_BOARD:
-                    msg += $"Board, {PokeDatabase.EventEditor.Spawnables.orientationsArray[dir].ToLower()}";
+                case TypeBoard:
+                    msg += $"Board, {PokeDatabase.EventEditor.Spawnables.OrientationsArray[Dir].ToLower()}";
 
                     break;
 
-                case TYPE_HIDDENITEM:
+                case TypeHiddenitem:
                     msg += "Hidden Item";
                     break;
             }
-            return msg + (scriptNumber == EventFile.NoScript ? ", [No script]" : $", [Scr {scriptNumber}]");
+            return msg + (ScriptNumber == EventFile.NoScript ? ", [No script]" : $", [Scr {ScriptNumber}]");
         }
         #endregion
     }
 
-    public class Overworld : Event {
+    public class Overworld : Event
+    {
         #region Fields (14)
         public static string MovementCodeKW = "Move";
         public enum OwType : ushort { NORMAL = 0, TRAINER = 1, ITEM = 3 };
 
-        public ushort owID;
-        public ushort overlayTableEntry;
-        public ushort movement;
-        public ushort type;
-        public ushort flag;
-        public ushort scriptNumber;
-        public short orientation;   // dir; the engine allows -1 for "no direction"
-        public ushort sightRange;
+        public ushort OwID;
+        public ushort OverlayTableEntry;
+        public ushort Movement;
+        public ushort Type;
+        public ushort Flag;
+        public ushort ScriptNumber;
+        public short Orientation;   // dir; the engine allows -1 for "no direction"
+        public ushort SightRange;
         // The three data fields at +0x0E, +0x10 and +0x12 (param0-2 of MapObject_CreateWithParams in
         // pokeheartgold src/map_object.c). +0x0E is the trainer sight range; +0x10 is the steps walked
         // between looks for types 4-6; +0x12 is never read for a map-placed object.
-        public ushort param1;
-        public ushort param2;
+        public ushort Param1;
+        public ushort Param2;
         // Signed: -1 means it isn't fenced in on that axis at all, anything else is how many tiles
         // either side of where it starts it may walk.
-        public short xRange;
-        public short yRange;
-        public bool is3D = new bool();
+        public short XRange;
+        public short YRange;
+        public bool Is3D = new bool();
         #endregion
 
         #region Constructors (2)
-        public Overworld(Stream data) {
-            evType = EventType.Overworld;
-            using (BinaryReader reader = new BinaryReader(data)) {
-                owID = reader.ReadUInt16();
-                overlayTableEntry = reader.ReadUInt16();
-                movement = reader.ReadUInt16();
-                type = reader.ReadUInt16();
-                flag = reader.ReadUInt16();
-                scriptNumber = reader.ReadUInt16();
-                orientation = reader.ReadInt16();
-                sightRange = reader.ReadUInt16();
-                param1 = reader.ReadUInt16();
-                param2 = reader.ReadUInt16();
-                xRange = reader.ReadInt16();
-                yRange = reader.ReadInt16();
+        public Overworld(Stream data)
+        {
+            EvType = EventType.Overworld;
+            using (BinaryReader reader = new BinaryReader(data))
+            {
+                OwID = reader.ReadUInt16();
+                OverlayTableEntry = reader.ReadUInt16();
+                Movement = reader.ReadUInt16();
+                Type = reader.ReadUInt16();
+                Flag = reader.ReadUInt16();
+                ScriptNumber = reader.ReadUInt16();
+                Orientation = reader.ReadInt16();
+                SightRange = reader.ReadUInt16();
+                Param1 = reader.ReadUInt16();
+                Param2 = reader.ReadUInt16();
+                XRange = reader.ReadInt16();
+                YRange = reader.ReadInt16();
 
                 /* Decompose x-y coordinates in matrix and map positions */
                 int xPosition = reader.ReadInt16();
                 int yPosition = reader.ReadInt16();
-                xMapPosition = (short)(xPosition % MapFile.mapSize);
-                yMapPosition = (short)(yPosition % MapFile.mapSize);
-                xMatrixPosition = (ushort)(xPosition / MapFile.mapSize);
-                yMatrixPosition = (ushort)(yPosition / MapFile.mapSize);
+                XMapPosition = (short)(xPosition % MapFile.MapSize);
+                YMapPosition = (short)(yPosition % MapFile.MapSize);
+                XMatrixPosition = (ushort)(xPosition / MapFile.MapSize);
+                YMatrixPosition = (ushort)(yPosition / MapFile.MapSize);
 
-                zPosition = reader.ReadInt32();
+                ZPosition = reader.ReadInt32();
             }
         }
-        public Overworld(int owID, int xMatrixPosition, int yMatrixPosition) {
-            evType = EventType.Overworld;
+        public Overworld(int owID, int xMatrixPosition, int yMatrixPosition)
+        {
+            EvType = EventType.Overworld;
 
-            this.owID = (ushort)owID;
-            overlayTableEntry = 1;
-            movement = 0;
-            type = 0;
-            flag = 0;
-            scriptNumber = 0;
-            orientation = 1;
-            sightRange = 0;
-            param1 = 0;
-            param2 = 0;
-            xRange = 0;
-            yRange = 0;
+            this.OwID = (ushort)owID;
+            OverlayTableEntry = 1;
+            Movement = 0;
+            Type = 0;
+            Flag = 0;
+            ScriptNumber = 0;
+            Orientation = 1;
+            SightRange = 0;
+            Param1 = 0;
+            Param2 = 0;
+            XRange = 0;
+            YRange = 0;
 
-            xMapPosition = 16;
-            yMapPosition = 16;
-            zPosition = 0;
-            this.xMatrixPosition = (ushort)xMatrixPosition;
-            this.yMatrixPosition = (ushort)yMatrixPosition;
+            XMapPosition = 16;
+            YMapPosition = 16;
+            ZPosition = 0;
+            this.XMatrixPosition = (ushort)xMatrixPosition;
+            this.YMatrixPosition = (ushort)yMatrixPosition;
         }
-        public Overworld(Overworld toCopy) {
-            evType = EventType.Overworld;
+        public Overworld(Overworld toCopy)
+        {
+            EvType = EventType.Overworld;
 
-            this.owID = toCopy.owID;
-            overlayTableEntry = toCopy.overlayTableEntry;
-            movement = toCopy.movement;
-            type = toCopy.type;
-            flag = toCopy.flag;
-            scriptNumber = toCopy.scriptNumber;
-            orientation = toCopy.orientation;
-            sightRange = toCopy.sightRange;
-            param1 = toCopy.param1;
-            param2 = toCopy.param2;
-            xRange = toCopy.xRange;
-            yRange = toCopy.yRange;
+            this.OwID = toCopy.OwID;
+            OverlayTableEntry = toCopy.OverlayTableEntry;
+            Movement = toCopy.Movement;
+            Type = toCopy.Type;
+            Flag = toCopy.Flag;
+            ScriptNumber = toCopy.ScriptNumber;
+            Orientation = toCopy.Orientation;
+            SightRange = toCopy.SightRange;
+            Param1 = toCopy.Param1;
+            Param2 = toCopy.Param2;
+            XRange = toCopy.XRange;
+            YRange = toCopy.YRange;
 
-            xMapPosition = toCopy.xMapPosition;
-            yMapPosition = toCopy.yMapPosition;
-            zPosition = toCopy.zPosition;
-            this.xMatrixPosition = toCopy.xMatrixPosition;
-            this.yMatrixPosition = toCopy.yMatrixPosition;
+            XMapPosition = toCopy.XMapPosition;
+            YMapPosition = toCopy.YMapPosition;
+            ZPosition = toCopy.ZPosition;
+            this.XMatrixPosition = toCopy.XMatrixPosition;
+            this.YMatrixPosition = toCopy.YMatrixPosition;
         }
         #endregion
 
         #region Methods (1)
-        public override byte[] ToByteArray() {
-            using (BinaryWriter writer = new BinaryWriter(new MemoryStream())) {
-                writer.Write(owID);
-                writer.Write(overlayTableEntry);
-                writer.Write(movement);
-                writer.Write(type);
-                writer.Write(flag);
-                writer.Write(scriptNumber);
-                writer.Write(orientation);
-                writer.Write(sightRange);
-                writer.Write(param1);
-                writer.Write(param2);
-                writer.Write(xRange);
-                writer.Write(yRange);
+        public override byte[] ToByteArray()
+        {
+            using (BinaryWriter writer = new BinaryWriter(new MemoryStream()))
+            {
+                writer.Write(OwID);
+                writer.Write(OverlayTableEntry);
+                writer.Write(Movement);
+                writer.Write(Type);
+                writer.Write(Flag);
+                writer.Write(ScriptNumber);
+                writer.Write(Orientation);
+                writer.Write(SightRange);
+                writer.Write(Param1);
+                writer.Write(Param2);
+                writer.Write(XRange);
+                writer.Write(YRange);
 
-                short xCoordinate = (short)(xMapPosition + MapFile.mapSize * xMatrixPosition);
+                short xCoordinate = (short)(XMapPosition + MapFile.MapSize * XMatrixPosition);
                 writer.Write(xCoordinate);
 
-                short yCoordinate = (short)(yMapPosition + MapFile.mapSize * yMatrixPosition);
+                short yCoordinate = (short)(YMapPosition + MapFile.MapSize * YMatrixPosition);
                 writer.Write(yCoordinate);
 
-                writer.Write(zPosition);
+                writer.Write(ZPosition);
 
                 return ((MemoryStream)writer.BaseStream).ToArray();
             }
         }
 
-        public override string ToString() {
-            string entityName = ", " + "Entry " + overlayTableEntry;
-            return $"{(this.isAlias() ? "AliasOf" : "ID")} {this.owID} {entityName}";
+        public override string ToString()
+        {
+            string entityName = ", " + "Entry " + OverlayTableEntry;
+            return $"{(this.IsAlias() ? "AliasOf" : "ID")} {this.OwID} {entityName}";
         }
 
-        private bool isAlias() {
-            return scriptNumber == 0xFFFF;
+        private bool IsAlias()
+        {
+            return ScriptNumber == 0xFFFF;
         }
         #endregion
     }
 
-    public class Warp : Event {
+    public class Warp : Event
+    {
         #region Fields (4)
-        public ushort header;
-        public ushort anchor;
-        public uint height;
+        public ushort Header;
+        public ushort Anchor;
+        public uint Height;
         #endregion
 
         #region Constructors (2)
-        public Warp(Stream data) {
-            evType = EventType.Warp;
-            using (BinaryReader reader = new BinaryReader(data)) {
+        public Warp(Stream data)
+        {
+            EvType = EventType.Warp;
+            using (BinaryReader reader = new BinaryReader(data))
+            {
                 /* Decompose x-y coordinates in matrix and map positions */
                 int xPosition = reader.ReadInt16();
                 int yPosition = reader.ReadInt16();
-                xMapPosition = (short)(xPosition % MapFile.mapSize);
-                yMapPosition = (short)(yPosition % MapFile.mapSize);
-                xMatrixPosition = (ushort)(xPosition / MapFile.mapSize);
-                yMatrixPosition = (ushort)(yPosition / MapFile.mapSize);
+                XMapPosition = (short)(xPosition % MapFile.MapSize);
+                YMapPosition = (short)(yPosition % MapFile.MapSize);
+                XMatrixPosition = (ushort)(xPosition / MapFile.MapSize);
+                YMatrixPosition = (ushort)(yPosition / MapFile.MapSize);
 
-                header = reader.ReadUInt16();
-                anchor = reader.ReadUInt16();
-                height = reader.ReadUInt32();
+                Header = reader.ReadUInt16();
+                Anchor = reader.ReadUInt16();
+                Height = reader.ReadUInt32();
             }
         }
-        public Warp(int xMatrixPosition, int yMatrixPosition) {
-            evType = EventType.Warp;
+        public Warp(int xMatrixPosition, int yMatrixPosition)
+        {
+            EvType = EventType.Warp;
 
-            header = 0;
-            anchor = 0;
+            Header = 0;
+            Anchor = 0;
 
-            xMapPosition = 0;
-            yMapPosition = 0;
-            this.xMatrixPosition = (ushort)xMatrixPosition;
-            this.yMatrixPosition = (ushort)yMatrixPosition;
+            XMapPosition = 0;
+            YMapPosition = 0;
+            this.XMatrixPosition = (ushort)xMatrixPosition;
+            this.YMatrixPosition = (ushort)yMatrixPosition;
         }
-        public Warp(Warp toCopy) {
-            evType = EventType.Warp;
+        public Warp(Warp toCopy)
+        {
+            EvType = EventType.Warp;
 
-            header = toCopy.header;
-            anchor = toCopy.anchor;
-            height = toCopy.height;
+            Header = toCopy.Header;
+            Anchor = toCopy.Anchor;
+            Height = toCopy.Height;
 
-            xMapPosition = toCopy.xMapPosition;
-            yMapPosition = toCopy.yMapPosition;
-            this.xMatrixPosition = toCopy.xMatrixPosition;
-            this.yMatrixPosition = toCopy.yMatrixPosition;
+            XMapPosition = toCopy.XMapPosition;
+            YMapPosition = toCopy.YMapPosition;
+            this.XMatrixPosition = toCopy.XMatrixPosition;
+            this.YMatrixPosition = toCopy.YMatrixPosition;
         }
         #endregion
 
         #region Methods (1)
-        public override byte[] ToByteArray() {
-            using (BinaryWriter writer = new BinaryWriter(new MemoryStream())) {
-                ushort xCoordinate = (ushort)(xMapPosition + MapFile.mapSize * xMatrixPosition);
+        public override byte[] ToByteArray()
+        {
+            using (BinaryWriter writer = new BinaryWriter(new MemoryStream()))
+            {
+                ushort xCoordinate = (ushort)(XMapPosition + MapFile.MapSize * XMatrixPosition);
                 writer.Write(xCoordinate);
 
-                ushort yCoordinate = (ushort)(yMapPosition + MapFile.mapSize * yMatrixPosition);
+                ushort yCoordinate = (ushort)(YMapPosition + MapFile.MapSize * YMatrixPosition);
                 writer.Write(yCoordinate);
 
-                writer.Write(header);
-                writer.Write(anchor);
-                writer.Write(height);
+                writer.Write(Header);
+                writer.Write(Anchor);
+                writer.Write(Height);
 
                 return ((MemoryStream)writer.BaseStream).ToArray();
             }
         }
-        public override string ToString() {
-            return "To Header " + header.ToString("D3") + ", " + "Hook " + anchor.ToString("D2");
+        public override string ToString()
+        {
+            return "To Header " + Header.ToString("D3") + ", " + "Hook " + Anchor.ToString("D2");
         }
         #endregion
 
     }
 
-    public class Trigger : Event {
+    public class Trigger : Event
+    {
         #region Fields (7)
-        public ushort scriptNumber;
-        public ushort widthX;
-        public ushort heightY;
+        public ushort ScriptNumber;
+        public ushort WidthX;
+        public ushort HeightY;
         // No zPosition of its own: it inherits Event.zPosition. A separate field here shadowed the base
         // one, so anything holding the trigger as an Event wrote a value this class never saved.
-        public ushort expectedVarValue;
-        public ushort variableWatched;
+        public ushort ExpectedVarValue;
+        public ushort VariableWatched;
         #endregion Fields
 
         #region Constructors (2)
-        public Trigger(Stream data) {
-            evType = EventType.Trigger;
-            using (BinaryReader reader = new BinaryReader(data)) {
-                scriptNumber = reader.ReadUInt16();
+        public Trigger(Stream data)
+        {
+            EvType = EventType.Trigger;
+            using (BinaryReader reader = new BinaryReader(data))
+            {
+                ScriptNumber = reader.ReadUInt16();
 
                 /* Decompose x-y coordinates in matrix and map positions */
                 int xPosition = reader.ReadInt16();
                 int yPosition = reader.ReadInt16();
-                xMapPosition = (short)(xPosition % MapFile.mapSize);
-                yMapPosition = (short)(yPosition % MapFile.mapSize);
-                xMatrixPosition = (ushort)(xPosition / MapFile.mapSize);
-                yMatrixPosition = (ushort)(yPosition / MapFile.mapSize);
+                XMapPosition = (short)(xPosition % MapFile.MapSize);
+                YMapPosition = (short)(yPosition % MapFile.MapSize);
+                XMatrixPosition = (ushort)(xPosition / MapFile.MapSize);
+                YMatrixPosition = (ushort)(yPosition / MapFile.MapSize);
 
-                widthX = reader.ReadUInt16();
-                heightY = reader.ReadUInt16();
+                WidthX = reader.ReadUInt16();
+                HeightY = reader.ReadUInt16();
 
-                zPosition = reader.ReadUInt16();
-                expectedVarValue = reader.ReadUInt16();
-                variableWatched = reader.ReadUInt16();
+                ZPosition = reader.ReadUInt16();
+                ExpectedVarValue = reader.ReadUInt16();
+                VariableWatched = reader.ReadUInt16();
             }
         }
-        public Trigger(int xMatrixPosition, int yMatrixPosition) {
-            evType = EventType.Trigger;
+        public Trigger(int xMatrixPosition, int yMatrixPosition)
+        {
+            EvType = EventType.Trigger;
 
-            scriptNumber = 0;
-            variableWatched = 0;
-            expectedVarValue = 0;
-            widthX = 1;
-            heightY = 1;
+            ScriptNumber = 0;
+            VariableWatched = 0;
+            ExpectedVarValue = 0;
+            WidthX = 1;
+            HeightY = 1;
 
-            xMapPosition = 0;
-            yMapPosition = 0;
-            this.xMatrixPosition = (ushort)xMatrixPosition;
-            this.yMatrixPosition = (ushort)yMatrixPosition;
+            XMapPosition = 0;
+            YMapPosition = 0;
+            this.XMatrixPosition = (ushort)xMatrixPosition;
+            this.YMatrixPosition = (ushort)yMatrixPosition;
         }
-        public Trigger(Trigger toCopy) {
-            evType = EventType.Trigger;
+        public Trigger(Trigger toCopy)
+        {
+            EvType = EventType.Trigger;
 
-            scriptNumber = toCopy.scriptNumber;
-            variableWatched = toCopy.variableWatched;
-            expectedVarValue = toCopy.expectedVarValue;
-            widthX = toCopy.widthX;
-            heightY = toCopy.heightY;
+            ScriptNumber = toCopy.ScriptNumber;
+            VariableWatched = toCopy.VariableWatched;
+            ExpectedVarValue = toCopy.ExpectedVarValue;
+            WidthX = toCopy.WidthX;
+            HeightY = toCopy.HeightY;
 
-            xMapPosition = toCopy.xMapPosition;
-            yMapPosition = toCopy.yMapPosition;
-            zPosition = toCopy.zPosition;
-            this.xMatrixPosition = toCopy.xMatrixPosition;
-            this.yMatrixPosition = toCopy.yMatrixPosition;
+            XMapPosition = toCopy.XMapPosition;
+            YMapPosition = toCopy.YMapPosition;
+            ZPosition = toCopy.ZPosition;
+            this.XMatrixPosition = toCopy.XMatrixPosition;
+            this.YMatrixPosition = toCopy.YMatrixPosition;
         }
         #endregion
 
         #region Methods (1)
-        public override byte[] ToByteArray() {
-            using (BinaryWriter writer = new BinaryWriter(new MemoryStream())) {
-                writer.Write(scriptNumber);
-                ushort xCoordinate = (ushort)(xMapPosition + MapFile.mapSize * xMatrixPosition);
+        public override byte[] ToByteArray()
+        {
+            using (BinaryWriter writer = new BinaryWriter(new MemoryStream()))
+            {
+                writer.Write(ScriptNumber);
+                ushort xCoordinate = (ushort)(XMapPosition + MapFile.MapSize * XMatrixPosition);
                 writer.Write(xCoordinate);
-                ushort yCoordinate = (ushort)(yMapPosition + MapFile.mapSize * yMatrixPosition);
+                ushort yCoordinate = (ushort)(YMapPosition + MapFile.MapSize * YMatrixPosition);
                 writer.Write(yCoordinate);
-                writer.Write(widthX);
-                writer.Write(heightY);
-                writer.Write((ushort)zPosition);
-                writer.Write(expectedVarValue);
-                writer.Write(variableWatched);
+                writer.Write(WidthX);
+                writer.Write(HeightY);
+                writer.Write((ushort)ZPosition);
+                writer.Write(ExpectedVarValue);
+                writer.Write(VariableWatched);
 
                 return ((MemoryStream)writer.BaseStream).ToArray();
             }
         }
-        public override string ToString() {
+        public override string ToString()
+        {
             return ToString(hexMode: false);
         }
-        public string ToString(bool hexMode) {
-            string msg = scriptNumber == EventFile.NoScript ? "No script" : "Run script " + scriptNumber;
-            if (variableWatched != 0) {
-                if (hexMode) {
-                    msg += $" when Var 0x{variableWatched:X4} is 0x{expectedVarValue:X4}";
-                } else {
-                    msg += $" when Var {variableWatched} is {expectedVarValue}";
+        public string ToString(bool hexMode)
+        {
+            string msg = ScriptNumber == EventFile.NoScript ? "No script" : "Run script " + ScriptNumber;
+            if (VariableWatched != 0)
+            {
+                if (hexMode)
+                {
+                    msg += $" when Var 0x{VariableWatched:X4} is 0x{ExpectedVarValue:X4}";
+                }
+                else
+                {
+                    msg += $" when Var {VariableWatched} is {ExpectedVarValue}";
                 }
             }
             return msg;

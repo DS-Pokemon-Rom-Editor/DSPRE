@@ -28,7 +28,7 @@ namespace DSPRE.Tests
             if (!Directory.Exists(Platinum)) return false;
             SettingsManager.Load();
             new RomInfo("CPUE", Platinum);
-            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.scripts });
+            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.Scripts });
             return StarterRotomSource.IsAvailable;
         }
 
@@ -44,10 +44,10 @@ namespace DSPRE.Tests
 
             StarterRotomSource.Match vanilla = StarterRotomSource.FindVanilla();
             Assert.NotNull(vanilla);
-            _out.WriteLine($"RomInfo says file {RomInfo.starterHeldItemScriptFileID}, script "
-                         + $"{RomInfo.starterCommandScriptNumber}; found {vanilla.Where}");
-            Assert.Equal(RomInfo.starterHeldItemScriptFileID, vanilla.FileId);
-            Assert.Equal(RomInfo.starterCommandScriptNumber, vanilla.ContainerNumber);
+            _out.WriteLine($"RomInfo says file {RomInfo.StarterHeldItemScriptFileID}, script "
+                         + $"{RomInfo.StarterCommandScriptNumber}; found {vanilla.Where}");
+            Assert.Equal(RomInfo.StarterHeldItemScriptFileID, vanilla.FileId);
+            Assert.Equal(RomInfo.StarterCommandScriptNumber, vanilla.ContainerNumber);
 
             // The same command the full search settles on, so the shortcut is not a different answer.
             Assert.Equal(StarterRotomSource.FindStarter().Key, vanilla.Key);
@@ -78,7 +78,7 @@ namespace DSPRE.Tests
             Skip.If(!Open(), "Platinum sources not here");
 
             int inTheGame = Directory.GetFiles(
-                Path.Combine(RomInfo.workDir, "expanded", "scripts"), "*.rotom").Length;
+                Path.Combine(RomInfo.WorkDir, "expanded", "scripts"), "*.rotom").Length;
             Assert.True(inTheGame > 100, $"only {inTheGame} sources here, so this would prove nothing");
 
             StarterRotomSource.ForgetFilesRead();
@@ -210,10 +210,10 @@ namespace DSPRE.Tests
             finally
             {
                 // The editor writes both of these, so this test puts the user's settings back as it found them.
-                if (before == null) SettingsManager.Settings.starterCommandChoice.Remove(RomInfo.workDir ?? "");
-                else SettingsManager.Settings.starterCommandChoice[RomInfo.workDir ?? ""] = before;
-                if (fingerprintBefore == null) SettingsManager.Settings.starterCommandFingerprint.Remove(RomInfo.workDir ?? "");
-                else SettingsManager.Settings.starterCommandFingerprint[RomInfo.workDir ?? ""] = fingerprintBefore;
+                if (before == null) SettingsManager.Settings.StarterCommandChoice.Remove(RomInfo.WorkDir ?? "");
+                else SettingsManager.Settings.StarterCommandChoice[RomInfo.WorkDir ?? ""] = before;
+                if (fingerprintBefore == null) SettingsManager.Settings.StarterCommandFingerprint.Remove(RomInfo.WorkDir ?? "");
+                else SettingsManager.Settings.StarterCommandFingerprint[RomInfo.WorkDir ?? ""] = fingerprintBefore;
                 SettingsManager.Save();
             }
         }
@@ -238,7 +238,7 @@ namespace DSPRE.Tests
 
                 SettingsManager.Load();
                 new RomInfo("CPUE", copy);
-                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.scripts });
+                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.Scripts });
                 Skip.If(!StarterRotomSource.IsAvailable, "this project has no decompiled sources");
 
                 StarterEditorViewModel opened = new DSPRE.Avalonia.ViewModels.Pokemon.StarterEditorViewModel();
@@ -267,8 +267,8 @@ namespace DSPRE.Tests
             }
             finally
             {
-                try { new RomInfo("CPUE", Platinum); } catch { }
-                try { Directory.Delete(copy, true); } catch { }
+                try { new RomInfo("CPUE", Platinum); } catch { }   // restoring the shared project is best effort; the next test reopens it anyway
+                try { Directory.Delete(copy, true); } catch { }   // the copy is in the temp folder; a locked file is cleaned up later
                 RomExperiment.ForgetDatabaseFolder(copy);
             }
         }
@@ -293,7 +293,7 @@ namespace DSPRE.Tests
 
                 SettingsManager.Load();
                 new RomInfo("CPUE", copy);
-                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.scripts });
+                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.Scripts });
                 Skip.If(!StarterRotomSource.IsAvailable, "this project has no decompiled sources");
 
                 StarterRotomSource.Match before = StarterRotomSource.FindStarter();
@@ -313,22 +313,22 @@ namespace DSPRE.Tests
             }
             finally
             {
-                try { new RomInfo("CPUE", Platinum); } catch { }
-                try { Directory.Delete(copy, true); } catch { }
+                try { new RomInfo("CPUE", Platinum); } catch { }   // restoring the shared project is best effort; the next test reopens it anyway
+                try { Directory.Delete(copy, true); } catch { }   // the copy is in the temp folder; a locked file is cleaned up later
                 RomExperiment.ForgetDatabaseFolder(copy);
             }
         }
 
         private static string Fingerprint()
         {
-            Dictionary<string, string> map = SettingsManager.Settings?.starterCommandFingerprint;
-            return map != null && map.TryGetValue(RomInfo.workDir ?? "", out string f) ? f : null;
+            Dictionary<string, string> map = SettingsManager.Settings?.StarterCommandFingerprint;
+            return map != null && map.TryGetValue(RomInfo.WorkDir ?? "", out string f) ? f : null;
         }
 
         private static string Remembered()
         {
-            Dictionary<string, string> map = SettingsManager.Settings?.starterCommandChoice;
-            return map != null && map.TryGetValue(RomInfo.workDir ?? "", out string k) ? k : null;
+            Dictionary<string, string> map = SettingsManager.Settings?.StarterCommandChoice;
+            return map != null && map.TryGetValue(RomInfo.WorkDir ?? "", out string k) ? k : null;
         }
     }
 }

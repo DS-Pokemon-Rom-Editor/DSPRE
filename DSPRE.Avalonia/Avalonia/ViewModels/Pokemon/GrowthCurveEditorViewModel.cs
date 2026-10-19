@@ -127,14 +127,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_table == null) return true;
             List<int> changed = Enumerable.Range(0, GrowthTable.Curves).Where(CurveChanged).ToList();
             foreach (int c in changed)
-                if (_table.Problem(c) is string p) { await DialogHelper.ShowError(p, "Growth curves error"); return false; }
+                if (_table.Problem(c) is string p) { await DialogHelper.ShowErrorAsync(p, "Growth curves error"); return false; }
             try
             {
                 foreach (int c in changed) { _table.Save(c); _saved[c] = _table.Copy(c); }
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
             {
-                await DialogHelper.ShowError("The growth curves were not saved:\n" + e.Message, "Growth curves error");
+                await DialogHelper.ShowErrorAsync("The growth curves were not saved:\n" + e.Message, "Growth curves error");
                 return false;
             }
             Raise(nameof(HasUnsavedChanges));

@@ -135,7 +135,7 @@ callers must not depend on the process working directory.
   the calls in `BannedSymbols.txt` and `var`; fix the code instead of adding a file to an exemption in
   `.editorconfig`.
 - Prefer root-cause fixes in the owning layer over UI-only workarounds.
-- Check `RomInfo.gameFamily` or `RomInfo.gameVersion` before assuming layouts shared by DPPt and HGSS.
+- Check `RomInfo.GameFamily` or `RomInfo.GameVersion` before assuming layouts shared by DPPt and HGSS.
 - Put code offsets in `RomLocator`, and other version-specific layout facts in `RomInfo` or an existing
   centralized format table. Do not scatter magic offsets through readers or views.
 - Preserve the established hg-engine parsing model. Never infer variable binary layouts from a single

@@ -43,7 +43,7 @@ namespace DSPRE
         });
 
         public static bool Supports(string romId) => romId != null && (romId.StartsWith("IPK") || romId.StartsWith("IPG"));
-        public static bool SupportsCurrentRom => !RomInfo.isHGE && Supports(RomInfo.romID);
+        public static bool SupportsCurrentRom => !RomInfo.IsHGE && Supports(RomInfo.RomID);
 
         /// <summary>Every offset where <paramref name="code"/> sits, comparing all but its calls.</summary>
         private static List<int> Find(byte[] arm9, byte[] code, int[] calls)
@@ -69,7 +69,7 @@ namespace DSPRE
         public static bool DetectCurrentProject()
         {
             if (!SupportsCurrentRom) return false;
-            try { return Inspect(RomInfo.romID, File.ReadAllBytes(RomInfo.arm9Path)); }
+            try { return Inspect(RomInfo.RomID, File.ReadAllBytes(RomInfo.Arm9Path)); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { return false; }
         }
 
@@ -95,9 +95,9 @@ namespace DSPRE
         public static void Apply()
         {
             if (!SupportsCurrentRom) throw new InvalidOperationException("Unsupported ROM.");
-            byte[] arm9 = File.ReadAllBytes(RomInfo.arm9Path);
-            Apply(RomInfo.romID, arm9);
-            DSUtils.WriteWholeFile(RomInfo.arm9Path, arm9);
+            byte[] arm9 = File.ReadAllBytes(RomInfo.Arm9Path);
+            Apply(RomInfo.RomID, arm9);
+            DSUtils.WriteWholeFile(RomInfo.Arm9Path, arm9);
         }
 
         // Thumb BL: two halfwords holding the offset from the instruction plus 4, in halfwords.

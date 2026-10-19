@@ -68,7 +68,7 @@ namespace DSPRE.HgEngine
                 AnimJsonRoot root = AnimJsonRoot.Parse(File.ReadAllText(animJsonPath));
                 return root?.Sequences.Select(seq => seq.FrameData.Select(f => (f.CellIndex, f.FrameDelay)).ToArray()).ToArray();
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("HgEngineTrainerGraphicsSource.ReadAnimSequences", ex); return null; }
         }
 
         /// <summary>The cells of a cell.json, in file order, with the mapping it records.</summary>

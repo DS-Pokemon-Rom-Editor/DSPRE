@@ -36,11 +36,11 @@ namespace DSPRE.Avalonia.Views.Battle
                 using FileStream fs = System.IO.File.OpenRead(path);
                 imported = DSPRE.Avalonia.ImageConverter.DecodeRawImage(fs);
             }
-            catch (System.Exception ex) { await DialogHelper.ShowError($"Could not read the image: {ex.Message}", "Pokémon editor error"); return; }
-            if (imported == null) { await DialogHelper.ShowError("Image could not be decoded.", "Pokémon editor error"); return; }
+            catch (System.Exception ex) { await DialogHelper.ShowErrorAsync($"Could not read the image: {ex.Message}", "Pokémon editor error"); return; }
+            if (imported == null) { await DialogHelper.ShowErrorAsync("Image could not be decoded.", "Pokémon editor error"); return; }
 
             string error = VM.ImportIconGraphic(imported);
-            if (error != null) await DialogHelper.ShowError($"Import failed: {error}", "Pokémon editor error");
+            if (error != null) await DialogHelper.ShowErrorAsync($"Import failed: {error}", "Pokémon editor error");
             else SaveNotice.Imported("the icon", path);
         }
 
@@ -54,7 +54,7 @@ namespace DSPRE.Avalonia.Views.Battle
             if (indexedPng == null && raw == null)
             {
                 string reason = VM.FullPaletteExport ? "save the icon graphic first (full-palette export needs it on disk)" : "nothing to export";
-                await DialogHelper.ShowError($"Export failed: {reason}.", "Pokémon editor error");
+                await DialogHelper.ShowErrorAsync($"Export failed: {reason}.", "Pokémon editor error");
                 return;
             }
 
@@ -74,7 +74,7 @@ namespace DSPRE.Avalonia.Views.Battle
                 else DSPRE.Avalonia.ImageConverter.ToAvaloniaBitmap(raw).Save(path, PngBitmapEncoderOptions.Default);
                 SaveNotice.Exported(path);
             }
-            catch (System.Exception ex) { await DialogHelper.ShowError($"Export failed: {ex.Message}", "Pokémon editor error"); }
+            catch (System.Exception ex) { await DialogHelper.ShowErrorAsync($"Export failed: {ex.Message}", "Pokémon editor error"); }
         }
 
         private void Play_Click(object sender, RoutedEventArgs e) => VM?.ToggleAnimationPlayback();

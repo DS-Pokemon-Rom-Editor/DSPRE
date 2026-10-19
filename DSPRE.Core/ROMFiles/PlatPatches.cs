@@ -20,11 +20,11 @@ namespace DSPRE.ROMFiles
         /// <summary>The marker offset a hook leads to, or -1 when the hook or marker isn't there.</summary>
         private static int FollowHook(byte[] arm9, byte[] synth, uint hookRam, string marker)
         {
-            int at = (int)(hookRam - ARM9.address);
+            int at = (int)(hookRam - ARM9.Address);
             if (at < 0 || at + 8 > arm9.Length || !arm9.AsSpan(at, 4).SequenceEqual(HookBytes)) return -1;
             uint target = BitConverter.ToUInt32(arm9, at + 4) & ~1u;
-            if (target < synthOverlayLoadAddress + MarkerLength) return -1;
-            long m = target - synthOverlayLoadAddress - MarkerLength;
+            if (target < SynthOverlayLoadAddress + MarkerLength) return -1;
+            long m = target - SynthOverlayLoadAddress - MarkerLength;
             byte[] want = Encoding.ASCII.GetBytes(marker);
             if (m < 0 || m + MarkerLength > synth.Length || !synth.AsSpan((int)m, want.Length).SequenceEqual(want)) return -1;
             for (int i = want.Length; i < MarkerLength; i++) if (synth[m + i] != 0) return -1;
@@ -36,11 +36,11 @@ namespace DSPRE.ROMFiles
         /// <summary>arm9 and the synthetic overlay, re-read only when either changed on disk.</summary>
         private static (byte[] arm9, byte[] synth) Files()
         {
-            if (gameFamily != GameFamilies.Plat || isHGE || !File.Exists(arm9Path)) return (null, null);
-            if (!File.Exists(Filesystem.expArmPath)) DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay });
-            if (!File.Exists(Filesystem.expArmPath)) return (null, null);
-            string key = arm9Path + File.GetLastWriteTimeUtc(arm9Path).Ticks + Filesystem.expArmPath + File.GetLastWriteTimeUtc(Filesystem.expArmPath).Ticks;
-            if (_files.key != key) _files = (key, File.ReadAllBytes(arm9Path), File.ReadAllBytes(Filesystem.expArmPath));
+            if (GameFamily != GameFamilies.Plat || IsHGE || !File.Exists(Arm9Path)) return (null, null);
+            if (!File.Exists(Filesystem.ExpArmPath)) DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.SynthOverlay });
+            if (!File.Exists(Filesystem.ExpArmPath)) return (null, null);
+            string key = Arm9Path + File.GetLastWriteTimeUtc(Arm9Path).Ticks + Filesystem.ExpArmPath + File.GetLastWriteTimeUtc(Filesystem.ExpArmPath).Ticks;
+            if (_files.key != key) _files = (key, File.ReadAllBytes(Arm9Path), File.ReadAllBytes(Filesystem.ExpArmPath));
             return (_files.arm9, _files.synth);
         }
 
@@ -64,8 +64,8 @@ namespace DSPRE.ROMFiles
             try
             {
                 (byte[] arm9, byte[] synth) = Files();
-                if (arm9 == null || RomInfo.platPatchesHooks == null) return null;
-                int i = FollowHook(arm9, synth, RomInfo.platPatchesHooks.ItemFileId, "ITEMEXPV2");
+                if (arm9 == null || RomInfo.PlatHooks == null) return null;
+                int i = FollowHook(arm9, synth, RomInfo.PlatHooks.ItemFileId, "ITEMEXPV2");
                 if (i < 0 || i + 0x298 > synth.Length) return null;
                 ItemExpansion e = new ItemExpansion
                 {
@@ -89,10 +89,10 @@ namespace DSPRE.ROMFiles
             int o = e.RowsAt + (itemId - e.FirstItem) * 8;
             entry = new ItemNarcTableEntry
             {
-                itemData = BitConverter.ToUInt16(synth, o),
-                itemIcon = BitConverter.ToUInt16(synth, o + 2),
-                itemPalette = BitConverter.ToUInt16(synth, o + 4),
-                itemAGB = BitConverter.ToUInt16(synth, o + 6),
+                ItemData = BitConverter.ToUInt16(synth, o),
+                ItemIcon = BitConverter.ToUInt16(synth, o + 2),
+                ItemPalette = BitConverter.ToUInt16(synth, o + 4),
+                ItemAGB = BitConverter.ToUInt16(synth, o + 6),
             };
             return true;
         }
@@ -103,11 +103,11 @@ namespace DSPRE.ROMFiles
             if (e == null || !e.Covers(itemId)) return false;
             byte[] synth = (byte[])Files().synth.Clone();
             int o = e.RowsAt + (itemId - e.FirstItem) * 8;
-            BitConverter.GetBytes((ushort)entry.itemData).CopyTo(synth, o);
-            BitConverter.GetBytes((ushort)entry.itemIcon).CopyTo(synth, o + 2);
-            BitConverter.GetBytes((ushort)entry.itemPalette).CopyTo(synth, o + 4);
-            BitConverter.GetBytes((ushort)entry.itemAGB).CopyTo(synth, o + 6);
-            DSUtils.WriteWholeFile(Filesystem.expArmPath, synth);
+            BitConverter.GetBytes((ushort)entry.ItemData).CopyTo(synth, o);
+            BitConverter.GetBytes((ushort)entry.ItemIcon).CopyTo(synth, o + 2);
+            BitConverter.GetBytes((ushort)entry.ItemPalette).CopyTo(synth, o + 4);
+            BitConverter.GetBytes((ushort)entry.ItemAGB).CopyTo(synth, o + 6);
+            DSUtils.WriteWholeFile(Filesystem.ExpArmPath, synth);
             Forget();
             return true;
         }
@@ -132,11 +132,11 @@ namespace DSPRE.ROMFiles
             try
             {
                 (byte[] arm9, byte[] synth) = Files();
-                if (arm9 == null || RomInfo.platPatchesHooks == null) return null;
-                int m = FollowHook(arm9, synth, RomInfo.platPatchesHooks.ItemIsTmHm, "EXTRATMSV1");
+                if (arm9 == null || RomInfo.PlatHooks == null) return null;
+                int m = FollowHook(arm9, synth, RomInfo.PlatHooks.ItemIsTmHm, "EXTRATMSV1");
                 if (m < 0 || m + 0x608 > synth.Length) return null;
                 uint table = BitConverter.ToUInt32(synth, m + 0x5C);
-                if (table != synthOverlayLoadAddress + (uint)m + 0x510) return null;
+                if (table != SynthOverlayLoadAddress + (uint)m + 0x510) return null;
                 int count = (int)BitConverter.ToUInt32(synth, m + 0x510);
                 if (count < 0 || count > MaxExtraTms) return null;
                 ExtraTms t = new ExtraTms { Marker = m, Count = count };
@@ -162,14 +162,14 @@ namespace DSPRE.ROMFiles
             if (changed.Count == 0) return;
             byte[] synth = (byte[])Files().synth.Clone();
             foreach ((int row, ushort move) in changed) BitConverter.GetBytes(move).CopyTo(synth, t.Marker + 0x590 + row * 2);
-            DSUtils.WriteWholeFile(Filesystem.expArmPath, synth);
+            DSUtils.WriteWholeFile(Filesystem.ExpArmPath, synth);
             Forget();
         }
 
         private static string PersonalPath(int personalId)
         {
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData });
-            return Path.Combine(gameDirs[DirNames.personalPokeData].unpackedDir, personalId.ToString("D4"));
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.PersonalPokeData });
+            return Path.Combine(GameDirs[DirNames.PersonalPokeData].unpackedDir, personalId.ToString("D4"));
         }
 
         /// <summary>Whether personal file <paramref name="personalId"/> can learn extra TM <paramref name="row"/>.</summary>
@@ -224,9 +224,9 @@ namespace DSPRE.ROMFiles
                 }
                 if (next == mask) continue;
                 BitConverter.GetBytes(next).CopyTo(p, PersonalMaskOffset);
-                ArchiveMembers.Put(DirNames.personalPokeData, file.Key, p);
+                ArchiveMembers.Put(DirNames.PersonalPokeData, file.Key, p);
             }
-            if (synthChanged) { DSUtils.WriteWholeFile(Filesystem.expArmPath, synth); Forget(); }
+            if (synthChanged) { DSUtils.WriteWholeFile(Filesystem.ExpArmPath, synth); Forget(); }
         }
 
         /// <summary>Every (row, personal file) pair that can learn, for rows from <paramref name="firstRow"/>, read in one pass.</summary>
@@ -282,10 +282,10 @@ namespace DSPRE.ROMFiles
 
         public static TableLimits Limits()
         {
-            if (string.IsNullOrEmpty(arm9Path) || !File.Exists(arm9Path)) return new TableLimits();
-            string key = arm9Path + "|" + File.GetLastWriteTimeUtc(arm9Path).Ticks + "|" + itemTableOffset + "|" + isHGE;
+            if (string.IsNullOrEmpty(Arm9Path) || !File.Exists(Arm9Path)) return new TableLimits();
+            string key = Arm9Path + "|" + File.GetLastWriteTimeUtc(Arm9Path).Ticks + "|" + ItemTableOffset + "|" + IsHGE;
             if (_limits.key == key && _limits.limits != null) return _limits.limits;
-            TableLimits limits = isHGE ? ComputedLimits() : ComputeLimits(File.ReadAllBytes(arm9Path));
+            TableLimits limits = IsHGE ? ComputedLimits() : ComputeLimits(File.ReadAllBytes(Arm9Path));
             _limits = (key, limits);
             return limits;
         }
@@ -294,13 +294,13 @@ namespace DSPRE.ROMFiles
         {
             int codeLimit = ReadCodeLimit(arm9);
             int cap = codeLimit >= 0 ? codeLimit + 1 : ItemNameCount();
-            int dataCount = MemberCount(DirNames.itemData);
-            int iconCount = MemberCount(DirNames.itemIcons);
+            int dataCount = MemberCount(DirNames.ItemData);
+            int iconCount = MemberCount(DirNames.ItemIcons);
 
             int rows = 0;
-            while (rows < cap && itemTableOffset + (rows + 1) * 8L <= arm9.Length)
+            while (rows < cap && ItemTableOffset + (rows + 1) * 8L <= arm9.Length)
             {
-                int o = (int)itemTableOffset + rows * 8;
+                int o = (int)ItemTableOffset + rows * 8;
                 int data = BitConverter.ToUInt16(arm9, o), icon = BitConverter.ToUInt16(arm9, o + 2), palette = BitConverter.ToUInt16(arm9, o + 4);
                 if (data >= dataCount || icon >= iconCount || palette >= iconCount) break;
                 rows++;
@@ -314,22 +314,22 @@ namespace DSPRE.ROMFiles
         // each item's drawing and colours at 2 * id + 2 and 2 * id + 3, after its shared NANR and NCER.
         private static TableLimits ComputedLimits()
         {
-            int dataCount = MemberCount(DirNames.itemData), iconCount = MemberCount(DirNames.itemIcons);
+            int dataCount = MemberCount(DirNames.ItemData), iconCount = MemberCount(DirNames.ItemIcons);
             return new TableLimits { Count = Math.Max(0, Math.Min(dataCount, (iconCount - 2) / 2)) };
         }
 
         private static ItemNarcTableEntry ComputedRow(int itemId) => new ItemNarcTableEntry
         {
-            itemData = (uint)itemId,
-            itemIcon = (uint)(itemId * 2 + 2),
-            itemPalette = (uint)(itemId * 2 + 3),
+            ItemData = (uint)itemId,
+            ItemIcon = (uint)(itemId * 2 + 2),
+            ItemPalette = (uint)(itemId * 2 + 3),
         };
 
         /// <summary>The limit the game's item loader clamps ids to, when its code is where RomInfo expects; -1 otherwise.</summary>
         private static int ReadCodeLimit(byte[] arm9)
         {
-            uint site = itemLimitSite;
-            string[] parts = (itemLimitSignature ?? "").Replace(" ", "") is string hex && hex.Length % 2 == 0
+            uint site = ItemLimitSite;
+            string[] parts = (ItemLimitSignature ?? "").Replace(" ", "") is string hex && hex.Length % 2 == 0
                 ? Enumerable.Range(0, hex.Length / 2).Select(i => hex.Substring(i * 2, 2)).ToArray()
                 : Array.Empty<string>();
             if (site == 0 || parts.Length == 0 || site + parts.Length > arm9.Length) return -1;
@@ -360,7 +360,7 @@ namespace DSPRE.ROMFiles
         {
             try
             {
-                if (gameDirs == null || !gameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) dirs)) return int.MaxValue;
+                if (GameDirs == null || !GameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) dirs)) return int.MaxValue;
                 if (Directory.Exists(dirs.unpackedDir))
                 {
                     int n = NarcAPI.Narc.MemberCount(dirs.unpackedDir);
@@ -381,33 +381,33 @@ namespace DSPRE.ROMFiles
         /// <summary>An item's row. On hg-engine it follows from the id, so an item added since the last build has one too.</summary>
         public static ItemNarcTableEntry Read(int itemId)
         {
-            if (isHGE)
+            if (IsHGE)
             {
                 if (itemId < 0) throw new InvalidOperationException($"Item {itemId} has no row in the item table.");
                 return ComputedRow(itemId);
             }
             if (PlatPatches.TryReadItem(itemId, out ItemNarcTableEntry e)) return e;
             if (itemId < 0 || itemId >= VanillaCount) throw new InvalidOperationException($"Item {itemId} has no row in the item table.");
-            uint o = itemTableOffset + (uint)itemId * 8;
+            uint o = ItemTableOffset + (uint)itemId * 8;
             return new ItemNarcTableEntry
             {
-                itemData = ARM9.ReadWordLE(o),
-                itemIcon = ARM9.ReadWordLE(o + 2),
-                itemPalette = ARM9.ReadWordLE(o + 4),
-                itemAGB = ARM9.ReadWordLE(o + 6),
+                ItemData = ARM9.ReadWordLE(o),
+                ItemIcon = ARM9.ReadWordLE(o + 2),
+                ItemPalette = ARM9.ReadWordLE(o + 4),
+                ItemAGB = ARM9.ReadWordLE(o + 6),
             };
         }
 
         public static void Write(int itemId, ItemNarcTableEntry e)
         {
-            if (isHGE) throw new InvalidOperationException("hg-engine finds an item's data and icon by its id, so there is no item table to edit.");
+            if (IsHGE) throw new InvalidOperationException("hg-engine finds an item's data and icon by its id, so there is no item table to edit.");
             if (PlatPatches.TryWriteItem(itemId, e)) return;
             if (itemId < 0 || itemId >= VanillaCount) throw new InvalidOperationException($"Item {itemId} has no row in the item table.");
-            uint o = itemTableOffset + (uint)itemId * 8;
-            ARM9.WriteBytes(BitConverter.GetBytes((ushort)e.itemData), o);
-            ARM9.WriteBytes(BitConverter.GetBytes((ushort)e.itemIcon), o + 2);
-            ARM9.WriteBytes(BitConverter.GetBytes((ushort)e.itemPalette), o + 4);
-            ARM9.WriteBytes(BitConverter.GetBytes((ushort)e.itemAGB), o + 6);
+            uint o = ItemTableOffset + (uint)itemId * 8;
+            ARM9.WriteBytes(BitConverter.GetBytes((ushort)e.ItemData), o);
+            ARM9.WriteBytes(BitConverter.GetBytes((ushort)e.ItemIcon), o + 2);
+            ARM9.WriteBytes(BitConverter.GetBytes((ushort)e.ItemPalette), o + 4);
+            ARM9.WriteBytes(BitConverter.GetBytes((ushort)e.ItemAGB), o + 6);
             PlatPatches.Forget();
             Forget();
         }
@@ -421,24 +421,24 @@ namespace DSPRE.ROMFiles
         {
             int[] members = new int[itemCount];
             int vanilla = VanillaCount;
-            if (isHGE)
+            if (IsHGE)
             {
                 for (int i = 0; i < itemCount; i++) members[i] = i < vanilla ? i : -1;
                 return members;
             }
-            byte[] table = ARM9.ReadBytes(itemTableOffset, vanilla * 8);
+            byte[] table = ARM9.ReadBytes(ItemTableOffset, vanilla * 8);
             PlatPatches.ItemExpansion expansion = PlatPatches.Items();
             for (int i = 0; i < itemCount; i++)
             {
                 if (i < vanilla) members[i] = BitConverter.ToUInt16(table, i * 8);
-                else members[i] = expansion != null && expansion.Covers(i) && PlatPatches.TryReadItem(i, out ItemNarcTableEntry e) ? (int)e.itemData : -1;
+                else members[i] = expansion != null && expansion.Covers(i) && PlatPatches.TryReadItem(i, out ItemNarcTableEntry e) ? (int)e.ItemData : -1;
             }
             return members;
         }
 
         /// <summary>Other items reading the same item-data member, which an edit to it also changes.</summary>
         public static List<int> SharingData(int itemId, int itemCount) =>
-            Exists(itemId) ? SharingData(itemId, (int)Read(itemId).itemData, itemCount) : new List<int>();
+            Exists(itemId) ? SharingData(itemId, (int)Read(itemId).ItemData, itemCount) : new List<int>();
 
         /// <summary>Other items whose rows point at item data <paramref name="data"/>.</summary>
         public static List<int> SharingData(int itemId, int data, int itemCount)

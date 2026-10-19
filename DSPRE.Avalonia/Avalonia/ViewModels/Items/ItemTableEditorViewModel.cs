@@ -527,7 +527,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public string SelectedScriptLabel =>
             _selectedHiddenItem != null ? $"Use in spawnable: 8{_selectedHiddenItem.ScriptID:D3}" : "";
 
-        public int HiddenScriptMax => HgEngineProject.IsActive ? 255 : RomInfo.hiddenItemScriptMax;
+        public int HiddenScriptMax => HgEngineProject.IsActive ? 255 : RomInfo.HiddenItemScriptMax;
 
         private List<HiddenItemTable.Placement> SelectedPlacements =>
             _selectedHiddenItem != null && _hiddenPlacements.TryGetValue(_selectedHiddenItem.ScriptID, out List<HiddenItemTable.Placement> p)
@@ -548,17 +548,17 @@ namespace DSPRE.Avalonia.ViewModels.Items
         }
 
         // DP and Pt fill their tables, so Add reuses a removed entry's script, whose found flag a save may have set.
-        public bool ShowHiddenReuseNote => !HgEngineProject.IsActive && RomInfo.gameFamily is GameFamilies.DP or GameFamilies.Plat;
+        public bool ShowHiddenReuseNote => !HgEngineProject.IsActive && RomInfo.GameFamily is GameFamilies.DP or GameFamilies.Plat;
 
         private void PlaceHiddenRows()
         {
-            HashSet<int> daily = new HashSet<int>(RomInfo.hiddenItemDailyScripts);
+            HashSet<int> daily = new HashSet<int>(RomInfo.HiddenItemDailyScripts);
             foreach (HiddenItemRowVM row in HiddenItems) PlaceHiddenRow(row, daily);
         }
 
         private void PlaceHiddenRow(HiddenItemRowVM row, HashSet<int> daily = null)
         {
-            daily ??= new HashSet<int>(RomInfo.hiddenItemDailyScripts);
+            daily ??= new HashSet<int>(RomInfo.HiddenItemDailyScripts);
             row.Daily = daily.Contains(row.ScriptID);
             row.Where = !_hiddenPlacements.TryGetValue(row.ScriptID, out List<HiddenItemTable.Placement> placed) ? "Not placed"
                 : PlacementText(placed[0]) + (placed.Count > 1 ? $" and {placed.Count - 1} more" : "");
@@ -751,15 +751,15 @@ namespace DSPRE.Avalonia.ViewModels.Items
             for (int i = 0; i < itemNames.Length; i++) ItemNames.Add(itemNames[i]);
             _headerNames = headerNames?.ToArray() ?? Array.Empty<string>();
 
-            ShowPickupTab           = RomInfo.pickupTableOverlayNumber != -1;
+            ShowPickupTab           = RomInfo.PickupTableOverlayNumber != -1;
             ShowHiddenItemsTab      = RomInfo.IsHiddenItemsEditorAvailable() || HgEngineProject.IsActive;
             ShowRockSmashTab        = RomInfo.IsRockSmashEditorAvailable();
             ShowRockSmashItemTables = RomInfo.IsRockSmashItemTableAvailable();
 
             if (ShowPickupTab)
             {
-                if (OverlayUtils.IsCompressed(RomInfo.pickupTableOverlayNumber))
-                    OverlayUtils.Decompress(RomInfo.pickupTableOverlayNumber);
+                if (OverlayUtils.IsCompressed(RomInfo.PickupTableOverlayNumber))
+                    OverlayUtils.Decompress(RomInfo.PickupTableOverlayNumber);
                 LoadPickupTable();
             }
             if (ShowHiddenItemsTab)
@@ -769,7 +769,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             }
             if (ShowRockSmashTab)
             {
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.rockSmash });
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.RockSmash });
                 LoadRockSmash();
             }
             ResetUndo();
@@ -801,7 +801,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         private void LoadHiddenItems()
         {
             HiddenItems.Clear();
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.eventFiles });
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.EventFiles });
             _hiddenPlacements = HiddenItemTable.Placements();
 
             if (HgEngineProject.IsActive)
@@ -821,7 +821,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 return;
             }
 
-            _hiddenMaxCapacity = RomInfo.hiddenItemTableCapacity;
+            _hiddenMaxCapacity = RomInfo.HiddenItemTableCapacity;
             int tableLen = ReadHiddenItemCount();
             if (tableLen < 0)
             {
@@ -844,12 +844,12 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         private static List<int> HiddenItemUsers(int index)
         {
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.eventFiles });
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.EventFiles });
             List<int> files = new List<int>();
             int script = HiddenItemTable.ScriptBase + index;
             int fileCount = Filesystem.GetEventFileCount();
             for (int i = 0; i < fileCount; i++)
-                if (new EventFile(i).spawnables.Any(sp => sp.scriptNumber == script)) files.Add(i);
+                if (new EventFile(i).Spawnables.Any(sp => sp.ScriptNumber == script)) files.Add(i);
             return files;
         }
 
@@ -881,7 +881,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             List<int> users = HiddenItemUsers(_selectedHiddenItem.ScriptID);
             if (users.Count > 0)
             {
-                await DialogHelper.ShowError(
+                await DialogHelper.ShowErrorAsync(
                     $"Event file {string.Join(", ", users.Take(5))}{(users.Count > 5 ? " and more" : "")} still uses this entry. Change or delete those events first.",
                     "Hidden items");
                 return;
@@ -974,7 +974,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             (bool saved, string error) = await DSPRE.Avalonia.HgEngineSave.RunAsync(() => HgEngineHiddenItems.TrySave(entries, out string err) ? null : err);
             if (!saved)
             {
-                if (error != null) await DialogHelper.ShowError($"Hidden items were not saved.\n{error}", "Item tables error");
+                if (error != null) await DialogHelper.ShowErrorAsync($"Hidden items were not saved.\n{error}", "Item tables error");
                 return;
             }
 
@@ -1022,7 +1022,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 : null;
             if (refusal != null)
             {
-                _ = DialogHelper.ShowError($"Hidden items were not saved.\n{refusal}", "Item tables error");
+                _ = DialogHelper.ShowErrorAsync($"Hidden items were not saved.\n{refusal}", "Item tables error");
                 return;
             }
 
@@ -1059,7 +1059,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 catch (Exception e) when (e is InvalidOperationException || e is System.IO.IOException || e is UnauthorizedAccessException)
                 {
                     AppLogger.Error("Item Tables, Rock Smash items: " + e.Message);
-                    _ = DialogHelper.ShowError("The Rock Smash items were not saved:\n" + e.Message, "Item tables error");
+                    _ = DialogHelper.ShowErrorAsync("The Rock Smash items were not saved:\n" + e.Message, "Item tables error");
                     return;
                 }
             }

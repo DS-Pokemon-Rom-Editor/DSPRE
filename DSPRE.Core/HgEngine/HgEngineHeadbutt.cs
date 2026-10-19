@@ -66,12 +66,12 @@ namespace DSPRE.HgEngine
             if (HgEngineSourcePatcher.TryGetFieldValueInBlock(mapBlock, new[] { FieldPathSegment.Field("specialTreeCount") }, out string stc))
                 int.TryParse(stc.Trim(), out specialTreeCount);
 
-            ReadSlots(mapBlock, "normalSlots", species, file.normalEncounters, 12);
-            ReadSlots(mapBlock, "specialSlots", species, file.specialEncounters, 6);
-            ReadGroups(mapBlock, normalTreeCount, specialTreeCount, file.normalTreeGroups, file.specialTreeGroups);
+            ReadSlots(mapBlock, "normalSlots", species, file.NormalEncounters, 12);
+            ReadSlots(mapBlock, "specialSlots", species, file.SpecialEncounters, 6);
+            ReadGroups(mapBlock, normalTreeCount, specialTreeCount, file.NormalTreeGroups, file.SpecialTreeGroups);
 
-            file.normalTreeGroupsCount = (ushort)file.normalTreeGroups.Count;
-            file.specialTreeGroupsCount = (ushort)file.specialTreeGroups.Count;
+            file.NormalTreeGroupsCount = (ushort)file.NormalTreeGroups.Count;
+            file.SpecialTreeGroupsCount = (ushort)file.SpecialTreeGroups.Count;
             return true;
         }
 
@@ -89,8 +89,8 @@ namespace DSPRE.HgEngine
             List<string> failed = new List<string>();
 
             // As the game's own files: a map with no trees and no Pokemon set is only the counts.
-            int totalGroups = file.normalTreeGroups.Count + file.specialTreeGroups.Count;
-            bool slots = totalGroups > 0 || file.normalEncounters.Concat(file.specialEncounters).Any(e => e.pokemonID != 0 || e.minLevel != 0 || e.maxLevel != 0);
+            int totalGroups = file.NormalTreeGroups.Count + file.SpecialTreeGroups.Count;
+            bool slots = totalGroups > 0 || file.NormalEncounters.Concat(file.SpecialEncounters).Any(e => e.PokemonID != 0 || e.MinLevel != 0 || e.MaxLevel != 0);
             if (!TryShapeMap(ref text, fieldName, slots, totalGroups, out error)) return false;
 
             string SlotsLiteral(IReadOnlyList<HeadbuttEncounter> list, int count)
@@ -99,32 +99,32 @@ namespace DSPRE.HgEngine
                 for (int i = 0; i < count; i++)
                 {
                     HeadbuttEncounter e = i < list.Count ? list[i] : new HeadbuttEncounter();
-                    string sp = species != null && species.TryGetNameWithPrefix(e.pokemonID, "SPECIES_", out string sn) ? sn : e.pokemonID.ToString();
-                    items.Add($"{{ {sp}, {e.minLevel}, {e.maxLevel} }}");
+                    string sp = species != null && species.TryGetNameWithPrefix(e.PokemonID, "SPECIES_", out string sn) ? sn : e.PokemonID.ToString();
+                    items.Add($"{{ {sp}, {e.MinLevel}, {e.MaxLevel} }}");
                 }
                 return "{ " + string.Join(", ", items) + " }";
             }
 
-            if (slots && !TryReplaceMapField(ref text, fieldName, "normalSlots", SlotsLiteral(file.normalEncounters, 12))) failed.Add("normalSlots");
-            if (slots && !TryReplaceMapField(ref text, fieldName, "specialSlots", SlotsLiteral(file.specialEncounters, 6))) failed.Add("specialSlots");
-            if (!TryReplaceMapField(ref text, fieldName, "normalTreeCount", file.normalTreeGroups.Count.ToString())) failed.Add("normalTreeCount");
-            if (!TryReplaceMapField(ref text, fieldName, "specialTreeCount", file.specialTreeGroups.Count.ToString())) failed.Add("specialTreeCount");
+            if (slots && !TryReplaceMapField(ref text, fieldName, "normalSlots", SlotsLiteral(file.NormalEncounters, 12))) failed.Add("normalSlots");
+            if (slots && !TryReplaceMapField(ref text, fieldName, "specialSlots", SlotsLiteral(file.SpecialEncounters, 6))) failed.Add("specialSlots");
+            if (!TryReplaceMapField(ref text, fieldName, "normalTreeCount", file.NormalTreeGroups.Count.ToString())) failed.Add("normalTreeCount");
+            if (!TryReplaceMapField(ref text, fieldName, "specialTreeCount", file.SpecialTreeGroups.Count.ToString())) failed.Add("specialTreeCount");
 
             if (totalGroups > 0)
             {
                 string GroupLiteral(HeadbuttTreeGroup g)
                 {
                     List<string> coords = new List<string>(6);
-                    foreach (HeadbuttTree t in g.trees)
+                    foreach (HeadbuttTree t in g.Trees)
                     {
-                        int x = t.IsUnused ? -1 : t.globalX, y = t.IsUnused ? -1 : t.globalY;
+                        int x = t.IsUnused ? -1 : t.GlobalX, y = t.IsUnused ? -1 : t.GlobalY;
                         coords.Add($"{{ {x}, {y} }}");
                     }
                     return "{ " + string.Join(", ", coords) + " }";
                 }
                 List<string> groups = new List<string>(totalGroups);
-                foreach (HeadbuttTreeGroup g in file.normalTreeGroups) groups.Add(GroupLiteral(g));
-                foreach (HeadbuttTreeGroup g in file.specialTreeGroups) groups.Add(GroupLiteral(g));
+                foreach (HeadbuttTreeGroup g in file.NormalTreeGroups) groups.Add(GroupLiteral(g));
+                foreach (HeadbuttTreeGroup g in file.SpecialTreeGroups) groups.Add(GroupLiteral(g));
                 string treeCoordsLiteral = "{\n            " + string.Join(",\n            ", groups) + ",\n        }";
                 if (!TryReplaceMapField(ref text, fieldName, "treeCoords", treeCoordsLiteral)) failed.Add("treeCoords");
             }
@@ -204,9 +204,9 @@ namespace DSPRE.HgEngine
                     if (parts.Count < 3) continue;
                     dest.Add(new HeadbuttEncounter
                     {
-                        pokemonID = (ushort)ResolveToken(parts[0], species),
-                        minLevel = (byte)ResolveToken(parts[1], null),
-                        maxLevel = (byte)ResolveToken(parts[2], null),
+                        PokemonID = (ushort)ResolveToken(parts[0], species),
+                        MinLevel = (byte)ResolveToken(parts[1], null),
+                        MaxLevel = (byte)ResolveToken(parts[2], null),
                     });
                 }
             }
@@ -222,12 +222,12 @@ namespace DSPRE.HgEngine
             {
                 HeadbuttTreeGroup group = new HeadbuttTreeGroup();
                 List<string> coords = HgEngineSourcePatcher.SplitArrayValue(groups[i].Trim());
-                for (int j = 0; j < coords.Count && j < group.trees.Count; j++)
+                for (int j = 0; j < coords.Count && j < group.Trees.Count; j++)
                 {
                     List<string> xy = HgEngineSourcePatcher.SplitArrayValue(coords[j].Trim());
                     if (xy.Count < 2) continue;
-                    group.trees[j].globalX = unchecked((ushort)ResolveToken(xy[0], null));
-                    group.trees[j].globalY = unchecked((ushort)ResolveToken(xy[1], null));
+                    group.Trees[j].GlobalX = unchecked((ushort)ResolveToken(xy[0], null));
+                    group.Trees[j].GlobalY = unchecked((ushort)ResolveToken(xy[1], null));
                 }
                 if (i < normalCount) normalDest.Add(group);
                 else specialDest.Add(group);

@@ -53,8 +53,8 @@ namespace DSPRE.Csv
 
         private static object[] Cells(string[] moveNames, string[] typeNames, int id, MoveData m) => new object[]
         {
-            id, id < moveNames.Length ? moveNames[id] : "", (int)m.movetype < typeNames.Length ? typeNames[(int)m.movetype] : ((int)m.movetype).ToString(),
-            m.split, m.damage, m.accuracy, m.priority, m.sideEffectProbability, m.pp, GetAttackRangeName(m.target),
+            id, id < moveNames.Length ? moveNames[id] : "", (int)m.Movetype < typeNames.Length ? typeNames[(int)m.Movetype] : ((int)m.Movetype).ToString(),
+            m.Split, m.Damage, m.Accuracy, m.Priority, m.SideEffectProbability, m.Pp, GetAttackRangeName(m.Target),
         };
 
         private (MoveData Move, string Error) Base(int id)
@@ -95,8 +95,8 @@ namespace DSPRE.Csv
                 MoveData was = Base(e.MoveID).Move;
                 MoveData now = new MoveData(new MemoryStream(was.ToByteArray()))
                 {
-                    movetype = e.MoveType, split = e.Split, damage = e.Power, accuracy = e.Accuracy, priority = e.Priority,
-                    sideEffectProbability = e.SideEffectProbability, pp = e.PP, target = e.Range,
+                    Movetype = e.MoveType, Split = e.Split, Damage = e.Power, Accuracy = e.Accuracy, Priority = e.Priority,
+                    SideEffectProbability = e.SideEffectProbability, Pp = e.PP, Target = e.Range,
                 };
                 CsvRules.Compare(changes, r.Label, ColumnNames, Type, Cells(names, _typeNames, e.MoveID, was), Cells(names, _typeNames, e.MoveID, now));
                 // Names are text, not move data: listing a different one lets the editor offer the rename after Apply.
@@ -221,8 +221,8 @@ namespace DSPRE.Csv
         {
             writer.WriteLine(CsvText.Row(ColumnNames));
             foreach (EggMoveEntry e in table)
-                foreach (ushort move in e.moveIDs)
-                    writer.WriteLine(CsvText.Row(e.speciesID, e.speciesID < pokemon.Length ? pokemon[e.speciesID] : "", move, move < moves.Length ? moves[move] : ""));
+                foreach (ushort move in e.MoveIDs)
+                    writer.WriteLine(CsvText.Row(e.SpeciesID, e.SpeciesID < pokemon.Length ? pokemon[e.SpeciesID] : "", move, move < moves.Length ? moves[move] : ""));
         }
 
         public override void Check(CsvCheck c)
@@ -241,9 +241,9 @@ namespace DSPRE.Csv
             foreach (CsvRecord r in accepted)
             {
                 Entry e = (Entry)r.Value;
-                int at = table.FindIndex(t => t.speciesID == e.Species);
+                int at = table.FindIndex(t => t.SpeciesID == e.Species);
                 if (at < 0) { table.Add(new EggMoveEntry(e.Species, new List<ushort>())); at = table.Count - 1; }
-                table[at].moveIDs.Add((ushort)e.Move);
+                table[at].MoveIDs.Add((ushort)e.Move);
             }
             return table;
         }
@@ -253,13 +253,13 @@ namespace DSPRE.Csv
             List<CsvChange> changes = new List<CsvChange>();
             List<EggMoveEntry> next = Result(accepted);
             foreach (EggMoveEntry was in _now)
-                if (!next.Any(n => n.speciesID == was.speciesID))
-                    changes.Add(new CsvChange($"#{was.speciesID} {_pokemon[was.speciesID]}", "Egg moves", Describe(was.moveIDs), "None (not in the file)"));
+                if (!next.Any(n => n.SpeciesID == was.SpeciesID))
+                    changes.Add(new CsvChange($"#{was.SpeciesID} {_pokemon[was.SpeciesID]}", "Egg moves", Describe(was.MoveIDs), "None (not in the file)"));
             foreach (EggMoveEntry now in next)
             {
-                List<ushort> was = _now.FirstOrDefault(n => n.speciesID == now.speciesID).moveIDs ?? new List<ushort>();
-                if (!was.SequenceEqual(now.moveIDs))
-                    changes.Add(new CsvChange($"#{now.speciesID} {_pokemon[now.speciesID]}", "Egg moves", Describe(was), Describe(now.moveIDs)));
+                List<ushort> was = _now.FirstOrDefault(n => n.SpeciesID == now.SpeciesID).MoveIDs ?? new List<ushort>();
+                if (!was.SequenceEqual(now.MoveIDs))
+                    changes.Add(new CsvChange($"#{now.SpeciesID} {_pokemon[now.SpeciesID]}", "Egg moves", Describe(was), Describe(now.MoveIDs)));
             }
             return changes;
         }

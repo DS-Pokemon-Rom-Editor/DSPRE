@@ -31,14 +31,14 @@ namespace DSPRE.Avalonia.Data
         private const int BackgroundTileCapacity = 768; // 32x24, no reuse in the real data, but budgeted the same
         private const int CopyrightTileCapacity = 96;   // copyright NCGR's real character-pool size
 
-        private readonly ScriptNarc _narc = new(DirNames.titleScreenGraphics);
+        private readonly ScriptNarc _narc = new(DirNames.TitleScreenGraphics);
         public bool Available => _narc.Available;
 
         /// <summary>Which game's logo/background/palette this instance reads and writes. Both HeartGold's
         /// and SoulSilver's sets live in the same archive regardless of which one is actually loaded, so
         /// this can be switched freely, e.g. to edit both from one ROM project. Defaults to the loaded
         /// ROM's own version. Does not affect the copyright strip, which is shared between both.</summary>
-        public GameVersions Version { get; set; } = gameVersion;
+        public GameVersions Version { get; set; } = GameVersion;
 
         /// <summary>Imports wait here until the owner saves; drawing and exports read through them.</summary>
         public PendingArchiveWrites Pending { get; } = new PendingArchiveWrites();

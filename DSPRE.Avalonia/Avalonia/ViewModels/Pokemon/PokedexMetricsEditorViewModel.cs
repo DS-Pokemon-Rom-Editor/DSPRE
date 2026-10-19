@@ -52,7 +52,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool ShowListsNote => !DSPRE.HgEngine.HgEngineProject.IsActive;
         public bool CanOpenLists => ShowListsNote;
 
-        public bool ShowForme => !UseHgEngineSource && _archive?.HasOriginGiratina == true && _currentId == SpeciesFile.GIRATINA_ID_NUM;
+        public bool ShowForme => !UseHgEngineSource && _archive?.HasOriginGiratina == true && _currentId == SpeciesFile.GiratinaIdNum;
         public int FormeIndex
         {
             get => _forme;
@@ -126,7 +126,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_currentId <= 0 || _values == null || _values[_forme] == null) { SizePreview = null; return; }
             try
             {
-                ScreenPage page = DSPRE.Avalonia.Data.PokedexBook.SizePage(DexPageRecipes.For(RomInfo.gameFamily));
+                ScreenPage page = DSPRE.Avalonia.Data.PokedexBook.SizePage(DexPageRecipes.For(RomInfo.GameFamily));
                 if (page == null) { SizePreview = null; return; }
                 if (_previewSample == null || _previewSample.Species != _currentId)
                 {
@@ -152,7 +152,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>Opens the Pokédex graphics editor on this Pokémon's size page.</summary>
         public void OpenSizePage()
         {
-            ScreenPage page = DSPRE.Avalonia.Data.PokedexBook.SizePage(DexPageRecipes.For(RomInfo.gameFamily));
+            ScreenPage page = DSPRE.Avalonia.Data.PokedexBook.SizePage(DexPageRecipes.For(RomInfo.GameFamily));
             AvaloniaEditorLauncher.OpenPokedexGraphics(_currentId, page?.Id);
         }
 
@@ -263,16 +263,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Reads of the footprint see this tab's bytes; writes go to <paramref name="write"/> instead of the project.
         private ScriptNarc.Staging FootprintStaging(Action<RomInfo.DirNames, int, byte[]> write = null) => new()
         {
-            Read = (dir, id) => dir == RomInfo.DirNames.footprintGraphics && id == _footprintEntry ? _footprint : null,
+            Read = (dir, id) => dir == RomInfo.DirNames.FootprintGraphics && id == _footprintEntry ? _footprint : null,
             Write = write ?? ((_, _, _) => { }),
         };
 
         private void LoadFootprint(int species)
         {
-            _footprintArchive ??= GraphicAssets.All.FirstOrDefault(x => x.Dir == RomInfo.DirNames.footprintGraphics);
+            _footprintArchive ??= GraphicAssets.All.FirstOrDefault(x => x.Dir == RomInfo.DirNames.FootprintGraphics);
             _footprintEntry = -1;
-            try { if (_footprintArchive != null) _footprintEntry = GraphicAssets.FootprintEntry(species); } catch { }
-            _footprintLoaded = _footprintEntry >= 0 ? new ScriptNarc(RomInfo.DirNames.footprintGraphics).Get(_footprintEntry) : null;
+            try { if (_footprintArchive != null) _footprintEntry = GraphicAssets.FootprintEntry(species); } catch (Exception ex) { AppLogger.Warn("Pokedex metrics: footprint entry: " + ex.Message); }
+            _footprintLoaded = _footprintEntry >= 0 ? new ScriptNarc(RomInfo.DirNames.FootprintGraphics).Get(_footprintEntry) : null;
             _footprint = _footprintLoaded;
             ShowFootprintImage();
         }
@@ -304,7 +304,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string error;
             using (ScriptNarc.Use(FootprintStaging((dir, id, bytes) =>
                    {
-                       if (dir == RomInfo.DirNames.footprintGraphics && id == _footprintEntry) drawn = bytes;
+                       if (dir == RomInfo.DirNames.FootprintGraphics && id == _footprintEntry) drawn = bytes;
                        else elsewhere = true;
                    })))
                 error = GraphicAssets.ImportPng(_footprintArchive, _footprintEntry, path, out _);
@@ -329,7 +329,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void WriteFootprint()
         {
-            if (FootprintChanged) new ScriptNarc(RomInfo.DirNames.footprintGraphics).Put(_footprintEntry, _footprint);
+            if (FootprintChanged) new ScriptNarc(RomInfo.DirNames.FootprintGraphics).Put(_footprintEntry, _footprint);
         }
 
         // ─── Dirty, undo ──────────────────────────────────────────────────────────
@@ -424,7 +424,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             RenderSizePreview();
         }
 
-        private bool ShowFormeFor(int id) => _archive?.HasOriginGiratina == true && id == SpeciesFile.GIRATINA_ID_NUM;
+        private bool ShowFormeFor(int id) => _archive?.HasOriginGiratina == true && id == SpeciesFile.GiratinaIdNum;
 
         public void DiscardChanges() => LoadMon(_currentId);
 
@@ -438,7 +438,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             (bool saved, string error) = await HgEngineSave.RunAsync(() =>
                 HgEnginePokedexMetrics.TryRebuildSortLists(out listed, out string writeError) ? null : writeError);
             if (saved) SaveNotice.Saved($"Pokédex size sorts ({listed} Pokémon)");
-            else if (error != null) await DialogHelper.ShowError($"The size sorts were not rebuilt:\n{error}", "Pokédex error");
+            else if (error != null) await DialogHelper.ShowErrorAsync($"The size sorts were not rebuilt:\n{error}", "Pokédex error");
         }
 
         // ─── Save ─────────────────────────────────────────────────────────────────
@@ -468,14 +468,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 {
                     if (error == null) return;
                     AppLogger.Error($"hg-engine Pokédex data write failed for species {species}: {error}");
-                    await DialogHelper.ShowError($"Pokédex data was not saved:\n{error}", "Pokédex error");
+                    await DialogHelper.ShowErrorAsync($"Pokédex data was not saved:\n{error}", "Pokédex error");
                     return;
                 }
             }
             else
             {
                 string why = values.Where(v => v != null).Select(PokedexDataArchive.WhyNot).FirstOrDefault(w => w != null);
-                if (why != null) { await DialogHelper.ShowError($"Pokédex data was not saved: {why}", "Pokédex error"); return; }
+                if (why != null) { await DialogHelper.ShowErrorAsync($"Pokédex data was not saved: {why}", "Pokédex error"); return; }
                 for (int i = 0; i < 2; i++)
                     if (values[i] != null && !values[i].SameAs(_loaded[i])) _archive.Set(species, values[i], originGiratina: i == 1);
                 _archive.Save();

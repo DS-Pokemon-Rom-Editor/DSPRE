@@ -308,12 +308,12 @@ namespace DSPRE.Avalonia.Views.World
         {
             MapHeader h = DSPRE.ROMFiles.MapHeader.GetMapHeader(id);
             if (h == null) yield break;
-            if (EventVM.HasUnsavedChanges && EventVM.SelectedEventIndex != h.eventFileID) yield return (EventVM, "event file");
-            if (MatrixVM.HasUnsavedChanges && MatrixVM.SelectedMatrixIndex != h.matrixID) yield return (MatrixVM, "matrix");
-            if (AreaDataVM.HasUnsavedChanges && AreaDataVM.SelectedIndex != h.areaDataID) yield return (AreaDataVM, "area");
-            if (ScriptsVM.HasUnsavedChanges && !ScriptsVM.IsShowingScriptFile(h.scriptFileID)) yield return (ScriptsVM, "script");
-            if (LevelScriptsVM.HasUnsavedChanges && LevelScriptsVM.SelectedScriptIndex != h.levelScriptID) yield return (LevelScriptsVM, "level script");
-            if (TextVM.HasUnsavedChanges && TextVM.SelectedArchiveIndex != h.textArchiveID) yield return (TextVM, "text archive");
+            if (EventVM.HasUnsavedChanges && EventVM.SelectedEventIndex != h.EventFileID) yield return (EventVM, "event file");
+            if (MatrixVM.HasUnsavedChanges && MatrixVM.SelectedMatrixIndex != h.MatrixID) yield return (MatrixVM, "matrix");
+            if (AreaDataVM.HasUnsavedChanges && AreaDataVM.SelectedIndex != h.AreaDataID) yield return (AreaDataVM, "area");
+            if (ScriptsVM.HasUnsavedChanges && !ScriptsVM.IsShowingScriptFile(h.ScriptFileID)) yield return (ScriptsVM, "script");
+            if (LevelScriptsVM.HasUnsavedChanges && LevelScriptsVM.SelectedScriptIndex != h.LevelScriptID) yield return (LevelScriptsVM, "level script");
+            if (TextVM.HasUnsavedChanges && TextVM.SelectedArchiveIndex != h.TextArchiveID) yield return (TextVM, "text archive");
             if (MapVM.HasUnsavedChanges && MapVM.HeaderId != id) yield return (MapVM, "map");
             int wild = _encountersVm switch
             {
@@ -321,7 +321,7 @@ namespace DSPRE.Avalonia.Views.World
                 WildEditorHGSSViewModel hgss => hgss.SelectedEncounterIndex,
                 _ => -1,
             };
-            if (_encountersVm is IEditorWithUnsavedChanges enc && enc.HasUnsavedChanges && h.wildPokemon != ushort.MaxValue && wild != h.wildPokemon)
+            if (_encountersVm is IEditorWithUnsavedChanges enc && enc.HasUnsavedChanges && h.WildPokemon != ushort.MaxValue && wild != h.WildPokemon)
                 yield return (enc, "encounter file");
         }
 
@@ -390,7 +390,7 @@ namespace DSPRE.Avalonia.Views.World
                 case WildEditorDPPtViewModel dppt: dppt.Detach(); break;
                 case WildEditorHGSSViewModel hgss: hgss.Detach(); break;
             }
-            if (RomInfo.isHGE)
+            if (RomInfo.IsHGE)
             {
                 // hg-engine owns encounter data; editing it here would be overwritten on its next build.
                 EncountersTab.Content = new global::Avalonia.Controls.TextBlock
@@ -407,13 +407,13 @@ namespace DSPRE.Avalonia.Views.World
             }
             try
             {
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.encounters, DirNames.monIcons });
-                string path = gameDirs[DirNames.encounters].unpackedDir;
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.Encounters, DirNames.MonIcons });
+                string path = GameDirs[DirNames.Encounters].unpackedDir;
                 string[] names = GetPokemonNames();
                 int headerCount = GetHeaderCount();
                 int initial = VM != null && VM.CanOpenEncounters ? (int)VM.WildPokemon : -1;
 
-                if (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat)
+                if (GameFamily == GameFamilies.DP || GameFamily == GameFamilies.Plat)
                 {
                     WildEditorDPPtViewModel evm = new WildEditorDPPtViewModel(path, names, initial, headerCount);
                     _encountersVm = evm;
@@ -451,7 +451,7 @@ namespace DSPRE.Avalonia.Views.World
             catch (System.Exception ex)
             {
                 _encountersEmbedded = false;
-                _ = DialogHelper.ShowError($"Failed to set up the Wild Encounters editor:\n{ex.Message}", "Wild encounters error");
+                _ = DialogHelper.ShowErrorAsync($"Failed to set up the Wild Encounters editor:\n{ex.Message}", "Wild encounters error");
             }
         }
 
@@ -490,10 +490,10 @@ namespace DSPRE.Avalonia.Views.World
                 _ => null,
             };
             if (editor?.HasUnsavedChanges == true
-                && await DialogHelper.AskYesNo("Save this tab's changes first? The window opens what is saved.", "Open in window"))
+                && await DialogHelper.AskYesNoAsync("Save this tab's changes first? The window opens what is saved.", "Open in window"))
             {
                 string failed = await UnsavedChangesDialog.TrySaveEditorAsync(editor);
-                if (failed != null) { await DialogHelper.ShowError("The tab was not saved:\n" + failed, "Open in window"); return; }
+                if (failed != null) { await DialogHelper.ShowErrorAsync("The tab was not saved:\n" + failed, "Open in window"); return; }
             }
 
             switch (tab)

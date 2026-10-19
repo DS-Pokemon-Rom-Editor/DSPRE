@@ -24,13 +24,13 @@ namespace DSPRE
         public static Location Locate()
         {
             RomInfo.PrepareCameraData();
-            string path = OverlayUtils.GetPath(RomInfo.cameraTblOverlayNumber);
-            uint[] pointers = new uint[RomInfo.cameraTblOffsetsToRAMaddress.Length];
+            string path = OverlayUtils.GetPath(RomInfo.CameraTblOverlayNumber);
+            uint[] pointers = new uint[RomInfo.CameraTblOffsetsToRAMaddress.Length];
             using (DSUtils.EasyReader br = new DSUtils.EasyReader(path))
             {
                 for (int i = 0; i < pointers.Length; i++)
                 {
-                    br.BaseStream.Position = RomInfo.cameraTblOffsetsToRAMaddress[i];
+                    br.BaseStream.Position = RomInfo.CameraTblOffsetsToRAMaddress[i];
                     pointers[i] = br.ReadUInt32();
                 }
             }
@@ -38,18 +38,18 @@ namespace DSPRE
             return new Location
             {
                 OverlayPath = path,
-                Offset = pointers[0] - OverlayUtils.OverlayTable.GetRAMAddress(RomInfo.cameraTblOverlayNumber),
+                Offset = pointers[0] - OverlayUtils.OverlayTable.GetRAMAddress(RomInfo.CameraTblOverlayNumber),
                 PointersAgree = pointers.All(p => p == pointers[0]),
             };
         }
 
         public static List<GameCamera> Read(Location at)
         {
-            bool hgss = RomInfo.gameFamily == RomInfo.GameFamilies.HGSS;
-            List<GameCamera> cameras = new List<GameCamera>(RomInfo.cameraCount);
+            bool hgss = RomInfo.GameFamily == RomInfo.GameFamilies.HGSS;
+            List<GameCamera> cameras = new List<GameCamera>(RomInfo.CameraCount);
             using (DSUtils.EasyReader br = new DSUtils.EasyReader(at.OverlayPath, at.Offset))
             {
-                for (int i = 0; i < RomInfo.cameraCount; i++)
+                for (int i = 0; i < RomInfo.CameraCount; i++)
                 {
                     cameras.Add(hgss
                         ? new GameCamera(br.ReadUInt32(), br.ReadInt16(), br.ReadInt16(), br.ReadInt16(),
@@ -68,18 +68,18 @@ namespace DSPRE
         public static void Write(IReadOnlyList<GameCamera> cameras, string path, uint offset)
         {
             for (int i = 0; i < cameras.Count; i++)
-                DSUtils.WriteToFile(path, cameras[i].ToByteArray(), (uint)(offset + i * RomInfo.cameraSize));
+                DSUtils.WriteToFile(path, cameras[i].ToByteArray(), (uint)(offset + i * RomInfo.CameraSize));
         }
 
         /// <summary>The table as the game has it now, or null when it cannot be read.</summary>
         public static List<GameCamera> TryRead()
         {
-            if (string.IsNullOrEmpty(RomInfo.workDir)) return null;   // no project open, nothing to read
+            if (string.IsNullOrEmpty(RomInfo.WorkDir)) return null;   // no project open, nothing to read
             try
             {
                 // A compressed overlay holds packed bytes, not the table; ds-rom projects keep it unpacked.
                 RomInfo.PrepareCameraData();
-                if (OverlayUtils.IsCompressed(RomInfo.cameraTblOverlayNumber)) return null;
+                if (OverlayUtils.IsCompressed(RomInfo.CameraTblOverlayNumber)) return null;
                 return Read(Locate());
             }
             catch (Exception ex)

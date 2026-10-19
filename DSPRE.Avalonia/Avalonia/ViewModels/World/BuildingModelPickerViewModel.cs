@@ -78,7 +78,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 {
                     string name = null;
                     try { name = ModelAssets.NameInFile(File.ReadAllBytes(Path.Combine(dir, i.ToString("D4")))); }
-                    catch (IOException) { }
+                    catch (IOException) { }   // a model that can't be read is listed without a name
                     list.Add(new Entry { Id = i, Name = name });
                 }
                 return list;
@@ -107,7 +107,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     NSBMD nsbmd = NSBMDLoader.LoadNSBMD(new MemoryStream(data));
                     byte[] tex = _textures ?? NSBUtils.GetTexturesFromTexturedNSBMD(data);
                     bool painted = ModelAssets.Dress(nsbmd, tex);
-                    if (nsbmd.models != null && nsbmd.models.Length > 0) Preview = NsbmdGeometry.BuildModel(nsbmd.models[0]);
+                    if (nsbmd.Models != null && nsbmd.Models.Length > 0) Preview = NsbmdGeometry.BuildModel(nsbmd.Models[0]);
                     StatusText = painted ? "" : "Shown unpainted: this map's building textures don't fit it.";
                 }
                 catch (Exception ex) when (ex is IOException || ex is ArgumentException || ex is IndexOutOfRangeException || ex is InvalidDataException)

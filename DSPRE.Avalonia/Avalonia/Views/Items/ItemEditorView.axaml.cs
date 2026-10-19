@@ -29,16 +29,16 @@ namespace DSPRE.Avalonia.Views.Items
             int drawing = Data.GraphicAssets.DrawingForItem(VM.SelectedItemIndex);
             if (drawing < 0)
             {
-                _ = DialogHelper.ShowInfo("This item does not name a drawing, so there is nothing to open.",
+                _ = DialogHelper.ShowInfoAsync("This item does not name a drawing, so there is nothing to open.",
                                           "Open icon in Graphics");
                 return;
             }
-            AvaloniaEditorLauncher.OpenGraphicAt(DSPRE.RomInfo.DirNames.itemIcons, drawing);
+            AvaloniaEditorLauncher.OpenGraphicAt(DSPRE.RomInfo.DirNames.ItemIcons, drawing);
         }
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) VM?.DiscardChanges();
         }
         private void Undo_Click(object sender, RoutedEventArgs e) => VM?.Undo();
         private void Redo_Click(object sender, RoutedEventArgs e) => VM?.Redo();

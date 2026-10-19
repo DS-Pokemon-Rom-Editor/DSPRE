@@ -65,7 +65,7 @@ namespace DSPRE.Avalonia.Data
             if (index < 0) return null;
             if (_others.TryGetValue((dir, index), out byte[] known)) return known;
             byte[] data = null;
-            try { data = NitroBgCodec.Inflate(Other?.Invoke(dir, index)); } catch { }
+            try { data = NitroBgCodec.Inflate(Other?.Invoke(dir, index)); } catch { }   // a member that can't be read is drawn as missing
             if (data != null) _others[(dir, index)] = data;
             return data;
         }
@@ -102,7 +102,7 @@ namespace DSPRE.Avalonia.Data
             if (index < 0) return null;
             if (_files.TryGetValue(index, out byte[] known)) return known;
             byte[] raw = null;
-            try { raw = _member(index); } catch { }
+            try { raw = _member(index); } catch { }   // a member that can't be read is drawn as missing
             byte[] data = NitroBgCodec.Inflate(raw);
             // A read that failed (a file another window is still writing) is tried again next time.
             if (data != null) _files[index] = data;
@@ -218,7 +218,7 @@ namespace DSPRE.Avalonia.Data
         private string LabelName(ScreenText t)
         {
             string text = null;
-            try { text = _text?.Invoke(t, _variant); } catch { }
+            try { text = _text?.Invoke(t, _variant); } catch { }   // a label without readable text is called Label
             if (string.IsNullOrWhiteSpace(text)) return "Label";
             text = text.Replace((char)13, ' ').Replace((char)10, ' ').Trim();
             return "Label: " + (text.Length > 24 ? text.Substring(0, 24) + "…" : text);
@@ -368,7 +368,7 @@ namespace DSPRE.Avalonia.Data
             if (s.Anim >= 0)
             {
                 byte[] nanr = File(s.Archive, s.Anim);
-                try { if (nanr != null) cell = NanrFile.Read(nanr).CellOf(seq, s.Frame); } catch { }
+                try { if (nanr != null) cell = NanrFile.Read(nanr).CellOf(seq, s.Frame); } catch { }   // without the animation the first cell is shown
             }
             if (cell < 0 || cell >= cells.Count) return;
             ushort[] colours = NitroBgCodec.ReadColours(File(s.ColoursArchive, s.Colours));

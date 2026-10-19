@@ -146,7 +146,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             try { _timing.Save(); return true; }
             catch (Exception e) when (e is System.IO.IOException || e is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError("The intro timings were not saved:\n" + e.Message, Title);
+                await DialogHelper.ShowErrorAsync("The intro timings were not saved:\n" + e.Message, Title);
                 return false;
             }
         }

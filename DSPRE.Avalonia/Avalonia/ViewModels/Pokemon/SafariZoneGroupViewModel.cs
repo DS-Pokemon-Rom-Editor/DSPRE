@@ -112,34 +112,34 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             public bool Exists => _e != null;
             public bool ShowForms => _owner.ShowForms;
             public ObservableCollection<string> SpeciesNames => _owner.SpeciesNames;
-            public int Species => _e == null ? 0 : BaseSpecies(_e.pokemonID);
+            public int Species => _e == null ? 0 : BaseSpecies(_e.PokemonID);
             public int SpeciesIndex
             {
                 get => _e != null && Species < SpeciesNames.Count ? Species : -1;
                 set
                 {
                     if (_e == null || value < 0 || _owner._suppress || value == Species) return;
-                    _e.pokemonID = WithSpecies(_e.pokemonID, value);
+                    _e.PokemonID = WithSpecies(_e.PokemonID, value);
                     Raise(); Raise(nameof(Species)); _owner.Touch();
                 }
             }
             public decimal Level
             {
-                get => _e == null ? 0 : Math.Min((int)_e.level, MaxShownLevel);
+                get => _e == null ? 0 : Math.Min((int)_e.Level, MaxShownLevel);
                 set
                 {
-                    if (_e == null || _owner._suppress || (int)value == Math.Min((int)_e.level, MaxShownLevel)) return;
-                    _e.level = (byte)Math.Clamp((int)value, 0, 255);
+                    if (_e == null || _owner._suppress || (int)value == Math.Min((int)_e.Level, MaxShownLevel)) return;
+                    _e.Level = (byte)Math.Clamp((int)value, 0, 255);
                     Raise(); _owner.Touch();
                 }
             }
             public decimal Form
             {
-                get => _e == null ? 0 : FormBits(_e.pokemonID);
+                get => _e == null ? 0 : FormBits(_e.PokemonID);
                 set
                 {
-                    if (_e == null || _owner._suppress || (int)value == FormBits(_e.pokemonID)) return;
-                    _e.pokemonID = WithForm(_e.pokemonID, (int)value);
+                    if (_e == null || _owner._suppress || (int)value == FormBits(_e.PokemonID)) return;
+                    _e.PokemonID = WithForm(_e.PokemonID, (int)value);
                     Raise(); _owner.Touch();
                 }
             }
@@ -182,32 +182,32 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
 
             public ObservableCollection<string> ObjectTypeNames => _owner.ObjectTypeNames;
-            public bool RequirementTypeWarning => _req.typeID == 0;
+            public bool RequirementTypeWarning => _req.TypeID == 0;
 
             public int ReqType
             {
-                get => _req.typeID;
+                get => _req.TypeID;
                 set
                 {
-                    if (value < 0 || _owner._suppress || value == _req.typeID) return;
-                    _req.typeID = (byte)value;
+                    if (value < 0 || _owner._suppress || value == _req.TypeID) return;
+                    _req.TypeID = (byte)value;
                     Raise(); Raise(nameof(RequirementTypeWarning)); _owner.Touch();
                 }
             }
             public decimal ReqPoints
             {
-                get => _req.quantity;
-                set { if (_owner._suppress || (int)value == _req.quantity) return; _req.quantity = (byte)Math.Clamp((int)value, 0, 255); Raise(); _owner.Touch(); }
+                get => _req.Quantity;
+                set { if (_owner._suppress || (int)value == _req.Quantity) return; _req.Quantity = (byte)Math.Clamp((int)value, 0, 255); Raise(); _owner.Touch(); }
             }
             public int OptReqType
             {
-                get => _opt.typeID;
-                set { if (value < 0 || _owner._suppress || value == _opt.typeID) return; _opt.typeID = (byte)value; Raise(); _owner.Touch(); }
+                get => _opt.TypeID;
+                set { if (value < 0 || _owner._suppress || value == _opt.TypeID) return; _opt.TypeID = (byte)value; Raise(); _owner.Touch(); }
             }
             public decimal OptReqPoints
             {
-                get => _opt.quantity;
-                set { if (_owner._suppress || (int)value == _opt.quantity) return; _opt.quantity = (byte)Math.Clamp((int)value, 0, 255); Raise(); _owner.Touch(); }
+                get => _opt.Quantity;
+                set { if (_owner._suppress || (int)value == _opt.Quantity) return; _opt.Quantity = (byte)Math.Clamp((int)value, 0, 255); Raise(); _owner.Touch(); }
             }
         }
 

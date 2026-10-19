@@ -20,7 +20,7 @@ namespace DSPRE.Avalonia.Data
         {
             FieldFont font;
             try { font = FieldFont.LoadSystemFont(); }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleGaugeGlyphs.NameBlock", ex); return null; }
             if (font == null) return null;
 
             const int wide = 8 * Tile, tall = 2 * Tile;

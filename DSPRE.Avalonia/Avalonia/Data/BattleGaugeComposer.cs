@@ -154,14 +154,14 @@ namespace DSPRE.Avalonia.Data
         private static bool TryLayout(Kind kind, out Layout layout)
         {
             // The slots are read from the game; these tables are the fallback when its slot tables aren't found.
-            Layout known = kind == Kind.PlayerSingle && RomInfo.gameFamily == RomInfo.GameFamilies.DP ? DiamondPearlPlayerSingle
+            Layout known = kind == Kind.PlayerSingle && RomInfo.GameFamily == RomInfo.GameFamilies.DP ? DiamondPearlPlayerSingle
                          : Layouts.GetValueOrDefault(kind);
             if (known != null && FromRom(kind, known) is Layout read)
             {
                 layout = read;
                 return true;
             }
-            if (kind == Kind.PlayerSingle && RomInfo.gameFamily == RomInfo.GameFamilies.DP)
+            if (kind == Kind.PlayerSingle && RomInfo.GameFamily == RomInfo.GameFamilies.DP)
             {
                 layout = DiamondPearlPlayerSingle;
                 return true;
@@ -175,7 +175,7 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>Where the green health fill starts on screen: Diamond and Pearl's bar begins a tile earlier.</summary>
         public static int HealthFillLeft(Kind kind) =>
-            CentreOf(kind).X + (kind == Kind.PlayerSingle && RomInfo.gameFamily == RomInfo.GameFamilies.DP ? 0 : 8);
+            CentreOf(kind).X + (kind == Kind.PlayerSingle && RomInfo.GameFamily == RomInfo.GameFamilies.DP ? 0 : 8);
 
         /// <summary>What to write on a gauge.</summary>
         public sealed class Showing
@@ -228,7 +228,7 @@ namespace DSPRE.Avalonia.Data
         {
             if (!BattleGaugeText.IsAvailable || !TryLayout(kind, out Layout layout)) return null;
 
-            ScriptNarc narc = new ScriptNarc(RomInfo.DirNames.battleObj);
+            ScriptNarc narc = new ScriptNarc(RomInfo.DirNames.BattleObj);
             if (!narc.Available) return null;
 
             int drawing = BattleObjects.Find(layout.Graphic, "Drawing");
@@ -238,7 +238,7 @@ namespace DSPRE.Avalonia.Data
 
             byte[] tiles;
             try { tiles = GraphicAssets.Unsqueeze(narc.Get(drawing)); }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleGaugeComposer.Build", ex); return null; }
             if (tiles == null || tiles.Length < CharDataAt(tiles) + TileBytes) return null;
 
             WriteTheText(tiles, layout, showing);

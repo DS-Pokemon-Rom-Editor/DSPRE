@@ -133,7 +133,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             return pages.ToArray();
         }
 
-        private readonly TutorialPage[] Pages = BuildPages();
+        private readonly TutorialPage[] _pages = BuildPages();
 
         /// <summary>The recent projects shown under the open buttons.</summary>
         public RecentProjectsViewModel Recents { get; } = new();
@@ -144,7 +144,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             get => _pageIndex;
             set
             {
-                if (value < 0 || value >= Pages.Length || value == _pageIndex) return;
+                if (value < 0 || value >= _pages.Length || value == _pageIndex) return;
                 _pageIndex = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(PageTitle));
@@ -155,22 +155,22 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             }
         }
 
-        public string PageTitle => Pages[_pageIndex].Title;
-        public string PageBody => Pages[_pageIndex].Body;
-        public string PageLabel => $"{_pageIndex + 1} / {Pages.Length}";
+        public string PageTitle => _pages[_pageIndex].Title;
+        public string PageBody => _pages[_pageIndex].Body;
+        public string PageLabel => $"{_pageIndex + 1} / {_pages.Length}";
         public bool CanGoBack => _pageIndex > 0;
-        public bool CanGoNext => _pageIndex < Pages.Length - 1;
+        public bool CanGoNext => _pageIndex < _pages.Length - 1;
 
         public void Back() => PageIndex = _pageIndex - 1;
         public void Next() => PageIndex = _pageIndex + 1;
 
         public bool ShowAtStartup
         {
-            get => SettingsManager.Settings?.showWelcomeOnStartup ?? true;
+            get => SettingsManager.Settings?.ShowWelcomeOnStartup ?? true;
             set
             {
                 if (SettingsManager.Settings == null) return;
-                SettingsManager.Settings.showWelcomeOnStartup = value;
+                SettingsManager.Settings.ShowWelcomeOnStartup = value;
                 SettingsManager.Save();
                 OnPropertyChanged();
             }

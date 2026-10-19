@@ -112,11 +112,11 @@ namespace DSPRE.Avalonia.Data
         {
             if (_ready) return;
             _ready = true;
-            if (!gameDirs.ContainsKey(_dir)) { _path = null; _count = 0; return; }
+            if (!GameDirs.ContainsKey(_dir)) { _path = null; _count = 0; return; }
 
             if (_fromPacked)
             {
-                _path = gameDirs[_dir].packedDir;
+                _path = GameDirs[_dir].packedDir;
                 _count = 0;
                 if (_path == null || !File.Exists(_path)) { _path = null; return; }
                 Narc narc = NarcAPI.Narc.Open(_path);
@@ -127,7 +127,7 @@ namespace DSPRE.Avalonia.Data
 
             _archive = HgEngine.HgEngineOwnedFiles.ArchiveOf(_dir);
             DSPRE.DSUtils.TryUnpackNarcs(new List<DirNames> { _dir });
-            _path = gameDirs[_dir].unpackedDir;
+            _path = GameDirs[_dir].unpackedDir;
             _count = _path != null ? NarcAPI.Narc.MemberCount(_path) : 0;
         }
 

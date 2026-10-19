@@ -68,12 +68,12 @@ namespace DSPRE.Csv
 
         private static object[] Cells(Lists l, int id, PokemonPersonalData d) => new object[]
         {
-            id, NameOf(l.Pokemon, id), NameOf(l.Types, (int)d.type1), NameOf(l.Types, (int)d.type2),
-            d.baseHP, d.baseAtk, d.baseDef, d.baseSpAtk, d.baseSpDef, d.baseSpeed,
-            d.evHP, d.evAtk, d.evDef, d.evSpAtk, d.evSpDef, d.evSpeed,
-            NameOf(l.Abilities, d.firstAbility), NameOf(l.Abilities, d.secondAbility), NameOf(l.Items, d.item1), NameOf(l.Items, d.item2),
-            d.catchRate, d.givenExp, d.genderVec, d.eggSteps, d.baseFriendship, NameOf(l.GrowthCurves, (int)d.growthCurve),
-            NameOf(l.EggGroups, d.eggGroup1), NameOf(l.EggGroups, d.eggGroup2), d.escapeRate, NameOf(l.DexColors, (int)d.color), d.flip,
+            id, NameOf(l.Pokemon, id), NameOf(l.Types, (int)d.Type1), NameOf(l.Types, (int)d.Type2),
+            d.BaseHP, d.BaseAtk, d.BaseDef, d.BaseSpAtk, d.BaseSpDef, d.BaseSpeed,
+            d.EvHP, d.EvAtk, d.EvDef, d.EvSpAtk, d.EvSpDef, d.EvSpeed,
+            NameOf(l.Abilities, d.FirstAbility), NameOf(l.Abilities, d.SecondAbility), NameOf(l.Items, d.Item1), NameOf(l.Items, d.Item2),
+            d.CatchRate, d.GivenExp, d.GenderVec, d.EggSteps, d.BaseFriendship, NameOf(l.GrowthCurves, (int)d.GrowthCurve),
+            NameOf(l.EggGroups, d.EggGroup1), NameOf(l.EggGroups, d.EggGroup2), d.EscapeRate, NameOf(l.DexColors, (int)d.Color), d.Flip,
         };
 
         // A number with no name is written as the number, which the import reads back.
@@ -100,8 +100,8 @@ namespace DSPRE.Csv
             PokemonPersonalData d = new PokemonPersonalData(new MemoryStream(baseData.ToByteArray()));
             bool ok = true;
             int v;
-            if (ok &= c.Name(Type1, _types, out v, (int)baseData.type1)) d.type1 = (PokemonType)v;
-            if (ok &= c.Name(Type2, _types, out v, (int)baseData.type2)) d.type2 = (PokemonType)v;
+            if (ok &= c.Name(Type1, _types, out v, (int)baseData.Type1)) d.Type1 = (PokemonType)v;
+            if (ok &= c.Name(Type2, _types, out v, (int)baseData.Type2)) d.Type2 = (PokemonType)v;
             byte[] stats = new byte[6], evs = new byte[6];
             for (int s = 0; s < 6; s++)
             {
@@ -109,26 +109,26 @@ namespace DSPRE.Csv
                 // Each yield has two bits in the file.
                 if (ok &= c.Number(EvHp + s, 0, 3, out v)) evs[s] = (byte)v;
             }
-            (d.baseHP, d.baseAtk, d.baseDef, d.baseSpAtk, d.baseSpDef, d.baseSpeed) = (stats[0], stats[1], stats[2], stats[3], stats[4], stats[5]);
-            (d.evHP, d.evAtk, d.evDef, d.evSpAtk, d.evSpDef, d.evSpeed) = (evs[0], evs[1], evs[2], evs[3], evs[4], evs[5]);
+            (d.BaseHP, d.BaseAtk, d.BaseDef, d.BaseSpAtk, d.BaseSpDef, d.BaseSpeed) = (stats[0], stats[1], stats[2], stats[3], stats[4], stats[5]);
+            (d.EvHP, d.EvAtk, d.EvDef, d.EvSpAtk, d.EvSpDef, d.EvSpeed) = (evs[0], evs[1], evs[2], evs[3], evs[4], evs[5]);
 
-            int abilityMax = RomInfo.isHGE ? ushort.MaxValue : byte.MaxValue;
-            if (ok &= c.Name(Ability1, _abilities, out v, baseData.firstAbility) && InRange(c, Ability1, v, abilityMax)) d.firstAbility = (ushort)v;
-            if (ok &= c.Name(Ability2, _abilities, out v, baseData.secondAbility) && InRange(c, Ability2, v, abilityMax)) d.secondAbility = (ushort)v;
-            if (ok &= c.Name(Item1, _items, out v, baseData.item1)) d.item1 = (ushort)v;
-            if (ok &= c.Name(Item2, _items, out v, baseData.item2)) d.item2 = (ushort)v;
-            if (ok &= c.Number(CatchRate, 0, 255, out v)) d.catchRate = (byte)v;
-            if (ok &= c.Number(BaseExp, 0, 255, out v)) d.givenExp = (byte)v;
-            if (ok &= c.Number(Gender, 0, 255, out v)) d.genderVec = (byte)v;
-            if (ok &= c.Number(EggSteps, 0, 255, out v)) d.eggSteps = (byte)v;
-            if (ok &= c.Number(Friendship, 0, 255, out v)) d.baseFriendship = (byte)v;
-            if (ok &= c.Name(Growth, _growth, out v, (int)baseData.growthCurve) && InRange(c, Growth, v, 255)) d.growthCurve = (PokemonGrowthCurve)v;
-            if (ok &= c.Name(EggGroup1, _eggGroups, out v, baseData.eggGroup1) && InRange(c, EggGroup1, v, 255)) d.eggGroup1 = (byte)v;
-            if (ok &= c.Name(EggGroup2, _eggGroups, out v, baseData.eggGroup2) && InRange(c, EggGroup2, v, 255)) d.eggGroup2 = (byte)v;
-            if (ok &= c.Number(EscapeRate, 0, 255, out v)) d.escapeRate = (byte)v;
+            int abilityMax = RomInfo.IsHGE ? ushort.MaxValue : byte.MaxValue;
+            if (ok &= c.Name(Ability1, _abilities, out v, baseData.FirstAbility) && InRange(c, Ability1, v, abilityMax)) d.FirstAbility = (ushort)v;
+            if (ok &= c.Name(Ability2, _abilities, out v, baseData.SecondAbility) && InRange(c, Ability2, v, abilityMax)) d.SecondAbility = (ushort)v;
+            if (ok &= c.Name(Item1, _items, out v, baseData.Item1)) d.Item1 = (ushort)v;
+            if (ok &= c.Name(Item2, _items, out v, baseData.Item2)) d.Item2 = (ushort)v;
+            if (ok &= c.Number(CatchRate, 0, 255, out v)) d.CatchRate = (byte)v;
+            if (ok &= c.Number(BaseExp, 0, 255, out v)) d.GivenExp = (byte)v;
+            if (ok &= c.Number(Gender, 0, 255, out v)) d.GenderVec = (byte)v;
+            if (ok &= c.Number(EggSteps, 0, 255, out v)) d.EggSteps = (byte)v;
+            if (ok &= c.Number(Friendship, 0, 255, out v)) d.BaseFriendship = (byte)v;
+            if (ok &= c.Name(Growth, _growth, out v, (int)baseData.GrowthCurve) && InRange(c, Growth, v, 255)) d.GrowthCurve = (PokemonGrowthCurve)v;
+            if (ok &= c.Name(EggGroup1, _eggGroups, out v, baseData.EggGroup1) && InRange(c, EggGroup1, v, 255)) d.EggGroup1 = (byte)v;
+            if (ok &= c.Name(EggGroup2, _eggGroups, out v, baseData.EggGroup2) && InRange(c, EggGroup2, v, 255)) d.EggGroup2 = (byte)v;
+            if (ok &= c.Number(EscapeRate, 0, 255, out v)) d.EscapeRate = (byte)v;
             // The colour shares its byte with the flip flag.
-            if (ok &= c.Name(DexColor, _colors, out v, (int)baseData.color) && InRange(c, DexColor, v, 127)) d.color = (PokemonDexColor)v;
-            if (ok &= c.Flag(Flip, out bool flip)) d.flip = flip;
+            if (ok &= c.Name(DexColor, _colors, out v, (int)baseData.Color) && InRange(c, DexColor, v, 127)) d.Color = (PokemonDexColor)v;
+            if (ok &= c.Flag(Flip, out bool flip)) d.Flip = flip;
             if (ok) c.Record.Value = new Entry(id, d);
         }
 

@@ -237,8 +237,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             public VariableValueTrigger Trigger { get; }
 
             public string Label =>
-                $"{FieldScriptValues.Describe(Trigger.variableToWatch)} = {Trigger.expectedValue}"
-                + $"  ·  script {Trigger.scriptTriggered}";
+                $"{FieldScriptValues.Describe(Trigger.VariableToWatch)} = {Trigger.ExpectedValue}"
+                + $"  ·  script {Trigger.ScriptTriggered}";
 
             private int _value;
             public int Value
@@ -249,7 +249,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     if (_value == value) return;
                     _value = value;
                     PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value)));
-                    _set?.Invoke(Trigger.variableToWatch, value);
+                    _set?.Invoke(Trigger.VariableToWatch, value);
                 }
             }
 
@@ -264,7 +264,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             LevelScriptArrivals.Clear();
             LevelScriptWatchers.Clear();
             foreach (LevelScriptTrigger t in FieldLevelScripts.OnArrival(_levelScripts))
-                LevelScriptArrivals.Add($"{FieldLevelScripts.WhenItRuns(t)}: script {t.scriptTriggered}");
+                LevelScriptArrivals.Add($"{FieldLevelScripts.WhenItRuns(t)}: script {t.ScriptTriggered}");
             foreach (VariableValueTrigger t in FieldLevelScripts.Watchers(_levelScripts))
                 LevelScriptWatchers.Add(new LevelScriptWatcher(t, SetVariable));
             OnPropertyChanged(nameof(HasLevelScripts));
@@ -289,12 +289,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             _firedWatchers.Clear();
             foreach (LevelScriptTrigger t in FieldLevelScripts.OnArrival(_levelScripts))
-                RunWhileLoading(t.scriptTriggered,
-                    $"{FieldLevelScripts.WhenItRuns(t)}, so the map runs script {t.scriptTriggered}.");
+                RunWhileLoading(t.ScriptTriggered,
+                    $"{FieldLevelScripts.WhenItRuns(t)}, so the map runs script {t.ScriptTriggered}.");
 
             // These run before anybody is put on the map, so a flag they set decides who is there.
             foreach (Npc npc in _npcs)
-                if (npc.OnMap == null && npc.Event.flag != 0 && GameState.TryGetFlag(npc.Event.flag, out bool set))
+                if (npc.OnMap == null && npc.Event.Flag != 0 && GameState.TryGetFlag(npc.Event.Flag, out bool set))
                     npc.OnMap = !set;
             Rebuild();
         }
@@ -313,9 +313,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 if (_firedWatchers.Contains(t)) continue;
                 if (!FieldLevelScripts.IsSatisfied(t, VariableValue)) continue;
                 _firedWatchers.Add(t);
-                ScriptLines.Add($"{FieldScriptValues.Describe(t.variableToWatch)} holds {VariableValue(t.variableToWatch)}, "
-                                + $"so the map starts script {t.scriptTriggered}.");
-                RunScript(t.scriptTriggered, "");
+                ScriptLines.Add($"{FieldScriptValues.Describe(t.VariableToWatch)} holds {VariableValue(t.VariableToWatch)}, "
+                                + $"so the map starts script {t.ScriptTriggered}.");
+                RunScript(t.ScriptTriggered, "");
                 return;                          // the engine takes the first one and stops
             }
         }
@@ -514,7 +514,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             foreach (Npc npc in _npcs)
             {
-                StartBesideNames.Add($"Beside overworld {npc.Event.owID}");
+                StartBesideNames.Add($"Beside overworld {npc.Event.OwID}");
                 _startPlaces.Add((FieldInteraction.TileX(npc.Event), FieldInteraction.TileZ(npc.Event)));
             }
 
@@ -522,23 +522,23 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             // well: a trigger is the whole reason to walk onto a particular square.
             if (_events != null)
             {
-                for (int i = 0; i < _events.triggers.Count; i++)
+                for (int i = 0; i < _events.Triggers.Count; i++)
                 {
-                    Trigger t = _events.triggers[i];
-                    StartBesideNames.Add(t.scriptNumber == EventFile.NoScript
+                    Trigger t = _events.Triggers[i];
+                    StartBesideNames.Add(t.ScriptNumber == EventFile.NoScript
                         ? $"Beside trigger {i} with no script"
-                        : $"Beside trigger {i} running script {t.scriptNumber}");
+                        : $"Beside trigger {i} running script {t.ScriptNumber}");
                     _startPlaces.Add((FieldInteraction.TileX(t), FieldInteraction.TileZ(t)));
                 }
-                for (int i = 0; i < _events.warps.Count; i++)
+                for (int i = 0; i < _events.Warps.Count; i++)
                 {
-                    Warp w = _events.warps[i];
+                    Warp w = _events.Warps[i];
                     StartBesideNames.Add($"Beside warp {i}");
                     _startPlaces.Add((FieldInteraction.TileX(w), FieldInteraction.TileZ(w)));
                 }
-                for (int i = 0; i < _events.spawnables.Count; i++)
+                for (int i = 0; i < _events.Spawnables.Count; i++)
                 {
-                    Spawnable sp = _events.spawnables[i];
+                    Spawnable sp = _events.Spawnables[i];
                     StartBesideNames.Add($"Beside spawnable {i}");
                     _startPlaces.Add((FieldInteraction.TileX(sp), FieldInteraction.TileZ(sp)));
                 }
@@ -835,7 +835,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             return GameState.TryGetVar(number, out long v) ? (int)v : -1;
         }
 
-        private Npc NpcById(int id) => _npcs.FirstOrDefault(n => n.Event.owID == id && IsOnMap(n));
+        private Npc NpcById(int id) => _npcs.FirstOrDefault(n => n.Event.OwID == id && IsOnMap(n));
 
         /// <summary>
         /// Sets somebody walking through a movement, and says how long it will take. The script does not
@@ -897,18 +897,18 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 case ScriptEffectKind.ShowObject:
                 {
                     int id = ResolveObject(e.A);
-                        Npc npc = _npcs.FirstOrDefault(n => n.Event.owID == id);
+                        Npc npc = _npcs.FirstOrDefault(n => n.Event.OwID == id);
                     if (npc == null) break;
                     if (e.B == 1)
                     {
                         // AddObject only brings somebody back while their flag is clear.
-                        bool hidden = npc.Event.flag != 0 && (GameState.TryGetFlag(npc.Event.flag, out bool set) ? set : FlagIsSet(npc.Event.flag));
+                        bool hidden = npc.Event.Flag != 0 && (GameState.TryGetFlag(npc.Event.Flag, out bool set) ? set : FlagIsSet(npc.Event.Flag));
                         if (!hidden) npc.OnMap = true;
                     }
                     else
                     {
                         npc.OnMap = false;
-                        if (npc.Event.flag != 0) GameState.SetFlag(npc.Event.flag, true);
+                        if (npc.Event.Flag != 0) GameState.SetFlag(npc.Event.Flag, true);
                     }
                     break;
                 }
@@ -943,11 +943,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             EventFlags.Clear();
             _flagsSet.Clear();
-            if (events?.overworlds == null) return;
+            if (events?.Overworlds == null) return;
 
             // Flag 0 is the one nothing ever sets, so an overworld carrying it is simply always there.
-            foreach (IGrouping<ushort, Overworld> g in events.overworlds.Where(o => o.flag != 0)
-                                               .GroupBy(o => o.flag)
+            foreach (IGrouping<ushort, Overworld> g in events.Overworlds.Where(o => o.Flag != 0)
+                                               .GroupBy(o => o.Flag)
                                                .OrderBy(g => g.Key))
                 EventFlags.Add(new EventFlagSwitch(g.Key, g.Count(), FlagsChanged));
         }
@@ -963,7 +963,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             set { if (Set(ref _cameraId, value)) { OnPropertyChanged(nameof(CameraEntry)); OnPropertyChanged(nameof(CameraDescription)); } }
         }
 
-        private RomInfo.GameFamilies _family = RomInfo.gameFamily;
+        private RomInfo.GameFamilies _family = RomInfo.GameFamily;
 
         /// <summary>Which game is being previewed: the two keep different camera tables and menus.</summary>
         public RomInfo.GameFamilies Family
@@ -1532,7 +1532,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             Warp warp = FieldInteraction.WarpAt(_events, Player.TileX, Player.TileZ);
             if (warp != null)
             {
-                ScriptLines.Add($"A way through to header {warp.header}, warp {warp.anchor}. "
+                ScriptLines.Add($"A way through to header {warp.Header}, warp {warp.Anchor}. "
                                 + "The preview stays put.");
                 OpenDoorAt(Player.TileX, Player.TileZ);
             }
@@ -1541,9 +1541,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (waiting == null) return;
 
             // A trigger only goes off when its variable holds the value it waits for.
-            if (GameState.TryGetVar(waiting.variableWatched, out long held))
+            if (GameState.TryGetVar(waiting.VariableWatched, out long held))
             {
-                if (held == waiting.expectedVarValue) { ScriptLines.Clear(); RunScript(waiting.scriptNumber, "The trigger goes off."); }
+                if (held == waiting.ExpectedVarValue) { ScriptLines.Clear(); RunScript(waiting.ScriptNumber, "The trigger goes off."); }
                 return;
             }
 
@@ -1553,10 +1553,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 Kind = ScriptQuestion.QuestionKind.YesNo,
                 FromPreview = true,
                 Subject = "the trigger on this tile",
-                Prompt = (waiting.scriptNumber == EventFile.NoScript
+                Prompt = (waiting.ScriptNumber == EventFile.NoScript
                             ? "There is a trigger here with no script. It goes off when "
-                            : $"There is a trigger here. It runs script {waiting.scriptNumber} when ")
-                       + $"{FieldScriptValues.Describe(waiting.variableWatched)} is {waiting.expectedVarValue}.",
+                            : $"There is a trigger here. It runs script {waiting.ScriptNumber} when ")
+                       + $"{FieldScriptValues.Describe(waiting.VariableWatched)} is {waiting.ExpectedVarValue}.",
                 Options = new[] { ("Set it off", 1L), ("Leave it", 0L) },
             };
             ScriptLines.Add(Question.Prompt);
@@ -1584,7 +1584,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (npc != null)
             {
                 _talkTarget = npc;
-                RunScript(npc.Event.scriptNumber, $"You talk to overworld {npc.Event.owID}.");
+                RunScript(npc.Event.ScriptNumber, $"You talk to overworld {npc.Event.OwID}.");
                 return;
             }
 
@@ -1592,10 +1592,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (sign != null)
             {
                 _talkTarget = null;
-                string what = (SpawnableKind)sign.type == SpawnableKind.Signboard ? "read the sign"
-                            : (SpawnableKind)sign.type == SpawnableKind.HiddenItem ? "find something hidden"
+                string what = (SpawnableKind)sign.Type == SpawnableKind.Signboard ? "read the sign"
+                            : (SpawnableKind)sign.Type == SpawnableKind.HiddenItem ? "find something hidden"
                             : "look at it";
-                RunScript(sign.scriptNumber, $"You {what}.");
+                RunScript(sign.ScriptNumber, $"You {what}.");
                 return;
             }
 
@@ -1645,7 +1645,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             ConfigureWalker(_walker);
             _walker.Begin(_walkerStartId?.Invoke(scriptNumber) ?? scriptNumber);
             // The engine notes who was spoken to before the script's first command runs.
-            if (_talkTarget != null) GameState.SetVar(ScriptWalker.LastTalkedVar, _talkTarget.Event.owID);
+            if (_talkTarget != null) GameState.SetVar(ScriptWalker.LastTalkedVar, _talkTarget.Event.OwID);
 
             Question = null;
             _shake = null;
@@ -1737,9 +1737,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 if (value != 0)
                 {
                     // Setting it off means the variable held what it was waiting for.
-                    GameState.SetVar(trigger.variableWatched, trigger.expectedVarValue);
+                    GameState.SetVar(trigger.VariableWatched, trigger.ExpectedVarValue);
                     ScriptLines.Clear();
-                    RunScript(trigger.scriptNumber, "The trigger goes off.");
+                    RunScript(trigger.ScriptNumber, "The trigger goes off.");
                 }
                 else
                 {
@@ -2023,8 +2023,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             // People are placed with the same normalised coordinates the scene is drawn in, so a tile has
             // to be measured in those too.
-            _tileX = scene.CellStrideX / MapFile.mapSize * scene.Scale;
-            _tileZ = scene.CellStrideZ / MapFile.mapSize * scene.Scale;
+            _tileX = scene.CellStrideX / MapFile.MapSize * scene.Scale;
+            _tileZ = scene.CellStrideZ / MapFile.MapSize * scene.Scale;
 
             // The animation drives materials by name (river, sea_on and so on), the same way the game
             // does. Match those names to the parts of the scene built from them.
@@ -2044,26 +2044,26 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _timeBuildings = _buildings.TimeBuildings;
 
             // People: every overworld gets its own motion, seeded so replaying the preview looks the same.
-            if (events?.overworlds != null)
+            if (events?.Overworlds != null)
             {
                 int n = 0;
-                foreach (Overworld ow in events.overworlds)
+                foreach (Overworld ow in events.Overworlds)
                 {
-                    OverworldMovement move = OverworldMovements.Find(RomInfo.gameFamily, ow.movement);
-                    MoveFacing facing = (MoveFacing)Math.Min(Math.Max((int)ow.orientation, 0), 3);
+                    OverworldMovement move = OverworldMovements.Find(RomInfo.GameFamily, ow.Movement);
+                    MoveFacing facing = (MoveFacing)Math.Min(Math.Max((int)ow.Orientation, 0), 3);
                     // param1 on the looking trainer types counts steps walked, not frames, so it
                     // doesn't change the idle pace.
                     const int interval = 0;
                     // The engine refuses a step into a closed-off tile, so the preview asks the same
                     // question, in whole-matrix tiles measured from where the event stands.
-                    int homeX = ow.xMatrixPosition * MapFile.mapSize + ow.xMapPosition;
-                    int homeZ = ow.yMatrixPosition * MapFile.mapSize + ow.yMapPosition;
+                    int homeX = ow.XMatrixPosition * MapFile.MapSize + ow.XMapPosition;
+                    int homeZ = ow.YMatrixPosition * MapFile.MapSize + ow.YMapPosition;
                     Npc npc = new Npc { Event = ow };
                     Func<int, int, bool> blocked = (dx, dz) =>
                         (collision != null && !collision.IsEmpty && collision.IsBlocked(homeX + dx, homeZ + dz))
                         || SomebodyOn(homeX + dx, homeZ + dz, npc, true);
 
-                    npc.Motion = new OverworldAnimator(move, facing, ow.xRange, ow.yRange, interval,
+                    npc.Motion = new OverworldAnimator(move, facing, ow.XRange, ow.YRange, interval,
                                                        seed + n++, blocked);
                     _npcs.Add(npc);
                 }
@@ -2236,7 +2236,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// </summary>
         private FieldPlayer MakePlayer()
         {
-            bool haveEvents = _events?.overworlds != null && _events.overworlds.Count > 0;
+            bool haveEvents = _events?.Overworlds != null && _events.Overworlds.Count > 0;
             if (!haveEvents && StartTile == null) return null;
 
             // Start where the watcher asked, if they picked somewhere; otherwise stand in the middle of
@@ -2245,14 +2245,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (StartTile != null) { cx = StartTile.Value.x; cz = StartTile.Value.z; }
             else
             {
-                cx = (int)_events.overworlds.Average(o => o.xMatrixPosition * MapFile.mapSize + o.xMapPosition);
-                cz = (int)_events.overworlds.Average(o => o.yMatrixPosition * MapFile.mapSize + o.yMapPosition);
+                cx = (int)_events.Overworlds.Average(o => o.XMatrixPosition * MapFile.MapSize + o.XMapPosition);
+                cz = (int)_events.Overworlds.Average(o => o.YMatrixPosition * MapFile.MapSize + o.YMapPosition);
             }
 
             bool Free(int x, int z) => CanStand(x, z);
 
             // Spiral out from the middle until an open tile turns up.
-            for (int r = 0; r < MapFile.mapSize; r++)
+            for (int r = 0; r < MapFile.MapSize; r++)
                 for (int dz = -r; dz <= r; dz++)
                     for (int dx = -r; dx <= r; dx++)
                     {
@@ -2332,7 +2332,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 {
                     if (shot.Joint != null)
                         foreach (KeyValuePair<int, float[]> kv in NsbmdGeometry.RebuildBuilding(_scene, shot.Building,
-                                     (id, part) => shot.Joint.MatrixFor(id, shot.Frame, part, shot.Building.Model?.modelScale ?? 1f)))
+                                     (id, part) => shot.Joint.MatrixFor(id, shot.Frame, part, shot.Building.Model?.ModelScale ?? 1f)))
                             moved[kv.Key] = kv.Value;
 
                     if (shot.Pattern != null)
@@ -2351,9 +2351,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 {
                     if (!IsOnMap(npc) || !npc.Motion.Visible) continue;
                     // Signposts, the book and the like are models, already in the scene the editor built.
-                    if (DSPRE.ROMFiles.Overworld3DObjects.IsModel(npc.Event.overlayTableEntry)) continue;
-                    OverworldSprites.SpritePixels pix = OverworldSprites.Get(npc.Event.overlayTableEntry, (ushort)npc.Motion.Facing,
-                                                   PictureFor(npc.Event.overlayTableEntry, npc.Motion.Facing, npc.Motion.Cycle));
+                    if (DSPRE.ROMFiles.Overworld3DObjects.IsModel(npc.Event.OverlayTableEntry)) continue;
+                    OverworldSprites.SpritePixels pix = OverworldSprites.Get(npc.Event.OverlayTableEntry, (ushort)npc.Motion.Facing,
+                                                   PictureFor(npc.Event.OverlayTableEntry, npc.Motion.Facing, npc.Motion.Cycle));
                     if (pix == null || pix.Width <= 0 || pix.Height <= 0) continue;
                     float halfW = HalfWidthOf(pix), halfH = HalfHeightOf(pix);
                     sprites.Add(new NsbmdGlControl.SpriteInstance

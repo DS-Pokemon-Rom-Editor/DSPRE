@@ -219,14 +219,14 @@ namespace DSPRE.ROMFiles
             foreach (ScriptAction action in actions)
             {
                 if (action == null) continue;
-                string name = StripCount(action.name);
-                if (action.id == 0xFE || (action.id == null && IsEnd(name))) break;
+                string name = StripCount(action.Name);
+                if (action.Id == 0xFE || (action.Id == null && IsEnd(name))) break;
 
                 // The number means the same thing whichever names the database gives the actions.
-                FieldMovementStep step = action.id != null ? FromId(action.id.Value, name) : ParseOne(name);
+                FieldMovementStep step = action.Id != null ? FromId(action.Id.Value, name) : ParseOne(name);
                 if (step == null) break;
 
-                int times = Math.Max(1, (int)(action.repetitionCount ?? 1));
+                int times = Math.Max(1, (int)(action.RepetitionCount ?? 1));
                 for (int i = 0; i < times && steps.Count < 512; i++)
                     steps.Add(new FieldMovementStep
                     {

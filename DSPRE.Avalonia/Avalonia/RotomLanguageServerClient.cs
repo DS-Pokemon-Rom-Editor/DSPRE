@@ -358,7 +358,7 @@ namespace DSPRE.Avalonia
                 // would otherwise surface as a confusing "rotom-lsp open failed" warning on every ROM switch.
                 if (!_disposed)
                 {
-                    try { _writeLock.Release(); } catch (ObjectDisposedException) { }
+                    try { _writeLock.Release(); } catch (ObjectDisposedException) { }   // the lock is already gone when the client was disposed mid-send
                 }
             }
         }
@@ -375,7 +375,7 @@ namespace DSPRE.Avalonia
                     await HandleMessageAsync(message.RootElement);
                 }
             }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException) { }   // cancelled on purpose when the client shuts down
             catch (Exception ex)
             {
                 if (!_cts.IsCancellationRequested)
@@ -565,7 +565,7 @@ namespace DSPRE.Avalonia
         {
             if (string.IsNullOrWhiteSpace(uri)) return "";
             try { return new Uri(uri).LocalPath; }
-            catch { return uri; }
+            catch (Exception ex) { AppLogger.WarnOnce("RotomLanguageServerClient.LocalPath", ex); return uri; }
         }
 
         private static string SeverityName(int severity)
@@ -600,7 +600,7 @@ namespace DSPRE.Avalonia
                     _process.WaitForExit(3000);
                 }
             }
-            catch { }
+            catch { }   // the server may have exited on its own already
 
             _process?.Dispose();
             _writeLock.Dispose();

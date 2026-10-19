@@ -44,19 +44,19 @@ namespace DSPRE.ROMFiles
         private static bool GameHas(GameFamilies? onlyFrom) => onlyFrom switch
         {
             null => true,
-            GameFamilies.Plat => gameFamily == GameFamilies.Plat || gameFamily == GameFamilies.HGSS,
-            _ => gameFamily == onlyFrom,
+            GameFamilies.Plat => GameFamily == GameFamilies.Plat || GameFamily == GameFamilies.HGSS,
+            _ => GameFamily == onlyFrom,
         };
 
         // Diamond and Pearl have only the Deoxys and Wormadam form entries.
         private static int FormEntriesInThisGame =>
-            gameFamily == GameFamilies.DP ? 5 : PokeDatabase.PersonalData.personalExtraFiles.Length;
+            GameFamily == GameFamilies.DP ? 5 : PokeDatabase.PersonalData.ExtraFiles.Length;
 
         /// <summary>What an icon file is, or null for the shared files and the empty species 0 picture.</summary>
         public static Icon Describe(int file)
         {
             if (file <= SharedFiles) return null;
-            if (isHGE || file < EggFile) return new Icon { File = file, Species = file - SharedFiles, EditorId = file - SharedFiles };
+            if (IsHGE || file < EggFile) return new Icon { File = file, Species = file - SharedFiles, EditorId = file - SharedFiles };
             if (file == EggFile) return new Icon { File = file, IsEgg = true, Form = "Egg", EditorId = EggEntry };
             if (file == ManaphyEggFile)
                 return new Icon { File = file, Species = ManaphySpecies, IsEgg = true, Form = "Egg", EditorId = ManaphySpecies };
@@ -73,9 +73,9 @@ namespace DSPRE.ROMFiles
         /// <summary>A form with a Pokémon Editor entry of its own opens that entry, any other its species.</summary>
         private static int EditorEntry(int file, int species)
         {
-            PokeDatabase.PersonalData.PersonalExtraFiles[] extras = PokeDatabase.PersonalData.personalExtraFiles;
+            PokeDatabase.PersonalData.PersonalExtraFiles[] extras = PokeDatabase.PersonalData.ExtraFiles;
             for (int i = 0; i < FormEntriesInThisGame && i < extras.Length; i++)
-                if (extras[i].iconId == file - SharedFiles) return NameBankEntries + i;
+                if (extras[i].IconId == file - SharedFiles) return NameBankEntries + i;
             return species;
         }
 

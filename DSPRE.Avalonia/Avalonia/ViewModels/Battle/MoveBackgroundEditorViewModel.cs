@@ -83,7 +83,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             int keep = _selected;
             if (!MoveBackgroundTable.TryLoad(out _table, out string error)) { _table = null; StatusText = error; return; }
             _saved = _table.Rows.Select(r => r.ToArray()).ToArray();
-            ScriptNarc narc = new ScriptNarc(DirNames.battleBg);
+            ScriptNarc narc = new ScriptNarc(DirNames.BattleBg);
             ArchiveMax = narc.Available ? Math.Max(0, narc.Count - 1) : 65535;
             OnPropertyChanged(nameof(ArchiveMax));
             RebuildList();
@@ -176,14 +176,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     try { _table.Save(members); return null; }
                     catch (InvalidOperationException e) { return e.Message; }
                 });
-                if (!saved) { if (error != null) await DialogHelper.ShowError("The move backgrounds were not saved:\n" + error, "Move backgrounds"); return false; }
+                if (!saved) { if (error != null) await DialogHelper.ShowErrorAsync("The move backgrounds were not saved:\n" + error, "Move backgrounds"); return false; }
             }
             else
             {
                 try { _table.Save(members); }
                 catch (Exception e) when (e is InvalidOperationException || e is System.IO.IOException || e is UnauthorizedAccessException)
                 {
-                    await DialogHelper.ShowError("The move backgrounds were not saved:\n" + e.Message, "Move backgrounds");
+                    await DialogHelper.ShowErrorAsync("The move backgrounds were not saved:\n" + e.Message, "Move backgrounds");
                     return false;
                 }
             }

@@ -48,7 +48,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _table = FriendshipTable.Load();
             _saved = _table.ToBytes();
             for (int e = 0; e < FriendshipTable.Events; e++)
-                if (e != 9 || gameFamily != GameFamilies.HGSS)   // HeartGold has no Contests
+                if (e != 9 || GameFamily != GameFamilies.HGSS)   // HeartGold has no Contests
                     Rows.Add(new RowViewModel(this, e));
             StartUndo();
         }
@@ -114,7 +114,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try { _table.Save(); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
             {
-                await DialogHelper.ShowError("The friendship changes were not saved:\n" + e.Message, "Friendship changes error");
+                await DialogHelper.ShowErrorAsync("The friendship changes were not saved:\n" + e.Message, "Friendship changes error");
                 return false;
             }
             _saved = _table.ToBytes();

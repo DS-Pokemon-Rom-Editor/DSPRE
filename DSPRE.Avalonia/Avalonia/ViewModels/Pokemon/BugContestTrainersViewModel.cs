@@ -108,7 +108,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string path = Filesystem.GetBugContestTrainerPath();
             try
             {
-                _file = gameFamily != GameFamilies.HGSS ? null : BugContestTrainerFile.Load(path);
+                _file = GameFamily != GameFamilies.HGSS ? null : BugContestTrainerFile.Load(path);
                 _unavailable = _file == null ? "The Bug-Catching Contest exists only in HeartGold and SoulSilver." : null;
             }
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is UnauthorizedAccessException)
@@ -157,7 +157,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_file == null || !HasUnsavedChanges) return;
             if (HasProblems)
             {
-                await DialogHelper.ShowError($"The contest opponents were not saved:\n{Problems}", "Bug Contest opponents error");
+                await DialogHelper.ShowErrorAsync($"The contest opponents were not saved:\n{Problems}", "Bug Contest opponents error");
                 return;
             }
             try
@@ -166,7 +166,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError($"The contest opponents were not saved:\n{e.Message}", "Bug Contest opponents error");
+                await DialogHelper.ShowErrorAsync($"The contest opponents were not saved:\n{e.Message}", "Bug Contest opponents error");
                 return;
             }
             _saved = _file.ToBytes();

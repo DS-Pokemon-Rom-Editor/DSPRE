@@ -113,7 +113,7 @@ namespace DSPRE.ROMFiles
         internal BattleMusicTables(bool fromHgEngineSource = false) => FromHgEngineSource = fromHgEngineSource;
 
         // Every dump's combo table is measured; Diamond and Pearl still refuse a table whose two pointers disagree.
-        public static bool IsSupported => gameFamily == GameFamilies.HGSS || gameFamily == GameFamilies.Plat || gameFamily == GameFamilies.DP;
+        public static bool IsSupported => GameFamily == GameFamilies.HGSS || GameFamily == GameFamilies.Plat || GameFamily == GameFamilies.DP;
 
         // ── Selection ────────────────────────────────────────────────────────────────────────────
 
@@ -156,19 +156,19 @@ namespace DSPRE.ROMFiles
 
         /// <summary>DP/Pt: the wild species the selection code gives their own combo. Empty for HGSS, which keeps a table.</summary>
         public IReadOnlyDictionary<int, int> CodeSpeciesCombos =>
-            gameFamily == GameFamilies.DP ? DpSpeciesCombo : gameFamily == GameFamilies.Plat ? PtSpeciesCombo : new Dictionary<int, int>();
+            GameFamily == GameFamilies.DP ? DpSpeciesCombo : GameFamily == GameFamilies.Plat ? PtSpeciesCombo : new Dictionary<int, int>();
 
         /// <summary>The theme for a battle against this trainer class, or -1.</summary>
         public int TrainerSequence(int trainerClass, bool kanto = false)
         {
             // The class intros patch replaces the switch; each class's row holds its music.
-            if (gameFamily != GameFamilies.HGSS && ClassJumps == null && ClassIntroPatch.ReadRows() is List<ClassIntroPatch.Row> rows)
+            if (GameFamily != GameFamilies.HGSS && ClassJumps == null && ClassIntroPatch.ReadRows() is List<ClassIntroPatch.Row> rows)
                 return trainerClass >= 0 && trainerClass < rows.Count ? rows[trainerClass].Music : -1;
             if (ClassJumps != null)
                 return ComboSequence(ClassJumps.ComboOf(trainerClass));
-            if (gameFamily == GameFamilies.DP)
+            if (GameFamily == GameFamilies.DP)
                 return ComboSequence(DpClassCombo.TryGetValue(trainerClass, out int d) ? d : DpNormalTrainer);
-            if (gameFamily == GameFamilies.Plat)
+            if (GameFamily == GameFamilies.Plat)
                 return ComboSequence(PtClassCombo.TryGetValue(trainerClass, out int c) ? c : PtNormalTrainer);
 
             int combo = HgssTrainerCombo;
@@ -180,9 +180,9 @@ namespace DSPRE.ROMFiles
         /// <summary>The theme for a wild battle with this species, or -1.</summary>
         public int WildSequence(int species, bool kanto = false)
         {
-            if (gameFamily == GameFamilies.DP)
+            if (GameFamily == GameFamilies.DP)
                 return ComboSequence(DpSpeciesCombo.TryGetValue(species, out int d) ? d : DpNormalWild);
-            if (gameFamily == GameFamilies.Plat)
+            if (GameFamily == GameFamilies.Plat)
                 return ComboSequence(PtSpeciesCombo.TryGetValue(species, out int c) ? c : PtNormalWild);
 
             int combo = HgssWildCombo;
@@ -205,7 +205,7 @@ namespace DSPRE.ROMFiles
         public static BattleMusicTables Load()
         {
             if (!IsSupported) return null;
-            if (gameFamily == GameFamilies.HGSS && HgEngineMusicTables.TablesInSource) return HgEngineMusicTables.ReadBattle();
+            if (GameFamily == GameFamilies.HGSS && HgEngineMusicTables.TablesInSource) return HgEngineMusicTables.ReadBattle();
             return LoadRom();
         }
 
@@ -213,32 +213,32 @@ namespace DSPRE.ROMFiles
         public static BattleMusicTables LoadRom()
         {
             if (!IsSupported) return null;
-            if (isHGE && BitConverter.ToUInt32(ARM9.ReadBytes(effectsComboTableOffsetToRAMAddress, 4), 0) >= synthOverlayLoadAddress) return null;
+            if (IsHGE && BitConverter.ToUInt32(ARM9.ReadBytes(EffectsComboTableOffsetToRAMAddress, 4), 0) >= SynthOverlayLoadAddress) return null;
             BattleMusicTables t = new BattleMusicTables();
 
-            bool hgss = gameFamily == GameFamilies.HGSS;
-            if (gameFamily == GameFamilies.DP && !DpPointersAgree()) return null;
-            int comboCount = hgss ? ARM9.ReadByte(effectsComboTableOffsetToSizeLimiter)
-                : gameFamily == GameFamilies.DP ? DpComboCount : PtNormalWild + 1;
-            if (!Locate(t.Combos, effectsComboTableOffsetToRAMAddress, comboCount * 4)) return null;
+            bool hgss = GameFamily == GameFamilies.HGSS;
+            if (GameFamily == GameFamilies.DP && !DpPointersAgree()) return null;
+            int comboCount = hgss ? ARM9.ReadByte(EffectsComboTableOffsetToSizeLimiter)
+                : GameFamily == GameFamilies.DP ? DpComboCount : PtNormalWild + 1;
+            if (!Locate(t.Combos, EffectsComboTableOffsetToRAMAddress, comboCount * 4)) return null;
             using (DSUtils.EasyReader r = new DSUtils.EasyReader(t.Combos.Path, t.Combos.Start))
                 for (int i = 0; i < comboCount; i++) t.Combos.Rows.Add((r.ReadUInt16(), r.ReadUInt16()));
 
             if (hgss)
             {
-                if (!ReadPacked(t.Classes, vsTrainerEntryTableOffsetToRAMAddress, ARM9.ReadByte(vsTrainerEntryTableOffsetToSizeLimiter))
-                    || !ReadPacked(t.Species, vsPokemonEntryTableOffsetToRAMAddress, ARM9.ReadByte(vsPokemonEntryTableOffsetToSizeLimiter)))
+                if (!ReadPacked(t.Classes, VsTrainerEntryTableOffsetToRAMAddress, ARM9.ReadByte(VsTrainerEntryTableOffsetToSizeLimiter))
+                    || !ReadPacked(t.Species, VsPokemonEntryTableOffsetToRAMAddress, ARM9.ReadByte(VsPokemonEntryTableOffsetToSizeLimiter)))
                     return null;
             }
 
             VsIntroSites sites = RomLocator.VsIntroSites;
-            uint musicLiteral = effectsComboTableSecondPointerOffset != 0 ? effectsComboTableSecondPointerOffset
+            uint musicLiteral = EffectsComboTableSecondPointerOffset != 0 ? EffectsComboTableSecondPointerOffset
                 : sites != null && sites.ComboMusicLiteral >= 0 ? (uint)sites.ComboMusicLiteral : 0;
             if (musicLiteral != 0)
                 t.MusicPointerAgrees = BitConverter.ToUInt32(ARM9.ReadBytes(musicLiteral, 4), 0)
-                    == BitConverter.ToUInt32(ARM9.ReadBytes(effectsComboTableOffsetToRAMAddress, 4), 0) + 2;
-            if (!hgss && ClassJumpSite is (int table, int count) && File.Exists(arm9Path))
-                t.ClassJumps = ClassJumpTable.Decode(File.ReadAllBytes(arm9Path), table, count);
+                    == BitConverter.ToUInt32(ARM9.ReadBytes(EffectsComboTableOffsetToRAMAddress, 4), 0) + 2;
+            if (!hgss && ClassJumpSite is (int table, int count) && File.Exists(Arm9Path))
+                t.ClassJumps = ClassJumpTable.Decode(File.ReadAllBytes(Arm9Path), table, count);
             return t;
         }
 
@@ -268,8 +268,8 @@ namespace DSPRE.ROMFiles
 
         // A second pointer sits two bytes into the same table; if they disagree, the layout is not the known one.
         private static bool DpPointersAgree() =>
-            BitConverter.ToUInt32(ARM9.ReadBytes(effectsComboTableSecondPointerOffset, 4), 0)
-            == BitConverter.ToUInt32(ARM9.ReadBytes(effectsComboTableOffsetToRAMAddress, 4), 0) + 2;
+            BitConverter.ToUInt32(ARM9.ReadBytes(EffectsComboTableSecondPointerOffset, 4), 0)
+            == BitConverter.ToUInt32(ARM9.ReadBytes(EffectsComboTableOffsetToRAMAddress, 4), 0) + 2;
 
         // A row is an id in the low 10 bits and a combo in the high 6.
         private static bool ReadPacked(Table<(int, int)> table, uint pointerOffset, int count)
@@ -291,12 +291,12 @@ namespace DSPRE.ROMFiles
         {
             uint ram = BitConverter.ToUInt32(ARM9.ReadBytes(pointerOffset, 4), 0);
             (int region, int offset) = RamAddress.Find(ram, length,
-                RamAddress.Synthetic(File.Exists(Filesystem.expArmPath) ? new FileInfo(Filesystem.expArmPath).Length : 0),
-                RamAddress.Arm9(new FileInfo(arm9Path).Length));
+                RamAddress.Synthetic(File.Exists(Filesystem.ExpArmPath) ? new FileInfo(Filesystem.ExpArmPath).Length : 0),
+                RamAddress.Arm9(new FileInfo(Arm9Path).Length));
             if (region < 0) return false;
             table.Repointed = region == 0;
             table.Start = (uint)offset;
-            table.Path = table.Repointed ? Filesystem.expArmPath : arm9Path;
+            table.Path = table.Repointed ? Filesystem.ExpArmPath : Arm9Path;
             return true;
         }
     }

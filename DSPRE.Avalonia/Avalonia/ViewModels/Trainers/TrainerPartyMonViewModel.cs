@@ -131,7 +131,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
     public class TrainerPartyMonViewModel : INotifyPropertyChanged
     {
         // HGSS carries a slot's set gender or ability into the natures of the slots after it, so order matters there.
-        private static string OrderNote => gameFamily == GameFamilies.HGSS ? "\nA set gender or ability changes the natures of the Pokémon after it." : "";
+        private static string OrderNote => GameFamily == GameFamilies.HGSS ? "\nA set gender or ability changes the natures of the Pokémon after it." : "";
         public string MoveUpTip => "Move up the party" + OrderNote;
         public string MoveDownTip => "Move down the party" + OrderNote;
 
@@ -266,7 +266,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private static byte GenderRatio(int species)
         {
             if (species <= 0) return 255;
-            try { return new PokemonPersonalData(species).genderVec; }
+            try { return new PokemonPersonalData(species).GenderVec; }
             catch (Exception e) when (e is System.IO.IOException || e is ArgumentException) { return 127; }
         }
 
@@ -319,7 +319,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private static string TypeName(int type)
         {
             try { string[] names = RomInfo.GetTypeNames(); return type < names.Length ? names[type] : $"Type {type}"; }
-            catch { return $"Type {type}"; }
+            catch (Exception ex) { AppLogger.WarnOnce("TrainerPartyMonViewModel.TypeName", ex); return $"Type {type}"; }
         }
         private string _ivText = "";
         public string IvText { get => _ivText; private set => Set(ref _ivText, value); }
@@ -341,7 +341,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         /// <summary>Shows the nature, IVs and nature choices a personality gives, and the default gender and ability.</summary>
         public void ShowPersonality(uint pid, uint defaultPid, IReadOnlyList<NatureChoice> choices, IReadOnlyList<DefaultMove> defaultMoves)
         {
-            NatureText = DVCalculator.Natures[DVCalculator.getNatureFromPID(pid)];
+            NatureText = DVCalculator.Natures[DVCalculator.GetNatureFromPID(pid)];
             IvText = $"{Iv}/31";
             OnPropertyChanged(nameof(HiddenPowerType)); OnPropertyChanged(nameof(HiddenPowerPower));
             OnPropertyChanged(nameof(HiddenPowerIcon)); OnPropertyChanged(nameof(HiddenPowerTip));
@@ -672,7 +672,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 RawImage gdi = DSUtils.GetFormPokePicRaw(_speciesIndex, (int)_formId, 32, 32);
                 PokemonIcon = ImageConverter.ToAvaloniaBitmap(gdi);
             }
-            catch { PokemonIcon = null; }
+            catch (Exception ex) { AppLogger.WarnOnce("TrainerPartyMonViewModel.UpdateIcon", ex); PokemonIcon = null; }
         }
     }
 }

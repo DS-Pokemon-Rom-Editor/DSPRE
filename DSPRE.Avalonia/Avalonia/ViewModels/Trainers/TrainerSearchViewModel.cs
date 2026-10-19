@@ -98,15 +98,15 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     {
                         TrainerFile t = TrainerRecords.Load(i);
                         List<int> species = new List<int>(), items = new List<int>();
-                        for (int m = 0; m < t.trp.partyCount; m++)
+                        for (int m = 0; m < t.Trp.PartyCount; m++)
                         {
-                            PartyPokemon mon = t.party[m];
-                            if (mon?.pokeID is ushort s) species.Add(s);
-                            if (mon?.heldItem is ushort h) items.Add(h);
+                            PartyPokemon mon = t.Party[m];
+                            if (mon?.PokeID is ushort s) species.Add(s);
+                            if (mon?.HeldItem is ushort h) items.Add(h);
                         }
                         int ai = 0;
-                        for (int b = 0; b < t.trp.AI.Length && b < 31; b++) if (t.trp.AI[b]) ai |= 1 << b;
-                        facts[i] = new Facts(t.trp.trainerClass, t.trp.partyCount, t.trp.doubleBattle, t.trp.chooseMoves, ai, species.ToArray(), items.ToArray());
+                        for (int b = 0; b < t.Trp.AI.Length && b < 31; b++) if (t.Trp.AI[b]) ai |= 1 << b;
+                        facts[i] = new Facts(t.Trp.TrainerClass, t.Trp.PartyCount, t.Trp.DoubleBattle, t.Trp.ChooseMoves, ai, species.ToArray(), items.ToArray());
                     }
                     catch (Exception e) when (e is IOException || e is ArgumentException || e is IndexOutOfRangeException) { facts[i] = null; }
                 }

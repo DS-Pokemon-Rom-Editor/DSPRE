@@ -66,7 +66,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private bool _suppress;
 
         public const string Title = "VS Intro Editor";
-        private const DirNames Archive = DirNames.encounterEffectGraphics;
+        private const DirNames Archive = DirNames.EncounterEffectGraphics;
 
         public VsIntroEditorViewModel() { }
 
@@ -76,15 +76,15 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             // With the class metadata patch the stock tables are retired, and no longer read as they were.
             if (!DetectClassRecords()) _t = VsIntroTables.Load(Part.Trainers);
             IsClassIntroPatch = _t?.ClassesInPatch == true;
-            List<DirNames> dirs = new List<DirNames> { Archive, DirNames.textArchives };
-            if (gameFamily == GameFamilies.Plat || IsClassIntroPatch) dirs.Add(DirNames.trainerGraphics);
+            List<DirNames> dirs = new List<DirNames> { Archive, DirNames.TextArchives };
+            if (GameFamily == GameFamilies.Plat || IsClassIntroPatch) dirs.Add(DirNames.TrainerGraphics);
             DSUtils.TryUnpackNarcs(dirs);
             _names = VsIntroNames.Read();
             _art = new ScriptNarc(Archive);
             _artCount = _art.Available ? _art.Count : 0;
             _kinds = Enumerable.Range(0, _artCount)
-                               .Select(i => { try { return GraphicAssets.Identify(_art.Get(i)); } catch { return Kind.Unknown; } }).ToArray();
-            try { _font = FieldFont.LoadSystemFont(); } catch { _font = null; }
+                               .Select(i => { try { return GraphicAssets.Identify(_art.Get(i)); } catch (Exception ex) { AppLogger.WarnOnce("VsIntroEditorViewModel.Load", ex); return Kind.Unknown; } }).ToArray();
+            try { _font = FieldFont.LoadSystemFont(); } catch (Exception ex) { AppLogger.WarnOnce("VsIntroEditorViewModel.Load", ex); _font = null; }
             _preview = new VsIntroPreview(ArtBytes, _font);
             LoadMotion();
             if (IsClassRecords) { LoadClassRecords(); LoadTimings(); }
@@ -490,8 +490,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (!IsPlatinum || trainerClass < 0) return null;
             if (_classColours.TryGetValue(trainerClass, out ushort[] c)) return c;
-            try { c = NitroBgCodec.ReadColours(new ScriptNarc(DirNames.trainerGraphics).Get(trainerClass * 5 + 1)); }
-            catch { c = null; }
+            try { c = NitroBgCodec.ReadColours(new ScriptNarc(DirNames.TrainerGraphics).Get(trainerClass * 5 + 1)); }
+            catch (Exception ex) { AppLogger.WarnOnce("VsIntroEditorViewModel.ClassColours", ex); c = null; }
             if (c != null && c.Length == 0) c = null;
             return _classColours[trainerClass] = c;
         }
@@ -776,7 +776,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 (bool saved, string error) = await HgEngineSave.RunAsync(() => { _t.Save(); return null; });
                 if (!saved)
                 {
-                    if (error != null) await DialogHelper.ShowError("The VS intros were not saved:\n" + error, Title);
+                    if (error != null) await DialogHelper.ShowErrorAsync("The VS intros were not saved:\n" + error, Title);
                     return false;
                 }
             }
@@ -785,7 +785,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 try { _t.Save(); }
                 catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
                 {
-                    await DialogHelper.ShowError("The VS intros were not saved:\n" + e.Message, Title);
+                    await DialogHelper.ShowErrorAsync("The VS intros were not saved:\n" + e.Message, Title);
                     return false;
                 }
             }
@@ -806,7 +806,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             try { _t = VsIntroTables.Load(Part.Trainers); }
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException)
             {
-                _ = DialogHelper.ShowError("The saved VS intros couldn't be read back:\n" + e.Message, Title);
+                _ = DialogHelper.ShowErrorAsync("The saved VS intros couldn't be read back:\n" + e.Message, Title);
                 return;
             }
             int mug = MugshotRows.IndexOf(_mugshot), intro = IntroRows.IndexOf(_intro), cls = ClassId;

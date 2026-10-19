@@ -42,12 +42,12 @@ namespace DSPRE.Avalonia.Views.Shell
             Button browse = new Button { Content = "Browse…" };
             browse.Click += async (_, _) =>
             {
-                string picked = await DialogHelper.OpenFolder(this, "Changelogs folder");
+                string picked = await DialogHelper.OpenFolderAsync(this, "Changelogs folder");
                 if (!string.IsNullOrEmpty(picked)) _folderBox.Text = picked;
             };
 
             Button preview = new Button { Content = "Show preview", IsDefault = true };
-            preview.Click += async (_, _) => await ShowPreview();
+            preview.Click += async (_, _) => await ShowPreviewAsync();
 
             Button close = new Button { Content = "Close", IsCancel = true };
             close.Click += (_, _) => Close();
@@ -110,15 +110,15 @@ namespace DSPRE.Avalonia.Views.Shell
                   (sectionOnly ? $", section \"## {DisplayVersion(_versionBox.Text)}\" only." : ", whole file.");
         }
 
-        private async System.Threading.Tasks.Task ShowPreview()
+        private async System.Threading.Tasks.Task ShowPreviewAsync()
         {
             if (!TryResolve(out _, out string notes, out _, out _))
             {
-                await DialogHelper.ShowInfo("Enter a version like 2.3 and pick a folder that holds the changelog files.",
+                await DialogHelper.ShowInfoAsync("Enter a version like 2.3 and pick a folder that holds the changelog files.",
                     "Nothing to preview");
                 return;
             }
-            await AppUpdater.ShowUpdatePrompt(AppInfo.GetDSPREVersion(), DisplayVersion(_versionBox.Text), notes, preview: true);
+            await AppUpdater.ShowUpdatePromptAsync(AppInfo.GetDSPREVersion(), DisplayVersion(_versionBox.Text), notes, preview: true);
         }
 
         // Mirrors the "Attach changelog to release notes" step in .github/workflows/update-releases.yaml:

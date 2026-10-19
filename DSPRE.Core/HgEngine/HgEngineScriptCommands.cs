@@ -17,7 +17,7 @@ namespace DSPRE.HgEngine
 
         public readonly record struct Command(string Name, int ArgCount);
 
-        private static readonly Dictionary<string, (DateTime Stamp, Dictionary<int, Command> Commands)> _cache = new();
+        private static readonly Dictionary<string, (DateTime Stamp, Dictionary<int, Command> Commands)> Cache = new();
 
         /// <summary>Animation commands by opcode, or an empty map when no checkout is open or the file is missing.</summary>
         public static IReadOnlyDictionary<int, Command> Animation() => Load(AnimMacrosRelPath, ReadAnimation);
@@ -32,11 +32,11 @@ namespace DSPRE.HgEngine
             if (!File.Exists(path)) return new Dictionary<int, Command>();
             DateTime stamp = File.GetLastWriteTimeUtc(path);
             string key = path;
-            lock (_cache)
+            lock (Cache)
             {
-                if (_cache.TryGetValue(key, out (DateTime Stamp, Dictionary<int, Command> Commands) hit) && hit.Stamp == stamp) return hit.Commands;
+                if (Cache.TryGetValue(key, out (DateTime Stamp, Dictionary<int, Command> Commands) hit) && hit.Stamp == stamp) return hit.Commands;
                 Dictionary<int, Command> commands = read(HgEngineFileCache.GetText(path));
-                _cache[key] = (stamp, commands);
+                Cache[key] = (stamp, commands);
                 return commands;
             }
         }

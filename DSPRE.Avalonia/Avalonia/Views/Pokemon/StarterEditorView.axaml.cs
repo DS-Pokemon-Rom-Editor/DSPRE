@@ -20,7 +20,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private void Save_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e) => VM.SaveChanges();
         private async void Discard_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
         {
-            if (await DialogHelper.ConfirmDiscard(this)) VM.DiscardChanges();
+            if (await DialogHelper.ConfirmDiscardAsync(this)) VM.DiscardChanges();
         }
 
         private async void Manage_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)

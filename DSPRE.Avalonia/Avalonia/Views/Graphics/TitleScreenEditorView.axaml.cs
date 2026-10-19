@@ -25,15 +25,15 @@ namespace DSPRE.Avalonia.Views.Graphics
             EditorWindowChrome.Attach(this, _vm);
         }
 
-        private async void ImportLogo_Click(object sender, RoutedEventArgs e) => await ImportPng(_vm.ImportLogo);
-        private async void ImportBackground_Click(object sender, RoutedEventArgs e) => await ImportPng(_vm.ImportBackground);
-        private async void ImportCopyright_Click(object sender, RoutedEventArgs e) => await ImportPng(_vm.ImportCopyright);
+        private async void ImportLogo_Click(object sender, RoutedEventArgs e) => await ImportPngAsync(_vm.ImportLogo);
+        private async void ImportBackground_Click(object sender, RoutedEventArgs e) => await ImportPngAsync(_vm.ImportBackground);
+        private async void ImportCopyright_Click(object sender, RoutedEventArgs e) => await ImportPngAsync(_vm.ImportCopyright);
 
-        private async void ExportLogo_Click(object sender, RoutedEventArgs e) => await ExportPng(_vm.ExportLogo, "logo.png");
-        private async void ExportBackground_Click(object sender, RoutedEventArgs e) => await ExportPng(_vm.ExportBackground, "background.png");
-        private async void ExportCopyright_Click(object sender, RoutedEventArgs e) => await ExportPng(_vm.ExportCopyright, "copyright.png");
+        private async void ExportLogo_Click(object sender, RoutedEventArgs e) => await ExportPngAsync(_vm.ExportLogo, "logo.png");
+        private async void ExportBackground_Click(object sender, RoutedEventArgs e) => await ExportPngAsync(_vm.ExportBackground, "background.png");
+        private async void ExportCopyright_Click(object sender, RoutedEventArgs e) => await ExportPngAsync(_vm.ExportCopyright, "copyright.png");
 
-        private async System.Threading.Tasks.Task ImportPng(System.Func<string, string> import)
+        private async System.Threading.Tasks.Task ImportPngAsync(System.Func<string, string> import)
         {
             IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
@@ -47,11 +47,11 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = import(path);
             if (error != null)
-                await DialogHelper.ShowError($"Import failed: {error}", "Title screen editor error", this);
+                await DialogHelper.ShowErrorAsync($"Import failed: {error}", "Title screen editor error", this);
             else SaveNotice.Imported(null, path);
         }
 
-        private async System.Threading.Tasks.Task ExportPng(System.Func<string, string> export, string suggestedName)
+        private async System.Threading.Tasks.Task ExportPngAsync(System.Func<string, string> export, string suggestedName)
         {
             IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
@@ -65,7 +65,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = export(path);
             if (error != null)
-                await DialogHelper.ShowError($"Export failed: {error}", "Title screen editor error", this);
+                await DialogHelper.ShowErrorAsync($"Export failed: {error}", "Title screen editor error", this);
             else SaveNotice.Exported(path);
         }
 
@@ -83,7 +83,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = _vm.ImportPalette(path);
             if (error != null)
-                await DialogHelper.ShowError($"Import failed: {error}", "Title screen editor error", this);
+                await DialogHelper.ShowErrorAsync($"Import failed: {error}", "Title screen editor error", this);
             else SaveNotice.Imported(null, path);
         }
 
@@ -91,7 +91,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void RevertChanges_Click(object sender, RoutedEventArgs e)
         {
-            if (!await DialogHelper.ConfirmDiscard(this)) return;
+            if (!await DialogHelper.ConfirmDiscardAsync(this)) return;
             _vm.RevertChanges();
         }
 
@@ -109,7 +109,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = _vm.ExportPalette(path);
             if (error != null)
-                await DialogHelper.ShowError($"Export failed: {error}", "Title screen editor error", this);
+                await DialogHelper.ShowErrorAsync($"Export failed: {error}", "Title screen editor error", this);
             else SaveNotice.Exported(path);
         }
 

@@ -141,9 +141,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _classNames = SafeNames(GetTrainerClassNames);
             _classNameCount = _classNames.Length;
             _phoneMessages = null;
-            if (pokegearPhoneMessageArchive >= 0)
+            if (PokegearPhoneMessageArchive >= 0)
             {
-                try { _phoneMessages = new TextArchive(pokegearPhoneMessageArchive).messages; } catch { }
+                try { _phoneMessages = new TextArchive(PokegearPhoneMessageArchive).Messages; } catch (Exception ex) { AppLogger.Warn("Phone book messages: " + ex.Message); }
             }
             List<string> titles = new List<string>();
             for (int t = 0; t < 256; t++)
@@ -174,7 +174,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private static string[] SafeNames(System.Func<string[]> read)
         {
             try { return read() ?? System.Array.Empty<string>(); }
-            catch { return System.Array.Empty<string>(); }
+            catch (Exception ex) { AppLogger.WarnOnce("PokegearPhoneBookViewModel.SafeNames", ex); return System.Array.Empty<string>(); }
         }
 
         // ── Contact list ──
@@ -242,7 +242,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private static string LocationText(ushort mapId)
         {
             try { return HeaderLabels.LocationNameOf(MapHeader.GetMapHeader(mapId)); }
-            catch { return ""; }
+            catch (Exception ex) { AppLogger.WarnOnce("PokegearPhoneBookViewModel.LocationText", ex); return ""; }
         }
 
         private void SelectContact(int contact)

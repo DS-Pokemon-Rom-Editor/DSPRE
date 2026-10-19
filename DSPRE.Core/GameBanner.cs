@@ -78,12 +78,12 @@ namespace DSPRE
                 int nul = s.IndexOf('\0');
                 return (nul >= 0 ? s.Substring(0, nul) : s).Trim();
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("GameBanner.ReadNdstoolTitle", ex); return null; }
         }
 
         // ── ds-rom banner folder ─────────────────────────────────────────────────────
 
-        public static string DsRomBannerDir => Path.Combine(RomInfo.workDir, "banner");
+        public static string DsRomBannerDir => Path.Combine(RomInfo.WorkDir, "banner");
         public static string DsRomBitmapPath => Path.Combine(DsRomBannerDir, "bitmap.png");
         public static string DsRomPalettePath => Path.Combine(DsRomBannerDir, "palette.png");
         public static string DsRomYamlPath => Path.Combine(DsRomBannerDir, "banner.yaml");
@@ -92,14 +92,19 @@ namespace DSPRE
         /// ("japanese", "english", …) and values are the 2-3 line menu text.</summary>
         public class BannerYaml
         {
-            public string version { get; set; }
-            public Dictionary<string, string> title { get; set; }
-            public BannerImages images { get; set; }
+            [YamlMember(Alias = "version")]
+            public string Version { get; set; }
+            [YamlMember(Alias = "title")]
+            public Dictionary<string, string> Title { get; set; }
+            [YamlMember(Alias = "images")]
+            public BannerImages Images { get; set; }
         }
         public class BannerImages
         {
-            public string bitmap_path { get; set; }
-            public string palette_path { get; set; }
+            [YamlMember(Alias = "bitmap_path")]
+            public string BitmapPath { get; set; }
+            [YamlMember(Alias = "palette_path")]
+            public string PalettePath { get; set; }
         }
 
         public static BannerYaml ReadDsRomYaml()

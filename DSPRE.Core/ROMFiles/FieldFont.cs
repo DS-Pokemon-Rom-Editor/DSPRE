@@ -157,9 +157,9 @@ namespace DSPRE.ROMFiles
         {
             try
             {
-                if (!RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.fonts, out (string packedDir, string unpackedDir) dirs)) return null;
+                if (!RomInfo.GameDirs.TryGetValue(RomInfo.DirNames.Fonts, out (string packedDir, string unpackedDir) dirs)) return null;
                 // hg-engine copies some fonts in from its own files on every build, so those files are the font.
-                if (HgEngine.HgEngineSourceAssets.ReadVerbatim(HgEngine.HgEngineOwnedFiles.ArchiveOf(RomInfo.DirNames.fonts), entry) is byte[] source)
+                if (HgEngine.HgEngineSourceAssets.ReadVerbatim(HgEngine.HgEngineOwnedFiles.ArchiveOf(RomInfo.DirNames.Fonts), entry) is byte[] source)
                     return Read(source);
                 string member = EntryPath(entry);
                 if (member != null) return Read(File.ReadAllBytes(member));
@@ -168,13 +168,13 @@ namespace DSPRE.ROMFiles
                 byte[] blob = ReadNarcEntry(File.ReadAllBytes(path), entry);
                 return blob == null ? null : Read(blob);
             }
-            catch { return null; }
+            catch (Exception ex) { AppLogger.WarnOnce("FieldFont.LoadFromArchive", ex); return null; }
         }
 
         /// <summary>The unpacked font archive's members in entry order, or none when it is not unpacked.</summary>
         public static string[] UnpackedEntries()
         {
-            if (RomInfo.gameDirs == null || !RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.fonts, out (string packedDir, string unpackedDir) dirs)) return Array.Empty<string>();
+            if (RomInfo.GameDirs == null || !RomInfo.GameDirs.TryGetValue(RomInfo.DirNames.Fonts, out (string packedDir, string unpackedDir) dirs)) return Array.Empty<string>();
             string dir = dirs.unpackedDir;
             if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) return Array.Empty<string>();
             return Directory.GetFiles(dir).OrderBy(x => x).ToArray();
@@ -190,7 +190,7 @@ namespace DSPRE.ROMFiles
         public void Save(int entry)
         {
             if (EntryPath(entry) == null) throw new FileNotFoundException($"Font archive entry {entry} is not unpacked.");
-            ArchiveMembers.Put(RomInfo.DirNames.fonts, entry, Write());
+            ArchiveMembers.Put(RomInfo.DirNames.Fonts, entry, Write());
         }
 
         /// <summary>How wide a letter is, which is how far along the next one starts.</summary>
@@ -276,7 +276,7 @@ namespace DSPRE.ROMFiles
                             map[text[0]] = code - 1;
                     }
             }
-            catch { }
+            catch (Exception ex) { AppLogger.Warn("Field font character map: " + ex.Message); }
             _glyphByChar = map;
             return _glyphByChar;
         }

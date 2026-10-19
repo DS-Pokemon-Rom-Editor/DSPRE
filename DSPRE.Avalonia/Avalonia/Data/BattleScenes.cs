@@ -45,14 +45,14 @@ namespace DSPRE.Avalonia.Data
 
             // The internal names are codes like D02 and R213.
             int headers = 0;
-            try { headers = RomInfo.GetHeaderCount(); } catch { }
+            try { headers = RomInfo.GetHeaderCount(); } catch (Exception ex) { AppLogger.Warn("Battle scenes: header count: " + ex.Message); }
 
             List<string> internalNames = null, placeNames = null;
-            try { internalNames = HeaderLists.GetHeaderListBoxNames(); } catch { }
-            try { placeNames = RomInfo.GetLocationNames(); } catch { }
+            try { internalNames = HeaderLists.GetHeaderListBoxNames(); } catch (Exception ex) { AppLogger.Warn("Battle scenes: header names: " + ex.Message); }
+            try { placeNames = RomInfo.GetLocationNames(); } catch (Exception ex) { AppLogger.Warn("Battle scenes: location names: " + ex.Message); }
 
             bool dynamic = false;
-            try { dynamic = HeaderLabels.DynamicHeaders; } catch { }
+            try { dynamic = HeaderLabels.DynamicHeaders; } catch (Exception ex) { AppLogger.Warn("Battle scenes: dynamic headers flag: " + ex.Message); }
 
             // The displayed-name lookup only works properly in some games.
             bool trustDisplayedNames = false;
@@ -66,7 +66,7 @@ namespace DSPRE.Avalonia.Data
                         if (MapHeader.TryReadLocationNameIndex(i, dynamic, out int at)
                             && at >= 0 && at < placeNames.Count) answered++;
                     }
-                    catch { }
+                    catch { }   // a header that can't be read doesn't count towards the answered places
                 }
                 trustDisplayedNames = answered * 10 >= headers * 9;
             }
@@ -84,7 +84,7 @@ namespace DSPRE.Avalonia.Data
                             if (!string.IsNullOrEmpty(shown) && shown.Trim('-').Length > 0) return shown;
                         }
                     }
-                    catch { }
+                    catch { }   // a header that can't be read falls back to its internal name
                 }
                 if (internalNames != null && id < internalNames.Count)
                 {
@@ -97,10 +97,10 @@ namespace DSPRE.Avalonia.Data
             for (ushort i = 0; i < headers; i++)
             {
                 MapHeader h;
-                try { h = MapHeader.GetMapHeader(i); } catch { continue; }
+                try { h = MapHeader.GetMapHeader(i); } catch (Exception ex) { AppLogger.WarnOnce("BattleScenes.Read", ex); continue; }
                 if (h == null) continue;
 
-                int id = h.battleBackground;
+                int id = h.BattleBackground;
                 if (!byId.TryGetValue(id, out Scene scene))
                 {
                     (int Drawing, int Tilemap, int PaletteDay) files = BattleBgRenderer.BackdropFiles(id);

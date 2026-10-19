@@ -32,7 +32,7 @@ namespace DSPRE.HgEngine
         private static Dictionary<string, List<Source>> _members;
         private static string _cachedFor;
         private static DateTime _cachedStamp;
-        private static readonly HashSet<string> _reportedMismatch = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly HashSet<string> ReportedMismatch = new(StringComparer.OrdinalIgnoreCase);
 
         public static void ClearCache() { _members = null; _cachedFor = null; }
 
@@ -48,8 +48,8 @@ namespace DSPRE.HgEngine
             if (all == null || !all.TryGetValue(HgEngineOwnedFiles.Normalise(archive), out List<Source> list)) return null;
             if (list.Count != memberCount)
             {
-                lock (_reportedMismatch)
-                    if (_reportedMismatch.Add(archive))
+                lock (ReportedMismatch)
+                    if (ReportedMismatch.Add(archive))
                         AppLogger.Error($"HgEngineBuiltPngs: the build rules give {archive} {list.Count} files but it holds {memberCount}, so its PNGs are left alone.");
                 return null;
             }
