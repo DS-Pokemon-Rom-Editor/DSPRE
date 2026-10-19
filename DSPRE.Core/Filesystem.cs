@@ -286,10 +286,6 @@ namespace DSPRE {
             return GetPath(Filesystem.trainerGraphics, id);
         }
 
-        public static string GetMonIconPath(int id, string format = "D4") {
-            return GetPath(Filesystem.monIcons, id, format);
-        }
-
         public static string GetSynthOerlayPath(int id) {
             return GetPath(Filesystem.synthOverlay, id);
         }

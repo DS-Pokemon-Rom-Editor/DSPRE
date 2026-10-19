@@ -8,19 +8,6 @@ namespace DSPRE {
         public const int NSBMD_DOESNTHAVE_TEXTURE = 0;
         public const int NSBMD_HAS_TEXTURE = 1;
 
-        public static string ReadNSBMDname(BinaryReader reader, long? startPos = null) {
-            if (startPos != null) {
-                reader.BaseStream.Position = (long)startPos;
-            }
-
-            if (reader.ReadUInt32() == NSBMD.NDS_TYPE_MDL0) { //MDL0
-                reader.BaseStream.Position += 0x1c;
-            } else {
-                reader.BaseStream.Position += 0x1c + 4;
-            }
-
-            return Encoding.UTF8.GetString(reader.ReadBytes(16));
-        }
         public static byte[] BuildNSBMDwithTextures(byte[] nsbmd, byte[] nsbtx) {
             byte[] wholeMDL0 = GetFirstBlock(nsbmd);
             byte[] wholeTEX0 = GetFirstBlock(nsbtx);

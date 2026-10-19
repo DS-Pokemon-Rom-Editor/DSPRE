@@ -652,37 +652,6 @@ namespace DSPRE.Resources {
                 ["IPGK"] = GameVersions.SoulSilver
             };
 
-            private static readonly Dictionary<GameFamilies, Dictionary<byte, string>> collisionLabels = new Dictionary<GameFamilies, Dictionary<byte, string>>();
-            private static readonly Dictionary<GameFamilies, Dictionary<byte, string>> behaviourLabels = new Dictionary<GameFamilies, Dictionary<byte, string>>();
-
-            /// <summary>Collision painter labels for the loaded game, keyed by value.</summary>
-            public static Dictionary<byte, string> MapCollisionPainters
-            {
-                get
-                {
-                    lock (collisionLabels)
-                    {
-                        if (!collisionLabels.TryGetValue(RomInfo.gameFamily, out Dictionary<byte, string> labels))
-                            collisionLabels[RomInfo.gameFamily] = labels = TilePermissions.CollisionsFor(RomInfo.gameFamily).ToDictionary(c => c.Value, c => c.Label);
-                        return labels;
-                    }
-                }
-            }
-
-            /// <summary>Tile behaviour labels for the loaded game, keyed by value.</summary>
-            public static Dictionary<byte, string> MapCollisionTypePainters
-            {
-                get
-                {
-                    lock (behaviourLabels)
-                    {
-                        if (!behaviourLabels.TryGetValue(RomInfo.gameFamily, out Dictionary<byte, string> labels))
-                            behaviourLabels[RomInfo.gameFamily] = labels = TilePermissions.BehavioursFor(RomInfo.gameFamily).ToDictionary(b => b.Value, b => b.Label);
-                        return labels;
-                    }
-                }
-            }
-
             public static Dictionary<ushort, string> pokeNames = new Dictionary<ushort, string>() {
                 [1] = "Bulbasaur",
                 [2] = "Ivysaur",
@@ -1424,69 +1393,6 @@ namespace DSPRE.Resources {
                     [7] = "hgssfield",
                     [8] = "hgsslake",
                     [9] = "hgssgray"
-                };
-            }
-            public static class WeatherPics {
-                public static Dictionary<byte[], string> dpWeatherImageDict = new Dictionary<byte[], string>() {
-                    [new byte[] { 0, 8, 13, 18, 19, 20, 23, 25 }] = "dpnormal",
-                    [new byte[] { 1 }] = "dpcloudy",
-                    [new byte[] { 2 }] = "dprain",
-                    [new byte[] { 3 }] = "dpheavyrain",
-                    [new byte[] { 4, 24 }] = "dpthunderstorm",
-                    [new byte[] { 5, 28 }] = "dpsnowslow",
-                    [new byte[] { 6, 21, 26, 27 }] = "dpdiamondsnow",
-                    [new byte[] { 7 }] = "dpblizzard",
-                    [new byte[] { 9 }] = "dpsandfall",
-                    [new byte[] { 10 }] = "dpsandstorm",
-                    [new byte[] { 11 }] = "dphail",
-                    [new byte[] { 12 }] = "dprocksascending",
-                    [new byte[] { 14 }] = "dpfog",
-                    [new byte[] { 15 }] = "dpfog", //deep fog
-                    [new byte[] { 16 }] = "dpdark",
-                    [new byte[] { 17 }] = "dplightning",
-                    [new byte[] { 22 }] = "dplightsandstorm"
-                };
-                public static Dictionary<byte[], string> ptWeatherImageDict = new Dictionary<byte[], string>() {
-                    [new byte[] { 0, 8, 13, 20, 31, 33 }] = "ptnormal",
-                    [new byte[] { 1 }] = "ptcloudy",
-                    [new byte[] { 2, 32 }] = "ptrain",
-                    [new byte[] { 3 }] = "ptheavyrain",
-                    [new byte[] { 4 }] = "ptthunderstorm",
-                    [new byte[] { 5, 36 }] = "ptsnowslow",
-                    [new byte[] { 6, 21, 34, 35 }] = "ptdiamondsnow",
-                    [new byte[] { 7 }] = "ptblizzard",
-                    [new byte[] { 9 }] = "ptsandfall",
-                    [new byte[] { 10 }] = "ptsandstorm",
-                    [new byte[] { 11 }] = "pthail",
-                    [new byte[] { 12 }] = "ptrocksascending",
-                    [new byte[] { 14, 15 }] = "ptfog",
-                    [new byte[] { 16 }] = "ptdark",
-                    [new byte[] { 17 }] = "ptlightning",
-
-                    [new byte[] { 18 }] = "ptlightfog",
-                    [new byte[] { 19 }] = "ptheavyfog",
-
-                    [new byte[] { 22 }] = "ptlightsandstorm",
-                    [new byte[] { 23 }] = "ptforestweather",
-                    [new byte[] { 24, 25 }] = "ptspotlight",
-
-                    [new byte[] { 26 }] = "ptdarkfog",
-                    [new byte[] { 27 }] = "ptgreenish",
-                    [new byte[] { 28 }] = "ptredish",
-                    [new byte[] { 29 }] = "ptblueish",
-                    [new byte[] { 30 }] = "ptdim",
-                };
-
-                public static Dictionary<byte[], string> hgssweatherImageDict = new Dictionary<byte[], string>() {
-                    [new byte[] { 0 }] = "hgssnormal",
-                    [new byte[] { 1, 2, 3, 4 }] = "hgssrain",
-                    [new byte[] { 5, 6 }] = "hgsssnow",
-                    [new byte[] { 7 }] = "hgssnormal", //sandstorm in battle only
-                    [new byte[] { 8 }] = "hgssdiamond",
-                    [new byte[] { 9, 10 }] = "hgssfog",
-                    [new byte[] { 11 }] = "hgssdark",
-                    [new byte[] { 12 }] = "hgssdark2",
-                    [new byte[] { 13 }] = "hgssArcade"
                 };
             }
         }

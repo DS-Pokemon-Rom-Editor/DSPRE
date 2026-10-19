@@ -10,7 +10,6 @@ on:
   workflow_dispatch:
 
 env:
-  SOLUTION_FILE_PATH: DS_Map.sln
   BUILD_CONFIGURATION: Release
 
 jobs:
@@ -42,7 +41,7 @@ jobs:
         id: get_version
         shell: bash
         run: |
-          dotnet_version=$(grep -oE '\[assembly: AssemblyVersion\("([0-9\.]+)"\)\]' DS_Map/Properties/AssemblyInfo.cs | sed -E 's/.*AssemblyVersion\("([0-9\.]+)"\).*/\1/')
+          dotnet_version=$(grep -oE '<AssemblyVersion>[0-9.]+</AssemblyVersion>' DSPRE.Avalonia/DSPRE.Avalonia.csproj | sed -E 's/<AssemblyVersion>([0-9.]+)<\/AssemblyVersion>/\1/')
           major=$(echo "$dotnet_version" | cut -d. -f1)
           minor=$(echo "$dotnet_version" | cut -d. -f2)
 
@@ -93,8 +92,13 @@ jobs:
           echo "Display version: ${{ steps.get_version.outputs.display_version }}"
           echo "Release tag: ${{ steps.get_version.outputs.release_tag }}"
 
-      - name: Add MSBuild to PATH
-        uses: microsoft/setup-msbuild@v2
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          # Avalonia 12 needs a newer compiler than SDK 8 has; the 8 runtime runs the net8.0 app and tests.
+          dotnet-version: |
+            8.0.x
+            10.0.x
         if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
 
       - name: Setup Rust
@@ -106,21 +110,15 @@ jobs:
         run: |
           git clone https://github.com/DS-Pokemon-Rom-Editor/scrcmd-database.git databases
 
-      - name: Restore NuGet packages
-        working-directory: ${{env.GITHUB_WORKSPACE}}
-        run: nuget restore ${{env.SOLUTION_FILE_PATH}}
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
-
-      - name: Build DSPRE
-        working-directory: ${{env.GITHUB_WORKSPACE}}
-        run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}
+      - name: Publish DSPRE (win-x64)
+        run: dotnet publish DSPRE.Avalonia/DSPRE.Avalonia.csproj -p:PublishProfile=win-x64 -o publish
         if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
 
       - name: Copy output manually
         if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
         run: |
-          mkdir -p publish
-          cp -r DS_Map/bin/${{env.BUILD_CONFIGURATION}}/* publish/
+          # Installed copies update through DSPRE.exe; the launcher still finds DSPRE.Avalonia.dll by name.
+          Rename-Item -Path publish/DSPRE.Avalonia.exe -NewName DSPRE.exe
           mkdir -p "publish/databases"
           robocopy databases "publish/databases" /E /XD "databases\.git\objects\pack"
           if ($LASTEXITCODE -le 7) { exit 0 } else { exit 1 }
@@ -203,7 +201,7 @@ jobs:
         id: get_version
         shell: bash
         run: |
-          dotnet_version=$(grep -oE '\[assembly: AssemblyVersion\("([0-9\.]+)"\)\]' DS_Map/Properties/AssemblyInfo.cs | sed -E 's/.*AssemblyVersion\("([0-9\.]+)"\).*/\1/')
+          dotnet_version=$(grep -oE '<AssemblyVersion>[0-9.]+</AssemblyVersion>' DSPRE.Avalonia/DSPRE.Avalonia.csproj | sed -E 's/<AssemblyVersion>([0-9.]+)<\/AssemblyVersion>/\1/')
           major=$(echo "$dotnet_version" | cut -d. -f1)
           minor=$(echo "$dotnet_version" | cut -d. -f2)
 
@@ -238,7 +236,10 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          # Avalonia 12 needs a newer compiler than SDK 8 has; the 8 runtime runs the net8.0 app and tests.
+          dotnet-version: |
+            8.0.x
+            10.0.x
         if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
 
       - name: Setup Rust

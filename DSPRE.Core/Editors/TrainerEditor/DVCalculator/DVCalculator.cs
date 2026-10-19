@@ -62,25 +62,6 @@ namespace DSPRE
             natures = new List<DVIVNatureTriplet>(result.Values);
         }
 
-        public static void SortTriplets(ref List<DVIVNatureTriplet> triplets, string sortBy, bool ascending = true)
-        {
-            if (sortBy == "Nature")
-            {
-                if (ascending)
-                    triplets.Sort((a, b) => string.Compare(a.Nature, b.Nature));
-                else
-                    triplets.Sort((a, b) => string.Compare(b.Nature, a.Nature));
-            }
-            else if (sortBy == "DV" || sortBy == "IV")
-            {
-                // Ascending isn't really a sensible option here
-                if (!ascending)
-                    triplets.Sort((a, b) => a.DV.CompareTo(b.DV));
-                else
-                    triplets.Sort((a, b) => b.DV.CompareTo(a.DV));
-            }
-        }
-
         public static uint generatePID(uint trainerIdx, uint trainerClassIdx, uint pokeIdx, byte pokeLevel, byte baseGenderRatio, int genderOverride, int abilityOverride, byte difficultyValue)
         {
             uint newSeed = (uint)(trainerIdx + pokeIdx + pokeLevel + difficultyValue);

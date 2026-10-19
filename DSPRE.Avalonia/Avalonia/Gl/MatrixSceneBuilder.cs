@@ -1,7 +1,6 @@
 ﻿using DSPRE.ROMFiles;
 using LibNDSFormats.NSBMD;
 using LibNDSFormats.NSBTX;
-using NSMBe4.DSFileSystem;
 using System;
 using System.Collections.Generic;
 using System.IO;

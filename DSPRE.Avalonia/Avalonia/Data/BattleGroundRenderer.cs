@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Ekona.Images;
-using Images;   // NCGR / NCLR / NCER readers
+using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.Data
@@ -115,33 +114,17 @@ namespace DSPRE.Avalonia.Data
 
         private GroundImage Render(int ncgrIdx, int nclrIdx, int ncerIdx, int posX, int posY)
         {
-            List<string> temps = new List<string>();
             try
             {
-                string chr = WriteTemp(_narc.Get(ncgrIdx), temps);
-                string pal = WriteTemp(_narc.Get(nclrIdx), temps);
-                string cel = WriteTemp(_narc.Get(ncerIdx), temps);
+                byte[] chr = NitroBgCodec.Inflate(_narc.Get(ncgrIdx));
+                byte[] pal = NitroBgCodec.Inflate(_narc.Get(nclrIdx));
+                byte[] cel = NitroBgCodec.Inflate(_narc.Get(ncerIdx));
                 if (chr == null || pal == null || cel == null) return null;
-                NCLR nclr = new NCLR(pal, nclrIdx, Path.GetFileName(pal));
-                NCGR ncgr = new NCGR(chr, ncgrIdx, Path.GetFileName(chr));
-                NCER ncer = new NCER(cel, ncerIdx, Path.GetFileName(cel));
-                RawImage raw = ncer.Get_RawImage(ncgr, nclr, 0, Canvas, Canvas, trans: true, currOAM: -1, draw_index: null);
+                RawImage raw = CellRenderer.Draw(NcerFile.Read(cel), 0, chr, NitroBgCodec.ReadColours(pal), Canvas, Canvas);
                 if (raw == null || raw.IsEmpty) return null;
                 return new GroundImage { Rgba = ToRgba(raw, Canvas), Width = Canvas, Height = Canvas, Left = posX - Canvas / 2, Top = posY - Canvas / 2 };
             }
             catch (Exception ex) { AppLogger.Error("BattleGroundRenderer.Render failed: " + ex.Message); return null; }
-            finally { foreach (string t in temps) { try { File.Delete(t); } catch { } } }
-        }
-
-        // The clact readers take a file path; materialise the NARC bytes (LZ10-decompressed if 0x10) to a temp file.
-        private static string WriteTemp(byte[] bytes, List<string> temps)
-        {
-            if (bytes == null) return null;
-            if (bytes.Length >= 4 && bytes[0] == 0x10) { try { bytes = NSMBe4.ROM.LZ77_Decompress(bytes); } catch { } }
-            string tmp = Path.Combine(Path.GetTempPath(), "dspre_grd_" + Guid.NewGuid().ToString("N") + ".bin");
-            File.WriteAllBytes(tmp, bytes);
-            temps.Add(tmp);
-            return tmp;
         }
 
         // RawImage BGRA → straight RGBA byte[s*s*4].

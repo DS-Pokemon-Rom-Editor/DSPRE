@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
-using Images;
+using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Data
 {
@@ -82,45 +81,25 @@ namespace DSPRE.Avalonia.Data
             }
         }
 
-        public static CellSequence[] FromNanr(NANR nanr)
+        public static CellSequence[] FromNanr(NanrFile nanr)
         {
-            NANR.sNANR.Animation[] anis = nanr?.Struct.abnk.anis;
-            if (anis == null) return Array.Empty<CellSequence>();
-            CellSequence[] outp = new CellSequence[anis.Length];
-            for (int i = 0; i < anis.Length; i++)
+            if (nanr == null) return Array.Empty<CellSequence>();
+            CellSequence[] outp = new CellSequence[nanr.Sequences.Count];
+            for (int i = 0; i < outp.Length; i++)
             {
-                NANR.sNANR.Animation a = anis[i];
-                CFrame[] frames = new CFrame[a.frames?.Length ?? 0];
+                NanrFile.Sequence a = nanr.Sequences[i];
+                CFrame[] frames = new CFrame[a.Frames.Count];
                 for (int j = 0; j < frames.Length; j++)
                 {
-                    NANR.sNANR.Frame_Data d = a.frames[j].data;
-                    double sx = a.dataType == 1 ? GetFrameInt(d, "scaleX", 4096) / 4096.0 : 1.0;
-                    double sy = a.dataType == 1 ? GetFrameInt(d, "scaleY", 4096) / 4096.0 : 1.0;
-                    double rot = a.dataType == 1 ? GetFrameUShort(d, "rotation", 0) / 65536.0 * 360.0 : 0.0;
-                    frames[j] = new CFrame(d.nCell, a.frames[j].unknown1, d.xDisplacement, d.yDisplacement, rot, sx, sy);
+                    NanrFile.Result r = nanr.ResultFor(i, j) ?? new NanrFile.Result();
+                    bool turns = a.ElementType == 1;
+                    frames[j] = new CFrame(r.Cell, a.Frames[j].Delay, r.ShiftX, r.ShiftY,
+                                           turns ? r.Rotation / 65536.0 * 360.0 : 0.0,
+                                           turns ? r.ScaleX / 4096.0 : 1.0, turns ? r.ScaleY / 4096.0 : 1.0);
                 }
-                uint playMode = GetAnimationUInt(a, "playMode", GetAnimationUInt(a, "unknown2", 0) | (GetAnimationUInt(a, "unknown3", 0) << 16));
-                outp[i] = new CellSequence { Frames = frames, Loop = playMode == 2 || playMode == 4 };
+                outp[i] = new CellSequence { Frames = frames, Loop = a.PlayMode == 2 || a.PlayMode == 4 };
             }
             return outp;
-        }
-
-        private static int GetFrameInt(NANR.sNANR.Frame_Data data, string fieldName, int defaultValue)
-        {
-            FieldInfo field = typeof(NANR.sNANR.Frame_Data).GetField(fieldName);
-            return field == null ? defaultValue : Convert.ToInt32(field.GetValue(data));
-        }
-
-        private static ushort GetFrameUShort(NANR.sNANR.Frame_Data data, string fieldName, ushort defaultValue)
-        {
-            FieldInfo field = typeof(NANR.sNANR.Frame_Data).GetField(fieldName);
-            return field == null ? defaultValue : Convert.ToUInt16(field.GetValue(data));
-        }
-
-        private static uint GetAnimationUInt(NANR.sNANR.Animation animation, string fieldName, uint defaultValue)
-        {
-            FieldInfo field = typeof(NANR.sNANR.Animation).GetField(fieldName);
-            return field == null ? defaultValue : Convert.ToUInt32(field.GetValue(animation));
         }
     }
 }

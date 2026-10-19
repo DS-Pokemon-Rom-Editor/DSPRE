@@ -5,7 +5,6 @@ using System.Linq;
 using DSPRE;
 using DSPRE.Editors;
 using DSPRE.ROMFiles;
-using Images;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.Data
@@ -103,6 +102,9 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Which entry holds the drawing a layout arranges, when the game says so.</summary>
         public Func<int, int> DrawingEntry;
 
+            /// <summary>Colour numbers of a palette bank that something outside the archive's drawings draws with, and what.</summary>
+            public Func<int, int, IEnumerable<(int Slot, string Who)>> AlsoUsesColours;
+
             /// <summary>The members are Pokéwalker pictures of this size (PokewalkerImage), not Nitro files.</summary>
             public (int Width, int Height)? Pokewalker;
 
@@ -153,6 +155,8 @@ namespace DSPRE.Avalonia.Data
         {
             public Archive Archive;
             public string Name;
+            /// <summary>Shown when hovering the row: the DS layer it is drawn on, or why it is odd.</summary>
+            public string Tip;
             public List<UnitPart> Parts = new();
             /// <summary>
             /// The lowest file this thing occupies, which is where it starts in the archive.
@@ -180,11 +184,12 @@ namespace DSPRE.Avalonia.Data
         /// trainer or an HP bar looks like nothing as a sheet of loose tiles. Then the drawing, then how
         /// it moves, then its colours.
         /// </summary>
-        public static int PartRank(string part) => part switch
+        public static int PartRank(string part)
         {
-            "As it appears" => 0, "Drawing" => 1, "Animation" => 2, "Arrangement" => 3, "Colours" => 4,
-            _ => 5,
-        };
+            if (part == "As it appears") return 0;
+            bool Has(string word) => part != null && part.IndexOf(word, StringComparison.OrdinalIgnoreCase) >= 0;
+            return Has("drawing") ? 1 : Has("animation") ? 2 : Has("arrangement") ? 3 : Has("colours") ? 4 : 5;
+        }
 
         public static List<Unit> Units(Archive a, int fileCount)
         {
@@ -277,11 +282,12 @@ namespace DSPRE.Avalonia.Data
                 if (colours >= 0 && colours < fileCount) u.Parts.Add(Part(a, colours, "Colours"));
             }
             string NameAt(int index) => ScreenGraphicsLayouts.NameOf(a.Dir, index) ?? a.Title;
+            string TipAt(int index) => ScreenGraphicsLayouts.TipOf(a.Dir, index);
 
             foreach (ScreenGraphicsLayouts.Entry e in entries)
             {
                 if (e.Index >= fileCount || e.Kind != "NSCR") continue;
-                Unit u = new() { Archive = a, Name = NameAt(e.Index) };
+                Unit u = new() { Archive = a, Name = NameAt(e.Index), Tip = TipAt(e.Index) };
                 u.Parts.Add(Part(a, e.Index, "As it appears"));
                 AddPairs(u, ScreenGraphicsLayouts.DrawingFor(a.Dir, e.Index), -1, ScreenGraphicsLayouts.ColoursFor(a.Dir, e.Index));
                 units.Add(u);
@@ -294,7 +300,7 @@ namespace DSPRE.Avalonia.Data
                 int colours = ScreenGraphicsLayouts.ColoursFor(a.Dir, e.Index);
                 Archive shown = ScreenGraphicsLayouts.DrawingFor(a.Dir, e.Cells) == e.Index
                     ? a : a.WithPairing(e.Cells, e.Index, colours, ScreenGraphicsLayouts.BankFor(a.Dir, e.Index));
-                Unit u = new() { Archive = a, Name = NameAt(e.Index) };
+                Unit u = new() { Archive = a, Name = NameAt(e.Index), Tip = TipAt(e.Index) };
                 u.Parts.Add(Part(shown, e.Cells, "As it appears"));
                 AddPairs(u, e.Index, ScreenGraphicsLayouts.AnimFor(a.Dir, e.Index), colours);
                 units.Add(u);
@@ -302,7 +308,7 @@ namespace DSPRE.Avalonia.Data
             foreach (ScreenGraphicsLayouts.Entry e in entries)
             {
                 if (e.Index >= fileCount || e.Kind != "NCER" || used.Contains(e.Index) || e.Drawing < 0) continue;
-                Unit u = new() { Archive = a, Name = NameAt(e.Drawing < fileCount ? e.Drawing : e.Index) };
+                Unit u = new() { Archive = a, Name = NameAt(e.Drawing < fileCount ? e.Drawing : e.Index), Tip = TipAt(e.Index) };
                 u.Parts.Add(Part(a, e.Index, "As it appears"));
                 AddPairs(u, e.Drawing, ScreenGraphicsLayouts.AnimFor(a.Dir, e.Index), ScreenGraphicsLayouts.ColoursFor(a.Dir, e.Index));
                 units.Add(u);
@@ -553,7 +559,7 @@ namespace DSPRE.Avalonia.Data
             PokewalkerSprites index = PokewalkerIndex();
             if (index == null || !index.Pictures.TryGetValue(picture, out PokewalkerSprites.Picture p)) return null;
             string name = FromList(RomInfo.GetPokemonNames, p.Species) ?? $"Pokémon {p.Species}";
-            return p.Form >= 0 ? $"{name}, form {p.Form + 1}" : p.Female ? $"{name}, female" : name;
+            return p.Form >= 0 ? $"{name} form {p.Form + 1}" : p.Female ? $"Female {name}" : name;
         }
 
         private static string FromList(Func<string[]> list, int at)
@@ -583,7 +589,7 @@ namespace DSPRE.Avalonia.Data
                 Colours = Pairing.NearestInSameArchive, DeepEditor = "Pokémon Sprite Editor",
                 ScrambledPixels = true, FrameWidth = 80, FrameHeight = 80,
                 Stride = 6,
-                PartNames = new[] { "Back, female", "Back, male", "Front, female", "Front, male",
+                PartNames = new[] { "Female back", "Male back", "Female front", "Male front",
                                     "Colours", "Shiny colours" },
                 // All four of a Pokemon's sprites share one set of colours; the only other set is the shiny
                 // one.
@@ -693,6 +699,7 @@ namespace DSPRE.Avalonia.Data
                 ColourBank = BattleObjects.ColourBankFor,
                 PixelWidthOf = BattleObjects.WidthFor,
                 NameOf = BattleObjects.NameOf,
+                AlsoUsesColours = BattleObjects.AlsoUsesColours,
                 BuildUnits = n => BattleObjects.Units(All.First(x => x.Dir == DirNames.battleObj), n) },
             new Archive { Dir = DirNames.battleBgPlanm, Title = "Battle background colour cycles", In = Group.BattleChrome,
                 What = "Colour changes played over a battle background. HeartGold and SoulSilver only.",
@@ -762,7 +769,7 @@ namespace DSPRE.Avalonia.Data
                                  : i is >= 184 and <= 264 ? 293 : i == 267 ? 287 : i is 268 or 269 ? 288 : -1 },
 
             new Archive { Dir = DirNames.dungeonCutinGraphics, Title = "Place splash screens", In = Group.Places,
-                BuildUnits = n => DungeonCutinTable.UnitsFor(
+                BuildUnits = n => DungeonCutinUnits.UnitsFor(
                     All.First(x => x.Dir == DirNames.dungeonCutinGraphics), n),
                 What = "The picture shown when you enter a dungeon. HeartGold and SoulSilver only." },
 
@@ -811,6 +818,15 @@ namespace DSPRE.Avalonia.Data
                 ColourEntry = i => ScreenGraphicsLayouts.ColoursFor(DirNames.pokedexGraphics, i),
                 ColourBank = i => ScreenGraphicsLayouts.BankFor(DirNames.pokedexGraphics, i),
                 ArrangementEntry = i => ScreenGraphicsLayouts.ArrangementFor(DirNames.pokedexGraphics, i) },
+            new Archive { Dir = DirNames.summaryGraphics, Title = "Summary screen", In = Group.Windows,
+                What = "The Pokémon summary pages: backgrounds, balls, markings, ribbons and the sprites on them.",
+                NameOf = i => ScreenGraphicsLayouts.NameOf(DirNames.summaryGraphics, i),
+                DrawingEntry = i => ScreenGraphicsLayouts.DrawingFor(DirNames.summaryGraphics, i),
+                ColourEntry = i => ScreenGraphicsLayouts.ColoursFor(DirNames.summaryGraphics, i),
+                ColourBank = i => ScreenGraphicsLayouts.BankFor(DirNames.summaryGraphics, i),
+                ArrangementEntry = i => ScreenGraphicsLayouts.ArrangementFor(DirNames.summaryGraphics, i) },
+            new Archive { Dir = DirNames.summarySprites, Title = "Summary screen sprites", In = Group.Windows,
+                What = "The summary screen's ball cells, markings, arrows and other sprites. HeartGold and SoulSilver only." },
             new Archive { Dir = DirNames.openingDemoGraphics, Title = "Opening movie", In = Group.Places,
                 What = "The pictures in the opening movie. HeartGold and SoulSilver only.",
                 NameOf = i => ScreenGraphicsLayouts.NameOf(DirNames.openingDemoGraphics, i),
@@ -880,8 +896,9 @@ namespace DSPRE.Avalonia.Data
             if (plain == null || plain.Length == 0 || marker != 0x10) return null;
             try
             {
-                byte[] squeezed = NSMBe4.ROM.LZ77_Compress(plain);
+                byte[] squeezed = DSPRE.ROMFiles.Lz77.Compress(plain);
                 if (squeezed == null || squeezed.Length < 5 || squeezed[0] != 0x10) return null;
+                if (!DSPRE.ROMFiles.Lz77.EndsAtDeclaredSize(squeezed)) return null;
                 // Never hand back something that will not come out again as what went in.
                 byte[] check = NitroBgCodec.Inflate(squeezed);
                 return check != null && check.Length == plain.Length && check.SequenceEqual(plain)
@@ -893,15 +910,6 @@ namespace DSPRE.Avalonia.Data
         /// <summary>How a file is squeezed, or zero when it is not.</summary>
         public static byte SqueezeMarker(byte[] b)
             => b != null && b.Length > 4 && (b[0] == 0x10 || b[0] == 0x11) ? b[0] : (byte)0;
-
-        private static string WriteTemp(byte[] data, List<string> temps)
-        {
-            if (data == null || data.Length == 0) return null;
-            string p = Path.GetTempFileName();
-            File.WriteAllBytes(p, Unsqueeze(data));
-            temps.Add(p);
-            return p;
-        }
 
         /// <summary>Draws a palette as a grid of its colours, which is the only sensible picture of one.</summary>
         private static Preview PaletteSwatch(byte[] pal)
@@ -1063,23 +1071,17 @@ namespace DSPRE.Avalonia.Data
                      + "changed.";
             byte[] openDrawing = drawMarker != 0 ? Unsqueeze(drawing) : drawing;
 
-            List<string> temps = new List<string>();
             try
             {
-                string chrPath = WriteTemp(raw, temps);
-                string palPath = WriteTemp(Unsqueeze(pal), temps);
-                string drawPath = WriteTemp(openDrawing, temps);
-
-                NCLR nclr = new NCLR(palPath, 0, Path.GetFileName(palPath));
-                NCGR ncgr = new NCGR(drawPath, 0, Path.GetFileName(drawPath));
-                NCER ncer = new NCER(chrPath, 0, Path.GetFileName(chrPath));
-                if (ncer.Banks == null || ncer.Banks.Length == 0) return "This layout has no pieces in it.";
+                NcerFile ncer = NcerFile.Read(Unsqueeze(raw));
+                if (ncer == null || ncer.Cells.Count == 0) return "This layout has no pieces in it.";
+                ushort[] colours = NitroBgCodec.ReadColours(Unsqueeze(pal));
 
                 // Draw it once to find where the crop cut, so the pieces can be put back against the
                 // canvas they were laid out on rather than against the cropped picture.
-                RawImage whole = ncer.Get_RawImage(ncgr, nclr, 0, CellCanvas, CellCanvas, true, -1, null);
-                if (whole == null || whole.IsEmpty) return "This sprite could not be put together.";
-                (byte[] _, int shownW, int shownH) = CropToPieces(ToRgba(whole), whole.Width, whole.Height, ncer.Banks[0],
+                RawImage whole = CellRenderer.Draw(ncer, 0, openDrawing, colours, CellCanvas, CellCanvas);
+                if (whole.IsEmpty) return "This sprite could not be put together.";
+                (byte[] _, int shownW, int shownH) = CropToPieces(ToRgba(whole), whole.Width, whole.Height, ncer.Cells[0],
                                                        out int cutLeft, out int cutTop);
 
                 // The picture has to be the one this sprite is drawn at, or every piece would be read
@@ -1088,17 +1090,9 @@ namespace DSPRE.Avalonia.Data
                     return $"This sprite is {shownW} by {shownH} and that picture is {width} by {height}. "
                          + "Save this one first and paint over what comes out.";
 
-                string why = CellDecompose.PutBack(ncer.Banks[0], ncer.BlockSize, ncgr, nclr,
-                                                  painted, width, height, ncgr.Tiles, out byte[] tiles,
-                                                  CellCanvas, cutLeft, cutTop);
+                string why = CellDecompose.PutBack(ncer, 0, openDrawing, colours, painted, width, height,
+                                                  out byte[] outp, CellCanvas, cutLeft, cutTop);
                 if (why != null) return why;
-
-                // The tile bytes sit inside the drawing file, so put them back where they came from.
-                byte[] outp = (byte[])openDrawing.Clone();
-                int at = TilesStartInNcgr(openDrawing);
-                if (at < 0 || at + tiles.Length > outp.Length)
-                    return "This drawing could not be taken apart, so nothing was changed.";
-                Buffer.BlockCopy(tiles, 0, outp, at, tiles.Length);
 
                 if (drawMarker != 0)
                 {
@@ -1116,15 +1110,6 @@ namespace DSPRE.Avalonia.Data
                 AppLogger.Error("GraphicAssets.PutAssembledBack: " + ex.Message);
                 return "This sprite could not be put back.";
             }
-            finally { foreach (string t in temps) { try { File.Delete(t); } catch { } } }
-        }
-
-        /// <summary>Where the pixels start inside a drawing, from the one place that reads its header.</summary>
-        private static int TilesStartInNcgr(byte[] ncgr)
-        {
-            if (ncgr == null || ncgr.Length < 0x30) return -1;
-            int at = NitroBgCodec.ReadTileHeader(ncgr).TilesAt;
-            return at > 0 && at < ncgr.Length ? at : -1;
         }
 
 
@@ -1228,15 +1213,10 @@ namespace DSPRE.Avalonia.Data
                 return new Preview { Kind = kind, Whynot = "No colours could be found for this drawing, so it "
                                                         + "cannot be shown in the right ones." };
 
-            List<string> temps = new List<string>();
             try
             {
-                string palPath = WriteTemp(pal, temps);
-                string chrPath = WriteTemp(raw, temps);
-                if (palPath == null || chrPath == null)
+                if (pal.Length == 0)
                     return new Preview { Kind = kind, Whynot = "This entry could not be read." };
-
-                NCLR nclr = new NCLR(palPath, 0, Path.GetFileName(palPath));
 
                 if (kind == Kind.TileMap || kind == Kind.CellLayout)
                 {
@@ -1261,9 +1241,6 @@ namespace DSPRE.Avalonia.Data
                             ? "This arranges a background's tiles, and the drawing it arranges could not be found."
                             : "This arranges the pieces of a sprite, and the drawing it arranges could not be found." };
 
-                    string drawPath = WriteTemp(drawing, temps);
-                    NCGR drawNcgr = new NCGR(drawPath, 0, Path.GetFileName(drawPath));
-
                     if (kind == Kind.TileMap)
                     {
                         NitroBgCodec.BgImage bg = NitroBgCodec.Composite(Unsqueeze(drawing), Unsqueeze(pal), Unsqueeze(raw));
@@ -1272,24 +1249,29 @@ namespace DSPRE.Avalonia.Data
                         return new Preview { Rgba = bg.Rgba, Width = bg.Width, Height = bg.Height, Kind = kind };
                     }
 
-                    NCER ncer = new NCER(chrPath, 0, Path.GetFileName(chrPath));
-                    // A sprite whose palette the game picks at run time (the dex's type icons) has its cells on palette 0;
-                    // turning the banks round puts the chosen one there.
-                    int bank = a.ColourBank?.Invoke(index) ?? 0;
-                    if (bank > 0 && nclr.Palette != null && bank < nclr.Palette.Length)
-                    {
-                        System.Drawing.Color[][] banks = nclr.Palette;
-                        System.Drawing.Color[][] turned = new System.Drawing.Color[banks.Length][];
-                        for (int k = 0; k < banks.Length; k++) turned[k] = banks[(k + bank) % banks.Length];
-                        nclr.Set_Palette(turned);
-                    }
-                    RawImage cell = ncer.Get_RawImage(drawNcgr, nclr, 0, CellCanvas, CellCanvas, trans: true, currOAM: -1, draw_index: null);
-                    if (cell == null || cell.IsEmpty)
+                    NcerFile ncer = NcerFile.Read(Unsqueeze(raw));
+                    byte[] openDrawing = Unsqueeze(drawing);
+                    if (ncer == null || !(NitroBgCodec.ReadDrawingHeader(openDrawing) is NitroBgCodec.DrawingHeader head))
                         return new Preview { Kind = kind, Whynot = "This sprite could not be put together." };
+                    ushort[] colours = NitroBgCodec.ReadColours(Unsqueeze(pal));
+                    // A sprite whose palette the game picks at run time (the dex's type icons) has its cells on palette 0;
+                    // turning the rows round puts the chosen one there.
+                    int bank = a.ColourBank?.Invoke(index) ?? 0;
+                    int rowSize = head.EightBit ? 256 : 16;
+                    int rows = colours.Length / rowSize;
+                    if (bank > 0 && bank < rows)
+                    {
+                        ushort[] turned = new ushort[colours.Length];
+                        Array.Copy(colours, bank * rowSize, turned, 0, (rows - bank) * rowSize);
+                        Array.Copy(colours, 0, turned, (rows - bank) * rowSize, bank * rowSize);
+                        Array.Copy(colours, rows * rowSize, turned, rows * rowSize, colours.Length - rows * rowSize);
+                        colours = turned;
+                    }
+                    RawImage cell = CellRenderer.Draw(ncer, 0, openDrawing, colours, CellCanvas, CellCanvas);
                     // These are laid out on a whole screen's worth of room and most of them use a corner of
                     // it, so show the pieces rather than a mostly empty screen.
-                    (byte[] crop, int cw, int ch) = ncer.Banks != null && ncer.Banks.Length > 0
-                        ? CropToPieces(ToRgba(cell), cell.Width, cell.Height, ncer.Banks[0], out _, out _)
+                    (byte[] crop, int cw, int ch) = ncer.Cells.Count > 0
+                        ? CropToPieces(ToRgba(cell), cell.Width, cell.Height, ncer.Cells[0], out _, out _)
                         : TrimBlank(ToRgba(cell), cell.Width, cell.Height);
                     return new Preview { Rgba = crop, Width = cw, Height = ch, Kind = kind };
                 }
@@ -1313,13 +1295,7 @@ namespace DSPRE.Avalonia.Data
                 Indexed art = ReadIndexed(a, index, out string cannot, shiny, narc, paletteIndex);
                 if (art != null)
                     return new Preview { Rgba = Flatten(art), Width = art.Width, Height = art.Height, Kind = kind };
-
-                // Read as a drawing only here: an arrangement or cell layout is not one, and parsing it as one throws.
-                NCGR ncgr = new NCGR(chrPath, 0, Path.GetFileName(chrPath));
-                RawImage img = ncgr.Get_RawImage(nclr);
-                if (img == null || img.IsEmpty)
-                    return new Preview { Kind = kind, Whynot = cannot ?? "This drawing could not be turned into a picture." };
-                return new Preview { Rgba = ToRgba(img), Width = img.Width, Height = img.Height, Kind = kind };
+                return new Preview { Kind = kind, Whynot = cannot ?? "This drawing could not be turned into a picture." };
             }
             catch (Exception ex)
             {
@@ -1327,7 +1303,6 @@ namespace DSPRE.Avalonia.Data
                 return new Preview { Kind = kind, Whynot = "This entry says it is a drawing but does not read "
                                                         + "like one, so there is nothing to show." };
             }
-            finally { foreach (string t in temps) { try { File.Delete(t); } catch { } } }
         }
 
         /// <summary>Cuts the see-through border off a picture, leaving what was drawn.</summary>
@@ -1343,17 +1318,16 @@ namespace DSPRE.Avalonia.Data
         /// 96 by 64 VS portrait stays 96 by 64 whatever its outer columns hold. Falls back to the drawn pixels when
         /// the pieces say nothing.
         /// </summary>
-        private static (byte[] rgba, int w, int h) CropToPieces(byte[] rgba, int w, int h, Ekona.Images.Bank bank,
+        private static (byte[] rgba, int w, int h) CropToPieces(byte[] rgba, int w, int h, NcerFile.Cell cell,
                                                                 out int cutLeft, out int cutTop)
         {
             int left = w, top = h, right = 0, bottom = 0;
-            foreach (Ekona.Images.OAM oam in bank.oams ?? Array.Empty<Ekona.Images.OAM>())
+            foreach (NcerFile.Piece p in cell.Pieces)
             {
-                System.Drawing.Size size = Ekona.Images.Actions.Get_OAMSize(oam.obj0.shape, oam.obj1.size);
                 // Where the renderer puts the piece: the canvas middle plus its offset.
-                int x0 = w / 2 + oam.obj1.xOffset, y0 = h / 2 + oam.obj0.yOffset;
+                int x0 = w / 2 + p.X, y0 = h / 2 + p.Y;
                 left = Math.Min(left, x0); top = Math.Min(top, y0);
-                right = Math.Max(right, x0 + size.Width); bottom = Math.Max(bottom, y0 + size.Height);
+                right = Math.Max(right, x0 + p.Width); bottom = Math.Max(bottom, y0 + p.Height);
             }
             left = Math.Max(0, left); top = Math.Max(0, top); right = Math.Min(w, right); bottom = Math.Min(h, bottom);
             if (right <= left || bottom <= top) return TrimBlank(rgba, w, h, out cutLeft, out cutTop);

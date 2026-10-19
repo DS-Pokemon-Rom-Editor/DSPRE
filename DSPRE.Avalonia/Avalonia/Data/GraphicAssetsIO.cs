@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using DSPRE;
-using Images;
+using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Data
 {
@@ -171,23 +171,14 @@ namespace DSPRE.Avalonia.Data
 
         private static (int dataOff, int dataSize, int bpp, int width, int height, bool tiled)? ReadShape(byte[] ncgr, int declaredWidth = 0)
         {
-            if (ncgr == null) return null;
-            int c = NitroBgCodec.Find(ncgr, "RAHC", 0);
-            if (c < 0 || c + 0x20 > ncgr.Length) return null;
-
-            // Read as SIGNED, which is how Nds4j (the library behind NitroViewer) reads them: a game that
-            // does not record a dimension writes 0xFFFF, which is -1, not 65535.
-            short tilesDown = (short)NitroBgCodec.U16(ncgr, c + 0x08);
-            short tilesAcross = (short)NitroBgCodec.U16(ncgr, c + 0x0A);
-            int depth = NitroBgCodec.U32(ncgr, c + 0x0C);          // 3 = sixteen colours, 4 = two fifty six
-            int tiledFlag = NitroBgCodec.U32(ncgr, c + 0x14);
-            int dataSize = NitroBgCodec.U32(ncgr, c + 0x18);
-            int dataOff = c + 0x20;
+            if (!(NitroBgCodec.ReadDrawingHeader(ncgr) is NitroBgCodec.DrawingHeader head)) return null;
+            int tilesDown = head.TilesDown, tilesAcross = head.TilesAcross;
+            int dataOff = head.DataAt, dataSize = head.DataSize;
             if (dataOff >= ncgr.Length) return null;
-            if (dataSize <= 0 || dataOff + dataSize > ncgr.Length) dataSize = ncgr.Length - dataOff;
+            if (dataSize <= 0) dataSize = ncgr.Length - dataOff;
 
-            int bpp = depth == 4 ? 8 : 4;
-            bool tiled = (tiledFlag & 0xFF) == 0;
+            int bpp = head.EightBit ? 8 : 4;
+            bool tiled = head.Tiled;
             int bytesPerTile = 64 * bpp / 8;
             int numTiles = bytesPerTile > 0 ? dataSize / bytesPerTile : 0;
             if (numTiles <= 0) return null;
@@ -269,7 +260,7 @@ namespace DSPRE.Avalonia.Data
                 uint[] allowed = ix.Palette.Length > ix.ColourCount
                     ? ix.Palette.Take(ix.ColourCount).ToArray()
                     : ix.Palette;
-                File.WriteAllBytes(path, IndexedPng.Write(ix.Indices, allowed, ix.Width, ix.Height));
+                PlainFiles.WriteBytes(path, IndexedPng.Write(ix.Indices, allowed, ix.Width, ix.Height));
                 return null;
             }
 
@@ -320,7 +311,7 @@ namespace DSPRE.Avalonia.Data
                 uint argb = 0xFF000000u | (uint)((p.Rgba[i * 4] << 16) | (p.Rgba[i * 4 + 1] << 8) | p.Rgba[i * 4 + 2]);
                 idx[i] = number[argb];
             }
-            File.WriteAllBytes(path, IndexedPng.Write(idx, pal, p.Width, p.Height));
+            PlainFiles.WriteBytes(path, IndexedPng.Write(idx, pal, p.Width, p.Height));
             return null;
         }
 
@@ -348,7 +339,7 @@ namespace DSPRE.Avalonia.Data
             if (!narc.Available) return "This game does not have this archive.";
             byte[] b = narc.Get(index);
             if (b == null || b.Length == 0) return "This entry is empty.";
-            File.WriteAllBytes(path, b);
+            PlainFiles.WriteBytes(path, b);
             return null;
         }
 
@@ -649,16 +640,12 @@ namespace DSPRE.Avalonia.Data
                 return "These colours are squeezed down in a way DSPRE cannot put back yet.";
             if (marker != 0) nclr = Unsqueeze(nclr);
 
-            int p = NitroBgCodec.Find(nclr, "TTLP", 0);
-            if (p < 0) return "These colours are not stored in a way DSPRE can write back.";
-            // Colours start 0x18 into the block, where NitroBgCodec.ReadPalette reads them.
-            int off = p + 0x18;
-            int size = Math.Min(NitroBgCodec.U32(nclr, p + 0x10), nclr.Length - off);
-            if (size <= 0) return "These colours are not stored in a way DSPRE can write back.";
+            int held = NitroBgCodec.ColourCount(nclr);
+            if (held <= 0) return "These colours are not stored in a way DSPRE can write back.";
 
             // Write into the same bank the colours were read from. These files often hold many banks side
             // by side, so starting at the front would repaint whatever owns the first one.
-            int room = size / 2 - startAt;
+            int room = held - startAt;
             if (startAt < 0 || room <= 0)
                 return "These colours sit outside what this entry holds.";
             if (palette.Length > room)
@@ -668,10 +655,7 @@ namespace DSPRE.Avalonia.Data
             for (int i = 0; i < palette.Length; i++)
             {
                 uint c = palette[i];
-                int r = (int)((c >> 16) & 0xFF) >> 3, g = (int)((c >> 8) & 0xFF) >> 3, b = (int)(c & 0xFF) >> 3;
-                ushort v = (ushort)(r | (g << 5) | (b << 10));
-                outp[off + (startAt + i) * 2] = (byte)(v & 0xFF);
-                outp[off + (startAt + i) * 2 + 1] = (byte)(v >> 8);
+                NitroBgCodec.PutColour(outp, startAt + i, NitroBgCodec.ToBgr555((byte)(c >> 16), (byte)(c >> 8), (byte)c));
             }
             if (marker != 0)
             {

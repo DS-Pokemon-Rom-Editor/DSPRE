@@ -8,7 +8,6 @@ using System.Text;
 using System.Threading.Tasks;
 using static DSPRE.MoveData;
 using static DSPRE.RomInfo;
-using static Images.NCOB.sNCOB;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -144,7 +143,7 @@ namespace DSPRE
                 DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
             };
 
-            File.WriteAllText(outputPath, System.Text.Json.JsonSerializer.Serialize(root, opts));
+            PlainFiles.WriteText(outputPath, System.Text.Json.JsonSerializer.Serialize(root, opts));
         }
 
 
@@ -650,84 +649,6 @@ namespace DSPRE
         }
 
 
-        public static string ExportEditableLearnsetDataToCSV()
-        {
-            string executablePath = AppDomain.CurrentDomain.BaseDirectory;
-            string docsFolderPath = Path.Combine(executablePath, "Docs");
-
-            string learnsetDataPath = Path.Combine(docsFolderPath, "LearnsetData.csv");
-
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData, DirNames.learnsets, DirNames.moveData });
-
-            string[] pokeNames = RomInfo.GetPokemonNamesWithForms(RomInfo.GetPersonalFilesCount());
-            string[] moveNames = RomInfo.GetAttackNames();
-
-            // Create the Docs folder if it doesn't exist
-            if (!Directory.Exists(docsFolderPath))
-            {
-                Directory.CreateDirectory(docsFolderPath);
-            }
-
-            // Write the Editable Learnset Data to the CSV file
-            LearnsetData curLearnsetData = null;
-            StreamWriter sw = new StreamWriter(learnsetDataPath);
-
-            // Write CSV header
-            sw.WriteLine("ID,Name,Level,Move");
-
-            for (int i = 0; i < RomInfo.GetLearnsetFilesCount(); i++)
-            {
-                curLearnsetData = new LearnsetData(i);
-                string pokemonName = pokeNames[i];
-
-                // If there are no moves in the learnset, still write one row for the Pokemon
-                if (curLearnsetData.list.Count == 0)
-                {
-                    sw.WriteLine($"{i},{pokemonName},,");
-                }
-                else
-                {
-                    // Write one row for each move/level combination
-                    foreach ((byte level, ushort move) entry in curLearnsetData.list)
-                    {
-                        string moveName = moveNames[entry.move];
-                        sw.WriteLine($"{i},{pokemonName},{entry.level},{moveName}");
-                    }
-                }
-            }
-
-            sw.Close();
-
-            return learnsetDataPath;
-
-        }
-
-        public static string ExportLearnsetDataToJSON()
-        {
-            string executablePath = AppDomain.CurrentDomain.BaseDirectory;
-            string docsFolderPath = Path.Combine(executablePath, "Docs");
-            string learnsetDataPath = Path.Combine(docsFolderPath, "LearnsetData.json");
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData, DirNames.learnsets, DirNames.moveData });
-
-            // Create the Docs folder if it doesn't exist
-            if (!Directory.Exists(docsFolderPath))
-            {
-                Directory.CreateDirectory(docsFolderPath);
-            }
-
-            List<(int Species, IEnumerable<(int Level, int Move)> Moves)> sets = new List<(int, IEnumerable<(int, int)>)>();
-            for (int i = 0; i < RomInfo.GetLearnsetFilesCount(); i++)
-            {
-                LearnsetData curLearnsetData = new LearnsetData(i);
-                List<(int Level, int Move)> moves = new List<(int Level, int Move)>();
-                foreach ((byte level, ushort move) e in curLearnsetData.list) moves.Add((e.level, e.move));
-                sets.Add((i, moves));
-            }
-
-            File.WriteAllText(learnsetDataPath, LearnsetJson(sets));
-            return learnsetDataPath;
-        }
-
         /// <summary>
         /// Every learnset given as JSON keyed by SPECIES_ name, each with its level-up moves as MOVE_ names.
         /// Shared by the docs export and the editors, which pass their own (possibly unsaved) lists.
@@ -854,7 +775,7 @@ namespace DSPRE
             FileStream curTrainerParty = null;
             StreamWriter sw = new StreamWriter(trainerDataPath);
 
-            int trainerCount = Directory.GetFiles(RomInfo.gameDirs[DirNames.trainerProperties].unpackedDir).Length;
+            int trainerCount = NarcAPI.Narc.MemberCount(RomInfo.gameDirs[DirNames.trainerProperties].unpackedDir);
             bool shinyPatch = TrainerShinyPatch.DetectCurrentProject();
 
             for (int i = 1; i < trainerCount; i++)

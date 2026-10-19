@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using DSPRE;
 using DSPRE.ROMFiles;
-using Images;   // NCLR reader
+using System.Linq;
 
 namespace DSPRE.Avalonia.Data
 {
@@ -47,23 +47,22 @@ namespace DSPRE.Avalonia.Data
             int colours = BattleObjects.Find("HpBar.Shared", "Colours");
             if (colours < 0) return null;
 
-            string temp = null;
             try
             {
                 byte[] raw = narc.Get(colours);
                 if (raw == null) return null;
-                temp = Path.Combine(Path.GetTempPath(), "dspre_gage_pal_" + Guid.NewGuid().ToString("N") + ".nclr");
-                File.WriteAllBytes(temp, raw);
-                NCLR nclr = new NCLR(temp, colours, Path.GetFileName(temp));
-                System.Drawing.Color[][] banks = nclr.Palette;
-                if (banks != null && banks.Length > 0 && banks[0] != null && banks[0].Length >= 16)
-                    _palette = banks[0];
+                ushort[] all = NitroBgCodec.ReadColours(raw);
+                int row = Math.Min(NitroBgCodec.DeclaredRowSize(raw), all.Length);
+                if (row >= 16)
+                    _palette = all.Take(row).Select(c => { (byte r, byte g, byte b) = NitroBgCodec.Colour(c); return System.Drawing.Color.FromArgb(r, g, b); }).ToArray();
             }
             catch (Exception ex) { AppLogger.Warn("The gauge palette could not be read: " + ex.Message); }
-            finally { try { if (temp != null) File.Delete(temp); } catch { } }
 
             return _palette;
         }
+
+        /// <summary>The gauge's first bank of colours, which its tiles and the pieces copied into them use.</summary>
+        public static System.Drawing.Color[] Colours() => Palette();
 
         /// <summary>Forgets the colours, for when a different ROM is opened.</summary>
         public static void Reset() { _palette = null; _paletteFor = null; BattleGaugeText.Reset(); }

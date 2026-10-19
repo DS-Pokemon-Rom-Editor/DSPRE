@@ -44,23 +44,6 @@ namespace DSPRE.ROMFiles
             pokeDataReader.Close();
         }
 
-        public static bool hasMoreThanOneGender(int pokemonID, SpeciesFile[] pokemonSpecies)
-        {
-            if (pokemonID < 0 || pokemonID >= pokemonSpecies.Length)
-            {
-                return false;
-            }
-
-            switch (pokemonSpecies[pokemonID].GenderRatioMaleToFemale)
-            {
-                case GENDER_RATIO_MALE:
-                case GENDER_RATIO_FEMALE:
-                case GENDER_RATIO_GENDERLESS:
-                    return false;
-                default:
-                    return true;
-            }
-        }
     }
 }
 
