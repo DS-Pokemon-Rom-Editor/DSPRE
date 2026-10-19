@@ -79,9 +79,9 @@ namespace DSPRE.Avalonia.Data
                 case "Platform" when w.Length == 3:
                     return w[2] switch
                     {
-                        "Yours" => $"Platform {w[1]}, your side",
-                        "Theirs" => $"Platform {w[1]}, their side",
-                        _ => $"Platform {w[1]} colours, {w[2].ToLowerInvariant()}",
+                        "Yours" => $"Your platform {w[1]}",
+                        "Theirs" => $"Their platform {w[1]}",
+                        _ => $"Platform {w[1]} {w[2].ToLowerInvariant()} colours",
                     };
                 case "ThrownBall" when w.Length == 2:
                     return BallNamed(w[1], out _) ?? "Thrown ball " + w[1];
@@ -158,33 +158,33 @@ namespace DSPRE.Avalonia.Data
         private static readonly (string Name, string Says)[] Spoken =
         {
             ("HpBar.Debug", "HP bar colours"),
-            ("HpBar.Shared", "HP bar colours, shared"),
+            ("HpBar.Shared", "Shared HP bar colours"),
 
             // Which file is whose comes from the games' own gauge tables, not from the names.
-            ("HpBar.Yours", "HP bar, your side"),
-            ("HpBar.Theirs", "HP bar, their side"),
-            ("HpBar.YoursDouble", "HP bar, your side, two on two"),
-            ("HpBar.YourPartner", "HP bar, your partner, two on two"),
-            ("HpBar.TheirsDouble", "HP bar, their side, two on two"),
-            ("HpBar.TheirPartner", "HP bar, their partner, two on two"),
+            ("HpBar.Yours", "Your HP bar"),
+            ("HpBar.Theirs", "Their HP bar"),
+            ("HpBar.YoursDouble", "Your HP bar (double battle)"),
+            ("HpBar.YourPartner", "Your partner's HP bar (double battle)"),
+            ("HpBar.TheirsDouble", "Their HP bar (double battle)"),
+            ("HpBar.TheirPartner", "Their partner's HP bar (double battle)"),
 
             // Nothing in the games ever loads these four.
-            ("HpBar.SpareA", "Spare HP bar, unused"),
-            ("HpBar.SpareB", "Spare HP bar, unused"),
-            ("NameBox.SpareA", "Spare name box, unused"),
-            ("NameBox.SpareB", "Spare name box, unused"),
+            ("HpBar.SpareA", "Unused spare HP bar"),
+            ("HpBar.SpareB", "Unused spare HP bar"),
+            ("NameBox.SpareA", "Unused spare name box"),
+            ("NameBox.SpareB", "Unused spare name box"),
             ("HpBar.CaughtBall", "Caught ball on the bar"),
             ("CaughtBall.Unused", "Caught ball"),
             ("PartyBalls.Yours", "Your six balls"),
             ("PartyBalls.Theirs", "Their six balls"),
-            ("MessageFrame.Debug", "Spare message frame colours, unused"),
+            ("MessageFrame.Debug", "Unused spare message frame colours"),
             ("MessageFrame.Shared", "Message frame colours"),
             ("Cursor.Choice", "Choice cursor"),
             ("LevelUp.Panel", "Level up panel"),
             ("Safari.Counter", "Safari counter"),
             ("Safari.Shared", "Safari counter colours"),
             ("PokemonSlot.Normal", "Pokémon slot"),
-            ("PokemonSlot.Large", "Pokémon slot, large"),
+            ("PokemonSlot.Large", "Large Pokémon slot"),
             ("TypeIcon.Shared", "Type and contest icon colours"),
             ("Blank.Shared", "Blank colours"),
             ("Blank.Piece", "Blank piece"),
@@ -383,6 +383,22 @@ namespace DSPRE.Avalonia.Data
             return IndexOf(names, thing, "Drawing");
         }
 
+        /// <summary>
+        /// What draws with the HP bar colours besides the bars: the pieces the battle code copies in, and the
+        /// name, level and HP numbers, written in colours 14 (letters), 2 (shadow) and 15 (behind them).
+        /// </summary>
+        public static IEnumerable<(int Slot, string Who)> AlsoUsesColours(int paletteEntry, int bank)
+        {
+            if (bank != 0 || paletteEntry < 0 || paletteEntry != Find("HpBar.Shared", "Colours")) yield break;
+            foreach (int slot in new[] { BattleGaugeGlyphs.Letter, BattleGaugeGlyphs.Shadow, BattleGaugeGlyphs.Background })
+                yield return (slot, "the name, level and HP numbers");
+            byte[] sheet = BattleGaugePieces.ReadSheet();
+            if (sheet == null) yield break;
+            bool[] seen = new bool[16];
+            foreach (byte b in sheet) { seen[b & 0xF] = true; seen[b >> 4] = true; }
+            for (int s = 1; s < 16; s++) if (seen[s]) yield return (s, "the HP bar pieces");
+        }
+
         /// <summary>The colours a battle drawing is meant to use, where the game says so plainly.</summary>
         public static int ColoursFor(int fileIndex)
         {
@@ -446,9 +462,9 @@ namespace DSPRE.Avalonia.Data
             if (thing == null) return null;
             string friendly = Friendly(thing);
             if (part == "File") return friendly;
-            // "Message frame colours, colours" reads worse than the name on its own.
+            // "Message frame colours (colours)" reads worse than the name on its own.
             if (friendly.IndexOf(part, StringComparison.OrdinalIgnoreCase) >= 0) return friendly;
-            return $"{friendly}, {part.ToLowerInvariant()}";
+            return $"{friendly} ({part.ToLowerInvariant()})";
         }
     }
 }

@@ -33,7 +33,10 @@ namespace DSPRE.Avalonia.Views.Battle
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveChanges();
-        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) VM?.DiscardChanges();
+        }
 
         private void TopScreen_Pressed(object sender, PointerPressedEventArgs e) => Pick(sender, e, false);
         private void TouchScreen_Pressed(object sender, PointerPressedEventArgs e) => Pick(sender, e, true);
@@ -48,17 +51,16 @@ namespace DSPRE.Avalonia.Views.Battle
             GraphicAssets.Archive archive = ArchiveOf(piece);
             if (archive == null)
             {
-                await DialogHelper.ShowError("This piece's archive is not one the painter can open.", "Battle Screen");
+                await DialogHelper.ShowError("This piece's archive is not one the painter can open.", "Battle screen error");
                 return;
             }
             if (!await WarnIfShared(piece)) return;
+            // The painter works on the saved graphic, so pending imports are settled first.
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(VM, this, "graphic", "Save them before painting?")) return;
 
             int at = BattleScreenEditorViewModel.PaintableEntry(piece);
-            VM.Edits.Remember(piece.Archive, at, "the painting of " + piece.Name);
-            GraphicPainterView painter = new GraphicPainterView(new GraphicPainterViewModel(archive, at));
-            // The painter writes as it goes, so the screens are read again once it is closed.
-            painter.Closed += (_, _) => VM?.Reload();
-            painter.ShowManaged();
+            // The painter saves on its own, so the screens are read again once it is closed.
+            AvaloniaEditorLauncher.OpenPainter(archive, at, () => VM?.Reload());
         }
 
         /// <summary>
@@ -71,7 +73,7 @@ namespace DSPRE.Avalonia.Views.Battle
             if (piece == null || piece.Drawing < 0)
             {
                 await DialogHelper.ShowInfo("This piece is not drawn from a single file in an archive.",
-                                            "Battle Screen");
+                                            "Battle screen");
                 return;
             }
             AvaloniaEditorLauncher.OpenGraphicAt(piece.Archive, piece.Drawing);
@@ -90,9 +92,10 @@ namespace DSPRE.Avalonia.Views.Battle
             if (path == null) return;
 
             int at = BattleScreenEditorViewModel.PaintableEntry(piece);
-            string trouble = GraphicAssets.ExportPng(archive, at, path);
-            if (trouble != null) await DialogHelper.ShowError(trouble, "Battle Screen");
-            else VM?.Refresh();
+            string trouble;
+            using (VM.Reading()) trouble = GraphicAssets.ExportPng(archive, at, path);
+            if (trouble != null) await DialogHelper.ShowError(trouble, "Battle screen error");
+            else { VM?.Refresh(); SaveNotice.Exported(path); }
         }
 
         private async void Import_Click(object sender, RoutedEventArgs e)
@@ -108,11 +111,52 @@ namespace DSPRE.Avalonia.Views.Battle
             if (path == null) return;
 
             int at = BattleScreenEditorViewModel.PaintableEntry(piece);
-            VM.Edits.Remember(piece.Archive, at, "the PNG imported into " + piece.Name);
-            string trouble = GraphicAssets.ImportPng(archive, at, path, out string note);
-            if (trouble != null) { VM.Edits.DropLastStepIfUnchanged(); await DialogHelper.ShowError(trouble, "Battle Screen"); return; }
-            if (!string.IsNullOrEmpty(note)) await DialogHelper.ShowInfo(note, "Battle Screen");
-            VM?.Reload();
+            BattleGaugeComposer.Kind? bar = piece.UsesBarPieces ? HpBarFit.KindOf(piece.Layout) : null;
+            if (bar != null)
+            {
+                (HpBarImportPrompt.Choice barChoice, HpBarFit.Plan plan) = await HpBarImportPrompt.AskAsync(this, archive, piece.Layout, bar.Value, path);
+                if (barChoice == HpBarImportPrompt.Choice.Cancel) return;
+                if (barChoice == HpBarImportPrompt.Choice.Fit)
+                {
+                    string failed = VM.Import(() => HpBarImport.Apply(archive, piece.Layout, path, plan,
+                        () => VM.Pending.Read(HpBarImport.SheetTarget), s => VM.StageBarPieces(s), out _));
+                    if (failed != null) { await DialogHelper.ShowError(failed, "Battle screen error"); return; }
+                    SaveNotice.Imported(piece.Name, path);
+                    return;
+                }
+            }
+            (PngColourPrompt.Choice choice, GraphicAssets.PngColourCheck check) = await PngColourPrompt.AskAsync(this, archive, at, path);
+            if (choice == PngColourPrompt.Choice.Cancel) return;
+            string note = null;
+            string trouble = VM.Import(() => PngColourPrompt.Import(archive, at, path, choice, check, out note));
+            if (trouble != null) { await DialogHelper.ShowError(trouble, "Battle screen error"); return; }
+            if (!string.IsNullOrEmpty(note)) await DialogHelper.ShowInfo(note, "Battle screen");
+            SaveNotice.Imported(piece.Name, path);
+        }
+
+        private void BarLayout_Click(object sender, RoutedEventArgs e) => AvaloniaEditorLauncher.OpenHpBarLayoutEditor();
+        private void TextBackgroundPatch_Click(object sender, RoutedEventArgs e) => VM?.OpenTextBackgroundPatch();
+
+        private async void ExportBarPieces_Click(object sender, RoutedEventArgs e)
+        {
+            string path = await DialogHelper.SaveFile(this, "Save the bar pieces as a PNG",
+                new[] { new FilePickerFileType("PNG image") { Patterns = new[] { "*.png" } } },
+                "HP bar pieces.png");
+            if (path == null) return;
+            string trouble = HpBarPiecesSheet.Export(path);
+            if (trouble != null) await DialogHelper.ShowError(trouble, "Battle screen error");
+            else SaveNotice.Exported(path);
+        }
+
+        private async void ImportBarPieces_Click(object sender, RoutedEventArgs e)
+        {
+            if (VM == null) return;
+            string path = await DialogHelper.OpenFile(this, "Import PNG",
+                new[] { new FilePickerFileType("PNG image") { Patterns = new[] { "*.png" } } });
+            if (path == null) return;
+            string trouble = VM.ImportBarPieces(path);
+            if (trouble != null) await DialogHelper.ShowError(trouble, "Battle screen error");
+            else SaveNotice.Imported("the bar pieces", path);
         }
 
         /// <summary>

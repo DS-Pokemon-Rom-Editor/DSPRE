@@ -6,7 +6,7 @@
         x:Class="DSPRE.Avalonia.Views.Battle.BattleScreenEditorView"
         x:DataType="vm:BattleScreenEditorViewModel"
         Title="Battle screen"
-        Width="1120" Height="780" MinWidth="980" MinHeight="620"
+        Width="1120" Height="780" MinWidth="1100" MinHeight="620"
         WindowStartupLocation="CenterScreen">
 
   <Design.DataContext>
@@ -63,7 +63,7 @@
     </controls:EditorToolbar>
 
     <!-- The piece list -->
-    <Border DockPanel.Dock="Left" Width="196" BorderBrush="{DynamicResource Editor.Border}"
+    <Border DockPanel.Dock="Left" Width="168" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,1,0">
       <DockPanel Margin="6">
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
@@ -88,7 +88,7 @@
     </Border>
 
     <!-- What is picked -->
-    <Border x:Name="PieceDetails" DockPanel.Dock="Right" Width="240" BorderBrush="{DynamicResource Editor.Border}"
+    <Border x:Name="PieceDetails" DockPanel.Dock="Right" Width="380" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="1,0,0,0">
       <ScrollViewer>
         <StackPanel Margin="8" Spacing="8">
@@ -109,8 +109,42 @@
                   HorizontalAlignment="Stretch" ToolTip.Tip="PNG image"/>
           <TextBlock Text="{Binding CannotPaintBecause}" Classes="hint"
                      IsVisible="{Binding CannotPaintBecause, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-          <Button Content="Open in graphics" controls:Icon.Key="OpenLink" Click="HandOver_Click" IsEnabled="{Binding CanHandOver}"
+          <Button Content="Open in Graphics" controls:Icon.Key="OpenLink" Click="HandOver_Click" IsEnabled="{Binding CanHandOver}"
                   HorizontalAlignment="Stretch" ToolTip.Tip="{Binding HandOverWhat}"/>
+
+          <StackPanel x:Name="BarPiecesSection" Spacing="6" IsVisible="{Binding ShowsBarPieces}">
+            <Separator Margin="0,4"/>
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Text="Bar pieces" FontWeight="SemiBold"/>
+              <controls:HelpTip Text="Copied over every bar as the battle runs: fill, status, gender and Lv, caught ball."/>
+            </StackPanel>
+            <ItemsControl ItemsSource="{Binding BarPieceGroups}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:BarPieceGroupRow">
+                  <StackPanel Margin="0,0,0,8" Spacing="2">
+                    <TextBlock Text="{Binding Name}" Classes="hint"/>
+                    <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" HorizontalAlignment="Left"
+                            Background="{DynamicResource Editor.PanelBg}">
+                      <Image Source="{Binding Picture}" Width="{Binding Width}" Height="{Binding Height}"
+                             Stretch="Fill" RenderOptions.BitmapInterpolationMode="None"/>
+                    </Border>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Button Content="Export…" controls:Icon.Key="export" Click="ExportBarPieces_Click"
+                      IsEnabled="{Binding HasBarPieces}" ToolTip.Tip="PNG image"/>
+              <Button Content="Import…" controls:Icon.Key="import" Click="ImportBarPieces_Click"
+                      IsEnabled="{Binding HasBarPieces}" ToolTip.Tip="PNG image in the HP bar colours"/>
+            </StackPanel>
+            <Button Content="Layout" controls:Icon.Key="OpenLink" Click="BarLayout_Click" HorizontalAlignment="Stretch"
+                    ToolTip.Tip="Where the name, level, HP and gauges sit on each bar"/>
+            <Button Content="Open in Patch Toolbox" controls:Icon.Key="OpenLink" Click="TextBackgroundPatch_Click" HorizontalAlignment="Stretch"
+                    IsVisible="{Binding CanClearTextBackground}" ToolTip.Tip="{Binding ClearTextBackgroundHelp}"/>
+            <TextBlock Text="{Binding BarPiecesNote}" Classes="hint"
+                       IsVisible="{Binding BarPiecesNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+          </StackPanel>
 
           <Separator Margin="0,4"/>
 
@@ -118,11 +152,11 @@
             <TextBlock Text="Sample" FontWeight="SemiBold"/>
             <controls:HelpTip Text="Preview only, nothing is saved."/>
           </StackPanel>
-          <TextBlock Text="How many Pokémon a side" Classes="hint" IsVisible="{Binding GaugeTextIsReal}"/>
+          <TextBlock Text="Battle type" Classes="hint" IsVisible="{Binding GaugeTextIsReal}"/>
           <ComboBox SelectedIndex="{Binding BattleSizeChoice}" HorizontalAlignment="Stretch"
                     IsVisible="{Binding GaugeTextIsReal}">
-            <ComboBoxItem>One, a single battle</ComboBoxItem>
-            <ComboBoxItem>Two, a double battle</ComboBoxItem>
+            <ComboBoxItem>Single battle</ComboBoxItem>
+            <ComboBoxItem>Double battle</ComboBoxItem>
           </ComboBox>
 
           <CheckBox Content="Show the numbers instead of the bar"
@@ -164,7 +198,7 @@
 
     <!-- The two screens, stacked the way a DS has them -->
     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-      <StackPanel x:Name="BothScreens" Spacing="10" Margin="12" HorizontalAlignment="Center">
+      <StackPanel x:Name="BothScreens" Spacing="10" Margin="12" HorizontalAlignment="Left">
 
         <TextBlock Text="Top screen" Classes="hint" HorizontalAlignment="Center"/>
         <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="Black">
@@ -188,12 +222,11 @@
               <views:RomTextBlock Canvas.Left="210" Canvas.Top="102" Text="{Binding SampleLevelText}"
                                   IsVisible="{Binding !GaugeTextIsReal}"/>
 
-              <!-- How much health is left. The bar itself is part of the picture; only its green
-                   fill moves, and these two places are the single battle's bars. -->
+              <!-- A plain fill when the slot tables are not found. -->
               <Rectangle Canvas.Left="50" Canvas.Top="42" Height="4" Fill="#38C838"
-                         Width="{Binding HpBarWidth}" IsVisible="{Binding !IsDoubles}"/>
+                         Width="{Binding HpBarWidth}" IsVisible="{Binding ShowsPlainFill}"/>
               <Rectangle Canvas.Left="200" Canvas.Top="118" Height="4" Fill="#38C838"
-                         Width="{Binding HpBarWidth}" IsVisible="{Binding !IsDoubles}"/>
+                         Width="{Binding HpBarWidth}" IsVisible="{Binding ShowsPlainFill}"/>
               <views:RomTextBlock Canvas.Left="16"  Canvas.Top="152" Text="{Binding SampleMessage}" Ink="#515159" Shadow="#A2A2AA"/>
 
               <Rectangle IsVisible="{Binding HighlightOnTop}"

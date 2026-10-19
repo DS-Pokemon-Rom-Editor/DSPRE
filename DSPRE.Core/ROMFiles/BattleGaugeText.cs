@@ -6,8 +6,8 @@ using System.Linq;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// The letters a battle writes onto a gauge. "Lv" and the gender symbol are found by searching the
-    /// battle overlay rather than by address, so a romhack that has moved things still works.
+    /// The letters a battle writes onto a gauge, read from the pieces sheet in the battle overlay and the
+    /// number font.
     /// </summary>
     public static class BattleGaugeText
     {
@@ -25,7 +25,7 @@ namespace DSPRE.ROMFiles
         private const int NumberFontHeader = 48;
         private const int DigitCount = 10;
 
-        /// <summary>The "Lv" the gauge shares with the number font, which is what finds the overlay.</summary>
+        /// <summary>The "Lv" the gauge shares with the number font.</summary>
         private const int BattleLvRightHalf = 24;
 
         /// <summary>The slash between the two HP numbers, which the games place at this tile.</summary>
@@ -36,8 +36,6 @@ namespace DSPRE.ROMFiles
 
         private sealed class Layout
         {
-            public int AnchorAt;             // bytes from tile 0 to the half tile of "Lv" the search finds
-            public int TableTiles;
             public Dictionary<Gender, int[]> Genders;
             public bool GenderIsOneRow;      // two tiles to be drawn four rows lower, not a 2 by 2 block
             public int NoStatusTile;
@@ -48,8 +46,6 @@ namespace DSPRE.ROMFiles
         // its "Lv" matches the font. Badly poisoned reuses the poison word.
         private static readonly Layout PlatinumAndJohto = new()
         {
-            AnchorAt = 0x49 * 32,
-            TableTiles = 0x4e,
             Genders = new()
             {
                 [Gender.Female] = new[] { 0x3c, 0x3d, 0x48, 0x49 },
@@ -63,8 +59,6 @@ namespace DSPRE.ROMFiles
         // Diamond and Pearl keep the mark and "Lv" as one 16 by 8 row that the gauge lowers four rows as it draws.
         private static readonly Layout DiamondPearl = new()
         {
-            AnchorAt = 0x3d * 32 + 16,
-            TableTiles = 0x46,
             Genders = new()
             {
                 [Gender.Female] = new[] { 0x3c, 0x3d },
@@ -113,7 +107,7 @@ namespace DSPRE.ROMFiles
         public static Tile Slash()
         {
             Pieces read = Read();
-            return read == null ? null : TileAt(read.Overlay, read.TilesAt + SlashTile * 32);
+            return read == null ? null : TileAt(Sheet(read), SlashTile * 32);
         }
 
         /// <summary>
@@ -125,7 +119,8 @@ namespace DSPRE.ROMFiles
             Pieces read = Read();
             Layout layout = Current;
             if (read == null || !layout.Genders.TryGetValue(gender, out int[] tiles)) return null;
-            Tile[] stored = tiles.Select(t => TileAt(read.Overlay, read.TilesAt + t * 32)).ToArray();
+            byte[] sheet = Sheet(read);
+            Tile[] stored = tiles.Select(t => TileAt(sheet, t * 32)).ToArray();
             if (!layout.GenderIsOneRow) return stored;
 
             // Uncovered rows take the strip's background, or the bar would show through.
@@ -148,7 +143,7 @@ namespace DSPRE.ROMFiles
             int first = status == Status.None ? Current.NoStatusTile : StatusWords.TryGetValue(status, out int at) ? at : -1;
             if (read == null || first < 0) return null;
             return Enumerable.Range(0, StatusTiles)
-                             .Select(i => TileAt(read.Overlay, read.TilesAt + (first + i) * 32))
+                             .Select(i => TileAt(Sheet(read), (first + i) * 32))
                              .ToArray();
         }
 
@@ -161,6 +156,11 @@ namespace DSPRE.ROMFiles
             Pieces read = Read();
             return read == null ? null : TileAt(read.NumberFont, BattleLvRightHalf * 32);
         }
+
+        // A preview can stage a sheet that is not written yet; otherwise the overlay's own.
+        private static byte[] Sheet(Pieces read) => BattleGaugePieces.StagedSheet
+            ?? (BattleGaugePieces.IsOverlayStaged ? BattleGaugePieces.ReadSheet() : null)
+            ?? read.Overlay.AsSpan(read.TilesAt, Math.Min(0x4E * 32, read.Overlay.Length - read.TilesAt)).ToArray();
 
         /// <summary>Forgets what was read, for when a different ROM is opened.</summary>
         public static void Reset() { _read = null; _readFor = null; _why = null; }
@@ -206,44 +206,24 @@ namespace DSPRE.ROMFiles
             byte[] numbers = ReadNumberFont(entry);
             if (numbers == null) return null;
 
-            // The gauge keeps the same "Lv" as the number font, four rows lower, so half a tile of it
-            // matches byte for byte. That is what says which overlay holds the gauge's pictures.
-            byte[] needle = numbers.Skip(BattleLvRightHalf * 32).Take(16).ToArray();
-            if (needle.Length < 16 || needle.All(b => b == needle[0]))
+            BattleGaugePieces.Found found = BattleGaugePieces.Locate();
+            if (found == null) { _why = BattleGaugePieces.WhyNot; return null; }
+            byte[] bytes;
+            try { bytes = File.ReadAllBytes(OverlayUtils.GetPath(found.Overlay)); }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                _why = "This ROM's number font does not hold the \"Lv\" the gauge is found by.";
+                _why = "The battle overlay could not be read: " + ex.Message;
                 return null;
             }
 
-            int overlays;
-            try { overlays = OverlayUtils.OverlayTable.GetNumberOfOverlays(); }
-            catch (Exception ex) { _why = "The overlay table could not be read: " + ex.Message; return null; }
-
-            for (int ov = 0; ov < overlays; ov++)
+            _read = new Pieces
             {
-                byte[] bytes = TryReadOverlay(ov);
-                if (bytes == null) continue;
-
-                int at = IndexOf(bytes, needle);
-                if (at < 0) continue;
-
-                // That half tile belongs to the female "Lv", whose place in the table differs by family.
-                Layout layout = Current;
-                int tilesAt = at - layout.AnchorAt;
-                if (tilesAt < 0 || tilesAt + layout.TableTiles * 32 > bytes.Length) continue;
-
-                _read = new Pieces
-                {
-                    NumberFont = numbers,
-                    Overlay = bytes,
-                    TilesAt = tilesAt,
-                    OverlayNumber = ov,
-                };
-                return _read;
-            }
-
-            _why = "The battle overlay holding the gauge's \"Lv\" and gender marks was not found.";
-            return null;
+                NumberFont = numbers,
+                Overlay = bytes,
+                TilesAt = found.SheetAt,
+                OverlayNumber = found.Overlay,
+            };
+            return _read;
         }
 
         private static byte[] ReadNumberFont(int entry)
@@ -265,7 +245,7 @@ namespace DSPRE.ROMFiles
             try
             {
                 byte[] raw = File.ReadAllBytes(files[entry]);
-                byte[] tiles = raw.Length > 0 && raw[0] == 0x10 ? NSMBe4.ROM.LZ77_Decompress(raw) : raw;
+                byte[] tiles = raw.Length > 0 && raw[0] == 0x10 ? Lz77.Decompress(raw) : raw;
                 if (tiles.Length < (BattleLvRightHalf + 1) * 32)
                 {
                     _why = "The number font is smaller than the pictures we read out of it.";
@@ -280,19 +260,6 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        private static byte[] TryReadOverlay(int number)
-        {
-            try
-            {
-                string path = OverlayUtils.GetPath(number);
-                if (!File.Exists(path)) return null;
-                // Only ds-rom projects, where overlays are already decompressed, are read here. A packed
-                // overlay simply will not match, and the search moves on.
-                return File.ReadAllBytes(path);
-            }
-            catch { return null; }
-        }
-
         /// <summary>One tile, by its byte offset: the blob does not start on a tile boundary.</summary>
         private static Tile TileAt(byte[] data, int at)
         {
@@ -305,19 +272,6 @@ namespace DSPRE.ROMFiles
                 made.Pixels[i * 2 + 1] = (byte)(b >> 4);
             }
             return made;
-        }
-
-        private static int IndexOf(byte[] hay, byte[] needle)
-        {
-            int last = hay.Length - needle.Length;
-            for (int i = 0; i <= last; i++)
-            {
-                if (hay[i] != needle[0]) continue;
-                int j = 1;
-                while (j < needle.Length && hay[i + j] == needle[j]) j++;
-                if (j == needle.Length) return i;
-            }
-            return -1;
         }
 
         /// <summary>Where the gauge's pictures were found, for a status line or a test.</summary>

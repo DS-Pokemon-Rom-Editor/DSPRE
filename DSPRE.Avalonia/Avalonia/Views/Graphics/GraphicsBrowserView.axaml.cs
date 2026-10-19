@@ -36,7 +36,10 @@ namespace DSPRE.Avalonia.Views.Graphics
             string err = ViewModel.SetPaletteColour(number, picked.Value.R, picked.Value.G, picked.Value.B);
             if (err != null) await DialogHelper.ShowError(err, "Change colour");
         }
-        private void Discard_Click(object sender, RoutedEventArgs e) => ViewModel?.DiscardChanges();
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscard(this)) ViewModel?.DiscardChanges();
+        }
 
         /// <summary>Empties the search box, which is what the button beside it is for.</summary>
         private void ClearSearch_Click(object sender, RoutedEventArgs e)
@@ -55,8 +58,8 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (path == null) return;
 
             string err = vm.SavePicture(path);
-            vm.Status = err ?? $"Exported to {path}.";
-            if (err != null) await DialogHelper.ShowInfo(err, "Export PNG");
+            if (err != null) { await DialogHelper.ShowError(err, "Graphics error"); return; }
+            SaveNotice.Exported(path);
         }
 
         private async void SaveRaw_Click(object sender, RoutedEventArgs e)
@@ -74,8 +77,8 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (path == null) return;
 
             string err = vm.SaveFileAsItIs(path);
-            vm.Status = err ?? $"Exported to {path}.";
-            if (err != null) await DialogHelper.ShowInfo(err, "Export file");
+            if (err != null) { await DialogHelper.ShowError(err, "Graphics error"); return; }
+            SaveNotice.Exported(path);
         }
 
         private async void Replace_Click(object sender, RoutedEventArgs e)
@@ -94,15 +97,34 @@ namespace DSPRE.Avalonia.Views.Graphics
             string path = await DialogHelper.OpenFile(this, "Import PNG", new[] { Png });
             if (path == null) return;
 
-            string err = vm.Replace(path, out string note);
-            vm.Status = err ?? "Imported. Save to keep it.";
-            if (err != null) { await DialogHelper.ShowInfo(err, "Import PNG"); return; }
+            (Data.GraphicAssets.Archive target, int at) = vm.ImportTarget;
+            string err, note;
+            Data.BattleGaugeComposer.Kind? bar = target?.Dir == RomInfo.DirNames.battleObj ? Data.HpBarFit.KindOf(at) : null;
+            HpBarImportPrompt.Choice barChoice = HpBarImportPrompt.Choice.PictureOnly;
+            Data.HpBarFit.Plan plan = null;
+            if (bar != null)
+            {
+                (barChoice, plan) = await HpBarImportPrompt.AskAsync(this, target, at, bar.Value, path);
+                if (barChoice == HpBarImportPrompt.Choice.Cancel) return;
+            }
+            if (barChoice == HpBarImportPrompt.Choice.Fit)
+            {
+                err = vm.ReplaceHpBar(path, plan, out note);
+            }
+            else
+            {
+                (PngColourPrompt.Choice choice, Data.GraphicAssets.PngColourCheck check) = await PngColourPrompt.AskAsync(this, target, at, path);
+                if (choice == PngColourPrompt.Choice.Cancel) return;
+                err = vm.Replace(path, choice, check, out note);
+            }
+            if (err != null) { vm.StatusText = err; await DialogHelper.ShowError(err, "Graphics error"); return; }
+            SaveNotice.Imported(vm.Selected.Name ?? $"{vm.Selected.Archive.Title} {vm.Selected.Index}", path);
 
             // A background shares its pieces, so painting one square changes every square drawn from the
             // same one. Say so rather than leaving it to be found later.
             if (!string.IsNullOrEmpty(note))
             {
-                vm.Status = note;
+                vm.StatusText = note;
                 await DialogHelper.ShowInfo(note, "Import PNG");
             }
         }
@@ -125,9 +147,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             // The painter works on the saved graphic, so pending imports are settled first.
             if (!await RecordSwitchGuard.ConfirmLeaveAsync(vm, this, "graphic", "Save them before painting?")) return;
 
-            GraphicPainterView painter = new GraphicPainterView(
-                new GraphicPainterViewModel(vm.ShowingArchive, vm.ShowingIndex));
-            painter.ShowManaged();
+            AvaloniaEditorLauncher.OpenPainter(vm.ShowingArchive, vm.ShowingIndex);
         }
     }
 }

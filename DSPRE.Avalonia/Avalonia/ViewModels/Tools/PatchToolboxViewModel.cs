@@ -31,12 +31,12 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             ["trainerCustomPokeballs"] = "Trainers",
             ["arm9"] = "Foundation", ["matrix"] = "Foundation", ["dynamicHeaders"] = "Foundation", ["scrcmdRepoint"] = "Foundation",
-            ["trainerClassMetadata"] = "Trainers", ["classIntros"] = "Trainers", ["vsIntroTimings"] = "Trainers", ["trainerClassTablesExpanded"] = "Trainers", ["trainerEncounterBgmRepointed"] = "Trainers", ["trainerShiny"] = "Trainers",
+            ["trainerClassMetadata"] = "Trainers", ["classIntros"] = "Trainers", ["vsIntroTimings"] = "Trainers", ["vsClassTableExpanded"] = "Trainers", ["trainerClassTablesExpanded"] = "Trainers", ["trainerEncounterBgmRepointed"] = "Trainers", ["trainerShiny"] = "Trainers",
             // Grouped by what the patch is about, not what it edits: name patches sit with their subject.
             ["sentenceCase"] = "Items and Pokémon", ["itemSentenceCase"] = "Items and Pokémon", ["trainerNames"] = "Trainers",
             ["sameHeldItemOdds"] = "Items and Pokémon", ["itemStandardize"] = "Items and Pokémon",
             ["punchingMovesExpanded"] = "Moves", ["soundMovesExpanded"] = "Moves", ["regionalDexCount"] = "Items and Pokémon", ["evolutionSlots"] = "Items and Pokémon", ["typeChartExpanded"] = "Moves", ["swarmTableExpanded"] = "Items and Pokémon", ["bpShopExpanded"] = "Items and Pokémon", ["martsExpanded"] = "Items and Pokémon", ["pickupSlots"] = "Items and Pokémon",
-            ["bdhcam"] = "Maps and graphics", ["buildingRotation"] = "Maps and graphics", ["disableTextures"] = "Maps and graphics",
+            ["bdhcam"] = "Maps and graphics", ["buildingRotation"] = "Maps and graphics", ["disableTextures"] = "Maps and graphics", ["hpBarText"] = "Maps and graphics",
             ["platPatches"] = "External", ["g4Patcher"] = "External",
         };
 
@@ -45,12 +45,12 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             ["trainerCustomPokeballs"] = "pokeball ball capsule seals trainer party apricorn net ultra",
             ["arm9"] = "synthetic overlay memory expansion expand required", ["matrix"] = "matrix 0 map size expand", ["dynamicHeaders"] = "header narc allocate headers",
-            ["scrcmdRepoint"] = "script command table custom commands", ["trainerClassMetadata"] = "gender prize eye contact music vs intro class", ["vsIntroTimings"] = "vs intro timing flash slide hold class encounter effect",
+            ["scrcmdRepoint"] = "script command table custom commands", ["trainerClassMetadata"] = "gender prize eye contact music vs intro class", ["vsIntroTimings"] = "vs intro timing flash slide hold class encounter effect", ["vsClassTableExpanded"] = "vs intro class table room rows music expand",
             ["trainerClassTablesExpanded"] = "class tables expand", ["classIntros"] = "vs intro mugshot class style music diamond pearl platinum", ["trainerEncounterBgmRepointed"] = "encounter music bgm table", ["trainerShiny"] = "shiny trainer party",
             ["sentenceCase"] = "names capital case pokemon", ["itemSentenceCase"] = "names capital case items", ["trainerNames"] = "trainer name length text",
             ["sameHeldItemOdds"] = "held item odds wild", ["itemStandardize"] = "item numbers scripts ground items order",
             ["punchingMovesExpanded"] = "punch punching iron fist move list table expand repoint", ["soundMovesExpanded"] = "sound soundproof move list table expand repoint ai", ["regionalDexCount"] = "regional pokedex dex size count complete professor rating", ["evolutionSlots"] = "evolution evolutions evo slots methods more expand", ["typeChartExpanded"] = "type chart matchups effectiveness expand", ["swarmTableExpanded"] = "swarm swarms outbreak table expand rows", ["bpShopExpanded"] = "battle point bp shop counter tm exchange expand", ["martsExpanded"] = "mart marts shop poke mart items custom expand", ["pickupSlots"] = "pickup ability items level range slots rare independent",
-            ["bdhcam"] = "camera cameras dynamic", ["buildingRotation"] = "building rotation map editor", ["disableTextures"] = "textures dynamic disable",
+            ["bdhcam"] = "camera cameras dynamic", ["buildingRotation"] = "building rotation map editor", ["disableTextures"] = "textures dynamic disable", ["hpBarText"] = "hp bar health gauge name level numbers text box background white transparent clear battle",
             ["platPatches"] = "external platinum patches link", ["g4Patcher"] = "external asm code injection armips patches link kalaay",
         };
 

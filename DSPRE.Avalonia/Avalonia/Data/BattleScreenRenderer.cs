@@ -33,6 +33,7 @@ namespace DSPRE.Avalonia.Data
             public string SharedNote;        // what else changes when this one does
             public string CannotEditBecause; // set when the painter cannot be handed this one
             public string Whynot;            // set when Rgba is null
+            public bool UsesBarPieces;       // the battle copies its fill and status in from the bar pieces
 
             // Hardware alpha blend weights in sixteenths; own 16 and below 0 is a plain draw.
             public int BlendOwn = 16, BlendBelow;
@@ -84,6 +85,7 @@ namespace DSPRE.Avalonia.Data
             public BattleGaugeText.Status Status = BattleGaugeText.Status.None;
             public bool Doubles;             // two bars a side instead of one
             public bool NumbersInsteadOfBar; // in a double battle the games swap the two over
+            public double HealthLeft = 1.0;
         }
 
         private readonly ScriptNarc _bg = new ScriptNarc(DirNames.battleBg);
@@ -201,7 +203,7 @@ namespace DSPRE.Avalonia.Data
             {
                 Piece piece = new Piece
                 {
-                    Name = player ? "Ground, your side" : "Ground, their side",
+                    Name = player ? "Your ground" : "Their ground",
                     What = "The tray the Pokémon stands on.",
                     Archive = DirNames.battleObj,
                     Drawing = files.HasValue ? (player ? files.Value.MineDrawing : files.Value.EnemyDrawing) : -1,
@@ -215,6 +217,8 @@ namespace DSPRE.Avalonia.Data
                 pieces.Add(piece);
             }
         }
+
+        private const int SampleMostHealth = 20;
 
         private void AddGauges(List<Piece> pieces, Options o)
         {
@@ -233,6 +237,7 @@ namespace DSPRE.Avalonia.Data
                     Layout = BattleObjects.Find(thing, "As it appears"),
                     Colours = BattleObjects.Find("HpBar.Shared", "Colours"),
                     SharedNote = "Every battle in the game draws this same bar.",
+                    UsesBarPieces = true,
                 };
                 try
                 {
@@ -247,6 +252,9 @@ namespace DSPRE.Avalonia.Data
                         // Only your own side shows numbers, and in a double battle only once the
                         // games have been asked to swap the bar for them.
                         ShowHealthNumbers = player && (!o.Doubles || o.NumbersInsteadOfBar),
+                        Health = (int)Math.Round(Math.Clamp(o.HealthLeft, 0, 1) * SampleMostHealth),
+                        MostHealth = SampleMostHealth,
+                        FillGauges = true,
                     });
                     if (g == null && !o.Doubles)
                     {
@@ -309,7 +317,7 @@ namespace DSPRE.Avalonia.Data
             };
             try
             {
-                FieldWindowFrame frame = FieldWindowFrame.Load(windowStyle);
+                FieldWindowFrame frame = WindowFrames.Load(windowStyle);
                 if (frame == null) piece.Whynot = "The window frames could not be read from this ROM.";
                 else
                 {

@@ -13,6 +13,14 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.ViewModels.Battle
 {
+    public sealed class BarPieceGroupRow
+    {
+        public string Name { get; init; }
+        public Bitmap Picture { get; init; }
+        public double Width { get; init; }
+        public double Height { get; init; }
+    }
+
     /// <summary>One line in the list of pieces beside the screens.</summary>
     public sealed class BattlePieceRow
     {
@@ -27,7 +35,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
     /// The whole battle, both screens, drawn from the ROM's own graphics, with every piece of it
     /// selectable and editable.
     /// </summary>
-    public sealed class BattleScreenEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
+    public sealed class BattleScreenEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -44,7 +52,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         public BattleScreenEditorViewModel()
         {
-            Edits.Changed += RaiseEdits;
+            Pending.Changed += RaiseEdits;
             if (Design.IsDesignMode) { _loading = false; return; }
 
             // The preview writes in the ROM's own font, which is read once and kept for every window
@@ -63,6 +71,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             for (int i = 0; i < BattleBgRenderer.BackdropCount; i++) BackdropNames.Add("Backdrop " + i);
 
             _loading = false;
+            AppEvents.RomPatchStateChanged += OnPatchStateChanged;
             Refresh();
         }
 
@@ -163,44 +172,83 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private string _statusText = "";
         public string StatusText { get => _statusText; private set => Set(ref _statusText, value); }
 
-        // Imports and painting write the unpacked members at once; Save keeps them, Discard puts the opened bytes back.
-        public ArchiveEditSession Edits { get; } = new ArchiveEditSession();
-        public bool HasUnsavedChanges => Edits.HasChanges;
-        public string UnsavedChangesDescription => "Battle screen";
-        public bool CanUndo => Edits.CanUndo;
-        public bool CanRedo => Edits.CanRedo;
-        public string UndoWhat => Edits.UndoWhat;
-        public string RedoWhat => Edits.RedoWhat;
+        // Imports wait here until Save; the screens are drawn from them meanwhile.
+        public PendingArchiveWrites Pending { get; } = new PendingArchiveWrites();
+        public bool HasUnsavedChanges => Pending.IsDirty;
+        public string UnsavedChangesDescription => "Battle screen graphics";
+        public bool CanUndo => Pending.CanUndo;
+        public bool CanRedo => Pending.CanRedo;
 
-        public void Undo() { if (Edits.Undo() is string what) { Reload(); StatusText = "Undid " + what + "."; } }
-        public void Redo() { if (Edits.Redo() is string what) { Reload(); StatusText = "Redid " + what + "."; } }
+        public void Undo() { if (!Pending.CanUndo) return; Pending.Undo(); Reload(); }
+        public void Redo() { if (!Pending.CanRedo) return; Pending.Redo(); Reload(); }
 
         public void SaveChanges()
         {
-            if (!Edits.HasChanges) return;
-            Edits.Accept();
+            if (!HasUnsavedChanges) return;
+            Pending.Save();
+            Reload();
             SaveNotice.Saved(UnsavedChangesDescription);
         }
 
         public void DiscardChanges()
         {
-            if (!Edits.HasChanges) return;
-            Edits.Revert();
+            if (!HasUnsavedChanges) return;
+            Pending.Discard();
             Reload();
-            StatusText = "Battle screen put back as opened.";
+        }
+
+        /// <summary>Reads on this thread see the pending archive members and bar pieces until disposed.</summary>
+        public IDisposable Reading()
+        {
+            IDisposable members = Pending.Reading();
+            IDisposable sheet = BattleGaugePieces.Staged(Pending.Read(HpBarImport.SheetTarget));
+            return new Both(sheet, members);
+        }
+
+        private sealed class Both : IDisposable
+        {
+            private readonly IDisposable _a, _b;
+            public Both(IDisposable a, IDisposable b) { _a = a; _b = b; }
+            public void Dispose() { _a.Dispose(); _b.Dispose(); }
+        }
+
+        /// <summary>Runs an import whose writes, bar pieces included, become one pending step. Returns its error or null.</summary>
+        public string Import(Func<string> import)
+        {
+            string error = Pending.Import(() =>
+            {
+                using (BattleGaugePieces.Staged(Pending.Read(HpBarImport.SheetTarget))) return import();
+            });
+            Reload();
+            return error;
+        }
+
+        /// <summary>Stands in for writing the bar pieces during <see cref="Import"/>.</summary>
+        public string StageBarPieces(byte[] sheet) { Pending.Stage(HpBarImport.SheetTarget, sheet); return null; }
+
+        public void Detach() => AppEvents.RomPatchStateChanged -= OnPatchStateChanged;
+
+        public bool CanClearTextBackground => HpBarTextPatchOffer.CanOffer;
+        public string ClearTextBackgroundHelp => HpBarTextPatchOffer.Tip;
+
+        public void OpenTextBackgroundPatch() => HpBarTextPatchOffer.Open();
+
+        private void OnPatchStateChanged(object sender, EventArgs e)
+        {
+            OnPropertyChanged(nameof(CanClearTextBackground));
+            Refresh();
         }
 
         /// <summary>Reads the pieces again after a member was written, including by the painter.</summary>
         public void Reload()
         {
-            Edits.DropLastStepIfUnchanged();
             BattleGaugeTextRenderer.Reset();
             Refresh();
         }
 
         private void RaiseEdits()
         {
-            foreach (string n in new[] { nameof(HasUnsavedChanges), nameof(CanUndo), nameof(CanRedo), nameof(UndoWhat), nameof(RedoWhat) })
+            foreach (string n in new[] { nameof(HasUnsavedChanges), nameof(CanUndo), nameof(CanRedo) })
                 OnPropertyChanged(n);
         }
 
@@ -210,6 +258,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (_loading) return;
             try
             {
+                using IDisposable pending = Reading();
                 _pieces = _renderer.Build(new BattleScreenRenderer.Options
                 {
                     TerrainId = _terrainIndex,
@@ -223,12 +272,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     Status = _status,
                     Doubles = _doubles,
                     NumbersInsteadOfBar = _numbersInsteadOfBar,
+                    HealthLeft = _hpLeft,
                 });
 
                 string keep = Selected?.Name;
                 Pieces.Clear();
                 foreach (BattleScreenRenderer.Piece p in _pieces) Pieces.Add(new BattlePieceRow { Piece = p });
 
+                DrawBarPieces();
                 TopScreen = ToBitmap(BattleScreenRenderer.Flatten(_pieces, touch: false));
                 TouchScreen = ToBitmap(BattleScreenRenderer.Flatten(_pieces, touch: true));
 
@@ -263,7 +314,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 nameof(Selected), nameof(HasSelection), nameof(SelectedName), nameof(SelectedWhat),
                 nameof(SelectedShared), nameof(SelectedIsShared), nameof(CanPaint), nameof(CannotPaintBecause),
-                nameof(CanHandOver), nameof(HandOverWhat),
+                nameof(CanHandOver), nameof(HandOverWhat), nameof(ShowsBarPieces),
                 nameof(HighlightLeft), nameof(HighlightTop), nameof(HighlightWidth), nameof(HighlightHeight),
                 nameof(HighlightOnTop), nameof(HighlightOnTouch),
             }) OnPropertyChanged(n);
@@ -280,12 +331,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public string SampleLevelText => "Lv" + _sampleLevel;
         public double HpBarWidth => 48 * _hpLeft;
 
+        /// <summary>Where the fill is not copied in from the game's pieces, a plain one is drawn over the bar.</summary>
+        public bool ShowsPlainFill => !_doubles && BattleGaugePieces.Locate()?.HasSlots != true;
+
         // ── the gauge's own letters ───────────────────────────────────────────────
         //
         // The name, the level and the gender symbol are drawn with the pictures the game itself uses,
-        // rather than typed out in a desktop font, and go into the bar's own picture. Checked against a
-        // frame captured from a real battle: 93.6% of their bar and 95.0% of yours. What is left over
-        // is the green health fill and the arrow, which the game draws on top rather than into the bar.
+        // rather than typed out in a desktop font, and go into the bar's own picture, and so do the
+        // health and experience fill, copied from the pieces the battle code keeps.
 
         /// <summary>Whether the real pictures can be used, and what to say when they cannot.</summary>
         public bool GaugeTextIsReal => BattleGaugeTextRenderer.IsAvailable;
@@ -343,8 +396,41 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 _doubles = picked;
                 OnPropertyChanged(nameof(BattleSizeChoice));
                 OnPropertyChanged(nameof(IsDoubles));
+                OnPropertyChanged(nameof(ShowsPlainFill));
                 Refresh();
             }
+        }
+
+        public bool ShowsBarPieces => Selected?.Piece.UsesBarPieces == true;
+
+        private const int BarPieceZoom = 3;
+
+        public ObservableCollection<BarPieceGroupRow> BarPieceGroups { get; } = new();
+        public bool HasBarPieces => BarPieceGroups.Count > 0;
+
+        public string BarPiecesNote => HasBarPieces ? null
+            : BattleGaugePieces.WhyNot ?? "The HP bar colours could not be read.";
+
+        private void DrawBarPieces()
+        {
+            BarPieceGroups.Clear();
+            foreach (HpBarPiecesSheet.Group g in HpBarPiecesSheet.Groups())
+            {
+                byte[] rgba = HpBarPiecesSheet.GroupRgba(g, out int w, out int h);
+                if (rgba == null) { BarPieceGroups.Clear(); break; }
+                BarPieceGroups.Add(new BarPieceGroupRow
+                {
+                    Name = g.Name, Picture = ImageConverter.FromRgba(rgba, w, h),
+                    Width = w * BarPieceZoom, Height = h * BarPieceZoom,
+                });
+            }
+            OnPropertyChanged(nameof(HasBarPieces));
+            OnPropertyChanged(nameof(BarPiecesNote));
+        }
+
+        public string ImportBarPieces(string path)
+        {
+            return Import(() => HpBarPiecesSheet.Import(path, StageBarPieces));
         }
 
         private static Bitmap ToBitmap(byte[] rgba)
