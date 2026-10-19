@@ -50,6 +50,15 @@ namespace DSPRE.HgEngine
         /// <summary>bytereplacement only.</summary>
         public IReadOnlyList<byte> Bytes { get; set; } = Array.Empty<byte>();
 
+        /// <summary>The #ifdef / #ifndef conditions the line sits under, as the list writes them, or empty.</summary>
+        public string Condition { get; set; } = "";
+
+        /// <summary>Whether the build applies it: false when the checkout's defines rule it out, null when that turns on a make flag.</summary>
+        public bool? Built { get; set; } = true;
+
+        /// <summary>Why <see cref="Built"/> is not true, in words.</summary>
+        public string BuiltNote { get; set; } = "";
+
         public string BinaryName => OverlayNumber < 0 ? "arm9" : $"overlay {OverlayNumber}";
 
         /// <summary>No register, or the 255 that stands for one, replaces the routine outright.</summary>
@@ -112,6 +121,9 @@ namespace DSPRE.HgEngine
         public HgEnginePatchKind Kind { get; }
         public string FileName { get; }
         public string FullPath { get; }
+
+        // Kept so a save changes only the edited lines.
+        private bool _endsWithNewline = true;
         public List<HgEnginePatchEntry> Entries { get; } = new();
 
         private HgEnginePatchList(HgEnginePatchKind kind, string fileName, string fullPath)
@@ -151,11 +163,75 @@ namespace DSPRE.HgEngine
             HgEnginePatchList list = new HgEnginePatchList(kind, fileName, path);
             try
             {
+                string text = File.ReadAllText(path);
+                list._endsWithNewline = text.Length == 0 || text.EndsWith('\n');
                 foreach (string raw in File.ReadAllLines(path))
                     list.Entries.Add(Parse(kind, raw));
+                MarkConditions(list.Entries, Path.GetDirectoryName(path));
             }
             catch (Exception ex) { AppLogger.Error($"HgEnginePatchList.Read({fileName}): " + ex.Message); }
             return list;
+        }
+
+        /// <summary>
+        /// Settles each line's #ifdef / #ifndef the way make.py does: an #include "file" line adds every line of that file
+        /// starting with "#define ", the -D flags make passes count as defined, and only #ifdef, #ifndef, #else and
+        /// #endif are understood. Flags the Makefile passes only for some builds leave a line as depending on them.
+        /// </summary>
+        private static void MarkConditions(List<HgEnginePatchEntry> entries, string root)
+        {
+            HashSet<string> defined = new HashSet<string>(StringComparer.Ordinal);
+            HashSet<string> makeFlags = MakeFlags(root);
+            List<(string Name, bool WhenDefined)> open = new List<(string, bool)>();
+            foreach (HgEnginePatchEntry entry in entries)
+            {
+                string raw = entry.RawLine ?? "";
+                string line = raw.Trim();
+                string upper = line.ToUpperInvariant();
+                string[] words = line.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+                if (raw.StartsWith("#include \""))
+                {
+                    string file = Path.Combine(root, raw.Split('"')[1].Trim().Replace('/', Path.DirectorySeparatorChar));
+                    if (File.Exists(file))
+                        foreach (string define in File.ReadLines(file).Where(l => l.StartsWith("#define ")))
+                        {
+                            string[] parts = define.Trim().Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+                            if (parts.Length > 1) defined.Add(parts[1]);
+                        }
+                    continue;
+                }
+                if (upper.StartsWith("#IFDEF ") && words.Length > 1) { open.Insert(0, (words[1], true)); continue; }
+                if (upper.StartsWith("#IFNDEF ") && words.Length > 1) { open.Insert(0, (words[1], false)); continue; }
+                if (upper == "#ELSE" && open.Count > 0) { open[0] = (open[0].Name, !open[0].WhenDefined); continue; }
+                if (upper == "#ENDIF" && open.Count > 0) { open.RemoveAt(0); continue; }
+                if (open.Count == 0) continue;
+
+                entry.Condition = string.Join(" and ", open.AsEnumerable().Reverse().Select(c => (c.WhenDefined ? "" : "not ") + c.Name));
+                (string Name, bool WhenDefined) off = open.FirstOrDefault(c => !makeFlags.Contains(c.Name) && defined.Contains(c.Name) != c.WhenDefined);
+                (string Name, bool WhenDefined) depends = open.FirstOrDefault(c => makeFlags.Contains(c.Name));
+                if (off.Name != null)
+                {
+                    entry.Built = false;
+                    entry.BuiltNote = off.WhenDefined ? $"Off: {off.Name} is not defined." : $"Off: {off.Name} is defined.";
+                }
+                else if (depends.Name != null)
+                {
+                    entry.Built = null;
+                    entry.BuiltNote = $"Depends on {depends.Name}, which make passes only for some builds.";
+                }
+            }
+        }
+
+        // -D flags in the Makefile; they sit under build options such as AUTO_TEST, so none is settled here.
+        private static HashSet<string> MakeFlags(string root)
+        {
+            HashSet<string> flags = new HashSet<string>(StringComparer.Ordinal);
+            string makefile = Path.Combine(root, "Makefile");
+            if (!File.Exists(makefile)) return flags;
+            foreach (string line in File.ReadLines(makefile).Where(l => l.Contains("CFLAGS")))
+                foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(line, @"-D(\w+)"))
+                    flags.Add(m.Groups[1].Value);
+            return flags;
         }
 
         internal static HgEnginePatchEntry Parse(HgEnginePatchKind kind, string raw)
@@ -302,7 +378,7 @@ namespace DSPRE.HgEngine
             {
                 // Written back line for line as they came; added and changed entries carry their new line.
                 IEnumerable<string> lines = Entries.Select(e => e.RawLine);
-                HgEngineFileCache.WriteText(FullPath, string.Join("\n", lines) + "\n");
+                HgEngineFileCache.WriteText(FullPath, string.Join("\n", lines) + (_endsWithNewline ? "\n" : ""));
                 HgEngineClaimedRanges.ClearCache();
                 return true;
             }

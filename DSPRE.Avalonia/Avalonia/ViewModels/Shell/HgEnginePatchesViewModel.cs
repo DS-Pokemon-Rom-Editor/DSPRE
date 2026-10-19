@@ -29,6 +29,11 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         /// <summary>Added here and not written to its list yet.</summary>
         public bool IsPending { get; init; }
 
+        public string Built => Entry.Built switch { true => "Yes", false => "Off", null => "Depends" };
+        public string Condition => Entry.Condition;
+        public string BuiltNote => string.IsNullOrEmpty(Entry.BuiltNote) ? null : Entry.BuiltNote;
+        public double RowOpacity => Entry.Built == false ? 0.5 : 1.0;
+
         /// <summary>Set when another entry writes over the same bytes, which is nearly always a mistake.</summary>
         public string Clash { get; set; }
         public bool HasClash => !string.IsNullOrEmpty(Clash);
@@ -52,35 +57,54 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         // Entries added or changed since the last save, shown as not saved.
         private readonly HashSet<HgEnginePatchEntry> _pending = new();
 
-        // One step per add, change or delete, each knowing how to take itself back and redo itself.
-        private sealed record Step(HgEnginePatchList List, Action Undo, Action Redo);
-        private readonly Stack<Step> _done = new(), _undone = new();
-        public bool CanUndo => _done.Count > 0;
-        public bool CanRedo => _undone.Count > 0;
+        // Every list's entries at one moment. Entries keep their identity across steps, so a step stores their fields.
+        private sealed record EntryState(HgEnginePatchEntry Entry, bool Parsed, int OverlayNumber, string Symbol,
+            long Address, int Register, IReadOnlyList<byte> Bytes, string RawLine);
+        private sealed record Snapshot(List<EntryState>[] Lists, HashSet<HgEnginePatchEntry> Pending);
+
+        // One step per add, change or delete. Save reads the lists again, so it starts the history again too.
+        private readonly UndoHistory<Snapshot> _history = new();
+        private Snapshot _loaded;
+        public bool CanUndo => _history.CanUndo;
+        public bool CanRedo => _history.CanRedo;
+
+        private Snapshot Take() => new Snapshot(
+            _lists.Select(l => l.Entries.Select(e => new EntryState(e, e.Parsed, e.OverlayNumber, e.Symbol, e.Address, e.Register, e.Bytes, e.RawLine)).ToList()).ToArray(),
+            new HashSet<HgEnginePatchEntry>(_pending));
+
+        private void Restore(Snapshot state)
+        {
+            for (int i = 0; i < Math.Min(_lists.Count, state.Lists.Length); i++)
+            {
+                _lists[i].Entries.Clear();
+                foreach (EntryState s in state.Lists[i])
+                {
+                    (s.Entry.Parsed, s.Entry.OverlayNumber, s.Entry.Symbol, s.Entry.Address, s.Entry.Register, s.Entry.Bytes, s.Entry.RawLine) =
+                        (s.Parsed, s.OverlayNumber, s.Symbol, s.Address, s.Register, s.Bytes, s.RawLine);
+                    _lists[i].Entries.Add(s.Entry);
+                }
+            }
+            _pending.Clear();
+            _pending.UnionWith(state.Pending);
+        }
 
         public void Undo()
         {
-            if (_done.Count == 0) return;
-            Step step = _done.Pop();
-            step.Undo();
-            _undone.Push(step);
+            if (!_history.CanUndo) return;
+            Restore(_history.Undo());
             Stepped();
         }
 
         public void Redo()
         {
-            if (_undone.Count == 0) return;
-            Step step = _undone.Pop();
-            step.Redo();
-            _done.Push(step);
+            if (!_history.CanRedo) return;
+            Restore(_history.Redo());
             Stepped();
         }
 
-        private void Did(Step step)
+        private void Step()
         {
-            step.Redo();
-            _done.Push(step);
-            _undone.Clear();
+            _history.Capture(Take());
             Stepped();
         }
 
@@ -92,8 +116,20 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         private void ForgetSteps()
         {
-            _done.Clear(); _undone.Clear();
+            _loaded = Take();
+            _history.Reset(_loaded);
             OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo));
+        }
+
+        // The lists whose lines differ from what was read.
+        private List<HgEnginePatchList> ChangedLists()
+        {
+            List<HgEnginePatchList> changed = new();
+            if (_loaded == null) return changed;
+            for (int i = 0; i < Math.Min(_lists.Count, _loaded.Lists.Length); i++)
+                if (!_lists[i].Entries.Select(e => e.RawLine).SequenceEqual(_loaded.Lists[i].Select(s => s.RawLine)))
+                    changed.Add(_lists[i]);
+            return changed;
         }
 
         public ObservableCollection<PatchRow> Rows { get; } = new();
@@ -107,6 +143,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         private int _binaryFilter;
         public int BinaryFilter { get => _binaryFilter; set { if (Set(ref _binaryFilter, value)) Rebuild(); } }
+
+        private bool _builtOnly = true;
+        public bool BuiltOnly { get => _builtOnly; set { if (Set(ref _builtOnly, value)) Rebuild(); } }
 
         // ── Adding one ──────────────────────────────────────────────────────
         public ObservableCollection<string> NewListChoices { get; } = new();
@@ -147,6 +186,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             _lists = _readAll();
             foreach (HgEnginePatchList l in _lists) { ListNames.Add(l.FileName); NewListChoices.Add(l.FileName); }
             if (_lists.Count > 0) _newList = 0;
+            ForgetSteps();
 
             Rebuild();
         }
@@ -163,6 +203,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
             foreach ((HgEnginePatchList list, HgEnginePatchEntry entry) in all
                 .Where(x => wanted == null || x.Entry.OverlayNumber == wanted)
+                .Where(x => !BuiltOnly || x.Entry.Built != false)
                 .OrderBy(x => x.Entry.OverlayNumber).ThenBy(x => x.Entry.Address))
             {
                 long offset = entry.FileOffset(OverlayRam);
@@ -179,7 +220,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
             MarkClashes();
             int clashes = Rows.Count(r => r.HasClash);
+            int off = all.Count(x => x.Entry.Built == false);
             StatusText = $"{Rows.Count} patch(es)" +
+                (off > 0 ? $", {off} off in your config{(BuiltOnly ? " and hidden" : "")}" : "") +
                 (clashes > 0 ? $", {clashes} running into another" : "") +
                 (_pending.Count > 0 ? $", {_pending.Count} not saved" : "") + ".";
         }
@@ -203,12 +246,12 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         }
 
         /// <summary>
-        /// Flags patches starting inside another. Same-address pairs are skipped, since hg-engine stacks them on
-        /// purpose and repeats lines across #ifdef branches.
+        /// Flags patches starting inside another. Lines the config leaves out don't count. Same-address pairs are
+        /// skipped, since hg-engine stacks them on purpose and repeats lines across #ifdef branches.
         /// </summary>
         private void MarkClashes()
         {
-            foreach (IGrouping<int, PatchRow> group in Rows.Where(r => r.Offset.Length > 0).GroupBy(r => r.Entry.OverlayNumber))
+            foreach (IGrouping<int, PatchRow> group in Rows.Where(r => r.Offset.Length > 0 && r.Entry.Built != false).GroupBy(r => r.Entry.OverlayNumber))
             {
                 List<(PatchRow Row, long Start, int Len)> ordered = group
                     .Select(r => (Row: r,
@@ -288,7 +331,6 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             string why = ReadFields(list.Kind, out int overlay, out long at, out int register, out List<byte> bytes);
             if (why != null) return why;
 
-            (bool Parsed, int OverlayNumber, string Symbol, long Address, int Register, IReadOnlyList<byte> Bytes, string RawLine, bool Pending) before = (entry.Parsed, entry.OverlayNumber, entry.Symbol, entry.Address, entry.Register, entry.Bytes, entry.RawLine, Pending: _pending.Contains(entry));
             HgEnginePatchEntry trial = new HgEnginePatchEntry { Kind = list.Kind, RawLine = entry.RawLine };
             string symbol = NewSymbol?.Trim();
             HgEnginePatchList.Change(trial, overlay, symbol, at, register, bytes);
@@ -296,18 +338,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             if (problem != null) return problem;
             if (trial.RawLine == entry.RawLine) return null;
 
-            Did(new Step(list,
-                Undo: () =>
-                {
-                    (entry.Parsed, entry.OverlayNumber, entry.Symbol, entry.Address, entry.Register, entry.Bytes, entry.RawLine) =
-                        (before.Parsed, before.OverlayNumber, before.Symbol, before.Address, before.Register, before.Bytes, before.RawLine);
-                    if (!before.Pending) _pending.Remove(entry);
-                },
-                Redo: () =>
-                {
-                    HgEnginePatchList.Change(entry, overlay, symbol, at, register, bytes);
-                    _pending.Add(entry);
-                }));
+            HgEnginePatchList.Change(entry, overlay, symbol, at, register, bytes);
+            _pending.Add(entry);
+            Step();
             StatusText = $"Changed in {list.FileName}, not saved yet. {StatusText}";
             return null;
         }
@@ -319,11 +352,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             if (entry == null) return "Pick a patch in the table first.";
             HgEnginePatchList list = _lists.FirstOrDefault(l => l.Entries.Contains(entry));
             if (list == null) return "That patch is no longer in its list.";
-            int at = list.Entries.IndexOf(entry);
-            bool wasPending = _pending.Contains(entry);
-            Did(new Step(list,
-                Undo: () => { list.Entries.Insert(Math.Min(at, list.Entries.Count), entry); if (wasPending) _pending.Add(entry); },
-                Redo: () => { list.Entries.Remove(entry); _pending.Remove(entry); }));
+            list.Entries.Remove(entry);
+            _pending.Remove(entry);
+            Step();
             SelectedRow = null;
             StatusText = $"Removed from {list.FileName}, not saved yet. {StatusText}";
             return null;
@@ -365,9 +396,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             list.Entries.Remove(added);
             if (problem != null) return problem;
 
-            Did(new Step(list,
-                Undo: () => { list.Entries.Remove(added); _pending.Remove(added); },
-                Redo: () => { if (!list.Entries.Contains(added)) list.Entries.Add(added); _pending.Add(added); }));
+            list.Entries.Add(added);
+            _pending.Add(added);
+            Step();
             StatusText = $"Added to {list.FileName}, not saved yet. {StatusText}";
             return null;
         }
@@ -376,9 +407,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public string Save()
         {
             if (!IsAvailable) return "No hg-engine checkout is linked.";
-            if (_done.Count == 0) return null;
+            if (!HasUnsavedChanges) return null;
 
-            foreach (HgEnginePatchList list in _done.Select(s => s.List).Distinct().ToList())
+            foreach (HgEnginePatchList list in ChangedLists())
             {
                 if (!list.Save(out string error))
                 {
@@ -404,11 +435,12 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         }
 
         // ── Unsaved changes ─────────────────────────────────────────────────
-        public bool HasUnsavedChanges => _done.Count > 0;
+        // A step undone back to what was read leaves nothing to save.
+        public bool HasUnsavedChanges => _history.IsDirty && ChangedLists().Count > 0;
 
-        public string UnsavedChangesDescription => _done.Count == 1
-            ? "1 hg-engine patch change"
-            : $"{_done.Count} hg-engine patch changes";
+        public string UnsavedChangesDescription => ChangedLists() is { Count: 1 } one
+            ? "hg-engine " + one[0].FileName
+            : $"{ChangedLists().Count} hg-engine patch lists";
 
         public void SaveChanges() => Save();
 

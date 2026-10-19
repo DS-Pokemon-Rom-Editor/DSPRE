@@ -88,7 +88,8 @@ namespace DSPRE.HgEngine
 
             foreach (HgEnginePatchList list in HgEnginePatchList.ReadAllAt(root))
             {
-                foreach (HgEnginePatchEntry entry in list.Entries.Where(e => e.Parsed))
+                // A line the checkout's defines rule out is never written; one that depends on a make flag might be.
+                foreach (HgEnginePatchEntry entry in list.Entries.Where(e => e.Parsed && e.Built != false))
                 {
                     long offset = entry.FileOffset(overlayRam);
                     if (offset < 0) continue;
