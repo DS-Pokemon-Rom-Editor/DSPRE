@@ -5,41 +5,30 @@
 | Project | Target | What it is |
 |---|---|---|
 | `DSPRE.Core` | `net8.0` | Cross-platform ROM core: formats, ROM data, and scripts |
-| `Ekona`, `Images` | `net8.0` | Pixel and Nintendo DS image-format libraries |
-| `DSPRE.Avalonia` | `net8.0` | Cross-platform Avalonia app for Windows and Linux |
-| `DSPRE` | `net8.0-windows` | Windows host executable; Avalonia by default, with the legacy WinForms shell retained |
-| `DSPRE.Tests` | `net8.0`, plus `net8.0-windows` on Windows | xUnit tests; the Windows target adds tests that need GDI+ or the Windows host |
+| `DSPRE.Avalonia` | `net8.0` | The app, for Windows and Linux |
+| `DSPRE.Tests` | `net8.0` | xUnit tests |
 
 ## Prerequisites
 
-- .NET SDK 8.0 (`dotnet --version`)
-- On Linux, install the .NET 8 SDK using the instructions for your distribution at
+- .NET SDK 10 (9.0.300 or newer works; `global.json` refuses older), and the .NET 8 runtime to run the app and
+  tests. Avalonia 12 needs the newer compiler; the projects still target .NET 8.
+- On Linux, install both using the instructions for your distribution at
   https://learn.microsoft.com/dotnet/core/install/linux.
 
 ## Windows
 
 ```powershell
-dotnet build DS_Map.sln
-dotnet test DSPRE.Tests/DSPRE.Tests.csproj -f net8.0
+dotnet build DSPRE.sln
+dotnet test DSPRE.Tests/DSPRE.Tests.csproj
 ```
 
-Run profiles in the `DSPRE` project:
-
-- **DSPRE** starts the Avalonia shell and is the default.
-- **DSPRE (beta editors on)** passes `--beta`.
-- **DSPRE (old WinForms shell)** sets `DSPRE_WINFORMS_SHELL=1`.
-- `DSPRE.Avalonia` starts the same Avalonia UI without loading WinForms into the process.
-
-Omit `-f net8.0` when the Windows-only test target is relevant. On Windows that runs both configured
-targets; on other platforms the project selects the cross-platform target.
+Run profiles in the `DSPRE.Avalonia` project: **DSPRE (Avalonia)**, and **DSPRE (Avalonia, beta editors on)**,
+which passes `--beta`. The WSL profiles run the same build under WSL.
 
 ## Linux
 
-The solution builds on Linux. Windows-only projects set `EnableWindowsTargeting` automatically, so
-they compile but cannot run there.
-
 ```bash
-dotnet build DS_Map.sln
+dotnet build DSPRE.sln
 dotnet build DSPRE.Avalonia/DSPRE.Avalonia.csproj
 dotnet run --project DSPRE.Avalonia/DSPRE.Avalonia.csproj
 ```
@@ -48,8 +37,20 @@ Solution configurations `Debug-Linux` and `Release-Linux` build the cross-platfo
 `DSPRE.Avalonia` targeting `linux-x64`:
 
 ```bash
-dotnet build DS_Map.sln -c Release-Linux
+dotnet build DSPRE.sln -c Release-Linux
 ```
+
+### System libraries
+
+The app needs ICU and the X11 and OpenGL libraries Avalonia loads. On Debian or Ubuntu, including WSL:
+
+```bash
+sudo apt install libicu-dev libice6 libsm6 libx11-6 libx11-xcb1 libxext6 libxrandr2 libxi6 libxcursor1 \
+  libfontconfig1 libgl1 libegl1
+```
+
+`libicu-dev` pulls in whichever `libicuNN` the release ships. Under WSL, start DSPRE with
+`MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA` (or the GPU's name) so it renders on the dedicated GPU.
 
 ### Distributable output
 
@@ -57,6 +58,9 @@ dotnet build DS_Map.sln -c Release-Linux
 dotnet publish DSPRE.Avalonia/DSPRE.Avalonia.csproj -p:PublishProfile=linux-x64
 dotnet publish DSPRE.Avalonia/DSPRE.Avalonia.csproj -p:PublishProfile=win-x64
 ```
+
+Windows releases rename the published `DSPRE.Avalonia.exe` to `DSPRE.exe`, the name Velopack updates installed
+copies through. The launcher still finds `DSPRE.Avalonia.dll` by name, so only the exe is renamed.
 
 ### Runtime pieces beside the executable
 

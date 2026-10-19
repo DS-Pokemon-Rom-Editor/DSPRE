@@ -21,7 +21,10 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          # Avalonia 12 needs a newer compiler than SDK 8 has; the 8 runtime runs the net8.0 app and tests.
+          dotnet-version: |
+            8.0.x
+            10.0.x
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -81,7 +84,10 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          # Avalonia 12 needs a newer compiler than SDK 8 has; the 8 runtime runs the net8.0 app and tests.
+          dotnet-version: |
+            8.0.x
+            10.0.x
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -188,7 +194,7 @@ jobs:
             ## ⚠️ Avalonia Canary Build Notice ⚠️
             This is a Canary Build of the pure Avalonia DSPRE shell (no WinForms), automatically
             generated from the latest push to `feature/avalonia`. Windows and Linux, both
-            self-contained. This is the in-progress cross-platform shell — expect missing features,
+            self-contained. This is the in-progress cross-platform shell; expect missing features,
             rough edges, and instability.
 
             ## 🚧 What does this mean?

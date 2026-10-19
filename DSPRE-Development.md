@@ -1,379 +1,329 @@
-# Working on DSPRE
+# DSPRE development guide
 
-DSPRE 3.0 is an Avalonia app. This is how the code is laid out, how we write it, and the traps that
-have cost people a day. Build and publish instructions are in [BUILDING.md](BUILDING.md).
-
-The old WinForms shell is still in the repo behind `--winforms`. New UI work targets Avalonia unless a
-task explicitly concerns the legacy shell, and the rest of this document focuses on Avalonia.
-
----
+Build and publish: [BUILDING.md](BUILDING.md).
 
 ## Projects
 
-| | Target | What belongs here |
-|---|---|---|
-| `DSPRE.Core` | net8.0 | ROM formats, `ROMFiles` models, `DSUtils`, `RomInfo`, scripts, text, hg-engine. No UI. |
-| `DSPRE.Avalonia` | net8.0 | The app. Views, view models, the GL renderer, readers only the UI needs. |
-| `DSPRE.Tests` | net8.0 | xunit. |
+| Project | Holds |
+|---|---|
+| `DSPRE.Core` | ROM formats, `ROMFiles`, `DSUtils`, `RomInfo`, scripts, text, hg-engine. No UI. |
+| `DSPRE.Avalonia` | The app: views, view models, the GL renderer, readers only the UI uses. |
+| `DSPRE.Tests` | xunit tests. |
 
-`DS_Map` is the Windows exe that hosts the same Avalonia UI, plus the legacy WinForms editors.
+All target net8.0. Anything written back to the ROM goes in `DSPRE.Core/ROMFiles`: it reads from a `byte[]`,
+checks the length, and writes back with `ToBytes()`. Unknown fields and padding are written back as
+they were. Read-only types for drawing
+or listing go in `DSPRE.Avalonia/Avalonia/Data`. Core shows messages only through `AppMessages`.
 
-**Core or Avalonia?** If the type is written back into the ROM it goes in `DSPRE.Core/ROMFiles` and
-derives from `RomFile` with a `ToByteArray()`. If it only ever reads, to draw or list something, it goes
-in `DSPRE.Avalonia/Avalonia/Data`: `GraphicAssets`, `SdatArchive`, `SpaArchive`, `NitroBgCodec`.
+### Folders
 
-Core never shows UI. If you want a dialog from inside `ROMFiles`, raise it through `AppMessages` (in
-`Ekona`) and let the shell decide what to show.
-
-### Views and view models are filed by menu
-
-Both trees have the same eleven folders, and each is its own namespace:
+Views and view models share eleven folders, one namespace each, named after the menu:
 
 ```
 Shell  Pokemon  Trainers  Items  Text  World  Graphics  Battle  Audio  Tools  Controls
 ```
 
-The folder is the menu the editor opens from, not what the class is called. `Controls` is the shared
-pieces with no menu entry of their own: `PixelGrid`, `RomTextBlock`, `GlyphPainter`, `WaveformView`.
-
-`MapEditorViewModel` lives in `ViewModels/World/`, namespace `DSPRE.Avalonia.ViewModels.World`. You
-don't need a `using`: the csproj declares a global using per section. XAML doesn't get those, so a
-view's `xmlns:vm` names its own section. Two views embed across sections and carry a second prefix:
-`PokemonEditorView` embeds the battle display, `MapsWorkspaceView` embeds the text and script editors.
-
----
+`Controls` holds shared controls with no menu entry. C# gets each folder through a global using; XAML names it
+with `xmlns:vm`.
 
 ## Build and run
 
 ```powershell
-dotnet build DS_Map.sln          # everything
-dotnet test DSPRE.Tests/DSPRE.Tests.csproj -f net8.0
+dotnet build DSPRE.sln
+dotnet test DSPRE.Tests/DSPRE.Tests.csproj
 ```
 
-In Visual Studio the dropdown on `DSPRE` gives you **DSPRE** (the Avalonia shell),
-**DSPRE (beta editors on)** which passes `--beta`, and **DSPRE (old WinForms shell)**.
-`DSPRE.Avalonia` runs the same UI with no WinForms in the process at all, and has its own two profiles.
-
-From a terminal the executable is `DS_Map\bin\Debug\net8.0-windows\DSPRE.exe`, or
-`DSPRE.Avalonia\bin\Debug\net8.0\DSPRE.Avalonia.exe`. Helpers resolve from the output's `Tools\`
-directory through `AppContext.BaseDirectory`; the process working directory does not control lookup.
-
-Extracted test projects are configured per machine. See [Pointing tests at your games](#pointing-them-at-your-games).
-
-**Two build traps.**
-
-A partial build leaves a stale DLL: building `DSPRE.Avalonia.csproj` alone does not copy the DLL into
-`DS_Map\bin\Debug\net8.0-windows\`, so `DSPRE.exe` keeps running your old code and the build reports
-success. Build `DS_Map.sln`, and kill `DSPRE.exe` and `rotom-lsp.exe` first or you get MSB3026.
-
-Quiet output can hide the actionable Avalonia compiler line among other build output. When a XAML
-change fails, inspect medium-verbosity errors and `AVLN` diagnostics:
+Visual Studio has launch profiles for Windows and WSL, each with a `--beta` variant. Close `DSPRE.Avalonia.exe`
+and `rotom-lsp.exe` before building. If a XAML change fails with no clear error:
 
 ```powershell
-dotnet build DS_Map.sln -v m --nologo 2>&1 | Select-String ": error |AVLN"
+dotnet build DSPRE.sln -v m --nologo 2>&1 | Select-String ": error |AVLN"
 ```
 
----
+## Editors
 
-## How we write an editor
+Copy an editor from the same folder. `CameraEditorViewModel` is small, `MapEditorViewModel` large.
 
-Every editor in the app follows the same shape. Copy an existing one in the same section rather than
-starting from scratch; `CameraEditorViewModel` is a good small example, `MapEditorViewModel` a large one.
+### How an editor fits together
 
-### The view model
+Editors are MVVM: the view binds to its view model, the view model holds the state and reads and writes ROM
+types from `DSPRE.Core`.
 
-Plain `INotifyPropertyChanged`, declared per class. No ReactiveUI, no CommunityToolkit, no shared view
-model base class: view models declare `PropertyChanged` themselves, so there is little framework
-machinery to learn before reading one.
-
-```csharp
-namespace DSPRE.Avalonia.ViewModels.World
-{
-    public class MyEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
-    {
-        public event PropertyChangedEventHandler PropertyChanged;
-        void Notify([CallerMemberName] string p = null) =>
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(p));
-
-        private string _name;
-        public string Name { get => _name; set { _name = value; Notify(); SetDirty(); } }
-
-        // The designer calls this one, so it must not touch RomInfo.
-        public MyEditorViewModel()
-        {
-            if (!Design.IsDesignMode) return;
-            Entries = new ObservableCollection<MyRowVM> { new MyRowVM(0) };
-        }
-
-        public MyEditorViewModel(string[] names) { ... }
-    }
-}
+```mermaid
+flowchart LR
+    Open["Menu, Ctrl+P or another editor"] --> Launcher["AvaloniaEditorLauncher<br/>EditorAvailability, BetaEditors"]
+    Launcher --> Host["EditorHostWindow<br/>ShowManaged()"]
+    Host --> View["View (.axaml)"]
+    View <-->|bindings| VM["View model"]
+    VM --> Core["DSPRE.Core ROMFiles"]
+    VM --> Pending["PendingArchiveWrites<br/>StagedArchive"]
+    Pending -->|Save| Members["ArchiveMembers"]
+    VM -->|arm9, overlays| DSUtils["DSUtils.WriteToFile"]
+    VM <-->|AppEvents| Others["Other view models"]
+    Members --> Folders[("Project folder")]
+    DSUtils --> Folders
+    Folders -->|Save ROM| Nds[".nds"]
 ```
 
-The `Design.IsDesignMode` guard on the first line of any parameterless constructor is not optional.
-Without it the designer reads `RomInfo` with no ROM loaded and the preview dies.
+`ShowManaged` tracks the window for the unsaved-changes check (`OpenEditors`) and calls `IDetachable.Detach`
+on close.
 
-For a grid, give each row its own small view model in the same file, suffixed `VM` or `Row`:
-`CameraRowVM`, `WildEncounterRow`, `TrainerPartyMonViewModel`. Keep fields the format has but the UI
-doesn't show, so a round trip doesn't drop them:
+### View model
 
-```csharp
-// Hidden fields preserved for round-trip
-internal short Unk1 { get; private set; }
-```
+Plain `INotifyPropertyChanged` in each class; no ReactiveUI, CommunityToolkit or base class. A parameterless
+constructor starts with `if (!Design.IsDesignMode) return;`, or the designer reads `RomInfo` with no ROM. Grid
+rows get a small `...Row` or `...VM` class in the same file and keep fields the UI doesn't show.
 
 ### Unsaved changes
 
-Anything that edits data implements `IEditorWithUnsavedChanges` and calls `SetDirty()` from its setters,
-`SetClean()` after a successful save. `OpenEditors` uses it to prompt before a ROM is closed, so an
-editor that skips it silently loses the user's work.
+Every editor that changes data implements `IEditorWithUnsavedChanges`, or its changes are lost when the ROM
+closes. Compare current bytes with the saved bytes, return false from `SaveChangesAsync` on failure, end a save
+with `SaveNotice.Saved(...)`, and ask through `RecordSwitchGuard.ConfirmLeaveAsync` before leaving an edited
+record. `FriendshipChangesViewModel` is the example.
 
-```csharp
-public bool HasUnsavedChanges => _dirty;
-public string UnsavedChangesDescription => $"Camera {_index}";
-public void SaveChanges()   { WriteBack(); SetClean(); }
-public void DiscardChanges(){ _dirty = false; Notify(nameof(HasUnsavedChanges)); }
-```
+### Undo
 
-### The view
+Use `ByteStateUndo`, or `UndoHistory<T>` for state that isn't bytes; implement `ISupportsUndo` and add
+`<controls:UndoRedoButtons/>`. No private undo stacks. Changes passed the same group
+(`ByteStateUndo.Record(group)`, `PendingArchiveWrites.Change(make, group)`) are one step; the colour popup
+passes itself.
 
-`Views/<Section>/MyEditorView.axaml` with `x:Class` naming the section namespace. Compiled bindings are
-on by default, so every file needs `x:DataType` or you get a build error that reads like something else:
+### View
 
-```xml
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
-             x:Class="DSPRE.Avalonia.Views.World.MyEditorView"
-             x:DataType="vm:MyEditorViewModel">
-```
+`Views/<Folder>/MyEditorView.axaml`, with `x:Class` in that folder's namespace and `x:DataType` set. Make it a
+`UserControl` so it can sit in the Maps workspace. Code-behind holds event handlers only.
 
-Prefer a `UserControl` to a `Window`. A UserControl can be embedded in a Maps workspace tab or inside a
-bigger editor, and `EditorHostWindow` wraps it when it opens from a menu. The code-behind holds event
-handlers and nothing else: no ROM logic, no file IO.
+### Maps workspace
+
+The main window is `MapsWorkspaceView`: the header list on the left, and tabs that hold the editors' own views
+for the selected header (Header, Map, Events, Matrix, Area Data, Encounters, Scripts, Level Scripts, Text). An
+editor added as a tab goes in `MapsWorkspaceView.GetEmbeddedEditors`, so its unsaved changes are checked.
 
 ### Opening it
 
-Add a method to `AvaloniaEditorLauncher.cs` that builds the view model, builds the view, and calls
-`.ShowManaged()`.
+Add a method to `AvaloniaEditorLauncher.cs`:
 
 ```csharp
 public static void OpenMyEditor()
-    => new MyEditorView(new MyEditorViewModel(names)).ShowManaged();
-```
-
-**Always `ShowManaged()`, never `Show()`.** It is the single place that positions the window on the
-right monitor, registers it with `OpenEditors`, and asks the beta gate. A plain `Show()` skips all
-three, and a test fails the build if you write one.
-
-### Wiring the menu
-
-Add the entry to `MainWindowView.axaml` with its click handler. If the editor only applies to some
-games, add a `CanUseMyEditor` property to `MainWindowViewModel` and bind `IsEnabled` to it.
-
-Never leave a greyed control with nothing on screen saying why. Bind `ToolTip.Tip` to the reason.
-
-### Long work on first open
-
-If the editor unpacks a NARC the first time it opens, do it off the UI thread behind the busy overlay,
-or the window appears frozen. The pattern is a pair of properties the view binds an overlay to:
-
-```csharp
-public bool IsBusy { get => _busy; set { _busy = value; Notify(); } }
-public string BusyText { get => _busyText; set { _busyText = value; Notify(); } }
-```
-
-### The rest of the house furniture
-
-| Need | Use | Never |
-|---|---|---|
-| Any dialog | `DialogHelper.ShowInfo/ShowError/Confirm/AskThreeWay` | `MessageBox` |
-| A good/warn/bad colour | `StatusBrushes` | `Brushes.DarkGreen` |
-| Tell other editors something changed | `AppEvents.RaiseNamesChanged()` and friends | reaching into another view model |
-| A name the user can rename | `LabelStore` | a hardcoded string table |
-| Undo | `UndoHistory` | a private stack |
-| GDI bitmap into Avalonia | `ImageConverter.ToAvaloniaBitmap` | |
-
-`AppEvents` carries `NamesChanged`, `LabelsChanged`, `RomPatchStateChanged`, `BannerChanged` and
-`HgEngineLinkChanged`. Raise the right one after a write and every open editor picks it up.
-
----
-
-## The beta gate
-
-Editors that are not finished are listed in `DSPRE.Core/BetaEditors.cs`, one dictionary of window class
-names, and switched off unless the app is started with `--beta`. Debug builds always have them on.
-Adding or removing a line is the whole job.
-
-Two places ask. The menu asks through `Beta[WindowName]`, so the entry greys out with the reason on
-hover. `WindowPlacement.ShowManaged` asks again when the window opens, so an editor reached from the
-command palette or a button inside another editor is stopped too.
-
-The message says the editor is not available yet and nothing else. Don't mention the switch in the UI or
-in the user changelog.
-
----
-
-## Tests
-
-Tests are filed by subject under `DSPRE.Tests/`.
-
-```powershell
-dotnet test DSPRE.Tests/DSPRE.Tests.csproj -f net8.0 --nologo
-dotnet test DSPRE.Tests/DSPRE.Tests.csproj -f net8.0 --filter "FullyQualifiedName~BattleIcon"
-```
-
-Many tests read extracted projects. Use a class-name filter for a focused iteration, then run the
-broader relevant target before handoff. Do not run full test processes concurrently because the ROM
-fixtures and application state are shared.
-
-### Pointing them at your games
-
-Most of the suite reads real extracted projects. Where yours live is per machine, so put it in
-`testroms.json` beside `DS_Map.sln` (git ignores it):
-
-```json
 {
-  "heartGold": "<path-to-heartgold-project>",
-  "platinum":  "<path-to-platinum-project>",
-  "diamond":   "<path-to-diamond-project>"
+    if (Refused(nameof(MyEditorView))) return;
+    new EditorHostWindow("My editor", new MyEditorView(new MyEditorViewModel(names)), 900, 600).ShowManaged();
 }
 ```
 
-`DSPRE_TEST_HEARTGOLD`, `DSPRE_TEST_PLATINUM` and `DSPRE_TEST_DIAMOND` override the file, which is how
-to point one run somewhere else. `DSPRE_TEST_ROMS_CONFIG` selects an alternate JSON file. If you keep
-all three under one folder in the layout expected by `TestRoms`, set `DSPRE_TEST_ROMS` instead of
-naming each one.
+Add its rule to `EditorAvailability.cs`. Always `ShowManaged()`, never `Show()`. One-table editors use
+`OpenTableEditor(...)`. A `Window` editor calls `EditorWindowChrome.Attach(window, vm)`. An editor with one
+window uses `BringForward<TView, TModel>(goTo)`. Slow first opens go through `OpenBehindCardAsync`, with only
+file work off the UI thread.
 
-Read them through `TestRoms.HeartGold` / `.Platinum` / `.Diamond`, never a path written into the test.
-A test whose optional game is missing should use `SkippableFact` and `Skip.If` with a useful reason,
-not return as a passing test. A sweep must also assert that it checked at least one record.
+### Menu
 
-Two conventions cause confusing failures if you miss them:
+In `MainWindowView.axaml` bind `IsVisible` to `Shown[MyEditorView]`, `IsEnabled` to `Usable[MyEditorView]` and
+`ToolTip.Tip` to `BlockedNote[MyEditorView]`. Add a command in `AvaloniaEditorLauncher.BuildCommands` and a tour
+in `EditorTours.<Folder>.cs`.
 
-- `[Collection("rom")]` on anything that opens a ROM. `RomInfo` is static, so two ROM tests running side
-  by side read each other's game.
-- `RomFiles.Settled(dir)` instead of `Directory.GetFiles` when listing an unpacked NARC. Both target
-  frameworks share one unpacked project, so a sweep can catch the folder half filled.
+### Shared helpers
 
-`DSPRE.Tests/Tools/` is not tests. It is ROM builders and battle stagers that write a modified ROM so
-you can look at an edit in a running game; they no-op unless an environment variable names what to build.
+| For | Use |
+|---|---|
+| Dialogs | `DialogHelper` |
+| Good, warning, bad colours | `StatusBrushes`; `Editor.Good`, `Editor.Warn`, `Editor.Bad` in XAML |
+| Telling other editors | `AppEvents` |
+| Renamable names | `LabelStore` |
+| Pixels to a bitmap | `ImageConverter.FromRgba` |
+| Name lists | `NameRefresh.Bind`, `ListSync.Apply`, `FilteredNames` |
+| One overworld sprite | `OverworldSpriteView`; `OverworldSprites.Get` and `Outlined` |
+| Message and menu borders | `WindowFrames` |
+| DSPRE's own folders, logging | `AppPaths`, `AppLogger` (Core) |
+| Pixels in Core | `RawImage` |
 
-A test earns its place by being able to fail for a reason that matters. Source-text searches and
-reflection checks usually establish only that a symbol exists, not that the application reaches it.
-Assertions should consume values produced by the code under test, and a new test should be observed
-failing for the intended reason when practical.
+Subscribe to `AppEvents` in the view model and implement `IDetachable`. An editor that only draws archive
+members uses `AppEvents.WhenSaved(redraw, dirs)`.
 
----
+### Asking the user
 
-## ROM project formats
+Every dialog goes through `DialogHelper` with the editor as owner. Every Discard asks
+`DialogHelper.ConfirmDiscard(this)`. A choice that needs a preview is a small class with `AskAsync`
+(`PngColourPrompt`). Hide what this game doesn't have; disable what can't work now, with a tooltip saying why.
 
-`RomInfo.IsDsRomProject` is set while a project is loaded from the folder type returned by
-`DSUtils.GetFolderType`. That method detects ds-rom by `config.yaml` and legacy ndstool projects by
-`header.bin`. Keep format detection and conversion in `DSPRE.Core/DSUtils/DSUtils.cs` and do not
-reproduce it in an editor.
+### Toolbar and controls
 
-The current ds-rom layout uses `files/` for the ROM file system, `arm9/arm9.bin`,
-`arm9_overlays/ovNNN.bin`, and YAML metadata headed by `header.yaml`. The legacy ndstool layout uses
-`data/`, a root `arm9.bin`, `overlay/overlay_NNNN.bin`, and `header.bin`. New extraction uses ds-rom;
-legacy projects can be converted by the existing conversion path.
+`EditorToolbar` orders controls the same everywhere. Name pickers are `FusionAutoCompleteBox`, number and name
+pickers `IdNameSelector`. `controls:EditorLink.To` links a value to its editor. `HelpTip` adds a one-line hint.
+Icons come from `Icon.Key`, never text symbols.
 
-Overlay callers use `OverlayUtils.GetPath` so both layouts continue to work. Saving a ROM must
-write through the existing NARC and project build paths rather than moving files directly from an
-editor.
+### Tours
 
-## Script binary and plaintext workflow
+One `Add("XView", "Name", S(target, title, body), ...)` per editor in `EditorTours.<Folder>.cs`. Targets: null,
+`"toolbar"`, `"tabs"`, `"list"`, `"name:X"`, `"type:X"`, `"tab:Name"`, optionally prefixed `"pick:List>"`.
 
-`DSPRE.Core/ROMFiles/ScriptFile.cs` owns the dual representation. Binary script data comes from the
-ROM project; optional editable text lives at `expanded/scripts/NNNN.script`.
+## Agreed rules
 
-- `TryReadPlaintextIfNewer` uses the plaintext form only when it is newer than the binary form.
-- Export preserves current plaintext unless the database hash requires regeneration.
-- `.database_hash` records the script database state used for the export.
-- The save path rebuilds binaries that require it before packing the project.
+New code follows these; older code is being moved over.
 
-Keep timestamp comparison, cache invalidation, parsing, and rebuild decisions in that owner. Changes
-need round-trip coverage for an unchanged binary, an externally edited plaintext file, and a database
-change. Search for existing script readers before adding another interpretation of the format.
+### Writing game files
 
-### Rotom owns its project
+Archive members are written only through `ArchiveMembers.Put` and `ArchiveMembers.Delete` (or `Write(path,
+bytes)` when you only have a path). arm9 and overlays are written only through `DSUtils.WriteToFile` or
+`DSUtils.WriteWholeFile`, which ask the hg-engine write guard. Everything else (exports, DSPRE's own data,
+project sources, backups, temp files) goes through `PlainFiles`, which refuses members and code. hg-engine
+checkout source text goes through `HgEngineVerifiedWrite`.
 
-Rotom keeps each project's command database in `.rotom/command_database/` and manages it itself. DSPRE does not
-compare it with the scrcmd-database copy in `%APPDATA%\DSPRE\databases`, replace it or offer to update it; that copy
-only matters when legacy `.script` files are converted. DSPRE never regenerates script sources wholesale either: a
-project last built with an older rotom is compiled as it is, and only sources whose game bytes changed outside rotom
-are made again. The one thing DSPRE adds is an hg-engine checkout's flag names, once, right after `rotom init`.
-`RotomTool.ProjectDatabaseFile()` is that database; DSPRE's own command names come from it on a Rotom project, and
-the Custom Script Command Manager imports into it (backing the old one up under `.rotom/backups/`) only when the user
-asks.
+### Unsaved archive edits
 
----
+Editors keep archive changes in `PendingArchiveWrites` until Save. One-member-at-a-time editors use
+`StagedArchive`. An editor with its own undo stores `PendingArchiveWrites.Take()` in each state. Scripts,
+trainers, new map headers and new overworld entries still apply straight away, after asking.
 
-## Gotchas
+### Events
 
-### ROM data
+View models subscribe to events themselves and implement `IDetachable`; `ShowManaged` detaches them on close.
+Views listen only to their own view model.
 
-- Branch on `RomInfo.gameFamily` before touching any offset, and often `gameLanguage`. Most offsets
-  differ per version and several per language.
-- Offsets belong in `RomInfo`, not as private consts in an editor, and every `Setup*` must run at ROM
-  load. `SetupSpawnSettings` was called by one editor only, so everything else read offset 0.
-- `param0` is stored as `sightRange` but is the engine's general `param0`. For trainer types it is the
-  sight range; `param1` is the glance and spin interval for those types; `param2` has no reader in the
-  field code; and on hg-engine item overworlds `param0` carries the item ID instead.
-  (`EventFile.cs:247`, `EventEditorViewModel.cs:275`)
-- A block is 32 tiles, tile 0 is raw 0, and event anchors are separate from tile positions.
+### Where things are in the ROM
+
+Code offsets live in `RomLocator`, as a switch on game then language with every case written out. Single
+offsets are `RomLocator.Thing` values read through `Where`, `Read`, `Write`, `WhyNot` and `WorksOn`; groups of
+sites are records in `RomLocator.Sites.cs`; per-dump values are in `RomLocator.Offsets.cs`, `.Tables.cs`,
+`.FixedTables.cs` and `.Measured.cs`. Text bank numbers and offsets inside script files stay in
+`RomInfo`. `RomLocator.WorksOn` and `RomInfo.DescribeDumps` say which dumps a feature works on.
 
 ### Graphics
 
-- Tile sheets often write `0xFFFF` for both dimensions, meaning unspecified, because the game gets the
-  shape from a cell layout instead. Read it **signed**: that is -1, not 65535. Guessing a square from the
-  tile count is right by luck often enough to fool you. A 32x32 item icon is 16 tiles and comes out
-  right; a 32x16 battle icon is 8 tiles and comes out stacked.
-- Background arrangements wider than 32 squares are stored in 32x32 blocks; 32 or narrower is stored
-  straight across at its own width. At exactly 32 both rules agree, and most files are exactly 32, so a
-  sample will not tell you which you have.
-- Battle sprite palettes are per species at slot 4. Taking the nearest palette in the archive hands most
-  species the previous one's shiny colours, which looks almost right.
-- Battle sprite pixels are scrambled with a rolling XOR key. Read straight they look like static.
+One reader per format, from bytes, through `ScriptNarc`, to bitmaps through `ImageConverter`, shown without
+smoothing.
 
-### Avalonia
+### Wording
 
-- A hidden `TabItem` is still tab zero, so selecting by index lands on the wrong tab.
-- A `ComboBox` clears its own `SelectedIndex` when its items change. Restore the selection after the
-  collection settles, not with it.
-- Populating a combo box fires its selection handler, so guard reentrancy while loading.
-- Mutating an `ObservableCollection` from inside its own `CollectionChanged` handler throws. The battle
-  display crashed this way on every gender switch.
+Sentence-case titles. Buttons name the action; handovers say "Open in <editor>". Saves, exports and imports
+use `SaveNotice`, not dialogs. No exclamation marks, and Enter never confirms a question.
 
-### hg-engine
+## Code patches
 
-- Read it as source text through `ElementScanner`, never by byte offset. The layout moves between
-  versions; the source does not.
-- Check the hg-engine wiki before calling something an upstream bug.
+Start from `ApplyClassIntrosPatch` and `ROMFiles/ClassIntroPatch.cs`. A synthetic-overlay patch needs:
 
----
+- a `ROMFiles` class with a 12-byte `Marker` (listed in `SyntheticOverlaySpace.BlockMarkers`), `IsApplied`,
+  `WhyNotApplicable()`, `Apply(int blockOffset)`, and its `.s` source under `Resources/ROMToolboxDB/`;
+- in `PatchToolboxLogic`: an `Apply...Patch()`, a `Status` entry, its key in `ApplyByKey` and in the hg-engine
+  refusal list, and a `Credits` entry;
+- a `PatchNotes` entry and the key's tab in `PatchToolboxViewModel`.
+
+A patch never applies another patch; one that needs the ARM9 expansion returns `Unsupported("Requires ARM9
+expansion")`. Editors never apply patches: they show "Open in Patch Toolbox"
+(`AvaloniaEditorLauncher.OpenPatchToolboxAt(key)`) and refresh on `AppEvents.RomPatchStateChanged`.
+
+### Synthetic overlay space
+
+Each block starts with a 32-byte header: marker, version, length. `Reserved`, `Plan`, `PlaceAt` and `Place` in
+`SyntheticOverlaySpace` find room. A growing table has one class with `MoveToExpansion()`;
+`SwarmTable.MoveToExpansion` is the example.
+
+## Beta editors
+
+Listed by window class in `DSPRE.Core/BetaEditors.cs`. Off unless the app starts with `--beta`; always on in
+Debug. The UI never mentions the switch.
+
+## Tests
+
+```powershell
+dotnet test DSPRE.Tests/DSPRE.Tests.csproj --filter "FullyQualifiedName~BattleIcon"
+```
+
+Test projects are set per machine in `testroms.json` next to `DSPRE.sln` (ignored by git), or with
+`DSPRE_TEST_HEARTGOLD`, `DSPRE_TEST_PLATINUM` and `DSPRE_TEST_DIAMOND`:
+
+```json
+{ "heartGold": "<path>", "platinum": "<path>", "diamond": "<path>" }
+```
+
+Read them through `TestRoms`. Put `[Collection("rom")]` on any test that opens a ROM, and don't run two test
+processes at once.
+
+## ROM projects
+
+ds-rom projects (`config.yaml`, `files/`, `arm9/`, `arm9_overlays/`) and legacy ndstool projects
+(`header.bin`, `data/`, `overlay/`) both work. Detection is in `DSUtils.GetFolderType`; overlay paths come from
+`OverlayUtils.GetPath`. Never decompress an overlay yourself. RAM addresses become file offsets with
+`RamAddress.Find`.
+
+### Archives
+
+Each archive is a `RomInfo.DirNames` value mapped in `RomInfo.gameDirs`. Call `DSUtils.TryUnpackNarcs` before
+the first read, then read and write only the unpacked folder.
+
+### Save ROM
+
+Save ROM compiles changed Rotom scripts, settles archives changed outside DSPRE (`NarcSync`), rebuilds text and
+script binaries, packs every archive except hg-engine's own, and builds the `.nds` with ds-rom. Any failure stops
+it before anything is written.
+
+### Rotom
+
+Rotom owns `.rotom/command_database/`. DSPRE never replaces it or regenerates script sources wholesale.
+`RotomTool.ProjectDatabaseFile()` is that database.
+
+## Graphics
+
+`GraphicAssets.All` lists every 2D archive, with its colour pairing and grouping; `ModelAssets.All` does the
+same for 3D. Readers, all in `DSPRE.Core/ROMFiles`:
+
+| Format | Reader |
+|---|---|
+| Colours (NCLR) | `NitroBgCodec.ReadColours`, `ReadPalette`, `PutColour` |
+| Drawings (NCGR) | `NitroBgCodec.ReadCharacters`, `DrawingFile` |
+| Screens (NSCR) | `NitroBgCodec.ReadMap`, `Composite` |
+| Cells (NCER) | `NcerFile.Read`, `CellRenderer.Draw` |
+| Cell animations (NANR) | `NanrFile.Read` |
+| Textures (TEX0) | `Tex0Block`, `NsbmdTextureDecoder` |
+| LZ77 | `Lz77.Decompress`, `Compress` |
+
+A game screen is drawn by a renderer that returns pieces with their source files (`BattleScreenRenderer`,
+`ScreenPageComposer`). Pokédex and summary pages are `ScreenBook`s (`PokedexBook`, `SummaryBook`) shown by
+`ScreenPagesView`. PNG export keeps
+colour numbers; shared-palette imports refuse a wrong PNG and offer `PngColourPrompt`. `OpenGraphicAt` and
+`OpenPainter` hand a graphic to the Graphics window or painter.
+
+## Scripts
+
+`DSPRE.Core/ROMFiles/ScriptFile.cs` owns binary scripts and the text under `expanded/scripts/`: timestamps,
+caching, the database hash and rebuilds. Don't add another script reader.
+
+Script numbers from 2000 up are shared scripts. `CommonScriptId.Resolve` gives the range, script file and script
+number; `CommonScriptLabels` holds the names users give them.
+
+## Events
+
+Overworld sprites 101 to 116 are picked by a script while playing, from variable 0x4020 up. The editor draws
+`RomInfo.VariableOverworldStandIn` with an outline (`RomInfo.IsVariableOverworld`).
+
+## Known traps
+
+- Check `RomInfo.gameFamily` and `gameLanguage` before any offset.
+- `param0` is stored as `sightRange` but is the engine's general parameter.
+- Tile sheets often store `0xFFFF` for width and height: read it as -1, the cell layout decides the shape.
+- Backgrounds wider than 32 squares are stored in 32x32 blocks.
+- Battle sprite palettes are per species, and their pixels are XOR-scrambled.
+- A hidden `TabItem` still counts as tab zero. A `ComboBox` loses `SelectedIndex` when its items change.
+- Editing an `ObservableCollection` inside its own `CollectionChanged` throws.
+
+## hg-engine projects
+
+An hg-engine ROM has "hg-engine rocks!" at the start of overlay 129 (`RomInfo.isHGE`);
+`HgEngineProject.IsActive` means a checkout is linked. Each `EditorAvailability` rule says `Open`,
+`NeedsLink`, `Source`, `Closed` or `LinkedOnly`. With a checkout linked, data is read from its source text,
+never by offset, and written through `HgEngineVerifiedWrite`. Synthetic-overlay patches are refused.
 
 ## House style
 
-- Comments say why, not what, and only when the why is not obvious. One line. No block comments
-  narrating how you debugged something.
-- No em dashes anywhere: code, UI text, changelogs, commit messages.
-- If the operator asks for a commit, subjects use `type(Scope): what changed`, lowercase, no body.
-  Common types are `feature`, `fix`, and `chore`.
-- Changelogs live in `Changelogs/`, written for users, with numbers where there are numbers.
-- Don't name leaked source files in anything that lands in the repo. Say what the games do and how you
-  checked it. The pret decomp is public and fine to cite.
+- Comments say why, in one line, only when it isn't obvious.
+- No `var`, no em dashes.
+- The build fails on the calls in `BannedSymbols.txt`. Only the write paths themselves are exempt, in
+  `.editorconfig`.
+- UI text is short and said the way people say it. Labels are nouns. "…" only when the action asks for input.
+- Commit subjects: `type(Scope): what changed`, no body.
+- Never name leaked source files in the repo. The pret decomps are fine to cite.
 
----
+## Reference
 
-## Where the domain knowledge is
-
-`Research/` has the worked-out material: move animation opcodes and routines, field animation, sprites
-and icons, the graphics archive census. It is maintained by the project's human contributors; do not
-add or reorganize material there unless that documentation work was explicitly requested.
-[pret/pokeheartgold](https://github.com/pret/pokeheartgold) is the public reference for HGSS behaviour.
-
-Bundled tools live in `Tools/` at the repo root and are copied next to the exe. `ndstool` and `blz`
-are Windows-only so far; `chatot`, `dsrom`, `apicula`, `rotom` and `rotom-lsp` have Linux builds.
-Release workflows build the pinned apicula source through `.github/actions/build-apicula` instead of
-shipping the checked-in local fallback.
+`Research/` holds documented game knowledge; human contributors maintain it. Bundled tools are in `Tools/` and
+are copied next to the exe.

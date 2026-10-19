@@ -1,7 +1,7 @@
 # DSPRE - DS Pokémon ROM Editor Reloaded
 
 <p align="center">
-  <img src="readmeImages/Map%20Editor.png" alt="DSPRE" width="700"/>
+  <img src="readmeImages/map-editor.png" alt="DSPRE" width="700"/>
 </p>
 
 **DSPRE (DS Pokémon ROM Editor Reloaded)** is a tool for editing Nintendo DS Pokémon games (Generation IV). It allows you to modify maps, scripts, events, Pokémon data, trainers, and more.
@@ -20,8 +20,6 @@ For additional documentation, tutorials, and research on DS Pokémon ROM hacking
 - [Getting Started](#getting-started)
 - [Enhancements Over Original DSPRE](#enhancements-over-original-dspre)
 - [Development Guide](#development-guide)
-- [Architecture Overview](#architecture-overview)
-- [Creating New Editors](#creating-new-editors)
 - [Contributing](#contributing)
 - [External Resources](#external-resources)
 
@@ -56,7 +54,7 @@ View and edit 3D map-related data including collisions, permissions, building pl
 - DAE, GLB, and NSBMD model export
 - 512px map screenshot export (for PDSMS backgrounds)
 
-<img src="readmeImages/Map%20Editor.png" width="450" alt="Map Editor"/>
+<img src="readmeImages/map-editor.png" width="450" alt="Map Editor"/>
 
 **Note:** To create new maps from scratch, use **[Pokémon DS Map Studio (PDSMS)](https://github.com/Trifindo/Pokemon-DS-Map-Studio)**.
 
@@ -77,13 +75,13 @@ Edit game scripts in binary or plaintext format.
 - Number format selection (hex or decimal)
 - Custom script command database support
 
-<img src="readmeImages/Script%20Editor.png" width="550" alt="Script Editor"/>
+<img src="readmeImages/script-editor.png" width="550" alt="Script Editor"/>
 
 **VS Code Extension:** Install the **[DSPRE Script Compatibility extension](https://github.com/DS-Pokemon-Rom-Editor/vsc-dspre-script-compat)** for syntax highlighting when editing scripts externally. This can be installed directly in VS Code by searching "DSPRE" in the Extensions: Marketplace.
 
 **Script Command Databases:** The command databases are maintained at **[scrcmd-database](https://github.com/DS-Pokemon-Rom-Editor/scrcmd-database)**. Contributions are welcome.
 
-<img src="readmeImages/Script%20Command%20Database.png" width="450" alt="Script Command Database"/>
+<img src="readmeImages/script-command-database.png" width="450" alt="Script Command Database"/>
 
 ---
 
@@ -113,7 +111,7 @@ Edit world map layout and connections.
 - Status bar coordinates
 - Matrix names in selector
 
-<img src="readmeImages/Matrix%20Editor.png" width="450" alt="Matrix Editor"/>
+<img src="readmeImages/matrix-editor.png" width="450" alt="Matrix Editor"/>
 
 ---
 
@@ -128,7 +126,7 @@ Place and configure NPCs, warps, triggers, and spawnables.
 - Overworld sprite rendering
 - 512px customisable map and event data screenshot export
 
-<img src="readmeImages/Event%20Editor.png" width="450" alt="Event Editor"/>
+<img src="readmeImages/event-editor.png" width="450" alt="Event Editor"/>
 
 ---
 
@@ -142,7 +140,7 @@ Configure wild Pokémon encounters.
 - Broken encounter file repair
 - Separate editors for DPPt and HGSS formats
 
-<img src="readmeImages/Wild%20Encounters%20Grass.png" width="450" alt="Wild Encounters Editor"/>
+<img src="readmeImages/wild-encounters-grass.png" width="450" alt="Wild Encounters Editor"/>
 
 ---
 
@@ -159,7 +157,7 @@ Edit trainer data including party, AI, and items.
 - DV Calculator (IV & Nature determination)
 - Export to Showdown format
 
-<img src="readmeImages/Trainer%20Editor.png" width="450" alt="Trainer Editor"/>
+<img src="readmeImages/trainer-editor.png" width="450" alt="Trainer Editor"/>
 
 **Note:** For more advanced trainer editing features, see **[VSMaker2](https://github.com/Chvlkie/VSMaker2)**, which supports DSPRE unpacked ROMs.
 
@@ -182,7 +180,7 @@ Edit Pokémon base stats and attributes.
 - Egg groups
 - CSV import/export
 
-<img src="readmeImages/Personal%20Data%20Editor.png" width="450" alt="Personal Data Editor"/>
+<img src="readmeImages/personal-data-editor.png" width="450" alt="Personal Data Editor"/>
 
 #### Learnset Editor
 Edit level-up moves.
@@ -198,7 +196,7 @@ Edit level-up moves.
   - Level adjustment
   - Filter and search
 
-<img src="readmeImages/Leanrset%20Ediotr.png" width="350" alt="Learnset Editor"/>
+<img src="readmeImages/leanrset-ediotr.png" width="350" alt="Learnset Editor"/>
 
 #### Evolution Editor
 Edit evolution methods and targets.
@@ -207,7 +205,7 @@ Edit evolution methods and targets.
 - Evolution parameters (level, item, move, etc.)
 - Multiple evolution paths
 
-<img src="readmeImages/Evolution%20Editor.png" width="350" alt="Evolution Editor"/>
+<img src="readmeImages/evolution-editor.png" width="350" alt="Evolution Editor"/>
 
 #### Egg Move Editor
 Edit egg moves by species.
@@ -233,7 +231,7 @@ Edit move properties.
 - Natural Gift, Fling, Pluck effects
 - CSV import/export
 
-<img src="readmeImages/Move%20Data%20Editor.png" width="450" alt="Move Data Editor"/>
+<img src="readmeImages/move-data-editor.png" width="450" alt="Move Data Editor"/>
 
 For more information, see the [DS Pokémon Hacking Wiki - Editing Moves](https://ds-pokemon-hacking.github.io/docs/generation-iv/guides/editing_moves/).
 
@@ -251,7 +249,7 @@ Edit item data and effects.
 - Natural Gift, Fling, Pluck effects
 - Party Use Parameters (status healing, HP/PP restoration, stat boosters, EV modifiers, friendship modifiers)
 
-<img src="readmeImages/Item%20Data%20Editor.png" width="450" alt="Item Editor"/>
+<img src="readmeImages/item-data-editor.png" width="450" alt="Item Editor"/>
 
 ---
 
@@ -274,7 +272,7 @@ Edit in-game trade Pokémon.
 - Origin language
 - Nickname and OT name
 
-<img src="readmeImages/Trade%20Editor.png" width="350" alt="Trade Editor"/>
+<img src="readmeImages/trade-editor.png" width="350" alt="Trade Editor"/>
 
 ---
 
@@ -287,7 +285,7 @@ Edit Safari Zone encounters.
 - Block placement requirements
 - Import/export
 
-<img src="readmeImages/Safari%20Editor.png" width="450" alt="Safari Zone Editor"/>
+<img src="readmeImages/safari-editor.png" width="450" alt="Safari Zone Editor"/>
 
 ---
 
@@ -299,7 +297,7 @@ Edit Headbutt tree encounters with 3D map visualization.
 - Click-to-select trees on map
 - Import/export
 
-<img src="readmeImages/Headbut%20Editor.png" width="450" alt="Headbutt Encounter Editor"/>
+<img src="readmeImages/headbut-editor.png" width="450" alt="Headbutt Encounter Editor"/>
 
 ---
 
@@ -317,7 +315,7 @@ Edit fly destination tables.
 
 Edit camera positions and angles.
 
-<img src="readmeImages/Camera%20Editor.png" width="350" alt="Camera Editor"/>
+<img src="readmeImages/camera-editor.png" width="350" alt="Camera Editor"/>
 
 ---
 
@@ -342,7 +340,7 @@ Add, edit and delete AreaData and texture packs.
 - Palette matching
 - Texture preview
 
-<img src="readmeImages/NSBTX%20Editor.png" width="350" alt="NSBTX Editor"/>
+<img src="readmeImages/nsbtx-editor.png" width="350" alt="NSBTX Editor"/>
 
 ---
 
@@ -357,7 +355,7 @@ Edit in-game text.
 - STRVAR helper with type reference
 - Import/export
 
-<img src="readmeImages/Text%20Editor.png" width="450" alt="Text Editor"/>
+<img src="readmeImages/text-editor.png" width="450" alt="Text Editor"/>
 
 ---
 
@@ -368,7 +366,7 @@ Edit various game tables.
 - Conditional Music Table (HGSS)
 - Pre-Battle Effects (VS. sequences and battle tracks)
 
-<img src="readmeImages/Table%20Editor.png" width="450" alt="Table Editor"/>
+<img src="readmeImages/table-editor.png" width="450" alt="Table Editor"/>
 
 ---
 
@@ -415,7 +413,7 @@ Apply patches to expand ROM capabilities:
 | Script Command Repointing | Custom script database support |
 | Trainer Name Expansion | Extended trainer name length |
 
-<img src="readmeImages/Patch%20Toolbox.png" width="350" alt="ROM Toolbox"/>
+<img src="readmeImages/patch-toolbox.png" width="350" alt="ROM Toolbox"/>
 
 ---
 
@@ -475,355 +473,30 @@ These improvements were made compared to the original DSPRE by Nomura:
 ## Development Guide
 
 ### Prerequisites
-- Visual Studio 2019 or later
-- .NET Framework 4.8 SDK
+- .NET SDK 10 (9.0.300 or newer) and the .NET 8 runtime
 - Git
 
 ### Building from Source
 ```powershell
 git clone https://github.com/DS-Pokemon-Rom-Editor/DSPRE.git
 cd DSPRE
-msbuild DSPRE.sln /p:Configuration=Release
+dotnet build DSPRE.sln -c Release
 ```
 
 ### Solution Structure
 
 ```
 DSPRE/
-??? DS_Map/           # Main application (DSPRE.csproj)
-?   ??? Editors/      # All editor UserControls and Forms
-?   ??? ROMFiles/     # Data model classes
-?   ??? DSUtils/      # Low-level DS utilities
-?   ??? Resources/    # Databases and static resources
-?   ??? LibNDSFormats/# 3D model format handling
-?   ??? ...
-??? Ekona/            # Image/sprite library (Ekona.csproj)
-??? Images/           # Nintendo image format plugin (Images.csproj)
+├── DSPRE.Core/       # ROM formats, data model, scripts and the rest of the non-UI logic
+├── DSPRE.Avalonia/   # The app: views, view models and the 3D renderer
+└── DSPRE.Tests/      # xUnit tests
 ```
 
----
-
-## Architecture Overview
-
-### Key Design Patterns
-
-#### 1. Static ROM Context (`RomInfo.cs`)
-All ROM metadata is stored statically for global access:
-```csharp
-string workDir = RomInfo.workDir;
-GameFamilies family = RomInfo.gameFamily;
-string scriptsPath = RomInfo.gameDirs[DirNames.scripts].unpackedDir;
-```
-
-#### 2. RomFile Base Class
-All ROM data structures inherit from `RomFile`:
-```csharp
-public abstract class RomFile {
-    public abstract byte[] ToByteArray();
-    public bool SaveToFile(string path, bool showSuccessMessage = true);
-    protected bool SaveToFileDefaultDir(DirNames dir, int IDtoReplace, bool showSuccessMessage = true);
-}
-```
-
-#### 3. NARC Archive System
-Game data is stored in NARC archives that are unpacked for editing:
-```csharp
-DSUtils.TryUnpackNarcs(new List<DirNames> { 
-    DirNames.scripts, 
-    DirNames.eventFiles 
-});
-
-string path = Filesystem.GetScriptPath(fileID);
-```
-
-#### 4. Handler State Pattern
-Prevent event handler recursion:
-```csharp
-private void SomeControl_ValueChanged(object sender, EventArgs e)
-{
-    if (Helpers.HandlersDisabled) return;
-    
-    Helpers.DisableHandlers();
-    try {
-        otherControl.Value = newValue;
-    } finally {
-        Helpers.EnableHandlers();
-    }
-}
-```
-
-#### 5. Dirty Tracking Pattern
-Track unsaved changes. For Form-based editors:
-```csharp
-private bool dirty = false;
-
-private void SetDirty(bool status) {
-    dirty = status;
-    this.Text = formName + (dirty ? "*" : "");
-}
-
-private bool CheckDiscardChanges() {
-    if (!dirty) return true;
-
-    var result = MessageBox.Show("Unsaved changes. Discard?", 
-        "Warning", MessageBoxButtons.YesNo);
-    return result == DialogResult.Yes;
-}
-```
-
-For UserControl-based editors (tab panels), implement `IEditorWithUnsavedChanges`:
-```csharp
-public class MyEditor : UserControl, IEditorWithUnsavedChanges
-{
-    private bool isDirty = false;
-
-    // IEditorWithUnsavedChanges implementation
-    public bool HasUnsavedChanges => isDirty;
-    public string UnsavedChangesMessage => $"My Editor (File {currentFileID})";
-
-    private void SetDirty()
-    {
-        if (!isDirty)
-        {
-            isDirty = true;
-            OpenEditorsRegistry.Register(this);
-        }
-    }
-
-    private void SetClean()
-    {
-        if (isDirty)
-        {
-            isDirty = false;
-            OpenEditorsRegistry.Unregister(this);
-        }
-    }
-}
-```
-
----
-
-## Creating New Editors
-
-### Example: Creating a Simple Data Editor
-
-```csharp
-using DSPRE.ROMFiles;
-using System;
-using System.Collections.Generic;
-using System.Windows.Forms;
-
-namespace DSPRE.Editors
-{
-    public partial class MyNewEditor : Form
-    {
-        private MyDataFile currentFile;
-        private int currentId = 0;
-        private bool dirty = false;
-        private readonly string formName = "My New Editor";
-        private readonly string[] itemNames;
-
-        public MyNewEditor()
-        {
-            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { 
-                RomInfo.DirNames.myDataFiles 
-            });
-            
-            itemNames = RomInfo.GetItemNames();
-            
-            InitializeComponent();
-            
-            Helpers.DisableHandlers();
-            fileIdNumeric.Maximum = GetFileCount() - 1;
-            itemComboBox.Items.AddRange(itemNames);
-            Helpers.EnableHandlers();
-            
-            LoadFile(0);
-        }
-
-        private int GetFileCount()
-        {
-            return Directory.GetFiles(
-                RomInfo.gameDirs[RomInfo.DirNames.myDataFiles].unpackedDir
-            ).Length;
-        }
-
-        private void LoadFile(int id)
-        {
-            Helpers.DisableHandlers();
-            
-            currentId = id;
-            currentFile = new MyDataFile(id);
-            
-            itemComboBox.SelectedIndex = currentFile.ItemId;
-            valueNumeric.Value = currentFile.Value;
-            
-            SetDirty(false);
-            Helpers.EnableHandlers();
-        }
-
-        private void SetDirty(bool status)
-        {
-            dirty = status;
-            this.Text = formName + (dirty ? "*" : "");
-        }
-
-        private bool CheckDiscardChanges()
-        {
-            if (!dirty) return true;
-            
-            var result = MessageBox.Show(
-                "Unsaved changes. Save before switching?",
-                "Unsaved Changes",
-                MessageBoxButtons.YesNoCancel
-            );
-            
-            if (result == DialogResult.Yes)
-            {
-                SaveFile();
-                return true;
-            }
-            return result == DialogResult.No;
-        }
-
-        private void SaveFile()
-        {
-            currentFile.SaveToFileDefaultDir(currentId, showSuccessMessage: false);
-            SetDirty(false);
-        }
-
-        private void fileIdNumeric_ValueChanged(object sender, EventArgs e)
-        {
-            if (Helpers.HandlersDisabled) return;
-            
-            if (CheckDiscardChanges())
-            {
-                LoadFile((int)fileIdNumeric.Value);
-            }
-            else
-            {
-                Helpers.DisableHandlers();
-                fileIdNumeric.Value = currentId;
-                Helpers.EnableHandlers();
-            }
-        }
-
-        private void itemComboBox_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (Helpers.HandlersDisabled) return;
-            currentFile.ItemId = itemComboBox.SelectedIndex;
-            SetDirty(true);
-        }
-
-        private void valueNumeric_ValueChanged(object sender, EventArgs e)
-        {
-            if (Helpers.HandlersDisabled) return;
-            currentFile.Value = (int)valueNumeric.Value;
-            SetDirty(true);
-        }
-
-        private void saveButton_Click(object sender, EventArgs e)
-        {
-            SaveFile();
-        }
-
-        private void MyNewEditor_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            if (!CheckDiscardChanges())
-            {
-                e.Cancel = true;
-            }
-        }
-    }
-}
-```
-
-### Creating the Data Model
-
-```csharp
-using System.IO;
-
-namespace DSPRE.ROMFiles
-{
-    public class MyDataFile : RomFile
-    {
-        public int ID { get; }
-        public int ItemId { get; set; }
-        public int Value { get; set; }
-
-        public MyDataFile(int id)
-        {
-            ID = id;
-            string path = Filesystem.GetMyDataPath(id);
-            
-            using (var reader = new BinaryReader(File.OpenRead(path)))
-            {
-                ItemId = reader.ReadUInt16();
-                Value = reader.ReadInt32();
-            }
-        }
-
-        public override byte[] ToByteArray()
-        {
-            using (var ms = new MemoryStream())
-            using (var writer = new BinaryWriter(ms))
-            {
-                writer.Write((ushort)ItemId);
-                writer.Write(Value);
-                return ms.ToArray();
-            }
-        }
-
-        public void SaveToFileDefaultDir(int id, bool showSuccessMessage = true)
-        {
-            SaveToFileDefaultDir(RomInfo.DirNames.myDataFiles, id, showSuccessMessage);
-        }
-    }
-}
-```
-
-### Adding Filesystem Helper
-
-In `Filesystem.cs`:
-```csharp
-public static string myDataFiles => 
-    RomInfo.gameDirs[RomInfo.DirNames.myDataFiles].unpackedDir;
-
-public static string GetMyDataPath(int id)
-{
-    return GetPath(myDataFiles, id);
-}
-
-public static int GetMyDataCount()
-{
-    return Directory.GetFiles(myDataFiles).Length;
-}
-```
-
-### Registering the Editor
-
-In `Main Window.cs`:
-```csharp
-private void myEditorToolStripMenuItem_Click(object sender, EventArgs e)
-{
-    DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.myDataFiles });
-    new MyNewEditor().Show();
-}
-```
+How editors are built and the rules new code follows: [DSPRE-Development.md](DSPRE-Development.md).
 
 ---
 
 ## Contributing
-
-### Code Style Guidelines
-
-1. Follow existing patterns - look at similar editors for reference
-2. Use Helpers - `Helpers.DisableHandlers()`, `Helpers.statusLabelMessage()`, etc.
-3. Log appropriately - use `AppLogger.Info()`, `AppLogger.Error()`, etc.
-4. Check game version - use `RomInfo.gameFamily` for version-specific logic
-5. Avoid useless comments - only comment "why", not "what"
-6. **SetDirty() guards** - When calling `SetDirty()` in event handlers, ALWAYS check BOTH `Helpers.HandlersDisabled` AND the relevant selection index (e.g., `listBox.SelectedIndex < 0`). Setup code can trigger handlers after `EnableHandlers()`, causing false dirty state.
-7. **Reset() for UserControl editors** - Editors that maintain state must implement a `Reset()` method to clear all data when switching ROMs. Always wrap in `DisableHandlers()`/`EnableHandlers()`.
 
 ### Pull Request Process
 
@@ -860,5 +533,6 @@ This project is open source. See the repository for license details.
 ## Credits
 
 - Original DSPRE by Nomura
+- Pokéwalker picture format: DECODE_IMG and ENCODE_IMG by DmitryGR, with BluRose's PNG changes, from hg-engine
 - All contributors to the DSPRE Reloaded project
 - The DS Pokémon ROM hacking community
