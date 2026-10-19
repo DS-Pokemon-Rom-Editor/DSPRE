@@ -1,6 +1,162 @@
 # DSPRE development guide
 
-Build and publish: [BUILDING.md](BUILDING.md).
+- [House style](#house-style)
+- [Projects](#projects)
+- [Build and run](#build-and-run) (publishing: [BUILDING.md](BUILDING.md))
+- [Editors](#editors)
+- [Agreed rules](#agreed-rules)
+- [Code patches](#code-patches)
+- [Beta editors](#beta-editors)
+- [Tests](#tests)
+- [ROM projects](#rom-projects)
+- [Graphics](#graphics)
+- [Scripts](#scripts)
+- [Events](#events)
+- [Known traps](#known-traps)
+- [hg-engine projects](#hg-engine-projects)
+- [Reference](#reference)
+
+## House style
+
+### Naming
+
+Types, methods, properties and events are PascalCase. Private fields start with an underscore, like `_saved` or
+`_undo`. Locals and parameters are camelCase, and so are constants declared inside a method.
+
+DSPRE's own constants and `static readonly` fields are PascalCase, like `SafeMax`. Constants that copy a name from
+the decomp, a C header or OpenGL keep that name exactly, usually in UPPER_CASE, so one search finds them in both
+places: `GL_TEXTURE_2D`, `WET02_START_Y_OFS`.
+
+Methods that return a `Task` end in `Async`. A view is `<Thing>View` and its view model is `<Thing>ViewModel`. A
+class split over several files uses `<Class>.<Part>.cs`, like `RomLocator.Tables.cs`.
+
+Names use the game's words, or a player's, like `FriendshipChanges`.
+
+### Layout
+
+Braces go on their own line, namespaces included, and indentation is four spaces. Each public type has its own
+file with the same name. One-line members are written with `=>`.
+
+### Reading and writing ROM data
+
+A ROM file class is built from a byte array and turns itself back into bytes with `ToBytes()`. It checks the
+length before reading. Fields DSPRE doesn't edit are kept, so opening a file and saving it without changes gives
+back the same bytes.
+
+```csharp
+public sealed class FriendshipTable
+{
+    public const int Events = 10, Bands = 3, Size = Events * Bands;
+    public sbyte[,] Values { get; } = new sbyte[Events, Bands];
+
+    public FriendshipTable(byte[] data) { /* fill Values from data */ }
+    public byte[] ToBytes() { /* the same layout back */ }
+
+    public static string WhyNot() => RomLocator.WhyNot(RomLocator.Thing.FriendshipChanges, Size);
+    public static FriendshipTable Load() => new FriendshipTable(RomLocator.Read(RomLocator.Thing.FriendshipChanges, Size));
+    public void Save() => RomLocator.Write(RomLocator.Thing.FriendshipChanges, ToBytes());
+}
+```
+
+Sizes and counts come from the ROM's own tables, counts and pointers.
+
+Each format has one reader, and every editor uses it. A bug in reading a format is fixed in the reader, not in the
+editors that show it.
+
+Offsets and anything else that differs between games or languages live in `RomLocator` or `RomInfo`, as a switch
+that names every game.
+
+### Methods
+
+Checks that end a method come first, each with its own `return`. The main work follows at the top indentation
+level.
+
+When something can be refused, a `WhyNot` method returns the reason as a string, or null when it's allowed.
+Callers read it like this:
+
+```csharp
+if (ClassIntroPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
+```
+
+A method that can fail in normal use is `bool TryX(..., out T result)` rather than one that throws.
+
+### Errors
+
+An error should never close DSPRE. When something fails, the user is told what didn't work, the details go to the
+log, and the editor stays usable.
+
+Code catches the exceptions it expects, such as a missing file, a file in use, or data too short to read, at the
+point where it knows what was being attempted. That's what lets the message say "Trainer 12 wasn't saved" instead
+of "Object reference not set".
+
+Anything the user starts, like Save, Import, Open or Apply patch, also catches `Exception` around the whole
+action. It logs the details with `CrashReporter.LogHandled`, shows `DialogHelper.ShowError`, and leaves the editor
+open:
+
+```csharp
+private async void Save_Click(object sender, RoutedEventArgs e)
+{
+    try { await _vm.SaveChangesAsync(); }
+    catch (Exception ex)
+    {
+        CrashReporter.LogHandled(ex);
+        await DialogHelper.ShowError("The trainer wasn't saved:\n" + ex.Message, "Save failed");
+    }
+}
+```
+
+`AvaloniaErrorHandler` catches anything that still reaches the UI thread and keeps DSPRE running, but it can only
+say "An unexpected error occurred", so code shouldn't count on it.
+
+Work started with `Task.Run` is awaited or catches its own errors. If it isn't, a failure is only logged and the
+user never hears about it.
+
+An empty `catch { }` hides bugs. When an error really can be ignored, a comment says why.
+
+### UX
+
+An editor should be easy to follow for someone opening it for the first time, and still give power users
+everything. Its main view holds what most people come to change. Settings few people touch are folded into an
+Advanced section or a separate tool, and they stay complete there.
+
+The user decides when their files change. Edits are a draft until Save, any of them can be undone or discarded,
+and DSPRE asks before doing anything that would lose work. Warnings and guards cover what the user can't see
+coming: losing unsaved work, a value that breaks in game, a patch that changes code, or a file that would be
+written wrong. An edit whose result shows right away on screen applies without asking.
+
+When an edit changes something the player sees, the editor shows it the way the game draws it, and the preview
+follows every change, so a user can judge an edit without leaving DSPRE.
+
+Editors are connected. A value that refers to another record leads to the editor for that record, any editor can
+be opened by name, and when one editor changes data, the others showing it update. They also feel the same:
+toolbars, saving, undo, notices and wording work alike everywhere, so knowing one editor means knowing the rest.
+
+An editor shows what the open game has, under the names that game uses, and nothing it doesn't have.
+
+### UI
+
+Labels are short nouns, in the words players already use for the thing, and longer explanations go in tooltips
+and tours. Titles use sentence case. Buttons say what
+they do, and one that takes you to another editor says "Open in <editor>". "…" appears only when the action asks
+for more input.
+
+Controls for something this game doesn't have are hidden. Controls that can't be used right now are disabled, with
+a tooltip saying why.
+
+Saving, exporting and importing confirm with a `SaveNotice` instead of a dialog. Messages don't use exclamation
+marks, and Enter never answers a question. An editor that's slow to open shows the busy card while it loads.
+
+Icons come from `Icon.Key`, not text symbols. Numbers are whole where the game's are.
+
+### Comments and text
+
+Comments explain why something is done, in a line, and only when the code doesn't already say it.
+
+Code doesn't use `var`, and no text uses em dashes. The build rejects `var` and the calls listed in
+`BannedSymbols.txt`.
+
+Commit subjects follow `type(Scope): what changed`, without a body. Leaked source files are never named in the
+repo; the pret decomps can be cited.
 
 ## Projects
 
@@ -10,10 +166,8 @@ Build and publish: [BUILDING.md](BUILDING.md).
 | `DSPRE.Avalonia` | The app: views, view models, the GL renderer, readers only the UI uses. |
 | `DSPRE.Tests` | xunit tests. |
 
-All target net8.0. Anything written back to the ROM goes in `DSPRE.Core/ROMFiles`: it reads from a `byte[]`,
-checks the length, and writes back with `ToBytes()`. Unknown fields and padding are written back as
-they were. Read-only types for drawing
-or listing go in `DSPRE.Avalonia/Avalonia/Data`. Core shows messages only through `AppMessages`.
+All target net8.0. Classes that write back to the ROM live in `DSPRE.Core/ROMFiles`. Read-only types used for
+drawing or listing live in `DSPRE.Avalonia/Avalonia/Data`. Core shows messages through `AppMessages`.
 
 ### Folders
 
@@ -34,7 +188,7 @@ dotnet test DSPRE.Tests/DSPRE.Tests.csproj
 ```
 
 Visual Studio has launch profiles for Windows and WSL, each with a `--beta` variant. Close `DSPRE.Avalonia.exe`
-and `rotom-lsp.exe` before building. If a XAML change fails with no clear error:
+and `rotom-lsp.exe` before building. When a XAML change fails with no clear error, this shows it:
 
 ```powershell
 dotnet build DSPRE.sln -v m --nologo 2>&1 | Select-String ": error |AVLN"
@@ -42,11 +196,12 @@ dotnet build DSPRE.sln -v m --nologo 2>&1 | Select-String ": error |AVLN"
 
 ## Editors
 
-Copy an editor from the same folder. `CameraEditorViewModel` is small, `MapEditorViewModel` large.
+The easiest start is copying an editor from the same folder. `CameraEditorViewModel` is a small one,
+`MapEditorViewModel` a large one.
 
 ### How an editor fits together
 
-Editors are MVVM: the view binds to its view model, the view model holds the state and reads and writes ROM
+Editors are MVVM: the view binds to its view model, and the view model holds the state and reads and writes ROM
 types from `DSPRE.Core`.
 
 ```mermaid
@@ -65,43 +220,107 @@ flowchart LR
     Folders -->|Save ROM| Nds[".nds"]
 ```
 
-`ShowManaged` tracks the window for the unsaved-changes check (`OpenEditors`) and calls `IDetachable.Detach`
-on close.
+`ShowManaged` tracks the window for the unsaved-changes check (`OpenEditors`) and calls `IDetachable.Detach` when
+it closes.
 
 ### View model
 
-Plain `INotifyPropertyChanged` in each class; no ReactiveUI, CommunityToolkit or base class. A parameterless
-constructor starts with `if (!Design.IsDesignMode) return;`, or the designer reads `RomInfo` with no ROM. Grid
-rows get a small `...Row` or `...VM` class in the same file and keep fields the UI doesn't show.
+Each view model implements `INotifyPropertyChanged` itself, with no ReactiveUI, CommunityToolkit or base class. The
+parameterless constructor is for the XAML designer and returns straight away outside it, since there is no ROM to
+read there. Grid rows get a small `...Row` or `...VM` class in the same file, which keeps the fields the UI doesn't
+show.
+
+```csharp
+public class MyEditorViewModel : INotifyPropertyChanged
+{
+    public event PropertyChangedEventHandler PropertyChanged;
+    private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+
+    public MyEditorViewModel() { if (!Design.IsDesignMode) return; }
+    public MyEditorViewModel(string[] names) { ... }
+
+    private int _index;
+    public int Index { get => _index; set { if (_index == value) return; _index = value; Raise(); } }
+}
+```
 
 ### Unsaved changes
 
-Every editor that changes data implements `IEditorWithUnsavedChanges`, or its changes are lost when the ROM
-closes. Compare current bytes with the saved bytes, return false from `SaveChangesAsync` on failure, end a save
-with `SaveNotice.Saved(...)`, and ask through `RecordSwitchGuard.ConfirmLeaveAsync` before leaving an edited
-record. `FriendshipChangesViewModel` is the example.
+An editor that changes data implements `IEditorWithUnsavedChanges`; that is how closing the ROM knows to ask about
+it. It compares the current bytes with the saved ones, returns false from `SaveChangesAsync` when the save fails,
+ends a save with `SaveNotice.Saved(...)`, and asks through `RecordSwitchGuard.ConfirmLeaveAsync` before leaving an
+edited record. From `FriendshipChangesViewModel`:
+
+```csharp
+public bool HasUnsavedChanges => _table != null && !_table.ToBytes().AsSpan().SequenceEqual(_saved);
+public string UnsavedChangesDescription => "Friendship changes";
+
+public void SaveChanges() => _ = SaveChangesAsync();
+
+public async Task<bool> SaveChangesAsync()
+{
+    if (_table == null) return true;
+    try { _table.Save(); }
+    catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
+    {
+        await DialogHelper.ShowError("The friendship changes were not saved:\n" + e.Message, "Friendship changes error");
+        return false;
+    }
+    _saved = _table.ToBytes();
+    Changed();
+    SaveNotice.Saved(UnsavedChangesDescription);
+    return true;
+}
+
+public void DiscardChanges() { CopyValues(_saved); StartUndo(); Changed(); }
+```
 
 ### Undo
 
-Use `ByteStateUndo`, or `UndoHistory<T>` for state that isn't bytes; implement `ISupportsUndo` and add
-`<controls:UndoRedoButtons/>`. No private undo stacks. Changes passed the same group
-(`ByteStateUndo.Record(group)`, `PendingArchiveWrites.Change(make, group)`) are one step; the colour popup
-passes itself.
+Undo comes from `ByteStateUndo`, or `UndoHistory<T>` for state that isn't bytes. The view model implements
+`ISupportsUndo` and the view adds `<controls:UndoRedoButtons/>`. Changes recorded with the same group
+(`ByteStateUndo.Record(group)`, `PendingArchiveWrites.Change(make, group)`) undo as one step; the colour popup
+passes itself as the group.
+
+```csharp
+private ByteStateUndo _undo;
+private void StartUndo() => _undo = new ByteStateUndo(() => _table.ToBytes(), b => { CopyValues(b); Changed(); },
+    () => { Raise(nameof(CanUndo)); Raise(nameof(CanRedo)); });
+public bool CanUndo => _undo?.CanUndo == true;
+public bool CanRedo => _undo?.CanRedo == true;
+public void Undo() => _undo?.Undo();
+public void Redo() => _undo?.Redo();
+
+private void Changed() { Raise(nameof(HasUnsavedChanges)); _undo?.Record(); }   // after every edit
+```
 
 ### View
 
-`Views/<Folder>/MyEditorView.axaml`, with `x:Class` in that folder's namespace and `x:DataType` set. Make it a
-`UserControl` so it can sit in the Maps workspace. Code-behind holds event handlers only.
+A view lives in `Views/<Folder>/MyEditorView.axaml`, with `x:Class` in that folder's namespace and `x:DataType`
+set. Without `x:DataType` the build fails with an error that points somewhere else. Views are `UserControl`s so
+they can also sit in the Maps workspace, and their code-behind holds event handlers only.
+
+```xml
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+             x:Class="DSPRE.Avalonia.Views.Pokemon.FriendshipChangesView"
+             x:DataType="vm:FriendshipChangesViewModel">
+  <Design.DataContext>
+    <vm:FriendshipChangesViewModel/>
+  </Design.DataContext>
+```
 
 ### Maps workspace
 
-The main window is `MapsWorkspaceView`: the header list on the left, and tabs that hold the editors' own views
-for the selected header (Header, Map, Events, Matrix, Area Data, Encounters, Scripts, Level Scripts, Text). An
-editor added as a tab goes in `MapsWorkspaceView.GetEmbeddedEditors`, so its unsaved changes are checked.
+The main window is `MapsWorkspaceView`: the header list on the left, and tabs that hold the editors' own views for
+the selected header (Header, Map, Events, Matrix, Area Data, Encounters, Scripts, Level Scripts, Text). An editor
+added as a tab is listed in `MapsWorkspaceView.GetEmbeddedEditors`, so its unsaved changes are checked.
 
 ### Opening it
 
-Add a method to `AvaloniaEditorLauncher.cs`:
+Each editor has an open method in `AvaloniaEditorLauncher.cs` and a rule in `EditorAvailability.cs`:
 
 ```csharp
 public static void OpenMyEditor()
@@ -111,16 +330,26 @@ public static void OpenMyEditor()
 }
 ```
 
-Add its rule to `EditorAvailability.cs`. Always `ShowManaged()`, never `Show()`. One-table editors use
-`OpenTableEditor(...)`. A `Window` editor calls `EditorWindowChrome.Attach(window, vm)`. An editor with one
-window uses `BringForward<TView, TModel>(goTo)`. Slow first opens go through `OpenBehindCardAsync`, with only
-file work off the UI thread.
+Windows open with `ShowManaged()`, which places them, registers them with `OpenEditors` and asks the beta gate; a
+plain `Show()` skips all three. One-table editors use `OpenTableEditor(...)`. A `Window` editor calls
+`EditorWindowChrome.Attach(window, vm)`. An editor that only ever has one window uses
+`BringForward<TView, TModel>(goTo)`. A slow first open goes through `OpenBehindCardAsync`, with only the file work
+off the UI thread.
+
+```csharp
+public static void OpenFriendshipChanges() => OpenTableEditor("Friendship Changes", FriendshipTable.WhyNot,
+    () => new FriendshipChangesView(new FriendshipChangesViewModel(true)), 760, 480, 640, 440);
+
+await OpenBehindCardAsync("Opening Audio Editor…", "Reading the cries, music and sound effects.",
+    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData }),   // off the UI thread
+    () => new AudioEditorView(new AudioEditorViewModel(names)));                        // on it, card still up
+```
 
 ### Menu
 
-In `MainWindowView.axaml` bind `IsVisible` to `Shown[MyEditorView]`, `IsEnabled` to `Usable[MyEditorView]` and
-`ToolTip.Tip` to `BlockedNote[MyEditorView]`. Add a command in `AvaloniaEditorLauncher.BuildCommands` and a tour
-in `EditorTours.<Folder>.cs`.
+In `MainWindowView.axaml` the menu item binds `IsVisible` to `Shown[MyEditorView]`, `IsEnabled` to
+`Usable[MyEditorView]` and `ToolTip.Tip` to `BlockedNote[MyEditorView]`. The editor also gets a command in
+`AvaloniaEditorLauncher.BuildCommands`, for Ctrl+P, and a tour in `EditorTours.<Folder>.cs`.
 
 ### Shared helpers
 
@@ -137,70 +366,108 @@ in `EditorTours.<Folder>.cs`.
 | DSPRE's own folders, logging | `AppPaths`, `AppLogger` (Core) |
 | Pixels in Core | `RawImage` |
 
-Subscribe to `AppEvents` in the view model and implement `IDetachable`. An editor that only draws archive
-members uses `AppEvents.WhenSaved(redraw, dirs)`.
+An editor that only draws archive members redraws with `AppEvents.WhenSaved(redraw, dirs)`.
 
 ### Asking the user
 
-Every dialog goes through `DialogHelper` with the editor as owner. Every Discard asks
-`DialogHelper.ConfirmDiscard(this)`. A choice that needs a preview is a small class with `AskAsync`
-(`PngColourPrompt`). Hide what this game doesn't have; disable what can't work now, with a tooltip saying why.
+Dialogs go through `DialogHelper` with the editor as owner, and Discard asks through
+`DialogHelper.ConfirmDiscard(this)`. A choice that needs a preview is a small class with `AskAsync`, like
+`PngColourPrompt`.
 
 ### Toolbar and controls
 
-`EditorToolbar` orders controls the same everywhere. Name pickers are `FusionAutoCompleteBox`, number and name
-pickers `IdNameSelector`. `controls:EditorLink.To` links a value to its editor. `HelpTip` adds a one-line hint.
-Icons come from `Icon.Key`, never text symbols.
+`EditorToolbar` keeps the controls in the same order in every editor. Name pickers are `FusionAutoCompleteBox`,
+number-and-name pickers `IdNameSelector`. `controls:EditorLink.To` links a value to its editor, and `HelpTip` adds a
+one-line hint.
 
 ### Tours
 
-One `Add("XView", "Name", S(target, title, body), ...)` per editor in `EditorTours.<Folder>.cs`. Targets: null,
-`"toolbar"`, `"tabs"`, `"list"`, `"name:X"`, `"type:X"`, `"tab:Name"`, optionally prefixed `"pick:List>"`.
+Each editor has one `Add("XView", "Name", S(target, title, body), ...)` in `EditorTours.<Folder>.cs`. A target is
+null, `"toolbar"`, `"tabs"`, `"list"`, `"name:X"`, `"type:X"` or `"tab:Name"`, optionally prefixed with
+`"pick:List>"`.
+
+```csharp
+Add("CameraEditorView", "Camera Editor",
+    S("list", "Camera angles", "Each row is a camera a header can use. Headers pick one by its number."),
+    S("list", "Changing a camera", "Double-click a cell to change its distance, rotation, field of view or clipping."));
+```
 
 ## Agreed rules
 
-New code follows these; older code is being moved over.
+New code follows these, and older code is being moved over.
 
 ### Writing game files
 
-Archive members are written only through `ArchiveMembers.Put` and `ArchiveMembers.Delete` (or `Write(path,
-bytes)` when you only have a path). arm9 and overlays are written only through `DSUtils.WriteToFile` or
-`DSUtils.WriteWholeFile`, which ask the hg-engine write guard. Everything else (exports, DSPRE's own data,
-project sources, backups, temp files) goes through `PlainFiles`, which refuses members and code. hg-engine
-checkout source text goes through `HgEngineVerifiedWrite`.
+Archive members are written through `ArchiveMembers.Put` and `ArchiveMembers.Delete`, or `Write(path, bytes)` when
+only the path is known. arm9 and overlays are written through `DSUtils.WriteToFile` or `DSUtils.WriteWholeFile`,
+which check the hg-engine write guard. Everything else, such as exports, DSPRE's own data, project sources,
+backups and temp files, goes through `PlainFiles`, which refuses members and code. Source text in an hg-engine
+checkout goes through `HgEngineVerifiedWrite`.
+
+```csharp
+ArchiveMembers.Put(DirNames.personalPokeData, species, bytes);
+DSUtils.WriteToFile(OverlayUtils.GetPath(overlay), patch, writeAt: (uint)offset);
+PlainFiles.WriteBytes(exportPath, bytes);
+```
 
 ### Unsaved archive edits
 
-Editors keep archive changes in `PendingArchiveWrites` until Save. One-member-at-a-time editors use
-`StagedArchive`. An editor with its own undo stores `PendingArchiveWrites.Take()` in each state. Scripts,
-trainers, new map headers and new overworld entries still apply straight away, after asking.
+Editors keep archive changes in `PendingArchiveWrites` until Save. Editors that work on one member at a time use
+`StagedArchive`. An editor with its own undo stores `PendingArchiveWrites.Take()` in each state. Scripts, trainers,
+new map headers and new overworld entries still apply straight away, after asking.
+
+```csharp
+_pending.Change(step => step.Put(DirNames.dungeonCutinGraphics, p, nclrBytes)
+                            .Put(DirNames.dungeonCutinGraphics, t, ncgrBytes));   // one undo step
+byte[] shown = _pending.Read(DirNames.dungeonCutinGraphics, p);                    // sees unsaved changes
+_pending.Save();                                                                   // or Discard()
+```
 
 ### Events
 
-View models subscribe to events themselves and implement `IDetachable`; `ShowManaged` detaches them on close.
-Views listen only to their own view model.
+View models subscribe to events themselves and implement `IDetachable`, and `ShowManaged` detaches them when the
+window closes. Views listen only to their own view model.
+
+```csharp
+public class BattleScreenEditorViewModel : INotifyPropertyChanged, IDetachable
+{
+    public BattleScreenEditorViewModel() { ... AppEvents.RomPatchStateChanged += OnPatchStateChanged; }
+    public void Detach() => AppEvents.RomPatchStateChanged -= OnPatchStateChanged;
+}
+```
 
 ### Where things are in the ROM
 
-Code offsets live in `RomLocator`, as a switch on game then language with every case written out. Single
-offsets are `RomLocator.Thing` values read through `Where`, `Read`, `Write`, `WhyNot` and `WorksOn`; groups of
-sites are records in `RomLocator.Sites.cs`; per-dump values are in `RomLocator.Offsets.cs`, `.Tables.cs`,
-`.FixedTables.cs` and `.Measured.cs`. Text bank numbers and offsets inside script files stay in
-`RomInfo`. `RomLocator.WorksOn` and `RomInfo.DescribeDumps` say which dumps a feature works on.
+Code offsets live in `RomLocator`, as a switch on game then language with every case written out. Single offsets
+are `RomLocator.Thing` values read through `Where`, `Read`, `Write`, `WhyNot` and `WorksOn`. Groups of sites are
+records in `RomLocator.Sites.cs`, and per-dump values are in `RomLocator.Offsets.cs`, `.Tables.cs`,
+`.FixedTables.cs` and `.Measured.cs`. Text bank numbers and offsets inside script files stay in `RomInfo`.
+`RomLocator.WorksOn` and `RomInfo.DescribeDumps` say which dumps a feature works on.
+
+```csharp
+// RomLocator.Tables.cs; the Thing is added to the enum and the map in RomLocator.cs
+private static Spot? FriendshipChanges(GameVersions game, GameLanguages language, int revision) => game switch
+{
+    GameVersions.Platinum => language switch
+    {
+        GameLanguages.English when revision == 10 => Arm9(0xF05A0),   // Europe
+        ...
+        _ => null,
+    },
+    ...
+};
+
+byte[] bytes = RomLocator.Read(RomLocator.Thing.FriendshipChanges, Size);
+```
 
 ### Graphics
 
-One reader per format, from bytes, through `ScriptNarc`, to bitmaps through `ImageConverter`, shown without
-smoothing.
-
-### Wording
-
-Sentence-case titles. Buttons name the action; handovers say "Open in <editor>". Saves, exports and imports
-use `SaveNotice`, not dialogs. No exclamation marks, and Enter never confirms a question.
+Each format has one reader that works from bytes, members are read through `ScriptNarc`, and bitmaps are made by
+`ImageConverter` and shown without smoothing.
 
 ## Code patches
 
-Start from `ApplyClassIntrosPatch` and `ROMFiles/ClassIntroPatch.cs`. A synthetic-overlay patch needs:
+`ApplyClassIntrosPatch` and `ROMFiles/ClassIntroPatch.cs` are the model to copy. A synthetic-overlay patch has:
 
 - a `ROMFiles` class with a 12-byte `Marker` (listed in `SyntheticOverlaySpace.BlockMarkers`), `IsApplied`,
   `WhyNotApplicable()`, `Apply(int blockOffset)`, and its `.s` source under `Resources/ROMToolboxDB/`;
@@ -208,20 +475,36 @@ Start from `ApplyClassIntrosPatch` and `ROMFiles/ClassIntroPatch.cs`. A syntheti
   refusal list, and a `Credits` entry;
 - a `PatchNotes` entry and the key's tab in `PatchToolboxViewModel`.
 
-A patch never applies another patch; one that needs the ARM9 expansion returns `Unsupported("Requires ARM9
-expansion")`. Editors never apply patches: they show "Open in Patch Toolbox"
+```csharp
+public static bool ApplyClassIntrosPatch()
+{
+    if (AlreadyApplied(Probe(() => ClassIntroPatch.IsApplied))) return false;
+    if (ClassIntroPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
+    if (PlacementNote(new[] { ClassIntroPatch.BlockLength }, out int[] offsets) is not string placement) return false;
+    if (!ConfirmYesNo("What the patch does." + placement + BackupNote("the ARM9 and the synthetic overlay") +
+        "\n\nApply this patch?" + CreditNote("classIntros"), "Confirm to proceed"))
+        return false;
+    PlainFiles.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+    ClassIntroPatch.Apply(offsets[0]);
+    ShowInfo("What changed and where to edit it.", "Patch applied");
+    return true;
+}
+```
+
+Each patch applies only itself. One that needs the ARM9 expansion returns `Unsupported("Requires ARM9
+expansion")`. Editors hand patches over to the Patch Toolbox with an "Open in Patch Toolbox" button
 (`AvaloniaEditorLauncher.OpenPatchToolboxAt(key)`) and refresh on `AppEvents.RomPatchStateChanged`.
 
 ### Synthetic overlay space
 
 Each block starts with a 32-byte header: marker, version, length. `Reserved`, `Plan`, `PlaceAt` and `Place` in
-`SyntheticOverlaySpace` find room. A growing table has one class with `MoveToExpansion()`;
-`SwarmTable.MoveToExpansion` is the example.
+`SyntheticOverlaySpace` find room. A table that grows has one class with `MoveToExpansion()`, like
+`SwarmTable.MoveToExpansion`.
 
 ## Beta editors
 
-Listed by window class in `DSPRE.Core/BetaEditors.cs`. Off unless the app starts with `--beta`; always on in
-Debug. The UI never mentions the switch.
+Beta editors are listed by window class in `DSPRE.Core/BetaEditors.cs`. They're off unless the app starts with
+`--beta`, and always on in Debug builds. The UI doesn't mention the switch.
 
 ## Tests
 
@@ -236,20 +519,20 @@ Test projects are set per machine in `testroms.json` next to `DSPRE.sln` (ignore
 { "heartGold": "<path>", "platinum": "<path>", "diamond": "<path>" }
 ```
 
-Read them through `TestRoms`. Put `[Collection("rom")]` on any test that opens a ROM, and don't run two test
-processes at once.
+Tests read them through `TestRoms`. A test that opens a ROM has `[Collection("rom")]`, and only one test process
+runs at a time, since they share the ROM fixtures.
 
 ## ROM projects
 
-ds-rom projects (`config.yaml`, `files/`, `arm9/`, `arm9_overlays/`) and legacy ndstool projects
-(`header.bin`, `data/`, `overlay/`) both work. Detection is in `DSUtils.GetFolderType`; overlay paths come from
-`OverlayUtils.GetPath`. Never decompress an overlay yourself. RAM addresses become file offsets with
-`RamAddress.Find`.
+ds-rom projects (`config.yaml`, `files/`, `arm9/`, `arm9_overlays/`) and legacy ndstool projects (`header.bin`,
+`data/`, `overlay/`) both work. Detection is in `DSUtils.GetFolderType`, and overlay paths come from
+`OverlayUtils.GetPath`. ds-rom handles overlay compression, so overlays are read and written as they are in the
+project. RAM addresses become file offsets with `RamAddress.Find`.
 
 ### Archives
 
-Each archive is a `RomInfo.DirNames` value mapped in `RomInfo.gameDirs`. Call `DSUtils.TryUnpackNarcs` before
-the first read, then read and write only the unpacked folder.
+Each archive is a `RomInfo.DirNames` value mapped in `RomInfo.gameDirs`. `DSUtils.TryUnpackNarcs` unpacks it
+before the first read, and from then on DSPRE reads and writes the unpacked folder.
 
 ### Save ROM
 
@@ -259,13 +542,13 @@ it before anything is written.
 
 ### Rotom
 
-Rotom owns `.rotom/command_database/`. DSPRE never replaces it or regenerates script sources wholesale.
-`RotomTool.ProjectDatabaseFile()` is that database.
+Rotom owns the project's command database in `.rotom/command_database/`. DSPRE reads it through
+`RotomTool.ProjectDatabaseFile()` and leaves changing it, and regenerating script sources, to Rotom.
 
 ## Graphics
 
-`GraphicAssets.All` lists every 2D archive, with its colour pairing and grouping; `ModelAssets.All` does the
-same for 3D. Readers, all in `DSPRE.Core/ROMFiles`:
+`GraphicAssets.All` lists every 2D archive, with its colour pairing and grouping; `ModelAssets.All` does the same
+for 3D. Readers, all in `DSPRE.Core/ROMFiles`:
 
 | Format | Reader |
 |---|---|
@@ -277,30 +560,30 @@ same for 3D. Readers, all in `DSPRE.Core/ROMFiles`:
 | Textures (TEX0) | `Tex0Block`, `NsbmdTextureDecoder` |
 | LZ77 | `Lz77.Decompress`, `Compress` |
 
-A game screen is drawn by a renderer that returns pieces with their source files (`BattleScreenRenderer`,
+A game screen is drawn by a renderer that returns its pieces with their source files (`BattleScreenRenderer`,
 `ScreenPageComposer`). Pokédex and summary pages are `ScreenBook`s (`PokedexBook`, `SummaryBook`) shown by
-`ScreenPagesView`. PNG export keeps
-colour numbers; shared-palette imports refuse a wrong PNG and offer `PngColourPrompt`. `OpenGraphicAt` and
-`OpenPainter` hand a graphic to the Graphics window or painter.
+`ScreenPagesView`. PNG export keeps colour numbers, and shared-palette imports refuse a PNG with the wrong colours
+and offer `PngColourPrompt`. `OpenGraphicAt` and `OpenPainter` hand a graphic to the Graphics window or the
+painter.
 
 ## Scripts
 
 `DSPRE.Core/ROMFiles/ScriptFile.cs` owns binary scripts and the text under `expanded/scripts/`: timestamps,
-caching, the database hash and rebuilds. Don't add another script reader.
+caching, the database hash and rebuilds. Everything that reads or writes scripts goes through it.
 
 Script numbers from 2000 up are shared scripts. `CommonScriptId.Resolve` gives the range, script file and script
-number; `CommonScriptLabels` holds the names users give them.
+number, and `CommonScriptLabels` holds the names users give them.
 
 ## Events
 
 Overworld sprites 101 to 116 are picked by a script while playing, from variable 0x4020 up. The editor draws
-`RomInfo.VariableOverworldStandIn` with an outline (`RomInfo.IsVariableOverworld`).
+`RomInfo.VariableOverworldStandIn` with an outline for them (`RomInfo.IsVariableOverworld`).
 
 ## Known traps
 
-- Check `RomInfo.gameFamily` and `gameLanguage` before any offset.
+- Layouts differ between games and languages, so `RomInfo.gameFamily` and `gameLanguage` decide every offset.
 - `param0` is stored as `sightRange` but is the engine's general parameter.
-- Tile sheets often store `0xFFFF` for width and height: read it as -1, the cell layout decides the shape.
+- Tile sheets often store `0xFFFF` for width and height. That reads as -1, and the cell layout decides the shape.
 - Backgrounds wider than 32 squares are stored in 32x32 blocks.
 - Battle sprite palettes are per species, and their pixels are XOR-scrambled.
 - A hidden `TabItem` still counts as tab zero. A `ComboBox` loses `SelectedIndex` when its items change.
@@ -308,22 +591,12 @@ Overworld sprites 101 to 116 are picked by a script while playing, from variable
 
 ## hg-engine projects
 
-An hg-engine ROM has "hg-engine rocks!" at the start of overlay 129 (`RomInfo.isHGE`);
-`HgEngineProject.IsActive` means a checkout is linked. Each `EditorAvailability` rule says `Open`,
-`NeedsLink`, `Source`, `Closed` or `LinkedOnly`. With a checkout linked, data is read from its source text,
-never by offset, and written through `HgEngineVerifiedWrite`. Synthetic-overlay patches are refused.
-
-## House style
-
-- Comments say why, in one line, only when it isn't obvious.
-- No `var`, no em dashes.
-- The build fails on the calls in `BannedSymbols.txt`. Only the write paths themselves are exempt, in
-  `.editorconfig`.
-- UI text is short and said the way people say it. Labels are nouns. "…" only when the action asks for input.
-- Commit subjects: `type(Scope): what changed`, no body.
-- Never name leaked source files in the repo. The pret decomps are fine to cite.
+An hg-engine ROM has "hg-engine rocks!" at the start of overlay 129 (`RomInfo.isHGE`).
+`HgEngineProject.IsActive` means a checkout is linked. Each `EditorAvailability` rule says `Open`, `NeedsLink`,
+`Source`, `Closed` or `LinkedOnly`. With a checkout linked, data is read from its source text rather than by
+offset, and written through `HgEngineVerifiedWrite`. Synthetic-overlay patches are refused.
 
 ## Reference
 
-`Research/` holds documented game knowledge; human contributors maintain it. Bundled tools are in `Tools/` and
+`Research/` holds documented game knowledge, maintained by human contributors. Bundled tools are in `Tools/` and
 are copied next to the exe.
