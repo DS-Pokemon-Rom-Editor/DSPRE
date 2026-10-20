@@ -18,12 +18,29 @@
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
-        <CheckBox Content="Interior (HGSS)" IsChecked="{Binding Interior}" IsEnabled="{Binding IsHGSS}" VerticalAlignment="Center"/>
-        <TextBlock Text="Textures" VerticalAlignment="Center"/>
+        <TextBlock Text="Texture pack" VerticalAlignment="Center"/>
         <ComboBox Width="150" ItemsSource="{Binding Textures}" SelectedIndex="{Binding SelectedTextureIndex}"/>
-        <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
-        <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
+        <Button controls:EditorToolbar.Slot="Import" Content="Import…" controls:Icon.Key="import" Click="Import_Click"
+                ToolTip.Tip="An NSBMD model, or an OBJ mesh turned into one"/>
+        <Button controls:EditorToolbar.Slot="Export" Content="Export" controls:Icon.Key="export">
+          <Button.Flyout>
+            <MenuFlyout>
+              <MenuItem Header="NSBMD…" Tag="Nsbmd" Click="Export_Click"/>
+              <MenuItem Header="DAE…" Tag="Dae" Click="Export_Click"/>
+              <MenuItem Header="glTF…" Tag="Glb" Click="Export_Click"/>
+              <Separator/>
+              <MenuItem Header="All as NSBMD…" Tag="Nsbmd" Click="ExportAll_Click"/>
+              <MenuItem Header="All as DAE…" Tag="Dae" Click="ExportAll_Click"/>
+              <MenuItem Header="All as glTF…" Tag="Glb" Click="ExportAll_Click"/>
+            </MenuFlyout>
+          </Button.Flyout>
+        </Button>
     </controls:EditorToolbar>
+
+    <TabStrip DockPanel.Dock="Top" SelectedIndex="{Binding ArchiveTab}" IsVisible="{Binding IsHGSS}" Margin="4,2,4,0">
+      <TabStripItem Content="Exterior"/>
+      <TabStripItem Content="Interior"/>
+    </TabStrip>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
       <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>

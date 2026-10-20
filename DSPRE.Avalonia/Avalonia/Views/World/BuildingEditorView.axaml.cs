@@ -43,7 +43,11 @@ namespace DSPRE.Avalonia.Views.World
         }
 
         private async void Import_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportAsync());
-        private async void Export_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportAsync());
+        private async void Export_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportAsync(FormatOf(sender)));
+        private async void ExportAll_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportAllAsync(FormatOf(sender)));
+
+        private static BuildingEditorViewModel.ExportFormat FormatOf(object sender)
+            => Enum.Parse<BuildingEditorViewModel.ExportFormat>((string)((Control)sender).Tag);
 
         private static async Task SafeAsync(Task task)
         {
