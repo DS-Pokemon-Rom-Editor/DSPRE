@@ -750,6 +750,9 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         /// <summary>Picks the line of the symbol claiming jump-table slot <paramref name="scriptNumber"/>.
         /// The "#N" detail is compared exactly, so #2 never lands on #21.</summary>
+        private static int? ScriptNumberOf(RotomLspSymbol symbol) =>
+            symbol.Detail != null && symbol.Detail.StartsWith('#') && int.TryParse(symbol.Detail.AsSpan(1), out int n) ? n : null;
+
         internal static int? FindScriptEntryLine(IReadOnlyList<RotomLspSymbol> symbols, int scriptNumber)
         {
             string slot = "#" + scriptNumber;
@@ -1478,7 +1481,18 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 if (token.IsCancellationRequested || !SamePath(path, _currentPath)) return;
 
                 Outline.Clear();
-                foreach (RotomLspSymbol symbol in symbols) Outline.Add(new OutlineEntry(symbol.Name, symbol.Line, symbol.Depth));
+                // Numbered scripts first, by number, then everything else in file order.
+                List<OutlineEntry> entries = symbols.Select(s => new OutlineEntry(s.Name, s.Line, s.Depth, ScriptNumberOf(s))).ToList();
+                foreach (OutlineEntry entry in entries.Where(e => e.Number != null).OrderBy(e => e.Number)) Outline.Add(entry);
+                List<OutlineEntry> rest = entries.Where(e => e.Number == null).ToList();
+                for (int i = 0; i < rest.Count; i++)
+                {
+                    // A heading like "Scripts" whose rows all moved up has nothing left under it.
+                    bool wasHeading = entries.IndexOf(rest[i]) + 1 < entries.Count && entries[entries.IndexOf(rest[i]) + 1].Depth > rest[i].Depth;
+                    bool keepsRows = i + 1 < rest.Count && rest[i + 1].Depth > rest[i].Depth;
+                    if (wasHeading && !keepsRows) continue;
+                    Outline.Add(rest[i]);
+                }
                 _lenses = lenses;
                 _hints = hints;
                 PublishInlineTexts();
@@ -1798,8 +1812,9 @@ namespace DSPRE.Avalonia.ViewModels.Text
     }
 
     /// <summary>One outline row: indented by nesting, jumps to <see cref="Line"/> when picked.</summary>
-    public sealed record OutlineEntry(string Name, int Line, int Depth)
+    /// <summary>One outline row. A script that has a number in the file's jump table shows it.</summary>
+    public sealed record OutlineEntry(string Name, int Line, int Depth, int? Number = null)
     {
-        public string Display => new string(' ', Depth * 2) + Name;
+        public string Display => Number is int n ? $"#{n}  {Name}" : new string(' ', Depth * 2) + Name;
     }
 }

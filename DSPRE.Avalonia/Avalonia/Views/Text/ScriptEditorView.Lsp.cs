@@ -121,7 +121,18 @@ namespace DSPRE.Avalonia.Views.Text
             }
         }
 
-        private void Outline_DoubleTapped(object sender, TappedEventArgs e) => JumpToOutlineEntry();
+        private void Outline_Tapped(object sender, TappedEventArgs e) => JumpToOutlineEntry();
+
+        private void ScriptNumber_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter || VM == null) return;
+            e.Handled = true;
+            string text = ScriptNumberBox.Text?.Trim().TrimStart('#') ?? "";
+            OutlineEntry entry = int.TryParse(text, out int number) ? VM.Outline.FirstOrDefault(o => o.Number == number) : null;
+            if (entry == null) { VM.StatusText = $"No script #{text} in this file."; return; }
+            OutlineList.SelectedItem = entry;
+            JumpToLine(entry.Line);
+        }
 
         private void Outline_KeyDown(object sender, KeyEventArgs e)
         {
