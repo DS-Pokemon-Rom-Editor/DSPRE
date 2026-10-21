@@ -362,12 +362,15 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
             }, _owner);
 
-            if (done > 0) SaveNotice.Exported(folder);
+            if (done > 0) SaveNotice.ExportedTo(done == 1 ? "1 building model" : $"{done} building models", folder);
             StatusText = failed.Count == 0
                 ? $"Exported {done} building models."
                 : $"Exported {done} building models; {failed.Count} failed: {string.Join(", ", failed.Take(5))}{(failed.Count > 5 ? ", …" : "")}.";
             if (failed.Count > 0)
-                await DialogHelper.ShowErrorAsync($"{failed.Count} of {models.Count} building models weren't exported. The log says why.", "Export all", _owner);
+                await DialogHelper.ShowErrorAsync(failed.Count == 1
+                    ? $"{failed[0]} wasn't exported. The log says why."
+                    : $"{failed.Count} of {models.Count} building models weren't exported: {string.Join(", ", failed.Take(5))}{(failed.Count > 5 ? ", …" : "")}. The log says why.",
+                    "Export all", _owner);
         }
     }
 }

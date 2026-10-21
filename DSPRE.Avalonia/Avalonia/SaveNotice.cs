@@ -48,6 +48,10 @@ namespace DSPRE.Avalonia
         /// <summary>"Exported egg_moves.csv", with a Show file button that opens its folder.</summary>
         public static void Exported(string path) => Post("Exported " + Path.GetFileName(path), path);
 
+        /// <summary>"Exported 590 building models to buildings", with an Open folder button. Give what went out, not the verb.</summary>
+        public static void ExportedTo(string what, string folder)
+            => Post($"Exported {what.Trim()} to {Path.GetFileName(folder.TrimEnd('\\', '/'))}", folder, opensFolder: true);
+
         /// <summary>"Imported Bulbasaur's egg moves from egg_moves.csv". Give what came in, not the verb; the file is left out when unknown.</summary>
         public static void Imported(string what, string path)
         {
@@ -56,19 +60,19 @@ namespace DSPRE.Avalonia
             else Post(file == null ? "Imported " + what.Trim() : $"Imported {what.Trim()} from {file}", null);
         }
 
-        private static void Post(string message, string file)
+        private static void Post(string message, string file, bool opensFolder = false)
         {
             if (string.IsNullOrWhiteSpace(message)) return;
 
-            if (Dispatcher.UIThread.CheckAccess()) Present(message, file);
-            else Dispatcher.UIThread.Post(() => Present(message, file));
+            if (Dispatcher.UIThread.CheckAccess()) Present(message, file, opensFolder);
+            else Dispatcher.UIThread.Post(() => Present(message, file, opensFolder));
         }
 
         private static Border _showing;
         private static OverlayLayer _showingIn;
         private static DispatcherTimer _life;
 
-        private static void Present(string message, string file)
+        private static void Present(string message, string file, bool opensFolder)
         {
             try
             {
@@ -81,7 +85,7 @@ namespace DSPRE.Avalonia
                 // worth reading, since it names the whole save rather than a part of it.
                 Clear();
 
-                _showing = Build(message, file);
+                _showing = Build(message, file, opensFolder);
                 _showingIn = layer;
                 layer.Children.Add(_showing);
                 Place(_showing, window.ClientSize);
@@ -112,7 +116,7 @@ namespace DSPRE.Avalonia
             _showingIn = null;
         }
 
-        private static Border Build(string message, string file)
+        private static Border Build(string message, string file, bool opensFolder)
         {
             TextBlock text = new TextBlock
             {
@@ -124,8 +128,14 @@ namespace DSPRE.Avalonia
             Control child = text;
             if (file != null)
             {
-                Button show = new Button { Content = "Show file", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(12, 0, 0, 0) };
-                show.Click += (_, _) => { SystemShell.RevealInFileManager(file); Clear(); };
+                string label = opensFolder ? "Open folder" : Directory.Exists(file) ? "Show folder" : "Show file";
+                Button show = new Button { Content = label, Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(12, 0, 0, 0) };
+                show.Click += (_, _) =>
+                {
+                    if (opensFolder) SystemShell.OpenWithDefaultApp(file);
+                    else SystemShell.RevealInFileManager(file);
+                    Clear();
+                };
                 child = new StackPanel { Orientation = Orientation.Horizontal, Children = { text, show } };
             }
             return Frame(child, file != null);

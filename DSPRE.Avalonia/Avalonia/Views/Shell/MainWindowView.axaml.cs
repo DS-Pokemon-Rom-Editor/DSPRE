@@ -1289,7 +1289,7 @@ namespace DSPRE.Avalonia.Views.Shell
                 try { DocTool.ExportDocs(folder); }
                 catch (System.Exception ex) { error = ex.Message; }
             });
-            if (error == null) SaveNotice.Exported(folder);
+            if (error == null) SaveNotice.ExportedTo("the docs", folder);
             else await DialogHelper.ShowErrorAsync("Exporting docs failed:\n" + error, "Export docs error");
         }
 

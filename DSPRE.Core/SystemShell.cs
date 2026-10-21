@@ -10,10 +10,10 @@ namespace DSPRE
     /// </summary>
     public static class SystemShell
     {
-        /// <summary>Reveal the file in the OS file manager (selected where the platform supports it).</summary>
+        /// <summary>Reveal the file or folder in the OS file manager (selected where the platform supports it).</summary>
         public static void RevealInFileManager(string path)
         {
-            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path) && !Directory.Exists(path))
             {
                 return;
             }
