@@ -267,11 +267,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 // Headbutt isn't one of DSPRE's owned domains for the packed NARC, so the vanilla read
                 // would show a stale packed-ROM snapshot rather than the checkout's real data/Headbutt.c.
+                _hgeReadError = null;
                 if (HgEngineProject.IsActive)
                 {
                     if (!HgEngineHeadbutt.TryLoad(index, out _file, out string err))
                     {
                         _file = new HeadbuttEncounterFile();
+                        _hgeReadError = err;
                         AppLogger.Error($"hg-engine headbutt read failed (file {index}): {err}");
                     }
                 }
@@ -1018,9 +1020,18 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             return !HasUnsavedChanges;
         }
 
+        // Set when the map couldn't be read from Headbutt.c: saving the blank file shown would replace it.
+        private string _hgeReadError;
+
         private async Task SaveHgEngineAsync()
         {
             if (_file == null || _selFile < 0) return;
+            if (_hgeReadError != null)
+            {
+                await DialogHelper.ShowErrorAsync($"Headbutt file {_selFile} couldn't be read from Headbutt.c, so saving it would replace what is there:"
+                    + Environment.NewLine + _hgeReadError, "Headbutt editor error");
+                return;
+            }
             int fileId = _selFile;
             HeadbuttEncounterFile file = _file;
             (bool saved, string error) = await HgEngineSave.RunAsync(() => HgEngineHeadbutt.TrySave(fileId, file, out string err) ? null : err);

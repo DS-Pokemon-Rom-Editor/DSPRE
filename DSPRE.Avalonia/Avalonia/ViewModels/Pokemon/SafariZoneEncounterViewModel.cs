@@ -175,6 +175,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             try
             {
+                _hgeReadError = null;
                 if (UseHgEngineSource)
                 {
                     _file = null;
@@ -190,9 +191,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
+                if (UseHgEngineSource) _hgeReadError ??= ex.Message;
                 _ = DialogHelper.ShowErrorAsync($"Failed to load Safari Zone file {id}:\n{ex.Message}", "Safari Zone error");
             }
         }
+
+        // Set when an area's source couldn't be read: saving the blank groups shown would replace it.
+        private string _hgeReadError;
 
         private void BindGroups()
         {
@@ -221,6 +226,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 else
                 {
                     AppLogger.Error($"hg-engine safari zone read failed ({type}, area {areaId}): {error}");
+                    _hgeReadError ??= $"{type}: {error}";
                     vm.SetData(new SafariZoneEncounterGroup());
                 }
             }
@@ -243,6 +249,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private async Task SaveHgEngineAsync()
         {
+            if (_hgeReadError != null)
+            {
+                await DialogHelper.ShowErrorAsync($"Area {_selectedFileIndex} couldn't be read from SafariEncounters.c, so saving it would replace "
+                    + "what is there:\n" + _hgeReadError, "Special encounters editor error");
+                return;
+            }
             List<(HgEngineSafariEncounters.RodType, SafariZoneEncounterGroup)> groups = new List<(DSPRE.HgEngine.HgEngineSafariEncounters.RodType, SafariZoneEncounterGroup)>
             {
                 (DSPRE.HgEngine.HgEngineSafariEncounters.RodType.Land, GrassVM.CurrentGroup),

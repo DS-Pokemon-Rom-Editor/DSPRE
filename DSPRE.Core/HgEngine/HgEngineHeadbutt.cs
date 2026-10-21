@@ -66,8 +66,11 @@ namespace DSPRE.HgEngine
             if (HgEngineSourcePatcher.TryGetFieldValueInBlock(mapBlock, new[] { FieldPathSegment.Field("specialTreeCount") }, out string stc))
                 int.TryParse(stc.Trim(), out specialTreeCount);
 
-            ReadSlots(mapBlock, "normalSlots", species, file.NormalEncounters, 12);
-            ReadSlots(mapBlock, "specialSlots", species, file.SpecialEncounters, 6);
+            string unreadable = null;
+            ReadSlots(mapBlock, "normalSlots", species, file.NormalEncounters, 12, ref unreadable);
+            ReadSlots(mapBlock, "specialSlots", species, file.SpecialEncounters, 6, ref unreadable);
+            // Saving writes every slot back, so one read as 0 would replace the source's species.
+            if (unreadable != null) { error = $"Headbutt.c has a species DSPRE can't read: {unreadable}"; file = null; return false; }
             ReadGroups(mapBlock, normalTreeCount, specialTreeCount, file.NormalTreeGroups, file.SpecialTreeGroups);
 
             file.NormalTreeGroupsCount = (ushort)file.NormalTreeGroups.Count;
@@ -194,7 +197,8 @@ namespace DSPRE.HgEngine
             return true;
         }
 
-        private static void ReadSlots(string mapBlock, string fieldName, HgEngineSymbolTable species, List<HeadbuttEncounter> dest, int fixedCount)
+        private static void ReadSlots(string mapBlock, string fieldName, HgEngineSymbolTable species, List<HeadbuttEncounter> dest, int fixedCount,
+            ref string unreadable)
         {
             if (HgEngineSourcePatcher.TryGetFieldValueInBlock(mapBlock, new[] { FieldPathSegment.Field(fieldName) }, out string raw))
             {
@@ -204,7 +208,7 @@ namespace DSPRE.HgEngine
                     if (parts.Count < 3) continue;
                     dest.Add(new HeadbuttEncounter
                     {
-                        PokemonID = (ushort)ResolveToken(parts[0], species),
+                        PokemonID = (ushort)ResolveSpecies(parts[0], species, ref unreadable),
                         MinLevel = (byte)ResolveToken(parts[1], null),
                         MaxLevel = (byte)ResolveToken(parts[2], null),
                     });
@@ -251,6 +255,14 @@ namespace DSPRE.HgEngine
             if (!m.Success) return false;
             open = m.Index + m.Length - 1;
             return BraceScanner.TryFindMatchingBrace(text, open, out close);
+        }
+
+        // The slot writer names plain species only, so a form or anything else it can't name is refused.
+        private static int ResolveSpecies(string token, HgEngineSymbolTable species, ref string unreadable)
+        {
+            if (HgEngineEvolutions.ResolveTarget(token.Trim(), species, out int id, out int form) && form == 0) return id;
+            unreadable ??= token.Trim();
+            return 0;
         }
 
         private static int ResolveToken(string token, HgEngineSymbolTable table)
