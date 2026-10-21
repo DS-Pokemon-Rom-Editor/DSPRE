@@ -279,9 +279,10 @@ namespace DSPRE
                 return null;
             }
 
-            public void Save()
+            /// <summary>False when the script file could not be written; the item events are then left alone.</summary>
+            public bool Save()
             {
-                if (!HasChanges) return;
+                if (!HasChanges) return true;
                 // Every surviving entry's original script number to its new one. An add lands before any
                 // later scripts in the file, so moves go both ways.
                 Dictionary<int, int> moved = new Dictionary<int, int>();
@@ -298,13 +299,14 @@ namespace DSPRE
                 }
 
                 _script.RenumberContainers();
-                _script.SaveToFileDefaultDir(RomInfo.ItemScriptFileNumber, showSuccessMessage: false);
+                if (!_script.SaveToFileDefaultDir(RomInfo.ItemScriptFileNumber, showSuccessMessage: false)) return false;
                 RemapItemReferences(Remap);
                 _removed.Clear();
                 for (int i = 0; i < _origin.Count; i++) _origin[i] = i;
                 _used.Clear();
                 foreach (int n in GetUsedScriptNumbers()) _used.Add(n);
                 HasChanges = false;
+                return true;
             }
         }
     }

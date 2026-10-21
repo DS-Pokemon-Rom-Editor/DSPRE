@@ -167,7 +167,11 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public void Save()
         {
             if (!HasUnsavedChanges) return;
-            _session.Save();
+            if (!_session.Save())
+            {
+                StatusText = "The item script file could not be saved.";
+                return;
+            }
             _history.Reset(_session.Take());
             Changed = true;
             StatusText = "";
