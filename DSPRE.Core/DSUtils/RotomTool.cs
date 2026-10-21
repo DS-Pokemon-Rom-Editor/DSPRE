@@ -83,7 +83,30 @@ namespace DSPRE
             }
         }
 
-        public static Task<Result> RunAsync(params string[] args) => RunInAsync(ProjectRoot, args);
+        public static Task<Result> RunAsync(params string[] args)
+        {
+            if (args.Length > 0 && args[0] != "init") AddMissingBinaryRoot();
+            return RunInAsync(ProjectRoot, args);
+        }
+
+        /// <summary>rotom init leaves binary_roots out when it can't find unpacked/scripts, and every decompile then fails.</summary>
+        public static void AddMissingBinaryRoot()
+        {
+            if (string.IsNullOrEmpty(ProjectRoot)) return;
+            string toml = Path.Combine(ProjectRoot, "rotom.toml");
+            if (!File.Exists(toml) || !Directory.Exists(Path.Combine(ProjectRoot, "unpacked", "scripts"))) return;
+            string text = File.ReadAllText(toml);
+            if (Regex.IsMatch(text, @"^\s*binary_roots\s*=", RegexOptions.Multiline)) return;
+            Match source = Regex.Match(text, @"^[ \t]*source_roots\s*=[^\r\n]*\]", RegexOptions.Multiline);
+            if (!source.Success) return;
+            text = text.Insert(source.Index + source.Length, (text.Contains("\r\n") ? "\r\n" : "\n") + "binary_roots = [\"unpacked/scripts\"]");
+            try
+            {
+                PlainFiles.WriteText(toml, text, new UTF8Encoding(false));
+                AppLogger.Info("Added binary_roots to rotom.toml.");
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { AppLogger.Warn("rotom.toml: " + ex.Message); }
+        }
 
         /// <summary>
         /// Runs `rotom init`, which reads the game family from a ROM tree in the project root. An hg-engine folder
