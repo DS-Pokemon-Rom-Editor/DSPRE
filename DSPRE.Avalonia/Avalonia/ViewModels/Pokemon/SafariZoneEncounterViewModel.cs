@@ -188,13 +188,18 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 }
                 SetClean();
                 ResetUndo();
+                if (_hgeReadError != null)
+                    _ = DialogHelper.ShowErrorAsync($"{AreaName(id)} couldn't be read from SafariEncounters.c, so it can't be saved here:\n{_hgeReadError}", "Special encounters editor error");
             }
             catch (Exception ex)
             {
                 if (UseHgEngineSource) _hgeReadError ??= ex.Message;
+                CrashReporter.LogHandled(ex);
                 _ = DialogHelper.ShowErrorAsync($"Failed to load Safari Zone file {id}:\n{ex.Message}", "Safari Zone error");
             }
         }
+
+        private string AreaName(int id) => id >= 0 && id < FileNames.Count ? FileNames[id] : $"Area {id}";
 
         // Set when an area's source couldn't be read: saving the blank groups shown would replace it.
         private string _hgeReadError;
@@ -227,7 +232,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 {
                     AppLogger.Error($"hg-engine safari zone read failed ({type}, area {areaId}): {error}");
                     _hgeReadError ??= $"{type}: {error}";
-                    vm.SetData(new SafariZoneEncounterGroup());
+                    vm.SetData(SafariZoneEncounterGroup.Blank());
                 }
             }
         }
@@ -251,7 +256,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_hgeReadError != null)
             {
-                await DialogHelper.ShowErrorAsync($"Area {_selectedFileIndex} couldn't be read from SafariEncounters.c, so saving it would replace "
+                await DialogHelper.ShowErrorAsync($"{AreaName(_selectedFileIndex)} couldn't be read from SafariEncounters.c, so saving it would replace "
                     + "what is there:\n" + _hgeReadError, "Special encounters editor error");
                 return;
             }

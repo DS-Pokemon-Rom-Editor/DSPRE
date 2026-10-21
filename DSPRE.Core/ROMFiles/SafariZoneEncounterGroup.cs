@@ -17,6 +17,19 @@ namespace DSPRE.ROMFiles
     public BindingList<SafariZoneObjectRequirement> ObjectRequirements = new BindingList<SafariZoneObjectRequirement>();
     public BindingList<SafariZoneObjectRequirement> OptionalObjectRequirements = new BindingList<SafariZoneObjectRequirement>();
 
+    /// <summary>Ten empty slots for each time of day and no object slots, the smallest group that writes.</summary>
+    public static SafariZoneEncounterGroup Blank()
+    {
+      SafariZoneEncounterGroup group = new SafariZoneEncounterGroup();
+      for (int i = 0; i < EncounterSlots; i++)
+      {
+        group.MorningEncounters.Add(new SafariZoneEncounter());
+        group.DayEncounters.Add(new SafariZoneEncounter());
+        group.NightEncounters.Add(new SafariZoneEncounter());
+      }
+      return group;
+    }
+
     public void ReadObjectSlots(BinaryReader br)
     {
       ObjectSlots = br.ReadByte();

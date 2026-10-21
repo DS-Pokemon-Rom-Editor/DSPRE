@@ -30,7 +30,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         { Name = name; _e = e; Species = species; _changed = changed; }
         // Out-of-range values show clamped so the boxes never coerce, and are only replaced when the user picks another value.
         private const int MaxShownLevel = 100;
-        public int SpeciesIndex { get => _e.PokemonID < Species.Count ? _e.PokemonID : -1; set { if (value < 0 || value == SpeciesIndex) return; _e.PokemonID = (ushort)value; On(nameof(SpeciesIndex)); _changed(); } }
+        // hg-engine keeps a form in the top bits of the species word, as Safari does.
+        private const int FormShift = DSPRE.HgEngine.HgEngineTrainerSource.FormShift;
+        private int BaseSpecies => _e.PokemonID & DSPRE.HgEngine.HgEngineTrainerSource.SpeciesMask;
+        public int SpeciesIndex { get => BaseSpecies < Species.Count ? BaseSpecies : -1; set { if (value < 0 || value == SpeciesIndex) return; _e.PokemonID = (ushort)(value | ((_e.PokemonID >> FormShift) << FormShift)); On(nameof(SpeciesIndex)); _changed(); } }
+        public decimal Form { get => _e.PokemonID >> FormShift; set { if ((int)value == (int)Form) return; _e.PokemonID = (ushort)(BaseSpecies | (Math.Clamp((int)value, 0, 31) << FormShift)); On(nameof(Form)); _changed(); } }
+        public bool ShowForms => DSPRE.HgEngine.HgEngineProject.IsActive;
         internal void Reselect() => On(nameof(SpeciesIndex));
         public decimal MinLevel { get => Math.Min((int)_e.MinLevel, MaxShownLevel); set { if (value == MinLevel) return; _e.MinLevel = (byte)value; On(nameof(MinLevel)); _changed(); } }
         public decimal MaxLevel { get => Math.Min((int)_e.MaxLevel, MaxShownLevel); set { if (value == MaxLevel) return; _e.MaxLevel = (byte)value; On(nameof(MaxLevel)); _changed(); } }
@@ -189,6 +194,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void OnTreeChanged() { Dirty(); RefreshTreeMarkers(); }
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
+        public bool ShowForms => HgEngineProject.IsActive;
+
         public HeadbuttEncounterViewModel() { }
         public HeadbuttEncounterViewModel(bool _) { }
 
@@ -285,7 +292,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 RefreshGroups();
                 SetClean();
                 ResetUndo();
-                StatusText = $"Loaded headbutt file {index} ({_file.NormalTreeGroups.Count} normal / {_file.SpecialTreeGroups.Count} special tree groups).";
+                StatusText = _hgeReadError != null
+                    ? $"Headbutt file {index} couldn't be read from Headbutt.c: {_hgeReadError}"
+                    : $"Loaded headbutt file {index} ({_file.NormalTreeGroups.Count} normal / {_file.SpecialTreeGroups.Count} special tree groups).";
                 OnPropertyChanged(nameof(UnsavedChangesDescription));
                 // Resolve + render the map ONCE per file, exactly like the event editor (full matrix when
                 // small, else the bounding box of all trees). Group selection only re-marks, never rebuilds.
@@ -294,7 +303,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (_file.NormalTreeGroups.Count > 0) SelectedNormalGroupIndex = 0;
                 else if (_file.SpecialTreeGroups.Count > 0) SelectedSpecialGroupIndex = 0;
             }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Failed to load headbutt file {index}:\n{ex.Message}", "Headbutt editor error"); }
+            catch (Exception ex)
+            {
+                CrashReporter.LogHandled(ex);
+                _ = DialogHelper.ShowErrorAsync($"Failed to load headbutt file {index}:\n{ex.Message}", "Headbutt editor error");
+            }
         }
 
         private void RefreshGroups()

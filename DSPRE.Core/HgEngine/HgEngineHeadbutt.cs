@@ -96,20 +96,22 @@ namespace DSPRE.HgEngine
             bool slots = totalGroups > 0 || file.NormalEncounters.Concat(file.SpecialEncounters).Any(e => e.PokemonID != 0 || e.MinLevel != 0 || e.MaxLevel != 0);
             if (!TryShapeMap(ref text, fieldName, slots, totalGroups, out error)) return false;
 
-            string SlotsLiteral(IReadOnlyList<HeadbuttEncounter> list, int count)
+            List<string> SlotItems(IReadOnlyList<HeadbuttEncounter> list, int count)
             {
                 List<string> items = new List<string>(count);
                 for (int i = 0; i < count; i++)
                 {
                     HeadbuttEncounter e = i < list.Count ? list[i] : new HeadbuttEncounter();
-                    string sp = species != null && species.TryGetNameWithPrefix(e.PokemonID, "SPECIES_", out string sn) ? sn : e.PokemonID.ToString();
+                    int id = e.PokemonID & HgEngineTrainerSource.SpeciesMask, form = e.PokemonID >> HgEngineTrainerSource.FormShift;
+                    string sp = HgEngineTrainerSource.FormatSpecies(species != null && species.TryGetNameWithPrefix(id, "SPECIES_", out string sn) ? sn : id.ToString(), form);
                     items.Add($"{{ {sp}, {e.MinLevel}, {e.MaxLevel} }}");
                 }
-                return "{ " + string.Join(", ", items) + " }";
+                return items;
             }
 
-            if (slots && !TryReplaceMapField(ref text, fieldName, "normalSlots", SlotsLiteral(file.NormalEncounters, 12))) failed.Add("normalSlots");
-            if (slots && !TryReplaceMapField(ref text, fieldName, "specialSlots", SlotsLiteral(file.SpecialEncounters, 6))) failed.Add("specialSlots");
+            // Written in the layout the file already has, so a save only changes the slots that changed.
+            if (slots && !TryReplaceMapField(ref text, fieldName, "normalSlots", old => HgEngineSafariEncounters.ListLiteral(old, SlotItems(file.NormalEncounters, 12)))) failed.Add("normalSlots");
+            if (slots && !TryReplaceMapField(ref text, fieldName, "specialSlots", old => HgEngineSafariEncounters.ListLiteral(old, SlotItems(file.SpecialEncounters, 6)))) failed.Add("specialSlots");
             if (!TryReplaceMapField(ref text, fieldName, "normalTreeCount", file.NormalTreeGroups.Count.ToString())) failed.Add("normalTreeCount");
             if (!TryReplaceMapField(ref text, fieldName, "specialTreeCount", file.SpecialTreeGroups.Count.ToString())) failed.Add("specialTreeCount");
 
@@ -239,10 +241,14 @@ namespace DSPRE.HgEngine
         }
 
         private static bool TryReplaceMapField(ref string text, string mapFieldName, string subFieldName, string newLiteral)
+            => TryReplaceMapField(ref text, mapFieldName, subFieldName, _ => newLiteral);
+
+        private static bool TryReplaceMapField(ref string text, string mapFieldName, string subFieldName, System.Func<string, string> make)
         {
             if (!TryFindDataBlock(text, out int open, out int close)) return false;
             FieldPathSegment[] path = new[] { FieldPathSegment.Field(mapFieldName), FieldPathSegment.Field(subFieldName) };
             if (!ElementScanner.TryLocateValueSpan(text, open, close, path, out int vs, out int ve)) return false;
+            string newLiteral = make(text.Substring(vs, ve - vs));
             if (HgEngineSourcePatcher.SameTokens(text.Substring(vs, ve - vs), newLiteral)) return true;
             text = text.Substring(0, vs) + newLiteral + text.Substring(ve);
             return true;
@@ -257,10 +263,10 @@ namespace DSPRE.HgEngine
             return BraceScanner.TryFindMatchingBrace(text, open, out close);
         }
 
-        // The slot writer names plain species only, so a form or anything else it can't name is refused.
+        // A slot can name a form: MON_WITH_FORM(SPECIES_X, n) or SPECIES_X | (n << 11).
         private static int ResolveSpecies(string token, HgEngineSymbolTable species, ref string unreadable)
         {
-            if (HgEngineEvolutions.ResolveTarget(token.Trim(), species, out int id, out int form) && form == 0) return id;
+            if (HgEngineEvolutions.ResolveTarget(token.Trim(), species, out int id, out int form)) return id | (form << HgEngineTrainerSource.FormShift);
             unreadable ??= token.Trim();
             return 0;
         }
