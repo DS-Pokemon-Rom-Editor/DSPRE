@@ -31,6 +31,19 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string Where { get; init; }
         public DirNames Dir { get; init; }
         public int Member { get; init; }
+
+        /// <summary>The colours file a drawing is shown with, and its row, when the page knows them; -1 otherwise.</summary>
+        public int ColoursFile { get; init; } = -1;
+        public int ColoursRow { get; init; } = -1;
+
+        /// <summary>Every row a sprite's pieces show the drawing in, when there is more than one.</summary>
+        public IReadOnlyList<int> Rows { get; init; } = Array.Empty<int>();
+
+        /// <summary>What else on the pages shows this file, or null when nothing does.</summary>
+        public string SharedNote { get; init; }
+
+        /// <summary>A colours file, whose row <see cref="ColoursRow"/> is shown as swatches to change.</summary>
+        public bool IsColours { get; init; }
     }
 
     /// <summary>
@@ -292,11 +305,55 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(SelectedPart));
                 OnPropertyChanged(nameof(CanEditPart));
+                OnPropertyChanged(nameof(CanPaintPart));
+                FillSwatches();
             }
+        }
+
+        public ObservableCollection<GraphicPainterViewModel.Swatch> Swatches { get; } = new();
+        public bool HasSwatches => Swatches.Count > 0;
+
+        private void FillSwatches()
+        {
+            Swatches.Clear();
+            ScreenPartRow part = SelectedPart;
+            GraphicAssets.Archive archive = ArchiveOf(part);
+            if (part?.IsColours == true && part.ColoursRow >= 0 && archive != null)
+            {
+                (byte r, byte g, byte b)[] colours;
+                using (Pending.Reading()) colours = GraphicAssets.ReadPaletteEntry(archive, part.Member);
+                for (int i = 0; i < 16 && colours != null && part.ColoursRow * 16 + i < colours.Length; i++)
+                {
+                    (byte r, byte g, byte b) = colours[part.ColoursRow * 16 + i];
+                    Swatches.Add(new GraphicPainterViewModel.Swatch
+                    {
+                        Number = part.ColoursRow * 16 + i,
+                        Fill = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromRgb(r, g, b)),
+                        Tip = $"Colour {i}, row {part.ColoursRow}",
+                    });
+                }
+            }
+            OnPropertyChanged(nameof(HasSwatches));
+        }
+
+        /// <summary>Staged until Save, like an import.</summary>
+        public string SetColour(int number, byte r, byte g, byte b)
+        {
+            ScreenPartRow part = SelectedPart;
+            GraphicAssets.Archive archive = ArchiveOf(part);
+            if (archive == null || part?.IsColours != true) return "Pick a colours file first.";
+            int keep = _partIndex;
+            string error = Import(() => GraphicAssets.WritePaletteColour(archive, part.Member, number, r, g, b));
+            // Putting the page together again refills the parts; stay on the same file.
+            if (keep < Parts.Count) PartIndex = keep;
+            return error;
         }
 
         public ScreenPartRow SelectedPart => _partIndex >= 0 && _partIndex < Parts.Count ? Parts[_partIndex] : null;
         public bool CanEditPart => SelectedPart != null;
+
+        // A colours file has no pixels, so its swatches stand in for the painter.
+        public bool CanPaintPart => SelectedPart is { IsColours: false };
 
         private void FillParts()
         {
@@ -325,18 +382,43 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 case ScreenLayerKind.Background:
                     ScreenBg bg = screen.Bgs.FirstOrDefault(b => b.Bg == layer.Index && ScreenPage.Shows(b.When, Variant));
                     if (bg == null) break;
-                    Add(Dex("Drawing", bg.Drawing));
+                    ScreenPartRow bgDrawing = Dex("Drawing", bg.Drawing);
+                    (int coloursFile, int coloursRow) = _composer?.MainColours(screen, bg, Variant) ?? (-1, -1);
+                    Add(bgDrawing == null ? null : new ScreenPartRow
+                    {
+                        Name = bgDrawing.Name, Where = bgDrawing.Where, Dir = bgDrawing.Dir, Member = bgDrawing.Member,
+                        ColoursFile = coloursFile, ColoursRow = coloursFile < 0 ? -1 : coloursRow,
+                        SharedNote = SharedNote(dex, bg.Drawing, bg),
+                    });
                     foreach (ScreenPaste piece in bg.Pieces.Where(p => p.Screen >= 0 && ScreenPage.Shows(p.When, Variant)))
-                        Add(Dex("Arrangement", piece.Screen));
+                        if (Dex("Arrangement", piece.Screen) is ScreenPartRow arrangement)
+                            Add(new ScreenPartRow
+                            {
+                                Name = arrangement.Name, Where = arrangement.Where, Dir = arrangement.Dir, Member = arrangement.Member,
+                                SharedNote = SharedNote(dex, piece.Screen, bg),
+                            });
+                    // A text layer has no drawing; its colours are the rows its text windows print in.
+                    (int textFile, int textRow) = coloursFile >= 0 ? (-1, -1) : TextColours(screen, bg);
                     foreach (ScreenPaletteLoad load in screen.Palettes.Where(p => ScreenPage.Shows(p.When, Variant)))
-                        Add(Dex("Colours", load.File));
+                        Add(ColoursPart(Dex("Colours", load.File), load.File == coloursFile ? coloursRow : load.File == textFile ? textRow : -1));
                     break;
                 case ScreenLayerKind.Sprite when layer.Index >= 0 && layer.Index < screen.Sprites.Count:
                     ScreenSprite s = screen.Sprites[layer.Index];
-                    Add(Dex("Drawing", _book.SpriteDrawing(s), s.DrawingArchive));
+                    // The painter reads its colours from the drawing's own archive, so it is told only when they share one.
+                    ScreenPartRow drawing = Dex("Drawing", _book.SpriteDrawing(s), s.DrawingArchive);
+                    bool sameArchive = (s.DrawingArchive ?? dex) == (s.ColoursArchive ?? dex);
+                    IReadOnlyList<int> rows = _composer?.SpriteRows(s, Variant) ?? Array.Empty<int>();
+                    Add(drawing == null ? null : new ScreenPartRow
+                    {
+                        Name = drawing.Name, Where = drawing.Where, Dir = drawing.Dir, Member = drawing.Member,
+                        ColoursFile = sameArchive && s.TypeDrawing < 0 ? s.Colours : -1,
+                        ColoursRow = sameArchive && s.TypeDrawing < 0 && rows.Count > 0 ? rows[0] : -1,
+                        Rows = sameArchive && s.TypeDrawing < 0 && rows.Count > 1 ? rows : Array.Empty<int>(),
+                        SharedNote = SharedNote(s.DrawingArchive ?? dex, _book.SpriteDrawing(s), s),
+                    });
                     Add(Dex("Cell layout", s.Cells, s.Archive));
                     Add(Dex("Animation", s.Anim, s.Archive));
-                    Add(Dex("Colours", s.Colours));
+                    Add(ColoursPart(Dex("Colours", s.Colours, s.ColoursArchive), rows.Count > 0 ? rows[0] : -1));
                     break;
                 case ScreenLayerKind.Sprite:
                     int t = -1 - layer.Index;
@@ -348,6 +430,57 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     break;
             }
             return parts;
+        }
+
+        private static ScreenPartRow ColoursPart(ScreenPartRow part, int row) => part == null ? null : new ScreenPartRow
+        {
+            Name = part.Name, Where = row >= 0 ? part.Where + ", row " + row : part.Where, Dir = part.Dir, Member = part.Member,
+            ColoursFile = part.Member, ColoursRow = row, IsColours = true,
+        };
+
+        // The colours file and row most of a background's text prints in, or (-1, -1) when it prints none.
+        private (int File, int Row) TextColours(ScreenLayout screen, ScreenBg bg)
+        {
+            int[] rows = screen.Texts.Where(t => t.Bg == bg.Bg && t.Colours < 0 && ScreenPage.Shows(t.When, Variant))
+                               .GroupBy(t => t.Row).OrderByDescending(g => g.Count()).Select(g => g.Key).Take(1).ToArray();
+            return rows.Length == 0 ? (-1, -1) : ScreenPageComposer.LoadedRow(screen, rows[0], Variant);
+        }
+
+        // Variants are folded together: a file shown in any state counts.
+        private string SharedNote(DirNames dir, int member, object self)
+        {
+            if (member < 0) return null;
+            DirNames own = _book.Archive;
+            List<(string Page, string Name)> users = new();
+            foreach (ScreenPage page in _pages)
+                foreach (ScreenLayout screen in new[] { page.Main, page.Sub })
+                {
+                    if (screen == null) continue;
+                    foreach (ScreenBg bg in screen.Bgs)
+                    {
+                        if (ReferenceEquals(bg, self) || dir != own) continue;
+                        if (bg.Drawing == member || bg.Pieces.Any(p => p.Screen == member))
+                            users.Add((page.Name, "Background " + bg.Bg));
+                    }
+                    foreach (ScreenSprite s in screen.Sprites)
+                        if (!ReferenceEquals(s, self) && s.Picture == null && (s.DrawingArchive ?? own) == dir && _book.SpriteDrawing(s) == member)
+                            users.Add((page.Name, s.Name));
+                }
+            users = users.Distinct().ToList();
+            if (users.Count == 0) return null;
+            // The same layer on the other pages is this piece again, so it is counted by page instead of named.
+            string selfName = self is ScreenBg mine ? "Background " + mine.Bg : (self as ScreenSprite)?.Name;
+            List<(string Page, string Name)> others = users.Where(u => u.Name != selfName).ToList();
+            if (others.Count == 0)
+            {
+                int copies = users.Select(u => u.Page).Distinct().Count();
+                return copies >= _pages.Count - 1 ? "Every page shows this file." : copies == 1 ? $"The {users[0].Page} page shows this file too." : $"{copies} other pages show this file too.";
+            }
+            int pages = others.Select(u => u.Page).Distinct().Count();
+            List<string> names = others.Select(u => u.Name).Distinct().ToList();
+            string where = pages == _pages.Count ? "every page" : pages == 1 ? "the " + others[0].Page + " page" : pages + " pages";
+            string listed = string.Join(", ", names.Take(5)) + (names.Count > 5 ? $" and {names.Count - 5} more" : "");
+            return $"{listed} on {where} use{(names.Count == 1 ? "s" : "")} this file too.";
         }
 
         private static string NamedArchive(DirNames dir) => GraphicAssets.All.FirstOrDefault(a => a.Dir == dir)?.Title ?? dir.ToString();
@@ -383,7 +516,15 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _filling = false;
             int again = keep == null ? -1 : Boxes.ToList().FindIndex(b => b.Name == keep);
             BoxIndex = again;
-            OnPropertyChanged(nameof(BoxIndex));
+            // The setter stays quiet when nothing is picked again, and the fields would keep the last page's box.
+            RaiseBox();
+        }
+
+        private void RaiseBox()
+        {
+            foreach (string name in new[] { nameof(BoxIndex), nameof(SelectedBox), nameof(HasBox), nameof(CanResizeBox),
+                                            nameof(BoxX), nameof(BoxY), nameof(BoxWidth), nameof(BoxHeight) })
+                OnPropertyChanged(name);
         }
 
         private bool _filling;
@@ -395,14 +536,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 if (_filling || value == _boxIndex) return;
                 _boxIndex = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(SelectedBox));
-                OnPropertyChanged(nameof(HasBox));
-                OnPropertyChanged(nameof(CanResizeBox));
-                OnPropertyChanged(nameof(BoxX));
-                OnPropertyChanged(nameof(BoxY));
-                OnPropertyChanged(nameof(BoxWidth));
-                OnPropertyChanged(nameof(BoxHeight));
+                RaiseBox();
                 Redraw();
             }
         }

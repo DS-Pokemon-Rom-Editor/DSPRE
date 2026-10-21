@@ -106,6 +106,17 @@ namespace DSPRE.Avalonia
         public static Task ShowErrorAsync(string message, string title, string details)
             => ShowMsgAsync(message, title, MsgButtons.Ok, details);
 
+        /// <summary>Runs something the user started; an unexpected error is logged and shown, and the editor stays open.</summary>
+        public static async Task GuardAsync(Func<Task> action, string failed, string title, Window owner = null)
+        {
+            try { await action(); }
+            catch (Exception ex)
+            {
+                CrashReporter.LogHandled(ex);
+                await ShowErrorAsync(failed + "\n" + ex.Message, title, owner);
+            }
+        }
+
         /// <returns>true = Yes, false = No</returns>
         public static async Task<bool> AskYesNoAsync(string message, string title = "Confirm", Window owner = null)
         {

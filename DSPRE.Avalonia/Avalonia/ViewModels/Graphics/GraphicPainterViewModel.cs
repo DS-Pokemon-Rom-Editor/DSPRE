@@ -41,21 +41,23 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         // so keeping them whole is simpler than remembering which pixels moved and just as quick.
         private readonly Stack<(byte[] pixels, uint[] colours)> _undo = new();
 
-        private readonly int _palette;
+        private readonly int _palette, _paletteBank;
 
         /// <param name="palette">The colours file to paint with, when the caller knows the one the game pairs with
         /// this drawing; otherwise it is found from the archive's layout.</param>
-        public GraphicPainterViewModel(GraphicAssets.Archive archive, int index, int palette = -1)
+        /// <param name="paletteBank">The row of that file the drawing is painted with, for a caller that knows it.</param>
+        public GraphicPainterViewModel(GraphicAssets.Archive archive, int index, int palette = -1, int paletteBank = -1)
         {
             _archive = archive;
             _index = index;
             _palette = palette;
+            _paletteBank = paletteBank;
             Load();
         }
 
         private void Load()
         {
-            _art = GraphicAssets.ReadIndexed(_archive, _index, out string why, paletteIndex: _palette);
+            _art = GraphicAssets.ReadIndexed(_archive, _index, out string why, paletteIndex: _palette, paletteBank: _paletteBank);
             if (_art == null)
             {
                 Trouble = why ?? "This entry cannot be painted.";
@@ -376,7 +378,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             // The colours are a separate file, so they are written separately and only when they changed.
             if (!_colours.SequenceEqual(_art.Palette.Take(_colours.Length)))
             {
-                string perr = GraphicAssets.WritePalette(_archive, _index, _colours, _palette);
+                string perr = GraphicAssets.WritePalette(_archive, _index, _colours, _palette, _paletteBank);
                 if (perr != null)
                     return "The picture went in, but the colours did not: " + perr;
             }

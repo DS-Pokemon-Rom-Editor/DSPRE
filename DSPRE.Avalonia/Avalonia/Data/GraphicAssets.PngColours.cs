@@ -16,12 +16,12 @@ namespace DSPRE.Avalonia.Data
         {
             public List<uint> Missing = new();          // 0xRRGGBB, as the DS would keep them
             public List<int> Slots = new();             // colour number each missing colour would take, in order
-            public List<string> SlotUsers = new();      // what else draws with that number, or null
+            public List<IReadOnlyList<string>> SlotUsers = new();   // what else draws with that number, or null
             public int PaletteEntry = -1;
             public int Bank;                            // which sixteen of the palette the graphic draws with
             public string CannotAddBecause;             // null when the colours can be put into the palette
             public bool KeepsNumbers;                   // a flat drawing takes the PNG's numbers, not its colours
-            public string[] UsersOf = new string[16];   // what else draws with each colour number of the bank, or null
+            public IReadOnlyList<string>[] UsersOf = new IReadOnlyList<string>[16];   // what else draws with each colour number of the bank, or null
             public uint[] BankColours = new uint[16];
             public bool[] Kept = new bool[16];          // numbers the PNG already paints with, so not free to take
 
@@ -29,7 +29,7 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>Null when it cannot be told; the import then reports the problem itself.</summary>
-        public static PngColourCheck CheckPngColours(Archive a, int index, string path)
+        public static PngColourCheck CheckPngColours(Archive a, int index, string path, int paletteIndex = -1, int paletteBank = -1)
         {
             try
             {
@@ -39,10 +39,10 @@ namespace DSPRE.Avalonia.Data
                 Kind kind = Identify(raw);
                 if (!IndexedPng.TryRead(File.ReadAllBytes(path), out byte[] indices, out uint[] pal, out int w, out int h)) return null;
 
-                if (kind == Kind.TileGraphic && (a.ArrangementEntry?.Invoke(index) ?? -1) < 0) return CheckNumbers(a, index, indices, pal);
+                if (kind == Kind.TileGraphic && (a.ArrangementEntry?.Invoke(index) ?? -1) < 0) return CheckNumbers(a, index, indices, pal, paletteIndex, paletteBank);
                 if (kind != Kind.CellLayout && kind != Kind.TileGraphic) return null;
 
-                int paletteAt = FindColourIndex(a, narc, index);
+                int paletteAt = paletteIndex >= 0 ? paletteIndex : FindColourIndex(a, narc, index);
                 byte[] nclr = paletteAt >= 0 ? narc.Get(paletteAt) : null;
                 if (nclr == null) return null;
                 (byte r, byte g, byte b)[] all = NitroBgCodec.ReadPalette(Unsqueeze(nclr), out int count);
@@ -52,6 +52,18 @@ namespace DSPRE.Avalonia.Data
                 if (banks == null || banks.Count != 1)
                     check.CannotAddBecause = "DSPRE cannot tell which set of sixteen colours new ones belong in for this picture.";
                 check.Bank = banks?.FirstOrDefault() ?? 0;
+
+                // Each square of a whole background keeps its own row, so a colour in any of its rows is not new.
+                if (kind == Kind.TileGraphic)
+                {
+                    HashSet<uint> drawable = ArrangedColours(a, narc, index, all, count);
+                    if (drawable != null)
+                    {
+                        foreach (uint c in PaintedColours(indices, pal))
+                            if (!drawable.Contains(c) && !check.Missing.Contains(c)) check.Missing.Add(c);
+                        return check;
+                    }
+                }
 
                 uint[] bank = Enumerable.Range(0, 16)
                     .Select(i => check.Bank * 16 + i < count ? Pack(all[check.Bank * 16 + i]) : 0xFFFFFFFFu).ToArray();
@@ -69,7 +81,7 @@ namespace DSPRE.Avalonia.Data
                 {
                     check.BankColours[s] = bank[s];
                     check.Kept[s] = wanted[s] || bank[s] == 0xFFFFFFFFu;
-                    check.UsersOf[s] = users.TryGetValue(s, out List<string> u) && u.Count > 0 ? string.Join(", ", u) : null;
+                    check.UsersOf[s] = users.TryGetValue(s, out List<string> u) && u.Count > 0 ? u : null;
                 }
                 // Graphics the game never loads do not count against a colour.
                 int Weight(int slot) => users.TryGetValue(slot, out List<string> u) ? u.Count(x => !x.Contains("unused")) : 0;
@@ -95,14 +107,15 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>A flat drawing keeps the PNG's colour numbers, so what matters is the colour each number has.</summary>
-        private static PngColourCheck CheckNumbers(Archive a, int index, byte[] indices, uint[] pal)
+        private static PngColourCheck CheckNumbers(Archive a, int index, byte[] indices, uint[] pal, int paletteIndex, int paletteBank)
         {
-            Indexed ix = ReadIndexed(a, index, out _);
+            Indexed ix = ReadIndexed(a, index, out _, paletteIndex: paletteIndex, paletteBank: paletteBank);
             if (ix?.Palette == null || pal == null) return null;
             PngColourCheck check = new PngColourCheck { KeepsNumbers = true };
             ScriptNarc narc = new ScriptNarc(a.Dir);
-            check.PaletteEntry = FindColourIndex(a, narc, index);
-            if (ix.BitsPerPixel == 4) { try { check.Bank = a.ColourBank?.Invoke(index) ?? 0; } catch { } }   // without a known bank the first bank is used
+            check.PaletteEntry = paletteIndex >= 0 ? paletteIndex : FindColourIndex(a, narc, index);
+            if (ix.BitsPerPixel == 4 && paletteBank >= 0) check.Bank = paletteBank;
+            else if (ix.BitsPerPixel == 4) { try { check.Bank = a.ColourBank?.Invoke(index) ?? 0; } catch { } }   // without a known bank the first bank is used
             Dictionary<int, List<string>> users = ix.BitsPerPixel == 4 && check.PaletteEntry >= 0
                 ? SlotUsers(a, narc, index, check.PaletteEntry, check.Bank) : new Dictionary<int, List<string>>();
             bool[] used = new bool[256];
@@ -114,7 +127,7 @@ namespace DSPRE.Avalonia.Data
                 if (want == have) continue;
                 check.Missing.Add(want);
                 check.Slots.Add(i);
-                check.SlotUsers.Add(users.TryGetValue(i, out List<string> u) && u.Count > 0 ? string.Join(", ", u) : null);
+                check.SlotUsers.Add(users.TryGetValue(i, out List<string> u) && u.Count > 0 ? u : null);
             }
             if (check.PaletteEntry < 0) check.CannotAddBecause = "DSPRE does not know which colours this drawing is painted with.";
             return check;
@@ -140,6 +153,33 @@ namespace DSPRE.Avalonia.Data
             foreach (byte v in indices) seen[v] = true;
             for (int i = 0; i < seen.Length && i < pal.Length; i++)
                 if (seen[i] && (pal[i] >> 24) >= 128) yield return Ds(pal[i] & 0xFFFFFF);
+        }
+
+        /// <summary>Every row the arrangement's squares name, or the whole file for a 256-colour drawing; null without an arrangement.</summary>
+        private static HashSet<uint> ArrangedColours(Archive a, ScriptNarc narc, int index, (byte r, byte g, byte b)[] all, int count)
+        {
+            int arranged = -1;
+            try { arranged = a.ArrangementEntry?.Invoke(index) ?? -1; } catch { }   // without an arrangement the row check applies
+            byte[] scr = arranged >= 0 ? narc.Get(arranged) : null;
+            if (scr == null) return null;
+            scr = Unsqueeze(scr);
+            bool eightBit = NitroBgCodec.ReadTileHeader(Unsqueeze(narc.Get(index))).EightBit;
+            HashSet<int> rows = new HashSet<int>();
+            if (!eightBit)
+            {
+                (int w, int h, int mapAt) = NitroBgCodec.ReadScreenHeader(scr);
+                int entryBytes = NitroBgCodec.EntryBytes(scr);
+                for (int square = 0; square < NitroBgCodec.SquareCount(w / 8, h / 8); square++)
+                {
+                    int e = NitroBgCodec.EntryAt(scr, mapAt, square, entryBytes);
+                    if (e >= 0 && entryBytes == 2) rows.Add(e >> 12);
+                }
+                if (entryBytes == 1) rows.Add(0);
+            }
+            HashSet<uint> colours = new HashSet<uint>();
+            for (int i = 0; i < count && i < all.Length; i++)
+                if (eightBit ? i != 0 : i % 16 != 0 && rows.Contains(i / 16)) colours.Add(Pack(all[i]));
+            return colours;
         }
 
         private static uint Pack((byte r, byte g, byte b) c) => Ds((uint)(c.r << 16 | c.g << 8 | c.b));

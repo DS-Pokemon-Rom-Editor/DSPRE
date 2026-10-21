@@ -1073,9 +1073,9 @@ namespace DSPRE.Avalonia
         }
 
         /// <summary>Opens the paint window on one drawing; <paramref name="closed"/> runs when it closes, so the caller can redraw.</summary>
-        public static void OpenPainter(Data.GraphicAssets.Archive archive, int member, System.Action closed = null)
+        public static void OpenPainter(Data.GraphicAssets.Archive archive, int member, System.Action closed = null, int palette = -1, int paletteBank = -1)
         {
-            Views.Graphics.GraphicPainterView painter = new Views.Graphics.GraphicPainterView(new ViewModels.Graphics.GraphicPainterViewModel(archive, member));
+            Views.Graphics.GraphicPainterView painter = new Views.Graphics.GraphicPainterView(new ViewModels.Graphics.GraphicPainterViewModel(archive, member, palette, paletteBank));
             if (closed != null) painter.Closed += (_, _) => closed();
             painter.ShowManaged();
         }

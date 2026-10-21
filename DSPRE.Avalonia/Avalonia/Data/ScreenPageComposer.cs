@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Data
@@ -234,6 +235,49 @@ namespace DSPRE.Avalonia.Data
 
         // ── backgrounds ──────────────────────────────────────────────────────────────────────────
 
+        /// <summary>The colours file and row most of a background's squares use on this page, or (-1, -1).</summary>
+        public (int File, int Row) MainColours(ScreenLayout screen, ScreenBg bg, string variant)
+        {
+            Dictionary<int, int> uses = new Dictionary<int, int>();
+            foreach (ScreenPaste piece in bg.Pieces)
+            {
+                if (piece.Screen < 0 || !ScreenPage.Shows(piece.When, variant)) continue;
+                byte[] scr = File(piece.Screen);
+                if (scr == null) continue;
+                (int w, int h, int mapAt) = NitroBgCodec.ReadScreenHeader(scr);
+                int sCols = w / 8, sRows = h / 8, entryBytes = NitroBgCodec.EntryBytes(scr);
+                int width = piece.Width < 0 ? sCols - piece.FromX : piece.Width;
+                int height = piece.Height < 0 ? sRows - piece.FromY : piece.Height;
+                for (int y = 0; y < height; y++)
+                    for (int x = 0; x < width; x++)
+                    {
+                        int sx = piece.FromX + x, sy = piece.FromY + y;
+                        if (sx >= sCols || sy >= sRows) continue;
+                        int e = NitroBgCodec.EntryAt(scr, mapAt, NitroBgCodec.SquareIndex(sCols, sx, sy), entryBytes);
+                        if (e < 0) continue;
+                        int row = piece.Palette >= 0 ? piece.Palette : e >> 12;
+                        uses[row] = uses.TryGetValue(row, out int n) ? n + 1 : 1;
+                    }
+            }
+            if (uses.Count == 0) return (-1, -1);
+            int main = -1, most = -1;
+            foreach (KeyValuePair<int, int> use in uses) if (use.Value > most) { main = use.Key; most = use.Value; }
+            return LoadedRow(screen, main, variant);
+        }
+
+        /// <summary>The colours file and its row that fill a background colour row of a screen, or (-1, -1).</summary>
+        public static (int File, int Row) LoadedRow(ScreenLayout screen, int row, string variant)
+        {
+            // A later load overwrites an earlier one.
+            for (int i = screen.Palettes.Count - 1; i >= 0; i--)
+            {
+                ScreenPaletteLoad load = screen.Palettes[i];
+                if (ScreenPage.Shows(load.When, variant) && row >= load.ToRow && row < load.ToRow + load.Rows)
+                    return (load.File, load.FromRow + row - load.ToRow);
+            }
+            return (-1, -1);
+        }
+
         private ushort[] BgPalette(ScreenLayout screen, string variant)
         {
             ushort[] palette = new ushort[256];
@@ -338,16 +382,43 @@ namespace DSPRE.Avalonia.Data
                 if (pic?.Rgba != null) Paste(rgba, pic, s.X - pic.Width / 2, s.Y - pic.Height / 2);
                 return;
             }
-            int seq = s.Seq, drawing = s.Drawing, row = s.Row, shift = 0;
+            if (!Resolve(s, out int drawing, out int row, out int shift, out DsBgScreen.Oam[] pieces)) return;
+            if (s.Cells < 0)
+            {
+                DrawWhole(rgba, s, File(s.DrawingArchive, drawing), NitroBgCodec.ReadColours(File(s.ColoursArchive, s.Colours)), row);
+                return;
+            }
+            ushort[] colours = NitroBgCodec.ReadColours(File(s.ColoursArchive, s.Colours));
+            byte[] characters = NitroBgCodec.ReadCharacters(File(s.DrawingArchive, drawing));
+            (int x, int y, double scale, double degrees) = Place(s.Size, s.X + shift, s.Y);
+            int fixedRow = s.Palette;
+            DsBgScreen.DrawCellTurned(rgba, pieces, characters, p => DsBgScreen.Row(colours, fixedRow >= 0 ? fixedRow : p + row), x, y, degrees, scale, scale);
+        }
+
+        /// <summary>The colours rows a sprite is shown with in this page state, most used first; empty when it isn't shown.</summary>
+        public IReadOnlyList<int> SpriteRows(ScreenSprite s, string variant)
+        {
+            _variant = variant ?? "";
+            if (s.Picture != null || !Resolve(s, out _, out int row, out _, out DsBgScreen.Oam[] pieces)) return Array.Empty<int>();
+            if (s.Palette >= 0) return new[] { s.Palette };
+            if (pieces == null) return new[] { row };
+            return pieces.GroupBy(p => p.Palette + row).OrderByDescending(g => g.Sum(p => p.Width * p.Height)).Select(g => g.Key).ToList();
+        }
+
+        // False when the page doesn't show the sprite; pieces is null for a sprite drawn whole.
+        private bool Resolve(ScreenSprite s, out int drawing, out int row, out int shift, out DsBgScreen.Oam[] pieces)
+        {
+            int seq = s.Seq;
+            (drawing, row, shift, pieces) = (s.Drawing, s.Row, 0, null);
             if (s.Readout != DexReadout.None)
             {
-                if (Digit?.Invoke(s.Readout, s.Step, s.Place) is not (int digitSeq, int dx)) return;
+                if (Digit?.Invoke(s.Readout, s.Step, s.Place) is not (int digitSeq, int dx)) return false;
                 (seq, shift) = (digitSeq, dx);
             }
             if (s.TypeSlot > 0)
             {
                 int type = _type?.Invoke(s.TypeSlot) ?? -1;
-                if (type < 0) return;
+                if (type < 0) return false;
                 if (s.TypeDrawing >= 0)
                 {
                     drawing = s.TypeDrawing + type;
@@ -355,14 +426,9 @@ namespace DSPRE.Avalonia.Data
                 }
                 else seq = type;
             }
-            if (s.Cells < 0)
-            {
-                DrawWhole(rgba, s, File(s.DrawingArchive, drawing), NitroBgCodec.ReadColours(File(s.ColoursArchive, s.Colours)), row);
-                return;
-            }
+            if (s.Cells < 0) return true;
             byte[] ncer = File(s.Archive, s.Cells);
-            byte[] chr = File(s.DrawingArchive, drawing);
-            if (ncer == null || chr == null) return;
+            if (ncer == null || File(s.DrawingArchive, drawing) == null) return false;
             List<DsBgScreen.Oam[]> cells = DsBgScreen.ReadCells(ncer);
             int cell = seq;
             if (s.Anim >= 0)
@@ -370,12 +436,9 @@ namespace DSPRE.Avalonia.Data
                 byte[] nanr = File(s.Archive, s.Anim);
                 try { if (nanr != null) cell = NanrFile.Read(nanr).CellOf(seq, s.Frame); } catch { }   // without the animation the first cell is shown
             }
-            if (cell < 0 || cell >= cells.Count) return;
-            ushort[] colours = NitroBgCodec.ReadColours(File(s.ColoursArchive, s.Colours));
-            byte[] characters = NitroBgCodec.ReadCharacters(chr);
-            (int x, int y, double scale, double degrees) = Place(s.Size, s.X + shift, s.Y);
-            int fixedRow = s.Palette;
-            DsBgScreen.DrawCellTurned(rgba, cells[cell], characters, p => DsBgScreen.Row(colours, fixedRow >= 0 ? fixedRow : p + row), x, y, degrees, scale, scale);
+            if (cell < 0 || cell >= cells.Count) return false;
+            pieces = cells[cell];
+            return true;
         }
 
         // Each cell copies a 5 by 5 stamp out of a strip drawing, the piece's number times 5 along it.
@@ -490,6 +553,25 @@ namespace DSPRE.Avalonia.Data
             string text = _text?.Invoke(t, _variant);
             FieldFont font = _font?.Invoke(t.Font);
             if (string.IsNullOrEmpty(text) || font == null) return;
+            if (t.WinW > 0 && t.WinH > 0)
+            {
+                // The game prints into the window's own bitmap, which cuts off at its edges.
+                byte[] scratch = new byte[rgba.Length];
+                DrawTextLines(scratch, t, text, font, palette);
+                int left = t.WinX * 8, top = t.WinY * 8;
+                for (int y = Math.Max(0, top); y < Math.Min(Height, top + t.WinH * 8); y++)
+                    for (int x = Math.Max(0, left); x < Math.Min(Width, left + t.WinW * 8); x++)
+                    {
+                        int at = (y * Width + x) * 4;
+                        if (scratch[at + 3] != 0) Buffer.BlockCopy(scratch, at, rgba, at, 4);
+                    }
+                return;
+            }
+            DrawTextLines(rgba, t, text, font, palette);
+        }
+
+        private static void DrawTextLines(byte[] rgba, ScreenText t, string text, FieldFont font, ushort[] palette)
+        {
             int inkAt = t.Row * 16 + t.Ink, shadowAt = t.Row * 16 + t.Shadow;
             ushort ink = inkAt < palette.Length ? palette[inkAt] : (ushort)0;
             ushort shadow = shadowAt < palette.Length ? palette[shadowAt] : (ushort)0;
@@ -517,6 +599,7 @@ namespace DSPRE.Avalonia.Data
                     ScreenTextAlign.Block => t.X - BlockWidth(font, lines) / 2,
                     ScreenTextAlign.BoxCentre => t.WinX * 8 + Math.Max(0, t.WinW * 8 - width) / 2,
                     ScreenTextAlign.BoxRight => t.WinX * 8 + t.WinW * 8 - width,
+                    ScreenTextAlign.SpanCentre => t.WinX * 8 + Math.Max(0, t.Span - width) / 2,
                     _ => t.X,
                 };
                 DsBgScreen.DrawText(rgba, font, lines[i], x, top + i * 16, ink, shadow);

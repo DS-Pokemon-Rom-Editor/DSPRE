@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -28,14 +29,19 @@ namespace DSPRE.Avalonia.Views.Graphics
         private static readonly FilePickerFileType Png =
             new("PNG image") { Patterns = new[] { "*.png" } };
 
-        private async void Paint_Click(object sender, RoutedEventArgs e)
+        private const string ErrorTitle = "Bottom screen error";
+        private async void Paint_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(PaintAsync, "The painter didn't open.", ErrorTitle, this);
+        private async void Export_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(ExportAsync, "The PNG wasn't exported.", ErrorTitle, this);
+        private async void Import_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(ImportAsync, "The PNG wasn't imported.", ErrorTitle, this);
+
+        private async Task PaintAsync()
         {
             BottomScreenPiece piece = VM?.Selected;
             if (piece == null || piece.Drawing < 0) return;
             GraphicAssets.Archive archive = ArchiveOf(piece);
             if (archive == null)
             {
-                await DialogHelper.ShowErrorAsync("This piece's archive is not one the painter can open.", "Bottom screen error");
+                await DialogHelper.ShowErrorAsync("This piece's archive is not one the painter can open.", ErrorTitle);
                 return;
             }
 
@@ -45,7 +51,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             AvaloniaEditorLauncher.OpenPainter(archive, piece.Drawing, () => VM?.ReloadAfterImport());
         }
 
-        private async void Export_Click(object sender, RoutedEventArgs e)
+        private async Task ExportAsync()
         {
             BottomScreenPiece piece = VM?.Selected;
             if (piece == null || piece.Drawing < 0) return;
@@ -58,11 +64,11 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string trouble;
             using (VM.Reading()) trouble = GraphicAssets.ExportPng(archive, piece.Drawing, path);
-            if (trouble != null) await DialogHelper.ShowErrorAsync(trouble, "Bottom screen error");
+            if (trouble != null) await DialogHelper.ShowErrorAsync(trouble, ErrorTitle);
             else SaveNotice.Exported(path);
         }
 
-        private async void Import_Click(object sender, RoutedEventArgs e)
+        private async Task ImportAsync()
         {
             BottomScreenPiece piece = VM?.Selected;
             if (piece == null || piece.Drawing < 0) return;
@@ -77,7 +83,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             string note = null;
             string trouble = VM.Import(() => PngColourPrompt.Import(archive, piece.Drawing, path, choice, check, out note)
                                               ?? VM.WhyOverRoom(piece));
-            if (trouble != null) { await DialogHelper.ShowErrorAsync(trouble, "Bottom screen error"); return; }
+            if (trouble != null) { await DialogHelper.ShowErrorAsync(trouble, ErrorTitle); return; }
             if (!string.IsNullOrEmpty(note)) await DialogHelper.ShowInfoAsync(note, "Bottom screen");
             SaveNotice.Imported(piece.Name, path);
         }

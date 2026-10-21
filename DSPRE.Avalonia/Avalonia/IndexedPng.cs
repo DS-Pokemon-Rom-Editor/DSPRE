@@ -10,12 +10,17 @@ namespace DSPRE.Avalonia
     {
         internal static readonly byte[] Signature = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
 
+        /// <summary>An interlaced PNG, which <see cref="TryRead"/> refuses. IHDR is always the first chunk.</summary>
+        public static bool IsInterlaced(byte[] fileBytes) =>
+            fileBytes.Length > 28 && fileBytes.AsSpan(0, 8).SequenceEqual(Signature)
+            && fileBytes.AsSpan(12, 4).SequenceEqual("IHDR"u8) && fileBytes[28] != 0;
+
         public static bool TryRead(byte[] fileBytes, out byte[] indices, out uint[] palette, out int width, out int height)
         {
             indices = null; palette = null; width = 0; height = 0;
             if (fileBytes.Length < 8 || !fileBytes.AsSpan(0, 8).SequenceEqual(Signature)) return false;
 
-            int pos = 8, w = 0, h = 0, bitDepth = 0, colorType = -1;
+            int pos = 8, w = 0, h = 0, bitDepth = 0, colorType = -1, interlace = 0;
             byte[] plte = null, trns = null;
             using MemoryStream idatStream = new MemoryStream();
 
@@ -32,6 +37,7 @@ namespace DSPRE.Avalonia
                         h = ReadUInt32BE(fileBytes, dataStart + 4);
                         bitDepth = fileBytes[dataStart + 8];
                         colorType = fileBytes[dataStart + 9];
+                        interlace = fileBytes[dataStart + 12];
                         break;
                     case "PLTE":
                         plte = new byte[len];
@@ -53,6 +59,8 @@ namespace DSPRE.Avalonia
 
             if (colorType != 3 || plte == null || w <= 0 || h <= 0) return false;
             if (bitDepth != 8 && bitDepth != 4 && bitDepth != 2 && bitDepth != 1) return false;
+            // The row-by-row decode below can't read Adam7's seven passes.
+            if (interlace != 0) return false;
 
             idatStream.Position = 0;
             byte[] raw;

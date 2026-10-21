@@ -100,18 +100,24 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private int _coloursFrom = -1;
         private Item _coloursFor;
 
+        /// <summary>The colours file the caller asked for while its row is shown, or -1.</summary>
+        public int ShownColours => _selected != null && ReferenceEquals(_selected, _coloursFor) && ShowingArchive?.Dir == _selected.Archive.Dir ? _coloursFrom : -1;
+
         public bool JumpTo(GraphicAssets.Archive archive, int fileIndex, bool preferAssembled = false, int palette = -1)
         {
             if (archive == null) return false;
 
             // Land on the tab that holds it, so the row is not filtered out of view.
             CategoryTab tab = Tabs.FirstOrDefault(t => t.Only == archive.In) ?? Tabs.FirstOrDefault();
+            bool tabChanged = false;
             if (tab != null && !ReferenceEquals(tab, _selectedTab))
             {
                 _selectedTab = tab;
                 OnPropertyChanged(nameof(SelectedTab));
+                tabChanged = true;
             }
-            Search = "";
+            // One filter pass for both, so the rows are the new tab's.
+            if (Set(ref _search, "", nameof(Search)) || tabChanged) ApplyFilter();
 
             Item row = _everything.FirstOrDefault(i => i.Archive.Dir == archive.Dir
                                                    && i.Unit != null
@@ -470,6 +476,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             Picture = null;
             Whynot = "";
+            _shownKind = GraphicAssets.Kind.Unknown;
             PaletteColours.Clear();
             OnPropertyChanged(nameof(ShowsPalette));
             if (_selected == null)
@@ -483,9 +490,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 using IDisposable pending = _pending.Reading();
-                int colours = ReferenceEquals(_selected, _coloursFor) && ShowingArchive?.Dir == a.Dir ? _coloursFrom : -1;
-                GraphicAssets.Preview p = GraphicAssets.Render(ShowingArchive ?? a, ShowingIndex, _showShiny, paletteIndex: colours);
+                GraphicAssets.Preview p = GraphicAssets.Render(ShowingArchive ?? a, ShowingIndex, _showShiny, paletteIndex: ShownColours);
                 ShowPaletteColours(ShowingArchive ?? a, ShowingIndex, p.Kind);
+                _shownKind = p.Kind;
                 if (p.Rgba != null && p.Width > 0)
                 {
                     Picture = ImageConverter.FromRgba(p.Rgba, p.Width, p.Height);
@@ -517,6 +524,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             OnPropertyChanged(nameof(HasSelection));
             OnPropertyChanged(nameof(CanReplace));
             OnPropertyChanged(nameof(ReplaceHelp));
+            OnPropertyChanged(nameof(CanPaint));
+            OnPropertyChanged(nameof(PaintHelp));
             OnPropertyChanged(nameof(SavePictureHelp));
             OnPropertyChanged(nameof(DeepEditorName));
             OnPropertyChanged(nameof(HasDeepEditor));
@@ -539,6 +548,39 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public bool CanReplace => _selected != null && ShowingArchive?.CannotImportBecause == null
                                   && _picture != null;
+
+        private GraphicAssets.Kind _shownKind;
+
+        /// <summary>The editor that paints a tile map's screen in place, where there is one.</summary>
+        public (string Name, Action Open)? ScreenEditor
+        {
+            get
+            {
+                if (_shownKind != GraphicAssets.Kind.TileMap) return null;
+                return ShowingArchive?.Dir switch
+                {
+                    RomInfo.DirNames.SummaryGraphics when EditorAvailability.Allows("SummaryScreenEditorView") =>
+                        ("Summary screen", AvaloniaEditorLauncher.OpenSummaryScreen),
+                    RomInfo.DirNames.PokedexGraphics when EditorAvailability.Allows("PokedexGraphicsEditorView") =>
+                        ("Pokédex graphics", AvaloniaEditorLauncher.OpenPokedexGraphics),
+                    _ => null,
+                };
+            }
+        }
+
+        public bool CanPaint => CanReplace && (_shownKind != GraphicAssets.Kind.TileMap || ScreenEditor != null);
+
+        public string PaintHelp
+        {
+            get
+            {
+                if (!CanReplace) return ReplaceHelp;
+                if (_shownKind != GraphicAssets.Kind.TileMap) return "Paint this picture's pixels.";
+                return ScreenEditor is (string name, _)
+                    ? $"Opens the {name} editor, where this screen's pictures are painted in place."
+                    : "A tile map only says where squares go. Pick its picture to paint it.";
+            }
+        }
 
         public string ReplaceHelp
         {
@@ -590,7 +632,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             if (_selected == null) return "Pick something first.";
             using IDisposable pending = _pending.Reading();
-            return GraphicAssets.ExportPng(ShowingArchive ?? _selected.Archive, ShowingIndex, path);
+            return GraphicAssets.ExportPng(ShowingArchive ?? _selected.Archive, ShowingIndex, path, ShownColours);
         }
 
         public string SaveFileAsItIs(string path)
@@ -614,9 +656,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             note = null;
             if (_selected == null) return "Pick something first.";
             GraphicAssets.Archive archive = ShowingArchive ?? _selected.Archive;
-            int index = ShowingIndex;
+            int index = ShowingIndex, colours = ShownColours;
             string said = null;
-            string err = _pending.Import(() => PngColourPrompt.Import(archive, index, path, choice, check, out said));
+            string err = _pending.Import(() => PngColourPrompt.Import(archive, index, path, choice, check, out said, colours));
             note = said;
             return err;
         }

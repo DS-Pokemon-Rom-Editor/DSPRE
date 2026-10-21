@@ -571,7 +571,8 @@ A game screen is drawn by a renderer that returns its pieces with their source f
 `ScreenPageComposer`). Pokédex and summary pages are `ScreenBook`s (`PokedexBook`, `SummaryBook`) shown by
 `ScreenPagesView`. PNG export keeps colour numbers, and shared-palette imports refuse a PNG with the wrong colours
 and offer `PngColourPrompt`. `OpenGraphicAt` and `OpenPainter` hand a graphic to the Graphics window or the
-painter.
+painter, with the colours file and row the screen shows it in. Changing a file other pieces also show asks first
+("This piece is shared"), in the Battle screen editor and in `ScreenPagesView` alike.
 
 ## Scripts
 

@@ -148,11 +148,11 @@ namespace DSPRE.Avalonia.Data
                     },
                     Texts = new List<ScreenText>
                     {
-                        T((ScreenTextKind)0, 7, 1, 48, 34, (ScreenTextAlign)1, 0, 3, 3, 2, 2, 0, 0, 3, 0, -1, 0, 0, 0, 0, false, null, "Sinnoh|National"),
-                        T((ScreenTextKind)0, 5, 1, 48, 82, (ScreenTextAlign)1, 0, 3, 3, 2, 2, 0, 0, 3, 0, -1, 0, 0, 0, 0, false, null, "Sinnoh|National"),
-                        T((ScreenTextKind)0, 29, 1, 48, 146, (ScreenTextAlign)1, 0, 2, 3, 2, 2, 0, 0, 3, 0, -1, 0, 0, 0, 0, false, null, null),
-                        T((ScreenTextKind)0, 106, 1, 190, 0, (ScreenTextAlign)1, 0, 1, 3, 2, 2, 0, 0, 3, 0, -1, 0, 0, 0, 0, false, null, "Sinnoh|National"),
-                        T((ScreenTextKind)0, 107, 1, 190, 0, (ScreenTextAlign)1, 0, 1, 3, 2, 2, 0, 0, 3, 0, -1, 0, 0, 0, 0, false, null, "Search results"),
+                        T((ScreenTextKind)0, 7, 1, 8, 26, (ScreenTextAlign)0, 0, 3, 3, 2, 2, 0, 0, 3, 0, -1, 0, 0, 0, 0, false, null, "Sinnoh|National"),
+                        T((ScreenTextKind)0, 5, 1, 8, 74, (ScreenTextAlign)0, 0, 3, 3, 2, 2, 0, 0, 3, 0, -1, 0, 0, 0, 0, false, null, "Sinnoh|National"),
+                        T((ScreenTextKind)0, 29, 1, 8, 138, (ScreenTextAlign)0, 0, 2, 3, 2, 2, 0, 0, 3, 0, -1, 0, 0, 0, 0, false, null, null),
+                        T((ScreenTextKind)0, 106, 1, 134, 0, (ScreenTextAlign)0, 0, 1, 3, 2, 2, 0, 0, 3, 0, -1, 0, 0, 0, 0, false, null, "Sinnoh|National"),
+                        T((ScreenTextKind)0, 107, 1, 134, 0, (ScreenTextAlign)0, 0, 1, 3, 2, 2, 0, 0, 3, 0, -1, 0, 0, 0, 0, false, null, "Search results"),
                     },
                 },
             },
@@ -1264,11 +1264,11 @@ namespace DSPRE.Avalonia.Data
                     },
                     Texts = new List<ScreenText>
                     {
-                        T((ScreenTextKind)0, 7, 1, 48, 34, (ScreenTextAlign)1, 0, 3, 3, 2, 2, 0, 0, 3, 0, -1, 0, 0, 0, 0, false, null, "Sinnoh|National"),
-                        T((ScreenTextKind)0, 5, 1, 48, 82, (ScreenTextAlign)1, 0, 3, 3, 2, 2, 0, 0, 3, 0, -1, 0, 0, 0, 0, false, null, "Sinnoh|National"),
-                        T((ScreenTextKind)0, 29, 1, 48, 146, (ScreenTextAlign)1, 0, 2, 3, 2, 2, 0, 0, 3, 0, -1, 0, 0, 0, 0, false, null, null),
-                        T((ScreenTextKind)0, 107, 1, 190, 0, (ScreenTextAlign)1, 0, 1, 3, 2, 2, 0, 0, 3, 0, -1, 0, 0, 0, 0, false, null, "Sinnoh|National"),
-                        T((ScreenTextKind)0, 108, 1, 190, 0, (ScreenTextAlign)1, 0, 1, 3, 2, 2, 0, 0, 3, 0, -1, 0, 0, 0, 0, false, null, "Search results"),
+                        T((ScreenTextKind)0, 7, 1, 8, 26, (ScreenTextAlign)0, 0, 3, 3, 2, 2, 0, 0, 3, 0, -1, 0, 0, 0, 0, false, null, "Sinnoh|National"),
+                        T((ScreenTextKind)0, 5, 1, 8, 74, (ScreenTextAlign)0, 0, 3, 3, 2, 2, 0, 0, 3, 0, -1, 0, 0, 0, 0, false, null, "Sinnoh|National"),
+                        T((ScreenTextKind)0, 29, 1, 8, 138, (ScreenTextAlign)0, 0, 2, 3, 2, 2, 0, 0, 3, 0, -1, 0, 0, 0, 0, false, null, null),
+                        T((ScreenTextKind)0, 107, 1, 134, 0, (ScreenTextAlign)0, 0, 1, 3, 2, 2, 0, 0, 3, 0, -1, 0, 0, 0, 0, false, null, "Sinnoh|National"),
+                        T((ScreenTextKind)0, 108, 1, 134, 0, (ScreenTextAlign)0, 0, 1, 3, 2, 2, 0, 0, 3, 0, -1, 0, 0, 0, 0, false, null, "Search results"),
                     },
                 },
             },

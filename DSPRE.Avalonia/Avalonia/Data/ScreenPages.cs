@@ -18,6 +18,8 @@ namespace DSPRE.Avalonia.Data
         BoxRight,
         /// <summary>A count like 38/38 with its slash centred on X, the first number ending at the slash.</summary>
         Slash,
+        /// <summary>Centred across <see cref="ScreenText.Span"/> pixels from the window's left, as HGSS centres the summary names.</summary>
+        SpanCentre,
     }
 
     /// <summary>What a line of text on a page shows.</summary>
@@ -150,6 +152,8 @@ namespace DSPRE.Avalonia.Data
         public int Bg = 1;
         public int X, Y;
         public ScreenTextAlign Align;
+        /// <summary>The width <see cref="ScreenTextAlign.SpanCentre"/> centres across.</summary>
+        public int Span;
         /// <summary>When set, the lines are centred down a box this tall that starts at <see cref="Y"/>.</summary>
         public int BoxHeight;
         /// <summary>Palette row the colour numbers below are taken from.</summary>

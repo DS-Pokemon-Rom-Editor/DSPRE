@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
@@ -26,9 +27,19 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private void Save_Click(object sender, RoutedEventArgs e) => ViewModel?.SaveChanges();
 
+        private const string ErrorTitle = "Graphics error";
         private async void PaletteColour_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is not Control { Tag: int number } || ViewModel == null) return;
+            if (sender is Control { Tag: int number }) await DialogHelper.GuardAsync(() => ChangeColourAsync(number), "The colour wasn't changed.", ErrorTitle, this);
+        }
+        private async void SavePicture_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(SavePictureAsync, "The PNG wasn't exported.", ErrorTitle, this);
+        private async void SaveRaw_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(SaveRawAsync, "The file wasn't exported.", ErrorTitle, this);
+        private async void Replace_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(ReplaceAsync, "The PNG wasn't imported.", ErrorTitle, this);
+        private async void Paint_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(PaintAsync, "The painter didn't open.", ErrorTitle, this);
+
+        private async Task ChangeColourAsync(int number)
+        {
+            if (ViewModel == null) return;
             (byte R, byte G, byte B)? now = ViewModel.PaletteColours.FirstOrDefault(s => s.Number == number)?.Fill is global::Avalonia.Media.ISolidColorBrush brush
                 ? (brush.Color.R, brush.Color.G, brush.Color.B) : null;
             (byte R, byte G, byte B)? picked = await DialogHelper.PickColourAsync(this, "Change colour " + number, now);
@@ -48,7 +59,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             SearchBox.Focus();
         }
 
-        private async void SavePicture_Click(object sender, RoutedEventArgs e)
+        private async Task SavePictureAsync()
         {
             GraphicsBrowserViewModel vm = ViewModel;
             if (vm?.Selected == null) return;
@@ -58,11 +69,11 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (path == null) return;
 
             string err = vm.SavePicture(path);
-            if (err != null) { await DialogHelper.ShowErrorAsync(err, "Graphics error"); return; }
+            if (err != null) { await DialogHelper.ShowErrorAsync(err, ErrorTitle); return; }
             SaveNotice.Exported(path);
         }
 
-        private async void SaveRaw_Click(object sender, RoutedEventArgs e)
+        private async Task SaveRawAsync()
         {
             GraphicsBrowserViewModel vm = ViewModel;
             if (vm?.Selected == null)
@@ -77,11 +88,11 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (path == null) return;
 
             string err = vm.SaveFileAsItIs(path);
-            if (err != null) { await DialogHelper.ShowErrorAsync(err, "Graphics error"); return; }
+            if (err != null) { await DialogHelper.ShowErrorAsync(err, ErrorTitle); return; }
             SaveNotice.Exported(path);
         }
 
-        private async void Replace_Click(object sender, RoutedEventArgs e)
+        private async Task ReplaceAsync()
         {
             GraphicsBrowserViewModel vm = ViewModel;
             if (vm?.Selected == null) return;
@@ -113,11 +124,11 @@ namespace DSPRE.Avalonia.Views.Graphics
             }
             else
             {
-                (PngColourPrompt.Choice choice, Data.GraphicAssets.PngColourCheck check) = await PngColourPrompt.AskAsync(this, target, at, path);
+                (PngColourPrompt.Choice choice, Data.GraphicAssets.PngColourCheck check) = await PngColourPrompt.AskAsync(this, target, at, path, vm.ShownColours);
                 if (choice == PngColourPrompt.Choice.Cancel) return;
                 err = vm.Replace(path, choice, check, out note);
             }
-            if (err != null) { vm.StatusText = err; await DialogHelper.ShowErrorAsync(err, "Graphics error"); return; }
+            if (err != null) { vm.StatusText = err; await DialogHelper.ShowErrorAsync(err, ErrorTitle); return; }
             SaveNotice.Imported(vm.Selected.Name ?? $"{vm.Selected.Archive.Title} {vm.Selected.Index}", path);
 
             // A background shares its pieces, so painting one square changes every square drawn from the
@@ -133,21 +144,26 @@ namespace DSPRE.Avalonia.Views.Graphics
         /// hand-off those editors make coming this way.</summary>
         private void OpenOwner_Click(object sender, RoutedEventArgs e) => ViewModel?.OpenOwningEditor();
 
-        private async void Paint_Click(object sender, RoutedEventArgs e)
+        private async Task PaintAsync()
         {
             GraphicsBrowserViewModel vm = ViewModel;
             if (vm?.Selected == null) return;
 
-            if (!vm.CanReplace)
+            if (!vm.CanPaint)
             {
-                await DialogHelper.ShowInfoAsync(vm.ReplaceHelp, "Paint");
+                await DialogHelper.ShowInfoAsync(vm.PaintHelp, "Paint");
+                return;
+            }
+            if (vm.ScreenEditor is (_, System.Action open))
+            {
+                open();
                 return;
             }
 
             // The painter works on the saved graphic, so pending imports are settled first.
             if (!await RecordSwitchGuard.ConfirmLeaveAsync(vm, this, "graphic", "Save them before painting?")) return;
 
-            AvaloniaEditorLauncher.OpenPainter(vm.ShowingArchive, vm.ShowingIndex);
+            AvaloniaEditorLauncher.OpenPainter(vm.ShowingArchive, vm.ShowingIndex, palette: vm.ShownColours);
         }
     }
 }

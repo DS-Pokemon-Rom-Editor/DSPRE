@@ -21,7 +21,8 @@ namespace DSPRE.Avalonia.Data
         // One print call into a box: a line of a message bank (the summary's own unless Bank is set) with its
         // placeholders filled from Args, at X, Y from the box's top left, or centred or right-aligned in the box.
         private sealed record Print(int Line, string[] Args = null, Ink Colour = Ink.White, ScreenTextAlign At = ScreenTextAlign.Left,
-                                    int X = 0, int Y = 0, int Bank = -1, int Font = 0, ScreenTextKind Kind = ScreenTextKind.Message);
+                                    int X = 0, int Y = 0, int Bank = -1, int Font = 0, ScreenTextKind Kind = ScreenTextKind.Message,
+                                    int Span = 0);
 
         // One text box on a page: the table and entry it is in arm9, and the prints the game makes into it.
         private sealed record Box(string Table, int Index, string Name, Print[] Prints, string When = null);
@@ -32,6 +33,8 @@ namespace DSPRE.Avalonia.Data
         // The sample's moves: Tackle, Rollout, Bide and Rest. Their types, power, PP and the rest are read from the ROM.
         private static readonly int[] SampleMoves = { 33, 205, 117, 156 };
         private const int SampleLevel = 50;
+        // The longest names the games allow, in capitals.
+        private const string LongestTrainer = "MAXWELL", LongestNickname = "MAXIMILIAN";
 
         private readonly DexSample _sample;
         private readonly bool _hgss;
@@ -296,7 +299,7 @@ namespace DSPRE.Avalonia.Data
                 page.Side(side).Texts.Add(new ScreenText
                 {
                     Kind = p.Kind, Line = p.Line, Bank = p.Bank, Args = p.Args, Font = p.Font,
-                    Bg = bg, X = w.X * 8 + p.X, Y = w.Y * 8 + p.Y, Align = p.At, Row = w.Palette, Ink = ink, Shadow = shadow,
+                    Bg = bg, X = w.X * 8 + p.X, Y = w.Y * 8 + p.Y, Align = p.At, Span = p.Span, Row = w.Palette, Ink = ink, Shadow = shadow,
                     WinX = w.X, WinY = w.Y, WinW = w.Width, WinH = w.Height, When = box.When,
                 });
             }
@@ -499,7 +502,7 @@ namespace DSPRE.Avalonia.Data
             string level = Num(SampleLevel, 3);
             Print[] nickname =
             {
-                new(-1, Colour: Ink.White, Kind: ScreenTextKind.SpeciesName),
+                new(-1, new[] { LongestNickname }, Ink.White, Kind: ScreenTextKind.Sample),
                 // A male sample: the game prints the male sign in blue at the box's right edge.
                 new(1, Colour: Ink.Blue, At: ScreenTextAlign.BoxRight),
             };
@@ -510,7 +513,7 @@ namespace DSPRE.Avalonia.Data
                     Value("Static", 31, "Held item", 6, null),
                     Value("Static", 32, "Level", 3, level, x: 16),
                     new Box("Static", 33, "Nickname", nickname),
-                    Label("Static", 23, "Cancel", 146, at: ScreenTextAlign.BoxCentre, font: 4),
+                    Label("Static", 23, "Cancel", 146, font: 4),
                 }
                 : new[]
                 {
@@ -564,7 +567,7 @@ namespace DSPRE.Avalonia.Data
                     Label("Static", 13, "Next level heading", 19),
                     Value("Info", 0, "Pokédex number", 9, Num(_sample.Species, 3, '0'), at: ScreenTextAlign.BoxCentre),
                     new Box("Info", 1, "Name", new[] { new Print(-1, Colour: Ink.Black, At: ScreenTextAlign.BoxCentre, Kind: ScreenTextKind.SpeciesName) }),
-                    new Box("Info", 2, "Trainer", new[] { new Print(-1, new[] { "Lucas" }, Ink.Blue, ScreenTextAlign.BoxCentre, Kind: ScreenTextKind.Sample) }),
+                    new Box("Info", 2, "Trainer", new[] { new Print(-1, new[] { LongestTrainer }, Ink.Blue, ScreenTextAlign.BoxCentre, Kind: ScreenTextKind.Sample) }),
                     Value("Info", 3, "ID", 16, Num(12345, 5, '0'), at: ScreenTextAlign.BoxCentre),
                     Value("Info", 4, "Exp. points", 18, Num(125000, 7, ' '), at: ScreenTextAlign.BoxCentre),
                     Value("Info", 5, "Next level", 21, Num(7651, 7, ' '), at: ScreenTextAlign.BoxCentre),
@@ -654,8 +657,9 @@ namespace DSPRE.Avalonia.Data
                     Label("Static", 12, "Exp. points heading", 17),
                     Label("Static", 13, "Next level heading", 19),
                     Value("Info", 0, "Pokédex number", 9, Num(_sample.Species, 3, '0'), at: ScreenTextAlign.BoxCentre),
-                    new Box("Info", 1, "Name", new[] { new Print(-1, Colour: Ink.Black, At: ScreenTextAlign.BoxCentre, Kind: ScreenTextKind.SpeciesName) }),
-                    new Box("Info", 2, "Trainer", new[] { new Print(-1, new[] { "Ethan" }, Ink.Blue, ScreenTextAlign.BoxCentre, Kind: ScreenTextKind.Sample) }),
+                    // HGSS centres the species and trainer names across 72 pixels, not across their boxes.
+                    new Box("Info", 1, "Name", new[] { new Print(-1, Colour: Ink.Black, At: ScreenTextAlign.SpanCentre, Kind: ScreenTextKind.SpeciesName, Span: 72) }),
+                    new Box("Info", 2, "Trainer", new[] { new Print(-1, new[] { LongestTrainer }, Ink.Blue, ScreenTextAlign.SpanCentre, Kind: ScreenTextKind.Sample, Span: 72) }),
                     Value("Info", 3, "ID", 16, Num(12345, 5, '0'), at: ScreenTextAlign.BoxCentre),
                     Value("Info", 4, "Exp. points", 18, Num(125000, 7), at: ScreenTextAlign.BoxRight),
                     Value("Info", 5, "Next level", 21, Num(7651, 7), at: ScreenTextAlign.BoxRight),

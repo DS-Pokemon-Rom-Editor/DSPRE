@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -20,9 +21,9 @@ namespace DSPRE.Avalonia
         /// comes back too, so a caller keeping undo steps can remember the palette before it is written.
         /// </summary>
         public static async Task<(Choice Choice, GraphicAssets.PngColourCheck Check)> AskAsync(Window owner, GraphicAssets.Archive archive,
-                                                                                            int index, string path)
+                                                                                            int index, string path, int palette = -1, int paletteBank = -1)
         {
-            GraphicAssets.PngColourCheck check = GraphicAssets.CheckPngColours(archive, index, path);
+            GraphicAssets.PngColourCheck check = GraphicAssets.CheckPngColours(archive, index, path, palette, paletteBank);
             if (check == null || check.Matches) return (Choice.AsItIs, check);
 
             Choice picked = Choice.Cancel;
@@ -35,9 +36,11 @@ namespace DSPRE.Avalonia
                 SizeToContent = SizeToContent.Height,
             };
 
+            int missing = check.Missing.Count;
             string said = check.KeepsNumbers
-                ? $"{check.Missing.Count} of the colours in that PNG differ from the palette at the same colour numbers."
-                : $"That PNG uses {check.Missing.Count} colours this graphic's palette does not have.";
+                ? (missing == 1 ? "1 of the colours in that PNG differs" : $"{missing} of the colours in that PNG differ")
+                  + " from the palette at the same colour numbers."
+                : $"That PNG uses {missing} colour{(missing == 1 ? "" : "s")} this graphic's palette does not have.";
             StackPanel root = new StackPanel { Margin = new global::Avalonia.Thickness(16), Spacing = 8 };
             root.Children.Add(new TextBlock { Text = said, TextWrapping = TextWrapping.Wrap });
 
@@ -66,10 +69,10 @@ namespace DSPRE.Avalonia
                         look.Children.Add(Swatch(check.BankColours[slot]));
                         look.Children.Add(new TextBlock
                         {
-                            Text = $"Colour {slot}" + (check.UsersOf[slot] != null ? ": " + check.UsersOf[slot] : ": nothing else"),
+                            Text = $"Colour {slot}: " + Users(check.UsersOf[slot]),
                             VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 380,
                         });
-                        ToolTip.SetTip(item, check.UsersOf[slot] ?? "Nothing else draws with this colour.");
+                        ToolTip.SetTip(item, check.UsersOf[slot] == null ? "Nothing else draws with this colour." : string.Join("\n", check.UsersOf[slot]));
                         global::Avalonia.Automation.AutomationProperties.SetName(item, $"Colour {slot}");
                         pick.Items.Add(item);
                         if (slot == check.Slots[i]) pick.SelectedItem = item;
@@ -79,11 +82,22 @@ namespace DSPRE.Avalonia
                 }
                 else if (check.KeepsNumbers && i < check.Slots.Count)
                 {
-                    row.Children.Add(new TextBlock
+                    IReadOnlyList<string> users = check.SlotUsers[i];
+                    StackPanel note = new StackPanel { VerticalAlignment = VerticalAlignment.Center, MaxWidth = 440 };
+                    note.Children.Add(new TextBlock
                     {
-                        Text = $"Colour {check.Slots[i]}" + (check.SlotUsers[i] != null ? ", also used by " + check.SlotUsers[i] : ""),
-                        VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 440,
+                        Text = $"Colour {check.Slots[i]}" + (users?.Count == 1 ? ", also used by " + users[0] : ""),
+                        TextWrapping = TextWrapping.Wrap,
                     });
+                    // A long list of names would bury the colours.
+                    if (users?.Count > 1)
+                        note.Children.Add(new Expander
+                        {
+                            Header = $"Also used by {users.Count} other pictures",
+                            Content = new TextBlock { Text = string.Join(", ", users), TextWrapping = TextWrapping.Wrap },
+                            HorizontalAlignment = HorizontalAlignment.Stretch,
+                        });
+                    row.Children.Add(note);
                 }
                 rows.Children.Add(row);
             }
@@ -126,6 +140,9 @@ namespace DSPRE.Avalonia
             return (picked, check);
         }
 
+        private static string Users(IReadOnlyList<string> users) =>
+            users == null ? "nothing else" : users.Count == 1 ? users[0] : $"{users.Count} other pictures";
+
         private static Border Swatch(uint c) => new Border
         {
             Width = 22, Height = 22, BorderThickness = new global::Avalonia.Thickness(1), BorderBrush = Brushes.Gray,
@@ -133,7 +150,7 @@ namespace DSPRE.Avalonia
         };
 
         public static string Import(GraphicAssets.Archive archive, int index, string path, Choice choice,
-                                    GraphicAssets.PngColourCheck check, out string note)
+                                    GraphicAssets.PngColourCheck check, out string note, int palette = -1, int paletteBank = -1)
         {
             note = null;
             if (choice == Choice.Cancel) return null;
@@ -142,7 +159,7 @@ namespace DSPRE.Avalonia
                 string trouble = GraphicAssets.AddPngColours(archive, check);
                 if (trouble != null) return trouble;
             }
-            return GraphicAssets.ImportPng(archive, index, path, out note);
+            return GraphicAssets.ImportPng(archive, index, path, out note, palette, paletteBank);
         }
     }
 }

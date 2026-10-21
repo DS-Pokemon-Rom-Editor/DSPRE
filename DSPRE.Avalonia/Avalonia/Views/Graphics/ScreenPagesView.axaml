@@ -80,10 +80,25 @@
       <DockPanel Margin="10">
         <TextBlock DockPanel.Dock="Top" Text="{Binding LayerName}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,8"/>
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,8,0,0">
-          <Button Content="Paint" controls:Icon.Key="brush" Click="Paint_Click" IsEnabled="{Binding CanEditPart}"/>
+          <Button Content="Paint" controls:Icon.Key="brush" Click="Paint_Click" IsEnabled="{Binding CanPaintPart}"/>
           <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click" IsEnabled="{Binding CanEditPart}" ToolTip.Tip="PNG image"/>
           <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click" IsEnabled="{Binding CanEditPart}" ToolTip.Tip="PNG image"/>
         </StackPanel>
+        <ItemsControl DockPanel.Dock="Bottom" Margin="0,8,0,0" ItemsSource="{Binding Swatches}" IsVisible="{Binding HasSwatches}"
+                      HorizontalAlignment="Left" ToolTip.Tip="Everything using these colours changes too">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><UniformGrid Columns="8"/></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:GraphicPainterViewModel+Swatch">
+              <Button Width="28" Height="28" Margin="1" Padding="0" Tag="{Binding Number}"
+                      Click="Colour_Click" ToolTip.Tip="{Binding Tip}">
+                <Border Width="24" Height="24" BorderThickness="1"
+                        BorderBrush="{DynamicResource Editor.Border}" Background="{Binding Fill}"/>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
         <ListBox ItemsSource="{Binding Parts}" SelectedIndex="{Binding PartIndex}">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:ScreenPartRow">
