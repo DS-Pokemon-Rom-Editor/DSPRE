@@ -678,6 +678,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 // Reload to recompute message IDs/offsets.
                 _archive = new TextArchive(TrainerMessageTextNumber);
                 ReadTable();
+                // The write renumbers every message, so the shown list must come from the reread table.
+                _current = null;
                 LoadTrainer(_currentTrainerId);
             }
             catch (Exception ex)
