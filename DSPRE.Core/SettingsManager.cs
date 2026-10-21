@@ -150,14 +150,35 @@ namespace DSPRE
             Newtonsoft.Json.Linq.JObject merged = new Newtonsoft.Json.Linq.JObject();
             foreach (Newtonsoft.Json.Linq.JProperty p in mine.Properties())
             {
-                bool changedHere = _saved == null || !Newtonsoft.Json.Linq.JToken.DeepEquals(p.Value, _saved[p.Name]);
                 Newtonsoft.Json.Linq.JToken other = onDisk?.GetValue(p.Name, StringComparison.OrdinalIgnoreCase);
-                merged[p.Name] = changedHere || other == null ? p.Value : other;
+                merged[p.Name] = _saved == null ? p.Value : Merge(p.Value, _saved[p.Name], other);
             }
             PlainFiles.WriteText(SettingsFile, merged.ToString(Formatting.Indented));
             _saved = merged;
             // Take up what another window changed, so this one shows it too.
             JsonConvert.PopulateObject(merged.ToString(), Settings, Replace);
+        }
+
+        // Per-project tables (test saves, emulator paths) are merged key by key, so two windows each keep their own.
+        private static Newtonsoft.Json.Linq.JToken Merge(Newtonsoft.Json.Linq.JToken mine, Newtonsoft.Json.Linq.JToken saved,
+            Newtonsoft.Json.Linq.JToken onDisk)
+        {
+            if (onDisk == null) return mine;
+            if (Newtonsoft.Json.Linq.JToken.DeepEquals(mine, saved)) return onDisk;
+            if (mine is not Newtonsoft.Json.Linq.JObject m || onDisk is not Newtonsoft.Json.Linq.JObject d) return mine;
+            Newtonsoft.Json.Linq.JObject s = saved as Newtonsoft.Json.Linq.JObject;
+            Newtonsoft.Json.Linq.JObject result = new Newtonsoft.Json.Linq.JObject();
+            foreach (string key in m.Properties().Select(p => p.Name).Union(d.Properties().Select(p => p.Name)))
+            {
+                Newtonsoft.Json.Linq.JToken here = m[key], before = s?[key], there = d[key];
+                if (here == null)
+                {
+                    if (before == null && there != null) result[key] = there;   // added by another window
+                    continue;                                                   // removed here
+                }
+                result[key] = Merge(here, before, there);
+            }
+            return result;
         }
 
         private static Newtonsoft.Json.Linq.JObject ReadDisk()

@@ -155,6 +155,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public bool HasProject => AvaloniaEditorLauncher.IsRomLoaded && !string.IsNullOrEmpty(RomInfo.WorkDir);
 
         private string _testSavePath = "";
+        private string _testSaveProject;
         public string TestSavePath { get => _testSavePath; set => Set(ref _testSavePath, value ?? ""); }
 
         public async Task ChooseTestSaveCommandAsync(Window owner)
@@ -243,7 +244,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                 _emulatorPaths[kv.Key] = kv.Value;
             _emulatorIndex = Enum.TryParse(SettingsManager.Settings.PreferredEmulator, out EmulatorKind preferred)
                 ? Array.IndexOf(Emulators.All, preferred) + 1 : 0;
-            _testSavePath = HasProject ? TestSaves.For(RomInfo.WorkDir) ?? "" : "";
+            // The window outlives a project switch, so the test save stays with the project it was read for.
+            _testSaveProject = HasProject ? RomInfo.WorkDir : null;
+            _testSavePath = _testSaveProject != null ? TestSaves.For(_testSaveProject) ?? "" : "";
 
             // snapshot for unsaved-changes detection
             _oldExportPath      = ExportPath;
@@ -280,7 +283,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
             SettingsManager.Settings.EmulatorPaths = new System.Collections.Generic.Dictionary<string, string>(_emulatorPaths);
             SettingsManager.Settings.PreferredEmulator = SelectedEmulator?.ToString() ?? "";
-            if (HasProject) TestSaves.Remember(RomInfo.WorkDir, TestSavePath);
+            if (_testSaveProject != null) TestSaves.Remember(_testSaveProject, TestSavePath);
 
             _oldExportPath      = ExportPath;
             _oldMapImportPath   = MapImportPath;
