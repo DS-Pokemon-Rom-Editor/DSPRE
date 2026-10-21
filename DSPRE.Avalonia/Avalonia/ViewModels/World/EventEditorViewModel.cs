@@ -1570,7 +1570,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (!await DialogHelper.AskYesNoAsync($"Delete the last event file ({last})?", "Delete event file?")) return;
             try
             {
-                if (_selectedIndex == last) SelectedEventIndex = last - 1;
+                // The edits belong to the file being deleted.
+                if (_selectedIndex == last) { SetClean(); SelectedEventIndex = last - 1; }
                 _archive.RemoveLast();
                 EventNames.RemoveAt(last);
                 OnPropertyChanged(nameof(HasUnsavedChanges));

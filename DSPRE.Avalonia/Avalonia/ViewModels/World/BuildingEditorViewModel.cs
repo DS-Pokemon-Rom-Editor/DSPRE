@@ -306,12 +306,12 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         // The file name the user picked becomes the folder apicula writes into, beside where they picked.
-        private string ExportThreeD(int index, byte[] data, bool glb, string name, string folder)
+        private string ExportThreeD(int index, byte[] data, bool glb, string name, string folder, bool report = true)
         {
             NSBMD model = NSBMDLoader.LoadNSBMD(new MemoryStream(data));
             byte[] textures = TexturesFor(index, data, model, out int pack);
             // The model's own pictures are already inside it; only a pack has to be added.
-            return DSPRE.ModelUtils.ExportModel(name, data, pack >= 0 ? textures : null, glb, folder);
+            return DSPRE.ModelUtils.ExportModel(name, data, pack >= 0 ? textures : null, glb, folder, report);
         }
 
         /// <summary>Exports every model on the current tab into one folder, painted as the texture pack box says.</summary>
@@ -351,7 +351,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     try
                     {
                         if (format == ExportFormat.Nsbmd) PlainFiles.WriteBytes(Path.Combine(folder, stem + ".nsbmd"), data);
-                        else if (ExportThreeD(index, data, format == ExportFormat.Glb, stem, folder) == null) { failed.Add(stem); continue; }
+                        else if (ExportThreeD(index, data, format == ExportFormat.Glb, stem, folder, report: false) == null) { failed.Add(stem); continue; }
                         done++;
                     }
                     catch (Exception ex)
@@ -366,6 +366,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             StatusText = failed.Count == 0
                 ? $"Exported {done} building models."
                 : $"Exported {done} building models; {failed.Count} failed: {string.Join(", ", failed.Take(5))}{(failed.Count > 5 ? ", …" : "")}.";
+            if (failed.Count > 0)
+                await DialogHelper.ShowErrorAsync($"{failed.Count} of {models.Count} building models weren't exported. The log says why.", "Export all", _owner);
         }
     }
 }

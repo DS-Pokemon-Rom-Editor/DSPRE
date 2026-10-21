@@ -2899,7 +2899,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (!await DialogHelper.AskYesNoAsync($"Delete the last map file ({last})?", "Delete map file?")) return;
             try
             {
-                if (_selectedMapIndex == last) SelectedMapIndex = last - 1;
+                // The edits belong to the file being deleted.
+                if (_selectedMapIndex == last) { SetClean(); SelectedMapIndex = last - 1; }
                 _archive.RemoveLast();
                 _platesToClear.Add(last);
                 MapNames.RemoveAt(last);

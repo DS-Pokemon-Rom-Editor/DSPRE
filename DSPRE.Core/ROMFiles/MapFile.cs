@@ -227,6 +227,7 @@ namespace DSPRE.ROMFiles
             ImportPermissions(other.CollisionsToByteArray());
             ImportBuildings(other.BuildingsToByteArray());
             ImportTerrain(other.Bdhc);
+            KeptPlates.Clear();
             Bgs = family == GameFamilies.HGSS ? other.Bgs : BlankBGS;
         }
 

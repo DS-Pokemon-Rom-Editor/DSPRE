@@ -1435,12 +1435,11 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task AddHeaderAsync()
         {
             if (!_dynamicHeaders) return;
+            // Adding selects the new header, which reloads the shown one.
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "header", "Save them before adding a header?")) return;
             const string newmap = "NEWMAP";
             int source = CopyFromIndex == 1 ? SelectedHeaderId : 0;
-            // The selected header's unsaved edits are what the user sees, so a copy of it carries them.
-            int newId = source == SelectedHeaderId && _dirty && _header != null
-                ? MapHeader.RestoreDynamicHeader(_header.ToByteArray(), newmap)
-                : MapHeader.AddDynamicHeader(newmap, source);
+            int newId = MapHeader.AddDynamicHeader(newmap, source);
             _removedHeaders.Clear();   // a restore would land on a different number now
             RaiseUndoState();
             OnPropertyChanged(nameof(RemoveTip));
@@ -1523,6 +1522,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                     $"Remove header {lastIndex:D3} ({name})? Only the last header can be removed. It is deleted now, not on Save; Ctrl+Z puts it back.",
                     "Delete header?"))
                 return;
+            // Removing reloads the shown header.
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "header", "Save them before removing the header?")) return;
 
             byte[] data = File.ReadAllBytes(Filesystem.GetDynamicHeaderPath(lastIndex));
             MapHeader.RemoveLastDynamicHeader();

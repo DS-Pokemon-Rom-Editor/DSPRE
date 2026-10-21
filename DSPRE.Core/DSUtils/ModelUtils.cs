@@ -11,13 +11,20 @@ namespace DSPRE
         /// null, and returns that sub-folder, or null when nothing was written. Says nothing on success, so the caller
         /// can confirm it its own way.
         /// </summary>
-        public static string ExportModel(string modelName, byte[] modelData, byte[] textureData, bool glb, string folder = null)
+        /// <param name="report">False for a batch that reports its failures once at the end; they are only logged here.</param>
+        public static string ExportModel(string modelName, byte[] modelData, byte[] textureData, bool glb, string folder = null, bool report = true)
         {
-            return Convert(modelName, modelData, textureData, glb, quiet: true, folder);
+            return Convert(modelName, modelData, textureData, glb, quiet: true, folder, report);
         }
 
-        private static string Convert(string modelName, byte[] modelData, byte[] textureData, bool glb, bool quiet, string folder)
+        private static string Convert(string modelName, byte[] modelData, byte[] textureData, bool glb, bool quiet, string folder, bool report = true)
         {
+            void Fail(string message, string title)
+            {
+                AppLogger.Error(message);
+                if (report) AppMessages.Error(message, title);
+            }
+
             if (!quiet && folder == null)
             {
                 AppMessages.Info("Choose output folder.\nDSPRE will automatically create a sub-folder in it.", "Awaiting user input");
@@ -61,7 +68,7 @@ namespace DSPRE
             /* Check correct creation of temp NSBMD file*/
             if (!File.Exists(tempNSBMDPath))
             {
-                AppMessages.Error("Expected NSBMD file could not be found.\nAborting", "Error");
+                Fail("The NSBMD file wasn't found.", "Error");
                 return null;
             }
 
@@ -73,7 +80,7 @@ namespace DSPRE
             {
                 apicula.Dispose();
                 File.Delete(tempNSBMDPath);
-                DSUtils.ReportToolUnavailable("apicula");
+                Fail(DSUtils.ToolAvailabilityError("apicula"), "Tool unavailable");
                 return null;
             }
             apicula.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
@@ -97,7 +104,7 @@ namespace DSPRE
 
             if (apicula.ExitCode != 0)
             {
-                AppMessages.Error($"NSBMD to {(glb ? "GLB" : "DAE")} conversion failed.", "Apicula error");
+                Fail($"NSBMD to {(glb ? "GLB" : "DAE")} conversion failed.", "Apicula error");
                 return null;
             }
             if (!quiet)
