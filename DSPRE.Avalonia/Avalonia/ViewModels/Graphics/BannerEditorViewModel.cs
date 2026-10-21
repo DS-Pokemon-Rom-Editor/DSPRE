@@ -222,7 +222,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             try
             {
-                if (RomInfo.IsDsRomProject)
+                if (RomInfo.IsDsRomProject || Directory.Exists(RomInfo.BannerPath))
                 {
                     AvaloniaBitmap icon = File.Exists(GameBanner.DsRomBitmapPath)
                         ? new AvaloniaBitmap(GameBanner.DsRomBitmapPath)

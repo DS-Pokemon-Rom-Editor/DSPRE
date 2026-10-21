@@ -83,7 +83,7 @@ namespace DSPRE
 
         // ── ds-rom banner folder ─────────────────────────────────────────────────────
 
-        public static string DsRomBannerDir => Path.Combine(RomInfo.WorkDir, "banner");
+        public static string DsRomBannerDir => RomInfo.BannerPath;   // an hg-engine base project keeps it in base_dsrom/
         public static string DsRomBitmapPath => Path.Combine(DsRomBannerDir, "bitmap.png");
         public static string DsRomPalettePath => Path.Combine(DsRomBannerDir, "palette.png");
         public static string DsRomYamlPath => Path.Combine(DsRomBannerDir, "banner.yaml");
