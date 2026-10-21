@@ -75,9 +75,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// Reading every archive to see what is in it is real file work, so it does not happen here.
         /// The caller runs <see cref="Scan"/> off the UI thread and then <see cref="Publish"/> on it.
         /// </summary>
-        // The browser is where a texture missing from the tileset should stand out, so it draws those magenta.
-        static ModelBrowserViewModel() { NsbmdGeometry.ShowMissingTextures = true; }
-
         public ModelBrowserViewModel()
         {
             // Reads here run from the scan thread and the render as well, so they all see the pending entries.
@@ -840,12 +837,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 NSBMDModel model = nsbmd.Models[0];
                 float scale = model.ModelScale;
-                NsbmdRenderModel still = NsbmdGeometry.BuildModel(model);
+                NsbmdRenderModel still = NsbmdGeometry.BuildModel(model, showMissingTextures: true);
                 bool differs = false;
                 for (int f = 1; f < anim.FrameCount && !differs; f++)
                 {
                     NsbmdRenderModel at = NsbmdGeometry.BuildModel(model,
-                        (objectId, part) => anim.MatrixFor(objectId, f, part, scale), still);
+                        (objectId, part) => anim.MatrixFor(objectId, f, part, scale), still, showMissingTextures: true);
                     differs = Differs(still, at);
                 }
                 // Whose movement it is decides why nothing moved, and saying the wrong one of these is
@@ -954,15 +951,15 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (_movementJustPicked)
                 {
                     _movementJustPicked = false;
-                    _placeLike = NsbmdGeometry.BuildModel(nsbmd.Models[0]);
+                    _placeLike = NsbmdGeometry.BuildModel(nsbmd.Models[0], showMissingTextures: true);
                     CheckTheMovementDoesSomething(nsbmd, anim);
                 }
                 float scale = nsbmd.Models[0].ModelScale;
                 Model3D = anim == null
-                    ? NsbmdGeometry.BuildModel(nsbmd.Models[0])
+                    ? NsbmdGeometry.BuildModel(nsbmd.Models[0], showMissingTextures: true)
                     : NsbmdGeometry.BuildModel(nsbmd.Models[0],
                         (objectId, part) => anim.MatrixFor(objectId, _frame % Math.Max(1, anim.FrameCount), part, scale),
-                        _placeLike);
+                        _placeLike, showMissingTextures: true);
                 if (Model3D == null) { Whynot = "This model would not open."; return; }
 
                 if (!dressed && TextureChoices.Count > 1)

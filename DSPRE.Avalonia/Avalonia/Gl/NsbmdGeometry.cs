@@ -278,12 +278,13 @@ namespace DSPRE.Avalonia.Gl
         /// <summary>Builds a single model, centred/scaled to fit (for the standalone viewer).</summary>
         /// <summary>Builds one model on its own. A joint animation can be handed in to replace the parts'
         /// own matrices for a frame, which is what makes a door swing or a windmill turn.</summary>
+        /// <param name="showMissingTextures">Draws a magenta check for a texture missing from the tileset.</param>
         public static NsbmdRenderModel BuildModel(NSBMDModel model,
-            Func<int, NSBMDObject, float[]> jointMatrix = null, NsbmdRenderModel placeLike = null)
+            Func<int, NSBMDObject, float[]> jointMatrix = null, NsbmdRenderModel placeLike = null, bool showMissingTextures = false)
         {
             NsbmdRenderModel result = new NsbmdRenderModel();
             Dictionary<(int Material, int Node), List<float>> byNodeAndMat = new Dictionary<(int Material, int Node), List<float>>();
-            Accumulate(model, null, 0, result, null, jointMatrix, byNodeAndMat);
+            Accumulate(model, null, 0, result, null, jointMatrix, byNodeAndMat, showMissingTextures);
             Finalize(result, byNodeAndMat);
             NormalizePositions(result, placeLike);
             return result;
@@ -689,7 +690,7 @@ namespace DSPRE.Avalonia.Gl
         private static void Accumulate(NSBMDModel model, float[] sceneTransform, int matOffset,
             NsbmdRenderModel target, Dictionary<int, List<float>> byMat,
             Func<int, NSBMDObject, float[]> jointMatrix = null,
-            Dictionary<(int Material, int Node), List<float>> byNodeAndMat = null)
+            Dictionary<(int Material, int Node), List<float>> byNodeAndMat = null, bool showMissingTextures = false)
         {
             if (model == null || model.Polygons.Count == 0) return;
 
@@ -784,14 +785,12 @@ namespace DSPRE.Avalonia.Gl
                         NsbmdTextureData tex = NsbmdTextureDecoder.Decode(mat);
                         if (tex != null) target.Textures[key] = tex;
                         // The game draws these untextured; the magenta check is a Model Browser debugging aid.
-                        else if (mat.MissingExternalTexture && ShowMissingTextures) target.Textures[key] = MissingTexture();
+                        else if (mat.MissingExternalTexture && showMissingTextures) target.Textures[key] = MissingTexture();
                     }
                 }
             }
         }
 
-        /// <summary>Whether a material whose texture is not in the tileset is painted with a magenta check instead of flat.</summary>
-        public static bool ShowMissingTextures { get; set; }
 
         private static NsbmdTextureData MissingTexture()
         {
