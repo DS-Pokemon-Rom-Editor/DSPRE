@@ -42,22 +42,15 @@ namespace DSPRE.Avalonia.Views.World
             await vm.SetupAsync(this);
         }
 
-        private async void Import_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportAsync());
-        private async void Export_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportAsync(FormatOf(sender)));
-        private async void ExportAll_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportAllAsync(FormatOf(sender)));
+        private const string ErrorTitle = "Building editor error";
+        private async void Import_Click(object sender, RoutedEventArgs e)
+            => await DialogHelper.GuardAsync(() => VM?.ImportAsync() ?? Task.CompletedTask, "The model wasn't imported.", ErrorTitle, this);
+        private async void Export_Click(object sender, RoutedEventArgs e)
+            => await DialogHelper.GuardAsync(() => VM?.ExportAsync(FormatOf(sender)) ?? Task.CompletedTask, "The model wasn't exported.", ErrorTitle, this);
+        private async void ExportAll_Click(object sender, RoutedEventArgs e)
+            => await DialogHelper.GuardAsync(() => VM?.ExportAllAsync(FormatOf(sender)) ?? Task.CompletedTask, "The building models weren't exported.", ErrorTitle, this);
 
         private static BuildingEditorViewModel.ExportFormat FormatOf(object sender)
             => Enum.Parse<BuildingEditorViewModel.ExportFormat>((string)((Control)sender).Tag);
-
-        private static async Task SafeAsync(Task task)
-        {
-            if (task == null) return;
-            try { await task; }
-            catch (System.Exception ex)
-            {
-                CrashReporter.LogHandled(ex);
-                await DialogHelper.ShowErrorAsync(ex.Message);
-            }
-        }
     }
 }

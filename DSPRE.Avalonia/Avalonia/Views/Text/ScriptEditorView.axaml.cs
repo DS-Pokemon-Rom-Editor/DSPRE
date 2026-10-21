@@ -267,9 +267,9 @@ namespace DSPRE.Avalonia.Views.Text
             }
         }
 
-        private async void Save_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.SaveAsync());
-        private async void Import_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportAsync());
-        private async void Export_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportAsync());
+        private async void Save_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.SaveAsync() ?? Task.CompletedTask, "The script file wasn't saved.", ErrorTitle);
+        private async void Import_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ImportAsync() ?? Task.CompletedTask, "The script file wasn't imported.", ErrorTitle);
+        private async void Export_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ExportAsync() ?? Task.CompletedTask, "The script file wasn't exported.", ErrorTitle);
         private void Add_Click(object sender, RoutedEventArgs e) => VM?.AddScriptFile();
 
         private async void RemoveLast_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.RemoveLastScriptFileAsync(); }
@@ -308,7 +308,7 @@ namespace DSPRE.Avalonia.Views.Text
             if (e.Key != Key.S || (e.KeyModifiers & KeyModifiers.Control) == 0) return;
 
             e.Handled = true;
-            await SafeAsync(VM?.SaveAsync());
+            await DialogHelper.GuardAsync(() => VM?.SaveAsync() ?? Task.CompletedTask, "The script file wasn't saved.", ErrorTitle);
         }
 
         private async void RotomEditor_KeyDown(object sender, KeyEventArgs e)
@@ -737,12 +737,7 @@ namespace DSPRE.Avalonia.Views.Text
             RotomEditor.Focus();
         }
 
-        private static async Task SafeAsync(Task task)
-        {
-            if (task == null) return;
-            try { await task; }
-            catch (Exception ex) { AppLogger.Warn("Script editor async handler failed: " + ex.Message); }
-        }
+        private const string ErrorTitle = "Script editor error";
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {

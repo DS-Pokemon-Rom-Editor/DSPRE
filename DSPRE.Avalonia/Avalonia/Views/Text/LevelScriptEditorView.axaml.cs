@@ -48,25 +48,16 @@ namespace DSPRE.Avalonia.Views.Text
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
-        private async void Import_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportAsync());
-        private async void Export_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportAsync());
+        private async void Import_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ImportAsync() ?? Task.CompletedTask, "The level script wasn't imported.", ErrorTitle);
+        private async void Export_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ExportAsync() ?? Task.CompletedTask, "The level script wasn't exported.", ErrorTitle);
         private void ShowFile_Click(object sender, RoutedEventArgs e) => VM?.ShowFile();
         private void Add_Click(object sender, RoutedEventArgs e) => VM?.AddTrigger();
-        private async void AddFile_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.AddFileAsync());
-        private async void RemoveFile_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.RemoveLastFileAsync());
+        private async void AddFile_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.AddFileAsync() ?? Task.CompletedTask, "The level script file wasn't added.", ErrorTitle);
+        private async void RemoveFile_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.RemoveLastFileAsync() ?? Task.CompletedTask, "The level script file wasn't removed.", ErrorTitle);
         private void Remove_Click(object sender, RoutedEventArgs e) => VM?.RemoveTrigger();
         private void GoToScript_Click(object sender, RoutedEventArgs e) => VM?.GoToTriggerScript();
 
-        private static async Task SafeAsync(Task task)
-        {
-            if (task == null) return;
-            try { await task; }
-            catch (System.Exception ex)
-            {
-                CrashReporter.LogHandled(ex);
-                await DialogHelper.ShowErrorAsync(ex.Message);
-            }
-        }
+        private const string ErrorTitle = "Level script editor error";
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {

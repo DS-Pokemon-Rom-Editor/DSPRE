@@ -19,14 +19,10 @@ namespace DSPRE.Avalonia.Views.Pokemon
         {
             if (await DialogHelper.ConfirmDiscardAsync(this)) VM?.DiscardChanges();
         }
-        private async void Export_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportAsync());
-        private async void Import_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportAsync());
+        private async void Export_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ExportAsync() ?? Task.CompletedTask, "The Great Marsh encounters weren't exported.", ErrorTitle);
+        private async void Import_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ImportAsync() ?? Task.CompletedTask, "The Great Marsh encounters weren't imported.", ErrorTitle);
         private void Locate_Click(object sender, RoutedEventArgs e) => VM?.Locate();
 
-        private static async Task SafeAsync(Task task)
-        {
-            if (task == null) return;
-            try { await task; } catch { /* handled in VM */ }
-        }
+        private const string ErrorTitle = "Special encounters editor error";
     }
 }

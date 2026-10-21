@@ -14,18 +14,11 @@ namespace DSPRE.Avalonia.Views.Pokemon
             InitializeComponent();
         }
 
-        private async void Save_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.SaveAsync());
-        private async void SaveAs_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.SaveAsAsync());
-        private async void Import_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportAsync());
+        private async void Save_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.SaveAsync() ?? Task.CompletedTask, "The Safari Zone area wasn't saved.", ErrorTitle);
+        private async void SaveAs_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.SaveAsAsync() ?? Task.CompletedTask, "The Safari Zone area wasn't saved.", ErrorTitle);
+        private async void Import_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ImportAsync() ?? Task.CompletedTask, "The Safari Zone area wasn't imported.", ErrorTitle);
 
-        private static async Task SafeAsync(Task task)
-        {
-            if (task == null) return;
-            // The view models report their own failures; log anything that still gets this far so a
-            // handler that stops reporting leaves a trace instead of going quiet.
-            try { await task; }
-            catch (System.Exception ex) { AppLogger.Warn("Safari Zone editor handler failed: " + ex.Message); }
-        }
+        private const string ErrorTitle = "Special encounters editor error";
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {

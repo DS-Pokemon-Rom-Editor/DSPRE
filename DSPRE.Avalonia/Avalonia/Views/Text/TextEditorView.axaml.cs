@@ -108,12 +108,12 @@ namespace DSPRE.Avalonia.Views.Text
         // ── Archive toolbar ──────────────────────────────────────────────────
         private void AddArchive_Click(object sender, RoutedEventArgs e) => VM?.AddArchive();
         private async void RemoveArchive_Click(object sender, RoutedEventArgs e)
-            => await RunSafeAsync(() => VM?.RemoveArchiveAsync());
+            => await DialogHelper.GuardAsync(() => VM?.RemoveArchiveAsync() ?? Task.CompletedTask, "The text archive wasn't removed.", ErrorTitle);
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
         private async void Import_Click(object sender, RoutedEventArgs e)
-            => await RunSafeAsync(() => VM?.ImportAsync());
+            => await DialogHelper.GuardAsync(() => VM?.ImportAsync() ?? Task.CompletedTask, "The text archive wasn't imported.", ErrorTitle);
         private async void Export_Click(object sender, RoutedEventArgs e)
-            => await RunSafeAsync(() => VM?.ExportAsync());
+            => await DialogHelper.GuardAsync(() => VM?.ExportAsync() ?? Task.CompletedTask, "The text archive wasn't exported.", ErrorTitle);
 
         // ── Line controls ────────────────────────────────────────────────────
         private void AddString_Click(object sender, RoutedEventArgs e) => VM?.AddString();
@@ -124,7 +124,7 @@ namespace DSPRE.Avalonia.Views.Text
         // ── Search / replace ─────────────────────────────────────────────────
         private void Search_Click(object sender, RoutedEventArgs e) => VM?.Search();
         private async void Replace_Click(object sender, RoutedEventArgs e)
-            => await RunSafeAsync(() => VM?.ReplaceAsync());
+            => await DialogHelper.GuardAsync(() => VM?.ReplaceAsync() ?? Task.CompletedTask, "The replace didn't finish.", ErrorTitle);
 
         private void Search_KeyDown(object sender, KeyEventArgs e)
         {
@@ -146,15 +146,10 @@ namespace DSPRE.Avalonia.Views.Text
         private void SearchResult_DoubleTapped(object sender, TappedEventArgs e)
         {
             if (SearchResultsList.SelectedItem is not TextSearchResultVM r || VM == null) return;
-            _ = RunSafeAsync(() => VM.GoToResultAsync(r));
+            _ = DialogHelper.GuardAsync(() => VM.GoToResultAsync(r) ?? Task.CompletedTask, "The search result couldn't be opened.", ErrorTitle);
         }
 
-        private static async Task RunSafeAsync(System.Func<Task> action)
-        {
-            Task task = action?.Invoke();
-            if (task == null) return;
-            try { await task; } catch { /* errors handled inside the VM */ }
-        }
+        private const string ErrorTitle = "Text editor error";
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {

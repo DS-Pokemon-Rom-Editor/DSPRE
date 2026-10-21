@@ -40,7 +40,7 @@ namespace DSPRE.Avalonia.Views.Battle
             await vm.SetupAsync(this);
         }
 
-        private async void Save_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.SaveAsync());
+        private async void Save_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.SaveAsync() ?? Task.CompletedTask, "The trainer text wasn't saved.", ErrorTitle);
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
             if (await DialogHelper.ConfirmDiscardAsync(this)) VM?.DiscardChanges();
@@ -50,10 +50,6 @@ namespace DSPRE.Avalonia.Views.Battle
         private void EditTrigger_Click(object sender, RoutedEventArgs e) => VM?.EditTrigger();
         private void SaveMessage_Click(object sender, RoutedEventArgs e) => VM?.SaveMessage();
 
-        private static async Task SafeAsync(Task task)
-        {
-            if (task == null) return;
-            try { await task; } catch { /* handled in VM */ }
-        }
+        private const string ErrorTitle = "Battle message editor error";
     }
 }

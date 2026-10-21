@@ -140,22 +140,13 @@ namespace DSPRE.Avalonia.Views.World
         private void AddHeaders_Click(object sender, RoutedEventArgs e) => VM?.AddHeaderSection();
         private async void RemoveHeaders_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.RemoveHeaderSectionAsync(); }
         private async void RemoveHeights_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.RemoveHeightsSectionAsync(); }
-        private async void AddMatrix_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.AddMatrixAsync());
-        private async void RemoveMatrix_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.RemoveLastMatrixAsync());
+        private async void AddMatrix_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.AddMatrixAsync() ?? Task.CompletedTask, "The matrix wasn't added.", ErrorTitle);
+        private async void RemoveMatrix_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.RemoveLastMatrixAsync() ?? Task.CompletedTask, "The matrix wasn't removed.", ErrorTitle);
         private void AddHeights_Click(object sender, RoutedEventArgs e) => VM?.AddHeightsSection();
-        private async void Import_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportAsync());
-        private async void Export_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportAsync());
+        private async void Import_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ImportAsync() ?? Task.CompletedTask, "The matrix wasn't imported.", ErrorTitle);
+        private async void Export_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ExportAsync() ?? Task.CompletedTask, "The matrix wasn't exported.", ErrorTitle);
 
-        private static async Task SafeAsync(Task task)
-        {
-            if (task == null) return;
-            try { await task; }
-            catch (System.Exception ex)
-            {
-                CrashReporter.LogHandled(ex);
-                await DialogHelper.ShowErrorAsync(ex.Message);
-            }
-        }
+        private const string ErrorTitle = "Matrix editor error";
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {

@@ -67,7 +67,7 @@ namespace DSPRE.Avalonia.Views.Trainers
 
         private void AddTrainer_Click(object sender, RoutedEventArgs e) => VM?.AddTrainer();
         private async void RemoveTrainer_Click(object sender, RoutedEventArgs e)
-            => await SafeAsync(VM?.RemoveLastAddedTrainerAsync());
+            => await DialogHelper.GuardAsync(() => VM?.RemoveLastAddedTrainerAsync() ?? Task.CompletedTask, "The trainer wasn't removed.", ErrorTitle);
 
         private void BattleMessages_Click(object sender, RoutedEventArgs e)
         {
@@ -82,18 +82,14 @@ namespace DSPRE.Avalonia.Views.Trainers
             MainTabs.SelectedIndex = 1;
         }
 
-        private async void ExportTrainer_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportTrainerAsync());
-        private async void ImportTrainer_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportTrainerAsync());
-        private async void ExportProperties_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportPropertiesAsync());
-        private async void ImportProperties_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ReplacePropertiesAsync());
-        private async void ExportParty_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportPartyAsync());
-        private async void ImportParty_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportPartyAsync());
+        private async void ExportTrainer_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ExportTrainerAsync() ?? Task.CompletedTask, "The trainer wasn't exported.", ErrorTitle);
+        private async void ImportTrainer_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ImportTrainerAsync() ?? Task.CompletedTask, "The trainer wasn't imported.", ErrorTitle);
+        private async void ExportProperties_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ExportPropertiesAsync() ?? Task.CompletedTask, "The trainer properties weren't exported.", ErrorTitle);
+        private async void ImportProperties_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ReplacePropertiesAsync() ?? Task.CompletedTask, "The trainer properties weren't imported.", ErrorTitle);
+        private async void ExportParty_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ExportPartyAsync() ?? Task.CompletedTask, "The party wasn't exported.", ErrorTitle);
+        private async void ImportParty_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ImportPartyAsync() ?? Task.CompletedTask, "The party wasn't imported.", ErrorTitle);
 
-        private static async Task SafeAsync(Task task)
-        {
-            if (task == null) return;
-            try { await task; } catch { /* handled in VM */ }
-        }
+        private const string ErrorTitle = "Trainer editor error";
 
         private async void Search_Click(object sender, RoutedEventArgs e)
         {
@@ -106,7 +102,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         }
 
         private void PlaySprite_Click(object sender, RoutedEventArgs e) => VM?.TogglePlay();
-        private async void FindUses_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.FindUsesAsync());
+        private async void FindUses_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.FindUsesAsync() ?? Task.CompletedTask, "The search for uses didn't finish.", ErrorTitle);
 
         private void Use_DoubleTapped(object sender, global::Avalonia.Input.TappedEventArgs e)
         {

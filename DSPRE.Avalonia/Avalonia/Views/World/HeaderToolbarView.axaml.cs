@@ -25,15 +25,11 @@ namespace DSPRE.Avalonia.Views.World
         private void Copy_Click(object sender, RoutedEventArgs e) => VM?.Copy();
         private void Paste_Click(object sender, RoutedEventArgs e) => VM?.Paste();
         private void Search_Click(object sender, RoutedEventArgs e) => AvaloniaEditorLauncher.OpenHeaderSearch();
-        private async void Import_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportAsync());
-        private async void Export_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportAsync());
-        private async void AddHeader_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.AddHeaderAsync());
-        private async void RemoveHeader_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.RemoveHeaderAsync());
+        private async void Import_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ImportAsync() ?? Task.CompletedTask, "The header wasn't imported.", ErrorTitle);
+        private async void Export_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ExportAsync() ?? Task.CompletedTask, "The header wasn't exported.", ErrorTitle);
+        private async void AddHeader_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.AddHeaderAsync() ?? Task.CompletedTask, "The header wasn't added.", ErrorTitle);
+        private async void RemoveHeader_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.RemoveHeaderAsync() ?? Task.CompletedTask, "The header wasn't removed.", ErrorTitle);
 
-        private static async Task SafeAsync(Task task)
-        {
-            if (task == null) return;
-            try { await task; } catch { /* handled in VM */ }
-        }
+        private const string ErrorTitle = "Header editor error";
     }
 }

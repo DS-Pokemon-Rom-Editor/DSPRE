@@ -302,17 +302,17 @@ namespace DSPRE.Avalonia.Views.World
             if (vm.ReviewImport(permissionsBefore, fromModelWindow: false) is MapImportReviewViewModel review)
                 await new MapImportReviewView(review).ShowDialog(owner);
         }
-        private async void Export_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportAsync());
+        private async void Export_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ExportAsync() ?? Task.CompletedTask, "The map wasn't exported.", ErrorTitle);
         private void AddMap_Click(object sender, RoutedEventArgs e) => VM?.AddMapFile();
-        private async void RemMap_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.RemoveLastMapFileAsync());
+        private async void RemMap_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.RemoveLastMapFileAsync() ?? Task.CompletedTask, "The map file wasn't removed.", ErrorTitle);
         private void AddBuilding_Click(object sender, RoutedEventArgs e) => VM?.AddBuilding();
         private void RemoveBuilding_Click(object sender, RoutedEventArgs e) => VM?.RemoveBuilding();
         private void DupBuilding_Click(object sender, RoutedEventArgs e) => VM?.DuplicateBuilding();
-        private async void ImportBuildings_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportBuildingsAsync());
-        private async void ExportBuildings_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportBuildingsAsync());
+        private async void ImportBuildings_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ImportBuildingsAsync() ?? Task.CompletedTask, "The buildings weren't imported.", ErrorTitle);
+        private async void ExportBuildings_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ExportBuildingsAsync() ?? Task.CompletedTask, "The buildings weren't exported.", ErrorTitle);
 
-        private async void ExportNsbmd_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportNsbmdAsync());
-        private async void ExportTexturedNsbmd_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportTexturedNsbmdAsync());
+        private async void ExportNsbmd_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ExportNsbmdAsync() ?? Task.CompletedTask, "The map model wasn't exported.", ErrorTitle);
+        private async void ExportTexturedNsbmd_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ExportTexturedNsbmdAsync() ?? Task.CompletedTask, "The textured map model wasn't exported.", ErrorTitle);
         private void ShowMapFile_Click(object sender, RoutedEventArgs e) => VM?.ShowMapFile();
         private void ClearLayer_Click(object sender, RoutedEventArgs e)
         {
@@ -326,13 +326,13 @@ namespace DSPRE.Avalonia.Views.World
                 SaveNotice.Exported);
         private void ExportDae_Click(object sender, RoutedEventArgs e) => VM?.ExportDae();
         private void ExportGlb_Click(object sender, RoutedEventArgs e) => VM?.ExportGlb();
-        private async void ImportTerrain_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportTerrainAsync());
-        private async void ExportTerrain_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportTerrainAsync());
-        private async void ImportSound_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportSoundAsync());
-        private async void ExportSound_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportSoundAsync());
+        private async void ImportTerrain_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ImportTerrainAsync() ?? Task.CompletedTask, "The terrain wasn't imported.", ErrorTitle);
+        private async void ExportTerrain_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ExportTerrainAsync() ?? Task.CompletedTask, "The terrain wasn't exported.", ErrorTitle);
+        private async void ImportSound_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ImportSoundAsync() ?? Task.CompletedTask, "The sound data wasn't imported.", ErrorTitle);
+        private async void ExportSound_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ExportSoundAsync() ?? Task.CompletedTask, "The sound data wasn't exported.", ErrorTitle);
         private void BlankSound_Click(object sender, RoutedEventArgs e) => VM?.BlankSound();
-        private async void ImportPerms_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportPermissionsAsync());
-        private async void ExportPerms_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportPermissionsAsync());
+        private async void ImportPerms_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ImportPermissionsAsync() ?? Task.CompletedTask, "The permissions weren't imported.", ErrorTitle);
+        private async void ExportPerms_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ExportPermissionsAsync() ?? Task.CompletedTask, "The permissions weren't exported.", ErrorTitle);
 
         private async void ScanTypes_Click(object sender, RoutedEventArgs e)
         {
@@ -343,10 +343,6 @@ namespace DSPRE.Avalonia.Views.World
             await DialogHelper.ShowInfoAsync($"Used types across all maps (copied to clipboard):\n\n{report}", "Used collision types");
         }
 
-        private static async Task SafeAsync(Task task)
-        {
-            if (task == null) return;
-            try { await task; } catch { /* handled in VM */ }
-        }
+        private const string ErrorTitle = "Map editor error";
     }
 }

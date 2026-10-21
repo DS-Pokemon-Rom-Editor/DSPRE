@@ -73,7 +73,7 @@ namespace DSPRE.Avalonia.Views.World
 
         // ── Toolbar handlers ─────────────────────────────────────────────────
         private async void SaveTable_Click(object sender, RoutedEventArgs e)
-            => await RunSafeAsync(() => VM?.SaveAsync());
+            => await DialogHelper.GuardAsync(() => VM?.SaveAsync() ?? Task.CompletedTask, "The camera table wasn't saved.", ErrorTitle);
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
@@ -81,24 +81,20 @@ namespace DSPRE.Avalonia.Views.World
         }
 
         private async void ExportTable_Click(object sender, RoutedEventArgs e)
-            => await RunSafeAsync(() => VM?.ExportTableAsync());
+            => await DialogHelper.GuardAsync(() => VM?.ExportTableAsync() ?? Task.CompletedTask, "The camera table wasn't exported.", ErrorTitle);
 
         private async void ImportTable_Click(object sender, RoutedEventArgs e)
-            => await RunSafeAsync(() => VM?.ImportTableAsync());
+            => await DialogHelper.GuardAsync(() => VM?.ImportTableAsync() ?? Task.CompletedTask, "The camera table wasn't imported.", ErrorTitle);
 
         private async void Rename_Click(object sender, RoutedEventArgs e)
-            => await RunSafeAsync(() => VM?.RenameSelectedAsync());
+            => await DialogHelper.GuardAsync(() => VM?.RenameSelectedAsync() ?? Task.CompletedTask, "The camera wasn't renamed.", ErrorTitle);
 
         private async void ExportCamera_Click(object sender, RoutedEventArgs e)
-            => await RunSafeAsync(() => VM?.ExportCameraAsync());
+            => await DialogHelper.GuardAsync(() => VM?.ExportCameraAsync() ?? Task.CompletedTask, "The camera wasn't exported.", ErrorTitle);
 
         private async void ImportCamera_Click(object sender, RoutedEventArgs e)
-            => await RunSafeAsync(() => VM?.ImportCameraAsync());
+            => await DialogHelper.GuardAsync(() => VM?.ImportCameraAsync() ?? Task.CompletedTask, "The camera wasn't imported.", ErrorTitle);
 
-        private static async Task RunSafeAsync(System.Func<Task> action)
-        {
-            if (action == null) return;
-            try { await action(); } catch { /* errors handled inside the VM */ }
-        }
+        private const string ErrorTitle = "Camera editor error";
     }
 }

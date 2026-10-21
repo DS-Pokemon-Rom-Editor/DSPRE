@@ -32,8 +32,8 @@ namespace DSPRE.Avalonia.Views.Graphics
             await vm.SetupAsync(this);
         }
 
-        private async void Import_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ImportAsync());
-        private async void Export_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportAsync());
+        private async void Import_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ImportAsync() ?? Task.CompletedTask, "The textures weren't imported.", ErrorTitle);
+        private async void Export_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ExportAsync() ?? Task.CompletedTask, "The textures weren't exported.", ErrorTitle);
         private void ShowFile_Click(object sender, RoutedEventArgs e) => VM?.ShowFile();
 
         // ── Preview zoom: fitted until the wheel turns, then whole-pixel steps; dragging pans ─────────────
@@ -88,17 +88,8 @@ namespace DSPRE.Avalonia.Views.Graphics
             e.Pointer.Capture(null);
         }
         private void AddPack_Click(object sender, RoutedEventArgs e) => VM?.AddPack();
-        private async void RemPack_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.RemoveLastPackAsync());
+        private async void RemPack_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.RemoveLastPackAsync() ?? Task.CompletedTask, "The texture pack wasn't removed.", ErrorTitle);
 
-        private static async Task SafeAsync(Task task)
-        {
-            if (task == null) return;
-            try { await task; }
-            catch (System.Exception ex)
-            {
-                CrashReporter.LogHandled(ex);
-                await DialogHelper.ShowErrorAsync(ex.Message);
-            }
-        }
+        private const string ErrorTitle = "Map & building textures error";
     }
 }

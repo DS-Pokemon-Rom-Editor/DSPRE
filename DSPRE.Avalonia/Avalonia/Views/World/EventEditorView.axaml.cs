@@ -347,8 +347,8 @@ namespace DSPRE.Avalonia.Views.World
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
         private async void Import_Click(object sender, RoutedEventArgs e) =>
-            await SafeAsync(VM?.ImportAsync(source => EventImportDialog.ShowAsync(source, TopLevel.GetTopLevel(this) as Window)));
-        private async void Export_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.ExportAsync());
+            await DialogHelper.GuardAsync(() => VM?.ImportAsync(source => EventImportDialog.ShowAsync(source, TopLevel.GetTopLevel(this) as Window)) ?? Task.CompletedTask, "The events weren't imported.", ErrorTitle);
+        private async void Export_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ExportAsync() ?? Task.CompletedTask, "The event file wasn't exported.", ErrorTitle);
 
         private async void ManageGroundItems_Click(object sender, RoutedEventArgs e)
         {
@@ -456,17 +456,8 @@ namespace DSPRE.Avalonia.Views.World
         private void RemoveSpawn_Click(object sender, RoutedEventArgs e) => VM?.RemoveSpawnable();
         private void DupSpawn_Click(object sender, RoutedEventArgs e) => VM?.DuplicateSpawnable();
         private void AddFile_Click(object sender, RoutedEventArgs e) => VM?.AddEventFile();
-        private async void RemFile_Click(object sender, RoutedEventArgs e) => await SafeAsync(VM?.RemoveLastEventFileAsync());
+        private async void RemFile_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.RemoveLastEventFileAsync() ?? Task.CompletedTask, "The event file wasn't removed.", ErrorTitle);
 
-        private static async Task SafeAsync(Task task)
-        {
-            if (task == null) return;
-            try { await task; }
-            catch (System.Exception ex)
-            {
-                CrashReporter.LogHandled(ex);
-                await DialogHelper.ShowErrorAsync(ex.Message);
-            }
-        }
+        private const string ErrorTitle = "Event editor error";
     }
 }
