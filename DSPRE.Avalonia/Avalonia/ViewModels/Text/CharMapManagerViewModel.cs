@@ -267,12 +267,12 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 if (!proceed) return;
             }
 
-            // Ask for merge strategy via a simple picker dialog
-            MergeStrategy strategy = await AskMergeStrategyAsync();
+            MergeStrategy? strategy = await AskMergeStrategyAsync();
+            if (strategy == null) return;
 
             try
             {
-                MergeResult result = CharMapManager.MergeCustomWithDefault(strategy);
+                MergeResult result = CharMapManager.MergeCustomWithDefault(strategy.Value);
                 _currentMap = result.MergedMap;
                 PopulateListsFromMap();
                 SetDirty(true);
@@ -401,21 +401,21 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
         }
 
-        private async Task<MergeStrategy> AskMergeStrategyAsync()
+        // Null when the user cancels. Four answers do not fit one dialog, so replacing is asked first.
+        private static async Task<MergeStrategy?> AskMergeStrategyAsync()
         {
-            // Simple info+choice dialog: three options presented as a message
-            string message =
-                "Select merge strategy for conflicting entries:\n\n" +
-                "1 = Prefer Custom  (keep your custom chars, merge aliases)\n" +
-                "2 = Prefer Base    (keep default chars, add your custom aliases)\n" +
-                "3 = Replace Base   (use only your custom chars and aliases)\n\n" +
-                "Reply Yes for option 1 (Prefer Custom), No for option 2 (Prefer Base).\n" +
-                "(Cancel to use Replace Base)";
+            DialogHelper.MsgResult mode = await DialogHelper.AskThreeWayAsync(
+                "Merge your custom map with the built-in one, or replace the built-in map with only your characters and aliases?",
+                "Rebase charmap", "Merge", "Replace");
+            if (mode == DialogHelper.MsgResult.Cancel) return null;
+            if (mode == DialogHelper.MsgResult.No) return MergeStrategy.ReplaceBase;
 
-            DialogHelper.MsgResult r = await DialogHelper.AskYesNoCancelAsync(message, "Merge strategy");
-            return r == DialogHelper.MsgResult.Yes   ? MergeStrategy.PreferCustom
-                 : r == DialogHelper.MsgResult.No    ? MergeStrategy.PreferBase
-                 : MergeStrategy.ReplaceBase;
+            DialogHelper.MsgResult keep = await DialogHelper.AskThreeWayAsync(
+                "When both maps define a code, keep which character? Aliases from both are kept.",
+                "Rebase charmap", "Custom", "Built-in");
+            return keep == DialogHelper.MsgResult.Yes ? MergeStrategy.PreferCustom
+                 : keep == DialogHelper.MsgResult.No  ? MergeStrategy.PreferBase
+                 : (MergeStrategy?)null;
         }
     }
 }

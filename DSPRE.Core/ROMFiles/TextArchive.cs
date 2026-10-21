@@ -54,6 +54,23 @@ namespace DSPRE.ROMFiles
                 return;
             }
 
+            if (File.Exists(jsonPath))
+            {
+                // Decoding the .bin below writes over the JSON, so a hand edit that doesn't parse is kept aside.
+                string kept = jsonPath + ".unreadable";
+                try
+                {
+                    PlainFiles.Copy(jsonPath, kept, overwrite: true);
+                    AppMessages.Error($"Text archive {ID:D4}'s JSON could not be read, so it was read from the .bin again. "
+                        + $"The JSON was kept as {Path.GetFileName(kept)}.", "Text archive");
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                {
+                    AppMessages.Error($"Text archive {ID:D4}'s JSON could not be read or kept aside ({ex.Message}). "
+                        + "It is being replaced from the .bin.", "Text archive");
+                }
+            }
+
             // Next try to read from legacy plain text file if it exists
             if (TryReadPlainTextFile(jsonPath))
             {

@@ -287,7 +287,16 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 StartUndo();
                 StatusText = $"Script {index} is not a level script (empty). Add a trigger to make it one.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Failed to load level script {index}:\n{ex.Message}", "Level script editor error"); }
+            catch (Exception ex)
+            {
+                // The previous file must not stay loaded under this number, or Save would write it here.
+                _file = null;
+                RefreshTriggers();
+                SetClean();
+                StartUndo();
+                StatusText = $"Level script {index} could not be read.";
+                _ = DialogHelper.ShowErrorAsync($"Failed to load level script {index}:\n{ex.Message}", "Level script editor error");
+            }
         }
 
         private void RefreshTriggers()

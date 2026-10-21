@@ -271,6 +271,9 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 new TextArchive(id, new List<string>(now)).SaveToExpandedDir(id, showSuccessMessage: false, sender: this);
                 (string binPath, string jsonPath) = TextArchive.GetFilePaths(id);
                 TextConverter.JSONToBin(jsonPath, binPath, CharMapManager.GetCharMapPath());
+                // JSONToBin drops chatot's warnings; a JSON newer than its .bin is encoded again, with them, by the ROM build.
+                try { File.SetLastWriteTimeUtc(jsonPath, DateTime.UtcNow.AddSeconds(2)); }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { AppLogger.Warn($"Text archive {id}: {ex.Message}"); }
             }
             _removedArchives.Clear();
             _addedArchives.Clear();
@@ -456,15 +459,15 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     "There are unsaved changes to the currently loaded Text Archive.\nDo you want to save them?",
                     "Unsaved changes");
 
-                if (r == DialogHelper.MsgResult.Cancel)
+                if (r == DialogHelper.MsgResult.Yes) await SaveAsync();
+                // A cancel, or a save that didn't go through, stays on the archive that holds the edits.
+                if (r == DialogHelper.MsgResult.Cancel || (r == DialogHelper.MsgResult.Yes && _dirty))
                 {
                     _isLoading = true;
                     SelectedArchiveIndex = _current.ID;
                     _isLoading = false;
                     return;
                 }
-                if (r == DialogHelper.MsgResult.Yes)
-                    Save();
             }
 
             LoadArchive(index);
@@ -703,12 +706,21 @@ namespace DSPRE.Avalonia.ViewModels.Text
             StatusText = HasUnsavedChanges ? "Opened the archive as last saved." : "Opened the archive.";
         }
 
-        public void Save()
+        public void Save() => _ = SaveAsync();
+
+        async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
+        {
+            await SaveAsync();
+            return !HasUnsavedChanges;
+        }
+
+        /// <summary>Completes once the archive is written, hg-engine source writes included.</summary>
+        public async Task SaveAsync()
         {
             if (_current == null) return;
-            if (_managedSource != null) { _ = SaveToHgEngineSourceAsync(); return; }
-            if (_fieldSource?.IsMain == true) { _ = SaveToGeneratedFieldAsync(); return; }
-            if (_generatedSource != null) { _ = RefusedForManagedArchiveAsync("Saving"); return; }
+            if (_managedSource != null) { await SaveToHgEngineSourceAsync(); return; }
+            if (_fieldSource?.IsMain == true) { await SaveToGeneratedFieldAsync(); return; }
+            if (_generatedSource != null) { await RefusedForManagedArchiveAsync("Saving"); return; }
 
             if (!_addedArchives.ContainsKey(_current.ID))
                 _current.SaveToExpandedDir(_current.ID, showSuccessMessage: false, sender: this);
@@ -971,8 +983,21 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 return true;
             }
 
-            List<int> edited = DSUtils.ReplaceTextInArchives(
-                new[] { (SearchText, ReplaceText ?? "", CaseSensitive) }, first, last, OwnedByHgEngine, this);
+            List<int> edited;
+            try
+            {
+                edited = DSUtils.ReplaceTextInArchives(
+                    new[] { (SearchText, ReplaceText ?? "", CaseSensitive) }, first, last, OwnedByHgEngine, this);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                // Archives before the failure are already rewritten, so the shown one is read again either way.
+                if (SelectedArchiveIndex >= 0) LoadArchive(SelectedArchiveIndex);
+                AppEvents.RaiseNamesChanged();
+                StatusText = "Replace stopped partway.";
+                await DialogHelper.ShowErrorAsync($"Replace stopped partway; text banks before the failure were already changed:\n{ex.Message}", "Text editor error");
+                return;
+            }
             foreach (int cur in edited)
                 SearchResults.Add(new TextSearchResultVM(cur, 0, $"Text archive ({cur}) - Successfully edited"));
 
