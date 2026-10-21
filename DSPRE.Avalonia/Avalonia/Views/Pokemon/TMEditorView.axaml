@@ -59,7 +59,7 @@
 				<!-- Move selector -->
 				<Label Content="Move"/>
 				<controls:FusionAutoCompleteBox controls:EditorLink.To="Move" ItemsSource="{Binding MoveNames}"
-						  SelectedIndex="{Binding SelectedMoveIndex}"
+						  SelectedIndex="{Binding SelectedMoveIndex}" AllowsNone="False"
 						  HorizontalAlignment="Stretch"/>
 
 				<!-- Auto-Palette (single) -->

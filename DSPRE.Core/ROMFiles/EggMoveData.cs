@@ -166,10 +166,7 @@ namespace DSPRE
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                AppLogger.Error($"EggMoveData.ReadFromRom failed: {ex.Message}");
-            }
+            // A failed read throws: callers saving back an empty table would wipe every list.
             finally
             {
                 reader?.Close();

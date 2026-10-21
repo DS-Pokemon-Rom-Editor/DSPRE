@@ -447,7 +447,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     + "\n\nSave anyway?", "Wild Pokémon editor")) return;
             WriteWalkingRowsToFile();
             WriteWaterRowsToFile();
-            _archive.Save(_selectedEncounterIndex, _current.ToByteArray());
+            try { _archive.Save(_selectedEncounterIndex, _current.ToByteArray()); }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                await DialogHelper.ShowErrorAsync("The encounter files could not be saved:" + Environment.NewLine + ex.Message, "Wild Pokémon editor");
+                StagedChanged();
+                return;
+            }
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
             _history.MarkSaved();
@@ -723,7 +729,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (!await DialogHelper.AskYesNoAsync("Open every encounter file and reset corrupted fields to their defaults?", "Repair all encounter files?")) return;
             int n = _archive.Count;
             for (int i = 0; i < n; i++)
-                _archive.Put(i, new EncounterFileDPPt(new MemoryStream(_archive.Read(i))).ToByteArray());
+            {
+                // The shown file is repaired from its unsaved edits, so they are kept.
+                byte[] source = i == _selectedEncounterIndex && _current != null ? _current.ToByteArray() : _archive.Read(i);
+                _archive.Put(i, new EncounterFileDPPt(new MemoryStream(source)).ToByteArray());
+            }
             LoadFile(_selectedEncounterIndex);
             StagedChanged();
         }
@@ -764,7 +774,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // Form data
             _current.FormRates[0] = EastWest(_shellosFormIndex, _shellosRaw);
             _current.FormRates[1] = EastWest(_gastrodonFormIndex, _gastrodonRaw);
-            _current.UnownTable     = (uint)_unownTableIndex;
+            // A table the list can't show keeps its stored value; picking one in the list writes it straight away.
+            if (_current.UnownTable < (uint)UnownTableNames.Count) _current.UnownTable = (uint)_unownTableIndex;
         }
 
         private void WriteWaterRowsToFile()

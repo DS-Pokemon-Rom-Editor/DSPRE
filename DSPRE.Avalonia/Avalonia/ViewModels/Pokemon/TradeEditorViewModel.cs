@@ -356,6 +356,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task ChangeTradeIDAsync(int newID)
         {
             if (_loading) return;
+            // A cancel puts the spinner back on the shown trade, which lands here again.
+            if (_cur != null && newID == _cur.Id) return;
             if (_tradeDirty || _textDirty)
             {
                 DialogHelper.MsgResult result = await DialogHelper.AskYesNoCancelAsync(

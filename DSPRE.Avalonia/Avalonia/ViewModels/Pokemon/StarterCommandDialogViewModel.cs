@@ -41,10 +41,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         private int _fileId;
-        public int FileId { get => _fileId; set => Set(ref _fileId, value); }
+        // A different file or script than the one checked needs checking again.
+        public int FileId { get => _fileId; set { if (Set(ref _fileId, value)) { _verified = null; VerdictText = null; } } }
 
         private string _container = "";
-        public string ContainerName { get => _container; set => Set(ref _container, value); }
+        public string ContainerName { get => _container; set { if (Set(ref _container, value)) { _verified = null; VerdictText = null; } } }
 
         private string _verdict;
         public string VerdictText { get => _verdict; private set { Set(ref _verdict, value); OnPropertyChanged(nameof(HasVerdict)); } }

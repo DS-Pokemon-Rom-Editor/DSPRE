@@ -321,7 +321,7 @@ namespace DSPRE.Avalonia.Views.World
                 WildEditorHGSSViewModel hgss => hgss.SelectedEncounterIndex,
                 _ => -1,
             };
-            if (_encountersVm is IEditorWithUnsavedChanges enc && enc.HasUnsavedChanges && h.WildPokemon != ushort.MaxValue && wild != h.WildPokemon)
+            if (_encountersVm is IEditorWithUnsavedChanges enc && enc.HasUnsavedChanges && h.WildPokemon != (VM?.NoEncountersId ?? ushort.MaxValue) && wild != h.WildPokemon)
                 yield return (enc, "encounter file");
         }
 

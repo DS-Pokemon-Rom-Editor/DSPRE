@@ -168,12 +168,20 @@ namespace DSPRE.ROMFiles
         public uint[] FormRates = new uint[5];
         public uint UnownTable = 0;
 
+        // The writer starts from these, so bytes it does not model (an unused table, slot padding) survive a save.
+        private readonly byte[] _original;
+
         #endregion
 
         #region Constructors (1)
         public EncounterFileDPPt(Stream data)
         {
-            using (BinaryReader reader = new BinaryReader(data))
+            using (MemoryStream copy = new MemoryStream())
+            {
+                using (data) data.CopyTo(copy);
+                _original = copy.ToArray();
+            }
+            using (BinaryReader reader = new BinaryReader(new MemoryStream(_original)))
             {
                 List<string> fieldsWithErrors = new List<string>();
 
@@ -444,6 +452,7 @@ namespace DSPRE.ROMFiles
         public override byte[] ToByteArray()
         {
             MemoryStream newData = new MemoryStream();
+            if (_original != null) { newData.Write(_original, 0, _original.Length); newData.Position = 0; }
             using (BinaryWriter writer = new BinaryWriter(newData))
             {
                 writer.Write((uint)WalkingRate);

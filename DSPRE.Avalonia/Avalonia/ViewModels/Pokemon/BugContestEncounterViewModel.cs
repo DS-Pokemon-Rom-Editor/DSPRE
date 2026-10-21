@@ -163,7 +163,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             LoadFile(() => new BugContestEncounterFile(true));
         }
 
-        private void LoadFile(Func<BugContestEncounterFile> factory, bool newHistory = true)
+        /// <summary>False when the file couldn't be read; the error has been shown.</summary>
+        private bool LoadFile(Func<BugContestEncounterFile> factory, bool newHistory = true)
         {
             try
             {
@@ -177,10 +178,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (SetNames.Count > 0) SelectedSetIndex = 0;
                 SetClean();
                 if (newHistory || _undo == null) ResetUndo();
+                return true;
             }
             catch (Exception ex)
             {
                 _ = DialogHelper.ShowErrorAsync($"Error loading Bug Contest encounters: {ex.Message}", "Special encounters editor error");
+                return false;
             }
         }
 
@@ -284,7 +287,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string path = await DialogHelper.SaveFileAsync(_owner, "Export Bug Contest encounters",
                 new[] { filter }, "mushi_encount.bin");
             if (path == null) return;
-            try { _file.SaveToFile(path, showSuccessMessage: false); SaveNotice.Exported(path); }
+            try { PlainFiles.WriteBytes(path, _file.ToByteArray()); SaveNotice.Exported(path); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
                 await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Special encounters editor error");
@@ -300,7 +303,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try
             {
                 // An import is one undoable step over what was shown.
-                LoadFile(() => new BugContestEncounterFile(path), newHistory: false);
+                if (!LoadFile(() => new BugContestEncounterFile(path), newHistory: false)) return;
                 Edited();
                 SaveNotice.Imported("Bug Contest encounters", path);
             }

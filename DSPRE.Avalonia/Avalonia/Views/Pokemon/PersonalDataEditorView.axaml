@@ -84,10 +84,10 @@
               <GroupBox Grid.Column="2" Header="Held items">
                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,2,Auto,8,Auto,2,Auto,8,Auto" Margin="4">
                   <TextBlock Grid.Row="0" Grid.Column="0" Text="Item 1" Classes="label"/>
-                  <controls:FusionAutoCompleteBox controls:EditorLink.To="Item"  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item1Index}"/>
+                  <controls:FusionAutoCompleteBox controls:EditorLink.To="Item"  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item1Index}" AllowsNone="False"/>
                   <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Item1Odds}" Classes="subtle" IsVisible="{Binding HasHeldItemOdds}"/>
                   <TextBlock Grid.Row="4" Grid.Column="0" Text="Item 2" Classes="label"/>
-                  <controls:FusionAutoCompleteBox controls:EditorLink.To="Item"  Grid.Row="4" Grid.Column="1" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item2Index}"/>
+                  <controls:FusionAutoCompleteBox controls:EditorLink.To="Item"  Grid.Row="4" Grid.Column="1" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item2Index}" AllowsNone="False"/>
                   <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding Item2Odds}" Classes="subtle" IsVisible="{Binding HasHeldItemOdds}"/>
                   <Button Grid.Row="8" Grid.Column="1" Content="Wild held items" controls:Icon.Key="OpenLink" HorizontalAlignment="Left"
                           Click="WildHeldItems_Click" IsVisible="{Binding CanOpenWildHeldItems}"
@@ -136,7 +136,7 @@
                 <ComboBox  Grid.Row="0" Grid.Column="3" ItemsSource="{Binding EggGroupNames}" SelectedIndex="{Binding EggGroup2Index}"/>
                 <TextBlock Grid.Row="2" Grid.Column="0" Text="Hatch result" Classes="label" IsVisible="{Binding !ShowHgEngineExtras}"
                            ToolTip.Tip="Babies that need an incense are set in Pokémon > Breeding Items"/>
-                <controls:FusionAutoCompleteBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding HatchResultIndex}" IsVisible="{Binding !ShowHgEngineExtras}"/>
+                <controls:FusionAutoCompleteBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding HatchResultIndex}" AllowsNone="False" IsVisible="{Binding !ShowHgEngineExtras}"/>
                 <TextBlock Grid.Row="2" Grid.Column="2" Text="Egg steps"    Classes="label" Margin="12,0,6,0"/>
                 <NumericUpDown Grid.Row="2" Grid.Column="3" Value="{Binding EggSteps}" Minimum="0" Maximum="255"/>
               </Grid>

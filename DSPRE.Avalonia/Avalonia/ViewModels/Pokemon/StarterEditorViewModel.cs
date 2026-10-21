@@ -382,6 +382,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (RomInfo.StarterHeldItemScriptFileID >= 0) touchedScripts.Add(RomInfo.StarterHeldItemScriptFileID);
             }
 
+            Snapshot before = _saved;
             MarkClean();
             _dirty = false;
             SaveNotice.Saved(UnsavedChangesDescription);
@@ -393,7 +394,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // The species bytes above are already on disk. What is left shells out to rotom, and
             // awaiting it here would freeze the app: SaveChanges runs straight off a Click handler.
             if ((touchedScripts.Count > 0 && RomInfo.HasRotomProject) || throughTheScript)
-                _ = FinishSavingAsync(touchedScripts, throughTheScript);
+                _ = FinishSavingAsync(touchedScripts, throughTheScript, before);
         }
 
         /// <summary>
@@ -402,7 +403,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// overwrite each other. Both shell out to rotom, so this stays off the UI thread.
         /// </summary>
         private async System.Threading.Tasks.Task FinishSavingAsync(
-            System.Collections.Generic.List<int> touchedScripts, bool throughTheScript)
+            System.Collections.Generic.List<int> touchedScripts, bool throughTheScript, Snapshot before)
         {
             IsBusy = true;
             try
@@ -410,7 +411,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (throughTheScript)
                 {
                     BusyText = "Saving the script…";
-                    await SaveThroughTheScriptAsync();
+                    if (!await SaveThroughTheScriptAsync() && before != null)
+                    {
+                        // The level and item are still the old ones on disk, so they count as unsaved again.
+                        _saved = _saved with { HeldItem = before.HeldItem, Level = before.Level };
+                        _dirty = !Equals(TakeSnapshot(), _saved);
+                        OnPropertyChanged(nameof(HasUnsavedChanges));
+                    }
                 }
                 if (touchedScripts.Count > 0 && RomInfo.HasRotomProject)
                 {
@@ -430,7 +437,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// Rewrites the give command's level and held item and compiles, which is what the Script
         /// Editor's own Save does. Reports what went wrong rather than leaving it silent.
         /// </summary>
-        private async System.Threading.Tasks.Task SaveThroughTheScriptAsync()
+        private async System.Threading.Tasks.Task<bool> SaveThroughTheScriptAsync()
         {
             StarterRotomSource.Match command = _command;
             int item = HeldItem;
@@ -441,12 +448,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try
             {
                 string failure = await StarterRotomSource.SaveAsync(command, level, itemName, item);
-                if (failure != null) AppMessages.Error(failure, "Starter Pokémon editor");
+                if (failure == null) return true;
+                AppMessages.Error(failure, "Starter Pokémon editor");
             }
             catch (Exception ex)
             {
                 AppMessages.Error("The script could not be saved: " + ex.Message, "Starter Pokémon editor");
             }
+            return false;
         }
 
         private void MarkDirty()

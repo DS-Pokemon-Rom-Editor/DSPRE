@@ -552,8 +552,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public void CopyMachinesTo(int sourceId, IEnumerable<int> targetIds)
         {
-            SortedSet<int> sourceSet = new SortedSet<int>(_compat[sourceId]);
-            List<int> targets = targetIds.Where(id => id != sourceId).ToList();
+            // The dialog lists every species name, which on DP is more than there are data files.
+            if (!_compat.TryGetValue(sourceId, out SortedSet<int> source))
+            {
+                UpdateStatus("Pick a Pokémon that has TM/HM data to copy from.");
+                return;
+            }
+            SortedSet<int> sourceSet = new SortedSet<int>(source);
+            List<int> targets = targetIds.Where(id => id != sourceId && _compat.ContainsKey(id)).ToList();
             foreach (int id in targets) SetRows(id, sourceSet);
             AfterBulkFamilyChange($"Copied TM/HM compatibility from {SpeciesLabel(sourceId)} to {targets.Count} Pokémon.");
         }

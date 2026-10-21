@@ -170,6 +170,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 foreach (HoneyTreeEncounterGroup g in _file.Groups) GroupNames.Add(g.Name);
                 _suppress = false;
 
+                _selectedGroupIndex = -1;
                 if (GroupNames.Count > 0) SelectedGroupIndex = 0;
                 ResetUndo();
             }
@@ -209,7 +210,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             _suppress = false;
 
+            // Forced, so a new group shown at the same slot number still loads that slot.
+            _selectedSlotIndex = -1;
             if (EncounterSlots.Count > 0) SelectedSlotIndex = 0;
+            else ClearFields();
         }
 
         private void LoadSlot(int slot)
@@ -308,6 +312,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     foreach (HoneyTreeEncounterGroup g in _file.Groups) GroupNames.Add(g.Name);
                     _suppress = false;
 
+                    _selectedGroupIndex = -1;
                     if (GroupNames.Count > 0) SelectedGroupIndex = 0;
                     Edited();
                     SaveNotice.Imported("Honey Tree encounters", path);
