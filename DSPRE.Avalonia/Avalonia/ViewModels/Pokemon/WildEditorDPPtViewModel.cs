@@ -272,8 +272,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public int UnownTableIndex
         {
             get => _unownTableIndex;
-            set { if (Set(ref _unownTableIndex, value) && !_loading) { _current.UnownTable = (uint)value; SetDirty(); } }
+            set { if (Set(ref _unownTableIndex, value) && !_loading && value >= 0 && value < KnownUnownTables) { _current.UnownTable = (uint)value; SetDirty(); } }
         }
+
+        // Past these, an extra row names the stored table.
+        private const int KnownUnownTables = 9;
 
         // ── Title ────────────────────────────────────────────────────────
         private string _title = "Wild Pokémon Editor (DPPt)";
@@ -591,9 +594,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             OnPropertyChanged(nameof(ShellosFormIndex));
             _gastrodonFormIndex = (int)(_current.FormRates[1] == 0 ? 0 : 1);
             OnPropertyChanged(nameof(GastrodonFormIndex));
-            _unownTableIndex = (int)_current.UnownTable;
-            if (_unownTableIndex < 0) _unownTableIndex = 0;
-            if (_unownTableIndex >= UnownTableNames.Count) _unownTableIndex = 0;
+            while (UnownTableNames.Count > KnownUnownTables) UnownTableNames.RemoveAt(KnownUnownTables);
+            if (_current.UnownTable >= KnownUnownTables) UnownTableNames.Add($"Table {_current.UnownTable}");
+            _unownTableIndex = (int)Math.Min(_current.UnownTable, KnownUnownTables);
             OnPropertyChanged(nameof(UnownTableIndex));
 
             string[] walkLabels = Enumerable.Range(0, 12).Select(i => EncounterSlotOdds.SlotLabel("Walking", i)).ToArray();
@@ -774,8 +777,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // Form data
             _current.FormRates[0] = EastWest(_shellosFormIndex, _shellosRaw);
             _current.FormRates[1] = EastWest(_gastrodonFormIndex, _gastrodonRaw);
-            // A table the list can't show keeps its stored value; picking one in the list writes it straight away.
-            if (_current.UnownTable < (uint)UnownTableNames.Count) _current.UnownTable = (uint)_unownTableIndex;
+            // The extra row keeps the stored table.
+            if (_unownTableIndex < KnownUnownTables) _current.UnownTable = (uint)_unownTableIndex;
         }
 
         private void WriteWaterRowsToFile()

@@ -149,6 +149,9 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public BugContestEncounterFile(string path) : this()
         {
+            long size = new FileInfo(path).Length;
+            if (size != TotalEntries * EntrySize)
+                throw new InvalidDataException($"That file is {size} bytes; a Bug Contest file is {TotalEntries * EntrySize}.");
             ParseFile(path);
         }
 
