@@ -994,8 +994,11 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 // Archives before the failure are already rewritten, so the shown one is read again either way.
                 if (SelectedArchiveIndex >= 0) LoadArchive(SelectedArchiveIndex);
                 AppEvents.RaiseNamesChanged();
-                StatusText = "Replace stopped partway.";
-                await DialogHelper.ShowErrorAsync($"Replace stopped partway; text banks before the failure were already changed:\n{ex.Message}", "Text editor error");
+                bool one = last - first == 1;
+                StatusText = one ? "Text bank not changed." : "Replace stopped partway.";
+                await DialogHelper.ShowErrorAsync(one
+                    ? $"Text bank {first} wasn't changed:\n{ex.Message}"
+                    : $"Replace stopped partway; text banks before the failure were already changed:\n{ex.Message}", "Text editor error");
                 return;
             }
             foreach (int cur in edited)
