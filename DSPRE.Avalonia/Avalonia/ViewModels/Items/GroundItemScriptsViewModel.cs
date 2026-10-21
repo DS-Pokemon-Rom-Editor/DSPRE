@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
 using Avalonia.Controls;
 
@@ -167,9 +169,12 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public void Save()
         {
             if (!HasUnsavedChanges) return;
-            if (!_session.Save())
+            string failed = null;
+            try { if (!_session.Save()) failed = ""; }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { failed = " " + ex.Message; }
+            if (failed != null)
             {
-                StatusText = "The item script file could not be saved.";
+                StatusText = "The item script file could not be saved." + failed;
                 return;
             }
             _history.Reset(_session.Take());
