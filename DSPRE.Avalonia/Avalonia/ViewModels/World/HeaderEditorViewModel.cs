@@ -1522,8 +1522,6 @@ namespace DSPRE.Avalonia.ViewModels.World
                     $"Remove header {lastIndex:D3} ({name})? Only the last header can be removed. It is deleted now, not on Save; Ctrl+Z puts it back.",
                     "Delete header?"))
                 return;
-            // Removing reloads the shown header.
-            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "header", "Save them before removing the header?")) return;
 
             byte[] data = File.ReadAllBytes(Filesystem.GetDynamicHeaderPath(lastIndex));
             MapHeader.RemoveLastDynamicHeader();
@@ -1532,8 +1530,9 @@ namespace DSPRE.Avalonia.ViewModels.World
             _internalNames.RemoveAt(lastIndex);
             _headerListNames.RemoveAt(lastIndex);
             LoadLocationIndices();
+            // Another shown header keeps its edits; the removed one's edits went with it.
             RebuildTree();
-            SelectHeader(SelectedHeaderId >= lastIndex ? (ushort)(lastIndex - 1) : SelectedHeaderId);
+            if (SelectedHeaderId >= lastIndex) { SetClean(); SelectHeader((ushort)(lastIndex - 1)); }
             RaiseUndoState();
             OnPropertyChanged(nameof(RemoveTip));
         }
