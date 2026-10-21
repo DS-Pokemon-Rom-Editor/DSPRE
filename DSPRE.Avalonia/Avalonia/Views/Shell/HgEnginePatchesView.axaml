@@ -88,6 +88,17 @@
         <DataGridTextColumn Header="Built"   Binding="{Binding Built}"   Width="80"/>
         <DataGridTextColumn Header="When"    Binding="{Binding Condition}" Width="160"/>
         <DataGridTextColumn Header="Runs into" Binding="{Binding Clash}" Width="200"/>
+        <DataGridTemplateColumn Header="Problem" Width="240">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate x:DataType="vm:PatchRow">
+              <StackPanel Orientation="Horizontal" Spacing="4" Margin="6,0" VerticalAlignment="Center"
+                          IsVisible="{Binding Problem, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding Problem}">
+                <controls:IconImage Key="warning" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding Problem}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+              </StackPanel>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
       </DataGrid.Columns>
     </DataGrid>
   </DockPanel>

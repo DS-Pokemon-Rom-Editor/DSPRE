@@ -370,9 +370,12 @@ namespace DSPRE.HgEngine
             entry.RawLine = indent + entry.Render();
         }
 
+        /// <summary>Why this list cannot be written, or null.</summary>
+        public string FirstProblem => Entries.Select(Problem).FirstOrDefault(p => p != null);
+
         public bool Save(out string error)
         {
-            error = Entries.Select(Problem).FirstOrDefault(p => p != null);
+            error = FirstProblem;
             if (error != null) return false;
             try
             {

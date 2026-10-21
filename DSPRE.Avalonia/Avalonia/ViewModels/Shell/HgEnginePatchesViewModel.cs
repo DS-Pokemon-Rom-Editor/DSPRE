@@ -37,6 +37,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         /// <summary>Set when another entry writes over the same bytes, which is nearly always a mistake.</summary>
         public string Clash { get; set; }
         public bool HasClash => !string.IsNullOrEmpty(Clash);
+
+        /// <summary>Why Save would refuse this entry, or null.</summary>
+        public string Problem { get; init; }
     }
 
     /// <summary>
@@ -215,6 +218,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                     Offset = offset < 0 ? "" : $"0x{offset:X}",
                     Size = entry.Length.ToString(),
                     IsPending = pending,
+                    Problem = HgEnginePatchList.Problem(entry),
                 });
             }
 
@@ -409,7 +413,17 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             if (!IsAvailable) return "No hg-engine checkout is linked.";
             if (!HasUnsavedChanges) return null;
 
-            foreach (HgEnginePatchList list in ChangedLists())
+            // Every list is checked first, so none is left half saved.
+            List<HgEnginePatchList> changed = ChangedLists();
+            if (changed.Select(l => l.FirstProblem).FirstOrDefault(p => p != null) is string problem)
+            {
+                // Pick the entry it is about, so it can be fixed from the fields.
+                HgEnginePatchEntry bad = changed.SelectMany(l => l.Entries).FirstOrDefault(e => HgEnginePatchList.Problem(e) != null);
+                SelectedRow = Rows.FirstOrDefault(r => ReferenceEquals(r.Entry, bad)) ?? SelectedRow;
+                return problem;
+            }
+
+            foreach (HgEnginePatchList list in changed)
             {
                 if (!list.Save(out string error))
                 {

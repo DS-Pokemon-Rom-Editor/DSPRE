@@ -51,6 +51,9 @@ namespace DSPRE.Avalonia
 
         private static string _held;
 
+        /// <summary>The ROM or folder this window holds, as it was claimed.</summary>
+        public static string HeldPath { get; private set; }
+
         private static string LockDir => Path.Combine(AppPaths.DspreDataPath, "locks");
 
         // A ROM and the folder it extracts to are the same project.
@@ -83,6 +86,7 @@ namespace DSPRE.Avalonia
             Directory.CreateDirectory(LockDir);
             PlainFiles.WriteText(file, Environment.ProcessId.ToString());
             _held = file;
+            HeldPath = path;
             return true;
         }
 
@@ -92,6 +96,7 @@ namespace DSPRE.Avalonia
             try { if (File.Exists(_held)) File.Delete(_held); }
             catch (IOException) { }   // the next DSPRE sees a dead owner and takes it anyway
             _held = null;
+            HeldPath = null;
         }
 
         private static bool IsDspre(int pid)

@@ -52,32 +52,41 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             LogLines.Clear();
             ResultText = "";
             Succeeded = false;
-
-            string ndsPath = Path.Combine(HgEngineProject.RepoPathUnc, HgEngineProject.IsSafeBuildRomName(BuildRom) ? BuildRom : "test.nds");
-            DateTime? beforeWriteTimeUtc = File.Exists(ndsPath) ? File.GetLastWriteTimeUtc(ndsPath) : (DateTime?)null;
-
-            bool ok = await Task.Run(() => HgEngineBuild.RunFullBuild(
-                line => Dispatcher.UIThread.Post(() => LogLines.Add(line)),
-                out _, BuildRom));
-
-            bool ndsProduced = File.Exists(ndsPath) &&
-                (beforeWriteTimeUtc == null || File.GetLastWriteTimeUtc(ndsPath) > beforeWriteTimeUtc);
-
-            if (ok && ndsProduced)
+            // The window can't close while this runs, so every way out has to clear it.
+            try
             {
-                Succeeded = true;
-                ResultText = "Build succeeded: " + ndsPath;
-            }
-            else if (ok)
-            {
-                ResultText = "make reported success, but the ROM wasn't produced or updated at " + ndsPath + ".";
-            }
-            else
-            {
-                ResultText = "Build failed. See the log above for details.";
-            }
+                string ndsPath = Path.Combine(HgEngineProject.RepoPathUnc, HgEngineProject.IsSafeBuildRomName(BuildRom) ? BuildRom : "test.nds");
+                DateTime? beforeWriteTimeUtc = File.Exists(ndsPath) ? File.GetLastWriteTimeUtc(ndsPath) : (DateTime?)null;
 
-            IsRunning = false;
+                bool ok = await Task.Run(() => HgEngineBuild.RunFullBuild(
+                    line => Dispatcher.UIThread.Post(() => LogLines.Add(line)),
+                    out _, BuildRom));
+
+                bool ndsProduced = File.Exists(ndsPath) &&
+                    (beforeWriteTimeUtc == null || File.GetLastWriteTimeUtc(ndsPath) > beforeWriteTimeUtc);
+
+                if (ok && ndsProduced)
+                {
+                    Succeeded = true;
+                    ResultText = "Build succeeded: " + ndsPath;
+                }
+                else if (ok)
+                {
+                    ResultText = "make reported success, but the ROM wasn't produced or updated at " + ndsPath + ".";
+                }
+                else
+                {
+                    ResultText = "Build failed. See the log above for details.";
+                }
+            }
+            catch (Exception ex)
+            {
+                ResultText = "Build failed: " + ex.Message;
+            }
+            finally
+            {
+                IsRunning = false;
+            }
         }
     }
 }

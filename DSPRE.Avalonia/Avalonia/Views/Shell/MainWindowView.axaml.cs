@@ -361,11 +361,7 @@ namespace DSPRE.Avalonia.Views.Shell
             string path = await PickFolderAsync();
             if (string.IsNullOrEmpty(path)) return;
 
-            // An hg-engine checkout, or its base/ tree, opens as an hg-engine folder project.
-            string checkout = HgEngineProject.LooksLikeCheckout(path) ? path
-                : HgEngineProject.LooksLikeCheckout(System.IO.Path.GetDirectoryName(path.TrimEnd('\\', '/'))) && DSUtils.GetFolderType(path) == 2
-                    ? System.IO.Path.GetDirectoryName(path.TrimEnd('\\', '/')) : null;
-            if (checkout != null)
+            if (CheckoutFor(path) is string checkout)
             {
                 await OpenHgEngineFolderCoreAsync(checkout);
                 return;
@@ -375,6 +371,14 @@ namespace DSPRE.Avalonia.Views.Shell
             if (!await ConfirmProjectCloseAsync()) return;
             OpenEditors.CloseEditorWindows(this);
             await LoadRomAsync(err0 => { bool ok = AvaloniaRomLoader.LoadFromFolder(path, out string er); err0(er); return ok; }, sourcePath: path);
+        }
+
+        /// <summary>The checkout a folder opens as: an hg-engine checkout itself, or the one whose base/ tree it is.</summary>
+        private static string CheckoutFor(string path)
+        {
+            if (HgEngineProject.LooksLikeCheckout(path)) return path;
+            string parent = System.IO.Path.GetDirectoryName(path.TrimEnd('\\', '/'));
+            return HgEngineProject.LooksLikeCheckout(parent) && DSUtils.GetFolderType(path) == 2 ? parent : null;
         }
 
         /// <summary>Pick and open an hg-engine checkout as the project.</summary>
@@ -428,52 +432,56 @@ namespace DSPRE.Avalonia.Views.Shell
             HgEngineShell? shell = stored ?? await ViewModels.Tools.HgEngineLinkViewModel.AskShellAsync(checkout);
             if (shell == null) return;
             HgEngineProject.OpenFolder(checkout, shell.Value);
-
-            List<string> missing = HgEngineFolder.MissingTools(checkout);
-            if (missing == null)
+            try
             {
-                await DialogHelper.ShowErrorAsync("DSPRE could not start the build shell for this folder.", title, this);
-                return;
-            }
-            if (missing.Count > 0)
-            {
-                await DialogHelper.ShowErrorAsync("hg-engine's build needs these, and the build shell can't find them:\n\n"
-                    + string.Join(", ", missing) + "\n\nInstall them as hg-engine's README describes, then open the folder again.", title, this);
-                return;
-            }
-
-            if (!System.IO.File.Exists(HgEngineFolder.RomPath(checkout)) && !await ProvideRomAsync(checkout)) return;
-            string code = HgEngineFolder.ReadGameCode(HgEngineFolder.RomPath(checkout));
-            if (code != HgEngineFolder.GameCode)
-            {
-                await DialogHelper.ShowErrorAsync($"This checkout's rom.nds is {code ?? "unreadable"}, but hg-engine builds from a HeartGold (USA) ROM ({HgEngineFolder.GameCode}).", title, this);
-                return;
-            }
-
-            if (!HgEngineFolder.HasBase(checkout))
-            {
-                if (!await DialogHelper.AskYesNoAsync("This hg-engine folder hasn't been built yet. Build it now? DSPRE opens what the build extracts.", title)) return;
-                if (!await new CompileRomView().BuildAsync(this)) return;
-                if (!HgEngineFolder.HasBase(checkout))
+                List<string> missing = HgEngineFolder.MissingTools(checkout);
+                if (missing == null)
                 {
-                    await DialogHelper.ShowErrorAsync("The build finished but left no base/ folder to open.", title, this);
+                    await DialogHelper.ShowErrorAsync("DSPRE could not start the build shell for this folder.", title, this);
                     return;
                 }
-            }
+                if (missing.Count > 0)
+                {
+                    await DialogHelper.ShowErrorAsync("hg-engine's build needs these, and the build shell can't find them:\n\n"
+                        + string.Join(", ", missing) + "\n\nInstall them as hg-engine's README describes, then open the folder again.", title, this);
+                    return;
+                }
 
-            bool close = askToClose
-                ? await ConfirmProjectCloseAsync()
-                : await UnsavedChangesDialog.ShowIfNeededAsync(this, OpenEditors.GetUnsavedEditors(this));
-            if (!close) return;
-            OpenEditors.CloseEditorWindows(this);
-            string baseDir = HgEngineFolder.BaseDir(checkout);
-            await LoadRomAsync(err0 =>
-            {
-                bool ok = AvaloniaRomLoader.LoadFromFolder(baseDir, out string er, recordRecent: false);
-                if (ok) SettingsManager.RecordRecentProject(checkout);   // the checkout, so reopening runs these checks again
-                err0(er);
-                return ok;
-            }, sourcePath: checkout);
+                if (!System.IO.File.Exists(HgEngineFolder.RomPath(checkout)) && !await ProvideRomAsync(checkout)) return;
+                string code = HgEngineFolder.ReadGameCode(HgEngineFolder.RomPath(checkout));
+                if (code != HgEngineFolder.GameCode)
+                {
+                    await DialogHelper.ShowErrorAsync($"This checkout's rom.nds is {code ?? "unreadable"}, but hg-engine builds from a HeartGold (USA) ROM ({HgEngineFolder.GameCode}).", title, this);
+                    return;
+                }
+
+                if (!HgEngineFolder.HasBase(checkout))
+                {
+                    if (!await DialogHelper.AskYesNoAsync("This hg-engine folder hasn't been built yet. Build it now? DSPRE opens what the build extracts.", title)) return;
+                    if (!await new CompileRomView().BuildAsync(this)) return;
+                    if (!HgEngineFolder.HasBase(checkout))
+                    {
+                        await DialogHelper.ShowErrorAsync("The build finished but left no base/ folder to open.", title, this);
+                        return;
+                    }
+                }
+
+                bool close = askToClose
+                    ? await ConfirmProjectCloseAsync()
+                    : await UnsavedChangesDialog.ShowIfNeededAsync(this, OpenEditors.GetUnsavedEditors(this));
+                if (!close) return;
+                OpenEditors.CloseEditorWindows(this);
+                string baseDir = HgEngineFolder.BaseDir(checkout);
+                await LoadRomAsync(err0 =>
+                {
+                    bool ok = AvaloniaRomLoader.LoadFromFolder(baseDir, out string er, recordRecent: false);
+                    if (ok) SettingsManager.RecordRecentProject(checkout);   // the checkout, so reopening runs these checks again
+                    err0(er);
+                    return ok;
+                }, sourcePath: checkout);
+            }
+            // Every way out, including a cancel, leaves the link matching the project that is open.
+            finally { HgEngineProject.Refresh(); }
         }
 
         private const string WslLinuxBuildAdvice =
@@ -525,9 +533,9 @@ namespace DSPRE.Avalonia.Views.Shell
                 OpenEditors.CloseEditorWindows(this);
                 await LoadRomAsync(err0 => { bool ok = AvaloniaRomLoader.LoadFromFile(path, out string er, reExtract.Value); err0(er); return ok; }, sourcePath: path);
             }
-            else if (System.IO.Directory.Exists(path) && HgEngineProject.LooksLikeCheckout(path))
+            else if (System.IO.Directory.Exists(path) && CheckoutFor(path) is string checkout)
             {
-                await OpenHgEngineFolderCoreAsync(path);
+                await OpenHgEngineFolderCoreAsync(checkout);
             }
             else if (System.IO.Directory.Exists(path))
             {
@@ -572,6 +580,7 @@ namespace DSPRE.Avalonia.Views.Shell
         private async System.Threading.Tasks.Task LoadRomAsync(System.Func<System.Action<string>, bool> load, string sourcePath = null)
         {
             MainWindowViewModel vm = DataContext as MainWindowViewModel;
+            string openBefore = RomInfo.WorkDir, claimedBefore = ProjectWindows.HeldPath;
             if (!ProjectWindows.TryClaim(sourcePath))
             {
                 await DialogHelper.ShowInfoAsync("This project is already open in another DSPRE window.", "Open ROM");
@@ -599,6 +608,8 @@ namespace DSPRE.Avalonia.Views.Shell
             if (!ok)
             {
                 ProjectWindows.Release();
+                // A load that fails early leaves the previous project open, so it keeps its claim.
+                if (claimedBefore != null && openBefore != null && RomInfo.WorkDir == openBefore) ProjectWindows.TryClaim(claimedBefore);
                 if (vm != null) vm.StatusText = "ROM load failed.";
                 await DialogHelper.ShowErrorAsync(error ?? "Failed to load the ROM.", "Open ROM");
                 return;
@@ -1356,9 +1367,14 @@ namespace DSPRE.Avalonia.Views.Shell
         private void BattleTests_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenBattleTests();
 
-        private async void CompileRom_Click(object sender, RoutedEventArgs e)
+        private async void CompileRom_Click(object sender, RoutedEventArgs e) => await RunRomOperationAsync(CompileRomCoreAsync);
+
+        private async System.Threading.Tasks.Task CompileRomCoreAsync()
         {
             if (!HgEngineProject.IsActive) return;
+            // make builds from base/, so editors and DSPRE's unpacked copies are written there first, as Save ROM does.
+            if (!await UnsavedChangesDialog.ShowIfNeededAsync(this, OpenEditors.GetUnsavedEditors(this))) return;
+            if (RomInfo.IsHgEngineBaseProject) { await BuildHgEngineFolderAsync(null); return; }
             await new CompileRomView().ShowAndRunAsync(this);
         }
 
