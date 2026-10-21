@@ -677,6 +677,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             AppEvents.RomPatchStateChanged -= OnRomPatchStateChanged;
             AppEvents.ClassIntrosSaved -= OnClassIntrosSaved;
             _spriteSaved?.Dispose();
+            _propertiesSaved?.Dispose();
             Data.TrainerCapsuleCatalog.Changed -= ShowCapsuleNames;
             TextArchive.Saved -= OnTextSaved;
             StopPlaying();
@@ -744,6 +745,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 AppEvents.RomPatchStateChanged += OnRomPatchStateChanged;
                 AppEvents.ClassIntrosSaved += OnClassIntrosSaved;
                 _spriteSaved = AppEvents.WhenSaved(UpdateTrainerSprite, DirNames.TrainerGraphics);
+                _propertiesSaved = AppEvents.WhenSaved(OnPropertiesSaved, DirNames.TrainerProperties);
 
                 for (int i = 0; i < classNames.Length; i++) TrainerClassItems.Add($"[{i:D3}] {classNames[i]}");
 
@@ -1191,6 +1193,22 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         // ── Sprite ──────────────────────────────────────────────────────────────────
         private IDisposable _spriteSaved;
+        private IDisposable _propertiesSaved;
+
+        // The trainer flag editor writes these records too; reloading keeps Save here from putting the old flags back.
+        private void OnPropertiesSaved()
+        {
+            if (IsHgeActive || _trainer == null || _loadedTrainerId < 0) return;
+            string path = ArchiveMembers.PathOf(DirNames.TrainerProperties, _loadedTrainerId);
+            if (!File.Exists(path) || File.ReadAllBytes(path).AsSpan().SequenceEqual(_trainer.Trp.ToByteArray())) return;
+            if (_dirty)
+            {
+                StatusText = $"Trainer {_loadedTrainerId} was changed in another editor. Saving here replaces those changes.";
+                return;
+            }
+            _statusAfterLoad = $"Trainer {_loadedTrainerId} was changed in another editor and has been reloaded.";
+            LoadTrainer(_loadedTrainerId);
+        }
 
         private void UpdateTrainerSprite()
         {
@@ -1272,7 +1290,13 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             TrainerRecords.Save(_selectedTrainerIndex, _trainer.Trp, _trainer.Party);
 
-            UpdateTrainerName(_trainerName);
+            if (UpdateTrainerName(_trainerName) is string nameError)
+            {
+                // The record is written; the name stays unsaved so Save or the close prompt tries it again.
+                StatusText = $"Trainer {_selectedTrainerIndex}'s name was not saved.";
+                _ = DialogHelper.ShowErrorAsync($"Trainer {_selectedTrainerIndex}'s name was not saved:\n{nameError}", "Trainer editor error");
+                return;
+            }
 
             _savedName = _trainerName;
             _savedClass = _trainer.Trp.TrainerClass;
@@ -1686,9 +1710,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (path == null) return;
             try
             {
+                byte[] condensed;
                 _trainer.Party.ExportCondensedData = true;
-                PlainFiles.WriteBytes(path, _trainer.Party.ToByteArray());
-                _trainer.Party.ExportCondensedData = false;
+                try { condensed = _trainer.Party.ToByteArray(); }
+                finally { _trainer.Party.ExportCondensedData = false; }   // Save must write the ROM layout
+                PlainFiles.WriteBytes(path, condensed);
                 SaveNotice.Exported(path);
             }
             catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Trainer editor error"); }
@@ -1841,17 +1867,23 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             finally { _suppress = wasSuppressed; }
         }
 
-        private void UpdateTrainerName(string newName)
+        /// <summary>The error, or null when the name was written.</summary>
+        private string UpdateTrainerName(string newName)
         {
-            if (_trainer == null) return;
+            if (_trainer == null) return null;
             try
             {
                 _trainer.Name = newName;
                 TextArchive ta = new TextArchive(TrainerNamesMessageNumber);
                 ta.SetSimpleTrainerName(_trainer.Trp.TrainerID, newName);
                 ta.SaveToExpandedDir(TrainerNamesMessageNumber, showSuccessMessage: false);
+                return null;
             }
-            catch (Exception ex) { AppLogger.Error("Trainer name save failed: " + ex.Message); }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Trainer name save failed: " + ex.Message);
+                return ex.Message;
+            }
         }
     }
 
