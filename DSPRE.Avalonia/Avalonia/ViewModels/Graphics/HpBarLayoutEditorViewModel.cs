@@ -33,9 +33,19 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public int Row { get => _y; set => MoveTo?.Invoke(this, _x, value); }
 
         private string _problem;
-        public string Problem { get => _problem; set { _problem = value; Raise(); Raise(nameof(HasProblem)); Raise(nameof(Outline)); } }
+        public string Problem { get => _problem; set { _problem = value; Raise(); Raise(nameof(HasProblem)); Raise(nameof(Outline)); Raise(nameof(Fill)); Raise(nameof(Flagged)); } }
         public bool HasProblem => _problem != null;
-        public string Outline => _problem != null ? "#FF3030" : Colour;
+
+        private bool _clashes;
+        /// <summary>The game will draw it over another part or off the bar's art: allowed, but it shows in battle.</summary>
+        public bool Clashes { get => _clashes; set { _clashes = value; Raise(); Raise(nameof(Outline)); Raise(nameof(Fill)); Raise(nameof(Flagged)); } }
+
+        public string Outline => _problem != null ? "#FF3030" : _clashes ? "#FF9800" : Colour;
+
+        // An outline alone gets lost among the parts' colours.
+        public string Fill => _problem != null ? "#88FF3030" : _clashes ? "#88FF9800" : "#22FFFFFF";
+
+        public bool Flagged => _problem != null || _clashes;
 
         public double Left => X * HpBarLayoutEditorViewModel.Square;
         public double Top => Y * HpBarLayoutEditorViewModel.Square;
@@ -144,17 +154,57 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
             Recheck();
             Redraw();
-            foreach (string n in new[] { nameof(ScreenX), nameof(ScreenY), nameof(ExtraPiece), nameof(HasExtraPiece), nameof(LayoutIndex) }) Raise(n);
+            foreach (string n in new[] { nameof(ScreenX), nameof(ScreenY), nameof(LayoutIndex) }) Raise(n);
         }
 
         private void Recheck()
         {
             BattleGaugeLayout layout = Layout;
             if (layout == null) return;
-            foreach (HpBarPartRow row in Parts) row.Problem = layout.Problem(row.Part);
+            (Func<int, bool> empty, Func<int, bool> plain) = TileLooks();
+            HashSet<BattleGaugeLayout.Part> clashes = layout.Clashes(empty, plain, SavedLayout());
+            foreach (HpBarPartRow row in Parts)
+            {
+                row.Problem = layout.Problem(row.Part);
+                row.Clashes = clashes.Contains(row.Part);
+            }
             Problems = string.Join("\n", Parts.Where(p => p.HasProblem).Select(p => p.Problem).Distinct());
             Raise(nameof(CanSave));
             Raise(nameof(SaveHelp));
+        }
+
+        // The bar as the ROM has it, whose uncovered art the parts are checked against.
+        private BattleGaugeLayout SavedLayout()
+        {
+            try { return BattleGaugeLayout.Read(Bar); }
+            catch (Exception ex) { AppLogger.WarnOnce("HpBarLayoutEditorViewModel.SavedLayout", ex); return null; }
+        }
+
+        // Tiles of the bar's drawing that are empty, and ones that are one colour all over.
+        private (Func<int, bool> Empty, Func<int, bool> Plain) TileLooks()
+        {
+            try
+            {
+                int drawing = BattleObjects.Find(BattleGaugeComposer.GraphicOf(Kind), "Drawing");
+                byte[] ncgr;
+                using (_pending.Reading())
+                    ncgr = drawing >= 0 ? GraphicAssets.Unsqueeze(new ScriptNarc(RomInfo.DirNames.BattleObj).Get(drawing)) : null;
+                if (ncgr == null) return (null, null);
+                int tilesAt = NitroBgCodec.ReadTileHeader(ncgr).TilesAt;
+                ReadOnlySpan<byte> Tile(int tile)
+                {
+                    int at = tilesAt + tile * BattleGaugePieces.TileBytes;
+                    return at >= 0 && at + BattleGaugePieces.TileBytes <= ncgr.Length ? ncgr.AsSpan(at, BattleGaugePieces.TileBytes) : default;
+                }
+                // Two pixels to a byte, so a one-colour tile repeats one byte whose halves match.
+                bool Plain(int tile)
+                {
+                    ReadOnlySpan<byte> t = Tile(tile);
+                    return t.Length > 0 && (t[0] >> 4) == (t[0] & 0xF) && t.IndexOfAnyExcept(t[0]) < 0;
+                }
+                return (tile => Tile(tile) is { Length: > 0 } t && t.IndexOfAnyExcept((byte)0) < 0, Plain);
+            }
+            catch (Exception ex) { AppLogger.WarnOnce("HpBarLayoutEditorViewModel.TileLooks", ex); return (null, null); }
         }
 
         private string _problems = "";
@@ -199,14 +249,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             get => Layout?.ScreenY ?? 0;
             set { if (Layout == null || Layout.ScreenY == value) return; Layout.ScreenY = Math.Clamp(value, -32, 224); Raise(); Commit(); }
-        }
-
-        public bool HasExtraPiece => Layout?.ExtraPiece != null;
-
-        public int ExtraPiece
-        {
-            get => Layout?.ExtraPiece ?? 0;
-            set { if (Layout?.ExtraPiece == null || Layout.ExtraPiece == value) return; Layout.ExtraPiece = value; Raise(); Commit(); }
         }
 
         private Bitmap _barPicture;

@@ -19,7 +19,7 @@ namespace DSPRE.ROMFiles
         public BattleGaugePieces.Bar Bar;
         public Dictionary<Part, (int X, int Y)> At = new();
         public int ScreenX, ScreenY;
-        public int? ExtraPiece;                       // how far left of the bar its extra piece sits, where the game says
+        public int? ExtraPiece;                       // Pt and HGSS never create this piece, so it is only kept
 
         public static int TileAt(int x, int y) => (x >= Half ? 64 : 0) + y * Half + x % Half;
 
@@ -126,6 +126,40 @@ namespace DSPRE.ROMFiles
             a.X < b.X + sb.W && b.X < a.X + sa.W && a.Y < b.Y + sb.H && b.Y < a.Y + sa.H;
 
         public IEnumerable<string> Problems() => At.Keys.Select(Problem).Where(p => p != null);
+
+        /// <summary>
+        /// Parts drawn over another part, over empty squares of the bar, or over bar art (HP letters, the slash) no part
+        /// covers in <paramref name="saved"/>. Only a double battle's bars swap the numbers for the gauge.
+        /// </summary>
+        public HashSet<Part> Clashes(Func<int, bool> empty, Func<int, bool> plain = null, BattleGaugeLayout saved = null)
+        {
+            HashSet<int> art = new();
+            if (saved != null && empty != null && plain != null)
+            {
+                HashSet<int> under = new();
+                foreach ((Part part, (int X, int Y) at) in saved.At)
+                {
+                    (int w, int h) = SizeOf(part);
+                    for (int y = at.Y; y < at.Y + h; y++)
+                        for (int x = at.X; x < at.X + w; x++) under.Add(TileAt(x, y));
+                }
+                for (int tile = 0; tile < Columns * Rows; tile++)
+                    if (!empty(tile) && !plain(tile) && !under.Contains(tile)) art.Add(tile);
+            }
+            HashSet<Part> clashes = new();
+            bool swaps = Bar is BattleGaugePieces.Bar.YoursDouble or BattleGaugePieces.Bar.YourPartner;
+            foreach ((Part part, (int X, int Y) at) in At)
+            {
+                (int w, int h) = SizeOf(part);
+                foreach ((Part other, (int X, int Y) o) in At)
+                    if (other != part && !swaps && MayOverlap(part, other) && Overlaps(at, (w, h), o, SizeOf(other)))
+                        clashes.Add(part);
+                for (int y = at.Y; y < at.Y + h && empty != null; y++)
+                    for (int x = at.X; x < at.X + w; x++)
+                        if (x >= 0 && y >= 0 && x < Columns && y < Rows && (empty(TileAt(x, y)) || art.Contains(TileAt(x, y)))) clashes.Add(part);
+            }
+            return clashes;
+        }
 
         /// <summary>A row of squares as table spans: the part left of the middle, then the part right of it.</summary>
         private static List<BattleGaugePieces.Span> Runs(int x, int y, int w)

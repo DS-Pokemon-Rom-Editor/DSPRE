@@ -69,11 +69,6 @@
             <TextBlock Text="Y" VerticalAlignment="Center"/>
             <NumericUpDown Value="{Binding ScreenY}" Minimum="-32" Maximum="224" Increment="1" FormatString="0" Width="120"/>
           </StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasExtraPiece}">
-            <TextBlock Text="Tab position" VerticalAlignment="Center"/>
-            <NumericUpDown Value="{Binding ExtraPiece}" Minimum="-128" Maximum="127" Increment="1" FormatString="0" Width="120"
-                           ToolTip.Tip="Moves the tab that appears next to your HP bar when it's your turn."/>
-          </StackPanel>
         </StackPanel>
       </ScrollViewer>
     </Border>
@@ -88,7 +83,10 @@
               <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2">
                 <Border Width="12" Height="12" Background="{Binding Colour}" BorderBrush="{Binding Outline}" BorderThickness="2"
                         VerticalAlignment="Center"/>
-                <TextBlock Text="{Binding Name}" Width="104" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding Name}" Width="84" VerticalAlignment="Center"/>
+                <controls:IconImage Key="warning" Width="14" Height="14" VerticalAlignment="Center" IsVisible="{Binding Flagged}"
+                                    ToolTip.Tip="{Binding Problem, TargetNullValue='Shows over the bar drawing or another part in battle'}"/>
+                <Panel Width="14" IsVisible="{Binding !Flagged}"/>
                 <NumericUpDown Value="{Binding Column}" Minimum="0" Maximum="15" Increment="1" FormatString="0" Width="64"
                                ToolTip.Tip="Column"/>
                 <NumericUpDown Value="{Binding Row}" Minimum="0" Maximum="7" Increment="1" FormatString="0" Width="64"
@@ -123,7 +121,7 @@
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:HpBarPartRow">
                   <Border Width="{Binding Width}" Height="{Binding Height}" BorderBrush="{Binding Outline}" BorderThickness="2"
-                          Background="#22FFFFFF" ToolTip.Tip="{Binding Problem}">
+                          Background="{Binding Fill}" ToolTip.Tip="{Binding Problem}">
                     <TextBlock Text="{Binding Name}" FontSize="11" Margin="3,1" Foreground="{Binding Colour}"
                                FontWeight="SemiBold"/>
                   </Border>
