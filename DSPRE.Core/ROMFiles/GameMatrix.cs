@@ -115,7 +115,7 @@ namespace DSPRE.ROMFiles
                 }
             }
         }
-        public GameMatrix(int ID) : this (new FileStream(Path.Combine(RomInfo.GameDirs[DirNames.Matrices].unpackedDir, ID.ToString("D4")), FileMode.Open))
+        public GameMatrix(int ID) : this (new FileStream(Path.Combine(RomInfo.GameDirs[DirNames.Matrices].unpackedDir, ID.ToString("D4")), FileMode.Open, FileAccess.Read))
         {
             this.Id = ID;
         }

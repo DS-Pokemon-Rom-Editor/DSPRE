@@ -88,7 +88,7 @@ namespace DSPRE.ROMFiles
                 return fileStream;
             }
             
-            return new FileStream(Path.Combine(RomInfo.GameDirs[DirNames.TradeData].unpackedDir, id.ToString("D4")), FileMode.Open);
+            return new FileStream(Path.Combine(RomInfo.GameDirs[DirNames.TradeData].unpackedDir, id.ToString("D4")), FileMode.Open, FileAccess.Read);
             
         }
 

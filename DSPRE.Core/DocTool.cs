@@ -783,9 +783,9 @@ namespace DSPRE
                 string suffix = Path.DirectorySeparatorChar + i.ToString("D4");
 
                 curTrainerProperties = new TrainerProperties((ushort)i,
-                    new FileStream(RomInfo.GameDirs[DirNames.TrainerProperties].unpackedDir + suffix, FileMode.Open));
+                    new FileStream(RomInfo.GameDirs[DirNames.TrainerProperties].unpackedDir + suffix, FileMode.Open, FileAccess.Read));
 
-                curTrainerParty = new FileStream(RomInfo.GameDirs[DirNames.TrainerParty].unpackedDir + suffix, FileMode.Open);
+                curTrainerParty = new FileStream(RomInfo.GameDirs[DirNames.TrainerParty].unpackedDir + suffix, FileMode.Open, FileAccess.Read);
 
                 curTrainerFile = new TrainerFile(curTrainerProperties, curTrainerParty, trainerNames[i]);
 

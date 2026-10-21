@@ -71,7 +71,7 @@ namespace DSPRE.ROMFiles
         #endregion
 
         #region Constructors (1)
-        public MapFile(string path, GameFamilies gFamily, bool discardMoveperms = false, bool showMessages = true) : this (new FileStream(path, FileMode.Open), gFamily, discardMoveperms, showMessages) {}
+        public MapFile(string path, GameFamilies gFamily, bool discardMoveperms = false, bool showMessages = true) : this (new FileStream(path, FileMode.Open, FileAccess.Read), gFamily, discardMoveperms, showMessages) {}
         public MapFile(int mapNumber, GameFamilies gFamily, bool discardMoveperms = false, bool showMessages = true) : this(Path.Combine(RomInfo.GameDirs[DirNames.Maps].unpackedDir, mapNumber.ToString("D4")), gFamily, discardMoveperms, showMessages) { }
         public MapFile(Stream data, GameFamilies gFamily, bool discardMoveperms = false, bool showMessages = true)
         {
@@ -526,7 +526,7 @@ namespace DSPRE.ROMFiles
 
             try
             {
-                using (Stream fs = new FileStream(modelPath, FileMode.Open))
+                using (Stream fs = new FileStream(modelPath, FileMode.Open, FileAccess.Read))
                 {
                     this.NSBMDFile = NSBMDLoader.LoadNSBMD(fs);
                 }
@@ -543,7 +543,7 @@ namespace DSPRE.ROMFiles
 
             try
             {
-                using (Stream fs = new FileStream(modelPath, FileMode.Open))
+                using (Stream fs = new FileStream(modelPath, FileMode.Open, FileAccess.Read))
                 {
                     this.NSBMDFile = NSBMDLoader.LoadNSBMD(fs);
                 }

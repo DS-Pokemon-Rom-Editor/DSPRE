@@ -441,7 +441,7 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        public EncounterFileDPPt(int ID) : this(new FileStream(Path.Combine(RomInfo.GameDirs[DirNames.Encounters].unpackedDir, ID.ToString("D4")), FileMode.Open)) { }
+        public EncounterFileDPPt(int ID) : this(new FileStream(Path.Combine(RomInfo.GameDirs[DirNames.Encounters].unpackedDir, ID.ToString("D4")), FileMode.Open, FileAccess.Read)) { }
         public EncounterFileDPPt()
         {
             SwarmPokemon = new ushort[2];
@@ -963,7 +963,7 @@ namespace DSPRE.ROMFiles
                 }
             }
         }
-        public EncounterFileHGSS(int ID) : this(new FileStream(Path.Combine(RomInfo.GameDirs[DirNames.Encounters].unpackedDir, ID.ToString("D4")), FileMode.Open)) { }
+        public EncounterFileHGSS(int ID) : this(new FileStream(Path.Combine(RomInfo.GameDirs[DirNames.Encounters].unpackedDir, ID.ToString("D4")), FileMode.Open, FileAccess.Read)) { }
         public EncounterFileHGSS()
         {
             SwarmPokemon = new ushort[4];

@@ -67,7 +67,7 @@ namespace DSPRE.ROMFiles
                 }
             }
         }
-        public EventFile(int ID) : this(new FileStream(Path.Combine(RomInfo.GameDirs[DirNames.EventFiles].unpackedDir, ID.ToString("D4")), FileMode.Open))
+        public EventFile(int ID) : this(new FileStream(Path.Combine(RomInfo.GameDirs[DirNames.EventFiles].unpackedDir, ID.ToString("D4")), FileMode.Open, FileAccess.Read))
         {
                     this.ID = ID;
                 }

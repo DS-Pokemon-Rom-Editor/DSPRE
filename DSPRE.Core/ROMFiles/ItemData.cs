@@ -455,7 +455,7 @@ namespace DSPRE.ROMFiles
         }
 
 
-        public ItemData(int ID) : this(new FileStream(Path.Combine(RomInfo.GameDirs[DirNames.ItemData].unpackedDir, ID.ToString("D4")), FileMode.Open), ID) { }
+        public ItemData(int ID) : this(new FileStream(Path.Combine(RomInfo.GameDirs[DirNames.ItemData].unpackedDir, ID.ToString("D4")), FileMode.Open, FileAccess.Read), ID) { }
 
         public override byte[] ToByteArray()
         {

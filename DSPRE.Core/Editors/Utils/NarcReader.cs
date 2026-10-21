@@ -31,7 +31,7 @@ namespace DSPRE.Editors.Utils
         public NarcReader(string strFileName)
         {
             _fileName = strFileName;
-            Fs = new FileStream(strFileName, FileMode.Open, FileAccess.ReadWrite);
+            Fs = new FileStream(strFileName, FileMode.Open, FileAccess.Read);
             BinaryReader binaryReader = new BinaryReader(Fs);
             byte[] array = new byte[16];
             binaryReader.Read(array, 0, 16);
@@ -67,7 +67,7 @@ namespace DSPRE.Editors.Utils
 
         public int OpenEntry(int id)
         {
-            Fs = new FileStream(_fileName, FileMode.Open, FileAccess.ReadWrite);
+            Fs = new FileStream(_fileName, FileMode.Open, FileAccess.Read);
             Fs.Seek(Fe[id].Ofs, SeekOrigin.Begin);
             return 0;
         }

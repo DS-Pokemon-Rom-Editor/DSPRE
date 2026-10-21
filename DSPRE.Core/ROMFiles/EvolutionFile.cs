@@ -142,7 +142,7 @@ namespace DSPRE
             }
         }
 
-        public EvolutionFile(int ID) : this(new FileStream(Path.Combine(RomInfo.GameDirs[DirNames.Evolutions].unpackedDir, ID.ToString("D4")), FileMode.Open)) { }
+        public EvolutionFile(int ID) : this(new FileStream(Path.Combine(RomInfo.GameDirs[DirNames.Evolutions].unpackedDir, ID.ToString("D4")), FileMode.Open, FileAccess.Read)) { }
 
         public EvolutionFile() { }
 

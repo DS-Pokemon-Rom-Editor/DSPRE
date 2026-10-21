@@ -70,7 +70,7 @@ namespace LibNDSFormats.NSBTX
             texs = new List<NSBMDTexture>();
             pals = new List<NSBMDPalette>();
             IEnumerable<NSBMDMaterial> result = null;
-            using (FileStream fileStream = new FileStream(fileInfo.FullName, FileMode.Open))
+            using (FileStream fileStream = new FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read))
             {
                 result = LoadNsbtx(fileStream, out texs, out pals);
             }

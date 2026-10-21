@@ -47,7 +47,7 @@ namespace DSPRE.ROMFiles
       Parse(new MemoryStream(data));
     }
 
-    public void ParseFile(string path) => Parse(new FileStream(path, FileMode.Open));
+    public void ParseFile(string path) => Parse(new FileStream(path, FileMode.Open, FileAccess.Read));
 
     private void Parse(Stream fs)
     {

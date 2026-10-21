@@ -60,7 +60,7 @@ namespace LibNDSFormats.NSBCA
         public static IEnumerable<NSBMDAnimation> LoadNsbca(FileInfo fileInfo)
         {
             IEnumerable<NSBMDAnimation> result = null;
-            using (FileStream fileStream = new FileStream(fileInfo.FullName, FileMode.Open))
+            using (FileStream fileStream = new FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read))
             {
                 result = LoadNsbca(fileStream);
             }
