@@ -2406,9 +2406,28 @@ namespace DSPRE
             {
                 // The NARC path literals use '\', normalize so they resolve on non-Windows too.
                 string packedDir = Path.Combine(WorkDir, kvp.Value.Replace('\\', Path.DirectorySeparatorChar));
-                string unpackedDir = Path.Combine(DspreDir, "unpacked", kvp.Key.ToString());
+                string unpackedDir = Path.Combine(DspreDir, "unpacked", UnpackedFolderName(kvp.Key));
+                KeepLegacyFolder(Path.Combine(DspreDir, "unpacked", kvp.Key.ToString()), unpackedDir);
                 GameDirs.Add(kvp.Key, (packedDir, unpackedDir));
             }
+        }
+
+        /// <summary>
+        /// The member name with a lowercase first letter (scripts), or as written when it starts with two capitals
+        /// (OWSprites). Rotom and existing projects depend on these names, and Linux tells the cases apart.
+        /// </summary>
+        public static string UnpackedFolderName(DirNames dir)
+        {
+            string name = dir.ToString();
+            return name.Length > 1 && char.IsUpper(name[1]) ? name : char.ToLowerInvariant(name[0]) + name.Substring(1);
+        }
+
+        // Only a case-sensitive disk can hold a folder named as the member is written beside the usual one.
+        private static void KeepLegacyFolder(string written, string folder)
+        {
+            if (string.Equals(written, folder, StringComparison.Ordinal) || Directory.Exists(folder) || !Directory.Exists(written)) return;
+            try { Directory.Move(written, folder); }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { AppLogger.Warn($"Could not rename {written} to {folder}: {ex.Message}"); }
         }
 
         public static string GetLangResFolderName()
