@@ -159,6 +159,13 @@ namespace DSPRE
         /// <summary>The shared menu entries a script's standard-text menus read from. -1 when unknown.</summary>
         public static int FieldMenuEntriesArchive { get; private set; } = -1;
 
+        /// <summary>The YES and NO entries of <see cref="FieldMenuEntriesArchive"/> the yes/no box shows. -1 when unknown.</summary>
+        public static int FieldYesEntry { get; private set; } = -1;
+        public static int FieldNoEntry { get; private set; } = -1;
+
+        /// <summary>The archive battles print their messages from. -1 when unknown.</summary>
+        public static int BattleStringsTextNumber { get; private set; } = -1;
+
         /// <summary>The four archives GetStdMsgNaix picks between, in order. Empty when unknown.</summary>
         public static int[] FieldSharedMessageArchives { get; private set; } = System.Array.Empty<int>();
 
@@ -256,9 +263,12 @@ namespace DSPRE
 
         /// <summary>
         /// The battle overlay's four HP bar text routines (name, level, current HP, max HP): the <c>ldr r0, [r0]</c> before
-        /// each one's image proxy call, and the BLX of each copy of its text onto the bar.
+        /// each one's image proxy call, and the BLX of each copy of its text onto the bar. <c>TileHooks</c> and
+        /// <c>TileCopies</c> are the same for the routines that copy whole tiles of the bar's pieces with a colour 15
+        /// background: the gender symbol and "Lv" (only the writes in Diamond and Pearl, which read the bar back first), and
+        /// the caught ball in Platinum and HeartGold. Diamond's ball has colour 15 inside it, so it is left out.
         /// </summary>
-        public sealed record HpBarTextSites(int Overlay, int[] Hooks, int[] Copies);
+        public sealed record HpBarTextSites(int Overlay, int[] Hooks, int[] Copies, int[] TileHooks, int[] TileCopies);
 
         /// <summary>
         /// Battle Point exchange code sites: Platinum's corner list pointers, overlay 7 price literal (the next one is +2)
@@ -404,6 +414,36 @@ namespace DSPRE
 
         /// <summary>One of the summary screen's window tables in arm9: eight bytes a window, the page it belongs to.</summary>
         public sealed record SummaryWindowTableSite(string Page, uint Offset, int Count);
+
+        /// <summary>
+        /// A run of window templates (eight bytes each) in arm9 (overlay -1) or an overlay file, one entry a window, and the
+        /// background layer and first tile the first one has in the game, which a read checks.
+        /// </summary>
+        public sealed record ScreenWindowTableSite(string Group, int Overlay, uint Offset, ScreenWindowName[] Windows, int FirstLayer, int FirstBaseTile);
+
+        /// <summary>A window's name and, for a party Pokémon's window, which Pokémon (1 to 6) and part ("name", "HP") it is.</summary>
+        public sealed record ScreenWindowName(string Name, int Pokemon = 0, string Part = null);
+
+        /// <summary>
+        /// The party menu's tables in arm9 that place each Pokémon: panels (twelve bytes each), cursor tables (eight a stop),
+        /// the sprite templates whose entries 4 to 9 are the status icons (forty bytes each), and HGSS's touch areas (four each).
+        /// </summary>
+        public sealed record PartyPanelSites(uint Panels, uint[] Cursors, uint SpriteTemplates, uint[] Touch);
+
+        /// <summary>The arm9 addresses of the party menu functions the panel size patch rewrites.</summary>
+        public sealed record PartyPanelCodeSites(uint Draw, uint Empty, uint Loader, uint Capture, uint Ticks, uint Step, uint Redraw);
+
+        /// <summary>
+        /// The Thumb instruction in arm9 that holds the party menu's HP bar length in pixels (movs r2, #48). The colour is still
+        /// judged against 48: that call shares its 48 with the size of each Pokémon's draw state, which can't change.
+        /// </summary>
+        public sealed record PartyHpBarSites(uint Length);
+
+        /// <summary>
+        /// The party menu's graphics archive members a panel resize rebuilds: the cursor's cells and tiles, the panel art and
+        /// the background, with how many of the background's rows lie above the message box.
+        /// </summary>
+        public sealed record PartyGraphicsMembers(int CursorCells, int CursorTiles, int PanelArt, int Background, int PanelRows);
 
         /// <summary>
         /// A summary screen bar's code: the Thumb instructions whose low byte is its tile column and row, how many
@@ -717,6 +757,14 @@ namespace DSPRE
             FieldTextureAnimations, // Pt data/fldtanime.narc, HGSS a/1/3/9 (HGSS data/fldtanime.narc is unused): member 0 names textures, the rest hold frames
             EncounterEffectGraphics, // DP/Pt graphic/field_encounteffect.narc, HGSS a/1/0/9: special trainer battle intro art
             NameInputGraphics,      // DP/Pt data/namein.narc, HGSS a/0/3/1: the naming screen's backgrounds and icons
+            StartMenuGraphics,      // Pt graphic/menu_gra.narc: the start menu's icons and cursor
+            PokegearGraphics,       // HGSS a/1/4/3: the Pokégear frame and app buttons, six skins each
+            PokegearMapGraphics,    // HGSS a/1/4/4: the Pokégear map
+            PokegearPhoneGraphics,  // HGSS a/1/4/6: the Pokégear phone
+            PokegearRadioGraphics,  // HGSS a/1/4/7: the Pokégear radio
+            PartyMenuGraphics,      // Pt graphic/pl_plist_gra.narc, HGSS a/0/2/1: the party screen
+            BoxGraphics,            // Pt graphic/box.narc, HGSS a/0/1/9: the PC boxes
+            OptionsGraphics,        // Pt graphic/config_gra.narc, HGSS a/0/7/2: the options screen
             TrainerClassMetadata,   // HGSS a/1/5/5, only used by the external trainer class metadata patch
             PokedexData,            // DP/Pt application/zukanlist/zkn_data/zukan_data.narc, HGSS a/0/7/4: dex height, weight, body shape, size check and sort lists (Pt/HGSS with Origin Giratina)
             PokedexDataAltered,     // Pt zukan_data_gira.narc, HGSS a/2/1/4: the same with Altered Giratina
@@ -1154,6 +1202,8 @@ namespace DSPRE
         public static void SetFieldScriptArchives()
         {
             FieldMenuEntriesArchive = -1;
+            FieldYesEntry = FieldNoEntry = -1;
+            BattleStringsTextNumber = -1;
             FieldSharedMessageArchives = System.Array.Empty<int>();
             SystemFontPaletteEntry = -1;
             FieldTouchMenuTextArchive = -1;
@@ -1163,10 +1213,14 @@ namespace DSPRE
             {
                 case GameFamilies.Plat:
                     FieldMenuEntriesArchive = japanese ? 360 : 361;          // TEXT_BANK_MENU_ENTRIES
+                    if (!japanese) { FieldYesEntry = 41; FieldNoEntry = 42; } // MenuEntries_Text_Yes, _No
+                    if (!japanese) BattleStringsTextNumber = 368;               // TEXT_BANK_BATTLE_STRINGS
                     SystemFontPaletteEntry = 6;
                     break;
                 case GameFamilies.HGSS:
                     FieldMenuEntriesArchive = japanese ? 189 : 191;
+                    if (!japanese) { FieldYesEntry = 42; FieldNoEntry = 43; } // CreateYesNoMenu
+                    if (!japanese) BattleStringsTextNumber = 197;
                     FieldSharedMessageArchives = japanese ? new[] { 740, 209, 29, 428 } : new[] { 752, 211, 30, 435 };
                     SystemFontPaletteEntry = 7;
                     FieldTouchMenuTextArchive = japanese ? 194 : 196;
@@ -1252,7 +1306,7 @@ namespace DSPRE
                         {
                             if (OverlayUtils.Decompress(1) < 0)
                             {
-                                ShowWarning?.Invoke("Overlay 1 couldn't be decompressed.\nOverworld sprites in the Event Editor will be " +
+                                ShowWarning?.Invoke("Overlay 1 couldn't be decompressed.\nOverworld sprites in the Event editor will be " +
                                 "displayed incorrectly or not displayed at all.", "Decompression error");
                             }
                         }
@@ -1268,7 +1322,7 @@ namespace DSPRE
                         uint ramAddressOfTable = bReader.ReadUInt32();
                         if ((ramAddressOfTable >> 0x18) != 0x02)
                         {
-                            ShowWarning?.Invoke("Something went wrong reading the Overworld configuration table.\nOverworld sprites in the Event Editor will be " +
+                            ShowWarning?.Invoke("Something went wrong reading the Overworld configuration table.\nOverworld sprites in the Event editor will be " +
                                 "displayed incorrectly or not displayed at all.", "Decompression error");
                             return;
                         }
@@ -1710,6 +1764,7 @@ namespace DSPRE
             FieldMenuEntriesArchive = TextBank(FieldMenuEntriesArchive);
             FieldSharedMessageArchives = TextBanks(FieldSharedMessageArchives);
             FieldTouchMenuTextArchive = TextBank(FieldTouchMenuTextArchive);
+            BattleStringsTextNumber = TextBank(BattleStringsTextNumber);
             AbilityNamesTextNumber = TextBank(AbilityNamesTextNumber);
             PokedexMessagesTextNumber = TextBank(PokedexMessagesTextNumber);
             PokedexEntryTextNumber = TextBank(PokedexEntryTextNumber);
@@ -2199,6 +2254,10 @@ namespace DSPRE
                         [DirNames.SynthOverlay] = $@"{_dataFolderName}\data\weather_sys.narc",
                         [DirNames.DynamicHeaders] = $@"{_dataFolderName}\debug\cb_edit\d_test.narc",
                         [DirNames.AreaWindowGraphics] = $@"{_dataFolderName}\arc\area_win_gra.narc",
+                        [DirNames.StartMenuGraphics] = $@"{_dataFolderName}\graphic\menu_gra.narc",
+                        [DirNames.PartyMenuGraphics] = $@"{_dataFolderName}\graphic\pl_plist_gra.narc",
+                        [DirNames.BoxGraphics] = $@"{_dataFolderName}\graphic\box.narc",
+                        [DirNames.OptionsGraphics] = $@"{_dataFolderName}\graphic\config_gra.narc",
                         [DirNames.SealGraphics] = $@"{_dataFolderName}\application\custom_ball\data\cb_data.narc",
                         [DirNames.TrainerCapsules] = $@"{_dataFolderName}\application\custom_ball\edit\pl_cb_data.narc",
                         [DirNames.PokedexData] = $@"{_dataFolderName}\application\zukanlist\zkn_data\zukan_data.narc",
@@ -2329,6 +2388,13 @@ namespace DSPRE
                         [DirNames.Fonts] = $@"{_dataFolderName}\a\0\1\6",
                         [DirNames.WindowFrames] = $@"{_dataFolderName}\a\0\3\8",
                         [DirNames.FieldTouchMenu] = $@"{_dataFolderName}\a\0\1\4",
+                        [DirNames.PokegearGraphics] = $@"{_dataFolderName}\a\1\4\3",
+                        [DirNames.PokegearMapGraphics] = $@"{_dataFolderName}\a\1\4\4",
+                        [DirNames.PokegearPhoneGraphics] = $@"{_dataFolderName}\a\1\4\6",
+                        [DirNames.PokegearRadioGraphics] = $@"{_dataFolderName}\a\1\4\7",
+                        [DirNames.PartyMenuGraphics] = $@"{_dataFolderName}\a\0\2\1",
+                        [DirNames.BoxGraphics] = $@"{_dataFolderName}\a\0\1\9",
+                        [DirNames.OptionsGraphics] = $@"{_dataFolderName}\a\0\7\2",
                         [DirNames.FieldTouchChoices] = $@"{_dataFolderName}\a\2\3\7",
                         [DirNames.SummaryGraphics] = $@"{_dataFolderName}\a\1\6\2",
                         [DirNames.SummarySprites] = $@"{_dataFolderName}\a\0\3\9",
@@ -2472,7 +2538,7 @@ namespace DSPRE
 
                 case GameFamilies.DP:
                 case GameFamilies.Plat:
-                    using (BinaryReader idReader = new BinaryReader(new FileStream(OWtablePath, FileMode.Open)))
+                    using (BinaryReader idReader = new BinaryReader(new FileStream(OWtablePath, FileMode.Open, FileAccess.Read)))
                     {
                         idReader.BaseStream.Position = OWTableOffset;
 
@@ -2488,7 +2554,7 @@ namespace DSPRE
                     break;
 
                 case GameFamilies.HGSS:
-                    using (BinaryReader idReader = new BinaryReader(new FileStream(OWtablePath, FileMode.Open)))
+                    using (BinaryReader idReader = new BinaryReader(new FileStream(OWtablePath, FileMode.Open, FileAccess.Read)))
                     {
                         idReader.BaseStream.Position = OWTableOffset;
 
@@ -2511,7 +2577,7 @@ namespace DSPRE
             OverworldTableKeys = OverworldTable.Keys.ToArray();
         }
 
-        /// <summary>Checks if the Item Table Editor is available for the current ROM version. </summary>
+        /// <summary>Checks if the Item Music & battle tables is available for the current ROM version. </summary>
         /// <returns>True if the editor is available, false otherwise</returns>
         public static bool IsItemTableEditorAvailable()
         {

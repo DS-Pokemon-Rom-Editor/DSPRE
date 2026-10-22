@@ -32,7 +32,8 @@ namespace DSPRE.Avalonia
         }
 
         public static async Task<(Choice Choice, HpBarFit.Plan Plan)> AskAsync(Window owner, GraphicAssets.Archive archive, int index,
-                                                                             BattleGaugeComposer.Kind kind, string path)
+                                                                             BattleGaugeComposer.Kind kind, string path,
+                                                                             bool offerPictureOnly = true)
         {
             Shown plain = Make(archive, index, kind, path);
 
@@ -59,10 +60,13 @@ namespace DSPRE.Avalonia
                 fit.Click += (_, _) => { picked = Choice.Fit; win.Close(); };
                 buttons.Children.Add(fit);
             }
-            Button only = new Button { Content = "Picture only" };
-            ToolTip.SetTip(only, "Import the picture and leave the text colours and bar pieces as they are");
-            only.Click += (_, _) => { picked = Choice.PictureOnly; win.Close(); };
-            buttons.Children.Add(only);
+            if (offerPictureOnly)
+            {
+                Button only = new Button { Content = "Picture only" };
+                ToolTip.SetTip(only, "Import the picture and leave the text colours and bar pieces as they are");
+                only.Click += (_, _) => { picked = Choice.PictureOnly; win.Close(); };
+                buttons.Children.Add(only);
+            }
             Button cancel = new Button { Content = "Cancel", IsCancel = true };
             cancel.Click += (_, _) => win.Close();
             buttons.Children.Add(cancel);

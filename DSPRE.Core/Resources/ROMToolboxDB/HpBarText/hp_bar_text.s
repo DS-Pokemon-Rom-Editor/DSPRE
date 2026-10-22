@@ -1,7 +1,8 @@
 @ DSPRE clear battle text background, for Diamond, Pearl, Platinum, HeartGold and SoulSilver.
 @ The battle draws a bar's name, level and HP numbers into a buffer filled with colour 15 and copies it over the bar
 @ (HealthBox_DrawBattlerName, _DrawLevelNumber, _DrawCurrentHP and _DrawMaxHP in pokeplatinum src/battle/healthbox.c;
-@ ov12_0226516C, _02265354, _02265474 and _02265500 in pokeheartgold). Each of those copies goes through Merge instead,
+@ ov12_0226516C, _02265354, _02265474 and _02265500 in pokeheartgold). The gender symbol and "Lv" come from tiles with
+@ a colour 15 background (HealthBox_DrawLevelText). Each of those copies goes through Merge instead,
 @ which keeps the bar's own pixel wherever the buffer has colour 15. The bar's untouched tiles stay in RAM for the whole
 @ battle as its tile resource; each routine's call for the bar's image proxy goes through Hook, which notes where
 @ they are. DSPRE fills ProxyGetter and Copy per ROM, and OffsetAt with the address of Offset.

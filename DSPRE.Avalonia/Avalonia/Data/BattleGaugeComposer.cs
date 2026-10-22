@@ -271,7 +271,7 @@ namespace DSPRE.Avalonia.Data
         private static void WriteTheText(byte[] tiles, Layout layout, Showing showing)
         {
             // With the clear text background patch the battle keeps the bar's own pixels wherever the text's background would go.
-            bool clearBackground = BattleGaugeTextPatch.IsApplied;
+            bool clearBackground = BattleGaugeTextPatch.TextIsClear;
 
             // The name is eight tiles across and two down, and goes in as four pieces: the top row and
             // the bottom row, each cut where the first sprite piece runs out and the second begins.
@@ -290,8 +290,9 @@ namespace DSPRE.Avalonia.Data
             byte[] mark = BattleGaugeGlyphs.GenderAndLvBlock(showing.Gender);
             if (mark != null)
             {
-                Copy(mark, 0, tiles, layout.LvMark[0], showing: layout.LvMark[0].size);
-                Copy(mark, 2 * TileBytes, tiles, layout.LvMark[1], showing: layout.LvMark[1].size);
+                bool clearMark = BattleGaugeTextPatch.TilesAreClear;
+                Copy(mark, 0, tiles, layout.LvMark[0], showing: layout.LvMark[0].size, clearMark);
+                Copy(mark, 2 * TileBytes, tiles, layout.LvMark[1], showing: layout.LvMark[1].size, clearMark);
             }
 
             // The level sits four rows lower than the tiles it lands in, so each digit straddles two of
@@ -383,7 +384,8 @@ namespace DSPRE.Avalonia.Data
             }
 
             // A wild Pokemon's bar always gets this tile: the ball when it has been caught, a blank when not.
-            if (theirs) CopyPiece(sheet, showing.Caught ? BattleGaugePieces.CaughtBall : BattleGaugePieces.NoStatus, tiles, layout.Caught);
+            if (theirs) CopyPiece(sheet, showing.Caught ? BattleGaugePieces.CaughtBall : BattleGaugePieces.NoStatus, tiles, layout.Caught,
+                                  BattleGaugeTextPatch.CaughtIsClear);
         }
 
         /// <summary>How full each cell of a gauge is, 0 to 8 pixels, the way the games count it.</summary>
@@ -401,10 +403,10 @@ namespace DSPRE.Avalonia.Data
             return cells;
         }
 
-        private static void CopyPiece(byte[] sheet, int piece, byte[] tiles, int tile)
+        private static void CopyPiece(byte[] sheet, int piece, byte[] tiles, int tile, bool clearBackground = false)
         {
             if (tile <= 0) return;
-            Copy(sheet, piece * TileBytes, tiles, (tile, 1), showing: 1);
+            Copy(sheet, piece * TileBytes, tiles, (tile, 1), showing: 1, clearBackground);
         }
 
         private static void Copy(byte[] from, int fromAt, byte[] into, (int pos, int size) where, int showing, bool clearBackground = false)

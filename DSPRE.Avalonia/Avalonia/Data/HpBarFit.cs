@@ -106,7 +106,12 @@ namespace DSPRE.Avalonia.Data
                         if (c != 0xFF000000u) inText[c] = inText.GetValueOrDefault(c) + 1;
                     }
             }
-            if (inText.Count == 0) { plan.CannotBecause = "The picture has nothing where the name and level go."; return plan; }
+            if (inText.Count == 0)
+            {
+                if (!BattleGaugeTextPatch.TextIsClear) { plan.CannotBecause = "The picture has nothing where the name and level go."; return plan; }
+                // With the patch the text background is never drawn, so a see-through text area keeps the text colours there are now.
+                inText[Ds(Pack(palette[TextBack]))] = 1;
+            }
 
             List<KeyValuePair<uint, int>> ranked = inText.OrderByDescending(kv => kv.Value).ToList();
             plan.Background = ranked[0].Key;
@@ -137,7 +142,7 @@ namespace DSPRE.Avalonia.Data
                 double between = Light(plan.Ink) * 0.35 + Light(plan.Background) * 0.65;
                 plan.Shadow = (plain.Count > 0 ? plain : left).OrderBy(c => Math.Abs(Light(c) - between)).FirstOrDefault(shadowNow);
             }
-            plan.ClearTextBackground = BattleGaugeTextPatch.IsApplied;
+            plan.ClearTextBackground = BattleGaugeTextPatch.TextIsClear;
             if (!plan.ClearTextBackground && ranked[0].Value * 10 < total * 9)
                 plan.Notes.Add("The name" + (ShowsNumbers(kind) ? ", level and HP numbers" : " and level")
                              + " sit on one flat colour, so only the main colour of those areas shows.");

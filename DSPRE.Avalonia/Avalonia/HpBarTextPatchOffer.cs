@@ -3,7 +3,7 @@ using DSPRE.ROMFiles;
 namespace DSPRE.Avalonia
 {
     /// <summary>
-    /// Sends the HP bar editors to the clear battle text background patch in the ROM Patch Toolbox. It changes the game's
+    /// Sends the HP bar editors to the clear battle text background patch in the ROM patch toolbox. It changes the game's
     /// code, so the editors only preview it and never apply it themselves.
     /// </summary>
     internal static class HpBarTextPatchOffer
