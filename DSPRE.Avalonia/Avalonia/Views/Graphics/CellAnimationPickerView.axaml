@@ -23,10 +23,9 @@
   <DockPanel Margin="10">
 
     <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,8,0,0">
-      <TextBlock Text="{Binding DeepEditorHint}" Classes="hint" IsVisible="{Binding HasDeepEditor}"/>
       <DockPanel>
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
-          <Button Content="{Binding DeepEditorName}" Click="DeepEditor_Click"
+          <Button Content="{Binding OpenDeepEditorLabel}" controls:Icon.Key="OpenLink" Click="DeepEditor_Click"
                   IsVisible="{Binding HasDeepEditor}"/>
           <Button Content="Open" controls:Icon.Key="OpenLink" Click="Open_Click" MinWidth="90"/>
         </StackPanel>
@@ -37,7 +36,7 @@
     <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
       <TextBlock Text="{Binding Summary}" Classes="hint"/>
       <TextBox Text="{Binding Search}" PlaceholderText="Search by archive or file number"/>
-      <CheckBox Content="Only the ones with art to draw them" IsChecked="{Binding DrawableOnly}"
+      <CheckBox Content="With art only" IsChecked="{Binding DrawableOnly}"
                 ToolTip.Tip="An animation needs a layout and a sheet of tiles before anything can be shown"/>
       <CheckBox Content="Include sprites with their own editor" IsChecked="{Binding IncludeSpecialised}"
                 ToolTip.Tip="Trainer and Pokémon sprites are edited in their own editors."/>

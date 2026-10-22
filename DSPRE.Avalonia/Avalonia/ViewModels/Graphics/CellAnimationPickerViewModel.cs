@@ -145,13 +145,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         // These own poses, colours and source images. Frame order and timing are this window's job.
         private static readonly string[] OwnsTheArtwork =
         {
-            "Trainer Sprite Editor", "Trainer Back Sprite Editor", "Pokémon Sprite Editor",
+            "Trainer sprite editor", "Trainer back sprite editor", "Pokémon editor",
         };
 
-        // Editors that work on frames; the graphics list also names archive users like the Header Editor.
+        // Editors that work on frames; the graphics list also names archive users like the Header editor.
         private static readonly string[] HandsOffTo =
         {
-            "Trainer Sprite Editor", "Trainer Back Sprite Editor", "Pokémon Sprite Editor", "Pokémon Editor", "Bottom Screen Editor",
+            "Trainer sprite editor", "Trainer back sprite editor", "Pokémon editor", "Bottom screen",
         };
 
         private static string HandOff(string deepEditor) => Array.IndexOf(HandsOffTo, deepEditor) >= 0 ? deepEditor : null;
@@ -173,7 +173,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             OnPropertyChanged(nameof(Selected));
             OnPropertyChanged(nameof(DeepEditorName));
             OnPropertyChanged(nameof(HasDeepEditor));
-            OnPropertyChanged(nameof(DeepEditorHint));
+            OnPropertyChanged(nameof(OpenDeepEditorLabel));
         }
 
         public CellAnimationFound Selected =>
@@ -189,10 +189,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// </summary>
         public string DeepEditorName => Selected?.DeepEditor;
         public bool HasDeepEditor => !string.IsNullOrEmpty(DeepEditorName);
-        public string DeepEditorHint => HasDeepEditor
-            ? $"The {DeepEditorName} does more with these: poses, colours and the source files. This window "
-              + "edits the animation itself, which it does not."
-            : "";
+        public string OpenDeepEditorLabel => HasDeepEditor ? $"Open in {DeepEditorName}" : "";
 
         public string Summary => $"{_all.Count} animation files in this game"
                                + (_all.Count == 0 ? "" : $", {_all.Count(a => a.Drawable)} with art to draw");

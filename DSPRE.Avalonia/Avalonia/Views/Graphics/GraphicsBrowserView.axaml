@@ -2,9 +2,10 @@
         xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
+        xmlns:vmc="clr-namespace:DSPRE.Avalonia.ViewModels.Controls"
         x:Class="DSPRE.Avalonia.Views.Graphics.GraphicsBrowserView"
         x:DataType="vm:GraphicsBrowserViewModel"
-        Title="Graphics"
+        Title="All graphics"
         Width="980" Height="720" MinWidth="560" MinHeight="420"
         WindowStartupLocation="CenterScreen">
   <Design.DataContext>
@@ -14,7 +15,7 @@
   <DockPanel>
 
     <controls:EditorToolbar>
-        <TextBox PlaceholderText="Search by name or number, like trainer or icon" x:Name="SearchBox"
+        <TextBox PlaceholderText="Search" x:Name="SearchBox"
                  Text="{Binding Search}" FontSize="13" Width="340">
           <TextBox.InnerRightContent>
             <Button controls:Icon.Key="Cross" Click="ClearSearch_Click" Padding="8,2" Margin="0,0,2,0"
@@ -120,9 +121,18 @@
                 </DataTemplate>
               </ListBox.ItemTemplate>
             </ListBox>
-            <TextBlock Text="{Binding Details}" FontSize="13" TextWrapping="Wrap"/>
-            <TextBlock Text="{Binding DeepEditorHint}" IsVisible="{Binding HasDeepEditor}"
-                       FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
+            <TextBlock Text="{Binding Details}" FontSize="13" TextWrapping="Wrap"
+                       IsVisible="{Binding Details, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            <ItemsControl ItemsSource="{Binding Facts}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vmc:DetailFact">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="{Binding Name}" Width="80" Foreground="{DynamicResource Editor.Subtle}"/>
+                    <TextBlock Text="{Binding Value}"/>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
           </StackPanel>
         </Border>
 

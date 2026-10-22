@@ -53,27 +53,27 @@ namespace DSPRE.Avalonia.Data
         {
             new Archive { Dir = DirNames.OWSprites, Title = "Overworld people and objects", In = Group.Overworld,
                 What = "Everything that stands about on the map: people, signs, items and the rest.",
-                DeepEditor = "Overworld Editor" },
+                DeepEditor = "Overworld editor" },
 
             new Archive { Dir = DirNames.ExteriorBuildingModels, Title = "Outdoor buildings", TextureArchive = DirNames.BuildingTextures, AnimationArchive = DirNames.BuildingAnimations, In = Group.Buildings,
                 What = "The buildings as seen from the outside on the world map.",
-                DeepEditor = "Building Editor" },
+                DeepEditor = "Building editor" },
             new Archive { Dir = DirNames.InteriorBuildingModels, Title = "Indoor buildings", TextureArchive = DirNames.BuildingTextures, AnimationArchive = DirNames.BuildingAnimations, Indoor = true, In = Group.Buildings,
-                What = "The insides of buildings you can walk into.", DeepEditor = "Building Editor" },
+                What = "The insides of buildings you can walk into.", DeepEditor = "Building editor" },
             new Archive { Dir = DirNames.BuildingTextures, Title = "Building textures", In = Group.Buildings,
-                What = "The pictures painted onto the buildings.", DeepEditor = "Map & Building Textures editor" },
+                What = "The pictures painted onto the buildings.", DeepEditor = "Map & building textures" },
             new Archive { Dir = DirNames.BuildingAnimations, Title = "Building animations", In = Group.Buildings,
                 What = "Doors opening, windmills turning, and the rest of what buildings do." },
 
             new Archive { Dir = DirNames.MapTextures, Title = "Map textures", In = Group.Maps,
                 What = "The pictures painted onto the ground and scenery of each map.",
-                DeepEditor = "Map & Building Textures editor" },
+                DeepEditor = "Map & building textures" },
             new Archive { Dir = DirNames.GroundAnimations, Title = "Ground animations", In = Group.Maps,
                 What = "Water and other ground that moves." },
 
             new Archive { Dir = DirNames.TitleScreenGraphics, Title = "Title screen", In = Group.Other,
                 What = "The logo and background of the game's own title screen.",
-                DeepEditor = "Title Screen Editor" },
+                DeepEditor = "Title screen editor" },
             new Archive { Dir = DirNames.BagGraphics, Title = "Bag", In = Group.Other, OnlyThreeD = true,
                 What = "The bag on the bag screen, one for the boy and one for the girl, with each pocket opening." },
             new Archive { Dir = DirNames.OpeningDemoGraphics, Title = "Opening movie", In = Group.Other, OnlyThreeD = true,
@@ -118,7 +118,7 @@ namespace DSPRE.Avalonia.Data
         public static string ShortName(Kind k) => k switch
         {
             Kind.Model => "a model",
-            Kind.TextureBundle => "a set of pictures",
+            Kind.TextureBundle => "a texture file",
             Kind.JointAnimation => "joint movement",
             Kind.TextureAnimation => "a sliding picture",
             Kind.TextureSwap => "a list of pictures to swap between",
@@ -127,6 +127,22 @@ namespace DSPRE.Avalonia.Data
             Kind.Empty => "nothing",
             _ => "something that is not 3D data",
         };
+
+        /// <summary>A kind as a label for the details pane.</summary>
+        public static string KindName(Kind k) => k switch
+        {
+            Kind.Model => "Model",
+            Kind.TextureBundle => "Texture set",
+            Kind.JointAnimation => "Joint animation",
+            Kind.TextureAnimation => "Texture scroll",
+            Kind.TextureSwap => "Texture swap",
+            Kind.VisibilityAnimation => "Visibility animation",
+            Kind.MaterialAnimation => "Material animation",
+            Kind.Empty => "Empty",
+            _ => "Not 3D data",
+        };
+
+        private const string OnlyModelsExport = "Only models export to DAE or glTF";
 
         /// <summary>What can be done with one entry, and why not when not.</summary>
         public sealed class Options
@@ -154,19 +170,14 @@ namespace DSPRE.Avalonia.Data
                 case Kind.Model:
                     o.CanShow = true;
                     o.CanSaveModel = true;
-                    o.SaveNote = "Saves as a file other 3D programs open, with the shape and the pictures "
-                               + "painted on it. Movement is not included: the animations are separate "
-                               + "entries and are not carried over.";
+                    o.SaveNote = "Animations are separate entries and are not included";
                     break;
 
                 case Kind.TextureBundle:
                     o.CanShow = false;
-                    o.ShowNote = "This is a set of pictures for painting onto models, not a model itself, "
-                               + "so there is no shape to show. Open it in the Map & Building Textures editor to see "
-                               + "the pictures.";
+                    o.ShowNote = "Texture set, no model";
                     o.CanSaveModel = false;
-                    o.SaveNote = "There is no model here to save as a 3D file. The whole file can still be "
-                               + "saved exactly as it is.";
+                    o.SaveNote = OnlyModelsExport;
                     break;
 
                 case Kind.JointAnimation:
@@ -175,11 +186,9 @@ namespace DSPRE.Avalonia.Data
                 case Kind.VisibilityAnimation:
                 case Kind.MaterialAnimation:
                     o.CanShow = false;
-                    o.ShowNote = "This is movement for a model, not a model. It needs the model it belongs "
-                               + "to before there is anything to see.";
+                    o.ShowNote = "Animation, no model";
                     o.CanSaveModel = false;
-                    o.SaveNote = "Movement on its own is not something a 3D file can hold. The whole file "
-                               + "can still be saved exactly as it is.";
+                    o.SaveNote = OnlyModelsExport;
                     break;
 
                 case Kind.Empty:
@@ -187,8 +196,8 @@ namespace DSPRE.Avalonia.Data
                     break;
 
                 default:
-                    o.ShowNote = o.SaveNote = "This entry is not 3D data, so there is nothing to show or "
-                                            + "convert. The whole file can still be saved as it is.";
+                    o.ShowNote = "Not 3D data";
+                    o.SaveNote = OnlyModelsExport;
                     break;
             }
             return o;
@@ -700,7 +709,7 @@ namespace DSPRE.Avalonia.Data
                 return "That file is not 3D data. " + CanConvertAMesh;
 
             if (HoldsTextureSets(a) && now != Kind.TextureBundle)
-                return $"Only a set of pictures (BTX0) goes in this archive, and that file holds {ShortName(now)}.";
+                return $"Only a texture file (BTX0) goes in this archive, and that file holds {ShortName(now)}.";
 
             if (was != Kind.NotThreeD && was != Kind.Empty && now != was)
                 return $"This entry holds {ShortName(was)} and that file holds {ShortName(now)}. Put a "
@@ -713,8 +722,8 @@ namespace DSPRE.Avalonia.Data
                     return "This entry could not be read as an overworld texture: " + targetWhy;
                 if (!DSPRE.LibNDSFormats.Btx0Structure.TryInspect(file, out Btx0Structure source, out string sourceWhy))
                     return "That file could not be read as an overworld texture: " + sourceWhy;
-                if (!target.HasSameProfileAs(source))
-                    return "That texture uses a different dictionary, frame-reuse, texture, or palette layout than this entry.";
+                if (target.ProfileDifference(source) is string why)
+                    return $"That file can't go in overworld texture {index}: {why}, and the game would draw it wrong.";
                 if (DSPRE.LibNDSFormats.BTX0.ReadRaw(file, 0) == null)
                     return "That file isn't a texture DSPRE can write (BTX0, 16-color format).";
             }

@@ -84,6 +84,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private string _details = "Pick a place on the left to see what it fights on.";
         public string Details { get => _details; private set => Set(ref _details, value); }
 
+        public ObservableCollection<DetailFact> Facts { get; } = new();
+
         /// <summary>Every place that fights on this scenery, so the number means something.</summary>
         public ObservableCollection<string> Places { get; } = new();
 
@@ -99,7 +101,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             Whynot = "";
             if (_selected == null)
             {
-                Details = "Pick a place on the left to see what it fights on.";
+                Details = "Pick a place on the left to see it.";
+                Facts.Clear();
                 Places.Clear();
                 HasPlaces = false;
                 RaiseAll();
@@ -107,11 +110,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             }
 
             BattleScenes.Scene s = _selected;
-            Details = $"Battle scenery {s.BackgroundId}. Drawn from file {s.Drawing}, arranged by file "
-                    + $"{s.Arrangement}, painted from file {s.PaletteDay + _timeOfDay}. "
-                    + (s.Headers.Count == 0
-                        ? "No place in this game fights here, so it is spare."
-                        : $"{s.Headers.Count} map header{(s.Headers.Count == 1 ? "" : "s")} use this scenery.");
+            Details = "";
+            Facts.Clear();
+            Facts.Add(new DetailFact("Scenery", s.BackgroundId.ToString()));
+            Facts.Add(new DetailFact("Drawing", s.Drawing.ToString()));
+            Facts.Add(new DetailFact("Arrangement", s.Arrangement.ToString()));
+            Facts.Add(new DetailFact("Palette", (s.PaletteDay + _timeOfDay).ToString()));
+            Facts.Add(new DetailFact("Headers", s.Headers.Count == 0 ? "None" : s.Headers.Count.ToString()));
 
             // The whole list rather than the first forty, in a box that scrolls, so nothing trails off
             // into "and more".
@@ -122,16 +127,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 Places.Add($"{name} (header {s.Headers[i]})");
             }
             HasPlaces = Places.Count > 0;
-            PlacesHeader = Places.Count == 1 ? "The one map header that uses this scenery"
-                                             : $"The {Places.Count} map headers that use this scenery";
+            PlacesHeader = $"Headers ({Places.Count})";
 
             try
             {
                 BattleBgRenderer.BgImage bg = _backdrops.BuildBackdrop(s.BackgroundId, _timeOfDay);
                 if (bg?.Rgba == null)
                 {
-                    Whynot = "This scenery could not be drawn. The colours it names may not be a palette "
-                           + "in this game.";
+                    Whynot = "Unreadable palette";
                     RaiseAll();
                     return;
                 }

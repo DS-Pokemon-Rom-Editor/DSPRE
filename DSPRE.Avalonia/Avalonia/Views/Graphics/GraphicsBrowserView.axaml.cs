@@ -25,7 +25,8 @@ namespace DSPRE.Avalonia.Views.Graphics
             EditorWindowChrome.AttachUndoKeys(this, vm);
         }
 
-        private void Save_Click(object sender, RoutedEventArgs e) => ViewModel?.SaveChanges();
+        private async void Save_Click(object sender, RoutedEventArgs e)
+            => await DialogHelper.GuardAsync(() => { ViewModel?.SaveChanges(); return System.Threading.Tasks.Task.CompletedTask; }, "The graphics weren't saved.", ErrorTitle, this);
 
         private const string ErrorTitle = "Graphics error";
         private async void PaletteColour_Click(object sender, RoutedEventArgs e)

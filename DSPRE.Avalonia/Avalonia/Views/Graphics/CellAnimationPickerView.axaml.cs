@@ -43,17 +43,16 @@ namespace DSPRE.Avalonia.Views.Graphics
             // The animation's number says which class or Pokemon; files per trainer class vary by game.
             switch (pick.DeepEditor)
             {
-                case "Trainer Sprite Editor":
+                case "Trainer sprite editor":
                     AvaloniaEditorLauncher.OpenTrainerSpriteEditor(TrainerGraphicsLayout.ClassOf(pick.Animation));
                     break;
-                case "Trainer Back Sprite Editor":
+                case "Trainer back sprite editor":
                     AvaloniaEditorLauncher.OpenTrainerBackSpriteEditor(TrainerGraphicsLayout.ClassOf(pick.Animation));
                     break;
-                case "Pokémon Sprite Editor":
-                case "Pokémon Editor":
+                case "Pokémon editor":
                     _ = AvaloniaEditorLauncher.OpenPokemonEditorAsync(pick.Animation / 6);
                     break;
-                case "Bottom Screen Editor":
+                case "Bottom screen":
                     AvaloniaEditorLauncher.OpenBottomScreenEditor();
                     break;
             }

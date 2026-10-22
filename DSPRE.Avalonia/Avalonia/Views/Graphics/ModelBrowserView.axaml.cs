@@ -76,6 +76,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => ViewModel?.SaveChanges();
+        private void OpenDeepEditor_Click(object sender, RoutedEventArgs e) => ViewModel?.OpenDeepEditor();
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
             if (await DialogHelper.ConfirmDiscardAsync(this)) ViewModel?.DiscardChanges();
@@ -107,7 +108,6 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (err != null) { await DialogHelper.ShowErrorAsync(err, "Models and textures error"); return; }
             if (written == null) return;
             SaveNotice.Exported(written);
-            vm.StatusText = "The model and its pictures are exported; its animations are separate entries.";
         }
 
         private async void PutIn_Click(object sender, RoutedEventArgs e)

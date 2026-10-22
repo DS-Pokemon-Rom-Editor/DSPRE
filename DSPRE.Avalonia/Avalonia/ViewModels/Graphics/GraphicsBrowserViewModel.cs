@@ -34,8 +34,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             /// <summary>What this thing is called. The games name most of them, so say the name rather
             /// than repeating the archive down every row of the list.</summary>
             public string Name { get; init; }
-            public string Label => Name == null
-                ? $"{Index,5}  {Archive.Title}"
+            public string Label => Unit?.Gathered == true ? Name
+                : Name == null ? $"{Index,5}  {Archive.Title}"
                 : $"{Index,5}  {Name}";
             public string Search { get; init; }   // lowercased, for filtering
             public string Tip { get; init; }
@@ -230,6 +230,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             GraphicAssets.Group.Items => "Items",
             GraphicAssets.Group.TextAndFonts => "Fonts",
             GraphicAssets.Group.Windows => "Text boxes",
+            GraphicAssets.Group.MenuScreens => "Menu screens",
             GraphicAssets.Group.Places => "Places",
             GraphicAssets.Group.BottomScreen => "Bottom screen",
             _ => g.ToString(),
@@ -291,7 +292,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 string what = _selectedTab?.Only == null ? "in this game" : "under " + _selectedTab.Title;
                 if (string.IsNullOrEmpty(q))
                     return Shown.Count < here
-                        ? $"{here} graphics {what}. Showing the first {Shown.Count}; type to narrow it down."
+                        ? $"{here} graphics {what}; first {Shown.Count} shown"
                         : $"{here} graphics {what}.";
                 return Shown.Count == 0
                     ? $"Nothing {what} matches \"{q}\". Try part of a name, like trainer or icon."
@@ -385,11 +386,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public bool HasOwningEditor => OwningEditorName != null;
 
         public string OwningEditorLabel => HasOwningEditor
-            ? $"Edit in the {OwningEditorName}…" : "Edit its properties…";
+            ? $"Open in {OwningEditorName}" : "Open in editor";
 
         public string OwningEditorHelp => HasOwningEditor
-            ? $"Open the {OwningEditorName}, which decides everything about this but how it looks."
-            : "Nothing in DSPRE owns this graphic's numbers.";
+            ? null : "No editor works on this graphic";
 
         /// <summary>Opens whatever owns this graphic. Does nothing when nothing does.</summary>
         public void OpenOwningEditor()
@@ -472,12 +472,24 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private string _details = "Pick something on the left to see it.";
         public string Details { get => _details; private set => Set(ref _details, value); }
 
+        public ObservableCollection<DetailFact> Facts { get; } = new();
+
+        private void ShowFacts(GraphicAssets.Archive a, string name = null, string value = null)
+        {
+            Details = "";
+            Facts.Clear();
+            Facts.Add(new DetailFact("Name", Showing(a)));
+            Facts.Add(new DetailFact("Number", ShowingIndex.ToString()));
+            if (name != null) Facts.Add(new DetailFact(name, value));
+        }
+
         private void Look()
         {
             Picture = null;
             Whynot = "";
             _shownKind = GraphicAssets.Kind.Unknown;
             PaletteColours.Clear();
+            Facts.Clear();
             OnPropertyChanged(nameof(ShowsPalette));
             if (_selected == null)
             {
@@ -497,21 +509,20 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 {
                     Picture = ImageConverter.FromRgba(p.Rgba, p.Width, p.Height);
                     SizeToShow(p.Width, p.Height);
-                    Details = ShowsPalette
-                        ? $"{Showing(a)}, number {ShowingIndex}. {PaletteColours.Count} colours."
-                        : $"{Showing(a)}, number {ShowingIndex}. {p.Width} by {p.Height}.";
+                    if (ShowsPalette) ShowFacts(a, "Colours", PaletteColours.Count.ToString());
+                    else ShowFacts(a, "Size", $"{p.Width} × {p.Height}");
                 }
                 else
                 {
                     Whynot = p.Whynot ?? "There is no picture in this entry.";
-                    Details = $"{Showing(a)}, number {ShowingIndex}.";
+                    ShowFacts(a);
                 }
             }
             catch (Exception ex)
             {
                 AppLogger.Error("GraphicsBrowser.Look failed: " + ex.Message);
                 Whynot = "This entry could not be opened.";
-                Details = $"{Showing(a)}, number {ShowingIndex}.";
+                ShowFacts(a);
             }
             RaiseAll();
         }
@@ -527,9 +538,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             OnPropertyChanged(nameof(CanPaint));
             OnPropertyChanged(nameof(PaintHelp));
             OnPropertyChanged(nameof(SavePictureHelp));
-            OnPropertyChanged(nameof(DeepEditorName));
-            OnPropertyChanged(nameof(HasDeepEditor));
-            OnPropertyChanged(nameof(DeepEditorHint));
         }
 
         // ── what can be done with what is picked ───────────────────────────────────────────────────
@@ -610,11 +618,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             OnPropertyChanged(nameof(ShownWidth));
             OnPropertyChanged(nameof(ShownHeight));
         }
-
-        public string DeepEditorHint => HasDeepEditor ? $"The {DeepEditorName} does more with these." : "";
-
-        public string DeepEditorName => ShowingArchive?.DeepEditor;
-        public bool HasDeepEditor => !string.IsNullOrEmpty(DeepEditorName);
 
         private string _status = "";
         public string StatusText { get => _status; set => Set(ref _status, value); }

@@ -160,7 +160,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             if (tabs.Count > 0)
                 tabs.Insert(0, new CategoryTab { Title = "Everything", Only = null, Count = found.Count,
-                                                 What = "Every model, picture set and animation this game has." });
+                                                 What = "Every model, texture set and animation this game has." });
 
             _everything.Clear();
             _everything.AddRange(found);
@@ -170,11 +170,22 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <summary>Puts what <see cref="Scan"/> found into the bound collections. UI thread only.</summary>
         public void Publish()
         {
+            // The list is read again after every import, undo and discard, and the user stays where they were.
+            CategoryTab oldTab = _selectedTab;
+            Item old = _selected;
+            int oldPart = _partIndex;
+
+            _publishing = true;
             Tabs.Clear();
             foreach (CategoryTab t in _scanned ?? new List<CategoryTab>()) Tabs.Add(t);
-            _selectedTab = Tabs.FirstOrDefault();
+            _selectedTab = Tabs.FirstOrDefault(t => oldTab != null && t.Only == oldTab.Only && t.OnlyUnclaimed == oldTab.OnlyUnclaimed)
+                           ?? Tabs.FirstOrDefault();
             OnPropertyChanged(nameof(SelectedTab));
-            ApplyFilter();
+            _publishing = false;
+
+            Item again = old == null ? null : _everything.FirstOrDefault(i => i.Archive.Dir == old.Archive.Dir && i.Index == old.Index);
+            ApplyFilter(again, reread: true);
+            if (again != null && ReferenceEquals(_selected, again) && oldPart > 0 && oldPart < Parts.Count) PartIndex = oldPart;
         }
 
         /// <summary>
@@ -245,10 +256,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public ObservableCollection<Item> Shown { get; } = new();
 
         private CategoryTab _selectedTab;
+        // Set while Publish swaps the tabs, whose list box would otherwise filter for each step.
+        private bool _publishing;
         public CategoryTab SelectedTab
         {
             get => _selectedTab;
-            set { if (Set(ref _selectedTab, value)) ApplyFilter(); }
+            set { if (Set(ref _selectedTab, value) && !_publishing) ApplyFilter(); }
         }
 
         private string _search = "";
@@ -256,8 +269,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private const int ShowAtMost = 3000;
 
-        private void ApplyFilter()
+        private void ApplyFilter(Item prefer = null, bool reread = false)
         {
+            // Clearing the list makes the bound list box set Selected to null, so the pick is kept first.
+            Item keep = prefer ?? _selected;
             Shown.Clear();
             string q = SearchMatch.Fold((_search ?? "").Trim());
             IEnumerable<Item> hits = _everything;
@@ -265,8 +280,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             else if (_selectedTab?.Only != null) hits = hits.Where(i => i.In == _selectedTab.Only.Value);
             if (!string.IsNullOrEmpty(q)) hits = hits.Where(i => i.Search.Contains(q));
             foreach (Item i in hits.Take(ShowAtMost)) Shown.Add(i);
-            if (_selected == null || !Shown.Contains(_selected))
-                Selected = Shown.FirstOrDefault();
+            Item next = keep != null && Shown.Contains(keep) ? keep : Shown.FirstOrDefault();
+            if (!ReferenceEquals(_selected, next)) Selected = next;
+            else if (reread && next != null) { BuildParts(); Look(); }
             OnPropertyChanged(nameof(FoundSummary));
         }
 
@@ -281,8 +297,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 string what = _selectedTab?.Only == null ? "in this game" : "under " + _selectedTab.Title;
                 if (string.IsNullOrEmpty(q))
                     return Shown.Count < here
-                        ? $"{here} models, picture sets and animations {what}. Showing the first {Shown.Count}; type to narrow it down."
-                        : $"{here} models, picture sets and animations {what}.";
+                        ? $"{here} models, texture sets and animations {what}; first {Shown.Count} shown"
+                        : $"{here} models, texture sets and animations {what}.";
                 return Shown.Count == 0
                     ? $"Nothing {what} matches \"{q}\". Try part of a name, like building or map."
                     : $"{Shown.Count} of {here} {what} match \"{q}\".";
@@ -349,6 +365,16 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private string _details = "Pick something on the left to see it.";
         public string Details { get => _details; private set => Set(ref _details, value); }
 
+        public ObservableCollection<DetailFact> Facts { get; } = new();
+        private List<DetailFact> _baseFacts = new();
+
+        private void ShowFacts(params DetailFact[] more)
+        {
+            Details = "";
+            Facts.Clear();
+            foreach (DetailFact f in _baseFacts.Concat(more)) Facts.Add(f);
+        }
+
         private string _whynot = "";
         public string Whynot { get => _whynot; private set => Set(ref _whynot, value); }
         public bool HasModel => Model3D != null;
@@ -373,7 +399,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_selected == null)
             {
                 _options = null;
-                _baseDetails = "";
+                _baseFacts = new List<DetailFact>();
+                Facts.Clear();
                 Details = "Pick something on the left to see it.";
                 OnPropertyChanged(nameof(HasTextureChoice));
                 OnPropertyChanged(nameof(HasAnimationChoice));
@@ -385,8 +412,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             ModelAssets.Archive a = _selected.Archive;
             _options = ModelAssets.WhatCanBeDone(a, ShowingIndex);
-            _baseDetails = $"{Named}, number {ShowingIndex}. {ModelAssets.ShortName(_options.Kind)}.";
-            Details = _baseDetails;
+            _baseFacts = new List<DetailFact>
+            {
+                new DetailFact("Name", Named),
+                new DetailFact("Number", ShowingIndex.ToString()),
+                new DetailFact("Kind", ModelAssets.KindName(_options.Kind)),
+            };
+            ShowFacts();
 
             // An animation picked on its own has no shape to draw, so say what it does instead of
             // leaving an empty box and the word "animation".
@@ -607,7 +639,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 Whynot = texture.Format == 7 || palette != null
                     ? "This texture is malformed or uses data the preview cannot decode."
                     : "This texture needs a palette, but this set does not contain one.";
-                Details = _baseDetails;
+                ShowFacts();
                 OnPropertyChanged(nameof(HasNoModel));
                 return;
             }
@@ -615,9 +647,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             // No bitmap can be made without a running UI, which is how the tests drive this view model.
             try { TexturePreview = ImageConverter.FromRgba(decoded.Rgba, decoded.Width, decoded.Height); }
             catch (InvalidOperationException) { TexturePreview = null; }
-            Details = _baseDetails + $"  {PreviewTextureNames[_previewTextureIndex]}, {decoded.Width} × {decoded.Height} pixels. "
-                + $"This set contains {_previewTextures.Count} texture{(_previewTextures.Count == 1 ? "" : "s")} "
-                + $"and {_previewPalettes.Count} palette{(_previewPalettes.Count == 1 ? "" : "s")}.";
+            ShowFacts(new DetailFact("Texture", PreviewTextureNames[_previewTextureIndex]),
+                      new DetailFact("Size", $"{decoded.Width} × {decoded.Height}"),
+                      new DetailFact("Textures", _previewTextures.Count.ToString()),
+                      new DetailFact("Palettes", _previewPalettes.Count.ToString()));
         }
 
         private void ClearTexturePreview()
@@ -962,12 +995,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         _placeLike, showMissingTextures: true);
                 if (Model3D == null) { Whynot = "This model would not open."; return; }
 
-                if (!dressed && TextureChoices.Count > 1)
-                    Details = _baseDetails + "  Shown bare. Pick a picture set above to dress it.";
-                else if (!dressed)
-                    Details = _baseDetails + "  This model has no pictures of its own, and this game keeps "
-                            + "none for it to borrow.";
-                else Details = _baseDetails;
+                if (!dressed && TextureChoices.Count <= 1) ShowFacts(new DetailFact("Textures", "None"));
+                else ShowFacts();
             }
             catch (Exception ex)
             {
@@ -977,9 +1006,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             ApplyCompanions(_frame);
         }
-
-
-        private string _baseDetails = "";
 
         /// <summary>What an animation picked on its own does, and which model it was written for.</summary>
         public string AnimationDetails { get; private set; } = "";
@@ -1008,7 +1034,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             OnPropertyChanged(nameof(SaveModelHelp));
             OnPropertyChanged(nameof(CanPutFileIn));
             OnPropertyChanged(nameof(PutFileInHelp));
-            OnPropertyChanged(nameof(DeepEditorHint));
+            OnPropertyChanged(nameof(OpenDeepEditorLabel));
             OnPropertyChanged(nameof(HasDeepEditor));
             OnPropertyChanged(nameof(CanPlay));
             OnPropertyChanged(nameof(PlayHelp));
@@ -1028,7 +1054,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public string DeepEditorName => _selected?.Archive.DeepEditor;
         public bool HasDeepEditor => !string.IsNullOrEmpty(DeepEditorName);
-        public string DeepEditorHint => HasDeepEditor ? $"The {DeepEditorName} does more with these." : "";
+        public string OpenDeepEditorLabel => HasDeepEditor ? $"Open in {DeepEditorName}" : "";
+
+        public void OpenDeepEditor()
+        {
+            if (HasDeepEditor) AvaloniaEditorLauncher.OpenEditorNamed(DeepEditorName);
+        }
 
         private string _status = "";
         public string StatusText { get => _status; set => Set(ref _status, value); }
