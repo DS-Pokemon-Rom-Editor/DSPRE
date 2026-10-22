@@ -274,9 +274,7 @@ namespace DSPRE.Avalonia.Views.Controls
             }
         }
 
-        // The arrow that says another page is waiting: the ROM's own cursor art, whose three frames each sit a pixel
-        // lower. In HeartGold the first frame's light rows (art columns 5-11, rows 3-5) show at 242-248, 171-173 in game,
-        // so the art's corner is 237,168.
+        // The ROM's "more text" arrow: three frames, each a pixel lower. In HeartGold the art's corner is at 237,168.
         private static void DrawMoreArrow(DrawingContext ctx, double ox, double oy, double s, int bob)
         {
             int frame = Math.Clamp(bob, 0, _cursorBitmaps.Length - 1);
@@ -291,7 +289,7 @@ namespace DSPRE.Avalonia.Views.Controls
                 return;
             }
 
-            // A stand-in when the ROM's cursor cannot be read.
+            // Used when the ROM's cursor can't be read.
             double left = ox + 242 * s, top = oy + (171 + bob) * s;
             double width = 8 * s, depth = 5 * s;
 

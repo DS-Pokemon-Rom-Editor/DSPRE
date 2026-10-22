@@ -1149,15 +1149,14 @@ namespace DSPRE.Avalonia.Views.Shell
             => AvaloniaEditorLauncher.OpenNsbtxEditor();
 
 
-        // The Screens item opens the editor; its arrow lists the screens to open it at.
+        // The Screens item opens the editor; its arrow lists the screens.
         private void Screens_Click(object sender, RoutedEventArgs e)
         {
             if (!ReferenceEquals(e.Source, sender)) return;
             AvaloniaEditorLauncher.OpenScreensEditor();
         }
 
-        // A menu item with a submenu only opens the submenu when clicked, so a click on its words, short of the
-        // arrow, opens the editor itself.
+        // A menu item with a submenu only opens the submenu, so clicking its text opens the editor directly.
         private void ScreensMenu_Released(object sender, global::Avalonia.Input.PointerReleasedEventArgs e)
         {
             if (sender is not MenuItem item || e.InitialPressMouseButton != global::Avalonia.Input.MouseButton.Left) return;

@@ -257,13 +257,12 @@ namespace DSPRE.ROMFiles
 
         public byte[] Write() => (byte[])_bytes.Clone();
 
-        /// <summary>A cell's pieces as their three halfwords, with the cell's attribute and bounds.</summary>
+        /// <summary>A new cell: its pieces' three halfwords, attribute and bounds.</summary>
         public sealed record NewCell(IReadOnlyList<(ushort A0, ushort A1, ushort A2)> Pieces, ushort Attr, short MaxX, short MaxY, short MinX, short MinY);
 
         /// <summary>
-        /// The file with a new cell table and pieces in place of the old ones, the sections after the cell bank (labels, extra
-        /// data) kept as they were. Only files without transfer partitions or user data, whose offsets would move, are rebuilt;
-        /// for the rest it returns null.
+        /// The file with a new cell table and pieces; the sections after the cell bank are kept. Null for files with transfer partitions or
+        /// user data, whose offsets would move.
         /// </summary>
         public byte[] WithCells(IReadOnlyList<NewCell> cells)
         {

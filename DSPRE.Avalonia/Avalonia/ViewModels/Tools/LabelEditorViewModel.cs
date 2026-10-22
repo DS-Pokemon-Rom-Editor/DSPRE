@@ -124,7 +124,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 foreach (LabelCategory c in _all.Where(c => c.Group == group))
                 {
                     _keys.Add(c.Key);
-                    // One game's categories only, so its game suffix says nothing.
+                    // Only one game's categories, so the game suffix adds nothing.
                     bool oneGame = c.Games != null && RomInfo.GameFamily != RomInfo.GameFamilies.NULL;
                     int cut = oneGame ? c.DisplayName.LastIndexOf(" (", StringComparison.Ordinal) : -1;
                     CategoryNames.Add(cut > 0 ? c.DisplayName.Substring(0, cut) : c.DisplayName);

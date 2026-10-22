@@ -31,8 +31,7 @@ namespace DSPRE.Avalonia
         }
 
         /// <summary>
-        /// The failure itself: Avalonia raises routed-event handlers by reflection, so a handler's exception arrives
-        /// wrapped, and its message would only say that a target threw.
+        /// Unwraps the real failure: Avalonia calls routed-event handlers by reflection, so their exceptions arrive wrapped.
         /// </summary>
         private static Exception Cause(Exception ex)
         {

@@ -13,10 +13,7 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.ViewModels.Graphics
 {
-    /// <summary>
-    /// The game's screens in groups. Each screen shows the views it has: Preview (the screen with a text line it prints, and
-    /// what it is drawn from), Edit (its own editor) and Layout (where its windows and bars sit).
-    /// </summary>
+    /// <summary>The game's screens in groups, each with the views it has: Preview, Edit and Layout.</summary>
     public sealed class ScreensEditorViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -27,7 +24,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private IEnumerable<ScreenEntry> Entries => Groups.SelectMany(g => g.Entries);
 
         private object _selectedNode;
-        /// <summary>What is picked in the list: a screen, or a group heading, which keeps the screen on show.</summary>
+        /// <summary>A screen or a group heading; a heading keeps the current screen on show.</summary>
         public object SelectedNode
         {
             get => _selectedNode;
@@ -68,9 +65,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             SelectedEntry = Entries.FirstOrDefault();
         }
 
-        /// <summary>Shows the screen <paramref name="key"/>, with <paramref name="line"/> of <paramref name="bank"/> when given.</summary>
-        /// <param name="then">Run on the view's editor once it exists, to point it at a page or a piece.</param>
-        /// <param name="fresh">Make the editor again, when it has nothing unsaved, so it picks up a new sample.</param>
+        /// <summary>Shows a screen, and a line on it when given.</summary>
+        /// <param name="then">Run on the editor once it exists, to point it at a page or piece.</param>
+        /// <param name="fresh">Remake the editor, when nothing is unsaved, so it picks up a new sample.</param>
         public void GoTo(string key, int bank = -1, int line = -1, string view = null, Action<object> then = null, bool fresh = false)
         {
             ScreenEntry entry = Entries.FirstOrDefault(e => e.Key == key || e.Page?.Key == key);
@@ -97,12 +94,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         // ── the embedded editors' unsaved changes and undo, passed on to the window ──
 
-        // Two views can share one model (Summary's Edit and Layout), so each model counts once.
+        // Summary's Edit and Layout share one model, so each model counts once.
         private IEnumerable<DSPRE.Editors.IEditorWithUnsavedChanges> Editors =>
             Entries.SelectMany(e => e.Views).OfType<ScreenEditorView>().Select(v => v.Model)
                    .OfType<DSPRE.Editors.IEditorWithUnsavedChanges>().Distinct();
 
-        /// <summary>An embedded editor was made; its changes now count as this window's.</summary>
+        /// <summary>Its changes now count as this window's.</summary>
         private readonly HashSet<object> _watched = new HashSet<object>();
 
         internal void Watch(object model)
@@ -159,7 +156,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public ObservableCollection<ScreenEntry> Entries { get; }
     }
 
-    /// <summary>One screen and the views it has.</summary>
     public sealed class ScreenEntry : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -190,10 +186,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public string Key { get; }
         public string Title { get; }
-        /// <summary>The text page behind Preview, when the screen prints text archives.</summary>
         public ScreenTabViewModel Page { get; }
         public ObservableCollection<ScreenView> Views { get; } = new ObservableCollection<ScreenView>();
-        /// <summary>A screen with one view shows it without a tab.</summary>
         public bool HasSeveralViews => Views.Count > 1;
 
         private ScreenView _view;
@@ -216,7 +210,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_view is ScreenEditorView editor) editor.Make(_owner);
         }
 
-        /// <summary>Picks a view before the screen is shown, so only that view's editor gets made.</summary>
+        /// <summary>Picks a view before showing the screen, so only that view's editor is made.</summary>
         internal void PickWithoutMaking(ScreenView view)
         {
             _view = view;
@@ -238,7 +232,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public ScreenTabViewModel Page { get; }
     }
 
-    /// <summary>A screen's own editor, made the first time its view is shown.</summary>
+    /// <summary>A screen's own editor, made the first time its view shows.</summary>
     public sealed class ScreenEditorView : ScreenView, INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -249,10 +243,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private readonly List<Action<object>> _then = new List<Action<object>>();
         private bool _making;
 
-        /// <param name="make">The editor's view, or null while it still opens in a window of its own.</param>
+        /// <param name="make">The editor's view; null while it still opens in its own window.</param>
         /// <param name="openApart">Opens it in its own window, for editors not moved in yet.</param>
-        /// <param name="prepare">File work the editor needs first, run off the UI thread behind the busy card.</param>
-        /// <param name="forgotten">Run when the editor is let go of, for state its views share.</param>
+        /// <param name="prepare">File work run first, off the UI thread, behind the busy card.</param>
+        /// <param name="forgotten">Run when the editor is dropped, for state its views share.</param>
         public ScreenEditorView(string name, Func<Control> make, Action openApart = null, Action prepare = null, string busy = null,
                                 Action forgotten = null) : base(name)
         {
@@ -271,14 +265,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public void OpenApart() => _openApart?.Invoke();
 
-        /// <summary>Runs <paramref name="action"/> on the editor's model now, or once it has been made.</summary>
+        /// <summary>Runs on the editor's model now, or once it's made.</summary>
         internal void WhenMade(Action<object> action)
         {
             if (Control != null) action(Model);
             else _then.Add(action);
         }
 
-        /// <summary>Lets go of an editor with nothing unsaved, so the next showing makes it afresh.</summary>
+        /// <summary>Drops an editor with nothing unsaved, so it's made fresh next time.</summary>
         internal void ForgetIfClean()
         {
             if (Control == null || (Model as DSPRE.Editors.IEditorWithUnsavedChanges)?.HasUnsavedChanges == true) return;
@@ -300,7 +294,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             catch (Exception ex) { AppLogger.Error("Screens editor: " + Name + ": " + ex.Message); }
             finally { _making = false; }
             if (Control == null) return;
-            // The editor's own tour, offered the first time it shows here as it was in its own window.
+            // Offers the editor's own tour the first time it shows here.
             EditorTours.Attach(Control, Control.GetType().Name);
             owner.Watch(Model);
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Control)));
@@ -309,20 +303,17 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
     }
 
-    /// <summary>The screens in their groups, each with the views this game has for it.</summary>
     internal static class ScreenCatalog
     {
         private static GameTextScreens.Screen Text(string key) => GameTextScreens.Screens.FirstOrDefault(s => s.Key == key);
 
-        /// <summary>The Pokémon and page the Pokédex and summary editors are next made with.</summary>
+        /// <summary>The Pokémon and page the next Pokédex and summary editors open on.</summary>
         public static (int Species, string Page) PokedexStart, SummaryStart;
 
-        // An editor's view, when the gate and the ROM allow it.
         private static ScreenEditorView Editor(string gate, string name, Func<Control> make, Action openApart = null,
                                                Action prepare = null, string busy = null, Action forgotten = null) =>
             EditorAvailability.Allows(gate) ? new ScreenEditorView(name, make, openApart, prepare, busy, forgotten) : null;
 
-        // Layout, for a screen whose window tables are known for this ROM.
         private static ScreenEditorView LayoutOf(string screen, string title) =>
             ScreenWindowLayout.Read(screen) == null ? null
                 : new ScreenEditorView("Layout", () => new Views.Graphics.ScreenWindowLayoutView(new ScreenWindowLayoutViewModel(screen, title)));
@@ -335,7 +326,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private static Action Unpack(params DirNames[] dirs) => () => DSUtils.TryUnpackNarcs(dirs.ToList());
 
-        // The summary's Edit (its layers) and Layout (its text boxes and bars) are two views of one model.
+        // Summary's Edit and Layout are two views of one model.
         private static ScreenEntry SummaryEntry(ScreensEditorViewModel o)
         {
             ScreenPagesEditorViewModel shared = null;
@@ -397,7 +388,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
     }
 
-    /// <summary>One screen: which archive and line it is drawn with, the picture, and its pieces.</summary>
     public sealed class ScreenTabViewModel : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -419,10 +409,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public bool HasSample => _screen.Key == "party";
 
-        // The Layout view whose unsaved edits the preview draws.
         private ScreenWindowLayoutViewModel _layout;
 
-        /// <summary>Draws <paramref name="layout"/>'s unsaved edits from now on, and again after each one; null draws the ROM's.</summary>
+        /// <summary>Draws the layout's unsaved edits from now on; null draws the ROM's.</summary>
         public void Follow(ScreenWindowLayoutViewModel layout)
         {
             if (ReferenceEquals(_layout, layout)) return;
@@ -437,7 +426,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_filled) _ = RedrawAsync();
         }
 
-        // What a preview draws on its worker thread: the Layout view's unsaved edits when there is one.
         private IDisposable DrawScope() => _layout?.DrawScope();
 
         private void OnSampleChanged()
@@ -446,7 +434,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_filled) _ = RedrawAsync();
         }
 
-        /// <summary>Stops following the sample party.</summary>
         public void Detach() { if (HasSample) PartySample.Changed -= OnSampleChanged; }
 
         private List<string> _species;
@@ -463,7 +450,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
         }
 
-        // Fixed names: a list rebuilt on each change resets the box's pick, which sets the Pokémon again and loops.
+        // A fixed list: rebuilding it resets the box's selection, which sets the Pokémon again and loops.
         public List<string> SampleSlots { get; } = Enumerable.Range(1, 6).Select(i => $"Pokémon {i}").ToList();
 
         private int _slot;
@@ -506,7 +493,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 Raise(n);
         }
 
-        /// <summary>The states the screen is shown in, like the summary's; empty when it has one look.</summary>
+        /// <summary>The states the screen can be shown in; empty when it only has one.</summary>
         public string[] States { get; }
         public bool HasStates => States.Length > 0;
 
@@ -524,7 +511,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
         }
 
-        // A line printed in one state shows that state when it is picked.
+        // Picking a line printed in one state shows that state.
         private void FollowLine()
         {
             int wanted = _screen.StateOf == null || _line == null || _archive == null ? -1 : _screen.StateOf(_archive.Bank, _line.Index);
@@ -533,7 +520,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             Raise(nameof(StateIndex));
         }
 
-        // An archive's first line, which names a caller or a radio show, to tell the archives apart.
+        // An archive's first line names a caller or radio show, which tells the archives apart.
         private static string FirstLineOf(int bank)
         {
             try
@@ -590,7 +577,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string PictureName { get => _pictureName; private set { _pictureName = value; Raise(); } }
 
         private string _note = "";
-        /// <summary>Said when the chosen line is not one this screen prints.</summary>
+        /// <summary>Shown when the chosen line isn't printed on this screen.</summary>
         public string Note { get => _note; private set { _note = value; Raise(); Raise(nameof(HasNote)); } }
         public bool HasNote => !string.IsNullOrEmpty(_note);
 
@@ -603,11 +590,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private HashSet<(DirNames, int)> _lit = new HashSet<(DirNames, int)>();
         private bool _litBySlot, _scrollToLit;
 
-        /// <summary>A piece was lit that the pieces list should scroll to.</summary>
+        /// <summary>Raised when a piece lights up, so the pieces list can scroll to it.</summary>
         public event Action<ScreenPieceRow> Lit;
 
         private Bitmap _outline;
-        /// <summary>The pixels of the piece being pointed at, over the picture.</summary>
         public Bitmap Outline { get => _outline; private set { _outline = value; Raise(); } }
 
         /// <summary>Lights the pieces that draw the screen pixel at x, y.</summary>
@@ -623,7 +609,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             ApplyLit();
         }
 
-        /// <summary>Outlines what a piece draws, or nothing.</summary>
         public void PointAt(ScreenPieceRow row)
         {
             int i = row == null ? -1 : Pieces.IndexOf(row);
@@ -649,7 +634,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _scrollToLit = false;
         }
 
-        // The piece's pixels tinted, with a solid edge so a thin one still shows.
+        // Tinted, with a solid edge so thin pieces still show.
         private static Bitmap OutlineOf(bool[] area)
         {
             if (area == null || !area.Contains(true)) return null;
@@ -696,7 +681,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private global::Avalonia.Threading.DispatcherTimer _play;
 
-        /// <summary>The tab came into view: its lines are read the first time, and a screen that moves on by itself plays.</summary>
+        /// <summary>Reads the lines the first time the tab shows, and starts screens that move on by themselves.</summary>
         public void Enter()
         {
             if (!_filled)
@@ -715,7 +700,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _play = null;
         }
 
-        /// <summary>Picks an archive of this screen and a line in it, when they are given.</summary>
         public void Show(int bank, int line)
         {
             Enter();
@@ -799,7 +783,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 Note = "";
                 _stops = Math.Max(1, shot.Stops);
                 _byItself = shot.MovesOnByItself;
-                // The archive is named only when the pieces come from more than one.
+                // The archive is only named when pieces come from more than one.
                 bool several = shot.Pieces.Select(p => p.Dir).Distinct().Count() > 1;
                 foreach ((DirNames dir, int member, string kind) in shot.Pieces) Pieces.Add(new ScreenPieceRow(dir, member, kind, several));
                 if (_litBySlot) LightSlot(); else ApplyLit();
@@ -811,7 +795,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             UpdatePlay();
         }
 
-        // A screen the game moves on by itself shows its boxes in turn, about as long as each stays up.
+        // A screen that moves on by itself shows each box for about as long as the game does.
         private void UpdatePlay()
         {
             bool play = _stops > 1 && _byItself;
@@ -824,7 +808,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             else if (!play) Leave();
         }
 
-        /// <summary>Opens the chosen line in the Text editor.</summary>
         public void EditText()
         {
             if (_archive != null && _line != null) AvaloniaEditorLauncher.OpenTextEditorAt(_archive.Bank, _line.Index);
@@ -844,26 +827,24 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public ScreenLineRow(int index, string text) { Index = index; Text = text ?? ""; }
         public int Index { get; }
         public string Text { get; }
-        /// <summary>The line as the archive holds it, placeholders and all, its breaks as spaces.</summary>
+        /// <summary>The line as the archive holds it, placeholders included, line breaks as spaces.</summary>
         public string Label => $"{Index}  {Text.Replace("\\n", " ").Replace("\\r", " ").Replace("\\f", " ").Trim()}";
-        /// <summary>The whole line with its breaks, for the tooltip.</summary>
         public string Full => Text.Replace("\\n", "\n").Replace("\\r", "\n").Replace("\\f", "\n");
 
-        // The sample words the preview prints for placeholders, the rest of the markup left out.
         private static string Words(string text) =>
             global::System.Text.RegularExpressions.Regex.Replace(FieldStringVars.Expand(text ?? "", GameTextScreens.SampleWord), @"\{[^}]*\}", "");
 
-        /// <summary>A line on one row: sample words, its breaks as spaces.</summary>
+        /// <summary>Sample words for placeholders, line breaks as spaces.</summary>
         internal static string Readable(string text) => Words(text).Replace("\\n", " ").Replace("\\r", " ").Replace("\\f", " ").Trim();
     }
 
-    /// <summary>An archive member the screen is drawn from, opened in Graphics.</summary>
+    /// <summary>An archive file the screen is drawn from, opened in the Graphics browser.</summary>
     public sealed class ScreenPieceRow : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
 
         private bool _lit;
-        /// <summary>It draws the spot picked on the screen, or the sample Pokémon picked.</summary>
+        /// <summary>True when it draws the picked spot or the picked sample Pokémon.</summary>
         public bool IsLit
         {
             get => _lit;

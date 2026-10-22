@@ -60,7 +60,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public AvaBitmap TrainerMalePreview { get => _trainerMalePreview; private set { if (Set(ref _trainerMalePreview, value)) OnPropertyChanged(nameof(PiecePreview)); } }
         public AvaBitmap TrainerFemalePreview { get => _trainerFemalePreview; private set { if (Set(ref _trainerFemalePreview, value)) OnPropertyChanged(nameof(PiecePreview)); } }
 
-        /// <summary>The pieces the card is made of, in the list beside it.</summary>
+        /// <summary>The card's pieces, listed beside it.</summary>
         public string[] Pieces { get; } = { "Card front", "Card back", "Colours", "Boy", "Girl" };
 
         private int _pieceIndex;
@@ -80,7 +80,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public bool PieceIsColours => _pieceIndex == 2;
         public bool PieceIsImage => _pieceIndex != 2;
         public bool PieceIsPose => _pieceIndex > 2;
-        /// <summary>The screen with the picked piece: the colours show on the card's front.</summary>
+        /// <summary>The colours show on the card's front.</summary>
         public AvaBitmap PiecePreview => _pieceIndex switch
         {
             1 => CardBackPreview, 3 => TrainerMalePreview, 4 => TrainerFemalePreview, _ => CardFrontPreview,

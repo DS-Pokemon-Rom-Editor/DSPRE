@@ -5,18 +5,16 @@ using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Data
 {
-    /// <summary>
-    /// The window layouts the screen previews draw their text in: the ROM's, or inside <see cref="Use"/> a Layout view's.
-    /// </summary>
+    /// <summary>The window layouts the screen previews use: the ROM's, or a Layout view's inside <see cref="Use"/>.</summary>
     public static class ScreenWindowLayouts
     {
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, ScreenWindowLayout> Read = new();
         private static string _rom;
 
-        // The layout and panels drawn on this thread in place of the ROM's, as a Layout view's unsaved edits.
+        // A Layout view's unsaved layout and panels, used instead of the ROM's on this thread.
         [ThreadStatic] private static (string Screen, ScreenWindowLayout Layout, PartyPanelLayout Panels) _using;
 
-        /// <summary>Previews drawn on this thread use <paramref name="layout"/> and <paramref name="panels"/> until the result is disposed.</summary>
+        /// <summary>Previews drawn on this thread use these until the result is disposed.</summary>
         public static IDisposable Use(string screen, ScreenWindowLayout layout, PartyPanelLayout panels)
         {
             (string, ScreenWindowLayout, PartyPanelLayout) before = _using;
@@ -39,7 +37,7 @@ namespace DSPRE.Avalonia.Data
             return read;
         }
 
-        /// <summary>Forgets what was read, after a save, so the next preview reads it again.</summary>
+        /// <summary>Clears the cache after a save so the next preview reads it again.</summary>
         public static void Forget(string screen)
         {
             Read.TryRemove(screen, out _);
@@ -49,7 +47,7 @@ namespace DSPRE.Avalonia.Data
         private static PartyPanelLayout _readPanels;
         private static string _panelsRom;
 
-        /// <summary>The party panels the previews draw: the ROM's, or inside <see cref="Use"/> a Layout view's; null when unknown.</summary>
+        /// <summary>The ROM's panels, or a Layout view's inside <see cref="Use"/>; null when unknown.</summary>
         public static PartyPanelLayout Panels()
         {
             if (_using.Panels != null) return _using.Panels;
@@ -57,17 +55,14 @@ namespace DSPRE.Avalonia.Data
             return _readPanels;
         }
 
-        /// <summary>A window's place and size in tiles, or <paramref name="fallback"/> when the layout isn't known.</summary>
+        /// <summary>In tiles; <paramref name="fallback"/> when the layout isn't known.</summary>
         public static (int X, int Y, int W, int H) Window(string screen, string name, (int X, int Y, int W, int H) fallback)
         {
             ScreenWindowLayout.Window w = For(screen)?.Windows.FirstOrDefault(x => x.Name == name);
             return w == null ? fallback : (w.X, w.Y, w.Width, w.Height);
         }
 
-        /// <summary>
-        /// Both screens in a state with the lines they print, for the Layout view's preview: the one the screen's shots show
-        /// and, where the screen draws one, the other. Either is null when it isn't drawn.
-        /// </summary>
+        /// <summary>Both screens with their lines, for the Layout preview. Either is null when it isn't drawn.</summary>
         public static (byte[] Top, byte[] Bottom) Draw(string screen, int state = -1)
         {
             GameTextScreens.Screen text = GameTextScreens.Screens.FirstOrDefault(s => s.Key == screen);
@@ -86,7 +81,7 @@ namespace DSPRE.Avalonia.Data
                 return l >= 0 && l < lines.Count ? lines[l] : "";
             }
             int first = Math.Clamp(text.FirstLine, 0, Math.Max(0, lines.Count - 1));
-            // A state only the layout has (a multi battle's Pokémon, a menu with field moves) is drawn as the nearest real one.
+            // A Layout-only state is drawn as the nearest real one.
             int drawn = state < 0 || text.States == null ? -1 : text.DrawnAs?.Invoke(state) ?? Math.Min(state, text.States.Length - 1);
             GameTextScreens.Shot shot = GameTextScreens.Draw(text, bank, first, Line(bank, first), Line, 0, drawn);
             GameTextScreens.Shot other = GameTextScreens.DrawOther(text, Math.Max(0, drawn), Line);

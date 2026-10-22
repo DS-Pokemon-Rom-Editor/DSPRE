@@ -79,10 +79,10 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>
-        /// A tile sheet with new tiles in place of its own, every other field and section kept; for sprite sheets, whose
-        /// size fields say they are a strip (0xFFFF) and so need no change. Null when the bytes aren't a tile sheet.
+        /// A tile sheet with new tiles, every other field and section kept. Sprite sheets mark their size as a strip (0xFFFF), so it needs
+        /// no change. Null when the bytes aren't a tile sheet.
         /// </summary>
-        /// <param name="packed">The tiles as the sheet stores them, four bits a pixel.</param>
+        /// <param name="packed">The tiles as the sheet stores them, 4 bits per pixel.</param>
         public static byte[] ReplaceTiles(byte[] ncgr, byte[] packed)
         {
             int rahc = DSPRE.ROMFiles.NitroBgCodec.Find(ncgr, "RAHC", 0);

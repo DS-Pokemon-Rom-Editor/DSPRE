@@ -104,7 +104,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Observable collections (bound to ListBox / ComboBoxes)
         // ----------------------------------------------------------------
 
-        /// <summary>Rows change in place: replacing one in the list would drop the list's selection.</summary>
+        /// <summary>Rows change in place, because replacing one would drop the list's selection.</summary>
         public sealed class MachineRow : INotifyPropertyChanged
         {
             public event PropertyChangedEventHandler PropertyChanged;

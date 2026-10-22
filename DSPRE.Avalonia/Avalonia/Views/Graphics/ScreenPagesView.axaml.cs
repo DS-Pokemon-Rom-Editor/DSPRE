@@ -26,10 +26,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         }
 
         private string _shows = "All";
-        /// <summary>
-        /// What this view shows of the book: "Pieces" (the layers and their files), "Layout" (the text boxes and bars the
-        /// code places) or "All". The Screens editor shows the two halves as Edit and Layout over one model.
-        /// </summary>
+        /// <summary>Which part of the book this view shows: "Pieces" (layers and files), "Layout" (text boxes and bars) or "All".</summary>
         public string Shows { get => _shows; set { _shows = value ?? "All"; ApplyShows(); } }
 
         private void ApplyShows()
@@ -42,7 +39,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             layers.IsVisible = !layout;
             heading.IsVisible = !layout;
             parts.IsVisible = !layout;
-            // Alone in its column, the box list starts at the top, as wide as the HP bar editor's part list.
+            // On its own, the box list sits at the top, as wide as the HP bar editor's part list.
             DockPanel.SetDock(boxes, layout ? Dock.Top : Dock.Bottom);
             if (layout) left.Width = 300;
             if (_shows == "Pieces") boxes.IsVisible = false;
@@ -64,7 +61,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             {
                 bool top = image.Name == "TopScreen";
                 (int tx, int ty) = TileAt(e.GetPosition(image));
-                // The smallest box under the pointer, so boxes that share tiles can both be picked.
+                // Picks the smallest box under the pointer, so boxes that share tiles can both be picked.
                 _dragging = (top ? VM.TopBoxes : VM.BottomBoxes)
                     .Where(r => tx >= r.Across && tx < r.Across + r.Item.Width && ty >= r.Down && ty < r.Down + r.Item.Height)
                     .OrderBy(r => r.Item.Width * r.Item.Height).FirstOrDefault();
@@ -86,7 +83,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             _dragging.Drag(x - _grabbedAt.X, y - _grabbedAt.Y);
         }
 
-        // The page is put together again once, when the box is let go.
+        // The page is redrawn once, when the box is dropped.
         private void Screen_Released(object sender, PointerReleasedEventArgs e)
         {
             if (_dragging == null) return;

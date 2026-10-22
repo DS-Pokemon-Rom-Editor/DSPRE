@@ -170,7 +170,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <summary>Puts what <see cref="Scan"/> found into the bound collections. UI thread only.</summary>
         public void Publish()
         {
-            // The list is read again after every import, undo and discard, and the user stays where they were.
+            // The list is reread after every import, undo and discard, keeping the user's place.
             CategoryTab oldTab = _selectedTab;
             Item old = _selected;
             int oldPart = _partIndex;
@@ -256,7 +256,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public ObservableCollection<Item> Shown { get; } = new();
 
         private CategoryTab _selectedTab;
-        // Set while Publish swaps the tabs, whose list box would otherwise filter for each step.
+        // Set while Publish swaps tabs, so the list box doesn't filter on every step.
         private bool _publishing;
         public CategoryTab SelectedTab
         {
@@ -271,7 +271,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private void ApplyFilter(Item prefer = null, bool reread = false)
         {
-            // Clearing the list makes the bound list box set Selected to null, so the pick is kept first.
+            // Clearing the list sets Selected to null, so the selection is saved first.
             Item keep = prefer ?? _selected;
             Shown.Clear();
             string q = SearchMatch.Fold((_search ?? "").Trim());

@@ -7,62 +7,56 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.Data
 {
     /// <summary>
-    /// Screens the games print text archives on, put together from their own backgrounds with each line where the
-    /// game writes it: the options, the menus, the place-name banner, the PC, the party, the bag, the Pokégear and more.
-    /// Layouts are the games' own (pokeplatinum, pokeheartgold).
+    /// Draws the game screens that print text, with each line where the game puts it (pokeplatinum and pokeheartgold layouts).
     /// </summary>
     public static class GameTextScreens
     {
-        /// <summary>A drawn screen, named for the archive it comes from.</summary>
         public sealed record Shot(string Name, byte[] Rgba, Action Open = null)
         {
-            /// <summary>How many boxes the screen prints the message in; more than one makes the stop shown matter.</summary>
+            /// <summary>Message boxes the line takes; with more than one, the box shown matters.</summary>
             public int Stops { get; init; } = 1;
-            /// <summary>The game moves on to the next box by itself, with nothing for the player to press.</summary>
+            /// <summary>True when the game moves to the next box on its own.</summary>
             public bool MovesOnByItself { get; init; }
-            /// <summary>Which screen of <see cref="Screens"/> this is.</summary>
             public string Key { get; init; }
-            /// <summary>The archive members the picture was drawn from, and what kind of file each is.</summary>
+            /// <summary>The files the picture was drawn from, with their type.</summary>
             public IReadOnlyList<(DirNames Dir, int Member, string Kind)> Pieces { get; init; } = Array.Empty<(DirNames, int, string)>();
-            /// <summary>The pieces each sample party Pokémon was drawn with, by party slot.</summary>
+            /// <summary>The files each sample Pokémon was drawn with, by party slot.</summary>
             public IReadOnlyList<(DirNames Dir, int Member, int Who)> PokemonPieces { get; init; } = Array.Empty<(DirNames, int, int)>();
         }
 
-        /// <summary>A screen the Screens editor shows, and the archives it prints.</summary>
         public sealed class Screen
         {
             public string Key { get; init; }
             public string Title { get; init; }
-            /// <summary>The archives in this ROM it prints, or none when the game has no such screen.</summary>
+            /// <summary>The text archives this ROM prints on it; empty when the game doesn't have the screen.</summary>
             public Func<int[]> Banks { get; init; }
             public Func<int, int, Shot> Draw { get; init; }
-            /// <summary>The line it opens on in each of its archives.</summary>
             public int FirstLine { get; init; }
-            /// <summary>The states the screen is shown in, each with its own windows and graphics, or null.</summary>
+            /// <summary>Each state has its own windows and graphics; null if the screen has none.</summary>
             public string[] States { get; init; }
-            /// <summary>The state a line is printed in, or -1 when it shows in whichever state is picked.</summary>
+            /// <summary>The state a line is printed in, or -1 if it shows in any state.</summary>
             public Func<int, int, int> StateOf { get; init; }
-            /// <summary>Whether a window of the screen's layout (its group and name) is on screen in a state.</summary>
+            /// <summary>Whether a window (by group and name) is on screen in a state.</summary>
             public Func<int, string, string, bool> Shows { get; init; }
-            /// <summary>The states its Layout offers: <see cref="States"/>, and any only the layout needs.</summary>
+            /// <summary>The Layout tab's states: <see cref="States"/> plus Layout-only ones.</summary>
             public string[] LayoutStates { get; init; }
-            /// <summary>Whether this game has a Layout-only state; null when it has them all. Only the last ones may be missing.</summary>
+            /// <summary>Whether this game has a Layout-only state; null when it has all of them.</summary>
             public Func<int, bool> HasLayoutState { get; init; }
             /// <summary>The state a Layout-only state is drawn as.</summary>
             public Func<int, int> DrawnAs { get; init; }
-            /// <summary>The screen the shots don't show, drawn in a state for the Layout view, or null.</summary>
+            /// <summary>Draws the screen the shots don't show, for the Layout tab; null if there is none.</summary>
             public Func<int, Shot> OtherScreen { get; init; }
-            /// <summary>Rows a background is scrolled up by in a state, so a window shows that much higher.</summary>
+            /// <summary>Rows a background is scrolled up in a state.</summary>
             public Func<int, int, int> RowsScrolled { get; init; }
-            /// <summary>When the game puts a window on its background, earliest first; null keeps the layout's order.</summary>
+            /// <summary>The order the game puts windows down; null keeps the table order.</summary>
             public Func<ScreenWindowLayout.Window, int> PutOrder { get; init; }
-            /// <summary>The tiles a window must stay inside because the game moves them as one block, or null.</summary>
+            /// <summary>The block the game moves a window with, which the window must stay inside; null if none.</summary>
             public Func<ScreenWindowLayout.Window, (int X, int Y, int W, int H)?> Block { get; init; }
-            /// <summary>The row the game's code puts a window on in a state whatever the layout says, or null.</summary>
+            /// <summary>The row the game's code forces a window to in a state; null if the table decides.</summary>
             public Func<int, ScreenWindowLayout.Window, int?> FixedTop { get; init; }
-            /// <summary>Windows that take turns share a name here and are never on screen together; null for the rest.</summary>
+            /// <summary>Windows that take turns share this name; null for the rest.</summary>
             public Func<ScreenWindowLayout.Window, string> TakesTurns { get; init; }
-            /// <summary>The tiles a window's frame adds round it (left, top, right, bottom), or null for none.</summary>
+            /// <summary>Tiles a window's frame adds (left, top, right, bottom); null for none.</summary>
             public Func<ScreenWindowLayout.Window, (int L, int T, int R, int B)?> Frame { get; init; }
             public bool Available => Banks().Length > 0;
         }
@@ -71,7 +65,6 @@ namespace DSPRE.Avalonia.Data
         private static bool Pt => GameFamily == GameFamilies.Plat;
         private static int[] Us(params int[] banks) => banks.Select(TextBank).Where(b => b >= 0).ToArray();
 
-        /// <summary>Every screen, in the order the Screens editor lists them.</summary>
         public static readonly Screen[] Screens =
         {
             new() { Key = "options", Title = "Options", Banks = () => Pt ? Us(220) : Hg ? Us(45) : Array.Empty<int>(),
@@ -92,7 +85,7 @@ namespace DSPRE.Avalonia.Data
             new() { Key = "party", Title = "Party", Banks = () => Pt ? Us(453) : Hg ? Us(300) : Array.Empty<int>(),
                     Draw = (bank, line) => Party(line, Hg), FirstLine = 29,
                     States = PartyStates, LayoutStates = PartyStates.Append("Menu with field moves").Append("Multi battle").ToArray(),
-                    // Retail Platinum always opens the party menu with the single layout, so its multi tables go unused.
+                    // Retail Platinum only uses the single layout, so the multi tables never show.
                     HasLayoutState = state => state != PartyMulti || Hg,
                     DrawnAs = state => state == PartyFieldMoves ? PartyMenu : state == PartyMulti ? PartyNormal : state,
                     OtherScreen = state => Hg ? PartyTop(-1, state) : null,
@@ -114,20 +107,16 @@ namespace DSPRE.Avalonia.Data
         private enum Align { Left, Right, Centre }
 
         private static readonly object Gate = new object();
-        // What a line reads as: the edited text for the line being previewed, the archive's own otherwise.
+        // The edit for the previewed line, otherwise the archive's.
         private static Func<int, int, string> _line;
-        // Which of a message's boxes to show, and whether the screen being drawn showed one.
         private static int _stop;
-        // The state the screen being drawn is in.
         private static int _state;
         private static int _stops;
         private static bool _byItself;
-        // The archive members the screen being drawn read.
         private static List<(DirNames Dir, int Member, string Kind)> _pieces = new();
-        // The sample Pokémon being drawn, and the pieces each one read.
         private static int _drawing = -1;
         private static List<(DirNames Dir, int Member, int Who)> _pokemonPieces = new();
-        // The piece a redraw leaves out, to find the pixels it draws.
+        // Left out of a redraw to find the pixels a file draws.
         private static (DirNames Dir, int Member) _without = (default, -1);
         private static bool Without(DirNames dir, int member) => _without.Member == member && _without.Dir == dir;
 
@@ -136,14 +125,14 @@ namespace DSPRE.Avalonia.Data
             if (_drawing >= 0) _pokemonPieces.Add((dir, member, _drawing));
         }
 
-        // The tiles each window of the screen being drawn still shows on, by name.
+        // Tiles each window still shows on after later windows.
         private static Dictionary<string, bool[]> _shownTiles;
 
-        /// <summary>A window's place in tiles as a state shows it: its own, or the row the game's code fixes it to.</summary>
+        /// <summary>A window's position in tiles in a state: its own, or the row the game's code forces.</summary>
         public static (int X, int Y, int W, int H) Placed(Screen screen, ScreenWindowLayout.Window w, int state) =>
             (w.X, screen.FixedTop?.Invoke(state, w) ?? w.Y, w.Width, w.Height);
 
-        /// <summary>Whether two windows can be on screen at once: windows that take turns never are.</summary>
+        /// <summary>Whether two windows can be on screen together. Windows that take turns never are.</summary>
         public static bool Together(Screen screen, ScreenWindowLayout.Window a, ScreenWindowLayout.Window b)
         {
             string turn = screen?.TakesTurns?.Invoke(a);
@@ -151,8 +140,7 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>
-        /// The tiles of its 32 by 32 map each window shown in a state keeps, by name. The game puts windows on a background one
-        /// after another, and a later one replaces every tile it covers, its see-through ones too.
+        /// Tiles of the 32 by 32 map each window keeps: a later window replaces every tile it covers, even see-through ones.
         /// </summary>
         public static Dictionary<string, bool[]> ShownTiles(Screen screen, ScreenWindowLayout layout, int state)
         {
@@ -179,7 +167,7 @@ namespace DSPRE.Avalonia.Data
             return shown;
         }
 
-        // Draws a window's contents only on the tiles no later window has replaced.
+        // Draws a window's contents only on tiles that no later window replaced.
         private static void InWindow(byte[] rgba, string name, Action<byte[]> draw)
         {
             if (_shownTiles == null || !_shownTiles.TryGetValue(name, out bool[] tiles)) { draw(rgba); return; }
@@ -206,8 +194,8 @@ namespace DSPRE.Avalonia.Data
             return shots;
         }
 
-        /// <summary>One screen with <paramref name="line"/> of <paramref name="bank"/> on it, or null when it does not print that line.</summary>
-        /// <param name="state">The screen's state to show it in; -1 for the one the line belongs to, or the first.</param>
+        /// <summary>One screen showing that line, or null if it doesn't print it.</summary>
+        /// <param name="state">The state to show it in; -1 for the line's own state, or the first one.</param>
         public static Shot Draw(Screen screen, int bank, int line, string text, Func<int, int, string> archiveLine, int stop = 0, int state = -1)
         {
             if (GameLanguage == GameLanguages.Japanese || screen == null) return null;
@@ -242,8 +230,7 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>
-        /// The pixels each of a shot's pieces draws, found by drawing the screen again without it and seeing what changed.
-        /// A piece the screen cannot be drawn without gets none.
+        /// The pixels each piece draws, found by redrawing without it; a piece the screen can't be drawn without gets none.
         /// </summary>
         public static bool[][] Areas(Screen screen, int bank, int line, string text, Func<int, int, string> archiveLine, int stop, int state,
                                      Shot shot, Func<bool> cancelled)
@@ -269,7 +256,7 @@ namespace DSPRE.Avalonia.Data
             return areas;
         }
 
-        // Reads an archive's members and keeps note of which, so the editor can list what a screen is made of.
+        // Notes which files a screen reads, so the editor can list them.
         private static Func<int, byte[]> Members(DirNames dir)
         {
             Func<int, byte[]> m = MoveTextScreens.Members(dir);
@@ -285,7 +272,6 @@ namespace DSPRE.Avalonia.Data
             };
         }
 
-        // What a Nitro file is, from the four letters it starts with.
         private static string KindOf(byte[] data)
         {
             if (data == null || data.Length < 4) return "File";
@@ -315,7 +301,7 @@ namespace DSPRE.Avalonia.Data
         private static FieldFont SystemFont => Font(0);
         private static FieldFont TalkFont => Font(1);
 
-        // A row of a font archive palette: Pt 6 and HGSS 7 are the system font's, Pt 7 and HGSS 8 the message font's.
+        // Pt 6 and HGSS 7 are the system font's palette rows, Pt 7 and HGSS 8 the message font's.
         private static ushort[] FontColours(int member) =>
             DsBgScreen.Row(NitroBgCodec.ReadColours(MoveTextScreens.Members(DirNames.Fonts)?.Invoke(member)), 0);
 
@@ -324,7 +310,7 @@ namespace DSPRE.Avalonia.Data
 
         private static ushort Rgb(int r, int g, int b) => (ushort)(r | g << 5 | b << 10);
 
-        /// <summary>A line as a screen prints it: sample words for its placeholders, its markup left out, its breaks kept.</summary>
+        /// <summary>Placeholders filled with sample words, markup removed, line breaks kept.</summary>
         private static string Text(int usBank, int id) => Line(TextBank(usBank), id);
 
         private static string Line(int bank, int id)
@@ -335,7 +321,6 @@ namespace DSPRE.Avalonia.Data
             return global::System.Text.RegularExpressions.Regex.Replace(expanded, @"\{[^}]*\}", "");
         }
 
-        /// <summary>One box of a message, the one the preview has stepped to.</summary>
         private static string Box(int bank, int id, FieldFont font)
         {
             string expanded = FieldStringVars.Expand(_line(bank, id) ?? "", SampleWord);
@@ -347,12 +332,11 @@ namespace DSPRE.Avalonia.Data
 
         private static string BoxText(int usBank, int id, FieldFont font) => Box(TextBank(usBank), id, font);
 
-        /// <summary>A word for a placeholder that reads like the game would fill it, for previews.</summary>
         public static string SampleWord(int family, int kind, int buffer)
         {
             string word = FieldStringVars.SuggestFor(kind, buffer, null);
             if (!word.StartsWith("strvar", StringComparison.Ordinal)) return word;
-            // Month names (HGSS writes them as family 34); anything else unknown reads as a dash, not the placeholder's workings.
+            // Month names are family 34 in HGSS; any other unknown placeholder shows as a dash.
             return kind == 74 || family == 34 ? "Jan." : "-";
         }
 
@@ -386,7 +370,7 @@ namespace DSPRE.Avalonia.Data
             return rgba;
         }
 
-        // The field behind a field window, which the preview cannot know.
+        // The preview can't know the field behind a field window.
         private static ushort FieldBackdrop => Rgb(6, 7, 8);
 
         private static void Blit(byte[] rgba, byte[] piece, int pw, int ph, int left, int top)
@@ -403,7 +387,6 @@ namespace DSPRE.Avalonia.Data
                 }
         }
 
-        /// <summary>The standard border round a writing area at tile x, y, filled with <paramref name="paper"/>.</summary>
         private static void StandardWindow(byte[] rgba, int x, int y, int w, int h, ushort paper)
         {
             (byte r, byte g, byte b) = NitroBgCodec.Colour(paper);
@@ -413,7 +396,7 @@ namespace DSPRE.Avalonia.Data
             Blit(rgba, piece, pw, ph, (x - 1) * 8, (y - 1) * 8);
         }
 
-        /// <summary>The message border round a writing area at tile x, y: two tiles left, three right, one above and below.</summary>
+        /// <summary>Two tiles left, three right, one above and below.</summary>
         private static void MessageWindow(byte[] rgba, int x, int y, int w, int h, ushort paper)
         {
             Fill(rgba, paper, x * 8 - 1, y * 8 - 1, w * 8 + 2, h * 8 + 2);
@@ -468,7 +451,7 @@ namespace DSPRE.Avalonia.Data
             s.InitLayer(2, 3, 0);
             s.LoadTiles(0, m(1));
             s.Fill(2, 1, 0, 0, 32, 32, 0);
-            // The cursor bar is the arrangement's top two rows, scrolled down to the row the cursor is on.
+            // The cursor bar is the arrangement's top two rows, scrolled to the cursor's row.
             s.InitLayer(0, 1, 0);
             s.Copy(0, 0, 3 + row * 2, 32, 2, NitroBgCodec.ReadMap(m(2)).Entries, 0, 0, 32);
             byte[] rgba = s.Render();
@@ -498,7 +481,7 @@ namespace DSPRE.Avalonia.Data
             return new Shot("Options graphics: top", rgba);
         }
 
-        // pokeheartgold src/options_app.c: label, the choices and the x each is centred on.
+        // pokeheartgold src/options_app.c: the label, the choices and the x each is centred on.
         private static readonly (int Label, int[] Choices, int[] Xs)[] HgOptionRows =
         {
             (1, new[] { 9, 10, 11 }, new[] { 124, 172, 220 }), (2, new[] { 12, 13 }, new[] { 124, 172 }),
@@ -512,7 +495,7 @@ namespace DSPRE.Avalonia.Data
             (DsBgScreen s, Func<int, byte[]> m) = Bg(DirNames.OptionsGraphics);
             if (s == null) return null;
 
-            // Top: the frame-type box; bottom: the list. Both are drawn, the bottom under the top.
+            // Top: the frame type box, drawn over the list.
             DsBgScreen top = new DsBgScreen();
             Palettes(top, NitroBgCodec.ReadColours(m(3)), 0, 2);
             Layer(top, m, 0, 1, 0, 8, 19);
@@ -564,7 +547,7 @@ namespace DSPRE.Avalonia.Data
             ushort[] sys = SystemColours;
             ushort grey = Rgb(26, 26, 26);
 
-            // CONTINUE has focus: a white window; the others are grey.
+            // CONTINUE is selected, so its window is white and the others grey.
             StandardWindow(rgba, 3, 1, width, 10, sys[15]);
             Print(rgba, SystemFont, Text(bank, 0), 24, 8, sys[1], sys[2]);
             for (int i = 0; i < 4; i++)
@@ -593,7 +576,7 @@ namespace DSPRE.Avalonia.Data
         private static Dictionary<int, int> _bannerStyles;
         private static string _bannerRom;
 
-        // The banner style the first map with this name uses; maps without a banner have style 0.
+        // Maps with no banner use style 0.
         private static int BannerStyle(int name, bool hg)
         {
             if (_bannerStyles == null || _bannerRom != WorkDir)
@@ -619,7 +602,7 @@ namespace DSPRE.Avalonia.Data
 
         private static Shot Banner(int line, bool hg)
         {
-            // A name no map shows on entry is drawn in the first style, so every name can be seen in a banner.
+            // So a name no map shows on entry can still be previewed.
             int style = Math.Max(1, BannerStyle(line, hg));
             Func<int, byte[]> m = Members(DirNames.AreaWindowGraphics);
             if (m == null) return null;
@@ -673,7 +656,7 @@ namespace DSPRE.Avalonia.Data
 
         // ── trainer card ─────────────────────────────────────────────────────────────
 
-        // A label and its value: the value ends at Right, or starts at At when it is placed rather than aligned.
+        // The value ends at Right, or starts at At when it is placed.
         private sealed record CardRow(int TileX, int TileY, int Label, int Value, int Right, int At = -1);
 
         // pokeplatinum src/applications/trainer_case/card_text.c; pokeheartgold overlay_trainer_card_main.
@@ -726,7 +709,7 @@ namespace DSPRE.Avalonia.Data
                 string value = r.Value switch { -1 => "00000", -2 => "PLAYER", -3 => "0", _ => Text(bank, r.Value) };
                 if (r.At >= 0)
                 {
-                    // Link battles: "W" and "L" placed, each count ending before its letter.
+                    // Link battles place "W" and "L", with each count ending before its letter.
                     Print(rgba, SystemFont, Text(bank, r.Value), x + r.At, y, ink, shadow);
                     Print(rgba, SystemFont, Text(bank, r.Value + 1), x + r.At + 64, y, ink, shadow);
                     Print(rgba, SystemFont, "0", x + 160, y, ink, shadow, Align.Right);
@@ -738,7 +721,7 @@ namespace DSPRE.Avalonia.Data
             }
             if (hg)
             {
-                // The touch hint and the Cancel button under the card, in palette row 15's colours 5 and 4.
+                // Palette row 15, colours 5 and 4.
                 FieldFont touch = Font(4) ?? SystemFont;
                 if (back) Print(rgba, touch, Text(bank, 16), 8 + 48, 21 * 8 + 4, rank[5], rank[4], Align.Centre);
                 else Print(rgba, SystemFont, Text(bank, 15), 8, 21 * 8 + 4, rank[5], rank[4]);
@@ -804,7 +787,7 @@ namespace DSPRE.Avalonia.Data
             else if (line >= 24)
             {
                 List<int> items = line == 67 ? new List<int> { 24, 67 } : new List<int> { line, 67 };
-                // The menu window is eight rows high; the frame goes round the rows in use, at its foot.
+                // The menu window is eight rows tall; the frame only covers the rows in use, at the bottom.
                 (int ux, int uy, int uw, int _) = ScreenWindowLayouts.Window("box", "Menu", (19, 3, 12, 16));
                 int n = items.Count, top = uy + (8 - n) * 2;
                 StandardWindow(rgba, ux, top, uw, 2 * n, row4[15]);
@@ -814,7 +797,7 @@ namespace DSPRE.Avalonia.Data
             return new Shot("PC box graphics: top", rgba);
         }
 
-        // pokeheartgold overlay 14; the layout matches the box screens of the Platinum code.
+        // pokeheartgold overlay 14, laid out like Platinum's box screens.
         private static Shot BoxHg(bool messages, int line)
         {
             (DsBgScreen s, Func<int, byte[]> m) = Bg(DirNames.BoxGraphics);
@@ -855,7 +838,7 @@ namespace DSPRE.Avalonia.Data
             }
             else
             {
-                // Menu buttons, bottom-aligned at column 21, three tiles a row, in the touch font.
+                // Bottom-aligned at column 21, three tiles per row, in the touch font.
                 FieldFont touch = Font(4) ?? SystemFont;
                 ushort[] sel = DsBgScreen.Row(colours, 0);
                 Fill(rgba, Rgb(31, 31, 31), 21 * 8, 17 * 8, 11 * 8, 3 * 8);
@@ -866,7 +849,7 @@ namespace DSPRE.Avalonia.Data
 
         // ── Pokégear ─────────────────────────────────────────────────────────────────
 
-        // pokeheartgold src/application/pokegear: the frame every app's top screen sits in, for skin 0.
+        // pokeheartgold src/application/pokegear: the frame every app's top screen sits in, skin 0.
         private static void PokegearFrame(DsBgScreen s)
         {
             Func<int, byte[]> gear = Members(DirNames.PokegearGraphics);
@@ -927,7 +910,7 @@ namespace DSPRE.Avalonia.Data
                 Print(rgba, SystemFont, Line(bank, 1), 32, 128, row[1], row[2]);
                 if (line >= 2)
                 {
-                    // The show prints a line at a time and scrolls the window up a line for the next, two on show.
+                    // The show scrolls up a line at a time, with two lines visible.
                     string[] said = Text(bank, line).Split('\n');
                     _byItself = true;
                     _stops = Math.Max(1, said.Length - 1);
@@ -965,8 +948,7 @@ namespace DSPRE.Avalonia.Data
 
         // ── party ────────────────────────────────────────────────────────────────────
 
-        // One Pokémon's panel contents, as pokeheartgold party_context_menu.c and pokeplatinum windows.c print them: name and
-        // gender, the "Lv" glyph and level, HP with its slash, the 48-pixel bar, and the ball, icon, condition and item sprites.
+        // pokeheartgold party_context_menu.c, pokeplatinum windows.c.
         private static void PartyPokemon(byte[] rgba, Func<int, byte[]> m, int n, PartySample.Pokemon who, int bank, ushort[] row0,
                                         ushort[] colours, byte[] glyphs, bool hg)
         {
@@ -996,7 +978,7 @@ namespace DSPRE.Avalonia.Data
                         Digits(into, glyphs, who.Level.ToString(), lx * 8 + 21, ly * 8 + 2, row0);
                     });
                 (int hx, int hy, int _, int _) = ScreenWindowLayouts.Window("party", ScreenWindowLayout.PokemonWindow(n + 1, "HP"), (px + 7, py + 4, 8, 2));
-                // HGSS right-aligns the current HP in three digits at 0, Platinum pads it with spaces from 4; "/" at 28.
+                // HGSS right-aligns the HP in three digits from 0; Platinum pads it with spaces from 4.
                 string cur = who.Hp.ToString();
                 InWindow(rgba, ScreenWindowLayout.PokemonWindow(n + 1, "HP"), into =>
                 {
@@ -1009,8 +991,7 @@ namespace DSPRE.Avalonia.Data
                 int full = ScreenWindowLayouts.Panels()?.HpBarLength ?? PartyPanelLayout.GameHpBarLength;
                 int length = who.MaxHp <= 0 ? 0 : who.Hp * full / who.MaxHp;
                 if (length == 0 && who.Hp > 0) length = 1;
-                // Green over half (and when full), yellow over a fifth, red below: colours 9 and 10 of rows 3, 4 and 5.
-                // The colour is judged on the game's 48 pixels whatever the bar's length.
+                // The colour is always judged on the game's 48 pixels, whatever the bar length.
                 int judged = who.MaxHp <= 0 ? 0 : who.Hp * PartyPanelLayout.GameHpBarLength / who.MaxHp;
                 int barRow = who.Hp == who.MaxHp || judged * 2 > PartyPanelLayout.GameHpBarLength ? 3
                            : judged * 5 > PartyPanelLayout.GameHpBarLength ? 4 : 5;
@@ -1024,13 +1005,12 @@ namespace DSPRE.Avalonia.Data
             }
         }
 
-        // A Pokémon's sprites, drawn after every Pokémon's text since sprites sit over the text layer.
+        // Sprites sit above the text layer, so they're drawn after all the text.
         private static void PartyPokemonSprites(byte[] rgba, Func<int, byte[]> m, int n, PartySample.Pokemon who, bool hg, bool opened)
         {
             (int px, int py) = PanelOf(n);
             int condition = who.Egg ? 0 : who.Hp == 0 ? 6 : who.Condition;
-            // pokeheartgold _0210150C / pokeplatinum sMemberPanelTemplates: ball at +16,+14 and icon at +30,+16 in pixels, unless
-            // the ROM's tables say otherwise; the status icon has its own sprite template, the held item sits 8,8 from the icon.
+            // pokeheartgold _0210150C, pokeplatinum sMemberPanelTemplates; the held item sits 8,8 from the icon.
             PartyPanelLayout panels = ScreenWindowLayouts.Panels();
             (int bx, int by) = panels?.Ball(n) ?? (px * 8 + 16, py * 8 + 14);
             (int ix, int iy) = panels?.Icon(n) ?? (px * 8 + 30, py * 8 + 16);
@@ -1041,13 +1021,11 @@ namespace DSPRE.Avalonia.Data
             if (who.Item > 0) PartySprite(rgba, m, 18, 19, 20, ix + 8, iy + 8, who.Item == 2 ? 1 : 0, -1, 21);
         }
 
-        // The panels' size and strip: the size patch's, or the game's own 16 by 6.
         private static PartyPanelSizePatch.Size PanelSize => ScreenWindowLayouts.Panels()?.Size ?? PartyPanelSizePatch.Original;
 
-        // A Pokémon's panel in tiles, from the ROM's table when it is known.
         private static (int X, int Y) PanelOf(int n) => ScreenWindowLayouts.Panels()?.Panel(n) ?? PartyPanels[n];
 
-        // A glyph of the font archive's special characters: pixel 1 in colour 15, 2 in 14, the rest left clear.
+        // Pixel 1 is colour 15 and pixel 2 colour 14; the rest stay clear.
         private static void Glyph(byte[] rgba, byte[] glyphs, int tile, int tiles, int x, int y, ushort[] row)
         {
             if (glyphs == null) return;
@@ -1067,14 +1045,13 @@ namespace DSPRE.Avalonia.Data
                     }
         }
 
-        // Digits are the first ten glyphs, eight pixels apart.
+        // The digits are the first ten glyphs.
         private static void Digits(byte[] rgba, byte[] glyphs, string number, int x, int y, ushort[] row)
         {
             for (int i = 0; i < number.Length; i++)
                 if (char.IsDigit(number[i])) Glyph(rgba, glyphs, number[i] - '0', 1, x + i * 8, y, row);
         }
 
-        // A party sprite from its animation, cells and drawing, in colours file 8 unless given; the first frame of a sequence.
         private static void PartySprite(byte[] rgba, Func<int, byte[]> m, int nanr, int ncer, int ncgr, int x, int y, int sequence,
                                         int forcedRow, int nclr = 8)
         {
@@ -1093,7 +1070,6 @@ namespace DSPRE.Avalonia.Data
             catch (Exception ex) { AppLogger.WarnOnce("GameTextScreens.PartySprite", ex); }
         }
 
-        // The species' icon, its first frame centred on x, y.
         private static void PartyIcon(byte[] rgba, int species, int x, int y)
         {
             try
@@ -1117,29 +1093,27 @@ namespace DSPRE.Avalonia.Data
             catch (Exception ex) { AppLogger.WarnOnce("GameTextScreens.PartyIcon", ex); }
         }
 
-        // The condition icons: HGSS a/0/3/9 files 62 to 65, Platinum's summary archive 62 to 65; the sequence is the condition.
+        // HGSS a/0/3/9 files 62 to 65, Platinum's summary archive 62 to 65.
         private static void StatusIcon(byte[] rgba, int condition, int x, int y, bool hg)
         {
             Func<int, byte[]> m = Members(hg ? DirNames.SummarySprites : DirNames.SummaryGraphics);
             if (m != null) PartySprite(rgba, m, 62, 63, 64, x, y, condition, -1, 65);
         }
 
-        // Where each Pokémon's panel sits, in tiles: pokeplatinum party_menu main.c, pokeheartgold party_menu.c.
+        // pokeplatinum party_menu main.c, pokeheartgold party_menu.c.
         private static readonly (int X, int Y)[] PartyPanels = { (0, 0), (16, 1), (0, 6), (16, 7), (0, 12), (16, 13) };
-        // The second row of the same tables, for a multi battle.
         private static readonly (int X, int Y)[] MultiPanels = { (0, 0), (16, 0), (0, 6), (16, 6), (0, 12), (16, 12) };
 
         private static readonly string[] PokemonParts = { "name", "level", "HP", "HP bar", "comment" };
 
-        // Each Pokémon's windows are put in party order when its panel is drawn, name first; the buttons' come after.
+        // The game puts each Pokémon's windows down with its panel, in party order; the buttons come after.
         private static int PartyPutOrder(ScreenWindowLayout.Window w)
         {
             if (w.Pokemon == 0) return 100;
             return w.Pokemon * 10 + Math.Max(0, Array.IndexOf(PokemonParts, w.Part));
         }
 
-        // Switching two Pokémon slides each one's panel, text included (pokeheartgold PartyMenu_SwapMonsPanelsStep,
-        // pokeplatinum context_menu.c), so a window outside it is left behind.
+        // Switching slides each panel with its text (pokeheartgold PartyMenu_SwapMonsPanelsStep), so a window outside it is left behind.
         private static (int X, int Y, int W, int H)? PartyBlock(ScreenWindowLayout.Window w)
         {
             if (w.Pokemon == 0) return null;
@@ -1148,8 +1122,7 @@ namespace DSPRE.Avalonia.Data
             return (x, y, size.Width, size.Height);
         }
 
-        // Message boxes have the message frame (two tiles left, three right, one above and below); menu buttons and Platinum's
-        // item and move menus a one-tile one.
+        // Message boxes have a wider frame than menu buttons and Platinum's item and move menus.
         private static (int L, int T, int R, int B)? PartyFrame(ScreenWindowLayout.Window w)
         {
             if (w.Name.EndsWith(" message", StringComparison.Ordinal)) return (2, 1, 3, 1);
@@ -1158,7 +1131,7 @@ namespace DSPRE.Avalonia.Data
             return null;
         }
 
-        // With Confirm on screen (the Battle Frontier's picks) both games add the Cancel window at row 22, whatever its table says.
+        // With Confirm on screen both games force the Cancel window to row 22.
         private static int? PartyFixedTop(int state, ScreenWindowLayout.Window w) =>
             state == PartyConfirm && w.Name == "Cancel button" ? 22 : null;
 
@@ -1167,7 +1140,7 @@ namespace DSPRE.Avalonia.Data
         private static string[] PartyStates => new[] { "Normal", "Menu open", "Item menu", "Move list", "Confirm and cancel" };
         private const int PartyNormal = 0, PartyMenu = 1, PartyItemMenu = 2, PartyMoveList = 3, PartyConfirm = 4, PartyFieldMoves = 5, PartyMulti = 6;
 
-        /// <summary>The party lines a state is built from: pokeheartgold msg_0300 and pokeplatinum party_menu.</summary>
+        /// <summary>pokeheartgold msg_0300, pokeplatinum party_menu.</summary>
         private sealed record PartyLines(int Choose, int MenuPrompt, int ItemPrompt, int MovePrompt, int Summary, int Switch,
                                          int Item, int Quit, int Give, int Take, int[] Menu);
 
@@ -1186,12 +1159,12 @@ namespace DSPRE.Avalonia.Data
             return -1;
         }
 
-        // HGSS slides its top screen panel up while a Pokémon is picked (party_menu.c PartyMenu_SetTopScreenSelectionPanelVisibility).
+        // party_menu.c PartyMenu_SetTopScreenSelectionPanelVisibility.
         private static bool PartyPanelUp(int state) => state is PartyMenu or PartyItemMenu or PartyMoveList or PartyFieldMoves;
 
         /// <summary>
-        /// Which windows of the party layout are on screen in a state; Multi battle is a Layout-only state. A Pokémon's
-        /// comment shows only when teaching a TM, using an evolution stone or choosing an order, none of which are states yet.
+        /// Multi battle is a Layout-only state. A Pokémon's comment only shows for TMs, evolution stones and choosing an order, which
+        /// aren't states yet.
         /// </summary>
         public static bool PartyShows(int state, string group, string name, bool hg)
         {
@@ -1212,7 +1185,7 @@ namespace DSPRE.Avalonia.Data
                 "Quit button" => state is PartyMenu or PartyItemMenu or PartyMoveList or PartyFieldMoves,
                 _ when name.StartsWith("Submenu button", StringComparison.Ordinal) =>
                     state == PartyMoveList || (state == PartyItemMenu && name[^1] is '1' or '2'),
-                // sButtonWindowIDs: four choices use buttons 1 to 3 and Quit; with field moves the left column (4 to 7) fills too.
+                // sButtonWindowIDs: with field moves the left column (4 to 7) is used too.
                 _ when name.StartsWith("Menu button", StringComparison.Ordinal) =>
                     state == PartyFieldMoves || (state == PartyMenu && name[^1] is '1' or '2' or '3'),
                 _ => false,
@@ -1236,12 +1209,11 @@ namespace DSPRE.Avalonia.Data
             for (int n = 0; n < 6; n++)
             {
                 PartySample.Pokemon who = PartySample.Party[n];
-                // pokeheartgold sub_0207A174 / pokeplatinum DrawMemberPanel: the lead panel for the first Pokémon, the back
-                // one for the rest and the empty one where nobody is; an egg's HP strip is blanked.
+                // pokeheartgold sub_0207A174, pokeplatinum DrawMemberPanel.
                 int from = who.Empty ? 2 * size.Height : n == 0 ? 0 : size.Height;
-                // sub_0207A7F4: colour row 3 on, +4 for the picked Pokémon, +2 when fainted; an empty slot takes row 1.
+                // sub_0207A7F4.
                 int row = who.Empty ? 1 : 3 + (n == 0 ? 4 : 0) + (!who.Egg && who.Hp == 0 ? 2 : 0);
-                // Only colours 0 to 7 change with the state; 8 to 15 stay those of the slot's own row, 3 + slot.
+                // Only colours 0 to 7 change with the state.
                 ushort[] panel = DsBgScreen.Row(colours, who.Empty ? 1 : 3 + n);
                 if (!who.Empty) Array.Copy(DsBgScreen.Row(colours, row), panel, 8);
                 s.SetPalette(3 + n, panel);
@@ -1266,7 +1238,6 @@ namespace DSPRE.Avalonia.Data
             {
                 PartySample.Pokemon who = PartySample.Party[n];
                 if (who.Empty) continue;
-                // Each Pokémon owns its panel too, which comes out of the one arrangement.
                 _drawing = n;
                 Credit(DirNames.PartyMenuGraphics, 22);
                 Credit(DirNames.Fonts, hg ? 5 : 4);
@@ -1281,7 +1252,7 @@ namespace DSPRE.Avalonia.Data
                 PartyPokemonSprites(rgba, m, n, who, hg, n == 0 && menuUp);
                 _drawing = -1;
             }
-            // The cursor: sequence 1 on the lead panel, colour row 1 while a menu is open (sub_0207A89C).
+            // sub_0207A89C.
             (int cx0, int cy0) = ScreenWindowLayouts.Panels()?.Cursor(0) ?? (64, 25);
             PartySprite(rgba, m, 5, 6, 7, cx0, cy0, 1, menuUp ? 1 : -1);
 
@@ -1289,7 +1260,7 @@ namespace DSPRE.Avalonia.Data
             int[] comments = hg ? Enumerable.Range(150, 15).ToArray() : Enumerable.Range(167, 15).ToArray();
             int[] levelUp = hg ? Enumerable.Range(169, 8).ToArray() : Enumerable.Range(185, 7).ToArray();
 
-            // The Confirm and Cancel buttons are sprites with their word printed over them (party_menu sprites 8 and 9).
+            // party_menu sprites 8 and 9.
             if (state is PartyNormal or PartyConfirm)
             {
                 PartyButton(rgba, m, 232, state == PartyConfirm ? 184 : 176, state == PartyConfirm ? 2 : 0);
@@ -1316,7 +1287,6 @@ namespace DSPRE.Avalonia.Data
                         Print(rgba, SystemFont, Text(bank, levelUp[6]), 8 + 104, 8 + 16 * i, sys[1], sys[2], Align.Right);
                     }
                 }
-                // The prompt, or the picked line when it is a message of this state.
                 bool message = line > 1 && (line < 8 || line > 13) && PartyStateOf(line, hg) < 0 && !comments.Contains(line) && !levelUp.Contains(line);
                 int shown = message ? line : t.Choose;
                 int[] prompts = hg ? new[] { 29, 30, 32, 33, 34, 35, 184 } : new[] { 29, 30, 31, 32, 33, 34, 197 };
@@ -1329,14 +1299,13 @@ namespace DSPRE.Avalonia.Data
                 return new Shot($"Party graphics: {(hg ? "bottom" : "top")}", rgba);
             }
 
-            // A Pokémon is picked: the menu, the item menu or the move list, with its question in the medium box.
             int prompt = state switch { PartyItemMenu => t.ItemPrompt, PartyMoveList => line == t.MovePrompt + 1 ? line : t.MovePrompt, _ => t.MenuPrompt };
             List<string> choices = new List<string>();
             int picked = -1;
             if (state == PartyMenu)
             {
                 int[] menu = { t.Summary, t.Switch, t.Item, t.Quit };
-                // A choice that is not on the usual menu (Mail, a field move, Set and the rest) takes the Item slot.
+                // Mail, field moves, Set and other extra choices use the Item slot.
                 if (t.Menu.Contains(line) && !menu.Contains(line)) menu[2] = line;
                 picked = Array.IndexOf(menu, line);
                 choices.AddRange(menu.Select(n => Text(bank, n)));
@@ -1355,10 +1324,10 @@ namespace DSPRE.Avalonia.Data
 
             if (hg)
             {
-                // HGSS brightens the list half way to white behind its menu buttons (G2_SetBlendBrightness(30, 8)).
+                // G2_SetBlendBrightness(30, 8).
                 for (int i = 0; i < rgba.Length; i += 4)
                     for (int c = 0; c < 3; c++) rgba[i + c] = (byte)(rgba[i + c] + (255 - rgba[i + c]) * 8 / 16);
-                // pokeheartgold party_context_menu.c sButtonWindowIDs: the field menu, then the item menu and move list.
+                // pokeheartgold party_context_menu.c sButtonWindowIDs.
                 string[] slots = state switch
                 {
                     PartyMenu => new[] { "Menu button 1", "Menu button 2", "Menu button 3", "Quit button" },
@@ -1372,7 +1341,7 @@ namespace DSPRE.Avalonia.Data
             {
                 if (state == PartyMenu)
                 {
-                    // pokeplatinum windows.c PartyMenu_DrawContextMenu: column 19, ending at row 23, two rows a choice.
+                    // pokeplatinum windows.c PartyMenu_DrawContextMenu.
                     int top = 23 - 2 * choices.Count;
                     PartyList(rgba, 19, top, 12, 2 * choices.Count, choices, Math.Max(0, picked), sys);
                 }
@@ -1390,7 +1359,6 @@ namespace DSPRE.Avalonia.Data
             return new Shot($"Party graphics: {(hg ? "bottom" : "top")}", rgba);
         }
 
-        /// <summary>The screen a shot doesn't show, in a state, for the Layout view.</summary>
         public static Shot DrawOther(Screen screen, int state, Func<int, int, string> archiveLine)
         {
             if (GameLanguage == GameLanguages.Japanese || screen?.OtherScreen == null) return null;
@@ -1404,8 +1372,7 @@ namespace DSPRE.Avalonia.Data
             }
         }
 
-        // pokeheartgold party_menu.c sub_02079A14: the top screen is party graphics 12/14 under 24/25, colours 13. With a
-        // Pokémon picked its panel slides up 40 pixels, five tiles, bringing the windows at rows 24 to 26 into view.
+        // pokeheartgold party_menu.c sub_02079A14. A selected Pokémon's panel slides up five tiles, showing the windows on rows 24 to 26.
         private static Shot PartyTop(int line, int state)
         {
             const int bank = 300;
@@ -1435,7 +1402,6 @@ namespace DSPRE.Avalonia.Data
             return new Shot("Party top screen graphics: top", rgba);
         }
 
-        // A standard framed list with the cursor on the picked choice.
         private static void PartyList(byte[] rgba, int x, int y, int w, int h, List<string> choices, int picked, ushort[] sys)
         {
             StandardWindow(rgba, x, y, w, h, sys[15]);
@@ -1446,7 +1412,6 @@ namespace DSPRE.Avalonia.Data
             }
         }
 
-        // The Confirm and Cancel buttons: party graphics 9 (animation), 10 (cells) and 11 (drawing) in colour file 8.
         private static void PartyButton(byte[] rgba, Func<int, byte[]> m, int x, int y, int sequence)
         {
             try
@@ -1464,8 +1429,7 @@ namespace DSPRE.Avalonia.Data
             catch (Exception ex) { AppLogger.WarnOnce("GameTextScreens.PartyButton", ex); }
         }
 
-        // pokeheartgold party_context_menu.c sub_0207E3A8: a button's frame is tiles of party graphics 26, colour row 2,
-        // one tile round the window; the picked one uses the second set of frame tiles and colour 11 inside.
+        // pokeheartgold party_context_menu.c sub_0207E3A8.
         private static readonly int[] ButtonFrameTiles = { 0, 2, 6, 8, 3, 5, 1, 7 };
 
         private static void PartyMenuButton(byte[] rgba, Func<int, byte[]> m, ushort[] colours, string window, string text,
@@ -1481,7 +1445,7 @@ namespace DSPRE.Avalonia.Data
             for (int yy = ry + 1; yy < ry + rh - 1; yy++) { Tile(4, rx, yy); Tile(5, rx + rw - 1, yy); }
             for (int xx = rx + 1; xx < rx + rw - 1; xx++) { Tile(6, xx, ry); Tile(7, xx, ry + rh - 1); }
             Fill(rgba, row2[picked ? 11 : 4], wx * 8, wy * 8, ww * 8, wh * 8);
-            // getButtonColorRaised: the first four choices in colours 14 and 15, the rest in 9 and 10.
+            // getButtonColorRaised.
             (ushort ink, ushort shadow) = quit || index < 4 ? (row2[14], row2[15]) : (row2[9], row2[10]);
             FieldFont font = Font(4) ?? SystemFont;
             if (quit) Print(rgba, font, text, wx * 8 + ww * 4, wy * 8 + 4, ink, shadow, Align.Centre);
@@ -1505,7 +1469,7 @@ namespace DSPRE.Avalonia.Data
 
         // ── bag lists ────────────────────────────────────────────────────────────────
 
-        // pokeplatinum src/applications/bag: the item list on the top screen, nine rows of 16 pixels at tile 14.
+        // pokeplatinum src/applications/bag.
         private static Shot BagPt(int bank, int line)
         {
             (DsBgScreen s, Func<int, byte[]> m) = Bg(DirNames.BagGraphics);
@@ -1560,7 +1524,7 @@ namespace DSPRE.Avalonia.Data
             return new Shot("Bag graphics: top", rgba);
         }
 
-        // pokeheartgold src/application/bag: six item buttons a page on the bottom screen.
+        // pokeheartgold src/application/bag.
         private static Shot BagHg(int bank, int line)
         {
             if (bank == TextBank(10) && line >= 120 && line <= 127)
@@ -1608,7 +1572,7 @@ namespace DSPRE.Avalonia.Data
 
         // ── Platinum start menu ──────────────────────────────────────────────────────
 
-        // pokeplatinum src/start_menu.c: message id and icon cell of each row once everything is unlocked.
+        // pokeplatinum src/start_menu.c, with everything unlocked.
         private static readonly int[] StartMenuRows = { 0, 1, 2, 3, 4, 5, 6 };
 
         private static Shot StartMenuPt(int line)

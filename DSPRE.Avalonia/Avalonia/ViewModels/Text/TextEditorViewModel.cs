@@ -125,37 +125,34 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         public bool HasPreview => CurrentPreview != null;
 
-        /// <summary>Whether Next box has anywhere to go.</summary>
         public bool HasMoreStops => _previewFrames.Count > 1;
 
-        /// <summary>The screen that prints the open archive in a window of its own, or null for message box text.</summary>
+        /// <summary>Null for message box text.</summary>
         public FieldTextArchives.Screen Screen => _current == null ? null : FieldTextArchives.ScreenFor(_current.ID);
 
         public bool IsOnScreen => Screen != null;
 
-        /// <summary>The screens DSPRE can draw that print the selected line (Pokédex, summary screen), drawn with it.</summary>
+        /// <summary>The Pokédex and summary pages that print the selected line, drawn with it.</summary>
         public ObservableCollection<DSPRE.Avalonia.Data.TextScreenShot> ScreenShots { get; } = new ObservableCollection<DSPRE.Avalonia.Data.TextScreenShot>();
 
         public bool HasScreenShots => ScreenShots.Count > 0;
 
-        /// <summary>A screen on show prints the line a box at a time, so Next box steps it on.</summary>
+        /// <summary>Next box steps through a screen's boxes when one is showing.</summary>
         public bool ShotsHaveStops => ShotStops > 1;
 
-        // The screens on show step through their own boxes, which need not match the message box's.
+        // Screens step through their own boxes, which can differ from the message box's.
         private int ShotStops => ScreenShots.Count == 0 ? 0 : ScreenShots.Max(s => s.Stops);
 
-        // What Next box steps through: the screens' boxes while they show, the message box's otherwise.
         private int StopCount => HasScreenShots ? ShotStops : _previewFrames.Count;
 
-        /// <summary>The screens on show move on by themselves, so the stops play in turn rather than wait for a press.</summary>
+        /// <summary>True when the screens move on by themselves, so the boxes play in turn.</summary>
         public bool ShotsMoveOn => ShotsHaveStops && ScreenShots.Where(s => s.Stops > 1).All(s => s.MovesOnByItself);
 
-        /// <summary>Whether Next box is offered under the screens.</summary>
         public bool ShotsWaitForPress => ShotsHaveStops && !ShotsMoveOn;
 
         private global::Avalonia.Threading.DispatcherTimer _playStops;
 
-        // Runs the stops of a screen that moves on by itself, about as long as a box stays up in the game.
+        // Plays each box about as long as it stays up in the game.
         private void UpdatePlayStops()
         {
             if (ShotsMoveOn)
@@ -174,7 +171,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         private int _shotsAsked;
 
-        // Drawing the pages takes a moment, so it runs aside and only the newest ask is shown.
+        // Drawing pages takes a moment, so it runs in the background and only the newest result is shown.
         private async Task RefreshScreenShotsAsync()
         {
             int asked = ++_shotsAsked;
@@ -201,14 +198,14 @@ namespace DSPRE.Avalonia.ViewModels.Text
             UpdatePlayStops();
         }
 
-        // An archive whose lines show on screens keeps the box hidden while the next line's pictures are drawn.
+        // Hides the box while the next line's pictures are drawn.
         private int _bankWithShots = -1;
 
         public bool ShowsMessageBox => Screen == null && ScreenShots.Count == 0 && _bankWithShots != (_current?.ID ?? -1);
 
         public string ScreenName => Screen?.Name ?? "";
 
-        /// <summary>The selected line as that screen lays it out: every line at once, nothing wrapped.</summary>
+        /// <summary>Every line at once, without wrapping, as that screen lays it out.</summary>
         public IReadOnlyList<string> ScreenLines
         {
             get
@@ -633,7 +630,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 RenumberLines();
             }
             finally { _isLoading = wasLoading; }
-            // Refilling the list drops the selection, which would leave the preview empty.
+            // Refilling the list clears the selection, which would leave the preview empty.
             if (Lines.Count > 0) SelectedLineIndex = Math.Clamp(keep, 0, Lines.Count - 1);
         }
 

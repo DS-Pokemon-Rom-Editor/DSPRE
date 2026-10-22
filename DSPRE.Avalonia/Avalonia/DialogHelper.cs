@@ -118,7 +118,7 @@ namespace DSPRE.Avalonia
         }
 
         /// <summary>
-        /// For a save started without being awaited: its failure is shown instead of vanishing with the task.
+        /// For a save that isn't awaited: shows its failure instead of losing it.
         /// </summary>
         public static async void Watch(Task task, string failed = "The changes weren't saved.", string title = "Save failed")
         {

@@ -105,8 +105,8 @@ namespace DSPRE
             ["TMEditorView"] = new Rule { Title = "The TM / HM editor", Hge = HgEngine.NeedsLink },
             ["BattleScriptEditorView"] = new Rule
             {
-                Title = "The Move animations & battle scripts", Hge = HgEngine.NeedsLink, BuiltArchives = new[] { DirNames.WazaParticle },
-                Unsupported = Unless(() => Family(GameFamilies.Plat, GameFamilies.HGSS), "The Move animations & battle scripts supports Platinum, HeartGold and SoulSilver."),
+                Title = "The Move animations & battle scripts editor", Hge = HgEngine.NeedsLink, BuiltArchives = new[] { DirNames.WazaParticle },
+                Unsupported = Unless(() => Family(GameFamilies.Plat, GameFamilies.HGSS), "The Move animations & battle scripts editor supports Platinum, HeartGold and SoulSilver."),
             },
             ["ItemTableEditorView"] = new Rule
             {
@@ -138,28 +138,28 @@ namespace DSPRE
             ["PokegearPhoneBookView"] = new Rule
             {
                 Title = "The Pokégear phone book", Hge = HgEngine.NeedsLink,
-                Unsupported = Unless(() => PokegearPhoneBook.IsSupported, "The Pokégear Phone Book only exists in HeartGold and SoulSilver."),
+                Unsupported = Unless(() => PokegearPhoneBook.IsSupported, "The Pokégear phone book only exists in HeartGold and SoulSilver."),
             },
             ["FlyEditorView"] = new Rule { Title = "The Fly / warp editor", Hge = HgEngine.NeedsLink },
             ["DungeonCutinEditorView"] = new Rule
             {
                 Title = "The Dungeon cutin editor", Hge = HgEngine.NeedsLink,
-                Unsupported = Unless(IsDungeonCutinEditorAvailable, "The Dungeon Cut-in editor is available for HeartGold and SoulSilver ROMs."),
+                Unsupported = Unless(IsDungeonCutinEditorAvailable, "The Dungeon cutin editor is for HeartGold and SoulSilver."),
             },
             ["TitleScreenEditorView"] = new Rule
             {
                 Title = "The Title screen editor", Hge = HgEngine.NeedsLink,
-                Unsupported = Unless(IsTitleScreenEditorAvailable, "The Title Screen editor is available for HeartGold and SoulSilver ROMs."),
+                Unsupported = Unless(IsTitleScreenEditorAvailable, "The Title screen editor is for HeartGold and SoulSilver."),
             },
             ["BottomScreenEditorView"] = new Rule
             {
                 Title = "Bottom screen", Hge = HgEngine.NeedsLink,
-                Unsupported = Unless(IsBottomScreenEditorAvailable, "The Bottom Screen editor is not available for this ROM."),
+                Unsupported = Unless(IsBottomScreenEditorAvailable, "The Bottom screen editor isn't available for this ROM."),
             },
             ["TrainerCardEditorView"] = new Rule
             {
                 Title = "The Trainer card editor", Hge = HgEngine.NeedsLink,
-                Unsupported = Unless(IsTrainerCardEditorAvailable, "The Trainer Card editor is not available for this ROM."),
+                Unsupported = Unless(IsTrainerCardEditorAvailable, "The Trainer card editor isn't available for this ROM."),
             },
             ["CellAnimationEditorView"] = new Rule { Title = "Cell animations", Hge = HgEngine.NeedsLink },
             ["PokedexGraphicsEditorView"] = new Rule { Title = "Pokédex graphics", Hge = HgEngine.NeedsLink },

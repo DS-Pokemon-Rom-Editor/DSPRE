@@ -38,7 +38,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public AvaBitmap BackgroundPreview { get => _backgroundPreview; private set { if (Set(ref _backgroundPreview, value)) OnPropertyChanged(nameof(PiecePreview)); } }
         public AvaBitmap CopyrightPreview { get => _copyrightPreview; private set { if (Set(ref _copyrightPreview, value)) OnPropertyChanged(nameof(PiecePreview)); } }
 
-        /// <summary>The pieces the title screen is made of, in the list beside it.</summary>
+        /// <summary>The title screen's pieces, listed beside it.</summary>
         public string[] Pieces { get; } = { "Background", "Logo", "Copyright text", "Colours" };
 
         private int _pieceIndex = 1;

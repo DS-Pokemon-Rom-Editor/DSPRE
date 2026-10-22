@@ -158,7 +158,7 @@ namespace DSPRE.Avalonia.Data
             /// <summary>Shown when hovering the row: the DS layer it is drawn on, or why it is odd.</summary>
             public string Tip;
             public List<UnitPart> Parts = new();
-            /// <summary>Files gathered from all over the archive, so no one file number stands for them.</summary>
+            /// <summary>Files gathered from across the archive, so no single file number stands for them.</summary>
             public bool Gathered;
             /// <summary>
             /// The lowest file this thing occupies, which is where it starts in the archive.

@@ -20,7 +20,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             AvaloniaXamlLoader.Load(this);
             DataContext = new BottomScreenEditorViewModel();
-            // The animation runs on a timer, so it has to be let go of when the editor leaves the screen.
+            // The animation runs on a timer, so it stops when the editor leaves the screen.
             DetachedFromVisualTree += (_, _) => VM?.Stop();
         }
 

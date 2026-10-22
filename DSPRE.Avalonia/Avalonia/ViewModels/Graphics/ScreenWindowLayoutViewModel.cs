@@ -12,24 +12,20 @@ using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.ViewModels.Graphics
 {
-    /// <summary>
-    /// A screen's text windows as boxes to drag or type into, beside both screens as the game draws them, in the HP bar
-    /// editor's shape. A screen with states shows the windows of the picked one.
-    /// </summary>
+    /// <summary>A screen's text windows to drag or type into, next to the screens as the game draws them.</summary>
     public sealed class ScreenWindowLayoutViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
-        /// <summary>How many board pixels one tile takes: the screens are drawn at twice their size and scaled to fit.</summary>
+        /// <summary>Board pixels per tile; the screens are drawn at double size.</summary>
         public const double Tile = 16;
 
         private readonly string _screen;
         private readonly ScreenWindowLayout _layout;
-        // The party's panels, which carry their Pokémon's windows and sprites; null on other screens.
+        // Null on screens other than the party.
         private readonly PartyPanelLayout _panels;
         private readonly GameTextScreens.Screen _text;
-        // Every unsaved edit: the window and panel tables as targets, rebuilt graphics as archive members.
         private readonly PendingArchiveWrites _pending = new PendingArchiveWrites();
         private readonly PendingArchiveWrites.Target _windowTables, _panelTables;
 
@@ -57,10 +53,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             AppEvents.RomPatchStateChanged += OnPatchStateChanged;
         }
 
-        /// <summary>Raised after every edit, undo and save, for views that draw this layout.</summary>
+        /// <summary>Raised after every edit, undo and save.</summary>
         public event Action Changed;
 
-        /// <summary>Previews drawn on this thread show the unsaved edits until the result is disposed.</summary>
+        /// <summary>Use while drawing on a worker thread, so the preview shows the unsaved edits.</summary>
         public IDisposable DrawScope() => new Scopes(_pending.Reading(), ScreenWindowLayouts.Use(_screen, _layout, _panels));
 
         private sealed class Scopes : IDisposable
@@ -70,7 +66,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             public void Dispose() { foreach (IDisposable d in _all.Reverse()) d.Dispose(); }
         }
 
-        // An undo, redo or discard changed what is pending, so the tables are read back from it.
+        // Undo, redo and discard change what's pending, so the tables are read back from it.
         private void OnPendingChanged()
         {
             if (_pending.Read(_windowTables) is byte[] windows) _layout.FromBytes(windows);
@@ -80,7 +76,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             Changed?.Invoke();
         }
 
-        // Makes the tables as they are now, and any graphics the change rebuilt, one undo step.
+        // One undo step for the tables and any rebuilt graphics.
         private void Record(Action<ScriptNarc> graphics = null)
         {
             _pending.Import(() =>
@@ -96,13 +92,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private readonly RomInfo.PartyGraphicsMembers _members = RomLocator.PartyGraphicsMembers;
         private const RomInfo.DirNames PartyGraphics = RomInfo.DirNames.PartyMenuGraphics;
-        // The size the saved panel art is drawn at; a rebuild starts from it.
+        // Rebuilds start from the saved art, at the size it was saved at.
         private PartyPanelSizePatch.Size _savedSize;
 
-        // A member as saved; rebuilds start from it, never from an unsaved rebuild.
+        // Rebuilds start from the saved file, never from an unsaved rebuild.
         private static byte[] Saved(int member) => NitroBgCodec.Inflate(new ScriptNarc(PartyGraphics).GetFromDisk(member));
 
-        /// <summary>Stretches the cursor frame to the panel size, keeping its corners.</summary>
         public void RebuildCursor()
         {
             if (_panels == null || _members == null) return;
@@ -113,7 +108,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             Record(narc => { narc.Put(_members.CursorCells, built.Cells); narc.Put(_members.CursorTiles, built.Tiles); });
         }
 
-        /// <summary>Redraws the panel art at the panel size from its own tiles, and moves each Pokémon's windows inside.</summary>
         public void RebuildPanelArt()
         {
             if (_panels == null || _members == null) return;
@@ -124,7 +118,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             Record(narc => narc.Put(_members.PanelArt, art));
         }
 
-        /// <summary>Clears the old panel outlines from the background.</summary>
         public void RebuildBackground()
         {
             if (_panels == null || _members == null) return;
@@ -134,8 +127,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             Record(narc => narc.Put(_members.Background, background));
         }
 
-        // Each Pokémon window's place inside its panel as the ROM has it, in tiles, and its icon's and ball's in pixels, from
-        // Pokémon 1.
+        // Where Pokémon 1's windows (in tiles) and its icon and ball (in pixels) sit in its panel in the ROM.
         private readonly Dictionary<string, (int X, int Y)> _inPanel;
         private readonly (int X, int Y) _iconInPanel, _ballInPanel;
 
@@ -156,11 +148,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             return (x - px * 8, y - py * 8);
         }
 
-        // A Pokémon's icon is 32 pixels square.
         private const int IconTiles = 4;
 
-        // Puts each Pokémon's windows inside its panel: where the ROM has them when they all fit, otherwise the icon in the top
-        // left corner with the level beside it, the name below and the HP under or over the strip. The HP bar goes on the strip.
+        // Uses the ROM's places when everything fits; otherwise stacks the icon, level, name and HP.
         private void PlaceWindows()
         {
             PartyPanelSizePatch.Size size = _panels.Size;
@@ -172,11 +162,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 (int px, int py) = _panels.Panel(n);
                 ScreenWindowLayout.Window[] windows = _layout.Windows.Where(w => w.Group == SingleGroup && w.Pokemon == n + 1).ToArray();
                 ScreenWindowLayout.Window level = windows.FirstOrDefault(w => w.Part == "level");
-                // The status icon is drawn over the level, so it keeps its place relative to it.
+                // The status icon covers the level, so it moves with it.
                 (int sx, int sy) = _panels.SpriteAt(n, PartyPanelLayout.Sprite.Status);
                 (int statusX, int statusY) = level == null ? (0, 0) : (sx - level.X * 8, sy - level.Y * 8);
 
-                // The ball keeps its place on the icon's corner, inside the panel.
+                // The ball stays on the icon's corner, inside the panel.
                 (int iconX, int iconY) = fits ? _iconInPanel : (IconTiles * 4, IconTiles * 4);
                 (int ballX, int ballY) = (_ballInPanel.X - _iconInPanel.X + iconX, _ballInPanel.Y - _iconInPanel.Y + iconY);
                 (int ix, int iy) = _panels.SpriteAt(n, PartyPanelLayout.Sprite.Icon);
@@ -188,7 +178,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 {
                     (int x, int y) = w.Part switch
                     {
-                        // The strip starts with the two "HP" label tiles when it is long enough to have them.
+                        // Leaves room for the two "HP" label tiles when the strip has them.
                         "HP bar" => (size.StripColumn + (size.StripLength >= 3 ? 2 : 0), size.StripRow),
                         _ when fits => _inPanel[w.Part],
                         "name" => (0, IconTiles),
@@ -234,7 +224,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string[] ScreenChoices { get; } = { "Both screens", "Top screen", "Bottom screen" };
 
         private int _screens;
-        /// <summary>Both screens, or one of them alone and so drawn larger.</summary>
         public int ScreensIndex
         {
             get => _screens;
@@ -255,12 +244,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public Bitmap TopPicture { get => _top; private set { _top = value; Raise(); } }
         public Bitmap BottomPicture { get => _bottom; private set { _bottom = value; Raise(); } }
 
-        // A screen shows when it has windows or a picture, and the dropdown lets it.
         public bool ShowTop => _screens != 2 && (TopWindows.Count > 0 || _top != null);
         public bool ShowBottom => _screens != 1 && (BottomWindows.Count > 0 || _bottom != null);
         private void RaiseShown() { Raise(nameof(ShowTop)); Raise(nameof(ShowBottom)); }
 
-        /// <summary>The same window of every Pokémon can move together.</summary>
         public bool HasParty => _layout?.Windows.Any(w => w.Pokemon > 0) == true;
 
         private bool _moveAll;
@@ -268,11 +255,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         // ── panel size, once the party panel size patch is in ──
 
-        /// <summary>The panels can change size: the patch is in.</summary>
         public bool PanelsResizable => _panels?.Resizable == true;
-        /// <summary>The cursor, panel art and background can be rebuilt at the new size: this game's files for them are known.</summary>
         public bool CanRebuildGraphics => PanelsResizable && _members != null;
-        /// <summary>The panels can't change size yet, but this game has the patch for it.</summary>
         public bool CanOfferSizePatch => _panels != null && !_panels.Resizable && !RomInfo.IsHGE && PartyPanelSizePatch.SupportsCurrentRom;
 
         public void OpenSizePatch() => AvaloniaEditorLauncher.OpenPatchToolboxAt("partyPanelSize");
@@ -288,14 +272,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public decimal PanelWidth { get => _panels?.Width ?? 0; set => ChangePanelSize(s => FitStrip(s with { Width = (int)value })); }
         public decimal PanelHeight { get => _panels?.Height ?? 0; set => ChangePanelSize(s => FitStrip(s with { Height = (int)value })); }
 
-        // A smaller panel pulls the HP bar strip in with it, so shrinking is never blocked by the strip.
+        // So shrinking the panel is never blocked by the strip.
         private static PartyPanelSizePatch.Size FitStrip(PartyPanelSizePatch.Size s)
         {
             int column = Math.Min(s.StripColumn, Math.Max(0, s.Width - 1));
             int length = Math.Clamp(s.StripLength, 1, s.Width - column);
             return s with { StripColumn = column, StripLength = length, StripRow = Math.Min(s.StripRow, s.Height - 1) };
         }
-        /// <summary>The HP bar can be made shorter: this game's code for its length is known.</summary>
         public bool HpBarLengthEditable => _panels?.HpBarLengthEditable == true;
         public int MaxHpBarLength => _layout?.Windows.FirstOrDefault(w => w.Group == SingleGroup && w.Part == "HP bar")?.MaxWidth * 8
                                      ?? PartyPanelLayout.GameHpBarLength;
@@ -315,7 +298,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public decimal StripRow { get => _panels?.Size.StripRow ?? 0; set => ChangePanelSize(s => s with { StripRow = (int)value }); }
         public decimal StripLength { get => _panels?.Size.StripLength ?? 0; set => ChangePanelSize(s => s with { StripLength = (int)value }); }
 
-        // A size the code can't hold is refused with the reason on the status line; the boxes go back to the size in use.
+        // A size the code can't hold is refused, with the reason on the status line.
         private void ChangePanelSize(Func<PartyPanelSizePatch.Size, PartyPanelSizePatch.Size> change)
         {
             if (_panels == null || !_panels.Resizable) return;
@@ -327,7 +310,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             Commit();
         }
 
-        // Each box's range follows the others, so no box can take a size the code can't hold.
+        // Each range depends on the others, so no box can go past what the code holds.
         private PartyPanelSizePatch.Size Now => _panels?.Size ?? PartyPanelSizePatch.Original;
         public int MinPanelWidth => 1;
         public int MaxPanelWidth => Math.Min(ScreenWindowLayout.MapColumns, PartyPanelSizePatch.MaxArea / Now.Height);
@@ -346,8 +329,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 Raise(n);
         }
 
-        // The windows the picked state shows, coloured in turn, each on the board of its screen; the party's panels come first,
-        // so they sit under their windows.
+        // Panels are added first so they sit under their windows.
         private void Fill()
         {
             Windows.Clear();
@@ -405,17 +387,16 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private ScreenWindowLayout _savedLayout;
 
-        // The layout as saved, which warnings compare with.
+        // Warnings compare against the saved layout.
         private ScreenWindowLayout SavedLayout() => _savedLayout ??= ScreenWindowLayout.Read(_screen);
 
-        // The party's window groups (RomLocator.ScreenWindows), and the panels' rows, which aren't windows.
         private const string SingleGroup = "Pokémon", MultiGroup = "Pokémon in a multi battle", PanelGroup = "Panels";
         private const string PanelColour = "#9E9E9E";
 
         private static bool IsPanel(ScreenWindowRow row) => row.Window.Group == PanelGroup;
         private static bool IsSprite(ScreenWindowRow row) => row.Window.Group == SpriteGroup;
 
-        // The sprites placed from each Pokémon's tables, with the boxes the board shows for them, in tiles.
+        // Board box sizes in tiles.
         private const string SpriteGroup = "Sprites", SpriteColour = "#C8C8C8";
         private static readonly (PartyPanelLayout.Sprite Sprite, string Part, int Width, int Height)[] SpriteRows =
         {
@@ -425,7 +406,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private static PartyPanelLayout.Sprite SpriteOf(ScreenWindowRow row) => SpriteRows.First(r => r.Part == row.Window.Part).Sprite;
 
-        // Moves a sprite in tile steps, so its place within a tile is kept; with Move all Pokémon every Pokémon's moves too.
+        // Sprites move in whole tiles so their offset inside a tile is kept.
         private void MoveSprite(ScreenWindowRow row, int x, int y)
         {
             int dx = x - row.Window.X, dy = y - row.Window.Y;
@@ -438,7 +419,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _ = RedrawAsync();
         }
 
-        // A panel row's box follows its panel in the table.
         private void SyncPanels()
         {
             if (_panels == null) return;
@@ -457,7 +437,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
         }
 
-        // What goes wrong with a panel where it sits: another panel or a button under it, or a slide the game can't match.
         private List<string> PanelNotes(ScreenWindowRow row, int state)
         {
             List<string> notes = new List<string>();
@@ -474,13 +453,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 (int ox, int oy, int ow, int oh) = GameTextScreens.Placed(_text, other.Window, state);
                 if (ox < p.X + p.Width && p.X < ox + ow && oy < p.Y + p.Height && p.Y < oy + oh) notes.Add($"Under {Said(other.Window)}");
             }
-            // Switching slides even slots' panels left and odd slots' right by their width, wherever they are.
+            // The game slides even slots left and odd slots right by the panel width, wherever they are.
             if (p.X != (n % 2 == 0 ? 0 : _panels.MaxX))
                 notes.Add($"Slides toward the {(n % 2 == 0 ? "left" : "right")} edge when Pokémon switch places");
             return notes;
         }
 
-        // Problems a move made; the ones the saved layout already has are the game's own and left unsaid.
+        // Problems the saved layout already has are the game's own, so only new ones are shown.
         private void Warn()
         {
             if (_text == null || _layout == null) return;
@@ -500,7 +479,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
         }
 
-        // A window's name inside a sentence: "Pokémon 4's name", "the short message".
         private static string Said(ScreenWindowLayout.Window w) =>
             w.Pokemon > 0 ? w.Name : "the " + char.ToLowerInvariant(w.Name[0]) + w.Name.Substring(1);
 
@@ -527,7 +505,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         }
                     if (overlap) notes.Add(lost ? $"Partly hidden by {Said(other)}" : $"Hides part of {Said(other)}");
                 }
-                // A box on a background in front (a lower number on the same screen) covers it, frame and all.
+                // A box on a background in front (lower number, same screen) covers it, frame included.
                 foreach (ScreenWindowLayout.Window a in shown)
                 {
                     if (a.Layer >= w.Layer || a.Layer / 4 != w.Layer / 4 || !GameTextScreens.Together(_text, w, a)) continue;
@@ -543,7 +521,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             return all;
         }
 
-        /// <summary>Moves a window while it is dragged; the change only becomes a step when <see cref="Commit"/> runs.</summary>
+        /// <summary>The change becomes an undo step when <see cref="Commit"/> runs.</summary>
         public void Move(ScreenWindowRow row, int x, int y)
         {
             if (row == null) return;
@@ -565,7 +543,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _ = RedrawAsync();
         }
 
-        /// <summary>Makes a window smaller, never bigger than in the ROM; with Move all Pokémon the same window of every Pokémon too.</summary>
+        /// <summary>Never bigger than in the ROM.</summary>
         public void Resize(ScreenWindowRow row, int width, int height)
         {
             if (row == null || IsPanel(row) || IsSprite(row)) return;
@@ -581,7 +559,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _ = RedrawAsync();
         }
 
-        // A panel moves with its Pokémon's windows, and with Move all Pokémon every panel moves the same step.
         private void MovePanel(int pokemon, int x, int y)
         {
             (int px, int py) = _panels.Panel(pokemon);
@@ -605,7 +582,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _ = RedrawAsync();
         }
 
-        // The window, and with Move all Pokémon on the same window of every other Pokémon in its table.
         private IEnumerable<ScreenWindowLayout.Window> Following(ScreenWindowLayout.Window w)
         {
             yield return w;
@@ -614,7 +590,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (!ReferenceEquals(other, w) && other.Group == w.Group && other.Pokemon > 0 && other.Part == w.Part) yield return other;
         }
 
-        /// <summary>Makes the edits since the last step one undo step, as a drag ends or a value is typed.</summary>
         public void Commit() => Record();
 
         private void Refresh()
@@ -632,7 +607,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private int _asked;
 
-        // Both screens in the picked state, as the game draws them with the windows where they are now.
         private async Task RedrawAsync()
         {
             int asked = ++_asked;
@@ -656,8 +630,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_layout == null) return true;
             try
             {
-                // Everything a save needs is checked before anything is written: the graphics archive unpacked, the panel size
-                // allowed. The graphics files go first, then the tables in arm9, so a failure leaves arm9 as it was.
+                // Checks everything first, then writes graphics before arm9, so a failed save leaves arm9 untouched.
                 if (_pending.Pending(PartyGraphics).Count > 0)
                 {
                     await Task.Run(() => DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { PartyGraphics }));
@@ -702,7 +675,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
     }
 
-    /// <summary>One window in the list and on the board.</summary>
     public sealed class ScreenWindowRow : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -710,7 +682,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private readonly int _scrolled;
 
-        /// <param name="scrolled">Rows its background is scrolled up by in the shown state, so it shows that much higher.</param>
+        /// <param name="scrolled">Rows its background is scrolled up in the shown state.</param>
         public ScreenWindowRow(ScreenWindowLayout.Window window, string colour, int scrolled)
         {
             Window = window;
@@ -721,13 +693,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public ScreenWindowLayout.Window Window { get; }
         public string Name => Window.Name;
         public string Colour { get; }
-        /// <summary>The row the game's code puts it on in the shown state, whatever its own is.</summary>
+        /// <summary>The row the game's code forces in the shown state, if any.</summary>
         public int? FixedTop { get; init; }
-        /// <summary>The row it shows on, which is its own (or the fixed one) less any scroll.</summary>
         public int ShownY => (FixedTop ?? Window.Y) - _scrolled;
 
         private string _warning = "";
-        /// <summary>What goes wrong where it sits now, one problem a line; empty when nothing does.</summary>
+        /// <summary>One problem per line; empty when there are none.</summary>
         public string Warning
         {
             get => _warning;
@@ -742,9 +713,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public bool HasWarning => _warning.Length > 0;
         public int Scrolled => _scrolled;
 
-        /// <summary>Set by the editor, so typing a tile moves the window the same way a drag does.</summary>
+        /// <summary>Set by the editor so typing a tile works like dragging.</summary>
         public Action<ScreenWindowRow, int, int> MoveTo;
-        /// <summary>Set by the editor for the game's own windows, the ones a size can be typed for.</summary>
+        /// <summary>Set only for the game's own windows, the ones that can be resized.</summary>
         public Action<ScreenWindowRow, int, int> SizeTo;
 
         public int Across { get => Window.X; set => MoveTo?.Invoke(this, value, Window.Y); }

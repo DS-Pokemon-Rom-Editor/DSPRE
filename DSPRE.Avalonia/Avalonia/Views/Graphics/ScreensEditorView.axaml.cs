@@ -23,7 +23,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         private void EditText_Click(object sender, RoutedEventArgs e) => PageOf(sender)?.EditText();
         private void OpenPiece_Click(object sender, RoutedEventArgs e) => ((sender as Control)?.DataContext as ScreenPieceRow)?.Open();
 
-        // The picture is drawn at twice the screen's size, inside a one-pixel border.
+        // Drawn at double size inside a one-pixel border.
         private void Picture_PointerPressed(object sender, PointerPressedEventArgs e)
         {
             if (sender is not Control picture || PageOf(sender) is not ScreenTabViewModel page) return;
@@ -39,7 +39,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private void Piece_PointerExited(object sender, PointerEventArgs e) => ListPageOf(sender)?.PointAt(null);
 
-        // Scrolls the pieces list to the first lit piece, once its rows are laid out.
+        // Scrolls to the first lit piece once its rows are laid out.
         private void PieceList_Attached(object sender, VisualTreeAttachmentEventArgs e)
         {
             if (sender is not ItemsControl list || list.Tag != null) return;

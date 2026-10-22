@@ -10,7 +10,7 @@
     <Viewbox Stretch="Uniform">
       <Canvas Width="256" Height="192" ClipToBounds="True">
         <!-- Real battle-scene backdrop + terrain platforms (Arena Type selector: DSUtils.BattleGroundRenderer /
-             BattleBgRenderer, same real-ROM-data renderers the Move animations & battle scripts uses), falling back to the
+             BattleBgRenderer, the same renderers the Move animations & battle scripts editor uses), falling back to the
              bundled placeholder art if the ROM/NARC is unavailable or decoding fails. -->
         <Image Source="{Binding ArenaBackdrop}" Canvas.Left="{Binding BackdropX}" Canvas.Top="0" Stretch="None" IsVisible="{Binding HasArenaGraphics}"/>
         <Image Source="{x:Static views:BattleSceneControl.BackgroundAsset}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192" Stretch="Fill" IsVisible="{Binding !HasArenaGraphics}"/>

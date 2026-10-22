@@ -1380,7 +1380,7 @@ namespace DSPRE.Avalonia
         /// Opens the Pokédex pages put together with a sample Pokémon, or, where that editor is not on, the
         /// graphics window at the Pokédex's first screen.
         /// </summary>
-        /// <summary>Opens the Screens editor, on screen <paramref name="key"/> and a line of one of its archives when given.</summary>
+        /// <summary>Opens the Screens editor, at a screen and a line when given.</summary>
         public static void OpenScreensEditor(string key = null, int bank = -1, int line = -1, string view = null,
                                              System.Action<object> then = null, bool fresh = false)
         {
@@ -1399,7 +1399,7 @@ namespace DSPRE.Avalonia
         {
             if (EditorAvailability.Allows("PokedexGraphicsEditorView") && EditorAvailability.Allows("ScreensEditorView"))
             {
-                // An editor with unsaved work keeps its sample; otherwise it is made again with this one.
+                // An editor with unsaved work keeps its sample; otherwise it's remade with this one.
                 ViewModels.Graphics.ScreenCatalog.PokedexStart = (species, pageId);
                 OpenScreensEditor("pokedex", view: "Edit", fresh: true,
                     then: model => (model as ViewModels.Graphics.ScreenPagesEditorViewModel)?.GoToPage(pageId));
@@ -1414,8 +1414,8 @@ namespace DSPRE.Avalonia
         /// <summary>Opens the Pokémon summary screen's pages, put together with a sample Pokémon.</summary>
         public static void OpenSummaryScreen() => _ = OpenSummaryScreenAsync();
 
-        /// <param name="species">The Pokémon to show the pages with; 0 keeps the usual sample.</param>
-        /// <param name="pageId">The page to open on, or null for the first.</param>
+        /// <param name="species">The Pokémon to show; 0 keeps the usual sample.</param>
+        /// <param name="pageId">The page to open, or null for the first.</param>
         public static async System.Threading.Tasks.Task OpenSummaryScreenAsync(int species = 0, string pageId = null)
         {
             if (Refused("SummaryScreenEditorView")) return;
@@ -1647,7 +1647,7 @@ namespace DSPRE.Avalonia
             }
         }
 
-        /// <summary>Opens the editor the menus call <paramref name="name"/>.</summary>
+        /// <summary>Opens the editor with this menu name.</summary>
         public static void OpenEditorNamed(string name)
             => PaletteCommands().FirstOrDefault(c => c.Name == name)?.Run?.Invoke();
 

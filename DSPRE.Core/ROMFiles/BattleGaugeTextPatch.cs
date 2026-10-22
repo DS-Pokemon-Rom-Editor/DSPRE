@@ -7,10 +7,8 @@ using System.Text;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// Clears the white box behind each HP bar's name, level, HP numbers, gender symbol, "Lv" and caught ball. The battle
-    /// writes the text into a buffer filled with colour 15 and takes the rest from tiles with a colour 15 background, then
-    /// copies them over the bar; with the patch the copy keeps the bar's pixel wherever they have colour 15.
-    /// Source: Resources/ROMToolboxDB/HpBarText/hp_bar_text.s.
+    /// Clears the white box behind the HP bar text, gender symbol, "Lv" and caught ball by keeping the bar's pixels where they have colour
+    /// 15.
     /// </summary>
     public static class BattleGaugeTextPatch
     {
@@ -74,7 +72,7 @@ namespace DSPRE.ROMFiles
             => hooks.All(h => BitConverter.ToUInt16(ov, h) == LoadSprite && CallAt(ov, h + 2) is (uint t, false) && t == getter)
             && copies.All(c => CallAt(ov, c) is (uint t, true) && t == copy);
 
-        /// <summary>The patch's code address when every text site calls into it and its marked block is there, or 0.</summary>
+        /// <summary>The patch's code address when every text site calls it and its block is there, or 0.</summary>
         private static uint PatchedCode(byte[] ov)
         {
             if (!File.Exists(Filesystem.ExpArmPath) || CallAt(ov, Sites.Hooks[0]) is not (uint hook, false)) return 0;
@@ -99,18 +97,17 @@ namespace DSPRE.ROMFiles
             catch (Exception ex) when (ex is IOException || ex is ArgumentException) { return false; }
         }
 
-        /// <summary>The name, level and HP numbers keep the bar behind them.</summary>
         public static bool TextIsClear => Probe((_, _) => true);
 
-        /// <summary>The gender symbol, "Lv" and the caught ball keep the bar behind them too; ROMs patched before they were covered don't.</summary>
+        /// <summary>Also true for the gender symbol, "Lv" and caught ball; ROMs patched before that are false.</summary>
         public static bool TilesAreClear => Probe((ov, code) => Routed(ov, code, Sites.TileHooks, Sites.TileCopies));
 
         public static bool IsApplied => TilesAreClear;
 
-        /// <summary>The caught ball keeps the bar behind it; Diamond and Pearl's ball has colour 15 inside it, so never there.</summary>
+        /// <summary>Never in Diamond and Pearl, whose ball has colour 15 inside it.</summary>
         public static bool CaughtIsClear => RomInfo.GameFamily != RomInfo.GameFamilies.DP && TilesAreClear;
 
-        /// <summary>The patch is in for the text only, and the tile sites are still the game's own.</summary>
+        /// <summary>Patched for the text only, with the tile sites still untouched.</summary>
         public static bool NeedsTileUpdate => !TilesAreClear && Probe((ov, code) =>
         {
             uint block = (uint)BlockOffset(code);
@@ -155,7 +152,7 @@ namespace DSPRE.ROMFiles
             Route(code, Sites.Hooks.Concat(Sites.TileHooks), Sites.Copies.Concat(Sites.TileCopies));
         }
 
-        /// <summary>Points the gender symbol, "Lv" and caught ball at a patch that is already in for the text.</summary>
+        /// <summary>Adds the gender symbol, "Lv" and caught ball to a ROM already patched for the text.</summary>
         public static void AddTiles()
         {
             uint code = PatchedCode(ReadOverlay());

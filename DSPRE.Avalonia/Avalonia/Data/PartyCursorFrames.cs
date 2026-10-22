@@ -6,13 +6,12 @@ using DSPRE.ROMFiles;
 namespace DSPRE.Avalonia.Data
 {
     /// <summary>
-    /// Builds the party menu's cursor frames at a new panel size from the ones it has: each frame's corners are kept, its
-    /// edges and middle are repeated to fill the new size, and the result is cut into sprite pieces of the sizes the
-    /// hardware has. The cells keep their order (normal, lead, and the two switch frames), so the animation file needs no change.
+    /// Rebuilds the party cursor frames at a new panel size: corners kept, edges and middle repeated, cut into hardware sprite sizes. Cell
+    /// order stays the same, so the animation file doesn't change.
     /// </summary>
     public static class PartyCursorFrames
     {
-        // The square, wide and tall sizes a sprite piece can be, as (shape, size) for its two attribute fields.
+        // The sprite sizes the hardware has, as (shape, size) attribute values.
         private static readonly Dictionary<(int W, int H), (int Shape, int Size)> Shapes = new()
         {
             [(8, 8)] = (0, 0), [(16, 16)] = (0, 1), [(32, 32)] = (0, 2), [(64, 64)] = (0, 3),
@@ -20,13 +19,10 @@ namespace DSPRE.Avalonia.Data
             [(8, 16)] = (2, 0), [(8, 32)] = (2, 1), [(16, 32)] = (2, 2), [(32, 64)] = (2, 3),
         };
 
-        // A corner this many pixels across stays as it was drawn.
+        // Corners this many pixels across are kept as drawn.
         private const int Corner = 16;
 
-        /// <summary>
-        /// The cell file and tile sheet for frames of <paramref name="width"/> by <paramref name="height"/> tiles, or null with
-        /// <paramref name="why"/> when the files aren't the kind this can rebuild.
-        /// </summary>
+        /// <summary>Null, with <paramref name="why"/>, when the files can't be rebuilt.</summary>
         public static (byte[] Cells, byte[] Tiles) Build(byte[] ncer, byte[] ncgr, int width, int height, out string why)
         {
             why = null;
@@ -56,7 +52,7 @@ namespace DSPRE.Avalonia.Data
                     pieces.Add(((ushort)((y & 0xFF) | shape << 14), (ushort)((x & 0x1FF) | size << 14),
                                 (ushort)(tile | priority << 10 | palette << 12)));
                 }
-                // The low six bits hold the frame's reach from its centre in steps of four pixels; the rest stay as they were.
+                // The low six bits are the frame's reach from its centre in 4-pixel steps.
                 int reach = (int)(Math.Sqrt(w * w / 4.0 + h * h / 4.0) / 4);
                 built.Add(new NcerFile.NewCell(pieces, (ushort)((cell.Attr & ~0x3F) | Math.Min(reach, 0x3F)),
                                                (short)(w / 2 - 1), (short)(h / 2 - 1), (short)(-w / 2), (short)(-h / 2)));
@@ -68,7 +64,6 @@ namespace DSPRE.Avalonia.Data
             return (newCells, newTiles);
         }
 
-        // A cell drawn as colour numbers over its bounds, 0 where nothing is drawn.
         private static (byte[] Pixels, int Width, int Height) Render(NcerFile file, NcerFile.Cell cell, byte[] chars)
         {
             int minX = cell.Pieces.Min(p => p.X), minY = cell.Pieces.Min(p => p.Y);
@@ -90,7 +85,6 @@ namespace DSPRE.Avalonia.Data
             return (pixels, w, h);
         }
 
-        // Corners kept, the rest filled by repeating what lies between them, across and down.
         private static byte[] Stretch(byte[] old, int ow, int oh, int w, int h)
         {
             byte[] result = new byte[w * h];
@@ -107,7 +101,7 @@ namespace DSPRE.Avalonia.Data
             return result;
         }
 
-        // A tile's 32 bytes, four bits a pixel, low half first.
+        // 4 bits per pixel, low nibble first.
         private static byte[] Tile(byte[] pixels, int w, int x0, int y0)
         {
             byte[] t = new byte[32];
@@ -117,7 +111,7 @@ namespace DSPRE.Avalonia.Data
             return t;
         }
 
-        // Covers a rectangle with pieces: the largest sizes along each side first, halving any pair the hardware lacks.
+        // Largest sizes first along each side; pairs the hardware doesn't have are split in half.
         private static IEnumerable<(int X, int Y, int W, int H)> Cut(int x, int y, int w, int h)
         {
             List<int> Chunks(int length)

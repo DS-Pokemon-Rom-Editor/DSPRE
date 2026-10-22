@@ -5,12 +5,11 @@ using System.Linq;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// Lets the HeartGold and SoulSilver party menu draw its panels at any size up to 96 tiles. Each number that depends on
-    /// the panel size becomes one instruction's immediate in arm9, in place. Applied, it holds the game's own size.
+    /// Lets HGSS party panels be any size up to 96 tiles, by turning each size-dependent number in arm9 into an immediate, in place.
     /// </summary>
     public static class PartyPanelSizePatch
     {
-        /// <summary>A panel's size in tiles and its HP bar strip: the row of tiles the egg blanks and a switch redraws.</summary>
+        /// <summary>A panel's size in tiles and its HP bar strip, the tiles eggs blank and switches redraw.</summary>
         public sealed record Size(int Width, int Height, int StripColumn, int StripRow, int StripLength, int StripTile)
         {
             // The strip's first entry in a panel buffer, and its byte offset in the party menu's work area.
@@ -18,7 +17,7 @@ namespace DSPRE.ROMFiles
             internal int StripSource => 0x3D4 + 2 * Strip;
         }
 
-        /// <summary>The game's own size: 16 by 6 tiles, the strip at column 6 of row 3 and nine tiles long.</summary>
+        /// <summary>16 by 6, the strip at column 6 of row 3, nine tiles long.</summary>
         public static Size Original => new Size(16, 6, 6, 3, 9, RomLocator.PartyStripTile);
 
         /// <summary>The panel buffers hold 96 tiles each, so no panel can be bigger.</summary>
@@ -81,7 +80,7 @@ namespace DSPRE.ROMFiles
             new(Fn.Loader, 0x060, 0x3620, s => Adds(6, 2 * s.Width)),
             new(Fn.Loader, 0x062, 0x3720, s => Adds(7, 2 * s.Width)),
             new(Fn.Loader, 0x064, 0x2C06, s => Cmp(4, s.Height)),
-            // sub_0207FC1C: a switch saves both panels and their text; the row step was a shift, now a running offset.
+            // sub_0207FC1C: the row step was a shift and is now a running offset.
             new(Fn.Capture, 0x0B4, 0x9803, Fixed(Movs(5, 0))),
             new(Fn.Capture, 0x0B6, 0x0165, Fixed(0x9803)),
             new(Fn.Capture, 0x0BE, 0x2220, s => Movs(2, 2 * s.Width)),
@@ -154,10 +153,10 @@ namespace DSPRE.ROMFiles
             return now;
         }
 
-        /// <summary>Whether this game and language have the patch's sites; HeartGold and SoulSilver in every language.</summary>
+        /// <summary>HeartGold and SoulSilver, every language.</summary>
         public static bool SupportsCurrentRom => RomLocator.PartyPanelCodeSites != null;
 
-        /// <summary>The size the patched code holds, or null when the patch isn't in or the code was changed by something else.</summary>
+        /// <summary>Null when the patch isn't in or something else changed the code.</summary>
         public static Size Read()
         {
             ushort[] now = ReadSites(RomLocator.PartyPanelCodeSites);
@@ -197,14 +196,13 @@ namespace DSPRE.ROMFiles
             return null;
         }
 
-        /// <summary>Rewrites the code with the game's own size, so the game is unchanged until a size is set.</summary>
+        /// <summary>Writes the game's own size, so nothing changes until a size is set.</summary>
         public static void Apply()
         {
             if (WhyNotApplicable() is string why) throw new InvalidOperationException(why);
             WriteSites(Original);
         }
 
-        /// <summary>Sets a new size in the patched code.</summary>
         public static void Write(Size size)
         {
             if (WhyNotSize(size) is string why) throw new ArgumentException(why);
@@ -222,7 +220,7 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>The bytes of a size, for undo.</summary>
+        /// <summary>For undo.</summary>
         public static byte[] ToBytes(Size s) => new[]
         {
             (byte)s.Width, (byte)s.Height, (byte)s.StripColumn, (byte)s.StripRow, (byte)s.StripLength, (byte)s.StripTile,

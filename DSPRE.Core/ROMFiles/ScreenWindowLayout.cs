@@ -6,23 +6,22 @@ using System.Linq;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// The text windows a screen keeps in template tables of eight bytes each (background, column, row, width, height,
-    /// palette, first tile) in arm9 or the screen's overlay. A window never takes more tiles than the game gave it, since
-    /// the tiles after it belong to the next window.
+    /// A screen's text window tables (8 bytes per window) in arm9 or its overlay. A window can't grow past its tiles, because the next
+    /// window's tiles follow.
     /// </summary>
     public sealed class ScreenWindowLayout
     {
         public const int MapColumns = 32;
-        /// <summary>A window may sit below the visible rows where its background scrolls (the HGSS party top screen).</summary>
+        /// <summary>Windows can sit below the visible rows where the background scrolls (the HGSS party top screen).</summary>
         public const int MapHeight = 32;
 
         public sealed class Window
         {
             public string Group, Name;
             public int Layer, X, Y, Width, Height, Palette, BaseTile;
-            /// <summary>Its size in the ROM. The game sets aside only those tiles, so a new size can't be bigger.</summary>
+            /// <summary>Its size in the ROM. A new size can't be bigger, since the game only reserved those tiles.</summary>
             public int MaxWidth, MaxHeight;
-            /// <summary>The party Pokémon it belongs to, 1 to 6, and what it shows ("name", "HP"); 0 and null for any other window.</summary>
+            /// <summary>For a party Pokémon's window, which Pokémon (1 to 6) and part; 0 and null otherwise.</summary>
             public int Pokemon;
             public string Part;
             public Window Copy() => (Window)MemberwiseClone();
@@ -36,7 +35,7 @@ namespace DSPRE.ROMFiles
 
         private ScreenWindowLayout(RomInfo.ScreenWindowTableSite[] sites) { _sites = sites; }
 
-        /// <summary>The screen's tables, or null when they aren't known for this ROM or don't look like the game's.</summary>
+        /// <summary>Null when this ROM's tables aren't known or don't look like the game's.</summary>
         public static ScreenWindowLayout Read(string screen)
         {
             RomInfo.ScreenWindowTableSite[] sites = RomLocator.ScreenWindowSites(screen);
@@ -66,7 +65,7 @@ namespace DSPRE.ROMFiles
             catch (Exception ex) { AppLogger.WarnOnce("ScreenWindowLayout.Read." + screen, ex); return null; }
         }
 
-        // Every window on a background, inside the map and with a palette row, as a real table always is.
+        // A real table always has every window on a background, inside the map and with a palette row.
         private static bool Sane(byte[] bytes)
         {
             for (int at = 0; at + 8 <= bytes.Length; at += 8)
@@ -91,7 +90,7 @@ namespace DSPRE.ROMFiles
             return bytes;
         }
 
-        /// <summary>The windows as the bytes they are kept in, in table order.</summary>
+        /// <summary>In table order.</summary>
         public byte[] ToBytes()
         {
             byte[] bytes = new byte[Windows.Count * 8];
@@ -106,7 +105,7 @@ namespace DSPRE.ROMFiles
             return bytes;
         }
 
-        /// <summary>Takes window places and sizes from <see cref="ToBytes"/>, leaving their largest sizes as read.</summary>
+        /// <summary>Sets positions and sizes; the maximum sizes stay as read.</summary>
         public void FromBytes(byte[] bytes)
         {
             for (int i = 0; i < Windows.Count && i * 8 + 8 <= bytes.Length; i++)
@@ -117,10 +116,10 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>The tables' bytes as the files hold them now, in the order of <see cref="ToBytes"/>.</summary>
+        /// <summary>The bytes the files hold now, in <see cref="ToBytes"/> order.</summary>
         public byte[] FileBytes() => _sites.SelectMany(site => ReadSite(site) ?? new byte[site.Windows.Length * 8]).ToArray();
 
-        /// <summary>Writes bytes in the order of <see cref="ToBytes"/> back where the tables were read from.</summary>
+        /// <summary>Writes bytes in <see cref="ToBytes"/> order back to the tables.</summary>
         public void WriteFile(byte[] all)
         {
             int from = 0;

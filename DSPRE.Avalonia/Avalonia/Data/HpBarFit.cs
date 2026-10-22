@@ -109,7 +109,7 @@ namespace DSPRE.Avalonia.Data
             if (inText.Count == 0)
             {
                 if (!BattleGaugeTextPatch.TextIsClear) { plan.CannotBecause = "The picture has nothing where the name and level go."; return plan; }
-                // With the patch the text background is never drawn, so a see-through text area keeps the text colours there are now.
+                // With the patch the text background is never drawn, so a see-through text area keeps the current text colours.
                 inText[Ds(Pack(palette[TextBack]))] = 1;
             }
 

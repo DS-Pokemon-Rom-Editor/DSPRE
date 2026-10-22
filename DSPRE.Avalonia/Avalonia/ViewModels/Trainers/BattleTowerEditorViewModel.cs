@@ -51,7 +51,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public void SaveChanges()
         {
             if (_trainerFile == null || _setFile == null) return;
-            // Both halves are tried, then any failure is told once; a failure leaves the edits unsaved.
+            // Saves both files, then reports any failure once; a failure leaves the edits unsaved.
             string trainersError = _trainerFile.Save();
             string setsError = _setFile.Save();
             if (trainersError != null || setsError != null)

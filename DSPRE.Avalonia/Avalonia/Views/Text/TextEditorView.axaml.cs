@@ -47,7 +47,7 @@ namespace DSPRE.Avalonia.Views.Text
         {
             if (VM == null) return;
             FieldMessageBoxView.Font = FieldFont.LoadTalkFont();
-            // Screens with a window of their own write in the system font, inside the standard border.
+            // Screens with their own window use the system font inside the standard border.
             FieldMenuWindowView.Font = FieldFont.LoadSystemFont();
             FieldMenuWindowView.Frame = DSPRE.Avalonia.Data.WindowFrames.LoadStandard();
             FieldMenuWindowView.Colours = DSPRE.Avalonia.Data.WindowFrames.LoadSystemFontColours();
@@ -78,7 +78,7 @@ namespace DSPRE.Avalonia.Views.Text
         private void ShotOpen_Click(object sender, RoutedEventArgs e) =>
             ((sender as Control)?.DataContext as DSPRE.Avalonia.Data.TextScreenShot)?.Open?.Invoke();
 
-        // The screen at three times DS size, without smoothing.
+        // Three times DS size, without smoothing.
         private async void ShotLarger_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as Control)?.DataContext is not DSPRE.Avalonia.Data.TextScreenShot shot || shot.Picture == null) return;

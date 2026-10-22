@@ -906,7 +906,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (lines[index] == name) return true;
             lines[index] = name;
             if (!HgEngineOwnedFiles.TryWriteLines(owned, lines, out error)) return false;
-            // The same check the Text editor runs, so a bad tag shows now rather than at build time.
+            // The same check the Text editor runs, so a bad tag shows now instead of at build time.
             if (HgEngineBuild.TryValidateTextArchive(owned.RelPath, out string problems) && problems != null)
             {
                 error = $"Saved {owned.RelPath}, but its build will reject it:\n{problems}";

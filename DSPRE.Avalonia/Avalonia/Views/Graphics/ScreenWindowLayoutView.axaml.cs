@@ -29,7 +29,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             };
         }
 
-        // Both screens sit side by side; one alone stacks the preview under the boxes so each takes the whole width.
+        // Both screens sit side by side; a single screen stacks the preview under the boxes.
         private void Arrange()
         {
             Grid panes = this.FindControl<Grid>("Panes");
@@ -44,7 +44,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         public ScreenWindowLayoutView(ScreenWindowLayoutViewModel vm) : this() => DataContext = vm;
 
-        // The tile grid the boxes snap to, as on the HP bar editor's board.
+        // The grid the boxes snap to, like the HP bar editor's board.
         private static void DrawGrid(Canvas grid)
         {
             if (grid == null) return;
@@ -63,7 +63,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             if (VM == null || sender is not Control board) return;
             (int x, int y) = TileAt(e.GetPosition(board));
-            // The smallest window under the pointer, so windows that share tiles can both be picked.
+            // Picks the smallest window under the pointer, so windows that share tiles can both be picked.
             _dragging = (board.Name == "BottomBoard" ? VM.BottomWindows : VM.TopWindows)
                 .Where(r => x >= r.Window.X && x < r.Window.X + r.Window.Width && y >= r.ShownY && y < r.ShownY + r.Window.Height)
                 .OrderBy(r => r.Window.Width * r.Window.Height).FirstOrDefault();
@@ -76,7 +76,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             if (_dragging == null || sender is not Control board) return;
             (int x, int y) = TileAt(e.GetPosition(board));
-            // The board shows a scrolled window higher than its row; the row stored is the scrolled one plus the scroll.
+            // A scrolled window shows higher than its row, so the scroll is added back.
             VM?.Move(_dragging, x - _grabbedAt.X, y - _grabbedAt.Y + _dragging.Scrolled);
         }
 

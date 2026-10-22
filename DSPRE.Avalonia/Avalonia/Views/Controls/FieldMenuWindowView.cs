@@ -59,9 +59,9 @@ namespace DSPRE.Avalonia.Views.Controls
         public int CursorX { get => GetValue(CursorXProperty); set => SetValue(CursorXProperty, value); }
         /// <summary>How far down the first row starts; lists start one pixel lower.</summary>
         public int RowOffset { get => GetValue(RowOffsetProperty); set => SetValue(RowOffsetProperty, value); }
-        /// <summary>Off for a window that only shows a message.</summary>
+        /// <summary>False for windows that only show a message.</summary>
         public bool ShowCursor { get => GetValue(ShowCursorProperty); set => SetValue(ShowCursorProperty, value); }
-        /// <summary>Fits just the window to the control rather than the whole DS screen.</summary>
+        /// <summary>Fits only the window to the control instead of the whole DS screen.</summary>
         public bool FitToWindow { get => GetValue(FitToWindowProperty); set => SetValue(FitToWindowProperty, value); }
 
         /// <summary>Two rows of tiles per entry.</summary>
@@ -165,10 +165,7 @@ namespace DSPRE.Avalonia.Views.Controls
             return ToBitmap(rgba, width, height);
         }
 
-        /// <summary>
-        /// The window with its border as straight RGBA, for drawing somewhere other than this control.
-        /// <paramref name="cursor"/> is the row the cursor is on, or -1 for no cursor.
-        /// </summary>
+        /// <summary>The window and its border as straight RGBA. <paramref name="cursor"/> is the cursor's row, or -1.</summary>
         public static byte[] PaintRgba(IReadOnlyList<string> items, int tilesWide, int tilesHigh, int indent, int rowOffset,
                                        int cursorX, int cursor, out int width, out int height)
         {
@@ -199,8 +196,8 @@ namespace DSPRE.Avalonia.Views.Controls
         }
 
         /// <summary>
-        /// A window with its border and pieces of text placed in it, in pixels from the writing area's corner,
-        /// as straight RGBA. A right-aligned piece ends at its x. The cursor goes in front of the piece it names, or nowhere at -1.
+        /// A window with text pieces placed in pixels from its text area's corner, as straight RGBA. A right-aligned piece ends at its x;
+        /// -1 means no cursor.
         /// </summary>
         public static byte[] PaintPlaced(int tilesWide, int tilesHigh, IReadOnlyList<(string Text, int X, int Y, bool Right)> pieces,
                                          int cursor, out int width, out int height)

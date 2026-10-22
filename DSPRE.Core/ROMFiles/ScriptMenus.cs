@@ -5,23 +5,19 @@ using System.Linq;
 
 namespace DSPRE.ROMFiles
 {
-    /// <summary>
-    /// The multichoice menus and lists field scripts put up, found by reading every script file once per ROM, so a text
-    /// line can be shown in the menus that use it.
-    /// </summary>
+    /// <summary>The multichoice menus and lists field scripts show, found by reading every script once per ROM.</summary>
     public static class ScriptMenus
     {
         public sealed class Menu
         {
             public int ScriptFile { get; init; }
-            /// <summary>The window's writing area, in tiles, as the script gives it.</summary>
+            /// <summary>The text area, in tiles, as the script gives it.</summary>
             public int X { get; init; }
             public int Y { get; init; }
             public bool IsList { get; init; }
             public bool OnTouchScreen { get; init; }
-            /// <summary>The cursor's first entry.</summary>
             public int Cursor { get; init; }
-            /// <summary>The archive the entries come from: the shared menu archive, or the map's own.</summary>
+            /// <summary>The shared menu archive, or the map's own.</summary>
             public IReadOnlyList<int> Banks { get; init; }
             public IReadOnlyList<int> Entries { get; init; }
         }
@@ -75,7 +71,7 @@ namespace DSPRE.ROMFiles
                 string path = Filesystem.GetScriptPath(file);
                 if (!File.Exists(path)) continue;
                 ScriptFile script;
-                // The binary as the ROM holds it; the plaintext reader keeps a cache the editors share.
+                // Reads the binary directly; the plaintext reader's cache is shared by the editors.
                 try { using (MemoryStream data = new MemoryStream(File.ReadAllBytes(path))) script = new ScriptFile(data, true, false, file); }
                 catch (Exception ex) { AppLogger.WarnOnce("ScriptMenus.Script", ex); continue; }
                 if (script.IsLevelScript) continue;

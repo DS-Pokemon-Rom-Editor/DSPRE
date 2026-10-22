@@ -14,13 +14,13 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Graphics
 {
     /// <summary>One layer of the page in the list: a background, a sprite, a label or the sample Pokémon.</summary>
-    /// <summary>A text box or bar in the layout list and on the screen, moved by typing or dragging.</summary>
+    /// <summary>A text box or bar in the layout list and on the screen.</summary>
     public sealed class ScreenBoxRow : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise(string n) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
-        /// <summary>How many board pixels one tile takes: the screens are drawn at twice their size.</summary>
+        /// <summary>Board pixels per tile; the screens are drawn at double size.</summary>
         public const double Tile = 16;
 
         private readonly Action<ScreenBoxRow, int, int> _place;
@@ -55,7 +55,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             foreach (string n in new[] { nameof(Across), nameof(Down), nameof(Left), nameof(Top), nameof(Width), nameof(Height) }) Raise(n);
         }
 
-        /// <summary>Follows a drag on the screen; <see cref="Drop"/> places it.</summary>
+        /// <summary>Follows a drag; <see cref="Drop"/> places it.</summary>
         public void Drag(int x, int y)
         {
             _x = Math.Clamp(x, 0, 32 - Item.Width);
@@ -139,7 +139,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private readonly IDisposable _picturesSaved;
         public void Detach() => _picturesSaved?.Dispose();
 
-        /// <summary>Shows the page <paramref name="pageId"/>; null or an unknown id leaves the page on show.</summary>
+        /// <summary>Null or an unknown id keeps the current page.</summary>
         public void GoToPage(string pageId)
         {
             if (pageId == null) return;
@@ -606,12 +606,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public ScreenLayoutItem SelectedBox => _boxIndex >= 0 && _boxIndex < Boxes.Count ? Boxes[_boxIndex] : null;
         public bool HasBox => SelectedBox != null;
 
-        /// <summary>The boxes and bars as rows to type into and boxes to drag, the way the HP bar editor shows its parts.</summary>
+        /// <summary>The boxes and bars, listed like the HP bar editor's parts.</summary>
         public ObservableCollection<ScreenBoxRow> BoxRows { get; } = new();
         public ObservableCollection<ScreenBoxRow> TopBoxes { get; } = new();
         public ObservableCollection<ScreenBoxRow> BottomBoxes { get; } = new();
 
-        // The rows stay while the same items are shown, so a number being typed keeps its box.
+        // Rows are kept while the same items show, so a number being typed keeps its box.
         private void FillBoxRows()
         {
             ScreenSide topSide = Page?.MainOnTop != false ? ScreenSide.Main : ScreenSide.Sub;

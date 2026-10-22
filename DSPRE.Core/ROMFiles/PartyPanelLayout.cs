@@ -6,17 +6,15 @@ using System.Linq;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// Where the party menu puts each Pokémon's panel, and everything placed from it: the icon and ball, the status
-    /// icon, the cursor's stop in each single-layout table and, in HGSS, the touch area. A panel moves with all of them, so a
-    /// moved Pokémon still lines up.
+    /// Panel positions and everything placed from them (icon, ball, status icon, cursor stops, HGSS touch areas), so they move together.
     /// </summary>
     public sealed class PartyPanelLayout
     {
         public const int PartySize = 6;
 
-        /// <summary>The panels' size and HP bar strip: the size patch's, or the game's own 16 by 6.</summary>
+        /// <summary>From the size patch, or the game's 16 by 6.</summary>
         public PartyPanelSizePatch.Size Size { get; private set; } = PartyPanelSizePatch.Original;
-        /// <summary>Whether the size can change, which takes the panel size patch.</summary>
+        /// <summary>Needs the panel size patch.</summary>
         public bool Resizable { get; private set; }
         public int Width => Size.Width;
         public int Height => Size.Height;
@@ -28,13 +26,13 @@ namespace DSPRE.ROMFiles
         private readonly RomInfo.PartyPanelSites _sites;
         private readonly RomInfo.PartyHpBarSites _hpBar = RomLocator.PartyHpBarSites;
 
-        /// <summary>The game's HP bar length in pixels, where it can't be changed.</summary>
+        /// <summary>Used where the length can't be changed.</summary>
         public const int GameHpBarLength = 48;
-        /// <summary>The HP bar's length in pixels at full HP.</summary>
+        /// <summary>In pixels, at full HP.</summary>
         public int HpBarLength { get; set; } = GameHpBarLength;
-        /// <summary>Whether the HP bar length can be changed: this game's code for it is known.</summary>
+        /// <summary>This game's code for it is known.</summary>
         public bool HpBarLengthEditable { get; private set; }
-        // Each table's bytes for the six Pokémon, read from arm9, in the order of Regions.
+        // The tables' bytes for all six Pokémon, in the order of _regions.
         private readonly List<(uint Offset, int Length)> _regions = new List<(uint, int)>();
         private byte[] _data;
 
@@ -52,7 +50,7 @@ namespace DSPRE.ROMFiles
         private int StatusRegion => 1 + _sites.Cursors.Length;
         private int TouchRegion(int k) => 2 + _sites.Cursors.Length + k;
 
-        /// <summary>This ROM's panels, or null when they aren't known for it or don't look like the game's.</summary>
+        /// <summary>Null when this ROM's tables aren't known or don't look like the game's.</summary>
         public static PartyPanelLayout Read()
         {
             RomInfo.PartyPanelSites sites = RomLocator.PartyPanelSites;
@@ -68,7 +66,7 @@ namespace DSPRE.ROMFiles
             return layout.Sane(arm9) ? layout : null;
         }
 
-        // The length from movs r2, #length, or null when the code there is something else.
+        // Null when the code there isn't movs r2, #length.
         private int? ReadHpBar(byte[] arm9)
         {
             if (_hpBar == null) return null;
@@ -77,7 +75,7 @@ namespace DSPRE.ROMFiles
             return arm9[at];
         }
 
-        // What a move never changes: panels on the map, cursor stops with no size, and the buttons' touch areas after the Pokémon's.
+        // Checks what a move never changes: panels on the map, cursor stops without a size, and the button touch areas after the Pokémon's.
         private bool Sane(byte[] arm9)
         {
             for (int n = 0; n < PartySize; n++)
@@ -103,29 +101,29 @@ namespace DSPRE.ROMFiles
         private int U16(int at) => _data[at] | _data[at + 1] << 8;
         private void SetU16(int at, int value) { _data[at] = (byte)value; _data[at + 1] = (byte)(value >> 8); }
 
-        /// <summary>A Pokémon's panel, in tiles.</summary>
+        /// <summary>In tiles.</summary>
         public (int X, int Y) Panel(int pokemon) => (U16(pokemon * 12), U16(pokemon * 12 + 2));
-        /// <summary>The centre of a Pokémon's icon, in pixels.</summary>
+        /// <summary>Its centre, in pixels.</summary>
         public (int X, int Y) Icon(int pokemon) => (U16(pokemon * 12 + 4), U16(pokemon * 12 + 6));
-        /// <summary>The centre of a Pokémon's ball, in pixels.</summary>
+        /// <summary>Its centre, in pixels.</summary>
         public (int X, int Y) Ball(int pokemon) => (U16(pokemon * 12 + 8), U16(pokemon * 12 + 10));
-        /// <summary>The centre of a Pokémon's status icon, in pixels.</summary>
+        /// <summary>Its centre, in pixels.</summary>
         public (int X, int Y) Status(int pokemon)
         {
             int at = Start(StatusRegion) + pokemon * 40;
             return ((short)U16(at + 4), (short)U16(at + 6));
         }
-        /// <summary>Where the cursor's centre stops on a Pokémon in the usual party menu, in pixels.</summary>
+        /// <summary>Where the cursor's centre stops in the normal party menu, in pixels.</summary>
         public (int X, int Y) Cursor(int pokemon)
         {
             int at = Start(CursorRegion(0)) + pokemon * 8;
             return (_data[at], _data[at + 1]);
         }
 
-        /// <summary>The sprites placed from a Pokémon's tables: the held item and capsule follow the icon in the game's code.</summary>
+        /// <summary>The held item and capsule follow the icon in the game's code.</summary>
         public enum Sprite { Icon, Ball, Status }
 
-        /// <summary>A sprite's centre, in pixels.</summary>
+        /// <summary>Its centre, in pixels.</summary>
         public (int X, int Y) SpriteAt(int pokemon, Sprite sprite) => sprite switch
         {
             Sprite.Icon => Icon(pokemon),
@@ -133,7 +131,7 @@ namespace DSPRE.ROMFiles
             _ => Status(pokemon),
         };
 
-        /// <summary>Moves one of a Pokémon's sprites by dx, dy pixels, kept on the screen.</summary>
+        /// <summary>Moves it by dx, dy pixels, kept on screen.</summary>
         public void MoveSprite(int pokemon, Sprite sprite, int dx, int dy)
         {
             (int x, int y) = SpriteAt(pokemon, sprite);
@@ -148,7 +146,7 @@ namespace DSPRE.ROMFiles
             SetU16(at + 2, ny);
         }
 
-        /// <summary>Moves a Pokémon's panel to tile x, y, and everything placed from it by the same step.</summary>
+        /// <summary>Everything placed from the panel moves by the same step.</summary>
         public void Move(int pokemon, int x, int y)
         {
             (int px, int py) = Panel(pokemon);
@@ -175,7 +173,7 @@ namespace DSPRE.ROMFiles
             SetU16(s + 6, (short)U16(s + 6) + dy * 8);
             for (int k = 0; k < _sites.Touch.Length; k++)
             {
-                // Top, bottom, left, right; a right edge of 0 is the screen's, 256.
+                // Top, bottom, left, right; a right edge of 0 means 256.
                 int at = Start(TouchRegion(k)) + pokemon * 4;
                 int right = _data[at + 3] == 0 ? 256 : _data[at + 3];
                 _data[at] = (byte)(_data[at] + dy * 8);
@@ -185,7 +183,6 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>Reads the size again after the size patch is applied.</summary>
         public void ReadPatch()
         {
             PartyPanelSizePatch.Size patched = PartyPanelSizePatch.Read();
@@ -194,8 +191,7 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// Gives every panel a new size. Each keeps its top left corner where it fits, the cursor stops and touch areas are
-        /// worked out from the panels as the game's are, and the sprites stay where they are.
+        /// Each panel keeps its top left corner where it fits; cursor stops and touch areas are recalculated and sprites stay put.
         /// </summary>
         public void Resize(PartyPanelSizePatch.Size size)
         {
@@ -224,7 +220,7 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        // The tables' bytes, then the size's and the HP bar length's, so an undo step covers them all.
+        // Undo steps cover the tables, the size and the HP bar length.
         private int Length => _data.Length + 7;
         public byte[] ToBytes() => _data.Concat(PartyPanelSizePatch.ToBytes(Size)).Append((byte)HpBarLength).ToArray();
 
@@ -236,7 +232,7 @@ namespace DSPRE.ROMFiles
             HpBarLength = bytes[Length - 1];
         }
 
-        /// <summary>The tables' and size's bytes as arm9 holds them now, in the order of <see cref="ToBytes"/>.</summary>
+        /// <summary>The bytes arm9 holds now, in <see cref="ToBytes"/> order.</summary>
         public byte[] FileBytes()
         {
             byte[] arm9 = File.ReadAllBytes(RomInfo.Arm9Path);
@@ -245,7 +241,7 @@ namespace DSPRE.ROMFiles
                          .Append((byte)(ReadHpBar(arm9) ?? GameHpBarLength)).ToArray();
         }
 
-        /// <summary>Why bytes in the order of <see cref="ToBytes"/> can't be written, or null when they can.</summary>
+        /// <summary>Null when the bytes can be written.</summary>
         public string WhyNotWrite(byte[] bytes)
         {
             if (bytes == null || bytes.Length != Length) return "The panel tables don't match this ROM.";
@@ -257,7 +253,7 @@ namespace DSPRE.ROMFiles
             return PartyPanelSizePatch.WhyNotSize(size);
         }
 
-        /// <summary>Writes bytes in the order of <see cref="ToBytes"/> into arm9: the tables, and the size into the patched code.</summary>
+        /// <summary>Writes the tables, and the size into the patched code.</summary>
         public void WriteFile(byte[] bytes)
         {
             if (WhyNotWrite(bytes) is string why) throw new InvalidOperationException(why);

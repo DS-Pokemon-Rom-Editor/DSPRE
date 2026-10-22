@@ -25,12 +25,12 @@ namespace DSPRE.ROMFiles
         private FieldWindowFrame(byte[] tiles, uint[] colours, int paletteEntry, byte[] cursor = null)
         { _tiles = tiles; _colours = colours; PaletteEntry = paletteEntry; _cursor = cursor; }
 
-        /// <summary>The "more text" cursor, scroll_cursor: three 2x2 tile frames, each a pixel lower, in the frame's colours.</summary>
+        /// <summary>The "more text" cursor (scroll_cursor): three 2x2 tile frames, each a pixel lower.</summary>
         public const int CursorGraphicEntry = 22;
         private const int CursorTiles = 12;
         private readonly byte[] _cursor;
 
-        /// <summary>One of the cursor's three frames as 16x16 straight RGBA, or null when the ROM's could not be read.</summary>
+        /// <summary>One cursor frame as 16x16 RGBA, or null when the ROM's can't be read.</summary>
         public byte[] ComposeCursor(int frame)
         {
             if (_cursor == null) return null;

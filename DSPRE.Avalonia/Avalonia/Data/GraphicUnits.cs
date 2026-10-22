@@ -598,7 +598,7 @@ namespace DSPRE.Avalonia.Data
             return units;
         }
 
-        /// <summary>The card's own drawing, for the Trainer card editor handing it over.</summary>
+        /// <summary>The card's own drawing, for the Trainer card editor.</summary>
         public static int TrainerCardDrawing()
         {
             try { return RomInfo.TrainerCardMembers.ncgr; } catch (Exception ex) { AppLogger.WarnOnce("GraphicUnits.TrainerCardDrawing", ex); return -1; }
@@ -635,7 +635,7 @@ namespace DSPRE.Avalonia.Data
 
         // ── the banner shown on entering a place ───────────────────────────────────────────────────
 
-        /// <summary>One row per banner style, a drawing and its colours, named as the Header editor names it.</summary>
+        /// <summary>One row per banner style, with its drawing and colours, named the way the Header editor names it.</summary>
         public static List<GraphicAssets.Unit> AreaWindows(GraphicAssets.Archive a, int fileCount)
         {
             List<GraphicAssets.Unit> units = new List<GraphicAssets.Unit>();

@@ -2,10 +2,7 @@ using System;
 
 namespace DSPRE.Avalonia.Data
 {
-    /// <summary>
-    /// The party the party screen's previews are drawn with. The Screens editor's Sample panel changes it, and every
-    /// preview of the party screen follows.
-    /// </summary>
+    /// <summary>The party the party screen previews are drawn with; the Screens editor's Sample panel changes it.</summary>
     public static class PartySample
     {
         public sealed class Pokemon
@@ -25,7 +22,7 @@ namespace DSPRE.Avalonia.Data
             public bool Empty => Species == 0 && !Egg;
         }
 
-        // A mix that shows every look a panel has: full, holding an item, yellow and red health, a condition, fainted, an egg.
+        // One of every panel look: full, holding an item, yellow and red HP, a condition, fainted, an egg.
         public static readonly Pokemon[] Party =
         {
             new() { Species = 157, Level = 65, Hp = 237, MaxHp = 237, Gender = 0 },
@@ -38,7 +35,6 @@ namespace DSPRE.Avalonia.Data
 
         public static event Action Changed;
 
-        /// <summary>Tells the previews a Pokémon changed.</summary>
         public static void Raise() => Changed?.Invoke();
     }
 }

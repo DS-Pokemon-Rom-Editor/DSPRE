@@ -33,7 +33,7 @@ namespace DSPRE.Avalonia.Data
                 case ScreenTextKind.SpeciesName:
                     string[] names = null;
                     try { names = GetPokemonNames(); } catch (Exception ex) { AppLogger.Warn("Pokedex sample: species names: " + ex.Message); }
-                    // Through the shared reader, so the Text editor sees the names archive printed here too.
+                    // Uses the shared reader, so the Text editor also sees the names printed here.
                     return PokemonNamesTextNumbers?.Length > 0 ? ScreenTextReads.Line(PokemonNamesTextNumbers[0], species, names) : null;
                 case ScreenTextKind.Number: return species.ToString("D3");
                 case ScreenTextKind.Category: return Line(PokedexCategoryTextNumber, species);

@@ -159,11 +159,11 @@ namespace DSPRE
         /// <summary>The shared menu entries a script's standard-text menus read from. -1 when unknown.</summary>
         public static int FieldMenuEntriesArchive { get; private set; } = -1;
 
-        /// <summary>The YES and NO entries of <see cref="FieldMenuEntriesArchive"/> the yes/no box shows. -1 when unknown.</summary>
+        /// <summary>The yes and no entries in <see cref="FieldMenuEntriesArchive"/>; -1 when unknown.</summary>
         public static int FieldYesEntry { get; private set; } = -1;
         public static int FieldNoEntry { get; private set; } = -1;
 
-        /// <summary>The archive battles print their messages from. -1 when unknown.</summary>
+        /// <summary>The battle message archive; -1 when unknown.</summary>
         public static int BattleStringsTextNumber { get; private set; } = -1;
 
         /// <summary>The four archives GetStdMsgNaix picks between, in order. Empty when unknown.</summary>
@@ -262,11 +262,9 @@ namespace DSPRE
         public sealed record MoveListSites(int PointerSite, int CountCompare, int VanillaCapacity);
 
         /// <summary>
-        /// The battle overlay's four HP bar text routines (name, level, current HP, max HP): the <c>ldr r0, [r0]</c> before
-        /// each one's image proxy call, and the BLX of each copy of its text onto the bar. <c>TileHooks</c> and
-        /// <c>TileCopies</c> are the same for the routines that copy whole tiles of the bar's pieces with a colour 15
-        /// background: the gender symbol and "Lv" (only the writes in Diamond and Pearl, which read the bar back first), and
-        /// the caught ball in Platinum and HeartGold. Diamond's ball has colour 15 inside it, so it is left out.
+        /// The battle overlay's HP bar text routines: the ldr before each image proxy call and the BLX of each text copy onto the bar.
+        /// TileHooks and TileCopies do the same for the gender symbol, "Lv" (Diamond and Pearl only) and the caught ball (Platinum and
+        /// HeartGold), which are copied as whole tiles.
         /// </summary>
         public sealed record HpBarTextSites(int Overlay, int[] Hooks, int[] Copies, int[] TileHooks, int[] TileCopies);
 
@@ -416,17 +414,16 @@ namespace DSPRE
         public sealed record SummaryWindowTableSite(string Page, uint Offset, int Count);
 
         /// <summary>
-        /// A run of window templates (eight bytes each) in arm9 (overlay -1) or an overlay file, one entry a window, and the
-        /// background layer and first tile the first one has in the game, which a read checks.
+        /// Window templates (8 bytes each) in arm9 (overlay -1) or an overlay. A read checks the first window's layer and first tile.
         /// </summary>
         public sealed record ScreenWindowTableSite(string Group, int Overlay, uint Offset, ScreenWindowName[] Windows, int FirstLayer, int FirstBaseTile);
 
-        /// <summary>A window's name and, for a party Pokémon's window, which Pokémon (1 to 6) and part ("name", "HP") it is.</summary>
+        /// <summary>For a party Pokémon's window, which Pokémon (1 to 6) and part it is.</summary>
         public sealed record ScreenWindowName(string Name, int Pokemon = 0, string Part = null);
 
         /// <summary>
-        /// The party menu's tables in arm9 that place each Pokémon: panels (twelve bytes each), cursor tables (eight a stop),
-        /// the sprite templates whose entries 4 to 9 are the status icons (forty bytes each), and HGSS's touch areas (four each).
+        /// Party tables in arm9: panels (12 bytes each), cursor stops (8), sprite templates with the status icons at entries 4 to 9 (40),
+        /// and HGSS touch areas (4).
         /// </summary>
         public sealed record PartyPanelSites(uint Panels, uint[] Cursors, uint SpriteTemplates, uint[] Touch);
 
@@ -434,15 +431,11 @@ namespace DSPRE
         public sealed record PartyPanelCodeSites(uint Draw, uint Empty, uint Loader, uint Capture, uint Ticks, uint Step, uint Redraw);
 
         /// <summary>
-        /// The Thumb instruction in arm9 that holds the party menu's HP bar length in pixels (movs r2, #48). The colour is still
-        /// judged against 48: that call shares its 48 with the size of each Pokémon's draw state, which can't change.
+        /// The movs r2, #48 that sets the party HP bar length. The colour call's 48 can't change: it's shared with the draw state size.
         /// </summary>
         public sealed record PartyHpBarSites(uint Length);
 
-        /// <summary>
-        /// The party menu's graphics archive members a panel resize rebuilds: the cursor's cells and tiles, the panel art and
-        /// the background, with how many of the background's rows lie above the message box.
-        /// </summary>
+        /// <summary>Party graphics members a panel resize rebuilds, and how many background rows sit above the message box.</summary>
         public sealed record PartyGraphicsMembers(int CursorCells, int CursorTiles, int PanelArt, int Background, int PanelRows);
 
         /// <summary>
@@ -2577,7 +2570,7 @@ namespace DSPRE
             OverworldTableKeys = OverworldTable.Keys.ToArray();
         }
 
-        /// <summary>Checks if the Item Music & battle tables is available for the current ROM version. </summary>
+        /// <summary>Whether the Item tables editor works for this ROM.</summary>
         /// <returns>True if the editor is available, false otherwise</returns>
         public static bool IsItemTableEditorAvailable()
         {

@@ -3,16 +3,13 @@ using System.Collections.Generic;
 
 namespace DSPRE.Avalonia.Data
 {
-    /// <summary>
-    /// Every text archive line a screen book prints goes through here, so the Text editor can tell which pages show a
-    /// line and draw them with the line as it is being edited rather than as saved.
-    /// </summary>
+    /// <summary>Reads the lines the Pokédex and summary pages print, so the Text editor can find a line's pages and show your edit on them.</summary>
     internal static class ScreenTextReads
     {
         [ThreadStatic] private static HashSet<(int Bank, int Line)> _seen;
         [ThreadStatic] private static (int Bank, int Line, string Text)? _edit;
 
-        /// <summary>The line a page prints: the edit when one is being watched, else the archive's own.</summary>
+        /// <summary>A line from the archive, or your edit if it's the line being watched.</summary>
         public static string Line(int bank, int line, IReadOnlyList<string> lines)
         {
             _seen?.Add((bank, line));
@@ -20,7 +17,7 @@ namespace DSPRE.Avalonia.Data
             return lines != null && line >= 0 && line < lines.Count ? lines[line] : null;
         }
 
-        /// <summary>Records what this thread reads until disposed, printing <paramref name="text"/> for the watched line.</summary>
+        /// <summary>Until disposed, notes every line read on this thread and shows <paramref name="text"/> for the watched one.</summary>
         public static IDisposable Watch(int bank, int line, string text, HashSet<(int Bank, int Line)> seen)
         {
             _seen = seen;

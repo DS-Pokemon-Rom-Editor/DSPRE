@@ -56,7 +56,7 @@ namespace DSPRE.LibNDSFormats
 
         public bool HasSameProfileAs(Btx0Structure other) => ProfileDifference(other) == null;
 
-        /// <summary>The first way <paramref name="other"/> is laid out differently, said as "its ..." against "this one's", or null.</summary>
+        /// <summary>The first layout difference from <paramref name="other"/>, worded as "its ... and this one has ...", or null.</summary>
         public string ProfileDifference(Btx0Structure other)
         {
             if (other is null) return "it could not be read";

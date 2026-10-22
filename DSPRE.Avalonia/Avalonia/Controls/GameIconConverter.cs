@@ -15,7 +15,7 @@ namespace DSPRE.Avalonia.Controls
         public static readonly GameIconConverter MoveType = new(Kind.MoveType);
         /// <summary>A list label such as "Slot 0 (40%): COMBEE" to the icon of the Pokémon it names.</summary>
         public static readonly GameIconConverter PokemonInLabel = new(Kind.PokemonInLabel);
-        /// <summary>A type number to this ROM's icon for it.</summary>
+        /// <summary>Maps a type number to this ROM's icon.</summary>
         public static readonly GameIconConverter Type = new(Kind.Type);
 
         private enum Kind { Item, Pokemon, MoveType, PokemonInLabel, Type }

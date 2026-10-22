@@ -6,23 +6,22 @@ using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Data
 {
-    /// <summary>A screen that prints a text line, drawn with that line.</summary>
+    /// <summary>A screen drawn with a text line on it.</summary>
     public sealed class TextScreenShot
     {
         public string Name { get; init; }
         public Bitmap Picture { get; init; }
-        /// <summary>Opens the editor these graphics belong to, at this page.</summary>
+        /// <summary>Opens the editor for these graphics at this page.</summary>
         public Action Open { get; init; }
         public bool HasEditor => Open != null;
-        /// <summary>How many boxes the screen prints the message in.</summary>
         public int Stops { get; init; } = 1;
-        /// <summary>The game moves on to the next box by itself.</summary>
+        /// <summary>True when the game moves to the next box on its own.</summary>
         public bool MovesOnByItself { get; init; }
     }
 
     /// <summary>
-    /// Finds the screen pages DSPRE can draw (the Pokédex, the summary screen) that print a given text archive line, and
-    /// draws them with the line as edited. Which archives each page reads is learned once per ROM by composing it.
+    /// Finds and draws the Pokédex and summary pages that print a text line, with the edit shown. Which archives each page reads is learned
+    /// once per ROM.
     /// </summary>
     public static class TextScreenPreviews
     {
@@ -30,7 +29,7 @@ namespace DSPRE.Avalonia.Data
 
         private static readonly MoveTextScreens MoveScreens = new MoveTextScreens();
 
-        // The move and item screens the Move data editor draws, each with the line as the game prints it there.
+        // The Move data editor's move and item screens.
         private static void AddMoveTextScreens(List<TextScreenShot> shots, int bank, int line, string text)
         {
             bool hg = RomInfo.GameFamily == RomInfo.GameFamilies.HGSS;
@@ -60,7 +59,7 @@ namespace DSPRE.Avalonia.Data
             }
         }
 
-        // Where the field's yes/no box and the script menus sit, drawn over a plain screen since the map behind them varies.
+        // The yes/no box and script menus, drawn over a plain screen since the map behind them varies.
         private static void AddMenuWindows(List<TextScreenShot> shots, int bank, int line, string text)
         {
             if (bank == RomInfo.FieldMenuEntriesArchive && (line == RomInfo.FieldYesEntry || line == RomInfo.FieldNoEntry))
@@ -140,7 +139,7 @@ namespace DSPRE.Avalonia.Data
             shots.Add(new TextScreenShot
             {
                 Name = "Battle screen graphics: top",
-                // A battle message moves on by itself once it has been read.
+                // A battle message moves on by itself once read.
                 Stops = stops,
                 MovesOnByItself = stops > 1,
                 Picture = ImageConverter.FromRgba(top, 256, 192),
@@ -148,10 +147,10 @@ namespace DSPRE.Avalonia.Data
             });
         }
 
-        // The talk font's ink and shadow, as the field box draws them, in 15-bit colour.
+        // The talk font's ink and shadow, in 15-bit colour.
         private const ushort TalkLetter = 5 | 5 << 5 | 5 << 10, TalkShadow = 18 | 19 << 5 | 21 << 10;
 
-        // Text bank entries the HGSS touch menu prints.
+        // The text entries the HGSS touch menu prints.
         private static readonly int[] TouchMenuMessages = { 0, 1, 2, 3, 4, 5, 8, 14, 32, 34, 35,
             HgssTouchScreen.MenuMessage, HgssTouchScreen.TalkMessage, HgssTouchScreen.CheckMessage,
             HgssTouchScreen.FishingMessage, HgssTouchScreen.NextMessage };
@@ -178,7 +177,6 @@ namespace DSPRE.Avalonia.Data
             });
         }
 
-        // Field windows with their lines placed where the game prints them.
         private static void AddFieldWindows(List<TextScreenShot> shots, int bank, int line, string text)
         {
             HashSet<string> drawn = new HashSet<string>();
@@ -193,7 +191,7 @@ namespace DSPRE.Avalonia.Data
             }
         }
 
-        // A line as a window prints it: placeholders filled with sample words, markup the window does not show left out.
+        // Placeholders filled with sample words; markup the window doesn't show is removed.
         private static string Shown(string text)
         {
             string expanded = FieldStringVars.Expand(MenuLabel(text), GameTextScreens.SampleWord);
@@ -228,7 +226,7 @@ namespace DSPRE.Avalonia.Data
             return lines != null && line >= 0 && line < lines.Count ? lines[line] : "";
         }
 
-        // A window on a plain top screen, its writing area at tile left, top as the game places it.
+        // A window on a plain top screen; left, top is its text area as the game places it.
         private static Bitmap OnScreen(byte[] window, int width, int height, int tileLeft, int tileTop)
         {
             const int screenW = 256, screenH = 192;
@@ -250,11 +248,10 @@ namespace DSPRE.Avalonia.Data
 
         private static readonly object Gate = new object();
         private static string _rom;
-        // Per book, page, state and side: the archives it prints from.
+        // The archives each book, page, state and side prints from.
         private static readonly Dictionary<(int Book, string Page, string Variant, ScreenSide Side), HashSet<int>> Reads = new();
         private static readonly Dictionary<int, FieldFont> Fonts = new();
 
-        /// <summary>The pages that print <paramref name="line"/> of <paramref name="bank"/>, drawn with <paramref name="text"/>.</summary>
         public static List<TextScreenShot> For(int bank, int line, string text, int stop = 0)
         {
             List<TextScreenShot> shots = new List<TextScreenShot>();
@@ -262,7 +259,7 @@ namespace DSPRE.Avalonia.Data
             lock (Gate)
             {
                 if (_rom != RomInfo.WorkDir) { _rom = RomInfo.WorkDir; Reads.Clear(); Fonts.Clear(); _speciesByAbility = null; _battle = null; _touch = null; }
-                // Other lines of the archive may have been saved since the last look.
+                // Other lines may have been saved since the last check.
                 ArchiveLines.Clear();
                 int species = line >= 1 && line < SpeciesCount() ? line : 0;
                 for (int b = 0; b < Books.Length; b++)
@@ -289,8 +286,7 @@ namespace DSPRE.Avalonia.Data
                                 int slot = line;
                                 if (!seen.Contains((bank, line)))
                                 {
-                                    // A slot that prints one line of the archive picked by the sample (its ability, its move)
-                                    // shows the edited line in that slot too.
+                                    // A slot that prints a line picked by the sample (its ability, its move) shows the edit too.
                                     List<int> slots = seen.Where(s => s.Bank == bank).Select(s => s.Line).Distinct().ToList();
                                     if (slots.Count != 1) continue;
                                     slot = slots[0];
@@ -299,8 +295,7 @@ namespace DSPRE.Avalonia.Data
                                 }
                                 if (composed?.Rgba == null) continue;
 
-                                // Pages that print the line in the same place and the same way show nothing new: the line's
-                                // footprint is what changes when it is left blank.
+                                // Pages that print the line the same way add nothing; blanking the line shows which pixels are its own.
                                 ComposedScreen blank;
                                 try { using (ScreenTextReads.Watch(bank, slot, "", new HashSet<(int Bank, int Line)>())) blank = composer.Compose(page, variant, side); }
                                 catch (Exception ex) { AppLogger.WarnOnce("TextScreenPreviews.Compose", ex); continue; }
@@ -336,7 +331,6 @@ namespace DSPRE.Avalonia.Data
             return shots;
         }
 
-        // Where the line's pixels are and what they look like.
         private static long Footprint(byte[] with, byte[] without)
         {
             HashCode hash = new HashCode();
@@ -352,8 +346,7 @@ namespace DSPRE.Avalonia.Data
 
         private static Dictionary<int, int> _speciesByAbility;
 
-        // The Pokémon a book is drawn with: the line's own species, or for an ability line one that has that ability,
-        // so the ability's name and description shown together belong to each other.
+        // Draws with the line's own species, or for an ability line one that has the ability, so the name and description match.
         private static int SampleFor(int book, int bank, int line, int species)
         {
             bool ability = bank == RomInfo.AbilityNamesTextNumber
