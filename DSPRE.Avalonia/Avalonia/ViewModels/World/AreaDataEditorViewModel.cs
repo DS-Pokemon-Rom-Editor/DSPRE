@@ -205,6 +205,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             int count = _archive.Count;
             AreaNames.Clear();
             for (int i = 0; i < count; i++) AreaNames.Add("Area data " + i);
+            OnPropertyChanged(nameof(RemoveTip));
         }
         // RecordUndoSnapshot runs BEFORE the _dirty short-circuit so EVERY edit is captured (not just the first).
         private void Dirty() { RecordUndoSnapshot(); if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
@@ -265,13 +266,13 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>For a standalone window closing; the Maps workspace's instance lives for the session.</summary>
         public void Detach() => AppEvents.AreaDataSaved -= OnSavedElsewhere;
 
-        // The Map Editor edits areas too: show its save, unless this copy holds its own edits.
+        // The Map editor edits areas too: show its save, unless this copy holds its own edits.
         private void OnSavedElsewhere(object sender, int id)
         {
             if (ReferenceEquals(sender, this) || id != _selectedIndex) return;
             if (_dirty) { StatusText = $"Area data {id} was saved in another window. Save or discard here to see it."; return; }
             LoadArea(id);
-            StatusText = $"Area data {id} was saved in another window and reloaded.";
+            StatusText = "";
         }
 
         public async Task SetupAsync(Window owner)
@@ -296,7 +297,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowErrorAsync($"Failed to set up Area Data Editor:\n{ex.Message}", "Area data error");
+                await DialogHelper.ShowErrorAsync($"Failed to set up Area data editor:\n{ex.Message}", "Area data error");
             }
         }
 
@@ -312,7 +313,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 _history.Reset(_area.ToByteArray());   // loaded state is the clean undo baseline for this area
                 _lastCaptureUtc = DateTime.MinValue;
                 RaiseUndoState();
-                StatusText = $"Loaded area data {index}.";
+                StatusText = "";
                 OnPropertyChanged(nameof(UnsavedChangesDescription));
             }
             catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Failed to load area data {index}:\n{ex.Message}", "Area data error"); }

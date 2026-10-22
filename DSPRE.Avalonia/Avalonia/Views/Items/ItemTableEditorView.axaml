@@ -427,11 +427,9 @@
         <Grid ColumnDefinitions="300,8,*" Margin="4">
           <!-- Left: list -->
           <DockPanel Grid.Column="0">
-            <TextBlock DockPanel.Dock="Bottom" Text="Add reuses a removed entry's script and its found flag."
-                       IsVisible="{Binding ShowHiddenReuseNote}" TextWrapping="Wrap" FontSize="11" Margin="0,4,0,0"
-                       Foreground="{DynamicResource Editor.Subtle}"/>
             <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
-              <Button Content="Add" controls:Icon.Key="addIcon"    Click="HiddenAdd_Click"    MinWidth="70"/>
+              <Button Content="Add" controls:Icon.Key="addIcon"    Click="HiddenAdd_Click"    MinWidth="70"
+                      ToolTip.Tip="{Binding HiddenAddHelp}"/>
               <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="HiddenRemove_Click" MinWidth="70"
                       IsEnabled="{Binding HiddenItemSelected}"/>
             </StackPanel>
@@ -544,10 +542,9 @@
             </StackPanel>
           </Border>
 
-          <TextBlock DockPanel.Dock="Top" Margin="0,0,0,8" TextWrapping="Wrap" FontSize="11"
-                     Foreground="{DynamicResource Editor.Subtle}"
-                     IsVisible="{Binding !ShowRockSmashItemTables}"
-                     Text="Drop tables can only be edited on English HeartGold and SoulSilver. The per-header odds and the table below work in any language."/>
+          <controls:HelpTip DockPanel.Dock="Top" Margin="0,0,0,8" HorizontalAlignment="Left"
+                            IsVisible="{Binding !ShowRockSmashItemTables}"
+                            Text="Drop tables can only be edited on English HeartGold and SoulSilver"/>
 
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,4">
             <TextBox Width="220" Text="{Binding RockSmashSearch}" PlaceholderText="Search headers"/>

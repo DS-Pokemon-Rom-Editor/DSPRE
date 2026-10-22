@@ -18,7 +18,7 @@
         <Button Content="Add" controls:Icon.Key="addIcon" Click="Add_Click" IsEnabled="{Binding CanAdd}"/>
         <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveLast_Click" IsEnabled="{Binding CanRemoveLast}"
                 ToolTip.Tip="Deletes the highest-numbered script file, unless a header still uses it"/>
-        <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding IsEditable}"/>
+        <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding CanSave}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click" IsEnabled="{Binding IsEditable}"/>
         <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click" IsEnabled="{Binding IsEditable}"/>

@@ -10,7 +10,7 @@ using System.Collections.Generic;
 
 namespace DSPRE.Avalonia
 {
-    /// <summary>Renders trainer class sprite frames for the Trainer Editor and the Table Editor.</summary>
+    /// <summary>Renders trainer class sprite frames for the Trainer editor and the Music & battle tables.</summary>
     public sealed class TrainerClassSpriteRenderer
     {
         private ushort[][] _rows;

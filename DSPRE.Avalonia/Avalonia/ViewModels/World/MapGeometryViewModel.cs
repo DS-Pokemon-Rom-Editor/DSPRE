@@ -701,7 +701,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
                 PlateMesh = v.ToArray();
                 PlateVertexCount = v.Count / 8;
-                if (_proposal == null && !HasPickedPlate) PlateNote = $"{_plates.Count} plates. Click one to edit it.";
+                if (_proposal == null && !HasPickedPlate) PlateNote = $"{_plates.Count} plates";
             }
             PlatesChanged?.Invoke(this, EventArgs.Empty);
         }

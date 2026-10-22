@@ -28,7 +28,7 @@ namespace DSPRE
         {
             if (!HgEngine.HgEngineProject.IsActive) return null;
             if (HgEngine.HgEngineMachineMoves.TryRead(out List<HgEngineMachineMoves.Machine> machines, out string error)) return machines;
-            AppLogger.Error("TM Editor: " + error);
+            AppLogger.Error("TM / HM editor: " + error);
             return new System.Collections.Generic.List<HgEngine.HgEngineMachineMoves.Machine>();
         }
 
@@ -171,7 +171,7 @@ namespace DSPRE
             for (int i = 0; i < count; i++)
             {
                 int item = MachineItemId(i);
-                if (!ItemTable.Exists(item)) { AppLogger.Error($"TM Editor: machine {i} has no item row."); return null; }
+                if (!ItemTable.Exists(item)) { AppLogger.Error($"TM / HM editor: machine {i} has no item row."); return null; }
                 paletteIds[i] = (int)ItemTable.Read(item).ItemPalette;
             }
             return paletteIds;
@@ -277,9 +277,9 @@ namespace DSPRE
                 for (int i = 0; i < machines.Count; i++)
                 {
                     string icon = HgEngine.HgEngineMachineIcons.IconPathFor(HgEngine.HgEngineMachineIcons.ItemIdFor(machines[i].Label));
-                    if (icon == null) { AppLogger.Error($"TM Editor: no icon for {machines[i].Label}."); return null; }
+                    if (icon == null) { AppLogger.Error($"TM / HM editor: no icon for {machines[i].Label}."); return null; }
                     byte[] palette = HgEngine.HgEngineMachineIcons.ReadPalette(icon);
-                    if (palette == null) { AppLogger.Error($"TM Editor: {icon} has no palette."); return null; }
+                    if (palette == null) { AppLogger.Error($"TM / HM editor: {icon} has no palette."); return null; }
                     palettes[i] = Convert.ToBase64String(palette);
                     int type = (int)new MoveData(machines[i].Move).Movetype;
                     if (!votes.TryGetValue(type, out Dictionary<string, (int Count, string Png)> forType)) votes[type] = forType = new Dictionary<string, (int, string)>();
@@ -288,7 +288,7 @@ namespace DSPRE
             }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
             {
-                AppLogger.Error("TM Editor: " + ex.Message);
+                AppLogger.Error("TM / HM editor: " + ex.Message);
                 return null;
             }
 

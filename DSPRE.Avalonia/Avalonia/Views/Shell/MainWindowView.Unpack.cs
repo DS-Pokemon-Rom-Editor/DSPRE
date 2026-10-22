@@ -51,7 +51,7 @@ namespace DSPRE.Avalonia.Views.Shell
             if (vm != null)
             {
                 vm.BusyText = title + "…";
-                vm.BusyHint = "Each archive is read from the ROM's files into its unpacked folder.";
+                vm.BusyHint = "";
                 vm.IsBusy = true;
             }
             List<string> failed = new List<string>();

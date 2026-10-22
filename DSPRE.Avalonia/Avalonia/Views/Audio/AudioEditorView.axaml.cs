@@ -268,7 +268,6 @@ namespace DSPRE.Avalonia.Views.Audio
             {
                 PlainFiles.WriteBytes(path, midi);
                 SaveNotice.Exported(path);
-                vm.StatusText = "The notes and their timing are exact; the instruments are whatever the program you open it in has under those numbers.";
             }
             catch (Exception ex)
             {

@@ -16,7 +16,7 @@
           <Button Content="Save" controls:Icon.Key="saveButton"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
           <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
           <controls:UndoRedoButtons/>
-          <Button Content="Locate" controls:Icon.Key="folder" Click="Locate_Click"/>
+          <Button Content="Show files" controls:Icon.Key="folder" Click="Locate_Click"/>
       </controls:EditorToolbar>
 
       <StackPanel DockPanel.Dock="Bottom" Margin="8,0,8,8" Spacing="4">

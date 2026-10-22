@@ -61,8 +61,8 @@ namespace DSPRE.Avalonia
                 }
             }
             userFile.ExtractToFolder(finalExtractedPath);
-            if (await DialogHelper.AskYesNoAsync("The contents of " + narcPath + " have been extracted to:\n" + finalExtractedPath + Br + Br
-                    + "Rename the files by their contents?", "Archive unpacked", owner))
+            if (await DialogHelper.AskTwoWayAsync("Unpacked to:\n" + finalExtractedPath + Br + Br + "Rename the files by their contents?",
+                    "Archive unpacked", "Rename", "Keep names", owner))
                 await RenameByContentInAsync(owner, finalExtractedPath, ask: false);
         }
 

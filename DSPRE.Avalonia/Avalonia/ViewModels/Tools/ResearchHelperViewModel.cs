@@ -361,7 +361,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 if (ClassNamesList.Count > 0) SelectedClassIndex = 0;
 
                 DataLoaded = true;
-                StatusText = $"Loaded {_cachedScriptFiles.Count} script files, {_cachedLevelScriptFiles.Count} level scripts, {_cachedEventFiles.Count} event files";
+                StatusText = $"{_cachedScriptFiles.Count} script files, {_cachedLevelScriptFiles.Count} level scripts, {_cachedEventFiles.Count} event files";
             }
             catch (Exception ex)
             {
@@ -523,7 +523,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             string label = ScriptIdEntries[scriptId];
 
             ScriptIdResults.Clear();
-            StatusText = $"Searching for {label} in files associated with script file {sf.FileID}...";
+            StatusText = $"Searching script file {sf.FileID} for {label}…";
 
             // Find event files linked to headers that use this script file
             HashSet<int> assocEventIds = new HashSet<int>();
@@ -601,7 +601,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 }
             }
 
-            StatusText = $"Found {OwWatcherResults.Count} overworld event(s) using OW Entry ID {owEntryId}";
+            StatusText = $"Overworld {owEntryId}: {OwWatcherResults.Count} uses";
         }
 
         public void ClearOwResults() { OwWatcherResults.Clear(); OwEntryIdSearch = 0; StatusText = "Overworld Watcher search cleared"; }
@@ -610,7 +610,6 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             if (result == null) return;
             AvaloniaEditorLauncher.OpenEventEditorWithOverworld(result.EventFileID, result.OwIndex);
-            StatusText = $"Opened Event File {result.EventFileID}, Overworld {result.OwIndex}";
         }
 
         // ── Trainer Watcher ──────────────────────────────────────────────────────
@@ -784,56 +783,48 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             if (result.Type.StartsWith("Vs. Seeker"))
             {
                 AvaloniaEditorLauncher.OpenVsSeekerRematchEditor(result.Index);
-                StatusText = "Opened Vs. Seeker Rematch Editor";
                 return;
             }
 
             if (result.Type == "Trainer")
             {
                 AvaloniaEditorLauncher.OpenTrainerEditor(result.Index);
-                StatusText = $"Opened Trainer {result.Index}";
                 return;
             }
 
             if (result.Type == "Pokégear phonebook")
             {
                 AvaloniaEditorLauncher.OpenPokegearPhoneBook(result.Index);
-                StatusText = $"Opened the phone book at entry {result.Index}";
                 return;
             }
 
             if (result.Type == "Battle Tower")
             {
                 AvaloniaEditorLauncher.OpenBattleTowerEditor();
-                StatusText = $"Opened the Battle Tower editor; the trainer is number {result.Index}";
                 return;
             }
 
             if (result.Type == "Event")
             {
                 AvaloniaEditorLauncher.OpenEventEditorWithOverworld(result.SourceId, result.Index);
-                StatusText = $"Opened Event File {result.SourceId}";
                 return;
             }
 
             if (result.Type.StartsWith("Script"))
             {
                 AvaloniaEditorLauncher.OpenScriptEditor(result.SourceId, result.InFunction ? 0 : result.Index);
-                StatusText = $"Opened Script File {result.SourceId}";
                 return;
             }
 
             if (result.Type.StartsWith("Pokégear Rematch", StringComparison.OrdinalIgnoreCase))
             {
                 AvaloniaEditorLauncher.OpenPokegearRematchEditor(result.Index);
-                StatusText = "Opened Pokégear Rematch Editor";
                 return;
             }
 
             if (result.Type.StartsWith("Overworld"))
             {
                 AvaloniaEditorLauncher.OpenEventEditorWithOverworld(result.SourceId, result.Index);
-                StatusText = $"Opened Event File {result.SourceId}, Overworld {result.Index}";
             }
             else if (result.Type == "Script Command" || result.Type == "Function Command")
             {
@@ -841,7 +832,6 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 // a function's number has no slot in the source and only the file is opened.
                 int scriptNumber = result.Type == "Script Command" ? result.Index : 0;
                 AvaloniaEditorLauncher.OpenScriptEditor(result.SourceId, scriptNumber);
-                StatusText = $"Opened Script File {result.SourceId}";
             }
         }
 

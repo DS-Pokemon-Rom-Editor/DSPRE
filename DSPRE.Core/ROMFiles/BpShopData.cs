@@ -214,7 +214,7 @@ namespace DSPRE.ROMFiles
         {
             if (!IsPlatinum || Expanded) return;
             if (MovedByPatch) throw new InvalidOperationException("The Battle Point lists were moved by a patch DSPRE doesn't know, so it won't move them.");
-            if (!SyntheticOverlaySpace.Available()) throw new InvalidOperationException("Apply the ARM9 expansion in the ROM Patch Toolbox first.");
+            if (!SyntheticOverlaySpace.Available()) throw new InvalidOperationException("Apply the ARM9 expansion in the ROM patch toolbox first.");
             byte[] arm9 = File.ReadAllBytes(Arm9Path), ov7 = ReadOverlay7(), synth = ReadSynth();
             byte[] arm9Before = (byte[])arm9.Clone(), ov7Before = (byte[])ov7.Clone(), synthBefore = (byte[])synth.Clone();
             List<Entry> rows = PriceRows();
@@ -278,7 +278,7 @@ namespace DSPRE.ROMFiles
                 Where = "moved to the expanded ARM9 area";
             }
             else if (_inPlace || _blockStart >= 0)
-                throw new InvalidOperationException("The Battle Point lists don't fit where they are; apply the \"Expand the Battle Point lists\" patch in the ROM Patch Toolbox.");
+                throw new InvalidOperationException("The Battle Point lists don't fit where they are; apply the \"Expand the Battle Point lists\" patch in the ROM patch toolbox.");
             else throw new InvalidOperationException("The Battle Point lists were moved by a patch DSPRE doesn't know, so it won't write them.");
 
             // The script command's copy is read by no retail script; keep it matching while it still fits.
@@ -355,7 +355,7 @@ namespace DSPRE.ROMFiles
             {
                 if (!_inPlace && _blockStart < 0) return "A patch moved these lists somewhere DSPRE doesn't follow, so they can't be saved here.";
                 if (NeedsExpansion)
-                    return $"The item counter holds {VanillaLeft} items and the TM counter {VanillaRight} where they are. The \"Expand the Battle Point lists\" patch in the ROM Patch Toolbox makes room for {MaxListItems} each.";
+                    return $"The item counter holds {VanillaLeft} items and the TM counter {VanillaRight} where they are. The \"Expand the Battle Point lists\" patch in the ROM patch toolbox makes room for {MaxListItems} each.";
                 if (Left.Count > MaxListItems || Right.Count > MaxListItems) return $"Each counter can show up to {MaxListItems} items.";
                 // The price lookup's row count is a byte immediate.
                 if (PriceRows().Count > 255) return "The game can price up to 255 different items across both counters.";

@@ -350,7 +350,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private bool _formSharesBaseData;
         /// <summary>True when the selected form has no entry of its own in the main species list, so Personal Data/Learnset/Evolutions still read and save against the base species while only the sprite itself is form-specific (Unown, Castform, Cherrim, Shellos/Gastrodon, Arceus, Pichu, the egg forms).</summary>
         public bool FormSharesBaseData { get => _formSharesBaseData; private set => Set(ref _formSharesBaseData, value); }
-        public string FormSharesBaseDataText => "Stats, type, and other Personal Data are shared with the base Pokémon and will be saved there. Only this sprite belongs to the form.";
+        public string FormSharesBaseDataText => "Shares data with the base form";
 
         private bool _hasAlternateForms;
         /// <summary>True when the current species has its own entries in the alternate-forms table (Deoxys, Unown, etc.), so the variant dropdown only shows up when it's actually useful.</summary>
@@ -506,7 +506,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 PokemonBattleSpriteArchive narc = PokemonBattleSpriteArchive.Open(DirNames.OtherPokemonBattleSprites);
                 if (narc == null)
                 {
-                    StatusText = "Alternate forms NARC not found. Make sure the ROM is loaded.";
+                    StatusText = "The alternate form sprite archive is missing.";
                     return;
                 }
 
@@ -729,7 +729,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 PokemonBattleSpriteArchive narc = PokemonBattleSpriteArchive.Open(DirNames.PokemonBattleSprites);
                 if (narc == null)
                 {
-                    StatusText = "Battle sprites NARC not found. Make sure the ROM is loaded.";
+                    StatusText = "The battle sprite archive is missing.";
                     return;
                 }
 
@@ -867,13 +867,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     ApplyPalettesAndPublish();
                     Edited();
                     OnPropertyChanged(nameof(HasUnsavedChanges));
-                    StatusText = $"{SpriteLabels[slot]}'s artwork didn't change, just the colors, so only the palette was updated.";
+                    StatusText = "Palette updated; artwork unchanged.";
                     return;
                 }
 
                 if (!TryReadIndexedOrQuantize(fileBytes, imported, out byte[] newIndices, out uint[] newPalette, out int usedCount))
                 {
-                    StatusText = "This image has more than 16 colors. Reduce it to 16 or fewer and try again.";
+                    StatusText = "The image has more than 16 colours.";
                     return;
                 }
 
@@ -937,7 +937,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string label = shiny ? "shiny" : "normal";
             if (_rawSprites[slot] == null)
             {
-                StatusText = $"Load or import {SpriteLabels[slot]}'s artwork first, then you can get the {label} palette from a reference image.";
+                StatusText = $"Needs {SpriteLabels[slot]}'s artwork first.";
                 return;
             }
             string path = await DialogHelper.OpenFileAsync(owner, $"Import {label} reference for {SpriteLabels[slot]}",
@@ -962,7 +962,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 }
                 if (!TryReadIndexedOrQuantize(fileBytes, imported, out byte[] childIndices, out uint[] childPalette, out _))
                 {
-                    StatusText = "This image has more than 16 colors. Reduce it to 16 or fewer and try again.";
+                    StatusText = "The image has more than 16 colours.";
                     return;
                 }
 
@@ -1002,7 +1002,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (usedCount < 16)
             {
                 bool fillBlack = await DialogHelper.AskYesNoAsync(
-                    $"This image has a palette of {usedCount} colors, not the full 16.\n\n" +
+                    $"This image has a palette of {usedCount} colours, not the full 16.\n\n" +
                     "Fill in the blanks with black? Choosing No keeps it as a " + usedCount + "-color palette.",
                     "Palette isn't full", owner);
                 if (fillBlack)
@@ -1145,13 +1145,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     ApplyPalettesAndPublish();
                     Edited();
                     OnPropertyChanged(nameof(HasUnsavedChanges));
-                    StatusText = $"{genderLabel}'s artwork didn't change, just the colors, so only the palette was updated.";
+                    StatusText = "Palette updated; artwork unchanged.";
                     return;
                 }
 
                 if (!TryReadIndexedOrQuantize(fileBytes, imported, out byte[] newIndices, out uint[] newPalette, out int usedCount))
                 {
-                    StatusText = "This image has more than 16 colors. Reduce it to 16 or fewer and try again.";
+                    StatusText = "The image has more than 16 colours.";
                     return;
                 }
 
@@ -1208,14 +1208,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 byte[] parentIndices = BuildGenderSheetIndices(female);
                 if (parentIndices == null)
                 {
-                    StatusText = $"Import {genderLabel}'s Back and Front artwork first, then you can get the shiny palette from a reference sheet.";
+                    StatusText = $"Needs {genderLabel}'s back and front artwork first.";
                     return;
                 }
                 (RawImage imported, byte[] fileBytes) = await OpenGenderSheetAsync(owner, $"Import {genderLabel} Shiny Reference Sheet");
                 if (imported == null) return;
                 if (!TryReadIndexedOrQuantize(fileBytes, imported, out byte[] childIndices, out uint[] childPalette, out _))
                 {
-                    StatusText = "This image has more than 16 colors. Reduce it to 16 or fewer and try again.";
+                    StatusText = "The image has more than 16 colours.";
                     return;
                 }
 
@@ -1251,13 +1251,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     ApplyPalettesAndPublish();
                     Edited();
                     OnPropertyChanged(nameof(HasUnsavedChanges));
-                    StatusText = "The artwork didn't change, just the colors, so only the palette was updated.";
+                    StatusText = "Palette updated; artwork unchanged.";
                     return;
                 }
 
                 if (!TryReadIndexedOrQuantize(fileBytes, imported, out byte[] newIndices, out uint[] newPalette, out int usedCount))
                 {
-                    StatusText = "This image has more than 16 colors. Reduce it to 16 or fewer and try again.";
+                    StatusText = "The image has more than 16 colours.";
                     return;
                 }
 
@@ -1313,14 +1313,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 byte[] parentIndices = BuildFullSheetIndices();
                 if (parentIndices == null)
                 {
-                    StatusText = "Import both genders' Back and Front artwork first, then you can get the shiny palette from a reference sheet.";
+                    StatusText = "Needs the back and front artwork of both genders first.";
                     return;
                 }
                 (RawImage imported, byte[] fileBytes) = await OpenFullSheetAsync(owner, "Import Shiny Reference Sheet (Both Genders)");
                 if (imported == null) return;
                 if (!TryReadIndexedOrQuantize(fileBytes, imported, out byte[] childIndices, out uint[] childPalette, out _))
                 {
-                    StatusText = "This image has more than 16 colors. Reduce it to 16 or fewer and try again.";
+                    StatusText = "The image has more than 16 colours.";
                     return;
                 }
 
@@ -1648,8 +1648,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 ApplyPalettesAndPublish();
                 Edited();
                 OnPropertyChanged(nameof(HasUnsavedChanges));
-                StatusText = $"Added {missingGender} sprites (duplicated from the existing {sourceGender} sprites). " +
-                    "Use Import to give them their own look, and Save to keep them.";
+                StatusText = $"Added {missingGender} sprites, copied from {sourceGender}.";
             }
             catch (Exception ex)
             {
@@ -1710,7 +1709,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (_missingGenderIsFemale) { fb = mb; ff = mf; } else { mb = fb; mf = ff; }
                 if (!HgEngineHeightTable.TrySet(_currentId, fb, mb, ff, mf, out string error)) heightNote = $" HeightTable.c wasn't updated: {error}";
             }
-            StatusText = $"Added {missingGender} sprites (duplicated from the existing {sourceGender} sprites)." + heightNote;
+            StatusText = $"Added {missingGender} sprites, copied from {sourceGender}." + heightNote;
             LoadMon(_currentId);
         }
 
@@ -1747,7 +1746,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             PokemonBattleSpriteArchive narc = PokemonBattleSpriteArchive.Open(DirNames.PokemonBattleSprites);
             if (narc == null)
             {
-                StatusText = "Battle sprites NARC not found. Make sure the ROM is loaded.";
+                StatusText = "The battle sprite archive is missing.";
                 return;
             }
 
@@ -1806,7 +1805,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             PokemonBattleSpriteArchive narc = PokemonBattleSpriteArchive.Open(DirNames.OtherPokemonBattleSprites);
             if (narc == null)
             {
-                StatusText = "Alternate forms NARC not found. Make sure the ROM is loaded.";
+                StatusText = "The alternate form sprite archive is missing.";
                 return;
             }
 
@@ -1982,7 +1981,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             return await DialogHelper.AskYesNoAsync(
                 $"This image has {overwrite} color(s) that don't match the saved palette and won't fit in the free slots.\n\n" +
                 "Continuing will overwrite existing colors to make room, which can also change the shiny sprites since they're drawn from this same artwork. Continue anyway?",
-                "This will overwrite existing colors", owner);
+                "This will overwrite existing colours", owner);
         }
 
         // Matches colors by value first; a color with no match takes a genuine placeholder slot, never a used one, if any remain.

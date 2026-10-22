@@ -14,7 +14,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
     /// replacement for the WinForms main window.
     ///
     /// For now it hosts the editors that have already been ported to Avalonia
-    /// <see cref="UserControl"/>s as embedded tabs (currently the Camera Editor),
+    /// <see cref="UserControl"/>s as embedded tabs (currently the Camera editor),
     /// and exposes ROM state so the menu can launch the remaining editors (which
     /// still open as standalone Avalonia windows) only when a ROM is loaded.
     /// </summary>
@@ -241,7 +241,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             set { if (_busyText != value) { _busyText = value; OnPropertyChanged(); } }
         }
 
-        private string _busyHint = "First-time opens unpack the ROM and can take a little while.";
+        private string _busyHint = "";
         public string BusyHint
         {
             get => _busyHint;

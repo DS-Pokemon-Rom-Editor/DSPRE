@@ -34,18 +34,18 @@ namespace DSPRE.Avalonia.Controls
 
         public static string EditorName(LinkKind k) => k switch
         {
-            LinkKind.Pokemon => "Pokémon Editor",
-            LinkKind.Item => "Item Editor",
-            LinkKind.Move => "Move Data Editor",
-            LinkKind.Trainer => "Trainer Editor",
-            LinkKind.Header => "Header Editor",
-            LinkKind.Script => "Script Editor",
-            LinkKind.EventFile => "Event Editor",
-            LinkKind.Matrix => "Matrix Editor",
-            LinkKind.Map => "Map Editor",
-            LinkKind.Text => "Text Editor",
-            LinkKind.Wild => "Wild Pokémon Editor",
-            LinkKind.AreaData => "Area Data Editor",
+            LinkKind.Pokemon => "Pokémon editor",
+            LinkKind.Item => "Item editor",
+            LinkKind.Move => "Move data editor",
+            LinkKind.Trainer => "Trainer editor",
+            LinkKind.Header => "Header editor",
+            LinkKind.Script => "Script editor",
+            LinkKind.EventFile => "Event editor",
+            LinkKind.Matrix => "Matrix editor",
+            LinkKind.Map => "Map editor",
+            LinkKind.Text => "Text editor",
+            LinkKind.Wild => "Wild Pokémon editor",
+            LinkKind.AreaData => "Area data editor",
             _ => "",
         };
 

@@ -6,7 +6,7 @@
         xmlns:views="clr-namespace:DSPRE.Avalonia.Views.Battle"
         x:Class="DSPRE.Avalonia.Views.Graphics.BallCapsuleEditorView"
         x:DataType="vm:BallCapsuleEditorViewModel"
-        Title="Ball Capsules" Width="1360" Height="860" WindowStartupLocation="CenterScreen">
+        Title="Ball capsules" Width="1360" Height="860" WindowStartupLocation="CenterScreen">
   <Design.DataContext>
     <vm:BallCapsuleEditorViewModel/>
   </Design.DataContext>

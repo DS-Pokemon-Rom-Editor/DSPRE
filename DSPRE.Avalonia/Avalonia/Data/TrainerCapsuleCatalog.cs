@@ -17,7 +17,7 @@ namespace DSPRE.Avalonia.Data
         public string Name { get; init; }
     }
 
-    /// <summary>Trainer capsules shared by the Trainer Editor and Ball Capsules, reloaded when Ball Capsules saves.</summary>
+    /// <summary>Trainer capsules shared by the Trainer editor and Ball Capsules, reloaded when Ball Capsules saves.</summary>
     public static class TrainerCapsuleCatalog
     {
         /// <summary>Raised on the window thread after the capsules were saved.</summary>

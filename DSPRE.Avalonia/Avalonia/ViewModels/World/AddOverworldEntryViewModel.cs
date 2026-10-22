@@ -180,8 +180,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 bool fits = (haveTarget || haveProfile) && Fits(s);
                 string label = haveTarget || haveProfile
-                    ? $"{s.BaseLabel}, {s.Width}×{s.Height}, up to {s.ColorLimit} colors{(fits ? " (matches image and profile)" : " (different image/profile layout)")}"
-                    : $"{s.BaseLabel}, {s.Width}×{s.Height}, up to {s.ColorLimit} colors";
+                    ? $"{s.BaseLabel}, {s.Width}×{s.Height}, up to {s.ColorLimit} colours{(fits ? " (matches image and profile)" : " (different image/profile layout)")}"
+                    : $"{s.BaseLabel}, {s.Width}×{s.Height}, up to {s.ColorLimit} colours";
                 SlotOptions.Add(new OwIdOption { Id = s.Id, Label = label, Fits = fits });
             }
 
@@ -225,7 +225,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 {
                     _targetWidth = raw.Width; _targetHeight = raw.Height; _targetColors = CountColors(raw);
                     ImagePreview = ImageConverter.ToAvaloniaBitmap(raw);
-                    ImageInfoText = $"Your image: {_targetWidth}×{_targetHeight}, {_targetColors} unique colors. Pick a slot below that matches your image.";
+                    ImageInfoText = $"Image: {_targetWidth} × {_targetHeight}, {_targetColors} colours";
                     StatusText = "";
                 }
             }
@@ -261,7 +261,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 {
                     _targetWidth = raw.Width; _targetHeight = raw.Height; _targetColors = BTX0.ColorCount;
                     ImagePreview = ImageConverter.ToAvaloniaBitmap(raw);
-                    ImageInfoText = $"Your texture: {_targetWidth}×{_targetHeight}, {_targetColors} colors (already ROM-native). Pick a slot below that matches your image.";
+                    ImageInfoText = $"Texture: {_targetWidth} × {_targetHeight}, {_targetColors} colours";
                     StatusText = "";
                 }
             }

@@ -18,7 +18,7 @@ using DSPRE.Csv;
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
     /// <summary>
-    /// ViewModel for the TM/HM Editor Avalonia window.
+    /// ViewModel for the TM / HM editor Avalonia window.
     /// Implements IEditorWithUnsavedChanges so it participates in ROM-switch prompts.
     /// </summary>
     public class TMEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
@@ -104,10 +104,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Observable collections (bound to ListBox / ComboBoxes)
         // ----------------------------------------------------------------
 
-        public sealed class MachineRow
+        /// <summary>Rows change in place: replacing one in the list would drop the list's selection.</summary>
+        public sealed class MachineRow : INotifyPropertyChanged
         {
-            public string Text { get; init; }
-            public int Move { get; init; }
+            public event PropertyChangedEventHandler PropertyChanged;
+            private string _text;
+            private int _move;
+            public string Text { get => _text; set { if (_text == value) return; _text = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Text))); } }
+            public int Move { get => _move; set { if (_move == value) return; _move = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Move))); } }
             public override string ToString() => Text;
         }
         public ObservableCollection<MachineRow> MachineItems { get; } = new ObservableCollection<MachineRow>();
@@ -151,8 +155,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
                 _curMachineMoves[_selectedMachineIndex] = value;
                 string label = TMEditor.MachineLabelFromIndex(_selectedMachineIndex);
-                MachineRow row = new MachineRow { Text = $"{label} - {GetMoveNameFromID(value)}", Move = value };
-                ChangeMachineList(() => MachineItems[Pos(_selectedMachineIndex)] = row);
+                MachineRow row = MachineItems[Pos(_selectedMachineIndex)];
+                row.Text = $"{label} - {GetMoveNameFromID(value)}";
+                row.Move = value;
                 SetDirty(true);
             }
         }
@@ -175,7 +180,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Window title (reflects dirty state)
         // ----------------------------------------------------------------
 
-        private string _title = "TM/HM Editor";
+        private string _title = "TM / HM editor";
         public string Title
         {
             get => _title;
@@ -219,7 +224,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     _curMachineMoves[i] = i;
                     _curMachinePalettes[i] = i;
                 }
-                Title = "TM/HM Editor (Preview)";
+                Title = "TM / HM editor (Preview)";
                 return;
             }
             TryUnpackNarcs(new List<DirNames> { DirNames.MoveData });
@@ -310,7 +315,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                AppLogger.Error($"TM Editor: Failed to export machine data. Exception: {ex.Message}");
+                AppLogger.Error($"TM / HM editor: Failed to export machine data. Exception: {ex.Message}");
                 await DialogHelper.ShowErrorAsync($"The machines could not be exported:\n{ex.Message}", "TM / HM editor error");
             }
         }
@@ -354,6 +359,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void RefreshMachineMoveList()
         {
             string[] names = TMEditor.GetMachineMoveNames(_curMachineMoves);
+            if (MachineItems.Count == names.Length && _order.Length == names.Length)
+            {
+                for (int p = 0; p < _order.Length; p++)
+                {
+                    int i = _order[p];
+                    MachineItems[p].Text = $"{TMEditor.MachineLabelFromIndex(i)} - {names[i]}";
+                    MachineItems[p].Move = _curMachineMoves[i];
+                }
+                return;
+            }
             ChangeMachineList(() =>
             {
                 MachineItems.Clear();
@@ -407,7 +422,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private async Task UpdateDescriptionsAsync(List<(int Machine, int OldMove, int NewMove)> moved)
         {
             string labels = string.Join(", ", moved.Take(6).Select(m => TMEditor.MachineLabelFromIndex(m.Machine))) + (moved.Count > 6 ? "…" : "");
-            if (!await DialogHelper.AskYesNoAsync($"Rewrite the item descriptions of {labels} for their new moves?", "TM / HM editor")) return;
+            if (!await DialogHelper.AskYesNoAsync(moved.Count == 1 ? $"Update the description of {labels} to match its new move?" : $"Update the descriptions of {labels} to match their new moves?", "TM / HM editor")) return;
             try
             {
                 TmItemDescriptions.Result result = TmItemDescriptions.Update(moved);
@@ -440,7 +455,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException || ex is ArgumentException)
             {
-                AppLogger.Error($"TM Editor: Failed to save machine moves or palettes. Exception: {ex.Message}");
+                AppLogger.Error($"TM / HM editor: Failed to save machine moves or palettes. Exception: {ex.Message}");
                 _ = DialogHelper.ShowErrorAsync("The TMs and HMs were not saved:\n" + ex.Message, "TM / HM editor error");
                 return false;
             }

@@ -175,7 +175,7 @@ namespace DSPRE.Avalonia.Data
                 piece.Drawing = files.Drawing;
                 piece.Arrangement = files.Tilemap;
                 piece.Colours = files.PaletteDay + Math.Clamp(o.TimeOfDay, 0, 2);
-                piece.SharedNote = "The arrangement behind every backdrop is the same file.";
+                piece.SharedNote = "Shared by all backdrops";
                 // The sheet is twice as wide as the backdrop it draws, because the arrangement picks
                 // tiles out of it, so a picture the size of what you see here cannot go back into it.
                 piece.CannotEditBecause = "A backdrop is arranged out of a wider sheet of tiles, so a "
@@ -209,7 +209,7 @@ namespace DSPRE.Avalonia.Data
                     Drawing = files.HasValue ? (player ? files.Value.MineDrawing : files.Value.EnemyDrawing) : -1,
                     Layout = files.HasValue ? (player ? files.Value.MineLayout : files.Value.EnemyLayout) : -1,
                     Colours = files.HasValue ? files.Value.PaletteDay + o.TimeOfDay : -1,
-                    SharedNote = "Every place that fights on this terrain uses it.",
+                    SharedNote = "Shared by this terrain",
                 };
                 BattleGroundRenderer.GroundImage g = player ? both.mine : both.enemy;
                 if (g?.Rgba == null) piece.Whynot = "This ground could not be drawn.";
@@ -236,7 +236,7 @@ namespace DSPRE.Avalonia.Data
                     Drawing = BattleObjects.Find(thing, "Drawing"),
                     Layout = BattleObjects.Find(thing, "As it appears"),
                     Colours = BattleObjects.Find("HpBar.Shared", "Colours"),
-                    SharedNote = "Every battle in the game draws this same bar.",
+                    SharedNote = "Shared by all battles",
                     UsesBarPieces = true,
                 };
                 try
@@ -313,7 +313,7 @@ namespace DSPRE.Avalonia.Data
                      + "player's own setting, the same one the field uses.",
                 Archive = DirNames.WindowFrames,
                 Top = MessageTop,
-                SharedNote = "This frame is the one the whole game writes in, field and battle alike.",
+                SharedNote = "Shared by field and battle",
             };
             try
             {

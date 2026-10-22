@@ -47,10 +47,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public ObservableCollection<TimingRow> TimingRows { get; } = new();
         public bool HasTimings => _timing != null;
-        // The table is a code patch, so it comes from the ROM Patch Toolbox, which says what it changes first.
+        // The table is a code patch, so it comes from the ROM patch toolbox, which says what it changes first.
         public bool CanInstallTimings => _timing == null && IsClassRecords && !DSPRE.HgEngine.HgEngineProject.IsActive;
         public string TimingNote => _timing != null ? ""
-            : "Classes get their own intro speeds with the \"VS intro timings per class\" patch from the ROM Patch Toolbox."
+            : "Classes get their own intro speeds with the \"VS intro timings per class\" patch from the ROM patch toolbox."
               + (_timingWhy != null ? " " + _timingWhy : "");
         public bool ShowTimingSection => IsClassRecords && Record != null;
         public bool ShowTimingRows => HasTimings && TimingRows.Any(r => r.Visible);

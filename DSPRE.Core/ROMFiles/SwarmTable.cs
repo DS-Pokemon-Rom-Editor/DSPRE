@@ -150,7 +150,7 @@ namespace DSPRE.ROMFiles
             if (Rows.Count == 0) return "The swarm table needs at least one row.";
             if (Rows.Count > 255) return "The game can pick from up to 255 swarm rows.";
             if (NeedsExpansion)
-                return $"The table holds {Capacity} rows where it is. The \"Expand the swarm table\" patch in the ROM Patch Toolbox makes room for {MaxRows}.";
+                return $"The table holds {Capacity} rows where it is. The \"Expand the swarm table\" patch in the ROM patch toolbox makes room for {MaxRows}.";
             for (int i = 0; i < Rows.Count; i++)
             {
                 if (Rows[i].Header >= headerCount) return $"Row {i + 1} points at a header that doesn't exist.";
@@ -222,7 +222,7 @@ namespace DSPRE.ROMFiles
         public void MoveToExpansion()
         {
             if (FromSource || Expanded) return;
-            if (!SyntheticOverlaySpace.Available()) throw new InvalidOperationException("Apply the ARM9 expansion in the ROM Patch Toolbox first.");
+            if (!SyntheticOverlaySpace.Available()) throw new InvalidOperationException("Apply the ARM9 expansion in the ROM patch toolbox first.");
             byte[] code = ReadCode(), codeBefore = (byte[])code.Clone();
             byte[] rows = RowBytes();
             byte[] synthNow = File.ReadAllBytes(Filesystem.ExpArmPath), synthBefore = (byte[])synthNow.Clone();

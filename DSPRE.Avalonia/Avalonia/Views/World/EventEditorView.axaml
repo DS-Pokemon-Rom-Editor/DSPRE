@@ -17,6 +17,7 @@
         <Button Content="Add" controls:Icon.Key="addIcon"     Click="AddFile_Click"/>
         <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemFile_Click"/>
         <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
         <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
         <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
@@ -137,8 +138,8 @@
                       ToolTip.Tip="Remove the selected overworld (Del while the list is focused)"/>
               <Button Content="Duplicate" controls:Icon.Key="copy" Click="DupOw_Click" IsEnabled="{Binding HasOw}"/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-              <Button Content="Sort" controls:Icon.Key="sortAscending" Click="SortAsc_Click" ToolTip.Tip="Sort overworlds by OW id (ascending)"/>
-              <Button Content="Sort" controls:Icon.Key="sortDescending" Click="SortDesc_Click" ToolTip.Tip="Sort overworlds by OW id (descending)"/>
+              <Button controls:Icon.Key="sortAscending" Click="SortAsc_Click" ToolTip.Tip="Sort by OW id, low to high"/>
+              <Button controls:Icon.Key="sortDescending" Click="SortDesc_Click" ToolTip.Tip="Sort by OW id, high to low"/>
             </StackPanel>
             <Grid ColumnDefinitions="180,*">
               <ListBox Grid.Column="0" ItemsSource="{Binding Overworlds}"
@@ -251,7 +252,7 @@
                   <StackPanel Spacing="3" IsVisible="{Binding OwScriptSectionVisible}">
                     <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0" ToolTip.Tip="Set by the item or trainer above unless Type is Standard"/>
                     <controls:FusionAutoCompleteBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding OwScriptIndex}" IsVisible="{Binding !OwScriptHasCommonInfo}" IsEnabled="{Binding OwScriptEnabled}" HorizontalAlignment="Stretch"/>
-                    <TextBlock Text="This map's scripts have no script with this number."
+                    <TextBlock Text="No such script"
                                FontSize="10" Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap" IsVisible="{Binding OwScriptGenericWarningVisible}"/>
                     <Border IsVisible="{Binding OwScriptHasCommonInfo}" Background="{DynamicResource Editor.PanelBg}"
                             BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3" Padding="6,4">
@@ -368,7 +369,7 @@
                   </Grid>
                   <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0"/>
                   <controls:FusionAutoCompleteBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding TrScriptIndex}" IsVisible="{Binding !TrScriptHasCommonInfo}" HorizontalAlignment="Stretch"/>
-                  <TextBlock Text="This map's scripts have no script with this number."
+                  <TextBlock Text="No such script"
                              FontSize="10" Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap" IsVisible="{Binding TrScriptGenericWarningVisible}"/>
                   <Border IsVisible="{Binding TrScriptHasCommonInfo}" Background="{DynamicResource Editor.PanelBg}"
                           BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3" Padding="6,4">
@@ -459,7 +460,7 @@
                   <StackPanel Spacing="3" IsVisible="{Binding SpScriptFieldsVisible}">
                     <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0"/>
                     <controls:FusionAutoCompleteBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding SpScriptIndex}" IsVisible="{Binding !SpScriptHasCommonInfo}" HorizontalAlignment="Stretch"/>
-                    <TextBlock Text="This map's scripts have no script with this number."
+                    <TextBlock Text="No such script"
                                FontSize="10" Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap" IsVisible="{Binding SpScriptGenericWarningVisible}"/>
                     <Border IsVisible="{Binding SpScriptHasCommonInfo}" Background="{DynamicResource Editor.PanelBg}"
                             BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3" Padding="6,4">

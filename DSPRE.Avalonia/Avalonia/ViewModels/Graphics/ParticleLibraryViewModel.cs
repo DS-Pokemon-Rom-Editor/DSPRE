@@ -202,7 +202,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         /// <summary>
-        /// The battle intro archive is edited unpacked by the VS Intro Editor, so its particle files are read and
+        /// The battle intro archive is edited unpacked by the VS intro editor, so its particle files are read and
         /// written through the same unpacked copy; a loose copy would be overwritten when the ROM is saved.
         /// </summary>
         private void GatherEncounter()

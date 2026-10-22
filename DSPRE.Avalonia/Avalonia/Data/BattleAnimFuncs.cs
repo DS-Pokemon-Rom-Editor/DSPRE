@@ -44,10 +44,10 @@ namespace DSPRE.Avalonia.Data
 
         private static readonly BattleAnimFunc[] All =
         {
-            new BattleAnimFunc { Id = 0, Name = "Nop", Summary = "A sample routine the games left in. Does nothing.", Source = "BattleAnimScriptFunc_Nop" },
-            new BattleAnimFunc { Id = 1, Name = "AnimExample", Summary = "A sample routine the games left in. Does nothing.", Source = "BattleAnimScriptFunc_AnimExample" },
-            new BattleAnimFunc { Id = 2, Name = "SoundExample", Summary = "A sample routine the games left in. Does nothing.", Source = "BattleAnimScriptFunc_SoundExample" },
-            new BattleAnimFunc { Id = 3, Name = "GenericExample", Summary = "A sample routine the games left in. Does nothing.", Source = "BattleAnimScriptFunc_GenericExample" },
+            new BattleAnimFunc { Id = 0, Name = "Nop", Summary = "Unused", Source = "BattleAnimScriptFunc_Nop" },
+            new BattleAnimFunc { Id = 1, Name = "AnimExample", Summary = "Unused", Source = "BattleAnimScriptFunc_AnimExample" },
+            new BattleAnimFunc { Id = 2, Name = "SoundExample", Summary = "Unused", Source = "BattleAnimScriptFunc_SoundExample" },
+            new BattleAnimFunc { Id = 3, Name = "GenericExample", Summary = "Unused", Source = "BattleAnimScriptFunc_GenericExample" },
 
             new BattleAnimFunc { Id = 4, Name = "RotateMon", Summary = "Turns a Pokémon on the spot.",
                 Source = "BattleAnimScriptFunc_RotateMon",

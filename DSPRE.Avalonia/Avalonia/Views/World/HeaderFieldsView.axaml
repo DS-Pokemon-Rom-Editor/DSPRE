@@ -85,7 +85,7 @@
                   <Flyout Placement="BottomEdgeAlignedRight">
                     <StackPanel Spacing="6" Width="300">
                       <TextBlock TextWrapping="Wrap"
-                                 Text="Large weather backgrounds share memory with the area's buildings and textures. Arriving by door, Fly or a loaded save with too little left shows a black screen. Walking in from the next map is fine."/>
+                                 Text="Arriving by door, Fly or a loaded save can black-screen when the weather leaves too little memory for the area. Walking in from the next map is fine."/>
                       <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"
                                  Text="Estimated from the area data. Platinum only."/>
                       <TextBlock TextWrapping="Wrap" Text="{Binding WeatherRoomDetail}" IsVisible="{Binding WeatherRoomDetail, Converter={x:Static ObjectConverters.IsNotNull}}"/>

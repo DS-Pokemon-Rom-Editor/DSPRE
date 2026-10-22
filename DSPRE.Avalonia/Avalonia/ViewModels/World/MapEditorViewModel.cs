@@ -355,7 +355,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             LoadArea(id);
             SyncTilesetsToArea();
             RebuildPreview();
-            StatusText = $"Area {id} was saved in another window and reloaded.";
+            StatusText = "";
         }
         public ObservableCollection<PainterOption> CollisionPainters { get; } = new ObservableCollection<PainterOption>();
         public ObservableCollection<PainterOption> TypePainters { get; } = new ObservableCollection<PainterOption>();
@@ -859,7 +859,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private static uint StoredScale(decimal scale) => (uint)Math.Clamp(Math.Round(scale * ScaleUnit), 1m, ushort.MaxValue);
 
         // The stored rotation values are always readable/writable, but the GAME only reads them once
-        // the Building Rotation patch (Patch Toolbox) has been applied. Gate the controls so it's not
+        // the Building Rotation patch (ROM patch toolbox) has been applied. Gate the controls so it's not
         // implied that rotating a building here does anything in an unpatched ROM.
         private bool _buildingRotationEnabled = true;
         public bool BuildingRotationEnabled { get => _buildingRotationEnabled; private set => Set(ref _buildingRotationEnabled, value); }
@@ -899,7 +899,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (HasUnsavedChanges) { StatusText = $"Map {mapIndex} was saved in another window. Save or discard here to see it."; return; }
             if (IsSingleMap) LoadMap(mapIndex);
             else BuildHeaderPreview();
-            StatusText = $"Map {mapIndex} was saved in another window and reloaded.";
+            StatusText = "";
         }
 
         private void LoadBuildingDetail()
@@ -1725,7 +1725,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                         ? (was.collisions != null && !Open(was.collisions, was.types, px, pz) ? null : "now on a blocked or water square")
                         : DeadEnd(px, pz, waterTypes, warps);
                     if (trouble != null)
-                        found.Add(new EventClash { Kind = point.Kind, File = -1, X = px, Y = pz, WarpTrouble = trouble + "; change it in the Fly / Warp Editor", Move = false });
+                        found.Add(new EventClash { Kind = point.Kind, File = -1, X = px, Y = pz, WarpTrouble = trouble + "; change it in the Fly / warp editor", Move = false });
                 }
             }
             catch (Exception ex) { AppLogger.Error("Import spawn point check failed: " + ex.Message); }
@@ -2088,8 +2088,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool CanUndo => _history.CanUndo;
         public bool CanRedo => _history.CanRedo;
         // The status line would otherwise still describe the change just taken back.
-        public void Undo() { if (!CanUndo) return; ApplyStep(_history.Undo()); StatusText = "Undone."; }
-        public void Redo() { if (!CanRedo) return; ApplyStep(_history.Redo()); StatusText = "Redone."; }
+        public void Undo() { if (!CanUndo) return; ApplyStep(_history.Undo()); }
+        public void Redo() { if (!CanRedo) return; ApplyStep(_history.Redo()); }
         private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
 
         private MapStep TakeStep()
@@ -2314,7 +2314,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowErrorAsync($"Failed to set up Map Editor:\n{ex.Message}", "Map editor error");
+                await DialogHelper.ShowErrorAsync($"Failed to set up Map editor:\n{ex.Message}", "Map editor error");
             }
         }
 
@@ -2332,7 +2332,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
                 SetClean();
                 ResetUndo();
-                StatusText = $"Loaded map {index}.";
+                StatusText = "";
                 OnPropertyChanged(nameof(CanEditModel));
                 OnPropertyChanged(nameof(FocusedMapIndex));
                 OnPropertyChanged(nameof(Collisions));
@@ -2401,7 +2401,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (hdr == null) { StatusText = $"Header {_headerId}: not found."; RefreshBuildings(); MapLoaded?.Invoke(this, EventArgs.Empty); return; }
                 if (_headerId == MapHeader.Everywhere)
                 {
-                    StatusText = "Header 0 is the game's catch-all header, not a place, so it has no maps of its own.";
+                    StatusText = "Header 0 has no maps.";
                     ShowHeaderMaps(); RefreshBuildings(); SetClean(); RebuildOverlay(); MapLoaded?.Invoke(this, EventArgs.Empty); return;
                 }
 
@@ -2625,7 +2625,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                         catch { /* skip bad matrix */ }
                     }
             }
-            catch (Exception ex) { AppLogger.Error("Map→area lookup failed: " + ex.Message); }
+            catch (Exception ex) { AppLogger.Error("Map to area lookup failed: " + ex.Message); }
             return lookup;
         }
 

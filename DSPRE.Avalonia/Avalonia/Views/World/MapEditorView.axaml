@@ -33,6 +33,7 @@
           <Button x:Name="EditModelButton" Content="Modify map model" controls:Icon.Key="pencil" Click="EditModel_Click" IsEnabled="{Binding CanEditModel}"
                   ToolTip.Tip="Build, edit or import this map's model"/>
           <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton"     Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+          <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
           <controls:UndoRedoButtons/>
           <Button Content="Import…" controls:Icon.Key="import"   Click="Import_Click" IsVisible="{Binding IsSingleMap}"
                   ToolTip.Tip="A map .bin replaces the whole map; an .nsbmd replaces the model only"/>
@@ -201,7 +202,7 @@
                 </StackPanel>
                 <StackPanel Spacing="2">
                   <TextBlock Text="Rotation (°)" FontSize="10" Foreground="{DynamicResource Editor.Subtle}"/>
-                  <Button Content="Open in Patch Toolbox" controls:Icon.Key="OpenLink" Click="RotationPatch_Click" IsVisible="{Binding !BuildingRotationEnabled}"
+                  <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Click="RotationPatch_Click" IsVisible="{Binding !BuildingRotationEnabled}"
                           ToolTip.Tip="Turning buildings needs the building rotation patch."/>
                   <Grid ColumnDefinitions="18,*" RowDefinitions="Auto,Auto,Auto">
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="X" VerticalAlignment="Center"/>

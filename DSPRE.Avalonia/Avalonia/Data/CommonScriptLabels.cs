@@ -26,12 +26,14 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>Names the script in this project's labels.</summary>
-        public static void Rename(int scriptNumber, string name)
+        /// <returns>null when saved, else why not.</returns>
+        public static string Rename(int scriptNumber, string name)
         {
-            if (scriptNumber < First) return;
+            if (scriptNumber < First) return null;
             LabelStore.SetLabel(Key, scriptNumber - First, name, global: false);
-            LabelStore.Save(global: false);
+            string error = LabelStore.Save(global: false);
             AppEvents.RaiseLabelsChanged();
+            return error;
         }
     }
 }

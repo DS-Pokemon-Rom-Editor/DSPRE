@@ -31,7 +31,7 @@
     <controls:EditorToolbar>
         <TextBlock Text="Font" VerticalAlignment="Center"/>
         <ComboBox Width="220" ItemsSource="{Binding FontNames}" SelectedIndex="{Binding SelectedFontIndex}"
-                  PlaceholderText="This ROM carries no fonts this editor can read"/>
+                  PlaceholderText="No readable fonts"/>
         <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
         <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
         <Button Content="Save a picture…" controls:Icon.Key="export" Click="ExportPng_Click" IsEnabled="{Binding CanUsePictureCommand}"
@@ -130,8 +130,7 @@
           <views:FontSampleLine Model="{Binding}" Revision="{Binding GlyphChanged}"
                                 Text="{Binding Sample}"/>
         </Border>
-        <TextBlock Classes="hint"
-                   Text="Drawn at the size the game draws it, and again at three times that."/>
+        <controls:HelpTip HorizontalAlignment="Left" Text="Shown at game size and at 3×"/>
 
       </StackPanel>
     </ScrollViewer>

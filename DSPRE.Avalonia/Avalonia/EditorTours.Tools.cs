@@ -10,13 +10,13 @@ namespace DSPRE.Avalonia
                 S("tab:Validation>list", "Findings", "Each row gives the kind of file, the header it was found in and what is wrong."),
                 S("tab:Where used", "Where used", "Pick a kind of file and its number, then Find headers lists every header that uses it."));
 
-            Add("PatchToolboxView", "ROM Patch Toolbox",
+            Add("PatchToolboxView", "ROM patch toolbox",
                 S(null, "Patches", "Ready-made changes to the game's code and data, applied with one button."),
                 S("name:CautionBanner", "Back up first", "Some patches cannot be undone, so keep a copy of your project before applying one."),
                 S("name:PatchList", "Each patch", "What it does, and whether it is applied, can be applied or does not fit this game."),
                 S("name:PatchList", "Applying", "The button on the right applies the patch after asking you to confirm. It takes effect straight away, with nothing to save."));
 
-            Add("OverlayEditorView", "Overlay Editor",
+            Add("OverlayEditorView", "Overlay editor",
                 S(null, "Code overlays", "The game loads extra pieces of code as it needs them. This lists each one and whether it is packed down."),
                 S("list", "The list", "Compressed is how it is now, Marked Compressed is how the game expects it. A highlighted cell means the two disagree."),
                 S("toolbar", "Changing them", "Decompress All and Toggle Marked flip every row at once. In some projects the list is read only, since packing is handled when the ROM is built."),
@@ -42,7 +42,7 @@ namespace DSPRE.Avalonia
                 S("tab:Level Scripts", "Level Scripts", "Every level script file and how many triggers of each kind it has."),
                 S("tab:Variable Watcher", "Variable Watcher", "Type a variable number and Search to list every file that uses it. Double-click a row to copy its number."),
                 S("tab:Flag Watcher", "Flag Watcher", "Every script and person that sets, checks or hides behind a flag. Double-click a row to copy it."),
-                S("tab:Overworld Watcher", "Overworld Watcher", "Everyone placed on a map with a given sprite. Double-click a row to open it in the Event Editor."),
+                S("tab:Overworld Watcher", "Overworld Watcher", "Everyone placed on a map with a given sprite. Double-click a row to open it in the Event editor."),
                 S("tab:Trainer Watcher", "Trainer Watcher", "Every script, person and rematch that names a trainer. Double-click a row to open it."),
                 S("tab:File Watcher", "File Watcher", "Which headers use a script file. Double-click a row to copy it."),
                 S("tab:ID Watcher", "ID Watcher", "Pick a script file and one of its scripts to list the events that run it."),
@@ -56,7 +56,7 @@ namespace DSPRE.Avalonia
                 S("name:EntryRows", "Entries", "Type a new name next to each number. The default name is shown beside it for reference."),
                 S("toolbar", "Saving", "Add entry adds one more choice, Reset category brings back the defaults, and nothing is written until you press Save. Ctrl+Z undoes and Ctrl+Y redoes."));
 
-            Add("AudioEditorView", "Audio Editor",
+            Add("AudioEditorView", "Audio editor",
                 S(null, "Audio", "Listen to every sound in the game, save it out, and put your own cries and sounds in."),
                 S("name:SearchBox", "Search", "Type a name or number to filter every tab at once."),
                 S("tab:Cries", "Cries", "Each Pokémon's cry. You can import your own sound as a cry."),

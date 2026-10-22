@@ -30,7 +30,7 @@
       <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap"/>
     </Border>
 
-    <ListBox ItemsSource="{Binding Folders}"
+    <ListBox ItemsSource="{Binding Folders}" ToolTip.Tip="{Binding FolderHelp}"
              SelectedIndex="{Binding SelectedIndex}"
              IsEnabled="{Binding IsIdle}"/>
   </DockPanel>

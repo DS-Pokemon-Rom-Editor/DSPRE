@@ -6,7 +6,7 @@ namespace DSPRE.ROMFiles
 {
     /// <summary>
     /// The places the game puts the player without a warp: where they wake after blacking out, where Fly lands, and
-    /// (HGSS) where a town's warp unlocks. Read from the same arm9 table the Fly / Warp Editor edits.
+    /// (HGSS) where a town's warp unlocks. Read from the same arm9 table the Fly / warp editor edits.
     /// </summary>
     public static class SpawnPoints
     {

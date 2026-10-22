@@ -32,5 +32,6 @@ namespace DSPRE.Avalonia.Views.Trainers
         }
 
         private void Cancel_Click(object sender, RoutedEventArgs e) => Close();
+        private void OpenMusicPatch_Click(object sender, RoutedEventArgs e) => AvaloniaEditorLauncher.OpenPatchToolboxAt("trainerEncounterBgmRepointed");
     }
 }

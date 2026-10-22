@@ -111,7 +111,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (!IsAvailable)
             {
-                StatusText = "Trophy Garden is only in Diamond, Pearl and Platinum.";
+                StatusText = "Not in this game";
                 return;
             }
 
@@ -119,7 +119,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             if (string.IsNullOrEmpty(Filesystem.EncounterExtended) || !Directory.Exists(Filesystem.EncounterExtended))
             {
-                StatusText = "Trophy Garden encounter files not found. Expected location: arc/encdata_ex.narc";
+                StatusText = "The Trophy Garden file is missing.";
                 return;
             }
 

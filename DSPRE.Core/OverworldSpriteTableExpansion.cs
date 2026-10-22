@@ -12,7 +12,7 @@ namespace DSPRE
     /// (github.com/hzla/PlatPatches, <c>src/patches/overworld-sprites.js</c>). Platinum and
     /// Diamond/Pearl (the tables share the same structure per hzla's README and Platinum decomp).
     /// DSPRE never applies this patch itself; it only detects an already-patched ROM and, once
-    /// detected, lets the Overworld Editor add/delete custom entries within the capacity the
+    /// detected, lets the Overworld editor add/delete custom entries within the capacity the
     /// patch pre-reserved.
     ///
     /// Layout inside <see cref="Filesystem.ExpArmPath"/> (the same "synthetic overlay" NARC

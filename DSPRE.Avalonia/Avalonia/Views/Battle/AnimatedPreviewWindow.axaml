@@ -131,7 +131,7 @@
                      FontWeight="SemiBold" Margin="0,0,0,4"/>
           <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,0,0,8"
                      Foreground="{DynamicResource Editor.Subtle}" FontSize="12"
-                     Text="A person is on the map only while their flag is clear. Tick a flag to take them away."/>
+                     Text="Tick a flag to hide its person"/>
           <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" FontSize="12"
                      Foreground="{DynamicResource Editor.Subtle}"
                      Text="{Binding HiddenSummary}"/>
@@ -156,7 +156,7 @@
                      FontWeight="SemiBold" Margin="0,0,0,4"/>
           <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,0,0,8"
                      Foreground="{DynamicResource Editor.Subtle}" FontSize="12"
-                     Text="A message can leave a gap for a name, an item and so on. Type what goes in each."/>
+                     Text="Type what fills each message gap"/>
           <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" FontSize="12"
                      Foreground="{DynamicResource Editor.Subtle}"
                      Text="{Binding StringVarSummary}"/>
@@ -185,7 +185,7 @@
                      FontWeight="SemiBold" Margin="0,0,0,4"/>
           <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,0,0,8"
                      Foreground="{DynamicResource Editor.Subtle}" FontSize="12"
-                     Text="The top ones run as you arrive. The rest wait for a variable, checked on every step."/>
+                     Text="Top ones run on arrival; others wait"/>
           <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" FontSize="12"
                      Foreground="{DynamicResource Editor.Subtle}"
                      Text="{Binding LevelScriptSummary}"/>

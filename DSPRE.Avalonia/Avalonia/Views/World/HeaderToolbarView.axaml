@@ -9,14 +9,15 @@
   <controls:EditorToolbar x:Name="HeaderToolbar">
     <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"
             ToolTip.Tip="Save this header's own fields. Every other tab saves its own data."/>
-    <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Reset_Click" ToolTip.Tip="Go back to the saved header"/>
+    <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Reset_Click" IsEnabled="{Binding HasUnsavedChanges}" ToolTip.Tip="Go back to the saved header"/>
     <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
     <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
-    <Button Content="Add" controls:Icon.Key="addIcon" Click="AddHeader_Click" IsEnabled="{Binding CanAddRemove}"/>
+    <Button Content="Add" controls:Icon.Key="addIcon" Click="AddHeader_Click" IsEnabled="{Binding CanAddRemove}"
+            ToolTip.Tip="{Binding AddTip}" ToolTip.ShowOnDisabled="True"/>
     <ComboBox controls:EditorToolbar.Slot="Add" ItemsSource="{x:Static vm:HeaderEditorViewModel.CopyFromOptions}" SelectedIndex="{Binding CopyFromIndex}"
               IsEnabled="{Binding CanAddRemove}" ToolTip.Tip="What a new header starts as"/>
     <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveHeader_Click" IsEnabled="{Binding CanAddRemove}"
-            ToolTip.Tip="{Binding RemoveTip}"/>
+            ToolTip.Tip="{Binding RemoveTip}" ToolTip.ShowOnDisabled="True"/>
     <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
     <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
     <Button Content="Copy" controls:Icon.Key="copy" Click="Copy_Click" ToolTip.Tip="Copy this header's fields"/>

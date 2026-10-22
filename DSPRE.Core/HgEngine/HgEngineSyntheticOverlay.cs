@@ -17,7 +17,7 @@ namespace DSPRE.HgEngine
         public const string BuildDirRelPath = "build/a028";
         public const string CodeTablesRelPath = "data/codetables.mk";
 
-        /// <summary>Why the Patch Toolbox lists an expansion patch as unavailable.</summary>
+        /// <summary>Why the ROM patch toolbox lists an expansion patch as unavailable.</summary>
         public const string ToolboxReason = "hg-engine uses this space for its own code";
 
         /// <summary>Where the checkout keeps the members it repacks the archive from.</summary>

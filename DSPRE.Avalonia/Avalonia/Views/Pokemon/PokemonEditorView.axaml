@@ -123,9 +123,8 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
               <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0" IsVisible="{Binding CanOfferSlots}">
-                <TextBlock Text="More evolutions need the &quot;More evolution slots&quot; patch." VerticalAlignment="Center"
-                           FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
-                <Button Content="Open in Patch Toolbox" controls:Icon.Key="OpenLink" Click="OpenEvolutionSlots_Click"/>
+                <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Click="OpenEvolutionSlots_Click"
+                        ToolTip.Tip="More evolutions need the More evolution slots patch"/>
               </StackPanel>
             </StackPanel>
           </ScrollViewer>
@@ -140,9 +139,8 @@
             <StackPanel Spacing="10" IsVisible="{Binding IsAvailable}">
               <ComboBox ItemsSource="{Binding Formes}" SelectedIndex="{Binding FormeIndex}" IsVisible="{Binding ShowForme}" Width="200" HorizontalAlignment="Left"/>
               <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding ShowListsNote}">
-                <TextBlock Classes="subtle" VerticalAlignment="Center" TextWrapping="Wrap"
-                           Text="The Pokédex's sort lists take height, weight and body shape changes after Rebuild sort lists."/>
-                <Button Content="Pokédex lists" controls:Icon.Key="OpenLink" Click="PokedexLists_Click" IsVisible="{Binding CanOpenLists}"/>
+                <Button Content="Open in Pokédex lists" controls:Icon.Key="OpenLink" Click="PokedexLists_Click" IsVisible="{Binding CanOpenLists}"
+                        ToolTip.Tip="The sort lists take height, weight and body shape changes after Rebuild sort lists"/>
               </StackPanel>
               <StackPanel Orientation="Horizontal" Spacing="10">
               <GroupBox Header="Entry">

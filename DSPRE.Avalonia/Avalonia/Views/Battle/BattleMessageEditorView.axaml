@@ -64,7 +64,7 @@
               <TextBlock Text="{Binding PreviewWarning}" IsVisible="{Binding HasPreviewWarning}" TextWrapping="Wrap" FontSize="12"
                          Foreground="{DynamicResource Editor.Warn}"/>
             </StackPanel>
-            <Button Grid.Column="1" Content="Next stop" Click="PreviewNext_Click" IsEnabled="{Binding HasPreview}"/>
+            <Button Grid.Column="1" Content="Next box" Click="PreviewNext_Click" IsEnabled="{Binding HasPreview}"/>
           </Grid>
         </StackPanel>
         <TextBox AcceptsReturn="True" TextWrapping="Wrap" Text="{Binding MessageText}" Margin="0,4,0,0" VerticalContentAlignment="Top"/>

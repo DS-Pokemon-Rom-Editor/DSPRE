@@ -3,7 +3,7 @@ using DSPRE.Resources.ROMToolboxDB;
 namespace DSPRE
 {
     /// <summary>
-    /// Static ROM-patch state (which Patch Toolbox patches are applied to the loaded ROM).
+    /// Static ROM-patch state (which ROM patch toolbox patches are applied to the loaded ROM).
     /// Extracted from the WinForms <c>PatchToolboxDialog</c> so the core (Filesystem, MapHeader, …)
     /// can query it without a UI dependency; the dialog keeps forwarding members.
     /// </summary>

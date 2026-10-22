@@ -5,7 +5,7 @@ using DSPRE.Avalonia.ViewModels;
 namespace DSPRE.Avalonia.Views.Tools
 {
     /// <summary>
-    /// Native Avalonia ROM Patch Toolbox. Lists every patch with its applied/supported state and an
+    /// ROM patch toolbox. Lists every patch with its applied/supported state and an
     /// Apply button; the actual ROM-writing logic lives in the shared <c>PatchToolboxDialog</c>
     /// static methods so this and the WinForms dialog stay byte-identical.
     /// </summary>

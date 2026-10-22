@@ -183,7 +183,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (!IsSupported)
             {
-                StatusText = "The Vs. Seeker Rematch Editor only supports Diamond, Pearl and Platinum.";
+                StatusText = "Not in this game";
                 _rows = new List<RematchTable.Row>();
                 return;
             }
@@ -296,21 +296,20 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 if (!VsSeekerRematchTable.WriteRow(r, _rows[r], out string error))
                 {
-                    AppMessages.Error($"Save failed on row {r}: {error}", "Error");
+                    AppMessages.Error($"Row {r} wasn't saved:\n{error}", "Vs. Seeker rematch editor error");
                     return;
                 }
             }
 
-            int count = _dirtyRows.Count;
             _dirtyRows.Clear();
             _savedIds = _rows.Select(r => (ushort[])r.Ids.Clone()).ToList();
             _undo?.MarkSaved();
             SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
-            UpdateStatus($"Saved {count} row(s).");
+            UpdateStatus();
         }
 
         private void UpdateStatus(string message = null) =>
-            StatusText = message ?? $"{_rows.Count} rows.{(_dirtyRows.Count > 0 ? $" {_dirtyRows.Count} unsaved row(s)." : "")}";
+            StatusText = message ?? "";
     }
 }

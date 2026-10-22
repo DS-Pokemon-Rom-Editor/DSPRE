@@ -21,7 +21,7 @@
         <controls:UndoRedoButtons/>
         <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click" Margin="12,0,0,0" ToolTip.Tip="Exports the open tab"/>
         <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click" ToolTip.Tip="Imports into the open tab"/>
-        <Button Content="Locate" controls:Icon.Key="folder" Click="Locate_Click" ToolTip.Tip="Shows the open tab's files"/>
+        <Button Content="Show files" controls:Icon.Key="folder" Click="Locate_Click" ToolTip.Tip="Shows the open tab's files"/>
     </controls:EditorToolbar>
 
     <TextBlock DockPanel.Dock="Top" Text="Battle Tower data was not found for this game." Margin="16" IsVisible="{Binding !IsAvailable}"/>
@@ -50,7 +50,7 @@
               <TextBlock Text="Message 3"/>
               <TextBox AcceptsReturn="True" TextWrapping="Wrap" Text="{Binding Message3}"/>
 
-              <TextBlock Text="Pokémon sets this trainer can draw from" FontWeight="Bold" Margin="0,8,0,0"/>
+              <TextBlock Text="Pokémon sets" FontWeight="Bold" Margin="0,8,0,0"/>
               <ListBox x:Name="SetIdList" Height="160" ItemsSource="{Binding SetIdLabels}" SelectedIndex="{Binding SelectedSetIdIndex}"
                        DoubleTapped="SetIdList_DoubleTapped"/>
               <StackPanel Orientation="Horizontal" Spacing="6">

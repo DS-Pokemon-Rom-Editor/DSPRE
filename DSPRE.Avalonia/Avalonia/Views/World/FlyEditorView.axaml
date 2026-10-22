@@ -24,8 +24,8 @@
 	<!-- Three tabs -->
 	<TabControl Margin="8">
 
-	  <!-- ── Tab 1: Game-Over / Death Warps ─────────────────────────────── -->
-	  <TabItem Header="Game-Over warps">
+	  <!-- ── Tab 1: Whiteout warps ─────────────────────────────── -->
+	  <TabItem Header="Whiteout warps">
 		<DataGrid ItemsSource="{Binding Rows}"
 				  CanUserReorderColumns="False" CanUserResizeColumns="True"
 				  CanUserSortColumns="False" GridLinesVisibility="All"
@@ -33,7 +33,7 @@
 		  <DataGrid.Columns>
 
 			<!-- Header combobox (shared for all game families) -->
-			<DataGridTemplateColumn Header="Header (Game-Over)" Width="*">
+			<DataGridTemplateColumn Header="Header (whiteout)" Width="*">
 			  <DataGridTemplateColumn.CellTemplate>
 				<DataTemplate x:DataType="vm:FlyRow">
 				  <controls:FusionAutoCompleteBox ItemsSource="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).Headers}"

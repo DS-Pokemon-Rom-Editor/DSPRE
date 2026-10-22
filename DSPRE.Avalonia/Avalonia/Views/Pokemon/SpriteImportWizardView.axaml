@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         x:Class="DSPRE.Avalonia.Views.Pokemon.SpriteImportWizardView"
         x:DataType="vm:SpriteImportWizardViewModel"
         Title="Import wizard"
@@ -12,8 +13,8 @@
       <TextBlock Text="What do you want to change?" FontWeight="SemiBold"/>
       <RadioButton GroupName="mode" Content="Replace the image only" IsChecked="True" Click="ModeImage_Click"/>
       <RadioButton GroupName="mode" Content="Replace the palette only" Click="ModePalette_Click"/>
-      <RadioButton GroupName="mode" Content="Change full artwork (image and palette together)" Click="ModeFull_Click"/>
-      <RadioButton GroupName="mode" Content="Import a sprite sheet (back + front together)" Click="ModeSheet_Click"/>
+      <RadioButton GroupName="mode" Content="Image and palette" Click="ModeFull_Click"/>
+      <RadioButton GroupName="mode" Content="Sprite sheet" Click="ModeSheet_Click"/>
     </StackPanel>
 
     <StackPanel Spacing="8" IsVisible="{Binding ShowArtworkScope}">
@@ -46,11 +47,13 @@
 
     <StackPanel Spacing="8" IsVisible="{Binding ShowSheetScope}">
       <Border Height="1" Background="{DynamicResource Editor.Border}"/>
-      <TextBlock Text="One image with Back and Front (both animation frames of each) side by side." TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
-      <TextBlock Text="Which color?" FontWeight="SemiBold"/>
+      <StackPanel Orientation="Horizontal" Spacing="4">
+        <TextBlock Text="Colours" FontWeight="SemiBold"/>
+        <controls:HelpTip Text="One image with the back and front, both frames of each, side by side"/>
+      </StackPanel>
       <StackPanel Orientation="Horizontal" Spacing="12">
-        <RadioButton GroupName="sheetcolor" Content="Normal (the artwork itself)" IsChecked="True" Click="SheetColorNormal_Click"/>
-        <RadioButton GroupName="sheetcolor" Content="Shiny (colors only, from a shiny-colored sheet)" Click="SheetColorShiny_Click" IsVisible="{Binding !IsHgEngineActive}"/>
+        <RadioButton GroupName="sheetcolor" Content="Normal" IsChecked="True" Click="SheetColorNormal_Click"/>
+        <RadioButton GroupName="sheetcolor" Content="Shiny colours" Click="SheetColorShiny_Click" IsVisible="{Binding !IsHgEngineActive}"/>
       </StackPanel>
       <TextBlock Text="{Binding ExistingGender, StringFormat='Only {0} sprites exist for this species right now.'}"
                  IsVisible="{Binding GenderGapActive}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>

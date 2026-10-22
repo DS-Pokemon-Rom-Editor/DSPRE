@@ -77,13 +77,16 @@ namespace DSPRE.Avalonia.ViewModels.Text
             {
                 Folders.Add($"{RomInfo.ProjectName} (Rotom project)");
                 _files.Add((rotom, true));
-                StatusText = "The project's scripts are read and written with this database.";
+                FolderHelp = "The project's scripts are read and written with this database";
                 return;
             }
             Folders.Add($"{RomInfo.ProjectName} (scripts not converted to Rotom yet)");
             _files.Add((Path.Combine(DSPRE.ROMFiles.ScriptFile.CurrentRomDatabaseFolder(), "scrcmd_database.json"), false));
-            StatusText = "Rotom carries this database's commands over when the project's scripts are first opened.";
+            FolderHelp = "Rotom carries these commands over when the scripts are first opened";
         }
+
+        private string _folderHelp;
+        public string FolderHelp { get => _folderHelp; private set => Set(ref _folderHelp, value); }
 
         private (string Path, bool Rotom) Selected => HasSelection && SelectedIndex < _files.Count ? _files[SelectedIndex] : (null, false);
 
@@ -120,12 +123,9 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
             Refresh();
 
-            bool reload = await DialogHelper.AskYesNoAsync(
-                "Database replaced successfully.\n\n" +
-                "Do you want to reload and reparse all scripts now?\n\n" +
-                "Yes: Reload database and reparse all scripts immediately\n" +
-                "No: Changes will take effect on next ROM load",
-                "Reload database?");
+            bool reload = await DialogHelper.AskTwoWayAsync(
+                "Reparse every script with the new database now, or wait for the next ROM load?",
+                "Reload database?", "Reparse now", "Next load");
             if (reload)
             {
                 // The app's command list is built from the legacy copy with the Rotom project's names laid over it.
@@ -197,12 +197,12 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 {
                     SaveNotice.Show("Reparsed every script with this database.");
                 }
-                StatusText = "Reparse finished.";
+                StatusText = "";
             }
             catch (Exception ex)
             {
                 await DialogHelper.ShowErrorAsync($"Error reloading database: {ex.Message}", "Custom script command manager error");
-                StatusText = "Reparse failed.";
+                StatusText = "";
             }
             finally
             {
@@ -230,6 +230,14 @@ namespace DSPRE.Avalonia.ViewModels.Text
             {
                 PlainFiles.Copy(sourcePath, dest, overwrite: true);
                 SaveNotice.Exported(dest);
+            }
+            catch (DirectoryNotFoundException)
+            {
+                await DialogHelper.ShowErrorAsync($"That folder doesn't exist:\n{Path.GetDirectoryName(dest)}", "Custom script command manager error");
+            }
+            catch (UnauthorizedAccessException)
+            {
+                await DialogHelper.ShowErrorAsync($"That folder can't be written to:\n{Path.GetDirectoryName(dest)}", "Custom script command manager error");
             }
             catch (Exception ex)
             {

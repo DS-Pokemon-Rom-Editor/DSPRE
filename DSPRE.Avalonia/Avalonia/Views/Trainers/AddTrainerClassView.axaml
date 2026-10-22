@@ -47,9 +47,12 @@
       <ComboBox ItemsSource="{Binding SpriteChoices}" SelectedIndex="{Binding SpriteChoiceIndex}"
                 HorizontalAlignment="Stretch" MaxDropDownHeight="320"/>
 
-      <CheckBox Content="Give this class eye-contact music" IsChecked="{Binding AddMusic}" IsEnabled="{Binding CanAddMusic}" Margin="0,8,0,0"/>
-      <TextBlock Text="Eye-contact music needs the Trainer encounter music table patch."
-                 IsVisible="{Binding MusicNeedsPatch}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+      <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+        <CheckBox Content="Eye-contact music" IsChecked="{Binding AddMusic}" IsEnabled="{Binding CanAddMusic}"
+                  ToolTip.Tip="{Binding MusicHelp}" ToolTip.ShowOnDisabled="True"/>
+        <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Click="OpenMusicPatch_Click"
+                IsVisible="{Binding MusicNeedsPatch}"/>
+      </StackPanel>
       <StackPanel Spacing="2" IsEnabled="{Binding AddMusic}">
         <TextBlock Text="Eye contact music" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"
                    ToolTip.Tip="Plays when a trainer of this class spots the player."/>

@@ -145,7 +145,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 StatusText = "Error: " + ex.Message;
                 CrashReporter.LogHandled(ex);
-                await DialogHelper.ShowErrorAsync($"Failed to set up Building Editor:\n{ex.Message}", "Building editor error");
+                await DialogHelper.ShowErrorAsync($"Failed to set up Building editor:\n{ex.Message}", "Building editor error");
             }
         }
 
@@ -190,7 +190,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 bool wantsTextures = nsbmd.Models != null && nsbmd.Models.Any(m => m.Textures.Any(t => !string.IsNullOrEmpty(t.Texname)));
                 StatusText = !painted && !wantsTextures ? $"Building {index}, which uses no textures."
                     : !painted ? $"Building {index}, shown unpainted: pick a texture pack above to see its colours."
-                    : _texIndex == 0 && pack >= 0 ? $"Building {index}, painted from texture pack {pack}." : $"Building {index}.";
+                    : _texIndex == 0 && pack >= 0 ? $"Building {index}, painted from texture pack {pack}." : "";
             }
             catch (Exception ex)
             {

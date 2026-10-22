@@ -45,7 +45,7 @@ namespace DSPRE.Avalonia.Views.World
         {
             InitializeComponent();
             Loaded += OnLoadedSetup;
-            // Each tab offers its own tour the first time it is on screen; the Header tab shares the Header Editor's.
+            // Each tab offers its own tour the first time it is on screen; the Header tab shares the Header editor's.
             EditorTours.Attach(HeaderTabRoot, "HeaderEditorView");
             foreach (Control tab in new Control[] { MapEmbed, EventsEmbed, MatrixEmbed, AreaDataEmbed, ScriptsEmbed, LevelScriptsEmbed, TextEmbed })
                 EditorTours.Attach(tab, tab.GetType().Name);
@@ -117,15 +117,15 @@ namespace DSPRE.Avalonia.Views.World
                 if (editor != null) editors.Add((name, editor));
             }
 
-            Add("Header Editor", VM);
-            Add("Map Editor", MapVM);
-            Add("Matrix Editor", MatrixVM);
-            Add("Area Data Editor", AreaDataVM);
-            Add("Event Editor", EventVM);
-            Add("Script Editor", ScriptsVM);
-            Add("Level Script Editor", LevelScriptsVM);
-            Add("Text Editor", TextVM);
-            Add("Wild Encounters Editor", _encountersVm as IEditorWithUnsavedChanges);
+            Add("Header editor", VM);
+            Add("Map editor", MapVM);
+            Add("Matrix editor", MatrixVM);
+            Add("Area data editor", AreaDataVM);
+            Add("Event editor", EventVM);
+            Add("Script editor", ScriptsVM);
+            Add("Level script editor", LevelScriptsVM);
+            Add("Text editor", TextVM);
+            Add("Wild Pokémon editor", _encountersVm as IEditorWithUnsavedChanges);
             return editors;
         }
 
@@ -390,16 +390,11 @@ namespace DSPRE.Avalonia.Views.World
                 case WildEditorDPPtViewModel dppt: dppt.Detach(); break;
                 case WildEditorHGSSViewModel hgss: hgss.Detach(); break;
             }
+            // hg-engine owns encounter data; editing it here would be overwritten on its next build.
+            EncountersTab.IsVisible = !RomInfo.IsHGE;
             if (RomInfo.IsHGE)
             {
-                // hg-engine owns encounter data; editing it here would be overwritten on its next build.
-                EncountersTab.Content = new global::Avalonia.Controls.TextBlock
-                {
-                    Text = "hg-engine manages wild encounters. Edit them in your hg-engine project.",
-                    Margin = new global::Avalonia.Thickness(16),
-                    Opacity = 0.75,
-                    TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
-                };
+                EncountersTab.Content = null;
                 _encountersVm = null;
                 _encountersView = null;
                 _encountersEmbedded = true;

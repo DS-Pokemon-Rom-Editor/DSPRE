@@ -9,7 +9,7 @@ namespace DSPRE.ROMFiles
 {
     /// <summary>
     /// Keeps a Rotom project's script sources in step with binaries DSPRE writes directly.
-    /// The Script Editor compiles the whole project from <c>expanded/scripts</c>, so a source left
+    /// The Script editor compiles the whole project from <c>expanded/scripts</c>, so a source left
     /// describing the old binary would undo the write on the next compile. Every writer of a script
     /// or level-script binary reports it here, and only those files' sources are regenerated.
     /// </summary>

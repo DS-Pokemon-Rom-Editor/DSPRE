@@ -5,7 +5,7 @@ using System.Linq;
 namespace DSPRE.HgEngine
 {
     /// <summary>Resolves the real flag/enum names the linked checkout declares in
-    /// include/trainer_data.h, so the Trainer Editor never shows hardcoded vanilla labels.</summary>
+    /// include/trainer_data.h, so the Trainer editor never shows hardcoded vanilla labels.</summary>
     public static class HgEngineTrainerFieldSchema
     {
         private const string HeaderRelPath = "include/trainer_data.h";

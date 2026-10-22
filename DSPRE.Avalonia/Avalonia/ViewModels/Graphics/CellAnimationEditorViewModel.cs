@@ -1042,8 +1042,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         new PoketchScreen.Motion(degrees, scaleX, scaleY, sx, sy), _app.BgLayer), DsBgScreen.Width, DsBgScreen.Height);
                     OnPropertyChanged(nameof(PlayingFrame));
                     if (_app.SpriteSlots == null && string.IsNullOrEmpty(StatusText))
-                        StatusText = "Where this screen puts its sprite is in the game's code, so the frame "
-                                   + "is drawn in the middle.";
+                        StatusText = "Drawn in the middle; the game's code sets where";
                     return;
                 }
 

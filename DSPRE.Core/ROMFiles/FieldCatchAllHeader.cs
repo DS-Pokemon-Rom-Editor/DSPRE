@@ -11,7 +11,6 @@ namespace DSPRE.ROMFiles
 
         /// <summary>What to tell somebody who opens it.</summary>
         public const string Explanation =
-            "This header covers every part of the map nobody walks on, so there is nothing here to edit. "
-            + "Pick a header for a real place to see its map and events.";
+            "Unused map squares, nothing to edit";
     }
 }

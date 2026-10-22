@@ -15,7 +15,7 @@
     </StackPanel>
 
     <StackPanel Spacing="8">
-      <TextBlock Text="Copy the frame layout of an appearance that fits this image." TextWrapping="Wrap"/>
+      <TextBlock Text="Pick a frame layout" TextWrapping="Wrap"/>
       <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}"
                 HorizontalAlignment="Stretch"/>
 

@@ -16,17 +16,15 @@
     <controls:EditorToolbar x:Name="QueryPanel">
         <ComboBox Width="170" ItemsSource="{Binding Fields}" SelectedIndex="{Binding FieldIndex}"/>
         <ComboBox Width="150" ItemsSource="{Binding Operators}" SelectedIndex="{Binding OperatorIndex}"/>
-        <TextBox x:Name="ValueBox" Width="180" Text="{Binding ValueText}" PlaceholderText="Value to search…"/>
+        <TextBox x:Name="ValueBox" Width="180" Text="{Binding ValueText}" PlaceholderText="Value"/>
         <CheckBox Content="Auto" IsChecked="{Binding AutoSearch}" ToolTip.Tip="Search as you type"/>
         <Button Content="Search" controls:Icon.Key="lens" Click="Search_Click"/>
     </controls:EditorToolbar>
 
   <DockPanel Margin="10">
     <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" Text="{Binding StatusText}" TextWrapping="Wrap"/>
-    <TextBlock Foreground="{DynamicResource Editor.Subtle}" DockPanel.Dock="Bottom" Margin="0,8,0,0"
-               Text="Double-click a result to go to it."/>
 
-    <ListBox x:Name="ResultList" Margin="0,8,0,0"
+    <ListBox x:Name="ResultList" Margin="0,8,0,0" ToolTip.Tip="Double-click a result to open it"
              ItemsSource="{Binding Results}"
              SelectedIndex="{Binding SelectedResultIndex}"
              DoubleTapped="Result_DoubleTapped"/>

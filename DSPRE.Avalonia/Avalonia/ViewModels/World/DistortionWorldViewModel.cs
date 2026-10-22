@@ -1499,7 +1499,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             if (chosen.IsGround)
             {
-                PaintedGroundWarning = "Map permissions are saved from the Map Editor.";
+                PaintedGroundWarning = "Map permissions are saved from the Map editor.";
             }
             else
             {

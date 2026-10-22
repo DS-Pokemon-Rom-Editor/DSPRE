@@ -18,10 +18,7 @@
       <ComboBox ItemsSource="{Binding SectionNames}" SelectedIndex="{Binding SectionIndex}" IsVisible="{Binding HasSections}" MinWidth="180"/>
     </StackPanel>
 
-    <TextBlock DockPanel.Dock="Top" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,6" TextWrapping="Wrap"
-               Text="{Binding Hint}"/>
-
-    <DataGrid x:Name="Grid" ItemsSource="{Binding Entries}"
+    <DataGrid x:Name="Grid" ItemsSource="{Binding Entries}" ToolTip.Tip="{Binding Hint}"
               AutoGenerateColumns="False"
               IsReadOnly="True"
               GridLinesVisibility="Horizontal"

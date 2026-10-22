@@ -167,8 +167,8 @@
                   <CheckBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Content="Play the trainer intro" IsChecked="{Binding PlayTrainerIntro}"
                             IsEnabled="{Binding CanChooseIntro}"
                             ToolTip.Tip="Off plays a mid-battle send-out."/>
-                  <CheckBox Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Content="Their Pokémon slides in like a wild one" IsChecked="{Binding TrainerSlideIn}"
-                            IsEnabled="{Binding CanSlideIn}"/>
+                  <CheckBox Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Content="Wild-style entry" IsChecked="{Binding TrainerSlideIn}"
+                            IsEnabled="{Binding CanSlideIn}" ToolTip.Tip="Their Pokémon slides in like a wild one"/>
                   <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" Spacing="8">
                     <CheckBox Content="Party balls" IsChecked="{Binding ShowPartyBalls}" IsEnabled="{Binding CanShowPartyBalls}" VerticalAlignment="Center"
                               ToolTip.Tip="Trainer battles only."/>
@@ -265,8 +265,7 @@
                                  ToolTip.Tip="Back-sprite height for the alternate form (both genders). Signed −128…127."/>
                       <NumericUpDown Grid.Column="2" Value="{Binding FormBackHeight}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
                     </Grid>
-                    <TextBlock Text="For the form picked in Sprites, both genders."
-                               FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+                    <controls:HelpTip Text="For the form picked in Sprites, both genders" HorizontalAlignment="Left"/>
                   </StackPanel>
 
                   <Grid ColumnDefinitions="160,10,150">
@@ -407,8 +406,7 @@
                        is out of scope here). -->
                   <Separator/>
                   <TextBlock Text="{Binding ProgramScriptHeader}" FontWeight="SemiBold"/>
-                  <TextBlock Text="Shared by every Pokémon that uses this animation."
-                             FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+                  <TextBlock Text="Shared by all Pokémon using it" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
                   <StackPanel Orientation="Horizontal" Spacing="6">
                     <Button Content="Add command" controls:Icon.Key="addIcon" Click="AddProgramCmd_Click"/>
                     <Button Content="Save script" controls:Icon.Key="saveButton" Click="SaveProgramScript_Click" IsEnabled="{Binding ScriptDirty}"/>

@@ -49,15 +49,15 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public ScriptCommandGuideViewModel(bool isAnimation)
         {
             Title = isAnimation ? "Move animation commands" : "Move effect-sequence commands";
-            Hint = "Every command usable in this script's text editor, with its arguments and what it does. Type a command's arguments as label=value (e.g. slot=0); unlabeled numbers just fill whichever argument slots are left, in order.";
+            Hint = "Type arguments as label=value, such as slot=0; unlabelled numbers fill the remaining arguments in order";
             _all = new List<GuideEntry>(isAnimation ? ScriptCommandGuide.ForWest() : ScriptCommandGuide.ForWazaSeq());
             Refresh();
         }
 
         /// <summary>The event-script command database for the loaded ROM: commands, movements and comparison operators.</summary>
         public static ScriptCommandGuideViewModel ForEventScripts() => new ScriptCommandGuideViewModel(
-            "Script commands",
-            "The commands, movements and comparison operators of the loaded ROM's script command database, as the script editor reads them.",
+            "Script command database",
+            "Commands, movements and comparison operators, as the script editor reads them",
             true);
 
         private ScriptCommandGuideViewModel(string title, string hint, bool eventScript)

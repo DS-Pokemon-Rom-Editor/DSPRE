@@ -75,8 +75,8 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             set { if (Set(ref _globalScope, value)) { OnPropertyChanged(nameof(ScopeText)); ReloadEntries(); } }
         }
         public string ScopeText => _globalScope
-            ? "Global: applies to every ROM you open on this machine."
-            : "This project: saved in the current ROM's project folder.";
+            ? "Every ROM you open on this machine"
+            : "Saved in this ROM's project folder";
 
         private bool _dirty;
         public bool HasUnsavedChanges { get => _dirty; private set => Set(ref _dirty, value); }
@@ -85,7 +85,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         void global::DSPRE.Editors.IEditorWithUnsavedChanges.SaveChanges() => Save();
         void global::DSPRE.Editors.IEditorWithUnsavedChanges.DiscardChanges() => Discard();
 
-        private string _status = "Pick a category to rename its entries, or add entries a ROM hack introduces.";
+        private string _status = "";
         public string StatusText { get => _status; set => Set(ref _status, value); }
 
         public bool CanAddEntry
@@ -104,7 +104,10 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         public LabelEditorViewModel()
         {
-            _all.AddRange(LabelStore.Categories.OrderBy(c => c.Group).ThenBy(c => c.DisplayName));
+            // With a ROM open, only its game's categories.
+            _all.AddRange(LabelStore.Categories
+                .Where(c => c.Games == null || RomInfo.GameFamily == RomInfo.GameFamilies.NULL || c.Games.Contains(RomInfo.GameFamily))
+                .OrderBy(c => c.Group).ThenBy(c => c.DisplayName));
             foreach (string g in _all.Select(c => c.Group).Distinct())
                 GroupNames.Add(g);
             if (GroupNames.Count > 0) SelectedGroupIndex = 0;
@@ -121,7 +124,10 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 foreach (LabelCategory c in _all.Where(c => c.Group == group))
                 {
                     _keys.Add(c.Key);
-                    CategoryNames.Add(c.DisplayName);
+                    // One game's categories only, so its game suffix says nothing.
+                    bool oneGame = c.Games != null && RomInfo.GameFamily != RomInfo.GameFamilies.NULL;
+                    int cut = oneGame ? c.DisplayName.LastIndexOf(" (", StringComparison.Ordinal) : -1;
+                    CategoryNames.Add(cut > 0 ? c.DisplayName.Substring(0, cut) : c.DisplayName);
                 }
             }
             SelectedCategoryIndex = _keys.Count > 0 ? 0 : -1;
@@ -164,7 +170,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             Entries.Add(MakeRow(cat, index));
             Edited();
             OnPropertyChanged(nameof(CanAddEntry));
-            StatusText = $"Added entry {index} to “{cat.DisplayName}”. Rename it, then Save.";
+            StatusText = $"Added entry {index}.";
         }
 
         public void ResetCategory()
@@ -203,11 +209,17 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         public void Save()
         {
-            LabelStore.CommitDraft();
+            string error = LabelStore.CommitDraft();
             AppEvents.RaiseLabelsChanged();   // refresh every open editor's dropdowns
+            if (error != null)
+            {
+                HasUnsavedChanges = LabelStore.HasDraft;
+                _ = DialogHelper.ShowErrorAsync("The labels weren't saved:\n" + error, "Dropdown labels error");
+                return;
+            }
             HasUnsavedChanges = false;
             ResetUndo();
-            StatusText = $"Saved labels.";
+            StatusText = "";
         }
 
         /// <summary>Throws away unsaved edits (the draft), called when the window closes without saving.</summary>

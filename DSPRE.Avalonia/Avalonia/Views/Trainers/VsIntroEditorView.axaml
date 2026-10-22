@@ -271,7 +271,7 @@
               </ComboBox>
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="{Binding ClassNote}" Classes="subtle" VerticalAlignment="Center"/>
-                <Button Content="Open in Patch Toolbox" controls:Icon.Key="OpenLink" Click="MakeClassRoom_Click" IsVisible="{Binding CanMakeClassRoom}"
+                <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Click="MakeClassRoom_Click" IsVisible="{Binding CanMakeClassRoom}"
                         ToolTip.Tip="The &quot;Expand the VS intro class table&quot; patch gives room for up to 255 classes"/>
               </StackPanel>
               <TextBlock Text="Music" Classes="section"/>
@@ -376,7 +376,7 @@
                   <controls:HelpTip Text="This class's intro speeds in frames. 0 keeps the game's value."/>
                 </StackPanel>
                 <TextBlock Text="{Binding TimingNote}" IsVisible="{Binding !HasTimings}" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
-                <Button Content="Open in Patch Toolbox" controls:Icon.Key="OpenLink" Click="InstallTimings_Click" IsVisible="{Binding CanInstallTimings}" HorizontalAlignment="Left"/>
+                <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Click="InstallTimings_Click" IsVisible="{Binding CanInstallTimings}" HorizontalAlignment="Left"/>
                 <ItemsControl ItemsSource="{Binding TimingRows}" IsVisible="{Binding ShowTimingRows}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:TimingRow">

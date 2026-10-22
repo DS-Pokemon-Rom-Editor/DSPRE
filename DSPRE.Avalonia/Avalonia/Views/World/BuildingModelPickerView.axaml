@@ -24,7 +24,7 @@
 
     <Grid ColumnDefinitions="260,*">
       <DockPanel Grid.Column="0" Margin="0,0,8,0">
-        <TextBox x:Name="SearchBox" DockPanel.Dock="Top" Watermark="Search by number or name" Text="{Binding Search}" Margin="0,0,0,6"/>
+        <TextBox x:Name="SearchBox" DockPanel.Dock="Top" PlaceholderText="Search by number or name" Text="{Binding Search}" Margin="0,0,0,6"/>
         <ListBox x:Name="ModelList" ItemsSource="{Binding Shown}" SelectedItem="{Binding Selected}" DoubleTapped="List_DoubleTapped"/>
       </DockPanel>
       <Border Grid.Column="1" x:Name="GlHost" Background="#1F1F23" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">

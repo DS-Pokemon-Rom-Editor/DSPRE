@@ -173,7 +173,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             if (HasUnsavedChanges) { StatusText = "Save or discard this test first."; return; }
             string from = _template ?? _selected;
-            if (from == null) { StatusText = "Pick a test to start the new one from."; return; }
+            if (from == null) { StatusText = "Pick a test to start from."; return; }
             string rel = NewName.Trim().Replace('\\', '/');
             if (rel.Length > 0 && !rel.EndsWith(".c", StringComparison.OrdinalIgnoreCase)) rel += ".c";
             string start;

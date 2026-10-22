@@ -28,6 +28,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         /// <summary>Whether the eye-contact music table has room for the class; without its patch the option is off.</summary>
         public bool CanAddMusic { get; init; } = true;
         public bool MusicNeedsPatch => !CanAddMusic;
+        public string MusicHelp => MusicNeedsPatch ? "Needs the Trainer encounter music table patch" : null;
 
         private string _className = "";
         public string ClassName { get => _className; set => Set(ref _className, value); }

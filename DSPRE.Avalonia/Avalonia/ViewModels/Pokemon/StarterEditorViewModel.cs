@@ -88,7 +88,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public ObservableCollection<string> ItemNames { get; } = new();
 
         // ── Title ─────────────────────────────────────────────────────────────
-        private string _title = "Starter Pokémon Editor";
+        private string _title = "Starter Pokémon editor";
         public string Title { get => _title; private set => Set(ref _title, value); }
 
         // ── Starter species / held item ──────────────────────────────────────
@@ -144,7 +144,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool IsLevelSupported => _command != null;
 
         /// <summary>Where the starter is handed over, so it is clear what the editor is about to change.</summary>
-        public string CommandLocation => _command == null ? null : _command.Where;
+        public string CommandLocation => string.IsNullOrEmpty(_command?.Where) ? null : char.ToUpperInvariant(_command.Where[0]) + _command.Where.Substring(1);
         public bool HasCommandLocation => _command != null;
 
         /// <summary>HGSS keeps its starters in the ARM9, so there is no script command to point at.</summary>
@@ -373,7 +373,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
 
             // With the sources in front of us, the held item and the level go through the script the
-            // same way the Script Editor saves one: change the line, compile the project. Writing the
+            // same way the Script editor saves one: change the line, compile the project. Writing the
             // bytes instead would be undone the next time that script is compiled.
             bool throughTheScript = _command != null;
             if (IsHeldItemSupported && !throughTheScript)

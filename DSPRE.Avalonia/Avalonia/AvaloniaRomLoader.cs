@@ -31,7 +31,7 @@ namespace DSPRE.Avalonia
             int existing = DSUtils.GetFolderType(workDir);
             if (existing == -1)   // not already extracted → unpack
             {
-                AppLogger.Info($"Unpacking {ndsPath} → {workDir}");
+                AppLogger.Info($"Unpacking {ndsPath} to {workDir}");
                 if (!DSUtils.UnpackRom(ndsPath, workDir)) { error = "Unpacking the ROM failed."; return false; }
             }
             else if (reExtract)

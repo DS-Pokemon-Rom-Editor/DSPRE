@@ -19,7 +19,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         // ── Validation tab ─────────────────────────────────────────────────────
         public ObservableCollection<ValidationIssue> Issues { get; } = new();
-        private string _validationStatus = "Run validation to scan headers, evolutions and trainers for broken references.";
+        private string _validationStatus = "";
         public string ValidationStatus { get => _validationStatus; private set => Set(ref _validationStatus, value); }
 
         private bool _isRunning;
@@ -55,7 +55,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private decimal _lookupId;
         public decimal LookupId { get => _lookupId; set => Set(ref _lookupId, value); }
 
-        private string _findStatus = "Pick a file type and id, then Find which headers reference it.";
+        private string _findStatus = "";
         public string FindStatus { get => _findStatus; private set => Set(ref _findStatus, value); }
 
         public ProjectChecksViewModel()
@@ -73,7 +73,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 foreach (ushort h in headers) FindResults.Add($"Header {h}");
                 FindStatus = headers.Count == 0
                     ? $"No header references {kind} {(int)_lookupId}."
-                    : $"{headers.Count} header(s) reference {kind} {(int)_lookupId}.";
+                    : $"{headers.Count} {(headers.Count == 1 ? "header references" : "headers reference")} {kind} {(int)_lookupId}.";
             }
             catch (Exception ex) { FindStatus = "Lookup failed: " + ex.Message; }
         }

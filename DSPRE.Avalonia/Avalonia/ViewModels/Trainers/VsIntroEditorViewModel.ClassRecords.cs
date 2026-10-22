@@ -598,7 +598,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
             SaveNotice.Saved(UnsavedChangesDescription);
             AppEvents.RaiseClassIntrosSaved();
-            StatusText = "Saved. Save the ROM to keep the changes.";
+            StatusText = "Saved.";
             return true;
         }
 

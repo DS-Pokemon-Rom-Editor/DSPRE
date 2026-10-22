@@ -13,7 +13,7 @@ namespace DSPRE.ROMFiles
         public const int EggFile = 501, ManaphyEggFile = 502;
         private const int ManaphySpecies = 490, EggEntry = 494;
 
-        /// <summary>Entries in the species name bank; the Pokémon Editor's form entries follow them.</summary>
+        /// <summary>Entries in the species name bank; the Pokémon editor's form entries follow them.</summary>
         private const int NameBankEntries = 496;
 
         public sealed class Icon
@@ -22,7 +22,7 @@ namespace DSPRE.ROMFiles
             public int Species;       // 0 for the egg
             public string Form;       // null for a species' own icon
             public bool IsEgg;
-            public int EditorId;      // the Pokémon Editor entry that owns this icon
+            public int EditorId;      // the Pokémon editor entry that owns this icon
         }
 
         private static readonly (int First, int Species, string[] Forms, GameFamilies? OnlyFrom)[] FormRuns =
@@ -70,7 +70,7 @@ namespace DSPRE.ROMFiles
             return null;
         }
 
-        /// <summary>A form with a Pokémon Editor entry of its own opens that entry, any other its species.</summary>
+        /// <summary>A form with a Pokémon editor entry of its own opens that entry, any other its species.</summary>
         private static int EditorEntry(int file, int species)
         {
             PokeDatabase.PersonalData.PersonalExtraFiles[] extras = PokeDatabase.PersonalData.ExtraFiles;

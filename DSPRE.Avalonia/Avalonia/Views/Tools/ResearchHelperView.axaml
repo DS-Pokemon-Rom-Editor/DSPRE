@@ -31,7 +31,6 @@
       <!-- ── Tab 1: Scripts ──────────────────────────────────────────────── -->
       <TabItem Header="Scripts">
         <DockPanel Margin="4">
-          <TextBlock DockPanel.Dock="Top" Text="All script files and their content counts" Margin="0,0,0,4" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
           <DataGrid ItemsSource="{Binding ScriptStats}"
                     AutoGenerateColumns="False"
                     IsReadOnly="True"
@@ -53,7 +52,6 @@
       <!-- ── Tab 2: Level Scripts ────────────────────────────────────────── -->
       <TabItem Header="Level scripts">
         <DockPanel Margin="4">
-          <TextBlock DockPanel.Dock="Top" Text="Level script files and trigger type counts" Margin="0,0,0,4" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
           <DataGrid ItemsSource="{Binding LevelScriptStats}"
                     AutoGenerateColumns="False"
                     IsReadOnly="True"

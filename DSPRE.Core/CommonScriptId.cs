@@ -21,7 +21,7 @@ namespace DSPRE
             public string Name;
 
             // 0-based, exactly as the game's "ID - lowerBound" gives it. DSPRE's own script numbering
-            // (ScriptCommandContainer.manualUserID, what the Script Editor shows as "Script 1") is 1-based,
+            // (ScriptCommandContainer.manualUserID, what the Script editor shows as "Script 1") is 1-based,
             // so use ManualUserId for anything shown to the user or matched against a real ScriptFile.
             public int LocalScriptId;
             public int ManualUserId => LocalScriptId + 1;

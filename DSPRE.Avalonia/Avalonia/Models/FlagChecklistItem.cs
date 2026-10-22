@@ -2,7 +2,7 @@ using System.ComponentModel;
 
 namespace DSPRE.Avalonia.Models
 {
-    /// <summary>Right-hand flag checklist row for the Trainer Flag Bulk Editor (By Trainer mode).
+    /// <summary>Right-hand flag checklist row for the Trainer flag bulk editor (By Trainer mode).
     /// Purely display state driven by the ViewModel: <see cref="IsChecked"/> is bound one-way and
     /// updated via <see cref="SetChecked"/>; the actual toggle-on-click logic lives in the ViewModel,
     /// wired through the view's Click handler rather than a two-way binding, since the desired click
@@ -14,6 +14,8 @@ namespace DSPRE.Avalonia.Models
 
         public int Index { get; init; }
         public string Name { get; init; }
+        /// <summary>Shown above this row when it starts a group.</summary>
+        public string Heading { get; init; }
         /// <summary>The move a machine row teaches, or 0.</summary>
         public int Move { get; init; }
 

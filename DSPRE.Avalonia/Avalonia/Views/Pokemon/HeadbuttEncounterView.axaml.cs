@@ -161,6 +161,11 @@ namespace DSPRE.Avalonia.Views.Pokemon
             if (best >= 0) VM.SelectedTreeIndex = best;
         }
 
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscardAsync(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
+        }
+
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
         private async void FillMissing_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.FillMissingAsync(); }
         private void AddTree_Click(object sender, RoutedEventArgs e) => VM?.AddTree();

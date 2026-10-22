@@ -35,7 +35,7 @@ namespace DSPRE.Avalonia.Views.Graphics
                 await DialogHelper.ShowInfoAsync(err, "Save");
                 return;
             }
-            vm.StatusText = "Saved. Save the ROM to keep it.";
+            vm.StatusText = "Saved.";
         }
 
         // ── painting ───────────────────────────────────────────────────────────────────────────────

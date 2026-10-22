@@ -16,17 +16,17 @@ namespace DSPRE
     {
         public static readonly Dictionary<MapHeader.SearchableFields, string> SearchableFields = new Dictionary<MapHeader.SearchableFields, string>()
         {
-            [MapHeader.SearchableFields.AreaDataID] = "Area Data (ID)",
-            [MapHeader.SearchableFields.CameraAngleID] = "Camera Angle (ID)",
-            [MapHeader.SearchableFields.EventFileID] = "Event File (ID)",
-            [MapHeader.SearchableFields.InternalName] = "Internal Name",
-            [MapHeader.SearchableFields.LevelScriptID] = "Level Script (ID)",
-            [MapHeader.SearchableFields.MatrixID] = "Matrix (ID)",
-            [MapHeader.SearchableFields.MusicDayID] = "Music Day (ID)",
-            [MapHeader.SearchableFields.MusicNightID] = "Music Night (ID)",
-            [MapHeader.SearchableFields.ScriptFileID] = "Script File (ID)",
-            [MapHeader.SearchableFields.TextArchiveID] = "Text Archive (ID)",
-            [MapHeader.SearchableFields.WeatherID] = "Weather (ID)"
+            [MapHeader.SearchableFields.AreaDataID] = "Area data",
+            [MapHeader.SearchableFields.CameraAngleID] = "Camera angle",
+            [MapHeader.SearchableFields.EventFileID] = "Event file",
+            [MapHeader.SearchableFields.InternalName] = "Internal name",
+            [MapHeader.SearchableFields.LevelScriptID] = "Level script",
+            [MapHeader.SearchableFields.MatrixID] = "Matrix",
+            [MapHeader.SearchableFields.MusicDayID] = "Music (day)",
+            [MapHeader.SearchableFields.MusicNightID] = "Music (night)",
+            [MapHeader.SearchableFields.ScriptFileID] = "Script file",
+            [MapHeader.SearchableFields.TextArchiveID] = "Text archive",
+            [MapHeader.SearchableFields.WeatherID] = "Weather"
         };
 
         public enum NumOperators : byte
@@ -121,12 +121,8 @@ namespace DSPRE
                     }
                     break;
                 default:
-                    string[] fieldSplit = SearchableFields[(MapHeader.SearchableFields)fieldToSearch].Split();
-
-                    fieldSplit[0] = fieldSplit[0].ToLower();
-                    fieldSplit[fieldSplit.Length - 1] = fieldSplit[fieldSplit.Length - 1].Replace("(", "").Replace(")", ""); //Remove ( and ) from string
-
-                    PropertyInfo property = typeof(MapHeader).GetProperty(String.Join("", fieldSplit));
+                    // Each searchable field is named after the MapHeader property it reads.
+                    PropertyInfo property = typeof(MapHeader).GetProperty(((MapHeader.SearchableFields)fieldToSearch).ToString());
                     ushort numToSearch;
 
                     try

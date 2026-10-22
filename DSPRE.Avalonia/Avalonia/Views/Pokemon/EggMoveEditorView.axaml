@@ -35,7 +35,7 @@
 		<StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,6">
 		  <Grid ColumnDefinitions="*,Auto">
 			<TextBox Grid.Column="0" Text="{Binding SearchText}" PlaceholderText="Search Pokémon" KeyDown="Search_KeyDown"/>
-			<Button  Grid.Column="1" controls:Icon.Key="lens" Margin="4,0,0,0" Click="Search_Click"/>
+			<Button  Grid.Column="1" controls:Icon.Key="lens" Margin="4,0,0,0" Click="Search_Click" ToolTip.Tip="Search"/>
 		  </Grid>
 		  <ListBox ItemsSource="{Binding SearchResults}"
 				   SelectedIndex="{Binding SelectedSearchIndex}"
@@ -48,7 +48,7 @@
 		  <Grid ColumnDefinitions="*,*">
 			<controls:FusionAutoCompleteBox Grid.Column="0" Grid.ColumnSpan="2" ItemsSource="{Binding MonNames}"
 					  SelectedIndex="{Binding CbMonIndex}" Margin="0,0,0,4"
-					  PlaceholderText="Pick a Pokémon for the buttons below"/>
+					  PlaceholderText="Pokémon"/>
 		  </Grid>
 		  <TextBlock Text="{Binding MonStatusText}" FontSize="12" TextWrapping="Wrap"/>
 		  <StackPanel Orientation="Horizontal" Spacing="4">
@@ -81,12 +81,15 @@
 			<TextBlock Text="{Binding MoveIdText}"    FontSize="12"/>
 		  </StackPanel>
 		  <controls:FusionAutoCompleteBox ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding CbMoveIndex}"
-					PlaceholderText="Pick a move for the buttons below"/>
+					PlaceholderText="Move"/>
 		  <TextBlock Text="{Binding MoveStatusText}" FontSize="12" TextWrapping="Wrap"/>
 		  <StackPanel Orientation="Horizontal" Spacing="4">
-			<Button Content="Add" controls:Icon.Key="addIcon"     IsEnabled="{Binding CanAddMove}"     Click="AddMove_Click"/>
-			<Button Content="Replace" IsEnabled="{Binding CanReplaceMove}" Click="ReplaceMove_Click"/>
-			<Button Content="Delete" controls:Icon.Key="deleteIcon"  IsEnabled="{Binding CanDeleteMove}"  Click="DeleteMove_Click"/>
+			<Button Content="Add" controls:Icon.Key="addIcon"     IsEnabled="{Binding CanAddMove}"     Click="AddMove_Click"
+					ToolTip.Tip="{Binding MoveButtonsHelp}" ToolTip.ShowOnDisabled="True"/>
+			<Button Content="Replace" IsEnabled="{Binding CanReplaceMove}" Click="ReplaceMove_Click"
+					ToolTip.Tip="{Binding MoveButtonsHelp}" ToolTip.ShowOnDisabled="True"/>
+			<Button Content="Delete" controls:Icon.Key="deleteIcon"  IsEnabled="{Binding CanDeleteMove}"  Click="DeleteMove_Click"
+					ToolTip.Tip="{Binding MoveButtonsHelp}" ToolTip.ShowOnDisabled="True"/>
 		  </StackPanel>
 		</StackPanel>
 

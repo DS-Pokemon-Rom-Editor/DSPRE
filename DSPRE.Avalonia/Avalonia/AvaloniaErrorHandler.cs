@@ -30,6 +30,20 @@ namespace DSPRE.Avalonia
             Report(e.Exception);
         }
 
+        /// <summary>
+        /// The failure itself: Avalonia raises routed-event handlers by reflection, so a handler's exception arrives
+        /// wrapped, and its message would only say that a target threw.
+        /// </summary>
+        private static Exception Cause(Exception ex)
+        {
+            while (ex is System.Reflection.TargetInvocationException || (ex is AggregateException agg && agg.InnerExceptions.Count == 1))
+            {
+                if (ex.InnerException == null) break;
+                ex = ex.InnerException;
+            }
+            return ex;
+        }
+
         private static async void Report(Exception ex)
         {
             if (_showing) return;     // an error dialog is already up; don't stack more on top
@@ -39,7 +53,7 @@ namespace DSPRE.Avalonia
                 string path = CrashReporter.LogHandled(ex);
                 await DialogHelper.ShowErrorAsync(
                     "An unexpected error occurred, but the app is still running and your other open " +
-                    "editors are unaffected.\n\n" + (ex?.Message ?? "Unknown error.") +
+                    "editors are unaffected.\n\n" + (Cause(ex)?.Message ?? "Unknown error.") +
                     (path != null ? "\n\nA detailed report was saved to:\n" + path : ""),
                     "Unexpected error",
                     ex?.ToString());

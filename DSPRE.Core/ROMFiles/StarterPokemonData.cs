@@ -505,7 +505,7 @@ namespace DSPRE.ROMFiles
 
         /// <summary>
         /// Rotom-format projects (<see cref="RomInfo.HasRotomProject"/>) keep a decompiled <c>.rotom</c> text
-        /// source per script file (<c>expanded/scripts/&lt;id&gt;.rotom</c>) that the Script Editor reads
+        /// source per script file (<c>expanded/scripts/&lt;id&gt;.rotom</c>) that the Script editor reads
         /// directly off disk, it is only ever decompiled from the binary ONCE, the very first time the
         /// project has no <c>.rotom</c> files at all, and never reconciled against the binary again after
         /// that. Since <see cref="PatchRivalAndTagBattleScripts"/>/<see cref="SetHeldItem"/> only touch the
@@ -520,7 +520,7 @@ namespace DSPRE.ROMFiles
         /// blocked waiting for this call to return. Callers must `await` this from an async context (or fire
         /// it in the background) rather than block on it, see <see cref="StarterEditorViewModel"/>'s
         /// SaveChanges, which runs it after the synchronous save returns so the UI never freezes.
-        /// Best-effort throughout: a failure here only affects the Script Editor's display / future
+        /// Best-effort throughout: a failure here only affects the Script editor's display / future
         /// recompiles, not the ROM data itself (already correctly patched by the time this runs).
         /// </summary>
         public static Task RefreshRotomSourcesAsync(IEnumerable<int> fileIds)

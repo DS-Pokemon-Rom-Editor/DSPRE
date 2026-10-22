@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 namespace DSPRE.Avalonia
 {
     /// <summary>
-    /// Sends an editor that needs a code patch to that patch in the ROM Patch Toolbox. Editors never install a patch
+    /// Sends an editor that needs a code patch to that patch in the ROM patch toolbox. Editors never install a patch
     /// themselves: the toolbox entry says what it changes, what it backs up and that it can't be removed, and asks
     /// first. Editors listen for the patch state changing and pick the patch up once it is applied.
     /// </summary>
@@ -17,9 +17,9 @@ namespace DSPRE.Avalonia
         {
             string patchTitle = PatchToolboxLogic.PatchTitles.TryGetValue(key, out string named) ? named : key;
             bool open = await DialogHelper.AskTwoWayAsync(
-                $"{need} needs the \"{patchTitle}\" patch. It changes the game's code, so it is applied from the ROM Patch Toolbox, "
+                $"{need} needs the \"{patchTitle}\" patch. It changes the game's code, so it is applied from the ROM patch toolbox, "
                 + "where its notes say what it changes and what it backs up. Come back here once it is applied.",
-                title, "Open in Patch Toolbox", "Cancel");
+                title, "Open in ROM patch toolbox", "Cancel");
             if (open) AvaloniaEditorLauncher.OpenPatchToolboxAt(key);
         }
     }

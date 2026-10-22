@@ -350,7 +350,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     step.Remove(Archive, last);
                     if (config) step.Remove(DirNames.BuildingConfigFiles, last);
                 });
-                StatusText = $"Removed texture pack {last}.";
             }
             catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't remove pack:\n{ex.Message}", "Map & building textures error"); }
         }

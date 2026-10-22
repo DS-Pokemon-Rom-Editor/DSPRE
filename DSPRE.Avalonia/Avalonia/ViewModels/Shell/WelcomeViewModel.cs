@@ -85,7 +85,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             {
                 Title = "Power tools",
                 Body =
-                    "• The ROM Patch Toolbox applies binary patches such as ARM9 expansion and dynamic " +
+                    "• The ROM patch toolbox applies binary patches such as ARM9 expansion and dynamic " +
                     "headers. These modify the ROM itself, so back up your project first!\n" +
                     "• Validation & Where-Used scans headers for broken references and finds every place " +
                     "a matrix, script or event file is used.\n" +

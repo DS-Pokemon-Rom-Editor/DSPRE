@@ -135,7 +135,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         }
 
         /// <summary>
-        /// Opens this cry in the Audio Editor, where saving it out and putting a new one in live alongside
+        /// Opens this cry in the Audio editor, where saving it out and putting a new one in live alongside
         /// every other sound in the ROM rather than being duplicated here.
         /// </summary>
         private void EditCry_Click(object sender, RoutedEventArgs e)

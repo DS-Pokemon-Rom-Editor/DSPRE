@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 namespace DSPRE.Avalonia.Models
 {
     /// <summary>
-    /// Node types for the Header Editor's location-grouped sidebar tree. <see cref="IsExpanded"/>
+    /// Node types for the Header editor's location-grouped sidebar tree. <see cref="IsExpanded"/>
     /// notifies so the ViewModel can drive folder expansion and visibility (Expand/Collapse All,
     /// search, initial selection); display data is set when the tree is (re)built.
     /// </summary>

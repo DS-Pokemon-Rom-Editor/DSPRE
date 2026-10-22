@@ -220,8 +220,7 @@
                       ToolTip.Tip="Take the shiny colours from a shiny sheet."/>
               <Button Classes="sprite-btn" Content="Export both…" controls:Icon.Key="export" Click="ExportShinyFullSheet_Click" IsVisible="{Binding CanUseFullSheet}"/>
             </StackPanel>
-            <TextBlock Text="Shiny colours come from the male back sprite."
-                       IsVisible="{Binding IsHgEngineSourced}" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+            <controls:HelpTip Text="Shiny colours come from the male back sprite" IsVisible="{Binding IsHgEngineSourced}" HorizontalAlignment="Left"/>
             <Grid ColumnDefinitions="*,8,*,8,*,8,*">
               <StackPanel Grid.Column="0" Spacing="4" HorizontalAlignment="Center">
                 <TextBlock Classes="header" Text="Female back (shiny)"/>

@@ -98,7 +98,7 @@
             <ComboBox ItemsSource="{Binding ReflectTypeOptions}" SelectedIndex="{Binding ReflectTypeIndex}" HorizontalAlignment="Stretch"
                       ToolTip.Tip="Whether this overworld shows a water reflection."/>
           </StackPanel>
-          <TextBlock Text="No render-state entry found for this overworld." FontSize="12" FontStyle="Italic"
+          <TextBlock Text="No display settings" FontSize="12" FontStyle="Italic"
                      Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"
                      IsVisible="{Binding !HasRenderState}"/>
 

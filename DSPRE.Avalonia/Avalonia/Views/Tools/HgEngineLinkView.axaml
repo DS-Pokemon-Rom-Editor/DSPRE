@@ -21,7 +21,7 @@
     </StackPanel>
 
     <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Warn}" IsVisible="{Binding ShowRomNdsWarning}"
-               Text="No rom.nds found at this checkout's root. hg-engine's own build needs one there before you can Compile ROM."/>
+               Text="No rom.nds in the checkout" ToolTip.Tip="hg-engine's build needs rom.nds at the checkout root"/>
 
     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
       <Button Content="Unlink" Click="Unlink_Click" IsEnabled="{Binding IsLinked}"/>

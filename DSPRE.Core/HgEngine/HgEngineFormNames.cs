@@ -64,7 +64,7 @@ namespace DSPRE.HgEngine
     }
 
     /// <summary>Shared parse of data/FormToSpeciesMapping.c (form species ID -> base species ID), used by
-    /// both the display-name fallback and the Form Editor.</summary>
+    /// both the display-name fallback and the Form editor.</summary>
     public static class HgEngineFormMapping
     {
         public static Dictionary<int, int> Load()

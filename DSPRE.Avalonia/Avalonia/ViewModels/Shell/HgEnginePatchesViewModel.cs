@@ -182,7 +182,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             _readAll = readAll;
             if (!IsAvailable)
             {
-                StatusText = "Link an hg-engine checkout to see the patches it applies.";
+                StatusText = "No hg-engine checkout linked";
                 return;
             }
 

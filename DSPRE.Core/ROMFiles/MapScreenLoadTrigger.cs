@@ -9,13 +9,13 @@ namespace DSPRE.ROMFiles
       switch (TriggerType)
       {
         case LevelScriptTrigger.MAPCHANGE:
-          return base.ToString() + " upon entering the LS map.";
+          return base.ToString() + " when the player enters the map";
         case LevelScriptTrigger.SCREENRESET:
-          return base.ToString() + " when a fadescreen happens in the LS map.";
+          return base.ToString() + " when the screen fades back in on the map";
         case LevelScriptTrigger.LOADGAME:
-          return base.ToString() + " when the game resumes in the LS map.";
+          return base.ToString() + " when a saved game continues on the map";
         default:
-          return base.ToString() + " under unknown circumstances.";
+          return base.ToString() + " on an unknown trigger";
       }
     }
 

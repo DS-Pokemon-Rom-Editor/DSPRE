@@ -60,8 +60,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
         }
 
-        public string SelectAllLabel => IsByMachineMode ? "Enable All" : "Select All";
-        public string SelectNoneLabel => IsByMachineMode ? "Disable All" : "Select None";
+        public string SelectAllLabel => IsByMachineMode ? "Enable all" : "Select all";
+        public string SelectNoneLabel => IsByMachineMode ? "Disable all" : "Select none";
 
         private readonly int[] _order;
         /// <summary>The machine the "By TM/HM" box shows; <see cref="CurrentMachineIndex"/> is its place in the list.</summary>
@@ -270,7 +270,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 || !HgEngine.HgEngineLearnsets.TryGetAllLevelMoves(out _levelLists, out error))
             {
                 _loadError = error;
-                AppLogger.Error("TM/HM Bulk Editor: learnsets.json could not be read: " + error);
+                AppLogger.Error("TM/HM bulk editor: learnsets.json could not be read: " + error);
             }
             _formBases = HgEngine.HgEngineLearnsets.FormBases();
         }
@@ -664,7 +664,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception e) when (e is System.IO.IOException || e is UnauthorizedAccessException)
             {
-                AppLogger.Warn($"TM/HM Bulk Editor: could not re-read species {id}: {e.Message}");
+                AppLogger.Warn($"TM/HM bulk editor: could not re-read species {id}: {e.Message}");
                 return;
             }
             _carriedDirty = _isDirty;
@@ -731,7 +731,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             if (IsByPokemonMode)
             {
-                StatusText = $"{_speciesCount} Pokémon in {_families.Count} evolution families. {_selectedSpeciesIds.Count} selected." +
+                StatusText = $"{_speciesCount} Pokémon in {_families.Count} evolution families, {_selectedSpeciesIds.Count} selected" +
                     (_isDirty ? " [Unsaved Changes]" : "");
             }
             else

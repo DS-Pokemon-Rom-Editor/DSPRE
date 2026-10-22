@@ -14,7 +14,7 @@
 
   <DockPanel>
 	<controls:EditorToolbar x:Name="MapActions">
-		<Button Content="Save" controls:Icon.Key="saveButton"              IsEnabled="{Binding HasMap}" Click="Save_Click"/>
+		<Button Content="Save" controls:Icon.Key="saveButton"              IsEnabled="{Binding CanSave}" Click="Save_Click"/>
 		<Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<Button Content="Create custom map" Click="CreateMap_Click" Margin="12,2,6,2"/>
 		<Button Content="Delete custom map" controls:Icon.Key="deleteIcon" IsEnabled="{Binding HasMap}" Click="DeleteMap_Click"/>
@@ -33,9 +33,11 @@
 				 ItemsSource="{Binding CharMapItems}"
 				 SelectedIndex="{Binding SelectedCharMapIndex}"
 				 DoubleTapped="CharMapList_DoubleTapped"/>
+	  <TextBlock Grid.Row="1" Grid.Column="0" Text="No custom map" Foreground="{DynamicResource Editor.Subtle}"
+				 HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasMap}"/>
 
 	  <!-- Search row under charmap list -->
-	  <DockPanel x:Name="CharSearch" Grid.Row="2" Grid.Column="0" Margin="0,6,0,0">
+	  <DockPanel x:Name="CharSearch" Grid.Row="2" Grid.Column="0" Margin="0,6,0,0" VerticalAlignment="Top">
 		<Button DockPanel.Dock="Right" Content="Search" controls:Icon.Key="lens" Click="Search_Click" Margin="6,0,0,0"/>
 		<TextBox Text="{Binding SearchText}" PlaceholderText="Search letters, or 0x and a code"
 				 KeyDown="Search_KeyDown"/>

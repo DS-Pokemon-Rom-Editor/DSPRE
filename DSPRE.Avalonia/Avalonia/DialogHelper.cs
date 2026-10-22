@@ -117,6 +117,19 @@ namespace DSPRE.Avalonia
             }
         }
 
+        /// <summary>
+        /// For a save started without being awaited: its failure is shown instead of vanishing with the task.
+        /// </summary>
+        public static async void Watch(Task task, string failed = "The changes weren't saved.", string title = "Save failed")
+        {
+            try { await task; }
+            catch (Exception ex)
+            {
+                CrashReporter.LogHandled(ex);
+                await ShowErrorAsync(failed + "\n" + ex.Message, title);
+            }
+        }
+
         /// <returns>true = Yes, false = No</returns>
         public static async Task<bool> AskYesNoAsync(string message, string title = "Confirm", Window owner = null)
         {
@@ -143,8 +156,8 @@ namespace DSPRE.Avalonia
             => await ShowMsgAsync(message, title, MsgButtons.YesNo, labels: (dismiss, never, null)) == MsgResult.No;
 
         /// <summary>Two-way question whose buttons say what they do. True for <paramref name="yes"/>.</summary>
-        public static async Task<bool> AskTwoWayAsync(string message, string title, string yes, string no)
-            => await ShowMsgAsync(message, title, MsgButtons.YesNo, labels: (yes, no, null)) == MsgResult.Yes;
+        public static async Task<bool> AskTwoWayAsync(string message, string title, string yes, string no, Window owner = null)
+            => await ShowMsgAsync(message, title, MsgButtons.YesNo, owner: owner, labels: (yes, no, null)) == MsgResult.Yes;
 
         /// <summary>Asked by every Discard button: a discard cannot be undone.</summary>
         public static async Task<bool> ConfirmDiscardAsync(global::Avalonia.Visual from)

@@ -42,8 +42,7 @@
       <TextBlock IsVisible="{Binding ArchiveNotAvailable}" Text="{Binding ArchiveUnavailableText}"
                  FontSize="12" Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap"/>
       <TextBlock Text="{Binding EntryHeader}" FontWeight="SemiBold"/>
-      <TextBlock IsVisible="{Binding ShowTextHelp}" Text="One command per line. // starts a comment."
-                 FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+      <controls:HelpTip IsVisible="{Binding ShowTextHelp}" HorizontalAlignment="Left" Text="One command per line; // starts a comment"/>
     </StackPanel>
 
     <!-- 50/50 so the argument column can't crowd out the preview controls. -->
@@ -147,7 +146,7 @@
             <Panel>
             <TextBlock IsVisible="{Binding !IsAnimation}" Margin="16" TextWrapping="Wrap"
                        VerticalAlignment="Top" Foreground="{DynamicResource Editor.Subtle}"
-                       Text="Only move animations can be read here. Use the Cards or Script tab."/>
+                       Text="Only move animations open here"/>
             <Grid RowDefinitions="Auto,Auto,*,Auto" IsVisible="{Binding IsAnimation}">
               <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="4,4,4,2">
                 <TextBlock Text="Show as" VerticalAlignment="Center" FontSize="12"/>

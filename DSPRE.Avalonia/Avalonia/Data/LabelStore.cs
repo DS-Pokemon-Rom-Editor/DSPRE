@@ -19,6 +19,7 @@ namespace DSPRE.Avalonia.Data
         public string Singular { get; init; } = "Entry";   // for generated labels beyond the defaults
         public int Cap { get; init; } = 256;        // max entries the underlying field can hold (u8 = 256)
         public IReadOnlyList<string> Defaults { get; init; } = Array.Empty<string>();
+        public GameFamilies[] Games { get; init; }   // null: every game
 
         // Optional secondary per-entry ATTRIBUTE (a small enum choice). e.g. evolution methods carry a
         // "param meaning" (Level / Item / Move / Species / Beauty) so the editor knows how to interpret the
@@ -78,8 +79,9 @@ namespace DSPRE.Avalonia.Data
         // another hardcoded dropdown customisable.
         private static void RegisterBuiltins()
         {
-            void Reg(string key, string name, string group, string singular, string[] defaults)
-                => Register(new LabelCategory { Key = key, DisplayName = name, Group = group, Singular = singular, Cap = 256, Defaults = defaults });
+            void Reg(string key, string name, string group, string singular, string[] defaults, params GameFamilies[] games)
+                => Register(new LabelCategory { Key = key, DisplayName = name, Group = group, Singular = singular, Cap = 256, Defaults = defaults,
+                                                Games = games.Length > 0 ? games : null });
 
             // The routines a move animation can call.
             Reg("battle_anim_funcs", "Move animation routines", "Pokémon", "Routine",
@@ -89,30 +91,30 @@ namespace DSPRE.Avalonia.Data
             // Evolution methods also carry a per-method "param meaning" attribute (what the parameter is).
             Register(new LabelCategory
             {
-                Key = "evolution_methods", DisplayName = "Evolution Methods", Group = "Pokémon", Singular = "Method",
+                Key = "evolution_methods", DisplayName = "Evolution methods", Group = "Pokémon", Singular = "Method",
                 Cap = 256, Defaults = Enum.GetNames<EvolutionMethod>(),
                 AttrName = "Parameter", AttrOptions = Enum.GetNames<EvolutionParamMeaning>(),
                 AttrDefaults = EvoParamDefaults(),
                 AttrDefaultForNew = (int)EvolutionParamMeaning.CustomNumber,   // new methods default to a raw number
             });
-            Reg("pokemon_growth_curves",  "Growth Curves",     "Pokémon", "Curve",  Enum.GetNames<PokemonGrowthCurve>());
-            Reg("pokemon_egg_groups",     "Egg Groups",        "Pokémon", "Group",  Enum.GetNames<PokemonEggGroup>());
-            Reg("pokemon_dex_colors",     "Pokédex Colors",    "Pokémon", "Color",  Enum.GetNames<PokemonDexColor>());
+            Reg("pokemon_growth_curves",  "Growth curves",     "Pokémon", "Curve",  Enum.GetNames<PokemonGrowthCurve>());
+            Reg("pokemon_egg_groups",     "Egg groups",        "Pokémon", "Group",  Enum.GetNames<PokemonEggGroup>());
+            Reg("pokemon_dex_colors",     "Pokédex colours",    "Pokémon", "Color",  Enum.GetNames<PokemonDexColor>());
             // Items: combos bind by SelectedIndex == raw byte VALUE, so register VALUE-indexed defaults
             // (NaturalGiftType is non-sequential: gaps become generated "Type N" labels you can rename).
             // Hold effects and field-use funcs differ per game, so each game has its own category.
-            Reg("item_hold_effects",      "Item Hold Effects (Pt, HGSS)", "Items", "Effect", ItemLabels.HoldEffects(GameFamilies.Plat));
-            Reg("item_hold_effects_dp",   "Item Hold Effects (DP)",  "Items", "Effect", ItemLabels.HoldEffects(GameFamilies.DP));
-            Reg("item_field_pockets",     "Item Field Pockets",      "Items", "Pocket", ByValue<FieldPocket>());
-            Reg("item_field_use",         "Item Field Use Funcs (HGSS)", "Items", "Func", ItemLabels.FieldUse(GameFamilies.HGSS));
-            Reg("item_field_use_pt",      "Item Field Use Funcs (Pt)", "Items", "Func",   ItemLabels.FieldUse(GameFamilies.Plat));
-            Reg("item_field_use_dp",      "Item Field Use Funcs (DP)", "Items", "Func",   ItemLabels.FieldUse(GameFamilies.DP));
-            Reg("item_battle_use",        "Item Battle Use Funcs",   "Items", "Func",   ByValue<BattleUseFunc>());
-            Reg("item_natural_gift",      "Item Natural Gift Types", "Items", "Type",   ByValue<NaturalGiftType>());
+            Reg("item_hold_effects",      "Item hold effects (Pt, HGSS)", "Items", "Effect", ItemLabels.HoldEffects(GameFamilies.Plat), GameFamilies.Plat, GameFamilies.HGSS);
+            Reg("item_hold_effects_dp",   "Item hold effects (DP)",  "Items", "Effect", ItemLabels.HoldEffects(GameFamilies.DP), GameFamilies.DP);
+            Reg("item_field_pockets",     "Item field pockets",      "Items", "Pocket", ByValue<FieldPocket>());
+            Reg("item_field_use",         "Item field use (HGSS)", "Items", "Func", ItemLabels.FieldUse(GameFamilies.HGSS), GameFamilies.HGSS);
+            Reg("item_field_use_pt",      "Item field use (Pt)", "Items", "Func",   ItemLabels.FieldUse(GameFamilies.Plat), GameFamilies.Plat);
+            Reg("item_field_use_dp",      "Item field use (DP)", "Items", "Func",   ItemLabels.FieldUse(GameFamilies.DP), GameFamilies.DP);
+            Reg("item_battle_use",        "Item battle use",   "Items", "Func",   ByValue<BattleUseFunc>());
+            Reg("item_natural_gift",      "Item Natural Gift types", "Items", "Type",   ByValue<NaturalGiftType>());
             // Moves / trades
-            Reg("move_split",             "Move Split (Phys/Spec/Status)", "Moves", "Split", Enum.GetNames<MoveData.MoveSplit>());
-            Reg("move_contest_conditions","Move Contest Conditions", "Moves", "Condition", Enum.GetNames<MoveData.ContestCondition>());
-            Reg("move_contest_effects",   "Move Contest Effects (DP, Pt)", "Moves", "Effect", new[]
+            Reg("move_split",             "Move category", "Moves", "Split", Enum.GetNames<MoveData.MoveSplit>());
+            Reg("move_contest_conditions","Move contest conditions", "Moves", "Condition", Enum.GetNames<MoveData.ContestCondition>());
+            Reg("move_contest_effects",   "Move contest effects (DP, Pt)", "Moves", "Effect", new[]
             {
                 "None", "Perform first next turn", "Perform last next turn", "+2 per repeat of the same Judge",
                 "+2 if the Judge's Voltage goes up", "Basic performance", "+3 if no one else chose the Judge",
@@ -122,39 +124,39 @@ namespace DSPRE.Avalonia.Data
                 "Higher score at low Voltage", "+2 if performing first", "+2 if performing last",
                 "No Voltage down this turn", "+3 after two Voltage ups in a row", "Scores more the later it goes",
                 "+3 after a max Voltage", "+3 if rated the worst",
-            });
+            }, GameFamilies.DP, GameFamilies.Plat);
             // Area light types: what each value of an area data record's light field loads, per game (AreaLightTypes).
-            Reg("area_light_dp",          "Area Light Types (DP)",   "World", "Light", AreaLightTypes.DiamondPearlLabels);
-            Reg("area_light_pt",          "Area Light Types (Pt)",   "World", "Light", AreaLightTypes.PlatinumLabels);
-            Reg("area_light_hgss",        "Area Light Types (HGSS)", "World", "Light", AreaLightTypes.HeartGoldLabels);
-            Reg("trade_languages",        "Trade Origin Languages", "Trades", "Language", Enum.GetNames<TradeOriginLang>());
+            Reg("area_light_dp",          "Area light types (DP)",   "World", "Light", AreaLightTypes.DiamondPearlLabels, GameFamilies.DP);
+            Reg("area_light_pt",          "Area light types (Pt)",   "World", "Light", AreaLightTypes.PlatinumLabels, GameFamilies.Plat);
+            Reg("area_light_hgss",        "Area light types (HGSS)", "World", "Light", AreaLightTypes.HeartGoldLabels, GameFamilies.HGSS);
+            Reg("trade_languages",        "Trade origin languages", "Trades", "Language", Enum.GetNames<TradeOriginLang>());
 
             // Field cameras and weathers, per game: the header picks them by number and ROM hacks repurpose them.
-            void RegField(string key, string name, string singular, int cap, Dictionary<int, string> defaults) =>
+            void RegField(string key, string name, string singular, int cap, Dictionary<int, string> defaults, GameFamilies game) =>
                 Register(new LabelCategory { Key = key, DisplayName = name, Group = "World", Cap = cap, Defaults = Dense(defaults),
-                                             Singular = singular });
-            RegField("field_cameras_dp", "Cameras (DP)", "Camera", 256, DSPRE.Resources.PokeDatabase.CameraAngles.DPPtCameraDict);
-            RegField("field_cameras_pt", "Cameras (Pt)", "Camera", 256, DSPRE.Resources.PokeDatabase.CameraAngles.PtCameraDict);
-            RegField("field_cameras_hgss", "Cameras (HGSS)", "Camera", 256, DSPRE.Resources.PokeDatabase.CameraAngles.HGSSCameraDict);
-            RegField("field_weather_dp", "Weather (DP)", "Weather", 256, DSPRE.Resources.PokeDatabase.Weather.DPWeatherDict);
-            RegField("field_weather_pt", "Weather (Pt)", "Weather", 256, DSPRE.Resources.PokeDatabase.Weather.PtWeatherDict);
-            RegField("field_weather_hgss", "Weather (HGSS)", "Weather", 128, DSPRE.Resources.PokeDatabase.Weather.HGSSWeatherDict);
+                                             Singular = singular, Games = new[] { game } });
+            RegField("field_cameras_dp", "Cameras (DP)", "Camera", 256, DSPRE.Resources.PokeDatabase.CameraAngles.DPPtCameraDict, GameFamilies.DP);
+            RegField("field_cameras_pt", "Cameras (Pt)", "Camera", 256, DSPRE.Resources.PokeDatabase.CameraAngles.PtCameraDict, GameFamilies.Plat);
+            RegField("field_cameras_hgss", "Cameras (HGSS)", "Camera", 256, DSPRE.Resources.PokeDatabase.CameraAngles.HGSSCameraDict, GameFamilies.HGSS);
+            RegField("field_weather_dp", "Weather (DP)", "Weather", 256, DSPRE.Resources.PokeDatabase.Weather.DPWeatherDict, GameFamilies.DP);
+            RegField("field_weather_pt", "Weather (Pt)", "Weather", 256, DSPRE.Resources.PokeDatabase.Weather.PtWeatherDict, GameFamilies.Plat);
+            RegField("field_weather_hgss", "Weather (HGSS)", "Weather", 128, DSPRE.Resources.PokeDatabase.Weather.HGSSWeatherDict, GameFamilies.HGSS);
 
             // Scripts outside a map's own file, by script number less 2000, per game. Projects rewrite these scripts,
             // so none ship with a name; people name the ones they use.
-            void RegScripts(string key, string name) =>
+            void RegScripts(string key, string name, GameFamilies game) =>
                 Register(new LabelCategory { Key = key, DisplayName = name, Group = "Scripts", Singular = CommonScriptLabels.Unnamed,
-                                             Cap = 65536 - CommonScriptLabels.First, Defaults = Array.Empty<string>() });
-            RegScripts("common_scripts_dp", "Shared scripts (DP)");
-            RegScripts("common_scripts_pt", "Shared scripts (Pt)");
-            RegScripts("common_scripts_hgss", "Shared scripts (HGSS)");
+                                             Cap = 65536 - CommonScriptLabels.First, Defaults = Array.Empty<string>(), Games = new[] { game } });
+            RegScripts("common_scripts_dp", "Shared scripts (DP)", GameFamilies.DP);
+            RegScripts("common_scripts_pt", "Shared scripts (Pt)", GameFamilies.Plat);
+            RegScripts("common_scripts_hgss", "Shared scripts (HGSS)", GameFamilies.HGSS);
 
             // Overworld sprite entries. The games hold no names for these, so they start as numbers
             // and are worth naming per project: which entry is the player, which is a shop keeper.
             Register(new LabelCategory
             {
-                Key = "overworld_sprites", DisplayName = "Overworld Sprites", Group = "World",
-                Singular = "OW Entry", Cap = 4096, Defaults = Array.Empty<string>(),
+                Key = "overworld_sprites", DisplayName = "Overworld sprites", Group = "World",
+                Singular = "OW entry", Cap = 4096, Defaults = Array.Empty<string>(),
             });
         }
 
@@ -359,9 +361,11 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>Promotes the draft to the real store, persists the touched scopes, and signals editors.</summary>
-        public static void CommitDraft()
+        /// <returns>null when saved, else why not; the draft is then kept so Save can be tried again.</returns>
+        public static string CommitDraft()
         {
             Ensure();
+            byte[] draft = DraftSnapshot();
             foreach ((bool g, string k) r in DraftResets) ResetCategory(r.k, r.g);
             foreach (KeyValuePair<(bool g, string k, int i), string> kv in DraftLabels) SetLabel(kv.Key.k, kv.Key.i, kv.Value, kv.Key.g);
             foreach (KeyValuePair<(bool g, string k, int i), int> kv in DraftAttrs) SetAttr(kv.Key.k, kv.Key.i, kv.Value, kv.Key.g);
@@ -371,8 +375,11 @@ namespace DSPRE.Avalonia.Data
             foreach ((bool g, string k, int i) k in DraftAttrs.Keys) Note(k.g);
             foreach ((bool g, string k) k in DraftResets) Note(k.g);
             DiscardDraft();
-            if (p) Save(false);
-            if (g) Save(true);
+            string error = null;
+            if (p) error = Save(false);
+            if (g) error ??= Save(true);
+            if (error != null) RestoreDraft(draft);
+            return error;
         }
 
         public static void DiscardDraft() { DraftLabels.Clear(); DraftAttrs.Clear(); DraftResets.Clear(); }
@@ -397,11 +404,12 @@ namespace DSPRE.Avalonia.Data
                 DraftResets.Add((e[0].GetBoolean(), e[1].GetString()));
         }
 
-        public static void Save(bool global)
+        /// <returns>null when written, else why not.</returns>
+        public static string Save(bool global)
         {
             Ensure();
             string path = global ? GlobalPath : ProjectPath;
-            if (path == null) return;
+            if (path == null) return null;
             try
             {
                 LabelFile file = new LabelFile
@@ -413,12 +421,17 @@ namespace DSPRE.Avalonia.Data
                 if (file.Labels.Count == 0 && file.Attrs.Count == 0)
                 {
                     if (File.Exists(path)) File.Delete(path);
-                    return;
+                    return null;
                 }
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
                 PlainFiles.WriteText(path, JsonSerializer.Serialize(file, new JsonSerializerOptions { WriteIndented = true }));
+                return null;
             }
-            catch (Exception ex) { AppLogger.Error("LabelStore.Save: " + ex.Message); }
+            catch (Exception ex)
+            {
+                AppLogger.Error("LabelStore.Save: " + ex.Message);
+                return ex.Message;
+            }
         }
 
         private static Dictionary<string, Dictionary<string, T>> StringKeyed<T>(Dictionary<string, Dictionary<int, T>> src)

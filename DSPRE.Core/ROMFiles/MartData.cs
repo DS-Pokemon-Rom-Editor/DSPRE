@@ -77,7 +77,7 @@ namespace DSPRE.ROMFiles
         {
             if (HgEngine.HgEngineMarts.Enabled) return LoadSource();
             if (!RomInfo.IsMartEditorAvailable())
-                throw new InvalidOperationException("The Mart Editor is not available for this ROM.");
+                throw new InvalidOperationException("The Mart editor is not available for this ROM.");
 
             if (!ARM9.DecompressIfMarked())
                 throw new InvalidOperationException("The ARM9 could not be decompressed.");
@@ -186,7 +186,7 @@ namespace DSPRE.ROMFiles
             if (FromSource)
                 throw new InvalidOperationException("hg-engine puts its marts in the game's own slots, so no mart can be added.");
             if (!Expanded)
-                throw new InvalidOperationException("Adding a mart needs the \"Expand the marts\" patch from the ROM Patch Toolbox.");
+                throw new InvalidOperationException("Adding a mart needs the \"Expand the marts\" patch from the ROM patch toolbox.");
             if (SpecialtyShops.Count >= RoomyShops)
                 throw new InvalidOperationException($"The marts have room for {RoomyShops} marts.");
             int id = SpecialtyShops.Count;
@@ -238,7 +238,7 @@ namespace DSPRE.ROMFiles
                 catch { WriteReplacementFile(Filesystem.ExpArmPath, overlayBefore); throw; }
                 return true;
             }
-            throw new InvalidOperationException("Changing mart sizes needs the \"Expand the marts\" patch from the ROM Patch Toolbox.");
+            throw new InvalidOperationException("Changing mart sizes needs the \"Expand the marts\" patch from the ROM patch toolbox.");
         }
 
         public static int RoomyLength => RoomyPointersAt + RoomyShops * 4 + RoomyShops * (RoomyItems + 1) * 2;
@@ -284,7 +284,7 @@ namespace DSPRE.ROMFiles
         public void MoveToRoomyLayout()
         {
             if (FromSource || Expanded) return;
-            if (!SyntheticOverlaySpace.Available()) throw new InvalidOperationException("Apply the ARM9 expansion in the ROM Patch Toolbox first.");
+            if (!SyntheticOverlaySpace.Available()) throw new InvalidOperationException("Apply the ARM9 expansion in the ROM patch toolbox first.");
             byte[] overlay = File.ReadAllBytes(Filesystem.ExpArmPath), overlayBefore = (byte[])overlay.Clone();
             List<(long Start, long End)> excluded = SyntheticOverlaySpace.Reserved(overlay);
             // An older, tightly packed mart block is freed for the new one.

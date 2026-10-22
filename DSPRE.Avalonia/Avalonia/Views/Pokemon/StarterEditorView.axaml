@@ -60,7 +60,8 @@
 					 IsVisible="{Binding HasCommandLocation}"/>
 		  <Button Content="Manage…" Click="Manage_Click"
 				  ToolTip.Tip="Choose which give-a-Pokémon command the editor treats as the starter"/>
-		  <TextBlock Foreground="{DynamicResource Editor.Subtle}" Text="the scripts have changed since you chose this one" VerticalAlignment="Center" IsVisible="{Binding CommandsHaveChanged}"/>
+		  <TextBlock Foreground="{DynamicResource Editor.Warn}" Text="Scripts changed" VerticalAlignment="Center" IsVisible="{Binding CommandsHaveChanged}"
+					 ToolTip.Tip="The scripts changed after this command was picked"/>
 		</StackPanel>
 	  </StackPanel>
 	</Border>

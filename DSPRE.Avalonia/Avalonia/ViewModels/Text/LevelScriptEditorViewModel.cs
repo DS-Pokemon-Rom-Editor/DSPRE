@@ -191,7 +191,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 if (id != _selScript) return;
             }
             LoadFile(id);
-            StatusText = $"Level script {id} was saved in another editor and reloaded.";
+            StatusText = "";
         }
 
         /// <summary>Adds a level script with no triggers at the end of the script archive, built at once.</summary>
@@ -245,7 +245,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             int count = Filesystem.GetScriptCount();
             _suppress = true;
             while (ScriptNames.Count > count) ScriptNames.RemoveAt(ScriptNames.Count - 1);
-            while (ScriptNames.Count < count) ScriptNames.Add("Script File " + ScriptNames.Count);
+            while (ScriptNames.Count < count) ScriptNames.Add("Script file " + ScriptNames.Count);
             _suppress = false;
         }
 
@@ -257,14 +257,14 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.Scripts });
                 int count = Filesystem.GetScriptCount();
                 ScriptNames.Clear();
-                for (int i = 0; i < count; i++) ScriptNames.Add("Script File " + i);
+                for (int i = 0; i < count; i++) ScriptNames.Add("Script file " + i);
                 StatusText = $"{count} script files.";
                 if (count > 0) SelectedScriptIndex = Math.Min(Math.Max(0, InitialIndex), count - 1);
             }
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowErrorAsync($"Failed to set up Level Script Editor:\n{ex.Message}", "Level script editor error");
+                await DialogHelper.ShowErrorAsync($"Failed to set up Level script editor:\n{ex.Message}", "Level script editor error");
             }
         }
 
@@ -276,7 +276,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 RefreshTriggers();
                 SetClean();
                 StartUndo();
-                StatusText = $"Loaded level script {index} ({_file.BufferSet.Count} trigger(s)).";
+                StatusText = "";
                 OnPropertyChanged(nameof(UnsavedChangesDescription));
             }
             catch (InvalidDataException)
@@ -285,7 +285,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 RefreshTriggers();
                 SetClean();
                 StartUndo();
-                StatusText = $"Script {index} is not a level script (empty). Add a trigger to make it one.";
+                StatusText = $"Script {index} has no triggers.";
             }
             catch (Exception ex)
             {
@@ -392,7 +392,6 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             if (_selScript < 0) return;
             SystemShell.RevealInFileManager(Path.Combine(Filesystem.Scripts, _selScript.ToString("D4")));
-            if (HasUnsavedChanges) StatusText = "The file holds the level script as last saved.";
         }
 
         public async Task ExportAsync()

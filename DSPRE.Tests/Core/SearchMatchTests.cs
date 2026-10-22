@@ -33,8 +33,8 @@ namespace DSPRE.Tests
         {
             CommandPaletteViewModel vm = new CommandPaletteViewModel(DSPRE.Avalonia.AvaloniaEditorLauncher.BuildCommands());
             vm.SearchText = "pokemon editor";
-            Assert.Contains(vm.Items, c => c.Name == "Pokémon Editor");
-            Assert.Equal("Pokémon Editor", vm.Items.First().Name);
+            Assert.Contains(vm.Items, c => c.Name == "Pokémon editor");
+            Assert.Equal("Pokémon editor", vm.Items.First().Name);
         }
     }
 }

@@ -20,7 +20,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
     /// Avalonia port of the trainer-class panel of the WinForms <c>TrainerEditor</c>: rename a trainer
     /// class and edit its "eye contact" encounter music (the SSEQ that plays when that class of trainer
     /// spots the player), a small ARM9-backed table, separate from any single trainer's own data, so it
-    /// gets its own tab rather than crowding the main Trainer Editor window.
+    /// gets its own tab rather than crowding the main Trainer editor window.
     /// </summary>
     public class TrainerClassesViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
@@ -906,7 +906,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (lines[index] == name) return true;
             lines[index] = name;
             if (!HgEngineOwnedFiles.TryWriteLines(owned, lines, out error)) return false;
-            // The same check the Text Editor runs, so a bad tag shows now rather than at build time.
+            // The same check the Text editor runs, so a bad tag shows now rather than at build time.
             if (HgEngineBuild.TryValidateTextArchive(owned.RelPath, out string problems) && problems != null)
             {
                 error = $"Saved {owned.RelPath}, but its build will reject it:\n{problems}";

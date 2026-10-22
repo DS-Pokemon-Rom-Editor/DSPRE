@@ -74,19 +74,19 @@
 			  <TextBlock Grid.Row="8"  Grid.Column="0" Text="HP IV"            VerticalAlignment="Center"/>
 			  <NumericUpDown Grid.Row="8"  Grid.Column="1" Value="{Binding HpIV}"  Minimum="0" Maximum="31"/>
 
-			  <TextBlock Grid.Row="9"  Grid.Column="0" Text="Atk IV"           VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="9"  Grid.Column="0" Text="Attack IV"        VerticalAlignment="Center"/>
 			  <NumericUpDown Grid.Row="9"  Grid.Column="1" Value="{Binding AtkIV}" Minimum="0" Maximum="31"/>
 
-			  <TextBlock Grid.Row="10" Grid.Column="0" Text="Def IV"           VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="10" Grid.Column="0" Text="Defense IV"        VerticalAlignment="Center"/>
 			  <NumericUpDown Grid.Row="10" Grid.Column="1" Value="{Binding DefIV}" Minimum="0" Maximum="31"/>
 
-			  <TextBlock Grid.Row="11" Grid.Column="0" Text="Spe IV"           VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="11" Grid.Column="0" Text="Speed IV"        VerticalAlignment="Center"/>
 			  <NumericUpDown Grid.Row="11" Grid.Column="1" Value="{Binding SpeIV}" Minimum="0" Maximum="31"/>
 
-			  <TextBlock Grid.Row="12" Grid.Column="0" Text="SpAtk IV"         VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="12" Grid.Column="0" Text="Sp. Atk IV"        VerticalAlignment="Center"/>
 			  <NumericUpDown Grid.Row="12" Grid.Column="1" Value="{Binding SpaIV}" Minimum="0" Maximum="31"/>
 
-			  <TextBlock Grid.Row="13" Grid.Column="0" Text="SpDef IV"         VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="13" Grid.Column="0" Text="Sp. Def IV"        VerticalAlignment="Center"/>
 			  <NumericUpDown Grid.Row="13" Grid.Column="1" Value="{Binding SpdIV}" Minimum="0" Maximum="31"/>
 
 			  <TextBlock Grid.Row="14" Grid.Column="0" Text="Cool"             VerticalAlignment="Center"/>
@@ -110,7 +110,7 @@
 
 			<!-- HGSS-only unknown field -->
 			<StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsHGSS}">
-			  <TextBlock Text="Unknown (HGSS)" VerticalAlignment="Center"/>
+			  <TextBlock Text="Unknown" VerticalAlignment="Center"/>
 			  <NumericUpDown Value="{Binding Unknown}" Minimum="0" Maximum="2147483647"/>
 			</StackPanel>
 		  </StackPanel>
@@ -123,11 +123,11 @@
 		<StackPanel Spacing="8">
 		  <TextBlock Text="Text data" FontWeight="Bold"/>
 
-		  <TextBlock Text="Nickname (max 10 chars)"/>
-		  <TextBox Text="{Binding Nickname}" MaxLength="10"/>
+		  <TextBlock Text="Nickname"/>
+		  <TextBox Text="{Binding Nickname}" MaxLength="10" ToolTip.Tip="Up to 10 characters"/>
 
-		  <TextBlock Text="OT name (max 7 chars)"/>
-		  <TextBox Text="{Binding OtName}" MaxLength="7"/>
+		  <TextBlock Text="OT name"/>
+		  <TextBox Text="{Binding OtName}" MaxLength="7" ToolTip.Tip="Up to 7 characters"/>
 		</StackPanel>
 	  </Border>
 

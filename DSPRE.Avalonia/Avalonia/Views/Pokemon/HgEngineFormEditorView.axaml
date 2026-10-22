@@ -32,7 +32,7 @@
     <Border DockPanel.Dock="Top" Padding="8,4" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}">
       <TextBlock TextWrapping="Wrap" FontSize="12"
                  Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                 Text="Which forms the picked Pokémon has. Their stats are edited in the Pokémon editor."/>
+                 Text="Stats are edited in the Pokémon editor"/>
     </Border>
 
     <!-- ── Bottom: status ── -->

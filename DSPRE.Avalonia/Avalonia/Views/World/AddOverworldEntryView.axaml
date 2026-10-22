@@ -23,10 +23,10 @@
     </StackPanel>
 
     <StackPanel Spacing="4">
-      <TextBlock Text="Needs the overworld sprites expansion patch and a free slot." FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"
-                 IsVisible="{Binding !IsHgEngine}"/>
-      <TextBlock Text="The new overworld gets the next free number." FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"
-                 IsVisible="{Binding IsHgEngine}"/>
+      <controls:HelpTip Text="Needs the overworld sprites expansion patch and a free slot" HorizontalAlignment="Left"
+                        IsVisible="{Binding !IsHgEngine}"/>
+      <controls:HelpTip Text="The new overworld gets the next free number" HorizontalAlignment="Left"
+                        IsVisible="{Binding IsHgEngine}"/>
 
       <TextBlock Text="Appearance ID (decimal or 0x hex)" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,6,0,0" IsVisible="{Binding !IsHgEngine}"/>
       <TextBox Text="{Binding AppearanceIdText}" IsVisible="{Binding !IsHgEngine}"/>

@@ -51,14 +51,16 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public void SaveChanges()
         {
             if (_trainerFile == null || _setFile == null) return;
-            // Each save reports its own error; a failure leaves the edits unsaved.
-            bool trainersSaved = _trainerFile.SaveToNarc(showSuccessMessage: false);
-            bool setsSaved = _setFile.SaveToNarc(showSuccessMessage: false);
-            if (!trainersSaved || !setsSaved)
+            // Both halves are tried, then any failure is told once; a failure leaves the edits unsaved.
+            string trainersError = _trainerFile.Save();
+            string setsError = _setFile.Save();
+            if (trainersError != null || setsError != null)
             {
-                UpdateStatus();
-                StatusText += !trainersSaved && !setsSaved ? " Trainers and sets were not saved."
-                    : !trainersSaved ? " Trainers were not saved." : " Pokémon sets were not saved.";
+                string message = trainersError != null && setsError != null
+                    ? (trainersError == setsError ? "The trainers and Pokémon sets weren't saved:\n" + trainersError
+                        : "The trainers weren't saved:\n" + trainersError + "\n\nThe Pokémon sets weren't saved:\n" + setsError)
+                    : trainersError != null ? "The trainers weren't saved:\n" + trainersError : "The Pokémon sets weren't saved:\n" + setsError;
+                _ = DialogHelper.ShowErrorAsync(message, "Battle Tower editor error");
                 return;
             }
             _isDirty = false;
@@ -302,9 +304,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             DSPRE.Avalonia.Data.ListSync.Apply(ItemNames, GetItemNames());
             _suppress = true;
             DSPRE.Avalonia.Data.ListSync.Apply(TrainerLabels, _trainerFile.Trainers.Select((t, i) => $"[{i:D3}] {t}").ToList());
-            DSPRE.Avalonia.Data.ListSync.Apply(SetLabels, _setFile.Sets.Select((s, i) => $"Set {i:D3}: {s}").ToList());
+            DSPRE.Avalonia.Data.ListSync.Apply(SetLabels, _setFile.Sets.Select((s, i) => SetRow(i)).ToList());
             if (CurrentTrainer != null)
-                DSPRE.Avalonia.Data.ListSync.Apply(SetIdLabels, CurrentTrainer.SetIDs.Select(id => $"Set {id:D3}: {SetLabelFor(id)}").ToList());
+                DSPRE.Avalonia.Data.ListSync.Apply(SetIdLabels, CurrentTrainer.SetIDs.Select(id => SetRow(id)).ToList());
             _suppress = false;
             OnPropertyChanged(nameof(AddSetPreviewLabel));
             // A list box drops its pick when the picked row's text is replaced, after this returns.
@@ -362,10 +364,13 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             SetIdLabels.Clear();
             foreach (ushort id in trainer.SetIDs)
-                SetIdLabels.Add($"Set {id:D3}: {SetLabelFor(id)}");
+                SetIdLabels.Add(SetRow(id));
         }
 
         private string SetLabelFor(int id) => (_setFile != null && id >= 0 && id < _setFile.Sets.Count) ? _setFile.Sets[id].ToString() : "?";
+
+        private string SetRow(int id) =>
+            _setFile != null && id >= 0 && id < _setFile.Sets.Count && _setFile.Sets[id].Species == 0 ? $"Set {id} (empty)" : $"Set {id}: {SetLabelFor(id)}";
 
         public void NewTrainer()
         {
@@ -432,7 +437,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _suppress = true;
             SetLabels.Clear();
             for (int i = 0; i < _setFile.Sets.Count; i++)
-                SetLabels.Add($"Set {i:D3}: {_setFile.Sets[i]}");
+                SetLabels.Add(SetRow(i));
             _suppress = false;
 
             if (SetLabels.Count > 0)
@@ -513,7 +518,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 // Replacing the row clears the list's selection, which would leave later edits with no set.
                 _suppress = true;
-                SetLabels[index] = $"Set {index:D3}: {set}";
+                SetLabels[index] = SetRow(index);
                 _selectedSetIndex = index;
                 _suppress = false;
                 OnPropertyChanged(nameof(SelectedSetIndex));
@@ -549,7 +554,6 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         }
 
         private void UpdateStatus() =>
-            StatusText = $"{_trainerFile?.Trainers.Count ?? 0} trainers, {_setFile?.Sets.Count ?? 0} Pokémon sets." +
-                (_isDirty ? " Unsaved changes." : "");
+            StatusText = "";
     }
 }

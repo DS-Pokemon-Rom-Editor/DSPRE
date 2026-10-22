@@ -170,7 +170,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private TradeData _cur;
         private TextArchive _tradeArchive;
 
-        private string _title = "Trade Editor";
+        private string _title = "Trade editor";
         public string Title { get => _title; private set => Set(ref _title, value); }
 
         // ---- Trade ID spinner ----

@@ -54,7 +54,36 @@ namespace DSPRE.LibNDSFormats
             }
         }
 
-        public bool HasSameProfileAs(Btx0Structure other)
+        public bool HasSameProfileAs(Btx0Structure other) => ProfileDifference(other) == null;
+
+        /// <summary>The first way <paramref name="other"/> is laid out differently, said as "its ..." against "this one's", or null.</summary>
+        public string ProfileDifference(Btx0Structure other)
+        {
+            if (other is null) return "it could not be read";
+            if (Textures.Count != other.Textures.Count)
+                return $"it has {Count(other.Textures.Count, "frame")} and this one has {Textures.Count}";
+            for (int i = 0; i < Textures.Count; i++)
+            {
+                Btx0TextureEntry left = Textures[i];
+                Btx0TextureEntry right = other.Textures[i];
+                if (left.Width != right.Width || left.Height != right.Height)
+                    return $"its frames are {right.Width}×{right.Height} and this one's are {left.Width}×{left.Height}";
+                if (left.Name != right.Name)
+                    return $"its frame {i + 1} is named {right.Name} and this one's is {left.Name}";
+                if (left.Format != right.Format)
+                    return "its frames use a different colour format";
+            }
+            if (Palettes.Count != other.Palettes.Count)
+                return $"it has {Count(other.Palettes.Count, "palette")} and this one has {Palettes.Count}";
+            for (int i = 0; i < Palettes.Count; i++)
+                if (Palettes[i].Name != other.Palettes[i].Name)
+                    return $"its palette {i + 1} is named {other.Palettes[i].Name} and this one's is {Palettes[i].Name}";
+            return SameLayout(other) ? null : "its pictures are packed differently";
+        }
+
+        private static string Count(int n, string noun) => n + " " + noun + (n == 1 ? "" : "s");
+
+        private bool SameLayout(Btx0Structure other)
         {
             if (other is null ||
                 TextureDataSize != other.TextureDataSize ||

@@ -118,7 +118,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             AppEvents.RaiseBannerChanged();
             RefreshIconPreview();
             RaiseUnsaved();
-            StatusText = "Saved. The ROM gets it on the next Save ROM.";
+            SaveNotice.Saved("Game icon & banner");
         }
 
         public void DiscardChanges()

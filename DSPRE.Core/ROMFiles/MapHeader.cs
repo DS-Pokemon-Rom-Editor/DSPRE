@@ -139,7 +139,7 @@ namespace DSPRE.ROMFiles
 
         /// <summary>
         /// Reads just the location-name index (offset 0x12) of one header without building a full
-        /// <see cref="MapHeader"/>, for the Header Editor's location-grouped sidebar. Pass the
+        /// <see cref="MapHeader"/>, for the Header editor's location-grouped sidebar. Pass the
         /// already-known dynamic-headers flag so this doesn't re-probe the patch state per call.
         /// DP stores it as a ushort; Plat/HGSS as a byte.
         /// </summary>

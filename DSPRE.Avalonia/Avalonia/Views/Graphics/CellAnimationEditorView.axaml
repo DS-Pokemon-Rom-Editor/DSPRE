@@ -197,8 +197,7 @@
         </StackPanel>
       </Border>
 
-      <TextBlock Classes="hint" HorizontalAlignment="Center" MaxWidth="480"
-                 Text="Sequences are reached by number in the games' own code, so they cannot be reordered."/>
+      <controls:HelpTip HorizontalAlignment="Center" Text="Set in the game's code, so sequences can't be reordered"/>
     </StackPanel>
 
   </DockPanel>

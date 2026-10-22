@@ -25,7 +25,7 @@ namespace DSPRE.Avalonia
             public IEditorWithUnsavedChanges Editor { get; set; }
 
             public override string ToString()
-                => string.IsNullOrWhiteSpace(Description)
+                => string.IsNullOrWhiteSpace(Description) || Description == EditorName
                     ? EditorName
                     : $"{EditorName} - {Description}";
         }
@@ -40,7 +40,7 @@ namespace DSPRE.Avalonia
         private UnsavedChangesDialog(IEnumerable<UnsavedEditorInfo> editors)
         {
             _editors = editors.ToList();
-            Title = "Unsaved Changes";
+            Title = "Unsaved changes";
             Width = 560;
             Height = 420;
             MinWidth = 440;
@@ -64,12 +64,12 @@ namespace DSPRE.Avalonia
             _buttons.Add(cancel);
             buttons.Children.Add(cancel);
 
-            Button discardAll = new Button { Content = "Discard All", MinWidth = 100 };
+            Button discardAll = new Button { Content = "Discard all", MinWidth = 100 };
             discardAll.Click += async (_, _) => await DiscardAllAsync();
             _buttons.Add(discardAll);
             buttons.Children.Add(discardAll);
 
-            Button saveSelected = new Button { Content = "Save Selected", MinWidth = 110 };
+            Button saveSelected = new Button { Content = "Save selected", MinWidth = 110 };
             saveSelected.Click += async (_, _) => await SaveSelectedAsync();
             _buttons.Add(saveSelected);
             buttons.Children.Add(saveSelected);
@@ -78,13 +78,8 @@ namespace DSPRE.Avalonia
             StackPanel header = new StackPanel { Spacing = 4 };
             header.Children.Add(new TextBlock
             {
-                Text = "The following editors have unsaved changes:",
+                Text = "Unticked editors lose their changes.",
                 FontWeight = FontWeight.SemiBold,
-            });
-            header.Children.Add(new TextBlock
-            {
-                Text = "Select which changes to save. Unselected editors will be discarded.",
-                Opacity = 0.75,
                 TextWrapping = TextWrapping.Wrap,
             });
             DockPanel.SetDock(header, Dock.Top);
@@ -295,13 +290,6 @@ namespace DSPRE.Avalonia
         private async Task DiscardAllAsync()
         {
             if (_completed || _busy) return;
-            if (!await DialogHelper.AskYesNoAsync(
-                "Are you sure you want to discard ALL unsaved changes?\n\nThis cannot be undone.",
-                "Discard all changes?", this))
-            {
-                return;
-            }
-            if (_completed) return;
 
             _busy = true;
             SetButtonsEnabled(false);

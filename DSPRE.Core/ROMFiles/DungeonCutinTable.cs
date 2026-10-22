@@ -8,7 +8,7 @@ namespace DSPRE.ROMFiles
     ///
     /// HeartGold shows a picture of where you are when you walk in, and there are twenty five of them.
     /// Each names, for four times of day, the tiles it is drawn from, the colours and the arrangement.
-    /// Read once here so the Dungeon Cutin Editor and the Graphics window agree about it rather than each
+    /// Read once here so the Dungeon cutin editor and the Graphics window agree about it rather than each
     /// having their own copy of the field order.
     /// </summary>
     public static class DungeonCutinTable

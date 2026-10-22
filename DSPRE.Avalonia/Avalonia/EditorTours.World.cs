@@ -4,7 +4,7 @@ namespace DSPRE.Avalonia
     {
         static partial void RegisterWorld()
         {
-            Add("MapEditorView", "Map Editor",
+            Add("MapEditorView", "Map editor",
                 S("type:NsbmdGlControl", "The map", "Drag to pan, right-drag to orbit, wheel to zoom. Turn on Paint to paint squares straight onto the map, or Move buildings to drag them. The arrow keys pan, or move the picked building one square while Move buildings is on."),
                 S("name:ViewModeBox", "What you edit", "One map, the whole matrix, or every map of this header at once."),
                 S("toolbar", "Textures and overlays", "The second row picks this area's map and building textures and what is drawn over the map: collisions, square types or nothing."),
@@ -15,7 +15,7 @@ namespace DSPRE.Avalonia
                 S("name:EditModelButton", "Changing the ground", "Build or reshape this map from tiles, or import a Pokémon DS Map Studio map, a model (.nsbmd) or a whole map (.bin)."),
                 S("name:SaveButton", "Saving", "Save keeps your edits; in its own window Ctrl+S, Ctrl+Z and Ctrl+Y work too. Closing with unsaved edits asks first."));
 
-            Add("EventEditorView", "Event Editor",
+            Add("EventEditorView", "Event editor",
                 S("name:GlHost", "The map", "Every event on this header's maps. Click one to select it, or turn on Move and drag it. Drag to pan, right-drag to orbit, wheel to zoom. The arrow keys pan, or move the picked event one square while Move is on."),
                 S("name:ShowBar", "What's shown", "Hide kinds of events, switch to a flat 2D view, or centre the camera on the selected event."),
                 S("tab:Overworlds", "People and objects", "Everyone and everything standing on the map. Pick one to set its sprite, script, movement and, for trainers, who they are. Delete in the list removes it."),
@@ -25,7 +25,7 @@ namespace DSPRE.Avalonia
                 S("name:EventTabs", "Jump to other editors", "Fields that show a link button when you point at them lead to another editor: a person's trainer, a warp's destination. Right-click and pick Open, or Ctrl+click."),
                 S("name:SaveButton", "Saving", "Save keeps your edits; in its own window Ctrl+S, Ctrl+Z and Ctrl+Y work too. Closing with unsaved edits asks first."));
 
-            Add("HeaderEditorView", "Header Editor",
+            Add("HeaderEditorView", "Header editor",
                 S("list", "Headers", "Every place in the game, grouped by location. Search above the list, and right-click a header to open its map, events, scripts, text, wild Pokémon or matrix."),
                 S("name:LocationGroup", "Name and type", "The name shown on screen when you arrive, the kind of place it is and, in some games, its area icon, shown beside it."),
                 S("name:SoundGroup", "Music, weather and camera", "Day and night music, the weather, the camera angle and the battle background, with the field as they make it. Type a number or pick from the list."),
@@ -41,7 +41,7 @@ namespace DSPRE.Avalonia
                 S("name:MapSettingsGroup", "Map settings", "Whether the player can ride the bike, run, use an Escape Rope or fly here; in HeartGold and SoulSilver also phone, radio, the town map position, following Pokémon, Mom's call and the region."),
                 S(null, "Saving", "The toolbar above these fields saves them, and Reset goes back to the saved header. Each other tab saves its own data."));
 
-            Add("MatrixEditorView", "Matrix Editor",
+            Add("MatrixEditorView", "Matrix editor",
                 S("toolbar", "The matrix", "A matrix is the grid that joins maps into one seamless world. Pick one here."),
                 S("name:LegendBar", "Colours", "Cells are coloured by the kind of place they belong to: town, route, cave and so on. Heights are coloured from low to high."),
                 S("tab:Maps", "Maps", "Which map sits in each cell. With Paint off, click a cell to see its value and double-click it to open that map."),
@@ -51,31 +51,31 @@ namespace DSPRE.Avalonia
                 S("name:SpawnButton", "Starting point", "Makes the selected cell the place a new game begins."),
                 S("toolbar", "Saving", "Save keeps the matrix; in its own window Ctrl+S, Ctrl+Z and Ctrl+Y work too. Import and Export move a matrix in and out as a file."));
 
-            Add("AreaDataEditorView", "Area Data Editor",
+            Add("AreaDataEditorView", "Area data editor",
                 S("toolbar", "Area data", "An area sets the look shared by every header that uses it. Pick one here."),
                 S("name:AreaFields", "Textures", "The texture sets the map and its buildings are drawn with. Every header using this area changes with them."),
                 S("name:AreaFields", "Light and more", "The light type, and in some games the terrain animation, such as moving water, and whether the area is indoors."),
                 S("toolbar", "Saving", "Save keeps your edits, and Undo and Redo step back and forward. In its own window Ctrl+S, Ctrl+Z and Ctrl+Y work too."));
 
-            Add("CameraEditorView", "Camera Editor",
+            Add("CameraEditorView", "Camera editor",
                 S("list", "Camera angles", "Each row is a camera a header can use. Headers pick one by its number."),
                 S("list", "Changing a camera", "Double-click a cell to change its distance, rotation, field of view or clipping. Some games also have offsets."),
                 S("list", "One camera", "Export and Import at the end of a row move that single camera in and out as a file."),
                 S("toolbar", "Saving", "Save keeps the table (Ctrl+S) and Discard throws your edits away. Ctrl+Z undoes and Ctrl+Y redoes. The table buttons move every camera at once."));
 
-            Add("BuildingEditorView", "Building Editor",
+            Add("BuildingEditorView", "Building editor",
                 S("list", "Buildings", "Every building model in the game. Pick one to see it."),
                 S("name:GlHost", "Preview", "The picked building in 3D. Drag to pan, right-drag to orbit, wheel to zoom."),
                 S("toolbar", "Textures and sets", "Pick the texture set to view it with. Interior switches to indoor buildings in games that have them."),
                 S("toolbar", "Saving", "Import replaces the picked building's model and Export saves it out. Save keeps imports (Ctrl+S) and Discard drops them. Ctrl+Z undoes and Ctrl+Y redoes."));
 
-            Add("FlyEditorView", "Fly / Warp Editor",
-                S("tab:Game-Over Warps", "After a loss", "Where the player wakes up after losing a battle: the header and the square to stand on."),
+            Add("FlyEditorView", "Fly / warp editor",
+                S("tab:Whiteout warps", "After a loss", "Where the player wakes up after losing a battle: the header and the square to stand on."),
                 S("tab:Fly Warps", "Fly", "Where the player lands when flying to each place."),
                 S("tab:Unlock Settings", "Unlocking", "When each place opens up for Fly, and which ones are fly points or wake-up spots. The columns depend on the game."),
                 S("toolbar", "Saving", "Save keeps every table (Ctrl+S) and Discard throws your edits away. Ctrl+Z undoes and Ctrl+Y redoes."));
 
-            Add("SpawnEditorView", "Spawn Point Editor",
+            Add("SpawnEditorView", "Spawn point editor",
                 S("name:SpawnHeaderRow", "Where you start", "The header a new game begins in, and which way the player faces."),
                 S("name:CoordsGrid", "Exact square", "The matrix cell and the square inside that map where the player appears."),
                 S("name:MoneyRow", "Starting money", "How much money the player has at the start."),
@@ -85,7 +85,7 @@ namespace DSPRE.Avalonia
                 S("name:QueryPanel", "What to search", "Pick a field such as music, weather or script file, then how to compare it."),
                 S("name:ValueBox", "Value", "Type the value to look for, then Search. Tick Auto to search as you type."),
                 S("name:ResultList", "Results", "Every header that matches your search."),
-                S("name:ResultList", "Open one", "Double-click a result to open it in the Header Editor."));
+                S("name:ResultList", "Open one", "Double-click a result to open it in the Header editor."));
 
             Add("DistortionWorldView", "Distortion World",
                 S("name:FloorList", "Floors", "Each floor of the Distortion World. Pick one to edit it."),

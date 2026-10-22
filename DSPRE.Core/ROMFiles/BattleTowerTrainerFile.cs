@@ -139,14 +139,24 @@ namespace DSPRE.ROMFiles
 
         public bool SaveToNarc(bool showSuccessMessage = true)
         {
+            string error = Save();
+            if (error != null)
+            {
+                AppMessages.Error("The Battle Tower trainers weren't saved:\n" + error, "Battle Tower error");
+                return false;
+            }
+            if (showSuccessMessage) AppMessages.Info("Battle Tower trainers saved successfully!", "Success");
+            return true;
+        }
+
+        /// <returns>null when saved, else why not.</returns>
+        public string Save()
+        {
             try
             {
                 string narcDir = Filesystem.BattleTowerTrainers;
                 if (string.IsNullOrEmpty(narcDir) || !Directory.Exists(narcDir))
-                {
-                    AppMessages.Error("Battle Tower trainer directory not found.", "Error");
-                    return false;
-                }
+                    return "The Battle Tower trainer folder was not found.";
 
                 // Read-modify-write, same as TrainerEditor's own name/class archive saves,
                 // so the archive's existing encryption key is preserved.
@@ -181,17 +191,11 @@ namespace DSPRE.ROMFiles
 
                 namesArchive.SaveToExpandedDir(RomInfo.BattleTowerTrainerNamesMessageNumber, showSuccessMessage: false);
                 messagesArchive.SaveToExpandedDir(RomInfo.BattleTowerTrainerMessagesNumber, showSuccessMessage: false);
-
-                if (showSuccessMessage)
-                {
-                    AppMessages.Info("Battle Tower trainers saved successfully!", "Success");
-                }
-                return true;
+                return null;
             }
             catch (Exception ex)
             {
-                AppMessages.Error($"Error saving Battle Tower trainers: {ex.Message}", "Error");
-                return false;
+                return ex.Message;
             }
         }
 

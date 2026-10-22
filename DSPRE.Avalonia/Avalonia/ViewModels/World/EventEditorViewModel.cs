@@ -914,7 +914,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool SpScriptHasCommonInfo => !string.IsNullOrEmpty(SpScriptCommonInfo);
         public bool SpScriptGenericWarningVisible => SpScriptIndexOutOfRange && !SpScriptHasCommonInfo;
 
-        /// <summary>Open the Script Editor on the given script, following a common script to its real
+        /// <summary>Open the Script editor on the given script, following a common script to its real
         /// archive the way the old editor's per-event "go to script" buttons did, and landing on the
         /// script entry itself rather than just its file.</summary>
         public void GoToScript(int scriptNumber)
@@ -957,7 +957,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>Names a shared script in this project's labels.</summary>
         public void RenameCommonScript(int kind, string name)
         {
-            CommonScriptLabels.Rename(ShownScript(kind), name);
+            string error = CommonScriptLabels.Rename(ShownScript(kind), name);
+            if (error != null) _ = DialogHelper.ShowErrorAsync("The name wasn't saved:\n" + error, "Event editor error");
             OnPropertyChanged(nameof(OwScriptCommonName)); OnPropertyChanged(nameof(OwScriptCommonInfo));
             OnPropertyChanged(nameof(TrScriptCommonName)); OnPropertyChanged(nameof(TrScriptCommonInfo));
             OnPropertyChanged(nameof(SpScriptCommonName)); OnPropertyChanged(nameof(SpScriptCommonInfo));
@@ -1141,7 +1142,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             int count = _archive.Count;
             EventNames.Clear();
-            for (int i = 0; i < count; i++) EventNames.Add("Event File " + i);
+            for (int i = 0; i < count; i++) EventNames.Add("Event file " + i);
         }
         private void Dirty() { _undo?.Record(); if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
@@ -1296,7 +1297,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (ReferenceEquals(sender, this) || id != _selectedIndex) return;
             if (_dirty) { _ = OfferReloadAsync(id); return; }
             LoadFile(id);
-            StatusText = $"Event file {id} was saved in another window and reloaded.";
+            StatusText = "";
         }
 
         // Keeping these edits means saving them over what the other window wrote, so ask.
@@ -1307,7 +1308,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (id != _selectedIndex) return;
             if (!reload) { StatusText = $"Event file {id} was saved in another window. Saving here will overwrite it."; return; }
             LoadFile(id);
-            StatusText = $"Event file {id} was saved in another window and reloaded.";
+            StatusText = "";
         }
 
         public async Task SetupAsync(Window owner)
@@ -1346,7 +1347,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowErrorAsync($"Failed to set up Event Editor:\n{ex.Message}", "Event editor error");
+                await DialogHelper.ShowErrorAsync($"Failed to set up Event editor:\n{ex.Message}", "Event editor error");
             }
         }
 
@@ -1363,7 +1364,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 ResolveMatrixForFile(index);
                 SetClean();
                 StartUndo();
-                StatusText = $"Loaded event file {index}.";
+                StatusText = "";
                 OnPropertyChanged(nameof(UnsavedChangesDescription));
             }
             catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Failed to load event file {index}:\n{ex.Message}", "Event editor error"); }
@@ -1529,9 +1530,9 @@ namespace DSPRE.Avalonia.ViewModels.World
                 MapHeader h = MapHeader.GetMapHeader(_warp.Header);
                 if (h == null) { StatusText = $"Destination header {_warp.Header} not found."; return; }
                 int dest = h.EventFileID;
-                if (dest < 0 || dest >= EventNames.Count) { StatusText = $"Header {_warp.Header} → event file {dest} (out of range)."; return; }
+                if (dest < 0 || dest >= EventNames.Count) { StatusText = $"Header {_warp.Header} at event file {dest} is out of range."; return; }
                 SelectedEventIndex = dest;
-                StatusText = $"Warp leads to header {_warp.Header} → event file {dest}.";
+                StatusText = $"Warp leads to header {_warp.Header} at event file {dest}.";
             }
             catch (Exception ex) { StatusText = "Test warp failed: " + ex.Message; }
         }
@@ -1546,7 +1547,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 int newId = _archive.Add(new EventFile().ToByteArray());
-                EventNames.Add("Event File " + newId);
+                EventNames.Add("Event file " + newId);
                 SelectedEventIndex = newId;
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = $"Added event file {newId}.";
@@ -1605,7 +1606,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     catch { /* skip bad header */ }
                 }
             }
-            catch (Exception ex) { AppLogger.Error("Event→header lookup failed: " + ex.Message); }
+            catch (Exception ex) { AppLogger.Error("Event to header lookup failed: " + ex.Message); }
             return lookup;
         }
 
@@ -1744,7 +1745,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 if (_matrix == null)
                 {
-                    MapInfo = "No header uses this event file, so the game never loads it. Pick a matrix and area data to preview it.";
+                    MapInfo = "Unused by any header";
                     MapLoaded?.Invoke(this, EventArgs.Empty); RefreshMarkers(); return;
                 }
 
@@ -1777,7 +1778,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 _builtModelObjects = ModelObjectsNow();
                 Model3D = MatrixSceneBuilder.Build(_matrix, _areaDataId, GameFamily, areaForMap: null, includeCells: include, mode: StitchMode,
                                                    extrasForCell: ModelObjectsOn);
-                string scope = include == null ? "full" : $"{include.Count} maps, {scopeName}";
+                string scope = include == null ? "full" : $"{include.Count} {(include.Count == 1 ? "map" : "maps")}, {scopeName}";
                 MapInfo = Model3D != null
                     ? $"Matrix {_matrixId}  ·  {_matrix.Width}×{_matrix.Height} ({scope})  ·  area {_areaDataId}"
                     : $"Matrix {_matrixId}: no renderable maps.";

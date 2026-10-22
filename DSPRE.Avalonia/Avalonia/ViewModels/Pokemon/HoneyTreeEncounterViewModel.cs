@@ -44,7 +44,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private string _groupDescription = "";
         public string GroupDescription { get => _groupDescription; set => Set(ref _groupDescription, value); }
 
-        private string _encounterRateText = "Encounter Rate: N/A";
+        private string _encounterRateText = "Encounter rate: N/A";
         public string EncounterRateText { get => _encounterRateText; set => Set(ref _encounterRateText, value); }
 
         private Bitmap _pokemonIcon;
@@ -226,8 +226,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _suppress = true;
             SelectedSpeciesIndex = enc.Species < SpeciesNames.Count ? enc.Species : 0;
             EncounterRateText = slot < HoneyTreeEncounterGroup.SlotRates.Length
-                ? $"Encounter Rate: {HoneyTreeEncounterGroup.SlotRates[slot]}%"
-                : "Encounter Rate: N/A";
+                ? $"Encounter rate: {HoneyTreeEncounterGroup.SlotRates[slot]}%"
+                : "Encounter rate: N/A";
             _suppress = false;
             UpdateIcon(enc.Species);
         }
@@ -237,7 +237,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _suppress = true;
             SelectedSpeciesIndex = -1;
             PokemonIcon = null;
-            EncounterRateText = "Encounter Rate: N/A";
+            EncounterRateText = "Encounter rate: N/A";
             _suppress = false;
         }
 

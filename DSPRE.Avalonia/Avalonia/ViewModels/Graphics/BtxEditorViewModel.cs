@@ -342,7 +342,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public BtxEditorViewModel()
         {
             if (!Design.IsDesignMode) return;
-            for (int i = 0; i < 12; i++) OwEntries.Add($"OW Entry {i}");
+            for (int i = 0; i < 12; i++) OwEntries.Add($"OW entry {i}");
             _selectedIndex = 0;
             _statusText = "Design preview";
         }
@@ -490,8 +490,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (!_pendingRender.TryGetValue(key, out OverworldSpriteTableExpansion.OwRenderState state)) return true;
             if (!OverworldSpriteTableExpansion.TryWriteRenderState(key, state, out string error))
             {
-                StatusText = "Render-state write failed: " + error;
-                return false;
+                return Fail("The draw settings weren't saved:\n" + error);
             }
             _pendingRender.Remove(key);
             return true;
@@ -626,8 +625,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (!Btx0Structure.TryInspect(sourceData, out Btx0Structure sourceStructure, out string sourceError))
                 { error = "Source file isn't a structurally readable BTX0: " + sourceError; return false; }
 
-                if (!targetStructure.HasSameProfileAs(sourceStructure))
-                { error = "The raw BTX uses a different dictionary, frame-reuse, texture, or palette layout than the selected profile."; return false; }
+                if (targetStructure.ProfileDifference(sourceStructure) is string why)
+                { error = $"That file can't replace this overworld: {why}."; return false; }
 
                 RawImage source = BTX0.ReadRaw(sourceData, 0);
                 if (source == null) { error = "Source file isn't a texture DSPRE can write (BTX0, 16-color format)."; return false; }
@@ -703,9 +702,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 error = "The clone source is not a readable BTX0: " + cloneError;
                 return false;
             }
-            if (!template.HasSameProfileAs(clone))
+            if (template.ProfileDifference(clone) is string why)
             {
-                error = "The format template does not match the clone source's dictionary, frame-reuse, texture, and palette layout. Choose both from the same graphics profile.";
+                error = $"The template doesn't match the overworld being copied: {why}. Pick a template the same size and shape.";
                 return false;
             }
             return true;
@@ -776,7 +775,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     raw = BTX0.ReadRaw(_btxData, CurrentPaletteIndex);
                 CurrentImage = raw != null ? ImageConverter.ToAvaloniaBitmap(raw) : null;
                 StatusText = CurrentImage != null
-                    ? $"{CurrentImage.PixelSize.Width}×{CurrentImage.PixelSize.Height}, {BTX0.ColorCount} colors"
+                    ? $"{CurrentImage.PixelSize.Width}×{CurrentImage.PixelSize.Height}, {BTX0.ColorCount} colours"
                     : "Unsupported format";
             }
             catch (Exception ex)
@@ -904,7 +903,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     .ThenBy(p => p.AppearanceId)
                     .ToList();
                 if (profiles.Count == 0)
-                    error = $"No existing overworld profile in this ROM accepts a {import.Width}×{import.Height} PNG with {colorCount} colors.";
+                    error = $"No existing overworld profile in this ROM accepts a {import.Width}×{import.Height} PNG with {colorCount} colours.";
                 return true;
             }
             catch (Exception ex)
@@ -945,7 +944,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     return $"The selected profile expects {structure.SheetWidth}×{structure.SheetHeight}, but the PNG is {import.Width}×{import.Height}.";
                 uint colors = CountColors(import);
                 if (structure.Palettes.Count == 0 || colors > structure.Palettes[0].ColorCapacity)
-                    return $"The selected profile cannot hold the PNG's {colors} colors.";
+                    return $"The selected profile cannot hold the PNG's {colors} colours.";
 
                 if (!OverworldSpriteProfileMetadata.TryCreatePatch(
                     targetAppearanceId, sourceAppearanceId, out OverworldSpriteProfileMetadataPatch metadataPatch, out string metadataError))
@@ -1014,9 +1013,27 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         // ── Save ───────────────────────────────────────────────────────────────
+        private readonly List<string> _saveErrors = new List<string>();
+
+        private bool Fail(string error)
+        {
+            _saveErrors.Add(error);
+            return false;
+        }
+
+        // One dialog per Save, however many overworlds failed.
+        private void ReportSaveErrors()
+        {
+            if (_saveErrors.Count == 0) return;
+            string message = string.Join("\n\n", _saveErrors.Distinct());
+            _saveErrors.Clear();
+            _ = DialogHelper.ShowErrorAsync(message, "Overworld editor error");
+        }
+
         public int SaveSelected()
         {
             if (_selectedIndex < 0 || _selectedIndex >= _owKeys.Count) return 0;
+            _saveErrors.Clear();
             uint key = _owKeys[_selectedIndex];
             bool hadRender = _pendingRender.ContainsKey(key);
             bool hadFile = _modifiedFiles.TryGetValue(key, out byte[] data);
@@ -1025,12 +1042,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             else if (ok && hadRender) StatusText = "Saved.";
             OnPropertyChanged(nameof(HasUnsavedChanges));
             OnPropertyChanged(nameof(ModifiedCount));
+            ReportSaveErrors();
             return ok && (hadRender || hadFile) ? 1 : 0;
         }
 
         public int SaveAll()
         {
             int saved = 0;
+            _saveErrors.Clear();
             foreach (uint key in _pendingRender.Keys.ToList())
                 if (SaveRenderState(key) && !_modifiedFiles.ContainsKey(key)) saved++;
             foreach (KeyValuePair<uint, byte[]> kvp in _modifiedFiles.ToList())
@@ -1040,6 +1059,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             OnPropertyChanged(nameof(HasUnsavedChanges));
             OnPropertyChanged(nameof(ModifiedCount));
             if (saved > 0) SaveNotice.Show($"Saved {saved} overworld{(saved == 1 ? "" : "s")}.");
+            ReportSaveErrors();
             return saved;
         }
 
@@ -1054,8 +1074,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 if (!patch.TryApply(out string metadataError))
                 {
-                    StatusText = "Save failed: " + metadataError;
-                    return false;
+                    return Fail("The overworld wasn't saved:\n" + metadataError);
                 }
                 metadataApplied = true;
             }
@@ -1066,8 +1085,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (OverworldSourceFiles.Write((int)sprite, data) is string sourceError)
                 {
                     if (metadataApplied) patch.TryRollback(out _);
-                    StatusText = "Save failed: " + sourceError;
-                    return false;
+                    return Fail("The overworld wasn't saved:\n" + sourceError);
                 }
                 ArchiveMembers.Put(DirNames.OWSprites, (int)sprite, data);
             }
@@ -1078,10 +1096,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     try { ArchiveMembers.Put(DirNames.OWSprites, (int)sprite, original); } catch (Exception restoreError) { AppLogger.Warn("BTX editor: restoring the original sprite: " + restoreError.Message); }
                 }
                 if (metadataApplied && !patch.TryRollback(out string rollbackError))
-                    StatusText = $"Save failed: {ex.Message}. Metadata rollback also failed: {rollbackError}";
-                else
-                    StatusText = "Save failed: " + ex.Message;
-                return false;
+                    return Fail("The overworld wasn't saved:\n" + ex.Message + "\n\nIts table entry couldn't be put back either:\n" + rollbackError);
+                return Fail("The overworld wasn't saved:\n" + ex.Message);
             }
 
             _modifiedFiles.Remove(key);

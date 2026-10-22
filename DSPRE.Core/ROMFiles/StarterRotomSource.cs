@@ -21,7 +21,7 @@ namespace DSPRE.ROMFiles
     /// instead matches two, and GetPlayerStarterSpecies on its own appears twenty times, nearly all of
     /// them writing VAR_RESULT to ask which starter you picked.
     ///
-    /// Editing goes through the same two steps the Script Editor's Save does: write the text, then
+    /// Editing goes through the same two steps the Script editor's Save does: write the text, then
     /// compile the project. Nothing bespoke, so a starter edit behaves exactly like someone opening the
     /// script, changing the line by hand and saving it.
     /// </summary>
@@ -237,7 +237,7 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// The same call the Script Editor makes. Project mode, run from the project root, which is
+        /// The same call the Script editor makes. Project mode, run from the project root, which is
         /// where rotom.toml is and how it finds its database and constants. It only rebuilds what
         /// changed, so this costs one file.
         /// </summary>

@@ -236,7 +236,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             _results.Clear();
             _results.AddRange(result);
-            StatusText = $"{result.Count} header(s) whose {searchConfiguration}";
+            StatusText = $"{result.Count} {(result.Count == 1 ? "header" : "headers")} whose {searchConfiguration}";
         }
 
         private void CancelPendingSearch()

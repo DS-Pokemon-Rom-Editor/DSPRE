@@ -20,7 +20,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
     }
 
     /// <summary>
-    /// Backing model for the ground item list dialog (Event Editor's Overworld Item panel). Edits stay in a
+    /// Backing model for the ground item list dialog (Event editor's Overworld Item panel). Edits stay in a
     /// <see cref="GroundItemScriptsLogic.Session"/> until Save, which also renumbers the item events. Each edit is an
     /// undo step; Save starts the history again, since it renumbers the entries the steps refer to.
     /// </summary>
@@ -60,7 +60,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         private string _statusText = "";
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
 
-        /// <summary>Set once a save has written anything, so the owning Event Editor knows to
+        /// <summary>Set once a save has written anything, so the owning Event editor knows to
         /// re-sync its own Item dropdown (indices may have shifted).</summary>
         public bool Changed { get; private set; }
 

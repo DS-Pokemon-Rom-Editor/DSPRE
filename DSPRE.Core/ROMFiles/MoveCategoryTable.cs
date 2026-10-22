@@ -158,7 +158,7 @@ namespace DSPRE.ROMFiles
         {
             if (InExpansion) return;
             if (!SyntheticOverlaySpace.Available())
-                throw new InvalidOperationException("Apply the ARM9 expansion in the ROM Patch Toolbox first.");
+                throw new InvalidOperationException("Apply the ARM9 expansion in the ROM patch toolbox first.");
             if (Moves.Count > ExpandedCapacity)
                 throw new InvalidOperationException($"The {NameOf(Which)} move list already has more than {ExpandedCapacity} moves.");
 

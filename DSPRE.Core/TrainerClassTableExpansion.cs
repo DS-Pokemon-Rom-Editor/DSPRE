@@ -138,7 +138,7 @@ namespace DSPRE
         /// <summary>Unlike the gender/prize-mul tables, sTrainerEncounterBGMs' offsets are already
         /// tracked for every language/family DSPRE supports (RomLocator.Thing.EncounterMusicPointer),
         /// so its repoint status can be checked regardless of IsSupportedForCurrentRom. This is used
-        /// by the Patch Toolbox status row so it doesn't require the Trainer Editor to have been
+        /// by the ROM patch toolbox status row so it doesn't require the Trainer editor to have been
         /// opened first (which is what normally triggers the check as a side effect of loading).</summary>
         public static bool DetectMusicTableRepointed()
         {
@@ -393,7 +393,7 @@ namespace DSPRE
         }
 
         // Without the expansion the synthetic overlay is never loaded, so a moved table would be read from empty memory.
-        private const string NeedsExpansion = "This needs the ARM9 expansion from the ROM Patch Toolbox, which isn't applied to this ROM.";
+        private const string NeedsExpansion = "This needs the ARM9 expansion from the ROM patch toolbox, which isn't applied to this ROM.";
 
         // The game reads class N's front sprite from trfgra members 5N to 5N+4: tiles, palette, cells, animation, scan.
         private const int SpriteFilesPerClass = 5;
@@ -453,7 +453,7 @@ namespace DSPRE
 
             if (!ClassTablesHaveRoom)
             {
-                error = "Adding a class needs the \"Trainer class tables\" patch from the ROM Patch Toolbox.";
+                error = "Adding a class needs the \"Trainer class tables\" patch from the ROM patch toolbox.";
                 return false;
             }
             if (newClassId >= MaxClasses)
@@ -463,7 +463,7 @@ namespace DSPRE
             }
             if (addEncounterMusic && !MusicTableHasRoom)
             {
-                error = "Eye-contact music for a new class needs the \"Trainer encounter music table\" patch from the ROM Patch Toolbox.";
+                error = "Eye-contact music for a new class needs the \"Trainer encounter music table\" patch from the ROM patch toolbox.";
                 return false;
             }
 
@@ -609,7 +609,7 @@ namespace DSPRE
                     // Adding writes into the room the toolbox patch made; only the entry count changes in the code.
                     if (roomy < 0)
                     {
-                        error = "More eye-contact music needs the \"Trainer encounter music table\" patch from the ROM Patch Toolbox.";
+                        error = "More eye-contact music needs the \"Trainer encounter music table\" patch from the ROM patch toolbox.";
                         return false;
                     }
                     if (entryCount >= MaxClasses) { error = "Every trainer class already has eye-contact music."; return false; }

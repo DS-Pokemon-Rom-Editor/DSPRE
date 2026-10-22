@@ -1757,7 +1757,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             Building b = _map.Buildings[index];
             (int index, double x0, double z0, double x1, double z1) rect = BuildingSquares().FirstOrDefault(r => r.index == index);
             _buildingAtPress = (b.XPosition, b.ZPosition, (rect.x0, rect.z0, rect.x1, rect.z1));
-            Note = $"Building {index:D2}, model {b.ModelID}, at {b.XPosition},{b.ZPosition}. Drag to move it.";
+            Note = $"Building {index:D2} · model {b.ModelID} · {b.XPosition},{b.ZPosition}";
         }
 
         public void DragBuilding(int index, int dx, int dz)
@@ -2042,7 +2042,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
                 int inPack = textures.Count(t => list.For(t.Texname) != null);
                 Warning = inPack > 16 ? $"{inPack} of this area's textures are animated; the game animates the first 16." : null;
-                Note = $"{name} animates with {frames.Count} frames. Save the ROM to write it.";
+                Note = $"{name}: {frames.Count} frames";
             }
             catch (Exception ex) { return Fail(ex.Message); }
 
@@ -2220,7 +2220,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public int CollisionColumns => Chosen?.FootprintWide ?? 1;
         public int CollisionRows => Chosen?.FootprintDeep ?? 1;
 
-        // Choices use the names the Map Editor paints with; "No default" leaves the map's own value alone.
+        // Choices use the names the Map editor paints with; "No default" leaves the map's own value alone.
         public ObservableCollection<string> WalkChoices { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> TypeChoices { get; } = new ObservableCollection<string>();
         private readonly List<int> _walkValues = new List<int>(), _typeValues = new List<int>();

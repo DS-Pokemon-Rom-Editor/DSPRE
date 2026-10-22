@@ -525,6 +525,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             _dynamicHeaders = MapHeader.UsesDynamicHeaders;
             CanAddRemove = _dynamicHeaders;
             OnPropertyChanged(nameof(CanAddRemove));
+            OnPropertyChanged(nameof(AddTip));
+            OnPropertyChanged(nameof(RemoveTip));
         }
 
         private void OnMusicChanged() => Dispatcher.UIThread.Post(() => { OnPropertyChanged(nameof(DayPlayIcon)); OnPropertyChanged(nameof(NightPlayIcon)); });
@@ -549,7 +551,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (ReferenceEquals(sender, this) || _header == null || _header.ID != id) return;
             if (HasUnsavedChanges) { StatusText = $"Header {id} was saved in another window. Save or discard here to see it."; return; }
             LoadHeader((ushort)id);
-            StatusText = $"Header {id} was saved in another window and reloaded.";
+            StatusText = "";
         }
 
         // ── Setup ─────────────────────────────────────────────────────────────────────
@@ -571,6 +573,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 _dynamicHeaders = MapHeader.UsesDynamicHeaders;
                 CanAddRemove = _dynamicHeaders;
                 OnPropertyChanged(nameof(CanAddRemove));
+                OnPropertyChanged(nameof(AddTip));
+                OnPropertyChanged(nameof(RemoveTip));
 
                 _headerListNames = HeaderLists.GetHeaderListBoxNames();
                 _internalNames = HeaderLists.GetInternalNames();
@@ -1056,7 +1060,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             _history.Reset(UndoState());   // loaded state is the clean undo baseline for this header
             _lastCaptureUtc = DateTime.MinValue;
             RaiseUndoState();
-            StatusText = $"Header {_header.ID} loaded.";
+            StatusText = "";
             OnPropertyChanged(nameof(UnsavedChangesDescription));
             OnPropertyChanged(nameof(CurrentHeaderId));
             UpdateHeaderLocationInTree(headerId, CurrentHeaderLocationIndex());   // correct folder after reset/paste/import
@@ -1425,8 +1429,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         /// <summary>The header Remove takes away. Headers are numbered by position, so only the last one can go.</summary>
-        public string RemoveTip => _headerListNames.Count > 1
-            ? $"Removes header {_headerListNames.Count - 1:D3}, the last one"
+        private const string NeedsDynamicHeaders = "Needs the Dynamic map headers patch";
+        public string AddTip => _dynamicHeaders ? null : NeedsDynamicHeaders;
+        public string RemoveTip => !_dynamicHeaders ? NeedsDynamicHeaders
+            : _headerListNames.Count > 1 ? $"Removes header {_headerListNames.Count - 1:D3}, the last one"
             : "There has to be at least one header.";
 
         // Removed headers, newest last, so Ctrl+Z can put them back while no field edit is left to undo.

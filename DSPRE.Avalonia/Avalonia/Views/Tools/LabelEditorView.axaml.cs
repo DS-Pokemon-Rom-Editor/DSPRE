@@ -7,13 +7,13 @@ namespace DSPRE.Avalonia.Views.Tools
     public partial class LabelEditorView : Window
     {
         private LabelEditorViewModel VM => DataContext as LabelEditorViewModel;
-        private bool _closeConfirmed;
 
         public LabelEditorView()
         {
             InitializeComponent();
             LabelEditorViewModel vm = new LabelEditorViewModel();
             DataContext = vm;
+            EditorWindowChrome.Attach(this, vm);
             EditorWindowChrome.AttachUndoKeys(this, vm);
         }
 
@@ -21,19 +21,9 @@ namespace DSPRE.Avalonia.Views.Tools
         private void Add_Click(object sender, RoutedEventArgs e) => VM?.AddEntry();
         private void Reset_Click(object sender, RoutedEventArgs e) => VM?.ResetCategory();
 
-        protected override async void OnClosing(WindowClosingEventArgs e)
+        private async void Discard_Click(object sender, RoutedEventArgs e)
         {
-            if (VM != null && VM.HasUnsavedChanges && !_closeConfirmed)
-            {
-                e.Cancel = true;
-                DialogHelper.MsgResult r = await DialogHelper.AskYesNoCancelAsync(
-                    "You have unsaved changes. Do you want to save them before closing?", "Unsaved changes");
-                if (r == DialogHelper.MsgResult.Cancel) return;   // stay open
-                if (r == DialogHelper.MsgResult.Yes) VM.Save(); else VM.Discard();
-                _closeConfirmed = true; Close();
-                return;
-            }
-            base.OnClosing(e);
+            if (await DialogHelper.ConfirmDiscardAsync(this)) VM?.Discard();
         }
     }
 }

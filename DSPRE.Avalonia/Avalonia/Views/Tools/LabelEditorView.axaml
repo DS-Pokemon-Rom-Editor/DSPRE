@@ -15,9 +15,10 @@
   <DockPanel>
     <controls:EditorToolbar>
         <TextBlock Text="Scope" VerticalAlignment="Center"/>
-        <RadioButton Content="This project" GroupName="scope" IsChecked="{Binding !GlobalScope}"/>
-        <RadioButton Content="Global"       GroupName="scope" IsChecked="{Binding GlobalScope}"/>
+        <RadioButton Content="This project" GroupName="scope" IsChecked="{Binding !GlobalScope}" ToolTip.Tip="Saved in this ROM's project folder"/>
+        <RadioButton Content="Global"       GroupName="scope" IsChecked="{Binding GlobalScope}" ToolTip.Tip="Every ROM you open on this machine"/>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
         <Button Content="Add entry" controls:Icon.Key="addIcon" Click="Add_Click" IsEnabled="{Binding CanAddEntry}"/>
         <Button Content="Reset category" controls:Icon.Key="resetIcon" Click="Reset_Click"/>
@@ -37,8 +38,6 @@
       </DockPanel>
 
       <DockPanel Grid.Column="1">
-        <TextBlock DockPanel.Dock="Top" Text="{Binding ScopeText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"
-                   TextWrapping="Wrap" Margin="2,0,0,4"/>
         <Grid DockPanel.Dock="Top" ColumnDefinitions="44,*,150,150" Margin="2,2,2,2">
           <TextBlock Grid.Column="0" Text="#"        FontSize="12" FontWeight="Bold" Foreground="{DynamicResource Editor.Subtle}"/>
           <TextBlock Grid.Column="1" Text="Label"    FontSize="12" FontWeight="Bold" Foreground="{DynamicResource Editor.Subtle}"/>

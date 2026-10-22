@@ -21,12 +21,12 @@
         <controls:UndoRedoButtons/>
         <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click" ToolTip.Tip="Export encounters to an external file."/>
         <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click" ToolTip.Tip="Import encounters from an external file."/>
-        <Button Content="Locate" controls:Icon.Key="folder" Click="Locate_Click" ToolTip.Tip="Open the folder containing the encounter files."/>
+        <Button Content="Show files" controls:Icon.Key="folder" Click="Locate_Click" ToolTip.Tip="Open the folder containing the encounter files."/>
         <Button Content="?" Click="Help_Click" ToolTip.Tip="Trophy Garden help"/>
     </controls:EditorToolbar>
 
     <Grid>
-      <TextBlock Text="Trophy Garden is only in Diamond, Pearl and Platinum." Margin="16" IsVisible="{Binding !IsAvailable}"/>
+      <TextBlock Text="Not in this game" Margin="16" IsVisible="{Binding !IsAvailable}"/>
 
       <Grid ColumnDefinitions="240,*" IsVisible="{Binding IsAvailable}">
         <ListBox Grid.Column="0" Margin="4" ItemsSource="{Binding SlotLabels}"

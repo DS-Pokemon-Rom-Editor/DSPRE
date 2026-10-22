@@ -718,7 +718,7 @@ namespace DSPRE.ROMFiles
                 return;
 
             // expanded/scripts is Rotom's source root there, and a .script in it gets converted over
-            // the Rotom source on the next Script Editor open.
+            // the Rotom source on the next Script editor open.
             if (RomInfo.HasRotomProject)
                 return;
 

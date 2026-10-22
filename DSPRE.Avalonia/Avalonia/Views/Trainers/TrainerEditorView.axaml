@@ -401,7 +401,7 @@
                           </StackPanel>
 
                           <StackPanel IsEnabled="{Binding HgeAdditionalFlagsEnabled}">
-                            <TextBlock Text="Additional flags (each independently gates its own value)" FontSize="10"/>
+                            <TextBlock Text="More flags" FontSize="10"/>
                             <WrapPanel>
                               <StackPanel Width="110" Margin="0,0,6,0">
                                 <CheckBox Content="Status" IsChecked="{Binding HgeExtras.ExtraStatusEnabled}"/>

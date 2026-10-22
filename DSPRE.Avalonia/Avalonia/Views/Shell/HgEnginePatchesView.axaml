@@ -27,8 +27,8 @@
     </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="8,5">
-      <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"
-                 Text="Code patches from hooks, armhooks, bytereplacement and repoints. Offset is where each lands in the file. #ifdef lines are checked against your config."/>
+      <controls:HelpTip HorizontalAlignment="Left"
+                        Text="Offset is where each patch lands in the file; #ifdef lines are checked against your config"/>
     </Border>
 
     <!-- Adding one -->

@@ -114,12 +114,11 @@ namespace DSPRE.ROMFiles
         {
             Groups = new List<HoneyTreeEncounterGroup> {
                 new HoneyTreeEncounterGroup("Group A (Common)", 
-                    "Most common group (70% on normal trees, 20% on Munchlax trees)."),
+                    "70% on normal trees, 20% on Munchlax trees"),
                 new HoneyTreeEncounterGroup("Group B (Uncommon)", 
-                    "Uncommon group (20% on normal trees, 70% on Munchlax trees)."),
+                    "20% on normal trees, 70% on Munchlax trees"),
                 new HoneyTreeEncounterGroup("Group C (Munchlax)", 
-                    "Rare group containing Munchlax (1% on Munchlax trees only).\n" +
-                    "Each player has 4 unique Munchlax trees based on Trainer ID.")
+                    "1% on Munchlax trees only. Each player has 4 Munchlax trees, set by Trainer ID.")
             };
         }
 

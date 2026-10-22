@@ -12,7 +12,7 @@
 
   <DockPanel Margin="16">
     <TextBlock DockPanel.Dock="Top" Margin="0,0,0,10" TextWrapping="Wrap"
-               Text="Running hg-engine's full build (make): data domains, ASM hooks, and the final repack into test.nds."/>
+               Text="Building with make"/>
 
     <StackPanel DockPanel.Dock="Bottom" Margin="0,10,0,0" Spacing="8">
       <TextBlock Text="{Binding ResultText}" TextWrapping="Wrap" FontWeight="Bold"

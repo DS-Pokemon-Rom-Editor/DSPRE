@@ -13,7 +13,7 @@ using Avalonia.Threading;
 namespace DSPRE.Avalonia
 {
     /// <summary>
-    /// Installs native-Avalonia implementations of the Patch Toolbox prompt hooks
+    /// Installs native-Avalonia implementations of the ROM patch toolbox prompt hooks
     /// (<see cref="DSPRE.PatchToolboxLogic.ConfirmYesNo"/> etc.), so the native toolbox shows
     /// Avalonia dialogs instead of WinForms MessageBoxes while the ROM-writing logic stays shared.
     ///

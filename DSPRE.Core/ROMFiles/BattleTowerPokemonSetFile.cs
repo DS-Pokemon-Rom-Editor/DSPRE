@@ -62,7 +62,7 @@ namespace DSPRE.ROMFiles
         public override string ToString()
         {
             string[] pokemonNames = RomInfo.GetPokemonNames();
-            return Species < pokemonNames.Length ? pokemonNames[Species] : $"Pokemon {Species}";
+            return Species < pokemonNames.Length ? pokemonNames[Species] : $"Pokémon {Species}";
         }
     }
 
@@ -122,14 +122,24 @@ namespace DSPRE.ROMFiles
 
         public bool SaveToNarc(bool showSuccessMessage = true)
         {
+            string error = Save();
+            if (error != null)
+            {
+                AppMessages.Error("The Battle Tower Pokémon sets weren't saved:\n" + error, "Battle Tower error");
+                return false;
+            }
+            if (showSuccessMessage) AppMessages.Info("Battle Tower Pokemon sets saved successfully!", "Success");
+            return true;
+        }
+
+        /// <returns>null when saved, else why not.</returns>
+        public string Save()
+        {
             try
             {
                 string narcDir = Filesystem.BattleTowerPokemon;
                 if (string.IsNullOrEmpty(narcDir) || !Directory.Exists(narcDir))
-                {
-                    AppMessages.Error("Battle Tower Pokemon set directory not found.", "Error");
-                    return false;
-                }
+                    return "The Battle Tower Pokémon set folder was not found.";
 
                 for (int i = 0; i < Sets.Count; i++)
                 {
@@ -140,17 +150,11 @@ namespace DSPRE.ROMFiles
                         ArchiveMembers.Put(RomInfo.DirNames.BattleTowerPokemon, i, ms.ToArray());
                     }
                 }
-
-                if (showSuccessMessage)
-                {
-                    AppMessages.Info("Battle Tower Pokemon sets saved successfully!", "Success");
-                }
-                return true;
+                return null;
             }
             catch (Exception ex)
             {
-                AppMessages.Error($"Error saving Battle Tower Pokemon sets: {ex.Message}", "Error");
-                return false;
+                return ex.Message;
             }
         }
 

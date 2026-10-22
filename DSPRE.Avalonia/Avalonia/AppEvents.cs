@@ -17,8 +17,8 @@ namespace DSPRE.Avalonia
         /// <summary>A customisable dropdown-label category was edited (see <see cref="Data.LabelStore"/>).</summary>
         public static event EventHandler LabelsChanged;
 
-        /// <summary>A ROM Patch Toolbox patch was applied; editors gating a feature on a patch flag
-        /// (e.g. Map Editor's Building Rotation fields) should re-check their state.</summary>
+        /// <summary>A ROM patch toolbox patch was applied; editors gating a feature on a patch flag
+        /// (e.g. Map editor's Building Rotation fields) should re-check their state.</summary>
         public static event EventHandler RomPatchStateChanged;
 
         /// <summary>The game banner (icon / titles) was edited; the main window refreshes its icon.</summary>

@@ -218,7 +218,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                 return;
             }
 
-            view.FollowerNote = $"In the ROM's a/0/8/1, follower sprites start at file {start}, so this one is file {start + species}.";
+            view.FollowerNote = $"Follower file {start + species}";
             byte[] model = OverworldArchive().Get(start + species);
             if (model == null) { view.Followers.Add(new SpriteTile { Caption = "Follower", Whynot = "Nothing is stored here." }); return; }
 
@@ -265,7 +265,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                     _spriteSourceNote = "From your checkout's build of pokegra.narc.";
                     return _spriteArchive = fromCheckout;
                 }
-                _spriteSourceNote = "Your checkout's pokegra.narc could not be read, so these come from the ROM's a/0/0/4.";
+                _spriteSourceNote = "From the ROM; the checkout's pokegra.narc couldn't be read";
             }
 
             return _spriteArchive = new ScriptNarc(DirNames.PokemonBattleSprites, fromPacked: true);
@@ -498,7 +498,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             LoadLayout();
             _loadedSpeciesId = -1;
             LoadSelectedSpecies();
-            RepairNote = "Repaired. Save the ROM to write it back.";
+            RepairNote = "Repaired.";
             Raise(nameof(HasUnsavedChanges));
             RaiseSteps();
         }

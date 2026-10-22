@@ -64,9 +64,8 @@
         <DockPanel Margin="8">
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="16" Margin="0,0,0,8">
             <TextBlock Text="Walk rate" Classes="lbl"/>
-            <NumericUpDown Value="{Binding WalkingRate}" Minimum="0" Maximum="255" Width="100"/>
-            <TextBlock Text="A rate of 0 means nothing appears in the grass here." Classes="lbl"
-                       Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding NothingWalksHere}"/>
+            <NumericUpDown Value="{Binding WalkingRate}" Minimum="0" Maximum="255" Width="100"
+                           ToolTip.Tip="0 means nothing appears in the grass"/>
           </StackPanel>
           <DataGrid ItemsSource="{Binding WalkingRows}" AutoGenerateColumns="False" CanUserResizeColumns="True">
             <DataGrid.Columns>

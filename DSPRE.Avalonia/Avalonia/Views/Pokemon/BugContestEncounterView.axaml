@@ -10,7 +10,7 @@
 
   <Grid>
     <TextBlock IsVisible="{Binding IsNotAvailable}" Margin="16" TextWrapping="Wrap"
-               Text="Bug Contest encounters are not available for this ROM version."/>
+               Text="Not in this game"/>
 
     <DockPanel IsVisible="{Binding IsAvailable}">
       <controls:EditorToolbar>
@@ -19,7 +19,7 @@
           <controls:UndoRedoButtons/>
           <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
           <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
-          <Button Content="Locate" controls:Icon.Key="folder"  Click="Locate_Click"/>
+          <Button Content="Show files" controls:Icon.Key="folder"  Click="Locate_Click"/>
       </controls:EditorToolbar>
 
       <DockPanel Margin="8">

@@ -18,8 +18,8 @@ namespace DSPRE.ROMFiles
 
     public override string ToString()
     {
-      string expected = ExpectedValue >= FirstVariable ? "Var " + FormatValue(ExpectedValue) : FormatValue(ExpectedValue);
-      return base.ToString() + " when Var " + FormatValue(VariableToWatch) + " == " + expected;
+      string expected = ExpectedValue >= FirstVariable ? $"variable 0x{ExpectedValue:X4}" : FormatValue(ExpectedValue);
+      return base.ToString() + $" when variable 0x{VariableToWatch:X4} is " + expected;
     }
 
     /// <summary>The last save variable this game has.</summary>

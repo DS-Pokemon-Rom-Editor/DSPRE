@@ -45,7 +45,7 @@ namespace LibNDSFormats.NSBMD
         public enum RenderMode { Opaque = 1, Translucent, Picking }
 
         /// <summary>Converts the NSBMD 0-31 material alpha into a 0-1 GL alpha (31 = fully opaque).
-        /// Ported from upstream main's PR #209 ("Make Map Editor texture preview respect 1-30 alpha
+        /// Ported from upstream main's PR #209 ("Make Map editor texture preview respect 1-30 alpha
         /// values for materials") even though RenderModel here is currently a stub pending the OpenTK
         /// rewrite, kept in sync so a future merge with main doesn't conflict on this hunk, and so the
         /// eventual OpenTK renderer has it ready to call. The real fix now lives in the Avalonia

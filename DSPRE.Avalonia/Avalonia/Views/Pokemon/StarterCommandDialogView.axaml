@@ -8,7 +8,7 @@
 
   <DockPanel Margin="12">
     <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,0,0,8"
-               Text="These are the give-a-Pokémon commands in this project's scripts. Pick the one that hands the player their starter."/>
+               Text="Pick the starter command" FontWeight="SemiBold"/>
 
     <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,10,0,0">
       <Button Content="OK" Click="Ok_Click"/>
@@ -18,7 +18,7 @@
     <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0" Padding="0,10,0,0" Margin="0,10,0,0"
             BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
       <StackPanel Spacing="6">
-        <TextBlock Foreground="{DynamicResource Editor.Subtle}" Text="Somewhere else? Say where and check it:"/>
+        <TextBlock Foreground="{DynamicResource Editor.Subtle}" Text="Other location"/>
         <StackPanel Orientation="Horizontal" Spacing="6">
           <TextBlock Text="Script file" VerticalAlignment="Center"/>
           <NumericUpDown Minimum="0" Maximum="9999" Increment="1" FormatString="0" Width="110"

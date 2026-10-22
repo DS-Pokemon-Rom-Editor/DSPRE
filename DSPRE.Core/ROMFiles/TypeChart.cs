@@ -250,7 +250,7 @@ namespace DSPRE.ROMFiles
         {
             if (InExpansion) return;
             if (!SyntheticOverlaySpace.Available())
-                throw new InvalidOperationException("Apply the ARM9 expansion in the ROM Patch Toolbox first.");
+                throw new InvalidOperationException("Apply the ARM9 expansion in the ROM patch toolbox first.");
             (int[] col0, int[] col1, int[] col2, int countCompare, int countModulus) sites = Sites ?? throw new InvalidOperationException("This game version isn't supported yet.");
             if (!_countIsCompare || !_modulusIsMovs) throw new InvalidOperationException("Conversion 2's count check doesn't look like the game's, so DSPRE won't move the chart.");
             int oldCapacity = Capacity;

@@ -9,7 +9,7 @@ namespace DSPRE.ROMFiles
 {
     /// <summary>
     /// Watches a project's script sources and text archive JSON for edits made outside DSPRE, such as in
-    /// VS Code. A changed script source is compiled right away, as the Script Editor's Save does, and a
+    /// VS Code. A changed script source is compiled right away, as the Script editor's Save does, and a
     /// changed archive is announced so an open editor reloads it. DSPRE's own writes are skipped.
     /// </summary>
     public static class ProjectSourceWatcher

@@ -48,29 +48,29 @@ namespace DSPRE
 
         private static readonly Dictionary<string, Rule> Rules = new(StringComparer.OrdinalIgnoreCase)
         {
-            ["PokemonEditorView"] = new Rule { Title = "The Pokémon Editor", Hge = HgEngine.Source },
-            ["MoveDataEditorView"] = new Rule { Title = "The Move Data Editor", Hge = HgEngine.Source },
-            ["ItemEditorView"] = new Rule { Title = "The Item Editor", Hge = HgEngine.Source },
-            ["WildEditorView"] = new Rule { Title = "The Wild Pokémon Editor", Hge = HgEngine.Source },
-            ["TrainerEditorView"] = new Rule { Title = "The Trainer Editor", Hge = HgEngine.Source },
-            ["TrainerSpriteEditorView"] = new Rule { Title = "The Trainer Sprite Editor", Hge = HgEngine.Source },
-            ["TrainerBackSpriteEditor"] = new Rule { Title = "The Trainer Back Sprite Editor", Hge = HgEngine.Source },
+            ["PokemonEditorView"] = new Rule { Title = "The Pokémon editor", Hge = HgEngine.Source },
+            ["MoveDataEditorView"] = new Rule { Title = "The Move data editor", Hge = HgEngine.Source },
+            ["ItemEditorView"] = new Rule { Title = "The Item editor", Hge = HgEngine.Source },
+            ["WildEditorView"] = new Rule { Title = "The Wild Pokémon editor", Hge = HgEngine.Source },
+            ["TrainerEditorView"] = new Rule { Title = "The Trainer editor", Hge = HgEngine.Source },
+            ["TrainerSpriteEditorView"] = new Rule { Title = "The Trainer sprite editor", Hge = HgEngine.Source },
+            ["TrainerBackSpriteEditor"] = new Rule { Title = "The Trainer back sprite editor", Hge = HgEngine.Source },
 
-            ["BattleMessageEditorView"] = new Rule { Title = "The Battle Message Editor", Hge = HgEngine.Source },
+            ["BattleMessageEditorView"] = new Rule { Title = "Trainer battle messages", Hge = HgEngine.Source },
 
-            ["EggMoveEditorView"] = new Rule { Title = "The Egg Move Editor", Hge = HgEngine.Source },
-            ["BulkLearnsetEditorView"] = new Rule { Title = "The Bulk Learnset Editor", Hge = HgEngine.Source },
-            ["TmHmBulkEditorView"] = new Rule { Title = "The TM/HM Bulk Editor", Hge = HgEngine.Source },
-            ["TrainerFlagBulkEditorView"] = new Rule { Title = "The Trainer Flag Bulk Editor", Hge = HgEngine.Source },
+            ["EggMoveEditorView"] = new Rule { Title = "The Egg move editor", Hge = HgEngine.Source },
+            ["BulkLearnsetEditorView"] = new Rule { Title = "The Bulk learnset editor", Hge = HgEngine.Source },
+            ["TmHmBulkEditorView"] = new Rule { Title = "The TM/HM bulk editor", Hge = HgEngine.Source },
+            ["TrainerFlagBulkEditorView"] = new Rule { Title = "The Trainer flag bulk editor", Hge = HgEngine.Source },
             ["StarterEditorView"] = new Rule
             {
-                Title = "The Starter Pokémon Editor", Hge = HgEngine.Source,
-                Unsupported = Unless(IsStarterEditorAvailable, "The Starter Pokémon Editor does not support this ROM."),
+                Title = "The Starter Pokémon editor", Hge = HgEngine.Source,
+                Unsupported = Unless(IsStarterEditorAvailable, "The Starter Pokémon editor does not support this ROM."),
             },
             ["MartEditorView"] = new Rule
             {
-                Title = "The Mart Editor", Hge = HgEngine.Source,
-                Unsupported = Unless(IsMartEditorAvailable, "The Mart Editor does not support this ROM."),
+                Title = "The Mart editor", Hge = HgEngine.Source,
+                Unsupported = Unless(IsMartEditorAvailable, "The Mart editor does not support this ROM."),
             },
             ["WildHeldItemOddsView"] = new Rule { Title = "The Wild held items editor", Hge = HgEngine.Open, Unsupported = () => NoSpot(RomLocator.Thing.WildHeldItemOdds) },
             ["GrowthCurveEditorView"] = new Rule { Title = "The Growth curve editor", Hge = HgEngine.Open },
@@ -98,95 +98,102 @@ namespace DSPRE
                 Title = "The Underground mining editor", Hge = HgEngine.Closed,
                 Unsupported = () => Unless(() => Family(GameFamilies.DP, GameFamilies.Plat), "Only Diamond, Pearl and Platinum have the Underground.")() ?? NoSpot(RomLocator.Thing.MiningTreasures),
             },
-            ["VsIntroEditorView"] = new Rule { Title = "The VS Intro Editor", Hge = HgEngine.Source },
-            ["WildIntroEditorView"] = new Rule { Title = "The Wild Pokémon Intro Editor", Hge = HgEngine.Source },
+            ["VsIntroEditorView"] = new Rule { Title = "The VS intro editor", Hge = HgEngine.Source },
+            ["WildIntroEditorView"] = new Rule { Title = "The Wild Pokémon intro editor", Hge = HgEngine.Source },
 
-            ["AudioEditorView"] = new Rule { Title = "The Audio Editor", Hge = HgEngine.NeedsLink },
-            ["TMEditorView"] = new Rule { Title = "The TM Editor", Hge = HgEngine.NeedsLink },
+            ["AudioEditorView"] = new Rule { Title = "The Audio editor", Hge = HgEngine.NeedsLink },
+            ["TMEditorView"] = new Rule { Title = "The TM / HM editor", Hge = HgEngine.NeedsLink },
             ["BattleScriptEditorView"] = new Rule
             {
-                Title = "The Battle Script Editor", Hge = HgEngine.NeedsLink, BuiltArchives = new[] { DirNames.WazaParticle },
-                Unsupported = Unless(() => Family(GameFamilies.Plat, GameFamilies.HGSS), "The Battle Script Editor supports Platinum, HeartGold and SoulSilver."),
+                Title = "The Move animations & battle scripts", Hge = HgEngine.NeedsLink, BuiltArchives = new[] { DirNames.WazaParticle },
+                Unsupported = Unless(() => Family(GameFamilies.Plat, GameFamilies.HGSS), "The Move animations & battle scripts supports Platinum, HeartGold and SoulSilver."),
             },
             ["ItemTableEditorView"] = new Rule
             {
-                Title = "The Item Tables editor", Hge = HgEngine.NeedsLink,
+                Title = "Item tables", Hge = HgEngine.NeedsLink,
                 Unsupported = Unless(IsItemTableEditorAvailable, "The Item Tables editor does not support this ROM."),
             },
-            ["TradeEditorView"] = new Rule { Title = "The Trade Editor", Hge = HgEngine.NeedsLink },
+            ["TradeEditorView"] = new Rule { Title = "The Trade editor", Hge = HgEngine.NeedsLink },
             ["TableEditorView"] = new Rule
             {
-                Title = "Music & Battle Tables", Hge = HgEngine.NeedsLink,
+                Title = "Music & battle tables", Hge = HgEngine.NeedsLink,
                 Unsupported = Unless(() => GameFamily != GameFamilies.DP || BattleMusicTables.IsSupported, "Music & Battle Tables does not support this Diamond or Pearl ROM."),
             },
             ["BattleTowerEditorView"] = new Rule
             {
-                Title = "The Battle Tower Editor", Hge = HgEngine.NeedsLink,
+                Title = "The Battle Tower editor", Hge = HgEngine.NeedsLink,
                 Unsupported = Unless(() => BattleTowerTrainerFile.IsAvailable() && BattleTowerPokemonSetFile.IsAvailable(), "Battle Tower data was not found for this game."),
             },
-            ["CameraEditorView"] = new Rule { Title = "The Camera Editor", Hge = HgEngine.NeedsLink },
+            ["CameraEditorView"] = new Rule { Title = "The Camera editor", Hge = HgEngine.NeedsLink },
             ["VsSeekerRematchView"] = new Rule
             {
-                Title = "The Vs. Seeker Rematch Editor", Hge = HgEngine.NeedsLink,
-                Unsupported = Unless(() => VsSeekerRematchTable.IsSupported, "The Vs. Seeker Rematch Editor only supports Diamond, Pearl and Platinum."),
+                Title = "The Vs. Seeker rematch editor", Hge = HgEngine.NeedsLink,
+                Unsupported = Unless(() => VsSeekerRematchTable.IsSupported, "The Vs. Seeker rematch editor only supports Diamond, Pearl and Platinum."),
             },
             ["PokegearRematchView"] = new Rule
             {
-                Title = "The Pokégear Rematch Editor", Hge = HgEngine.NeedsLink,
-                Unsupported = Unless(() => PokegearRematchTable.IsSupported, "The Pokégear Rematch Editor only supports HeartGold and SoulSilver."),
+                Title = "The Pokégear rematch editor", Hge = HgEngine.NeedsLink,
+                Unsupported = Unless(() => PokegearRematchTable.IsSupported, "The Pokégear rematch editor only supports HeartGold and SoulSilver."),
             },
             ["PokegearPhoneBookView"] = new Rule
             {
-                Title = "The Pokégear Phone Book", Hge = HgEngine.NeedsLink,
+                Title = "The Pokégear phone book", Hge = HgEngine.NeedsLink,
                 Unsupported = Unless(() => PokegearPhoneBook.IsSupported, "The Pokégear Phone Book only exists in HeartGold and SoulSilver."),
             },
-            ["FlyEditorView"] = new Rule { Title = "The Fly / Warp Editor", Hge = HgEngine.NeedsLink },
+            ["FlyEditorView"] = new Rule { Title = "The Fly / warp editor", Hge = HgEngine.NeedsLink },
             ["DungeonCutinEditorView"] = new Rule
             {
-                Title = "The Dungeon Cut-in Editor", Hge = HgEngine.NeedsLink,
+                Title = "The Dungeon cutin editor", Hge = HgEngine.NeedsLink,
                 Unsupported = Unless(IsDungeonCutinEditorAvailable, "The Dungeon Cut-in editor is available for HeartGold and SoulSilver ROMs."),
             },
             ["TitleScreenEditorView"] = new Rule
             {
-                Title = "The Title Screen Editor", Hge = HgEngine.NeedsLink,
+                Title = "The Title screen editor", Hge = HgEngine.NeedsLink,
                 Unsupported = Unless(IsTitleScreenEditorAvailable, "The Title Screen editor is available for HeartGold and SoulSilver ROMs."),
             },
             ["BottomScreenEditorView"] = new Rule
             {
-                Title = "The Bottom Screen Editor", Hge = HgEngine.NeedsLink,
+                Title = "Bottom screen", Hge = HgEngine.NeedsLink,
                 Unsupported = Unless(IsBottomScreenEditorAvailable, "The Bottom Screen editor is not available for this ROM."),
             },
             ["TrainerCardEditorView"] = new Rule
             {
-                Title = "The Trainer Card Editor", Hge = HgEngine.NeedsLink,
+                Title = "The Trainer card editor", Hge = HgEngine.NeedsLink,
                 Unsupported = Unless(IsTrainerCardEditorAvailable, "The Trainer Card editor is not available for this ROM."),
             },
-            ["CellAnimationEditorView"] = new Rule { Title = "The Cell Animation Editor", Hge = HgEngine.NeedsLink },
-            ["PokedexGraphicsEditorView"] = new Rule { Title = "The Pokédex Graphics Editor", Hge = HgEngine.NeedsLink },
+            ["CellAnimationEditorView"] = new Rule { Title = "Cell animations", Hge = HgEngine.NeedsLink },
+            ["PokedexGraphicsEditorView"] = new Rule { Title = "Pokédex graphics", Hge = HgEngine.NeedsLink },
+            ["ScreensEditorView"] = new Rule
+            {
+                Title = "Screens", Hge = HgEngine.NeedsLink,
+                Unsupported = Unless(() => (RomInfo.GameFamily == RomInfo.GameFamilies.Plat || RomInfo.GameFamily == RomInfo.GameFamilies.HGSS)
+                                           && RomInfo.GameLanguage != RomInfo.GameLanguages.Japanese,
+                                     "The Screens editor works on Platinum, HeartGold and SoulSilver, except Japanese."),
+            },
             ["SummaryScreenEditorView"] = new Rule
             {
-                Title = "The Summary Screen Editor", Hge = HgEngine.NeedsLink,
+                Title = "Summary screen", Hge = HgEngine.NeedsLink,
                 Unsupported = Unless(() => ROMFiles.SummaryScreenLayout.SupportsCurrentRom,
                                      "The Summary Screen editor works on English Platinum, HeartGold and SoulSilver."),
             },
-            ["NamingScreenEditor"] = new Rule { Title = "The Naming Screen Editor", Hge = HgEngine.NeedsLink, Beta = "TrainerSpriteEditorView" },
-            ["ParticleEditorView"] = new Rule { Title = "The Particle Editor", Hge = HgEngine.NeedsLink, BuiltArchives = new[] { DirNames.WazaParticle } },
-            ["ParticleLibraryView"] = new Rule { Title = "The Particle Library", Hge = HgEngine.NeedsLink },
-            ["BallCapsuleEditorView"] = new Rule { Title = "The Ball Capsule Editor", Hge = HgEngine.NeedsLink },
-            ["BannerEditorView"] = new Rule { Title = "The Game Icon & Banner editor", Hge = HgEngine.NeedsLink },
-            ["SpawnEditorView"] = new Rule { Title = "The Spawn Point Editor", Hge = HgEngine.NeedsLink },
-            ["OverlayEditorView"] = new Rule { Title = "The Overlay Editor", Hge = HgEngine.NeedsLink },
-            ["BtxEditorView"] = new Rule { Title = "The Overworld Editor", Hge = HgEngine.NeedsLink },
+            ["NamingScreenEditor"] = new Rule { Title = "The Naming screen editor", Hge = HgEngine.NeedsLink, Beta = "TrainerSpriteEditorView" },
+            ["ParticleEditorView"] = new Rule { Title = "The Particle editor", Hge = HgEngine.NeedsLink, BuiltArchives = new[] { DirNames.WazaParticle } },
+            ["ParticleLibraryView"] = new Rule { Title = "Particles", Hge = HgEngine.NeedsLink },
+            ["BallCapsuleEditorView"] = new Rule { Title = "Ball capsules", Hge = HgEngine.NeedsLink },
+            ["BannerEditorView"] = new Rule { Title = "Game icon & banner", Hge = HgEngine.NeedsLink },
+            ["SpawnEditorView"] = new Rule { Title = "The Spawn point editor", Hge = HgEngine.NeedsLink },
+            ["OverlayEditorView"] = new Rule { Title = "The Overlay editor", Hge = HgEngine.NeedsLink },
+            ["BtxEditorView"] = new Rule { Title = "The Overworld editor", Hge = HgEngine.NeedsLink },
             ["ProjectChecksView"] = new Rule { Title = "Validation & Where-Used", Hge = HgEngine.NeedsLink },
-            ["PatchToolboxView"] = new Rule { Title = "The ROM Patch Toolbox", Hge = HgEngine.NeedsLink },
+            ["PatchToolboxView"] = new Rule { Title = "The ROM patch toolbox", Hge = HgEngine.NeedsLink },
             ["DataExports"] = new Rule { Title = "Data exports", Hge = HgEngine.NeedsLink },
-            ["ExportDocs"] = new Rule { Title = "Export Docs", Hge = HgEngine.NeedsLink },
+            ["ExportDocs"] = new Rule { Title = "Export docs", Hge = HgEngine.NeedsLink },
             ["TrainerUsageReport"] = new Rule { Title = "The trainer usage report", Hge = HgEngine.NeedsLink },
             // On an hg-engine ROM only its Headbutt tab opens, and only once the checkout is linked.
-            ["SpecialEncountersEditorView"] = new Rule { Title = "The Special Encounters editor", Hge = HgEngine.NeedsLink },
+            ["SpecialEncountersEditorView"] = new Rule { Title = "The Special encounters editor", Hge = HgEngine.NeedsLink },
             ["BattleScreenEditorView"] = new Rule
             {
-                Title = "The Battle Screen Editor", Hge = HgEngine.NeedsLink,
+                Title = "Battle screen", Hge = HgEngine.NeedsLink,
                 BuiltArchives = new[] { DirNames.BattleObj, DirNames.WindowFrames, DirNames.Fonts },
             },
             ["HpBarLayoutEditorView"] = new Rule
@@ -200,19 +207,19 @@ namespace DSPRE
             // These open without a ROM, so only the hg-engine and beta gates apply.
             ["GraphicsBrowserView"] = new Rule { Title = "The graphics list", Hge = HgEngine.NeedsLink, NeedsRom = false },
             ["ModelBrowserView"] = new Rule { Title = "The models list", Hge = HgEngine.NeedsLink, NeedsRom = false },
-            ["TilesetBuilderView"] = new Rule { Title = "Picture to Background", Hge = HgEngine.NeedsLink, NeedsRom = false },
-            ["FontEditorView"] = new Rule { Title = "The Font Editor", Hge = HgEngine.NeedsLink, NeedsRom = false, BuiltArchives = new[] { DirNames.Fonts } },
+            ["TilesetBuilderView"] = new Rule { Title = "Picture to background", Hge = HgEngine.NeedsLink, NeedsRom = false },
+            ["FontEditorView"] = new Rule { Title = "The Font editor", Hge = HgEngine.NeedsLink, NeedsRom = false, BuiltArchives = new[] { DirNames.Fonts } },
             ["BattleSceneBrowserView"] = new Rule { Title = "The battle scenes list", Hge = HgEngine.NeedsLink, NeedsRom = false },
 
-            ["HgEngineFormEditorView"] = new Rule { Title = "The Form Editor", Hge = HgEngine.LinkedOnly },
-            ["AbilityFlagsEditorView"] = new Rule { Title = "The Ability Flags editor", Hge = HgEngine.LinkedOnly },
-            ["MoveBackgroundEditorView"] = new Rule { Title = "The Move Backgrounds editor", Hge = HgEngine.Source },
-            ["HgEngineSettingsView"] = new Rule { Title = "hg-engine Settings", Hge = HgEngine.LinkedOnly },
+            ["HgEngineFormEditorView"] = new Rule { Title = "The Form editor", Hge = HgEngine.LinkedOnly },
+            ["AbilityFlagsEditorView"] = new Rule { Title = "Ability flags", Hge = HgEngine.LinkedOnly },
+            ["MoveBackgroundEditorView"] = new Rule { Title = "Move backgrounds", Hge = HgEngine.Source },
+            ["HgEngineSettingsView"] = new Rule { Title = "hg-engine settings", Hge = HgEngine.LinkedOnly },
             ["HgEnginePatchesView"] = new Rule { Title = "hg-engine patches", Hge = HgEngine.LinkedOnly },
             ["BattleTestsView"] = new Rule { Title = "Battle tests", Hge = HgEngine.LinkedOnly },
             ["HgeRomReviewView"] = new Rule
             {
-                Title = "The hg-engine ROM Review",
+                Title = "hg-engine ROM review",
                 Unsupported = Unless(() => IsHGE, "This review reads hg-engine's own archives, and this ROM is not an hg-engine build."),
             },
             ["DistortionWorldView"] = new Rule

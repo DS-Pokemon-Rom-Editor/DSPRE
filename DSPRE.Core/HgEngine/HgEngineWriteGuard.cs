@@ -7,7 +7,7 @@ namespace DSPRE.HgEngine
     /// <summary>
     /// Stops a write landing where hg-engine's build patches. Every DSPRE write to arm9 or an overlay
     /// funnels through DSUtils.WriteToFile, so asking once here covers the item table, marts, starters,
-    /// the trainer class expansion, the Patch Toolbox, the script command table and the trainer roster
+    /// the trainer class expansion, the ROM patch toolbox, the script command table and the trainer roster
     /// without each of them growing its own check.
     /// </summary>
     public static class HgEngineWriteGuard

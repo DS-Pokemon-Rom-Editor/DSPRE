@@ -101,7 +101,7 @@ namespace DSPRE.ROMFiles
             if (GameLanguage != GameLanguages.English || (RomID != "IPKE" && RomID != "IPGE"))
                 return "Intro timings are for English HeartGold and SoulSilver.";
             if (TrainerClassMetadataPatch.InstalledOffset() == null) return "Apply the trainer class metadata patch first.";
-            if (!SyntheticOverlaySpace.Available()) return "Apply the ARM9 expansion in the ROM Patch Toolbox first.";
+            if (!SyntheticOverlaySpace.Available()) return "Apply the ARM9 expansion in the ROM patch toolbox first.";
             if (!ActiveClassWordMatches()) return "The trainer class metadata patch isn't the version these timings were built for.";
             return null;
         }

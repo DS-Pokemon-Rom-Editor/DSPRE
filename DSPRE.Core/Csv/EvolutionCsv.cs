@@ -143,7 +143,7 @@ namespace DSPRE.Csv
                 if (e.Slots.Count == 0) { emptied[e.Id] = r; continue; }
                 count[e.Id] = count.TryGetValue(e.Id, out int n) ? n + 1 : 1;
                 if (count[e.Id] > _setup.SlotCount)
-                    On(r).Error(-1, $"{r.Label} has more than {_setup.SlotCount} evolutions. Skip this row or add slots in the Patch Toolbox.");
+                    On(r).Error(-1, $"{r.Label} has more than {_setup.SlotCount} evolutions. Skip this row or add slots in the ROM patch toolbox.");
             }
             foreach ((int id, CsvRecord r) in emptied)
                 if (count.ContainsKey(id))

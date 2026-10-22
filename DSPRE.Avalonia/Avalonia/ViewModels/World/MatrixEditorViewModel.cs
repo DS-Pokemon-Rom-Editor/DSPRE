@@ -71,7 +71,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 catch { }   // the expansion check falls back to unpatched limits
                 int max = MatrixMaxCells(patched), cells = _matrix.Width * _matrix.Height;
                 if (cells <= max) return "";
-                string fix = GameFamily == GameFamilies.HGSS && !patched ? " Apply Expand Matrix 0 in the ROM Patch Toolbox to double it." : "";
+                string fix = GameFamily == GameFamilies.HGSS && !patched ? " Apply Expand Matrix 0 in the ROM patch toolbox to double it." : "";
                 return $"{cells} cells: the game holds at most {max}, so a bigger matrix corrupts memory.{fix}";
             }
         }
@@ -369,7 +369,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (ReferenceEquals(sender, this) || id != _selectedIndex) return;
             if (_dirty) { StatusText = $"Matrix {id} was saved in another window. Save or discard here to see it."; return; }
             LoadMatrix(id);
-            StatusText = $"Matrix {id} was saved in another window and reloaded.";
+            StatusText = "";
         }
         public int InitialIndex { get; set; }
 
@@ -387,7 +387,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowErrorAsync($"Failed to set up Matrix Editor:\n{ex.Message}", "Matrix editor error");
+                await DialogHelper.ShowErrorAsync($"Failed to set up Matrix editor:\n{ex.Message}", "Matrix editor error");
             }
         }
 
@@ -399,7 +399,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 RebuildLegend();
                 SetClean();
                 StartUndo();
-                StatusText = $"Loaded matrix {index} ({Width}×{Height}).";
+                StatusText = "";
                 RaiseLoaded();
             }
             catch (Exception ex)

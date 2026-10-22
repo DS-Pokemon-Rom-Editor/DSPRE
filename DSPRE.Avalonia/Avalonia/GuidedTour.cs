@@ -170,7 +170,7 @@ namespace DSPRE.Avalonia
                     Title = "The Pokémon menu",
                     Body = "The creatures and their moves: species stats, learnsets and sprites (Pokémon " +
                            $"Editor), move data{(beta ? " and animations" : "")}, TM/HM and egg moves, trades and starters, " +
-                           "wild encounters, and the Special Encounters Editor for headbutt trees, the Bug " +
+                           "wild encounters, and the Special encounters editor for headbutt trees, the Bug " +
                            "Contest, the Safari Zone, honey trees, the Great Marsh and the Trophy Garden."
                 },
                 new Step
@@ -178,16 +178,16 @@ namespace DSPRE.Avalonia
                     Target = () => main.FindControl<Control>("TrainersMenu"),
                     Title = "The Trainers menu",
                     Body = beta
-                        ? "Everyone the player battles: parties in the Trainer Editor, trainer sprites, " +
+                        ? "Everyone the player battles: parties in the Trainer editor, trainer sprites, " +
                           "rematches, the Pokégear phone book, bulk trainer flags and the Battle Tower."
-                        : "Everyone the player battles: parties in the Trainer Editor, rematches, bulk " +
+                        : "Everyone the player battles: parties in the Trainer editor, rematches, bulk " +
                           "trainer flags and the Battle Tower."
                 },
                 new Step
                 {
                     Target = () => main.FindControl<Control>("ItemsMenu"),
                     Title = "The Items menu",
-                    Body = $"Each item's data and icon (Item Editor), {(beta ? "what the marts sell, " : "")}and where items " +
+                    Body = $"Each item's data and icon (Item editor), {(beta ? "what the marts sell, " : "")}and where items " +
                            "come from: Pickup loot, hidden ground items and HGSS Rock Smash drops."
                 },
                 new Step
@@ -218,7 +218,7 @@ namespace DSPRE.Avalonia
                 {
                     Target = () => main.FindControl<Control>("ToolsMenu"),
                     Title = "The Tools menu",
-                    Body = $"Power tools: {(beta ? "Validation & Where-Used, " : "")}the ROM Patch Toolbox, overlays, music " +
+                    Body = $"Power tools: {(beta ? "Validation & Where-Used, " : "")}the ROM patch toolbox, overlays, music " +
                            "and battle tables, data exports, archive tools and Settings.\n\n" +
                            "Tip: press Ctrl+P anywhere and type an editor's name to open it instantly. Right-click any " +
                            "menu item to pin it beside the menus; right-click the pinned button to take it off."
@@ -241,7 +241,7 @@ namespace DSPRE.Avalonia
             // the thing people read just before they start, and it has the status-bar line to point at.
             if (beta)
             {
-                // The Audio menu holds only the Audio Editor, so it is hidden with it.
+                // The Audio menu holds only the Audio editor, so it is hidden with it.
                 _steps.Insert(_steps.FindIndex(s => s.Title == "The Tools menu"), new Step
                 {
                     Target = () => main.FindControl<Control>("AudioMenu"),

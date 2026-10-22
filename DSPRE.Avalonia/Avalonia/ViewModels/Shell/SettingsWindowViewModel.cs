@@ -208,7 +208,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         {
             if (Design.IsDesignMode)
             {
-                VersionLabel = "DSPRE Version 1.0.0 (Preview)";
+                VersionLabel = "DSPRE version 1.0.0 (Preview)";
                 ExportPath = @"C:\Export";
                 MapImportPath = @"C:\Maps";
                 OpenDefaultRom = @"C:\game.nds";
@@ -217,7 +217,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                 NeverAskForOpening = false;
                 return;
             }
-            VersionLabel = $"DSPRE Version {AppInfo.GetDSPREVersion()}";
+            VersionLabel = $"DSPRE version {AppInfo.GetDSPREVersion()}";
 
             ExportPath       = SettingsManager.Settings.ExportPath        ?? string.Empty;
             MapImportPath    = SettingsManager.Settings.MapImportStarterPoint ?? string.Empty;

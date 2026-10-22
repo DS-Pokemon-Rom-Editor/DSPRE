@@ -39,7 +39,7 @@
     <TextBlock DockPanel.Dock="Top" Margin="16"
                IsVisible="{Binding NoTablesAvailable}"
                TextWrapping="Wrap"
-               Text="The Table Editor has no editable tables for this ROM version."/>
+               Text="Not in this game"/>
 
     <TabControl x:Name="Tabs" Margin="4" IsVisible="{Binding AnyTableShown}">
 
@@ -75,7 +75,7 @@
                    ItemsSource="{Binding ComboItems}"
                    SelectedIndex="{Binding ComboSelectedIndex}"/>
           <StackPanel Grid.Column="1" Margin="8,0,0,0" Spacing="6">
-            <TextBlock Text="VS animation (effect)" FontWeight="Bold"/>
+            <TextBlock Text="VS animation" FontWeight="Bold"/>
             <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding VsAnimation}"/>
             <TextBlock Text="Battle music" FontWeight="Bold"/>
             <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding BattleSseq}"/>

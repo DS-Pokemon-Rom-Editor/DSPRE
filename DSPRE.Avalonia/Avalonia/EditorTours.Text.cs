@@ -4,7 +4,7 @@ namespace DSPRE.Avalonia
     {
         static partial void RegisterText()
         {
-            Add("TextEditorView", "Text Editor",
+            Add("TextEditorView", "Text editor",
                 S(null, "Game text", "Every line of dialogue, name and menu text lives in a numbered archive. Pick one and edit its lines here."),
                 S("toolbar", "Archives", "Pick an archive, add a new one or remove the last one. Import and Export move a whole archive in and out as a file."),
                 S("name:LinesGrid", "The lines", "Each row is one line of text. Double-click the text to change it; the number on the left is what scripts use to show it."),
@@ -13,7 +13,7 @@ namespace DSPRE.Avalonia
                 S("name:ReplacePanel", "Search and replace", "Find text in this archive or in all of them, and replace it. Double-click a result to jump to that line."),
                 S("toolbar", "Saving", "Nothing is written until you press Save. Ctrl+Z undoes and Ctrl+Y redoes. Closing with unsaved edits asks first."));
 
-            Add("ScriptEditorView", "Script Editor",
+            Add("ScriptEditorView", "Script editor",
                 S(null, "Scripts", "Each script file holds the scripts, functions and movements for a place in the game, written as text."),
                 S("toolbar", "Script files", "Pick a file to open, or Add a new empty one. Import and Export move the text in and out, Find in File searches the open file, and Theme changes the colours."),
                 S("name:RotomEditor", "Writing code", "Point at a command to see what it does and what it takes. Ctrl+click a name, or press F12, to jump to where it is defined."),
@@ -21,7 +21,7 @@ namespace DSPRE.Avalonia
                 S("tab:Diagnostics", "Problems", "Mistakes found while you type or when you save. Double-click one to go to its line."),
                 S("toolbar", "Saving", "Save (Ctrl+S) writes the text and builds it into the game. If it fails to build, the problems show under Diagnostics."));
 
-            Add("LevelScriptEditorView", "Level Script Editor",
+            Add("LevelScriptEditorView", "Level script editor",
                 S(null, "Level scripts", "Level scripts run a script by themselves: when you enter a map, load the game, return to the map screen, or when a variable holds a value."),
                 S("toolbar", "Files", "Pick the level script file to edit. Import and Export move it in and out as a file."),
                 S("list", "Triggers", "Everything this file runs and when. Select one and press Remove selected to take it out."),
@@ -34,7 +34,7 @@ namespace DSPRE.Avalonia
                 S("name:DatabaseActions", "Refresh", "Refresh reads the list again after you change the files by hand."),
                 S("name:DatabaseActions", "Import and export", "Import replaces the picked project's list with yours (a Rotom project's old one is backed up first) and can reload every script right away. Export saves a copy, and Open Folder shows where it lives."));
 
-            Add("FontEditorView", "Font Editor",
+            Add("FontEditorView", "Font editor",
                 S(null, "Fonts", "Draw the letters the game writes text with, and see a sentence come out in the result."),
                 S("toolbar", "Font and pictures", "Pick a font. Save a picture and Read a picture move one letter, or the whole font, out to an image and back."),
                 S("list", "Letters", "Every letter in the font. Search by character or number, or show only drawn, empty or unassigned slots."),
