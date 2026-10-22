@@ -182,8 +182,7 @@ namespace DSPRE.Avalonia.Data
                 try { lines = new TextArchive(bank).Messages; } catch (Exception ex) { AppLogger.WarnOnce("SummaryBook.BankLine", ex); lines = null; }
                 _banks[bank] = lines;
             }
-            if (lines == null || line >= lines.Count) return null;
-            return lines[line].Replace("\\n", "\n").Replace("\\r", "\n").Replace("\\f", "\n");
+            return ScreenTextReads.Line(bank, line, lines)?.Replace("\\n", "\n").Replace("\\r", "\n").Replace("\\f", "\n");
         }
 
         // ── pictures ──────────────────────────────────────────────────────────────────────────────

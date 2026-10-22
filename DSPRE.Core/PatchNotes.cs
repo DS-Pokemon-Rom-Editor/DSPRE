@@ -191,9 +191,20 @@ namespace DSPRE
                 "Trainers > VS intro editor.\n\n" +
                 "Requirements\n" +
                 "HeartGold or SoulSilver, with the ARM9 expansion. Not compatible with hg-engine.",
+            ["partyPanelSize"] =
+                "What it does\n" +
+                "The Pokémon panels in the party menu can be any size up to 96 tiles, like 9 by 9 or 12 by 8, with the HP bar " +
+                "anywhere inside them. Nothing changes in game until you set a size.\n\n" +
+                "Where to edit\n" +
+                "The Screens editor's Party layout: the panel size, the HP bar strip and where each panel sits. Rebuild panel art, " +
+                "Clear background and Rebuild cursor frame redraw the art for the new size.\n\n" +
+                "Good to know\n" +
+                "The panel art keeps its old shape until you rebuild it or draw your own.\n\n" +
+                "Requirements\n" +
+                "HeartGold or SoulSilver, any language. No ARM9 expansion or synthetic overlay. Not compatible with hg-engine.",
             ["hpBarText"] =
                 "What it does\n" +
-                "Removes the white box behind the name, level and HP in battle, so your HP bar art shows behind them.\n\n" +
+                "Removes the white box behind the name, level, HP, gender symbol and \"Lv\" in battle, so your HP bar art shows behind them.\n\n" +
                 "Where to edit\n" +
                 "Graphics > HP bar layout and Graphics > Battle screen. Their previews drop the box once the patch is in.\n\n" +
                 "Requirements\n" +
@@ -274,7 +285,10 @@ namespace DSPRE
             ["vsClassTableExpanded"] = ("The ARM9's pointer to the class table and the count its search stops at are changed to the new table.",
                 "About 0.5 KB in the synthetic overlay.",
                 "the ARM9 and the synthetic overlay"),
-            ["hpBarText"] = ("Four calls and nine copies in the battle overlay (overlay 12 in HeartGold and SoulSilver, 16 in Platinum, 11 in Diamond) go through the patch's routine.",
+            ["partyPanelSize"] = ("76 instructions in seven of the ARM9's party menu functions hold the panel size instead of the game's 16 by 6, each changed in place.",
+                "No additional space or synthetic overlay.",
+                "the ARM9"),
+            ["hpBarText"] = ("Six calls and twelve copies in the battle overlay (overlay 12 in HeartGold and SoulSilver, 16 in Platinum; five calls and eleven copies in overlay 11 in Diamond) go through the patch's routine.",
                 "140 bytes in the synthetic overlay.",
                 "the battle overlay and the synthetic overlay"),
             ["martsExpanded"] = ("The ARM9's common mart pointer and specialty mart pointer table are moved to the new layout; saving changes the common mart's count byte.",

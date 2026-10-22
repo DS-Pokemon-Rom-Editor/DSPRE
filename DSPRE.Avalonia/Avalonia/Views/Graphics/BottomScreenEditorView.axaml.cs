@@ -10,17 +10,18 @@ using DSPRE.Avalonia.ViewModels.Graphics;
 
 namespace DSPRE.Avalonia.Views.Graphics
 {
-    public partial class BottomScreenEditorView : Window
+    public partial class BottomScreenEditorView : UserControl
     {
+        private Window Owner => TopLevel.GetTopLevel(this) as Window;
+
         private BottomScreenEditorViewModel VM => DataContext as BottomScreenEditorViewModel;
 
         public BottomScreenEditorView()
         {
             AvaloniaXamlLoader.Load(this);
             DataContext = new BottomScreenEditorViewModel();
-            EditorWindowChrome.Attach(this, VM);
-            // The animation runs on a timer, so it has to be let go of when the window closes.
-            Closed += (_, _) => VM?.Stop();
+            // The animation runs on a timer, so it has to be let go of when the editor leaves the screen.
+            DetachedFromVisualTree += (_, _) => VM?.Stop();
         }
 
         private static GraphicAssets.Archive ArchiveOf(BottomScreenPiece piece) =>
@@ -30,9 +31,9 @@ namespace DSPRE.Avalonia.Views.Graphics
             new("PNG image") { Patterns = new[] { "*.png" } };
 
         private const string ErrorTitle = "Bottom screen error";
-        private async void Paint_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(PaintAsync, "The painter didn't open.", ErrorTitle, this);
-        private async void Export_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(ExportAsync, "The PNG wasn't exported.", ErrorTitle, this);
-        private async void Import_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(ImportAsync, "The PNG wasn't imported.", ErrorTitle, this);
+        private async void Paint_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(PaintAsync, "The painter didn't open.", ErrorTitle, Owner);
+        private async void Export_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(ExportAsync, "The PNG wasn't exported.", ErrorTitle, Owner);
+        private async void Import_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(ImportAsync, "The PNG wasn't imported.", ErrorTitle, Owner);
 
         private async Task PaintAsync()
         {
@@ -46,7 +47,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             }
 
             // The painter works on the saved file, so pending changes are settled first.
-            if (!await RecordSwitchGuard.ConfirmLeaveAsync(VM, this, "graphic", "Save them before painting?")) return;
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(VM, Owner, "graphic", "Save them before painting?")) return;
             // The painter saves on its own, so the screen is read again once it is closed.
             AvaloniaEditorLauncher.OpenPainter(archive, piece.Drawing, () => VM?.ReloadAfterImport());
         }
@@ -58,7 +59,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             GraphicAssets.Archive archive = ArchiveOf(piece);
             if (archive == null) return;
 
-            string path = await DialogHelper.SaveFileAsync(this, "Save this piece as a PNG",
+            string path = await DialogHelper.SaveFileAsync(Owner, "Save this piece as a PNG",
                 new[] { Png }, Safe(piece.Name) + ".png");
             if (path == null) return;
 
@@ -75,10 +76,10 @@ namespace DSPRE.Avalonia.Views.Graphics
             GraphicAssets.Archive archive = ArchiveOf(piece);
             if (archive == null) return;
 
-            string path = await DialogHelper.OpenFileAsync(this, "Import PNG", new[] { Png });
+            string path = await DialogHelper.OpenFileAsync(Owner, "Import PNG", new[] { Png });
             if (path == null) return;
 
-            (PngColourPrompt.Choice choice, GraphicAssets.PngColourCheck check) = await PngColourPrompt.AskAsync(this, archive, piece.Drawing, path);
+            (PngColourPrompt.Choice choice, GraphicAssets.PngColourCheck check) = await PngColourPrompt.AskAsync(Owner, archive, piece.Drawing, path);
             if (choice == PngColourPrompt.Choice.Cancel) return;
             string note = null;
             string trouble = VM.Import(() => PngColourPrompt.Import(archive, piece.Drawing, path, choice, check, out note)
@@ -122,8 +123,10 @@ namespace DSPRE.Avalonia.Views.Graphics
             {
                 WindowStartupLocation = WindowStartupLocation.Manual,
             };
-            view.Position = new global::Avalonia.PixelPoint(Position.X + 48, Position.Y + 140);
-            view.Show(this);
+            Window owner = Owner;
+            if (owner == null) return;
+            view.Position = new global::Avalonia.PixelPoint(owner.Position.X + 48, owner.Position.Y + 140);
+            view.Show(owner);
         }
 
         private static string Safe(string name) =>

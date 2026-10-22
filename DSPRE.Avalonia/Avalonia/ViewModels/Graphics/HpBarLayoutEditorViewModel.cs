@@ -67,7 +67,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public const double Square = 40;
         public const double CanvasWidth = BattleGaugeLayout.Columns * Square, CanvasHeight = BattleGaugeLayout.Rows * Square;
 
-        private static readonly string[] Colours =
+        internal static readonly string[] Colours =
         {
             "#4FC3F7", "#FFB74D", "#AED581", "#F06292", "#BA68C8", "#FFF176", "#4DB6AC", "#E57373", "#90A4AE", "#A1887F", "#81C784", "#64B5F6",
         };

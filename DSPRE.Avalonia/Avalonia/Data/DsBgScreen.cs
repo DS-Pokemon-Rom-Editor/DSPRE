@@ -20,7 +20,8 @@ namespace DSPRE.Avalonia.Data
             public readonly ushort[] Map = new ushort[MapSide * MapSide];
         }
 
-        private readonly byte[] _vram = new byte[0x10000];
+        // A BG engine can place characters up to 256 KB in.
+        private readonly byte[] _vram = new byte[0x40000];
         private readonly ushort[] _colours = new ushort[16 * 16];
         private readonly Layer[] _layers = new Layer[4];
 

@@ -12,15 +12,16 @@ using DSPRE.Avalonia.ViewModels;
 
 namespace DSPRE.Avalonia.Views.Battle
 {
-    public partial class BattleScreenEditorView : Window
+    public partial class BattleScreenEditorView : UserControl
     {
+        private Window Owner => TopLevel.GetTopLevel(this) as Window;
+
         private BattleScreenEditorViewModel VM => DataContext as BattleScreenEditorViewModel;
 
         public BattleScreenEditorView()
         {
             AvaloniaXamlLoader.Load(this);
             DataContext = new BattleScreenEditorViewModel();
-            EditorWindowChrome.Attach(this, VM);
         }
 
         // The screens are drawn at twice size, so a click has to come back down to ROM pixels.
@@ -45,11 +46,11 @@ namespace DSPRE.Avalonia.Views.Battle
             GraphicAssets.All.FirstOrDefault(a => a.Dir == piece.Archive);
 
         private const string ErrorTitle = "Battle screen error";
-        private async void Paint_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(PaintAsync, "The painter didn't open.", ErrorTitle, this);
-        private async void Export_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(ExportAsync, "The PNG wasn't exported.", ErrorTitle, this);
-        private async void Import_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(ImportAsync, "The PNG wasn't imported.", ErrorTitle, this);
-        private async void ExportBarPieces_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(ExportBarPiecesAsync, "The bar pieces weren't exported.", ErrorTitle, this);
-        private async void ImportBarPieces_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(ImportBarPiecesAsync, "The bar pieces weren't imported.", ErrorTitle, this);
+        private async void Paint_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(PaintAsync, "The painter didn't open.", ErrorTitle, Owner);
+        private async void Export_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(ExportAsync, "The PNG wasn't exported.", ErrorTitle, Owner);
+        private async void Import_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(ImportAsync, "The PNG wasn't imported.", ErrorTitle, Owner);
+        private async void ExportBarPieces_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(ExportBarPiecesAsync, "The bar pieces weren't exported.", ErrorTitle, Owner);
+        private async void ImportBarPieces_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(ImportBarPiecesAsync, "The bar pieces weren't imported.", ErrorTitle, Owner);
 
         private async Task PaintAsync()
         {
@@ -63,7 +64,7 @@ namespace DSPRE.Avalonia.Views.Battle
             }
             if (!await WarnIfSharedAsync(piece)) return;
             // The painter works on the saved graphic, so pending imports are settled first.
-            if (!await RecordSwitchGuard.ConfirmLeaveAsync(VM, this, "graphic", "Save them before painting?")) return;
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(VM, Owner, "graphic", "Save them before painting?")) return;
 
             int at = BattleScreenEditorViewModel.PaintableEntry(piece);
             // The painter saves on its own, so the screens are read again once it is closed.
@@ -93,7 +94,7 @@ namespace DSPRE.Avalonia.Views.Battle
             GraphicAssets.Archive archive = ArchiveOf(piece);
             if (archive == null) return;
 
-            string path = await DialogHelper.SaveFileAsync(this, "Save this piece as a PNG",
+            string path = await DialogHelper.SaveFileAsync(Owner, "Save this piece as a PNG",
                 new[] { new FilePickerFileType("PNG image") { Patterns = new[] { "*.png" } } },
                 Safe(piece.Name) + ".png");
             if (path == null) return;
@@ -113,7 +114,7 @@ namespace DSPRE.Avalonia.Views.Battle
             if (archive == null) return;
             if (!await WarnIfSharedAsync(piece)) return;
 
-            string path = await DialogHelper.OpenFileAsync(this, "Import PNG",
+            string path = await DialogHelper.OpenFileAsync(Owner, "Import PNG",
                 new[] { new FilePickerFileType("PNG image") { Patterns = new[] { "*.png" } } });
             if (path == null) return;
 
@@ -121,7 +122,7 @@ namespace DSPRE.Avalonia.Views.Battle
             BattleGaugeComposer.Kind? bar = piece.UsesBarPieces ? HpBarFit.KindOf(piece.Layout) : null;
             if (bar != null)
             {
-                (HpBarImportPrompt.Choice barChoice, HpBarFit.Plan plan) = await HpBarImportPrompt.AskAsync(this, archive, piece.Layout, bar.Value, path);
+                (HpBarImportPrompt.Choice barChoice, HpBarFit.Plan plan) = await HpBarImportPrompt.AskAsync(Owner, archive, piece.Layout, bar.Value, path);
                 if (barChoice == HpBarImportPrompt.Choice.Cancel) return;
                 if (barChoice == HpBarImportPrompt.Choice.Fit)
                 {
@@ -132,7 +133,7 @@ namespace DSPRE.Avalonia.Views.Battle
                     return;
                 }
             }
-            (PngColourPrompt.Choice choice, GraphicAssets.PngColourCheck check) = await PngColourPrompt.AskAsync(this, archive, at, path);
+            (PngColourPrompt.Choice choice, GraphicAssets.PngColourCheck check) = await PngColourPrompt.AskAsync(Owner, archive, at, path);
             if (choice == PngColourPrompt.Choice.Cancel) return;
             string note = null;
             string trouble = VM.Import(() => PngColourPrompt.Import(archive, at, path, choice, check, out note));
@@ -146,7 +147,7 @@ namespace DSPRE.Avalonia.Views.Battle
 
         private async Task ExportBarPiecesAsync()
         {
-            string path = await DialogHelper.SaveFileAsync(this, "Save the bar pieces as a PNG",
+            string path = await DialogHelper.SaveFileAsync(Owner, "Save the bar pieces as a PNG",
                 new[] { new FilePickerFileType("PNG image") { Patterns = new[] { "*.png" } } },
                 "HP bar pieces.png");
             if (path == null) return;
@@ -158,7 +159,7 @@ namespace DSPRE.Avalonia.Views.Battle
         private async Task ImportBarPiecesAsync()
         {
             if (VM == null) return;
-            string path = await DialogHelper.OpenFileAsync(this, "Import PNG",
+            string path = await DialogHelper.OpenFileAsync(Owner, "Import PNG",
                 new[] { new FilePickerFileType("PNG image") { Patterns = new[] { "*.png" } } });
             if (path == null) return;
             string trouble = VM.ImportBarPieces(path);

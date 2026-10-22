@@ -78,6 +78,30 @@ namespace DSPRE.Avalonia.Data
             return d;
         }
 
+        /// <summary>
+        /// A tile sheet with new tiles in place of its own, every other field and section kept; for sprite sheets, whose
+        /// size fields say they are a strip (0xFFFF) and so need no change. Null when the bytes aren't a tile sheet.
+        /// </summary>
+        /// <param name="packed">The tiles as the sheet stores them, four bits a pixel.</param>
+        public static byte[] ReplaceTiles(byte[] ncgr, byte[] packed)
+        {
+            int rahc = DSPRE.ROMFiles.NitroBgCodec.Find(ncgr, "RAHC", 0);
+            if (rahc < 0 || rahc + 0x20 > ncgr.Length) return null;
+            int oldSize = DSPRE.ROMFiles.NitroBgCodec.U32(ncgr, rahc + 0x18);
+            int dataAt = rahc + 8 + DSPRE.ROMFiles.NitroBgCodec.U32(ncgr, rahc + 0x1C);
+            int sectionEnd = rahc + DSPRE.ROMFiles.NitroBgCodec.U32(ncgr, rahc + 4);
+            if (dataAt + oldSize > ncgr.Length || sectionEnd > ncgr.Length || dataAt + oldSize > sectionEnd) return null;
+            int grow = packed.Length - oldSize;
+            byte[] d = new byte[ncgr.Length + grow];
+            Array.Copy(ncgr, d, dataAt);
+            Array.Copy(packed, 0, d, dataAt, packed.Length);
+            Array.Copy(ncgr, dataAt + oldSize, d, dataAt + packed.Length, ncgr.Length - dataAt - oldSize);
+            U32(d, 8, d.Length);
+            U32(d, rahc + 4, sectionEnd - rahc + grow);
+            U32(d, rahc + 0x18, packed.Length);
+            return d;
+        }
+
         /// <param name="squares">One entry a square of the screen, already carrying tile, turns and bank.</param>
         public static byte[] Arrangement(ushort[] squares, int widthPixels, int heightPixels)
         {

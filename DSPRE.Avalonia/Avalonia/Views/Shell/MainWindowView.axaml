@@ -166,7 +166,7 @@
         <Separator/>
         <MenuItem Header="Font editor" Click="FontEditor_Click" IsVisible="{Binding Shown[FontEditorView]}" IsEnabled="{Binding CanUseFontEditor}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='The letters this ROM writes with, and what a sentence looks like in them'}"/>
-        <MenuItem Header="Char map manager" Click="CharMapManager_Click"/>
+        <MenuItem Header="Character map manager" Click="CharMapManager_Click"/>
       </MenuItem>
 
       <MenuItem Header="_World" x:Name="WorldMenu" IsEnabled="{Binding IsRomLoaded}">
@@ -189,21 +189,29 @@
 
       <MenuItem Header="_Graphics" x:Name="GraphicsMenu" IsEnabled="{Binding IsRomLoaded}">
         <MenuItem Header="All graphics" Click="GraphicsBrowser_Click" IsEnabled="{Binding Usable[GraphicsBrowserView]}" ToolTip.Tip="{Binding BlockedNote[GraphicsBrowserView]}"/>
-        <MenuItem Header="Pokédex graphics" Click="PokedexGraphics_Click" IsEnabled="{Binding Usable[GraphicsBrowserView]}" ToolTip.Tip="{Binding BlockedNote[GraphicsBrowserView]}"/>
+        <MenuItem x:Name="ScreensMenu" Header="Screens" Click="Screens_Click" IsVisible="{Binding Shown[ScreensEditorView]}" IsEnabled="{Binding Usable[ScreensEditorView]}"
+                  ToolTip.Tip="{Binding BlockedNote[ScreensEditorView], TargetNullValue='Game screens'}">
+          <MenuItem Header="Battle screen" Tag="battle" Click="ScreensAt_Click"/>
+          <MenuItem Header="HP bars" Tag="hpbar" Click="ScreensAt_Click"/>
+          <MenuItem Header="Party" Tag="party" Click="ScreensAt_Click"/>
+          <MenuItem Header="Bag" Tag="bag" Click="ScreensAt_Click"/>
+          <MenuItem Header="PC boxes" Tag="box" Click="ScreensAt_Click"/>
+          <MenuItem Header="Options" Tag="options" Click="ScreensAt_Click"/>
+          <MenuItem Header="Main menu" Tag="mainmenu" Click="ScreensAt_Click"/>
+          <MenuItem Header="Start menu" Tag="startmenu" Click="ScreensAt_Click"/>
+          <MenuItem Header="Trainer card" Tag="trainercard" Click="ScreensAt_Click"/>
+          <MenuItem Header="Naming screen" Tag="naming" Click="ScreensAt_Click"/>
+          <MenuItem Header="Pokédex" Tag="pokedex" Click="ScreensAt_Click"/>
+          <MenuItem Header="Summary" Tag="summary" Click="ScreensAt_Click"/>
+          <MenuItem Header="Place-name banner" Tag="banner" Click="ScreensAt_Click"/>
+          <MenuItem Header="Bottom screen" Tag="bottomscreen" Click="ScreensAt_Click"/>
+          <MenuItem Header="Pokégear" Tag="pokegear" Click="ScreensAt_Click"/>
+          <MenuItem Header="Title screen" Tag="title" Click="ScreensAt_Click"/>
+        </MenuItem>
         <MenuItem Header="All models and textures" Click="ModelBrowser_Click" IsEnabled="{Binding Usable[ModelBrowserView]}" ToolTip.Tip="{Binding BlockedNote[ModelBrowserView]}"/>
         <Separator IsVisible="{Binding BetaOn}"/>
         <MenuItem Header="Battle scenes" Click="BattleSceneBrowser_Click" IsVisible="{Binding Shown[BattleSceneBrowserView]}" IsEnabled="{Binding CanUseBattleSceneBrowser}" ToolTip.Tip="{Binding BlockedNote[BattleSceneBrowserView]}"/>
-        <MenuItem Header="Battle screen" Click="BattleScreen_Click" IsVisible="{Binding Shown[BattleScreenEditorView]}" IsEnabled="{Binding CanUseBattleScreen}"
-                  ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Both screens of a battle, drawn from this ROM, with every piece editable'}"/>
-        <MenuItem Header="HP bar layout" Click="HpBarLayout_Click" IsVisible="{Binding Shown[HpBarLayoutEditorView]}" IsEnabled="{Binding Usable[HpBarLayoutEditorView]}"
-                  ToolTip.Tip="{Binding BlockedNote[HpBarLayoutEditorView], TargetNullValue='Where the name, level, HP and gauges sit on each HP bar'}"/>
-        <MenuItem Header="Summary screen" Click="SummaryScreen_Click" IsVisible="{Binding Shown[SummaryScreenEditorView]}" IsEnabled="{Binding Usable[SummaryScreenEditorView]}"
-                  ToolTip.Tip="{Binding BlockedNote[SummaryScreenEditorView], TargetNullValue='The Pokémon summary pages, with their text boxes and bars'}"/>
-        <MenuItem Header="Bottom screen" Click="BottomScreenEditor_Click" IsVisible="{Binding Shown[BottomScreenEditorView]}" IsEnabled="{Binding CanUseBottomScreenEditor}"
-                  ToolTip.Tip="{Binding BottomScreenEditorNote}"/>
-        <MenuItem Header="Title screen editor" Click="TitleScreenEditor_Click" IsVisible="{Binding Shown[TitleScreenEditorView]}" IsEnabled="{Binding CanUseTitleScreenEditor}" ToolTip.Tip="{Binding TitleScreenEditorNote}"/>
         <MenuItem Header="Dungeon cutin editor" Click="DungeonCutinEditor_Click" IsVisible="{Binding Shown[DungeonCutinEditorView]}" IsEnabled="{Binding CanUseDungeonCutinEditor}" ToolTip.Tip="{Binding DungeonCutinEditorNote}"/>
-        <MenuItem Header="Trainer card editor" Click="TrainerCardEditor_Click" IsVisible="{Binding Shown[TrainerCardEditorView]}" IsEnabled="{Binding CanUseTrainerCardEditor}" ToolTip.Tip="{Binding TrainerCardEditorNote}"/>
         <MenuItem Header="Naming screen" Click="NamingScreenEditor_Click" IsVisible="{Binding Shown[TrainerSpriteEditorView]}" IsEnabled="{Binding CanUseNamingScreenEditor}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='The icons beside a name being typed: the player, rival, box and more'}"/>
         <MenuItem Header="Game icon &amp; banner" Click="BannerEditor_Click" IsVisible="{Binding Shown[BannerEditorView]}" IsEnabled="{Binding CanUseBannerEditor}"
@@ -216,7 +224,7 @@
                   ToolTip.Tip="{Binding BlockedNote[CellAnimationEditorView]}"/>
         <MenuItem Header="Particles" Click="Particles_Click" IsVisible="{Binding Shown[ParticleLibraryView]}" IsEnabled="{Binding CanUseParticles}"
                   ToolTip.Tip="{Binding BlockedNote[ParticleLibraryView]}"/>
-        <MenuItem Header="Ball Capsules" Click="BallCapsules_Click" IsVisible="{Binding Shown[BallCapsuleEditorView]}" IsEnabled="{Binding CanUseBallCapsules}"
+        <MenuItem Header="Ball capsules" Click="BallCapsules_Click" IsVisible="{Binding Shown[BallCapsuleEditorView]}" IsEnabled="{Binding CanUseBallCapsules}"
                   ToolTip.Tip="{Binding BlockedNote[BallCapsuleEditorView]}"/>
         <Separator IsVisible="{Binding BetaOn}"/>
         <MenuItem Header="Picture to background" Click="TilesetBuilder_Click" IsVisible="{Binding Shown[TilesetBuilderView]}"
@@ -280,7 +288,7 @@
                ToolTip.Tip="Right-click a menu item to pin it here"/>
         <TextBlock Foreground="{DynamicResource Editor.Subtle}" x:Name="NoFavouritesText" DockPanel.Dock="Left" VerticalAlignment="Center" FontSize="12"
                    TextTrimming="CharacterEllipsis"
-                   Text="No favourites selected. Right-click an editor in the menus to mark it as a favourite."/>
+                   Text="No favourites" ToolTip.Tip="Right-click an editor in the menus to add it"/>
         <controls:PinRow x:Name="FavouritesBar"/>
       </DockPanel>
     </DockPanel>

@@ -38,21 +38,21 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public static readonly TrainerSpriteSet Classes = new()
         {
             Archive = DirNames.TrainerGraphics, NameDigits = 3,
-            Title = "Trainer Class Sprite Editor", Noun = "class", ItemLabel = "Class:",
+            Title = "Trainer sprite editor", Noun = "class", ItemLabel = "Class",
             Names = _ => GetTrainerClassNames().ToList(),
         };
 
         public static readonly TrainerSpriteSet Backs = new()
         {
             Archive = DirNames.TrainerBackGraphics, NameDigits = 2,
-            Title = "Trainer Back Sprite Editor", Noun = "back sprite", ItemLabel = "Sprite:",
+            Title = "Trainer back sprite editor", Noun = "back sprite", ItemLabel = "Sprite",
             Names = count => DSPRE.ROMFiles.TrainerBackSprites.Names(count),
         };
 
         public static readonly TrainerSpriteSet NamingIcons = new()
         {
             Archive = DirNames.NameInputGraphics, NameDigits = 2, NamingScreen = true,
-            Title = "Naming Screen Editor", Noun = "icon", ItemLabel = "Icon:",
+            Title = "Naming screen", Noun = "icon", ItemLabel = "Icon",
             Names = _ => DSPRE.ROMFiles.NamingScreenIcons.All.Select(i => i.Name).ToList(),
         };
 
@@ -1239,7 +1239,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     // e.g. a discard while already on frame 0.
                     _selectedStripFrame = -1;
                     SelectedFrameIndex = 0; // triggers LoadFrame -> cells + canvas + swatches
-                    StatusText = $"{Capital(_set.Noun)} {trClassID}: {FrameCount} frame(s), {_tile.BitsPerPixel}bpp";
+                    StatusText = $"{Frames(FrameCount)}, {_tile.BitsPerPixel}bpp";
                 }
                 else
                 {
@@ -1468,6 +1468,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         }
 
         private static string Capital(string s) => string.IsNullOrEmpty(s) ? s : char.ToUpperInvariant(s[0]) + s.Substring(1);
+        private static string Frames(int n) => n == 1 ? "1 frame" : $"{n} frames";
 
         // ── Palette colours ─────────────────────────────────────────────────────
         private string _palPath;
@@ -1847,7 +1848,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 HasUnsavedChanges = false;
                 _paletteDirty = false;
                 ResetSteps();
-                StatusText = $"{ClassNames[Math.Max(0, _entryIds.IndexOf(animation))]}: {FrameCount} frame(s)";
+                StatusText = Frames(FrameCount);
                 _topBarFrame = 0; _topBarHold = 0;
                 BuildTopBarBackground(dir);
                 RebuildTopBar();

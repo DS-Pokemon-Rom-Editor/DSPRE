@@ -50,7 +50,7 @@ namespace DSPRE.Avalonia.Data
 
         // A preview must not unpack anything: Save ROM repacks every unpacked folder. An archive already
         // unpacked is read there, so edits show; any other is read straight from its packed file.
-        private static Func<int, byte[]> Members(RomInfo.DirNames dir)
+        internal static Func<int, byte[]> Members(RomInfo.DirNames dir)
         {
             if (!RomInfo.GameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) paths)) return null;
             ArchiveFiles files = System.IO.Directory.Exists(paths.unpackedDir)

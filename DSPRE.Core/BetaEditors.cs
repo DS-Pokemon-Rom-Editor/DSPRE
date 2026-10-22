@@ -53,6 +53,7 @@ namespace DSPRE
             ["PokedexGraphicsEditorView"] = new("Pokédex graphics", "Graphics"),
             ["PokegearPhoneBookView"] = new("Pokégear phone book", "Trainers"),
             ["SummaryScreenEditorView"] = new("Summary screen", "Graphics"),
+            ["ScreensEditorView"] = new("Screens", "Graphics"),
             ["ProjectChecksView"] = new("Validation & Where-Used", "Tools"),
             ["TilesetBuilderView"] = new("Picture to background", "Graphics"),
             ["TitleScreenEditorView"] = new("Title screen editor", "Graphics"),

@@ -1,162 +1,78 @@
-<Window xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 		xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
 		xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
 		x:Class="DSPRE.Avalonia.Views.Graphics.TitleScreenEditorView"
-		x:DataType="vm:TitleScreenEditorViewModel"
-		Title="Title screen editor"
-		Width="1180" Height="760" MinWidth="500" MinHeight="380"
-		WindowStartupLocation="CenterOwner">
+		x:DataType="vm:TitleScreenEditorViewModel">
   <Design.DataContext>
     <vm:TitleScreenEditorViewModel/>
   </Design.DataContext>
 
   <DockPanel>
-  <controls:EditorToolbar x:Name="SaveButtons">
-	  <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasChanges}"/>
-	  <Button Content="Discard" controls:Icon.Key="resetIcon" Click="RevertChanges_Click" IsEnabled="{Binding HasChanges}"/>
-	  <controls:UndoRedoButtons/>
-	  <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource Editor.Bad}" VerticalAlignment="Center" Margin="6,0,0,0"/>
-  </controls:EditorToolbar>
-  <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-  <StackPanel Margin="12" Spacing="12">
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Bad}" VerticalAlignment="Center"/>
+    </Border>
 
-	<!-- Row 1: the Background/Logo/Palette cards live inside each TabItem's own Content (duplicated
-	     markup, identical bindings), rather than below a content-less TabControl, so there's no empty
-	     tab body left over between the tab strip and the cards. -->
-	<Border BorderBrush="Gray" BorderThickness="1">
-	  <TabControl SelectedIndex="{Binding SelectedTabIndex}">
-		<TabItem Header="HeartGold">
-		  <StackPanel Orientation="Horizontal" Spacing="12" Margin="10">
+    <controls:EditorToolbar x:Name="SaveButtons">
+      <TextBlock Text="Version" VerticalAlignment="Center" Margin="0,0,6,0" controls:EditorToolbar.Slot="Picker"/>
+      <ComboBox Width="140" SelectedIndex="{Binding SelectedTabIndex}" controls:EditorToolbar.Slot="Picker">
+        <ComboBoxItem Content="HeartGold"/>
+        <ComboBoxItem Content="SoulSilver"/>
+      </ComboBox>
+      <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasChanges}"/>
+      <Button Content="Discard" controls:Icon.Key="resetIcon" Click="RevertChanges_Click" IsEnabled="{Binding HasChanges}"/>
+      <controls:UndoRedoButtons/>
+    </controls:EditorToolbar>
 
-			<Border x:Name="BackgroundCard" BorderBrush="Gray" BorderThickness="1" Padding="10" Width="360">
-			  <StackPanel Spacing="8">
-				<TextBlock Text="Background" FontWeight="Bold"/>
-				<Border Background="#181818" HorizontalAlignment="Left">
-				  <Image Source="{Binding BackgroundPreview}" Width="256" Height="192" Stretch="Uniform"/>
-				</Border>
-				<StackPanel Orientation="Horizontal" Spacing="6">
-				  <Button Content="Import PNG…" controls:Icon.Key="import" Click="ImportBackground_Click"/>
-				  <Button Content="Export PNG…" controls:Icon.Key="export" Click="ExportBackground_Click"/>
-				</StackPanel>
-			  </StackPanel>
-			</Border>
+    <!-- The pieces -->
+    <Border DockPanel.Dock="Left" Classes="screenList" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,1,0">
+      <DockPanel Margin="6">
+        <TextBlock DockPanel.Dock="Top" Text="Pieces" FontWeight="SemiBold" Margin="0,0,0,6"/>
+        <ListBox x:Name="PieceList" ItemsSource="{Binding Pieces}" SelectedIndex="{Binding PieceIndex}"/>
+      </DockPanel>
+    </Border>
 
-			<Border BorderBrush="Gray" BorderThickness="1" Padding="10" Width="360">
-			  <StackPanel Spacing="8">
-				<TextBlock Text="Logo" FontWeight="Bold"/>
-				<Border Background="#181818" HorizontalAlignment="Left">
-				  <Image Source="{Binding LogoPreview}" Width="256" Height="192" Stretch="Uniform"/>
-				</Border>
-				<StackPanel Orientation="Horizontal" Spacing="6">
-				  <Button Content="Import PNG…" controls:Icon.Key="import" Click="ImportLogo_Click"/>
-				  <Button Content="Export PNG…" controls:Icon.Key="export" Click="ExportLogo_Click"/>
-				</StackPanel>
-			  </StackPanel>
-			</Border>
+    <!-- What is picked -->
+    <Border DockPanel.Dock="Right" Classes="screenPanel" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1,0,0,0">
+      <StackPanel Margin="8" Spacing="8">
+        <StackPanel Orientation="Horizontal">
+          <TextBlock Text="{Binding PieceName}" FontWeight="SemiBold"/>
+          <controls:HelpTip Text="Rebuilt when you import the logo or background" IsVisible="{Binding PieceIsColours}"/>
+        </StackPanel>
+        <Border Background="#181818" HorizontalAlignment="Left" IsVisible="{Binding PieceIsImage}">
+          <Image Source="{Binding PiecePreview}" Width="256" Height="192" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
+        </Border>
+        <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding PieceIsImage}">
+          <Button Content="Import PNG…" controls:Icon.Key="import" Click="ImportPiece_Click"/>
+          <Button Content="Export PNG…" controls:Icon.Key="export" Click="ExportPiece_Click"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding PieceIsColours}">
+          <Button Content="Import colours…" controls:Icon.Key="import" Click="ImportPalette_Click"/>
+          <Button Content="Export colours…" controls:Icon.Key="export" Click="ExportPalette_Click"/>
+        </StackPanel>
+      </StackPanel>
+    </Border>
 
-			<Border BorderBrush="Gray" BorderThickness="1" Padding="10" Width="360">
-			  <StackPanel Spacing="8">
-				<StackPanel Orientation="Horizontal">
-				  <TextBlock Text="Colours (advanced)" FontWeight="Bold"/>
-				  <controls:HelpTip Text="Importing the logo or background rebuilds these colours."/>
-				</StackPanel>
-				<StackPanel Orientation="Horizontal" Spacing="6">
-				  <Button Content="Import colours…" controls:Icon.Key="import" Click="ImportPalette_Click"/>
-				  <Button Content="Export colours…" controls:Icon.Key="export" Click="ExportPalette_Click"/>
-				</StackPanel>
-			  </StackPanel>
-			</Border>
-
-		  </StackPanel>
-		</TabItem>
-
-		<TabItem Header="SoulSilver">
-		  <StackPanel Orientation="Horizontal" Spacing="12" Margin="10">
-
-			<Border BorderBrush="Gray" BorderThickness="1" Padding="10" Width="360">
-			  <StackPanel Spacing="8">
-				<TextBlock Text="Background" FontWeight="Bold"/>
-				<Border Background="#181818" HorizontalAlignment="Left">
-				  <Image Source="{Binding BackgroundPreview}" Width="256" Height="192" Stretch="Uniform"/>
-				</Border>
-				<StackPanel Orientation="Horizontal" Spacing="6">
-				  <Button Content="Import PNG…" controls:Icon.Key="import" Click="ImportBackground_Click"/>
-				  <Button Content="Export PNG…" controls:Icon.Key="export" Click="ExportBackground_Click"/>
-				</StackPanel>
-			  </StackPanel>
-			</Border>
-
-			<Border BorderBrush="Gray" BorderThickness="1" Padding="10" Width="360">
-			  <StackPanel Spacing="8">
-				<TextBlock Text="Logo" FontWeight="Bold"/>
-				<Border Background="#181818" HorizontalAlignment="Left">
-				  <Image Source="{Binding LogoPreview}" Width="256" Height="192" Stretch="Uniform"/>
-				</Border>
-				<StackPanel Orientation="Horizontal" Spacing="6">
-				  <Button Content="Import PNG…" controls:Icon.Key="import" Click="ImportLogo_Click"/>
-				  <Button Content="Export PNG…" controls:Icon.Key="export" Click="ExportLogo_Click"/>
-				</StackPanel>
-			  </StackPanel>
-			</Border>
-
-			<Border BorderBrush="Gray" BorderThickness="1" Padding="10" Width="360">
-			  <StackPanel Spacing="8">
-				<StackPanel Orientation="Horizontal">
-				  <TextBlock Text="Colours (advanced)" FontWeight="Bold"/>
-				  <controls:HelpTip Text="Importing the logo or background rebuilds these colours."/>
-				</StackPanel>
-				<StackPanel Orientation="Horizontal" Spacing="6">
-				  <Button Content="Import colours…" controls:Icon.Key="import" Click="ImportPalette_Click"/>
-				  <Button Content="Export colours…" controls:Icon.Key="export" Click="ExportPalette_Click"/>
-				</StackPanel>
-			  </StackPanel>
-			</Border>
-
-		  </StackPanel>
-		</TabItem>
-	  </TabControl>
-	</Border>
-
-	<!-- Row 2: Copyright (bottom left) + Preview (bottom right), Revert Changes centered between them -->
-	<Grid ColumnDefinitions="280,*,420">
-
-	  <Border x:Name="CopyrightCard" Grid.Column="0" BorderBrush="Gray" BorderThickness="1" Padding="10" VerticalAlignment="Top" Margin="0,0,12,0">
-		<StackPanel Spacing="8">
-		  <TextBlock Text="Copyright text" FontWeight="Bold"/>
-		  <Border Background="#181818" HorizontalAlignment="Left">
-			<Image Source="{Binding CopyrightPreview}" Width="256" Height="192" Stretch="Uniform"/>
-		  </Border>
-		  <StackPanel Orientation="Horizontal" Spacing="6">
-			<Button Content="Import PNG…" controls:Icon.Key="import" Click="ImportCopyright_Click"/>
-			<Button Content="Export PNG…" controls:Icon.Key="export" Click="ExportCopyright_Click"/>
-		  </StackPanel>
-		</StackPanel>
-	  </Border>
-
-
-	  <Border x:Name="PreviewCard" Grid.Column="2" BorderBrush="Gray" BorderThickness="1" Padding="10" VerticalAlignment="Top" Margin="12,0,0,0">
-		<StackPanel Spacing="8">
-		  <TextBlock Text="Preview (background + logo + copyright text)" FontWeight="Bold"/>
-		  <Border Background="#181818" HorizontalAlignment="Center" Width="384" Height="288" ClipToBounds="True">
-			<Grid>
-			  <Image Source="{Binding BackgroundPreview}" Width="384" Height="288" Stretch="Uniform"/>
-			  <Image x:Name="LogoOverlay" Source="{Binding LogoPreview}" Width="384" Height="288" Stretch="Uniform">
-				<Image.RenderTransform>
-				  <TranslateTransform/>
-				</Image.RenderTransform>
-			  </Image>
-			  <Image Source="{Binding CopyrightPreview}" Width="384" Height="288" Stretch="Uniform"/>
-			</Grid>
-		  </Border>
-		  <Button Content="Play intro" controls:Icon.Key="play" Click="PlayIntro_Click" HorizontalAlignment="Left"
-				  ToolTip.Tip="A recreation of the logo animation, close to the game's."/>
-		</StackPanel>
-	  </Border>
-
-	</Grid>
-
-  </StackPanel>
-  </ScrollViewer>
+    <!-- The screen as the game shows it -->
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+      <StackPanel Margin="12" Spacing="6" HorizontalAlignment="Center">
+        <TextBlock Text="Top screen" Classes="screenCaption"/>
+        <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="#181818" ClipToBounds="True">
+          <Grid Width="512" Height="384">
+            <Image Source="{Binding BackgroundPreview}" Width="512" Height="384" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
+            <Image x:Name="LogoOverlay" Source="{Binding LogoPreview}" Width="512" Height="384" Stretch="Uniform"
+                   RenderOptions.BitmapInterpolationMode="None">
+              <Image.RenderTransform>
+                <TranslateTransform/>
+              </Image.RenderTransform>
+            </Image>
+            <Image Source="{Binding CopyrightPreview}" Width="512" Height="384" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
+          </Grid>
+        </Border>
+        <Button Content="Play intro" controls:Icon.Key="play" Click="PlayIntro_Click" HorizontalAlignment="Center"
+                ToolTip.Tip="Plays the logo's entrance"/>
+      </StackPanel>
+    </ScrollViewer>
   </DockPanel>
-</Window>
+</UserControl>

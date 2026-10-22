@@ -25,6 +25,7 @@ namespace DSPRE.Avalonia.Views.Shell
         public MainWindowView()
         {
             InitializeComponent();
+            ScreensMenu.AddHandler(PointerReleasedEvent, ScreensMenu_Released, global::Avalonia.Interactivity.RoutingStrategies.Bubble, handledEventsToo: true);
 #if DEBUG
             AddChangelogPreviewMenuItem();
 #endif
@@ -567,7 +568,7 @@ namespace DSPRE.Avalonia.Views.Shell
             if (vm != null)
             {
                 vm.BusyText = "Checking unpacked archives…";
-                vm.BusyHint = "Each unpacked folder is compared with its archive. The first check after an update reads them all.";
+                vm.BusyHint = "";
                 vm.IsBusy = true;
             }
             try { await BusyOverlay.RunLockedAsync(() => NarcSync.Settle()); }
@@ -590,8 +591,8 @@ namespace DSPRE.Avalonia.Views.Shell
             {
                 vm.BusyText = "Opening ROM…";
                 vm.BusyHint = IsWslPath(sourcePath)
-                    ? "This project is hosted in WSL, so load times are noticeably higher than on a local drive. Please be patient while everything unpacks."
-                    : "First-time opens unpack the ROM and can take a little while.";
+                    ? "Projects in WSL load slower"
+                    : "";
                 vm.IsBusy = true;
             }
             string error = null;
@@ -614,7 +615,7 @@ namespace DSPRE.Avalonia.Views.Shell
                 await DialogHelper.ShowErrorAsync(error ?? "Failed to load the ROM.", "Open ROM");
                 return;
             }
-            if (vm != null) vm.StatusText = $"Loaded {RomInfo.ProjectName ?? "project"} from {RomInfo.WorkDir}";
+            if (vm != null) vm.StatusText = $"Loaded {RomInfo.ProjectName ?? "project"}";
             ProjectSourceWatcher.Start();
             await SettleChangedArchivesAsync(vm);
 
@@ -767,7 +768,7 @@ namespace DSPRE.Avalonia.Views.Shell
 
             (bool generate, bool stopAsking) = await DialogHelper.AskWithCheckAsync(
                 "This ROM has patches applied but no credits generated for them yet. Do you want DSPRE to generate template credits? " +
-                "You can also generate them any time from the Patch Toolbox.",
+                "You can also generate them any time from the ROM patch toolbox.",
                 "Patch credits", "Generate credits", "Not now", "Don't ask again", isChecked: true, owner: this);
             if (generate || stopAsking) PatchToolboxLogic.MarkCreditsHandled();
             if (generate) await DialogHelper.ShowCopyableTextAsync(PatchToolboxLogic.CreditsText(keys), "Credits", this);
@@ -963,7 +964,7 @@ namespace DSPRE.Avalonia.Views.Shell
             if (!TestSaves.Supports(kind))
             {
                 if (DataContext is MainWindowViewModel note)
-                    note.StatusText = $"{Emulators.DisplayName(kind)} keeps saves its own way, so the project's save wasn't put in place.";
+                    note.StatusText = $"Save not copied: {Emulators.DisplayName(kind)} keeps its own saves.";
                 return true;
             }
             DialogHelper.MsgResult answer = await DialogHelper.AskThreeWayAsync(
@@ -1033,7 +1034,7 @@ namespace DSPRE.Avalonia.Views.Shell
             if (vm != null)
             {
                 vm.BusyText = "Converting to ds-rom…";
-                vm.BusyHint = "A backup of the project is made next to it first.";
+                vm.BusyHint = "Backs up the project first";
                 vm.IsBusy = true;
             }
             int result;
@@ -1050,7 +1051,7 @@ namespace DSPRE.Avalonia.Views.Shell
         {
             // Native Avalonia toolbox over the shared PatchToolboxDialog apply-logic (identical ROM writes).
             try { AvaloniaEditorLauncher.OpenPatchToolbox(); }
-            catch (System.Exception ex) { _ = DialogHelper.ShowErrorAsync("Couldn't open the Patch Toolbox: " + ex.Message, "ROM Patch Toolbox"); }
+            catch (System.Exception ex) { _ = DialogHelper.ShowErrorAsync("Couldn't open the ROM patch toolbox: " + ex.Message, "ROM patch toolbox"); }
         }
 
         private void ScriptCommandDatabase_Click(object sender, RoutedEventArgs e) => AvaloniaEditorLauncher.OpenScriptCommandDatabase();
@@ -1147,7 +1148,29 @@ namespace DSPRE.Avalonia.Views.Shell
         private void NsbtxEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenNsbtxEditor();
 
-        private void PokedexGraphics_Click(object sender, RoutedEventArgs e) => AvaloniaEditorLauncher.OpenPokedexGraphics();
+
+        // The Screens item opens the editor; its arrow lists the screens to open it at.
+        private void Screens_Click(object sender, RoutedEventArgs e)
+        {
+            if (!ReferenceEquals(e.Source, sender)) return;
+            AvaloniaEditorLauncher.OpenScreensEditor();
+        }
+
+        // A menu item with a submenu only opens the submenu when clicked, so a click on its words, short of the
+        // arrow, opens the editor itself.
+        private void ScreensMenu_Released(object sender, global::Avalonia.Input.PointerReleasedEventArgs e)
+        {
+            if (sender is not MenuItem item || e.InitialPressMouseButton != global::Avalonia.Input.MouseButton.Left) return;
+            if (e.GetPosition(item).X > item.Bounds.Width - 32) return;
+            MainMenu.Close();
+            AvaloniaEditorLauncher.OpenScreensEditor();
+        }
+
+        private void ScreensAt_Click(object sender, RoutedEventArgs e)
+        {
+            e.Handled = true;
+            if ((sender as MenuItem)?.Tag is string key) AvaloniaEditorLauncher.OpenScreensEditor(key);
+        }
 
         private void GraphicsBrowser_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenGraphicsBrowser();
@@ -1158,13 +1181,8 @@ namespace DSPRE.Avalonia.Views.Shell
         private void BattleSceneBrowser_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenBattleSceneBrowser();
 
-        private void BattleScreen_Click(object sender, RoutedEventArgs e)
-            => AvaloniaEditorLauncher.OpenBattleScreenEditor();
 
-        private void SummaryScreen_Click(object sender, RoutedEventArgs e) => AvaloniaEditorLauncher.OpenSummaryScreen();
 
-        private void HpBarLayout_Click(object sender, RoutedEventArgs e)
-            => AvaloniaEditorLauncher.OpenHpBarLayoutEditor();
 
         private void TilesetBuilder_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenTilesetBuilder();
@@ -1181,11 +1199,7 @@ namespace DSPRE.Avalonia.Views.Shell
         private void DungeonCutinEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenDungeonCutinEditor();
 
-        private void TitleScreenEditor_Click(object sender, RoutedEventArgs e)
-            => AvaloniaEditorLauncher.OpenTitleScreenEditor();
 
-        private void BottomScreenEditor_Click(object sender, RoutedEventArgs e)
-            => AvaloniaEditorLauncher.OpenBottomScreenEditor();
 
         private void CellAnimations_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenCellAnimationPicker();
@@ -1196,8 +1210,6 @@ namespace DSPRE.Avalonia.Views.Shell
         private void BallCapsules_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenBallCapsuleEditor();
 
-        private void TrainerCardEditor_Click(object sender, RoutedEventArgs e)
-            => AvaloniaEditorLauncher.OpenTrainerCardEditor();
 
         private void NamingScreenEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenNamingScreenEditor();

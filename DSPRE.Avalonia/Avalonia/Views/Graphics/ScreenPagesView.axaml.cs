@@ -22,17 +22,78 @@ namespace DSPRE.Avalonia.Views.Graphics
         public ScreenPagesView()
         {
             AvaloniaXamlLoader.Load(this);
+            Loaded += (_, _) => ApplyShows();
+        }
+
+        private string _shows = "All";
+        /// <summary>
+        /// What this view shows of the book: "Pieces" (the layers and their files), "Layout" (the text boxes and bars the
+        /// code places) or "All". The Screens editor shows the two halves as Edit and Layout over one model.
+        /// </summary>
+        public string Shows { get => _shows; set { _shows = value ?? "All"; ApplyShows(); } }
+
+        private void ApplyShows()
+        {
+            Control layers = this.FindControl<Control>("LayerList"), parts = this.FindControl<Control>("PartPanel"),
+                    boxes = this.FindControl<Control>("BoxPanel"), heading = this.FindControl<Control>("LayerHeading"),
+                    left = this.FindControl<Control>("LeftColumn");
+            if (layers == null || parts == null || boxes == null || heading == null || left == null) return;
+            bool layout = _shows == "Layout";
+            layers.IsVisible = !layout;
+            heading.IsVisible = !layout;
+            parts.IsVisible = !layout;
+            // Alone in its column, the box list starts at the top, as wide as the HP bar editor's part list.
+            DockPanel.SetDock(boxes, layout ? Dock.Top : Dock.Bottom);
+            if (layout) left.Width = 300;
+            if (_shows == "Pieces") boxes.IsVisible = false;
+            foreach (string name in new[] { "TopBoxes", "BottomBoxes" })
+                if (this.FindControl<Control>(name) is Control overlay) overlay.IsVisible = layout;
         }
 
         private string ErrorTitle => (VM?.Title ?? "Screen") + " error";
 
+        private ScreenBoxRow _dragging;
+        private (int X, int Y) _grabbedAt;
+
+        private static (int X, int Y) TileAt(Point p) => ((int)(p.X / ScreenBoxRow.Tile), (int)(p.Y / ScreenBoxRow.Tile));
+
         private void Screen_Pressed(object sender, PointerPressedEventArgs e)
         {
             if (VM == null || sender is not Image image || image.Bounds.Width <= 0) return;
+            if (_shows == "Layout")
+            {
+                bool top = image.Name == "TopScreen";
+                (int tx, int ty) = TileAt(e.GetPosition(image));
+                // The smallest box under the pointer, so boxes that share tiles can both be picked.
+                _dragging = (top ? VM.TopBoxes : VM.BottomBoxes)
+                    .Where(r => tx >= r.Across && tx < r.Across + r.Item.Width && ty >= r.Down && ty < r.Down + r.Item.Height)
+                    .OrderBy(r => r.Item.Width * r.Item.Height).FirstOrDefault();
+                if (_dragging == null) return;
+                _grabbedAt = (tx - _dragging.Across, ty - _dragging.Down);
+                e.Pointer.Capture(image);
+                return;
+            }
             Point p = e.GetPosition(image);
             int x = (int)(p.X * ScreenPageComposer.Width / image.Bounds.Width);
             int y = (int)(p.Y * ScreenPageComposer.Height / image.Bounds.Height);
             VM.PickAt(image.Name == "TopScreen", x, y);
+        }
+
+        private void Screen_Moved(object sender, PointerEventArgs e)
+        {
+            if (_dragging == null || sender is not Image image) return;
+            (int x, int y) = TileAt(e.GetPosition(image));
+            _dragging.Drag(x - _grabbedAt.X, y - _grabbedAt.Y);
+        }
+
+        // The page is put together again once, when the box is let go.
+        private void Screen_Released(object sender, PointerReleasedEventArgs e)
+        {
+            if (_dragging == null) return;
+            ScreenBoxRow dropped = _dragging;
+            _dragging = null;
+            e.Pointer.Capture(null);
+            dropped.Drop();
         }
 
         private async void Paint_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(PaintAsync, "The painter didn't open.", ErrorTitle, Owner);

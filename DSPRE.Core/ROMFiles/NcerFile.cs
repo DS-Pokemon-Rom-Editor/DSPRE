@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace DSPRE.ROMFiles
@@ -255,6 +256,60 @@ namespace DSPRE.ROMFiles
         }
 
         public byte[] Write() => (byte[])_bytes.Clone();
+
+        /// <summary>A cell's pieces as their three halfwords, with the cell's attribute and bounds.</summary>
+        public sealed record NewCell(IReadOnlyList<(ushort A0, ushort A1, ushort A2)> Pieces, ushort Attr, short MaxX, short MaxY, short MinX, short MinY);
+
+        /// <summary>
+        /// The file with a new cell table and pieces in place of the old ones, the sections after the cell bank (labels, extra
+        /// data) kept as they were. Only files without transfer partitions or user data, whose offsets would move, are rebuilt;
+        /// for the rest it returns null.
+        /// </summary>
+        public byte[] WithCells(IReadOnlyList<NewCell> cells)
+        {
+            if (PartitionsAt != 0 || UserAt != 0 || StringBank != 0 || cells.Count == 0) return null;
+            int entry = Extended ? 16 : 8;
+            int pieceBytes = cells.Sum(c => c.Pieces.Count * 6);
+            int bodySize = 24 + cells.Count * entry + pieceBytes;
+            int kbecSize = (8 + bodySize + 3) & ~3;
+            byte[] head = new byte[KbecAt];
+            Array.Copy(_bytes, head, KbecAt);
+            int restAt = KbecAt + KbecSize;
+            byte[] rest = new byte[Math.Max(0, _bytes.Length - restAt)];
+            Array.Copy(_bytes, restAt, rest, 0, rest.Length);
+
+            byte[] d = new byte[KbecAt + kbecSize + rest.Length];
+            Array.Copy(head, d, head.Length);
+            void U16(int o, int v) { d[o] = (byte)v; d[o + 1] = (byte)(v >> 8); }
+            void U32(int o, int v) { U16(o, v & 0xFFFF); U16(o + 2, (v >> 16) & 0xFFFF); }
+            U32(8, d.Length);
+            d[KbecAt] = (byte)'K'; d[KbecAt + 1] = (byte)'B'; d[KbecAt + 2] = (byte)'E'; d[KbecAt + 3] = (byte)'C';
+            U32(KbecAt + 4, kbecSize);
+            int body = KbecAt + 8;
+            U16(body, cells.Count);
+            U16(body + 2, Extended ? 1 : 0);
+            U32(body + 4, 24);
+            U32(body + 8, (int)Mapping);
+            int table = body + 24, area = table + cells.Count * entry, start = 0;
+            for (int i = 0; i < cells.Count; i++)
+            {
+                int at = table + i * entry;
+                U16(at, cells[i].Pieces.Count);
+                U16(at + 2, cells[i].Attr);
+                U32(at + 4, start);
+                if (Extended)
+                {
+                    U16(at + 8, cells[i].MaxX); U16(at + 10, cells[i].MaxY); U16(at + 12, cells[i].MinX); U16(at + 14, cells[i].MinY);
+                }
+                foreach ((ushort a0, ushort a1, ushort a2) in cells[i].Pieces)
+                {
+                    U16(area + start, a0); U16(area + start + 2, a1); U16(area + start + 4, a2);
+                    start += 6;
+                }
+            }
+            Array.Copy(rest, 0, d, KbecAt + kbecSize, rest.Length);
+            return d;
+        }
 
         public Piece PieceAt(int cell, int piece)
         {

@@ -1,18 +1,15 @@
-<Window xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
         x:Class="DSPRE.Avalonia.Views.Graphics.BottomScreenEditorView"
-        x:DataType="vm:BottomScreenEditorViewModel"
-        Title="Bottom screen"
-        Width="1340" Height="780" MinWidth="900" MinHeight="560"
-        WindowStartupLocation="CenterScreen">
+        x:DataType="vm:BottomScreenEditorViewModel">
 
   <Design.DataContext>
     <vm:BottomScreenEditorViewModel/>
   </Design.DataContext>
 
-  <Window.Styles>
+  <UserControl.Styles>
     <Style Selector="TextBlock.hint">
       <Setter Property="FontSize" Value="12"/>
       <Setter Property="Foreground" Value="{DynamicResource Editor.Subtle}"/>
@@ -22,7 +19,7 @@
       <Setter Property="VerticalAlignment" Value="Center"/>
       <Setter Property="FontSize" Value="12"/>
     </Style>
-  </Window.Styles>
+  </UserControl.Styles>
 
   <DockPanel>
 
@@ -110,9 +107,10 @@
     </Border>
 
     <!-- The pieces -->
-    <Border DockPanel.Dock="Left" Width="228" BorderBrush="{DynamicResource Editor.Border}"
+    <Border DockPanel.Dock="Left" Classes="screenList" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,1,0">
       <DockPanel Margin="6">
+        <TextBlock DockPanel.Dock="Top" Text="Pieces" FontWeight="SemiBold" Margin="0,0,0,6"/>
         <ListBox x:Name="PieceList" ItemsSource="{Binding Pieces}" SelectedIndex="{Binding SelectedIndex}"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
           <ListBox.ItemTemplate>
@@ -129,7 +127,7 @@
     </Border>
 
     <!-- What is picked -->
-    <Border x:Name="PieceDetails" DockPanel.Dock="Right" Width="300" BorderBrush="{DynamicResource Editor.Border}"
+    <Border x:Name="PieceDetails" DockPanel.Dock="Right" Classes="screenPanel" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="1,0,0,0">
       <ScrollViewer>
         <StackPanel Margin="10" Spacing="8">
@@ -148,7 +146,7 @@
           <TextBlock Text="{Binding CannotEditBecause}" Classes="hint"
                      IsVisible="{Binding CannotEditBecause, Converter={x:Static ObjectConverters.IsNotNull}}"/>
 
-          <CheckBox Content="Fill in what the game fills in" IsChecked="{Binding FillContents}"
+          <CheckBox Content="Sample values" IsChecked="{Binding FillContents}"
                     IsVisible="{Binding HasContents}"
                     ToolTip.Tip="Health bars, party slots and the note page, at the positions the game uses"/>
 
@@ -190,13 +188,14 @@
     <!-- The screen being edited. Sized to the room it has rather than stretched to fill it, so the
          casing is never cut off at the edges. -->
     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-      <StackPanel Margin="12" Spacing="8" HorizontalAlignment="Center">
+      <StackPanel Margin="12" Spacing="6" HorizontalAlignment="Center">
+        <TextBlock Text="Bottom screen" Classes="screenCaption"/>
         <Border x:Name="ScreenPreview" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
-          <Image Source="{Binding Screen}" Width="640" Height="480" Stretch="Uniform"
+          <Image Source="{Binding Screen}" Width="512" Height="384" Stretch="Uniform"
                  RenderOptions.BitmapInterpolationMode="None"/>
         </Border>
       </StackPanel>
     </ScrollViewer>
 
   </DockPanel>
-</Window>
+</UserControl>

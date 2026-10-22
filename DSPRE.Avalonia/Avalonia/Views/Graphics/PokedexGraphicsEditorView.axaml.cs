@@ -5,7 +5,7 @@ using DSPRE.Avalonia.ViewModels.Graphics;
 
 namespace DSPRE.Avalonia.Views.Graphics
 {
-    public partial class PokedexGraphicsEditorView : Window
+    public partial class PokedexGraphicsEditorView : UserControl
     {
         public PokedexGraphicsEditorView() : this(new ScreenPagesEditorViewModel(new PokedexBook(), null)) { }
 
@@ -13,8 +13,6 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             AvaloniaXamlLoader.Load(this);
             DataContext = vm;
-            EditorWindowChrome.Attach(this, vm);
-            EditorWindowChrome.AttachUndoKeys(this, vm);
         }
     }
 }

@@ -16,8 +16,8 @@ using System.Globalization;
 namespace DSPRE
 {
     /// <summary>
-    /// Shared, UI-agnostic apply-logic for the ROM Patch Toolbox: both the WinForms
-    /// <see cref="PatchToolboxDialog"/> and the native Avalonia Patch Toolbox call byte-for-byte
+    /// Shared, UI-agnostic apply-logic for the ROM patch toolbox: both the WinForms
+    /// <see cref="PatchToolboxDialog"/> and the native Avalonia ROM patch toolbox call byte-for-byte
     /// identical patch code (no ROM-writing divergence). Core, no UI-toolkit dependency.
     ///
     /// All user prompts go through the pluggable <see cref="ConfirmYesNo"/> / <see cref="ShowInfo"/> /
@@ -831,7 +831,7 @@ namespace DSPRE
                 ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.InitString), data.InitOffset); //Write new initOffset
 
                 // The synthetic overlay's backing NARC has to actually be unpacked on disk before its
-                // file #0 can be checked/created, on a fresh project (Header Editor never opened) this
+                // file #0 can be checked/created, on a fresh project (Header editor never opened) this
                 // directory doesn't exist yet, which used to make the block below a silent no-op while
                 // still reporting success.
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.SynthOverlay });
@@ -1032,6 +1032,27 @@ namespace DSPRE
             return Unsupported("The code there has already been changed by something else.");
         }
 
+        public static PatchState PartyPanelSizeState()
+        {
+            if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+            if (!PartyPanelSizePatch.SupportsCurrentRom) return Unsupported("HeartGold and SoulSilver only");
+            if (PartyPanelSizePatch.IsApplied) return PatchState.Applied;
+            return PartyPanelSizePatch.WhyNotApplicable() is string why ? Unsupported(why) : PatchState.Available;
+        }
+
+        public static bool ApplyPartyPanelSizePatch()
+        {
+            if (PartyPanelSizeState() != PatchState.Available) return false;
+            if (!ConfirmYesNo("The Pokémon panels in the party menu can be any size up to 96 tiles, set in the Screens editor's Party " +
+                "layout. Nothing changes in game until you set a size." + BackupNote("the ARM9") + "\n\nApply this patch?" +
+                CreditNote("partyPanelSize"), "Confirm to proceed"))
+                return false;
+            BackUp(RomInfo.Arm9Path);
+            PartyPanelSizePatch.Apply();
+            ShowInfo("Set the panel size in the Screens editor's Party layout.", "Patch applied");
+            return true;
+        }
+
         public static bool ApplySameHeldItemOddsPatch()
         {
             if (SameHeldItemOddsState() != PatchState.Available) return false;
@@ -1137,9 +1158,21 @@ namespace DSPRE
         {
             if (AlreadyApplied(Probe(() => BattleGaugeTextPatch.IsApplied))) return false;
             if (BattleGaugeTextPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
+            if (BattleGaugeTextPatch.NeedsTileUpdate)
+            {
+                int patched = RomLocator.HpBarTextSites.Overlay;
+                if (!ConfirmYesNo("This ROM has the patch for the name, level and HP. The update also removes the box behind the gender symbol, \"Lv\" and the caught ball." +
+                    BackupNote($"overlay {patched}") + "\n\nUpdate the patch?" + CreditNote("hpBarText"), "Confirm to proceed"))
+                    return false;
+                string patchedPath = OverlayUtils.GetPath(patched);
+                PlainFiles.Copy(patchedPath, patchedPath + BackupSuffix, overwrite: true);
+                BattleGaugeTextPatch.AddTiles();
+                ShowInfo("Patch updated.", "Patch applied");
+                return true;
+            }
             if (PlacementNote(new[] { BattleGaugeTextPatch.BlockLength }, out int[] offsets) is not string placement) return false;
             int overlay = RomLocator.HpBarTextSites.Overlay;
-            if (!ConfirmYesNo("Removes the white box behind the name, level and HP in battle, so your HP bar art shows behind them." +
+            if (!ConfirmYesNo("Removes the white box behind the name, level, HP, gender symbol and \"Lv\" in battle, so your HP bar art shows behind them." +
                 placement + BackupNote($"overlay {overlay} and the synthetic overlay") +
                 "\n\nApply this patch?" + CreditNote("hpBarText"), "Confirm to proceed"))
                 return false;
@@ -1204,7 +1237,7 @@ namespace DSPRE
             string[] adFiles = Directory.GetFiles(GameDirs[DirNames.AreaData].unpackedDir);
             foreach (string s in adFiles)
             {
-                AreaData a = new AreaData(new FileStream(s, FileMode.Open))
+                AreaData a = new AreaData(new FileStream(s, FileMode.Open, FileAccess.Read))
                 {
                     GroundAnimation = 0xFFFF
                 };
@@ -1515,7 +1548,7 @@ namespace DSPRE
         }
 
         // ── Patch catalogue / status (read-only, UI-agnostic) ────────────────────────────────────
-        // Lets a non-WinForms shell (the Avalonia Patch Toolbox) list the patches, show each one's
+        // Lets a non-WinForms shell (the Avalonia ROM patch toolbox) list the patches, show each one's
         // applied/supported state, and apply it, mirroring the gating the WinForms constructor does.
 
         public enum PatchState { Available, Applied, Unsupported }
@@ -1557,6 +1590,7 @@ namespace DSPRE
             ["itemSentenceCase"] = ("Mixone", "sentence-case item names"),
             ["trainerNames"] = ("Mixone and AdAstra", "trainer name expansion"),
             ["sameHeldItemOdds"] = ("Mixone", "held item odds"),
+            ["partyPanelSize"] = ("Mixone", "party panel size"),
             ["buildingRotation"] = ("MrHam88", "building rotation"),
             ["trainerShiny"] = ("MrHam88", "shiny trainer Pokémon"),
             ["trainerCustomPokeballs"] = ("MrHam88", "trainer custom Poké Balls"),
@@ -1656,6 +1690,7 @@ namespace DSPRE
         public static readonly IReadOnlyDictionary<string, string> PatchTitles = new Dictionary<string, string>
         {
             ["sameHeldItemOdds"] = "Same held items use the odds",
+            ["partyPanelSize"] = "Party panel size",
             ["sentenceCase"] = "Sentence-case Pokémon names",
             ["itemSentenceCase"] = "Sentence-case item names",
             ["itemStandardize"] = "Standardize item numbers",
@@ -1690,6 +1725,10 @@ namespace DSPRE
         public static List<PatchInfo> GetPatchStatuses()
         {
             List<PatchInfo> list = new List<PatchInfo>();
+
+            list.Add(Status("partyPanelSize",
+                "Set the size of the Pokémon panels in the party menu, up to 96 tiles, in the Screens editor (HeartGold/SoulSilver). ARM9 only; no expansion required.",
+                PartyPanelSizeState));
 
             list.Add(Status("sameHeldItemOdds",
                 "Wild Pokémon whose two held items are the same normally always hold it. With this patch they hold it only as often as the held item odds say.",
@@ -1728,7 +1767,7 @@ namespace DSPRE
                 EvolutionSlotsProbe));
 
             list.Add(Status("martsExpanded",
-                $"Moves every mart into the expanded ARM9 area with room for {MartData.RoomyShops} marts of {MartData.RoomyItems} items, so the Mart Editor can add items and custom marts. Requires the ARM9 expansion patch.",
+                $"Moves every mart into the expanded ARM9 area with room for {MartData.RoomyShops} marts of {MartData.RoomyItems} items, so the Mart editor can add items and custom marts. Requires the ARM9 expansion patch.",
                 MartExpansionProbe));
 
             list.Add(Status("bpShopExpanded",
@@ -1772,7 +1811,7 @@ namespace DSPRE
                 }));
 
             list.Add(Status("buildingRotation",
-                "Enables the game to recognise the rotation of buildings placed in the Map Editor. Requires the ARM9 expansion patch and a ds-rom-format project.",
+                "Enables the game to recognise the rotation of buildings placed in the Map editor. Requires the ARM9 expansion patch and a ds-rom-format project.",
                 () =>
                 {
                     if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
@@ -1921,7 +1960,7 @@ namespace DSPRE
                 }));
 
             list.Add(Status("hpBarText",
-                "Removes the white box behind the name, level and HP in battle. Requires the ARM9 expansion patch.",
+                "Removes the white box behind the name, level, HP, gender symbol and \"Lv\" in battle. Requires the ARM9 expansion patch.",
                 () =>
                 {
                     if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
@@ -2282,7 +2321,7 @@ namespace DSPRE
             if (offsets == null)
             {
                 ShowError(SyntheticOverlaySpace.Available() ? "There isn't enough free space left in the synthetic overlay for this patch."
-                          : "Apply the ARM9 expansion in the ROM Patch Toolbox first.", "Patch not applied");
+                          : "Apply the ARM9 expansion in the ROM patch toolbox first.", "Patch not applied");
                 return null;
             }
             int[] at = offsets;
@@ -2370,7 +2409,7 @@ namespace DSPRE
             if (hgEngineRefusal != null && key is "arm9" or "bdhcam" or "buildingRotation" or "scrcmdRepoint"
                 or "trainerClassTablesExpanded" or "trainerEncounterBgmRepointed" or "punchingMovesExpanded" or "soundMovesExpanded"
                 or "pickupSlots" or "classIntros" or "hpBarText" or "vsClassTableExpanded" or "trainerShiny" or "trainerClassMetadata"
-                or "martsExpanded" or "bpShopExpanded" or "swarmTableExpanded" or "typeChartExpanded" or "vsIntroTimings")
+                or "martsExpanded" or "bpShopExpanded" or "swarmTableExpanded" or "typeChartExpanded" or "vsIntroTimings" or "partyPanelSize")
             {
                 ShowError(hgEngineRefusal, "Not available on hg-engine");
                 return false;
@@ -2393,6 +2432,7 @@ namespace DSPRE
                 case "disableTextures": return ApplyDisableDynamicTexturesPatch();
                 case "trainerNames": return ApplyExpandTrainerNamesPatch();
                 case "sameHeldItemOdds": return ApplySameHeldItemOddsPatch();
+                case "partyPanelSize": return ApplyPartyPanelSizePatch();
                 case "trainerClassTablesExpanded": return ApplyMoveTrainerClassTables();
                 case "trainerEncounterBgmRepointed": return ApplyMoveEncounterMusicTable();
                 case "pickupSlots": return ApplyPickupSlotsPatch();

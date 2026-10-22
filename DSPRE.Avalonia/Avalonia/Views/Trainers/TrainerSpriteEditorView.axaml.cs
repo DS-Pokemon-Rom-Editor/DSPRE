@@ -9,9 +9,12 @@ using System.Collections.Generic;
 
 namespace DSPRE.Avalonia.Views.Trainers
 {
-    public partial class TrainerSpriteEditorView : Window
+    public partial class TrainerSpriteEditorView : UserControl
     {
+        private Window Owner => TopLevel.GetTopLevel(this) as Window;
+
         private TrainerSpriteEditorViewModel VM => DataContext as TrainerSpriteEditorViewModel;
+        private string ErrorTitle => (VM?.Title is string t ? (t.EndsWith(" editor") ? t : t + " editor") : "Trainer sprite editor") + " error";
 
         private bool _animEditorReady;
         private bool _animSyncing;   // guards the AnimJsonEditor⇄VM text loop
@@ -22,14 +25,13 @@ namespace DSPRE.Avalonia.Views.Trainers
             InitializeComponent();
             Loaded += (_, _) => SetupAnimEditor();
             DataContextChanged += (_, _) => HookVm();
-            Closing += (_, _) => { VM?.StopAnimPreview(); VM?.StopTopBar(); };
+            DetachedFromVisualTree += (_, _) => { VM?.StopAnimPreview(); VM?.StopTopBar(); };
             NameRefresh.Bind(this, () => VM?.RefreshNames());
         }
 
         public TrainerSpriteEditorView(TrainerSpriteEditorViewModel vm) : this()
         {
             DataContext = vm;
-            EditorWindowChrome.Attach(this, vm, title: () => vm.Title);
         }
 
 
@@ -57,15 +59,17 @@ namespace DSPRE.Avalonia.Views.Trainers
                 vm.PaletteTitle(bank, index), vm.SwatchColor(bank, index), (argb, group) => vm.SetSwatchColor(bank, index, argb, group));
             PaletteColorEditorView window = new DSPRE.Avalonia.Views.Graphics.PaletteColorEditorView(editor);
             // Outside the editor, so the palette and the sprite both stay in view while the colour changes.
-            PixelRect? area = Screens.ScreenFromWindow(this)?.WorkingArea;
-            double scale = RenderScaling;
+            Window owner = Owner;
+            if (owner == null) return;
+            PixelRect? area = owner.Screens.ScreenFromWindow(owner)?.WorkingArea;
+            double scale = owner.RenderScaling;
             PixelPoint right = this.PointToScreen(new Point(Bounds.Width + 8, 0));
             int width = (int)(window.Width * scale);
             window.WindowStartupLocation = WindowStartupLocation.Manual;
             window.Position = area == null || right.X + width <= area.Value.Right
                 ? right
                 : this.PointToScreen(new Point(-8 - window.Width, 0));
-            window.Show(this);
+            window.Show(owner);
         }
 
         private void Frame_PointerPressed(object sender, PointerPressedEventArgs e)
@@ -131,7 +135,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         {
             string error = VM?.SaveAll();
             if (error != null)
-                await DialogHelper.ShowErrorAsync($"Save failed: {error}", owner: this);
+                await DialogHelper.ShowErrorAsync($"Save failed: {error}", ErrorTitle, Owner);
         }
 
         /// <summary>Opens the Graphics window at this sprite's drawing, the first of its five files.</summary>
@@ -144,7 +148,7 @@ namespace DSPRE.Avalonia.Views.Trainers
 
         private async void Import_Click(object sender, RoutedEventArgs e)
         {
-            IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await TopLevel.GetTopLevel(this).StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Import PNG",
                 AllowMultiple = false,
@@ -159,19 +163,19 @@ namespace DSPRE.Avalonia.Views.Trainers
 
             string error = VM?.ImportPng(path);
             if (error != null)
-                await DialogHelper.ShowErrorAsync($"Import failed: {error}", "Trainer sprite editor error", this);
+                await DialogHelper.ShowErrorAsync($"Import failed: {error}", ErrorTitle, Owner);
             else SaveNotice.Imported(null, path);
         }
 
         private async void CopyFrameToOtherSet_Click(object sender, RoutedEventArgs e)
         {
             string error = VM?.CopyFrameToOtherSet();
-            if (error != null) await DialogHelper.ShowErrorAsync(error, owner: this);
+            if (error != null) await DialogHelper.ShowErrorAsync(error, ErrorTitle, Owner);
         }
 
         private async void Export_Click(object sender, RoutedEventArgs e)
         {
-            IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            IStorageFile file = await TopLevel.GetTopLevel(this).StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = "Export PNG",
                 DefaultExtension = "png",
@@ -185,7 +189,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             if (path == null) return;
 
             if (VM?.ExportPng(path) == false)
-                await DialogHelper.ShowErrorAsync("Export failed.", "Trainer sprite editor error", this);
+                await DialogHelper.ShowErrorAsync("Export failed.", ErrorTitle, Owner);
             else SaveNotice.Exported(path);
         }
 
@@ -224,7 +228,7 @@ namespace DSPRE.Avalonia.Views.Trainers
 
         private async System.Threading.Tasks.Task ExportSheetAsync(int? animation)
         {
-            IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            IStorageFile file = await TopLevel.GetTopLevel(this).StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = animation == null ? "Export frames sheet" : "Export animation sheet",
                 DefaultExtension = "png",
@@ -234,12 +238,12 @@ namespace DSPRE.Avalonia.Views.Trainers
             string path = file?.TryGetLocalPath();
             if (path == null) return;
             string error = animation == null ? VM.ExportFramesSheet(path) : VM.ExportAnimationSheet(animation.Value, path);
-            if (error != null) await DialogHelper.ShowErrorAsync($"Export failed: {error}", "Trainer sprite editor error", this);
+            if (error != null) await DialogHelper.ShowErrorAsync($"Export failed: {error}", ErrorTitle, Owner);
         }
 
         private async System.Threading.Tasks.Task ImportSheetAsync(bool animation)
         {
-            IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await TopLevel.GetTopLevel(this).StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = animation ? "Open animation sheet" : "Open frames sheet",
                 AllowMultiple = false,
@@ -251,10 +255,10 @@ namespace DSPRE.Avalonia.Views.Trainers
             TrainerSheetImportViewModel wizard = VM.OpenSheetImport(animation, path, out string why);
             if (wizard == null)
             {
-                await DialogHelper.ShowErrorAsync($"Import failed: {why}", "Trainer sprite editor error", this);
+                await DialogHelper.ShowErrorAsync($"Import failed: {why}", ErrorTitle, Owner);
                 return;
             }
-            if (await new TrainerSheetImportView(wizard).ShowDialog<bool>(this)) VM.ApplySheetImport(wizard);
+            if (await new TrainerSheetImportView(wizard).ShowDialog<bool>(Owner)) VM.ApplySheetImport(wizard);
         }
 
         // The outer "Animations" tab and its inner "JSON" sub-tab lazily realize content only once
@@ -316,14 +320,14 @@ namespace DSPRE.Avalonia.Views.Trainers
         {
             string error = VM?.SaveAnimJson();
             if (error != null)
-                await DialogHelper.ShowErrorAsync($"Save failed: {error}", owner: this);
+                await DialogHelper.ShowErrorAsync($"Save failed: {error}", ErrorTitle, Owner);
         }
 
         private async void CreateAnimJson_Click(object sender, RoutedEventArgs e)
         {
             string error = VM?.CreateAnimJson();
             if (error != null)
-                await DialogHelper.ShowErrorAsync($"Create failed: {error}", owner: this);
+                await DialogHelper.ShowErrorAsync($"Create failed: {error}", ErrorTitle, Owner);
         }
 
         // ── Structured animation editor: sequence + frame list + play-once preview ───────────────
@@ -334,7 +338,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             if ((sender as Control)?.DataContext is not AnimFrameRowViewModel row) return;
             string error = VM?.RemoveAnimFrame(row);
             if (error != null)
-                await DialogHelper.ShowErrorAsync(error, owner: this);
+                await DialogHelper.ShowErrorAsync(error, ErrorTitle, Owner);
         }
 
         private void MoveFrameUp_Click(object sender, RoutedEventArgs e)
@@ -355,7 +359,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         {
             string error = VM?.RemoveAnimSequence();
             if (error != null)
-                await DialogHelper.ShowErrorAsync(error, owner: this);
+                await DialogHelper.ShowErrorAsync(error, ErrorTitle, Owner);
         }
 
         private async void PlayAnimPreview_Click(object sender, RoutedEventArgs e)

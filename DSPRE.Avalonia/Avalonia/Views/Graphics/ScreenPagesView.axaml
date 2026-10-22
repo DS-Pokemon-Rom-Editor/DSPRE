@@ -34,40 +34,38 @@
     </controls:EditorToolbar>
 
     <!-- The layers, front first -->
-    <Border DockPanel.Dock="Left" Width="230" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,1,0">
+    <Border x:Name="LeftColumn" DockPanel.Dock="Left" Classes="screenList" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,1,0">
       <DockPanel>
-      <!-- Text boxes and bars the game places in its code -->
-      <StackPanel x:Name="BoxPanel" DockPanel.Dock="Bottom" Margin="6" Spacing="6" IsVisible="{Binding HasLayout}">
-        <TextBlock Text="Text boxes and bars" FontWeight="SemiBold"/>
-        <ListBox Height="200" ItemsSource="{Binding Boxes}" SelectedIndex="{Binding BoxIndex}"
-                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-          <ListBox.ItemTemplate>
-            <DataTemplate x:DataType="data:ScreenLayoutItem">
-              <TextBlock Text="{Binding Name}" TextWrapping="Wrap"/>
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
-        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" IsEnabled="{Binding HasBox}"
-              ToolTip.Tip="In tiles of 8 pixels">
-          <TextBlock Grid.Row="0" Text="Across" VerticalAlignment="Center" Margin="0,0,8,0"/>
-          <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="31" Increment="1" FormatString="0" Value="{Binding BoxX}"/>
-          <TextBlock Grid.Row="1" Text="Down" VerticalAlignment="Center" Margin="0,4,8,0"/>
-          <NumericUpDown Grid.Row="1" Grid.Column="1" Margin="0,4,0,0" Minimum="0" Maximum="23" Increment="1" FormatString="0" Value="{Binding BoxY}"/>
-          <TextBlock Grid.Row="2" Text="Width" VerticalAlignment="Center" Margin="0,4,8,0"/>
-          <NumericUpDown Grid.Row="2" Grid.Column="1" Margin="0,4,0,0" Minimum="1" Maximum="32" Increment="1" FormatString="0"
-                         Value="{Binding BoxWidth}" IsEnabled="{Binding CanResizeBox}"/>
-          <TextBlock Grid.Row="3" Text="Height" VerticalAlignment="Center" Margin="0,4,8,0"/>
-          <NumericUpDown Grid.Row="3" Grid.Column="1" Margin="0,4,0,0" Minimum="1" Maximum="24" Increment="1" FormatString="0"
-                         Value="{Binding BoxHeight}" IsEnabled="{Binding CanResizeBox}"/>
-        </Grid>
-      </StackPanel>
+      <!-- Text boxes and bars the game places in its code, laid out the way the HP bar editor lists its parts -->
+      <DockPanel x:Name="BoxPanel" DockPanel.Dock="Bottom" Margin="8" IsVisible="{Binding HasLayout}">
+        <TextBlock DockPanel.Dock="Top" Text="Text boxes and bars" FontWeight="SemiBold" Margin="0,0,0,6"/>
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding BoxRows}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:ScreenBoxRow">
+                <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2">
+                  <Border Width="12" Height="12" Background="{Binding Colour}" BorderBrush="{Binding Colour}" BorderThickness="2"
+                          VerticalAlignment="Center"/>
+                  <TextBlock Text="{Binding Name}" Width="120" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                             ToolTip.Tip="{Binding Name}"/>
+                  <NumericUpDown Value="{Binding Across}" Minimum="0" Maximum="31" Increment="1" FormatString="0" Width="64"
+                                 ToolTip.Tip="Across"/>
+                  <NumericUpDown Value="{Binding Down}" Minimum="0" Maximum="23" Increment="1" FormatString="0" Width="64"
+                                 ToolTip.Tip="Down"/>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
+      <TextBlock x:Name="LayerHeading" DockPanel.Dock="Top" Text="Pieces" FontWeight="SemiBold" Margin="6,6,6,0"/>
       <ListBox x:Name="LayerList" Margin="6" ItemsSource="{Binding Layers}" SelectedIndex="{Binding LayerIndex}"
                ScrollViewer.HorizontalScrollBarVisibility="Disabled">
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="vm:ScreenLayerRow">
             <StackPanel>
               <TextBlock Text="{Binding Name}" TextWrapping="Wrap"/>
-              <TextBlock Text="{Binding Where}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+              <TextBlock Text="{Binding WhereShown}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
             </StackPanel>
           </DataTemplate>
         </ListBox.ItemTemplate>
@@ -76,7 +74,7 @@
     </Border>
 
     <!-- The files the picked layer is made from -->
-    <Border x:Name="PartPanel" DockPanel.Dock="Right" Width="270" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1,0,0,0">
+    <Border x:Name="PartPanel" DockPanel.Dock="Right" Classes="screenPanel" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1,0,0,0">
       <DockPanel Margin="10">
         <TextBlock DockPanel.Dock="Top" Text="{Binding LayerName}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,8"/>
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,8,0,0">
@@ -115,13 +113,57 @@
     <!-- Both screens, the top one first; a click picks the layer in front at that point -->
     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
       <StackPanel x:Name="Screens" Margin="12" Spacing="6" HorizontalAlignment="Center">
+        <TextBlock Text="Top screen" Classes="screenCaption"/>
         <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
-          <Image x:Name="TopScreen" Source="{Binding TopImage}" Width="512" Height="384" Stretch="Fill"
-                 RenderOptions.BitmapInterpolationMode="None" PointerPressed="Screen_Pressed" Cursor="Hand"/>
+          <Panel>
+            <Image x:Name="TopScreen" Source="{Binding TopImage}" Width="512" Height="384" Stretch="Fill"
+                   RenderOptions.BitmapInterpolationMode="None" PointerPressed="Screen_Pressed" PointerMoved="Screen_Moved"
+                   PointerReleased="Screen_Released" Cursor="Hand"/>
+            <ItemsControl x:Name="TopBoxes" ItemsSource="{Binding TopBoxes}" IsHitTestVisible="False" IsVisible="False">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.Styles>
+                <Style Selector="ContentPresenter" x:DataType="vm:ScreenBoxRow">
+                  <Setter Property="Canvas.Left" Value="{Binding Left}"/>
+                  <Setter Property="Canvas.Top" Value="{Binding Top}"/>
+                </Style>
+              </ItemsControl.Styles>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ScreenBoxRow">
+                  <Border Width="{Binding Width}" Height="{Binding Height}" BorderBrush="{Binding Colour}" BorderThickness="2" Background="#22FFFFFF">
+                    <TextBlock Text="{Binding Name}" FontSize="11" Margin="3,1" Foreground="{Binding Colour}" FontWeight="SemiBold"/>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Panel>
         </Border>
+        <TextBlock Text="Bottom screen" Classes="screenCaption"/>
         <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
-          <Image x:Name="BottomScreen" Source="{Binding BottomImage}" Width="512" Height="384" Stretch="Fill"
-                 RenderOptions.BitmapInterpolationMode="None" PointerPressed="Screen_Pressed" Cursor="Hand"/>
+          <Panel>
+            <Image x:Name="BottomScreen" Source="{Binding BottomImage}" Width="512" Height="384" Stretch="Fill"
+                   RenderOptions.BitmapInterpolationMode="None" PointerPressed="Screen_Pressed" PointerMoved="Screen_Moved"
+                   PointerReleased="Screen_Released" Cursor="Hand"/>
+            <ItemsControl x:Name="BottomBoxes" ItemsSource="{Binding BottomBoxes}" IsHitTestVisible="False" IsVisible="False">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.Styles>
+                <Style Selector="ContentPresenter" x:DataType="vm:ScreenBoxRow">
+                  <Setter Property="Canvas.Left" Value="{Binding Left}"/>
+                  <Setter Property="Canvas.Top" Value="{Binding Top}"/>
+                </Style>
+              </ItemsControl.Styles>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ScreenBoxRow">
+                  <Border Width="{Binding Width}" Height="{Binding Height}" BorderBrush="{Binding Colour}" BorderThickness="2" Background="#22FFFFFF">
+                    <TextBlock Text="{Binding Name}" FontSize="11" Margin="3,1" Foreground="{Binding Colour}" FontWeight="SemiBold"/>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Panel>
         </Border>
       </StackPanel>
     </ScrollViewer>

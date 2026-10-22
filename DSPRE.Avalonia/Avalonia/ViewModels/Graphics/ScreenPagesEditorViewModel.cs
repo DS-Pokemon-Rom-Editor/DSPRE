@@ -14,10 +14,64 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Graphics
 {
     /// <summary>One layer of the page in the list: a background, a sprite, a label or the sample Pokémon.</summary>
+    /// <summary>A text box or bar in the layout list and on the screen, moved by typing or dragging.</summary>
+    public sealed class ScreenBoxRow : INotifyPropertyChanged
+    {
+        public event PropertyChangedEventHandler PropertyChanged;
+        private void Raise(string n) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+
+        /// <summary>How many board pixels one tile takes: the screens are drawn at twice their size.</summary>
+        public const double Tile = 16;
+
+        private readonly Action<ScreenBoxRow, int, int> _place;
+        private int _x, _y;
+
+        public ScreenBoxRow(ScreenLayoutItem item, bool onTop, string colour, Action<ScreenBoxRow, int, int> place)
+        {
+            OnTop = onTop;
+            Colour = colour;
+            _place = place;
+            Use(item);
+        }
+
+        public ScreenLayoutItem Item { get; private set; }
+        public string Name => Item.Name;
+        public bool OnTop { get; }
+        public string Colour { get; }
+
+        public int Across { get => _x; set => _place(this, value, _y); }
+        public int Down { get => _y; set => _place(this, _x, value); }
+
+        public double Left => _x * Tile;
+        public double Top => _y * Tile;
+        public double Width => Item.Width * Tile;
+        public double Height => Item.Height * Tile;
+
+        public void Use(ScreenLayoutItem item)
+        {
+            Item = item;
+            _x = item.X;
+            _y = item.Y;
+            foreach (string n in new[] { nameof(Across), nameof(Down), nameof(Left), nameof(Top), nameof(Width), nameof(Height) }) Raise(n);
+        }
+
+        /// <summary>Follows a drag on the screen; <see cref="Drop"/> places it.</summary>
+        public void Drag(int x, int y)
+        {
+            _x = Math.Clamp(x, 0, 32 - Item.Width);
+            _y = Math.Clamp(y, 0, 24 - Item.Height);
+            Raise(nameof(Left));
+            Raise(nameof(Top));
+        }
+
+        public void Drop() => _place(this, _x, _y);
+    }
+
     public sealed class ScreenLayerRow
     {
         public string Name { get; init; }
         public string Where { get; init; }
+        public string WhereShown => Where + " screen";
         public ScreenSide Side { get; init; }
         public ScreenLayerKind Kind { get; init; }
         /// <summary>The background's number, or the item's place in its list (negative for a label).</summary>
@@ -84,6 +138,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private readonly IDisposable _picturesSaved;
         public void Detach() => _picturesSaved?.Dispose();
+
+        /// <summary>Shows the page <paramref name="pageId"/>; null or an unknown id leaves the page on show.</summary>
+        public void GoToPage(string pageId)
+        {
+            if (pageId == null) return;
+            int at = _pages.ToList().FindIndex(p => p.Id == pageId);
+            if (at >= 0) PageIndex = at;
+        }
 
         public string Title => _book.Title;
 
@@ -292,7 +354,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         public ScreenLayerRow SelectedLayer => _layerIndex >= 0 && _layerIndex < Layers.Count ? Layers[_layerIndex] : null;
-        public string LayerName => SelectedLayer == null ? "" : SelectedLayer.Where + ": " + SelectedLayer.Name;
+        public string LayerName => SelectedLayer == null ? "Nothing picked" : SelectedLayer.Where + ": " + SelectedLayer.Name;
 
         private int _partIndex = -1;
         public int PartIndex
@@ -518,12 +580,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             BoxIndex = again;
             // The setter stays quiet when nothing is picked again, and the fields would keep the last page's box.
             RaiseBox();
+            FillBoxRows();
         }
 
         private void RaiseBox()
         {
-            foreach (string name in new[] { nameof(BoxIndex), nameof(SelectedBox), nameof(HasBox), nameof(CanResizeBox),
-                                            nameof(BoxX), nameof(BoxY), nameof(BoxWidth), nameof(BoxHeight) })
+            foreach (string name in new[] { nameof(BoxIndex), nameof(SelectedBox), nameof(HasBox) })
                 OnPropertyChanged(name);
         }
 
@@ -543,32 +605,43 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public ScreenLayoutItem SelectedBox => _boxIndex >= 0 && _boxIndex < Boxes.Count ? Boxes[_boxIndex] : null;
         public bool HasBox => SelectedBox != null;
-        public bool CanResizeBox => SelectedBox?.CanResize == true;
 
-        public decimal? BoxX { get => SelectedBox?.X; set => PlaceBox(value, null, null, null); }
-        public decimal? BoxY { get => SelectedBox?.Y; set => PlaceBox(null, value, null, null); }
-        public decimal? BoxWidth { get => SelectedBox?.Width; set => PlaceBox(null, null, value, null); }
-        public decimal? BoxHeight { get => SelectedBox?.Height; set => PlaceBox(null, null, null, value); }
+        /// <summary>The boxes and bars as rows to type into and boxes to drag, the way the HP bar editor shows its parts.</summary>
+        public ObservableCollection<ScreenBoxRow> BoxRows { get; } = new();
+        public ObservableCollection<ScreenBoxRow> TopBoxes { get; } = new();
+        public ObservableCollection<ScreenBoxRow> BottomBoxes { get; } = new();
 
-        private void PlaceBox(decimal? x, decimal? y, decimal? width, decimal? height)
+        // The rows stay while the same items are shown, so a number being typed keeps its box.
+        private void FillBoxRows()
         {
-            ScreenLayoutItem box = SelectedBox;
-            if (box == null || _book.Layout == null) return;
-            int nx = (int)(x ?? box.X), ny = (int)(y ?? box.Y), nw = (int)(width ?? box.Width), nh = (int)(height ?? box.Height);
-            if (nx == box.X && ny == box.Y && nw == box.Width && nh == box.Height) return;
-            (byte[] bytes, string error) = _book.Layout.Place(box, nx, ny, nw, nh);
-            if (error != null)
+            ScreenSide topSide = Page?.MainOnTop != false ? ScreenSide.Main : ScreenSide.Sub;
+            if (BoxRows.Select(r => r.Name).SequenceEqual(Boxes.Select(b => b.Name)))
             {
-                StatusText = error;
-                OnPropertyChanged(nameof(BoxX));
-                OnPropertyChanged(nameof(BoxY));
-                OnPropertyChanged(nameof(BoxWidth));
-                OnPropertyChanged(nameof(BoxHeight));
+                for (int i = 0; i < Boxes.Count; i++) BoxRows[i].Use(Boxes[i]);
                 return;
             }
+            BoxRows.Clear();
+            TopBoxes.Clear();
+            BottomBoxes.Clear();
+            int colour = 0;
+            foreach (ScreenLayoutItem item in Boxes)
+            {
+                ScreenBoxRow row = new ScreenBoxRow(item, item.Side == topSide,
+                    HpBarLayoutEditorViewModel.Colours[colour++ % HpBarLayoutEditorViewModel.Colours.Length], PlaceItem);
+                BoxRows.Add(row);
+                (row.OnTop ? TopBoxes : BottomBoxes).Add(row);
+            }
+        }
+
+        private void PlaceItem(ScreenBoxRow row, int x, int y)
+        {
+            ScreenLayoutItem item = row.Item;
+            if (_book.Layout == null || (x == item.X && y == item.Y)) { row.Use(item); return; }
+            (byte[] bytes, string error) = _book.Layout.Place(item, x, y, item.Width, item.Height);
+            if (error != null) { StatusText = error; row.Use(item); return; }
             PendingArchiveWrites.Target target = _book.Layout.Target;
             Pending.Import(() => { Pending.Stage(target, bytes); return null; });
-            StatusText = "";
+            StatusText = "Moved.";
             Compose();
         }
 

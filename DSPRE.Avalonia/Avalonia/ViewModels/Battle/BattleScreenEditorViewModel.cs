@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
     {
         public BattleScreenRenderer.Piece Piece { get; init; }
         public string Name => Piece.Name;
-        public string Where => Piece.Touch ? "Touch screen" : "Top screen";
+        public string Where => Piece.Touch ? "Bottom screen" : "Top screen";
         public string Trouble => Piece.Whynot;
         public bool IsMissing => Piece.Rgba == null;
     }

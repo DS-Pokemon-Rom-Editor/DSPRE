@@ -55,10 +55,37 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         private AvaBitmap _cardFrontPreview, _cardBackPreview, _trainerMalePreview, _trainerFemalePreview;
-        public AvaBitmap CardFrontPreview { get => _cardFrontPreview; private set => Set(ref _cardFrontPreview, value); }
-        public AvaBitmap CardBackPreview { get => _cardBackPreview; private set => Set(ref _cardBackPreview, value); }
-        public AvaBitmap TrainerMalePreview { get => _trainerMalePreview; private set => Set(ref _trainerMalePreview, value); }
-        public AvaBitmap TrainerFemalePreview { get => _trainerFemalePreview; private set => Set(ref _trainerFemalePreview, value); }
+        public AvaBitmap CardFrontPreview { get => _cardFrontPreview; private set { if (Set(ref _cardFrontPreview, value)) OnPropertyChanged(nameof(PiecePreview)); } }
+        public AvaBitmap CardBackPreview { get => _cardBackPreview; private set { if (Set(ref _cardBackPreview, value)) OnPropertyChanged(nameof(PiecePreview)); } }
+        public AvaBitmap TrainerMalePreview { get => _trainerMalePreview; private set { if (Set(ref _trainerMalePreview, value)) OnPropertyChanged(nameof(PiecePreview)); } }
+        public AvaBitmap TrainerFemalePreview { get => _trainerFemalePreview; private set { if (Set(ref _trainerFemalePreview, value)) OnPropertyChanged(nameof(PiecePreview)); } }
+
+        /// <summary>The pieces the card is made of, in the list beside it.</summary>
+        public string[] Pieces { get; } = { "Card front", "Card back", "Colours", "Boy", "Girl" };
+
+        private int _pieceIndex;
+        public int PieceIndex
+        {
+            get => _pieceIndex;
+            set
+            {
+                if (value < 0 || !Set(ref _pieceIndex, value)) return;
+                OnPropertyChanged(nameof(PieceName)); OnPropertyChanged(nameof(PiecePreview));
+                OnPropertyChanged(nameof(PieceIsCard)); OnPropertyChanged(nameof(PieceIsColours)); OnPropertyChanged(nameof(PieceIsImage)); OnPropertyChanged(nameof(PieceIsPose));
+            }
+        }
+
+        public string PieceName => Pieces[_pieceIndex];
+        public bool PieceIsCard => _pieceIndex < 2;
+        public bool PieceIsColours => _pieceIndex == 2;
+        public bool PieceIsImage => _pieceIndex != 2;
+        public bool PieceIsPose => _pieceIndex > 2;
+        /// <summary>The screen with the picked piece: the colours show on the card's front.</summary>
+        public AvaBitmap PiecePreview => _pieceIndex switch
+        {
+            1 => CardBackPreview, 3 => TrainerMalePreview, 4 => TrainerFemalePreview, _ => CardFrontPreview,
+        };
+        public string ScreenCaption => RomInfo.GameFamily == RomInfo.GameFamilies.HGSS ? "Bottom screen" : "Top screen";
 
         private string _statusText = string.Empty;
         public string StatusText { get => _statusText; private set => Set(ref _statusText, value); }

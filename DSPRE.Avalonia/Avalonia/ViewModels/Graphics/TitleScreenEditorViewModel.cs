@@ -34,9 +34,29 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         private AvaBitmap _logoPreview, _backgroundPreview, _copyrightPreview;
-        public AvaBitmap LogoPreview { get => _logoPreview; private set => Set(ref _logoPreview, value); }
-        public AvaBitmap BackgroundPreview { get => _backgroundPreview; private set => Set(ref _backgroundPreview, value); }
-        public AvaBitmap CopyrightPreview { get => _copyrightPreview; private set => Set(ref _copyrightPreview, value); }
+        public AvaBitmap LogoPreview { get => _logoPreview; private set { if (Set(ref _logoPreview, value)) OnPropertyChanged(nameof(PiecePreview)); } }
+        public AvaBitmap BackgroundPreview { get => _backgroundPreview; private set { if (Set(ref _backgroundPreview, value)) OnPropertyChanged(nameof(PiecePreview)); } }
+        public AvaBitmap CopyrightPreview { get => _copyrightPreview; private set { if (Set(ref _copyrightPreview, value)) OnPropertyChanged(nameof(PiecePreview)); } }
+
+        /// <summary>The pieces the title screen is made of, in the list beside it.</summary>
+        public string[] Pieces { get; } = { "Background", "Logo", "Copyright text", "Colours" };
+
+        private int _pieceIndex = 1;
+        public int PieceIndex
+        {
+            get => _pieceIndex;
+            set
+            {
+                if (value < 0 || !Set(ref _pieceIndex, value)) return;
+                OnPropertyChanged(nameof(PieceName)); OnPropertyChanged(nameof(PiecePreview));
+                OnPropertyChanged(nameof(PieceIsImage)); OnPropertyChanged(nameof(PieceIsColours));
+            }
+        }
+
+        public string PieceName => Pieces[_pieceIndex];
+        public bool PieceIsImage => _pieceIndex < 3;
+        public bool PieceIsColours => _pieceIndex == 3;
+        public AvaBitmap PiecePreview => _pieceIndex switch { 0 => BackgroundPreview, 1 => LogoPreview, 2 => CopyrightPreview, _ => null };
 
         private string _statusText = string.Empty;
         public string StatusText { get => _statusText; private set => Set(ref _statusText, value); }

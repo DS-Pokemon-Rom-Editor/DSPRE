@@ -39,6 +39,9 @@ namespace DSPRE.Avalonia.Data
         [ThreadStatic] private static Staging _staging;
 
         /// <summary>Routes this thread's reads and writes through <paramref name="staging"/> until disposed.</summary>
+        /// <summary>An entry's unsaved bytes in the staging this thread uses, or null when it has none.</summary>
+        public static byte[] Staged(DirNames dir, int id) => _staging?.Read(dir, id);
+
         public static IDisposable Use(Staging staging)
         {
             Staging before = _staging;

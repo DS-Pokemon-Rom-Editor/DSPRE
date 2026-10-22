@@ -8,8 +8,10 @@ using System.Collections.Generic;
 
 namespace DSPRE.Avalonia.Views.Graphics
 {
-    public partial class TitleScreenEditorView : Window
+    public partial class TitleScreenEditorView : UserControl
     {
+        private Window Owner => TopLevel.GetTopLevel(this) as Window;
+
         private readonly TitleScreenEditorViewModel _vm;
         private readonly Image _logoOverlay;
 
@@ -22,20 +24,21 @@ namespace DSPRE.Avalonia.Views.Graphics
             _logoOverlay = this.FindControl<Image>("LogoOverlay");
             _vm = new TitleScreenEditorViewModel();
             DataContext = _vm;
-            EditorWindowChrome.Attach(this, _vm);
         }
 
-        private async void ImportLogo_Click(object sender, RoutedEventArgs e) => await ImportPngAsync(_vm.ImportLogo);
-        private async void ImportBackground_Click(object sender, RoutedEventArgs e) => await ImportPngAsync(_vm.ImportBackground);
-        private async void ImportCopyright_Click(object sender, RoutedEventArgs e) => await ImportPngAsync(_vm.ImportCopyright);
+        private async void ImportPiece_Click(object sender, RoutedEventArgs e) =>
+            await ImportPngAsync(_vm.PieceIndex switch { 0 => _vm.ImportBackground, 2 => _vm.ImportCopyright, _ => _vm.ImportLogo });
 
-        private async void ExportLogo_Click(object sender, RoutedEventArgs e) => await ExportPngAsync(_vm.ExportLogo, "logo.png");
-        private async void ExportBackground_Click(object sender, RoutedEventArgs e) => await ExportPngAsync(_vm.ExportBackground, "background.png");
-        private async void ExportCopyright_Click(object sender, RoutedEventArgs e) => await ExportPngAsync(_vm.ExportCopyright, "copyright.png");
+        private async void ExportPiece_Click(object sender, RoutedEventArgs e)
+        {
+            if (_vm.PieceIndex == 0) await ExportPngAsync(_vm.ExportBackground, "background.png");
+            else if (_vm.PieceIndex == 2) await ExportPngAsync(_vm.ExportCopyright, "copyright.png");
+            else await ExportPngAsync(_vm.ExportLogo, "logo.png");
+        }
 
         private async System.Threading.Tasks.Task ImportPngAsync(System.Func<string, string> import)
         {
-            IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await TopLevel.GetTopLevel(this).StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Import image",
                 AllowMultiple = false,
@@ -47,13 +50,13 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = import(path);
             if (error != null)
-                await DialogHelper.ShowErrorAsync($"Import failed: {error}", "Title screen editor error", this);
+                await DialogHelper.ShowErrorAsync($"Import failed: {error}", "Title screen editor error", Owner);
             else SaveNotice.Imported(null, path);
         }
 
         private async System.Threading.Tasks.Task ExportPngAsync(System.Func<string, string> export, string suggestedName)
         {
-            IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            IStorageFile file = await TopLevel.GetTopLevel(this).StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = "Export image",
                 DefaultExtension = "png",
@@ -65,13 +68,13 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = export(path);
             if (error != null)
-                await DialogHelper.ShowErrorAsync($"Export failed: {error}", "Title screen editor error", this);
+                await DialogHelper.ShowErrorAsync($"Export failed: {error}", "Title screen editor error", Owner);
             else SaveNotice.Exported(path);
         }
 
         private async void ImportPalette_Click(object sender, RoutedEventArgs e)
         {
-            IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await TopLevel.GetTopLevel(this).StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Import colours",
                 AllowMultiple = false,
@@ -83,7 +86,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = _vm.ImportPalette(path);
             if (error != null)
-                await DialogHelper.ShowErrorAsync($"Import failed: {error}", "Title screen editor error", this);
+                await DialogHelper.ShowErrorAsync($"Import failed: {error}", "Title screen editor error", Owner);
             else SaveNotice.Imported(null, path);
         }
 
@@ -97,7 +100,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void ExportPalette_Click(object sender, RoutedEventArgs e)
         {
-            IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            IStorageFile file = await TopLevel.GetTopLevel(this).StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = "Export colours",
                 DefaultExtension = "nclr",
@@ -109,13 +112,12 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = _vm.ExportPalette(path);
             if (error != null)
-                await DialogHelper.ShowErrorAsync($"Export failed: {error}", "Title screen editor error", this);
+                await DialogHelper.ShowErrorAsync($"Export failed: {error}", "Title screen editor error", Owner);
             else SaveNotice.Exported(path);
         }
 
-        // Preview is drawn at 1.5x (384px wide standing in for the real 256px), so a real DS pixel offset
-        // has to be scaled by the same factor to look correct here.
-        private const double PreviewScale = 384.0 / 256.0;
+        // The screen is drawn at twice size, so a DS pixel offset is doubled here.
+        private const double PreviewScale = 2.0;
 
         /// <summary>
         /// Steps through the same integer frame counter as the game's logo entrance: a 3-frame delay, then

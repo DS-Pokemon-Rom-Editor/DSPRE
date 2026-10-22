@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Trainers"
@@ -7,15 +7,12 @@
         xmlns:v="clr-namespace:DSPRE.Avalonia.Views.Controls"
         x:Class="DSPRE.Avalonia.Views.Trainers.TrainerSpriteEditorView"
         x:Name="RootWindow"
-        x:DataType="vm:TrainerSpriteEditorViewModel"
-        Width="900" Height="760"
-        MinWidth="680" MinHeight="520"
-        WindowStartupLocation="CenterOwner">
+        x:DataType="vm:TrainerSpriteEditorViewModel">
   <Design.DataContext>
     <vm:TrainerSpriteEditorViewModel/>
   </Design.DataContext>
 
-  <Window.Styles>
+  <UserControl.Styles>
     <Style Selector="Border.swatch">
       <Setter Property="BorderBrush" Value="{DynamicResource Editor.Border}"/>
     </Style>
@@ -25,7 +22,7 @@
     <Style Selector="Border.swatch.selected">
       <Setter Property="BorderBrush" Value="White"/>
     </Style>
-  </Window.Styles>
+  </UserControl.Styles>
 
   <DockPanel>
     <controls:EditorToolbar>
@@ -260,4 +257,4 @@
     </TabControl>
   </DockPanel>
   </DockPanel>
-</Window>
+</UserControl>

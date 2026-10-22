@@ -1,0 +1,185 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+             x:Class="DSPRE.Avalonia.Views.Graphics.ScreensEditorView"
+             x:DataType="vm:ScreensEditorViewModel">
+  <Design.DataContext>
+    <vm:ScreensEditorViewModel/>
+  </Design.DataContext>
+
+  <UserControl.Styles>
+    <Style Selector="TreeView#ScreenList TreeViewItem">
+      <Setter Property="IsExpanded" Value="True"/>
+    </Style>
+    <Style Selector="TabControl.single /template/ ItemsPresenter#PART_ItemsPresenter">
+      <Setter Property="IsVisible" Value="False"/>
+    </Style>
+    <Style Selector="Button.lit">
+      <Setter Property="BorderBrush" Value="{DynamicResource ABrush.AccentTone1.Border.Static}"/>
+      <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+    <Style Selector="Button.lit /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="BorderBrush" Value="{DynamicResource ABrush.AccentTone1.Border.Static}"/>
+      <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+  </UserControl.Styles>
+
+  <UserControl.DataTemplates>
+    <!-- Preview: lines, the screen with the picked one, and the pieces it is drawn from. -->
+    <DataTemplate DataType="vm:ScreenPreviewView">
+      <DockPanel DataContext="{Binding Page}" x:DataType="vm:ScreenTabViewModel">
+        <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}"
+                BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
+          <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+        </Border>
+
+        <controls:EditorToolbar>
+          <TextBlock Text="Text archive" VerticalAlignment="Center" Margin="0,0,6,0" IsVisible="{Binding HasSeveralArchives}"
+                     controls:EditorToolbar.Slot="Picker"/>
+          <ComboBox Width="300" IsVisible="{Binding HasSeveralArchives}" controls:EditorToolbar.Slot="Picker"
+                    ItemsSource="{Binding Archives}" SelectedItem="{Binding SelectedArchive}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:ScreenArchiveChoice">
+                <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis"/>
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Text="State" VerticalAlignment="Center" Margin="0,0,6,0" IsVisible="{Binding HasStates}"
+                     controls:EditorToolbar.Slot="Picker"/>
+          <ComboBox Width="170" IsVisible="{Binding HasStates}" controls:EditorToolbar.Slot="Picker"
+                    ItemsSource="{Binding States}" SelectedIndex="{Binding StateIndex}"/>
+          <Button Content="Open in Text editor" controls:Icon.Key="OpenLink" Click="EditText_Click"/>
+        </controls:EditorToolbar>
+
+        <Border DockPanel.Dock="Left" Classes="screenList" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,1,0">
+          <DockPanel Margin="6">
+            <TextBlock DockPanel.Dock="Top" Text="Lines" FontWeight="SemiBold" Margin="0,0,0,6"/>
+            <ListBox x:Name="LineList" ItemsSource="{Binding Lines}" SelectedItem="{Binding SelectedLine}"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:ScreenLineRow">
+                  <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Full}"/>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
+        </Border>
+
+        <Border DockPanel.Dock="Right" Classes="screenPanel" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1,0,0,0">
+          <DockPanel Margin="8">
+            <!-- The sample party the party screen is drawn with -->
+            <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,12" IsVisible="{Binding HasSample}">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Sample" FontWeight="SemiBold"/>
+                <controls:HelpTip Text="Only used for the preview"/>
+              </StackPanel>
+              <TextBlock Text="Pokémon" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+              <ComboBox ItemsSource="{Binding SampleSlots}" SelectedIndex="{Binding SampleIndex}" HorizontalAlignment="Stretch"/>
+              <TextBlock Text="Species" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+              <ComboBox ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding SampleSpecies}" HorizontalAlignment="Stretch"
+                        MaxDropDownHeight="400"/>
+              <CheckBox Content="Egg" IsChecked="{Binding SampleEgg}"/>
+              <Grid ColumnDefinitions="*,8,*,8,*" RowDefinitions="Auto,Auto">
+                <TextBlock Text="Level" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+                <TextBlock Grid.Column="2" Text="HP" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+                <TextBlock Grid.Column="4" Text="Max HP" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+                <NumericUpDown Grid.Row="1" Value="{Binding SampleLevel}" Minimum="1" Maximum="100" FormatString="0"/>
+                <NumericUpDown Grid.Row="1" Grid.Column="2" Value="{Binding SampleHp}" Minimum="0" Maximum="999" FormatString="0"/>
+                <NumericUpDown Grid.Row="1" Grid.Column="4" Value="{Binding SampleMaxHp}" Minimum="1" Maximum="999" FormatString="0"/>
+              </Grid>
+              <TextBlock Text="Gender" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+              <ComboBox SelectedIndex="{Binding SampleGender}" HorizontalAlignment="Stretch">
+                <ComboBoxItem>Male</ComboBoxItem>
+                <ComboBoxItem>Female</ComboBoxItem>
+                <ComboBoxItem>Genderless</ComboBoxItem>
+              </ComboBox>
+              <TextBlock Text="Status condition" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+              <ComboBox SelectedIndex="{Binding SampleCondition}" HorizontalAlignment="Stretch">
+                <ComboBoxItem>None</ComboBoxItem>
+                <ComboBoxItem>Paralysed</ComboBoxItem>
+                <ComboBoxItem>Frozen</ComboBoxItem>
+                <ComboBoxItem>Asleep</ComboBoxItem>
+                <ComboBoxItem>Poisoned</ComboBoxItem>
+                <ComboBoxItem>Burned</ComboBoxItem>
+              </ComboBox>
+              <TextBlock Text="Held item" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+              <ComboBox SelectedIndex="{Binding SampleItem}" HorizontalAlignment="Stretch">
+                <ComboBoxItem>Nothing</ComboBoxItem>
+                <ComboBoxItem>Item</ComboBoxItem>
+                <ComboBoxItem>Mail</ComboBoxItem>
+              </ComboBox>
+            </StackPanel>
+            <TextBlock DockPanel.Dock="Top" Text="Pieces" FontWeight="SemiBold" Margin="0,0,0,6"/>
+            <ScrollViewer>
+              <ItemsControl x:Name="PieceList" ItemsSource="{Binding Pieces}" AttachedToVisualTree="PieceList_Attached">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ScreenPieceRow">
+                    <Button Margin="0,0,0,4" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Click="OpenPiece_Click"
+                            ToolTip.Tip="Open in Graphics" Classes.lit="{Binding IsLit}"
+                            PointerEntered="Piece_PointerEntered" PointerExited="Piece_PointerExited">
+                      <StackPanel>
+                        <TextBlock Text="{Binding Name}"/>
+                        <TextBlock Text="{Binding Where}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+                      </StackPanel>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </DockPanel>
+        </Border>
+
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+          <StackPanel Margin="12" Spacing="6" HorizontalAlignment="Center">
+            <TextBlock Text="{Binding PictureName}" Classes="screenCaption"/>
+            <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Width="514" Height="386">
+              <Panel Background="Transparent" PointerPressed="Picture_PointerPressed" ToolTip.Tip="Click a spot to see the files that draw it">
+                <Image Source="{Binding Picture}" Width="512" Height="384" RenderOptions.BitmapInterpolationMode="None"/>
+                <Image Source="{Binding Outline}" Width="512" Height="384" RenderOptions.BitmapInterpolationMode="None"
+                       IsHitTestVisible="False"/>
+                <TextBlock Text="{Binding Note}" IsVisible="{Binding HasNote}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
+              </Panel>
+            </Border>
+            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center" IsVisible="{Binding HasStops}">
+              <TextBlock Text="{Binding StopText}" FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+              <Button Content="Next box" Click="NextStop_Click" IsVisible="{Binding WaitsForPress}"/>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+      </DockPanel>
+    </DataTemplate>
+
+    <!-- Edit and Layout: the screen's own editor, or a button while it still has a window of its own. -->
+    <DataTemplate DataType="vm:ScreenEditorView">
+      <Panel>
+        <ContentControl Content="{Binding Control}" IsVisible="{Binding !OpensApart}"/>
+        <Button Content="Open in its own window" IsVisible="{Binding OpensApart}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                Click="OpenApart_Click"/>
+      </Panel>
+    </DataTemplate>
+  </UserControl.DataTemplates>
+
+  <Grid ColumnDefinitions="220,*" Margin="6">
+    <TreeView x:Name="ScreenList" Grid.Column="0" ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedNode}">
+      <TreeView.DataTemplates>
+        <TreeDataTemplate DataType="vm:ScreenGroup" ItemsSource="{Binding Entries}">
+          <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
+        </TreeDataTemplate>
+        <DataTemplate DataType="vm:ScreenEntry">
+          <TextBlock Text="{Binding Title}"/>
+        </DataTemplate>
+      </TreeView.DataTemplates>
+    </TreeView>
+
+    <TabControl x:Name="ScreenViews" Grid.Column="1" Margin="10,0,0,0" Classes.single="{Binding !SelectedEntry.HasSeveralViews}"
+                ItemsSource="{Binding SelectedEntry.Views}" SelectedItem="{Binding SelectedEntry.SelectedView}">
+      <TabControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:ScreenView">
+          <TextBlock Text="{Binding Name}"/>
+        </DataTemplate>
+      </TabControl.ItemTemplate>
+    </TabControl>
+  </Grid>
+</UserControl>

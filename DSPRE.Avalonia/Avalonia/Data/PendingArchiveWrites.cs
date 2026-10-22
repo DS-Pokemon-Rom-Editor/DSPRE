@@ -275,6 +275,10 @@ namespace DSPRE.Avalonia.Data
             _importing = null;
             _importingOthers = null;
             if (error != null || written.Count + others.Count == 0) return error;
+            // Importing what is already there leaves no step to undo.
+            bool changes = written.Any(kv => !Same(kv.Value, MemberIn(_state, kv.Key)))
+                || others.Any(kv => !Same(kv.Value, _state.Others.TryGetValue(kv.Key, out byte[] now) ? now : _firstOthers[kv.Key].Bytes));
+            if (!changes) return null;
 
             State next = new(new(_state.Members), new(_state.Others));
             foreach (KeyValuePair<(DirNames, int), byte[]> kv in written) next.Members[kv.Key] = kv.Value;

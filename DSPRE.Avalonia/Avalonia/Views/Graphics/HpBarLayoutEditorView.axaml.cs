@@ -13,8 +13,10 @@ using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Views.Graphics
 {
-    public partial class HpBarLayoutEditorView : Window
+    public partial class HpBarLayoutEditorView : UserControl
     {
+        private Window Owner => TopLevel.GetTopLevel(this) as Window;
+
         private HpBarLayoutEditorViewModel VM => DataContext as HpBarLayoutEditorViewModel;
 
         private HpBarPartRow _dragging;
@@ -24,7 +26,6 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             AvaloniaXamlLoader.Load(this);
             DataContext = new HpBarLayoutEditorViewModel();
-            EditorWindowChrome.Attach(this, VM);
             DrawGrid();
         }
 
@@ -89,7 +90,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         private async void Import_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null) return;
-            string path = await DialogHelper.OpenFileAsync(this, "Import PNG",
+            string path = await DialogHelper.OpenFileAsync(Owner, "Import PNG",
                 new[] { new FilePickerFileType("PNG image") { Patterns = new[] { "*.png" } } });
             if (path == null) return;
             GraphicAssets.Archive archive = GraphicAssets.All.FirstOrDefault(a => a.Dir == RomInfo.DirNames.BattleObj);
@@ -97,7 +98,8 @@ namespace DSPRE.Avalonia.Views.Graphics
             HpBarFit.Plan plan;
             // The preview fits the picture to the layout as it stands here, saved or not.
             using (VM.Staging())
-                (choice, plan) = await HpBarImportPrompt.AskAsync(this, archive, VM.LayoutIndex, VM.Kind, path);
+                // This editor takes the bar as it appears in battle, which only the fitted import turns into tiles.
+                (choice, plan) = await HpBarImportPrompt.AskAsync(Owner, archive, VM.LayoutIndex, VM.Kind, path, offerPictureOnly: false);
             if (choice != HpBarImportPrompt.Choice.Fit) return;
             string trouble = VM.ImportFitted(path, plan);
             if (trouble != null) await DialogHelper.ShowErrorAsync(trouble, "HP bar layout error");

@@ -1,19 +1,16 @@
-<Window xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Battle"
         xmlns:views="clr-namespace:DSPRE.Avalonia.Views.Controls"
         x:Class="DSPRE.Avalonia.Views.Battle.BattleScreenEditorView"
-        x:DataType="vm:BattleScreenEditorViewModel"
-        Title="Battle screen"
-        Width="1120" Height="780" MinWidth="1100" MinHeight="620"
-        WindowStartupLocation="CenterScreen">
+        x:DataType="vm:BattleScreenEditorViewModel">
 
   <Design.DataContext>
     <vm:BattleScreenEditorViewModel/>
   </Design.DataContext>
 
-  <Window.Styles>
+  <UserControl.Styles>
     <Style Selector="TextBlock.hint">
       <Setter Property="FontSize" Value="12"/>
       <Setter Property="Foreground" Value="{DynamicResource Editor.Subtle}"/>
@@ -23,7 +20,7 @@
       <Setter Property="VerticalAlignment" Value="Center"/>
       <Setter Property="FontSize" Value="12"/>
     </Style>
-  </Window.Styles>
+  </UserControl.Styles>
 
   <DockPanel>
 
@@ -63,7 +60,7 @@
     </controls:EditorToolbar>
 
     <!-- The piece list -->
-    <Border DockPanel.Dock="Left" Width="168" BorderBrush="{DynamicResource Editor.Border}"
+    <Border DockPanel.Dock="Left" Classes="screenList" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,1,0">
       <DockPanel Margin="6">
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
@@ -88,7 +85,7 @@
     </Border>
 
     <!-- What is picked -->
-    <Border x:Name="PieceDetails" DockPanel.Dock="Right" Width="380" BorderBrush="{DynamicResource Editor.Border}"
+    <Border x:Name="PieceDetails" DockPanel.Dock="Right" Classes="screenPanel" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="1,0,0,0">
       <ScrollViewer>
         <StackPanel Margin="8" Spacing="8">
@@ -140,7 +137,7 @@
             </StackPanel>
             <Button Content="Layout" controls:Icon.Key="OpenLink" Click="BarLayout_Click" HorizontalAlignment="Stretch"
                     ToolTip.Tip="Where the name, level, HP and gauges sit on each bar"/>
-            <Button Content="Open in Patch Toolbox" controls:Icon.Key="OpenLink" Click="TextBackgroundPatch_Click" HorizontalAlignment="Stretch"
+            <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Click="TextBackgroundPatch_Click" HorizontalAlignment="Stretch"
                     IsVisible="{Binding CanClearTextBackground}" ToolTip.Tip="{Binding ClearTextBackgroundHelp}"/>
             <TextBlock Text="{Binding BarPiecesNote}" Classes="hint"
                        IsVisible="{Binding BarPiecesNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
@@ -159,7 +156,7 @@
             <ComboBoxItem>Double battle</ComboBoxItem>
           </ComboBox>
 
-          <CheckBox Content="Show the numbers instead of the bar"
+          <CheckBox Content="HP numbers"
                     IsChecked="{Binding NumbersInsteadOfBar}" IsVisible="{Binding IsDoubles}"/>
 
           <TextBlock Text="Pokémon name" Classes="hint"/>
@@ -198,9 +195,9 @@
 
     <!-- The two screens, stacked the way a DS has them -->
     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-      <StackPanel x:Name="BothScreens" Spacing="10" Margin="12" HorizontalAlignment="Left">
+      <StackPanel x:Name="BothScreens" Spacing="10" Margin="12" HorizontalAlignment="Center">
 
-        <TextBlock Text="Top screen" Classes="hint" HorizontalAlignment="Center"/>
+        <TextBlock Text="Top screen" Classes="screenCaption"/>
         <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="Black">
           <Panel Width="512" Height="384">
             <Image Source="{Binding TopScreen}" Width="512" Height="384" Stretch="Fill"
@@ -238,7 +235,7 @@
           </Panel>
         </Border>
 
-        <TextBlock Text="Touch screen" Classes="hint" HorizontalAlignment="Center"/>
+        <TextBlock Text="Bottom screen" Classes="screenCaption"/>
         <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="Black">
           <Panel Width="512" Height="384">
             <Image Source="{Binding TouchScreen}" Width="512" Height="384" Stretch="Fill"
@@ -261,4 +258,4 @@
     </ScrollViewer>
 
   </DockPanel>
-</Window>
+</UserControl>

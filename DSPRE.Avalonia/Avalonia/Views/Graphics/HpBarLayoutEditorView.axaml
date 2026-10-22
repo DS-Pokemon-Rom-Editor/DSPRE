@@ -1,24 +1,21 @@
-<Window xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
         x:Class="DSPRE.Avalonia.Views.Graphics.HpBarLayoutEditorView"
-        x:DataType="vm:HpBarLayoutEditorViewModel"
-        Title="HP bar layout"
-        Width="1560" Height="860" MinWidth="1500" MinHeight="700"
-        WindowStartupLocation="CenterScreen">
+        x:DataType="vm:HpBarLayoutEditorViewModel">
 
   <Design.DataContext>
     <vm:HpBarLayoutEditorViewModel/>
   </Design.DataContext>
 
-  <Window.Styles>
+  <UserControl.Styles>
     <Style Selector="TextBlock.hint">
       <Setter Property="FontSize" Value="12"/>
       <Setter Property="Foreground" Value="{DynamicResource Editor.Subtle}"/>
       <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
-  </Window.Styles>
+  </UserControl.Styles>
 
   <DockPanel>
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}"
@@ -40,38 +37,9 @@
         <TextBlock Text="Sample name" VerticalAlignment="Center"/>
         <TextBox Width="120" Text="{Binding SampleName}"/>
       </StackPanel>
-      <Button Content="Open in Patch Toolbox" controls:Icon.Key="OpenLink" Margin="16,0,0,4" Click="TextBackgroundPatch_Click"
+      <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Margin="16,0,0,4" Click="TextBackgroundPatch_Click"
               IsVisible="{Binding CanClearTextBackground}" ToolTip.Tip="{Binding ClearTextBackgroundHelp}"/>
     </controls:EditorToolbar>
-
-    <!-- The battle as it will look, and the numbers -->
-    <Border x:Name="BattlePreview" DockPanel.Dock="Right" Width="560" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1,0,0,0">
-      <ScrollViewer>
-        <StackPanel Margin="10" Spacing="8">
-          <ItemsControl ItemsSource="{Binding Shots}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="vm:HpBarShot">
-                <StackPanel Spacing="4" Margin="0,0,0,8">
-                  <TextBlock Text="{Binding Label}" FontWeight="SemiBold"/>
-                  <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" HorizontalAlignment="Left">
-                    <Image Source="{Binding Picture}" Width="512" Height="384" Stretch="Fill"
-                           RenderOptions.BitmapInterpolationMode="None"/>
-                  </Border>
-                </StackPanel>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-
-          <TextBlock Text="Position" FontWeight="SemiBold"/>
-          <StackPanel Orientation="Horizontal" Spacing="8">
-            <TextBlock Text="X" VerticalAlignment="Center"/>
-            <NumericUpDown Value="{Binding ScreenX}" Minimum="-64" Maximum="320" Increment="1" FormatString="0" Width="120"/>
-            <TextBlock Text="Y" VerticalAlignment="Center"/>
-            <NumericUpDown Value="{Binding ScreenY}" Minimum="-32" Maximum="224" Increment="1" FormatString="0" Width="120"/>
-          </StackPanel>
-        </StackPanel>
-      </ScrollViewer>
-    </Border>
 
     <!-- The parts, by name -->
     <Border x:Name="PartList" DockPanel.Dock="Left" Width="300" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,1,0">
@@ -132,7 +100,34 @@
         </Border>
         <TextBlock Text="{Binding Problems}" Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap" MaxWidth="640"
                    HorizontalAlignment="Left" IsVisible="{Binding HasProblems}"/>
+
+        <!-- The battle as it will look, and where the bar sits -->
+        <StackPanel x:Name="BattlePreview" Spacing="8">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="Position" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            <TextBlock Text="X" VerticalAlignment="Center"/>
+            <NumericUpDown Value="{Binding ScreenX}" Minimum="-64" Maximum="320" Increment="1" FormatString="0" Width="120"/>
+            <TextBlock Text="Y" VerticalAlignment="Center"/>
+            <NumericUpDown Value="{Binding ScreenY}" Minimum="-32" Maximum="224" Increment="1" FormatString="0" Width="120"/>
+          </StackPanel>
+          <ItemsControl ItemsSource="{Binding Shots}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:HpBarShot">
+                <StackPanel Spacing="4" Margin="0,0,12,8">
+                  <TextBlock Text="{Binding Label}" FontWeight="SemiBold"/>
+                  <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" HorizontalAlignment="Left">
+                    <Image Source="{Binding Picture}" Width="512" Height="384" Stretch="Fill"
+                           RenderOptions.BitmapInterpolationMode="None"/>
+                  </Border>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
       </StackPanel>
     </ScrollViewer>
   </DockPanel>
-</Window>
+</UserControl>

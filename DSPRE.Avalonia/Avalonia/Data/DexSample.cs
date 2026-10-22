@@ -33,7 +33,8 @@ namespace DSPRE.Avalonia.Data
                 case ScreenTextKind.SpeciesName:
                     string[] names = null;
                     try { names = GetPokemonNames(); } catch (Exception ex) { AppLogger.Warn("Pokedex sample: species names: " + ex.Message); }
-                    return names != null && species >= 0 && species < names.Length ? names[species] : null;
+                    // Through the shared reader, so the Text editor sees the names archive printed here too.
+                    return PokemonNamesTextNumbers?.Length > 0 ? ScreenTextReads.Line(PokemonNamesTextNumbers[0], species, names) : null;
                 case ScreenTextKind.Number: return species.ToString("D3");
                 case ScreenTextKind.Category: return Line(PokedexCategoryTextNumber, species);
                 case ScreenTextKind.Height: return Line(PokedexHeightTextNumber, species);
@@ -104,9 +105,8 @@ namespace DSPRE.Avalonia.Data
                 try { lines = new TextArchive(bank).Messages; } catch (Exception ex) { AppLogger.WarnOnce("DexSample.Line", ex); lines = null; }
                 _banks[bank] = lines;
             }
-            if (lines == null || line >= lines.Count) return null;
             // Lines carry escapes for the text engine's own codes; show the words.
-            return lines[line].Replace("\\n", "\n").Replace("\\r", "\n").Replace("\\f", "\n");
+            return ScreenTextReads.Line(bank, line, lines)?.Replace("\\n", "\n").Replace("\\r", "\n").Replace("\\f", "\n");
         }
 
         public ScreenPicture Picture(ScreenMon mon)

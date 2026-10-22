@@ -1,0 +1,178 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
+             x:Class="DSPRE.Avalonia.Views.Graphics.ScreenWindowLayoutView"
+             x:DataType="vm:ScreenWindowLayoutViewModel">
+  <Design.DataContext>
+    <vm:ScreenWindowLayoutViewModel/>
+  </Design.DataContext>
+
+  <!-- The HP bar editor's shape: windows on the left with where they sit, boxes to drag over black, and the screens as the
+       game draws them beside the boxes. -->
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+    </Border>
+
+    <controls:EditorToolbar x:Name="SaveButtons">
+      <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <controls:UndoRedoButtons/>
+      <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4" IsVisible="{Binding HasStates}">
+        <TextBlock Text="State" VerticalAlignment="Center"/>
+        <ComboBox Width="190" ItemsSource="{Binding States}" SelectedIndex="{Binding StateIndex}"/>
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4">
+        <TextBlock Text="Screens" VerticalAlignment="Center"/>
+        <ComboBox Width="150" ItemsSource="{Binding ScreenChoices}" SelectedIndex="{Binding ScreensIndex}"/>
+      </StackPanel>
+      <CheckBox Content="Move all Pokémon" IsChecked="{Binding MoveAllPokemon}" IsVisible="{Binding HasParty}" Margin="0,0,16,4"
+                ToolTip.Tip="Moves the same part of every Pokémon"/>
+      <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4" IsVisible="{Binding PanelsResizable}">
+        <TextBlock Text="Panel size" VerticalAlignment="Center"/>
+        <NumericUpDown Value="{Binding PanelWidth}" Minimum="{Binding MinPanelWidth}" Maximum="{Binding MaxPanelWidth}" Increment="1" FormatString="0"
+                       Width="64" ToolTip.Tip="Width in tiles. Width times height can be at most 96."/>
+        <NumericUpDown Value="{Binding PanelHeight}" Minimum="{Binding MinPanelHeight}" Maximum="{Binding MaxPanelHeight}" Increment="1" FormatString="0"
+                       Width="64" ToolTip.Tip="Height in tiles. Width times height can be at most 96."/>
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4" IsVisible="{Binding PanelsResizable}">
+        <TextBlock Text="HP bar strip" VerticalAlignment="Center" ToolTip.Tip="The row of the panel the HP bar sits in. Eggs hide it."/>
+        <NumericUpDown Value="{Binding StripColumn}" Minimum="0" Maximum="{Binding MaxStripColumn}" Increment="1" FormatString="0" Width="64" ToolTip.Tip="Across"/>
+        <NumericUpDown Value="{Binding StripRow}" Minimum="0" Maximum="{Binding MaxStripRow}" Increment="1" FormatString="0" Width="64" ToolTip.Tip="Down"/>
+        <NumericUpDown Value="{Binding StripLength}" Minimum="1" Maximum="{Binding MaxStripLength}" Increment="1" FormatString="0" Width="64" ToolTip.Tip="Length"/>
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4" IsVisible="{Binding HpBarLengthEditable}">
+        <TextBlock Text="HP bar length" VerticalAlignment="Center"/>
+        <NumericUpDown Value="{Binding HpBarLength}" Minimum="1" Maximum="{Binding MaxHpBarLength}" Increment="1" FormatString="0" Width="64"
+                       ToolTip.Tip="The HP bar's length in pixels at full HP"/>
+      </StackPanel>
+      <Button Content="Rebuild panel art" Margin="0,0,8,4" Click="RebuildPanelArt_Click" IsVisible="{Binding CanRebuildGraphics}"
+              ToolTip.Tip="Redraws the panels at this size and moves each Pokémon's text inside"/>
+      <Button Content="Clear background" Margin="0,0,8,4" Click="RebuildBackground_Click" IsVisible="{Binding CanRebuildGraphics}"
+              ToolTip.Tip="Removes the old panel outlines from the background"/>
+      <Button Content="Rebuild cursor frame" Margin="0,0,16,4" Click="RebuildCursor_Click" IsVisible="{Binding CanRebuildGraphics}"
+              ToolTip.Tip="Stretches the cursor frame to the panel size, keeping its corners"/>
+      <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Margin="0,0,16,4" Click="SizePatch_Click"
+              IsVisible="{Binding CanOfferSizePatch}" ToolTip.Tip="The &quot;Party panel size&quot; patch lets the panels change size."/>
+    </controls:EditorToolbar>
+
+    <!-- The windows, by name -->
+    <Border x:Name="WindowList" DockPanel.Dock="Left" Width="520" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,1,0">
+      <DockPanel Margin="8">
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="18,*,64,64,64,64" ColumnSpacing="6" Margin="0,0,16,6">
+          <TextBlock Grid.Column="0" Grid.ColumnSpan="2" Text="Windows" FontWeight="SemiBold"/>
+          <TextBlock Grid.Column="2" Text="Across" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
+          <TextBlock Grid.Column="3" Text="Down" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
+          <TextBlock Grid.Column="4" Text="Width" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
+          <TextBlock Grid.Column="5" Text="Height" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
+        </Grid>
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding Windows}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:ScreenWindowRow">
+                <Grid ColumnDefinitions="18,*,64,64,64,64" ColumnSpacing="6" Margin="0,2,16,2">
+                  <Border Width="12" Height="12" Background="{Binding Colour}" BorderBrush="{Binding Colour}" BorderThickness="2"
+                          VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                  <Panel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}" Margin="0,0,20,0"/>
+                    <ContentControl controls:Icon.Key="warning" HorizontalAlignment="Right" IsVisible="{Binding HasWarning}"
+                                    ToolTip.Tip="{Binding Warning}" Background="Transparent"/>
+                  </Panel>
+                  <NumericUpDown Grid.Column="2" Value="{Binding Across}" Minimum="0" Maximum="31" Increment="1" FormatString="0"
+                                 ToolTip.Tip="Across"/>
+                  <NumericUpDown Grid.Column="3" Value="{Binding Down}" Minimum="0" Maximum="31" Increment="1" FormatString="0"
+                                 ToolTip.Tip="Down"/>
+                  <NumericUpDown Grid.Column="4" Value="{Binding Wide}" Minimum="1" Maximum="{Binding MaxWide}" Increment="1" FormatString="0"
+                                 IsVisible="{Binding Sizable}" ToolTip.Tip="Width in tiles. It can't be wider than in the ROM until a patch allows it."/>
+                  <NumericUpDown Grid.Column="5" Value="{Binding Tall}" Minimum="1" Maximum="{Binding MaxTall}" Increment="1" FormatString="0"
+                                 IsVisible="{Binding Sizable}" ToolTip.Tip="Height in tiles. It can't be taller than in the ROM until a patch allows it."/>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+
+    <!-- Boxes over black beside the game's screens; one screen alone puts the preview under the boxes, larger -->
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+    <Grid x:Name="Panes" ColumnDefinitions="*,*" RowDefinitions="Auto" ColumnSpacing="16" RowSpacing="16" Margin="16">
+      <Viewbox x:Name="Boards" Grid.Column="0" Stretch="Uniform" VerticalAlignment="Top">
+        <StackPanel Spacing="6">
+          <TextBlock Text="Top screen" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding ShowTop}"/>
+          <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="Black" IsVisible="{Binding ShowTop}">
+            <Panel x:Name="TopBoard" Width="512" Height="384" ClipToBounds="True" Background="Black"
+                   PointerPressed="Board_Pressed" PointerMoved="Board_Moved" PointerReleased="Board_Released">
+              <Canvas x:Name="TopGrid" IsHitTestVisible="False"/>
+              <ItemsControl ItemsSource="{Binding TopWindows}" IsHitTestVisible="False">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.Styles>
+                  <Style Selector="ContentPresenter" x:DataType="vm:ScreenWindowRow">
+                    <Setter Property="Canvas.Left" Value="{Binding Left}"/>
+                    <Setter Property="Canvas.Top" Value="{Binding Top}"/>
+                  </Style>
+                </ItemsControl.Styles>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ScreenWindowRow">
+                    <Border Width="{Binding Width}" Height="{Binding Height}" BorderBrush="{Binding Colour}" BorderThickness="2"
+                            Background="#33FFFFFF">
+                      <TextBlock Text="{Binding Name}" FontSize="11" Margin="3,1" Foreground="{Binding Colour}" FontWeight="SemiBold"/>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Panel>
+          </Border>
+          <TextBlock Text="Bottom screen" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding ShowBottom}"
+                     Margin="0,6,0,0"/>
+          <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="Black" IsVisible="{Binding ShowBottom}">
+            <Panel x:Name="BottomBoard" Width="512" Height="384" ClipToBounds="True" Background="Black"
+                   PointerPressed="Board_Pressed" PointerMoved="Board_Moved" PointerReleased="Board_Released">
+              <Canvas x:Name="BottomGrid" IsHitTestVisible="False"/>
+              <ItemsControl ItemsSource="{Binding BottomWindows}" IsHitTestVisible="False">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.Styles>
+                  <Style Selector="ContentPresenter" x:DataType="vm:ScreenWindowRow">
+                    <Setter Property="Canvas.Left" Value="{Binding Left}"/>
+                    <Setter Property="Canvas.Top" Value="{Binding Top}"/>
+                  </Style>
+                </ItemsControl.Styles>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ScreenWindowRow">
+                    <Border Width="{Binding Width}" Height="{Binding Height}" BorderBrush="{Binding Colour}" BorderThickness="2"
+                            Background="#33FFFFFF">
+                      <TextBlock Text="{Binding Name}" FontSize="11" Margin="3,1" Foreground="{Binding Colour}" FontWeight="SemiBold"/>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Panel>
+          </Border>
+        </StackPanel>
+      </Viewbox>
+
+      <Viewbox x:Name="Previews" Grid.Column="1" Stretch="Uniform" VerticalAlignment="Top">
+        <StackPanel Spacing="6">
+          <TextBlock Text="Top screen" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding ShowTop}"/>
+          <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="{DynamicResource Editor.PanelBg}"
+                  IsVisible="{Binding ShowTop}">
+            <Image Source="{Binding TopPicture}" Width="512" Height="384" Stretch="Fill" RenderOptions.BitmapInterpolationMode="None"/>
+          </Border>
+          <TextBlock Text="Bottom screen" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding ShowBottom}"
+                     Margin="0,6,0,0"/>
+          <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="{DynamicResource Editor.PanelBg}"
+                  IsVisible="{Binding ShowBottom}">
+            <Image Source="{Binding BottomPicture}" Width="512" Height="384" Stretch="Fill" RenderOptions.BitmapInterpolationMode="None"/>
+          </Border>
+        </StackPanel>
+      </Viewbox>
+    </Grid>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>
