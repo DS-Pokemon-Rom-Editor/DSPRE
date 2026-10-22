@@ -15,8 +15,10 @@ namespace DSPRE.Avalonia.Controls
         public static readonly GameIconConverter MoveType = new(Kind.MoveType);
         /// <summary>A list label such as "Slot 0 (40%): COMBEE" to the icon of the Pokémon it names.</summary>
         public static readonly GameIconConverter PokemonInLabel = new(Kind.PokemonInLabel);
+        /// <summary>A type number to this ROM's icon for it.</summary>
+        public static readonly GameIconConverter Type = new(Kind.Type);
 
-        private enum Kind { Item, Pokemon, MoveType, PokemonInLabel }
+        private enum Kind { Item, Pokemon, MoveType, PokemonInLabel, Type }
         private string[] _names;
         private readonly Kind _kind;
         private readonly Dictionary<int, Bitmap> _cache = new();
@@ -39,6 +41,7 @@ namespace DSPRE.Avalonia.Controls
             if (_kind == Kind.PokemonInLabel)
                 return value is string label ? Pokemon.Convert(SpeciesNamedIn(label), targetType, parameter, culture) : null;
             int id = value switch { int i => i, ushort u => u, short s => s, uint ui => (int)ui, decimal d => (int)d, string t when int.TryParse(t, out int n) => n, _ => -1 };
+            if (_kind == Kind.Type) return id >= 0 ? Data.TypeIcons.For(id) : null;
             if (id <= 0) return null;
             if (_cachedFor != RomInfo.WorkDir)
             {

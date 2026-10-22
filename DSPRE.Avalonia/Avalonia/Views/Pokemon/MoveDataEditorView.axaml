@@ -62,8 +62,11 @@
 		<Grid RowDefinitions="Auto,8,Auto,8,Auto" ColumnDefinitions="Auto,*">
 
 		  <TextBlock Grid.Row="0" Grid.Column="0" Text="Type"   Classes="label"/>
-		  <ComboBox  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding TypeNames}"
-					 SelectedIndex="{Binding TypeIndex}"/>
+		  <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="6">
+			<ComboBox ItemsSource="{Binding TypeNames}" SelectedIndex="{Binding TypeIndex}"/>
+			<Image Width="32" Height="16" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="None"
+				   Source="{Binding TypeIndex, Converter={x:Static controls:GameIconConverter.Type}}"/>
+		  </StackPanel>
 
 		  <TextBlock Grid.Row="2" Grid.Column="0" Text="Split"  Classes="label"/>
 		  <ComboBox  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding SplitNames}"
@@ -76,7 +79,7 @@
 	  </GroupBox>
 
 	  <!-- Battle sequence -->
-	  <GroupBox x:Name="EffectBox" Grid.Row="2" Grid.Column="0" Header="Battle sequence (effect)">
+	  <GroupBox x:Name="EffectBox" Grid.Row="2" Grid.Column="0" Header="Battle sequence">
 		<controls:FusionAutoCompleteBox ItemsSource="{Binding BattleSeqItems}" SelectedIndex="{Binding BattleSeqIndex}"
 										HorizontalAlignment="Stretch" VerticalAlignment="Top"
 										ToolTip.Tip="Type a number or part of the description to search"/>

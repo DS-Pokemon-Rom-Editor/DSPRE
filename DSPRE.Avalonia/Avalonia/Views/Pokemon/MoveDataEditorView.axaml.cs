@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
             try
             {
                 string key = kind == DSPRE.ROMFiles.MoveCategoryTable.Kind.Punching ? "punchingMovesExpanded" : "soundMovesExpanded";
-                await PatchHandover.OfferAsync(key, $"Changing the {name} move list", "Move Data Editor");
+                await PatchHandover.OfferAsync(key, $"Changing the {name} move list", "Move data editor");
             }
             finally
             {
@@ -53,7 +53,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e)
-            => await ViewModel.SaveCommandAsync();
+            => await DialogHelper.GuardAsync(ViewModel.SaveCommandAsync, "The move wasn't saved.", "Move data editor error", this);
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
