@@ -53,7 +53,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private byte[] _saved;
         public bool HasUnsavedChanges => _file != null && _saved != null && !_file.ToBytes().AsSpan().SequenceEqual(_saved);
         public string UnsavedChangesDescription => "Bug Contest opponents";
-        public void SaveChanges() => _ = SaveAsync();
+        public void SaveChanges() => DialogHelper.Watch(SaveAsync());
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
             await SaveAsync();

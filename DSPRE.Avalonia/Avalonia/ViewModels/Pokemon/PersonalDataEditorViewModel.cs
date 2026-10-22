@@ -48,7 +48,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public string UnsavedChangesDescription =>
             _pending.Count > 0 ? $"Personal data of {_pending.Count + (_dirty ? 1 : 0)} Pokémon"
             : _current != null ? $"Personal data of {(_currentId < PokemonNames.Count ? PokemonNames[_currentId] : $"Pokémon {_currentId}")}" : "Personal data";
-        void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommandAsync();
+        void IEditorWithUnsavedChanges.SaveChanges() => DialogHelper.Watch(SaveCommandAsync());
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
             await SaveCommandAsync();
@@ -111,7 +111,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _lastCaptureUtc = DateTime.MinValue;
             RecordUndoSnapshot();
             _dirty = _history.IsDirty;
-            Title = _dirty ? "● Personal Data Editor" : "Personal Data Editor";
+            Title = _dirty ? "● Personal data editor" : "Personal data editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
@@ -276,7 +276,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private string _genderLabel = string.Empty;
         public string GenderLabel { get => _genderLabel; private set => Set(ref _genderLabel, value); }
 
-        private string _title = "Personal Data Editor";
+        private string _title = "Personal data editor";
         public string Title { get => _title; private set => Set(ref _title, value); }
 
         private Bitmap _monIconBitmap;
@@ -689,7 +689,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _loading = false;
 
             _dirty = _history.IsDirty;
-            Title = _dirty ? "● Personal Data Editor" : "Personal Data Editor";
+            Title = _dirty ? "● Personal data editor" : "Personal data editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
             RaiseUndoState();
         }
@@ -714,7 +714,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (Design.IsDesignMode)
             {
-                Title = "Personal Data Editor (Preview)";
+                Title = "Personal data editor (Preview)";
                 for (int i = 0; i < 10; i++) PokemonNames.Add($"Pokémon {i}");
                 TypeNames.Add("Normal"); TypeNames.Add("Fire"); TypeNames.Add("Water");
                 AbilityNames.Add("Overgrow"); AbilityNames.Add("Blaze"); AbilityNames.Add("Torrent");
@@ -1617,8 +1617,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         // ── Private helpers ───────────────────────────────────────────────────
 
-        private void SetDirty()  { if (_loading) return; RecordUndoSnapshot(); _dirty = true;  Title = "● Personal Data Editor"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
-        private void SetClean()  { _dirty = false; Title = "Personal Data Editor";  OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        private void SetDirty()  { if (_loading) return; RecordUndoSnapshot(); _dirty = true;  Title = "● Personal data editor"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        private void SetClean()  { _dirty = false; Title = "Personal data editor";  OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         private async Task ConfirmDiscardAsync(int newId)
         {

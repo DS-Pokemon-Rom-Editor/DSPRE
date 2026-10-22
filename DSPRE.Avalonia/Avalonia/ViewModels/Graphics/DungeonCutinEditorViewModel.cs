@@ -167,7 +167,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             Changed();
         }
         public string UnsavedChangesDescription => "Dungeon cut-ins";
-        void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommandAsync();
+        void IEditorWithUnsavedChanges.SaveChanges() => DialogHelper.Watch(SaveCommandAsync());
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
             await SaveCommandAsync();
@@ -186,7 +186,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public ObservableCollection<DungeonCutinRow> Rows { get; } = new();
         public ObservableCollection<string> Headers { get; } = new();
 
-        private string _title = "Dungeon Cutin Editor";
+        private string _title = "Dungeon cutin editor";
         public string Title { get => _title; private set => Set(ref _title, value); }
 
         private string _statusText = string.Empty;
@@ -298,7 +298,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 }
                 SelectedRow = Rows.Count > 0 ? Rows[0] : null;
                 StatusText = "Design-time preview (dummy data)";
-                Title = "Dungeon Cutin Editor (Preview)";
+                Title = "Dungeon cutin editor (Preview)";
                 return;
             }
             throw new InvalidOperationException("Parameterless constructor only for design time.");

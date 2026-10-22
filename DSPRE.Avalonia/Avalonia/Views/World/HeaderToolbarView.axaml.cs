@@ -15,7 +15,8 @@ namespace DSPRE.Avalonia.Views.World
             InitializeComponent();
         }
 
-        private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
+        private async void Save_Click(object sender, RoutedEventArgs e)
+            => await DialogHelper.GuardAsync(() => { VM?.Save(); return System.Threading.Tasks.Task.CompletedTask; }, "The header wasn't saved.", "Header editor error");
         private void Undo_Click(object sender, RoutedEventArgs e) => VM?.Undo();
         private void Redo_Click(object sender, RoutedEventArgs e) => VM?.Redo();
         private async void Reset_Click(object sender, RoutedEventArgs e)

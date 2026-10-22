@@ -32,7 +32,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
     }
 
     /// <summary>
-    /// Avalonia port of the WinForms Bulk Learnset Editor: edit every Pokémon's level-up learnset in
+    /// Avalonia port of the WinForms Bulk learnset editor: edit every Pokémon's level-up learnset in
     /// one grid. Rows are (species, level, move); a species filter narrows the view, and Save writes
     /// each species' rows back to its learnset file (sorted by level).
     /// </summary>
@@ -116,7 +116,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowErrorAsync($"Failed to set up Bulk Learnset Editor:\n{ex.Message}", "Bulk learnsets error");
+                await DialogHelper.ShowErrorAsync($"Failed to set up Bulk learnset editor:\n{ex.Message}", "Bulk learnsets error");
             }
         }
 
@@ -269,7 +269,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 _ = DialogHelper.ShowErrorAsync("The learnsets couldn't be read, so saving would replace them:\n" + _loadError, "Bulk learnsets error");
                 return;
             }
-            if (_sourceLists != null) { _ = SaveSourceAsync(); return; }
+            if (_sourceLists != null) { DialogHelper.Watch(SaveSourceAsync()); return; }
             try
             {
                 // Group current rows by species and rewrite each species' learnset file.

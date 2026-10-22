@@ -22,12 +22,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             public int Species { get; init; }
             public string Text { get; init; }
+            public override string ToString() => Text;
         }
 
         public sealed class ListChoice
         {
             public PokedexLists.ListInfo Info { get; init; }
             public string Text { get; init; }
+            public override string ToString() => Text;
         }
 
         private readonly PokedexLists _lists;
@@ -270,7 +272,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool HasUnsavedChanges => _lists != null && !_lists.Snapshot().AsSpan().SequenceEqual(_saved);
         public string UnsavedChangesDescription => "Pokédex lists";
 
-        public void SaveChanges() => _ = SaveChangesAsync();
+        public void SaveChanges() => DialogHelper.Watch(SaveChangesAsync());
 
         public async Task<bool> SaveChangesAsync()
         {

@@ -213,7 +213,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             try { (data, loadError) = ReadItemData(dataId); }
             catch (Exception ex)
             {
-                AppLogger.Error($"Item Editor: item data {dataId} could not be read: {ex}");
+                AppLogger.Error($"Item editor: item data {dataId} could not be read: {ex}");
                 _itemDataId = (int)_currentEntry.ItemData;
                 OnPropertyChanged(nameof(ItemDataId));
                 return;
@@ -515,7 +515,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         // Set while the list itself changes, so the selector's own index updates aren't taken as picks.
         private bool _syncingList;
 
-        public void SaveChanges() => _ = SaveAsync();
+        public void SaveChanges() => DialogHelper.Watch(SaveAsync());
 
         async System.Threading.Tasks.Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
@@ -823,7 +823,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             }
             catch (Exception ex)
             {
-                AppLogger.Error($"Item Editor: item {id} could not be read: {ex}");
+                AppLogger.Error($"Item editor: item {id} could not be read: {ex}");
                 _ = DialogHelper.ShowErrorAsync($"Item {id} could not be read.\n{ex.Message}", "Item editor error");
                 return false;
             }

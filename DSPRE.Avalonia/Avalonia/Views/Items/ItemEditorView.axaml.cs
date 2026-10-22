@@ -13,7 +13,8 @@ namespace DSPRE.Avalonia.Views.Items
         {
             DataContext = vm;
             InitializeComponent();
-            this.FindControl<Button>("SaveAllButton").Click += (_, _) => VM?.SaveChanges();
+            this.FindControl<Button>("SaveAllButton").Click += async (_, _) => await DialogHelper.GuardAsync(
+                () => VM?.SaveAsync() ?? System.Threading.Tasks.Task.CompletedTask, "The item wasn't saved.", "Item editor error", this);
             this.FindControl<Button>("AddItemButton").Click += async (_, _) => { if (VM != null) await VM.AddNewItemAsync(this); };
             EditorWindowChrome.Attach(this, vm);
         }

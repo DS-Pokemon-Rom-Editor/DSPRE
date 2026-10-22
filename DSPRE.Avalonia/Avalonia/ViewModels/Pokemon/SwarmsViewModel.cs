@@ -260,7 +260,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool HasUnsavedChanges => _table != null && !_table.Snapshot().AsSpan().SequenceEqual(_saved);
         public string UnsavedChangesDescription => "Swarms";
 
-        public void SaveChanges() => _ = SaveChangesAsync();
+        public void SaveChanges() => DialogHelper.Watch(SaveChangesAsync());
 
         public async Task<bool> SaveChangesAsync()
         {

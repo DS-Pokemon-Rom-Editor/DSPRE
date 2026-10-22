@@ -361,8 +361,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private static readonly string[] AiFlagLabels =
         {
-            "Basic", "Evaluate Attack", "Expert", "Setup", "Risky",
-            "Prioritize Extremes", "Baton Pass", "Tag Strategy", "Check HP", "Weather", "Harassment"
+            "Basic", "Evaluate attack", "Expert", "Setup", "Risky",
+            "Prioritize extremes", "Baton Pass", "Tag strategy", "Check HP", "Weather", "Harassment"
         };
 
         // Each flag's intent, from Lhea's notes on the Gen 4 trainer AI.
@@ -843,7 +843,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (!IsHgeActive) return;
             if (!HgEngineSpeciesPersonalFields.TryLoadAllAbilities(out Dictionary<int, (int first, int second)> fromSource, out string error))
             {
-                AppLogger.Error("Trainer Editor abilities could not be read from Species.c: " + error);
+                AppLogger.Error("Trainer editor abilities could not be read from Species.c: " + error);
                 return;
             }
             foreach (KeyValuePair<int, (int first, int second)> pair in fromSource)
@@ -875,7 +875,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 _history.Reset(Snapshot());   // loaded state is the clean undo baseline for this trainer
                 _lastCaptureUtc = DateTime.MinValue;
                 RaiseUndoState();
-                StatusText = _statusAfterLoad ?? $"Trainer {index} loaded.";
+                StatusText = _statusAfterLoad ?? "";
                 _statusAfterLoad = null;
                 OnPropertyChanged(nameof(UnsavedChangesDescription));
                 LoadBattleLines(index);
@@ -1269,7 +1269,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             if (IsHgeActive)
             {
-                _ = SaveHgEngineAsync();
+                DialogHelper.Watch(SaveHgEngineAsync());
                 return;
             }
 

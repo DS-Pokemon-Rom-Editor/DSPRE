@@ -36,7 +36,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool HasUnsavedChanges => _dirty || _archive.IsDirty;
         public string UnsavedChangesDescription
             => DSPRE.Avalonia.Data.StagedArchive.Join($"Wild Encounters (HGSS #{SelectedEncounterIndex})", _dirty, _archive.Describe("encounter file", "encounter files"));
-        void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommandAsync();
+        void IEditorWithUnsavedChanges.SaveChanges() => DialogHelper.Watch(SaveCommandAsync());
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
             await SaveCommandAsync();
@@ -86,13 +86,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             set
             {
                 if (!Set(ref _walkingRate, value)) return;
-                OnPropertyChanged(nameof(NothingWalksHere));
                 if (!_loading) { _current.WalkingRate = (byte)value; SetDirty(); SetNotes(); }
             }
         }
 
         /// <summary>A rate of zero means the game never rolls for a wild Pokemon here, so say so.</summary>
-        public bool NothingWalksHere => _walkingRate == 0;
         private int _surfRate;        public int SurfRate        { get => _surfRate;        set { if (Set(ref _surfRate,        value) && !_loading) { _current.SurfRate        = (byte)value; SetDirty(); SetNotes(); } } }
         private int _rockSmashRate;   public int RockSmashRate   { get => _rockSmashRate;   set { if (Set(ref _rockSmashRate,   value) && !_loading) { _current.RockSmashRate   = (byte)value; SetDirty(); } } }
         private int _oldRodRate;      public int OldRodRate      { get => _oldRodRate;      set { if (Set(ref _oldRodRate,      value) && !_loading) { _current.OldRodRate      = (byte)value; SetDirty(); SetNotes(); } } }
@@ -144,7 +142,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public ObservableCollection<WildEncounterRow> SuperRodRows { get; } = new();
 
         // ── Title ─────────────────────────────────────────────────────────
-        private string _title = "Wild Pokémon Editor (HGSS)";
+        private string _title = "Wild Pokémon editor";
         public string Title { get => _title; private set => Set(ref _title, value); }
 
         // ── Private state ─────────────────────────────────────────────────
@@ -184,7 +182,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _current = new EncounterFileHGSS(new MemoryStream(bytes));
             PopulateRows();
             _dirty = _history.IsDirty;
-            Title = _dirty ? "● Wild Pokémon Editor (HGSS)" : "Wild Pokémon Editor (HGSS)";
+            Title = _dirty ? "● Wild Pokémon editor" : "Wild Pokémon editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
             RaiseUndoState();
         }
@@ -266,7 +264,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (!Design.IsDesignMode) return;
 
-            Title = "Wild Pokémon Editor HGSS (Preview)";
+            Title = "Wild Pokémon editor HGSS (Preview)";
             for (int i = 0; i < 30; i++) PokemonNames.Add($"Pokémon {i:000}");
             EncounterNames.Add("[0] Route 29"); EncounterNames.Add("[1] Route 30"); EncounterNames.Add("[2] Unused");
             _selectedEncounterIndex = 0;
@@ -392,13 +390,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _pokemonIcons.Dispose();
         }
 
-        private void SetDirty() { if (_loading) return; RecordUndoSnapshot(); _dirty = true;  Title = "● Wild Pokémon Editor (HGSS)"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        private void SetDirty() { if (_loading) return; RecordUndoSnapshot(); _dirty = true;  Title = "● Wild Pokémon editor"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean() { _dirty = false; StagedChanged(); }
 
         // Added, removed and repaired files keep the editor unsaved after the open file's edits are clean.
         private void StagedChanged()
         {
-            Title = (HasUnsavedChanges ? "● " : "") + "Wild Pokémon Editor (HGSS)";
+            Title = (HasUnsavedChanges ? "● " : "") + "Wild Pokémon editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 

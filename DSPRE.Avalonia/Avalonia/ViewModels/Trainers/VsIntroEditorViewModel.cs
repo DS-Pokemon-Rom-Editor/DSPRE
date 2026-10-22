@@ -65,7 +65,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private readonly Dictionary<int, ushort[]> _classColours = new();
         private bool _suppress;
 
-        public const string Title = "VS Intro Editor";
+        public const string Title = "VS intro editor";
         private const DirNames Archive = DirNames.EncounterEffectGraphics;
 
         public VsIntroEditorViewModel() { }
@@ -753,7 +753,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                                          || _timing?.HasChanges == true;
         public string UnsavedChangesDescription => "VS intros";
 
-        public void SaveChanges() => _ = SaveChangesAsync();
+        public void SaveChanges() => DialogHelper.Watch(SaveChangesAsync());
 
         public async Task<bool> SaveChangesAsync()
         {
@@ -767,7 +767,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (!await SaveTimingsAsync()) return false;
             if (_t == null || !_t.HasChanges)
             {
-                if (hadMotion) { Raise(nameof(HasUnsavedChanges)); SaveNotice.Saved(UnsavedChangesDescription); StatusText = "Saved. Save the ROM to keep the changes."; }
+                if (hadMotion) { Raise(nameof(HasUnsavedChanges)); SaveNotice.Saved(UnsavedChangesDescription); StatusText = "Saved."; }
                 return true;
             }
             // hg-engine's music rows are source text, saved as one hg-engine write like the other editors.
@@ -791,7 +791,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
             RefreshAll();
             SaveNotice.Saved(UnsavedChangesDescription);
-            StatusText = "Saved. Save the ROM to keep the changes.";
+            StatusText = "Saved.";
             return true;
         }
 

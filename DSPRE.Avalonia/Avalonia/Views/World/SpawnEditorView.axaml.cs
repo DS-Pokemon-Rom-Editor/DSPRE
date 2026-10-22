@@ -31,6 +31,7 @@ namespace DSPRE.Avalonia.Views.World
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e)
-            => await (VM?.SaveChangesAsync() ?? System.Threading.Tasks.Task.CompletedTask);
+            => await DialogHelper.GuardAsync(() => VM?.SaveChangesAsync() ?? System.Threading.Tasks.Task.CompletedTask,
+                "The spawn point wasn't saved.", "Spawn point editor error", this);
     }
 }

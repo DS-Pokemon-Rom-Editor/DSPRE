@@ -83,7 +83,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             }
         }
         public string UnsavedChangesDescription => "Overlays";
-        void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveChangesCoreAsync();
+        void IEditorWithUnsavedChanges.SaveChanges() => DialogHelper.Watch(SaveChangesCoreAsync());
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
             await SaveChangesCoreAsync();
@@ -97,7 +97,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         public ObservableCollection<OverlayRow> Overlays { get; } = new();
 
-        private string _title = "Overlay Editor";
+        private string _title = "Overlay editor";
         public string Title { get => _title; private set => Set(ref _title, value); }
 
         private bool _isDsRomProject;
@@ -115,7 +115,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             if (Design.IsDesignMode)
             {
-                Title = "Overlay Editor (Preview)";
+                Title = "Overlay editor (Preview)";
                 SaveEnabled = true;
                 for (int i = 0; i < 5; i++)
                     Overlays.Add(new OverlayRow

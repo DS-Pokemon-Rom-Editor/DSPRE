@@ -162,7 +162,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public bool HasUnsavedChanges => _table != null && (_table.Rows.Count != _saved.Length || _table.Rows.Zip(_saved).Any(z => !z.First.SequenceEqual(z.Second)));
         public string UnsavedChangesDescription => "Move backgrounds";
 
-        public void SaveChanges() => _ = SaveChangesAsync();
+        public void SaveChanges() => DialogHelper.Watch(SaveChangesAsync());
 
         public async Task<bool> SaveChangesAsync()
         {

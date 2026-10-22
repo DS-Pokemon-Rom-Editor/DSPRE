@@ -136,7 +136,8 @@ namespace DSPRE.Avalonia.Views.World
             }
         }
 
-        private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
+        private async void Save_Click(object sender, RoutedEventArgs e)
+            => await DialogHelper.GuardAsync(() => { VM?.Save(); return System.Threading.Tasks.Task.CompletedTask; }, "The matrix wasn't saved.", ErrorTitle);
         private void AddHeaders_Click(object sender, RoutedEventArgs e) => VM?.AddHeaderSection();
         private async void RemoveHeaders_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.RemoveHeaderSectionAsync(); }
         private async void RemoveHeights_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.RemoveHeightsSectionAsync(); }

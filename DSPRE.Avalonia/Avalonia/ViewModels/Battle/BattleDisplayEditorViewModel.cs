@@ -135,7 +135,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         // ── Arena type (real battle-scene backdrop + terrain platforms, preview-only) ─────────────
         // One dropdown picks a terrain (Gravel/Sand/Lawn/.../Floor); its matching backdrop is
-        // auto-paired (BattleGroundRenderer.BackdropForTerrain). Same renderers the Battle Script Editor
+        // auto-paired (BattleGroundRenderer.BackdropForTerrain). Same renderers the Move animations & battle scripts
         // already uses for its (separate, more granular) Background/Terrain selectors; see
         // Data/BattleGroundRenderer.cs + BattleBgRenderer.cs. Falls back to the bundled
         // placeholder art (HasArenaGraphics=false) if the ROM/NARC is unavailable or decoding fails, so
@@ -2276,7 +2276,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public void Save()
         {
             if (!IsAvailable || _currentId < 0) return;
-            if (HgEngineProject.IsActive) { _ = SaveHgEngineAsync(); return; }
+            if (HgEngineProject.IsActive) { DialogHelper.Watch(SaveHgEngineAsync()); return; }
             AfterWrite(WriteAll());
         }
 

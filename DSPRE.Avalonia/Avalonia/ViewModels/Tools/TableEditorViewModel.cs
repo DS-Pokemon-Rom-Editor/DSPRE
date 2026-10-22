@@ -19,7 +19,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
     /// <summary>
     /// Avalonia port of the WinForms <c>TableEditor</c> (data only: the animated
     /// trainer-class sprite preview is intentionally omitted; it will return once
-    /// the Trainer Editor is ported and its sprite renderer can be reused).
+    /// the Trainer editor is ported and its sprite renderer can be reused).
     ///
     /// Edits three/four ARM9-backed tables, gated by game family:
     ///   • Conditional Music table        (HGSS)
@@ -219,7 +219,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private readonly HashSet<int> _dirtyVsPokemon = new HashSet<int>();
         public bool HasUnsavedChanges => _condDirty || _effectsDirty || _vsTrainerDirty || _vsPokemonDirty;
         public string UnsavedChangesDescription => "Tables";
-        public void SaveChanges() => _ = SaveAllAsync();
+        public void SaveChanges() => DialogHelper.Watch(SaveAllAsync());
 
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
@@ -243,7 +243,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 SaveNotice.Saved(UnsavedChangesDescription);
                 StatusText = toSource
                     ? $"Saved to {HgEngineMusicTables.SourceRelPath}. Compile the ROM to apply it."
-                    : "Tables saved.";
+                    : "";
             }
         }
 
@@ -653,7 +653,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             if (_suppress || _effectsComboTable == null || index < 0 || index >= _effectsComboTable.Count) return;
             if (OwnedByClassIntros(index))
             {
-                StatusText = "Set by each class's intro in the VS intro editor.";
+                StatusText = "Set in the VS intro editor";
                 LoadComboEntry(index);
                 return;
             }

@@ -203,7 +203,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public bool HasUnsavedChanges => IsDirty;
         public string UnsavedChangesDescription => "Camera table";
-        public void SaveChanges() => _ = SaveChangesAsync();
+        public void SaveChanges() => DialogHelper.Watch(SaveChangesAsync());
         public async Task<bool> SaveChangesAsync() { await SaveAsync(); return !IsDirty; }
         public void DiscardChanges() => _ = SetupAsync(_owner);
 
@@ -247,8 +247,9 @@ namespace DSPRE.Avalonia.ViewModels.World
         public CameraRowVM SelectedCamera
         {
             get => _selectedCamera;
-            set { if (_selectedCamera != value) { _selectedCamera = value; Notify(); } }
+            set { if (_selectedCamera != value) { _selectedCamera = value; Notify(); Notify(nameof(SelectedCameraIndex)); } }
         }
+        public int SelectedCameraIndex => _selectedCamera?.Index ?? -1;
 
         // The towns you can fly to, starting town first; the preview looks from the chosen one's fly spot.
         private System.Collections.Generic.List<FlyTable.Spot> _spots = new();
@@ -363,7 +364,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 // RomInfo.IsDsRomProject); ds-rom handles it automatically during unpack/build.
                 if (RomInfo.GameFamily == GameFamilies.HGSS && !RomInfo.IsDsRomProject && RomInfo.CameraTblOverlayNumber == 1)
                 {
-                    StatusText = "Convert this project to ds-rom format before using the Camera Editor for this ROM.";
+                    StatusText = "Needs a ds-rom project (File > Convert to ds-rom format)";
                     await DialogHelper.ShowInfoAsync(StatusText, "ds-rom project required");
                     IsReady = false;
                     return;
@@ -388,15 +389,13 @@ namespace DSPRE.Avalonia.ViewModels.World
                     row.PropertyChanged += OnRowChanged;
                     Cameras.Add(row);
                 }
-                int camCount = cameras.Count;
-
                 IsReady = true;
                 IsDirty = false;
                 ResetUndo();
                 SelectedCamera = Cameras.Count > 0 ? Cameras[0] : null;
                 LoadPreviewPlaces();
                 LoadPreviewWeathers();
-                StatusText = $"{camCount} cameras.";
+                StatusText = "";
             }
             catch (Exception ex)
             {
@@ -541,8 +540,9 @@ namespace DSPRE.Avalonia.ViewModels.World
             string name = await DialogHelper.PromptTextAsync($"Camera {row.Index}", "Rename camera", row.Name, _owner);
             if (name == null || name.Trim() == row.Name) return;
             DSPRE.Avalonia.Data.LabelStore.SetLabel(DSPRE.Avalonia.Data.LabelStore.CameraKey, row.Index, name, global: false);
-            DSPRE.Avalonia.Data.LabelStore.Save(global: false);
+            string error = DSPRE.Avalonia.Data.LabelStore.Save(global: false);
             AppEvents.RaiseLabelsChanged();
+            if (error != null) await DialogHelper.ShowErrorAsync("The name wasn't saved:\n" + error, "Camera editor error", _owner);
         }
 
         private void OnLabelsChanged(object sender, EventArgs e)

@@ -442,7 +442,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         // ─── Save ─────────────────────────────────────────────────────────────────
-        public void SaveChanges() => _ = SaveAsync();
+        public void SaveChanges() => DialogHelper.Watch(SaveAsync());
 
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {

@@ -120,7 +120,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool HasUnsavedChanges => _table != null && Enumerable.Range(0, GrowthTable.Curves).Any(CurveChanged);
         public string UnsavedChangesDescription => "Growth curves";
 
-        public void SaveChanges() => _ = SaveChangesAsync();
+        public void SaveChanges() => DialogHelper.Watch(SaveChangesAsync());
 
         public async Task<bool> SaveChangesAsync()
         {

@@ -119,7 +119,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             _undo?.Record();
         }
 
-        public void SaveChanges() => _ = SaveChangesAsync();
+        public void SaveChanges() => DialogHelper.Watch(SaveChangesAsync());
 
         public async Task<bool> SaveChangesAsync()
         {

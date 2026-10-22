@@ -30,10 +30,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public static readonly string[] FlagNames =
         {
-            "AI: Basic", "AI: Evaluate Attack", "AI: Expert", "AI: Setup", "AI: Risky",
-            "AI: Prioritize Extremes", "AI: Baton Pass", "AI: Tag Strategy", "AI: Check HP",
-            "AI: Weather", "AI: Harassment",
-            "Double Battle"
+            "Basic", "Evaluate attack", "Expert", "Setup", "Risky",
+            "Prioritize extremes", "Baton Pass", "Tag strategy", "Check HP",
+            "Weather", "Harassment",
+            "Double battle"
         };
         private const int AiFlagCount = TrainerProperties.AiCount;
 
@@ -69,8 +69,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
         }
 
-        public string SelectAllLabel => IsByFlagMode ? "Enable All" : "Select All";
-        public string SelectNoneLabel => IsByFlagMode ? "Disable All" : "Select None";
+        public string SelectAllLabel => IsByFlagMode ? "Enable all" : "Select all";
+        public string SelectNoneLabel => IsByFlagMode ? "Disable all" : "Select none";
 
         private int _currentFlagIndex;
         public int CurrentFlagIndex
@@ -171,7 +171,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             LoadAllTrainerData();
 
             foreach (string name in FlagNames)
-                FlagChecklist.Add(new FlagChecklistItem { Index = FlagChecklist.Count, Name = name });
+                FlagChecklist.Add(new FlagChecklistItem
+                {
+                    Index = FlagChecklist.Count, Name = name,
+                    Heading = FlagChecklist.Count == 0 ? "AI" : FlagChecklist.Count == AiFlagCount ? "Battle" : null,
+                });
 
             RebuildTree();
             RefreshFlagChecklistFromSelection();
@@ -195,7 +199,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _sourceBattle.Clear();
             for (int i = 0; i < _trainerCount; i++)
             {
-                using FileStream fs = new FileStream(Path.Combine(dir, i.ToString("D4")), FileMode.Open);
+                using FileStream fs = new FileStream(Path.Combine(dir, i.ToString("D4")), FileMode.Open, FileAccess.Read);
                 _trainerData[i] = new TrainerProperties((ushort)i, fs);
                 if (source != null) ReadSource(i, i < source.Count ? source[i] : (HgEngine.HgEngineSourceBlock?)null);
                 _loadedFlags[i] = SnapshotFlags(_trainerData[i]);
@@ -456,7 +460,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         // ── Save ─────────────────────────────────────────────────────────
         public void SaveAllChanges()
         {
-            if (FromSource) { _ = SaveSourceAsync(); return; }
+            if (FromSource) { DialogHelper.Watch(SaveSourceAsync()); return; }
             string dir = GameDirs[DirNames.TrainerProperties].unpackedDir;
             foreach ((int id, TrainerProperties tp) in _trainerData.ToList())
             {
@@ -467,7 +471,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 // Other editors may have saved this trainer since it was read here.
                 string path = Path.Combine(dir, id.ToString("D4"));
                 TrainerProperties onDisk;
-                using (FileStream fs = new FileStream(path, FileMode.Open))
+                using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read))
                     onDisk = new TrainerProperties((ushort)id, fs);
                 for (int f = 0; f < current.Length; f++)
                     if (current[f] != loaded[f]) SetFlag(onDisk, f, current[f]);
@@ -490,7 +494,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             if (IsByTrainerMode)
             {
-                StatusText = $"{_trainerCount} trainers in {Tree.Count} classes. {_selectedTrainerIds.Count} selected." +
+                StatusText = $"{_trainerCount} trainers in {Tree.Count} classes, {_selectedTrainerIds.Count} selected" +
                     (_isDirty ? " [Unsaved Changes]" : "");
             }
             else

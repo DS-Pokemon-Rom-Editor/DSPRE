@@ -31,7 +31,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
     /// <summary>
     /// hg-engine-only editor for data/PokeFormDataTbl.c: which form species exist for a base Pokémon
     /// (Mega Evolutions, regional forms, Gmax, etc.) and each one's NEEDS_REVERSION flag. Forms
-    /// themselves (base stats, types, abilities...) are edited through the normal Pokémon Editor; this
+    /// themselves (base stats, types, abilities...) are edited through the normal Pokémon editor; this
     /// editor only manages which form entries exist and how they're flagged, not their contents.
     /// </summary>
     public class HgEngineFormEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
@@ -113,7 +113,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _selectedSpeciesIndex >= 0 && _selectedSpeciesIndex < PokemonNames.Count
                 ? $"Forms of {PokemonNames[_selectedSpeciesIndex]}" : "Forms";
 
-        private string _statusText = "Select a species to view or edit its forms.";
+        private string _statusText = "";
         public string StatusText { get => _statusText; set { if (_statusText != value) { _statusText = value; OnPropertyChanged(); } } }
 
         // ── Design-time constructor ──────────────────────────────────────────
@@ -176,7 +176,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _undo?.Record();
         }
 
-        public void SaveChanges() => _ = SaveAsync();
+        public void SaveChanges() => DialogHelper.Watch(SaveAsync());
 
         async System.Threading.Tasks.Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
@@ -211,7 +211,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _table = HgEngineFormRegistry.LoadAll();   // refresh from disk so future selections see the new state
             _loaded = TakeState();
             SaveNotice.Saved(UnsavedChangesDescription);
-            StatusText = $"Saved {desired.Count} form(s) for {(SelectedSpeciesIndex < PokemonNames.Count ? PokemonNames[SelectedSpeciesIndex] : SelectedSpeciesIndex.ToString())}.";
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 

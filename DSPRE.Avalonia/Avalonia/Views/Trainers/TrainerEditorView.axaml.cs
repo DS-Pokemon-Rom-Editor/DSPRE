@@ -56,7 +56,8 @@ namespace DSPRE.Avalonia.Views.Trainers
             vm.Classes.OpenTrainer = id => { MainTabs.SelectedIndex = 0; vm.GoToTrainer(id); };
         }
 
-        private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
+        private async void Save_Click(object sender, RoutedEventArgs e)
+            => await DialogHelper.GuardAsync(() => { VM?.Save(); return System.Threading.Tasks.Task.CompletedTask; }, "The trainer wasn't saved.", ErrorTitle, this);
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
             if (await DialogHelper.ConfirmDiscardAsync(this)) VM?.DiscardTrainer();

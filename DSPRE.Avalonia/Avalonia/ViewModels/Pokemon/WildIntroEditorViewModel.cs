@@ -22,7 +22,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
         private void Raise(params string[] names) { foreach (string n in names) Raise(n); }
 
-        public const string Title = "Wild Pokémon Intro Editor";
+        public const string Title = "Wild Pokémon intro editor";
 
         private VsIntroTables _t;
         private VsIntroNames _names = new();
@@ -200,7 +200,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool HasUnsavedChanges => _t?.HasChanges == true;
         public string UnsavedChangesDescription => "Wild Pokémon intros";
 
-        public void SaveChanges() => _ = SaveChangesAsync();
+        public void SaveChanges() => DialogHelper.Watch(SaveChangesAsync());
 
         public async Task<bool> SaveChangesAsync()
         {
@@ -226,7 +226,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             Refresh();
             SaveNotice.Saved(UnsavedChangesDescription);
-            StatusText = "Saved. Save the ROM to keep the changes.";
+            StatusText = "Saved.";
             return true;
         }
 

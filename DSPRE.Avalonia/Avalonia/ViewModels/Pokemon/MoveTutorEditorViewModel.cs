@@ -255,7 +255,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             (!_data.PoolBytes().AsSpan().SequenceEqual(_savedPool) || !_data.MaskBytes().AsSpan().SequenceEqual(_savedMasks));
         public string UnsavedChangesDescription => "Move tutors";
 
-        public void SaveChanges() => _ = SaveChangesAsync();
+        public void SaveChanges() => DialogHelper.Watch(SaveChangesAsync());
 
         public async Task<bool> SaveChangesAsync()
         {

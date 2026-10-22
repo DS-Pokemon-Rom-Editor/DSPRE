@@ -159,7 +159,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public string PreviewText => CurrentPreview?.Text ?? "";
         public bool HasPreview => CurrentPreview != null;
         public bool PreviewHasMore => CurrentPreview != null && CurrentPreview.Wait != MessageWait.None;
-        public string PreviewStepText => _previewFrames.Count > 1 ? $"Stop {_previewFrame + 1} of {_previewFrames.Count}" : "";
+        public string PreviewStepText => _previewFrames.Count > 1 ? $"Box {_previewFrame + 1} of {_previewFrames.Count}" : "";
         public string PreviewWarning
         {
             get
@@ -215,7 +215,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty;
         public string UnsavedChangesDescription => "Trainer messages";
-        public void SaveChanges() => _ = SaveAsync();
+        public void SaveChanges() => DialogHelper.Watch(SaveAsync());
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
             await SaveAsync();

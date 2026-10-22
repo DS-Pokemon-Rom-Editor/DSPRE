@@ -138,7 +138,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public bool HasUnsavedChanges => Enumerable.Range(0, _berries.Count).Any(BerryChanged);
         public string UnsavedChangesDescription => "Berry data";
 
-        public void SaveChanges() => _ = SaveChangesAsync();
+        public void SaveChanges() => DialogHelper.Watch(SaveChangesAsync());
 
         public async Task<bool> SaveChangesAsync()
         {

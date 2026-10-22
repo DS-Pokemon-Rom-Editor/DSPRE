@@ -35,7 +35,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private readonly ScriptNarc[] _narcs = new ScriptNarc[5];
 
         public bool IsAvailable { get; }
-        public string UnavailableText => "The battle-script editor currently supports Platinum and HeartGold/SoulSilver only.";
+        public string UnavailableText => "Not in this game";
 
         public BattleScriptEditorViewModel()
         {
@@ -628,7 +628,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         public void Save()
         {
-            if (IsHgEngineSource) { _ = SaveSourceAsync(); return; }
+            if (IsHgEngineSource) { DialogHelper.Watch(SaveSourceAsync()); return; }
             if (!IsAvailable || _fileIndex < 0 || !CurrentNarc.Available) return;
             if (HasTextErrors)   // the cards are stale while the text is invalid, don't persist the wrong thing
             {
@@ -1454,7 +1454,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
                 CellAnimNote =
                     HasCellAnimation && HasParticleAnimation ? "Cell + particle effect. Press Play."
-                  : HasCellAnimation ? $"Cell animation: {_cellFrames.Count} frame(s). Press Play."
+                  : HasCellAnimation ? $"Cell animation, {_cellFrames.Count} {(_cellFrames.Count == 1 ? "frame" : "frames")}"
                   : HasParticleAnimation ? $"Particle effect: {emitters} emitter(s). Press Play."
                   : "Pokémon-motion effect (no particles). Press Play to see the lunge / shake.";
             }
@@ -1482,7 +1482,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     }
                 }
                 AppLogger.Info($"Move animation {moveIdForLogging} sprites: char={res.Char} pltt={res.Pltt} cell={res.Cell} " +
-                    $"anm={res.CellAnm} → load={loaded} banks={_cellRenderer.AnimationCount} frames={_cellFrames.Count}");
+                    $"anm={res.CellAnm} load={loaded} banks={_cellRenderer.AnimationCount} frames={_cellFrames.Count}");
             }
             else
             {

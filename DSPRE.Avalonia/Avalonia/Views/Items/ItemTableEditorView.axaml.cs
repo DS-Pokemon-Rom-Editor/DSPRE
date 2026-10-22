@@ -42,7 +42,9 @@ namespace DSPRE.Avalonia.Views.Items
             VM.SelectHiddenScript(script);
         }
 
-        private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveChanges();
+        private async void Save_Click(object sender, RoutedEventArgs e)
+            => await DialogHelper.GuardAsync(() => { VM?.SaveChanges(); return System.Threading.Tasks.Task.CompletedTask; },
+                "The item tables weren't all saved.", "Item tables error", this);
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {

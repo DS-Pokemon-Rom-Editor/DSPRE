@@ -320,7 +320,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         // IEditorWithUnsavedChanges sync wrapper
-        public void SaveChanges() => _ = SaveChangesAsync();
+        public void SaveChanges() => DialogHelper.Watch(SaveChangesAsync());
         public void DiscardChanges() => LoadFromRom();
     }
 }

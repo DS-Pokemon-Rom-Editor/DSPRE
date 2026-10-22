@@ -247,7 +247,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public void Save()
         {
-            if (UseHgEngineSource) { _ = SaveHgEngineAsync(); return; }
+            if (UseHgEngineSource) { DialogHelper.Watch(SaveHgEngineAsync()); return; }
             if (!SaveCore(out string failure))
                 AppLogger.Error("Safari Zone save failed: " + failure);
         }

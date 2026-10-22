@@ -549,6 +549,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         // DP and Pt fill their tables, so Add reuses a removed entry's script, whose found flag a save may have set.
         public bool ShowHiddenReuseNote => !HgEngineProject.IsActive && RomInfo.GameFamily is GameFamilies.DP or GameFamilies.Plat;
+        public string HiddenAddHelp => ShowHiddenReuseNote ? "Reuses a removed entry's script and its found flag" : null;
 
         private void PlaceHiddenRows()
         {
@@ -1011,7 +1012,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         {
             if (HgEngineProject.IsActive)
             {
-                _ = SaveHiddenItemsToSourceAsync();
+                DialogHelper.Watch(SaveHiddenItemsToSourceAsync());
                 return;
             }
 

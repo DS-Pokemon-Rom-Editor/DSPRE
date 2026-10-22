@@ -281,7 +281,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public bool HasUnsavedChanges => _table != null && !_table.State().AsSpan().SequenceEqual(_saved);
         public string UnsavedChangesDescription => "Underground mining";
 
-        public void SaveChanges() => _ = SaveChangesAsync();
+        public void SaveChanges() => DialogHelper.Watch(SaveChangesAsync());
 
         public async Task<bool> SaveChangesAsync()
         {

@@ -128,7 +128,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool HasUnsavedChanges => _odds != null && !_odds.Snapshot().AsSpan().SequenceEqual(_saved);
         public string UnsavedChangesDescription => "Encounter slot odds";
 
-        public void SaveChanges() => _ = SaveChangesAsync();
+        public void SaveChanges() => DialogHelper.Watch(SaveChangesAsync());
 
         public async Task<bool> SaveChangesAsync()
         {

@@ -86,7 +86,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty;
         public string UnsavedChangesDescription => "Fly and warp points";
-        void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommandAsync();
+        void IEditorWithUnsavedChanges.SaveChanges() => DialogHelper.Watch(SaveCommandAsync());
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
             await SaveCommandAsync();
@@ -112,7 +112,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public ObservableCollection<FlyRow>   Rows    { get; } = new();
         public ObservableCollection<string>   Headers { get; } = new();
 
-        private string _title = "Fly / Warp Editor";
+        private string _title = "Fly / warp editor";
         public string Title { get => _title; private set => Set(ref _title, value); }
 
         // Column-visibility helpers (bound to DataGrid column widths / IsVisible)
@@ -173,7 +173,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
 
                 StatusText = "Design-time preview (dummy data)";
-                Title = "Fly / Warp Editor (Preview)";
+                Title = "Fly / warp editor (Preview)";
                 return;
             }
             throw new InvalidOperationException("Parameterless constructor only for design time.");

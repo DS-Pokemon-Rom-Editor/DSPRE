@@ -14,7 +14,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
     /// </summary>
     public class SpecialEncountersEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
-        public const string Title = "Special Encounters Editor";
+        public const string Title = "Special encounters editor";
 
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -64,7 +64,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return parts.Count > 0 ? string.Join(", ", parts) : Title;
             }
         }
-        public void SaveChanges() => _ = SaveChangesAsync();
+        public void SaveChanges() => DialogHelper.Watch(SaveChangesAsync());
 
         public async Task<bool> SaveChangesAsync()
         {
@@ -168,11 +168,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     SafariZoneVM.PropertyChanged += OnChildChanged;
                     ShowSafariZone = true;
                 }
-                else PendingNote = "hg-engine builds the other special encounters from its own source.";
             }
             else
             {
-                PendingNote = "This ROM version has no special encounters.";
+                PendingNote = "Not in this game";
             }
             // A linked checkout's src/swarms.c is edited directly.
             if ((dppt || (hgss && (!headbuttOnly || DSPRE.HgEngine.HgEngineProject.IsActive))) && BetaEditors.Enabled)

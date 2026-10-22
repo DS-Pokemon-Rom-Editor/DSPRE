@@ -602,7 +602,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Save()
         {
             if (_currentId < 0) return;
-            if (UseHgEngineSource) { _ = SaveHgEngineAsync(); return; }
+            if (UseHgEngineSource) { DialogHelper.Watch(SaveHgEngineAsync()); return; }
             if (_current == null) return;
 
             foreach ((int id, EvolutionCsv.Slot[] slots) in _pending.OrderBy(kv => kv.Key).ToList())

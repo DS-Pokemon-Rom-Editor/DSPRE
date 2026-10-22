@@ -33,7 +33,9 @@ namespace DSPRE.Avalonia.Views.Tools
             TabDefault.SelectFirstVisible(Tabs);
         }
 
-        private async void Save_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.SaveAllAsync(); }
+        private async void Save_Click(object sender, RoutedEventArgs e)
+            => await DialogHelper.GuardAsync(() => VM?.SaveAllAsync() ?? Task.CompletedTask,
+                "The tables weren't all saved.", "Music & battle tables error", this);
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
             if (await DialogHelper.ConfirmDiscardAsync(this)) VM?.DiscardChanges();

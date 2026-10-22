@@ -117,7 +117,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         {
             if (_expansionOffered || _shop?.NeedsExpansion != true) return;
             _expansionOffered = true;
-            await PatchHandover.OfferAsync("bpShopExpanded", "A longer counter list", "Battle Point Shop");
+            await PatchHandover.OfferAsync("bpShopExpanded", "A longer counter list", "Battle Point shop");
         }
 
         /// <summary>After the toolbox moved the lists, follows them to their new place and keeps the entries being edited.</summary>
@@ -209,14 +209,14 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public bool HasUnsavedChanges => _shop != null && !_shop.Snapshot().AsSpan().SequenceEqual(_saved);
         public string UnsavedChangesDescription => "Battle Point shop";
 
-        public void SaveChanges() => _ = SaveChangesAsync();
+        public void SaveChanges() => DialogHelper.Watch(SaveChangesAsync());
 
         public async Task<bool> SaveChangesAsync()
         {
             if (_shop == null) return true;
             if (_shop.NeedsExpansion)
             {
-                await PatchHandover.OfferAsync("bpShopExpanded", "A longer counter list", "Battle Point Shop");
+                await PatchHandover.OfferAsync("bpShopExpanded", "A longer counter list", "Battle Point shop");
                 return false;
             }
             if (HasProblem) { await DialogHelper.ShowErrorAsync(Problem, "Battle Point shop error"); return false; }

@@ -53,7 +53,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             private set => Set(ref _monIconBitmap, value);
         }
 
-        private string _baseTitle = "Pokémon Editor";
+        private string _baseTitle = "Pokémon editor";
         public string Title => _baseTitle;
         private void SetBaseTitle(string t) { _baseTitle = t; OnPropertyChanged(nameof(Title)); }
 
@@ -199,7 +199,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (!Design.IsDesignMode) return;
 
-            _baseTitle = "Pokémon Editor (Preview)";
+            _baseTitle = "Pokémon editor (Preview)";
             for (int i = 0; i < 10; i++) PokemonNames.Add($"{i:D3} Pokémon {i}");
 
             PersonalVM   = new PersonalDataEditorViewModel();
@@ -281,7 +281,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             // Update title
             string name = (id >= 0 && id < PokemonNames.Count) ? PokemonNames[id] : $"#{id}";
-            SetBaseTitle($"Pokémon Editor - #{id} {name}");
+            SetBaseTitle($"Pokémon editor - {name}");
 
             // Sync all child VMs
             PersonalVM.LoadMon(id);
@@ -310,14 +310,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             LearnsetVM?.RefreshNames();
             EvolutionsVM?.RefreshNames(full);
             int id = _selectedMonIndex;
-            SetBaseTitle($"Pokémon Editor - #{id} {(id >= 0 && id < PokemonNames.Count ? PokemonNames[id] : $"#{id}")}");
+            SetBaseTitle($"Pokémon editor - {(id >= 0 && id < PokemonNames.Count ? PokemonNames[id] : $"#{id}")}");
         }
 
         // ─── Save all ─────────────────────────────────────────────────────────────
         public void SaveAll()
         {
             // A new species' save can ask about source comments, which needs the async path.
-            if (_pendingSpecies != null) { _ = SaveAllAsync(); return; }
+            if (_pendingSpecies != null) { DialogHelper.Watch(SaveAllAsync()); return; }
             if (PersonalVM.HasUnsavedChanges)   ((IEditorWithUnsavedChanges)PersonalVM).SaveChanges();
             if (LearnsetVM.HasUnsavedChanges)   LearnsetVM.SaveChanges();
             if (EvolutionsVM.HasUnsavedChanges) EvolutionsVM.SaveChanges();

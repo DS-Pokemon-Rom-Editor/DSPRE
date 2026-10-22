@@ -103,7 +103,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     Routes.Add(row);
                 }
                 if (_data.Regions is { Length: 2 } g)
-                    RoutesNote = $"Roamers 1 and 2 move within routes {g[0].Start + 1} to {g[0].Start + g[0].Count}, the others within {g[1].Start + 1} to {g[1].Start + g[1].Count}.";
+                    RoutesNote = $"Roamers 1 and 2: routes {g[0].Start + 1} to {g[0].Start + g[0].Count} · Others: routes {g[1].Start + 1} to {g[1].Start + g[1].Count}";
             }
             _saved = Snapshot();
             foreach (string n in new[] { nameof(PokemonNames), nameof(HeaderNames), nameof(Loaded), nameof(RoutesEditable), nameof(RoutesNote), nameof(HasRoutesNote) }) Raise(n);
@@ -204,7 +204,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool HasUnsavedChanges => Loaded && Snapshot() != _saved;
         public string UnsavedChangesDescription => "Roamers";
 
-        public void SaveChanges() => _ = SaveChangesAsync();
+        public void SaveChanges() => DialogHelper.Watch(SaveChangesAsync());
 
         public async Task<bool> SaveChangesAsync()
         {

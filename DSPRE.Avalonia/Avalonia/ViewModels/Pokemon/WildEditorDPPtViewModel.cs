@@ -166,7 +166,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool HasUnsavedChanges => _dirty || _archive.IsDirty;
         public string UnsavedChangesDescription
             => DSPRE.Avalonia.Data.StagedArchive.Join($"Wild Encounters (DPPt #{SelectedEncounterIndex})", _dirty, _archive.Describe("encounter file", "encounter files"));
-        void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommandAsync();
+        void IEditorWithUnsavedChanges.SaveChanges() => DialogHelper.Watch(SaveCommandAsync());
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
             await SaveCommandAsync();
@@ -279,7 +279,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private const int KnownUnownTables = 9;
 
         // ── Title ────────────────────────────────────────────────────────
-        private string _title = "Wild Pokémon Editor (DPPt)";
+        private string _title = "Wild Pokémon editor";
         public string Title { get => _title; private set => Set(ref _title, value); }
 
         // ── Private state ─────────────────────────────────────────────────
@@ -319,7 +319,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _current = new EncounterFileDPPt(new MemoryStream(bytes));
             PopulateRows();   // manages _loading itself; refreshes all rate/form fields + grid rows
             _dirty = _history.IsDirty;
-            Title = _dirty ? "● Wild Pokémon Editor (DPPt)" : "Wild Pokémon Editor (DPPt)";
+            Title = _dirty ? "● Wild Pokémon editor" : "Wild Pokémon editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
             RaiseUndoState();
         }
@@ -403,7 +403,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (!Design.IsDesignMode) return;
 
-            Title = "Wild Pokémon Editor DPPt (Preview)";
+            Title = "Wild Pokémon editor DPPt (Preview)";
             for (int i = 0; i < 30; i++) PokemonNames.Add($"Pokémon {i:000}");
             EncounterNames.Add("[0] Route 201"); EncounterNames.Add("[1] Route 202"); EncounterNames.Add("[2] Unused");
             _selectedEncounterIndex = 0;
@@ -491,13 +491,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _pokemonIcons.Dispose();
         }
 
-        private void SetDirty() { if (_loading) return; RecordUndoSnapshot(); _dirty = true;  Title = "● Wild Pokémon Editor (DPPt)"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        private void SetDirty() { if (_loading) return; RecordUndoSnapshot(); _dirty = true;  Title = "● Wild Pokémon editor"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean() { _dirty = false; StagedChanged(); }
 
         // Added, removed and repaired files keep the editor unsaved after the open file's edits are clean.
         private void StagedChanged()
         {
-            Title = (HasUnsavedChanges ? "● " : "") + "Wild Pokémon Editor (DPPt)";
+            Title = (HasUnsavedChanges ? "● " : "") + "Wild Pokémon editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 

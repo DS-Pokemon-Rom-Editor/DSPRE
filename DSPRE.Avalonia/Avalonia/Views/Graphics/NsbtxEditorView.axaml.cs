@@ -17,7 +17,8 @@ namespace DSPRE.Avalonia.Views.Graphics
         }
 
         public NsbtxEditorView(NsbtxEditorViewModel vm) : this() { DataContext = vm; EditorWindowChrome.Attach(this, vm); }
-        private void Save_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e) => (DataContext as NsbtxEditorViewModel)?.SaveChanges();
+        private async void Save_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+            => await DialogHelper.GuardAsync(() => { (DataContext as NsbtxEditorViewModel)?.SaveChanges(); return System.Threading.Tasks.Task.CompletedTask; }, "The texture packs weren't saved.", ErrorTitle, this);
         private async void Discard_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
         {
             if (await DialogHelper.ConfirmDiscardAsync(this)) (DataContext as NsbtxEditorViewModel)?.DiscardChanges();

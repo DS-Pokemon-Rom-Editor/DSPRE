@@ -221,7 +221,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get
             {
                 if (_chart == null) return "";
-                List<string> notes = _chart.Unusual.Select(m => $"{NameOf(m.Attacker)} → {NameOf(m.Defender)} {m.Tenths / 10m}×").ToList();
+                List<string> notes = _chart.Unusual.Select(m => $"{NameOf(m.Attacker)} on {NameOf(m.Defender)}: {m.Tenths / 10m}×").ToList();
                 if (notes.Count == 0) return "";
                 return "Battle messages and Conversion 2 only know 0×, ½× and 2×: " + string.Join(", ", notes.Take(6)) + (notes.Count > 6 ? "…" : "") + ". "
                     + "Stealth Rock only deals 0, ½, 1, 2 or 4 times its damage, and Wonder Guard, Filter, Solid Rock, Expert Belt "
@@ -249,7 +249,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool HasUnsavedChanges => _chart != null && Key() != _savedKey;
         public string UnsavedChangesDescription => "Type chart";
 
-        public void SaveChanges() => _ = SaveChangesAsync();
+        public void SaveChanges() => DialogHelper.Watch(SaveChangesAsync());
 
         public async Task<bool> SaveChangesAsync()
         {
@@ -280,10 +280,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         public bool CanMakeRoom => _chart != null && !_chart.InExpansion && !_chart.FromSource;
-        public string MakeRoomTip => $"The \"Expand the type chart\" patch in the ROM Patch Toolbox moves the chart to the expanded ARM9 area, where it holds up to {TypeChart.ExpandedCapacity - 2} matchups";
+        public string MakeRoomTip => $"The \"Expand the type chart\" patch in the ROM patch toolbox moves the chart to the expanded ARM9 area, where it holds up to {TypeChart.ExpandedCapacity - 2} matchups";
 
         /// <summary>Moving the chart changes the game's code, so the toolbox does it.</summary>
-        public Task MakeRoomAsync() => PatchHandover.OfferAsync("typeChartExpanded", "Room for more matchups", "Type Chart");
+        public Task MakeRoomAsync() => PatchHandover.OfferAsync("typeChartExpanded", "Room for more matchups", "Type chart");
 
         /// <summary>Rereads the chart after a toolbox patch moved it, unless edits here are still unsaved.</summary>
         private void OnRomPatchStateChanged(object sender, System.EventArgs e) => OnPatchStateChanged();

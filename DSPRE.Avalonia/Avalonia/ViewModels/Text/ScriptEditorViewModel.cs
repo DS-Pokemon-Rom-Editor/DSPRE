@@ -59,7 +59,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         private int _selectedEditorThemeIndex;
         private string _searchText = "";
         private bool _searchFuzzy;
-        private string _searchStatusText = "No search yet.";
+        private string _searchStatusText = "";
         private ScriptSearchResult _selectedSearchResult;
         private ScriptDiagnostic _selectedDiagnostic;
         private string _diagnosticsStatusText = "No compile diagnostics yet.";
@@ -226,6 +226,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         }
 
         public bool IsEditable => !IsBusy && !IsReadOnly && SelectedScriptIndex >= 0;
+        public bool CanSave => IsEditable && _dirty;
         public bool CanAdd => !IsBusy && RotomTool.IsAvailable;
 
         /// <summary>The last script file can go when the project's own sources hold it.</summary>
@@ -454,7 +455,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
             SetClean();
             LoadSelectedFile();
-            StatusText = DisplayPath(_currentPath) + " was saved elsewhere and reloaded.";
+            StatusText = "";
         }
 
 
@@ -768,7 +769,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             if (_lsp == null || !_lsp.IsRunning || string.IsNullOrWhiteSpace(_currentPath))
             {
-                StatusText = "Goto definition unavailable: live language service is not running.";
+                StatusText = "Go to definition needs the script checker running.";
                 return null;
             }
 
@@ -1115,7 +1116,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
         }
 
-        public void SaveChanges() => _ = SaveAsync();
+        public void SaveChanges() => DialogHelper.Watch(SaveAsync());
 
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
@@ -1329,7 +1330,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             IsReadOnly = false;
             StatusText = ManagedSource != null
                 ? "Loaded " + ManagedSource.RelPath + " from the hg-engine checkout."
-                : "Loaded " + DisplayPath(_currentPath) + ".";
+                : "";
             OnPropertyChanged(nameof(SelectedScriptPath));
             OnPropertyChanged(nameof(UnsavedChangesDescription));
             OnPropertyChanged(nameof(IsManagedByHgEngine));
@@ -1595,6 +1596,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (_dirty) return;
             _dirty = true;
             OnPropertyChanged(nameof(HasUnsavedChanges));
+            OnPropertyChanged(nameof(CanSave));
         }
 
         private void SetClean()
@@ -1602,11 +1604,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (!_dirty) return;
             _dirty = false;
             OnPropertyChanged(nameof(HasUnsavedChanges));
+            OnPropertyChanged(nameof(CanSave));
         }
 
         private void OnEditorStateChanged()
         {
             OnPropertyChanged(nameof(IsEditable));
+            OnPropertyChanged(nameof(CanSave));
             OnPropertyChanged(nameof(CanAdd));
             OnPropertyChanged(nameof(CanRemoveLast));
             OnPropertyChanged(nameof(CanSearchProject));

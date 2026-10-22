@@ -40,7 +40,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty;
         public string UnsavedChangesDescription => "Egg moves";
-        void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommandAsync();
+        void IEditorWithUnsavedChanges.SaveChanges() => DialogHelper.Watch(SaveCommandAsync());
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
             await SaveCommandAsync();
@@ -110,12 +110,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Observable state
         // ----------------------------------------------------------------
 
-        private string _title = "Egg Move Editor";
+        private string _title = "Egg move editor";
         public string Title { get => _title; private set => Set(ref _title, value); }
 
         public ObservableCollection<string> MonList    { get; } = new();
         public ObservableCollection<EggMoveRow> MoveList { get; } = new();
-        public sealed class EggMoveRow { public int Move { get; init; } public string Name { get; init; } }
+        public sealed class EggMoveRow { public int Move { get; init; } public string Name { get; init; } public override string ToString() => Name; }
         public ObservableCollection<string> MonNames   { get; } = new();
         public ObservableCollection<string> MoveNames  { get; } = new();
         public ObservableCollection<string> SearchResults { get; } = new();
@@ -174,6 +174,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private string _moveStatusText = string.Empty;
         public string MoveStatusText { get => _moveStatusText; private set => Set(ref _moveStatusText, value); }
+
+        public string MoveButtonsHelp => CbMoveIndex < 0 ? "Pick a move first" : null;
 
         private string _monCountText = string.Empty;
         public string MonCountText { get => _monCountText; private set => Set(ref _monCountText, value); }
@@ -528,7 +530,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             UpdateMonStatus();
             UpdateMoveStatus();
             UpdateMoveCountLabel();
-            EntryIdText = $"Entry Index: {idx}";
+            EntryIdText = $"Entry {idx}";
             RefreshButtonEnables();
         }
 
@@ -566,23 +568,22 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             OnPropertyChanged(nameof(CanAddMon));
             OnPropertyChanged(nameof(CanReplaceMon));
-            MonStatusText = CbMonIndex < 0 ? "Pick a Pokémon below to add, replace or delete."
-                : _eggMoveData.Any(e => e.SpeciesID == CbMonIndex) ? "This Pokémon already has egg moves."
-                : "This Pokémon can be added.";
+            MonStatusText = CbMonIndex >= 0 && _eggMoveData.Any(e => e.SpeciesID == CbMonIndex) ? "This Pokémon already has egg moves." : "";
         }
 
         private void UpdateMoveStatus()
         {
             OnPropertyChanged(nameof(CanAddMove));
             OnPropertyChanged(nameof(CanReplaceMove));
-            if (CbMoveIndex < 0) { MoveStatusText = "Pick a move below to add, replace or delete."; return; }
+            OnPropertyChanged(nameof(MoveButtonsHelp));
+            if (CbMoveIndex < 0) { MoveStatusText = ""; return; }
             if (_selectedMonIndex < 0) { MoveStatusText = "No Pokémon selected."; return; }
             ushort id = (ushort)CbMoveIndex;
             MoveStatusText = _eggMoveData[_selectedMonIndex].MoveIDs.Contains(id)
                 ? "Egg move already in list." : "Egg move can be added.";
         }
 
-        private void UpdateEntryCountLabel() => MonCountText = $"Pokémon Count: {_eggMoveData.Count}";
+        private void UpdateEntryCountLabel() => MonCountText = $"{_eggMoveData.Count} Pokémon";
 
         private void UpdateMoveCountLabel()
         {

@@ -289,7 +289,13 @@ namespace DSPRE.Avalonia.Views.World
             finally { vm.EndModelEdit(); }
         }
 
-        private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            if (await DialogHelper.ConfirmDiscardAsync(this)) (DataContext as DSPRE.Editors.IEditorWithUnsavedChanges)?.DiscardChanges();
+        }
+
+        private async void Save_Click(object sender, RoutedEventArgs e)
+            => await DialogHelper.GuardAsync(() => { VM?.Save(); return System.Threading.Tasks.Task.CompletedTask; }, "The map wasn't saved.", ErrorTitle);
         private async void Import_Click(object sender, RoutedEventArgs e)
         {
             MapEditorViewModel vm = VM;

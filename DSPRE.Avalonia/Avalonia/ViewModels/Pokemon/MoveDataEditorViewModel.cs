@@ -60,7 +60,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public string UnsavedChangesDescription =>
             _pendingMove != null ? $"New move {_pendingMove.DisplayName}"
             : _currentFile != null ? $"Move {_currentId} - {MoveNames[_currentId]}" : "Move data";
-        void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommandAsync();
+        void IEditorWithUnsavedChanges.SaveChanges() => DialogHelper.Watch(SaveCommandAsync());
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
             await SaveCommandAsync();
@@ -279,7 +279,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (_systemFontTried) return _systemFont;
                 _systemFontTried = true;
                 try { _systemFont = FieldFontCharacters.Ready ? FieldFont.LoadSystemFont() : null; }
-                catch (Exception ex) { AppLogger.Warn("Move Data Editor: system font not read: " + ex.Message); }
+                catch (Exception ex) { AppLogger.Warn("Move data editor: system font not read: " + ex.Message); }
                 return _systemFont;
             }
         }
@@ -456,7 +456,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
         }
 
-        private string _title = "Move Data Editor";
+        private string _title = "Move data editor";
         public string Title { get => _title; private set => Set(ref _title, value); }
 
         // ── Private state ──────────────────────────────────────────────────────
@@ -519,7 +519,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 ContestNames.Add("Cool");
                 Flags.Add(new FlagEntry { Name = "Dummy Flag" });
                 Description = "Design-time preview, no ROM loaded";
-                Title = "Move Data Editor (Preview)";
+                Title = "Move data editor (Preview)";
                 _selectedMoveIndex = 0;
                 _typeIndex = 0;
                 _splitIndex = 0;
@@ -536,7 +536,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             _descBank = new EditableTextBank(MoveDescriptionsTextNumbers);
             try { _machineMoves = TMEditor.ReadMachineMoves(); }
-            catch (Exception ex) { AppLogger.Warn("Move Data Editor: TM moves not read: " + ex.Message); }
+            catch (Exception ex) { AppLogger.Warn("Move data editor: TM moves not read: " + ex.Message); }
 
             string[] moveNames = GetAttackNames();
             string[] typeNames = GetTypeNames();

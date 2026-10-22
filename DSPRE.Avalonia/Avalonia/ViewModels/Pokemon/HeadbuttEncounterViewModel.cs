@@ -219,14 +219,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     DirNames.BuildingTextures, DirNames.MapTextures });
                 foreach (string n in GetPokemonNames()) Species.Add(n);
                 int count = Filesystem.GetHeadbuttCount();
-                for (int i = 0; i < count; i++) FileNames.Add("Headbutt File " + i);
+                for (int i = 0; i < count; i++) FileNames.Add("Headbutt file " + i);
                 StatusText = $"{count} headbutt files.";
                 if (count > 0) SelectedFileIndex = System.Math.Clamp(InitialIndex < 0 ? FirstWithTrees(count) : InitialIndex, 0, count - 1);
             }
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowErrorAsync($"Failed to set up Headbutt Editor:\n{ex.Message}", "Headbutt editor error");
+                await DialogHelper.ShowErrorAsync($"Failed to set up Headbutt:\n{ex.Message}", "Headbutt editor error");
             }
         }
 
@@ -242,7 +242,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try
             {
                 int made = NewProjectFiles.FillHeadbuttFiles(headers);
-                for (int i = FileNames.Count; i < Filesystem.GetHeadbuttCount(); i++) FileNames.Add("Headbutt File " + i);
+                for (int i = FileNames.Count; i < Filesystem.GetHeadbuttCount(); i++) FileNames.Add("Headbutt file " + i);
                 StatusText = $"Added {made} empty headbutt files.";
             }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
@@ -294,7 +294,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 ResetUndo();
                 StatusText = _hgeReadError != null
                     ? $"Headbutt file {index} couldn't be read from Headbutt.c: {_hgeReadError}"
-                    : $"Loaded headbutt file {index} ({_file.NormalTreeGroups.Count} normal / {_file.SpecialTreeGroups.Count} special tree groups).";
+                    : "";
                 OnPropertyChanged(nameof(UnsavedChangesDescription));
                 // Resolve + render the map ONCE per file, exactly like the event editor (full matrix when
                 // small, else the bounding box of all trees). Group selection only re-marks, never rebuilds.
@@ -319,8 +319,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             SelectedGroupTrees.Clear();
         }
 
+        public bool CanAddTree => CurrentGroup()?.Trees.Any(t => t.IsUnused) == true;
+        public string AddTreeHelp => CanAddTree ? "Add a tree" : "All tree slots in this group are in use";
+
         private void ShowGroupTrees()
         {
+            OnPropertyChanged(nameof(CanAddTree));
+            OnPropertyChanged(nameof(AddTreeHelp));
             SelectedGroupTrees.Clear();
             if (_file == null || _selGroup < 0) return;
             BindingList<HeadbuttTreeGroup> groups = _specialGroupActive ? _file.SpecialTreeGroups : _file.NormalTreeGroups;
@@ -461,7 +466,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (g == null) return;
             HeadbuttTree slot = null;
             foreach (HeadbuttTree t in g.Trees) if (t.IsUnused) { slot = t; break; }
-            if (slot == null) { StatusText = "All tree slots in this group are in use."; return; }
+            if (slot == null) return;
             ushort gx = 0, gy = 0;
             foreach (HeadbuttTree t in g.Trees) if (!t.IsUnused) { gx = t.GlobalX; gy = t.GlobalY; break; }
             slot.GlobalX = gx; slot.GlobalY = gy;
@@ -1017,7 +1022,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Save()
         {
             if (_file == null || _selFile < 0) return;
-            if (HgEngineProject.IsActive) { _ = SaveHgEngineAsync(); return; }
+            if (HgEngineProject.IsActive) { DialogHelper.Watch(SaveHgEngineAsync()); return; }
             try
             {
                 if (_file.SaveToFile(_selFile)) MarkSaved(_selFile);

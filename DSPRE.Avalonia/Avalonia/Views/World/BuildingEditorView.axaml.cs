@@ -26,7 +26,8 @@ namespace DSPRE.Avalonia.Views.World
         }
 
         public BuildingEditorView(BuildingEditorViewModel vm) : this() { DataContext = vm; EditorWindowChrome.Attach(this, vm); }
-        private void Save_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e) => (DataContext as BuildingEditorViewModel)?.SaveChanges();
+        private async void Save_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+            => await DialogHelper.GuardAsync(() => { (DataContext as BuildingEditorViewModel)?.SaveChanges(); return System.Threading.Tasks.Task.CompletedTask; }, "The building models weren't saved.", ErrorTitle, this);
         private async void Discard_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
         {
             if (await DialogHelper.ConfirmDiscardAsync(this)) (DataContext as BuildingEditorViewModel)?.DiscardChanges();

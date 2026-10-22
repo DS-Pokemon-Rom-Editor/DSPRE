@@ -17,8 +17,8 @@ namespace DSPRE.Avalonia.Views.Pokemon
             EditorWindowChrome.Attach(this, vm, title: () => vm.Title);
         }
 
-        private void Save_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-            => VM.SaveChanges();
+        private async void Save_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+            => await DialogHelper.GuardAsync(() => { VM.SaveChanges(); return System.Threading.Tasks.Task.CompletedTask; }, "The trade wasn't saved.", "Trade editor error", this);
 
         private async void Discard_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
         {
