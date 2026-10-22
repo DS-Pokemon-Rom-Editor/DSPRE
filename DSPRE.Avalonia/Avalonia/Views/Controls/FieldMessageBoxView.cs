@@ -63,12 +63,17 @@ namespace DSPRE.Avalonia.Views.Controls
 
         private static FieldWindowFrame _frame;
         private static Bitmap _frameBitmap;
+        private static readonly Bitmap[] _cursorBitmaps = new Bitmap[3];
 
         /// <summary>The border the games draw round the box, read out of the ROM. </summary>
         public static FieldWindowFrame Frame
         {
             get => _frame;
-            set { _frame = value; _frameBitmap?.Dispose(); _frameBitmap = null; }
+            set
+            {
+                _frame = value; _frameBitmap?.Dispose(); _frameBitmap = null;
+                for (int i = 0; i < _cursorBitmaps.Length; i++) { _cursorBitmaps[i]?.Dispose(); _cursorBitmaps[i] = null; }
+            }
         }
 
         /// <summary>The type used when the ROM's own font is not to hand.</summary>
@@ -269,11 +274,25 @@ namespace DSPRE.Avalonia.Views.Controls
             }
         }
 
-        // The arrow that says another page is waiting: a 2x2 tile cursor at pixels 240-255, 168-183,
-        // bobbing down 0, 1, 2 and 1 pixels.
+        // The arrow that says another page is waiting: the ROM's own cursor art, whose three frames each sit a pixel
+        // lower. In HeartGold the first frame's light rows (art columns 5-11, rows 3-5) show at 242-248, 171-173 in game,
+        // so the art's corner is 237,168.
         private static void DrawMoreArrow(DrawingContext ctx, double ox, double oy, double s, int bob)
         {
-            double left = ox + 244 * s, top = oy + (173 + bob) * s;
+            int frame = Math.Clamp(bob, 0, _cursorBitmaps.Length - 1);
+            if (_frame != null && _cursorBitmaps[frame] == null)
+            {
+                byte[] rgba = _frame.ComposeCursor(frame);
+                if (rgba != null) _cursorBitmaps[frame] = ImageConverter.FromRgba(rgba, 16, 16);
+            }
+            if (_cursorBitmaps[frame] != null)
+            {
+                ctx.DrawImage(_cursorBitmaps[frame], new Rect(0, 0, 16, 16), new Rect(ox + 237 * s, oy + 168 * s, 16 * s, 16 * s));
+                return;
+            }
+
+            // A stand-in when the ROM's cursor cannot be read.
+            double left = ox + 242 * s, top = oy + (171 + bob) * s;
             double width = 8 * s, depth = 5 * s;
 
             StreamGeometry g = new StreamGeometry();

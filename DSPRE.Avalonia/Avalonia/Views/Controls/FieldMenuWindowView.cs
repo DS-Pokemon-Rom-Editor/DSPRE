@@ -36,6 +36,10 @@ namespace DSPRE.Avalonia.Views.Controls
             AvaloniaProperty.Register<FieldMenuWindowView, int>(nameof(CursorX));
         public static readonly StyledProperty<int> RowOffsetProperty =
             AvaloniaProperty.Register<FieldMenuWindowView, int>(nameof(RowOffset));
+        public static readonly StyledProperty<bool> ShowCursorProperty =
+            AvaloniaProperty.Register<FieldMenuWindowView, bool>(nameof(ShowCursor), true);
+        public static readonly StyledProperty<bool> FitToWindowProperty =
+            AvaloniaProperty.Register<FieldMenuWindowView, bool>(nameof(FitToWindow));
 
         /// <summary>The rows on show.</summary>
         public IReadOnlyList<string> Items { get => GetValue(ItemsProperty); set => SetValue(ItemsProperty, value); }
@@ -55,6 +59,10 @@ namespace DSPRE.Avalonia.Views.Controls
         public int CursorX { get => GetValue(CursorXProperty); set => SetValue(CursorXProperty, value); }
         /// <summary>How far down the first row starts; lists start one pixel lower.</summary>
         public int RowOffset { get => GetValue(RowOffsetProperty); set => SetValue(RowOffsetProperty, value); }
+        /// <summary>Off for a window that only shows a message.</summary>
+        public bool ShowCursor { get => GetValue(ShowCursorProperty); set => SetValue(ShowCursorProperty, value); }
+        /// <summary>Fits just the window to the control rather than the whole DS screen.</summary>
+        public bool FitToWindow { get => GetValue(FitToWindowProperty); set => SetValue(FitToWindowProperty, value); }
 
         /// <summary>Two rows of tiles per entry.</summary>
         public const int EntryPixels = 16;
@@ -71,7 +79,8 @@ namespace DSPRE.Avalonia.Views.Controls
         static FieldMenuWindowView()
         {
             AffectsRender<FieldMenuWindowView>(ItemsProperty, WidthItemsProperty, CursorProperty, TileLeftProperty, TileTopProperty,
-                                               TilesWideProperty, TilesHighProperty, IndentProperty, CursorXProperty, RowOffsetProperty);
+                                               TilesWideProperty, TilesHighProperty, IndentProperty, CursorXProperty, RowOffsetProperty,
+                                               ShowCursorProperty, FitToWindowProperty);
         }
 
         public FieldMenuWindowView()
@@ -95,7 +104,7 @@ namespace DSPRE.Avalonia.Views.Controls
         private WriteableBitmap _picture;
         private string _pictureKey;
 
-        private static int Measure(string text)
+        public static int Measure(string text)
         {
             if (string.IsNullOrEmpty(text)) return 0;
             if (Font != null && FieldFontCharacters.Ready) return Font.Measure(text, FieldFontCharacters.GlyphFor);
@@ -123,7 +132,7 @@ namespace DSPRE.Avalonia.Views.Controls
             int tilesWide = TilesWide > 0 ? TilesWide : WidthInTiles(WidthItems ?? items);
             int tilesHigh = TilesHigh > 0 ? TilesHigh : items.Count * 2;
 
-            string key = $"{string.Join("\u0001", items)}|{Cursor}|{tilesWide}x{tilesHigh}|{Indent}|{CursorX}|{RowOffset}"
+            string key = $"{string.Join("\u0001", items)}|{Cursor}|{ShowCursor}|{tilesWide}x{tilesHigh}|{Indent}|{CursorX}|{RowOffset}"
                        + $"|{Font?.GetHashCode()}|{Frame?.GetHashCode()}|{Colours?.GetHashCode()}";
             if (_picture == null || _pictureKey != key)
             {
@@ -132,6 +141,15 @@ namespace DSPRE.Avalonia.Views.Controls
                 _pictureKey = key;
             }
             if (_picture == null) return;
+
+            if (FitToWindow)
+            {
+                double fit = Math.Min(w / _picture.PixelSize.Width, h / _picture.PixelSize.Height);
+                double fw = _picture.PixelSize.Width * fit, fh = _picture.PixelSize.Height * fit;
+                ctx.DrawImage(_picture, new Rect(0, 0, _picture.PixelSize.Width, _picture.PixelSize.Height),
+                              new Rect((w - fw) / 2, (h - fh) / 2, fw, fh));
+                return;
+            }
 
             // The picture includes the one-tile border round the writing area.
             double left = ox + (TileLeft - 1) * FieldMessageWindow.TileSize * scale;
@@ -143,60 +161,108 @@ namespace DSPRE.Avalonia.Views.Controls
 
         private WriteableBitmap Paint(IReadOnlyList<string> items, int tilesWide, int tilesHigh)
         {
+            byte[] rgba = PaintRgba(items, tilesWide, tilesHigh, Indent, RowOffset, CursorX, ShowCursor ? Cursor : -1, out int width, out int height);
+            return ToBitmap(rgba, width, height);
+        }
+
+        /// <summary>
+        /// The window with its border as straight RGBA, for drawing somewhere other than this control.
+        /// <paramref name="cursor"/> is the row the cursor is on, or -1 for no cursor.
+        /// </summary>
+        public static byte[] PaintRgba(IReadOnlyList<string> items, int tilesWide, int tilesHigh, int indent, int rowOffset,
+                                       int cursorX, int cursor, out int width, out int height)
+        {
             int tile = FieldMessageWindow.TileSize;
-            int width = (tilesWide + 2) * tile, height = (tilesHigh + 2) * tile;
+            width = (tilesWide + 2) * tile;
+            height = (tilesHigh + 2) * tile;
             uint paper = Colour(15, PaperFallback), letter = Colour(1, LetterFallback), shadow = Colour(2, ShadowFallback);
             byte[] rgba = Frame?.ComposeStandard(tilesWide, tilesHigh, out width, out height, paper)
                           ?? PlainWindow(width, height, paper);
+            int w = width, h = height;
 
-            void Dot(int x, int y, uint argb)
-            {
-                if (x < 0 || y < 0 || x >= width || y >= height) return;
-                int at = (y * width + x) * 4;
-                rgba[at] = (byte)(argb >> 16); rgba[at + 1] = (byte)(argb >> 8); rgba[at + 2] = (byte)argb; rgba[at + 3] = 0xFF;
-            }
-
-            bool Write(string text, int penX, int penY)
-            {
-                if (Font == null || !FieldFontCharacters.Ready)
-                {
-                    // Without the ROM's font there is nothing faithful to draw, so a block marks each letter.
-                    for (int i = 0; i < text.Length; i++)
-                        if (text[i] != ' ')
-                            for (int y = 4; y < 12; y++) for (int x = 0; x < 4; x++) Dot(penX + i * 6 + x, penY + y, letter);
-                    return false;
-                }
-                bool drew = false;
-                foreach (char c in text)
-                {
-                    int g = FieldFontCharacters.GlyphFor(c);
-                    int advance = Font.WidthOf(g);
-                    if (g >= 0)
-                    {
-                        drew = true;
-                        for (int y = 0; y < FieldFont.CellSize; y++)
-                            for (int x = 0; x < advance; x++)
-                            {
-                                byte v = Font.PixelAt(g, x, y);
-                                if (v == FieldFont.Nothing || v == FieldFont.Paper) continue;
-                                Dot(penX + x, penY + y, v == 1 ? letter : shadow);
-                            }
-                    }
-                    penX += advance > 0 ? advance : 6;
-                }
-                return drew;
-            }
+            void Dot(int x, int y, uint argb) => DotAt(rgba, w, h, x, y, argb);
+            bool Write(string text, int penX, int penY) => WriteAt(rgba, w, h, text, penX, penY, letter, shadow);
 
             for (int i = 0; i < items.Count; i++)
-                Write(items[i], tile + Indent, tile + RowOffset + i * EntryPixels);
+                Write(items[i], tile + indent, tile + rowOffset + i * EntryPixels);
 
-            int cy = tile + RowOffset + Math.Min(Math.Max(0, Cursor), items.Count - 1) * EntryPixels;
+            if (cursor < 0) return rgba;
+
+            int cy = tile + rowOffset + Math.Min(cursor, items.Count - 1) * EntryPixels;
             bool glyph = Font != null && FieldFontCharacters.Ready && FieldFontCharacters.GlyphFor(CursorCharacter) >= 0
-                         && Write(CursorCharacter.ToString(), tile + CursorX, cy);
+                         && Write(CursorCharacter.ToString(), tile + cursorX, cy);
             if (!glyph)
                 for (int y = 0; y < 7; y++)
-                    for (int x = 0; x <= Math.Min(y, 6 - y); x++) Dot(tile + CursorX + 1 + x, cy + 4 + y, letter);
+                    for (int x = 0; x <= Math.Min(y, 6 - y); x++) Dot(tile + cursorX + 1 + x, cy + 4 + y, letter);
 
+            return rgba;
+        }
+
+        /// <summary>
+        /// A window with its border and pieces of text placed in it, in pixels from the writing area's corner,
+        /// as straight RGBA. A right-aligned piece ends at its x. The cursor goes in front of the piece it names, or nowhere at -1.
+        /// </summary>
+        public static byte[] PaintPlaced(int tilesWide, int tilesHigh, IReadOnlyList<(string Text, int X, int Y, bool Right)> pieces,
+                                         int cursor, out int width, out int height)
+        {
+            byte[] rgba = PaintRgba(Array.Empty<string>(), tilesWide, tilesHigh, 0, 0, 0, -1, out width, out height);
+            int tile = FieldMessageWindow.TileSize, w = width, h = height;
+            uint letter = Colour(1, LetterFallback), shadow = Colour(2, ShadowFallback);
+            for (int i = 0; i < pieces.Count; i++)
+            {
+                (string text, int x, int y, bool right) = pieces[i];
+                int left = right ? x - Measure(text) : x;
+                WriteAt(rgba, w, h, text ?? "", tile + left, tile + y, letter, shadow);
+                if (i != cursor) continue;
+                bool glyph = Font != null && FieldFontCharacters.Ready && FieldFontCharacters.GlyphFor(CursorCharacter) >= 0
+                             && WriteAt(rgba, w, h, CursorCharacter.ToString(), tile, tile + y, letter, shadow);
+                if (!glyph)
+                    for (int cy = 0; cy < 7; cy++)
+                        for (int cx = 0; cx <= Math.Min(cy, 6 - cy); cx++) DotAt(rgba, w, h, tile + 1 + cx, tile + y + 4 + cy, letter);
+            }
+            return rgba;
+        }
+
+        private static void DotAt(byte[] rgba, int w, int h, int x, int y, uint argb)
+        {
+            if (x < 0 || y < 0 || x >= w || y >= h) return;
+            int at = (y * w + x) * 4;
+            rgba[at] = (byte)(argb >> 16); rgba[at + 1] = (byte)(argb >> 8); rgba[at + 2] = (byte)argb; rgba[at + 3] = 0xFF;
+        }
+
+        private static bool WriteAt(byte[] rgba, int w, int h, string text, int penX, int penY, uint letter, uint shadow)
+        {
+            if (Font == null || !FieldFontCharacters.Ready)
+            {
+                // Without the ROM's font there is nothing faithful to draw, so a block marks each letter.
+                for (int i = 0; i < text.Length; i++)
+                    if (text[i] != ' ')
+                        for (int y = 4; y < 12; y++) for (int x = 0; x < 4; x++) DotAt(rgba, w, h, penX + i * 6 + x, penY + y, letter);
+                return false;
+            }
+            bool drew = false;
+            foreach (char c in text)
+            {
+                int g = FieldFontCharacters.GlyphFor(c);
+                int advance = Font.WidthOf(g);
+                if (g >= 0)
+                {
+                    drew = true;
+                    for (int y = 0; y < FieldFont.CellSize; y++)
+                        for (int x = 0; x < advance; x++)
+                        {
+                            byte v = Font.PixelAt(g, x, y);
+                            if (v == FieldFont.Nothing || v == FieldFont.Paper) continue;
+                            DotAt(rgba, w, h, penX + x, penY + y, v == 1 ? letter : shadow);
+                        }
+                }
+                penX += advance > 0 ? advance : 6;
+            }
+            return drew;
+        }
+
+        private static WriteableBitmap ToBitmap(byte[] rgba, int width, int height)
+        {
             WriteableBitmap bmp = new WriteableBitmap(new PixelSize(width, height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
             using (ILockedFramebuffer buf = bmp.Lock())
             {

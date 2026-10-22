@@ -125,12 +125,109 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         public bool HasPreview => CurrentPreview != null;
 
+        /// <summary>Whether Next box has anywhere to go.</summary>
+        public bool HasMoreStops => _previewFrames.Count > 1;
+
+        /// <summary>The screen that prints the open archive in a window of its own, or null for message box text.</summary>
+        public FieldTextArchives.Screen Screen => _current == null ? null : FieldTextArchives.ScreenFor(_current.ID);
+
+        public bool IsOnScreen => Screen != null;
+
+        /// <summary>The screens DSPRE can draw that print the selected line (Pokédex, summary screen), drawn with it.</summary>
+        public ObservableCollection<DSPRE.Avalonia.Data.TextScreenShot> ScreenShots { get; } = new ObservableCollection<DSPRE.Avalonia.Data.TextScreenShot>();
+
+        public bool HasScreenShots => ScreenShots.Count > 0;
+
+        /// <summary>A screen on show prints the line a box at a time, so Next box steps it on.</summary>
+        public bool ShotsHaveStops => ShotStops > 1;
+
+        // The screens on show step through their own boxes, which need not match the message box's.
+        private int ShotStops => ScreenShots.Count == 0 ? 0 : ScreenShots.Max(s => s.Stops);
+
+        // What Next box steps through: the screens' boxes while they show, the message box's otherwise.
+        private int StopCount => HasScreenShots ? ShotStops : _previewFrames.Count;
+
+        /// <summary>The screens on show move on by themselves, so the stops play in turn rather than wait for a press.</summary>
+        public bool ShotsMoveOn => ShotsHaveStops && ScreenShots.Where(s => s.Stops > 1).All(s => s.MovesOnByItself);
+
+        /// <summary>Whether Next box is offered under the screens.</summary>
+        public bool ShotsWaitForPress => ShotsHaveStops && !ShotsMoveOn;
+
+        private global::Avalonia.Threading.DispatcherTimer _playStops;
+
+        // Runs the stops of a screen that moves on by itself, about as long as a box stays up in the game.
+        private void UpdatePlayStops()
+        {
+            if (ShotsMoveOn)
+            {
+                if (_playStops != null) return;
+                _playStops = new global::Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+                _playStops.Tick += (_, _) => NextPreviewStep();
+                _playStops.Start();
+            }
+            else if (_playStops != null)
+            {
+                _playStops.Stop();
+                _playStops = null;
+            }
+        }
+
+        private int _shotsAsked;
+
+        // Drawing the pages takes a moment, so it runs aside and only the newest ask is shown.
+        private async Task RefreshScreenShotsAsync()
+        {
+            int asked = ++_shotsAsked;
+            int bank = _current?.ID ?? -1;
+            int line = _selectedLineIndex;
+            string text = line >= 0 && line < Lines.Count ? Lines[line]?.Text : null;
+            List<DSPRE.Avalonia.Data.TextScreenShot> shots = new List<DSPRE.Avalonia.Data.TextScreenShot>();
+            if (_showPreview && bank >= 0 && text != null)
+            {
+                int stop = _previewFrame;
+                try { shots = await Task.Run(() => DSPRE.Avalonia.Data.TextScreenPreviews.For(bank, line, text, stop)); }
+                catch (Exception ex) { AppLogger.WarnOnce("TextEditorViewModel.ScreenShots", ex); }
+            }
+            if (asked != _shotsAsked) return;
+            _bankWithShots = shots.Count > 0 ? bank : -1;
+            ScreenShots.Clear();
+            foreach (DSPRE.Avalonia.Data.TextScreenShot shot in shots) ScreenShots.Add(shot);
+            OnPropertyChanged(nameof(HasScreenShots));
+            OnPropertyChanged(nameof(ShotsHaveStops));
+            OnPropertyChanged(nameof(PreviewStepText));
+            OnPropertyChanged(nameof(ShotsMoveOn));
+            OnPropertyChanged(nameof(ShotsWaitForPress));
+            OnPropertyChanged(nameof(ShowsMessageBox));
+            UpdatePlayStops();
+        }
+
+        // An archive whose lines show on screens keeps the box hidden while the next line's pictures are drawn.
+        private int _bankWithShots = -1;
+
+        public bool ShowsMessageBox => Screen == null && ScreenShots.Count == 0 && _bankWithShots != (_current?.ID ?? -1);
+
+        public string ScreenName => Screen?.Name ?? "";
+
+        /// <summary>The selected line as that screen lays it out: every line at once, nothing wrapped.</summary>
+        public IReadOnlyList<string> ScreenLines
+        {
+            get
+            {
+                FieldTextArchives.Screen screen = Screen;
+                string text = _selectedLineIndex >= 0 && _selectedLineIndex < Lines.Count ? Lines[_selectedLineIndex]?.Text : null;
+                if (string.IsNullOrEmpty(text) || screen == null) return new[] { "" };
+                List<FieldMessageFrame> frames = FieldMessageScript.Frames(text, MeasureText, screen.TilesWide * FieldMessageWindow.TileSize,
+                                                                           screen.TilesHigh / 2, wrapWhenUnmarked: false);
+                return frames.Count > 0 ? frames[0].Lines : new[] { "" };
+            }
+        }
+
         /// <summary>Whether the box is waiting on the player here rather than finishing.</summary>
         public bool PreviewHasMore => CurrentPreview != null && CurrentPreview.Wait != MessageWait.None;
 
         /// <summary>Which of the message's stops this is.</summary>
-        public string PreviewStepText => _previewFrames.Count > 1
-            ? $"Stop {_previewFrame + 1} of {_previewFrames.Count}" : "";
+        public string PreviewStepText => StopCount > 1
+            ? $"Box {_previewFrame % StopCount + 1} of {StopCount}" : "";
 
         /// <summary>What the player pressing A or B would do next.</summary>
         public string PreviewWaitText
@@ -141,10 +238,10 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 if (f == null) return "";
                 switch (f.Wait)
                 {
-                    case MessageWait.Clear: return "Waits, then clears the box and starts again";
-                    case MessageWait.Scroll: return "Waits, then scrolls up one line and carries on";
-                    case MessageWait.Simple: return "Waits, then carries on where it left off";
-                    default: return "The end of the message";
+                    case MessageWait.Clear: return "A clears the box";
+                    case MessageWait.Scroll: return "A scrolls up a line";
+                    case MessageWait.Simple: return "A carries on";
+                    default: return "End of message";
                 }
             }
         }
@@ -187,9 +284,10 @@ namespace DSPRE.Avalonia.ViewModels.Text
         /// <summary>Steps on to the message's next stop, wrapping round at the end.</summary>
         public void NextPreviewStep()
         {
-            if (_previewFrames.Count == 0) return;
-            _previewFrame = (_previewFrame + 1) % _previewFrames.Count;
+            if (StopCount == 0) return;
+            _previewFrame = (_previewFrame + 1) % StopCount;
             RaisePreviewChanged();
+            if (ShotsHaveStops) _ = RefreshScreenShotsAsync();
         }
 
         /// <summary>Works the selected line out again, after picking a different one or editing it.</summary>
@@ -205,12 +303,19 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     _previewFrames.AddRange(FieldMessageScript.Frames(text, MeasureText));
             }
             RaisePreviewChanged();
+            _ = RefreshScreenShotsAsync();
         }
 
         private void RaisePreviewChanged()
         {
             OnPropertyChanged(nameof(PreviewText));
             OnPropertyChanged(nameof(HasPreview));
+            OnPropertyChanged(nameof(HasMoreStops));
+            OnPropertyChanged(nameof(Screen));
+            OnPropertyChanged(nameof(IsOnScreen));
+            OnPropertyChanged(nameof(ShowsMessageBox));
+            OnPropertyChanged(nameof(ScreenName));
+            OnPropertyChanged(nameof(ScreenLines));
             OnPropertyChanged(nameof(PreviewHasMore));
             OnPropertyChanged(nameof(PreviewStepText));
             OnPropertyChanged(nameof(PreviewWaitText));
@@ -279,7 +384,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             _addedArchives.Clear();
             _savedArchiveCount = Filesystem.GetTextArchivesCount();
         }
-        public string UnsavedChangesDescription => DSPRE.Avalonia.Data.StagedArchive.Join(_current != null ? $"Text Archive {_current.ID}" : "Text Archive", _dirty,
+        public string UnsavedChangesDescription => DSPRE.Avalonia.Data.StagedArchive.Join(_current != null ? $"Text archive {_current.ID}" : "Text archive", _dirty,
             DSPRE.Avalonia.Data.StagedArchive.Describe("text archive", "text archives",
                 _addedArchives.Keys.Select(id => (id, DSPRE.Avalonia.Data.PendingArchiveWrites.PendingKind.Added))
                     .Concat(_removedArchives.Select(id => (id, DSPRE.Avalonia.Data.PendingArchiveWrites.PendingKind.Removed)))));
@@ -298,7 +403,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 _isLoading = true;
                 while (ArchiveNames.Count > _savedArchiveCount) ArchiveNames.RemoveAt(ArchiveNames.Count - 1);
                 while (ArchiveNames.Count < _savedArchiveCount)
-                    ArchiveNames.Add("Text Archive " + ArchiveNames.Count + Marker(HgEngineOwnedFiles.Get(TextArchivePath, ArchiveNames.Count)));
+                    ArchiveNames.Add("Text archive " + ArchiveNames.Count + Marker(HgEngineOwnedFiles.Get(TextArchivePath, ArchiveNames.Count)));
                 if (_selectedArchiveIndex >= ArchiveNames.Count) SelectedArchiveIndex = ArchiveNames.Count - 1;
                 _isLoading = false;
                 OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -325,7 +430,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public TextEditorViewModel()
         {
             if (!Design.IsDesignMode) return;
-            ArchiveNames.Add("Text Archive 0");
+            ArchiveNames.Add("Text archive 0");
             Lines.Add(new TextLineVM(0, "Sample line 0") { Number = "0x0" });
             Lines.Add(new TextLineVM(1, "Sample line 1") { Number = "0x1" });
             StatusText = "Design mode";
@@ -339,7 +444,12 @@ namespace DSPRE.Avalonia.ViewModels.Text
         }
 
         /// <summary>For a standalone window closing; the Maps workspace's instance lives for the session.</summary>
-        public void Detach() => TextArchive.Saved -= OnArchiveSavedElsewhere;
+        public void Detach()
+        {
+            TextArchive.Saved -= OnArchiveSavedElsewhere;
+            _playStops?.Stop();
+            _playStops = null;
+        }
 
         // Saving the old list over another editor's write would undo it, so the open archive follows it.
         private void OnArchiveSavedElsewhere(object sender, int id)
@@ -365,7 +475,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 if (_current == null || _current.ID != id) return;
             }
             LoadArchive(id);
-            StatusText = $"Text Archive {id} was saved in another editor and reloaded.";
+            StatusText = "";
         }
 
         /// <summary>Saves or discards unsaved edits before an action that reloads the archive.
@@ -426,7 +536,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 _savedArchiveCount = count;
                 for (int i = 0; i < count; i++)
                 {
-                    ArchiveNames.Add("Text Archive " + i + Marker(HgEngineOwnedFiles.Get(TextArchivePath, i)));
+                    ArchiveNames.Add("Text archive " + i + Marker(HgEngineOwnedFiles.Get(TextArchivePath, i)));
                 }
 
                 _isLoading = false;
@@ -456,7 +566,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (_dirty && _current != null)
             {
                 DialogHelper.MsgResult r = await DialogHelper.AskYesNoCancelAsync(
-                    "There are unsaved changes to the currently loaded Text Archive.\nDo you want to save them?",
+                    "Save the changes to this text archive?",
                     "Unsaved changes");
 
                 if (r == DialogHelper.MsgResult.Yes) await SaveAsync();
@@ -508,6 +618,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         private void ShowLines()
         {
             bool wasLoading = _isLoading;
+            int keep = _selectedLineIndex;
             _isLoading = true;
             try
             {
@@ -522,6 +633,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 RenumberLines();
             }
             finally { _isLoading = wasLoading; }
+            // Refilling the list drops the selection, which would leave the preview empty.
+            if (Lines.Count > 0) SelectedLineIndex = Math.Clamp(keep, 0, Lines.Count - 1);
         }
 
         private void LoadArchive(int id)
@@ -578,7 +691,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 RefreshPreview();
                 StatusText = _managedSource != null
                     ? $"Loaded {_managedSource.RelPath} ({_current.Messages.Count} lines) from the hg-engine checkout."
-                    : $"Loaded Text Archive {id} ({_current.Messages.Count} lines).";
+                    : $"{_current.Messages.Count} lines";
             }
             finally
             {
@@ -652,7 +765,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             int newId = ArchiveCount;
             _removedArchives.Remove(newId);
             _addedArchives[newId] = new List<string> { "Your text here." };
-            ArchiveNames.Add("Text Archive " + newId);
+            ArchiveNames.Add("Text archive " + newId);
             SelectedArchiveIndex = newId;
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
@@ -706,7 +819,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             StatusText = HasUnsavedChanges ? "Opened the archive as last saved." : "Opened the archive.";
         }
 
-        public void Save() => _ = SaveAsync();
+        public void Save() => DialogHelper.Watch(SaveAsync());
 
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
@@ -728,7 +841,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             SetClean();
             OnPropertyChanged(nameof(HasUnsavedChanges));
             SaveNotice.Saved(UnsavedChangesDescription);
-            StatusText = $"Saved Text Archive {_current.ID}.";
+            StatusText = $"Saved Text archive {_current.ID}.";
             // Names (Pokémon/item/move/…) come from text archives; tell open editors to refresh their combos.
             AppEvents.RaiseNamesChanged();
         }
@@ -847,8 +960,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (await RefusedForManagedArchiveAsync("Importing")) return;
             FilePickerFileType[] filters = new[]
             {
-                new FilePickerFileType("JSON Text Archive") { Patterns = new[] { "*.json" } },
-                new FilePickerFileType("Binary Text Archive") { Patterns = new[] { "*.msg", "*.bin" } },
+                new FilePickerFileType("JSON Text archive") { Patterns = new[] { "*.json" } },
+                new FilePickerFileType("Binary Text archive") { Patterns = new[] { "*.msg", "*.bin" } },
             };
             string path = await DialogHelper.OpenFileAsync(_owner, "Import text archive", filters);
             if (path == null) return;
@@ -860,7 +973,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 List<string> lines = TextArchive.ReadMessagesFrom(path);
                 if (lines.SequenceEqual(_current.Messages))
                 {
-                    StatusText = $"That file matches Text Archive {_current.ID} already.";
+                    StatusText = $"That file matches Text archive {_current.ID} already.";
                     return;
                 }
                 _current.Messages.Clear();
@@ -868,7 +981,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 ShowLines();
                 RefreshPreview();
                 SetDirty();
-                SaveNotice.Imported($"{lines.Count} lines into Text Archive {_current.ID}", path);
+                SaveNotice.Imported($"{lines.Count} lines into Text archive {_current.ID}", path);
             }
             catch (Exception ex)
             {
@@ -883,10 +996,10 @@ namespace DSPRE.Avalonia.ViewModels.Text
             int id = _current.ID;
             FilePickerFileType[] filters = new[]
             {
-                new FilePickerFileType("JSON Text Archive") { Patterns = new[] { "*.json" } },
-                new FilePickerFileType("Binary Text Archive") { Patterns = new[] { "*.msg" } },
+                new FilePickerFileType("JSON Text archive") { Patterns = new[] { "*.json" } },
+                new FilePickerFileType("Binary Text archive") { Patterns = new[] { "*.msg" } },
             };
-            string path = await DialogHelper.SaveFileAsync(_owner, "Export text archive", filters, "Text Archive " + id);
+            string path = await DialogHelper.SaveFileAsync(_owner, "Export text archive", filters, "Text archive " + id);
             if (path == null) return;
 
             string ext = Path.GetExtension(path).ToLowerInvariant();
@@ -956,19 +1069,18 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (SearchAllArchives)
             {
                 first = 0; last = Filesystem.GetTextArchivesCount();
-                specify = $" in every Text Bank of the game ({first} to {last - 1})";
+                specify = $" in every text archive ({first} to {last - 1})";
             }
             else
             {
                 if (_current == null) return;
                 if (await RefusedForManagedArchiveAsync("Replacing")) return;
                 first = SelectedArchiveIndex; last = first + 1;
-                specify = $" in the current text bank only ({first})";
+                specify = $" in text archive {first} only";
             }
             if (first < 0) return;
 
-            string message = $"You are about to replace every occurrence of \"{SearchText}\" with \"{ReplaceText}\"{specify}." +
-                             "\nThe operation can't be interrupted nor undone.\n\nProceed?";
+            string message = $"Replace every \"{SearchText}\" with \"{ReplaceText}\"{specify}? This saves at once and can't be undone.";
             if (!await DialogHelper.AskYesNoAsync(message, "Replace text?")) return;
             if (!await SaveOrDiscardBeforeReloadAsync("Replacing")) return;
 
@@ -995,20 +1107,20 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 if (SelectedArchiveIndex >= 0) LoadArchive(SelectedArchiveIndex);
                 AppEvents.RaiseNamesChanged();
                 bool one = last - first == 1;
-                StatusText = one ? "Text bank not changed." : "Replace stopped partway.";
+                StatusText = "";
                 await DialogHelper.ShowErrorAsync(one
-                    ? $"Text bank {first} wasn't changed:\n{ex.Message}"
-                    : $"Replace stopped partway; text banks before the failure were already changed:\n{ex.Message}", "Text editor error");
+                    ? $"Text archive {first} wasn't changed:\n{ex.Message}"
+                    : $"Replace stopped partway; the text archives before the failure were already changed:\n{ex.Message}", "Text editor error");
                 return;
             }
             foreach (int cur in edited)
-                SearchResults.Add(new TextSearchResultVM(cur, 0, $"Text archive ({cur}) - Successfully edited"));
+                SearchResults.Add(new TextSearchResultVM(cur, 0, $"Text archive {cur} edited"));
 
             // Reload the currently displayed archive so edits are visible.
             if (SelectedArchiveIndex >= 0) LoadArchive(SelectedArchiveIndex);
             if (edited.Count > 0) AppEvents.RaiseNamesChanged();
-            StatusText = $"Replace complete: {edited.Count} archive(s) edited"
-                         + (skipped > 0 ? $", {skipped} hg-engine archive(s) skipped." : ".");
+            StatusText = skipped == 0 ? ""
+                : skipped == 1 ? "1 hg-engine text archive was skipped." : $"{skipped} hg-engine text archives were skipped.";
         }
 
         /// <summary>Shows a search result's line, after its archive has loaded when it is another one.</summary>

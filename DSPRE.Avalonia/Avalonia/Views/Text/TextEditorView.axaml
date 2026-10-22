@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Text"
         xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+        xmlns:data="clr-namespace:DSPRE.Avalonia.Data"
         x:Class="DSPRE.Avalonia.Views.Text.TextEditorView"
         x:DataType="vm:TextEditorViewModel">
 
@@ -59,9 +60,9 @@
           <CheckBox Content="Search all archives"     IsChecked="{Binding SearchAllArchives}"/>
           <StackPanel Orientation="Horizontal" Spacing="6">
             <Button Content="Search" controls:Icon.Key="lens"  Click="Search_Click"  MinWidth="90"/>
-            <Button Content="Replace" Click="Replace_Click" Width="90"/>
+            <Button Content="Replace" Click="Replace_Click" Width="90" ToolTip.Tip="Replaces and saves at once"/>
           </StackPanel>
-          <TextBlock Text="Results (double-click or Enter to go)" Margin="0,6,0,0"/>
+          <TextBlock Text="Results" Margin="0,6,0,0"/>
         </StackPanel>
         <ListBox ItemsSource="{Binding SearchResults}"
                  DoubleTapped="SearchResult_DoubleTapped"
@@ -82,7 +83,43 @@
       <Border DockPanel.Dock="Bottom" IsVisible="{Binding ShowPreview}" Padding="6"
               Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}"
               BorderThickness="0,1,0,0">
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+        <Grid>
+        <DockPanel IsVisible="{Binding HasScreenShots}">
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center" Margin="0,4,0,0"
+                    IsVisible="{Binding ShotsHaveStops}">
+          <TextBlock Text="{Binding PreviewStepText}" FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+          <Button Content="Next box" Click="PreviewNext_Click" IsVisible="{Binding ShotsWaitForPress}"/>
+        </StackPanel>
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
+                      HorizontalAlignment="Center">
+          <ItemsControl ItemsSource="{Binding ScreenShots}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="10"/></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="data:TextScreenShot">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="{Binding Name}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+                  <Button Padding="0" Background="Transparent" BorderThickness="0" Click="ShotLarger_Click"
+                          ToolTip.Tip="View larger" Cursor="Hand">
+                    <Image Source="{Binding Picture}" Width="256" Height="192" RenderOptions.BitmapInterpolationMode="None"/>
+                  </Button>
+                  <Button Content="Open in editor" Click="ShotOpen_Click" HorizontalAlignment="Left" IsVisible="{Binding HasEditor}"/>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+        </DockPanel>
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" IsVisible="{Binding IsOnScreen}">
+          <views:FieldMenuWindowView Grid.Column="0" FitToWindow="True" ShowCursor="False" Indent="0" RowOffset="0"
+                                     Height="200" HorizontalAlignment="Stretch"
+                                     Items="{Binding ScreenLines}" TileLeft="{Binding Screen.TileLeft}" TileTop="{Binding Screen.TileTop}"
+                                     TilesWide="{Binding Screen.TilesWide}" TilesHigh="{Binding Screen.TilesHigh}"/>
+          <TextBlock Grid.Column="1" Width="230" Text="{Binding ScreenName}" FontSize="12" TextWrapping="Wrap"
+                     VerticalAlignment="Center"/>
+        </Grid>
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" IsVisible="{Binding ShowsMessageBox}">
           <views:FieldMessageBoxView Grid.Column="0" x:Name="PreviewBox" FitToFrame="True"
                                      Height="96" HorizontalAlignment="Stretch"
                                      Text="{Binding PreviewText}" HasMore="{Binding PreviewHasMore}"/>
@@ -99,8 +136,9 @@
               <ComboBox Width="110" ItemsSource="{Binding BorderNames}" SelectedIndex="{Binding BorderIndex}"
                         ToolTip.Tip="Which message box border to draw with."/>
             </StackPanel>
-            <Button Content="Next stop" Click="PreviewNext_Click" IsEnabled="{Binding HasPreview}"/>
+            <Button Content="Next box" Click="PreviewNext_Click" IsEnabled="{Binding HasMoreStops}"/>
           </StackPanel>
+        </Grid>
         </Grid>
       </Border>
 

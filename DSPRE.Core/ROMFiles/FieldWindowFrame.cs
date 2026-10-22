@@ -22,8 +22,35 @@ namespace DSPRE.ROMFiles
         /// <summary>The archive entry these colours were read from.</summary>
         public int PaletteEntry { get; }
 
-        private FieldWindowFrame(byte[] tiles, uint[] colours, int paletteEntry)
-        { _tiles = tiles; _colours = colours; PaletteEntry = paletteEntry; }
+        private FieldWindowFrame(byte[] tiles, uint[] colours, int paletteEntry, byte[] cursor = null)
+        { _tiles = tiles; _colours = colours; PaletteEntry = paletteEntry; _cursor = cursor; }
+
+        /// <summary>The "more text" cursor, scroll_cursor: three 2x2 tile frames, each a pixel lower, in the frame's colours.</summary>
+        public const int CursorGraphicEntry = 22;
+        private const int CursorTiles = 12;
+        private readonly byte[] _cursor;
+
+        /// <summary>One of the cursor's three frames as 16x16 straight RGBA, or null when the ROM's could not be read.</summary>
+        public byte[] ComposeCursor(int frame)
+        {
+            if (_cursor == null) return null;
+            frame = Math.Clamp(frame, 0, CursorTiles / 4 - 1);
+            byte[] rgba = new byte[16 * 16 * 4];
+            for (int quarter = 0; quarter < 4; quarter++)
+            {
+                int tile = frame * 4 + quarter;
+                int ox = quarter % 2 * TileSize, oy = quarter / 2 * TileSize;
+                for (int y = 0; y < TileSize; y++)
+                    for (int x = 0; x < TileSize; x++)
+                    {
+                        byte index = _cursor[tile * TileSize * TileSize + y * TileSize + x];
+                        uint c = index < _colours.Length ? _colours[index] : 0;
+                        int at = ((oy + y) * 16 + ox + x) * 4;
+                        rgba[at] = (byte)(c >> 16); rgba[at + 1] = (byte)(c >> 8); rgba[at + 2] = (byte)c; rgba[at + 3] = (byte)(c >> 24);
+                    }
+            }
+            return rgba;
+        }
 
         /// <summary>
         /// Reads one of the twenty frames from the window frame archive's members, or null if it cannot be read.
@@ -43,7 +70,9 @@ namespace DSPRE.ROMFiles
 
                 byte[] tiles = ReadTiles(gfx, TileCount);
                 uint[] colours = ReadColours(pal);
-                return tiles == null || colours == null ? null : new FieldWindowFrame(tiles, colours, paletteEntry);
+                byte[] cursorGfx = CursorGraphicEntry < count ? member(CursorGraphicEntry) : null;
+                byte[] cursor = cursorGfx == null ? null : ReadTiles(cursorGfx, CursorTiles);
+                return tiles == null || colours == null ? null : new FieldWindowFrame(tiles, colours, paletteEntry, cursor);
             }
             catch (Exception ex) { AppLogger.WarnOnce("FieldWindowFrame.Load", ex); return null; }
         }

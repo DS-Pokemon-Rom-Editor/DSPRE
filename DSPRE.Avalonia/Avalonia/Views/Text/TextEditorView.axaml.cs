@@ -47,6 +47,10 @@ namespace DSPRE.Avalonia.Views.Text
         {
             if (VM == null) return;
             FieldMessageBoxView.Font = FieldFont.LoadTalkFont();
+            // Screens with a window of their own write in the system font, inside the standard border.
+            FieldMenuWindowView.Font = FieldFont.LoadSystemFont();
+            FieldMenuWindowView.Frame = DSPRE.Avalonia.Data.WindowFrames.LoadStandard();
+            FieldMenuWindowView.Colours = DSPRE.Avalonia.Data.WindowFrames.LoadSystemFontColours();
 
             if (VM.BorderNames.Count == 0)
             {
@@ -70,6 +74,27 @@ namespace DSPRE.Avalonia.Views.Text
         }
 
         private void PreviewNext_Click(object sender, RoutedEventArgs e) => VM?.NextPreviewStep();
+
+        private void ShotOpen_Click(object sender, RoutedEventArgs e) =>
+            ((sender as Control)?.DataContext as DSPRE.Avalonia.Data.TextScreenShot)?.Open?.Invoke();
+
+        // The screen at three times DS size, without smoothing.
+        private async void ShotLarger_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as Control)?.DataContext is not DSPRE.Avalonia.Data.TextScreenShot shot || shot.Picture == null) return;
+            if (TopLevel.GetTopLevel(this) is not Window owner) return;
+            Image image = new Image { Source = shot.Picture, Stretch = global::Avalonia.Media.Stretch.Uniform };
+            global::Avalonia.Media.RenderOptions.SetBitmapInterpolationMode(image, global::Avalonia.Media.Imaging.BitmapInterpolationMode.None);
+            Window larger = new Window
+            {
+                Title = shot.Name,
+                Width = 256 * 3 + 24,
+                Height = 192 * 3 + 24,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Content = new Border { Padding = new global::Avalonia.Thickness(12), Child = image },
+            };
+            await larger.ShowDialog(owner);
+        }
         private void StrVarHelp_Click(object sender, RoutedEventArgs e) => AvaloniaEditorLauncher.OpenStrVarHelp();
 
         public TextEditorView(TextEditorViewModel vm) : this()
