@@ -11,7 +11,7 @@ namespace DSPRE.Avalonia.Data
     {
         internal sealed class Settings
         {
-            public int SampleRate = 32000;
+            public int SampleRate = AudioOutput.RenderRate;
             public double MaxSeconds = 8.0;
 
             /// <summary>False runs the timing only, without making sound, for reading notes.</summary>

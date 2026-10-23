@@ -12,7 +12,7 @@ namespace DSPRE.Avalonia.Data
     {
         // Long enough to hear a theme's loop come round without rendering the whole thing.
         private const double Seconds = 90;
-        private const int SampleRate = 32000;
+        private const int SampleRate = AudioOutput.RenderRate;
 
         private static readonly object Gate = new();
         private static object _handle;

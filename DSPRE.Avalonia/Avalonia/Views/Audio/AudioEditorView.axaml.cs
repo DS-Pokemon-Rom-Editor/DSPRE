@@ -19,7 +19,7 @@ namespace DSPRE.Avalonia.Views.Audio
 
         // What is currently drawn, so playing and saving use the same sound the picture was made from.
         private short[] _pcm;
-        private const int Rate = 32000;
+        private const int Rate = AudioOutput.RenderRate;
 
         // Rendering a tune takes long enough to be felt, and somebody arrowing down a list starts a new one
         // every keystroke, so each render cancels the one before it.

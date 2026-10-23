@@ -33,6 +33,10 @@ namespace DSPRE.Avalonia.Data
     /// <summary>The audio backend; startup sets NAudioOutput.</summary>
     public static class AudioOutput
     {
+        /// <summary>The rate every sound is rendered and mixed at. Sound cards run at 48 kHz, so nothing is resampled
+        /// on the way out, and the hardware's held samples keep their edge instead of folding back below 16 kHz.</summary>
+        public const int RenderRate = 48000;
+
         public static IAudioOutput Current { get; set; } = new NullAudioOutput();
     }
 }

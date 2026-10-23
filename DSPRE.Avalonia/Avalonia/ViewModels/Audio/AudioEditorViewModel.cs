@@ -625,7 +625,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         // ── doing something with it ─────────────────────────────────────────────────
 
         /// <summary>The sound of whatever is picked, ready to play or save.</summary>
-        public short[] RenderSelected(int playAt = 32000)
+        public short[] RenderSelected(int playAt = AudioOutput.RenderRate)
         {
             AudioItem item = Selected;
             if (item == null) return null;

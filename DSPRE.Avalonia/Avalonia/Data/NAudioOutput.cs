@@ -87,9 +87,10 @@ namespace DSPRE.Avalonia.Data
 
             lock (_gate)
             {
-                EnsureStarted(sampleRate);
+                EnsureStarted();
                 PcmVoice voice = new PcmVoice(interleavedStereoPcm, sampleRate, loop);
-                _mixer.AddMixerInput(voice);
+                // Raw samples at their own rate join the mix through a resampler; rendered sounds are already at the mix rate.
+                _mixer.AddMixerInput(sampleRate == AudioOutput.RenderRate ? voice : new WdlResamplingSampleProvider(voice, AudioOutput.RenderRate));
                 return voice;
             }
         }
@@ -112,14 +113,15 @@ namespace DSPRE.Avalonia.Data
             lock (_gate) { voice.FadeOut(voice.WaveFormat.SampleRate / 4 * 2); }
         }
 
-        private void EnsureStarted(int sampleRate)
+        private void EnsureStarted()
         {
             if (_mixer != null) return;
-            _mixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 2))
+            _mixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(AudioOutput.RenderRate, 2))
             {
                 ReadFully = true,   // keep producing silence between sounds instead of ending the output stream
             };
-            _output = new WaveOutEvent();
+            // NAudio's default is 300 ms in 2 buffers, 9 game frames behind the picture; 60 ms in 3 keeps sounds on their frame.
+            _output = new WaveOutEvent { DesiredLatency = 60, NumberOfBuffers = 3 };
             _output.Init(_mixer);
             _output.Play();
         }

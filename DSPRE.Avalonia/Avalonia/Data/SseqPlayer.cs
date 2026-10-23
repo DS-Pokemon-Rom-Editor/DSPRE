@@ -72,7 +72,7 @@ namespace DSPRE.Avalonia.Data
         /// <param name="waveArcOverride">
         /// Slot 0's wave archive instead of the bank's, for hg-engine's one-archive-per-species cries.
         /// </param>
-        public static short[] Render(SdatArchive sdat, int seqIndex, int sampleRate = 32000, double maxSeconds = 8.0,
+        public static short[] Render(SdatArchive sdat, int seqIndex, int sampleRate = AudioOutput.RenderRate, double maxSeconds = 8.0,
                                      int bankOverride = -1, int waveArcOverride = -1)
             => Render(sdat, seqIndex, new NitroSoundDriver.Settings { SampleRate = sampleRate, MaxSeconds = maxSeconds },
                       bankOverride, waveArcOverride);

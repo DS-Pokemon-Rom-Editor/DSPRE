@@ -126,7 +126,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
                 try
                 {
                     short[] pcm = SoundArchive.RenderCry(species);
-                    if (pcm != null && pcm.Length > 0) AudioOutput.Current.Play(pcm, 32000);
+                    if (pcm != null && pcm.Length > 0) AudioOutput.Current.Play(pcm, AudioOutput.RenderRate);
                 }
                 catch { /* an editor should not put up a dialog because a sound would not play */ }
             });

@@ -285,12 +285,12 @@ namespace DSPRE.Avalonia.Views.Battle
                     pcm = _rendered.GetOrAdd((kind, id), key => key.Item1 == ScriptEffectKind.Cry
                         ? SoundArchive.RenderCry(key.Item2)
                         : SseqPlayer.Render(sdat, key.Item2));
-                    if (pcm != null && pcm.Length > 0) AudioOutput.Current.Play(pcm, 32000);
+                    if (pcm != null && pcm.Length > 0) AudioOutput.Current.Play(pcm, AudioOutput.RenderRate);
                 }
                 catch { /* a preview should never put an error dialog up mid-animation */ }
 
-                // Interleaved stereo at 32 kHz, counted in 30 Hz field frames.
-                double seconds = pcm == null ? 0 : pcm.Length / 2.0 / 32000.0;
+                // Interleaved stereo at the render rate, counted in 30 Hz field frames.
+                double seconds = pcm == null ? 0 : pcm.Length / 2.0 / (double)AudioOutput.RenderRate;
                 int frames = (int)Math.Ceiling(seconds * AnimatedPreviewViewModel.FramesPerSecond);
                 Dispatcher.UIThread.Post(() => _vm.SoundLength(kind, frames));
 
@@ -315,13 +315,14 @@ namespace DSPRE.Avalonia.Views.Battle
             System.Threading.Tasks.Task.Run(() =>
             {
                 short[] pcm = null;
-                try { pcm = SseqPlayer.Render(sdat, id, 32000, MusicSeconds); } catch { }   // a sequence that can't render stays silent
+                try { pcm = SseqPlayer.Render(sdat, id, AudioOutput.RenderRate, MusicSeconds); }
+                catch (Exception ex) { AppLogger.WarnOnce("AnimatedPreviewWindow.Music", ex); }
                 if (pcm == null || pcm.Length == 0) return;
                 Dispatcher.UIThread.Post(() =>
                 {
                     // Something else was asked for while this one was being rendered.
                     if (token != _musicToken) return;
-                    _music = AudioOutput.Current.StartLooping(pcm, 32000);
+                    _music = AudioOutput.Current.StartLooping(pcm, AudioOutput.RenderRate);
                     if (_musicHolds > 0) AudioOutput.Current.SetPaused(_music, true);
                 });
             });

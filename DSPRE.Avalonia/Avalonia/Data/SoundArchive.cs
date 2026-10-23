@@ -467,10 +467,10 @@ namespace DSPRE.Avalonia.Data
         /// <summary>
         /// A Pokemon's cry, as sound ready to play, or null when this ROM has nothing for that species.
         /// </summary>
-        public static short[] RenderCry(int species, int sampleRate = 32000) => RenderCry(Load(), species, sampleRate);
+        public static short[] RenderCry(int species, int sampleRate = AudioOutput.RenderRate) => RenderCry(Load(), species, sampleRate);
 
         /// <summary>The same, played from an archive that may hold replacements not saved yet.</summary>
-        public static short[] RenderCry(SdatArchive sdat, int species, int sampleRate = 32000)
+        public static short[] RenderCry(SdatArchive sdat, int species, int sampleRate = AudioOutput.RenderRate)
         {
             if (sdat == null || species <= 0) return null;
 
