@@ -216,7 +216,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidDataException)
             {
-                return "The lists could not be rebuilt:\n" + ex.Message;
+                return "The lists couldn't be rebuilt:\n" + ex.Message;
             }
             changed = !_lists.Snapshot().AsSpan().SequenceEqual(before);
             if (changed) Edited();
@@ -242,7 +242,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public string Problem => _lists?.Problem() ?? "";
         public bool HasProblem => Problem.Length > 0;
-        /// <summary>While the game's own regional count differs from the saved order: what it holds and what to do.</summary>
+        /// <summary>What the game's regional count holds and what to do, while it differs from the saved order.</summary>
         public string CountNote
         {
             get
@@ -277,11 +277,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task<bool> SaveChangesAsync()
         {
             if (_lists == null) return true;
-            if (HasProblem) { await DialogHelper.ShowErrorAsync(Problem, "Pokédex lists error"); return false; }
+            if (HasProblem) { await DialogHelper.ShowErrorAsync(Problem, "Pokédex lists"); return false; }
             try { _lists.Save(); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
             {
-                await DialogHelper.ShowErrorAsync("The Pokédex lists were not saved:\n" + e.Message, "Pokédex lists error");
+                await DialogHelper.ShowErrorAsync("The Pokédex lists weren't saved:\n" + e.Message, "Pokédex lists");
                 return false;
             }
             _saved = _lists.Snapshot();

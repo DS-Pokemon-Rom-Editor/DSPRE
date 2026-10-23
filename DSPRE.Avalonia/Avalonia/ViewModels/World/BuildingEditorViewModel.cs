@@ -20,9 +20,8 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.World
 {
     /// <summary>
-    /// Avalonia port of the WinForms <c>BuildingEditor</c>. Browses the building model NARC
-    /// (exterior, or interior on HG/SS), renders the selected model in 3D with either its embedded
-    /// textures or a building texture pack, imports NSBMD or OBJ, and exports NSBMD, DAE or glTF.
+    /// Building models (exterior, or interior on HGSS): a 3D preview with a texture pack, NSBMD or OBJ import,
+    /// and NSBMD, DAE or glTF export.
     /// </summary>
     public class BuildingEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
@@ -116,12 +115,12 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (IsHGSS) dirs.Add(DirNames.InteriorBuildingModels);
                 DSUtils.TryUnpackNarcs(dirs);
                 try { _textureSets = BuildingModelTextureSets.ReadCurrentRom(); }
-                catch (Exception ex) { AppLogger.Error("Building texture sets could not be read: " + ex.Message); }
+                catch (Exception ex) { AppLogger.Error("Building texture sets couldn't be read: " + ex.Message); }
 
                 _suppress = true;
                 Textures.Add("Automatic");
                 int texCount = Filesystem.GetBuildingTexturesCount();
-                for (int i = 0; i < texCount; i++) Textures.Add("Texture pack " + i);
+                for (int i = 0; i < texCount; i++) Textures.Add("Building textures " + i);
                 _texIndex = 0; OnPropertyChanged(nameof(SelectedTextureIndex));
                 _suppress = false;
 
@@ -145,7 +144,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 StatusText = "Error: " + ex.Message;
                 CrashReporter.LogHandled(ex);
-                await DialogHelper.ShowErrorAsync($"Failed to set up Building editor:\n{ex.Message}", "Building editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't set up the Building editor:\n{ex.Message}", "Building editor");
             }
         }
 
@@ -252,14 +251,14 @@ namespace DSPRE.Avalonia.ViewModels.World
                 string err = string.Equals(Path.GetExtension(path), ".obj", StringComparison.OrdinalIgnoreCase)
                     ? _pending.Import(() => ModelAssets.ImportMesh(archive, index, path, out note))
                     : _pending.Import(() => ModelAssets.ImportRaw(archive, index, path));
-                if (err != null) { await DialogHelper.ShowErrorAsync(err, "Building editor error"); return; }
+                if (err != null) { await DialogHelper.ShowErrorAsync(err, "Building editor"); return; }
                 SaveNotice.Imported($"building model {index}", path);
                 if (note != null) StatusText = note;
             }
             catch (Exception ex)
             {
                 CrashReporter.LogHandled(ex);
-                await DialogHelper.ShowErrorAsync($"Building {_selBuilding} wasn't imported:\n{ex.Message}", "Building editor error");
+                await DialogHelper.ShowErrorAsync($"Building {_selBuilding} wasn't imported:\n{ex.Message}", "Building editor");
             }
         }
 
@@ -301,11 +300,11 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex)
             {
                 CrashReporter.LogHandled(ex);
-                await DialogHelper.ShowErrorAsync($"Building {_selBuilding} wasn't exported:\n{ex.Message}", "Building editor error");
+                await DialogHelper.ShowErrorAsync($"Building {_selBuilding} wasn't exported:\n{ex.Message}", "Building editor");
             }
         }
 
-        // The file name the user picked becomes the folder apicula writes into, beside where they picked.
+        // apicula writes into a folder named after the picked file, next to it.
         private string ExportThreeD(int index, byte[] data, bool glb, string name, string folder, bool report = true)
         {
             NSBMD model = NSBMDLoader.LoadNSBMD(new MemoryStream(data));

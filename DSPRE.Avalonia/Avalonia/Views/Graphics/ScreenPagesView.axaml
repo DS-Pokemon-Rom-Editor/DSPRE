@@ -39,19 +39,25 @@
       <!-- Text boxes and bars the game places in its code, laid out the way the HP bar editor lists its parts -->
       <DockPanel x:Name="BoxPanel" DockPanel.Dock="Bottom" Margin="8" IsVisible="{Binding HasLayout}">
         <TextBlock DockPanel.Dock="Top" Text="Text boxes and bars" FontWeight="SemiBold" Margin="0,0,0,6"/>
+        <Button DockPanel.Dock="Top" Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Margin="0,0,0,6" Click="FontPatch_Click"
+                IsVisible="{Binding OffersFontPatch}" ToolTip.Tip="The &quot;Summary screen fonts&quot; patch lets each text box use another font."/>
         <ScrollViewer HorizontalScrollBarVisibility="Disabled">
           <ItemsControl ItemsSource="{Binding BoxRows}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:ScreenBoxRow">
-                <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2">
-                  <Border Width="12" Height="12" Background="{Binding Colour}" BorderBrush="{Binding Colour}" BorderThickness="2"
-                          VerticalAlignment="Center"/>
-                  <TextBlock Text="{Binding Name}" Width="120" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                             ToolTip.Tip="{Binding Name}"/>
-                  <NumericUpDown Value="{Binding Across}" Minimum="0" Maximum="31" Increment="1" FormatString="0" Width="64"
-                                 ToolTip.Tip="Across"/>
-                  <NumericUpDown Value="{Binding Down}" Minimum="0" Maximum="23" Increment="1" FormatString="0" Width="64"
-                                 ToolTip.Tip="Down"/>
+                <StackPanel Margin="0,2" Spacing="2">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Border Width="12" Height="12" Background="{Binding Colour}" BorderBrush="{Binding Colour}" BorderThickness="2"
+                            VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Name}" Width="120" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{Binding Name}"/>
+                    <NumericUpDown Value="{Binding Across}" Minimum="0" Maximum="31" Increment="1" FormatString="0" Width="64"
+                                   ToolTip.Tip="Across"/>
+                    <NumericUpDown Value="{Binding Down}" Minimum="0" Maximum="23" Increment="1" FormatString="0" Width="64"
+                                   ToolTip.Tip="Down"/>
+                  </StackPanel>
+                  <ComboBox Margin="18,0,0,0" Width="180" ItemsSource="{Binding FontNames}" SelectedIndex="{Binding FontIndex}"
+                            IsVisible="{Binding CanPickFont}" ToolTip.Tip="Font"/>
                 </StackPanel>
               </DataTemplate>
             </ItemsControl.ItemTemplate>

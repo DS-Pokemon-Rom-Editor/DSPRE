@@ -30,7 +30,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         private static readonly FilePickerFileType Png =
             new("PNG image") { Patterns = new[] { "*.png" } };
 
-        private const string ErrorTitle = "Bottom screen error";
+        private const string ErrorTitle = "Bottom screen";
         private async void Paint_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(PaintAsync, "The painter didn't open.", ErrorTitle, Owner);
         private async void Export_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(ExportAsync, "The PNG wasn't exported.", ErrorTitle, Owner);
         private async void Import_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(ImportAsync, "The PNG wasn't imported.", ErrorTitle, Owner);
@@ -42,7 +42,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             GraphicAssets.Archive archive = ArchiveOf(piece);
             if (archive == null)
             {
-                await DialogHelper.ShowErrorAsync("This piece's archive is not one the painter can open.", ErrorTitle);
+                await DialogHelper.ShowErrorAsync("The painter can't open this piece's archive.", ErrorTitle);
                 return;
             }
 

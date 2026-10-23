@@ -32,9 +32,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
     }
 
     /// <summary>
-    /// Avalonia port of the WinForms Bulk learnset editor: edit every Pokémon's level-up learnset in
-    /// one grid. Rows are (species, level, move); a species filter narrows the view, and Save writes
-    /// each species' rows back to its learnset file (sorted by level).
+    /// Every Pokémon's level-up learnset in one grid; Save writes each species' rows back sorted by level.
     /// </summary>
     public class BulkLearnsetEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
@@ -116,7 +114,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowErrorAsync($"Failed to set up Bulk learnset editor:\n{ex.Message}", "Bulk learnsets error");
+                await DialogHelper.ShowErrorAsync($"Couldn't set up the Bulk learnset editor:\n{ex.Message}", "Bulk learnset editor");
             }
         }
 
@@ -205,7 +203,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Bulk learnsets error", owner);
+                await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Bulk learnset editor", owner);
             }
         }
 
@@ -223,7 +221,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Bulk learnsets error", owner);
+                await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Bulk learnset editor", owner);
             }
         }
 
@@ -232,7 +230,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_loadError != null)
             {
-                await DialogHelper.ShowErrorAsync("The learnsets couldn't be read:\n" + _loadError, "Bulk learnsets error", owner);
+                await DialogHelper.ShowErrorAsync("The learnsets couldn't be read:\n" + _loadError, "Bulk learnset editor", owner);
                 return;
             }
             Dictionary<int, List<LearnsetCsv.Move>> now = Lists();
@@ -266,7 +264,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_loadError != null)
             {
-                _ = DialogHelper.ShowErrorAsync("The learnsets couldn't be read, so saving would replace them:\n" + _loadError, "Bulk learnsets error");
+                _ = DialogHelper.ShowErrorAsync("The learnsets couldn't be read, so saving would replace them:\n" + _loadError, "Bulk learnset editor");
                 return;
             }
             if (_sourceLists != null) { DialogHelper.Watch(SaveSourceAsync()); return; }
@@ -293,7 +291,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 SaveNotice.Saved(UnsavedChangesDescription);
                 StatusText = "Saved all learnsets.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Save failed:\n{ex.Message}", "Bulk learnsets error"); }
+            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't save:\n{ex.Message}", "Bulk learnset editor"); }
         }
 
         // Only species whose rows changed are written into learnsets.json.
@@ -309,7 +307,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             (bool saved, string error) = await HgEngineSave.RunAsync(() =>
                 changes.Count == 0 || HgEngine.HgEngineLearnsets.TrySaveLevelMoves(changes, out string e) ? null : e);
-            if (!saved) { if (error != null) await DialogHelper.ShowErrorAsync("The learnsets were not saved:\n" + error, "Bulk learnsets error"); return; }
+            if (!saved) { if (error != null) await DialogHelper.ShowErrorAsync("The learnsets weren't saved:\n" + error, "Bulk learnset editor"); return; }
             foreach ((int id, IReadOnlyList<(int level, int move)> rows) in changes)
                 if (rows.Count > 0) _sourceLists[id] = rows.ToList(); else _sourceLists.Remove(id);
             _undo?.MarkSaved();

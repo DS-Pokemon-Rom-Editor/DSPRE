@@ -21,19 +21,12 @@ using DSPRE.Avalonia.Data;
 using System.Text;
 namespace DSPRE.Avalonia.ViewModels.World
 {
-    /// <summary>
-    /// Avalonia port of the WinForms <c>EventEditor</c>, core scope. Edits an event
-    /// file's four event lists (Spawnables, Overworlds, Warps, Triggers): select an
-    /// event to edit its position (map + matrix) and its type-specific fields, add/remove
-    /// events, and save / import / export. The 3D map overlay with event markers and
-    /// click-to-place are deferred (the renderer foundation is in place for later).
-    /// </summary>
+    /// <summary>Edits an event file's overworlds, warps, triggers and spawnables, with the map and markers in 3D.</summary>
     public class EventEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         /// <summary>
-        /// Whether the parts of this editor that are still being tried out are shown: walking the map,
-        /// the animated preview and the drag gizmos. They are off with the beta editors, because they
-        /// are the same kind of unfinished, but the editor itself is not gated.
+        /// Whether walking, the animated preview and the drag gizmos show. They are unfinished, so they follow the beta
+        /// switch; the editor itself isn't gated.
         /// </summary>
         public bool ShowBetaFeatures => BetaEditors.Enabled;
 
@@ -46,7 +39,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private bool _isCatchAllHeader;
 
-        /// <summary>Whether the chosen header is the one every unwalked square belongs to. </summary>
+        /// <summary>Whether the chosen header is the catch-all header for squares no map claims.</summary>
         public bool IsCatchAllHeader
         {
             get => _isCatchAllHeader;
@@ -72,8 +65,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex) { AppLogger.WarnOnce("EventEditorViewModel.GatherStringVars", ex); return none; }
             if (lines == null) return none;
 
-            // Which scripts show which message. A script that could not be read is skipped rather than
-            // stopping the rest.
+            // Which scripts show which message. A script that can't be read is skipped; the rest still load.
             Dictionary<int, List<int>> showsMessage = new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>();
             try
             {
@@ -228,7 +220,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public ObservableCollection<string> Warps { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> Triggers { get; } = new ObservableCollection<string>();
 
-        // ── Overworld sprite/movement/orientation dropdowns (mirrors WinForms EventEditor) ──
+        // ── Overworld sprite, movement and facing ──
         public ObservableCollection<string> OwSpriteEntries { get; } = new ObservableCollection<string>();
         // Only the movement types the loaded game defines; the list differs per game family.
         public ObservableCollection<string> OwMovementNames { get; } = new ObservableCollection<string>();
@@ -258,15 +250,11 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool HasOwModelPreview => OwModelPreview != null;
         public event EventHandler OwModelPreviewChanged;
 
-        // ── Overworld "kind" radio group (Standard / Trainer / Item), mirrors WinForms'
-        // normalRadioButton/isTrainerRadioButton/isItemRadioButton: selecting a kind sets ow.type and
-        // locks ow.scriptNumber to a value computed from the Trainer/Item dropdown (Script is only
-        // free-form for Standard).
+        // Trainer and Item set the type and lock the script to the picked entry; Standard leaves it free.
         private enum OwKind { Normal, Trainer, Item }
         private OwKind _owKind;
 
-        // ── Event type ──────────────────────────────────────────────────────────────── The full set the
-        // game defines, not just Standard/Trainer/Item.
+        // ── Event type: every type the game defines ──
         private ushort _owRawType;
         public ObservableCollection<string> OwEventTypes { get; } = new ObservableCollection<string>();
         private IReadOnlyList<OverworldEventType> _owTypeTable = new List<OverworldEventType>();
@@ -337,14 +325,10 @@ namespace DSPRE.Avalonia.ViewModels.World
             set { if (_ow == null || _suppress) return; if (_ow.Param2 == (ushort)value) return; _ow.Param2 = (ushort)value; Dirty(); OnPropertyChanged(nameof(OwParam2)); }
         }
 
-        // Script is normally locked when Trainer/Item drives it, but if the current script number
-        // doesn't resolve to any entry in that list (out-of-range/hand-edited data), unlock it so the
-        // user isn't stuck looking at a value they can't change from either the dropdown or the field.
+        // A script number that matches no entry unlocks the field, so the user can still change it.
         public bool OwScriptEnabled => _owKind == OwKind.Normal || OwTrainerIndexOutOfRange || OwItemIndexOutOfRange;
 
-        // Item mode already shows the resolved item/quantity in its own dropdown, so the raw Script
-        // fields would just be redundant clutter there; hide them entirely instead of graying them out.
-        // Still shown if the item index doesn't resolve, so there's a way to see/edit the raw number.
+        // Item mode shows the item in its box, so the raw script is hidden unless the item doesn't resolve.
         public bool OwScriptSectionVisible => _owKind != OwKind.Item || OwItemIndexOutOfRange;
 
         public bool OwTrainerFieldsVisible => _owKind == OwKind.Trainer;
@@ -363,16 +347,14 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         public string OwApricornNote =>
-            "This is an apricorn tree. What colour it grows is not stored here: the game looks up the "
-            + "apricorn bed this number picks and asks the save what is in it, so changing the number "
-            + "moves the tree to another bed and it comes out a different apricorn. The sprite chosen "
-            + "above is only what it looks like before the game replaces it.";
+            "This is an apricorn tree. Its colour isn't stored here: this number picks an apricorn bed, and "
+            + "the save says what grows there. A different number picks another bed. The sprite above is only "
+            + "shown until the game replaces it.";
 
-        /// <summary>HG Engine (community HeartGold decompilation, <see cref="RomInfo.IsHGE"/>) uses a
-        /// single generic item script (always exactly 7000) whose behavior reads the item ID straight
-        /// out of the event's own param0/sightRange field, instead of vanilla's one-script-per-item
-        /// scheme (script = 7000 + dropdown index). So the Item panel shows a different control
-        /// depending on which engine the loaded ROM actually runs.</summary>
+        /// <summary>
+        /// hg-engine has one item script (7000) that reads the item from param0, so the Item panel shows an item ID box
+        /// there.
+        /// </summary>
         public bool IsHGE => RomInfo.IsHGE;
         public bool OwItemFieldsVisibleVanilla => _owKind == OwKind.Item && !IsHGE;
         public bool OwItemFieldsVisibleHGE => _owKind == OwKind.Item && IsHGE;
@@ -387,9 +369,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             set { if (Set(ref _owTrainerIndex, value) && !_suppress && _ow != null && _owKind == OwKind.Trainer) RecomputeTrainerScript(); }
         }
 
-        // The Script field's raw value can point past the end of the current trainer roster (a script
-        // number that doesn't correspond to any known trainer, e.g. hand-edited data or a ROM-specific
-        // reserved value); show that clearly instead of a silently-blank dropdown.
+        // A script number past the trainer roster shows a warning, not a blank box.
         public bool OwTrainerIndexOutOfRange => _owKind == OwKind.Trainer && (_owTrainerIndex < 0 || _owTrainerIndex >= OwTrainerEntries.Count);
 
         /// <summary>Trainer 0 is the empty slot the games never use; picking it gives a battle with nobody.</summary>
@@ -411,10 +391,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public bool OwItemIndexOutOfRange => _owKind == OwKind.Item && (_owItemIndex < 0 || _owItemIndex >= OwItemEntries.Count);
 
-        /// <summary>HG Engine only: the item ID for this event, read/written straight to the same
-        /// underlying field as <see cref="OwSight"/> (param0), see <see cref="IsHGE"/>. Also keeps
-        /// OwSight's own cached backing field in sync so it doesn't show a stale value if the user
-        /// later switches this event back to Standard/Trainer kind.</summary>
+        /// <summary>hg-engine only: the item ID, stored in param0 like <see cref="OwSight"/>, whose cache is kept in step.</summary>
         public decimal OwItemIdHGE
         {
             get => _ow?.SightRange ?? 0;
@@ -443,8 +420,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             OnPropertyChanged(nameof(OwScriptGenericWarningVisible));
         }
 
-        /// <summary>Sets OwScript's model value + observable field directly, bypassing the property's equality guard
-        /// (WinForms always forces the script number when the type/trainer/item selection changes).</summary>
+        /// <summary>Sets the script past the equality guard, since a type, trainer or item change always rewrites it.</summary>
         private void ForceOwScript(ushort value)
         {
             if (_ow != null) _ow.ScriptNumber = value;
@@ -555,9 +531,8 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public void Detach() { AppEvents.NamesChanged -= OnNamesChanged; AppEvents.RomPatchStateChanged -= OnPatchStateChanged; }
 
-        // The item standardisation patch changes what each ground item entry is called; the script number stays.
-        // The item standardisation patch renumbers every ground item in the event files on disk and tells the user
-        // unsaved changes here are dropped, so the open file is read again with the new names. Other patches leave it.
+        // The item standardisation patch renumbers the ground items on disk and drops unsaved changes here, so the open
+        // file is read again with the new names.
         private void OnPatchStateChanged(object sender, EventArgs e)
         {
             if (IsHGE) return;
@@ -613,9 +588,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex) { AppLogger.Error("PopulateOwItemEntries: " + ex.Message); }
         }
 
-        /// <summary>Re-reads the ground-item script entries after they've been added/removed via the
-        /// Manage Ground Items dialog, and re-syncs the current selection to the (possibly shifted)
-        /// index for the event's own scriptNumber.</summary>
+        /// <summary>Rereads the ground items after the dialog changes them and keeps the event's entry selected.</summary>
         public void RefreshOwItemEntries()
         {
             PopulateOwItemEntries();
@@ -698,10 +671,6 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
         // Only overworlds store z as 16.16 fixed point (1 tile = 65536 units). Triggers and spawnables
         // store a plain value, so scaling those would truncate anything the user types to zero.
-        /// <summary>
-        /// Whether this kind of event keeps its height as a fixed-point world value rather than a plain
-        /// number.
-        /// </summary>
         private static bool ZIsFixedPointFor(Event e) => e is Overworld;
         private bool ZIsFixedPoint => ZIsFixedPointFor(_current);
         private decimal ToDisplayZ(int raw) => ZIsFixedPoint ? raw / 65536m : raw;
@@ -728,8 +697,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>The long version of the note, for hovering.</summary>
         public string ZPosNoteTip =>
             "Nothing in the games reads this height: arriving through a warp uses only x and z, and "
-            + "talking to a sign matches only its square. This is what the number would be in tiles if "
-            + "it were read the way an overworld's height is.";
+            + "talking to a sign matches only its square. It's shown in tiles as if it were an overworld's height.";
 
         public decimal ZPos
         {
@@ -880,10 +848,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
         public bool OwScriptIndexOutOfRange => _ow != null && OwScriptIndex < 0;
 
-        /// <summary>When the raw Script number for a Standard-type event isn't found in the header's own
-        /// paired script file, it may still be a valid "common"/global script (see <see cref="CommonScriptId"/>)
-        /// rather than a real error. Non-null only in that case, so the UI can show something useful
-        /// instead of a plain "doesn't match" warning.</summary>
+        /// <summary>
+        /// Set when a Standard event's script isn't in the header's file but is a common script, so the UI can say
+        /// where it is.
+        /// </summary>
         public string OwScriptCommonInfo
         {
             get
@@ -894,13 +862,12 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
         }
 
-        /// <summary>Shared by every event type: a script number that isn't in this header's own script
-        /// file may still be a valid common/global script rather than a mistake.</summary>
+        /// <summary>A script number missing from this header's file may still be a common script.</summary>
         private static string CommonScriptInfo(int scriptNumber)
         {
             CommonScriptId.Result result = CommonScriptId.Resolve(RomInfo.GameFamily, scriptNumber);
             if (result.Kind != CommonScriptId.Kind.Resolved) return null;
-            // Unnamed, the range is the card's title, so this line only says where the script is.
+            // An unnamed script's card is titled with its range, so this line only says where it is.
             return CommonScriptLabels.Of(scriptNumber) != null
                 ? result.Where
                 : $"Script file {result.ScriptArchiveId}, script {result.ManualUserId}";
@@ -914,9 +881,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool SpScriptHasCommonInfo => !string.IsNullOrEmpty(SpScriptCommonInfo);
         public bool SpScriptGenericWarningVisible => SpScriptIndexOutOfRange && !SpScriptHasCommonInfo;
 
-        /// <summary>Open the Script editor on the given script, following a common script to its real
-        /// archive the way the old editor's per-event "go to script" buttons did, and landing on the
-        /// script entry itself rather than just its file.</summary>
+        /// <summary>Opens the Script editor on the script itself, following a common script to its own file.</summary>
         public void GoToScript(int scriptNumber)
         {
             if (scriptNumber == EventFile.NoScript) { StatusText = "This event has no script."; return; }
@@ -958,7 +923,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void RenameCommonScript(int kind, string name)
         {
             string error = CommonScriptLabels.Rename(ShownScript(kind), name);
-            if (error != null) _ = DialogHelper.ShowErrorAsync("The name wasn't saved:\n" + error, "Event editor error");
+            if (error != null) _ = DialogHelper.ShowErrorAsync("The name wasn't saved:\n" + error, "Event editor");
             OnPropertyChanged(nameof(OwScriptCommonName)); OnPropertyChanged(nameof(OwScriptCommonInfo));
             OnPropertyChanged(nameof(TrScriptCommonName)); OnPropertyChanged(nameof(TrScriptCommonInfo));
             OnPropertyChanged(nameof(SpScriptCommonName)); OnPropertyChanged(nameof(SpScriptCommonInfo));
@@ -973,9 +938,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public decimal OwXRange { get => _owXr; set { if (Set(ref _owXr, value) && !_suppress && _ow != null) { _ow.XRange = (short)value; Dirty(); } } }
         public decimal OwYRange { get => _owYr; set { if (Set(ref _owYr, value) && !_suppress && _ow != null) { _ow.YRange = (short)value; Dirty(); } } }
 
-        // Dropdown-friendly wrappers: the sprite entry list is the sparse set of valid overlay-table
-        // keys (RomInfo.overworldTableKeys), so its ComboBox index isn't the same as the raw value;
-        // movement/orientation are plain 0..N index=value lists so they pass straight through.
+        // The sprite list skips unused table keys, so its index is mapped; movement and facing pass straight through.
         public int OwSpriteIndex
         {
             get => OverworldTableKeys == null ? -1 : Array.IndexOf(OverworldTableKeys, (uint)_owSprite);
@@ -986,7 +949,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 OnPropertyChanged();
             }
         }
-        // A value the game doesn't define shows nothing selected rather than snapping to another movement.
+        // A value the game doesn't define shows no selection, so it isn't changed to another movement.
         public int OwMovementIndex
         {
             get
@@ -1215,9 +1178,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private async Task ConfirmEventFileSwitchAsync(int requested)
         {
-            // Shared with every other editor that guards a record switch, so this offers Save as well
-            // as Discard. Discard-only forced the habit of saving first and switching second, which is
-            // the habit the prompt exists to make unnecessary.
+            // The shared switch guard, which offers Save as well as Discard.
             if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "event file")) return;
             SetClean();
             // Discarding can drop the file being switched to when it was added and not saved.
@@ -1227,9 +1188,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public int InitialIndex { get; set; }
 
-        /// <summary>When set (>=0), selected right after the event file finishes loading; lets callers
-        /// (e.g. Research Helper's Overworld/Trainer Watcher) jump straight to a specific overworld
-        /// entry instead of just the containing event file.</summary>
+        /// <summary>Overworld to select once the file loads, for callers that jump to one overworld.</summary>
         public int InitialOverworldIndex { get; set; } = -1;
         public int InitialSpawnableIndex { get; set; } = -1;
 
@@ -1260,10 +1219,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool ShowTriggers { get => _showTrig; set { if (Set(ref _showTrig, value)) RefreshMarkers(); } }
         public bool ShowSpawnables { get => _showSpawn; set { if (Set(ref _showSpawn, value)) RefreshMarkers(); } }
         public bool ShowGrid { get => _showGrid; set { if (Set(ref _showGrid, value)) RefreshMarkers(); } }
-        /// <summary>The tile-boundary grid overlay is only built for small matrices (≤4 cells): it's an
-        /// expensive per-tile collision scan that would otherwise repeat on every event add/move for a
-        /// large header, so bigger matrices skip it rather than pay that cost every refresh. The
-        /// checkbox is disabled instead of silently doing nothing so the limit is visible.</summary>
+        /// <summary>
+        /// The tile grid scans every tile on each refresh, so it only builds for 4 cells or fewer; the box is disabled
+        /// past that.
+        /// </summary>
         public bool GridToggleEnabled => _matrix != null && _matrix.Width * _matrix.Height <= 4;
 
         private bool _stitchGrid = true;
@@ -1326,8 +1285,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (GameFamily == GameFamilies.HGSS)
                     DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.InteriorBuildingModels });
                 _eventToHeader = BuildEventHeaderLookup();
-                // Overworld sprite lookups are populated during ROM/event setup in WinForms;
-                // ensure they exist for the 3D sprite billboards here (SetOWtable must run first).
+                // The 3D billboards need the overworld tables; SetOWtable must run first.
                 try { if (Ow3DSpriteDict == null) Set3DOverworldsDict(); } catch (Exception ex) { AppLogger.Error("Set3DOverworldsDict: " + ex.Message); }
                 try { if (OverworldTable == null) { SetOWtable(); ReadOWTable(); } } catch (Exception ex) { AppLogger.Error("ReadOWTable: " + ex.Message); }
                 OwSpriteEntries.Clear();
@@ -1347,7 +1305,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowErrorAsync($"Failed to set up Event editor:\n{ex.Message}", "Event editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't set up the Event editor:\n{ex.Message}", "Event editor");
             }
         }
 
@@ -1367,7 +1325,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 StatusText = "";
                 OnPropertyChanged(nameof(UnsavedChangesDescription));
             }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Failed to load event file {index}:\n{ex.Message}", "Event editor error"); }
+            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't load event file {index}:\n{ex.Message}", "Event editor"); }
         }
 
         private void RefreshLists()
@@ -1429,8 +1387,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 _owKind = OwKind.Trainer;
                 bool partner = _ow.ScriptNumber >= 4999;
                 int idx = partner ? _ow.ScriptNumber - 4999 : _ow.ScriptNumber - 2999;
-                // Out of range (past the end of the current trainer roster) → leave unselected (-1) rather
-                // than clamping into a wrong trainer; OwTrainerIndexOutOfRange surfaces this in the UI.
+                // Past the roster: left unselected so it isn't clamped to the wrong trainer; OwTrainerIndexOutOfRange
+                // warns.
                 _owTrainerIndex = (idx >= 0 && idx < OwTrainerEntries.Count) ? idx : -1;
                 _owPartnerTrainer = partner;
             }
@@ -1552,7 +1510,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = $"Added event file {newId}.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't add event file:\n{ex.Message}", "Event editor error"); }
+            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't add event file:\n{ex.Message}", "Event editor"); }
         }
 
         public async Task RemoveLastEventFileAsync()
@@ -1578,16 +1536,12 @@ namespace DSPRE.Avalonia.ViewModels.World
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = $"Removed event file {last}.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't remove event file:\n{ex.Message}", "Event editor error"); }
+            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't remove event file:\n{ex.Message}", "Event editor"); }
         }
 
         // ── 3D map view + event markers ─────────────────────────────────────────────────
 
-        /// <summary>
-        /// Builds the reverse map: event-file index → (matrix, area data) via the header that
-        /// references it (<see cref="MapHeader.EventFileID"/>). This is the real ROM linkage
-        /// the WinForms editor uses to pick the correct map + texture packs for an event file.
-        /// </summary>
+        /// <summary>Maps each event file to its header's matrix and area data (<see cref="MapHeader.EventFileID"/>).</summary>
         private static Dictionary<int, (ushort, byte, ushort, ushort)> BuildEventHeaderLookup()
         {
             Dictionary<int, (ushort, byte, ushort, ushort)> lookup = new Dictionary<int, (ushort, byte, ushort, ushort)>();
@@ -1679,7 +1633,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             try { _matrix = new GameMatrix(matrixId); }
             catch (Exception ex) when (ex is IOException || ex is ArgumentException || ex is EndOfStreamException)
             {
-                StatusText = $"Matrix {matrixId} could not be read: {ex.Message}";
+                StatusText = $"Matrix {matrixId} couldn't be read: {ex.Message}";
                 return;
             }
             _matrixId = matrixId;
@@ -1691,10 +1645,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         // ── Scripts available to this event file (the header's paired script file) ────────
-        /// <summary>The scripts defined in the header's paired script file (via <see cref="MapHeader.ScriptFileID"/>),
-        /// so Overworld/Trigger/Spawnable "Script" fields can be picked from a dropdown of what's actually
-        /// callable here instead of a free-form number. Values are each script's <c>manualUserID</c>, the
-        /// number these events' <c>scriptNumber</c> fields reference, after "No script" for 0.</summary>
+        /// <summary>The header's scripts by number, after No script, for the Script boxes.</summary>
         public ObservableCollection<string> AvailableScripts { get; } = new ObservableCollection<string>();
         private readonly List<uint> _availableScriptIds = new List<uint>();
 
@@ -1714,7 +1665,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     foreach (ScriptCommandContainer container in scriptFile.AllScripts)
                     {
                         _availableScriptIds.Add(container.ManualUserID);
-                        AvailableScripts.Add($"Script {container.ManualUserID} ({container.Commands?.Count ?? 0} cmds)");
+                        AvailableScripts.Add($"Script {container.ManualUserID} ({Plural.Of(container.Commands?.Count ?? 0, "command")})");
                     }
                 }
                 catch (Exception ex) { AppLogger.Error("PopulateAvailableScripts: " + ex.Message); }
@@ -1732,12 +1683,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private int _matrixId = -1;
         private int _headerId = -1;
 
-        /// <summary>
-        /// Renders only the maps this event file's events actually sit on (the cells they
-        /// occupy in the header's matrix), stitched together. This keeps the view focused on
-        /// the maps the file belongs to rather than loading an entire (possibly world-sized)
-        /// matrix. Each cell's tileset is resolved through its header section / the file's area.
-        /// </summary>
+        /// <summary>Renders only the maps the file's events stand on, so a world-sized matrix isn't loaded whole.</summary>
         private void DisplayMap()
         {
             Model3D = null;
@@ -1745,7 +1691,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 if (_matrix == null)
                 {
-                    MapInfo = "Unused by any header";
+                    MapInfo = "No header uses it";
                     MapLoaded?.Invoke(this, EventArgs.Empty); RefreshMarkers(); return;
                 }
 
@@ -1838,11 +1784,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private const int MapTiles = 32;
 
-        /// <summary>
-        /// Rebuilds the event overlay: warps/triggers/spawnables as flat colour quads and
-        /// overworlds as upright textured billboards (their real sprite). Everything is placed
-        /// by matrix cell + tile + z so it sits where it will be in-game.
-        /// </summary>
+        /// <summary>Rebuilds the markers: flat quads for warps, triggers and spawnables, sprite billboards for overworlds.</summary>
         public void RefreshMarkers()
         {
             MarkerMesh = null; MarkerVertexCount = 0;
@@ -1854,9 +1796,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 float tileZ = m.CellStrideZ / MapTiles;
 
                 (float x, float z) Cell(Event e) => EventCellRaw(m, e);
-                // The map is a 3D model whose top plane is the walkable ground. Place each event on
-                // the sampled surface at its tile (so it sits ON the plane, not at world-Y 0 which is
-                // below it). For overworld/spawnable Y, the field is a height-lookup hint, not an additive lift.
+                // Events stand on the map surface at their tile; an overworld or spawnable's height only picks the
+                // floor.
                 float EventY(float rawX, float rawZ, Event e) => EventSurfaceY(m, rawX, rawZ, e);
 
                 (float x, float y, float z) Foot(Event e)
@@ -2019,7 +1960,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex) { AppLogger.WarnOnce("EventEditorViewModel.ActionsFor", ex); return null; }
         }
 
-        /// <summary>The area the scene belongs to, which is what names its terrain animation.</summary>
+        /// <summary>The scene's area, which picks its terrain animation.</summary>
         public AreaData Area
         {
             get { try { return new AreaData(_areaDataId); } catch (Exception ex) { AppLogger.WarnOnce("EventEditorViewModel.Area", ex); return null; } }
@@ -2062,8 +2003,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// a local tile means nothing on its own once the view stitches several maps.</summary>
         public string HoverCoordsText { get => _hoverCoords; private set => Set(ref _hoverCoords, value); }
 
-        /// <summary>Reads the tile under a screen point through the viewport's own projection, so it
-        /// follows the camera rather than assuming a top-down view.</summary>
+        /// <summary>Reads the tile under a screen point through the viewport's projection, so any camera angle works.</summary>
         public void UpdateHoverCoords(double px, double py,
                                       Func<float, float, float, (bool ok, float sx, float sy)> project)
         {
@@ -2149,9 +2089,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             try
             {
-                // A script id above 2000 does not live in the map's own file at all: the games keep whole
-                // separate files for common scripts, trainers, hidden items and the rest, and read the id
-                // relative to where that range starts (SetScriptDataSub in script.c).
+                // Ids above 2000 live in shared files and count from their range's start (SetScriptDataSub in
+                // script.c).
                 CommonScriptId.Result common = CommonScriptId.Resolve(GameFamily, scriptNumber);
 
                 int scriptArchive, textArchive;
@@ -2248,8 +2187,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             switch (common.Kind)
             {
                 case CommonScriptId.Kind.Resolved:
-                    return $"Script {scriptNumber} lives in shared script file {common.ScriptArchiveId}, "
-                         + $"as its script {common.ManualUserId}.";
+                    return $"Script {scriptNumber} is script {common.ManualUserId} in shared script file {common.ScriptArchiveId}.";
                 default:
                     return null;
             }
@@ -2374,15 +2312,14 @@ namespace DSPRE.Avalonia.ViewModels.World
             SelectedTabIndex = type;
         }
 
-        // Event positions are INTEGER tiles (no fraction field), so a mouse drag accumulates sub-tile
-        // movement here and only steps the tile when it crosses a whole-tile boundary, exactly how the
-        // building gizmo carries its fraction. Reset at the start of each drag via BeginGizmoDrag().
+        // Positions are whole tiles, so a drag collects the fraction and steps on whole tiles, like the building gizmo.
         private float _dragAccumX, _dragAccumY, _dragAccumZ;
         public void BeginGizmoDrag() { _dragAccumX = 0f; _dragAccumY = 0f; _dragAccumZ = 0f; }
 
-        /// <summary>Moves the selected event by a raw-space delta along one world axis (0=X,1=Y,2=Z).
-        /// X/Z step the in-map tile in whole-tile increments (carrying the remainder), rolling over into
-        /// the neighbouring matrix cell at the map edge; Y edits the event height (zPosition).</summary>
+        /// <summary>
+        /// Moves the selected event along one axis (0=X, 1=Y, 2=Z): X and Z step whole tiles across map edges, Y
+        /// changes the height.
+        /// </summary>
         public void NudgeSelectedEventRaw(int axis, float rawDelta)
         {
             NsbmdRenderModel m = Model3D;
@@ -2504,8 +2441,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         /// <summary>
-        /// Imports events from a file. Into an empty file everything comes in; otherwise <paramref name="choose"/> picks
-        /// which events, and whether this file's own go first.
+        /// Imports events from a file. An empty file takes them all; otherwise <paramref name="choose"/> picks which,
+        /// and whether this file's go first.
         /// </summary>
         public async Task ImportAsync(Func<EventFile, Task<EventImportChoice>> choose)
         {
@@ -2517,7 +2454,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             try { using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read)) source = new EventFile(fs); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException)
             {
-                await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Event editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Event editor");
                 return;
             }
 
@@ -2551,7 +2488,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             RefreshLists(); Dirty(); RefreshMarkers();
             int count = choice.Overworlds.Length + choice.Warps.Length + choice.Triggers.Length + choice.Spawnables.Length;
             SaveNotice.Imported($"{count} events", path);
-            if (renumbered > 0) StatusText = $"{renumbered} overworlds got a new ID.";
+            if (renumbered > 0) StatusText = $"{Plural.Of(renumbered, "overworld")} got a new ID.";
         }
 
         private static int EventCount(EventFile f) =>
@@ -2567,10 +2504,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 OnPropertyChanged(n);
         }
 
-        /// <summary>Builds a complete text dump of the current 3D scene: matrix layout, per-cell map
-        /// placements (origin/size + the gap/overlap to each neighbour), and every event's exact computed
-        /// world position, so a render screenshot can be correlated against the numbers to find stitching/
-        /// placement issues. Paired with a PNG of the live render by the view.</summary>
+        /// <summary>A text dump of cell placements and event positions, to check stitching against a screenshot.</summary>
         public string BuildDebugReport()
         {
             StringBuilder sb = new System.Text.StringBuilder();
@@ -2579,7 +2513,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             sb.AppendLine($"Timestamp:   {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             sb.AppendLine($"Event file:  {_selectedIndex}");
             sb.AppendLine($"Matrix id:   {_matrixId}    Area data: {_areaDataId}");
-            sb.AppendLine($"Stitch mode: {(_stitchGrid ? "Grid" : "Continuous")} (both now use the DS-true fixed 32-tile grid)");
+            sb.AppendLine($"Stitch mode: {(_stitchGrid ? "Grid" : "Continuous")}");
             if (_matrix != null) sb.AppendLine($"Matrix size: {_matrix.Width} x {_matrix.Height}");
             sb.AppendLine("Units: 1 matrix cell = 32 tiles; Grid stride = 8.0 raw units (0.25/tile).");
             sb.AppendLine();
@@ -2645,7 +2579,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             string path = await DialogHelper.SaveFileAsync(_owner, "Export event file", new[] { filter }, $"event_{_selectedIndex:D4}.ev");
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _file.ToByteArray()); SaveNotice.Exported(path); }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Event editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Event editor"); }
         }
     }
 

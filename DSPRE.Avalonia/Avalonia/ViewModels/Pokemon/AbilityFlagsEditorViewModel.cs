@@ -184,7 +184,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             (bool saved, string error) = await HgEngineSave.RunAsync(() => HgEngineAbilityFlags.TryWrite(changes, out string writeError) ? null : writeError);
             if (!saved)
             {
-                if (error != null) await DialogHelper.ShowErrorAsync($"The ability flags were not saved:\n{error}", "Ability flags error");
+                if (error != null) await DialogHelper.ShowErrorAsync($"The ability flags weren't saved:\n{error}", "Ability flags");
                 return false;
             }
             foreach ((int id, HashSet<string> set) in changes) _saved[id] = new HashSet<string>(set);

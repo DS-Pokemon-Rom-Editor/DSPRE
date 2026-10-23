@@ -52,8 +52,8 @@ namespace DSPRE.ROMFiles
             }
 
             /// <summary>
-            /// Where the game puts the player on this tile, which is what jump points, prop triggers and camera
-            /// regions are compared against: on the ground that is the terrain's height, not the floor's altitude.
+            /// Where the game puts the player on this tile, for jump points, prop triggers and camera regions: the
+            /// terrain height on the ground, not the floor altitude.
             /// </summary>
             public (int x, int y, int z) EventAt(int col, int row)
             {

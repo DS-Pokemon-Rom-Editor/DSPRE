@@ -39,13 +39,13 @@ namespace DSPRE.HgEngine
                 return;
             }
 
-            // A write no editor asked about keeps what it would delete rather than lose it unseen.
+            // A write no editor asked about keeps the comments it would delete, so nothing is lost unseen.
             if (keepLostComments && File.Exists(path))
             {
                 List<HgEngineLostComment> lost = HgEngineSourceComments.Lost(path, DiskText(path), output);
                 if (lost.Count > 0)
                 {
-                    AppLogger.Info($"Kept {lost.Count} comment(s) a write would have deleted from {path}.");
+                    AppLogger.Info($"Kept {Plural.Of(lost.Count, "comment")} a write would have deleted from {path}.");
                     lf = HgEngineSourceComments.AppendKept(output, lost).Replace("\r\n", "\n");
                     output = keepCrlf ? lf.Replace("\n", "\r\n") : lf;
                 }

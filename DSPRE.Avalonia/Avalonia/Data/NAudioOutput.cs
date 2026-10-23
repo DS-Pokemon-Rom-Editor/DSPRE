@@ -64,15 +64,10 @@ namespace DSPRE.Avalonia.Data
         }
     }
 
-    /// <summary>Plays back <see cref="SseqPlayer"/>'s rendered PCM through NAudio's WASAPI output. The playback
-    /// device is Windows-only, so every entry point checks <see cref="OperatingSystem.IsWindows"/> and no-ops
-    /// elsewhere; a Linux build degrades to silent instead of throwing.
-    ///
-    /// A move animation can trigger its sound effect more than once, including several times on the same frame
-    /// as a deliberate layering technique for a punchier hit, and the real hardware mixes every simultaneous
-    /// channel into one output stream. To match that, every active trigger runs through one persistent
-    /// <see cref="MixingSampleProvider"/>/<see cref="WaveOutEvent"/> pair rather than a separate OS output
-    /// device per trigger, and a voice is only removed once it has actually finished playing.</summary>
+    /// <summary>
+    /// Plays <see cref="SseqPlayer"/>'s PCM through NAudio; silent off Windows. Every trigger goes through one mixer, as the
+    /// hardware mixes channels, so a sound played several times on one frame layers.
+    /// </summary>
     public sealed class NAudioOutput : IAudioOutput
     {
         private readonly object _gate = new object();

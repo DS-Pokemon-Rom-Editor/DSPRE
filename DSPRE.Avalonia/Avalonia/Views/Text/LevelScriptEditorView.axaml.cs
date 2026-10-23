@@ -5,8 +5,6 @@ using DSPRE.Avalonia.ViewModels;
 
 namespace DSPRE.Avalonia.Views.Text
 {
-    /// <summary>Authored as a <see cref="UserControl"/> so it can be embedded as the Level Scripts tab in
-    /// the Maps workspace; standalone launches host it in an <see cref="EditorHostWindow"/>.</summary>
     public partial class LevelScriptEditorView : UserControl
     {
         private LevelScriptEditorViewModel VM => DataContext as LevelScriptEditorViewModel;
@@ -22,19 +20,12 @@ namespace DSPRE.Avalonia.Views.Text
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
         {
-            // TabControl raises Loaded again whenever this embedded tab is revisited. ROM loads call
-            // EnsureSetupAsync(owner) explicitly, so automatic attachment only needs to bootstrap once.
+            // Loaded fires on every tab revisit; ROM loads call EnsureSetupAsync themselves.
             if (!_setupDone) await EnsureSetupAsync();
         }
 
-        /// <summary>
-        /// VM setup. No-ops until a ROM is loaded: the embedded Maps-workspace instance is created at
-        /// app boot, before any ROM; <see cref="MapsWorkspaceView"/> re-invokes this after EVERY
-        /// successful load (including switching ROMs mid-session), so <c>vm.SetupAsync</c> always re-runs.
-        /// </summary>
-        /// <param name="ownerOverride">Pass the owning Window explicitly when this control may not be
-        /// attached to the visual tree yet (a non-selected TabItem's content in the Maps workspace,
-        /// right after a ROM load), since <see cref="TopLevel.GetTopLevel"/> returns null in that case.</param>
+        /// <summary>Sets up the view model; see <see cref="MapsWorkspaceView"/>.</summary>
+        /// <param name="ownerOverride">The owning window, for a tab not yet in the visual tree.</param>
         public async Task EnsureSetupAsync(Window ownerOverride = null)
         {
             if (Design.IsDesignMode) return;
@@ -57,7 +48,7 @@ namespace DSPRE.Avalonia.Views.Text
         private void Remove_Click(object sender, RoutedEventArgs e) => VM?.RemoveTrigger();
         private void GoToScript_Click(object sender, RoutedEventArgs e) => VM?.GoToTriggerScript();
 
-        private const string ErrorTitle = "Level script editor error";
+        private const string ErrorTitle = "Level script editor";
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {

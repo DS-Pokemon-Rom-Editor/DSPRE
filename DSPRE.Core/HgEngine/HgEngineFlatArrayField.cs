@@ -3,10 +3,10 @@ using System.Linq;
 
 namespace DSPRE.HgEngine
 {
-    /// <summary>Shared read/write primitive for the several hg-engine data/*.c files that are just a flat
-    /// `[SPECIES_X] = value,` array (one scalar per species), e.g. HiddenAbilityTable.c, BaseExperienceTable.c,
-    /// BabyMons.c, RegionalDex.c, SpeciesToOWFormFemale.c. A species with no entry (sparse tables, or a table not
-    /// re-dumped since a fakemon was added) gets one inserted rather than failing.</summary>
+    /// <summary>
+    /// Reads and writes the flat <c>[SPECIES_X] = value,</c> tables (HiddenAbilityTable.c, BaseExperienceTable.c,
+    /// BabyMons.c, RegionalDex.c, SpeciesToOWFormFemale.c). A species with no entry gets one inserted.
+    /// </summary>
     internal static class HgEngineFlatArrayField
     {
         private const string SpeciesH = "include/constants/species.h";

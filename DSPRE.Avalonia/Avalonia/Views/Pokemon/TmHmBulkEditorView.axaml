@@ -27,10 +27,10 @@
         <Button Content="{Binding SelectAllLabel}" Click="SelectAll_Click" Margin="0,0,6,4"/>
         <Button Content="{Binding SelectNoneLabel}" Click="SelectNone_Click" Margin="0,0,12,4"/>
 
-        <Button x:Name="SyncUnionButton" Content="Sync family (union)" Click="SyncUnion_Click" IsEnabled="{Binding IsByPokemonMode}" Margin="0,0,6,4"
-                ToolTip.Tip="Give it to every member of the selected families"/>
-        <Button Content="Sync family (intersection)" Click="SyncIntersect_Click" IsEnabled="{Binding IsByPokemonMode}" Margin="0,0,12,4"
-                ToolTip.Tip="Keep only the machines every member shares"/>
+        <Button x:Name="SyncUnionButton" Content="Share across family" Click="SyncUnion_Click" IsEnabled="{Binding IsByPokemonMode}" Margin="0,0,6,4"
+                ToolTip.Tip="Gives every family member each machine any of them can learn (union)"/>
+        <Button Content="Keep shared only" Click="SyncIntersect_Click" IsEnabled="{Binding IsByPokemonMode}" Margin="0,0,12,4"
+                ToolTip.Tip="Keeps only the machines every family member shares (intersection)"/>
         <Button Content="Copy compatibility to…" controls:Icon.Key="copy" Click="CopyTo_Click" IsEnabled="{Binding IsByPokemonMode}" Margin="0,0,12,4"/>
 
         <TextBox x:Name="FilterBox" Text="{Binding FilterText}" Width="180" PlaceholderText="Search Pokémon" Margin="0,0,0,4"/>

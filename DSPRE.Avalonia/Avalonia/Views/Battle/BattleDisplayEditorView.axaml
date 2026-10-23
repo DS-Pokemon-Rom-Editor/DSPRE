@@ -104,7 +104,7 @@
         <!-- RIGHT COLUMN: the editable fields. -->
         <StackPanel Grid.Column="2" Spacing="14" VerticalAlignment="Top" MinWidth="320">
 
-          <!-- Party icon palette + graphic -->
+
           <StackPanel Spacing="4">
             <TextBlock Text="Party icon" FontWeight="SemiBold"/>
             <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
@@ -134,7 +134,7 @@
 
           <Separator/>
 
-          <!-- Battle sprite & shadow data -->
+
           <StackPanel Spacing="6">
             <TextBlock Text="Battle sprite &amp; shadow" FontWeight="SemiBold"/>
             <TextBlock Text="This Pokémon has no battle-sprite record." IsVisible="{Binding !HasSpriteData}"
@@ -183,7 +183,7 @@
                             ToolTip.Tip="The in-game text speed option."/>
                   <StackPanel Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" Spacing="12">
                     <CheckBox Content="Battle music" IsChecked="{Binding PlayBattleMusic}" VerticalAlignment="Center"
-                              ToolTip.Tip="Its class or species theme, else the standard one."/>
+                              ToolTip.Tip="Plays the class's or Pokémon's theme, or the standard one when there is none."/>
                     <CheckBox Content="In Kanto" IsChecked="{Binding KantoMusic}" IsVisible="{Binding ShowKantoMusic}" IsEnabled="{Binding PlayBattleMusic}"
                               VerticalAlignment="Center" ToolTip.Tip="The standard themes play their Kanto versions."/>
                     <TextBlock Foreground="{DynamicResource Editor.Subtle}" Text="{Binding BattleMusicText}" IsVisible="{Binding PlayBattleMusic}" VerticalAlignment="Center"/>
@@ -198,19 +198,18 @@
 
             <TabControl IsVisible="{Binding HasSpriteData}">
 
-              <!-- ── Positioning ─────────────────────────────────────────────────────────── -->
               <TabItem Header="Positioning">
                 <StackPanel Spacing="6" Margin="0,8,0,0">
                   <Grid ColumnDefinitions="160,10,150">
                     <TextBlock Grid.Column="0" Text="Front Y offset" VerticalAlignment="Center"
-                               ToolTip.Tip="Signed nudge to the front sprite (positive = up, negative = down). −128…127."/>
+                               ToolTip.Tip="Moves the front sprite up (positive) or down (negative), from -128 to 127."/>
                     <NumericUpDown Grid.Column="2" Value="{Binding SpriteY}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
                   </Grid>
 
                   <!-- Per-gender sprite heights (DP / Platinum, height.narc). Signed. Hidden while viewing a form. -->
                   <StackPanel IsVisible="{Binding ShowBaseHeights}" Spacing="6">
                     <CheckBox Content="Edit both genders together" IsChecked="{Binding UnifiedEdit}"
-                              ToolTip.Tip="One field per axis writes both ♂ and ♀. Off edits each gender separately."/>
+                              ToolTip.Tip="One set of heights for both genders. Off gives male and female their own."/>
 
                     <!-- Unified edit: one field per axis, writes both genders. -->
                     <StackPanel IsVisible="{Binding UnifiedEdit}" Spacing="6">
@@ -221,7 +220,7 @@
                       </Grid>
                       <Grid ColumnDefinitions="160,10,150">
                         <TextBlock Grid.Column="0" Text="Back height" VerticalAlignment="Center"
-                                   ToolTip.Tip="Back-sprite height (both genders). Signed −128…127."/>
+                                   ToolTip.Tip="How high the back sprite sits, both genders."/>
                         <NumericUpDown Grid.Column="2" Value="{Binding BackHeightUnified}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
                       </Grid>
                     </StackPanel>
@@ -235,17 +234,17 @@
                       </Grid>
                       <Grid ColumnDefinitions="160,10,150">
                         <TextBlock Grid.Column="0" Text="Front height ♀" VerticalAlignment="Center"
-                                   ToolTip.Tip="Front-sprite height (female). Signed −128…127."/>
+                                   ToolTip.Tip="How high the female front sprite sits."/>
                         <NumericUpDown Grid.Column="2" Value="{Binding FrontHeightF}" Minimum="{Binding HeightMinimum}" Maximum="{Binding HeightMaximum}" FormatString="0" Increment="1"/>
                       </Grid>
                       <Grid ColumnDefinitions="160,10,150">
                         <TextBlock Grid.Column="0" Text="Back height ♂" VerticalAlignment="Center"
-                                   ToolTip.Tip="Back-sprite height (male). Signed −128…127."/>
+                                   ToolTip.Tip="How high the male back sprite sits."/>
                         <NumericUpDown Grid.Column="2" Value="{Binding BackHeightM}" Minimum="{Binding HeightMinimum}" Maximum="{Binding HeightMaximum}" FormatString="0" Increment="1"/>
                       </Grid>
                       <Grid ColumnDefinitions="160,10,150">
                         <TextBlock Grid.Column="0" Text="Back height ♀" VerticalAlignment="Center"
-                                   ToolTip.Tip="Back-sprite height (female). Signed −128…127."/>
+                                   ToolTip.Tip="How high the female back sprite sits."/>
                         <NumericUpDown Grid.Column="2" Value="{Binding BackHeightF}" Minimum="{Binding HeightMinimum}" Maximum="{Binding HeightMaximum}" FormatString="0" Increment="1"/>
                       </Grid>
                     </StackPanel>
@@ -262,7 +261,7 @@
                     </Grid>
                     <Grid ColumnDefinitions="160,10,150">
                       <TextBlock Grid.Column="0" Text="Back height" VerticalAlignment="Center"
-                                 ToolTip.Tip="Back-sprite height for the alternate form (both genders). Signed −128…127."/>
+                                 ToolTip.Tip="How high the alternate form's back sprite sits, both genders."/>
                       <NumericUpDown Grid.Column="2" Value="{Binding FormBackHeight}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
                     </Grid>
                     <controls:HelpTip Text="For the form picked in Sprites, both genders" HorizontalAlignment="Left"/>
@@ -270,7 +269,7 @@
 
                   <Grid ColumnDefinitions="160,10,150">
                     <TextBlock Grid.Column="0" Text="Shadow X position" VerticalAlignment="Center"
-                               ToolTip.Tip="Moves the shadow right (positive) or left (negative). Signed −128…127."/>
+                               ToolTip.Tip="Moves the shadow right (positive) or left (negative), from -128 to 127."/>
                     <NumericUpDown Grid.Column="2" Value="{Binding ShadowX}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
                   </Grid>
 
@@ -282,7 +281,6 @@
                 </StackPanel>
               </TabItem>
 
-              <!-- ── Frames ──────────────────────────────────────────────────────────────── -->
               <TabItem Header="Frames">
                 <StackPanel Spacing="8" Margin="0,8,0,0">
                   <StackPanel Orientation="Horizontal" Spacing="8">
@@ -300,11 +298,11 @@
                           <Grid ColumnDefinitions="Auto,60,Auto,50,Auto,60,Auto,60" Margin="0,0,0,4" ColumnSpacing="4">
                             <TextBlock Grid.Column="0" Text="Frame" VerticalAlignment="Center" ToolTip.Tip="Sprite frame to show. -1 ends the run; below -1 repeats an earlier slot."/>
                             <NumericUpDown Grid.Column="1" Value="{Binding FrameNo}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
-                            <TextBlock Grid.Column="2" Text="Dur" VerticalAlignment="Center" ToolTip.Tip="Ticks to hold, plus one. On a repeat slot, how many times to repeat."/>
+                            <TextBlock Grid.Column="2" Text="Hold" VerticalAlignment="Center" ToolTip.Tip="Ticks to hold, plus one. On a repeat slot, how many times to repeat."/>
                             <NumericUpDown Grid.Column="3" Value="{Binding Duration}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
-                            <TextBlock Grid.Column="4" Text="H-shift" VerticalAlignment="Center" ToolTip.Tip="Pixels to move the sprite sideways."/>
+                            <TextBlock Grid.Column="4" Text="Sideways" VerticalAlignment="Center" ToolTip.Tip="H-shift: pixels to move the sprite sideways."/>
                             <NumericUpDown Grid.Column="5" Value="{Binding HorizontalShift}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
-                            <TextBlock Grid.Column="6" Text="V-shift" VerticalAlignment="Center" ToolTip.Tip="Stored but not used by the game."/>
+                            <TextBlock Grid.Column="6" Text="Up and down" VerticalAlignment="Center" ToolTip.Tip="V-shift: stored but not used by the game."/>
                             <NumericUpDown Grid.Column="7" Value="{Binding VerticalShift}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
                           </Grid>
                         </DataTemplate>
@@ -319,11 +317,11 @@
                           <Grid ColumnDefinitions="Auto,60,Auto,50,Auto,60,Auto,60" Margin="0,0,0,4" ColumnSpacing="4">
                             <TextBlock Grid.Column="0" Text="Frame" VerticalAlignment="Center" ToolTip.Tip="Sprite frame to show. -1 ends the run; below -1 repeats an earlier slot."/>
                             <NumericUpDown Grid.Column="1" Value="{Binding FrameNo}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
-                            <TextBlock Grid.Column="2" Text="Dur" VerticalAlignment="Center" ToolTip.Tip="Ticks to hold, plus one. On a repeat slot, how many times to repeat."/>
+                            <TextBlock Grid.Column="2" Text="Hold" VerticalAlignment="Center" ToolTip.Tip="Ticks to hold, plus one. On a repeat slot, how many times to repeat."/>
                             <NumericUpDown Grid.Column="3" Value="{Binding Duration}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
-                            <TextBlock Grid.Column="4" Text="H-shift" VerticalAlignment="Center" ToolTip.Tip="Pixels to move the sprite sideways."/>
+                            <TextBlock Grid.Column="4" Text="Sideways" VerticalAlignment="Center" ToolTip.Tip="H-shift: pixels to move the sprite sideways."/>
                             <NumericUpDown Grid.Column="5" Value="{Binding HorizontalShift}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
-                            <TextBlock Grid.Column="6" Text="V-shift" VerticalAlignment="Center" ToolTip.Tip="Stored but not used by the game."/>
+                            <TextBlock Grid.Column="6" Text="Up and down" VerticalAlignment="Center" ToolTip.Tip="V-shift: stored but not used by the game."/>
                             <NumericUpDown Grid.Column="7" Value="{Binding VerticalShift}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
                           </Grid>
                         </DataTemplate>
@@ -357,7 +355,6 @@
                 </StackPanel>
               </TabItem>
 
-              <!-- ── Animation ───────────────────────────────────────────────────────────── -->
               <TabItem Header="Animation">
                 <StackPanel IsVisible="{Binding HasAnimData}" Spacing="6" Margin="0,8,0,0">
                   <StackPanel Orientation="Horizontal" Spacing="8">

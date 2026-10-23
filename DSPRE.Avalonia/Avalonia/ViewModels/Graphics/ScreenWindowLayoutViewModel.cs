@@ -272,7 +272,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public decimal PanelWidth { get => _panels?.Width ?? 0; set => ChangePanelSize(s => FitStrip(s with { Width = (int)value })); }
         public decimal PanelHeight { get => _panels?.Height ?? 0; set => ChangePanelSize(s => FitStrip(s with { Height = (int)value })); }
 
-        // So shrinking the panel is never blocked by the strip.
+        // Shrinking the panel is never blocked by the strip.
         private static PartyPanelSizePatch.Size FitStrip(PartyPanelSizePatch.Size s)
         {
             int column = Math.Min(s.StripColumn, Math.Max(0, s.Width - 1));
@@ -652,7 +652,19 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             ScreenWindowLayouts.Forget(_screen);
             Raise(nameof(HasUnsavedChanges));
             SaveNotice.Saved(UnsavedChangesDescription);
+            if (CursorMissesPanels()) StatusText = "The cursor frame wasn't rebuilt for the new panel size.";
             return true;
+        }
+
+        private bool CursorMissesPanels()
+        {
+            if (_panels == null || _members == null || !_panels.Resizable) return false;
+            try
+            {
+                return PartyCursorFrames.FrameSize(Saved(_members.CursorCells)) is (int w, int h)
+                    && (w != _panels.Width * 8 || h != _panels.Height * 8);
+            }
+            catch (Exception e) when (e is System.IO.IOException || e is ArgumentException) { return false; }
         }
 
         public void DiscardChanges()

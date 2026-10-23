@@ -9,21 +9,8 @@ using System.Threading.Tasks;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// Finds and edits the starter's give command in a project's decompiled script sources.
-    ///
-    /// This is the way round to do it when the project has them. The game names the thing itself:
-    ///
-    ///     GetPlayerStarterSpecies VAR_0x8000
-    ///     GivePokemon VAR_0x8000, 5, ITEM_NONE, VAR_RESULT
-    ///
-    /// A GivePokemon reading the same variable a GetPlayerStarterSpecies just wrote is the starter, and
-    /// there is exactly one in an untouched Platinum. Looking for "the species comes from a variable"
-    /// instead matches two, and GetPlayerStarterSpecies on its own appears twenty times, nearly all of
-    /// them writing VAR_RESULT to ask which starter you picked.
-    ///
-    /// Editing goes through the same two steps the Script editor's Save does: write the text, then
-    /// compile the project. Nothing bespoke, so a starter edit behaves exactly like someone opening the
-    /// script, changing the line by hand and saving it.
+    /// Finds the starter's GivePokemon in the script sources: the one reading the variable GetPlayerStarterSpecies just
+    /// wrote. Edits save and compile as the Script editor does.
     /// </summary>
     public static class StarterRotomSource
     {
@@ -50,8 +37,7 @@ namespace DSPRE.ROMFiles
             public string Summary => NamedAsStarter
                 ? $"the starter's, species from {SpeciesArgument}, level {Level}"
                 : $"species {SpeciesArgument}, level {Level}";
-            // Keyed by where it sits in the script rather than by line number, so editing something
-            // above it in the file does not lose the user's choice.
+            // Keyed by its place in the script, not its line, so edits above it keep the choice.
             public string Key => $"rotom:{FileId}:{Container}:{IndexInContainer}";
         }
 
@@ -77,10 +63,7 @@ namespace DSPRE.ROMFiles
         private static readonly Regex Starter = new Regex(
             @"^\s*GetPlayerStarterSpecies\s+(\S+)\s*$", RegexOptions.Compiled);
 
-        /// <summary>
-        /// Every give command in the sources, the one the game names as the starter first. Reading 575
-        /// text files is quicker than parsing the binaries and needs no command database.
-        /// </summary>
+        /// <summary>Every give command in the sources, the starter first. Reading the text is quicker than parsing the binaries.</summary>
         public static List<Match> FindAll()
         {
             List<Match> found = new List<Match>();
@@ -94,17 +77,11 @@ namespace DSPRE.ROMFiles
             return found.OrderByDescending(f => f.NamedAsStarter).ThenBy(f => f.FileId).ToList();
         }
 
-        /// <summary>
-        /// The give commands in one script source. This is what the editor reads when it already knows
-        /// where the starter is, which is every time until somebody moves it.
-        /// </summary>
-        /// <summary>
-        /// How many script sources have been read. The editor is supposed to read one on a project
-        /// nobody has changed, so this is how a test can tell the shortcut is still being taken.
-        /// </summary>
+        /// <summary>How many sources have been read, so a test can see the one-file shortcut is taken.</summary>
         public static int FilesRead { get; private set; }
         public static void ForgetFilesRead() => FilesRead = 0;
 
+        /// <summary>The give commands in one script source; while the starter hasn't moved, only this is read.</summary>
         public static List<Match> ReadFile(int fileId)
         {
             List<Match> found = new List<Match>();
@@ -174,16 +151,15 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// Rewrites the level and the held item on that line and saves, which is what the Script
-        /// Editor does: write the source, then compile the project. Only the three arguments we own
-        /// are rebuilt, so a comment or the result variable on that line survives. Returns null when
-        /// it worked, or what went wrong, with the source put back if the compile refused it.
+        /// Rewrites the level and held item on that line, then saves as the Script editor does: write the source,
+        /// then compile. Only those arguments are rebuilt, so a comment on the line survives. Returns null on
+        /// success, or the error, with the source put back if the compile failed.
         /// </summary>
         public static async Task<string> SaveAsync(Match m, int? level, string heldItemArgument)
         {
             if (m == null) return "Nothing to change.";
             string path = PathFor(m.FileId);
-            if (!File.Exists(path)) return Path.GetFileName(path) + " is not there any more.";
+            if (!File.Exists(path)) return Path.GetFileName(path) + " isn't there any more.";
 
             string[] lines;
             string newline;
@@ -191,13 +167,13 @@ namespace DSPRE.ROMFiles
             try
             {
                 string text = File.ReadAllText(path);
-                // Written back with the file's own line endings rather than the platform's.
+                // Written back with the file's line endings, not the platform's.
                 newline = text.Contains("\r\n") ? "\r\n" : "\n";
                 endsWithNewline = text.EndsWith("\n");
                 lines = text.Replace("\r\n", "\n").Split('\n');
                 if (endsWithNewline) lines = lines.Take(lines.Length - 1).ToArray();
             }
-            catch (Exception ex) { return "Could not read the script source: " + ex.Message; }
+            catch (Exception ex) { return "Couldn't read the script source: " + ex.Message; }
             void Write()
             {
                 ProjectSourceWatcher.Expect(path);
@@ -220,7 +196,7 @@ namespace DSPRE.ROMFiles
                 $"{indent}GivePokemon {give.Groups[1].Value.Trim()}, {newLevel}, {newItem}{tail}";
 
             try { Write(); }
-            catch (Exception ex) { return "Could not write the script source: " + ex.Message; }
+            catch (Exception ex) { return "Couldn't write the script source: " + ex.Message; }
 
             string failure = await CompileProjectAsync(path);
             if (failure != null)
@@ -243,18 +219,18 @@ namespace DSPRE.ROMFiles
         /// </summary>
         private static async Task<string> CompileProjectAsync(string sourcePath)
         {
-            if (!RotomTool.IsAvailable) return "The rotom tool is not available, so nothing was saved.";
+            if (!RotomTool.IsAvailable) return "The rotom tool isn't available, so nothing was saved.";
             try
             {
                 // Only this file decides: another source failing must not undo the starter edit.
                 RotomTool.Result result = await RotomTool.CompileProjectAsync();
                 string failure = RotomTool.FailureFor(result, sourcePath);
                 if (failure != null)
-                    return "The script did not compile, so it was put back as it was: " + failure;
+                    return "The script didn't compile, so it was put back as it was: " + failure;
             }
             catch (Exception ex)
             {
-                return "The script did not compile, so it was put back as it was: " + ex.Message;
+                return "The script didn't compile, so it was put back as it was: " + ex.Message;
             }
             return null;
         }
@@ -315,9 +291,9 @@ namespace DSPRE.ROMFiles
         /// <summary>What checking a place the user pointed at came to.</summary>
         public enum Verdict
         {
-            Usable,            // a give command taking its species from a variable, which we can edit
+            Usable,            // a give command taking its species from a variable; editable
             SpeciesIsItsOwn,   // a give command with the species written in, so it picks its own
-            NotAGiveCommand,   // nothing there we can work with
+            NotAGiveCommand,   // nothing editable there
         }
 
         public sealed class Check
@@ -346,13 +322,13 @@ namespace DSPRE.ROMFiles
 
             if (inThere.Count > 0)
                 return new Check { Verdict = Verdict.SpeciesIsItsOwn, Found = inThere[0],
-                                   Message = "This script seems to manage species on its own, which we do not handle." };
+                                   Message = "DSPRE can't edit this script: it sets the species itself." };
 
             return new Check { Verdict = Verdict.NotAGiveCommand,
-                               Message = "There is no give-a-Pokemon command there." };
+                               Message = "There is no GivePokemon command there." };
         }
 
-        /// <summary>The scripts in a file, so the picker can offer them rather than ask for a number.</summary>
+        /// <summary>The scripts in a file, so the picker can list them.</summary>
         public static List<string> ContainersIn(int fileId)
         {
             List<string> names = new List<string>();
@@ -371,8 +347,8 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// The give command where an untouched game keeps its starter, read from that one file. Null when
-        /// it does not hold what it should, which is the only case worth reading the other 574 files for.
+        /// The give command where an untouched game keeps its starter, or null when it isn't there; only then are the
+        /// other files read.
         /// </summary>
         public static Match FindVanilla()
         {
@@ -392,7 +368,7 @@ namespace DSPRE.ROMFiles
             return ReadFile(fileId).FirstOrDefault(m => m.Key == key);
         }
 
-        /// <summary>The one the game names as the starter, or null when the sources do not say.</summary>
+        /// <summary>The give command the game marks as the starter, or null.</summary>
         public static Match FindStarter() => FindAll().FirstOrDefault(f => f.NamedAsStarter);
 
     }

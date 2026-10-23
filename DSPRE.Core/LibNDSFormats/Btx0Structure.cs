@@ -59,7 +59,7 @@ namespace DSPRE.LibNDSFormats
         /// <summary>The first layout difference from <paramref name="other"/>, worded as "its ... and this one has ...", or null.</summary>
         public string ProfileDifference(Btx0Structure other)
         {
-            if (other is null) return "it could not be read";
+            if (other is null) return "it couldn't be read";
             if (Textures.Count != other.Textures.Count)
                 return $"it has {Count(other.Textures.Count, "frame")} and this one has {Textures.Count}";
             for (int i = 0; i < Textures.Count; i++)

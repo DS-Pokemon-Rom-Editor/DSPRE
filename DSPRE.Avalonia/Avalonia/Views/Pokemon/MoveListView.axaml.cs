@@ -6,7 +6,7 @@ using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Views.Pokemon
 {
-    /// <summary>The moves on one ability list, as the Move Data editor holds them now; a double-click opens the move there.</summary>
+    /// <summary>The moves on one ability list, as the Move data editor has them; double-clicking a move opens it there.</summary>
     public partial class MoveListView : Window
     {
         private readonly MoveDataEditorViewModel _vm;

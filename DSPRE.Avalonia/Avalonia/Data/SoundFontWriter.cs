@@ -39,7 +39,7 @@ namespace DSPRE.Avalonia.Data
 
             List<SbnkInstrument> instruments;
             try { instruments = sdat.GetBankInstruments(bankNo); }
-            catch (Exception ex) { return Fail(r, "That bank could not be read: " + ex.Message); }
+            catch (Exception ex) { return Fail(r, "That bank couldn't be read: " + ex.Message); }
             if (instruments == null || instruments.Count == 0)
                 return Fail(r, "That bank holds no instruments.");
 
@@ -77,8 +77,7 @@ namespace DSPRE.Avalonia.Data
                     SwavSample sample;
                     if (region.Psg != PsgKind.None)
                     {
-                        // A tone generator has no recording of its own, so write out the sound it makes
-                        // as one short looping clip and point at that.
+                        // A tone generator has no recording, so its sound is written as one short looping clip.
                         sample = PsgWaveform.For(region);
                         key = $"psg{(int)region.Psg}-{region.PsgDuty}";
                     }
@@ -107,8 +106,8 @@ namespace DSPRE.Avalonia.Data
             }
 
             if (built.Count == 0)
-                return Fail(r, "None of that bank's instruments point at a recording this can read, so "
-                             + "there would be nothing in the file.");
+                return Fail(r, "None of that bank's instruments use a recording DSPRE can read, so the file "
+                             + "would be empty.");
 
             r.Instruments = built.Count;
             r.Regions = built.Sum(b => b.Zones.Count);
@@ -120,14 +119,14 @@ namespace DSPRE.Avalonia.Data
                 r.Notes.Add($"{r.TonesMade} of these are the DS's own tone generators, which carry no "
                           + "recording. Each was written out as one short looping clip of the sound it makes.");
             if (leftOut > 0)
-                r.Notes.Add($"{leftOut} note ranges point at a recording that is not there, so they were "
-                          + "left out. The rest went in.");
+                r.Notes.Add($"{leftOut} note ranges use a recording that isn't there, so they were left out. "
+                          + "The rest went in.");
             r.Notes.Add("Note ranges, root notes, loop points and sample rates are carried across exactly. "
-                      + "The attack, decay, sustain and release are converted from the way the DS counts "
-                      + "them to the way a SoundFont does, so they are close rather than identical.");
+                      + "The attack, decay, sustain and release are converted from the DS's values to "
+                      + "SoundFont ones, so they're close, not identical.");
 
             try { r.Bytes = Write(name, built, pool); }
-            catch (Exception ex) { return Fail(r, "That SoundFont could not be put together: " + ex.Message); }
+            catch (Exception ex) { return Fail(r, "That SoundFont couldn't be put together: " + ex.Message); }
             return r;
         }
 
@@ -139,10 +138,8 @@ namespace DSPRE.Avalonia.Data
         private const int Padding = 46;
 
         /// <summary>
-        /// Samples of run-up and run-out kept around each recording, outside the part that plays. A
-        /// player working out what sits between two samples reaches a little past the loop in both
-        /// directions, and the format asks for room to do it in. Filling that room with the sound that
-        /// really comes next in the loop is what keeps a held note from clicking at the seam.
+        /// Samples kept either side of each recording, filled with the loop's own sound, so a held note doesn't click at the
+        /// seam when a player reads past the loop.
         /// </summary>
         private const int Margin = 8;
 
@@ -175,9 +172,8 @@ namespace DSPRE.Avalonia.Data
                 for (int n = 0; n < pcm.Length; n++) Put(starts[i] + n, pcm[n]);
 
                 if (!s.Loop) continue;
-                // The run-up is what the loop plays just before coming round again, and the run-out is
-                // what it plays just after. Both are real sound from inside the loop, so a player
-                // reading past the seam hears the loop continue rather than silence.
+                // The run-up is what the loop plays just before it repeats and the run-out just after, so a player reading
+                // past the seam hears the loop continue.
                 int from = Math.Clamp(s.LoopStartSample, 0, pcm.Length - 1);
                 int loopLength = pcm.Length - from;
                 for (int n = 0; n < Margin; n++)
@@ -319,8 +315,8 @@ namespace DSPRE.Avalonia.Data
         // ── turning the DS's numbers into a SoundFont's ───────────────────────────────────────────
 
         /// <summary>
-        /// How long the attack takes, in seconds. The DS keeps a rate rather than a length, so this runs
-        /// the hardware's own per-tick curve until the note is all the way up.
+        /// How long the attack takes, in seconds. The DS keeps a rate, not a length, so this runs the hardware's per-tick
+        /// curve until the note is fully up.
         /// </summary>
         internal static double AttackSeconds(double attackRate)
         {

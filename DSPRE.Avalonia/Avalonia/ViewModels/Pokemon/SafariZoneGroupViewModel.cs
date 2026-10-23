@@ -8,14 +8,8 @@ using DSPRE.ROMFiles;
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
     /// <summary>
-    /// ViewModel for a single Safari Zone encounter group (Grass / Surf / Old Rod /
-    /// Good Rod / Super Rod). Each group has independent Morning/Day/Night "normal"
-    /// encounter lists, plus a set of "object" encounter slots that are shared
-    /// (by index) across the three times and carry item requirements.
-    ///
-    /// Each slot is one row with its three times side by side, edited in place.
-    /// Raises <see cref="Changed"/> on any edit so the parent
-    /// <see cref="SafariZoneEncounterViewModel"/> can mark itself dirty.
+    /// One Safari Zone encounter group: morning, day and night rows side by side, plus the object slots the
+    /// three times share, which carry item requirements.
     /// </summary>
     public class SafariZoneGroupViewModel : INotifyPropertyChanged
     {

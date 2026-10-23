@@ -5,10 +5,6 @@ using DSPRE.Avalonia.ViewModels;
 
 namespace DSPRE.Avalonia.Views.World
 {
-    /// <summary>
-    /// Header editor as a <see cref="UserControl"/> so it can be embedded as a tab in the
-    /// Avalonia MainWindow shell. Standalone launches host it in an <see cref="EditorHostWindow"/>.
-    /// </summary>
     public partial class HeaderEditorView : UserControl
     {
         private HeaderEditorViewModel VM => DataContext as HeaderEditorViewModel;

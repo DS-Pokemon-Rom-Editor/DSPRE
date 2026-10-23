@@ -20,10 +20,8 @@ using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChange
 namespace DSPRE.Avalonia.ViewModels.Battle
 {
     /// <summary>
-    /// "Battle Display" tab of the Pokémon editor: per-species presentation tweaks that live outside the
-    /// personal/sprite data, including the party-icon palette (which of the 3 icon palettes a mon's party
-    /// icon uses, 1 byte per species in the ARM9 icon-palette table) and battle-sprite coordinates
-    /// (/a/1/8/0). Supported on Diamond/Pearl, Platinum, and HeartGold/SoulSilver; see <see cref="IsAvailable"/>.
+    /// The Pokémon editor's Battle display tab: each species' party icon palette (one byte per species in
+    /// the ARM9 table) and battle sprite positions (/a/1/8/0).
     /// </summary>
     public class BattleDisplayEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
@@ -40,7 +38,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                                 || GameFamily == GameFamilies.Plat
                                 || GameFamily == GameFamilies.HGSS;
         public string UnavailableText =>
-            "Battle Display editing is supported on Diamond / Pearl, Platinum, and HeartGold / SoulSilver.";
+            "The Battle display tab works in Diamond, Pearl, Platinum, HeartGold and SoulSilver.";
 
         // The 3 party-icon palettes a mon can use (the icons themselves are edited in the icon NARC).
         public ObservableCollection<string> PartyPalettes { get; } =
@@ -133,13 +131,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             RaiseSprites();
         }
 
-        // ── Arena type (real battle-scene backdrop + terrain platforms, preview-only) ─────────────
-        // One dropdown picks a terrain (Gravel/Sand/Lawn/.../Floor); its matching backdrop is
-        // auto-paired (BattleGroundRenderer.BackdropForTerrain). Same renderers the Move animations & battle scripts editor
-        // uses for its (separate, more granular) Background/Terrain selectors; see
-        // Data/BattleGroundRenderer.cs + BattleBgRenderer.cs. Falls back to the bundled
-        // placeholder art (HasArenaGraphics=false) if the ROM/NARC is unavailable or decoding fails, so
-        // the scene always has a floor. Not saved anywhere, purely how the preview looks.
+        // Preview only. Falls back to bundled art when the ROM's graphics can't be decoded.
         private BattleGroundRenderer _groundRenderer;
         private BattleBgRenderer _bgRenderer;
 
@@ -182,10 +174,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     ArenaGroundMineLeft = mine.Left; ArenaGroundMineTop = mine.Top;
                     ArenaGroundEnemy = ImageConverter.FromRgba(enemy.Rgba, enemy.Width, enemy.Height);
                     ArenaGroundEnemyLeft = enemy.Left; ArenaGroundEnemyTop = enemy.Top;
-                    // The shared backdrop tilemap can be taller than the 256×192 scene (some are a stacked
-                    // multi-band scrolling texture), so crop to the top-left 256×192 instead of stretching the
-                    // whole thing to fit, or a taller source visibly squishes into repeated horizontal bands
-                    // (mirrors BattleScriptEditorViewModel.BgToBackdrop, same underlying data).
+                    // Crop to the top 256×192: some backdrops are taller and squish into bands when stretched.
                     // Two copies side by side so the intro scroll wraps without a seam.
                     _backdropWidth = Math.Max(256, backdropImg.Width);
                     ArenaBackdrop = ImageConverter.FromRgba(TileBackdropRgba(backdropImg.Rgba, backdropImg.Width, backdropImg.Height, _backdropWidth), _backdropWidth * 2, 192);
@@ -224,7 +213,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
         public string GaugeLevelText => "Lv5";
 
-        // The name and level as the game itself draws them, rather than typed out in a desktop font.
+        // The name and level drawn in the game's own letters, not a desktop font.
         // Shared with the other two battle previews so all three show the same thing.
         public bool GaugeTextIsReal => Data.GaugeTextImages.Available;
         public global::Avalonia.Media.Imaging.Bitmap GaugeNameImage => Data.GaugeTextImages.Name(GaugeNameText);
@@ -254,7 +243,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             RenderMessageBox();
         }
 
-        // The Battle Screen editor's box and font, in the default window style.
+        // The Battle screen's box and font, in the default window style.
         private Bitmap _messageBoxImage;
         private bool _messageBoxTried;
         public Bitmap MessageBoxImage { get => _messageBoxImage; private set => Set(ref _messageBoxImage, value); }
@@ -417,7 +406,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public Bitmap EnemySpriteF => Front(true);
         public Bitmap PlayerSpriteF => Back(true);
 
-        // Frame-integrity warnings: reuses the Sprite Editor's own blank-frame detection (FrameCellState), cross-checked against whichever pattern data actually drives this preview.
+        // Frame warnings reuse the Sprite tab's blank-frame check (FrameCellState) on the pattern data this preview uses.
         private PokemonSpriteEditorViewModel.FrameCellState PoseCell(bool front, bool female)
         {
             if (_sprites == null) return null;
@@ -511,7 +500,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private int ActFrontH(bool f) => (_formMode && _hasFormHeights) ? _formFrontH : (f ? _frontHeightF : _frontHeightM);
         private int ActBackH(bool f) => (_formMode && _hasFormHeights) ? _formBackH : (f ? _backHeightF : _backHeightM);
 
-        // Base 10, which is what the engine works out: appear Y 50 less half the 80px sprite.
+        // Base 10, as the engine computes it: appear Y 50 minus half the 80px sprite.
         // A measurement against a screenshot once put this at 11; testers on real battles say 10.
         private double FrontTopFor(int h) => 10 - _spriteY + (HeightsActive ? h : 0);
         private double BackTopFor(int h) => 72 + (HeightsActive ? h : 0);
@@ -648,10 +637,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             catch (Exception ex) { AppLogger.WarnOnce("BattleDisplayEditorViewModel.ExportIconGraphic", ex); return null; }
         }
 
-        /// <summary>Exports the icon as a genuine indexed PNG (real embedded 16-color palette table,
-        /// not RawImage's always-flattened RGBA) so tools that read PNG palettes see the actual colors,
-        /// same intent as the WinForms "export full palette" option. Unavailable while a pending unsaved
-        /// import exists, since that replacement isn't on disk in indexed form yet.</summary>
+        /// <summary>Exports the icon as an indexed PNG with its 16-colour palette. Unavailable while an import
+        /// is unsaved.</summary>
         public byte[] ExportIconGraphicIndexedPng()
         {
             if (!IsAvailable || _currentId < 0 || _pendingIconGraphic != null) return null;
@@ -737,9 +724,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private bool _hasAnimData;
         public bool HasAnimData { get => _hasAnimData; private set => Set(ref _hasAnimData, value); }
 
-        // hg-engine keeps this data in source files, so _src is never built there. Requiring it left every
-        // offset, shadow and height edit silently non-dirty, and an editor that never reports unsaved
-        // changes is never asked to save: those edits were dropped on close or on switching mon.
+        // hg-engine has no _src, so it must not gate dirty tracking.
         private bool CanEditSprite => (_src != null || HgEngineProject.IsActive) && _hasSpriteData && !_loading;
 
         private int _spriteY;   // signed −128..127, additive (positive = up, negative = down)
@@ -1181,7 +1166,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     if (_trainerIndex < 0) initial = SendOutGraphics.DefaultTrainer();
                 });
             }
-            catch (Exception ex) { AppLogger.Error("Send-out preview could not list trainers: " + ex.Message); }
+            catch (Exception ex) { AppLogger.Error("Send-out preview couldn't list trainers: " + ex.Message); }
             _trainersLoading = false;
             if (list == null || list.Count == 0) return;
             _trainersLoaded = true;
@@ -1784,12 +1769,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             RaiseMessage();
         }
 
-        // The UI timer fires irregularly, so ticks are counted against a stopwatch rather than one per callback.
+        // The UI timer fires irregularly, so ticks are counted from a stopwatch, not one per callback.
         private void OnAnimTimer()
         {
             if (!IsPlaying) { _animTimer?.Stop(); return; }
             long due = (long)(_clock.Elapsed.TotalSeconds * PreviewFps);
-            if (due - _ticksRun > 4) _ticksRun = due - 1;   // after a stall, resume rather than fast-forward
+            if (due - _ticksRun > 4) _ticksRun = due - 1;   // after a stall, resume instead of fast-forwarding
             while (IsPlaying && _ticksRun < due)
             {
                 _ticksRun++;
@@ -1903,15 +1888,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private int PreviewFps => FrameRateIndex == 1 ? 60 : 30;
 
-        // ── Program-animation SCRIPT EDITOR (Phase B): editable Pokémon animation command list for the front script ──
-        // NOTE: this edits the shared animation script in the pokeanime NARC, so it affects every Pokémon that
-        // uses this program-animation number, not just the current mon. Saved via its own "Save script" button.
+        // Shared by every Pokémon using this number, and saved with its own button.
         public ObservableCollection<ProgramCmdRow> ProgramRows { get; } = new ObservableCollection<ProgramCmdRow>();
         public bool HasProgramScript => ProgramRows.Count > 0;
 
         // Which script the editor targets: 0 = front (prg_anm_f), 1..3 = back variant slots 0..2 (prg_anm_b[n]).
         private int _scriptTarget;
-        public string[] ScriptTargetOptions { get; } = { "Front (prg_anm_f)", "Back slot 0", "Back slot 1", "Back slot 2" };
+        public string[] ScriptTargetOptions { get; } = { "Front", "Back slot 0", "Back slot 1", "Back slot 2" };
         public int ScriptTargetIndex
         {
             get => _scriptTarget;
@@ -1931,7 +1914,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             get
             {
                 string which = _scriptTarget == 0 ? "Front" : $"Back slot {_scriptTarget - 1}";
-                return $"{which} program animation #{CurrentScriptFile()}: script ({ProgramRows.Count} cmds)";
+                return $"{which} animation {CurrentScriptFile()}: {Plural.Of(ProgramRows.Count, "command")}";
             }
         }
         private bool _scriptDirty;
@@ -1989,7 +1972,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private List<PokemonAnimCommand> BuildCommandsFromRows()
         {
             if (_animDefsNarc == null)
-                return new List<PokemonAnimCommand>();   // return empty list
+                return new List<PokemonAnimCommand>();
 
             List<PokemonAnimCommand> cmds = new List<PokemonAnimCommand>();
             foreach (ProgramCmdRow row in ProgramRows)
@@ -2190,8 +2173,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         public BattleDisplayEditorViewModel() { }
 
-        /// <summary>Runtime ctor: takes the sibling Sprite VM so the battle mock can show this mon's
-        /// front (enemy) and back (player) sprites, refreshing when they re-render.</summary>
+        /// <summary>Takes the Sprite tab's view model so the preview shows this Pokémon's sprites as they
+        /// re-render.</summary>
         public BattleDisplayEditorViewModel(PokemonSpriteEditorViewModel sprites)
         {
             _sprites = sprites;
@@ -2328,7 +2311,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (error != null)
             {
                 AppLogger.Error("Battle Display save failed: " + error);
-                _ = DSPRE.Avalonia.DialogHelper.ShowErrorAsync("The Battle Display tab could not be saved: " + error, "Pokémon editor error");
+                _ = DSPRE.Avalonia.DialogHelper.ShowErrorAsync("Couldn't save the Battle display tab: " + error, "Pokémon editor");
                 return;
             }
             _savedPartyPaletteIndex = _partyPaletteIndex;
@@ -2382,7 +2365,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private int _verticalShift; public int VerticalShift { get => _verticalShift; set { if (_verticalShift != value) { _verticalShift = value; Raise(nameof(VerticalShift)); } } }
     }
 
-    /// <summary>One editable row of a Pokémon animation scripts: an opcode + its argument words (edited as
+    /// <summary>One editable row of a Pokémon animation script: an opcode + its argument words (edited as
     /// a comma/space-separated list; padded/truncated to the opcode's fixed arg count on save).</summary>
     public sealed class ProgramCmdRow : INotifyPropertyChanged
     {
@@ -2404,7 +2387,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 string[] names = DSPRE.Avalonia.Data.PokeAnimScript.ArgNames(Op);
                 if (names.Length > 0) return string.Join(", ", names);
                 int n = DSPRE.Avalonia.Data.PokeAnimScript.ArgsFor(Op);
-                return n == 0 ? "(no args)" : $"{n} arg(s)";
+                return n == 0 ? "No values" : Plural.Of(n, "value");
             }
         }
     }

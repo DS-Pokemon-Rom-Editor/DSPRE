@@ -6,10 +6,8 @@ using global::Avalonia.OpenGL;
 namespace DSPRE.Avalonia.Gl
 {
     /// <summary>
-    /// Minimal modern-GL function set bound through <see cref="GlInterface.GetProcAddress"/>.
-    /// Binding by proc-address (rather than relying on a specific Avalonia GlInterface
-    /// member surface) keeps this robust across Avalonia/driver variations. Covers the
-    /// subset needed for VBO + VAO + shader rendering.
+    /// The GL functions DSPRE draws with, bound through <see cref="GlInterface.GetProcAddress"/> so they work across
+    /// Avalonia and driver versions.
     /// </summary>
     public sealed class GlFunctions
     {

@@ -4,10 +4,8 @@ using System.Collections.ObjectModel;
 namespace DSPRE.Avalonia.Data
 {
     /// <summary>
-    /// Updates an <see cref="ObservableCollection{T}"/> of combo labels IN PLACE to match a new list,
-    /// rewriting changed entries, appending new ones, trimming removed ones. Updating in place (rather
-    /// than Clear+Add) keeps any bound <c>SelectedIndex</c> intact, so a live refresh of dropdown labels
-    /// or ROM names doesn't disturb the user's current selection.
+    /// Updates combo labels in place, so a bound <c>SelectedIndex</c> keeps the user's selection when labels or names
+    /// refresh.
     /// </summary>
     public static class ListSync
     {

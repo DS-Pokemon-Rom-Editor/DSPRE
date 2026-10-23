@@ -29,8 +29,7 @@ namespace DSPRE.Avalonia.Gl
         /// <summary>The material lets fog fall on it, polygon attribute bit 15.</summary>
         public bool Fog;
 
-        /// <summary>The material's resting texture matrix (its own scale, rotation and translation, built the way
-        /// the model's tool builds them); a texture animation replaces it while it plays. Null is identity.</summary>
+        /// <summary>The material's resting texture matrix, replaced while a texture animation plays; null is identity.</summary>
         public float[] TexMatrix;
     }
 
@@ -77,8 +76,7 @@ namespace DSPRE.Avalonia.Gl
         // can be matched to the parts it should move.
         public Dictionary<int, string> MaterialNameByKey = new Dictionary<int, string>();
 
-        /// <summary>Which material keys came from which building, so a building's own animation can be
-        /// matched to just its parts rather than to every material in the scene with the same name.</summary>
+        /// <summary>Which material keys came from which building, so its animation moves only its parts.</summary>
         public sealed class BuildingMaterials
         {
             public int ModelId; public int FirstKey, Count;
@@ -266,7 +264,7 @@ namespace DSPRE.Avalonia.Gl
     /// </summary>
     public static class NsbmdGeometry
     {
-        // WinForms applied this scale before rendering map models; buildings already include it.
+        // Map models need this scale; buildings already have it.
         private static float[] MapVertexScale(NSBMDModel model)
         {
             float ms = model?.ModelScale ?? 0f;
@@ -275,9 +273,8 @@ namespace DSPRE.Avalonia.Gl
             return Mat4.Scale(s, s, s);
         }
 
-        /// <summary>Builds a single model, centred/scaled to fit (for the standalone viewer).</summary>
-        /// <summary>Builds one model on its own. A joint animation can be handed in to replace the parts'
-        /// own matrices for a frame, which is what makes a door swing or a windmill turn.</summary>
+        /// <summary>Builds one model. A joint animation can replace its parts' matrices for a frame, so doors swing and windmills
+        /// turn.</summary>
         /// <param name="showMissingTextures">Draws a magenta check for a texture missing from the tileset.</param>
         public static NsbmdRenderModel BuildModel(NSBMDModel model,
             Func<int, NSBMDObject, float[]> jointMatrix = null, NsbmdRenderModel placeLike = null, bool showMissingTextures = false)
@@ -298,9 +295,7 @@ namespace DSPRE.Avalonia.Gl
             Dictionary<int, (Dictionary<string, NsbmdTextureData> Frames, List<(string Swap, int Frames)> Sequence)> mapAnimations = null,
             DSPRE.ROMFiles.TextureSrtAnimation groundScroll = null)
         {
-            // Build the single map as a 1×1 matrix cell so it gets the SAME fixed 32-tile CellPlacement and
-            // per-tile height grid the matrix/event editor uses. That gives the permission overlay a real tile
-            // grid (fixes oversized tiles on maps that don't fill all 32 tiles) and per-tile surface heights.
+            // Built as a 1 by 1 matrix cell, so the permission overlay gets the same 32-tile grid and heights.
             NsbmdRenderModel scene = BuildMatrixScene(new[]
             {
                 new MatrixCellGeometry { Map = map, Buildings = buildings, MapAnimations = mapAnimations, GroundScroll = groundScroll, CellX = 0, CellY = 0 }
@@ -761,10 +756,7 @@ namespace DSPRE.Avalonia.Gl
                     bool sets = coloured || (mat.HasDiffuseColor && c.R + c.G + c.B >= 0.05f * 255);
                     if (sets && NsbmdCull.Modulates(mat.PolyAttrib, mat.PolyAttribMask)) target.MaterialShadeByKey[key] = true;
 
-                    // Real per-material translucency (ported from WinForms PR #209) instead of hiding
-                    // materials outright: "h_kage" (影 = shadow) drop-shadow planes and puddle/window
-                    // overlays now render with their actual NSBMD alpha via GL_BLEND (NsbmdGlControl),
-                    // rather than being skipped and not drawn at all.
+                    // Translucent materials such as h_kage shadows, puddles and windows draw with their NSBMD alpha.
                     if (!target.MaterialAlphaByKey.ContainsKey(key))
                         target.MaterialAlphaByKey[key] = MaterialAlpha(mat);
 
@@ -784,7 +776,7 @@ namespace DSPRE.Avalonia.Gl
                     {
                         NsbmdTextureData tex = NsbmdTextureDecoder.Decode(mat);
                         if (tex != null) target.Textures[key] = tex;
-                        // The game draws these untextured; the magenta check is a Model Browser debugging aid.
+                        // The game draws these untextured; the magenta check is an aid in All models and textures.
                         else if (mat.MissingExternalTexture && showMissingTextures) target.Textures[key] = MissingTexture();
                     }
                 }
@@ -809,8 +801,7 @@ namespace DSPRE.Avalonia.Gl
             return new NsbmdTextureData { Rgba = rgba, Width = size, Height = size, WrapS = 1, WrapT = 1 };
         }
 
-        /// <summary>Converts the NSBMD 0-31 material alpha into a 0-1 GL alpha (31 = fully opaque).
-        /// Mirrors the WinForms fix in PR #209 (NSBMDGlRenderer.MaterialAlpha).</summary>
+        /// <summary>Converts NSBMD's 0-31 material alpha to GL's 0-1; 31 is opaque.</summary>
         private static float MaterialAlpha(NSBMDMaterial mat) => mat.Alpha >= 31 ? 1f : mat.Alpha / 31f;
 
         private static bool ComputeRawBounds(Dictionary<int, List<float>> byMat,
@@ -844,8 +835,7 @@ namespace DSPRE.Avalonia.Gl
             }
         }
 
-        /// <summary>One parameter word. Reads nought past the end rather than throwing, so a list
-        /// that stops mid-command is simply cut short.</summary>
+        /// <summary>One parameter word, or 0 past the end, so a list that stops mid-command is cut short.</summary>
         private static int S32(byte[] d, ref int i)
         {
             int v = i + 4 <= d.Length ? BitConverter.ToInt32(d, i) : 0;
@@ -896,10 +886,7 @@ namespace DSPRE.Avalonia.Gl
                 int[] cmds = new int[4];
                 for (int k = 0; k < 4; k++) cmds[k] = idx < len ? poly[idx++] : 0xff;
 
-                // Every command in the word is run, not only the ones with a parameter still to come.
-                // Stopping at the end of the parameters drops whatever sits after the last one, and the
-                // command that ends a run of corners takes no parameter, so a shape written as a single
-                // run lost all of it and a shape written as several lost its last one.
+                // Run every command in the word: the one that ends a run of corners takes no parameter.
                 for (int k = 0; k < 4; k++)
                 {
                     switch (cmds[k])

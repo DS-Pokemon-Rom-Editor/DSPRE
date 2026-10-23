@@ -10,7 +10,7 @@ namespace DSPRE.Avalonia.Data
     {
         /// <summary>
         /// What a PNG would lose going into a graphic: the colours its palette does not hold, and where they could
-        /// go instead. An import that finds some asks first rather than swapping them for the nearest colours.
+        /// go instead. An import that finds some asks first instead of swapping in the nearest colours.
         /// </summary>
         public sealed class PngColourCheck
         {
@@ -50,10 +50,10 @@ namespace DSPRE.Avalonia.Data
                 PngColourCheck check = new PngColourCheck { PaletteEntry = paletteAt };
                 List<int> banks = kind == Kind.CellLayout ? CellPlacement.Banks(Unsqueeze(raw)) : null;
                 if (banks == null || banks.Count != 1)
-                    check.CannotAddBecause = "DSPRE cannot tell which set of sixteen colours new ones belong in for this picture.";
+                    check.CannotAddBecause = "DSPRE can't tell which set of sixteen colours new ones belong in for this picture.";
                 check.Bank = banks?.FirstOrDefault() ?? 0;
 
-                // Each square of a whole background keeps its own row, so a colour in any of its rows is not new.
+                // Each tile of a whole background keeps its colour row, so a colour in any of its rows isn't new.
                 if (kind == Kind.TileGraphic)
                 {
                     HashSet<uint> drawable = ArrangedColours(a, narc, index, all, count);
@@ -88,8 +88,8 @@ namespace DSPRE.Avalonia.Data
                 List<int> free = Enumerable.Range(1, 15).Where(s => !check.Kept[s]).OrderBy(Weight).ThenBy(s => s).ToList();
                 if (free.Count < check.Missing.Count)
                 {
-                    check.CannotAddBecause = $"This picture needs {check.Missing.Count} new colours and only {free.Count} of the sixteen "
-                                           + "are not already taken by colours it keeps.";
+                    check.CannotAddBecause = $"This picture needs {check.Missing.Count} new colours, but only {free.Count} of the 16 "
+                                           + "slots are free.";
                     return check;
                 }
                 foreach (int s in free.Take(check.Missing.Count))
@@ -101,7 +101,7 @@ namespace DSPRE.Avalonia.Data
             }
             catch (Exception ex)
             {
-                AppLogger.Warn("The PNG's colours could not be checked: " + ex.Message);
+                AppLogger.Warn("The PNG's colours couldn't be checked: " + ex.Message);
                 return null;
             }
         }
@@ -129,7 +129,7 @@ namespace DSPRE.Avalonia.Data
                 check.Slots.Add(i);
                 check.SlotUsers.Add(users.TryGetValue(i, out List<string> u) && u.Count > 0 ? u : null);
             }
-            if (check.PaletteEntry < 0) check.CannotAddBecause = "DSPRE does not know which colours this drawing is painted with.";
+            if (check.PaletteEntry < 0) check.CannotAddBecause = "DSPRE doesn't know which colours this drawing is painted with.";
             return check;
         }
 
@@ -155,7 +155,7 @@ namespace DSPRE.Avalonia.Data
                 if (seen[i] && (pal[i] >> 24) >= 128) yield return Ds(pal[i] & 0xFFFFFF);
         }
 
-        /// <summary>Every row the arrangement's squares name, or the whole file for a 256-colour drawing; null without an arrangement.</summary>
+        /// <summary>Every row the arrangement's tiles name, or the whole file for a 256-colour drawing; null without an arrangement.</summary>
         private static HashSet<uint> ArrangedColours(Archive a, ScriptNarc narc, int index, (byte r, byte g, byte b)[] all, int count)
         {
             int arranged = -1;

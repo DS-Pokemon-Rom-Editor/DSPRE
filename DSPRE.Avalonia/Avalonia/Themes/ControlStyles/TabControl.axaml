@@ -9,10 +9,7 @@
             </TabControl>
         </Grid>
     </Design.PreviewWith>
-    <!-- Qt Fusion tab widget: the content sits in a frame filled with tabFrameColor and the
-         SELECTED tab is the same colour, overlapping the frame's top edge so the two merge with no
-         seam (PE_FrameTabWidget). Unselected tabs are darker + recessed, so the frame line shows
-         under them but not under the selected one. -->
+    <!-- Qt Fusion tab widget (PE_FrameTabWidget): the selected tab overlaps the frame so they merge. -->
     <ControlTheme x:Key="{x:Type TabControl}" TargetType="{x:Type TabControl}">
         <Setter Property="Background" Value="{DynamicResource TabControl.Frame.Background}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Button.Static.Border}"/>
@@ -33,8 +30,7 @@
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="0,2,2,2">
-                      <!-- same white innerContrastLine the tabs have (PE_FrameTabWidget), so the tab's
-                           bright edge continues into the content frame instead of stopping at a seam -->
+                      <!-- The same white inner line as the tabs (PE_FrameTabWidget), so the edge runs on. -->
                       <Border BorderBrush="{DynamicResource Button.InnerContrast}"
                               BorderThickness="1,0,1,1" CornerRadius="0,0,1,1">
                         <ContentPresenter x:Name="PART_SelectedContentHost"

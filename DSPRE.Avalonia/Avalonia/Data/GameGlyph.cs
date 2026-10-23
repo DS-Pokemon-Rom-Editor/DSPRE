@@ -5,8 +5,8 @@ using global::Avalonia.Media.Imaging;
 namespace DSPRE.Avalonia.Data
 {
     /// <summary>
-    /// One character of the loaded ROM's own font as a mask (ink opaque, the rest clear), for symbols such as the
-    /// Pokédollar that have no character of their own outside the games. Fill it with a brush to colour it.
+    /// One character of the ROM's font as a mask (ink opaque, the rest clear), for symbols like the Pokédollar that desktop
+    /// fonts don't have. Fill it with a brush to colour it.
     /// </summary>
     public static class GameGlyph
     {

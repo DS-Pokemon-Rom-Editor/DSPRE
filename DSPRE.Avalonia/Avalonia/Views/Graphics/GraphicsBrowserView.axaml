@@ -141,8 +141,7 @@
           <Panel>
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
                           IsVisible="{Binding HasPicture}">
-              <!-- Most of these are small, some only sixteen pixels across, so they are blown up to a
-                   readable size with square pixels rather than shown actual size in a large empty panel. -->
+              <!-- Small graphics are scaled up with square pixels so they can be read. -->
               <Image Source="{Binding Picture}" Stretch="Uniform"
                      Width="{Binding ShownWidth}" Height="{Binding ShownHeight}"
                      HorizontalAlignment="Center" VerticalAlignment="Center"

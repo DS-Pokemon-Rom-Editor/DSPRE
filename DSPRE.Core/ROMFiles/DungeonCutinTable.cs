@@ -4,12 +4,8 @@ using System.Collections.Generic;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// The table saying which files make up each location splash screen.
-    ///
-    /// HeartGold shows a picture of where you are when you walk in, and there are twenty five of them.
-    /// Each names, for four times of day, the tiles it is drawn from, the colours and the arrangement.
-    /// Read once here so the Dungeon cutin editor and the Graphics window agree about it rather than each
-    /// having their own copy of the field order.
+    /// HeartGold's 25 location splash screens, each with tiles, colours and arrangement for four times of day. Read
+    /// here so every editor uses one field order.
     /// </summary>
     public static class DungeonCutinTable
     {

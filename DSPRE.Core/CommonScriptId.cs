@@ -1,11 +1,8 @@
 namespace DSPRE
 {
     /// <summary>
-    /// Resolves a "common"/global script number against the CommonScript ID reference tables for
-    /// Diamond/Pearl, Platinum and HGSS (identical across languages for a given game). Below 2000, a
-    /// script number is always local to the current event's own paired script file, which DSPRE already
-    /// handles; this resolver is only meant to be consulted as a fallback once that local lookup fails.
-    /// Each game has its own table because some ranges changed meaning between games.
+    /// Where a script number of 2000 or more lives, per game (the same in every language); numbers below
+    /// that belong to the event's own script file.
     /// </summary>
     public static class CommonScriptId
     {
@@ -139,9 +136,7 @@ namespace DSPRE
             new(2000,  2500,  3,   40,  "Common scripts"),
         };
 
-        /// <summary>Resolves a script number that fell outside the current event's own paired script
-        /// file. Only meaningful for numbers &gt;= 2000; everything else returns NotCommon so callers keep
-        /// their existing local-only behavior.</summary>
+        /// <summary>Resolves a script number missing from the event's own script file; NotCommon below 2000.</summary>
         public static Result Resolve(RomInfo.GameFamilies family, int scriptNumber)
         {
             if (scriptNumber < 2000)

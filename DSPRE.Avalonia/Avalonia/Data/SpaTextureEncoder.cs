@@ -34,13 +34,13 @@ namespace DSPRE.Avalonia.Data
         {
             int pixels = width * height;
             if (rgba == null || rgba.Length != pixels * 4)
-                return Fail($"The image data does not hold {width}x{height} pixels.");
+                return Fail($"The image data doesn't hold {width}x{height} pixels.");
 
             int need = format switch { 1 or 4 or 6 => pixels, 2 => (pixels + 3) / 4, 3 => (pixels + 1) / 2, 7 => pixels * 2, _ => -1 };
             if (format == 5)
-                return Fail("4x4 compressed textures cannot be re-encoded.");
+                return Fail("4x4 compressed textures can't be re-encoded.");
             if (need < 0)
-                return Fail($"Texture format {format} is not one the games draw.");
+                return Fail($"Texture format {format} isn't one the games draw.");
             if (texels == null || texels.Length < need)
                 return Fail($"The texture's stored pixel data is shorter than a {width}x{height} {FormatName(format)} image.");
 

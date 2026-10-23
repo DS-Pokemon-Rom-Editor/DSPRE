@@ -124,7 +124,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             try { trouble = _motion.Save(); }
             catch (Exception e) when (e is System.IO.IOException || e is UnauthorizedAccessException) { trouble = e.Message; }
             if (trouble == null) return true;
-            await DialogHelper.ShowErrorAsync("The intro motion was not saved:\n" + trouble, Title);
+            await DialogHelper.ShowErrorAsync("The intro motion wasn't saved:\n" + trouble, Title);
             return false;
         }
 

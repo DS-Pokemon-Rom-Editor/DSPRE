@@ -126,7 +126,6 @@ namespace DSPRE.ROMFiles
         {
             using (BinaryReader reader = new BinaryReader(stream))
             {
-                // Deserialize the object from binary
                 BaseHP = reader.ReadByte();
                 BaseAtk = reader.ReadByte();
                 BaseDef = reader.ReadByte();
@@ -180,7 +179,6 @@ namespace DSPRE.ROMFiles
             {
                 using (BinaryWriter writer = new BinaryWriter(stream))
                 {
-                    // Serialize the object to binary
                     writer.Write(BaseHP);
                     writer.Write(BaseAtk);
                     writer.Write(BaseDef);
@@ -281,12 +279,12 @@ namespace DSPRE.ROMFiles
         }
         public void SaveToFileDefaultDir(int IDtoReplace, bool showSuccessMessage = true)
         {
-            // The Pokédex type search lists are rebuilt in Pokédex Lists, only when asked.
+            // The Pokédex type search lists are rebuilt only when asked, in Pokédex lists.
             SaveToFileDefaultDir(DirNames.PersonalPokeData, IDtoReplace, showSuccessMessage);
         }
         public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true)
         {
-            SaveToFileExplorePath("Gen IV Personal Pokémon data", "bin", suggestedFileName, showSuccessMessage);
+            SaveToFileExplorePath("Pokémon data", "bin", suggestedFileName, showSuccessMessage);
         }
 
     }

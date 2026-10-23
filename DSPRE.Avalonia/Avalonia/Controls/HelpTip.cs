@@ -5,7 +5,7 @@ using Avalonia.Media;
 
 namespace DSPRE.Avalonia.Controls
 {
-    /// <summary>A small ⓘ that shows its text as a tooltip.</summary>
+    /// <summary>A small "i" that shows its text as a tooltip.</summary>
     public sealed class HelpTip : Border
     {
         public static readonly StyledProperty<string> TextProperty = AvaloniaProperty.Register<HelpTip, string>(nameof(Text));

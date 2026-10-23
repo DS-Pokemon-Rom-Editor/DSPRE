@@ -33,13 +33,13 @@ namespace DSPRE.HgEngine
         public static bool TrySetPaletteId(int speciesId, int paletteId, out string error)
         {
             error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
 
             string text = TryReadSource(out string path);
-            if (text == null) { error = $"Source file not found: {path}"; return false; }
+            if (text == null) { error = $"{path} is missing from the checkout."; return false; }
 
             if (!TryReplaceValue(ref text, speciesId, DesignatorFor(speciesId), paletteId))
-            { error = $"Species {speciesId} not found in IconPaletteTable.c."; return false; }
+            { error = $"IconPaletteTable.c has no entry for species {speciesId}."; return false; }
             HgEngineFileCache.WriteText(path, text);
             return true;
         }

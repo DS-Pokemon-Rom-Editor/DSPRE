@@ -55,7 +55,7 @@ namespace DSPRE.Avalonia
             return result;
         }
 
-        /// <summary>Returns dirty standalone-window descriptions for the legacy host shutdown guard.</summary>
+        /// <summary>Descriptions of standalone windows with unsaved changes, for the shutdown guard.</summary>
         public static IReadOnlyList<string> UnsavedDescriptions()
             => GetUnsavedEditors().Select(info => info.ToString()).ToList();
 

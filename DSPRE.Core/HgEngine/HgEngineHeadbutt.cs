@@ -7,14 +7,9 @@ using DSPRE.ROMFiles;
 
 namespace DSPRE.HgEngine
 {
-    /// <summary>Source-text read/write for data/Headbutt.c: one giant struct with a hand-named dotted
-    /// field per map (~540), not an indexable array. Each field's own struct type name embeds its index
-    /// (<c>HeadbuttFile_009_Route_1 route1;</c>), so the index-to-field-name map is parsed from that naming
-    /// convention rather than assumed from declaration order. Reuses the vanilla
-    /// <see cref="HeadbuttEncounterFile"/>/<see cref="HeadbuttTreeGroup"/>/<see cref="HeadbuttTree"/>/
-    /// <see cref="HeadbuttEncounter"/> POCOs as the in-memory shape, so the existing UI works unchanged.
-    /// Each map's struct type sizes its own arrays, so adding or removing tree groups, or giving trees to a map
-    /// that has none, rewrites that type's declaration along with its data; __size[] follows through sizeof.</summary>
+    /// <summary>data/Headbutt.c: each map's field type holds its index (HeadbuttFile_009_Route_1) and sizes its arrays,
+    /// so tree group changes rewrite the type.</summary>
+    /// <remarks>The index comes from the type name, not the declaration order; __size[] follows through sizeof.</remarks>
     public static class HgEngineHeadbutt
     {
         private const string SourceRelPath = "data/Headbutt.c";
@@ -45,16 +40,16 @@ namespace DSPRE.HgEngine
         public static bool TryLoad(int headbuttFileIndex, out HeadbuttEncounterFile file, out string error)
         {
             file = null; error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             if (!TryGetFieldName(headbuttFileIndex, out string fieldName))
-            { error = $"Could not resolve a Headbutt.c field for file index {headbuttFileIndex}."; return false; }
+            { error = $"Couldn't resolve a Headbutt.c field for file index {headbuttFileIndex}."; return false; }
 
             string text = TryReadSource(out string path);
-            if (text == null) { error = $"Source file not found: {path}"; return false; }
+            if (text == null) { error = $"{path} is missing from the checkout."; return false; }
             if (!TryFindDataBlock(text, out int open, out int close))
-            { error = "Could not locate the Headbutt.c __data initializer."; return false; }
+            { error = "Couldn't locate the Headbutt.c __data initializer."; return false; }
             if (!ElementScanner.TryLocateValueSpan(text, open, close, new[] { FieldPathSegment.Field(fieldName) }, out int vs, out int ve))
-            { error = $"Could not locate .{fieldName} in Headbutt.c."; return false; }
+            { error = $"Couldn't locate .{fieldName} in Headbutt.c."; return false; }
             string mapBlock = text.Substring(vs, ve - vs);
 
             file = new HeadbuttEncounterFile { ID = (ushort)headbuttFileIndex };
@@ -81,12 +76,12 @@ namespace DSPRE.HgEngine
         public static bool TrySave(int headbuttFileIndex, HeadbuttEncounterFile file, out string error)
         {
             error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             if (!TryGetFieldName(headbuttFileIndex, out string fieldName))
-            { error = $"Could not resolve a Headbutt.c field for file index {headbuttFileIndex}."; return false; }
+            { error = $"Couldn't resolve a Headbutt.c field for file index {headbuttFileIndex}."; return false; }
 
             string text = TryReadSource(out string path);
-            if (text == null) { error = $"Source file not found: {path}"; return false; }
+            if (text == null) { error = $"{path} is missing from the checkout."; return false; }
 
             HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             List<string> failed = new List<string>();
@@ -169,7 +164,7 @@ namespace DSPRE.HgEngine
                 ("normalSlots", slots, "{ }"),
             })
             {
-                if (!TryFindDataBlock(text, out int open, out int close)) { error = "Could not locate the Headbutt.c __data initializer."; return false; }
+                if (!TryFindDataBlock(text, out int open, out int close)) { error = "Couldn't locate the Headbutt.c __data initializer."; return false; }
                 bool has = ElementScanner.TryLocateValueSpan(text, open, close, new[] { FieldPathSegment.Field(fieldName), FieldPathSegment.Field(name) }, out int vs, out int ve);
                 if (has && !wanted)
                 {
@@ -182,7 +177,7 @@ namespace DSPRE.HgEngine
                 else if (!has && wanted)
                 {
                     if (!ElementScanner.TryLocateValueSpan(text, open, close, new[] { FieldPathSegment.Field(fieldName) }, out int ms, out int me))
-                    { error = $"Could not locate .{fieldName} in Headbutt.c."; return false; }
+                    { error = $"Couldn't locate .{fieldName} in Headbutt.c."; return false; }
                     // Placed before the map's closing brace, the counts come first and the arrays follow in order.
                     int closing = text.LastIndexOf('}', me - 1);
                     int lineStart = text.LastIndexOf('\n', closing) + 1;

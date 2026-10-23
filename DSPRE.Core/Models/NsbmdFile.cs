@@ -66,7 +66,7 @@ namespace DSPRE.Models
 
             int said = (int)U32(bytes, 8);
             if (said != bytes.Length)
-                { whynot = $"Header size {said} does not match file size {bytes.Length}."; return null; }
+                { whynot = $"Header size {said} doesn't match file size {bytes.Length}."; return null; }
 
             f._blockCount = U16(bytes, 0x0E);
             if (f._blockCount < 1) { whynot = "No blocks."; return null; }
@@ -104,7 +104,7 @@ namespace DSPRE.Models
             int alsoSaid = bytes[modelAt + 25];
             if (count != alsoSaid)
             {
-                whynot = $"Model header says {alsoSaid} shapes, shape set has {count}.";
+                whynot = $"The model header says {alsoSaid} shapes but the shape set has {count}.";
                 return null;
             }
             int positions = shapeSet + 16 + count * 4;
@@ -186,7 +186,7 @@ namespace DSPRE.Models
                 if (kv.Value == null || kv.Value.Length == 0)
                     { whynot = $"Shape {kv.Key}: empty display list."; return null; }
                 if (kv.Value.Length % 4 != 0)
-                    { whynot = $"Shape {kv.Key}: {kv.Value.Length} bytes is not word aligned."; return null; }
+                    { whynot = $"Shape {kv.Key}: {kv.Value.Length} bytes isn't word aligned."; return null; }
             }
 
             int lastRecordEnd = 0;

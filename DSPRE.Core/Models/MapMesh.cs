@@ -320,7 +320,7 @@ namespace DSPRE.Models
         public byte[] Save(out string whynot)
         {
             whynot = null;
-            if (_rescaled) { whynot = "This model was rescaled and cannot be saved."; return null; }
+            if (_rescaled) { whynot = "This model was rescaled and can't be saved."; return null; }
             Dictionary<int, byte[]> replaced = new Dictionary<int, byte[]>();
 
             foreach (int shape in TouchedShapes)

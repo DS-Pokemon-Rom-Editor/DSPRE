@@ -43,7 +43,7 @@ namespace DSPRE.Avalonia.Views.World
             await vm.SetupAsync(this);
         }
 
-        private const string ErrorTitle = "Building editor error";
+        private const string ErrorTitle = "Building editor";
         private async void Import_Click(object sender, RoutedEventArgs e)
             => await DialogHelper.GuardAsync(() => VM?.ImportAsync() ?? Task.CompletedTask, "The model wasn't imported.", ErrorTitle, this);
         private async void Export_Click(object sender, RoutedEventArgs e)

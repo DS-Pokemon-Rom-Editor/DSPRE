@@ -13,12 +13,12 @@ namespace DSPRE.Avalonia.Views.Pokemon
             AvaloniaXamlLoader.Load(this);
             TradeEditorViewModel vm = new TradeEditorViewModel();
             DataContext = vm;
-            // VM owns the bound Title (+ "*" marker); chrome adds Ctrl+S + the close guard.
+            // VM owns the bound Title (+ "●" marker); chrome adds Ctrl+S + the close guard.
             EditorWindowChrome.Attach(this, vm, title: () => vm.Title);
         }
 
         private async void Save_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-            => await DialogHelper.GuardAsync(() => { VM.SaveChanges(); return System.Threading.Tasks.Task.CompletedTask; }, "The trade wasn't saved.", "Trade editor error", this);
+            => await DialogHelper.GuardAsync(() => { VM.SaveChanges(); return System.Threading.Tasks.Task.CompletedTask; }, "The trade wasn't saved.", "Trade editor", this);
 
         private async void Discard_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
         {

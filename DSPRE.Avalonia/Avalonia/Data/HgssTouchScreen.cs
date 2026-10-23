@@ -20,7 +20,7 @@ namespace DSPRE.Avalonia.Data
                           IconPalettes = 14, ItemIconCells = 54, ButtonCells = 68, ButtonCharacters = 70;
 
         // Overlay 27's icon table: the drawing each kind of icon is made from and the text bank entry
-        // under it. -1 is the Bug Contest Pokémon, which is its own icon rather than a drawing here.
+        // under it. -1 is the Bug Contest Pokémon, a separate icon with no drawing here.
         private static readonly (int Characters, int Message)[] IconKinds =
         {
             (18, 0), (21, 1), (24, 2), (30, 14), (33, 3), (36, 4), (39, 5), (42, 8),
@@ -86,9 +86,8 @@ namespace DSPRE.Avalonia.Data
         private HgssTouchScreen(Func<int, byte[]> menu, Func<int, byte[]> choices) { _menu = menu; _choices = choices; }
 
         /// <summary>
-        /// Reads both archives out of the loaded ROM, or null when this is not HeartGold or SoulSilver.
-        /// Every edit in DSPRE lands in the unpacked files and the ROM save packs them, so reading them here
-        /// is what makes a changed graphic show up straight away instead of after a save and reload.
+        /// Reads both archives from the unpacked files, so an edit shows right away; null when this isn't HeartGold or
+        /// SoulSilver.
         /// </summary>
         public static HgssTouchScreen Load()
         {

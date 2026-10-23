@@ -48,8 +48,8 @@ namespace DSPRE.HgEngine
         }
 
         /// <summary>
-        /// The members the checkout generates itself, read from its own code-table rules rather than
-        /// from what happens to be on disk, so an unbuilt checkout still answers.
+        /// The members the checkout generates, read from its code-table rules so an unbuilt checkout still
+        /// answers.
         /// </summary>
         public static IReadOnlyList<string> GeneratedMembers() =>
             GeneratedMembersAt(HgEngineProject.IsActive ? HgEngineProject.RepoRootWindows : null);

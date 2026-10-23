@@ -33,52 +33,52 @@ namespace DSPRE.Avalonia.Data
 
             switch (name)
             {
-                case "Delay": { int n = a.Length > 0 ? a[0] : 0; (string, string) s = ("wait", $"wait {n} frame(s)"); frame += n < 0 ? 0 : n; return s; }
-                case "WaitForAnimTasks": return ("wait", "wait for current action to finish");
-                case "End": return ("stop", "end");
+                case "Delay": { int n = a.Length > 0 ? a[0] : 0; (string, string) s = ("wait", $"Wait {Plural.Of(n, "frame")}"); frame += n < 0 ? 0 : n; return s; }
+                case "WaitForAnimTasks": return ("wait", "Wait for the current action to finish");
+                case "End": return ("stop", "End");
 
                 case "LoadParticleSystem":
-                case "LoadDebugParticleSystem": return ("particle", $"load particle set (slot {Arg(0)}, data {Arg(1)})");
+                case "LoadDebugParticleSystem": return ("particle", $"Load particle set {Arg(1)} into slot {Arg(0)}");
                 case "CreateEmitter":
                 case "CreateEmitterEx":
                 case "CreateEmitterForMove":
-                case "CreateEmitterForFriendlyFire": return ("particle", $"spawn particle emitter (slot {Arg(0)}, emitter {Arg(1)})");
-                case "WaitForAllEmitters": return ("particle", "wait for particles to finish");
-                case "UnloadParticleSystem": return ("particle", $"release particle set (slot {Arg(0)})");
+                case "CreateEmitterForFriendlyFire": return ("particle", $"Start emitter {Arg(1)} from slot {Arg(0)}");
+                case "WaitForAllEmitters": return ("particle", "Wait for the particles to finish");
+                case "UnloadParticleSystem": return ("particle", $"Stop the particles in slot {Arg(0)}");
 
                 case "CallFunc":
-                case "Nop11": return ("gear", $"call effect routine (func {Hex(0)}, {Arg(1)} arg(s))");
-                case "Nop3": return ("gear", $"sound task (func {Hex(0)}, {Arg(1)} arg(s))");
+                case "Nop11": return ("gear", $"Run built-in effect {Hex(0)}");
+                case "Nop3": return ("gear", $"Background sound {Hex(0)}");
 
                 case "PlaySoundEffect":
-                case "PlayPannedSoundEffect": return ("speaker", $"play sound {Arg(0)}");
-                case "PlayLoopedSoundEffect": return ("speaker", $"repeat sound {Arg(0)}");
-                case "PlayDelayedSoundEffect": return ("speaker", $"play sound {Arg(0)} (waited)");
-                case "StopSoundEffect": return ("speaker", "stop sound");
-                case "PlayPokemonCry": return ("speaker", "play cry");
+                case "PlayPannedSoundEffect": return ("speaker", $"Play sound {Arg(0)}");
+                case "PlayLoopedSoundEffect": return ("speaker", $"Loop sound {Arg(0)}");
+                case "PlayDelayedSoundEffect": return ("speaker", $"Play sound {Arg(0)} after a delay");
+                case "StopSoundEffect": return ("speaker", "Stop the sound");
+                case "PlayPokemonCry": return ("speaker", "Play the cry");
 
-                case "BeginLoop": loopDepth++; return ("reload", $"loop {Arg(0)} time(s):");
-                case "EndLoop": if (loopDepth > 0) loopDepth--; return ("reset", "end loop");
+                case "BeginLoop": loopDepth++; return ("reload", a.Length > 0 ? $"Repeat {Plural.Of(a[0], "time")}:" : "Repeat:");
+                case "EndLoop": if (loopDepth > 0) loopDepth--; return ("reset", "End of repeat");
 
-                case "SetBG0BG1AlphaBlending": return ("blend", $"set blend alpha ({Arg(0)},{Arg(1)})");
-                case "SetDefaultAlphaBlending": return ("blend", "reset blend alpha");
-                case "Nop2": return ("blend", "set blend control");
+                case "SetBG0BG1AlphaBlending": return ("blend", $"Set blending to {Arg(0)} and {Arg(1)}");
+                case "SetDefaultAlphaBlending": return ("blend", "Reset blending");
+                case "Nop2": return ("blend", "Pick the layers that blend");
 
                 case "SwitchBg":
                 case "SwitchBgAnimated":
-                case "SetBg": return ("picture", "change background");
-                case "RestoreBg": return ("picture", "restore background");
+                case "SetBg": return ("picture", "Change the background");
+                case "RestoreBg": return ("picture", "Bring back the background");
 
-                case "SetCameraProjection": return ("camera", $"camera change ({Arg(0)})");
-                case "SetCameraFlip": return ("camera", "camera reverse");
+                case "SetCameraProjection": return ("camera", $"Switch to camera {Arg(0)}");
+                case "SetCameraFlip": return ("camera", "Mirror the camera");
 
-                case "Nop7": return ("hidden", $"hide Pokémon (client {Arg(0)})");
-                case "Nop8": return ("eye", $"show Pokémon (client {Arg(0)})");
+                case "Nop7": return ("hidden", $"Hide Pokémon {Arg(0)}");
+                case "Nop8": return ("eye", $"Show Pokémon {Arg(0)}");
 
-                case "FlashScreen": return ("flash", "screen flash");
+                case "FlashScreen": return ("flash", "Flash the screen");
 
-                case "Call": return ("right", $"call subroutine {Arg(0)}");
-                case "Return": return ("left", "return from subroutine");
+                case "Call": return ("right", $"Run subroutine {Arg(0)}");
+                case "Return": return ("left", "Back from the subroutine");
 
                 default:
                     string args = a.Length == 0 ? "" : " " + string.Join(", ", a);

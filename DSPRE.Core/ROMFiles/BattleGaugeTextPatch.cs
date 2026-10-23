@@ -43,7 +43,7 @@ namespace DSPRE.ROMFiles
             return File.ReadAllBytes(OverlayUtils.GetPath(Sites.Overlay));
         }
 
-        // The target of a BL or BLX at at, and whether it is BLX; null when it is neither.
+        // The target of a BL or BLX at offset at, and whether it is BLX; null when it is neither.
         private static (uint Target, bool Blx)? CallAt(byte[] d, int at)
         {
             if (at < 0 || at + 4 > d.Length) return null;
@@ -119,7 +119,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Why the patch can't go in now, or null.</summary>
         public static string WhyNotApplicable()
         {
-            if (!SupportsCurrentRom) return "The HP bar text code isn't mapped for this ROM.";
+            if (!SupportsCurrentRom) return "This patch doesn't support this ROM yet.";
             if (NeedsTileUpdate) return null;
             if (!SyntheticOverlaySpace.Available()) return "Apply the ARM9 expansion first.";
             byte[] ov = ReadOverlay();
@@ -128,7 +128,7 @@ namespace DSPRE.ROMFiles
             bool vanilla = getter != null && copy != null
                 && Untouched(ov, getter.Value, copy.Value, Sites.Hooks, Sites.Copies)
                 && Untouched(ov, getter.Value, copy.Value, Sites.TileHooks, Sites.TileCopies);
-            return vanilla ? null : "The HP bar text code has already been changed by something else.";
+            return vanilla ? null : "Something else has already changed the HP bar text code, so DSPRE leaves it alone.";
         }
 
         /// <summary>Writes the routine into a marked block at <paramref name="blockOffset"/> and points the battle's text copies at it.</summary>
@@ -156,7 +156,7 @@ namespace DSPRE.ROMFiles
         public static void AddTiles()
         {
             uint code = PatchedCode(ReadOverlay());
-            if (code == 0) throw new InvalidOperationException("The clear battle text background patch isn't in this ROM.");
+            if (code == 0) throw new InvalidOperationException("The \"Clear battle text background\" patch isn't in this ROM.");
             Route(code, Sites.TileHooks, Sites.TileCopies);
         }
 

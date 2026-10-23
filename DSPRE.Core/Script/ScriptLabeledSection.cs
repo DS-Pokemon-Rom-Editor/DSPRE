@@ -1,5 +1,4 @@
-﻿// Create this as a new file: ScriptLabeledSection.cs
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace DSPRE.ROMFiles

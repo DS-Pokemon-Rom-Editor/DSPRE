@@ -38,12 +38,10 @@ namespace DSPRE.Avalonia.Views.Battle
 
             // Left-drag pans, right-drag orbits, wheel zooms, the same as the map and event editors.
             _nav = new Gl3DPointerNavigation(GlHost, GlView);
-            // Dragging with "Place" on drops the walk's starting point wherever the pointer is, the way
-            // dragging a pin about a map does. The camera stays put while that is going on.
+            // With Place on, a drag moves the walk's start and the camera stays put.
             _nav.IsPaintModeActive = () => _vm != null && _vm.PlacingStart;
             _nav.PaintAt = PlaceStartAt;
             Opened += (_, _) => { Start(); Focus(); };
-            // Catch the keys on the way down rather than on the way back up.
             AddHandler(KeyDownEvent, OnKey, RoutingStrategies.Tunnel);
             AddHandler(KeyUpEvent, OnKeyUp, RoutingStrategies.Tunnel);
             Closed += (_, _) => Stop();
@@ -111,7 +109,7 @@ namespace DSPRE.Avalonia.Views.Battle
             }
             FieldMessageBoxView.Frame = DSPRE.Avalonia.Data.WindowFrames.Load(_vm.BorderIndex);
             _vm.MessageFontNote = FieldMessageBoxView.Font == null
-                ? "Stand-in letters: this ROM's font could not be read."
+                ? "Stand-in letters: this ROM's font couldn't be read."
                 : null;
             // Wrap with the same measurements the box draws with, so lines land where they are put.
             _vm.MeasureText = FieldMessageBoxView.Measure;
@@ -160,8 +158,7 @@ namespace DSPRE.Avalonia.Views.Battle
                 double seconds = (now - _lastTick).TotalSeconds;
                 _lastTick = now;
 
-                // Drive off the wall clock rather than assuming the timer is exact, so a busy machine
-                // slows the preview down instead of running it out of step with the real timings.
+                // Timed by the wall clock, so a busy machine slows the preview without throwing it out of step.
                 int frames = _frames.Tick(seconds, _vm.Speed);
                 if (frames > 0) _vm.Advance(frames);
             };
@@ -208,7 +205,7 @@ namespace DSPRE.Avalonia.Views.Battle
 
             // The shift moves the camera and what it looks at together, so it lands on the target.
             (float x, float y, float z) = _vm.CameraTarget();
-            // A shake pushes what the camera looks at, which is what the games move too.
+            // A shake moves the camera target, as the games do.
             GlView.LookAt(x + (cam.ShiftXInTiles + _vm.CameraShiftX + _vm.ShakeOffsetX) * unit,
                           y + (cam.ShiftYInTiles + _vm.CameraShiftY + _vm.ShakeOffsetY) * unit,
                           z + (cam.ShiftZInTiles + _vm.CameraShiftZ) * unit);
@@ -241,7 +238,6 @@ namespace DSPRE.Avalonia.Views.Battle
             GlView.SetOrientation(wantYaw, wantPitch);
         }
 
-        // ── sound ────────────────────────────────────────────────────────────────────────
         private SdatArchive _sdat;
         private bool _sdatTried;
 
@@ -275,7 +271,7 @@ namespace DSPRE.Avalonia.Views.Battle
             SdatArchive sdat = Sdat();
             if (sdat == null) { _vm.SoundLength(kind, 0); return; }
 
-            // A fanfare holds the music , and the music carries on once it is over.
+            // A fanfare pauses the music, and the music resumes when it ends.
             bool holdsMusic = kind == ScriptEffectKind.Fanfare;
             if (holdsMusic && _music != null && _musicHolds++ == 0) AudioOutput.Current.SetPaused(_music, true);
 
@@ -284,8 +280,7 @@ namespace DSPRE.Avalonia.Views.Battle
                 short[] pcm = null;
                 try
                 {
-                    // A cry is not a sequence of its own: the games play the one shared sequence with the
-                    // Pokemon's own instruments in place of its, so the species number
+                    // Cries share one sequence and swap in the Pokémon's instruments, so the species number
                     // goes in as the bank.
                     pcm = _rendered.GetOrAdd((kind, id), key => key.Item1 == ScriptEffectKind.Cry
                         ? SoundArchive.RenderCry(key.Item2)
@@ -346,8 +341,7 @@ namespace DSPRE.Avalonia.Views.Battle
         }
 
         /// <summary>
-        /// Opens the walk already standing next to a tile and facing it, which is what the event editor
-        /// does when somebody asks to step in at the event they have selected.
+        /// Starts the walk beside a tile, facing it, for the Event editor's Step in here.
         /// </summary>
         public void StepInBeside(int tileX, int tileZ)
         {
@@ -356,7 +350,7 @@ namespace DSPRE.Avalonia.Views.Battle
             if (_vm.CanStepInto) _vm.StepInto = true;
         }
 
-        /// <summary>Opens the walk standing on a tile, which is where the dragged player was let go.</summary>
+        /// <summary>Starts the walk on the tile the player was dropped on.</summary>
         public void StepInOn(int tileX, int tileZ)
         {
             if (_vm == null) return;
@@ -387,7 +381,6 @@ namespace DSPRE.Avalonia.Views.Battle
             _frames.Reset();
         }
 
-        // ── Stepping in ──────────────────────────────────────────────────────────────────
         private static bool IsA(Key k) => k == Key.Enter || k == Key.Space || k == Key.Z;
         private static bool IsB(Key k) => k == Key.X || k == Key.Back;
 

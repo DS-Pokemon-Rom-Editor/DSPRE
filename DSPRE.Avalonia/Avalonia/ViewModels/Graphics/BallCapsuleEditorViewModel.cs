@@ -83,7 +83,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             Battle = new BattleDisplayEditorViewModel(Sprites);
             _capsuleIndex = 0;
             SpeciesIndex = Math.Min(1, SpeciesNames.Count - 1);
-            StatusText = _seals.Count == 0 ? "This ROM's seal table was not found." : $"{Seals.Count} seals.";
+            StatusText = _seals.Count == 0 ? "This ROM's seal table wasn't found." : $"{Seals.Count} seals.";
             StartUndo();
         }
 
@@ -281,7 +281,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         // Only the trainer capsules are saved; your design lives for the session.
         public bool HasUnsavedChanges => _savedTrainer != null && !Pack(_trainerCapsules).AsSpan().SequenceEqual(_savedTrainer);
-        public string UnsavedChangesDescription => "Trainer Ball Capsules";
+        public string UnsavedChangesDescription => "Trainer ball capsules";
 
         public void SaveChanges()
         {
@@ -294,7 +294,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 StatusText = "Trainer capsules saved.";
                 Data.TrainerCapsuleCatalog.Saved();
             }
-            catch (Exception ex) { StatusText = "Could not save: " + ex.Message; }
+            catch (Exception ex) { StatusText = "Couldn't save: " + ex.Message; }
         }
 
         public void DiscardChanges()

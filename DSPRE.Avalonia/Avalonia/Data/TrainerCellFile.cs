@@ -49,8 +49,8 @@ namespace DSPRE.Avalonia.Data
             catch (Exception e) when (e is ArgumentException or IndexOutOfRangeException or EndOfStreamException) { return null; }
         }
 
-        // Everything comes from the one cell reader; the file is only taken when writing it back gives the same
-        // bytes, which is what proves it has the layout Write produces.
+        // Everything comes from the one cell reader; the file is only taken when writing it back gives the same bytes, so
+        // it's known to have the layout Write makes.
         private static TrainerCellFile Parse(byte[] d)
         {
             if (d == null || d.Length < 0x30) return null;
@@ -148,7 +148,7 @@ namespace DSPRE.Avalonia.Data
             {
                 Piece d = Describe(p);
                 int x = d.X + dx, y = d.Y + dy;
-                if (x < -256 || x > 255 || y < -128 || y > 127) return $"Frame {cell} cannot move that far.";
+                if (x < -256 || x > 255 || y < -128 || y > 127) return $"Frame {cell} can't move that far.";
             }
             foreach (ushort[] p in c.Pieces)
             {

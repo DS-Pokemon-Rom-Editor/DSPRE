@@ -111,11 +111,11 @@ namespace DSPRE.HgEngine
             headerText = sourceText = sourcePath = null;
             error = null;
             headerPath = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             headerPath = Path.Combine(HgEngineProject.RepoPathUnc, HeaderRelPath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(headerPath)) { error = $"Source file not found: {headerPath}"; return false; }
+            if (!File.Exists(headerPath)) { error = $"{headerPath} is missing from the checkout."; return false; }
             sourcePath = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(sourcePath)) { error = $"Source file not found: {sourcePath}"; return false; }
+            if (!File.Exists(sourcePath)) { error = $"{sourcePath} is missing from the checkout."; return false; }
             headerText = HgEngineFileCache.GetText(headerPath);
             sourceText = HgEngineFileCache.GetText(sourcePath);
             return true;
@@ -130,16 +130,16 @@ namespace DSPRE.HgEngine
             error = null;
             HgEngineSymbolTable moves = HgEngineSymbolTable.Parse(headerText, config);
             if (!moves.TryGetValue("NUM_OF_CANONICAL_MOVES", out int canonicalCount))
-            { error = "Could not find NUM_OF_CANONICAL_MOVES in moves.h."; return false; }
+            { error = "Couldn't find NUM_OF_CANONICAL_MOVES in moves.h."; return false; }
             if (!moves.TryGetValue("NUM_OF_CUSTOM_MOVES", out int customCount))
-            { error = "Could not find NUM_OF_CUSTOM_MOVES in moves.h."; return false; }
+            { error = "Couldn't find NUM_OF_CUSTOM_MOVES in moves.h."; return false; }
 
             int candidateId = canonicalCount + customCount;
             string designator = Prefix + HgEngineNameSlug.ToUniqueSlug(displayName, moves, Prefix);
             if (!TryBuildSources(headerText, sourceText, displayName, designator, customCount, candidateId, config, out newHeader, out newSource, out error))
                 return false;
             if (!HgEngineSourcePatcher.TryFindEntry(newSource, designator, out int open, out int close))
-            { error = $"The new {designator} entry could not be read back, so nothing was added."; return false; }
+            { error = $"The new {designator} entry couldn't be read back, so nothing was added."; return false; }
 
             pending = new PendingMove
             {
@@ -159,7 +159,7 @@ namespace DSPRE.HgEngine
             newHeader = newSource = null;
             if (!TryPrepare(headerText, sourceText, pending.DisplayName, config, out PendingMove fresh, out string header, out string source, out error)) return false;
             if (fresh.Id != pending.Id || fresh.Designator != pending.Designator)
-            { error = "moves.h changed after the move was added, so it was not saved. Discard it and add it again."; return false; }
+            { error = "moves.h changed after the move was added, so it wasn't saved. Discard it and add it again."; return false; }
             if (!HgEngineMoveSource.TryApply(ref source, new[] { (pending.Designator, move) }, lookupFor, out error)) return false;
             newHeader = header;
             newSource = source;
@@ -177,13 +177,13 @@ namespace DSPRE.HgEngine
             error = null;
 
             if (!HgEngineHeaderEditor.TryInsertBeforeDefine(ref newHeader, "NUM_OF_CUSTOM_MOVES", $"#define {designator} (NUM_OF_CANONICAL_MOVES + {customCount})\n\n"))
-            { error = "Could not find NUM_OF_CUSTOM_MOVES in moves.h to anchor the new move next to."; return false; }
+            { error = "Couldn't find NUM_OF_CUSTOM_MOVES in moves.h to anchor the new move next to."; return false; }
             if (!HgEngineHeaderEditor.TryReplaceDefineValue(ref newHeader, "NUM_OF_CUSTOM_MOVES", (customCount + 1).ToString()))
-            { error = "Could not update NUM_OF_CUSTOM_MOVES."; return false; }
+            { error = "Couldn't update NUM_OF_CUSTOM_MOVES."; return false; }
 
             HgEngineSymbolTable rebuilt = HgEngineSymbolTable.Parse(newHeader, config);
             if (!rebuilt.TryGetValue(designator, out int newId) || newId != candidateId)
-            { error = $"moves.h would not number {designator} as {candidateId}, so nothing was added."; return false; }
+            { error = $"moves.h wouldn't number {designator} as {candidateId}, so nothing was added."; return false; }
             string clash = rebuilt.ByName
                 .Where(kv => kv.Value == candidateId && kv.Key != designator && kv.Key.StartsWith(Prefix, StringComparison.Ordinal))
                 .Select(kv => kv.Key).FirstOrDefault();
@@ -231,7 +231,7 @@ namespace DSPRE.HgEngine
                 newSource = string.Concat(newSource.AsSpan(0, indentEnd), newEntry, indent, newSource.AsSpan(indentEnd));
             }
             else if (!HgEngineHeaderEditor.TryInsertBeforeFinalCloseBrace(ref newSource, "\n    " + newEntry))
-            { error = $"Could not find the end of {SourceRelPath} to insert the new move."; return false; }
+            { error = $"Couldn't find the end of {SourceRelPath} to insert the new move."; return false; }
 
             return true;
         }

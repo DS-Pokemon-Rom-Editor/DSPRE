@@ -54,7 +54,6 @@ namespace DSPRE.Avalonia.Views.Controls
             RenderOptions.SetBitmapInterpolationMode(this, BitmapInterpolationMode.None);
         }
 
-        // ── the letters ──────────────────────────────────────────────────────────────────
 
         /// <summary>The game's own font, read out of the loaded ROM. </summary>
         public static FieldFont Font { get; set; }
@@ -94,7 +93,6 @@ namespace DSPRE.Avalonia.Views.Controls
             return (int)Math.Ceiling(f.Width);
         }
 
-        // ── drawing ──────────────────────────────────────────────────────────────────────
 
         private WriteableBitmap _page;      // the current page's letters, at DS size
         private string _pageText;
@@ -103,7 +101,7 @@ namespace DSPRE.Avalonia.Views.Controls
         public static readonly StyledProperty<bool> FitToFrameProperty =
             AvaloniaProperty.Register<FieldMessageBoxView, bool>(nameof(FitToFrame));
 
-        /// <summary>Fits just the box to the control rather than the whole DS screen. </summary>
+        /// <summary>Fits only the box to the control, not the whole DS screen.</summary>
         public bool FitToFrame { get => GetValue(FitToFrameProperty); set => SetValue(FitToFrameProperty, value); }
 
         /// <summary>

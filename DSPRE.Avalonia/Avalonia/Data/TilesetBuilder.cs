@@ -9,9 +9,8 @@ namespace DSPRE.Avalonia.Data
     /// Turns a plain picture into the three files a background is drawn from: the colours, the tile
     /// sheet, and the arrangement that says which tile goes in each square of the screen.
     ///
-    /// Nothing here quietly changes a picture to make it fit. When a picture asks for more than the
-    /// screen can hold, the answer is a refusal that names the number, so the picture can be redrawn
-    /// rather than silently worsened.
+    /// Nothing here quietly changes a picture to fit. A picture that needs more than the screen holds is refused with the
+    /// number, so it can be redrawn.
     /// </summary>
     public static class TilesetBuilder
     {
@@ -58,7 +57,7 @@ namespace DSPRE.Avalonia.Data
             if (rgba == null || width <= 0 || height <= 0 || rgba.Length < width * height * 4)
                 return Fail(r, "That picture has no pixels in it.");
             if (width % 8 != 0 || height % 8 != 0)
-                return Fail(r, "A background is drawn in squares of eight pixels, so its size has to divide "
+                return Fail(r, "A background is made of 8x8 tiles, so its size has to divide "
                              + $"by eight. That picture is {width} by {height}. The nearest that would fit "
                              + $"is {Round8(width)} by {Round8(height)}.");
             if (width > 1024 || height > 1024)
@@ -88,11 +87,10 @@ namespace DSPRE.Avalonia.Data
 
             if (anyClear && !r.ClearSlotKept)
             {
-                // No slot is being held clear, so see-through pixels are not see-through any more. They
-                // become black, which is what they already hold, and take up a colour like any other.
+                // With no slot held clear, see-through pixels become black and use up a colour.
                 for (int i = 0; i < clear.Length; i++) clear[i] = false;
                 fullColours.Add(0);
-                r.Notes.Add("See-through pixels were written as black, taking a colour of their own.");
+                r.Notes.Add("See-through pixels were written as black and use up a colour.");
             }
 
             HashSet<ushort> distinct = new HashSet<ushort>();
@@ -139,11 +137,11 @@ namespace DSPRE.Avalonia.Data
                 if (tooRich.Count > 0)
                 {
                     string where = string.Join("; ", tooRich.OrderByDescending(t => t.count).Take(3)
-                        .Select(t => $"the square at {t.x},{t.y} wants {t.count}"));
-                    return Fail(r, $"A square of eight pixels can only draw from {budget} "
+                        .Select(t => $"the square at {t.x},{t.y} has {t.count}"));
+                    return Fail(r, $"An 8x8 square can only use {budget} "
                                  + $"{(budget == 1 ? "colour" : "colours")} at once, and {tooRich.Count} "
-                                 + $"{(tooRich.Count == 1 ? "square asks" : "squares ask")} for more: {where}. "
-                                 + "Reduce those squares, or build it with 256 colours instead.");
+                                 + $"{(tooRich.Count == 1 ? "square needs" : "squares need")} more: {where}. "
+                                 + "Use fewer colours there, or build it with 256 colours.");
                 }
 
                 if (!PackBanks(wants, budget, out banks, out bankOf))

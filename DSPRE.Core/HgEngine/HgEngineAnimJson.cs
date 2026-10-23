@@ -5,10 +5,7 @@ using System.Text.Json.Serialization;
 namespace DSPRE.HgEngine
 {
     /// <summary>
-    /// Full, round-trippable model of an hg-engine <c>NNN_anim.json</c> (NANR). Unlike
-    /// <see cref="HgEngineTrainerGraphicsSource"/>'s private, read-only POCOs (built only for the preview
-    /// renderer), this keeps every sequence and field so a structured editor can safely round-trip the
-    /// whole file.
+    /// An hg-engine <c>NNN_anim.json</c> (NANR) with every field kept, so an editor can write it back whole.
     /// </summary>
     public sealed class AnimJsonRoot
     {

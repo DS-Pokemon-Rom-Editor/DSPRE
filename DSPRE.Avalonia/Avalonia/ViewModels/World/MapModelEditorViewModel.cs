@@ -45,7 +45,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 {
                     if (e.PropertyName != nameof(MapTilesViewModel.Dirty)) return;
                     Unsaved = Changed
-                        ? "Unsaved: save from the map editor."
+                        ? "Unsaved: save from the Map editor."
                         : null;
                     Raise(nameof(Changed));
                 };

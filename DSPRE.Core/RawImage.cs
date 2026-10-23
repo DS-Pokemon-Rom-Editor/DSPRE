@@ -1,15 +1,8 @@
 namespace DSPRE
 {
     /// <summary>
-    /// A UI-toolkit-agnostic bitmap: raw 32-bit pixels in <b>BGRA</b> byte order (the order both
-    /// Avalonia's <c>Bgra8888</c> and GDI+'s <c>Format32bppArgb</c> use in memory on little-endian),
+    /// A UI-toolkit-agnostic bitmap: raw 32-bit pixels in <b>BGRA</b> byte order (Avalonia's <c>Bgra8888</c>),
     /// straight (un-premultiplied) alpha, top-down rows, tightly packed (stride = Width*4).
-    ///
-    /// This is the core-side image currency for the cross-platform migration: decoders will eventually
-    /// produce <see cref="RawImage"/> directly (no <c>System.Drawing</c>), and each UI layer builds its
-    /// own native bitmap from it (Avalonia <c>WriteableBitmap</c>, WinForms <c>Bitmap</c>). See
-    /// <c>Avalonia/ImageConverter.ToAvaloniaBitmap(RawImage)</c> and the transitional
-    /// <c>GdiRawBridge.FromGdi</c>.
     /// </summary>
     public sealed class RawImage
     {

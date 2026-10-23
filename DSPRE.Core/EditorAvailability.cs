@@ -65,12 +65,12 @@ namespace DSPRE
             ["StarterEditorView"] = new Rule
             {
                 Title = "The Starter Pokémon editor", Hge = HgEngine.Source,
-                Unsupported = Unless(IsStarterEditorAvailable, "The Starter Pokémon editor does not support this ROM."),
+                Unsupported = Unless(IsStarterEditorAvailable, "The Starter Pokémon editor doesn't support this ROM."),
             },
             ["MartEditorView"] = new Rule
             {
                 Title = "The Mart editor", Hge = HgEngine.Source,
-                Unsupported = Unless(IsMartEditorAvailable, "The Mart editor does not support this ROM."),
+                Unsupported = Unless(IsMartEditorAvailable, "The Mart editor doesn't support this ROM."),
             },
             ["WildHeldItemOddsView"] = new Rule { Title = "The Wild held items editor", Hge = HgEngine.Open, Unsupported = () => NoSpot(RomLocator.Thing.WildHeldItemOdds) },
             ["GrowthCurveEditorView"] = new Rule { Title = "The Growth curve editor", Hge = HgEngine.Open },
@@ -102,7 +102,7 @@ namespace DSPRE
             ["WildIntroEditorView"] = new Rule { Title = "The Wild Pokémon intro editor", Hge = HgEngine.Source },
 
             ["AudioEditorView"] = new Rule { Title = "The Audio editor", Hge = HgEngine.NeedsLink },
-            ["TMEditorView"] = new Rule { Title = "The TM / HM editor", Hge = HgEngine.NeedsLink },
+            ["TMEditorView"] = new Rule { Title = "The TM/HM editor", Hge = HgEngine.NeedsLink },
             ["BattleScriptEditorView"] = new Rule
             {
                 Title = "The Move animations & battle scripts editor", Hge = HgEngine.NeedsLink, BuiltArchives = new[] { DirNames.WazaParticle },
@@ -111,18 +111,18 @@ namespace DSPRE
             ["ItemTableEditorView"] = new Rule
             {
                 Title = "Item tables", Hge = HgEngine.NeedsLink,
-                Unsupported = Unless(IsItemTableEditorAvailable, "The Item Tables editor does not support this ROM."),
+                Unsupported = Unless(IsItemTableEditorAvailable, "The Item tables editor doesn't support this ROM."),
             },
             ["TradeEditorView"] = new Rule { Title = "The Trade editor", Hge = HgEngine.NeedsLink },
             ["TableEditorView"] = new Rule
             {
                 Title = "Music & battle tables", Hge = HgEngine.NeedsLink,
-                Unsupported = Unless(() => GameFamily != GameFamilies.DP || BattleMusicTables.IsSupported, "Music & Battle Tables does not support this Diamond or Pearl ROM."),
+                Unsupported = Unless(() => GameFamily != GameFamilies.DP || BattleMusicTables.IsSupported, "Music & battle tables doesn't support this Diamond or Pearl ROM."),
             },
             ["BattleTowerEditorView"] = new Rule
             {
                 Title = "The Battle Tower editor", Hge = HgEngine.NeedsLink,
-                Unsupported = Unless(() => BattleTowerTrainerFile.IsAvailable() && BattleTowerPokemonSetFile.IsAvailable(), "Battle Tower data was not found for this game."),
+                Unsupported = Unless(() => BattleTowerTrainerFile.IsAvailable() && BattleTowerPokemonSetFile.IsAvailable(), "Battle Tower data wasn't found for this game."),
             },
             ["CameraEditorView"] = new Rule { Title = "The Camera editor", Hge = HgEngine.NeedsLink },
             ["VsSeekerRematchView"] = new Rule
@@ -143,8 +143,8 @@ namespace DSPRE
             ["FlyEditorView"] = new Rule { Title = "The Fly / warp editor", Hge = HgEngine.NeedsLink },
             ["DungeonCutinEditorView"] = new Rule
             {
-                Title = "The Dungeon cutin editor", Hge = HgEngine.NeedsLink,
-                Unsupported = Unless(IsDungeonCutinEditorAvailable, "The Dungeon cutin editor is for HeartGold and SoulSilver."),
+                Title = "The Dungeon cut-in editor", Hge = HgEngine.NeedsLink,
+                Unsupported = Unless(IsDungeonCutinEditorAvailable, "The Dungeon cut-in editor is for HeartGold and SoulSilver."),
             },
             ["TitleScreenEditorView"] = new Rule
             {
@@ -174,7 +174,7 @@ namespace DSPRE
             {
                 Title = "Summary screen", Hge = HgEngine.NeedsLink,
                 Unsupported = Unless(() => ROMFiles.SummaryScreenLayout.SupportsCurrentRom,
-                                     "The Summary Screen editor works on English Platinum, HeartGold and SoulSilver."),
+                                     "The Summary screen editor works on English Platinum, HeartGold and SoulSilver."),
             },
             ["NamingScreenEditor"] = new Rule { Title = "The Naming screen editor", Hge = HgEngine.NeedsLink, Beta = "TrainerSpriteEditorView" },
             ["ParticleEditorView"] = new Rule { Title = "The Particle editor", Hge = HgEngine.NeedsLink, BuiltArchives = new[] { DirNames.WazaParticle } },
@@ -184,7 +184,7 @@ namespace DSPRE
             ["SpawnEditorView"] = new Rule { Title = "The Spawn point editor", Hge = HgEngine.NeedsLink },
             ["OverlayEditorView"] = new Rule { Title = "The Overlay editor", Hge = HgEngine.NeedsLink },
             ["BtxEditorView"] = new Rule { Title = "The Overworld editor", Hge = HgEngine.NeedsLink },
-            ["ProjectChecksView"] = new Rule { Title = "Validation & Where-Used", Hge = HgEngine.NeedsLink },
+            ["ProjectChecksView"] = new Rule { Title = "Validation and where used", Hge = HgEngine.NeedsLink },
             ["PatchToolboxView"] = new Rule { Title = "The ROM patch toolbox", Hge = HgEngine.NeedsLink },
             ["DataExports"] = new Rule { Title = "Data exports", Hge = HgEngine.NeedsLink },
             ["ExportDocs"] = new Rule { Title = "Export docs", Hge = HgEngine.NeedsLink },
@@ -201,12 +201,12 @@ namespace DSPRE
                 Title = "The HP bar layout editor", Hge = HgEngine.NeedsLink,
                 BuiltArchives = new[] { DirNames.BattleObj, DirNames.Fonts },
                 Unsupported = Unless(() => ROMFiles.BattleGaugePieces.Locate()?.HasSlots == true,
-                                     "The HP bar tables were not found in this ROM's battle code."),
+                                     "The HP bar tables weren't found in this ROM's battle code."),
             },
 
             // These open without a ROM, so only the hg-engine and beta gates apply.
-            ["GraphicsBrowserView"] = new Rule { Title = "The graphics list", Hge = HgEngine.NeedsLink, NeedsRom = false },
-            ["ModelBrowserView"] = new Rule { Title = "The models list", Hge = HgEngine.NeedsLink, NeedsRom = false },
+            ["GraphicsBrowserView"] = new Rule { Title = "All graphics", Hge = HgEngine.NeedsLink, NeedsRom = false },
+            ["ModelBrowserView"] = new Rule { Title = "All models and textures", Hge = HgEngine.NeedsLink, NeedsRom = false },
             ["TilesetBuilderView"] = new Rule { Title = "Picture to background", Hge = HgEngine.NeedsLink, NeedsRom = false },
             ["FontEditorView"] = new Rule { Title = "The Font editor", Hge = HgEngine.NeedsLink, NeedsRom = false, BuiltArchives = new[] { DirNames.Fonts } },
             ["BattleSceneBrowserView"] = new Rule { Title = "The battle scenes list", Hge = HgEngine.NeedsLink, NeedsRom = false },
@@ -220,7 +220,7 @@ namespace DSPRE
             ["HgeRomReviewView"] = new Rule
             {
                 Title = "hg-engine ROM review",
-                Unsupported = Unless(() => IsHGE, "This review reads hg-engine's own archives, and this ROM is not an hg-engine build."),
+                Unsupported = Unless(() => IsHGE, "This review reads hg-engine's own archives, and this ROM isn't an hg-engine build."),
             },
             ["DistortionWorldView"] = new Rule
             {
@@ -244,7 +244,7 @@ namespace DSPRE
             switch (rule.Hge)
             {
                 case HgEngine.NeedsLink when IsHGE && !HgEngineProject.IsActive:
-                    return $"{title} is not available for an hg-engine ROM opened on its own. Open its hg-engine folder instead ({LinkHint}).";
+                    return $"An hg-engine ROM opened on its own can't use {title}. Open its hg-engine folder instead ({LinkHint}).";
                 case HgEngine.Source when IsHGE && !HgEngineProject.IsActive:
                     return $"{title} is disabled for hg-engine ROMs: hg-engine manages this data itself and would overwrite any changes " +
                         $"made here on its next build. Open its hg-engine folder ({LinkHint}) to edit it from source instead.";
@@ -258,7 +258,7 @@ namespace DSPRE
             if (rule.Unsupported?.Invoke() is string unsupported) return unsupported;
             if (BetaEditors.WhyNot(rule.Beta ?? editor) is string beta) return beta;
             foreach (DirNames dir in rule.BuiltArchives)
-                if (HgEngineOwnedFiles.RefusalFor(dir) is string built) return $"{title} is not available for this project. {built}";
+                if (HgEngineOwnedFiles.RefusalFor(dir) is string built) return $"{title} isn't available for this project. {built}";
             return null;
         }
 

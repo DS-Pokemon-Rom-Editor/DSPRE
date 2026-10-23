@@ -6,13 +6,8 @@ using System.Text;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// A cell animation file, read and written whole, so a file can go back exactly as it was found.
-    ///
-    /// Nearly everything is kept verbatim on purpose. The parts a person edits, a frame's hold and which
-    /// drawing it shows, are patched in place; everything else is handed back unchanged. That is what makes
-    /// an untouched file come out byte for byte identical, which is the only way to know nothing was lost.
-    ///
-    /// Layout from the NitroSystem g2d animation headers in the public pokeplatinum decomp.
+    /// A cell animation file (NANR). Only frame holds and drawings are patched in place, so an untouched file
+    /// round-trips byte for byte. Layout from pokeplatinum's g2d animation headers.
     /// </summary>
     public sealed class NanrFile
     {
@@ -82,8 +77,7 @@ namespace DSPRE.ROMFiles
         private uint[] _uaatFrameAttrs = Array.Empty<uint>();
         private ushort _uaatAttrsPerFrame = 1;
 
-        // Until something is added or removed the file's own offsets are reused, which is what keeps an
-        // untouched file coming back byte for byte identical.
+        // The file's offsets are reused until something is added or removed, so an untouched file round-trips.
         private bool _framesMoved;
 
         public List<Sequence> Sequences { get; } = new();
@@ -147,8 +141,7 @@ namespace DSPRE.ROMFiles
                         Pad = U16(d, fa + 0x06),
                     });
 
-                    // Several frames often share one result. Keeping them as one thing is what stops an
-                    // edit to a frame quietly changing another.
+                    // Frames often share one result; tracking it once keeps an edit to one frame from changing another.
                     if (!seen.TryGetValue(resultAt, out Result r))
                     {
                         int ra = bank + (int)f._animContents + resultAt;
@@ -302,8 +295,8 @@ namespace DSPRE.ROMFiles
             uint frameArrayHead = sequenceHead + (uint)(sequences * 0x10);
             uint animContents = frameArrayHead + (uint)(totalFrames * 8);
 
-            // Once frames have moved, each sequence's frames sit one after another from the start, and the
-            // extended block has to describe the new shape rather than the old one.
+            // Once frames have moved, each sequence's frames sit back to back from the start, and the extended
+            // block must match.
             if (_framesMoved)
             {
                 uint running = 0;
@@ -414,10 +407,7 @@ namespace DSPRE.ROMFiles
             return r == null ? 0 : Math.Max(0, r.Referrers - 1);
         }
 
-        /// <summary>
-        /// Changes which drawing a frame shows. The drawing lives in a result, and results are shared, so
-        /// by default this frame is given a result of its own and every other frame is left alone.
-        /// </summary>
+        /// <summary>Changes which drawing a frame shows. Results are shared, so by default the frame gets its own copy first.</summary>
         public void SetCell(int sequence, int frame, int cell, bool everywhere = false)
         {
             Result r = Own(sequence, frame, everywhere);
@@ -426,10 +416,7 @@ namespace DSPRE.ROMFiles
             r.Cell = (ushort)cell;
         }
 
-        /// <summary>
-        /// The result this frame draws from, given a copy of its own first if it shares one and the edit is
-        /// meant for this frame alone. Splitting it here is what stops a change to one frame moving another.
-        /// </summary>
+        /// <summary>The frame's result, split into its own copy first when it is shared and the edit is for this frame only.</summary>
         private Result Own(int sequence, int frame, bool everywhere)
         {
             Sequence s = At(sequence);
@@ -488,15 +475,15 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// The turn and stretch a frame carries, for the kind that holds them. Shared with every other
-        /// frame pointing at the same result, which is what <see cref="SharedWith"/> reports.
+        /// The turn and stretch a frame carries; shared by every frame on the same result (see <see
+        /// cref="SharedWith"/>).
         /// </summary>
         public string SetTurn(int sequence, int frame, double degrees, double scaleX, double scaleY,
                               bool everywhere = false)
         {
             Result probe = ResultFor(sequence, frame);
             if (probe == null) return "There is no such frame.";
-            if (probe.Element != 1) return "This frame does not carry a turn or a stretch.";
+            if (probe.Element != 1) return "This frame doesn't carry a turn or a stretch.";
             if (scaleX == 0 || scaleY == 0) return "A stretch of zero would make the drawing vanish.";
 
             Result r = Own(sequence, frame, everywhere);
@@ -635,7 +622,7 @@ namespace DSPRE.ROMFiles
                 PlayMode = last.PlayMode,
             };
 
-            // Named after its own number where the others are, since that is how these files read.
+            // Named by its number when the other sequences are.
             string root = (last.Name ?? "").TrimEnd('0', '1', '2', '3', '4', '5', '6', '7', '8', '9');
             fresh.Name = root.Length > 0 ? root + Sequences.Count : "";
 
@@ -678,8 +665,7 @@ namespace DSPRE.ROMFiles
             else RebuildNames();
         }
 
-        // A table of one offset per sequence and then the names themselves, which is how the tool that
-        // compiles these files lays it out.
+        // One offset per sequence, then the names, as the file compiler lays it out.
         private void RebuildNames()
         {
             int table = Sequences.Count * 4;

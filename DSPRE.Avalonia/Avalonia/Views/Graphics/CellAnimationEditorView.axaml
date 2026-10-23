@@ -115,7 +115,7 @@
                       <TextBlock Text="Hold" Classes="label" Width="56"/>
                       <NumericUpDown Value="{Binding Delay}" Minimum="0" Increment="1"
                                      Width="110" FormatString="0"
-                                     ToolTip.Tip="In sixtieths of a second. A hold of none is passed straight over."/>
+                                     ToolTip.Tip="In sixtieths of a second. A hold of 0 skips the frame."/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding CanTurn}">
                       <TextBlock Text="Turn" Classes="label" Width="56"/>
@@ -167,7 +167,7 @@
                   ToolTip.Tip="Draw the sprite in the application's own screen, where a player sees it"/>
         <Button Content="{Binding PoketchAppName}" Click="BackToPoketch_Click"
                 IsVisible="{Binding InPoketch}"
-                ToolTip.Tip="Open this app in the Bottom screen editor"/>
+                ToolTip.Tip="Open this app in Bottom screen"/>
       </StackPanel>
       <!-- Where the pieces of one drawing sit. The preview follows a move straight away. -->
       <Border x:Name="PiecesPanel" IsVisible="{Binding CanMovePieces}" Padding="10" CornerRadius="4" MaxWidth="512"

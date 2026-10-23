@@ -59,7 +59,7 @@ namespace DSPRE.Avalonia.Data
                 if (tilemap < fileCount) u.Parts.Add(Part(a, tilemap, "Shared arrangement"));
                 units.Add(u);
 
-                spokenFor.Add(tilemap);          // shared by every backdrop, so not a row of its own
+                spokenFor.Add(tilemap);          // shared by every backdrop, so it gets no row
                 spokenFor.Add(drawing);
                 spokenFor.Add(palDay); spokenFor.Add(palDay + 1); spokenFor.Add(palDay + 2);
             }
@@ -87,9 +87,7 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>
-        /// The touch screen panel is not a backdrop, and its files had no colours of their own, so
-        /// they were shown and put back in whatever palette came to hand. Every layer of the battle
-        /// menus is drawn from the panel's one drawing and colours.
+        /// The touch panel isn't a backdrop: every battle menu layer uses the panel's one drawing and colours.
         /// </summary>
         private static int PanelColours(int fileIndex) =>
             IsPanelFile(fileIndex) ? BattleBgNames.Find("TouchScreen.Panel:Colours") : -1;
@@ -141,7 +139,7 @@ namespace DSPRE.Avalonia.Data
                 if (files == null) continue;
                 (int mine, int enemy, int mineCell, int enemyCell, int palDay) = files.Value;
                 if (mine >= fileCount || enemy >= fileCount || palDay + 2 >= fileCount) continue;
-                // The bridge borrows both sides from other terrains, so it has no files of its own to show.
+                // The bridge borrows both sides from other terrains, so it has no files to show.
                 if (spokenFor.Contains(mine) && spokenFor.Contains(enemy)) continue;
 
                 GraphicAssets.Unit u = new GraphicAssets.Unit
@@ -158,8 +156,7 @@ namespace DSPRE.Avalonia.Data
                 if (enemyCell < fileCount) u.Parts.Add(Part(a, enemyCell, "Their shared layout"));
                 units.Add(u);
 
-                // The two cell layouts are shared by every terrain, so they are named on each row and must
-                // not also turn up as leftover rows of their own.
+                // The two cell layouts are shared by every terrain, so they're named on each row and get no row of their own.
                 foreach (int k in new[] { mine, enemy, palDay, palDay + 1, palDay + 2, mineCell, enemyCell })
                     spokenFor.Add(k);
             }
@@ -300,7 +297,7 @@ namespace DSPRE.Avalonia.Data
         }
 
 
-        // ── the Ball Capsule editor's seals and screens ────────────────────────────────────────────
+        // ── the seals and screens in Ball capsules ────────────────────────────────────────────
 
         /// <summary>One row per seal, drawn through its layout, plus the capsule editor's screens.</summary>
         // DP/Pt cb_data: one layout, animation and drawing per seal 00-79 (plus a second seal 15), in that order.
@@ -450,8 +447,7 @@ namespace DSPRE.Avalonia.Data
             }
 
             Row("System window", (0, "Drawing"), (firstColour, "Colours"));
-            // The field menu has its own drawing but borrows the system colours, so those colours belong
-            // to two rows and must not also turn up as a row of their own.
+            // The field menu borrows the system colours, so those colours belong to two rows and get no row of their own.
             Row("Field menu window", (1, "Drawing"), (firstColour, "Colours"));
 
             for (int i = 0; i < Styles; i++)
@@ -598,7 +594,7 @@ namespace DSPRE.Avalonia.Data
             return units;
         }
 
-        /// <summary>The card's own drawing, for the Trainer card editor.</summary>
+        /// <summary>The card's drawing, for Trainer card.</summary>
         public static int TrainerCardDrawing()
         {
             try { return RomInfo.TrainerCardMembers.ncgr; } catch (Exception ex) { AppLogger.WarnOnce("GraphicUnits.TrainerCardDrawing", ex); return -1; }

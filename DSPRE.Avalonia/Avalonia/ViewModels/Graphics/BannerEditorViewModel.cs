@@ -104,7 +104,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_pendingIcon != null)
             {
                 string error = GameBanner.ValidateAndWriteDsRomIcon(_pendingIcon);
-                if (error != null) { _ = DialogHelper.ShowErrorAsync(error, "Game icon & banner error"); return; }
+                if (error != null) { _ = DialogHelper.ShowErrorAsync(error, "Game icon & banner"); return; }
                 _pendingIcon = null;
             }
             if (TitlesEdited && _yaml?.Title != null)
@@ -113,7 +113,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 GameBanner.WriteDsRomYaml(_yaml);
                 _savedTitles = TitleText();
             }
-            // The written icon is the file now; a step back to an older pick would need it as a pick again.
+            // Once written, the icon is the file; undoing to an older pick would need that pick kept.
             StartUndo();
             AppEvents.RaiseBannerChanged();
             RefreshIconPreview();
@@ -145,7 +145,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     });
             }
             RefreshIconPreview();
-            StatusText = _yaml == null ? "banner.yaml not found, titles unavailable." : $"{Titles.Count} title languages.";
+            StatusText = _yaml == null ? "There is no banner.yaml, so the titles can't be edited." : $"{Titles.Count} title languages.";
             StartUndo();
         }
 
@@ -166,7 +166,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             if (!File.Exists(GameBanner.DsRomBitmapPath))
             {
-                await DialogHelper.ShowErrorAsync("This project has no banner/bitmap.png to export.", "Export icon");
+                await DialogHelper.ShowErrorAsync("This project has no banner/bitmap.png to export.", "Game icon & banner");
                 return;
             }
             string dest = await DialogHelper.SaveFileAsync(owner, "Export game icon as PNG",
@@ -176,7 +176,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try { PlainFiles.Copy(GameBanner.DsRomBitmapPath, dest, overwrite: true); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowErrorAsync("The icon could not be exported: " + ex.Message, "Export icon");
+                await DialogHelper.ShowErrorAsync("Couldn't export the icon: " + ex.Message, "Game icon & banner");
                 return;
             }
             SaveNotice.Exported(dest);
@@ -184,7 +184,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public async Task ImportIconAsync(Window owner)
         {
-            string src = await DialogHelper.OpenFileAsync(owner, "Import a 32×32 game icon (max 15 colors + transparency)",
+            string src = await DialogHelper.OpenFileAsync(owner, "Import a 32×32 game icon (up to 15 colours and transparency)",
                 new[] { new FilePickerFileType("PNG image") { Patterns = new[] { "*.png" } }, DialogHelper.AllFilter });
             if (string.IsNullOrEmpty(src)) return;
 
@@ -196,14 +196,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync("That picture could not be read: " + ex.Message, "Cannot import icon");
+                await DialogHelper.ShowErrorAsync("Couldn't import the icon: " + ex.Message, "Game icon & banner");
                 return;
             }
 
             string error = GameBanner.IconProblem(raw);
             if (error != null)
             {
-                await DialogHelper.ShowErrorAsync(error, "Cannot import icon");
+                await DialogHelper.ShowErrorAsync(error, "Game icon & banner");
                 return;
             }
             _pendingIcon = raw;

@@ -96,7 +96,7 @@ namespace DSPRE
             }
             catch (Exception ex) when (ex is IOException || ex is JsonException || ex is UnauthorizedAccessException)
             {
-                AppLogger.Warn("The archive fingerprints could not be read, so they start over: " + ex.Message);
+                AppLogger.Warn("The archive fingerprints couldn't be read, so they start over: " + ex.Message);
             }
             return _stamps;
         }
@@ -108,7 +108,7 @@ namespace DSPRE
             try { PlainFiles.WriteText(path, JsonSerializer.Serialize(_stamps, new JsonSerializerOptions { WriteIndented = true })); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                AppLogger.Warn("The archive fingerprints could not be saved: " + ex.Message);
+                AppLogger.Warn("The archive fingerprints couldn't be saved: " + ex.Message);
             }
         }
 
@@ -158,7 +158,7 @@ namespace DSPRE
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                AppLogger.Warn("Could not fingerprint " + packedPath + ": " + ex.Message);
+                AppLogger.Warn("Couldn't fingerprint " + packedPath + ": " + ex.Message);
             }
         }
 
@@ -201,7 +201,7 @@ namespace DSPRE
                 }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidDataException)
                 {
-                    AppLogger.Warn("Could not compare " + p.packedDir + " with its folder: " + ex.Message);
+                    AppLogger.Warn("Couldn't compare " + p.packedDir + " with its folder: " + ex.Message);
                 }
             }
             return found;
@@ -315,7 +315,7 @@ namespace DSPRE
                 Narc folder = Narc.FromFolder(c.UnpackedPath);
                 folder.Save(Path.Combine(backups, backupName + ".folder.narc"));
                 folder.Free();
-                Narc packed = Narc.Open(c.PackedPath) ?? throw new InvalidDataException(c.Name + " is not a valid archive.");
+                Narc packed = Narc.Open(c.PackedPath) ?? throw new InvalidDataException(c.Name + " isn't a valid archive.");
                 packed.ExtractToFolder(c.UnpackedPath);
                 packed.Free();
                 AppLogger.Info($"{c.Name}: unpacked the archive over the folder.");

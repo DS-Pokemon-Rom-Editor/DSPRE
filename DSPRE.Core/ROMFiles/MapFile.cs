@@ -49,7 +49,7 @@ namespace DSPRE.ROMFiles
     {
         #region Fields
 
-        public static readonly string NSBMDFilter = "NSBMD File (*.nsbmd)|*.nsbmd";
+        public static readonly string NSBMDFilter = "NSBMD model (*.nsbmd)|*.nsbmd";
 
         public bool CorrectnessFlag = true;
         public static readonly byte MapSize = 32;
@@ -99,8 +99,8 @@ namespace DSPRE.ROMFiles
                         CorrectnessFlag = false;
                         if (showMessages)
                         {
-                            AppMessages.Error("The header section of this map's BackGround Sound data is corrupted.",
-                            "BGS Error");
+                            AppMessages.Error("This map's background sound data is damaged.",
+                            "Background sound error");
                         }
                     }
                 }
@@ -120,7 +120,7 @@ namespace DSPRE.ROMFiles
 
                 /* Read nsbmd model */
                 if ( !LoadMapModel(reader.ReadBytes(nsbmdSectionLength), showMessages) )
-                { //Assign result to flag
+                {
                     CorrectnessFlag = false;
                     MapModel = null;
                 };
@@ -234,7 +234,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Why a model file can't be this map's model, or null when it can.</summary>
         public static string CannotUseModel(byte[] model)
         {
-            if (model == null || model.Length < 4 || BitConverter.ToUInt32(model, 0) != NSBMD.NdsTypeBmd0) return "That file is not an NSBMD model.";
+            if (model == null || model.Length < 4 || BitConverter.ToUInt32(model, 0) != NSBMD.NdsTypeBmd0) return "That file isn't an NSBMD model.";
             return TooBigForTheGame(model.Length, 0);
         }
 
@@ -268,14 +268,14 @@ namespace DSPRE.ROMFiles
                 {
                     if (showMessages)
                     {
-                        AppMessages.Error("Please select an NSBMD file.", "Invalid File");
+                        AppMessages.Error("Pick an NSBMD file.", "Not an NSBMD file");
                     }
                     return false;
                 }
 
                 modelReader.BaseStream.Position = 0xE;
                 if (modelReader.ReadInt16() > 1)
-                { // If NSBMD contains more than one segment, it means there are embedded textures we must remove
+                { // more than one block means embedded textures, which the area pack replaces
                     MapModelData = NSBUtils.GetModelWithoutTextures(newData);
                 }
                 else
@@ -365,7 +365,7 @@ namespace DSPRE.ROMFiles
         }
         public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true)
         {
-            SaveToFileExplorePath("Gen IV Map Bin", "bin", suggestedFileName, showSuccessMessage);
+            SaveToFileExplorePath("Map file", "bin", suggestedFileName, showSuccessMessage);
         }
         #endregion
     }
@@ -433,7 +433,6 @@ namespace DSPRE.ROMFiles
                 reader.BaseStream.Position += 0x2;
                 Length = reader.ReadUInt16();
                 
-                //reader.BaseStream.Position += 0x2;
             }
         }
         public Building()
@@ -520,7 +519,7 @@ namespace DSPRE.ROMFiles
 
             if (string.IsNullOrWhiteSpace(modelPath) || !File.Exists(modelPath))
             {
-                AppMessages.Error("Building " + ModelID + " could not be found in\n" + '"' + Path.GetDirectoryName(modelPath) + '"', "Building not found");
+                AppMessages.Error("Building " + ModelID + " couldn't be found in\n" + '"' + Path.GetDirectoryName(modelPath) + '"', "Building not found");
                 return;
             }
 
@@ -533,7 +532,7 @@ namespace DSPRE.ROMFiles
             }
             catch (FileNotFoundException)
             {
-                AppMessages.Error("Building " + ModelID + " could not be found in\n" + '"' + Path.GetDirectoryName(modelPath) + '"', "Building not found");
+                AppMessages.Error("Building " + ModelID + " couldn't be found in\n" + '"' + Path.GetDirectoryName(modelPath) + '"', "Building not found");
             }
         }
 
@@ -550,8 +549,8 @@ namespace DSPRE.ROMFiles
             }
             catch (Exception ex)
             {
-                AppLogger.Error($"Error loading building model ID {modelID} from path \"{modelPath}\": {ex.Message}");
-                AppMessages.Error($"Building \"{modelID}\" could not be found at path \"{modelPath}\".\n" +
+                AppLogger.Error($"Couldn't load building model ID {modelID} from path \"{modelPath}\": {ex.Message}");
+                AppMessages.Error($"Building \"{modelID}\" couldn't be found at path \"{modelPath}\".\n" +
                     $"Map may not display correctly.", "Building not found");
             }
         }

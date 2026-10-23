@@ -150,7 +150,7 @@ namespace DSPRE.ROMFiles
             if (Rows.Count == 0) return "The swarm table needs at least one row.";
             if (Rows.Count > 255) return "The game can pick from up to 255 swarm rows.";
             if (NeedsExpansion)
-                return $"The table holds {Capacity} rows where it is. The \"Expand the swarm table\" patch in the ROM patch toolbox makes room for {MaxRows}.";
+                return $"The swarm table only has room for {Capacity} rows. The \"Swarm table expansion\" patch in the ROM patch toolbox makes room for {MaxRows}.";
             for (int i = 0; i < Rows.Count; i++)
             {
                 if (Rows[i].Header >= headerCount) return $"Row {i + 1} points at a header that doesn't exist.";
@@ -209,7 +209,7 @@ namespace DSPRE.ROMFiles
                 return;
             }
 
-            throw new InvalidOperationException($"The swarm table holds {Capacity} rows where it is.");
+            throw new InvalidOperationException($"The swarm table only has room for {Capacity} rows.");
         }
 
         /// <summary>

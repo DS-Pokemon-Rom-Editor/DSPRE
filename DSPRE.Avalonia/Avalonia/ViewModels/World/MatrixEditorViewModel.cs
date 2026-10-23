@@ -16,10 +16,7 @@ using Avalonia.Media;
 namespace DSPRE.Avalonia.ViewModels.World
 {
     /// <summary>
-    /// Avalonia port of the WinForms <c>MatrixEditor</c>. Edits a map matrix's three
-    /// W×H grids (map IDs always, header IDs and altitudes as optional sections) via
-    /// the paintable <c>MatrixGridControl</c>. Supports selecting a matrix, adding the
-    /// optional sections, and save / import / export.
+    /// Edits a matrix's map, header and height grids; the header and height grids are optional sections.
     /// </summary>
     public class MatrixEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
@@ -71,13 +68,13 @@ namespace DSPRE.Avalonia.ViewModels.World
                 catch { }   // the expansion check falls back to unpatched limits
                 int max = MatrixMaxCells(patched), cells = _matrix.Width * _matrix.Height;
                 if (cells <= max) return "";
-                string fix = GameFamily == GameFamilies.HGSS && !patched ? " Apply Expand Matrix 0 in the ROM patch toolbox to double it." : "";
+                string fix = GameFamily == GameFamilies.HGSS && !patched ? " Apply the Matrix 0 expansion patch in the ROM patch toolbox to double it." : "";
                 return $"{cells} cells: the game holds at most {max}, so a bigger matrix corrupts memory.{fix}";
             }
         }
         public bool HasSizeWarning => SizeWarning.Length > 0;
 
-        /// <summary>Expand Matrix 0 raises the size limit, so the warning is read again after a patch.</summary>
+        /// <summary>Matrix 0 expansion raises the size limit, so the warning is read again after a patch.</summary>
         public void OnPatchStateChanged() { OnPropertyChanged(nameof(SizeWarning)); OnPropertyChanged(nameof(HasSizeWarning)); }
 
         private void Resize(int width, int height)
@@ -336,8 +333,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (value == _selectedIndex) return;
                 if (_dirty && !_suppress && value >= 0 && _selectedIndex >= 0)
                 {
-                    // Snap the list back to the matrix still loaded, so the answer decides where we
-                    // end up rather than the click already having moved us.
+                    // Snap the list back to the loaded matrix until the user answers.
                     int requested = value;
                     RecordSwitchGuard.SnapBack(() => _selectedIndex, v => _selectedIndex = v, () => OnPropertyChanged(nameof(SelectedMatrixIndex)));
                     _ = SwitchMatrixAsync(requested);
@@ -387,7 +383,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowErrorAsync($"Failed to set up Matrix editor:\n{ex.Message}", "Matrix editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't set up the Matrix editor:\n{ex.Message}", "Matrix editor");
             }
         }
 
@@ -404,7 +400,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex)
             {
-                _ = DialogHelper.ShowErrorAsync($"Failed to load matrix {index}:\n{ex.Message}", "Matrix editor error");
+                _ = DialogHelper.ShowErrorAsync($"Couldn't load matrix {index}:\n{ex.Message}", "Matrix editor");
             }
         }
 
@@ -488,7 +484,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowErrorAsync($"Couldn't add a matrix:\n{ex.Message}", "Matrix editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't add a matrix:\n{ex.Message}", "Matrix editor");
             }
         }
 
@@ -517,7 +513,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowErrorAsync($"Couldn't remove matrix {last}:\n{ex.Message}", "Matrix editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't remove matrix {last}:\n{ex.Message}", "Matrix editor");
             }
         }
 
@@ -534,7 +530,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 SaveNotice.Imported($"matrix {_selectedIndex}", path);
                 RaiseLoaded();
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Matrix editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Matrix editor"); }
         }
 
         public async Task ExportAsync()
@@ -544,7 +540,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             string path = await DialogHelper.SaveFileAsync(_owner, "Export matrix", new[] { filter }, $"matrix_{_selectedIndex:D4}.mtx");
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _matrix.ToByteArray()); SaveNotice.Exported(path); }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Matrix editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Matrix editor"); }
         }
     }
 }

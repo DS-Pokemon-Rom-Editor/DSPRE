@@ -71,7 +71,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             RevertCategories();
             if (_pendingMove == null && _pendingImports.Count == 0)
             {
-                // The edits live in _currentFile, so reading the move again is what puts them back.
+                // The edits live in _currentFile, so reading the move again drops them.
                 if (_currentFile != null) LoadMove(_currentId); else SetClean();
                 return;
             }
@@ -639,7 +639,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_currentFile == null) return;
             if (HgEngineProject.IsActive && SourceLoadError != null)
             {
-                await DialogHelper.ShowErrorAsync($"Move {_currentId} was not saved.\n{SourceLoadError}", "Move data editor error");
+                await DialogHelper.ShowErrorAsync($"Move {_currentId} wasn't saved.\n{SourceLoadError}", "Move data editor");
                 return;
             }
             int id = _currentId;
@@ -649,7 +649,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             Dictionary<int, MoveData> records = new Dictionary<int, MoveData>(_pendingImports) { [id] = move };
             string subject = pending != null ? pending.DisplayName : records.Count > 1 ? $"{records.Count} moves" : $"Move {id}";
 
-            // The source is what the next sync rebuilds from, so a save that can't reach it is no save.
+            // The next sync rebuilds from the source, so a save that can't write it fails.
             if (HgEngineProject.IsActive)
             {
                 (bool saved, string error) = await HgEngineSave.RunAsync(() => pending != null
@@ -657,7 +657,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     : (HgEngineMoveSource.TryWriteMany(records, out string writeError) ? null : writeError));
                 if (!saved)
                 {
-                    if (error != null) await DialogHelper.ShowErrorAsync($"{subject} not saved.\n{error}", "Move data editor error");
+                    if (error != null) await DialogHelper.ShowErrorAsync($"{subject} not saved.\n{error}", "Move data editor");
                     return;
                 }
             }
@@ -683,12 +683,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 move.SaveToFileDefaultDir(id, showSuccessMessage: false);
                 if (SaveTexts() is string textError)
                 {
-                    await DialogHelper.ShowErrorAsync($"The text of move {id} was not saved.\n{textError}", "Move data editor error");
+                    await DialogHelper.ShowErrorAsync($"The text of move {id} wasn't saved.\n{textError}", "Move data editor");
                     return;
                 }
                 if (SaveCategories() is string listError)
                 {
-                    await DialogHelper.ShowErrorAsync($"Move {id} was saved, but its punching or sound listing was not.\n{listError}", "Move data editor error");
+                    await DialogHelper.ShowErrorAsync($"Move {id} was saved, but its punching or sound listing wasn't.\n{listError}", "Move data editor");
                     return;
                 }
                 _history.MarkSaved();   // current state is now the on-disk baseline (undo can still go past it)
@@ -731,7 +731,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (!HgEngineMoveExpansion.TryPrepareMove(name, out HgEngineMoveExpansion.PendingMove pending, out string error)
                 || !HgEngineMoveExpansion.TryReadTemplate(pending, move, out error))
             {
-                await DialogHelper.ShowErrorAsync($"Could not add the move:\n{error}", "Add new move", owner);
+                await DialogHelper.ShowErrorAsync($"Couldn't add the move:\n{error}", "Add new move", owner);
                 return;
             }
 
@@ -775,7 +775,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     MoveData BuiltOrEmpty(int id) => File.Exists(Path.Combine(builtDir, id.ToString("D4"))) ? new MoveData(id) : new MoveData(new MemoryStream(new byte[16]));
                     if (!HgEngineMoveSource.TryLoadMany(Enumerable.Range(0, names.Length), BuiltOrEmpty, out moves, out skipped, out string loadError))
                     {
-                        await DialogHelper.ShowErrorAsync($"Error exporting: {loadError}", "Move data editor error");
+                        await DialogHelper.ShowErrorAsync($"Couldn't export:\n{loadError}", "Move data editor");
                         return;
                     }
                 }
@@ -789,12 +789,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
                 SaveNotice.Exported(path);
                 if (skipped.Count > 0)
-                    await DialogHelper.ShowInfoAsync($"{skipped.Count} moves could not be read and were left out:\n" + string.Join("\n", skipped.Take(10))
+                    await DialogHelper.ShowInfoAsync($"{skipped.Count} moves couldn't be read and were left out:\n" + string.Join("\n", skipped.Take(10))
                         + (skipped.Count > 10 ? $"\n...and {skipped.Count - 10} more" : ""), "Moves left out");
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync($"Error exporting: {ex.Message}", "Move data editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Move data editor");
             }
         }
 
@@ -886,7 +886,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private async Task ConfirmDiscardAsync(int newIndex)
         {
             bool discard = _pendingMove != null
-                ? await DialogHelper.AskYesNoAsync("The new move is not saved. Discard it and proceed?", "Unsaved changes")
+                ? await DialogHelper.AskYesNoAsync("The new move isn't saved. Discard it?", "Unsaved changes")
                 : await RecordSwitchGuard.ConfirmLeaveAsync(this, null, "move");
             if (!discard) { RecordSwitchGuard.SnapBack(() => _selectedMoveIndex, v => _selectedMoveIndex = v, () => OnPropertyChanged(nameof(SelectedMoveIndex))); return; }
             _dirty = false;
@@ -991,7 +991,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     }
                     catch (Exception ex)
                     {
-                        AppLogger.Error($"Failed to read move {e.MoveID}: {ex.Message}");
+                        AppLogger.Error($"Couldn't read move {e.MoveID}: {ex.Message}");
                         failures.Add($"Move {e.MoveID}: {ex.Message}");
                         continue;
                     }
@@ -1025,7 +1025,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             if (failures.Count == 0) return;
             string listed = string.Join("\n", failures.Take(10)) + (failures.Count > 10 ? $"\n...and {failures.Count - 10} more" : "");
-            await DialogHelper.ShowErrorAsync($"{staged} move(s) imported. {failures.Count} were not:\n{listed}", "Move data editor error");
+            await DialogHelper.ShowErrorAsync($"{Plural.Of(staged, "move")} imported, {failures.Count} not:\n{listed}", "Move data editor");
         }
     }
 }

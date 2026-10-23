@@ -13,18 +13,18 @@ using Path = System.IO.Path;
 
 namespace DSPRE
 {
-    /// <summary>Class to store ROM data from GEN IV Pokémon games</summary>
+    /// <summary>The open ROM project: its game, paths and version-specific layout.</summary>
 
     public partial class RomInfo
     {
-        public const string FolderSuffix = "_DSPRE_contents"; // changed back to public static string
+        public const string FolderSuffix = "_DSPRE_contents";
         private static string _dataFolderName;
         private static string _customNarcFolderName;
 
         public static bool IsDsRomProject { get; internal set; }
 
         /// <summary>
-        /// The open project is an hg-engine checkout's own extracted tree rather than a DSPRE project.
+        /// The open project is an hg-engine checkout's extracted tree, not a DSPRE project.
         /// It is the flat ndstool shape with its own names, and the build owns packing it.
         /// </summary>
         public static bool IsHgEngineBaseProject { get; internal set; }
@@ -39,8 +39,7 @@ namespace DSPRE
 
         public static bool IsHGE { get; private set; }
 
-        // UI-agnostic warning surface. The host sets this (WinForms → MessageBox, Avalonia → dialog); the default
-        // just logs. Keeps RomInfo free of a direct System.Windows.Forms dependency so Avalonia can own ROM loading.
+        // The Avalonia shell shows these; the default only logs.
         public static Action<string, string> ShowWarning = (msg, title) => AppLogger.Error(title + ": " + msg);
         public static bool HasRotomProject { get; private set; }
         public static void RefreshRotomProjectState() => HasRotomProject =
@@ -141,8 +140,8 @@ namespace DSPRE
         // Where the starter's GivePokemon sits in an untouched ROM. Knowing this, the editor reads one
         // script instead of searching all 575, which is the difference between under a millisecond and
         // about 45. -1 means "no known slot, go and look".
-        public static int StarterCommandScriptNumber { get; private set; } = -1;   // Plat only, for now
-        public static int StarterCommandIndex { get; private set; } = -1;          // Plat only, for now
+        public static int StarterCommandScriptNumber { get; private set; } = -1;   // Platinum only
+        public static int StarterCommandIndex { get; private set; } = -1;          // Platinum only
         public static int StarterScreenTextNumber { get; private set; } = -1;
         public static int StarterPokedexSpeciesTextNumber { get; private set; } = -1; // DP/Pt only
 
@@ -450,6 +449,10 @@ namespace DSPRE
         /// </summary>
         public sealed record SummaryScreenSites(SummaryWindowTableSite[] Windows, SummaryBarSite Hp, SummaryBarSite Exp, int MessageBank,
                                                 int AbilityDescriptionBank, int ContestEffectBank);
+
+        /// <summary>The arm9 addresses of the HGSS summary screen calls the fonts patch reroutes, with the width calls grouped by the registers that hold the window.</summary>
+        public sealed record SummaryFontSites(uint[] Prints, uint[] WidthR6, uint[] WidthR5R7, uint[] WidthR6R7, uint CentreName,
+                                              uint[] CentreTrainer, uint Load, uint Release);
 
 
         /// <summary>
@@ -782,13 +785,11 @@ namespace DSPRE
             // Refused before any static state changes, so the ROM already open stays intact.
             if (!IsSupportedGameCode(id))
             {
-                ShowWarning?.Invoke("The ROM you attempted to load is not supported.\nYou can only load Gen IV Pokémon ROMS, for now.", "Unsupported ROM");
+                ShowWarning?.Invoke("This ROM isn't supported. DSPRE opens Diamond, Pearl, Platinum, HeartGold and SoulSilver.", "Unsupported ROM");
                 return;
             }
 
-            // These are only ever (re)populated lazily elsewhere, behind an "if (x == null)" check, without
-            // resetting them here first, switching to a different ROM mid-session would leave the
-            // FIRST-loaded ROM's overworld-sprite table/dict silently in effect forever.
+            // Reset here: they fill lazily, so another ROM would keep the first ROM's overworld tables.
             OverworldTable = null;
             OverworldTableKeys = null;
             Ow3DSpriteDict = null;
@@ -850,7 +851,6 @@ namespace DSPRE
             RomID = id;
             RomRevision = ReadRomRevision(WorkDir);
             IsHGE = false;
-            // Get the folder name and strip the _DSPRE_contents suffix to get the ROM name
             string folderName = Path.GetFileName(romFolderName);
             if (folderName.EndsWith(FolderSuffix))
             {
@@ -897,7 +897,7 @@ namespace DSPRE
             SetFieldScriptArchives();
             SetupSpawnSettings();
             SetMonIconsPalTableAddress();
-            // The trainer editor and DV calculator read these; only the WinForms trainer editor used to set them.
+            // The Trainer editor and the DV calculator read these.
             try { SetAIBackportEnabled(); }
             catch (Exception ex) { AppLogger.Warn("AI backport check failed: " + ex.Message); }
 
@@ -920,7 +920,6 @@ namespace DSPRE
 
             InitScriptDBs();
 
-            /* System */
             ScriptCommandParametersDict = BuildCommandParametersDatabase(GameFamily);
 
             ScriptCommandNamesDict = BuildCommandNamesDatabase(GameFamily);
@@ -1033,7 +1032,7 @@ namespace DSPRE
         };
 
         /// <summary>
-        /// Overworld ids with no sprite of their own and a stand-in picture for each: DP and Platinum's 3D models,
+        /// Overworld ids without a sprite, and a stand-in picture for each: DP and Platinum's 3D models,
         /// and ids 101 to 116, which take their picture from variables 0x4020 to 0x402F.
         /// </summary>
         public static void Set3DOverworldsDict()
@@ -1049,7 +1048,7 @@ namespace DSPRE
                     if (state.DrawType == 2)
                         Ow3DSpriteDict[id] = SignpostImages.TryGetValue(id, out string sign) ? sign : "overworld";
             }
-            catch (Exception ex) { AppLogger.Error("The 3D overworld ids could not be read: " + ex.Message); }
+            catch (Exception ex) { AppLogger.Error("The 3D overworld ids couldn't be read: " + ex.Message); }
         }
 
         public const uint FirstVariableOverworld = 101, LastVariableOverworld = 116;
@@ -1062,7 +1061,7 @@ namespace DSPRE
         public static int SaveVariableCount =>
             IsHGE ? 0x4000 : GameFamily == GameFamilies.HGSS ? 0x170 : 0x120;
 
-        /// <summary>Whether an overworld id takes its picture from a map variable rather than the sprite table.</summary>
+        /// <summary>Whether an overworld id takes its picture from a map variable instead of the sprite table.</summary>
         public static bool IsVariableOverworld(uint id) => id >= FirstVariableOverworld && id <= LastVariableOverworld;
 
         // pokeheartgold include/constants/sprites.h SPRITE_HEROINE. HGSS scripts put the friend's sprite in
@@ -1109,7 +1108,6 @@ namespace DSPRE
         /// <summary>Offsets for the Starter Pokémon editor. </summary>
         public static void SetStarterOffsets()
         {
-            // Initialize to invalid values by default
             StarterGraphicsPrefix = null;
             StarterSceneSpeciesLiterals = null;
             StarterHeldItemScriptFileID = -1;
@@ -1299,8 +1297,7 @@ namespace DSPRE
                         {
                             if (OverlayUtils.Decompress(1) < 0)
                             {
-                                ShowWarning?.Invoke("Overlay 1 couldn't be decompressed.\nOverworld sprites in the Event editor will be " +
-                                "displayed incorrectly or not displayed at all.", "Decompression error");
+                                ShowWarning?.Invoke("Overlay 1 couldn't be decompressed, so the Event editor may show overworld sprites wrong or not at all.", "Decompression error");
                             }
                         }
                     }
@@ -1311,25 +1308,22 @@ namespace DSPRE
                     if (pointer == null) return;
 
                     using (DSUtils.EasyReader bReader = new DSUtils.EasyReader(ov1Path, pointer.Offset))
-                    { // read the pointer at the specified ram address and adjust accordingly below
+                    {
                         uint ramAddressOfTable = bReader.ReadUInt32();
                         if ((ramAddressOfTable >> 0x18) != 0x02)
                         {
-                            ShowWarning?.Invoke("Something went wrong reading the Overworld configuration table.\nOverworld sprites in the Event editor will be " +
-                                "displayed incorrectly or not displayed at all.", "Decompression error");
+                            ShowWarning?.Invoke("The overworld table couldn't be read, so the Event editor may show overworld sprites wrong or not at all.", "Overworld table unreadable");
                             return;
                         }
 
                         string ov131path = OverlayUtils.GetPath(131);
                         if (File.Exists(ov131path))
                         {
-                            // if HGE field extension overlay exists
                             OWTableOffset = ramAddressOfTable - OverlayUtils.OverlayTable.GetRAMAddress(131);
                             OWtablePath = ov131path;
                         }
                         else if (ramAddressOfTable >= RomInfo.SynthOverlayLoadAddress)
                         {
-                            // if the pointer shows the table was moved to the synthetic overlay
                             OWTableOffset = ramAddressOfTable - RomInfo.SynthOverlayLoadAddress;
                             OWtablePath = Filesystem.ExpArmPath;
                         }
@@ -1579,11 +1573,11 @@ namespace DSPRE
                 case GameFamilies.Plat:
                     PokemonNamesTextNumbers = GameLanguage == GameLanguages.Japanese
                         ? new int[1] { 408 }
-                        : new int[7] { 412, 413, 712, 713, 714, 715, 716 }; //413?
+                        : new int[7] { 412, 413, 712, 713, 714, 715, 716 }; // 413 unconfirmed
                     break;
 
                 case GameFamilies.HGSS:
-                    PokemonNamesTextNumbers = GameLanguage.Equals(GameLanguages.Japanese) ? new int[1] { 232 } : new int[7] { 237, 238, 817, 818, 819, 820, 821 }; //238?
+                    PokemonNamesTextNumbers = GameLanguage.Equals(GameLanguages.Japanese) ? new int[1] { 232 } : new int[7] { 237, 238, 817, 818, 819, 820, 821 }; // 238 unconfirmed
                     break;
             }
         }
@@ -1808,7 +1802,7 @@ namespace DSPRE
         public static int GetMachineMoveOffset() =>
             RomLocator.Where(RomLocator.Thing.MachineMoves)?.Offset ?? throw new NotSupportedException("Game not supported");
 
-        /// <summary>Whether the egg move limit counts only up to the last Pokémon header rather than the whole table.</summary>
+        /// <summary>Whether the egg move limit counts only up to the last Pokémon header, not the whole table.</summary>
         public static bool EggMoveLimitCountsHeadersOnly => GameFamily == GameFamilies.HGSS;
 
         /// <summary>
@@ -2419,7 +2413,7 @@ namespace DSPRE
                         [DirNames.OWSprites] = $@"{_dataFolderName}\a\0\8\1",
 
                         [DirNames.Scripts] = $@"{_dataFolderName}\a\0\1\2",
-                        //ENCOUNTERS FOLDER DEPENDS ON VERSION
+                        // HeartGold and SoulSilver keep encounters in different archives
                         [DirNames.TrainerProperties] = $@"{_dataFolderName}\a\0\5\5",
                         [DirNames.TrainerParty] = $@"{_dataFolderName}\a\0\5\6",
                         [DirNames.TrainerGraphics] = $@"{_dataFolderName}\a\0\5\8",
@@ -2486,7 +2480,7 @@ namespace DSPRE
         {
             if (string.Equals(written, folder, StringComparison.Ordinal) || Directory.Exists(folder) || !Directory.Exists(written)) return;
             try { Directory.Move(written, folder); }
-            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { AppLogger.Warn($"Could not rename {written} to {folder}: {ex.Message}"); }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { AppLogger.Warn($"Couldn't rename {written} to {folder}: {ex.Message}"); }
         }
 
         public static string GetLangResFolderName()
@@ -2586,17 +2580,15 @@ namespace DSPRE
         /// <summary>Whether this ROM's hidden item table and its count checks are known.</summary>
         public static bool IsHiddenItemsEditorAvailable() => HiddenItemTableCapacity > 0;
 
-        /// <summary>Checks if the Rock Smash per-header odds/table editor is available. </summary>
+        /// <summary>Whether the Rock Smash per-header odds and table editor works on this ROM.</summary>
         public static bool IsRockSmashEditorAvailable()
         {
             return GameFamily == GameFamilies.HGSS;
         }
 
         /// <summary>
-        /// Checks if the Rock Smash item-drop tables (the three fixed 8-slot tables in ov001.bin at
-        /// <see cref="RockSmashItemTablesOffset"/>, see
-        /// https://ds-pokemon-hacking.github.io/docs/generation-iv/guides/hgss-rock_smash/) are safe to
-        /// edit.
+        /// Whether the Rock Smash item tables (three 8-slot tables in ov001.bin, see the DS Pokémon Hacking wiki's HGSS Rock Smash
+        /// guide) are safe to edit.
         /// </summary>
         public static bool IsRockSmashItemTableAvailable()
         {
@@ -2663,8 +2655,7 @@ namespace DSPRE
             return GameFamily == GameFamilies.DP || GameFamily == GameFamilies.Plat || GameFamily == GameFamilies.HGSS;
         }
 
-        /// <summary>Gets a display name for the current game version.</summary>
-        /// <returns>Game display name (e.g., "Diamond (US)", "Platinum (US)", "HeartGold (US)")</returns>
+        /// <summary>The game's display name, such as "Platinum (US)".</summary>
         public static string GetGameDisplayName()
         {
             string gameName;

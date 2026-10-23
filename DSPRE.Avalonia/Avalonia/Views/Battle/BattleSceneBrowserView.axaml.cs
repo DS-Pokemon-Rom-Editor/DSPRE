@@ -19,8 +19,7 @@ namespace DSPRE.Avalonia.Views.Battle
         private void EditDrawing_Click(object sender, RoutedEventArgs e) => HandOver("drawing");
         private void EditColours_Click(object sender, RoutedEventArgs e) => HandOver("colours");
 
-        /// <summary>Painting is the Graphics window's job, so this hands the file over rather than
-        /// growing a second brush here.</summary>
+        /// <summary>Painting happens in All graphics, so this hands the file over.</summary>
         private void HandOver(string piece)
         {
             BattleSceneBrowserViewModel vm = ViewModel;
@@ -36,7 +35,7 @@ namespace DSPRE.Avalonia.Views.Battle
                 return;
             }
             AvaloniaEditorLauncher.OpenGraphicAt(DSPRE.RomInfo.DirNames.BattleBg, file);
-            vm.StatusText = $"Opened file {file} in the Graphics window.";
+            vm.StatusText = $"Opened file {file} in All graphics.";
         }
     }
 }

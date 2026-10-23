@@ -52,7 +52,7 @@ namespace DSPRE.Avalonia.Views.Text
             catch (Exception ex)
             {
                 CrashReporter.LogHandled(ex);
-                await DialogHelper.ShowErrorAsync("The use could not be opened:\n" + ex.Message);
+                await DialogHelper.ShowErrorAsync("The use couldn't be opened:\n" + ex.Message);
             }
         }
 

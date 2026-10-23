@@ -242,7 +242,7 @@ namespace DSPRE
                     Entries[order[place]].SetRank(key, (byte)Math.Min(place + 1, byte.MaxValue));
             }
 
-            /// <summary>The first entry calling this trainer, which is the one the game finds, or -1.</summary>
+            /// <summary>The first entry calling this trainer (the one the game uses), or -1.</summary>
             public int FindByTrainer(ushort trainerId)
             {
                 if (trainerId == 0) return -1;

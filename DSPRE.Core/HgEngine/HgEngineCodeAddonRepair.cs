@@ -19,7 +19,7 @@ namespace DSPRE.HgEngine
         {
             error = null;
             if (string.IsNullOrEmpty(unpackedDir) || !Directory.Exists(unpackedDir))
-            { error = "The archive has not been unpacked."; return false; }
+            { error = "The archive hasn't been unpacked."; return false; }
             if (staleMembers == null || staleMembers.Count == 0)
             { error = "There is nothing to drop."; return false; }
 

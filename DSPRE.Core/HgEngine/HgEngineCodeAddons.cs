@@ -6,15 +6,9 @@ using System.Linq;
 namespace DSPRE.HgEngine
 {
     /// <summary>
-    /// hg-engine builds its data tables into the archive a/0/2/8, which its own code calls
-    /// ARC_CODE_ADDONS, and reads them back by fixed member index, so one member left behind by an
-    /// earlier build shifts every table the game reads. Indices are its own, from
-    /// include/constants/file.h.
-    ///
-    /// These are tables, not code: hg-engine's code lives in overlay 129, which its armips hook loads
-    /// as the ARM9 expansion in place of the synthetic overlay DSPRE builds for a vanilla ROM. DSPRE
-    /// still files this archive under <see cref="RomInfo.DirNames.SynthOverlay"/>, which is its own
-    /// name for it from that arrangement, and means nothing about where hg-engine keeps code.
+    /// hg-engine's data tables in a/0/2/8 (ARC_CODE_ADDONS), read by fixed member index from
+    /// include/constants/file.h, so a leftover member shifts every table. The code itself is in overlay 129;
+    /// <see cref="RomInfo.DirNames.SynthOverlay"/> is only DSPRE's name for this archive.
     /// </summary>
     public static class HgEngineCodeAddons
     {
@@ -111,8 +105,7 @@ namespace DSPRE.HgEngine
         public enum PaletteStatus { Ok, NoTable, PastEndOfTable, NotABank }
 
         /// <summary>
-        /// The palette bank the game itself reads for a species, taken from the member hg-engine's code
-        /// reads rather than from the vanilla ARM9 table, which an hg-engine build does not keep.
+        /// A species' palette bank, from the member hg-engine reads; an hg-engine build doesn't keep the ARM9 table.
         /// </summary>
         public static PaletteStatus ReadIconPaletteId(int species, out int paletteId)
         {
@@ -149,12 +142,8 @@ namespace DSPRE.HgEngine
             public string Summary = "";
         }
 
-        /// <summary>
-        /// Reads the archive and works out whether hg-engine's tables sit where its code reads them. The
-        /// icon palette table is the anchor: it is one byte per species and every byte names a bank, which
-        /// no other table looks like.
-        /// </summary>
-        /// <summary>The layout of the ROM's own archive, measured against the ROM's own species count.</summary>
+        /// <summary>The ROM's a/0/2/8 layout, found by its icon palette table: one byte per species, each a bank
+        /// number.</summary>
         public static Layout Describe() => Describe(SpeciesCountFromRom());
 
         public static Layout Describe(int speciesCount)
@@ -217,9 +206,8 @@ namespace DSPRE.HgEngine
                 }
             }
 
-            // Failing that, the block names itself: hidden abilities and base experience are two bytes a
-            // species and sit immediately before the icon palettes, which are one, so a run of equal,
-            // equal, half where the last holds nothing but bank numbers is the table.
+            // Otherwise look for two tables of two bytes a species (hidden abilities, base experience) followed by
+            // the one-byte icon palette table, which holds only bank numbers.
             for (int i = 0; i + 2 < memberBytes.Count; i++)
             {
                 byte[] first = memberBytes[i], second = memberBytes[i + 1], third = memberBytes[i + 2];
@@ -236,15 +224,15 @@ namespace DSPRE.HgEngine
 
             if (layout.TableBlockStart < 0)
             {
-                return $"This archive holds {count} members and hg-engine's tables could not be identified in it. "
+                return $"This archive holds {count} members and hg-engine's tables couldn't be identified in it. "
                      + $"A healthy build has {HealthyMemberCount}.";
             }
 
             int shift = layout.TableBlockStart - HiddenAbilities;
             string shifted = shift == 0
                 ? "hg-engine's tables start where the game reads them"
-                : $"hg-engine's tables start {shift} {(Math.Abs(shift) == 1 ? "member" : "members")} "
-                  + (shift > 0 ? "later than" : "earlier than") + " the game reads them";
+                : $"hg-engine's tables start {Plural.Of(Math.Abs(shift), "member")} "
+                  + (shift > 0 ? "later" : "earlier") + " than the game reads them";
 
             return $"{shifted}, so the game reads the wrong member for every one of them. This archive holds "
                  + $"{count} members where a healthy build has {HealthyMemberCount}; {layout.StaleMembers.Count} "

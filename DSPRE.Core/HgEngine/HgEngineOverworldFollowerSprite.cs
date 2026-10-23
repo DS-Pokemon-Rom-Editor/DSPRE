@@ -53,27 +53,28 @@ namespace DSPRE.HgEngine
             return result;
         }
 
-        /// <summary>Resolves a species' current gfx index (sprite-file number) and size class. Fails (does
-        /// NOT synthesize a value) if the species has no MON_FOLLOWER_ENTRY line yet, use
-        /// <see cref="TryEnsureEntry"/> first if the caller wants to create one.</summary>
+        /// <summary>
+        /// A species' gfx index and size class; fails when it has no MON_FOLLOWER_ENTRY yet (see <see
+        /// cref="TryEnsureEntry"/>).
+        /// </summary>
         public static bool TryGetAssignment(int speciesId, out int gfxIndex, out string sizeClassName, out string error)
         {
             gfxIndex = -1; sizeClassName = null; error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator))
-            { error = $"Could not resolve a species designator for id {speciesId}."; return false; }
+            { error = $"Species {speciesId} has no SPECIES_ name in the checkout."; return false; }
 
             string text = TryReadTable(out string path);
-            if (text == null) { error = $"Source file not found: {path}"; return false; }
+            if (text == null) { error = $"{path} is missing from the checkout."; return false; }
 
             if (!TryFindEntry(text, designator, out Match m))
-            { error = $"No overworld follower entry for {designator} yet."; return false; }
+            { error = $"{designator} has no overworld follower entry yet."; return false; }
             sizeClassName = m.Groups[2].Value;
 
             HgEngineSymbolTable table = HgEngineSymbolTable.Load(TableRelPath);
             if (table == null || !table.TryGetValue("MON_OVERWORLD_GFX_START", out int baseGfx))
-            { error = "Could not resolve MON_OVERWORLD_GFX_START."; return false; }
+            { error = "Couldn't resolve MON_OVERWORLD_GFX_START."; return false; }
 
             gfxIndex = baseGfx + speciesId;
             return true;
@@ -82,15 +83,15 @@ namespace DSPRE.HgEngine
         public static bool TrySetSizeClass(int speciesId, string sizeClassName, out string error)
         {
             error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator))
-            { error = $"Could not resolve a species designator for id {speciesId}."; return false; }
+            { error = $"Species {speciesId} has no SPECIES_ name in the checkout."; return false; }
 
             string text = TryReadTable(out string path);
-            if (text == null) { error = $"Source file not found: {path}"; return false; }
+            if (text == null) { error = $"{path} is missing from the checkout."; return false; }
             if (!TryFindEntry(text, designator, out Match m))
-            { error = $"No overworld follower entry for {designator} yet."; return false; }
+            { error = $"{designator} has no overworld follower entry yet."; return false; }
 
             Group g2 = m.Groups[2];
             text = text.Substring(0, g2.Index) + sizeClassName + text.Substring(g2.Index + g2.Length);
@@ -107,17 +108,17 @@ namespace DSPRE.HgEngine
             gfxIndex = -1; error = null;
             HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator))
-            { error = $"Could not resolve a species designator for id {speciesId}."; return false; }
+            { error = $"Species {speciesId} has no SPECIES_ name in the checkout."; return false; }
 
             string text = TryReadTable(out string path);
-            if (text == null) { error = $"Source file not found: {path}"; return false; }
+            if (text == null) { error = $"{path} is missing from the checkout."; return false; }
             if (!TryInsertEntry(ref text, designator, "OVERWORLD_SIZE_SMALL"))
-            { error = "Could not locate the overworld table's terminator entry to insert next to."; return false; }
+            { error = "Couldn't locate the overworld table's terminator entry to insert next to."; return false; }
             HgEngineFileCache.WriteText(path, text);
 
             HgEngineSymbolTable table = HgEngineSymbolTable.Load(TableRelPath);
             if (table == null || !table.TryGetValue("MON_OVERWORLD_GFX_START", out int baseGfx))
-            { error = "Could not resolve MON_OVERWORLD_GFX_START."; return false; }
+            { error = "Couldn't resolve MON_OVERWORLD_GFX_START."; return false; }
             gfxIndex = baseGfx + speciesId;
             return true;
         }

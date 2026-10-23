@@ -54,7 +54,6 @@ public class ScriptParameter
     public string TargetLabel { get; set; }  // For RelativeJump type
     public int TargetOffset { get; set; }   // For RelativeJump type
 
-    // Constructor for regular parameters
     public ScriptParameter(byte[] data, ParameterType type)
     {
         RawData = data;
@@ -62,13 +61,11 @@ public class ScriptParameter
         DisplayValue = FormatParameter(data, type);
     }
 
-    // Constructor for relative jumps
     public ScriptParameter(int targetOffset, string targetLabel)
     {
         Type = ParameterType.Function;
         TargetOffset = targetOffset;
         TargetLabel = targetLabel;
-        // Store raw bytes only for display purposes
         RawData = BitConverter.GetBytes(targetOffset);
     }
 
@@ -79,7 +76,6 @@ public class ScriptParameter
             return TargetLabel;
         }
 
-        // Default formatting for other types
         if (RawData.Length == 0) return "";
         if (RawData.Length == 1) return RawData[0].ToString("X2");
         if (RawData.Length == 2) return BitConverter.ToUInt16(RawData, 0).ToString("X4");
@@ -137,8 +133,6 @@ public class ScriptParameter
                 break;
             case ParameterType.Function:
                 return $"Function#{value}";
-            //case ParameterType.Variable:
-            //    return $"VAR_{FormatHexNumber(value)}";
             case ParameterType.Action:
                 return $"Action#{value}";
             case ParameterType.CMDNumber:
@@ -197,7 +191,7 @@ public class ScriptParameter
     private string FormatHexNumber(uint value)
     {
         // Nothing but the script editor cares how this reads, and anything parsing a script without a
-        // UI (the starter locator, tests) has no settings loaded. Fall back rather than throwing.
+        // Callers without settings (the starter locator, tests) get the fallback.
         int preference = SettingsManager.Settings?.ScriptEditorFormatPreference ?? (int)NumberStyles.None;
         if (preference == (int)NumberStyles.HexNumber)
         {

@@ -17,7 +17,7 @@ namespace DSPRE.Avalonia.Data
 
         private static readonly ConcurrentDictionary<int, SwavSample> Cache = new ConcurrentDictionary<int, SwavSample>();
 
-        /// <summary>The clip for a region that has no recording of its own, or null if it has one.</summary>
+        /// <summary>The clip for a region with no recording, or null if it has one.</summary>
         public static SwavSample For(SbnkRegion region)
         {
             if (region == null || region.Psg == PsgKind.None) return null;

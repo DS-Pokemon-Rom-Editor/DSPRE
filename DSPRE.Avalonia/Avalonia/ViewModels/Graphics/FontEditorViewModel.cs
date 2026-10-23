@@ -20,19 +20,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string Letter { get; init; }     // the letter itself, where the character map knows it
         public string Number => Index.ToString();
 
-        /// <summary>Most of a font is kana and symbols an English map never asks for, and a blank
-        /// column beside them reads as something missing rather than something unused.</summary>
+        /// <summary>Most of a font is kana and symbols an English map never uses; a blank column beside
+        /// them looks like missing data.</summary>
         public bool IsMapped => !string.IsNullOrEmpty(Letter);
 
         /// <summary>Whether anything is drawn here. A picture with nothing in it is a free slot.</summary>
         public bool HasPicture { get; init; }
 
-        /// <summary>
-        /// What the list says beside the number. Nearly every letter is drawn, so saying so on each row
-        /// just shouts about what is normal; and the old line, that a letter was not in the character
-        /// map, read as "nothing here" when the picture was right there. Only the rare case is called
-        /// out: the couple of dozen slots with nothing in them.
-        /// </summary>
+        /// <summary>What the list shows beside the number: the letter, or a note for the few empty slots.</summary>
         public string Describe => IsMapped ? Letter : HasPicture ? "" : "empty";
     }
 
@@ -61,14 +56,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.Fonts });
-                // Touching the character map here means the letters are known by the time the list
-                // is filled, rather than one load too late.
+                // Load the character map here so the letters are known when the list fills.
                 try { FieldFontCharacters.GlyphFor('A'); } catch (Exception ex) { AppLogger.Warn("Font editor: field font character map: " + ex.Message); }
                 LoadFontList();
             }
             catch (Exception ex)
             {
-                StatusText = "The fonts could not be read: " + ex.Message;
+                StatusText = "The fonts couldn't be read: " + ex.Message;
                 AppLogger.Error("FontEditor: " + ex);
             }
             _loading = false;
@@ -241,8 +235,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         // ── Taking a step back ────────────────────────────────────────────────────
         //
-        // A painting tool without undo means one stray click is repaired by hand. Only the letter being
-        // worked on is remembered, not the whole font, so a step costs a few hundred bytes.
+        // Undo keeps only the letter being edited, so a step is a few hundred bytes.
 
         private sealed class Step
         {
@@ -271,9 +264,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         /// <summary>
-        /// Remembers the letter as it now stands, which is what the history wants: it records where an
-        /// edit arrived, and stepping back hands you where it came from. Recording the state beforehand
-        /// instead leaves the last change unrecorded, so undoing a width did nothing.
+        /// Records the letter after the edit, not before, or the last change gets no undo step.
         /// </summary>
         private void RecordStep()
         {
@@ -397,7 +388,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 ImageConverter.ToAvaloniaBitmap(image).Save(path, global::Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
                 return null;
             }
-            catch (Exception ex) { return "That picture could not be written: " + ex.Message; }
+            catch (Exception ex) { return "That picture couldn't be written: " + ex.Message; }
         }
 
         /// <summary>
@@ -418,7 +409,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 DSPRE.RawImage image;
                 using (FileStream stream = System.IO.File.OpenRead(path)) image = ImageConverter.DecodeRawImage(stream);
-                if (image == null) return "That picture could not be read.";
+                if (image == null) return "That picture couldn't be read.";
                 if (image.Width != wantAcross || image.Height != wantDown)
                     return $"That picture is {image.Width} by {image.Height} and this wants "
                          + $"{wantAcross} by {wantDown}. Save one out first to get the right size.";
@@ -440,7 +431,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 RaisePreview();
                 return null;
             }
-            catch (Exception ex) { return "That picture could not be read: " + ex.Message; }
+            catch (Exception ex) { return "That picture couldn't be read: " + ex.Message; }
         }
 
         /// <summary>The font as it stands, for anything that draws with it.</summary>
@@ -452,8 +443,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public string PreviewNote => _font == null ? null
             : FieldFontCharacters.Ready ? null
-            : "The character map for this ROM is not loaded, so letters cannot be matched to pictures. "
-              + "Open Text, Char Map Manager.";
+            : "The character map for this ROM isn't loaded, so letters can't be matched to pictures. "
+              + "Open the Character map manager.";
 
         // ── Saving ────────────────────────────────────────────────────────────────
         // Compared as bytes, so undoing back to the saved letters counts as clean.
@@ -477,7 +468,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
             catch (Exception ex)
             {
-                StatusText = "That font could not be saved: " + ex.Message;
+                StatusText = "That font couldn't be saved: " + ex.Message;
                 AppLogger.Error("FontEditor.Save: " + ex);
             }
         }
@@ -502,10 +493,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (_font != null)
                     for (int g = 0; g < _font.GlyphCount; g++)
                     {
-                        // Only the two inks count. Shade 0 is nothing and shade 3 is the paper the box
-                        // has already painted, so a letter made entirely of those is blank however many
-                        // non-zero values it holds. Counting anything non-zero called 489 of the 509
-                        // drawn, including ones whose canvas is plainly empty.
+                        // Only the two inks count: shade 0 is empty and shade 3 is the box's paper.
                         bool drawn = false;
                         int wide = Math.Min(_font.WidthOf(g), FieldFont.CellSize);
                         int tall = Math.Min(_font.Height, FieldFont.CellSize);
@@ -523,10 +511,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 OnPropertyChanged(nameof(SelectedGlyphIndex));
                 int mapped = Glyphs.Count(r => r.IsMapped);
                 StatusText = _font == null
-                    ? "That entry is not a font."
+                    ? "That entry isn't a font."
                     : $"{_font.GlyphCount} letters, up to {_font.MaxWidth} by {_font.Height}, "
-                      + $"{1 << _font.BitsPerPixel} shades. {mapped} of them are written by a "
-                      + "character in this ROM's map; the rest are kana and symbols it never asks for.";
+                      + $"{1 << _font.BitsPerPixel} shades. {mapped} of them have a character in this ROM's "
+                      + "character map; the rest are kana and symbols it doesn't use.";
                 if (_font != null && HgEngine.HgEngineSourceAssets.VerbatimSourceFor(
                         HgEngine.HgEngineOwnedFiles.ArchiveOf(DirNames.Fonts), _fontEntries[which]) is HgEngine.HgEngineOwnedFile source)
                     StatusText += $" hg-engine builds this font from {source.RelPath}, so saving writes there too.";
@@ -537,13 +525,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
             catch (Exception ex)
             {
-                StatusText = "That font could not be read: " + ex.Message;
+                StatusText = "That font couldn't be read: " + ex.Message;
                 AppLogger.Error("FontEditor.LoadFont: " + ex);
             }
         }
 
-        // The character map turns letters into picture numbers; going the other way is a search, done
-        // once when a font loads rather than per letter drawn.
+        // The character map turns letters into picture numbers; the reverse is a search, so it runs once
+        // per font load, not per letter.
         private static Dictionary<int, string> _lettersByGlyph;
         private static string LetterFor(int glyph)
         {

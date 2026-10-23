@@ -4,7 +4,7 @@
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Tools"
         x:Class="DSPRE.Avalonia.Views.Tools.ProjectChecksView"
         x:DataType="vm:ProjectChecksViewModel"
-        Title="Validation &amp; Where-Used"
+        Title="Validation and where used"
         Width="720" Height="560" MinWidth="520" MinHeight="380"
         WindowStartupLocation="CenterScreen">
 
@@ -14,7 +14,6 @@
 
   <DockPanel>
     <TabControl Margin="4">
-      <!-- ── Validation ────────────────────────────────────────────── -->
       <TabItem Header="Validation">
         <DockPanel>
           <controls:EditorToolbar>
@@ -33,7 +32,6 @@
         </DockPanel>
       </TabItem>
 
-      <!-- ── Where used ────────────────────────────────────────────── -->
       <TabItem Header="Where used">
         <DockPanel>
           <controls:EditorToolbar>

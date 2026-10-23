@@ -35,7 +35,7 @@
   <Grid ColumnDefinitions="160,8,*,8,260" Margin="8">
     <!-- Left: entry list -->
     <DockPanel Grid.Column="0">
-      <TextBlock DockPanel.Dock="Top" Text="OW entries" FontWeight="SemiBold" Margin="0,0,0,4"/>
+      <TextBlock DockPanel.Dock="Top" Text="Overworlds" FontWeight="SemiBold" Margin="0,0,0,4"/>
       <ListBox ItemsSource="{Binding OwEntries}"
                SelectedIndex="{Binding SelectedIndex}"
                ScrollViewer.VerticalScrollBarVisibility="Auto"/>
@@ -85,7 +85,7 @@
           </Border>
 
           <StackPanel Spacing="4" IsVisible="{Binding HasRenderState}">
-            <TextBlock Text="Render state" FontWeight="SemiBold"/>
+            <TextBlock Text="Display" FontWeight="SemiBold" ToolTip.Tip="Render state"/>
             <TextBlock Text="Draw type" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
             <ComboBox ItemsSource="{Binding DrawTypeOptions}" SelectedIndex="{Binding DrawTypeIndex}" HorizontalAlignment="Stretch"
                       ToolTip.Tip="Not drawn, a flat sprite or a 3D model."/>
@@ -93,7 +93,7 @@
             <ComboBox ItemsSource="{Binding ShadowTypeOptions}" SelectedIndex="{Binding ShadowTypeIndex}" HorizontalAlignment="Stretch"/>
             <TextBlock Text="Footmark" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
             <ComboBox ItemsSource="{Binding FootmarkTypeOptions}" SelectedIndex="{Binding FootmarkTypeIndex}" HorizontalAlignment="Stretch"
-                      ToolTip.Tip="Footprint trail left behind while walking/cycling over sand-like terrain."/>
+                      ToolTip.Tip="Footprints left when walking or cycling on sand."/>
             <TextBlock Text="Reflection" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
             <ComboBox ItemsSource="{Binding ReflectTypeOptions}" SelectedIndex="{Binding ReflectTypeIndex}" HorizontalAlignment="Stretch"
                       ToolTip.Tip="Whether this overworld shows a water reflection."/>
@@ -103,7 +103,7 @@
                      IsVisible="{Binding !HasRenderState}"/>
 
           <StackPanel Spacing="4" IsVisible="{Binding IsExpansionApplied}">
-            <TextBlock Text="Renderer / animation (read-only)" FontWeight="SemiBold"
+            <TextBlock Text="Copied settings (read-only)" FontWeight="SemiBold"
                        ToolTip.Tip="What this entry copied from another one."/>
             <TextBlock Text="{Binding RendererInfoText, StringFormat='Renderer row: {0}'}" FontSize="11" FontFamily="Consolas,Cascadia Mono,monospace" TextWrapping="Wrap"/>
             <TextBlock Text="{Binding AnimationInfoText, StringFormat='Animation row: {0}'}" FontSize="11" FontFamily="Consolas,Cascadia Mono,monospace" TextWrapping="Wrap"/>

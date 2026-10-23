@@ -90,7 +90,7 @@ namespace DSPRE.Models
                 byte[] tex0 = textures != null && textures.Count > 0 ? BuildTex0(textures) : null;
                 r.Bytes = Envelope(tex0 == null ? new[] { mdl0 } : new[] { mdl0, tex0 });
             }
-            catch (Exception ex) { return Fail(r, "Model build failed: " + ex.Message); }
+            catch (Exception ex) { return Fail(r, "The model couldn't be built: " + ex.Message); }
             return r;
         }
 

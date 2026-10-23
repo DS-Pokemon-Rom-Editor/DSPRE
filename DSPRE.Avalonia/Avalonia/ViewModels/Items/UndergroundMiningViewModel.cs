@@ -176,8 +176,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
             get
             {
                 if (_selectedRow == null) return "";
-                if (MiningArt.KindOf(_selectedRow.Row.Sprite) != "tiles") return $"Member {_selectedRow.Row.Sprite} is not a tile set.";
-                if (MiningArt.KindOf(_selectedRow.Row.Palette) != "palette") return $"Member {_selectedRow.Row.Palette} is not a palette.";
+                if (MiningArt.KindOf(_selectedRow.Row.Sprite) != "tiles") return $"Member {_selectedRow.Row.Sprite} isn't a tile set.";
+                if (MiningArt.KindOf(_selectedRow.Row.Palette) != "palette") return $"Member {_selectedRow.Row.Palette} isn't a palette.";
                 return "";
             }
         }
@@ -286,11 +286,11 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public async Task<bool> SaveChangesAsync()
         {
             if (_table == null) return true;
-            if (HasProblem) { await DialogHelper.ShowErrorAsync(Problem, "Underground mining error"); return false; }
+            if (HasProblem) { await DialogHelper.ShowErrorAsync(Problem, "Underground mining"); return false; }
             try { _table.Save(); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
             {
-                await DialogHelper.ShowErrorAsync("The Underground mining changes were not saved:\n" + e.Message, "Underground mining error");
+                await DialogHelper.ShowErrorAsync("The Underground mining changes weren't saved:\n" + e.Message, "Underground mining");
                 return false;
             }
             _saved = _table.State();

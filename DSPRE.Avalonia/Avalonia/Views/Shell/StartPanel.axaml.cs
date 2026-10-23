@@ -21,7 +21,7 @@ namespace DSPRE.Avalonia.Views.Shell
             InitializeComponent();
         }
 
-        // The main window itself, or the one that owns the Welcome window.
+        // The main window, or the Welcome window's owner.
         private MainWindowView Main => TopLevel.GetTopLevel(this) switch
         {
             MainWindowView main => main,

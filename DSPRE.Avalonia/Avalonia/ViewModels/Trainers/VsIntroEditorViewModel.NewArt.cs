@@ -74,7 +74,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowErrorAsync("The new art was not saved, so nothing else was:\n" + e.Message, Title);
+                await DialogHelper.ShowErrorAsync("The new art wasn't saved, so nothing else was:\n" + e.Message, Title);
                 return false;
             }
             _newArt.Clear();

@@ -15,7 +15,7 @@ namespace DSPRE.ROMFiles
         public struct Srt
         {
             public float ScaleS, ScaleT;
-            // Rotation is kept as its sine and cosine, which is how the file stores it.
+            // Rotation is kept as its sine and cosine, as the file stores it.
             public float SinRotation, CosRotation;
             public float TranslateS, TranslateT;
 

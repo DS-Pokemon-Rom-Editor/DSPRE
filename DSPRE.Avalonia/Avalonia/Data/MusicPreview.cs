@@ -73,7 +73,7 @@ namespace DSPRE.Avalonia.Data
                     else
                     {
                         try { _handle = AudioOutput.Current.StartLooping(pcm, SampleRate); }
-                        catch (Exception ex) { AppLogger.Error("Music preview could not play: " + ex.Message); _playing = -1; }
+                        catch (Exception ex) { AppLogger.Error("Music preview couldn't play: " + ex.Message); _playing = -1; }
                     }
                 }
                 Changed?.Invoke();

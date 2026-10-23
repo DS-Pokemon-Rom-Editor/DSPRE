@@ -156,17 +156,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                                                Math.Max(_colour?.FrameCount ?? 0, _showing?.FrameCount ?? 0));
 
         /// <summary>
-        /// Every animation in this model's archive that could belong to it, best first. Sureness comes
-        /// from the names; when no name fits, the game's habit of filing a model's animations right
-        /// after it decides, and that is only ever offered as a guess.
+        /// Every animation in this model's archive that could belong to it, best first, ranked by name. With
+        /// no match, the file right after the model is offered as a guess.
         /// </summary>
         private void FindCompanions(ModelAssets.Archive a, int modelIndex, string modelName)
         {
             _slides.Clear(); _swaps.Clear(); _colours.Clear(); _showings.Clear();
 
-            // Buildings keep their animations in an archive of their own, so look there as well as
-            // beside the model. In Platinum every sliding and swapping picture is in that one archive
-            // and none of them sits next to a model at all.
+            // Buildings keep animations in a separate archive, so look there too; in Platinum all of them are.
             foreach ((RomInfo.DirNames dir, bool sameArchive) in Sources(a))
             {
                 ScriptNarc narc = new ScriptNarc(dir);
@@ -239,7 +236,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 OnPropertyChanged(name);
         }
 
-        /// <summary>The archives worth looking in: the model's own, and the one its animations live in.</summary>
+        /// <summary>The archives to search: the model's and its animation archive.</summary>
         private static IEnumerable<(RomInfo.DirNames dir, bool sameArchive)> Sources(ModelAssets.Archive a)
         {
             yield return (a.Dir, true);
@@ -334,7 +331,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         /// <summary>
         /// What each material should look like this frame. Animations name the materials they drive, and
-        /// the built model knows each material's name, so the two are matched by name rather than order.
+        /// the built model knows each material's name, so they're matched by name, not order.
         /// </summary>
         private void ApplyCompanions(int frame)
         {
@@ -385,8 +382,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 }
             MaterialColours = colours.Count > 0 ? colours : null;
 
-            // A hidden part is left out rather than drawn see-through, which is only the same thing
-            // when there is nothing behind it.
+            // A hidden part is left out, not drawn see-through; the two differ when something is behind it.
             HiddenNodes = null;
             if (_showing != null && _showing.AnimationNames.Count > 0)
             {
@@ -427,8 +423,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
 
         /// <summary>
-        /// What an animation picked on its own actually is: what it drives, how long it runs, and which
-        /// model it was written for. Saying "this is an animation" and stopping is no use to anybody.
+        /// What an animation picked alone drives, how long it runs and which model it was made for.
         /// </summary>
         public string DescribeAnimation(ModelAssets.Archive a, int index, ModelAssets.Kind kind)
         {
@@ -449,50 +444,47 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 case ModelAssets.Kind.TextureAnimation:
                 {
                         TextureSrtAnimation t = TextureSrtAnimation.Load(b);
-                    if (t == null) return "This one would not open.";
+                    if (t == null) return "This animation couldn't be opened.";
                     frames = t.FrameCount;
                     int moving = Enumerable.Range(0, t.MaterialNames.Count).Count(i => !t.IsStatic(i));
-                    bits.Add(Count(t.MaterialNames.Count, "surface", "surfaces") + " it slides a picture across");
-                    if (moving < t.MaterialNames.Count) bits.Add($"{moving} of them actually move");
-                    bits.Add("on " + Join(t.MaterialNames));
+                    bits.Add("slides a picture across " + Plural.Of(t.MaterialNames.Count, "surface") + Join(t.MaterialNames));
+                    if (moving < t.MaterialNames.Count) bits.Add($"only {moving} of them move");
                     break;
                 }
                 case ModelAssets.Kind.TextureSwap:
                 {
                         TexturePatternAnimation t = TexturePatternAnimation.Load(b);
-                    if (t == null) return "This one would not open.";
+                    if (t == null) return "This animation couldn't be opened.";
                     frames = t.FrameCount;
-                    bits.Add(Count(t.MaterialNames.Count, "surface", "surfaces") + " it swaps the picture on");
-                    bits.Add("on " + Join(t.MaterialNames));
+                    bits.Add("swaps the picture on " + Plural.Of(t.MaterialNames.Count, "surface") + Join(t.MaterialNames));
                     break;
                 }
                 case ModelAssets.Kind.MaterialAnimation:
                 {
                         MaterialColourAnimation m = MaterialColourAnimation.Load(b);
-                    if (m == null) return "This one would not open.";
+                    if (m == null) return "This animation couldn't be opened.";
                     frames = m.FrameCount;
-                    bits.Add(Count(m.MaterialNames.Count, "surface", "surfaces") + " it colours");
-                    bits.Add(m.Fades ? "it fades them in and out" : "it holds them steady");
-                    bits.Add("on " + Join(m.MaterialNames));
+                    bits.Add("colours " + Plural.Of(m.MaterialNames.Count, "surface") + Join(m.MaterialNames));
+                    bits.Add(m.Fades ? "fading them in and out" : "holding them steady");
                     break;
                 }
                 case ModelAssets.Kind.VisibilityAnimation:
                 {
                         VisibilityAnimation v = VisibilityAnimation.Load(b);
-                    if (v == null) return "This one would not open.";
+                    if (v == null) return "This animation couldn't be opened.";
                     frames = v.FrameCount;
                     int parts = v.PartCount(0);
                     int changing = v.PartsThatChange(0).Count;
-                    bits.Add(Count(parts, "part", "parts") + " it can hide");
+                    bits.Add("can hide " + Plural.Of(parts, "part"));
                     bits.Add($"{changing} of them are hidden at some point");
                     break;
                 }
                 case ModelAssets.Kind.JointAnimation:
                 {
                         JointAnimation j = JointAnimation.Load(b);
-                    if (j == null) return "This one would not open.";
+                    if (j == null) return "This animation couldn't be opened.";
                     frames = j.FrameCount;
-                    bits.Add(Count(j.AnimatedObjects.Count, "part", "parts") + " it moves");
+                    bits.Add("moves " + Plural.Of(j.AnimatedObjects.Count, "part"));
                     break;
                 }
                 default: return "";
@@ -503,13 +495,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             return howLong + Sentence(bits) + ".";
         }
 
-        private static string Count(int n, string one, string many) => $"{n} {(n == 1 ? one : many)}";
-
+        // The surfaces' names in brackets, or nothing when they have none.
         private static string Join(IReadOnlyList<string> names)
         {
             List<string> real = names.Where(n => !string.IsNullOrWhiteSpace(n)).Take(4).ToList();
-            if (real.Count == 0) return "surfaces it does not name";
-            return string.Join(", ", real) + (names.Count > real.Count ? " and more" : "");
+            if (real.Count == 0) return "";
+            return " (" + string.Join(", ", real) + (names.Count > real.Count ? " and more" : "") + ")";
         }
 
         private static string Sentence(List<string> bits)
@@ -536,7 +527,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (b == null) return "";
 
             IReadOnlyList<string> names = NamesOf(kind, b);
-            if (names.Count == 0) return "It carries no name, so there is no telling which model it is for.";
+            if (names.Count == 0) return "It has no name, so its model is unknown.";
 
             List<(string name, ModelAssets.Match sure)> hits = new List<(string name, ModelAssets.Match sure)>();
             foreach (ModelAssets.Archive other in ModelAssets.All)

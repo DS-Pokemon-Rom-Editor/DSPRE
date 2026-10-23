@@ -361,7 +361,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_tradeDirty || _textDirty)
             {
                 DialogHelper.MsgResult result = await DialogHelper.AskYesNoCancelAsync(
-                    "You have unsaved changes. Do you want to save before changing the Trade ID?",
+                    "Save your changes before switching trades?",
                     "Unsaved changes");
 
                 if (result == DialogHelper.MsgResult.Yes)

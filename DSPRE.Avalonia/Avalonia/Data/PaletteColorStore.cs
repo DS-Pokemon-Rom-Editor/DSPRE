@@ -7,7 +7,7 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.Data
 {
-    /// <summary>Per-project favorite (16) and last-used (8) palette colors for the Sprite Editor's swatch picker, persisted at dspreDir/dspre_palette_colors.json (same convention as LabelStore's dspre_labels.json).</summary>
+    /// <summary>The project's 16 favourite and 8 last-used colours for the sprite painter's swatches, kept in dspreDir/dspre_palette_colors.json.</summary>
     public static class PaletteColorStore
     {
         public const int FavoriteSlots = 16;

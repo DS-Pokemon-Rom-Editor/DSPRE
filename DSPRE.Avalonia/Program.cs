@@ -8,10 +8,7 @@ using DSPRE.Avalonia.Data;
 
 namespace DSPRE.AvaloniaShell
 {
-    /// <summary>
-    /// Entry point of the cross-platform, pure-Avalonia DSPRE. No WinForms host hook is installed,
-    /// so <see cref="DSPRE.AvaloniaApp"/> always boots the Avalonia main window.
-    /// </summary>
+    /// <summary>DSPRE's entry point.</summary>
     internal static class Program
     {
         [STAThread]   // required on Windows; harmless elsewhere
@@ -30,8 +27,7 @@ namespace DSPRE.AvaloniaShell
             DSPRE.SettingsManager.Load();
             ApplyUiScaleOverride();
 
-            // Real sound-effect playback. NAudioOutput itself no-ops on non-Windows, so this is safe to
-            // wire unconditionally (matches the WinForms-hybrid shell's Program.cs).
+            // NAudioOutput does nothing off Windows, so it is wired everywhere.
             AudioOutput.Current = new NAudioOutput();
 
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);

@@ -10,7 +10,7 @@
   </Design.DataContext>
 
   <UserControl.Resources>
-    <!-- The name first, the folder it sits in underneath; the folder keeps its end, where look-alike paths differ. -->
+    <!-- Name on top, folder below; the folder keeps its end, where similar paths differ. -->
     <DataTemplate x:Key="RecentRow" x:DataType="vm:RecentProjectsViewModel+RecentEntry">
       <StackPanel Spacing="1" ToolTip.Tip="{Binding Path}">
         <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>

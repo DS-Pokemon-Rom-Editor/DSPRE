@@ -16,7 +16,7 @@ namespace DSPRE.ROMFiles
         Ended,       // the script finished
     }
 
-    /// <summary>Something a step asks the preview to actually do, rather than just describe.</summary>
+    /// <summary>Something a step asks the preview to play out.</summary>
     public enum ScriptEffectKind
     {
         None,
@@ -122,7 +122,7 @@ namespace DSPRE.ROMFiles
         /// <summary>What a fact is remembered by, so the same question is not asked again.</summary>
         public string FactKey;
 
-        /// <summary>Set when the preview is asking on its own account rather than a script asking.</summary>
+        /// <summary>Set when the preview asks, not the script.</summary>
         public bool FromPreview;
 
         /// <summary>Whether the player answers this in game, as opposed to the preview needing to know.</summary>
@@ -289,7 +289,7 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public bool GuessUnknowns { get; set; }
 
-        /// <summary>Looks up the old database name for a command number, which is what the steps match on.</summary>
+        /// <summary>The old database name for a command number; steps match on it.</summary>
         public Func<ushort, string> LegacyNameOf { get; set; } = DefaultLegacyName;
 
         /// <param name="messageLookup">Turns a message id into its text. Null just names the id instead.</param>
@@ -372,7 +372,7 @@ namespace DSPRE.ROMFiles
 
             if (++_guard > MaxSteps)
             {
-                Add(ScriptStepKind.Ended, "Stopped: this script keeps going round and does not finish.", null);
+                Add(ScriptStepKind.Ended, "Stopped: this script keeps going round and doesn't finish.", null);
                 Finished = true;
                 return false;
             }
@@ -406,8 +406,7 @@ namespace DSPRE.ROMFiles
                     break;
 
                 case ScriptQuestion.QuestionKind.Flag:
-                    // A flag test leaves the script "equal" when the flag is set, which is what the
-                    // following JumpIf EQUAL / JumpIf DIFFERENT pair is written against.
+                    // A flag test leaves "equal" when the flag is set, for the JumpIf EQUAL / DIFFERENT pair after it.
                     if (q.Number >= 0) State.SetFlag(q.Number, value != 0);
                     _relation = value != 0 ? Relation.Equal : Relation.Less;
                     Add(ScriptStepKind.Branch,
@@ -489,7 +488,7 @@ namespace DSPRE.ROMFiles
                     else
                     {
                         Add(ScriptStepKind.Branch,
-                            $"Skips the {(name == "CallIf" ? "call" : "jump")}, because the check did not come out {OperatorName(op)}.", name);
+                            $"Skips the {(name == "CallIf" ? "call" : "jump")}, because the check didn't come out {OperatorName(op)}.", name);
                         _index++;
                     }
                     return;
@@ -553,7 +552,7 @@ namespace DSPRE.ROMFiles
                     int number = (int)Value(cmd, 0);
                     bool trainer = name == "CheckTrainerFlag";
                     string subject = (trainer ? "trainer flag " : "flag ") + Display(cmd, 0);
-                    // Trainer flags live in a range of their own, so they are remembered apart.
+                    // Trainer flags have their own range, so they are tracked apart.
                     int key = trainer ? TrainerFlagKey(number) : number;
                     if (FieldScriptValues.IsVariable(number) && !trainer)
                     {
@@ -683,7 +682,7 @@ namespace DSPRE.ROMFiles
                         key: $"{name} {item} {count}",
                         prompt: space ? $"Is there room in the bag for {count} {ItemName(item)}?"
                                       : $"Does the player have {count} {ItemName(item)}?",
-                        options: space ? new[] { ("Room", 1L), ("No room", 0L) } : new[] { ("Has it", 1L), ("Does not", 0L) });
+                        options: space ? new[] { ("Room", 1L), ("No room", 0L) } : new[] { ("Has it", 1L), ("Doesn't", 0L) });
                     return;
                 }
 
@@ -692,7 +691,7 @@ namespace DSPRE.ROMFiles
                     string badge = TryValue((int)Value(cmd, 0), out long b) ? b.ToString() : Named(cmd, 0);
                     AskFact(cmd, name, varParam: 1, key: $"{name} {badge}",
                         prompt: $"Does the player have badge {badge}?",
-                        options: new[] { ("Has it", 1L), ("Does not", 0L) });
+                        options: new[] { ("Has it", 1L), ("Doesn't", 0L) });
                     return;
                 }
 
@@ -851,8 +850,7 @@ namespace DSPRE.ROMFiles
             {
                 int id = (int)Value(cmd, 0);
 
-                // A flexible slot may be a variable rather than a message number, and then there is no
-                // way to know which line it lands on without running the game.
+                // A flexible slot may hold a variable, and then only the game knows which line it shows.
                 if (FieldScriptValues.IsVariable(id))
                 {
                     string held = TryVar(id, out long heldId) ? _source.Messages?.Invoke((int)heldId) : null;
@@ -936,7 +934,7 @@ namespace DSPRE.ROMFiles
         private static ScriptEffect MessageEffect(string text) =>
             string.IsNullOrEmpty(text) ? null : new ScriptEffect(ScriptEffectKind.Message) { Text = text };
 
-        /// <summary>The commands the preview plays out rather than just naming.</summary>
+        /// <summary>The commands the preview plays out.</summary>
         private static ScriptEffect EffectFor(string name, ScriptCommand cmd)
         {
             switch (name)
@@ -1001,11 +999,11 @@ namespace DSPRE.ROMFiles
         {
             switch (e.Kind)
             {
-                case ScriptEffectKind.SoundEffect: return $"Playing sound effect {SoundName(e.A)}.";
-                case ScriptEffectKind.Fanfare: return $"Playing fanfare {SoundName(e.A)}, which pauses the music.";
-                case ScriptEffectKind.Music: return $"Playing music {SoundName(e.A)}.";
+                case ScriptEffectKind.SoundEffect: return $"Plays sound effect {SoundName(e.A)}.";
+                case ScriptEffectKind.Fanfare: return $"Plays fanfare {SoundName(e.A)}, which pauses the music.";
+                case ScriptEffectKind.Music: return $"Plays music {SoundName(e.A)}.";
                 case ScriptEffectKind.MusicStop: return "Stops the music.";
-                case ScriptEffectKind.Cry: return $"Playing the cry of {PokemonName(e.A)}.";
+                case ScriptEffectKind.Cry: return $"Plays the cry of {PokemonName(e.A)}.";
                 case ScriptEffectKind.CameraChange:
                     return $"Moves the camera to setting {e.A}.";
                 case ScriptEffectKind.CameraShake:
@@ -1013,7 +1011,7 @@ namespace DSPRE.ROMFiles
                 case ScriptEffectKind.Wait: return "Waits for that to finish.";
                 case ScriptEffectKind.WaitButton: return "Waits for the player to press a button.";
                 case ScriptEffectKind.OpenMessage: return "Opens the message box.";
-                case ScriptEffectKind.CloseMessage: return e.A == 1 ? "Stops the message box, leaving the words up." : "Closes the message box.";
+                case ScriptEffectKind.CloseMessage: return e.A == 1 ? "Closes the message box but leaves the words on screen." : "Closes the message box.";
                 case ScriptEffectKind.WaitMovement: return "Waits for everyone to finish moving.";
                 case ScriptEffectKind.WaitFrames: return $"Waits {e.A} frames.";
                 case ScriptEffectKind.FacePlayer: return "Turns to face the player.";
@@ -1028,9 +1026,7 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>
-        /// Spells out what a movement actually does, rather than just naming its number.
-        /// </summary>
+        /// <summary>Spells out what a movement does.</summary>
         private string DescribeMovement(int movementNumber)
         {
             IReadOnlyList<ScriptAction> actions = _source.Actions?.Invoke(movementNumber);
@@ -1046,7 +1042,7 @@ namespace DSPRE.ROMFiles
 
                 int times = action.RepetitionCount ?? 1;
                 parts.Add(times > 1 ? $"{step} ×{times}" : step);
-                if (parts.Count >= 12) { parts.Add("…"); break; }
+                if (parts.Count >= 12) { parts.Add("and more"); break; }
             }
             return parts.Count == 0 ? null : $"movement {movementNumber} ({string.Join(", ", parts)})";
         }
@@ -1216,14 +1212,10 @@ namespace DSPRE.ROMFiles
 
         private bool TryVar(int number, out long value) => State.TryGetVar(number, out value);
 
-        // Trainer flags sit in a range of their own in the save; this keeps them clear of ordinary flags.
+        // Trainer flags have their own range in the save; this keeps them clear of ordinary flags.
         private static int TrainerFlagKey(int trainer) => 0x10000 + trainer;
 
-        /// <summary>
-        /// A parameter that names a variable, written as what it is rather than a raw number. The
-        /// command's own text wins when it already has a name for it, since that is the one the person
-        /// editing the script sees.
-        /// </summary>
+        /// <summary>A variable parameter by name. The command text wins when it names it, since that is what the script shows.</summary>
         private static string Named(ScriptCommand cmd, int param)
         {
             string shown = Display(cmd, param);

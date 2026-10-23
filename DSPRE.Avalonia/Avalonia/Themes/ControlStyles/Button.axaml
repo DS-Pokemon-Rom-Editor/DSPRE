@@ -1,11 +1,6 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- Qt Fusion push button, ported from qfusionstyle.cpp (PE_PanelButtonCommand):
-           1. fill a rounded rect (r=2) with the face gradient
-           2. stroke a DARK outer outline (window.darker(140))
-           3. stroke a bright innerContrastLine (white @30) one pixel inside
-         Implemented as two nested Borders: OuterBorder = outline + gradient fill,
-         InnerContrast = the white ring. Pressed drops the gradient + the ring (sunken). -->
+    <!-- Qt Fusion push button (PE_PanelButtonCommand): OuterBorder is outline and face, InnerContrast the white line. -->
     <ControlTheme x:Key="{x:Type Button}" TargetType="{x:Type Button}">
         <Setter Property="Background" Value="{DynamicResource Button.Static.Background}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Button.Static.Border}"/>

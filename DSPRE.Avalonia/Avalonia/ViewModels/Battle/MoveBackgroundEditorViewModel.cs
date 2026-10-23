@@ -176,14 +176,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     try { _table.Save(members); return null; }
                     catch (InvalidOperationException e) { return e.Message; }
                 });
-                if (!saved) { if (error != null) await DialogHelper.ShowErrorAsync("The move backgrounds were not saved:\n" + error, "Move backgrounds"); return false; }
+                if (!saved) { if (error != null) await DialogHelper.ShowErrorAsync("The move backgrounds weren't saved:\n" + error, "Move backgrounds"); return false; }
             }
             else
             {
                 try { _table.Save(members); }
                 catch (Exception e) when (e is InvalidOperationException || e is System.IO.IOException || e is UnauthorizedAccessException)
                 {
-                    await DialogHelper.ShowErrorAsync("The move backgrounds were not saved:\n" + e.Message, "Move backgrounds");
+                    await DialogHelper.ShowErrorAsync("The move backgrounds weren't saved:\n" + e.Message, "Move backgrounds");
                     return false;
                 }
             }

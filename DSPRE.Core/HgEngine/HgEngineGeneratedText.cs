@@ -92,7 +92,7 @@ namespace DSPRE.HgEngine
                 int id = line / source.LinesPerEntry;
                 if (!byId.TryGetValue(id, out (string Designator, int Open, int Close) entry))
                 {
-                    error = $"{source.RelPath} has no entry for line {line}, so it cannot be edited here.";
+                    error = $"{source.RelPath} has no entry for line {line}, so it can't be edited here.";
                     return false;
                 }
                 string value = lines[line] ?? "";
@@ -122,7 +122,7 @@ namespace DSPRE.HgEngine
                 string literal = HgEngineTrainerSource.ToCStringLiteral(value);
                 if (!HgEngineSourcePatcher.TryUpsertField(ref text, designator, path, literal))
                 {
-                    error = $"Could not write {source.FieldLabel} for {designator} in {source.RelPath}.";
+                    error = $"Couldn't write {source.FieldLabel} for {designator} in {source.RelPath}.";
                     return false;
                 }
             }
@@ -130,7 +130,7 @@ namespace DSPRE.HgEngine
             try { HgEngineFileCache.WriteText(FullPath(source), text); }
             catch (Exception ex)
             {
-                error = $"Could not save {source.RelPath}: {ex.Message}";
+                error = $"Couldn't save {source.RelPath}: {ex.Message}";
                 return false;
             }
             return true;
@@ -151,9 +151,9 @@ namespace DSPRE.HgEngine
             text = null; byId = null; error = null;
             if (!HgEngineProject.IsLinked) { error = "No hg-engine checkout is linked."; return false; }
             string full = FullPath(source);
-            if (!File.Exists(full)) { error = $"{source.RelPath} was not found in the checkout."; return false; }
+            if (!File.Exists(full)) { error = $"{source.RelPath} wasn't found in the checkout."; return false; }
             HgEngineSymbolTable symbols = HgEngineSymbolTable.Load(source.Header);
-            if (symbols == null) { error = $"{source.Header} could not be read."; return false; }
+            if (symbols == null) { error = $"{source.Header} couldn't be read."; return false; }
 
             text = HgEngineFileCache.GetText(full);
             byId = new Dictionary<int, (string, int, int)>();

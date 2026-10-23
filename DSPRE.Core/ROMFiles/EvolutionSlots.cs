@@ -7,12 +7,11 @@ using static DSPRE.RomInfo;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// How many evolutions each Pokémon can have. The only reader of the evolution archive is GetMonEvolution
-    /// (pokeplatinum, pokeheartgold and pokediamond pokemon.c): it allocates slots x 6 bytes (a `movs r1, #imm`),
-    /// reads the species' file whole into it, and walks three slot loops (level, trade, item; each a `cmp rN, #imm`).
-    /// Every file must be padded to the new size: a shorter file leaves heap garbage in the loops, a longer one
-    /// overruns the buffer.
+    /// How many evolutions each Pokémon can have. GetMonEvolution is the only reader; every file must be padded to the
+    /// new size, or its loops read garbage or overrun.
     /// </summary>
+    /// <remarks>GetMonEvolution (pokemon.c in pokeplatinum, pokeheartgold and pokediamond) allocates slots x 6 bytes
+    /// with a movs r1, #imm and walks three slot loops (level, trade, item), each bounded by a cmp rN, #imm.</remarks>
     public static class EvolutionSlots
     {
         public const int Vanilla = 7;
@@ -31,7 +30,7 @@ namespace DSPRE.ROMFiles
             foreach (RomLocator.Thing t in Loops.Prepend(RomLocator.Thing.EvolutionSlotBuffer))
                 if (RomLocator.WhyNot(t, 2) is string why) return why;
             byte[] buffer = RomLocator.Read(RomLocator.Thing.EvolutionSlotBuffer, 2);
-            // movs r1, #imm, then cmp rN, #imm in each loop; anything else means the code isn't the one DSPRE knows.
+            // movs r1, #imm, then cmp rN, #imm in each loop; anything else is code DSPRE doesn't know.
             bool known = buffer[1] == 0x21 && buffer[0] % RecordSize == 0
                 && Loops.Select(t => RomLocator.Read(t, 2)).All(c => c[1] >= 0x28 && c[1] <= 0x2F && c[0] * RecordSize == buffer[0]);
             return known ? null : "The code that reads evolutions has been changed, so DSPRE leaves it alone.";

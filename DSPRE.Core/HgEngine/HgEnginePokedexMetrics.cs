@@ -105,9 +105,9 @@ namespace DSPRE.HgEngine
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             HgEngineDomainInfo info = HgEngineDomains.All.FirstOrDefault(d => d.Domain == HgEngineDomain.Species);
             HgEngineSymbolTable species = HgEngineSymbolTable.Load("include/constants/species.h");
-            if (info == null || species == null) { error = "include/constants/species.h could not be read."; return false; }
+            if (info == null || species == null) { error = "include/constants/species.h couldn't be read."; return false; }
             string path = Path.Combine(HgEngineProject.RepoPathUnc, info.SourceFileRelPath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(path)) { error = $"Source file not found: {path}"; return false; }
+            if (!File.Exists(path)) { error = $"{path} is missing from the checkout."; return false; }
 
             string text = HgEngineFileCache.GetText(path);
             int lastClose = -1;
@@ -141,7 +141,7 @@ namespace DSPRE.HgEngine
             error = null;
             if (!HgEngineDexSortLists.Exists) return true;
             HgEngineSymbolTable species = HgEngineSymbolTable.Load("include/constants/species.h");
-            if (species == null) { error = "include/constants/species.h could not be read."; return false; }
+            if (species == null) { error = "include/constants/species.h couldn't be read."; return false; }
             if (!HgEngineDexSortLists.TryLoad(out HgEngineDexSortLists sort, out error)) return false;
             Dictionary<string, List<string>> tokens = sort.Lists;
             Func<string, int?> Id = SpeciesIds(species);
@@ -197,7 +197,7 @@ namespace DSPRE.HgEngine
         {
             listed = 0;
             HgEngineSymbolTable species = HgEngineSymbolTable.Load("include/constants/species.h");
-            if (species == null) { error = "include/constants/species.h could not be read."; return false; }
+            if (species == null) { error = "include/constants/species.h couldn't be read."; return false; }
             if (!TryLoadAll(out Dictionary<int, PokedexMetrics> all, out error)) return false;
             if (!TryLoadAllTypes(out Dictionary<int, (int, int)> types, out error)) return false;
             if (!HgEngineDexSortLists.TryLoad(out HgEngineDexSortLists sort, out error)) return false;
@@ -211,7 +211,7 @@ namespace DSPRE.HgEngine
             HgEngineGeneratedText.Source nameSource = HgEngineGeneratedText.For(237);
             int count = known.Count == 0 ? 0 : known.Max(k => k.Id) + 1;
             if (nameSource == null || !HgEngineGeneratedText.TryReadLines(nameSource, count, out string[] names, out error))
-            { error ??= "The species names could not be read."; return false; }
+            { error ??= "The species names couldn't be read."; return false; }
 
             HashSet<string> changed = new HashSet<string>();
             void Set(string list, IEnumerable<(string Token, int Id)> order)
@@ -289,13 +289,13 @@ namespace DSPRE.HgEngine
             error = null;
             HgEngineDomainInfo info = HgEngineDomains.All.FirstOrDefault(d => d.Domain == HgEngineDomain.Species);
             HgEngineSymbolTable species = HgEngineSymbolTable.Load("include/constants/species.h");
-            if (info == null || species == null) { error = "include/constants/species.h could not be read."; return false; }
+            if (info == null || species == null) { error = "include/constants/species.h couldn't be read."; return false; }
             HgEngineSymbolTable typeTable = HgEngineSymbolTable.Load(PokemonH);
             HgEngineSymbolTable battleTypes = HgEngineSymbolTable.Load("include/constants/battle_constants.h");
             int Value(string token) => int.TryParse(token, out int n) ? n
                 : typeTable?.TryGetValue(token, out int v) == true ? v : battleTypes?.TryGetValue(token, out int w) == true ? w : -1;
             string path = Path.Combine(HgEngineProject.RepoPathUnc, info.SourceFileRelPath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(path)) { error = $"Source file not found: {path}"; return false; }
+            if (!File.Exists(path)) { error = $"{path} is missing from the checkout."; return false; }
             string text = HgEngineFileCache.GetText(path);
             int lastClose = -1;
             foreach (Match m in SpeciesEntry.Matches(text))
@@ -319,7 +319,7 @@ namespace DSPRE.HgEngine
             error = null;
             if (before == after || !HgEngineDexSortLists.Exists) return true;
             HgEngineSymbolTable species = HgEngineSymbolTable.Load("include/constants/species.h");
-            if (species == null) { error = "include/constants/species.h could not be read."; return false; }
+            if (species == null) { error = "include/constants/species.h couldn't be read."; return false; }
             if (!HgEngineDexSortLists.TryLoad(out HgEngineDexSortLists sort, out error)) return false;
             Dictionary<string, List<string>> tokens = sort.Lists;
             Func<string, int?> Id = SpeciesIds(species);

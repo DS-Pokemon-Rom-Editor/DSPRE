@@ -16,7 +16,7 @@ namespace DSPRE.ROMFiles
         /// <summary>What an intro effect does, from the effect id ranges the games' code picks routines by.</summary>
         public enum IntroKind { Terrain, Generic, Gym, Rival, League, Legendary, TeamGrunt, TeamLeader, Kimono, OldBall, BallTrainer, DoubleBalls, Unknown }
 
-        /// <summary>Combos the selection code picks itself rather than through a class.</summary>
+        /// <summary>Combos the selection code picks itself, not through a class.</summary>
         public enum ComboRole { None, Rival, Frontier, Link, Double, FrontierBrain, DoubleLeader, Ordinary, WildDouble, OrdinaryWild }
 
         public enum RecordKind { Gym, Rival, League, Executive }
@@ -176,7 +176,7 @@ namespace DSPRE.ROMFiles
             if (IsHGE && !HgEngine.HgEngineProject.IsActive) return "Open the hg-engine folder to edit its VS intros.";
             if (GameFamily != GameFamilies.DP && GameFamily != GameFamilies.Plat && GameFamily != GameFamilies.HGSS)
                 return "This game has no VS intros DSPRE knows about.";
-            if (GameLanguage != GameLanguages.English) return "VS intros are not supported for this language yet. Only US English games can be edited.";
+            if (GameLanguage != GameLanguages.English) return "VS intros aren't supported for this language yet. Only US English games can be edited.";
             VsIntroSites sites = RomLocator.VsIntroSites;
             if (sites == null) return "This version isn't supported yet.";
             if (!File.Exists(Arm9Path)) return "arm9 is missing from this project.";
@@ -245,7 +245,7 @@ namespace DSPRE.ROMFiles
         public bool OwnsMusic(int combo) => _combos.Owns(4 * combo + 2);
 
         private static InvalidDataException Mismatch(string what) =>
-            new InvalidDataException($"DSPRE could not find {what} where it expects it in this ROM, so it won't edit VS intros here.");
+            new InvalidDataException($"DSPRE couldn't find {what} where it expects it in this ROM, so it won't edit VS intros here.");
 
         /// <summary>True when the music tables are hg-engine source; saving those rows then writes music_tables.c.</summary>
         public bool FromSource { get; private set; }
@@ -452,8 +452,8 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// Whether a combo belongs to trainer battles rather than wild ones: a trainer intro kind, a combo the
-        /// battle setup picks for trainers, or one a class points at. Everything else is left to wild Pokémon.
+        /// Whether a combo is for trainer battles: a trainer intro kind, one the battle setup picks for trainers, or
+        /// one a class points at.
         /// </summary>
         public bool IsTrainerCombo(int combo)
         {
@@ -700,9 +700,8 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// Writes the bytes that differ from what was read or last saved, and nothing else. The files are read
-        /// again first: bytes this editor did not touch take what is on disk now, and a byte it is about to write
-        /// that changed on disk since it was read stops the save rather than overwrite that change.
+        /// Writes only the changed bytes. The files are read again first; if a byte about to be written changed on
+        /// disk, the save stops.
         /// </summary>
         public void Save()
         {

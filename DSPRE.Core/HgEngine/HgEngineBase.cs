@@ -65,8 +65,7 @@ namespace DSPRE.HgEngine
         public static bool Exists => Layout != HgEngineBaseLayout.None;
 
         /// <summary>
-        /// Why the ds-rom path is unavailable, or null when it is available. Shown when DSPRE would
-        /// rather have read the checkout as a ds-rom project.
+        /// Why the ds-rom path is unavailable, or null; shown when DSPRE falls back to the flat base/ tree.
         /// </summary>
         public static string DsRomUnavailableNotice => NoticeFor(Root);
 
@@ -77,11 +76,10 @@ namespace DSPRE.HgEngine
 
             if (!SupportsDsRomAt(root))
             {
-                return "This checkout is not a ds-rom hg-engine. DSPRE will read its flat base/ tree "
-                     + "instead, which carries no overlay table or header of its own. Build with "
-                     + "ROM_TOOL=dsrom to get one.";
+                return "This checkout doesn't build through ds-rom, so DSPRE reads its flat base/ tree, which has "
+                     + "no overlay table or header. Build with ROM_TOOL=dsrom to get them.";
             }
-            return "This checkout can build through ds-rom but has not done so yet, so there is no "
+            return "This checkout can build through ds-rom but hasn't done so yet, so there is no "
                  + "base_dsrom/ to read. Run a build with ROM_TOOL=dsrom.";
         }
 
@@ -97,7 +95,7 @@ namespace DSPRE.HgEngine
         /// </summary>
         public static string DsRomProject => Layout == HgEngineBaseLayout.DsRom ? DsRomDir : null;
 
-        /// <summary>The ROM filesystem root, which is what an archive path like "a/0/2/7" hangs off.</summary>
+        /// <summary>The ROM filesystem root that archive paths like "a/0/2/7" start from.</summary>
         public static string FileSystemRoot => FileSystemRootOf(Root, Layout);
 
         internal static string FileSystemRootOf(string root, HgEngineBaseLayout layout)

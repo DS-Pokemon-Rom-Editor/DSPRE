@@ -74,7 +74,7 @@ namespace DSPRE.Avalonia.Data
         public sealed class Options
         {
             public int TerrainId;
-            public int BackdropId = -1;      // -1 = the one that goes with the terrain
+            public int BackdropId = -1;      // -1 = match the terrain
             public int TimeOfDay;            // 0 day, 1 evening, 2 night
             public int WindowStyle;          // 0..19, the player's own setting
             public TouchMenu Menu = TouchMenu.Command;
@@ -153,7 +153,7 @@ namespace DSPRE.Avalonia.Data
             return canvas;
         }
 
-        /// <summary>The backdrop being shown: the one picked, or the one that goes with the terrain.</summary>
+        /// <summary>The backdrop shown: the picked one, or the terrain's.</summary>
         public static int ResolveBackdrop(Options o) =>
             o.BackdropId >= 0 ? o.BackdropId : BattleGroundRenderer.BackdropForTerrain(o.TerrainId);
 
@@ -167,8 +167,7 @@ namespace DSPRE.Avalonia.Data
                 Archive = DirNames.BattleBg,
             };
 
-            // Which files this backdrop is made of, so the editor can hand them over. Without these
-            // the piece was the only one with no way at all to reach what it is drawn from.
+            // The backdrop's files, so the editor can open them.
             if (bg >= 0)
             {
                 (int Drawing, int Tilemap, int PaletteDay) files = BattleBgRenderer.BackdropFiles(bg);
@@ -178,17 +177,16 @@ namespace DSPRE.Avalonia.Data
                 piece.SharedNote = "Shared by all backdrops";
                 // The sheet is twice as wide as the backdrop it draws, because the arrangement picks
                 // tiles out of it, so a picture the size of what you see here cannot go back into it.
-                piece.CannotEditBecause = "A backdrop is arranged out of a wider sheet of tiles, so a "
-                                        + "picture the size of this one cannot be put back. Open the "
-                                        + "sheet in the Graphics window to change it.";
+                piece.CannotEditBecause = "A backdrop is cut from a wider sheet of tiles, so a picture this size can't go "
+                                        + "back. Open the sheet in All graphics to change it.";
             }
             try
             {
                 BattleBgRenderer.BgImage img = bg >= 0 ? (_backdrop ??= new BattleBgRenderer()).BuildBackdrop(bg, o.TimeOfDay) : null;
-                if (img?.Rgba == null) piece.Whynot = "This backdrop could not be drawn.";
+                if (img?.Rgba == null) piece.Whynot = "This backdrop couldn't be drawn.";
                 else { piece.Rgba = img.Rgba; piece.Width = img.Width; piece.Height = img.Height; }
             }
-            catch (Exception ex) { piece.Whynot = "This backdrop could not be drawn: " + ex.Message; }
+            catch (Exception ex) { piece.Whynot = "This backdrop couldn't be drawn: " + ex.Message; }
             pieces.Add(piece);
         }
 
@@ -212,7 +210,7 @@ namespace DSPRE.Avalonia.Data
                     SharedNote = "Shared by this terrain",
                 };
                 BattleGroundRenderer.GroundImage g = player ? both.mine : both.enemy;
-                if (g?.Rgba == null) piece.Whynot = "This ground could not be drawn.";
+                if (g?.Rgba == null) piece.Whynot = "This ground couldn't be drawn.";
                 else { piece.Rgba = g.Rgba; piece.Width = g.Width; piece.Height = g.Height; piece.Left = g.Left; piece.Top = g.Top; }
                 pieces.Add(piece);
             }
@@ -268,10 +266,10 @@ namespace DSPRE.Avalonia.Data
                             };
                     }
 
-                    if (g?.Rgba == null) piece.Whynot = "This HP bar could not be drawn.";
+                    if (g?.Rgba == null) piece.Whynot = "This HP bar couldn't be drawn.";
                     else { piece.Rgba = g.Rgba; piece.Width = g.Width; piece.Height = g.Height; piece.Left = g.Left; piece.Top = g.Top; }
                 }
-                catch (Exception ex) { piece.Whynot = "This HP bar could not be drawn: " + ex.Message; }
+                catch (Exception ex) { piece.Whynot = "This HP bar couldn't be drawn: " + ex.Message; }
                 pieces.Add(piece);
             }
         }
@@ -283,10 +281,7 @@ namespace DSPRE.Avalonia.Data
         public const int MessageTop = 144;
 
         /// <summary>
-        /// The frame's outermost pixels are see-through, but the games do not show the battle behind
-        /// them: the whole band the box sits in is filled. Checked against a captured Platinum frame,
-        /// where every pixel of that band outside the paper is either black or the frame's own white,
-        /// and none of it is the scene. Leaving them clear let a strip of grass show along the edges.
+        /// The games fill the whole band behind the box, so the frame's see-through edge shows black, not the scene.
         /// </summary>
         private static void BlackOutTheRest(Piece piece)
         {
@@ -309,8 +304,8 @@ namespace DSPRE.Avalonia.Data
             Piece piece = new Piece
             {
                 Name = "Message box",
-                What = "The box battle text is written in. Which of the twenty frames it uses is the "
-                     + "player's own setting, the same one the field uses.",
+                What = "The box battle text appears in. The player picks its frame, one of 20, in Options, and the field uses "
+                     + "the same one.",
                 Archive = DirNames.WindowFrames,
                 Top = MessageTop,
                 SharedNote = "Shared by field and battle",
@@ -318,7 +313,7 @@ namespace DSPRE.Avalonia.Data
             try
             {
                 FieldWindowFrame frame = WindowFrames.Load(windowStyle);
-                if (frame == null) piece.Whynot = "The window frames could not be read from this ROM.";
+                if (frame == null) piece.Whynot = "The window frames couldn't be read from this ROM.";
                 else
                 {
                     piece.Rgba = frame.Compose(MessageTilesWide, MessageTilesHigh, out int w, out int h);
@@ -329,7 +324,7 @@ namespace DSPRE.Avalonia.Data
                     piece.Colours = frame.PaletteEntry;
                 }
             }
-            catch (Exception ex) { piece.Whynot = "This message box could not be drawn: " + ex.Message; }
+            catch (Exception ex) { piece.Whynot = "This message box couldn't be drawn: " + ex.Message; }
             return piece;
         }
 
@@ -481,11 +476,9 @@ namespace DSPRE.Avalonia.Data
             Piece piece = new Piece
             {
                 Name = name, What = what, Touch = true, Archive = DirNames.BattleBg,
-                // Every layer of the panel is drawn from the one sheet of tiles, so there is no
-                // saying which layer a painted picture should go back into.
                 CannotEditBecause = "All the touch screen layers share one sheet of tiles, so a "
-                                  + "picture painted here cannot be put back into just this layer. "
-                                  + "Open the sheet in the Graphics window to change it.",
+                                  + "picture painted here can't go back into just this layer. "
+                                  + "Open the sheet in All graphics to change it.",
             };
             try
             {
@@ -495,7 +488,7 @@ namespace DSPRE.Avalonia.Data
                 piece.Arrangement = scr; piece.Drawing = chr; piece.Colours = pal;
                 if (scr < 0 || chr < 0 || pal < 0)
                 {
-                    piece.Whynot = "This game does not name the touch screen panel files.";
+                    piece.Whynot = "This game doesn't name the touch screen panel files.";
                 }
                 else
                 {
@@ -505,11 +498,11 @@ namespace DSPRE.Avalonia.Data
                                                     colours, 256,
                                                     GraphicAssets.Unsqueeze(_bg.Get(scr)),
                                                     transparentZero: !opaque);
-                    if (bg?.Rgba == null) piece.Whynot = "This panel could not be put together.";
+                    if (bg?.Rgba == null) piece.Whynot = "This panel couldn't be put together.";
                     else { piece.Rgba = bg.Rgba; piece.Width = bg.Width; piece.Height = bg.Height; }
                 }
             }
-            catch (Exception ex) { piece.Whynot = "This panel could not be drawn: " + ex.Message; }
+            catch (Exception ex) { piece.Whynot = "This panel couldn't be drawn: " + ex.Message; }
             pieces.Add(piece);
             return piece;
         }

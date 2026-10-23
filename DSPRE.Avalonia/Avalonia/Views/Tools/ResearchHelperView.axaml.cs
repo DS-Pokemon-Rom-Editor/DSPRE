@@ -20,7 +20,6 @@ namespace DSPRE.Avalonia.Views.Tools
 
         private async void Reload_Click(object sender, RoutedEventArgs e) => await VM.LoadAllDataAsync();
 
-        // ── Variable Watcher ──────────────────────────────────────────────────
         private void VarSearch_Click(object sender, RoutedEventArgs e) => VM?.SearchVariableUsage();
         private void VarClear_Click(object sender, RoutedEventArgs e)  => VM?.ClearVariableResults();
 
@@ -34,7 +33,6 @@ namespace DSPRE.Avalonia.Views.Tools
             }
         }
 
-        // ── Flag Watcher ──────────────────────────────────────────────────────
         private void FlagSearch_Click(object sender, RoutedEventArgs e) => VM?.SearchFlagUsage();
         private void FlagClear_Click(object sender, RoutedEventArgs e)  => VM?.ClearFlagResults();
 
@@ -48,7 +46,6 @@ namespace DSPRE.Avalonia.Views.Tools
             }
         }
 
-        // ── Overworld Watcher ────────────────────────────────────────────────────
         private void OwSearch_Click(object sender, RoutedEventArgs e) => VM?.SearchOverworldEntryUsage();
         private void OwClear_Click(object sender, RoutedEventArgs e)  => VM?.ClearOwResults();
 
@@ -58,7 +55,6 @@ namespace DSPRE.Avalonia.Views.Tools
                 VM?.NavigateToOwResult(r);
         }
 
-        // ── Trainer Watcher ──────────────────────────────────────────────────────
         private void TrainerWatchSearch_Click(object sender, RoutedEventArgs e) => VM?.SearchTrainerUsage();
         private void TrainerWatchClear_Click(object sender, RoutedEventArgs e)  => VM?.ClearTrainerResults();
 
@@ -68,7 +64,6 @@ namespace DSPRE.Avalonia.Views.Tools
                 VM?.NavigateToTrainerResult(r);
         }
 
-        // ── Class Watcher ─────────────────────────────────────────────────────
         private void ClassWatchSearch_Click(object sender, RoutedEventArgs e) => VM?.SearchClassUsage();
         private void ClassWatchClear_Click(object sender, RoutedEventArgs e)  => VM?.ClearClassResults();
 
@@ -78,7 +73,6 @@ namespace DSPRE.Avalonia.Views.Tools
                 VM?.NavigateToTrainerResult(r);
         }
 
-        // ── File Watcher ──────────────────────────────────────────────────────
         private void FileWatcherSearch_Click(object sender, RoutedEventArgs e)
             => VM?.SearchScriptFileReferences();
 
@@ -92,7 +86,6 @@ namespace DSPRE.Avalonia.Views.Tools
             }
         }
 
-        // ── ID Watcher ────────────────────────────────────────────────────────
         private void IdWatcherSearch_Click(object sender, RoutedEventArgs e)
             => VM?.SearchScriptIdUsage();
 
@@ -106,7 +99,6 @@ namespace DSPRE.Avalonia.Views.Tools
             }
         }
 
-        // ── Header Watcher ────────────────────────────────────────────────────
         private void HeaderSearch_Click(object sender, RoutedEventArgs e)
             => VM?.SearchHeaderInfo();
 
@@ -139,7 +131,7 @@ namespace DSPRE.Avalonia.Views.Tools
                     }
                     catch { }   // a header that can't be read is skipped
                 }
-                VM.StatusText = $"Could not find header for event file {r.EventFileID}";
+                VM.StatusText = $"Couldn't find header for event file {r.EventFileID}";
             }
         }
 

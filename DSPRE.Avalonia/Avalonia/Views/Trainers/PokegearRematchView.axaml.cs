@@ -19,7 +19,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e)
-            => await DialogHelper.GuardAsync(() => { VM?.SaveAll(); return System.Threading.Tasks.Task.CompletedTask; }, "The rematches weren't saved.", "Pokégear rematch editor error");
+            => await DialogHelper.GuardAsync(() => { VM?.SaveAll(); return System.Threading.Tasks.Task.CompletedTask; }, "The rematches weren't saved.", "Pokégear rematch editor");
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {

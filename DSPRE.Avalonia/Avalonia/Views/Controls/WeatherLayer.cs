@@ -68,7 +68,7 @@ namespace DSPRE.Avalonia.Views.Controls
             }
             catch (Exception ex)
             {
-                AppLogger.Warn($"Weather {headerWeather} graphics could not be read: {ex.Message}");
+                AppLogger.Warn($"Weather {headerWeather} graphics couldn't be read: {ex.Message}");
                 return;
             }
 
@@ -85,7 +85,6 @@ namespace DSPRE.Avalonia.Views.Controls
             Publish(sim);
         }
 
-        // ── composing ────────────────────────────────────────────────────────────
 
         private void Publish(FieldWeatherSim sim)
         {
@@ -131,7 +130,6 @@ namespace DSPRE.Avalonia.Views.Controls
             return frame;
         }
 
-        // ── graphics ─────────────────────────────────────────────────────────────
 
         // The game copies the background's first sixteen colours into slot 6 and points every tile at it.
         private static byte[] Layer(Narc narc, (int Nclr, int Ncgr, int Nscr) set)

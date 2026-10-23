@@ -19,7 +19,7 @@ namespace DSPRE.Avalonia.Data
         private static readonly int[] HiddenDungeons = { 10 };
 
         /// <param name="time">0 morning, 1 day, 2 night.</param>
-        /// <param name="national">Whether the special list is the one used once the National Pokédex is obtained.</param>
+        /// <param name="national">Whether to use the special list for after the National Pokédex.</param>
         public static DexHabitatData Build(int species, int time, bool national)
         {
             if (GameFamily == GameFamilies.HGSS || !PokedexAreaData.TryLoad(out PokedexAreaData areas, out _)) return null;
@@ -64,7 +64,7 @@ namespace DSPRE.Avalonia.Data
         /// The places on the HGSS AREA page for a time and region: each route or town as a block sized to its area,
         /// each cave as a small block, and markers on the far exits of caves that cross the map.
         /// </summary>
-        /// <param name="kanto">Whether the Kanto half of the map is the one shown.</param>
+        /// <param name="kanto">Whether to show the Kanto half of the map.</param>
         public static DexHabitatData BuildHgss(int species, int time, bool kanto)
         {
             if (GameFamily != GameFamilies.HGSS || !PokedexAreaData.TryLoad(out PokedexAreaData areas, out _)) return null;

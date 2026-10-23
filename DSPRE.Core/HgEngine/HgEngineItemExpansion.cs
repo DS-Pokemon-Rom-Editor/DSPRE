@@ -110,11 +110,11 @@ namespace DSPRE.HgEngine
         {
             headerPath = headerText = sourcePath = sourceText = null;
             error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             headerPath = Path.Combine(HgEngineProject.RepoPathUnc, HeaderRelPath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(headerPath)) { error = $"Source file not found: {headerPath}"; return false; }
+            if (!File.Exists(headerPath)) { error = $"{headerPath} is missing from the checkout."; return false; }
             sourcePath = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(sourcePath)) { error = $"Source file not found: {sourcePath}"; return false; }
+            if (!File.Exists(sourcePath)) { error = $"{sourcePath} is missing from the checkout."; return false; }
             headerText = HgEngineFileCache.GetText(headerPath);
             sourceText = HgEngineFileCache.GetText(sourcePath);
             return true;
@@ -129,17 +129,17 @@ namespace DSPRE.HgEngine
             error = null;
             HgEngineSymbolTable items = HgEngineSymbolTable.Parse(headerText, config);
 
-            // Scan for the real max rather than using MAX_BASE_ITEM_NUM: that only tracks the vanilla boundary.
+            // Scan for the real max: MAX_BASE_ITEM_NUM only tracks the vanilla boundary.
             int maxId = -1;
             foreach (KeyValuePair<string, int> kv in items.ByName)
                 if (kv.Key.StartsWith(Prefix, StringComparison.Ordinal) && kv.Value > maxId) maxId = kv.Value;
-            if (maxId < 0) { error = "Could not find any existing ITEM_* constants."; return false; }
+            if (maxId < 0) { error = "Couldn't find any existing ITEM_* constants."; return false; }
             int candidateId = maxId + 1;
 
             string designator = Prefix + HgEngineNameSlug.ToUniqueSlug(displayName, items, Prefix);
             if (!TryBuildSources(headerText, sourceText, designator, candidateId, out newHeader, out newSource, out error)) return false;
             if (!HgEngineSourcePatcher.TryFindEntry(newSource, designator, out int open, out int close))
-            { error = $"The new {designator} entry could not be read back, so nothing was added."; return false; }
+            { error = $"The new {designator} entry couldn't be read back, so nothing was added."; return false; }
 
             pending = new PendingItem
             {
@@ -160,11 +160,11 @@ namespace DSPRE.HgEngine
             newSource = sourceText;
             error = null;
             if (!HgEngineHeaderEditor.TryInsertBeforeDefine(ref newHeader, "MAX_TOTAL_ITEM_NUM", $"#define {designator} {candidateId}\n\n"))
-            { error = "Could not find MAX_TOTAL_ITEM_NUM in item.h to anchor the new item next to."; return false; }
+            { error = "Couldn't find MAX_TOTAL_ITEM_NUM in item.h to anchor the new item next to."; return false; }
             if (!HgEngineHeaderEditor.TryReplaceDefineValue(ref newHeader, "MAX_TOTAL_ITEM_NUM", designator))
-            { error = "Could not update MAX_TOTAL_ITEM_NUM."; return false; }
+            { error = "Couldn't update MAX_TOTAL_ITEM_NUM."; return false; }
             if (!HgEngineHeaderEditor.TryInsertBeforeFinalCloseBrace(ref newSource, BuildNewEntry(sourceText, designator)))
-            { error = $"Could not find the end of {SourceRelPath} to insert the new item."; return false; }
+            { error = $"Couldn't find the end of {SourceRelPath} to insert the new item."; return false; }
             return true;
         }
 
@@ -177,7 +177,7 @@ namespace DSPRE.HgEngine
             newHeader = newSource = null;
             if (!TryPrepare(headerText, sourceText, pending.DisplayName, config, out PendingItem fresh, out string header, out string source, out error)) return false;
             if (fresh.Id != pending.Id || fresh.Designator != pending.Designator)
-            { error = "item.h changed after the item was added, so it was not saved. Discard it and add it again."; return false; }
+            { error = "item.h changed after the item was added, so it wasn't saved. Discard it and add it again."; return false; }
             if (!TrySpliceItem(ref source, pending.Designator, item, lookupFor, priceLookup, out error)) return false;
             newHeader = header;
             newSource = source;
@@ -224,11 +224,11 @@ namespace DSPRE.HgEngine
         public static bool TryWriteItem(int itemId, ItemData item, out string error)
         {
             error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             string sourcePath = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(sourcePath)) { error = $"Source file not found: {sourcePath}"; return false; }
+            if (!File.Exists(sourcePath)) { error = $"{sourcePath} is missing from the checkout."; return false; }
             if (!HgEngineDesignators.TryResolve(HgEngineDomain.Items, itemId, out string designator))
-            { error = $"Could not find item {itemId} in {HeaderRelPath}."; return false; }
+            { error = $"Couldn't find item {itemId} in {HeaderRelPath}."; return false; }
 
             string text = HgEngineFileCache.GetText(sourcePath);
             string updated = text;
@@ -254,7 +254,7 @@ namespace DSPRE.HgEngine
             if (item.FullPrice > ItemData.MaxHgEnginePrice)
             { error = $"A price of {item.FullPrice} is more than hg-engine can hold ({ItemData.MaxHgEnginePrice})."; return false; }
             if (!HgEngineSourcePatcher.TryFindEntry(text, designator, out int open, out int close))
-            { error = $"{designator} is not in {SourceRelPath}, so nothing was written."; return false; }
+            { error = $"{designator} isn't in {SourceRelPath}, so nothing was written."; return false; }
 
             HgEngineEntryIndex.TryPatch(text.Substring(open, close - open + 1), HgEngineItemSource.Fields, item, HgEngineItemSource.Headers,
                 lookupFor, out string block, out List<string> unresolved);

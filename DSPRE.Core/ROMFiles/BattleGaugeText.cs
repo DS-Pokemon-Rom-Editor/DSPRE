@@ -148,8 +148,8 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// The "Lv" as the number font holds it. The gauge keeps the same picture four rows lower, so
-        /// this is what says a gender block was read in the right place.
+        /// The "Lv" as the number font holds it. The gauge holds it four rows lower, so matching it proves the gender
+        /// block was read from the right place.
         /// </summary>
         public static Tile NumberFontLv()
         {
@@ -157,7 +157,7 @@ namespace DSPRE.ROMFiles
             return read == null ? null : TileAt(read.NumberFont, BattleLvRightHalf * 32);
         }
 
-        // A preview can stage a sheet that is not written yet; otherwise the overlay's own.
+        // A preview's staged sheet if there is one, else the overlay's.
         private static byte[] Sheet(Pieces read) => BattleGaugePieces.StagedSheet
             ?? (BattleGaugePieces.IsOverlayStaged ? BattleGaugePieces.ReadSheet() : null)
             ?? read.Overlay.AsSpan(read.TilesAt, Math.Min(0x4E * 32, read.Overlay.Length - read.TilesAt)).ToArray();
@@ -199,7 +199,7 @@ namespace DSPRE.ROMFiles
             int entry = NumberFontEntry;
             if (entry < 0)
             {
-                _why = "This game's gauge text is not read yet.";
+                _why = "DSPRE can't read the HP bar text in this game.";
                 return null;
             }
 
@@ -212,7 +212,7 @@ namespace DSPRE.ROMFiles
             try { bytes = File.ReadAllBytes(OverlayUtils.GetPath(found.Overlay)); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                _why = "The battle overlay could not be read: " + ex.Message;
+                _why = "The battle overlay couldn't be read: " + ex.Message;
                 return null;
             }
 
@@ -237,7 +237,7 @@ namespace DSPRE.ROMFiles
             // Not every editor that draws a gauge unpacks the fonts first, and a failed read is kept for the ROM.
             DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.Fonts });
             string dir = RomInfo.GameDirs[RomInfo.DirNames.Fonts].unpackedDir;
-            if (!Directory.Exists(dir)) { _why = "The font archive is not unpacked."; return null; }
+            if (!Directory.Exists(dir)) { _why = "The font archive isn't unpacked."; return null; }
 
             string[] files = Directory.GetFiles(dir).OrderBy(f => f, StringComparer.Ordinal).ToArray();
             if (entry >= files.Length) { _why = $"The font archive has no entry {entry}."; return null; }
@@ -248,14 +248,14 @@ namespace DSPRE.ROMFiles
                 byte[] tiles = raw.Length > 0 && raw[0] == 0x10 ? Lz77.Decompress(raw) : raw;
                 if (tiles.Length < (BattleLvRightHalf + 1) * 32)
                 {
-                    _why = "The number font is smaller than the pictures we read out of it.";
+                    _why = "The number font is too small to hold the HP bar digits.";
                     return null;
                 }
                 return tiles;
             }
             catch (Exception ex)
             {
-                _why = "The number font could not be read: " + ex.Message;
+                _why = "The number font couldn't be read: " + ex.Message;
                 return null;
             }
         }

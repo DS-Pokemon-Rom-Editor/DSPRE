@@ -5,17 +5,10 @@ using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
-    /// <summary>Source-text read/write for data/Evolutions.c's per-species <c>EvolutionTable.entries[]</c>
-    /// (hg-engine's <c>MAX_EVOS_PER_POKE</c> is 9; DSPRE's UI only edits 7 slots). Each entry is a
-    /// positional <c>{ method, param, target }</c> literal, not a dotted field, so this locates
-    /// <c>.entries</c> as one block and splits/rebuilds its elements directly. The method list is read
-    /// live from <c>include/pokemon.h</c>'s <c>EvoMethod</c> enum, never hardcoded. Slots beyond what
-    /// DSPRE edits are preserved verbatim on write, never truncated.
-    ///
-    /// <c>target</c> is packed, per <c>GetMonEvolutionInternal.c</c>'s own <c>evoTable[i].target &amp;
-    /// 0x7FF</c>/<c>&amp; 0xF800 &gt;&gt; 11</c>: bits 0-10 are the species id, bits 11-15 are a form to
-    /// switch to on evolution. The checkout spells it <c>MON_WITH_FORM(SPECIES_X, form)</c>, which is
-    /// what a changed target is written as; an unchanged one keeps its own spelling.</summary>
+    /// <summary>data/Evolutions.c's entries; DSPRE edits 7 of 9 slots. A changed target is written as
+    /// MON_WITH_FORM(SPECIES_X, form).</summary>
+    /// <remarks>Entries are positional { method, param, target } literals; slots past 7 are kept as written. A target's
+    /// bits 0-10 are the species and 11-15 the form to switch to. Methods come from include/pokemon.h's EvoMethod.</remarks>
     public static class HgEngineEvolutions
     {
         private const string SourceRelPath = "data/Evolutions.c";
@@ -65,13 +58,13 @@ namespace DSPRE.HgEngine
         {
             entries = new List<EvoEntry>();
             error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator))
-            { error = $"Could not resolve a species designator for id {speciesId}."; return false; }
+            { error = $"Species {speciesId} has no SPECIES_ name in the checkout."; return false; }
 
             string text = TryReadSource(out string path);
-            if (text == null) { error = $"Source file not found: {path}"; return false; }
+            if (text == null) { error = $"{path} is missing from the checkout."; return false; }
 
             if (!HgEngineSourcePatcher.TryGetFieldValue(text, designator, EntriesPath, out string rawEntriesBlock))
                 return true;   // no entry: caller treats an empty list as all-EVO_NONE
@@ -110,13 +103,13 @@ namespace DSPRE.HgEngine
         public static bool TrySetEntries(int speciesId, IReadOnlyList<(string MethodName, int Param, int TargetSpeciesId, int TargetFormId)> uiEntries, out string error)
         {
             error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator))
-            { error = $"Could not resolve a species designator for id {speciesId}."; return false; }
+            { error = $"Species {speciesId} has no SPECIES_ name in the checkout."; return false; }
 
             string text = TryReadSource(out string path);
-            if (text == null) { error = $"Source file not found: {path}"; return false; }
+            if (text == null) { error = $"{path} is missing from the checkout."; return false; }
 
             List<string> existingRaw = null;
             if (HgEngineSourcePatcher.TryGetFieldValue(text, designator, EntriesPath, out string rawEntriesBlock))
@@ -146,13 +139,13 @@ namespace DSPRE.HgEngine
             if (HgEngineSourcePatcher.TryFindEntry(text, designator, out _, out _))
             {
                 if (!HgEngineSourcePatcher.TryReplaceField(ref text, designator, EntriesPath, newBlock))
-                { error = $"Could not locate .entries for species {speciesId}."; return false; }
+                { error = $"Couldn't locate .entries for species {speciesId}."; return false; }
             }
             else
             {
                 string newEntry = $"\n    [{designator}] = {{\n        .entries = {newBlock},\n    }},\n";
                 if (!HgEngineHeaderEditor.TryInsertBeforeFinalCloseBrace(ref text, newEntry))
-                { error = $"Could not insert a new Evolutions entry for species {speciesId}."; return false; }
+                { error = $"Couldn't insert a new Evolutions entry for species {speciesId}."; return false; }
             }
 
             HgEngineFileCache.WriteText(path, text);

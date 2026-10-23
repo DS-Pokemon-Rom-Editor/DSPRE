@@ -5,8 +5,7 @@ using AvaloniaEdit.Highlighting.Xshd;
 
 namespace DSPRE.Avalonia
 {
-    /// <summary>Minimal JSON syntax highlighting for AvaloniaEdit's TextEditor, used by the Trainer Sprite
-    /// Editor's Animations JSON tab.</summary>
+    /// <summary>JSON highlighting for the Trainer sprite editor's animation text.</summary>
     public static class JsonSyntax
     {
         private static IHighlightingDefinition _cached;

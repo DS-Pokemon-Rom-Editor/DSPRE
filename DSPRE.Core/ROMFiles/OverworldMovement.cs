@@ -30,7 +30,7 @@ namespace DSPRE.ROMFiles
         public IReadOnlyList<MoveFacing> Facings = Array.Empty<MoveFacing>();
         public bool SpinClockwise;
 
-        /// <summary>A route with no directions of its own walks the way the event is facing (type 20).</summary>
+        /// <summary>A route with no directions walks the way the event faces (type 20).</summary>
         public bool RouteFollowsEventFacing => Kind == MoveKind.Route && Facings.Count == 0;
 
         public override string ToString() => $"[{Value:D2}]  {Name}";

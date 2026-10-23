@@ -52,6 +52,8 @@ namespace DSPRE.Avalonia.Data
         public int Width { get; init; }
         public int Height { get; init; }
         public bool CanResize { get; init; }
+        /// <summary>The font it prints in, by the game's number, or -1 when its font can't be picked.</summary>
+        public int Font { get; init; } = -1;
         /// <summary>What the layout knows the item by.</summary>
         public object Key { get; init; }
     }
@@ -73,5 +75,11 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>The layout bytes with an item moved or resized, or why it can't be.</summary>
         public abstract (byte[] Bytes, string Error) Place(ScreenLayoutItem item, int x, int y, int width, int height);
+        /// <summary>The layout bytes with a text box printing in another font, or why it can't.</summary>
+        public virtual (byte[] Bytes, string Error) SetFont(ScreenLayoutItem item, int font) => (null, "This screen's fonts can't be changed.");
+        /// <summary>The fonts' names, by the game's number.</summary>
+        public virtual IReadOnlyList<string> FontNames => Array.Empty<string>();
+        /// <summary>Whether a toolbox patch would let the fonts be picked.</summary>
+        public virtual bool OffersFontPatch => false;
     }
 }

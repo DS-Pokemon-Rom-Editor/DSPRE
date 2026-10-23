@@ -74,7 +74,7 @@ namespace DSPRE.HgEngine
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             if (!File.Exists(PathOf(RelPath))) { error = $"{RelPath} is missing from the checkout."; return false; }
             abilities = HgEngineSymbolTable.Load(AbilityH);
-            if (abilities == null) { error = $"{AbilityH} could not be read."; return false; }
+            if (abilities == null) { error = $"{AbilityH} couldn't be read."; return false; }
             HashSet<string> known = new HashSet<string>(FlagNames());
             if (known.Count == 0) { error = $"{StructHeader} has no AbilityFlags bitfield DSPRE can read."; return false; }
             text = HgEngineFileCache.GetText(PathOf(RelPath)).Replace("\r\n", "\n");
@@ -92,7 +92,7 @@ namespace DSPRE.HgEngine
         }
 
         /// <summary>Rewrites the entries of the abilities given, in the struct's flag order; an ability without an
-        /// entry gets one in id order. An entry DSPRE couldn't fully read is refused rather than rewritten.</summary>
+        /// entry gets one in id order. An entry DSPRE couldn't fully read is refused.</summary>
         public static bool TryWrite(IReadOnlyDictionary<int, HashSet<string>> changes, out string error)
         {
             if (!TryLoad(out string text, out CDeclaration table, out List<Entry> entries, out HgEngineSymbolTable abilities, out error)) return false;

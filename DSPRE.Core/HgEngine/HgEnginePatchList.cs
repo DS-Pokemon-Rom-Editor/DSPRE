@@ -12,7 +12,7 @@ namespace DSPRE.HgEngine
         /// <summary>hooks: binary, symbol, address, and the register the branch goes through.</summary>
         Hook,
 
-        /// <summary>armhooks: the same, assembled as ARM rather than THUMB.</summary>
+        /// <summary>armhooks: the same, assembled as ARM, not THUMB.</summary>
         ArmHook,
 
         /// <summary>bytereplacement: binary, address, and the bytes to write there.</summary>
@@ -30,7 +30,7 @@ namespace DSPRE.HgEngine
     {
         public HgEnginePatchKind Kind { get; set; }
 
-        /// <summary>The raw text, which is what an unparsed line is written back as.</summary>
+        /// <summary>The raw text, written back as it is when the line isn't parsed.</summary>
         public string RawLine { get; set; }
 
         public bool Parsed { get; set; }
@@ -71,7 +71,7 @@ namespace DSPRE.HgEngine
             HgEnginePatchKind.Hook => $"branches to {Symbol} through r{Register}",
             HgEnginePatchKind.ArmHook => $"branches to {Symbol} through r{Register}, in ARM",
             HgEnginePatchKind.Repoint => $"points at {Symbol}",
-            _ => $"writes {Bytes.Count} byte(s)",
+            _ => $"writes {Plural.Of(Bytes.Count, "byte")}",
         };
 
         internal string Render() => Kind switch
@@ -85,15 +85,14 @@ namespace DSPRE.HgEngine
 
         private string BinaryField => OverlayNumber < 0 ? "arm9" : OverlayNumber.ToString("D4");
 
-        /// <summary>How many bytes the build writes for this entry, which is what it claims.</summary>
+        /// <summary>How many bytes the build writes for this entry, and so claims.</summary>
         public int Length => Kind switch
         {
             HgEnginePatchKind.ByteReplacement => Bytes.Count,
             HgEnginePatchKind.Repoint => 4,
             HgEnginePatchKind.ArmHook => 8 + 4,
-            // The branch goes in at an even address and takes an extra halfword when that lands off a
-            // word boundary. Replacing the whole routine needs 0x18 of code plus its address, which is
-            // what a missing register column means, and what 255 means when one is written out.
+            // A branch takes an extra halfword off a word boundary. A missing register column, or 255, replaces the
+            // whole routine: 0x18 of code plus its address.
             _ => ReplacesWholeRoutine ? 0x18 + 4 : ((Address & ~1L) % 4 != 0 ? 6 + 4 : 4 + 4),
         };
 
@@ -212,7 +211,7 @@ namespace DSPRE.HgEngine
                 if (off.Name != null)
                 {
                     entry.Built = false;
-                    entry.BuiltNote = off.WhenDefined ? $"Off: {off.Name} is not defined." : $"Off: {off.Name} is defined.";
+                    entry.BuiltNote = off.WhenDefined ? $"Off: {off.Name} isn't defined." : $"Off: {off.Name} is defined.";
                 }
                 else if (depends.Name != null)
                 {
@@ -255,7 +254,7 @@ namespace DSPRE.HgEngine
                 foreach (string token in f.Skip(2))
                 {
                     if (!byte.TryParse(token, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out byte b))
-                        return entry;   // a define rather than literal bytes; leave the line alone
+                        return entry;   // a define, not literal bytes; leave the line alone
                     bytes.Add(b);
                 }
                 if (bytes.Count == 0) return entry;
@@ -269,7 +268,7 @@ namespace DSPRE.HgEngine
             if (f.Length < 3 || !TryHex(f[2], out long address)) return entry;
 
             // make.py splits hooks into exactly 3 or 4 columns and armhooks into exactly 4, reading the
-            // fourth with int(). Anything else is kept as text rather than rewritten into a different line.
+            // fourth with int(). Anything else is kept as text, so it can't become a different line.
             int register = -1;
             if (kind == HgEnginePatchKind.Repoint) { if (f.Length != 3) return entry; }
             else if (f.Length > 4) return entry;

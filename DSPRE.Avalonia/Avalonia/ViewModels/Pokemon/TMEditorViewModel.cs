@@ -243,7 +243,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _history.Reset(_savedSnap);   // loaded table is the clean undo baseline
             AppEvents.NamesChanged += OnNamesChanged;   // live-refresh move/type names from the Text editor
 
-            // Start on the first machine, so the move and palette boxes show something rather than blank.
+            // Start on the first machine so the move and palette boxes aren't blank.
             if (MachineItems.Count > 0) SelectedMachineIndex = 0;
         }
 
@@ -273,9 +273,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (!_palettesKnown) return;
             bool confirmed = await DialogHelper.AskYesNoAsync(
-                "This will set the palette of all TMs and HMs based on their move types.\n" +
-                "If any of the moves have custom types (e.g. Fairy) they will receive the Normal type palette instead and " +
-                "may need to be manually corrected.\nDo you want to continue?",
+                "Set every TM and HM palette from its move's type?\n\n" +
+                "Custom types such as Fairy get the Normal palette.",
                 "Auto-set all palettes");
 
             if (!confirmed) return;
@@ -316,7 +315,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             catch (Exception ex)
             {
                 AppLogger.Error($"TM / HM editor: Failed to export machine data. Exception: {ex.Message}");
-                await DialogHelper.ShowErrorAsync($"The machines could not be exported:\n{ex.Message}", "TM / HM editor error");
+                await DialogHelper.ShowErrorAsync($"The machines couldn't be exported:\n{ex.Message}", "TM / HM editor");
             }
         }
 
@@ -418,7 +417,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             return (moveId >= 0 && moveId < names.Length) ? names[moveId] : $"UNK_{moveId}";
         }
 
-        // The old description names the old move, so it is offered for rewriting rather than left wrong.
+        // The old description names the old move, so it is offered for rewriting.
         private async Task UpdateDescriptionsAsync(List<(int Machine, int OldMove, int NewMove)> moved)
         {
             string labels = string.Join(", ", moved.Take(6).Select(m => TMEditor.MachineLabelFromIndex(m.Machine))) + (moved.Count > 6 ? "…" : "");
@@ -427,11 +426,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 TmItemDescriptions.Result result = TmItemDescriptions.Update(moved);
                 if (result.Kept.Count > 0)
-                    await DialogHelper.ShowInfoAsync("Too long for the bag, left as they were: " + string.Join(", ", result.Kept) + ".", "TM / HM editor");
+                    await DialogHelper.ShowInfoAsync("These were too long for the bag and were left as they were: " + string.Join(", ", result.Kept) + ".", "TM / HM editor");
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
             {
-                await DialogHelper.ShowErrorAsync("The descriptions were not rewritten:\n" + e.Message, "TM / HM editor error");
+                await DialogHelper.ShowErrorAsync("The descriptions weren't rewritten:\n" + e.Message, "TM / HM editor");
             }
         }
 
@@ -456,7 +455,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException || ex is ArgumentException)
             {
                 AppLogger.Error($"TM / HM editor: Failed to save machine moves or palettes. Exception: {ex.Message}");
-                _ = DialogHelper.ShowErrorAsync("The TMs and HMs were not saved:\n" + ex.Message, "TM / HM editor error");
+                _ = DialogHelper.ShowErrorAsync("The TMs and HMs weren't saved:\n" + ex.Message, "TM / HM editor");
                 return false;
             }
             return true;
@@ -468,7 +467,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _dirty = isDirty;
             OnPropertyChanged(nameof(HasUnsavedChanges));
 
-            // Avalonia ViewModels are tracked by AvaloniaEditorsRegistry, not the WinForms OpenEditorsRegistry
+            // Tracked by AvaloniaEditorsRegistry.
         }
 
         private int GetMoveType(int moveId)

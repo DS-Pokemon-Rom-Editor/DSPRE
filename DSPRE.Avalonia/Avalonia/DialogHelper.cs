@@ -9,16 +9,9 @@ using Avalonia.Platform.Storage;
 
 namespace DSPRE.Avalonia
 {
-    /// <summary>
-    /// Wraps Avalonia 12 async message-box and file-dialog APIs behind a simple static interface.
-    /// Use this everywhere instead of System.Windows.Forms.MessageBox or OpenFileDialog/SaveFileDialog.
-    /// </summary>
+    /// <summary>Message boxes and file pickers for every editor.</summary>
     public static class DialogHelper
     {
-        // ----------------------------------------------------------------
-        // Message box result enum (replaces WinForms DialogResult)
-        // ----------------------------------------------------------------
-
         public enum MsgResult { Ok, Yes, No, Cancel }
 
         /// <summary>
@@ -120,7 +113,7 @@ namespace DSPRE.Avalonia
         /// <summary>
         /// For a save that isn't awaited: shows its failure instead of losing it.
         /// </summary>
-        public static async void Watch(Task task, string failed = "The changes weren't saved.", string title = "Save failed")
+        public static async void Watch(Task task, string failed = "The changes weren't saved.", string title = "Couldn't save")
         {
             try { await task; }
             catch (Exception ex)
@@ -141,11 +134,7 @@ namespace DSPRE.Avalonia
         public static Task<MsgResult> AskYesNoCancelAsync(string message, string title = "Confirm")
             => ShowMsgAsync(message, title, MsgButtons.YesNoCancel);
 
-        /// <summary>
-        /// Where an ownerless dialog should attach. The window the user is actually working in, not the
-        /// main window: a prompt raised by an editor belongs over that editor, or it looks like it came
-        /// from somewhere else and can end up behind the window that raised it.
-        /// </summary>
+        /// <summary>The window the user is working in, so an editor's prompt shows over that editor and not behind it.</summary>
         private static Window ActiveOwner()
         => OwnerWindow.Current;
 
@@ -413,19 +402,19 @@ namespace DSPRE.Avalonia
         // ----------------------------------------------------------------
 
         public static readonly FilePickerFileType CsvFilter =
-            new FilePickerFileType("CSV Files") { Patterns = new[] { "*.csv" } };
+            new FilePickerFileType("CSV files") { Patterns = new[] { "*.csv" } };
 
         public static readonly FilePickerFileType JsonFilter =
-            new FilePickerFileType("JSON Files") { Patterns = new[] { "*.json" } };
+            new FilePickerFileType("JSON files") { Patterns = new[] { "*.json" } };
 
         public static readonly FilePickerFileType PngFilter =
-            new FilePickerFileType("PNG Images") { Patterns = new[] { "*.png" } };
+            new FilePickerFileType("PNG images") { Patterns = new[] { "*.png" } };
 
         public static readonly FilePickerFileType AllFilter =
-            new FilePickerFileType("All Files") { Patterns = new[] { "*.*" } };
+            new FilePickerFileType("All files") { Patterns = new[] { "*.*" } };
 
         public static readonly FilePickerFileType ZipFilter =
-            new FilePickerFileType("ZIP Archive") { Patterns = new[] { "*.zip" } };
+            new FilePickerFileType("ZIP archive") { Patterns = new[] { "*.zip" } };
 
         // ----------------------------------------------------------------
         // Internal: lightweight dialog window built in code (no AXAML)
@@ -505,7 +494,7 @@ namespace DSPRE.Avalonia
                     if (clipboard != null)
                     {
                         await clipboard.SetTextAsync(message + "\n\n" + details);
-                        copyBtn.Content = "Copied!";
+                        copyBtn.Content = "Copied";
                     }
                 };
                 root.Children.Add(copyBtn);

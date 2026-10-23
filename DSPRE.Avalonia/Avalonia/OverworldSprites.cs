@@ -7,12 +7,7 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia
 {
-    /// <summary>
-    /// Resolves an overworld's sprite bitmap (by overlay-table entry + orientation) the same
-    /// way the WinForms event editor does (3D-overworld resource images, the NSBTX frame
-    /// banks under <c>OWSprites</c>, or a fallback bounding-box), and decodes it to top-down
-    /// RGBA for upload as a GL billboard texture. Results are cached per (entry, orientation).
-    /// </summary>
+    /// <summary>An overworld's sprite for one entry and facing, as top-down RGBA for a GL billboard, cached per entry and facing.</summary>
     public static class OverworldSprites
     {
         public sealed class SpritePixels { public byte[] Rgba; public int Width, Height; }
@@ -109,8 +104,7 @@ namespace DSPRE.Avalonia
             };
         }
 
-        // Mirrors EventEditor.GetOverworldImage. Sprite bank frames are drawn in the bank's first palette; the fixed
-        // fallback images come from the avares assets (see ResourceImages), no GDI anywhere.
+        // Sprite bank frames use the bank's first palette; the fixed fallbacks come from ResourceImages.
         private static DSPRE.RawImage LoadRaw(ushort eventEntryID, ushort orientation, int picture)
         {
             // The lookup tables are populated during ROM/event setup; make sure they exist.
@@ -212,8 +206,7 @@ namespace DSPRE.Avalonia
             return order;
         }
 
-        // Convert to RGBA (top row first), treating the top-left pixel's colour as transparent
-        // (matching WinForms Bitmap.MakeTransparent()).
+        // To RGBA, top row first, with the top-left pixel's colour see-through.
         private static SpritePixels ToRgba(DSPRE.RawImage src)
         {
             if (src == null || src.IsEmpty) return null;

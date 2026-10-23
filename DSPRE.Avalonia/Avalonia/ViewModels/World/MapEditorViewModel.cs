@@ -39,20 +39,12 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool Dirty;
     }
 
-    /// <summary>
-    /// Avalonia port of the WinForms <c>MapEditor</c>. Core scope: map-file selection,
-    /// a textured-geometry 3D preview (via <see cref="NsbmdGlControl"/>), the two 32×32
-    /// movement-permission grids (collision + type, painted via
-    /// <see cref="PermissionGridControl"/>), a buildings list, and save / import /
-    /// export of the map .bin. Building placement-by-picking and tileset texture binding
-    /// for the preview are deferred.
-    /// </summary>
+    /// <summary>Edits a map's permissions, buildings and model, on its own, with its header's maps, or across the whole matrix.</summary>
     public class MapEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         /// <summary>
-        /// Whether the parts of this editor that are still being tried out are shown: walking the map,
-        /// the animated preview and the drag gizmos. They are off with the beta editors, because they
-        /// are the same kind of unfinished, but the editor itself is not gated.
+        /// Whether walking, the animated preview and the drag gizmos show. They are unfinished, so they follow the beta
+        /// switch; the editor itself isn't gated.
         /// </summary>
         public bool ShowBetaFeatures => BetaEditors.Enabled;
 
@@ -128,15 +120,11 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool IsSingleMap => _viewModeIndex == 0;
         public bool IsMatrixView => _viewModeIndex == 1;
         public bool IsHeaderView => _viewModeIndex == 2;
-        /// <summary>Whether the Permissions/Buildings editing panel should be usable: single-map always
-        /// was; the "This header" view stitches multiple maps but keeps each one individually editable
-        /// (paint + move buildings). Full-matrix stays render-only since it can span the whole world.</summary>
+        /// <summary>Editing works on a single map and in the This header view; the Full matrix view only renders.</summary>
         public bool CanEdit => IsSingleMap || IsHeaderView;
         public bool IsStitchedView => IsMatrixView || IsHeaderView;
 
-        /// <summary>Header list for the "This header" view's own picker, letting a standalone popup
-        /// (opened from the menu, with no sidebar to follow) choose a header directly. Populated in
-        /// <see cref="SetupAsync"/>; index == header ID.</summary>
+        /// <summary>Headers for the This header picker, for a standalone window with no sidebar; index is the header ID.</summary>
         public ObservableCollection<string> HeaderNames { get; } = new ObservableCollection<string>();
 
         /// <summary>The header the "This header" view should show maps for. Fed by the Maps workspace
@@ -212,10 +200,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         private bool IsValidHeaderId(int value)
             => value >= -1 && (HeaderNames.Count == 0 || value < HeaderNames.Count);
 
-        // Full-matrix stitch layout: false = Continuous (geometry-sized), true = Grid (DS-true fixed 32-tile).
-        // Grid is the default: it's the DS-accurate layout, every block is a fixed 32-tile = MapStride
-        // span, so events/buildings map at exactly TileSize per tile and decorative overhang overlaps neighbours as on
-        // hardware. (Events now anchor at the map's tile-(0,0)=raw-0 corner, so both modes align; Grid is exact.)
+        // Grid (the default) gives every map a fixed 32-tile span, as the DS does; Continuous sizes cells by their
+        // geometry.
         private bool _stitchGrid = true;
         public bool StitchGrid
         {
@@ -224,7 +210,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 if (!Set(ref _stitchGrid, value)) return;
                 if (IsMatrixView && _selectedMatrix >= 0) BuildMatrixPreview();
-                else if (IsHeaderView) BuildHeaderPreview();   // was only rebuilding for Full Matrix; "This header" view never picked up the toggle
+                else if (IsHeaderView) BuildHeaderPreview();
             }
         }
         private NsbmdGeometry.MatrixStitchMode StitchMode => _stitchGrid ? NsbmdGeometry.MatrixStitchMode.Grid : NsbmdGeometry.MatrixStitchMode.Continuous;
@@ -250,8 +236,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool HasArea => _area != null;
 
         /// <summary>
-        /// Set when no header uses the map on show. The game loads a map, and takes its textures from the area data,
-        /// only through a header, so such a map is previewed with an area the user picks, as in the Event editor.
+        /// Set when no header uses the shown map. The game only loads maps through headers, so the user picks area data
+        /// for the preview, as in the Event editor.
         /// </summary>
         public string NoHeaderNote => IsSingleMap && _map != null && _area == null && _selectedMapIndex >= 0
             ? $"No header uses map {_selectedMapIndex}, so the game never loads it. Pick area data to preview its textures."
@@ -414,7 +400,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public byte TypePaintValue => _useRawType ? (byte)_rawType :
             (_typePainterIndex >= 0 && _typePainterIndex < TypePainters.Count ? TypePainters[_typePainterIndex].Value : (byte)0);
 
-        // Paint a raw value (WinForms "Value" radio) instead of a named type from the combo.
+        // Paints a raw value instead of a named type.
         private bool _useRawCollision; private decimal _rawCollision;
         public bool UseRawCollision { get => _useRawCollision; set { if (Set(ref _useRawCollision, value)) { OnPropertyChanged(nameof(CollisionPaintValue)); OnPropertyChanged(nameof(CollisionValue)); } } }
         public decimal RawCollision { get => _rawCollision; set { if (Set(ref _rawCollision, value)) { OnPropertyChanged(nameof(CollisionPaintValue)); OnPropertyChanged(nameof(CollisionValue)); } } }
@@ -422,8 +408,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool UseRawType { get => _useRawType; set { if (Set(ref _useRawType, value)) { OnPropertyChanged(nameof(TypePaintValue)); OnPropertyChanged(nameof(TypeValue)); } } }
         public decimal RawType { get => _rawType; set { if (Set(ref _rawType, value)) { OnPropertyChanged(nameof(TypePaintValue)); OnPropertyChanged(nameof(TypeValue)); } } }
 
-        // The painters as one number with names, like every other named value: a number with a name picks the name,
-        // any other number is painted as it is.
+        // The painter is a number box with names: a named number shows its name, any other is painted as it is.
         public ObservableCollection<string> CollisionNames { get; } = new();
         public List<int> CollisionKeys { get; } = new();
         public ObservableCollection<string> TypeNames { get; } = new();
@@ -494,11 +479,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool OverlayAsMesh { get => _overlayAsMesh; set { if (Set(ref _overlayAsMesh, value)) { OnPropertyChanged(nameof(ShowOverlayHeight)); RebuildOverlay(); } } }
         public bool ShowOverlayHeight => !_overlayAsMesh && _overlayModeIndex > 0;
         public bool ShowOverlayOpacity => _overlayModeIndex > 0;
-        /// <summary>"Mesh" only has a visible effect with an overlay mode selected (it re-colours the
-        /// overlay itself, which isn't drawn at all in "No overlay") and for a single loaded map;
-        /// stitched ("This header" / "Full matrix") views always render the flat plane overlay instead
-        /// (the mesh-tint texture is keyed to one map's own tile grid and can't be shared across several
-        /// stitched maps), so the checkbox is disabled there rather than silently doing nothing.</summary>
+        /// <summary>
+        /// Mesh needs an overlay and a single map, since the tint texture fits one map's grid, so the box is disabled
+        /// otherwise.
+        /// </summary>
         public bool MeshToggleEnabled => _overlayModeIndex > 0 && !IsStitchedView;
 
         // Height (in tiles) to lift the flat PLANE overlay off the surface. Ignored in mesh mode, which
@@ -553,9 +537,8 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             if (IsHeaderView && Model3D != null && _overlayModeIndex > 0)
             {
-                // Several maps at once can't share the single mesh-tint texture (it's keyed to one
-                // map's tile grid), so header view always renders the PLANE overlay, one flat 32×32
-                // tile grid per cell, each raised off the WHOLE scene's tallest point.
+                // The tint texture fits one map, so header view draws a flat grid per cell above the scene's highest
+                // point.
                 NsbmdRenderModel m = Model3D;
                 float planeY = (m.HasMapBounds ? m.MapMaxY : m.RawMaxY) + (float)_overlayHeight * NsbmdGeometry.TileSize;
                 List<float> v = new List<float>();
@@ -572,9 +555,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 return;
             }
 
-            // The single map is built as a 1×1 cell, so it carries a real tile grid (CellPlacement 0,0): a FIXED
-            // 32 tiles regardless of how much geometry the map has, which is what makes the tiles the right size on
-            // smaller maps.
+            // The single map is a 1x1 cell with a fixed 32-tile grid, so tiles keep their size on small maps.
             if (_map != null && Model3D != null && _overlayModeIndex > 0 && Model3D.TryCellPlacement(0, 0, out NsbmdRenderModel.CellPlacement cell))
             {
                 byte[,] grid = collision ? _map.Collisions : _map.Types;
@@ -648,7 +629,6 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private static float Lerp(float a, float b, float t) => a + (b - a) * t;
 
-        // One flat-coloured quad (a→b→c→d) as two triangles.
         /// <summary>Draws the edge of the 32-tile cell the overlay is painted on. </summary>
         private static void AppendCellOutline(List<float> v, NsbmdRenderModel m,
             NsbmdRenderModel.CellPlacement cell, float y)
@@ -676,11 +656,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             Vtx(a); Vtx(c); Vtx(d);
         }
 
-        // ── Building detail / add / remove ──────────────────────────────────────────────
-        // In "This header" view, buildings from every one of the header's maps are listed together;
-        // these helpers resolve a flat Buildings-list index to the (map, cell) that actually owns it,
-        // so the rest of the building-editing code (gizmo drag, detail panel, add/remove) doesn't need
-        // to know which view mode is active.
+        // This header view lists every map's buildings, so these map a list index to its map and cell.
         private (MapFile map, int cellX, int cellY, Building building)? ResolveBuildingAt(int flatIndex)
         {
             if (IsHeaderView)
@@ -768,8 +744,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         public int AreaIdForImport => _area == null ? -1 : _areaId;
 
         /// <summary>
-        /// What the map just brought in lacks here, for the import review. Null when it lacks nothing. Call it while
-        /// the imported map is the one being edited, so the events are checked against it.
+        /// What the imported map is missing here, for the import review, or null. Call it while the imported map is
+        /// open, so the events are checked against it.
         /// </summary>
         public MapImportReviewViewModel ReviewImport((byte[,] collisions, byte[,] types) permissionsBefore, bool fromModelWindow)
         {
@@ -858,9 +834,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private static decimal ScaleOf(uint stored) => stored / ScaleUnit;
         private static uint StoredScale(decimal scale) => (uint)Math.Clamp(Math.Round(scale * ScaleUnit), 1m, ushort.MaxValue);
 
-        // The stored rotation values are always readable/writable, but the GAME only reads them once
-        // the Building Rotation patch (ROM patch toolbox) has been applied. Gate the controls so it's not
-        // implied that rotating a building here does anything in an unpatched ROM.
+        // The game reads rotation only with the Building rotation patch, so the controls wait for it.
         private bool _buildingRotationEnabled = true;
         public bool BuildingRotationEnabled { get => _buildingRotationEnabled; private set => Set(ref _buildingRotationEnabled, value); }
 
@@ -953,8 +927,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         /// <summary>
-        /// How many maps over a building at this position stands. Building positions are tiles from the
-        /// map's centre, so a map spans -16 to 16 and only a position beyond that belongs to a neighbour.
+        /// How many maps away a building at this position is. Positions are tiles from the map's centre, so a map spans
+        /// -16 to 16.
         /// </summary>
         public static int CellsCrossed(short position, ushort fraction)
         {
@@ -966,13 +940,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         /// <summary>
-        /// In "This header" view, each map only renders (and the game only reads) its own buildings
-        /// list, so a building dragged/typed past its own map's -16..16 tile bounds would silently do
-        /// nothing in-game unless it's actually moved into the neighbouring map's building list, in
-        /// that map's local coordinates. Detects any whole-tile overflow and, if a header cell exists
-        /// there, re-homes the building: removes it from the source map, rewrites its position into
-        /// the destination map's local space, adds it there, marks both dirty, and re-selects it.
-        /// No-ops if no header cell exists at the target location.
+        /// Each map only reads its own buildings, so one moved past -16..16 goes to the neighbouring header map, in its
+        /// coordinates. Does nothing if no header map is there.
         /// </summary>
         private void MaybeTransferBuildingAcrossCells()
         {
@@ -987,11 +956,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             int dCellZ = CellsCrossed(b.ZPosition, b.ZFraction);
             if (dCellX == 0 && dCellZ == 0) return;   // still within its own map's tile bounds
 
-            // Buildings can legitimately sit a little outside their own map's -16..16 bounds on one axis
-            // (a decorative overhang near the edge) without that meaning anything about which map owns
-            // them, so resolve X and Z independently and only rebase whichever axis actually found a
-            // real neighbouring map; a combined-axis lookup is a last resort for a genuine diagonal
-            // crossing.
+            // Buildings can overhang one edge, so X and Z move to a neighbour separately; the diagonal lookup is a last
+            // resort.
             int? Find(int x, int y) { int idx = _headerCells.FindIndex(c => c.CellX == x && c.CellY == y); return idx >= 0 && idx != ci && _headerCells[idx].Map?.Buildings != null ? idx : (int?)null; }
 
             int targetIndex; int usedDCellX, usedDCellZ;
@@ -1599,7 +1565,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             _eventsToSave[file] = fresh;
             StatusText = dropped == 0
                 ? $"Event file {file} was saved in another window. The events moved here still move on Save."
-                : $"Event file {file} was saved in another window. {dropped} event move(s) made here no longer match and were dropped.";
+                : $"Event file {file} was saved in another window. {Plural.Of(dropped, "event move")} made here no longer match and were dropped.";
         }
 
         private HashSet<byte> WaterTypes()
@@ -1769,7 +1735,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                         found.Add(new EventClash
                         {
                             Kind = $"{side} edge to map {other}", File = -1, Squares = closed,
-                            WarpTrouble = $"{closed.Count} square{(closed.Count > 1 ? "s" : "")} that led on are now closed: "
+                            WarpTrouble = $"{Plural.Of(closed.Count, "square")} that led to map {other} {(closed.Count == 1 ? "is" : "are")} now closed: "
                                         + string.Join(" ", closed.Take(8).Select(c => $"{c.x},{c.y}")) + (closed.Count > 8 ? " ..." : "")
                                         + (leadsNowhere != null ? $"; even open again, {leadsNowhere}" : ""),
                         });
@@ -1863,7 +1829,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             leadsOn = false;
             (byte[,] collisions, byte[,] types) = _beforeImport;
-            if (collisions == null || types == null) return "not kept: the map before the import is not known";
+            if (collisions == null || types == null) return "not kept: the map before the import isn't known";
             int n = MapFile.MapSize, restored = 0;
             void Restore(int a, int b)
             {
@@ -1893,7 +1859,6 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private string BehaviourName(byte value) => TilePermissions.BehaviourLabel(value, GameFamily);
 
-        /// <summary>Moves the ticked events to the nearest open, dry, free square. Written with the map on Save.</summary>
         /// <summary>
         /// The open square nearest (x, y) on this map that no other event of the file stands on, nor any square in
         /// <paramref name="claimed"/>. Open means walkable and not water.
@@ -1941,7 +1906,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (c.File < 0)
                 {
                     c.Result = c.Squares == null ? null
-                        : _beforeImport.collisions == null ? "can't: the map before the import is not known"
+                        : _beforeImport.collisions == null ? "can't: the map before the import isn't known"
                         : $"will put back {c.Squares.Count} squares";
                     continue;
                 }
@@ -1967,6 +1932,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
         }
 
+        /// <summary>Moves the ticked events to the nearest open, dry, free square. Written with the map on Save.</summary>
         public int MoveEvents(IEnumerable<EventClash> clashes)
         {
             if (_map == null) return 0;
@@ -1976,7 +1942,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 if (c.Squares == null) continue;
                 (byte[,] collisions, byte[,] types) = _beforeImport;
-                if (collisions == null) { c.Result = "not kept: the map before the import is not known"; continue; }
+                if (collisions == null) { c.Result = "not kept: the map before the import isn't known"; continue; }
                 foreach ((int x, int y) in c.Squares) { _map.Collisions[y, x] = collisions[y, x]; _map.Types[y, x] = types[y, x]; }
                 MarkDirty();
                 c.Fixed = true;
@@ -2222,7 +2188,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex)
             {
                 AppLogger.Error("Map header navigation failed: " + ex);
-                await DialogHelper.ShowErrorAsync($"Could not switch headers:\n{ex.Message}", "Map editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't switch headers:\n{ex.Message}", "Map editor");
             }
             finally
             {
@@ -2264,9 +2230,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     AppEvents.EventFileSaved += OnEventFileSavedElsewhere;
                 }
 
-                // All of the below are rebuilt fresh on every ROM load (including switching to a
-                // different ROM mid-session), clear first or these would just keep appending onto
-                // the previous ROM's entries.
+                // Rebuilt on every ROM load, so cleared first.
                 CollisionPainters.Clear();
                 TypePainters.Clear();
                 foreach (TileCollision c in TilePermissions.CollisionsFor(GameFamily)) CollisionPainters.Add(new PainterOption(c.Value, c.Label));
@@ -2283,13 +2247,11 @@ namespace DSPRE.Avalonia.ViewModels.World
                 MapTilesets.Clear();
                 BuildingTilesets.Clear();
                 int mapTexCount = Filesystem.GetMapTexturesCount();
-                for (int i = 0; i < mapTexCount; i++) MapTilesets.Add("Map Tileset " + i);
+                for (int i = 0; i < mapTexCount; i++) MapTilesets.Add("Map textures " + i);
                 BuildingTilesets.Add("None");
                 int bldTexCount = Filesystem.GetBuildingTexturesCount();
-                for (int i = 0; i < bldTexCount; i++) BuildingTilesets.Add("Building Tileset " + i);
-                // Default to the first tileset so the map shows textured out of the box. There is
-                // no direct map→tileset link in the ROM (it goes through area data), so this is a
-                // best-effort default the user can change.
+                for (int i = 0; i < bldTexCount; i++) BuildingTilesets.Add("Building textures " + i);
+                // The first pack until the area data says otherwise, so the map shows textured.
                 if (MapTilesets.Count > 0) MapTilesetIndex = 0;
                 _suppress = false;
 
@@ -2314,7 +2276,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowErrorAsync($"Failed to set up Map editor:\n{ex.Message}", "Map editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't set up the Map editor:\n{ex.Message}", "Map editor");
             }
         }
 
@@ -2347,7 +2309,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex)
             {
-                _ = DialogHelper.ShowErrorAsync($"Failed to load map {index}:\n{ex.Message}", "Map editor error");
+                _ = DialogHelper.ShowErrorAsync($"Couldn't load map {index}:\n{ex.Message}", "Map editor");
             }
         }
 
@@ -2368,13 +2330,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             else if (_selectedMapIndex >= 0) LoadMap(_selectedMapIndex);
         }
 
-        /// <summary>
-        /// Loads every map belonging to the current header (the matrix cells where
-        /// <c>headers[y,x] == HeaderId</c>, or every non-empty cell if the matrix has no headers
-        /// section), the same ownership rule as the Headbutt editor's per-header map set, and stitches
-        /// them into one scene. Unlike Full Matrix, each map stays loaded with real (not discarded)
-        /// move-permission data so it can be painted and its buildings edited, individually saved.
-        /// </summary>
+        /// <summary>Loads and stitches the header's maps, each kept loaded so it can be painted and saved alone.</summary>
         private int _headerMapsOf = -1;
 
         private void ShowHeaderMaps()
@@ -2438,7 +2394,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 RefreshBuildings();
                 SetClean();
                 StatusText = Model3D != null
-                    ? $"Header {_headerId}: {_headerCells.Count} map(s) stitched."
+                    ? $"Header {_headerId}: {Plural.Of(_headerCells.Count, "map")} stitched."
                     : $"Header {_headerId}: no renderable maps.";
             }
             catch (Exception ex)
@@ -2463,7 +2419,6 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex) { AppLogger.Error("Header preview rebuild failed: " + ex.Message); }
         }
 
-        /// <summary>map index → area-data id via the reverse header/matrix lookup (or null).</summary>
         /// <summary>Where the shown map is closed off, for the preview to walk its people against.</summary>
         public MapCollisionGrid Collision
         {
@@ -2476,7 +2431,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
         }
 
-        /// <summary>The area the shown map belongs to, which is what names its terrain animation.</summary>
+        /// <summary>The shown map's area, which picks its terrain animation.</summary>
         public AreaData Area
         {
             get
@@ -2486,6 +2441,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
         }
 
+        /// <summary>Map index to area data id through the header and matrix lookup, or null.</summary>
         private byte? AreaForMap(int mapIndex)
             => _mapToArea != null && _mapToArea.TryGetValue(mapIndex, out byte a) ? a : (byte?)null;
 
@@ -2501,11 +2457,11 @@ namespace DSPRE.Avalonia.ViewModels.World
                 for (int y = 0; y < matrix.Height; y++)
                     for (int x = 0; x < matrix.Width; x++)
                         if (matrix.Maps[y, x] != GameMatrix.EMPTY) used++;
-                MatrixInfo = $"{matrix.Width}×{matrix.Height}, {used} map(s)";
+                MatrixInfo = $"{matrix.Width}×{matrix.Height}, {Plural.Of(used, "map")}";
                 byte fallback = AreaForMap(matrix.Maps[0, 0]) ?? 0;
                 Model3D = MatrixSceneBuilder.Build(matrix, fallback, GameFamily, AreaForMap, mode: StitchMode);
                 StatusText = Model3D != null
-                    ? $"Matrix {_selectedMatrix}: {matrix.Width}×{matrix.Height}, {used} map(s) stitched."
+                    ? $"Matrix {_selectedMatrix}: {matrix.Width}×{matrix.Height}, {Plural.Of(used, "map")} stitched."
                     : $"Matrix {_selectedMatrix} has no renderable maps.";
             }
             catch (Exception ex)
@@ -2518,12 +2474,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             MapLoaded?.Invoke(this, EventArgs.Empty);
         }
 
-        /// <summary>
-        /// Resolves the correct texture packs for a map via the real ROM linkage:
-        /// map → (a header whose matrix uses it) → areaDataID → AreaData.mapTileset /
-        /// buildingsTileset. Sets the tileset selectors so the map shows with its proper
-        /// textures by default; the user can still override.
-        /// </summary>
+        /// <summary>Points the texture pickers at the packs of the map's header area; the user can still change them.</summary>
         private void ResolveTilesetForMap(int mapIndex)
         {
             if (_mapToArea == null || !_mapToArea.TryGetValue(mapIndex, out byte areaId))
@@ -2553,7 +2504,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 // Adding textures makes a new pack.
                 int packs = Filesystem.GetMapTexturesCount();
-                for (int i = MapTilesets.Count; i < packs; i++) MapTilesets.Add("Map Tileset " + i);
+                for (int i = MapTilesets.Count; i < packs; i++) MapTilesets.Add("Map textures " + i);
                 if (MapTilesets.Count > 0)
                 {
                     _mapTilesetIndex = Math.Min(_area.MapTileset, MapTilesets.Count - 1);
@@ -2568,11 +2519,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         /// <summary>
-        /// Builds map index → area-data id with the same accuracy as the full-matrix view:
-        /// for matrices that carry a per-cell header section, each map gets the area of the
-        /// header that actually occupies its cell; for plain matrices, the area comes from a
-        /// header that references the matrix. Header-section results take precedence on conflict,
-        /// so a single map shows the same tileset as it does in the stitched matrix view.
+        /// Map index to area: a header section gives each cell its header's area, otherwise the matrix's header does,
+        /// so one map looks as it does stitched.
         /// </summary>
         private static Dictionary<int, byte> BuildMapAreaLookup()
         {
@@ -2636,9 +2584,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 if (_map == null) return;
 
-                // Bind the map tileset textures (if a pack is selected). Always bound regardless of
-                // ShowTextures: that toggle is a pure display setting now (NsbmdGlControl.ShowTextures),
-                // not a build-time one, so the model always carries real textures to show/hide instantly.
+                // Textures are always bound; ShowTextures only hides them.
                 if (_mapTilesetIndex >= 0 && _map.MapModel?.Models != null && _map.MapModel.Models.Length > 0)
                     BindNsbtx(_map.MapModel, Path.Combine(GameDirs[DirNames.MapTextures].unpackedDir, _mapTilesetIndex.ToString("D4")));
 
@@ -2773,7 +2719,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     {
                         refused = true;
                         StatusText = $"Map {cell.MapIndex} not saved. " + cellTooBig;
-                        _ = DialogHelper.ShowErrorAsync($"Map {cell.MapIndex}: {cellTooBig}\n\nIt was not saved.", "Map too big");
+                        _ = DialogHelper.ShowErrorAsync($"Map {cell.MapIndex}: {cellTooBig}\n\nIt wasn't saved.", "Map too big");
                         continue;
                     }
                     cell.Map.SaveToFileDefaultDir(cell.MapIndex, showSuccessMessage: false);
@@ -2789,7 +2735,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 bool areaSaved = _areaDirty;
                 SaveArea();
                 SetClean();
-                StatusText = saved > 0 || areaSaved ? $"Saved {saved} map(s){(areaSaved ? " and the area" : "")} for header {_headerId}." : "Nothing to save.";
+                StatusText = saved > 0 || areaSaved ? $"Saved {Plural.Of(saved, "map")}{(areaSaved ? " and the area" : "")} for header {_headerId}." : "Nothing to save.";
                 return;
             }
             if (_map == null || _selectedMapIndex < 0) return;
@@ -2797,7 +2743,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (MapFile.TooBigForTheGame(_map.MapModelData?.Length ?? 0, _map.Bdhc?.Length ?? 0) is string tooBig)
             {
                 StatusText = "Not saved. " + tooBig;
-                _ = DialogHelper.ShowErrorAsync(tooBig + "\n\nThe map was not saved.", "Map too big");
+                _ = DialogHelper.ShowErrorAsync(tooBig + "\n\nThe map wasn't saved.", "Map too big");
                 return;
             }
             _archive.Put(_selectedMapIndex, _map.ToByteArray());
@@ -2825,14 +2771,14 @@ namespace DSPRE.Avalonia.ViewModels.World
             try { data = File.ReadAllBytes(path); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Map editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Map editor");
                 return false;
             }
 
             // The file's contents decide, so a renamed file or one with no extension still comes in.
             if (MapFile.ReadImport(data, GameFamily, out MapFile read, out byte[] model, out bool converted) is string whynot)
             {
-                await DialogHelper.ShowErrorAsync(whynot, "Map editor error");
+                await DialogHelper.ShowErrorAsync(whynot, "Map editor");
                 return false;
             }
             bool wholeMap = read != null;
@@ -2873,7 +2819,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Map editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Map editor");
             }
         }
 
@@ -2889,7 +2835,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = $"Added map file {newId}.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't add map file:\n{ex.Message}", "Map editor error"); }
+            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't add map file:\n{ex.Message}", "Map editor"); }
         }
 
         public async Task RemoveLastMapFileAsync()
@@ -2907,7 +2853,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = $"Removed map file {last}.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't remove map file:\n{ex.Message}", "Map editor error"); }
+            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't remove map file:\n{ex.Message}", "Map editor"); }
         }
 
         private byte[] MapTextureData()
@@ -2926,14 +2872,14 @@ namespace DSPRE.Avalonia.ViewModels.World
             string path = await DialogHelper.SaveFileAsync(_owner, "Export map model", new[] { filter }, ModelName() + ".nsbmd");
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _map.MapModelData); SaveNotice.Exported(path); }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Map editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Map editor"); }
         }
         /// <summary>The model with the textures of the map texture pack in use put inside it, for tools that read them there.</summary>
         public async Task ExportTexturedNsbmdAsync()
         {
             if (_map?.MapModelData == null) return;
             string pack = Path.Combine(GameDirs[DirNames.MapTextures].unpackedDir, MapTilesetIndex.ToString("D4"));
-            if (!File.Exists(pack)) { await DialogHelper.ShowErrorAsync($"Map Tileset {MapTilesetIndex} could not be found.", "Map editor error"); return; }
+            if (!File.Exists(pack)) { await DialogHelper.ShowErrorAsync($"Map textures {MapTilesetIndex} couldn't be found.", "Map editor"); return; }
             FilePickerFileType filter = new FilePickerFileType("Model (.nsbmd)") { Patterns = new[] { "*.nsbmd" } };
             string path = await DialogHelper.SaveFileAsync(_owner, "Export textured map model", new[] { filter }, ModelName() + "_textured.nsbmd");
             if (path == null) return;
@@ -2944,11 +2890,11 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException)
             {
-                await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Map editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Map editor");
             }
         }
 
-        /// <summary>The saved map file in the file manager. Unsaved changes are not in it yet.</summary>
+        /// <summary>Shows the saved map file in the file manager; unsaved changes aren't in it.</summary>
         public void ShowMapFile()
         {
             if (_selectedMapIndex < 0) return;
@@ -2989,7 +2935,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (path == null) return;
             // Kept plates belong to the terrain being replaced.
             try { _map.ImportTerrain(File.ReadAllBytes(path)); _map.KeptPlates.Clear(); MarkDirty(); SaveNotice.Imported($"the terrain of map {_selectedMapIndex}", path); }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Map editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Map editor"); }
         }
         public async Task ExportTerrainAsync()
         {
@@ -2997,7 +2943,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             string path = await DialogHelper.SaveFileAsync(_owner, "Export terrain", new[] { new FilePickerFileType("Terrain (.bdhc)") { Patterns = new[] { "*.bdhc" } } }, ModelName() + ".bdhc");
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _map.Bdhc); SaveNotice.Exported(path); }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Map editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Map editor"); }
         }
 
         // ── Sound plates (BGS) ──────────────────────────────────────────────────────────
@@ -3007,7 +2953,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             string path = await DialogHelper.OpenFileAsync(_owner, "Import sound plates", new[] { new FilePickerFileType("Sound plates (.bgs)") { Patterns = new[] { "*.bgs", "*.bin", "*.*" } } });
             if (path == null) return;
             try { _map.ImportSoundPlates(File.ReadAllBytes(path)); MarkDirty(); SaveNotice.Imported($"the sound plates of map {_selectedMapIndex}", path); }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Map editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Map editor"); }
         }
         public async Task ExportSoundAsync()
         {
@@ -3015,7 +2961,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             string path = await DialogHelper.SaveFileAsync(_owner, "Export sound plates", new[] { new FilePickerFileType("Sound plates (.bgs)") { Patterns = new[] { "*.bgs" } } }, ModelName() + ".bgs");
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _map.Bgs); SaveNotice.Exported(path); }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Map editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Map editor"); }
         }
         public void BlankSound() { if (_map != null) { _map.Bgs = MapFile.BlankBGS; MarkDirty(); StatusText = "Blanked the sound plates."; } }
 
@@ -3034,7 +2980,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 MapLoaded?.Invoke(this, EventArgs.Empty);
                 SaveNotice.Imported($"the permissions of map {_selectedMapIndex}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Map editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Map editor"); }
         }
         public async Task ExportPermissionsAsync()
         {
@@ -3042,7 +2988,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             string path = await DialogHelper.SaveFileAsync(_owner, "Export permissions", new[] { new FilePickerFileType("Permissions") { Patterns = new[] { "*.mp" } } }, ModelName() + ".mp");
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _map.CollisionsToByteArray()); SaveNotice.Exported(path); }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Map editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Map editor"); }
         }
 
         // ── Buildings I/O + duplicate ────────────────────────────────────────────────────
@@ -3057,7 +3003,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 RefreshBuildings(); RebuildPreview(); MarkDirty();
                 SaveNotice.Imported($"the buildings of map {_selectedMapIndex}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Map editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Map editor"); }
         }
         public async Task ExportBuildingsAsync()
         {
@@ -3065,7 +3011,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             string path = await DialogHelper.SaveFileAsync(_owner, "Export buildings", new[] { new FilePickerFileType("Buildings") { Patterns = new[] { "*.bld" } } }, ModelName() + ".bld");
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _map.BuildingsToByteArray()); SaveNotice.Exported(path); }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Map editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Map editor"); }
         }
         public void DuplicateBuilding()
         {
@@ -3099,7 +3045,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             List<string> parts = new List<string>();
             foreach (byte b in used) parts.Add(TilePermissions.BehaviourLabel(b, GameFamily));
-            StatusText = $"{used.Count} distinct type(s) used across all maps.";
+            StatusText = $"{Plural.Of(used.Count, "distinct type")} used across all maps.";
             return string.Join(", ", parts);
         }
     }

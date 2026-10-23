@@ -10,14 +10,7 @@ namespace DSPRE.Avalonia
 {
     internal static class ImageConverter
     {
-        /// <summary>
-        /// Builds an Avalonia <see cref="AvaloniaBitmap"/> from a toolkit-agnostic <see cref="DSPRE.RawImage"/>
-        /// (BGRA8888, straight alpha) by copying straight into a <see cref="WriteableBitmap"/>, no GDI+,
-        /// no PNG round-trip. This is the permanent cross-platform render seam; as decoders start emitting
-        /// <see cref="DSPRE.RawImage"/>, they render through here directly.
-        /// </summary>
-        /// <summary>Builds a bitmap from plain red, green, blue, alpha bytes, which is what the graphic
-        /// browser's decoders hand back. RawImage wants them the other way round, so swap as we go.</summary>
+        /// <summary>Builds a bitmap from RGBA bytes, swapped to the BGRA that RawImage holds.</summary>
         public static AvaloniaBitmap FromRgba(byte[] rgba, int width, int height)
         {
             if (rgba == null || width <= 0 || height <= 0) return null;
@@ -61,11 +54,7 @@ namespace DSPRE.Avalonia
             return wb;
         }
 
-        /// <summary>
-        /// Loads an hg-engine icon.png (data/graphics/sprites/&lt;name&gt;/icon.png), which is a
-        /// vertical N-frame bounce-animation strip with no real alpha channel; crops to the first
-        /// Width×Width frame and color-keys the corner pixel to transparent.
-        /// </summary>
+        /// <summary>Loads the first frame of an hg-engine icon.png, with the corner colour see-through.</summary>
         public static AvaloniaBitmap LoadHgeIconFirstFrame(string pngPath)
         {
             using FileStream fs = System.IO.File.OpenRead(pngPath);
@@ -127,11 +116,7 @@ namespace DSPRE.Avalonia
             }
         }
 
-        /// <summary>
-        /// Decodes an encoded image stream (PNG/GIF/…) to a <see cref="DSPRE.RawImage"/> via Avalonia's
-        /// codecs; the cross-platform replacement for <c>new System.Drawing.Bitmap(stream)</c>.
-        /// Returns null on an unexpected pixel format.
-        /// </summary>
+        /// <summary>Decodes a PNG or GIF stream to a <see cref="DSPRE.RawImage"/>; null on an unexpected pixel format.</summary>
         public static DSPRE.RawImage DecodeRawImage(System.IO.Stream stream)
         {
             using WriteableBitmap wb = WriteableBitmap.Decode(stream);

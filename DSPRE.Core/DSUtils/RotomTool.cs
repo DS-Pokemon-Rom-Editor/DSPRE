@@ -238,7 +238,7 @@ namespace DSPRE
         public static async Task<Result> RunInAsync(string workingDirectory, params string[] args)
         {
             if (!IsAvailable)
-                throw new FileNotFoundException("rotom was not found in DSPRE's Tools folder.", ExePath);
+                throw new FileNotFoundException("rotom wasn't found in DSPRE's Tools folder.", ExePath);
 
             await OneAtATime.WaitAsync().ConfigureAwait(false);
             using IDisposable quiet = DSPRE.ROMFiles.ProjectSourceWatcher.Hold();
@@ -283,11 +283,7 @@ namespace DSPRE
             process.Start();
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
-            // ConfigureAwait(false): some callers (StarterPokemonData) run this from a synchronous UI-thread
-            // call chain via .GetAwaiter().GetResult(), capturing the UI SynchronizationContext here would
-            // deadlock (this await's continuation would need the UI thread, which is blocked waiting for it).
-            // Existing `await RotomTool.RunAsync(...)` callers are unaffected: this only changes which thread
-            // THIS method's own continuation runs on, not where the caller's own await resumes.
+            // StarterPokemonData blocks the UI thread on this, so resuming there would deadlock.
             await process.WaitForExitAsync().ConfigureAwait(false);
 
             return new Result
@@ -326,7 +322,7 @@ namespace DSPRE
                         string full = Path.GetFullPath(Path.Combine(ProjectRoot, rel));
                         int line = start < 0 ? 0 : LineOfByte(full, start);
                         string shown = Path.GetRelativePath(ProjectRoot, full).Replace('\\', '/');
-                        lines.Add(shown + (line > 0 ? ", line " + line : "") + ": " + (message ?? "did not compile"));
+                        lines.Add(shown + (line > 0 ? ", line " + line : "") + ": " + (message ?? "didn't compile"));
                     }
                 }
             }
@@ -368,7 +364,7 @@ namespace DSPRE
                     {
                         int ok = successes.GetArrayLength();
                         int failed = failures.GetArrayLength();
-                        return failed == 0 ? $"{ok} file(s) compiled." : $"{ok} compiled, {failed} failed.";
+                        return failed == 0 ? $"{Plural.Of(ok, "file")} compiled." : $"{ok} compiled, {failed} failed.";
                     }
                 }
                 catch { }   // output that isn't Rotom's JSON report is summarised as plain text instead

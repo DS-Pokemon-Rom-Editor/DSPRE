@@ -13,13 +13,6 @@ using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Views.World
 {
-    /// <summary>
-    /// Authored as a <see cref="UserControl"/> so it can be embedded as the Events tab in the Maps
-    /// workspace; standalone launches (<see cref="AvaloniaEditorLauncher.OpenEventEditor"/>) host it
-    /// in an <see cref="EditorHostWindow"/>. Do not change the base type back to Window: Avalonia
-    /// windows cannot be re-parented as a child control (embedding one throws "already has a visual
-    /// parent TopLevelHost").
-    /// </summary>
     public partial class EventEditorView : UserControl
     {
         private EventEditorViewModel VM => DataContext as EventEditorViewModel;
@@ -59,9 +52,7 @@ namespace DSPRE.Avalonia.Views.World
             };
             GlHost.PointerExited += (s, e) => VM?.ClearHoverCoords();
 
-            // Arrow keys nudge the selected event / pan the camera, but only while the 3D
-            // viewport itself has keyboard focus (Gl3DPointerNavigation focuses it on click);
-            // otherwise they'd steal input from a focused dropdown/spinner in the side panel.
+            // Arrow keys act only while the 3D view has focus, so side-panel inputs keep theirs.
             GlHost.KeyDown += (s, e) =>
             {
                 // In edit mode with an event selected, arrow keys nudge it one tile along X/Z; else pan.
@@ -97,15 +88,8 @@ namespace DSPRE.Avalonia.Views.World
             if (!_setupDone) await EnsureSetupAsync();
         }
 
-        /// <summary>
-        /// VM setup. No-ops until a ROM is loaded; the embedded Maps-workspace instance is created at
-        /// app boot, before any ROM. <see cref="MapsWorkspaceView"/> re-invokes this after EVERY
-        /// successful load (including switching ROMs mid-session), so <c>vm.SetupAsync</c> always
-        /// re-runs, only the event-subscription wiring is one-time.
-        /// </summary>
-        /// <param name="ownerOverride">Pass the owning Window explicitly when this control may not be
-        /// attached to the visual tree yet (a non-selected TabItem's content in the Maps workspace,
-        /// right after a ROM load), since <see cref="TopLevel.GetTopLevel"/> returns null in that case.</param>
+        /// <summary>Sets up the view model; see <see cref="MapsWorkspaceView"/>.</summary>
+        /// <param name="ownerOverride">The owning window, for a tab not yet in the visual tree.</param>
         public async Task EnsureSetupAsync(Window ownerOverride = null)
         {
             if (Design.IsDesignMode) return;
@@ -117,10 +101,8 @@ namespace DSPRE.Avalonia.Views.World
             if (!_setupDone)
             {
                 _setupDone = true;
-                // No EditorWindowChrome here (it requires a Window): the toolbar's own Save button covers
-                // saving, and when hosted standalone, EditorHostWindow already guards unsaved changes on
-                // close via this VM's IEditorWithUnsavedChanges. When embedded in the Maps workspace tab,
-                // the workspace's own Save/Reset handles it instead.
+                // No EditorWindowChrome (it needs a Window); EditorHostWindow or the Maps workspace guards unsaved
+                // changes.
                 vm.MapLoaded += (_, _) => { GlView.SetModel(VM.Model3D, keepView: VM.KeepViewOnLoad); RefreshGizmo(); LoadPegmanIcon(); };
                 vm.OwModelPreviewChanged += (_, _) => OwModelView.SetModel(VM.OwModelPreview);
                 vm.WalkTileChanged += (_, _) =>
@@ -224,13 +206,10 @@ namespace DSPRE.Avalonia.Views.World
             catch (Exception ex) { AppLogger.WarnOnce("EventEditorView.LoadLevelScripts", ex); return null; }
         }
 
-        // ── dragging the player onto the map ───────────────────────────────────────── Pick the little
-        // player up off the toolbar, drop them anywhere on the map, and the walk starts there.
 
         private bool _pegDragging;
         private (int x, int z)? _pegTile;
-        // Collision is worked out afresh every time it is asked for, so it is taken once when the drag
-        // starts rather than twice for every twitch of the pointer.
+        // Collision is rebuilt on every read, so it is read once when the drag starts.
         private MapCollisionGrid _pegMap;
         private FieldTilePicker.Prepared _pegTiles;
 
@@ -264,7 +243,7 @@ namespace DSPRE.Avalonia.Views.World
         {
             if (!_pegDragging) return;
 
-            // Where the pointer is over the map itself, which is what the projection is measured in.
+            // The pointer's position over the map, the space the projection uses.
             Point overMap = e.GetPosition(GlView);
             Point overOverlay = e.GetPosition(DragOverlay);
 
@@ -383,7 +362,7 @@ namespace DSPRE.Avalonia.Views.World
             if (VM == null) return;
             try
             {
-                string dir = await DialogHelper.OpenFolderAsync(TopLevel.GetTopLevel(this) as Window, "Choose a folder for the 3D debug dump");
+                string dir = await DialogHelper.OpenFolderAsync(TopLevel.GetTopLevel(this) as Window, "Choose a folder for the report");
                 if (dir == null) return;
 
                 string stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
@@ -399,10 +378,10 @@ namespace DSPRE.Avalonia.Views.World
                     try { if (rgba != null && w > 0 && h > 0) { SaveRgbaToPng(rgba, w, h, pngPath); pngOk = true; } }
                     catch (Exception ex) { AppLogger.WarnOnce("EventEditorView.ExportDebug_Click", ex); pngOk = false; }
                     SaveNotice.Exported(txtPath);
-                    if (!pngOk) _ = DialogHelper.ShowErrorAsync("The report was written, but the render could not be captured.", "Event editor error");
+                    if (!pngOk) _ = DialogHelper.ShowErrorAsync("The report was written, but the render couldn't be captured.", "Event editor");
                 });
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Debug dump failed:\n{ex.Message}", "Event editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't write the report:\n{ex.Message}", "Event editor"); }
         }
 
         // Builds a PNG from a raw RGBA framebuffer (origin bottom-left → flipped to top-left for the image).
@@ -464,6 +443,6 @@ namespace DSPRE.Avalonia.Views.World
         private void AddFile_Click(object sender, RoutedEventArgs e) => VM?.AddEventFile();
         private async void RemFile_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.RemoveLastEventFileAsync() ?? Task.CompletedTask, "The event file wasn't removed.", ErrorTitle);
 
-        private const string ErrorTitle = "Event editor error";
+        private const string ErrorTitle = "Event editor";
     }
 }

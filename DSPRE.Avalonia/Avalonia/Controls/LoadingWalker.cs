@@ -12,9 +12,8 @@ using DSPRE.ROMFiles;
 namespace DSPRE.Avalonia.Controls
 {
     /// <summary>
-    /// Something from the game crossing the loading card, a new one each time across: a random following Pokémon
-    /// in HeartGold and SoulSilver; the player in Diamond, Pearl and Platinum, either one, running, cycling or surfing.
-    /// Shown only when the overworld sprites are already unpacked, so the card never waits on reading them.
+    /// A sprite walking across the loading card: a following Pokémon in HGSS, the player in DPPt. Shown only when the
+    /// overworld sprites are already unpacked, so the card never waits on them.
     /// </summary>
     public class LoadingWalker : Control
     {

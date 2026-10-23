@@ -14,7 +14,7 @@ namespace DSPRE.Avalonia.Data
             public string Field;
             /// <summary>What would look different if this were acted on.</summary>
             public string WouldChange;
-            /// <summary>Where the games' own use of it was read.</summary>
+            /// <summary>The game code that reads it.</summary>
             public string Source;
         }
 
@@ -31,7 +31,7 @@ namespace DSPRE.Avalonia.Data
             },
         };
 
-        /// <summary>Read by the drawing code rather than by the movement code. </summary>
+        /// <summary>Read by the drawing code, not the movement code.</summary>
         public static readonly IReadOnlyList<string> DrawnNotMoved = new[]
         {
             "DrawType", "PosX", "PosY", "PosZ", "RepeatS", "RepeatT", "Aspect", "FlipS", "FlipT",
@@ -39,7 +39,7 @@ namespace DSPRE.Avalonia.Data
             "ChildPolyRefPlane", "DbbScale", "OffsetX", "OffsetY",
         };
 
-        /// <summary>The document, so it cannot drift from this table.</summary>
+        /// <summary>Builds the field page from this table, so the two can't drift apart.</summary>
         public static string BuildDocument(IReadOnlyList<string> allFields)
         {
             StringBuilder sb = new System.Text.StringBuilder();
@@ -47,7 +47,7 @@ namespace DSPRE.Avalonia.Data
             sb.Append("# Particle emitter fields\n\n");
             sb.Append("Generated from `SpaFieldNotes.cs`. Do not edit by hand; `SpaFieldDocTests` rewrites it.\n\n");
             sb.Append("An emitter record in a `.spa` archive holds ").Append(allFields.Count)
-              .Append(" fields. Every one of them is read. This says which ones the preview acts on, which ")
+              .Append(" fields. Every one of them is read. This page lists which ones the preview acts on, which ")
               .Append("ones only the drawing code looks at, and which ones it deliberately ignores.\n\n");
 
             sb.Append("## Read but not acted on\n\n");

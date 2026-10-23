@@ -10,10 +10,7 @@ using static DSPRE.RomInfo;
 
 public static class ScriptDatabaseJsonLoader
 {
-    /// <summary>
-    /// Call this once at startup (before any script lookups).
-    /// Loads all script command metadata from JSON into unified objects.
-    /// </summary>
+    /// <summary>Loads the script command database; call once before any script lookup.</summary>
     public static void InitializeFromJson(string jsonPath, GameVersions gameVersion)
     {
         string expandedPath = Environment.ExpandEnvironmentVariables(jsonPath);
@@ -61,7 +58,6 @@ public static class ScriptDatabaseJsonLoader
                     prop => prop.Value.GetString()
                 );
 
-            // Determine which dictionary to populate based on game version
             Dictionary<ushort, ScriptCommandInfo> commandInfoDict;
 
             switch (gameVersion)
@@ -80,13 +76,9 @@ public static class ScriptDatabaseJsonLoader
                 default:
                     throw new ArgumentOutOfRangeException(nameof(gameVersion), gameVersion, "Unsupported game");
             }
-            // Clear first, this dict is shared across every ROM of the same family, and custom command
-            // entries from a PREVIOUSLY loaded ROM's scrcmd_database.json (edited via the Custom Scrcmd
-            // Manager) would otherwise stick around forever if a later, different ROM's JSON doesn't
-            // happen to redefine the same codes.
+            // Cleared first: the dictionary is shared per family, so another ROM's custom commands would stay.
             commandInfoDict.Clear();
 
-            // Load script commands
             JsonElement scrRoot;
             if (!root.TryGetProperty("scrcmd", out scrRoot))
                 throw new InvalidOperationException("JSON is missing the \"scrcmd\" key");
@@ -96,7 +88,6 @@ public static class ScriptDatabaseJsonLoader
                 ushort code = Convert.ToUInt16(prop.Name.Substring(2), 16);
                 JsonElement entry = prop.Value;
 
-                // Create unified command info object
                 ScriptCommandInfo cmdInfo = new ScriptCommandInfo
                 {
                     CommandId = code,
@@ -113,7 +104,6 @@ public static class ScriptDatabaseJsonLoader
                         .ToArray();
                 }
 
-                // Load parameter types
                 if (entry.TryGetProperty("parameter_types", out JsonElement paramTypesElem))
                 {
                     cmdInfo.ParameterTypes = new List<ScriptParameter.ParameterType>();
@@ -128,7 +118,6 @@ public static class ScriptDatabaseJsonLoader
                     }
                 }
 
-                // Load parameter names (for display/documentation)
                 if (entry.TryGetProperty("parameter_values", out JsonElement paramNamesElem))
                 {
                     cmdInfo.ParameterNames = new List<string>();
@@ -139,7 +128,6 @@ public static class ScriptDatabaseJsonLoader
                     }
                 }
 
-                // Store in unified dictionary
                 cmdInfo.LegacyName = cmdInfo.Name;
                 commandInfoDict[code] = cmdInfo;
             }
@@ -147,7 +135,6 @@ public static class ScriptDatabaseJsonLoader
             // The names come from the old database, where command 0 is "Nop".
             ApplyRotomNames(expandedPath, commandInfoDict, gameVersion);
 
-            // Load sounds
             if (root.TryGetProperty("sounds", out JsonElement soundsRoot))
             {
                 Dictionary<ushort, string> soundsDict = ScriptDatabase.SoundNames;
@@ -249,7 +236,7 @@ public static class ScriptDatabaseJsonLoader
             }
             catch (Exception ex)
             {
-                AppLogger.Info("Could not read the rotom command names from " + v2 + ": " + ex.Message);
+                AppLogger.Info("Couldn't read the rotom command names from " + v2 + ": " + ex.Message);
             }
             return renamed;
         }
@@ -268,7 +255,7 @@ public static class ScriptDatabaseJsonLoader
 
                 int rank = VarNameRank(prop.Name);
                 bool known = rankOf.TryGetValue((ushort)id, out int existing);
-                // Equal meaningful names: the later one wins, as before. Otherwise the first stays.
+                // Equal meaningful names: the later one wins. Otherwise the first stays.
                 if (known && (rank < existing || (rank == existing && rank != MeaningfulName))) continue;
                 rankOf[(ushort)id] = rank;
                 ScriptDatabase.VarNames[(ushort)id] = prop.Name;
@@ -291,14 +278,13 @@ namespace DSPRE.Resources
 {
     public static class ScriptDatabase
     {
-        // New unified object-oriented dictionaries
         public static Dictionary<ushort, ScriptCommandInfo> DPScrCmdInfo = new Dictionary<ushort, ScriptCommandInfo>();
         public static Dictionary<ushort, ScriptCommandInfo> PlatScrCmdInfo = new Dictionary<ushort, ScriptCommandInfo>();
         public static Dictionary<ushort, ScriptCommandInfo> HGSSScrCmdInfo = new Dictionary<ushort, ScriptCommandInfo>();
 
         public static Dictionary<ushort, string> ComparisonOperatorsGenVappendix = new Dictionary<ushort, string>()
         {
-            /* GEN V ONLY */
+            // Gen V only.
             [6] = "OR",
             [7] = "AND",
             [0xFF] = "TRUEUP"
@@ -490,26 +476,18 @@ namespace DSPRE.Resources
             }
         }
 
-        /// <summary>
-        /// Exports all enum dictionaries to individual JSON files in the ROM-specific database folder.
-        /// These JSON files are used by external tools (like Rotom) for script assembly/disassembly.
-        /// Always regenerates from current ROM data to ensure they stay up-to-date.
-        /// </summary>
+        /// <summary>Writes the name lists Rotom reads (Pokémon, items, moves, trainers) from the current ROM.</summary>
         /// <param name="romFolderPath">Path to the ROM-specific database folder</param>
         public static void ExportEnumJsons(string romFolderPath)
         {
             Directory.CreateDirectory(romFolderPath);
 
-            // Export Pokemon names
             ExportDictionary(PokemonNames, Path.Combine(romFolderPath, "pokemon.json"));
 
-            // Export Item names
             ExportDictionary(ItemNames, Path.Combine(romFolderPath, "items.json"));
 
-            // Export Move names
             ExportDictionary(MoveNames, Path.Combine(romFolderPath, "moves.json"));
 
-            // Export Trainer names
             ExportDictionary(TrainerNames, Path.Combine(romFolderPath, "trainers.json"));
         }
 

@@ -57,7 +57,6 @@ namespace DSPRE.Avalonia.Views.Trainers
             if (VM?.RematchRow >= 0) AvaloniaEditorLauncher.OpenPokegearRematchEditor(VM.RematchRow);
         }
 
-        // ── Dragging a sort row ──
 
         private void SortList_PointerPressed(object sender, PointerPressedEventArgs e)
         {

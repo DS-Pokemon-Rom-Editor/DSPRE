@@ -27,7 +27,7 @@ namespace DSPRE.Avalonia.Data
             }
             catch (Exception ex)
             {
-                AppLogger.Error("Trainer sprite source PNG could not be read: " + ex.Message);
+                AppLogger.Error("Trainer sprite source PNG couldn't be read: " + ex.Message);
                 return false;
             }
         }
@@ -38,7 +38,7 @@ namespace DSPRE.Avalonia.Data
             try
             {
                 if (!IndexedPng.TryRead(File.ReadAllBytes(pngPath), out _, out uint[] colours, out int w, out int h))
-                    return $"{Path.GetFileName(pngPath)} is not an indexed PNG.";
+                    return $"{Path.GetFileName(pngPath)} isn't an indexed PNG.";
                 if (w * h != tile.Tiles.Length * 2)
                     return $"{Path.GetFileName(pngPath)} is {w}×{h}, which doesn't match the sprite's drawing.";
 

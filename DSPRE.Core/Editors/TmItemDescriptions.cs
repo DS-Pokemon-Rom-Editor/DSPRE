@@ -18,7 +18,7 @@ namespace DSPRE.Editors
 
         public static string WhyNot() =>
             RomInfo.IsHGE && !HgEngine.HgEngineProject.IsActive ? "Open the hg-engine folder to change its item text."
-            : !RomInfo.IsHGE && Bank <= 0 ? "Item descriptions aren't located for this game version."
+            : !RomInfo.IsHGE && Bank <= 0 ? "DSPRE doesn't know where this game version keeps item descriptions."
             : !FieldFontCharacters.Ready || FieldFont.LoadSystemFont() == null ? "The game font couldn't be read."
             : null;
 
@@ -78,7 +78,7 @@ namespace DSPRE.Editors
             }
 
             foreach (int id in touched)
-                if (banks[id].Save() is string error) AppLogger.Error($"TM descriptions: text {id} was not saved: {error}");
+                if (banks[id].Save() is string error) AppLogger.Error($"TM descriptions: text {id} wasn't saved: {error}");
             return result;
         }
 

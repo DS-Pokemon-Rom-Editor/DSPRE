@@ -54,7 +54,7 @@
               <Button Content="Import CSV…" controls:Icon.Key="import" Click="Learnset_Import_Click"/>
               <Button Content="Export CSV…" controls:Icon.Key="export" Click="Learnset_Export_Click"/>
               <Button Content="Bulk edit all" controls:Icon.Key="tableEditor" Click="Learnset_BulkEdit_Click"/>
-              <TextBlock Text="Warning: exceeds vanilla 20-move limit!" IsVisible="{Binding ExceedsVanillaLimit}" Foreground="{DynamicResource Editor.Bad}" FontWeight="Bold" VerticalAlignment="Center"/>
+              <TextBlock Text="Over the usual 20 moves" IsVisible="{Binding ExceedsVanillaLimit}" Foreground="{DynamicResource Editor.Bad}" FontWeight="Bold" VerticalAlignment="Center"/>
               <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource Editor.Bad}" FontStyle="Italic" VerticalAlignment="Center"/>
             </StackPanel>
           </Border>
@@ -105,9 +105,9 @@
                          TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
               <Grid ColumnDefinitions="180,8,80,8,180,16,Auto">
                 <TextBlock Grid.Column="0" Text="Method"         FontWeight="SemiBold" FontSize="12"/>
-                <TextBlock Grid.Column="2" Text="Param"          FontWeight="SemiBold" FontSize="12"/>
+                <TextBlock Grid.Column="2" Text="Value"          FontWeight="SemiBold" FontSize="12"/>
                 <TextBlock Grid.Column="4" Text="Target Pokémon" FontWeight="SemiBold" FontSize="12"/>
-                <TextBlock Grid.Column="6" Text="Param type"     FontWeight="SemiBold" FontSize="12"/>
+                <TextBlock Grid.Column="6" Text="Value type"     FontWeight="SemiBold" FontSize="12"/>
               </Grid><Separator/>
               <ItemsControl ItemsSource="{Binding EvoRows}">
                 <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Spacing="6"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
@@ -124,7 +124,7 @@
               </ItemsControl>
               <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0" IsVisible="{Binding CanOfferSlots}">
                 <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Click="OpenEvolutionSlots_Click"
-                        ToolTip.Tip="More evolutions need the More evolution slots patch"/>
+                        ToolTip.Tip="More evolutions need the Evolution slots patch"/>
               </StackPanel>
             </StackPanel>
           </ScrollViewer>
@@ -140,7 +140,7 @@
               <ComboBox ItemsSource="{Binding Formes}" SelectedIndex="{Binding FormeIndex}" IsVisible="{Binding ShowForme}" Width="200" HorizontalAlignment="Left"/>
               <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding ShowListsNote}">
                 <Button Content="Open in Pokédex lists" controls:Icon.Key="OpenLink" Click="PokedexLists_Click" IsVisible="{Binding CanOpenLists}"
-                        ToolTip.Tip="The sort lists take height, weight and body shape changes after Rebuild sort lists"/>
+                        ToolTip.Tip="Height, weight and body shape reach the sort lists when you rebuild them"/>
               </StackPanel>
               <StackPanel Orientation="Horizontal" Spacing="10">
               <GroupBox Header="Entry">
@@ -263,7 +263,6 @@
         </ScrollViewer>
       </TabItem>
 
-      <!-- ─── Sprites ──────────────────────────────────────────────────── -->
       <TabItem Header="Sprites">
         <views:PokemonSpriteEditorView DataContext="{Binding SpriteVM}"/>
       </TabItem>

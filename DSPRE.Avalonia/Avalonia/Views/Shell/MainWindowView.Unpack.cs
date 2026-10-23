@@ -66,7 +66,7 @@ namespace DSPRE.Avalonia.Views.Shell
             }
             finally { if (vm != null) vm.IsBusy = false; }
             if (failed.Count > 0)
-                await DialogHelper.ShowErrorAsync("These folders could not be emptied, so they were left as they were:" + Environment.NewLine + Environment.NewLine
+                await DialogHelper.ShowErrorAsync("These folders couldn't be emptied, so they were left as they were:" + Environment.NewLine + Environment.NewLine
                     + string.Join(Environment.NewLine, failed), title);
 
             // Every editor and cache read the old folders; reloading the project starts them all afresh.

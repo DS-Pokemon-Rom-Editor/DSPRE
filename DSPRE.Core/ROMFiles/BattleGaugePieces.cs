@@ -5,12 +5,8 @@ using System.IO;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// The tiles a battle copies into an HP bar while it runs (the health and experience fill, the status
-    /// word, the gender and "Lv" block, the caught ball, the slash) and the tables saying which of the bar's
-    /// own tiles each one goes into. Both live in the battle overlay, not in the graphics archive, so a bar
-    /// imported without them still shows the game's own fill and letters.
-    /// The sheet is found through the one function that reads it, not by its pictures, so repainting it
-    /// does not lose it.
+    /// The tiles battle copies into an HP bar and the tables saying where. Both live in the battle overlay and are
+    /// found through the function that reads them, so repainting doesn't lose them.
     /// </summary>
     public static class BattleGaugePieces
     {
@@ -55,9 +51,8 @@ namespace DSPRE.ROMFiles
         private static bool Sinnoh => Locate()?.Family == Family.DiamondPearl;
 
         /// <summary>
-        /// Where the experience fill goes in your single battle bar. These are numbers in the code rather than a
-        /// table, so they cannot be moved by editing a table: Platinum and HeartGold put five tiles then seven,
-        /// Diamond and Pearl four then seven.
+        /// Where the experience fill goes in your single battle bar. The code holds these as numbers, not a table: five
+        /// tiles then seven in Platinum and HeartGold, four then seven in Diamond and Pearl.
         /// </summary>
         public static Span[] ExpGauge => ReadExp() is { } e
             ? new[] { new Span(e.FirstTile * TileBytes, e.FirstCount * TileBytes), new Span(e.SecondTile * TileBytes, e.SecondCount * TileBytes) }
@@ -116,12 +111,12 @@ namespace DSPRE.ROMFiles
                 case RomInfo.GameFamilies.DP: family = Family.DiamondPearl; break;
                 case RomInfo.GameFamilies.Plat:
                 case RomInfo.GameFamilies.HGSS: family = Family.PlatinumAndJohto; break;
-                default: _why = "HP bar pieces are not supported for this game."; return null;
+                default: _why = "HP bar pieces aren't supported for this game."; return null;
             }
 
             int overlays;
             try { overlays = OverlayUtils.OverlayTable.GetNumberOfOverlays(); }
-            catch (Exception ex) { _why = "The overlay table could not be read: " + ex.Message; return null; }
+            catch (Exception ex) { _why = "The overlay table couldn't be read: " + ex.Message; return null; }
 
             for (int ov = 0; ov < overlays; ov++)
             {
@@ -154,7 +149,7 @@ namespace DSPRE.ROMFiles
                 }
             }
 
-            _why = "The battle code that draws the HP bar pieces was not found.";
+            _why = "The battle code that draws the HP bar pieces wasn't found.";
             return null;
         }
 
@@ -262,7 +257,7 @@ namespace DSPRE.ROMFiles
         public static string PutExp(byte[] overlay, int firstTile, int firstCount, int secondTile)
         {
             Found f = Locate();
-            if (f == null || f.ExpCodeAt < 0) return "The experience gauge's code was not found in this game.";
+            if (f == null || f.ExpCodeAt < 0) return "The experience gauge's code wasn't found in this game.";
             if (firstCount < 1 || firstCount > 7) return "The experience gauge's first part has to be 1 to 7 squares long.";
             if (firstTile is < 0 or > 255 || secondTile is < 0 or > 255) return "The experience gauge is outside the bar.";
             int a = f.ExpCodeAt;
@@ -318,7 +313,7 @@ namespace DSPRE.ROMFiles
             Found f = Locate();
             if (f == null) return WhyNot;
             if (tiles == null || tiles.Length != f.TileCount * TileBytes)
-                return $"The pieces are {f.TileCount} tiles; this is not the same size.";
+                return $"The HP bar pieces are {f.TileCount} tiles, and this picture isn't.";
             return Patch(f.Overlay, f.SheetAt, tiles);
         }
 
@@ -476,7 +471,7 @@ namespace DSPRE.ROMFiles
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                return "The overlay could not be written: " + ex.Message;
+                return "The overlay couldn't be written: " + ex.Message;
             }
         }
     }

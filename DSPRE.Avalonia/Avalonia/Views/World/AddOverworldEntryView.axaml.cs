@@ -28,7 +28,7 @@ namespace DSPRE.Avalonia.Views.World
                 AllowMultiple = false,
                 FileTypeFilter = new List<FilePickerFileType>
                 {
-                    new FilePickerFileType("PNG Image") { Patterns = new[] { "*.png" } }
+                    new FilePickerFileType("PNG image") { Patterns = new[] { "*.png" } }
                 }
             });
             if (files.Count == 0) return;
@@ -39,9 +39,7 @@ namespace DSPRE.Avalonia.Views.World
 
         private async void ChooseRawBtx_Click(object sender, RoutedEventArgs e)
         {
-            // Raw NSBTX/BTX0 dumps (e.g. extracted from another ROM) commonly have no file
-            // extension at all, so no FileTypeFilter here: any file can be picked and it's
-            // validated as a real BTX0 texture right after selection.
+            // Raw BTX0 dumps often have no extension, so any file is accepted and checked once picked.
             IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Choose a raw texture file (BTX0)",

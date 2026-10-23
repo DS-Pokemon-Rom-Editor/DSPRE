@@ -10,12 +10,8 @@ using global::Avalonia.OpenGL.Controls;
 namespace DSPRE.Avalonia.Gl
 {
     /// <summary>
-    /// Avalonia <see cref="OpenGlControlBase"/> that renders an <see cref="NsbmdRenderModel"/>
-    /// (per-material triangle parts + decoded textures) with a perspective + orbit
-    /// camera. Vertices are interleaved pos.xyz / uv.st / col.rgb. Textured parts sample
-    /// their material texture (with an alpha-test for transparent texels); untextured
-    /// parts use the flat material colour. Until a model is supplied it shows a self-test
-    /// cube. Normals/lighting are a later slice.
+    /// Draws an <see cref="NsbmdRenderModel"/> with an orbit camera; a test cube until a model is set. Vertices are pos.xyz,
+    /// uv.st, col.rgb.
     /// </summary>
     public class NsbmdGlControl : OpenGlControlBase
     {
@@ -69,17 +65,15 @@ namespace DSPRE.Avalonia.Gl
         private bool _outlineDirty;
         public bool ShowGizmos { get => _showGizmos; set { _showGizmos = value; RequestNextFrameRendering(); } }
 
-        // Textured/flat toggle: every vertex already carries its material's diffuse colour
-        // (see NsbmdGeometry), so turning this off just skips binding the texture and falls back
-        // to that flat per-material colour instead of reloading the model.
+        // Off skips binding textures; every vertex already has its material's colour.
         private bool _showTextures = true;
         public bool ShowTextures { get => _showTextures; set { _showTextures = value; RequestNextFrameRendering(); } }
 
         private float _overlayAlpha = 0.5f;
         public float OverlayAlpha { get => _overlayAlpha; set { _overlayAlpha = value; RequestNextFrameRendering(); } }
 
-        // ── Terrain animation ──────────────────────────────────────────────────────────── Per-material
-        // texture matrices, keyed the same way as the model's materials.
+        // ── Terrain animation ───────────────────────────────────────────────────────────
+        // Texture matrices per material, keyed like the model's materials.
         private Dictionary<int, float[]> _texMatrices;
         private static readonly float[] IdentityTexMatrix = { 1f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 1f };
 
@@ -912,9 +906,7 @@ namespace DSPRE.Avalonia.Gl
             _swapTexIds.Clear();
         }
 
-        // Sprite GPU textures are cached by their pixel-buffer reference (OverworldSprites.Get returns the
-        // SAME cached array for a given sprite), so re-positioning sprites during a drag only rebuilds the
-        // lightweight GpuSprite list; it does NOT re-upload textures (that was the move-gizmo lag).
+        // Sprite textures are cached by pixel array, so moving sprites during a drag doesn't upload them again.
         private readonly Dictionary<byte[], int> _spriteTexCache = new Dictionary<byte[], int>();
 
         private void FreeGpuSprites()
@@ -1047,8 +1039,7 @@ namespace DSPRE.Avalonia.Gl
         private Dictionary<int, float[]> _groundMatrices;
 
         /// <summary>
-        /// The scene's buildings played on the field clock (windmills, signs, wind lines), for a view that shows the
-        /// field rather than stepping animations itself. Null leaves the building state to the Set* calls.
+        /// The scene's buildings played on the field clock (windmills, signs, wind lines); null leaves them to the Set* calls.
         /// </summary>
         public SceneBuildingAnimator BuildingAnimator
         {
@@ -1217,9 +1208,7 @@ namespace DSPRE.Avalonia.Gl
                 else _f.Uniform1i(_hasTexLoc, 0);
                 if (_shadeLoc >= 0) _f.Uniform1i(_shadeLoc, part.Shade ? 1 : 0);
 
-                // Real per-material translucency (ported from WinForms PR #209): materials like the
-                // "h_kage" building drop-shadow plane or puddle overlays carry their own NSBMD alpha
-                // instead of always being fully opaque (or, previously, skipped and not drawn at all).
+                // Materials such as h_kage shadows and puddles draw with their NSBMD alpha.
                 float alpha = part.Alpha;
                 if (_fadedMaterials != null && _fadedMaterials.TryGetValue(part.MaterialKey, out float faded))
                     alpha = faded;

@@ -60,8 +60,18 @@ namespace DSPRE.Avalonia.Data
             if (tiles.Count / 32 > 1024) { why = "Frames this big need more tiles than a sprite can number."; return (null, null); }
             byte[] newCells = cells.WithCells(built);
             byte[] newTiles = NitroBgWrite.ReplaceTiles(ncgr, tiles.ToArray());
-            if (newCells == null || newTiles == null) { why = "The cursor's files are a kind this can't rebuild."; return (null, null); }
+            if (newCells == null || newTiles == null) { why = "DSPRE can't rebuild this kind of cursor file."; return (null, null); }
             return (newCells, newTiles);
+        }
+
+        /// <summary>The first frame's size in pixels, or null when the file can't be read.</summary>
+        public static (int Width, int Height)? FrameSize(byte[] ncer)
+        {
+            NcerFile cells = NcerFile.Read(ncer);
+            NcerFile.Cell cell = cells?.Cells.FirstOrDefault();
+            if (cell == null || cell.Pieces.Count == 0) return null;
+            return (cell.Pieces.Max(p => p.X + p.Width) - cell.Pieces.Min(p => p.X),
+                    cell.Pieces.Max(p => p.Y + p.Height) - cell.Pieces.Min(p => p.Y));
         }
 
         private static (byte[] Pixels, int Width, int Height) Render(NcerFile file, NcerFile.Cell cell, byte[] chars)

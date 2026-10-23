@@ -11,8 +11,8 @@ using DSPRE.ROMFiles;
 namespace DSPRE.Avalonia.Controls
 {
     /// <summary>
-    /// One overworld from the sprite table standing still and facing one way, drawn pixel for pixel. A pair Pokémon
-    /// bobs to the game's always-running clock as it does in the field.
+    /// One overworld from the sprite table standing and facing one way. A Pokémon with two frames bobs to the game's
+    /// clock, as in the field.
     /// </summary>
     public class OverworldSpriteView : Control
     {

@@ -20,9 +20,8 @@ using DSPRE.Avalonia.Data;
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
     /// <summary>
-    /// Avalonia port of the WinForms <c>BugContestEncounterEditor</c> (HGSS).
-    /// Edits the Bug-Catching Contest encounter sets (species, level range, the
-    /// threshold-based Rate, and Score). Embedded as a tab in the Encounters editor.
+    /// Bug-Catching Contest encounter sets (HGSS): species, levels, rate and score. A tab of the Special
+    /// encounters editor.
     /// </summary>
     public class BugContestEncounterViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
@@ -149,7 +148,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (!Filesystem.BugContestEncounterFileExists())
             {
                 await DialogHelper.ShowErrorAsync(
-                    "Bug Contest encounter file not found.\nExpected location: data/mushi/mushi_encount.bin", "Special encounters editor error");
+                    "The Bug Contest encounter file, data/mushi/mushi_encount.bin, is missing.", "Special encounters editor");
                 IsAvailable = false; OnPropertyChanged(nameof(IsNotAvailable)); return;
             }
             IsAvailable = true; OnPropertyChanged(nameof(IsNotAvailable));
@@ -182,7 +181,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                _ = DialogHelper.ShowErrorAsync($"Error loading Bug Contest encounters: {ex.Message}", "Special encounters editor error");
+                _ = DialogHelper.ShowErrorAsync($"Couldn't load the Bug Contest encounters: {ex.Message}", "Special encounters editor");
                 return false;
             }
         }
@@ -210,7 +209,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             UpdateRateDisplay();
         }
 
-        // ── Effective-rate calculation + validation (ported verbatim) ───────────────
+        // ── Effective rates and checks ────────────────────────────────────────────────
         private int CalculateEffectiveRate(int index)
         {
             BugContestEncounterSet set = CurrentSet;
@@ -246,7 +245,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 int prevRate = set.Encounters[i - 1].Rate;
                 int currRate = set.Encounters[i].Rate;
                 if (currRate >= prevRate && currRate > 0)
-                    warnings.Add($"Entry {i + 1} (rate {currRate}) never triggers - rate must be < {prevRate}.");
+                    warnings.Add($"Entry {i + 1} (rate {currRate}) never comes up: its rate has to be below {prevRate}.");
             }
             return string.Join("\n", warnings);
         }
@@ -272,7 +271,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Save()
         {
             if (_file == null) return;
-            if (_file.Problem() is string problem) { _ = DialogHelper.ShowErrorAsync(problem, "Bug Contest error"); return; }
+            if (_file.Problem() is string problem) { _ = DialogHelper.ShowErrorAsync(problem, "Special encounters editor"); return; }
             // The file reports its own write error.
             if (!_file.SaveToFile(showSuccessMessage: false)) return;
             _undo?.MarkSaved();
@@ -290,7 +289,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try { PlainFiles.WriteBytes(path, _file.ToByteArray()); SaveNotice.Exported(path); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Special encounters editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Special encounters editor");
             }
         }
 
@@ -309,7 +308,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync($"Error importing file: {ex.Message}", "Special encounters editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't import the file: {ex.Message}", "Special encounters editor");
             }
         }
 

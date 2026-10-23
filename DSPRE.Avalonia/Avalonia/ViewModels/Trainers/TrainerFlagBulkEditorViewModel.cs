@@ -14,11 +14,8 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Trainers
 {
     /// <summary>
-    /// Avalonia port of the WinForms <c>TrainerFlagBulkEditor</c>: bulk-edit trainer AI flags and the
-    /// double-battle flag, either by selecting trainers and toggling flags for all of them at once
-    /// (By Trainer), or by picking one flag and checking/unchecking it per trainer (By Flag).
-    /// Choose Items/Choose Moves aren't included: they control the trainerParty file's binary layout,
-    /// not just a flag, so editing them here without touching that file corrupts the party data.
+    /// Bulk-edits AI flags and the double battle flag, by trainer or by flag. Choose items and moves are left
+    /// out because they change the party file's layout.
     /// </summary>
     public class TrainerFlagBulkEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
@@ -237,7 +234,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 if (loaded.SequenceEqual(now)) continue;
                 if (!_sourceAi.TryGetValue(id, out int ai))
                 {
-                    await DialogHelper.ShowErrorAsync($"Trainer {id}'s flags couldn't be read from Trainers.c, so nothing was saved.", "Trainer flag bulk editor error");
+                    await DialogHelper.ShowErrorAsync($"Trainer {id}'s flags couldn't be read from Trainers.c, so nothing was saved.", "Trainer flag bulk editor");
                     return;
                 }
                 for (int f = 0; f < AiFlagCount; f++)
@@ -261,7 +258,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 }
                 return null;
             });
-            if (!saved) { if (error != null) await DialogHelper.ShowErrorAsync("Not everything was saved:\n" + error, "Trainer flag bulk editor error"); return; }
+            if (!saved) { if (error != null) await DialogHelper.ShowErrorAsync("Not everything was saved:\n" + error, "Trainer flag bulk editor"); return; }
 
             List<HgEngineSourceBlock> source = HgEngine.HgEngineTrainerSource.LoadAll();
             foreach ((int id, List<HgEngineFieldWrite> _, bool[] now) in writes)
@@ -495,14 +492,14 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (IsByTrainerMode)
             {
                 StatusText = $"{_trainerCount} trainers in {Tree.Count} classes, {_selectedTrainerIds.Count} selected" +
-                    (_isDirty ? " [Unsaved Changes]" : "");
+                    (_isDirty ? ", unsaved changes" : "");
             }
             else
             {
                 string flagLabel = CurrentFlagIndex >= 0 && CurrentFlagIndex < FlagNames.Length ? FlagNames[CurrentFlagIndex] : "?";
                 int enabledCount = _trainerData.Count(kvp => GetFlag(kvp.Value, CurrentFlagIndex));
                 StatusText = $"{flagLabel}: {enabledCount} of {_trainerCount} trainers have it enabled." +
-                    (_isDirty ? " [Unsaved Changes]" : "");
+                    (_isDirty ? " Unsaved changes." : "");
             }
         }
     }

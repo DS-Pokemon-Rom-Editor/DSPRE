@@ -102,7 +102,7 @@
                     <NumericUpDown Width="64" Minimum="0" Maximum="255" Increment="1" FormatString="0" Value="{Binding ReqPoints}"/>
                     <TextBlock Text="points" VerticalAlignment="Center"/>
                     <TextBlock Text="!" FontWeight="Bold" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Warn}"
-                               IsVisible="{Binding RequirementTypeWarning}" ToolTip.Tip="The game reads type 0 out of bounds"/>
+                               IsVisible="{Binding RequirementTypeWarning}" ToolTip.Tip="Type 0 doesn't work in game"/>
                     <TextBlock Text="and" VerticalAlignment="Center" Margin="10,0,0,0"/>
                     <ComboBox Width="150" ItemsSource="{Binding ObjectTypeNames}" SelectedIndex="{Binding OptReqType}"/>
                     <NumericUpDown Width="64" Minimum="0" Maximum="255" Increment="1" FormatString="0" Value="{Binding OptReqPoints}"/>

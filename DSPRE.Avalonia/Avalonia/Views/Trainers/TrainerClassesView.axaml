@@ -16,7 +16,7 @@
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
         <Button Content="Add…" controls:Icon.Key="addIcon" Click="AddTrainerClass_Click"
-                ToolTip.Tip="Platinum (English) or an hg-engine checkout."
+                ToolTip.Tip="Needs English Platinum or an hg-engine checkout."
                 IsEnabled="{Binding CanOfferAddClass}" IsVisible="{Binding !ShowClassCopy}"/>
         <Button controls:EditorToolbar.Slot="Add" Content="Duplicate" controls:Icon.Key="copy" Click="CopyClass_Click" IsVisible="{Binding ShowClassCopy}"
                 ToolTip.Tip="Add a copy of the selected class at the end"/>
@@ -61,7 +61,7 @@
           </Grid>
 
           <StackPanel Spacing="2" IsVisible="{Binding ShowGender}">
-            <TextBlock Text="Gender" ToolTip.Tip="Used for DV/nature calculations."/>
+            <TextBlock Text="Gender" ToolTip.Tip="Affects the natures of the class's Pokémon."/>
             <ComboBox SelectedIndex="{Binding GenderIndex}" HorizontalAlignment="Stretch">
               <ComboBoxItem>Male</ComboBoxItem>
               <ComboBoxItem>Female</ComboBoxItem>

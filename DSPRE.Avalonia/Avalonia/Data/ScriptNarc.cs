@@ -9,7 +9,7 @@ namespace DSPRE.Avalonia.Data
     /// <summary>
     /// Thin accessor for a one-file-per-entry NARC (the battle move-sequence and move-effect archives unpack to
     /// files "0000", "0001", …). Lazily unpacks on first use, then reads/writes individual entry files; the ROM
-    /// save repacks them. Guards a missing mapping (e.g. an archive not wired for a version) via <see cref="Available"/>.
+    /// save repacks them. Guards a missing mapping, such as an archive not wired for a version, via <see cref="Available"/>.
     /// The second constructor reads the packed archive instead, read-only, for a caller that needs the
     /// ROM's own bytes.
     /// </summary>
@@ -94,7 +94,7 @@ namespace DSPRE.Avalonia.Data
             return FromUnpacked(id);
         }
 
-        // A member hg-engine copies in from its own file on every build is whatever that file holds now.
+        // hg-engine copies some members in from a separate file on every build, so those read that file.
         private byte[] FromUnpacked(int id)
         {
             if (HgEngine.HgEngineSourceAssets.ReadVerbatim(_archive, id) is byte[] source) return source;
@@ -103,9 +103,8 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>
-        /// Reads the packed archive rather than its unpacked copy. Only that way are the bytes the ROM's
-        /// own: while an hg-engine checkout is linked the unpacked copy of an owned archive holds that
-        /// checkout's build instead, and asking for it rebuilds from source. Read-only.
+        /// Reads the packed archive without changing it. With an hg-engine checkout linked, the unpacked copy holds the
+        /// checkout's build, and reading it rebuilds from source.
         /// </summary>
         public ScriptNarc(DirNames dir, bool fromPacked) { _dir = dir; _fromPacked = fromPacked; }
 

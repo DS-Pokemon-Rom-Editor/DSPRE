@@ -100,17 +100,7 @@ namespace DSPRE
 
         }
 
-        /// <summary>
-        /// Converts an array of machine move IDs into their corresponding move names.
-        /// </summary>
-        /// <remarks>This method retrieves the move names from the underlying data source and maps each
-        /// machine move ID to its corresponding name. If any invalid IDs are encountered, a warning is logged, and the
-        /// placeholder string "UNK_{ID}" is used for those entries. You may want ReadMachineMoveNames() instead for a more straightforward approach.
-        /// </remarks>
-        /// <param name="machineMoves">An array of integers representing machine move IDs. Each ID corresponds to an index in the move name list.</param>
-        /// <returns>An array of strings containing the names of the moves corresponding to the provided machine move IDs. If an
-        /// ID is invalid (i.e., it does not correspond to a valid move), the resulting array will contain a placeholder
-        /// string in the format "UNK_{ID}" at the respective position.</returns>
+        /// <summary>Move names for machine move ids; an unknown id becomes UNK_{id}.</summary>
         public static string[] GetMachineMoveNames(int[] machineMoves)
         {
             string[] moveNames = RomInfo.GetAttackNames();
@@ -120,7 +110,6 @@ namespace DSPRE
 
             for (int i = 0; i < machineMoves.Length; i++)
             {
-                // Catch invalid move ids
                 if (machineMoves[i] >= moveNames.Length)
                 {
                     machineMoveNames[i] = $"UNK_{machineMoves[i]}";
@@ -139,15 +128,7 @@ namespace DSPRE
             return machineMoveNames;
         }
 
-        /// <summary>
-        /// Reads the names of all machine moves from the ROM and returns them as an array of strings.
-        /// </summary>
-        /// <remarks>
-        /// This method combines the functionality of ReadMachineMoves and GetMachineMoveNames and should be preferred.
-        /// </remarks>
-        /// <returns>
-        /// An array of strings representing the names of all machine moves (TMs and HMs) in the ROM.
-        /// </returns>
+        /// <summary>Every machine's move name.</summary>
         public static string[] ReadMachineMoveNames()
         {
             int[] machineMoves = ReadMachineMoves();
@@ -184,7 +165,7 @@ namespace DSPRE
                 throw new InvalidOperationException("The number of machines changed since the editor opened. Reopen it to edit them.");
             if (SourceMachines() is List<HgEngine.HgEngineMachineMoves.Machine> hge)
             {
-                // Colours first: they are read against the moves still on disk, which is what they were shown for.
+                // Colours first, while the moves on disk are still the ones they were shown with.
                 if (palettes != null) WriteSourceDiscTypes(hge, palettes);
                 if (!HgEngine.HgEngineMachineMoves.TryWrite(moves, out string error)) throw new InvalidOperationException(error);
                 return;
@@ -265,7 +246,7 @@ namespace DSPRE
 
         /// <summary>
         /// Each hg-engine machine's disc type, read from its icon's palette, and per type the disc most of its machines
-        /// use, which is what a machine given that type copies. Null when an icon can't be read, so nothing is written.
+        /// use, which a machine given that type copies. Null when an icon can't be read, so nothing is written.
         /// </summary>
         private static int[] ReadSourceDiscTypes(List<HgEngine.HgEngineMachineMoves.Machine> machines, out Dictionary<int, string> discByType)
         {
@@ -308,7 +289,7 @@ namespace DSPRE
         private static void WriteSourceDiscTypes(List<HgEngine.HgEngineMachineMoves.Machine> machines, int[] palettes)
         {
             int[] before = ReadSourceDiscTypes(machines, out Dictionary<int, string> discByType)
-                ?? throw new InvalidOperationException("The disc colours could not be read from the checkout, so nothing was saved.");
+                ?? throw new InvalidOperationException("The disc colours couldn't be read from the checkout, so nothing was saved.");
             for (int i = 0; i < machines.Count; i++)
             {
                 int type = PaletteToTypeIndex(palettes[i]);

@@ -4,13 +4,10 @@ using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
-    /// <summary>Resolves a species id straight to its real icon PNG in the linked hg-engine checkout.
-    /// hg-engine doesn't store Pokémon icons in personal.narc; each species' icon is a source PNG
-    /// (data/graphics/sprites/&lt;name&gt;/icon.png) assembled by data/graphics/pokegra.mk. This bypasses
-    /// the NCGR/NCLR/palette-table pipeline entirely and loads the source PNG directly, since
-    /// RomInfo.monIconPalTableAddress is a vanilla-only ARM9 offset that doesn't survive hg-engine's
-    /// recompile. pokegra.mk is parsed for the id -> PNG path mapping rather than re-deriving a
-    /// folder-name slug, since it's hg-engine's own generated ground truth.</summary>
+    /// <summary>
+    /// A species' icon PNG in the checkout (data/graphics/sprites/&lt;name&gt;/icon.png), found through pokegra.mk,
+    /// since the vanilla icon palette table doesn't survive hg-engine's build.
+    /// </summary>
     public static class HgEnginePokemonIcons
     {
         private const string PokegraMkRelPath = "data/graphics/pokegra.mk";

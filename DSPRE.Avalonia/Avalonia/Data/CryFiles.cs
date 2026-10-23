@@ -24,7 +24,7 @@ namespace DSPRE.Avalonia.Data
             int U16(int o) => file[o] | (file[o + 1] << 8);
             int U32(int o) => file[o] | (file[o + 1] << 8) | (file[o + 2] << 16) | (file[o + 3] << 24);
 
-            if (Sig(0) != "RIFF" || Sig(8) != "WAVE") { problem = "That is not a WAV file."; return null; }
+            if (Sig(0) != "RIFF" || Sig(8) != "WAVE") { problem = "That isn't a WAV file."; return null; }
 
             int format = 0, channels = 0, bits = 0;
             int dataAt = -1, dataLen = 0;

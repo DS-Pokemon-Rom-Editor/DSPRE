@@ -8,10 +8,8 @@ using System.Linq;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// One battle-sprite archive of fixed-size members: a 160x80 4bpp scrambled sprite (6448 bytes) or a 16-colour
-    /// palette (72 bytes). Reads and writes go to the unpacked copy that Save ROM repacks and the Graphics browser
-    /// reads, and each write also patches the packed file in place so both agree. An hg-engine-owned archive is
-    /// rebuilt from the checkout and skipped by Save ROM, so it is only used unpacked when it already is.
+    /// A battle sprite archive: 6448-byte 160x80 16-colour sprites or 72-byte palettes. Writes go to the unpacked copy
+    /// and patch the packed file too; an hg-engine archive is only used unpacked when it already is.
     /// </summary>
     public sealed class PokemonBattleSpriteArchive
     {

@@ -138,8 +138,8 @@ namespace DSPRE.Avalonia.Data
         {
             byte[] indices = Indices(out int width, out int height);
             System.Drawing.Color[] colours = BattleGaugeTextRenderer.Colours();
-            if (indices == null) return BattleGaugePieces.WhyNot ?? "The HP bar pieces could not be read.";
-            if (colours == null) return "The HP bar colours could not be read.";
+            if (indices == null) return BattleGaugePieces.WhyNot ?? "The HP bar pieces couldn't be read.";
+            if (colours == null) return "The HP bar colours couldn't be read.";
             try { PlainFiles.WriteBytes(path, IndexedPngWriter.Encode4Bpp(indices, width, height, colours[..16])); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { return ex.Message; }
             return null;
@@ -154,8 +154,8 @@ namespace DSPRE.Avalonia.Data
         {
             byte[] old = BattleGaugePieces.ReadSheet();
             System.Drawing.Color[] colours = BattleGaugeTextRenderer.Colours();
-            if (old == null) return BattleGaugePieces.WhyNot ?? "The HP bar pieces could not be read.";
-            if (colours == null) return "The HP bar colours could not be read.";
+            if (old == null) return BattleGaugePieces.WhyNot ?? "The HP bar pieces couldn't be read.";
+            if (colours == null) return "The HP bar colours couldn't be read.";
 
             Layout layout = For(old.Length / BattleGaugePieces.TileBytes);
             int wide = layout.Width * Tile, tall = layout.Height * Tile;
@@ -189,7 +189,7 @@ namespace DSPRE.Avalonia.Data
                     }
             }
             if (strays > 0)
-                return $"{strays} pixels are not in the HP bar colours. Change the colours first, or paint with those.";
+                return $"{strays} pixels aren't in the HP bar colours. Change the colours first, or paint with those.";
 
             return (write ?? BattleGaugePieces.WriteSheet)(tilesOut);
         }

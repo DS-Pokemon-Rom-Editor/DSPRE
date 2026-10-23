@@ -47,7 +47,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 _overlaysSize = 0;
                 Results.Add(new AddressRow("Overlay 42", "0x1234"));
                 Results.Add(new AddressRow("ARM9", "0x0A2C"));
-                Results.Add(new AddressRow("SynthOVL", "0x00F8"));
+                Results.Add(new AddressRow("Synthetic overlay", "0x00F8"));
                 StatusText = "Design-time preview (no actual ROM loaded)";
                 return;
             }
@@ -69,7 +69,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 }
 
                 if (addr >= RomInfo.SynthOverlayLoadAddress)
-                    Results.Add(new AddressRow("SynthOVL", $"0x{addr - RomInfo.SynthOverlayLoadAddress:X4}"));
+                    Results.Add(new AddressRow("Synthetic overlay", $"0x{addr - RomInfo.SynthOverlayLoadAddress:X4}"));
             }
             catch (Exception ex)
             {

@@ -113,7 +113,6 @@
         <ColumnDefinition Width="Auto"/>
         <ColumnDefinition Width="480" MinWidth="380"/>
       </Grid.ColumnDefinitions>
-      <!-- 3D preview (geometry; textures deferred) -->
       <Border x:Name="GlHost" Grid.Column="0" Background="Transparent" Margin="4">
         <gl:NsbmdGlControl x:Name="GlView"/>
       </Border>
@@ -190,7 +189,7 @@
                   </Grid>
                 </StackPanel>
                 <StackPanel Spacing="2">
-                  <TextBlock Text="Position (tiles · fine)" FontSize="10" Foreground="{DynamicResource Editor.Subtle}"/>
+                  <TextBlock Text="Position (tiles and fine steps)" FontSize="10" Foreground="{DynamicResource Editor.Subtle}"/>
                   <Grid ColumnDefinitions="18,*" RowDefinitions="Auto,Auto,Auto" Margin="0,0,0,0">
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="X" VerticalAlignment="Center"/>
                     <NumericUpDown Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" Margin="0,0,0,2" Minimum="-32768" Maximum="32767" Increment="0.0625" FormatString="0.####" Value="{Binding BX}"/>
@@ -249,7 +248,7 @@
                 <controls:HelpTip Text="Every header using this area shares its textures, animation and light."/>
               </StackPanel>
               <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,6,Auto,6,Auto">
-                <TextBlock Grid.Row="0" Text="Global NSBTA" VerticalAlignment="Center" Margin="0,0,10,0" IsVisible="{Binding IsHgssGame}"/>
+                <TextBlock Grid.Row="0" Text="Terrain animation" ToolTip.Tip="Global NSBTA" VerticalAlignment="Center" Margin="0,0,10,0" IsVisible="{Binding IsHgssGame}"/>
                 <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding AreaGroundAnimation}" Minimum="0" Maximum="65535" FormatString="0"
                                Width="120" HorizontalAlignment="Left" IsVisible="{Binding IsHgssGame}"
                                ToolTip.Tip="Area-wide texture animation, like moving water. 65535 is none."/>
@@ -261,7 +260,7 @@
             </StackPanel>
           </ScrollViewer>
         </TabItem>
-        <TabItem Header="Files / I/O" IsEnabled="{Binding IsSingleMap}">
+        <TabItem Header="Files" IsEnabled="{Binding IsSingleMap}">
           <ScrollViewer>
             <StackPanel Margin="8" Spacing="10">
               <Button Content="Show map file" controls:Icon.Key="folder" Click="ShowMapFile_Click" HorizontalAlignment="Left"
@@ -270,7 +269,7 @@
                 <StackPanel Orientation="Horizontal" Spacing="4">
                   <Button Content="Export model…" controls:Icon.Key="export" Click="ExportNsbmd_Click"/>
                   <Button Content="Export textured…" controls:Icon.Key="export" Click="ExportTexturedNsbmd_Click"
-                          ToolTip.Tip="With the Map textures pack's textures inside the model"/>
+                          ToolTip.Tip="With the map's textures inside the model"/>
                   <Button Content="Export DAE…" controls:Icon.Key="export"   Click="ExportDae_Click"/>
                   <Button Content="Export GLB…" controls:Icon.Key="export"   Click="ExportGlb_Click"/>
                 </StackPanel>

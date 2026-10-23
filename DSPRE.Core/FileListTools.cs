@@ -166,7 +166,7 @@ namespace DSPRE
                     if (!(value.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
                             ? int.TryParse(value.Substring(2), System.Globalization.NumberStyles.HexNumber, null, out next)
                             : int.TryParse(value, out next)))
-                        throw new FormatException($"\"{entry}\" has a value that is not a plain number.");
+                        throw new FormatException($"\"{entry}\" has a value that isn't a plain number.");
                 }
                 name = name.Length > prefix ? name.Substring(prefix) : name;
                 int underscore = name.LastIndexOf('_');

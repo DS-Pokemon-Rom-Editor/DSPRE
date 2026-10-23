@@ -211,7 +211,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 (bool saved, string error) = await HgEngineSave.RunAsync(() => { _t.Save(); return null; });
                 if (!saved)
                 {
-                    if (error != null) await DialogHelper.ShowErrorAsync("The wild Pokémon intros were not saved:\n" + error, Title);
+                    if (error != null) await DialogHelper.ShowErrorAsync("The wild Pokémon intros weren't saved:\n" + error, Title);
                     return false;
                 }
             }
@@ -220,7 +220,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 try { _t.Save(); }
                 catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
                 {
-                    await DialogHelper.ShowErrorAsync("The wild Pokémon intros were not saved:\n" + e.Message, Title);
+                    await DialogHelper.ShowErrorAsync("The wild Pokémon intros weren't saved:\n" + e.Message, Title);
                     return false;
                 }
             }

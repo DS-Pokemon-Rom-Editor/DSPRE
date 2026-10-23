@@ -36,23 +36,19 @@ namespace DSPRE.ROMFiles
         public int RemainingAdditions { get; }
     }
 
-    /// <summary>
-    /// Owns preflight validation for trainer roster expansion. Mutation remains separate so callers
-    /// cannot write one roster resource before every dependency has passed analysis.
-    /// </summary>
+    /// <summary>Checks everything before a trainer is added or removed, so nothing is written until every file passes.</summary>
     public static class TrainerRosterService
     {
         public static TrainerRosterAnalysis AnalyzeCurrentProject()
         {
             if (HgEngineProject.IsActive)
             {
-                return Refuse("Adding and removing trainers is not implemented for hg-engine projects: the "
-                    + "roster and its shared trainer script are both built from source.");
+                return Refuse("Trainers can't be added or removed in an hg-engine project, since it builds them from source.");
             }
 
             if (!TrainerScriptDescriptor.TryFor(GameFamily, out TrainerScriptDescriptor scriptDescriptor))
             {
-                return Refuse($"The {GameFamily} shared trainer-script bank is not supported.");
+                return Refuse(Unsafe($"no shared trainer script for {GameFamily}"));
             }
 
             if (!TrainerScriptExecutableDescriptor.TryFor(GameVersion, GameLanguage,
@@ -72,7 +68,7 @@ namespace DSPRE.ROMFiles
             string partyNarcPath = GameDirs[DirNames.TrainerParty].packedDir;
             if (!Directory.Exists(propertiesDir) || !File.Exists(partyNarcPath))
             {
-                return Refuse("The trainer properties and packed party archive must be available first.");
+                return Refuse("The trainer files aren't unpacked yet.");
             }
 
             int trainerCount = NarcAPI.Narc.MemberCount(propertiesDir);
@@ -86,14 +82,14 @@ namespace DSPRE.ROMFiles
             }
             else if (!TryReadNarcElementCount(partyNarcPath, out partyCount, out string narcError))
             {
-                return Refuse(narcError, trainerCount);
+                return Refuse(Unsafe(narcError), trainerCount);
             }
             TextArchive names = new TextArchive(TrainerNamesMessageNumber);
             int nameCount = names.Messages?.Count ?? 0;
             if (trainerCount <= 0 || trainerCount != partyCount || trainerCount != nameCount)
             {
                 return Refuse(
-                    $"Trainer resource counts differ: properties {trainerCount}, parties {partyCount}, names {nameCount}.",
+                    Unsafe($"counts differ: properties {trainerCount}, parties {partyCount}, names {nameCount}"),
                     trainerCount, partyCount, nameCount);
             }
 
@@ -101,7 +97,7 @@ namespace DSPRE.ROMFiles
                 readFunctions: true, readActions: true);
             if (sharedScripts.ParseFailedDueToInvalidCommand)
             {
-                return Refuse("The shared trainer-script file did not parse completely.",
+                return Refuse(Unsafe("the shared trainer script didn't parse completely"),
                     trainerCount, partyCount, nameCount);
             }
 
@@ -111,7 +107,7 @@ namespace DSPRE.ROMFiles
             if (scriptBytes == null || !TrainerScriptLayout.TryAnalyze(scriptBytes,
                 out layout, out layoutError))
             {
-                return Refuse(layoutError ?? "The shared trainer-script file could not be serialized.",
+                return Refuse(Unsafe(layoutError ?? "the shared trainer script couldn't be written out"),
                     trainerCount, partyCount, nameCount);
             }
 
@@ -123,7 +119,7 @@ namespace DSPRE.ROMFiles
                     : OverlayUtils.GetPath(target.OverlayNumber);
                 if (!File.Exists(path))
                 {
-                    return Refuse($"The {target.File} executable patch target is missing.",
+                    return Refuse(Unsafe($"{target.File} is missing"),
                         trainerCount, partyCount, nameCount, layout.SpecialIndex);
                 }
 
@@ -131,7 +127,7 @@ namespace DSPRE.ROMFiles
                 if (!TrainerScriptExecutableDescriptor.TryLocateTarget(executable,
                     specialScriptNumber, target.ExpectedThumbReferences, out _, out string patchError))
                 {
-                    return Refuse($"The {target.File} trainer-script signature is unsupported: {patchError}",
+                    return Refuse(Unsafe($"{target.File} trainer script references: {patchError}"),
                         trainerCount, partyCount, nameCount, layout.SpecialIndex);
                 }
             }
@@ -169,7 +165,7 @@ namespace DSPRE.ROMFiles
             string partyDir = GameDirs[DirNames.TrainerParty].unpackedDir;
             if (!Directory.Exists(partyDir))
             {
-                error = "The trainer-party archive must be unpacked before adding a trainer.";
+                error = "The trainer parties aren't unpacked yet.";
                 return false;
             }
 
@@ -181,13 +177,13 @@ namespace DSPRE.ROMFiles
                 readFunctions: true, readActions: true);
             if (sharedScripts.PlaintextParseFailed)
             {
-                error = "The shared trainer-script .script file has edits that do not parse. Fix it first.";
+                error = "The shared trainer script has edits in its .script file that don't compile. Fix them first.";
                 return false;
             }
             if (sharedScripts.ParseFailedDueToInvalidCommand ||
                 !TrainerScriptLayout.TryInsertGenericAliasBeforeSpecial(sharedScripts, out error))
             {
-                error ??= "The shared trainer-script file did not parse completely.";
+                error = Failed(error ?? "the shared trainer script didn't parse completely");
                 return false;
             }
 
@@ -196,7 +192,7 @@ namespace DSPRE.ROMFiles
                 out TrainerScriptLayout expandedLayout, out error) ||
                 expandedLayout.SpecialIndex != analysis.SpecialScriptIndex + 1)
             {
-                error ??= "The expanded trainer-script layout did not move exactly one entry.";
+                error = Failed(error ?? "the expanded script layout didn't move exactly one entry");
                 return false;
             }
 
@@ -213,6 +209,7 @@ namespace DSPRE.ROMFiles
                     newSpecialNumber, target.ExpectedThumbReferences, out byte[] patched,
                     out _, out error))
                 {
+                    error = Failed(error);
                     return false;
                 }
                 batch.PutCode(path, patched);
@@ -228,7 +225,7 @@ namespace DSPRE.ROMFiles
             if (trainerNames.Messages.Count != trainerId ||
                 !trainerNames.SetSimpleTrainerName(trainerId, trainerName))
             {
-                error = "The trainer-name archive could not append the new trainer name.";
+                error = Failed("the trainer name couldn't be added to the name archive");
                 trainerId = -1;
                 return false;
             }
@@ -239,6 +236,7 @@ namespace DSPRE.ROMFiles
             batch.Put(DirNames.Scripts, scriptDescriptor.SharedScriptArchiveId, expandedScript);
             if (!TryAddPlaintextMutation(batch, sharedScripts, scriptPaths.txtPath, "expanded", out error))
             {
+                error = Failed(error);
                 trainerId = -1;
                 return false;
             }
@@ -263,7 +261,7 @@ namespace DSPRE.ROMFiles
             string plaintext = scripts.ToPlainText(includeActions: true);
             if (string.IsNullOrWhiteSpace(plaintext))
             {
-                error = $"The {what} trainer-script plaintext could not be serialized.";
+                error = $"the {what} trainer script couldn't be written as text";
                 return false;
             }
             batch.PutFile(txtPath, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(plaintext));
@@ -295,7 +293,7 @@ namespace DSPRE.ROMFiles
             }
             if (analysis.TrainerRecordCount <= capacity.RetailTrainerRecordCount)
             {
-                error = "Retail trainers cannot be removed. Only trainers appended by DSPRE are eligible.";
+                error = "Only trainers DSPRE added can be removed.";
                 return false;
             }
 
@@ -314,7 +312,7 @@ namespace DSPRE.ROMFiles
                 {
                     locations += Environment.NewLine + $"• and {references.Count - 8} more";
                 }
-                error = $"Trainer {trainerId} is still in use and cannot be removed:" +
+                error = $"Trainer {trainerId} is still in use and can't be removed:" +
                     Environment.NewLine + locations;
                 trainerId = -1;
                 return false;
@@ -327,14 +325,14 @@ namespace DSPRE.ROMFiles
                 readFunctions: true, readActions: true);
             if (sharedScripts.PlaintextParseFailed)
             {
-                error = "The shared trainer-script .script file has edits that do not parse. Fix it first.";
+                error = "The shared trainer script has edits in its .script file that don't compile. Fix them first.";
                 trainerId = -1;
                 return false;
             }
             if (sharedScripts.ParseFailedDueToInvalidCommand ||
                 !TrainerScriptLayout.TryRemoveGenericAliasBeforeSpecial(sharedScripts, out error))
             {
-                error ??= "The shared trainer-script file did not parse completely.";
+                error = Failed(error ?? "the shared trainer script didn't parse completely");
                 trainerId = -1;
                 return false;
             }
@@ -344,7 +342,7 @@ namespace DSPRE.ROMFiles
                 out TrainerScriptLayout contractedLayout, out error) ||
                 contractedLayout.SpecialIndex != analysis.SpecialScriptIndex - 1)
             {
-                error ??= "The contracted trainer-script layout did not move exactly one entry.";
+                error = Failed(error ?? "the shrunk script layout didn't move exactly one entry");
                 trainerId = -1;
                 return false;
             }
@@ -362,6 +360,7 @@ namespace DSPRE.ROMFiles
                     newSpecialNumber, target.ExpectedThumbReferences, out byte[] patched,
                     out _, out error))
                 {
+                    error = Failed(error);
                     trainerId = -1;
                     return false;
                 }
@@ -374,7 +373,7 @@ namespace DSPRE.ROMFiles
             TextArchive trainerNames = new TextArchive(TrainerNamesMessageNumber);
             if (trainerNames.Messages.Count != analysis.TrainerNameCount)
             {
-                error = "The trainer-name archive changed during removal analysis.";
+                error = Failed("the trainer name archive changed while the removal was checked");
                 trainerId = -1;
                 return false;
             }
@@ -384,8 +383,9 @@ namespace DSPRE.ROMFiles
 
             (string binPath, string txtPath) scriptPaths = ScriptFile.GetFilePaths(scriptDescriptor.SharedScriptArchiveId);
             batch.Put(DirNames.Scripts, scriptDescriptor.SharedScriptArchiveId, contractedScript);
-            if (!TryAddPlaintextMutation(batch, sharedScripts, scriptPaths.txtPath, "contracted", out error))
+            if (!TryAddPlaintextMutation(batch, sharedScripts, scriptPaths.txtPath, "shrunk", out error))
             {
+                error = Failed(error);
                 trainerId = -1;
                 return false;
             }
@@ -398,6 +398,19 @@ namespace DSPRE.ROMFiles
 
             AfterCommit(scriptDescriptor.SharedScriptArchiveId);
             return true;
+        }
+
+        // The detail goes to the log; the dialog only needs to say what happened.
+        private static string Unsafe(string detail)
+        {
+            AppLogger.Warn("Trainer list: " + detail);
+            return "DSPRE can't safely change the trainer list in this ROM. The log has the details.";
+        }
+
+        private static string Failed(string detail)
+        {
+            AppLogger.Warn("Trainer list: " + detail);
+            return "DSPRE couldn't change the trainer list, so nothing changed. The log has the details.";
         }
 
         private static TrainerRosterAnalysis Refuse(string reason, int trainerCount = 0,
@@ -416,7 +429,7 @@ namespace DSPRE.ROMFiles
             {
                 if (input.Length < header.Length || input.Read(header, 0, header.Length) != header.Length)
                 {
-                    error = "The trainer-party NARC header is truncated.";
+                    error = "the trainer party archive header is cut short";
                     return false;
                 }
             }
@@ -424,14 +437,14 @@ namespace DSPRE.ROMFiles
             if (header[0] != (byte)'N' || header[1] != (byte)'A' ||
                 header[2] != (byte)'R' || header[3] != (byte)'C')
             {
-                error = "The trainer-party archive is not a NARC file.";
+                error = "the trainer party archive isn't a NARC";
                 return false;
             }
 
             uint value = BinaryPrimitives.ReadUInt32LittleEndian(header.AsSpan(0x18, sizeof(uint)));
             if (value > int.MaxValue)
             {
-                error = "The trainer-party NARC element count is too large.";
+                error = "the trainer party archive member count is too large";
                 return false;
             }
 

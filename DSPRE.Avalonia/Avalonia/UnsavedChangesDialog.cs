@@ -161,7 +161,7 @@ namespace DSPRE.Avalonia
                     return null;
                 }
 
-                return "The save was canceled or changes remain unsaved.";
+                return "The save was cancelled or changes remain unsaved.";
             }
             catch (Exception ex)
             {
@@ -245,7 +245,7 @@ namespace DSPRE.Avalonia
                 if (failures.Count > 0)
                 {
                     await DialogHelper.ShowErrorAsync(
-                        "One or more editors could not be saved:\n\n" + string.Join("\n", failures),
+                        "One or more editors couldn't be saved:\n\n" + string.Join("\n", failures),
                         "Couldn't save", this);
                     return;
                 }
@@ -270,7 +270,7 @@ namespace DSPRE.Avalonia
                 if (failures.Count > 0)
                 {
                     await DialogHelper.ShowErrorAsync(
-                        "One or more editors could not be discarded:\n\n" + string.Join("\n", failures),
+                        "One or more editors couldn't be discarded:\n\n" + string.Join("\n", failures),
                         "Couldn't discard", this);
                     return;
                 }
@@ -312,7 +312,7 @@ namespace DSPRE.Avalonia
                 if (failures.Count > 0)
                 {
                     await DialogHelper.ShowErrorAsync(
-                        "One or more editors could not be discarded:\n\n" + string.Join("\n", failures),
+                        "One or more editors couldn't be discarded:\n\n" + string.Join("\n", failures),
                         "Couldn't discard", this);
                     return;
                 }

@@ -127,7 +127,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             ? $"Edited in {DSPRE.HgEngine.HgEngineMarts.SourceRelPath}."
             : CanResize
             ? $"Room for {MartData.RoomyShops} marts of {MartData.RoomyItems} items."
-            : "Adding items or marts needs the Expand the marts patch.";
+            : "Adding items or marts needs the \"Mart expansion\" patch.";
         public string NewShopDisplayGuide => _data?.FromSource == true ? ""
             : SelectedShop?.SpecialtySource?.IsCustom == true
             ? $"Open it with SpMartScreen {SelectedShop.SpecialtySource.Id} in a script."

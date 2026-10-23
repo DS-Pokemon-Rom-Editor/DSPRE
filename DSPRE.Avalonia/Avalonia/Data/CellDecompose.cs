@@ -78,9 +78,9 @@ namespace DSPRE.Avalonia.Data
             if (file == null || cell < 0 || cell >= file.Cells.Count || file.Cells[cell].Pieces.Count == 0)
                 return "This entry has no pieces to put back.";
             if (painted == null || painted.Length < width * height * 4)
-                return "That picture is not the size this sprite is drawn at.";
+                return "That picture isn't the size this sprite is drawn at.";
             if (!(NitroBgCodec.ReadDrawingHeader(ncgr) is NitroBgCodec.DrawingHeader head))
-                return "This drawing could not be taken apart, so nothing was changed.";
+                return "This drawing couldn't be taken apart, so nothing was changed.";
             if (canvas <= 0) canvas = Math.Max(width, height);
 
             NcerFile.Cell c = file.Cells[cell];
@@ -137,8 +137,7 @@ namespace DSPRE.Avalonia.Data
                 }
             }
 
-            // Nothing written means nothing needed writing, which is what putting an unchanged picture
-            // back should do, so that is not a failure.
+            // Writing nothing is right for an unchanged picture, so it isn't a failure.
             changed = outp;
             return null;
         }

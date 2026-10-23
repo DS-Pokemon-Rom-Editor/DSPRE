@@ -21,9 +21,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             field = value; OnPropertyChanged(n); return true;
         }
 
-        /// <summary>One entry of one archive, as it appears in the list.</summary>
-        /// <summary>Properties, not fields: the compiled bindings this project uses cannot see fields.</summary>
-        /// <summary>One row of the list: a whole thing, which is usually made of several files.</summary>
+        /// <summary>One row of the list: a whole thing, usually several files. Properties, not fields, so
+        /// compiled bindings see them.</summary>
         public sealed class Item
         {
             public GraphicAssets.Archive Archive { get; init; }
@@ -31,8 +30,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             /// <summary>The first of this thing's files, and what is shown when nothing else is picked.</summary>
             public int Index { get; init; }
             public GraphicAssets.Unit Unit { get; init; }
-            /// <summary>What this thing is called. The games name most of them, so say the name rather
-            /// than repeating the archive down every row of the list.</summary>
+            /// <summary>What this thing is called. Most have game names, so the archive isn't repeated on
+            /// every row.</summary>
             public string Name { get; init; }
             public string Label => Unit?.Gathered == true ? Name
                 : Name == null ? $"{Index,5}  {Archive.Title}"
@@ -48,13 +47,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             /// <summary>Usually the row's own archive, but a model's pictures and movement live elsewhere.</summary>
             public GraphicAssets.Archive Archive { get; init; }
             public string Name { get; init; }
-            /// <summary>What this file is, so the list can open on a picture rather than a palette.</summary>
+            /// <summary>What this file is, so the list opens on a picture, not a palette.</summary>
             public GraphicAssets.Kind Kind { get; init; }
 
             /// <summary>
-            /// What to call this part. The plain words on their own said what a file is for rather than
-            /// what it is, and "As it appears" told nobody they were looking at a cell layout. A part
-            /// with a name of its own, like "Back, female", keeps it.
+            /// What to call this part. A part with its own name, like "Back, female", keeps it.
             /// </summary>
             public string Label => Name switch
             {
@@ -164,8 +161,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             foreach (GraphicAssets.Group g in Enum.GetValues<GraphicAssets.Group>())
             {
                 int inGroup = 0;
-                // A row can name its own tab, so an archive holding several different things is read for
-                // every tab rather than only its own.
+                // A row can name its own tab, so a mixed archive is read for every tab.
                 foreach ((GraphicAssets.Archive a, List<GraphicAssets.Unit> units) in archives)
                 {
                     if (a.In != g && !units.Any(u => u.In == g)) continue;
@@ -173,8 +169,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     foreach (GraphicAssets.Unit u in units)
                     {
                         if ((u.In ?? a.In) != g) continue;
-                        // Count the things, not the files: a row is a whole Pokemon or a whole trainer now,
-                        // so counting files made the tab claim six times as many as it lists.
+                        // Count things, not files: a row is a whole Pokémon or trainer.
                         inGroup++;
                         found.Add(new Item
                         {
@@ -209,8 +204,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             ApplyFilter();
         }
 
-        /// <summary>Which archives feed a tab. A tab can be fed by part of an archive, so this asks the
-        /// rows rather than assuming an archive belongs to one tab.</summary>
+        /// <summary>Which archives feed a tab. A tab can use part of an archive, so this asks the rows.</summary>
         private static string WhatIsOn(GraphicAssets.Group g, IEnumerable<Item> items)
         {
             IEnumerable<string> titles = items.Where(i => i.In == g).Select(i => i.Archive.Title).Distinct();
@@ -321,8 +315,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         /// <summary>
-        /// The first part that is a picture rather than the colours it is painted with, or the first of
-        /// anything when this unit holds no picture at all.
+        /// The first part that is a picture, not a palette, or the first part when there is no picture.
         /// </summary>
         private int FirstWorthShowing()
         {
@@ -521,7 +514,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             catch (Exception ex)
             {
                 AppLogger.Error("GraphicsBrowser.Look failed: " + ex.Message);
-                Whynot = "This entry could not be opened.";
+                Whynot = "This entry couldn't be opened.";
                 ShowFacts(a);
             }
             RaiseAll();
@@ -597,7 +590,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (_selected == null) return "Pick something first.";
                 if (ShowingArchive?.CannotImportBecause != null) return ShowingArchive.CannotImportBecause;
                 if (_picture == null)
-                    return "This entry has no picture in it, so a PNG cannot take its place. "
+                    return "This entry has no picture in it, so a PNG can't take its place. "
                          + (Whynot ?? "");
                 return "Replace this with a PNG of the same size and numbered colours. Export it first and paint over that.";
             }
@@ -647,9 +640,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public string Replace(string path) => Replace(path, out _);
 
-        /// <param name="note">Something worth telling somebody afterwards, or null. Painting a background
-        /// changes every place drawn from the same piece, which is worth saying rather than leaving to be
-        /// noticed.</param>
+        /// <param name="note">A note to show afterwards, or null, such as a painted background changing
+        /// every place that uses it.</param>
         public string Replace(string path, out string note) =>
             Replace(path, PngColourPrompt.Choice.AsItIs, null, out note);
 

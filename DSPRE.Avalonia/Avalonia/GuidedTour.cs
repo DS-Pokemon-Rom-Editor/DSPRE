@@ -13,11 +13,8 @@ using DSPRE.Avalonia.Views;
 namespace DSPRE.Avalonia
 {
     /// <summary>
-    /// First-time guided tour of the main window: dims the UI and spotlights one region at a
-    /// time (header list, map tabs, the main editor menus) with a small callout card. Starts
-    /// automatically after the first successful ROM load; replay via Tools &gt; Guided Tour.
-    /// The spotlight hole is not dimmed and stays clickable, so users can try the highlighted
-    /// control mid-tour. Editors run their own tour on first open (<see cref="StartEditor"/>).
+    /// The main window's tour after the first ROM load, replayed from Tools &gt; Guided tour. It dims the window and lights
+    /// one part at a time, which stays clickable. Editors run their own tours (<see cref="StartEditor"/>).
     /// </summary>
     public sealed class GuidedTour
     {
@@ -110,107 +107,94 @@ namespace DSPRE.Avalonia
                 {
                     Target = () => maps?.FindControl<Control>("Sidebar"),
                     Title = "The header list",
-                    Body = "Every location in the game is a map \"header\", and they are all listed here. " +
-                           "Click one to load it. Typing in the search box filters the list, which is handy " +
-                           "because there are hundreds of them."
+                    Body = "Every place in the game is a map header, all listed here. Click one to load it, or type in " +
+                           "the search box to find one."
                 },
                 new Step
                 {
                     Target = () => maps?.FindControl<Control>("ContextStrip"),
                     Title = "The selected header",
-                    Body = "This strip shows which header is selected and which game files it points to: " +
-                           "matrix, events, scripts, text and so on. Save header writes just the header's " +
-                           "own fields; Save ROM builds a playable .nds from everything saved so far."
+                    Body = "The picked header and the files it points to: matrix, events, scripts, text and the rest. " +
+                           "Save header writes the header's fields; Save ROM builds a playable .nds from everything saved."
                 },
 
                 // ── One step per Maps-workspace tab, switching the live tab as we go ──
                 Tab(0, "Tab 1 of 9: Header",
-                    "The header is this location's settings record: music, weather, camera angle, " +
-                    "location name, flags, and which game files (matrix, scripts, text…) it uses."),
+                    "This place's settings: music, weather, camera, name, flags, and the files it uses."),
                 Tab(1, "Tab 2 of 9: Map",
-                    "The 3D terrain and buildings. Paint movement collisions and terrain types, move " +
-                    "buildings around, and switch the view mode to see all of this header's maps " +
-                    "stitched together."),
+                    "The 3D terrain and buildings. Paint where the player can walk, move buildings, and switch " +
+                    "the view to see all of this header's maps together."),
                 Tab(2, "Tab 3 of 9: Events",
-                    "Everything placed ON the map: NPCs (overworlds), warps between maps, script " +
-                    "triggers and ground items. This is where you populate the world.\n\n" +
-                    "Fields that show a link button when you point at them, here and in other editors, lead to the " +
-                    "editor they refer to: right-click and pick Open, or Ctrl+click."),
+                    "Everything placed on the map: people, warps, triggers and items on the ground.\n\n" +
+                    "A field that shows a link button, here or in other editors, opens the editor it refers to: " +
+                    "right-click and pick Open, or Ctrl+click."),
                 Tab(3, "Tab 4 of 9: Matrix",
-                    "The grid that stitches individual maps into the seamless overworld. Each cell " +
-                    "points at one map file and sets its elevation."),
-                Tab(4, "Tab 5 of 9: Area Data",
-                    "Which texture pack and building set this area draws from; change it to re-skin " +
-                    "an area."),
+                    "The grid that joins maps into one world. Each cell picks a map and its height."),
+                Tab(4, "Tab 5 of 9: Area data",
+                    "Which texture pack and building set this area uses; change it to reskin the area."),
                 Tab(5, "Tab 6 of 9: Encounters",
-                    "The wild Pokémon of this area: which species appear in grass, water and caves, " +
-                    "at what levels and rates."),
+                    "This area's wild Pokémon in grass, water and caves, with their levels and rates."),
                 Tab(6, "Tab 7 of 9: Scripts",
-                    "Event logic: what happens when the player talks to an NPC or steps on a trigger. " +
-                    "Scripts reference the text you'll see in the next tabs."),
-                Tab(7, "Tab 8 of 9: Level Scripts",
-                    "Scripts that run automatically when the map loads, used for weather, one-time " +
-                    "cutscenes and map setup."),
+                    "What happens when the player talks to someone or steps on a trigger. Scripts show the text " +
+                    "from the Text tab."),
+                Tab(7, "Tab 8 of 9: Level scripts",
+                    "Scripts that run by themselves when the map loads, for weather, one-time cutscenes and setup."),
                 Tab(8, "Tab 9 of 9: Text",
-                    "The dialogue and signs used by this area. Every piece of game text lives in an " +
-                    "archive like this one."),
+                    "This area's dialogue and signs. All game text lives in archives like this one."),
 
                 // ── The menus: what lives where ──
                 new Step
                 {
                     Target = () => main.FindControl<Control>("FileMenu"),
                     Title = "The File menu",
-                    Body = "Open a ROM or an extracted project, save a playable .nds (Save ROM), or build " +
-                           "and run it in your emulator with F5. hg-engine projects have their own submenu " +
-                           "here: link the checkout, compile, and review its patches."
+                    Body = "Open a ROM or project, save a playable .nds with Save ROM, or build and run it in your " +
+                           "emulator with F5. hg-engine projects have a submenu here to link, compile and review patches."
                 },
                 new Step
                 {
                     Target = () => main.FindControl<Control>("PokemonMenu"),
                     Title = "The Pokémon menu",
-                    Body = "The creatures and their moves: species stats, learnsets and sprites (Pokémon " +
-                           $"Editor), move data{(beta ? " and animations" : "")}, TM/HM and egg moves, trades and starters, " +
-                           "wild encounters, and the Special encounters editor for headbutt trees, the Bug " +
-                           "Contest, the Safari Zone, honey trees, the Great Marsh and the Trophy Garden."
+                    Body = "Species with their learnsets and sprites, move data" + (beta ? " and animations" : "") +
+                           ", TMs, egg moves, trades, starters, wild Pokémon, and special encounters like headbutt " +
+                           "trees, the Bug Contest and the Safari Zone."
                 },
                 new Step
                 {
                     Target = () => main.FindControl<Control>("TrainersMenu"),
                     Title = "The Trainers menu",
                     Body = beta
-                        ? "Everyone the player battles: parties in the Trainer editor, trainer sprites, " +
-                          "rematches, the Pokégear phone book, bulk trainer flags and the Battle Tower."
-                        : "Everyone the player battles: parties in the Trainer editor, rematches, bulk " +
+                        ? "Everyone the player battles: parties, trainer sprites, rematches, the Pokégear phone book, " +
                           "trainer flags and the Battle Tower."
+                        : "Everyone the player battles: parties, rematches, trainer flags and the Battle Tower."
                 },
                 new Step
                 {
                     Target = () => main.FindControl<Control>("ItemsMenu"),
                     Title = "The Items menu",
-                    Body = $"Each item's data and icon (Item editor), {(beta ? "what the marts sell, " : "")}and where items " +
-                           "come from: Pickup loot, hidden ground items and HGSS Rock Smash drops."
+                    Body = $"Each item's data and icon, {(beta ? "what the marts sell, " : "")}and where items come from: " +
+                           "Pickup, hidden items and Rock Smash in HeartGold and SoulSilver."
                 },
                 new Step
                 {
                     Target = () => main.FindControl<Control>("TextMenu"),
                     Title = "The Text menu",
-                    Body = "Words and logic: all game text, the Script and Level Script editors you saw as " +
-                           $"tabs, custom script commands, {(beta ? "the font and " : "")}the character map."
+                    Body = "All game text, the script editors you saw as tabs, custom script commands, " +
+                           $"{(beta ? "the font and " : "")}the character map."
                 },
                 new Step
                 {
                     Target = () => main.FindControl<Control>("WorldMenu"),
                     Title = "The World menu",
-                    Body = "The map tools you just toured as tabs, as full windows, plus buildings, fly and " +
-                           $"spawn points, {(beta ? "Platinum's Distortion World " : "")}and the Advanced Header Search."
+                    Body = "The map tabs as full windows, plus buildings, Fly and spawn points, " +
+                           $"{(beta ? "Platinum's Distortion World " : "")}and Advanced header search."
                 },
                 new Step
                 {
                     Target = () => main.FindControl<Control>("GraphicsMenu"),
                     Title = "The Graphics menu",
                     Body = beta
-                        ? "Every picture and model in the game, plus editors for battle scenes, the title " +
-                          "screen, the trainer card, the game icon, overworld sprites, particles and more."
+                        ? "Every picture and model in the game, plus battle scenes, the title screen, the trainer card, " +
+                          "the game icon, overworld sprites, particles and more."
                         : "Every picture and model in the game, plus the overworld sprites and the textures " +
                           "of maps and buildings."
                 },
@@ -218,10 +202,10 @@ namespace DSPRE.Avalonia
                 {
                     Target = () => main.FindControl<Control>("ToolsMenu"),
                     Title = "The Tools menu",
-                    Body = $"Power tools: {(beta ? "Validation & Where-Used, " : "")}the ROM patch toolbox, overlays, music " +
-                           "and battle tables, data exports, archive tools and Settings.\n\n" +
-                           "Tip: press Ctrl+P anywhere and type an editor's name to open it instantly. Right-click any " +
-                           "menu item to pin it beside the menus; right-click the pinned button to take it off."
+                    Body = $"The ROM patch toolbox, {(beta ? "validation and where used, " : "")}overlays, music and battle tables, " +
+                           "exports, archive tools and Settings.\n\n" +
+                           "Press Ctrl+P anywhere and type an editor's name to open it. Right-click a menu item to pin it " +
+                           "beside the menus, and right-click the pin to take it off."
                 },
                 new Step
                 {
@@ -231,14 +215,13 @@ namespace DSPRE.Avalonia
                         if (tabs != null) tabs.SelectedIndex = 0;
                     },
                     Target = null,
-                    Title = "That's the tour!",
-                    Body = "You are ready to start hacking. You can replay this tour anytime from " +
-                           "Tools > Guided Tour, and the written guide is under Tools > Welcome & Tutorial."
+                    Title = "That's the tour",
+                    Body = "You're ready to start. Replay the tour from Tools > Guided tour; the written guide is in " +
+                           "Tools > Welcome & tutorial."
                 },
             };
 
-            // Only when the unfinished editors are switched on. It goes second from last, so it is
-            // the thing people read just before they start, and it has the status-bar line to point at.
+            // Beta only, second from last so it's read just before starting, pointing at the status bar line.
             if (beta)
             {
                 // The Audio menu holds only the Audio editor, so it is hidden with it.
@@ -251,7 +234,7 @@ namespace DSPRE.Avalonia
                 _steps.Insert(_steps.Count - 1, new Step
                 {
                     Target = () => main.FindControl<Control>("BetaNoticeText"),
-                    Title = "You are running the unfinished editors",
+                    Title = "Unfinished editors are on",
                     Body = BetaSummary(),
                 });
             }
@@ -266,13 +249,11 @@ namespace DSPRE.Avalonia
             List<string> features = new List<string>();
             foreach (BetaEditors.BetaFeature f in BetaEditors.Features) features.Add(f.Name);
 
-            return $"{BetaEditors.Count} editors that are normally hidden are available to you: "
-                 + string.Join(", ", areas) + ".\n\n"
-                 + "Inside editors that are finished, these parts are not: "
+            return $"{BetaEditors.Count} unfinished editors are on: " + string.Join(", ", areas) + ".\n\n"
+                 + "These parts of finished editors are unfinished too: "
                  + string.Join(", ", features).ToLowerInvariant() + ".\n\n"
-                 + "They can write a project you cannot open again, so back up first. If you report "
-                 + "a problem, please say whether a beta editor or feature was involved. The full "
-                 + "list is in Tools > Welcome & Tutorial.";
+                 + "They can break a project, so back up first, and when you report a problem, say whether you "
+                 + "used one of them. The full list is in Tools > Welcome & tutorial.";
         }
         private void Begin()
         {

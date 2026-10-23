@@ -37,9 +37,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public int SheetTiles { get; init; }
 
         /// <summary>
-        /// The editor that already specialises in this archive, if any. Trainer sprites and Pokemon sprites
-        /// have their own editors that know about poses, genders and the hg-engine sources; this window edits
-        /// the animation file itself, which is a different job, so it points at them rather than competing.
+        /// The editor made for this archive, if any. Trainer and Pokémon sprites have their own, so this window
+        /// links to them.
         /// </summary>
         public string DeepEditor { get; init; }
 
@@ -107,8 +106,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         /// <summary>
-        /// Reads every archive looking for animations. This is the slow part, so it is a separate step the
-        /// caller runs off the window's thread rather than something the constructor does.
+        /// Reads every archive for animations. It's slow, so the caller runs it off the UI thread.
         /// </summary>
         public void Gather()
         {
@@ -125,14 +123,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string Search { get => _search; set { if (Set(ref _search, value)) Show(); } }
 
         private bool _drawableOnly = true;
-        /// <summary>Hides the ones with nothing to draw them from, which cannot usefully be opened.</summary>
+        /// <summary>Hides animations with nothing to draw from.</summary>
         public bool DrawableOnly { get => _drawableOnly; set { if (Set(ref _drawableOnly, value)) Show(); } }
 
         private bool _hideSpecialised = true;
         /// <summary>
-        /// Hides the archives whose own editor does this same job better. Trainer and Pokemon sprites are
-        /// handled there, and listing their hundreds of animations as equals buries the archives this
-        /// window is the only way to reach.
+        /// Hides archives that have their own editor, so their hundreds of animations don't bury the rest.
         /// </summary>
         public bool HideSpecialised
         {
@@ -183,9 +179,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string StatusText { get => _status; private set => Set(ref _status, value); }
 
         /// <summary>
-        /// The editor that specialises in the picked file's archive, if any. Trainer and Pokemon sprites
-        /// have their own editors that know about poses, genders and hg-engine sources; this window edits
-        /// the animation file itself. Saying so beats quietly doing a worse version of their job.
+        /// The editor made for the picked file's archive, if any.
         /// </summary>
         public string DeepEditorName => Selected?.DeepEditor;
         public bool HasDeepEditor => !string.IsNullOrEmpty(DeepEditorName);
@@ -207,7 +201,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                                     || r.Animation.ToString() == q);
             }
 
-            // After the search, so the count describes what was held back from what is on screen.
+            // Counted after the search, so it covers only matches the filters hide.
             List<CellAnimationFound> matched = rows.ToList();
             int specialised = matched.Count(DoneBetterElsewhere);
             if (_hideSpecialised) matched = matched.Where(r => !DoneBetterElsewhere(r)).ToList();

@@ -9,15 +9,7 @@ using DSPRE.Editors;
 
 namespace DSPRE.Avalonia
 {
-    /// <summary>
-    /// Shared editor-window chrome, so every editor behaves the same without per-window plumbing:
-    ///  • a "●" unsaved-changes marker in the title bar,
-    ///  • a Ctrl+S save shortcut, and
-    ///  • a close-confirmation guard (prompt before discarding unsaved work).
-    /// Attach once from a window that hosts an <see cref="IEditorWithUnsavedChanges"/> VM. Because the
-    /// guard lives here, any future editor that calls <see cref="Attach"/> gets it for free; there is no
-    /// separate <c>OnClosing</c> to remember (and forget) per view.
-    /// </summary>
+    /// <summary>The "●" unsaved marker in the title, Ctrl+S and the close guard, for every editor window that calls Attach.</summary>
     public static class EditorWindowChrome
     {
         /// <summary>
@@ -39,7 +31,7 @@ namespace DSPRE.Avalonia
             }
 
             await DialogHelper.ShowErrorAsync(
-                $"Could not save {vm.UnsavedChangesDescription} before {action}:\n{failure}",
+                $"Couldn't save {vm.UnsavedChangesDescription} before {action}:\n{failure}",
                 "Couldn't save");
             return false;
         }

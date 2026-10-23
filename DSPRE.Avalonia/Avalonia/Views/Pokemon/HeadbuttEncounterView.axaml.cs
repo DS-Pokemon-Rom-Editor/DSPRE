@@ -33,9 +33,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
                 },
             };
 
-            // Arrow keys nudge the selected tree, but only while the 3D viewport itself has
-            // keyboard focus (Gl3DPointerNavigation focuses it on click); otherwise they'd steal
-            // input from a focused dropdown/spinner in the side panel.
+            // Arrow keys act only while the 3D view has focus, so side-panel inputs keep theirs.
             GlHost.KeyDown += (s, e) =>
             {
                 if (VM != null && VM.EditMode3D && VM.HasSelectedTree)

@@ -150,10 +150,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public void Refresh() { OnPC(nameof(ItemID)); OnPC(nameof(Display)); OnPC(nameof(Detail)); }
     }
 
-    /// <summary>One Rock Smash NARC entry (data/a/2/5/3): a header's item-drop odds and which of the
-    /// three hardcoded tables it rolls from. <see cref="Missing"/> flags headers whose file didn't
-    /// exist on disk (a modified ROM, or a header added after the NARC was last touched). Save
-    /// materializes it with whatever's currently shown (defaults to Odds=0/Default if left alone).</summary>
+    /// <summary>One Rock Smash entry (data/a/2/5/3): a header's item odds and which of the three tables it
+    /// rolls from. <see cref="Missing"/> marks a header with no file yet; Save creates it from what is shown.</summary>
     public class RockSmashHeaderRow : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -796,9 +794,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         }
 
         // ── Hidden items load ─────────────────────────────────────────────────
-        // Hidden Items isn't one of DSPRE's owned domains for the packed ROM, so the vanilla ARM9-offset
-        // read below would show a stale packed-ROM snapshot rather than the checkout's real
-        // data/HiddenItems.c when hg-engine is linked.
+        // With hg-engine the packed ROM is stale, so read the checkout's data/HiddenItems.c instead.
         private void LoadHiddenItems()
         {
             HiddenItems.Clear();
@@ -912,7 +908,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             if (ShowRockSmashItemTables)
             {
                 try { LoadRockSmashItemTables(); }
-                // An hg-engine source DSPRE can't read hides the tables rather than showing wrong ones.
+                // When DSPRE can't read the hg-engine source, the tables are hidden so no wrong ones show.
                 catch (InvalidOperationException e)
                 {
                     AppLogger.Error("Item Tables, Rock Smash items: " + e.Message);
@@ -975,7 +971,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             (bool saved, string error) = await DSPRE.Avalonia.HgEngineSave.RunAsync(() => HgEngineHiddenItems.TrySave(entries, out string err) ? null : err);
             if (!saved)
             {
-                if (error != null) await DialogHelper.ShowErrorAsync($"Hidden items were not saved.\n{error}", "Item tables error");
+                if (error != null) await DialogHelper.ShowErrorAsync($"Hidden items weren't saved.\n{error}", "Item tables");
                 return;
             }
 
@@ -1023,7 +1019,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 : null;
             if (refusal != null)
             {
-                _ = DialogHelper.ShowErrorAsync($"Hidden items were not saved.\n{refusal}", "Item tables error");
+                _ = DialogHelper.ShowErrorAsync($"Hidden items weren't saved.\n{refusal}", "Item tables");
                 return;
             }
 
@@ -1060,7 +1056,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 catch (Exception e) when (e is InvalidOperationException || e is System.IO.IOException || e is UnauthorizedAccessException)
                 {
                     AppLogger.Error("Item Tables, Rock Smash items: " + e.Message);
-                    _ = DialogHelper.ShowErrorAsync("The Rock Smash items were not saved:\n" + e.Message, "Item tables error");
+                    _ = DialogHelper.ShowErrorAsync("The Rock Smash items weren't saved:\n" + e.Message, "Item tables");
                     return;
                 }
             }

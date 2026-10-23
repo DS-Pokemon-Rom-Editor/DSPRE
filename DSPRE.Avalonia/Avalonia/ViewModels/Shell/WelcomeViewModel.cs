@@ -6,9 +6,8 @@ using System.Runtime.CompilerServices;
 namespace DSPRE.Avalonia.ViewModels.Shell
 {
     /// <summary>
-    /// The Welcome &amp; Tutorial window: quick-open actions + recent projects on the left, a short
-    /// paged getting-started guide on the right. Shown at startup (toggleable, and relaunchable
-    /// from Tools → Welcome &amp; Tutorial or from Settings).
+    /// The Welcome &amp; tutorial window: open actions and recent projects on the left, a short guide on the
+    /// right. Shown at startup unless turned off.
     /// </summary>
     public class WelcomeViewModel : INotifyPropertyChanged
     {
@@ -27,7 +26,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         {
             new()
             {
-                Title = "Welcome to DSPRE!",
+                Title = "Welcome to DSPRE",
                 Body =
                     "DSPRE (DS Pokémon ROM Editor) lets you edit the Gen IV games: Diamond, Pearl, " +
                     "Platinum, HeartGold and SoulSilver. You can change maps, events, scripts, trainers, " +
@@ -65,10 +64,10 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                     "• Dropdowns support type-to-jump: focus one and start typing an entry's name.\n" +
                     "• Editors track unsaved changes and warn you before anything is lost.\n" +
                     "• The major editors support undo and redo (Ctrl+Z / Ctrl+Y).\n" +
-                    "• In 3D views, drag with the left button to orbit, the right button to pan, and " +
+                    "• In 3D views, drag with the right button to orbit, the left button to pan, and " +
                     "scroll to zoom. Speeds and axis inversion can be adjusted in Settings.\n" +
                     "• Many dropdown labels (evolution methods, for example) can be renamed via " +
-                    "Tools > Edit Dropdown Labels."
+                    "Tools > Edit dropdown labels."
             },
             new()
             {
@@ -85,13 +84,13 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             {
                 Title = "Power tools",
                 Body =
-                    "• The ROM patch toolbox applies binary patches such as ARM9 expansion and dynamic " +
-                    "headers. These modify the ROM itself, so back up your project first!\n" +
-                    "• Validation & Where-Used scans headers for broken references and finds every place " +
+                    "• The ROM patch toolbox adds features such as ARM9 expansion and dynamic headers. " +
+                    "They change the game's code, so back up your project first.\n" +
+                    "• Validation and where used scans headers for broken references and finds every place " +
                     "a matrix, script or event file is used.\n" +
-                    "• Advanced Header Search queries headers by any field.\n" +
+                    "• Advanced header search finds headers by any field.\n" +
                     "• The archive and model texture tools unpack and rebuild game archives and model textures.\n\n" +
-                    "You can reopen this guide anytime from Tools > Welcome & Tutorial. A short guided " +
+                    "You can reopen this guide from Tools > Welcome & tutorial. A short guided " +
                     "tour will also point out where everything is when you open your first ROM."
             },
         };
@@ -117,7 +116,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                     + ".\n\n"
                     + "These parts of finished editors are switched on too:\n"
                     + string.Join("\n", features) + "\n\n"
-                    + "They are unfinished. They can write a project you cannot open again, so back "
+                    + "They are unfinished. They can write a project you can't open again, so back "
                     + "up your work before using one, and keep the clean .nds somewhere safe.\n\n"
                     + "If you report a problem, please say whether a beta editor or feature was "
                     + "involved. It is the difference between a bug in DSPRE and a bug in something "
@@ -176,7 +175,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             }
         }
 
-        /// <summary>So nobody forgets which mode they started in after clicking past the page.</summary>
+        /// <summary>Reminds the user which mode they started in after the page is gone.</summary>
         public string WindowTitle => BetaEditors.Enabled
             ? "Welcome to DSPRE (beta features on)"
             : "Welcome to DSPRE";

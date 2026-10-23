@@ -18,7 +18,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         }
 
         private async void Save_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-            => await DialogHelper.GuardAsync(() => { VM.SaveChanges(); return System.Threading.Tasks.Task.CompletedTask; }, "The starters weren't saved.", "Starter Pokémon editor error", this);
+            => await DialogHelper.GuardAsync(() => { VM.SaveChanges(); return System.Threading.Tasks.Task.CompletedTask; }, "The starters weren't saved.", "Starter Pokémon editor", this);
         private async void Discard_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
         {
             if (await DialogHelper.ConfirmDiscardAsync(this)) VM.DiscardChanges();

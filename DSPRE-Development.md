@@ -174,7 +174,8 @@ repo; the pret decomps can be cited.
 | `DSPRE.Tests` | xunit tests. |
 
 All target net8.0. Classes that write back to the ROM live in `DSPRE.Core/ROMFiles`. Read-only types used for
-drawing or listing live in `DSPRE.Avalonia/Avalonia/Data`. Core shows messages through `AppMessages`.
+drawing or listing live in `DSPRE.Avalonia/Avalonia/Data`. Core shows messages through `AppMessages`; a finished
+save or export there calls `AppMessages.Notice`, which shows as a `SaveNotice`.
 
 ### Folders
 
@@ -372,6 +373,7 @@ In `MainWindowView.axaml` the menu item binds `IsVisible` to `Shown[MyEditorView
 | Message and menu borders | `WindowFrames` |
 | DSPRE's own folders, logging | `AppPaths`, `AppLogger` (Core) |
 | Pixels in Core | `RawImage` |
+| Counts in text ("1 map", "3 maps") | `Plural.Of` (Core) |
 
 An editor that only draws archive members redraws with `AppEvents.WhenSaved(redraw, dirs)`.
 

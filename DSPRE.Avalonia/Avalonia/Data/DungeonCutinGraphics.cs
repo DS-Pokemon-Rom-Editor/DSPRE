@@ -6,16 +6,8 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.Data
 {
     /// <summary>
-    /// Reads and writes the graphics a Dungeon Cutin table row points at: standard NCLR palette + NCGR
-    /// tiles + NSCR screen/tilemap trios in a/1/5/0 (HGSS only), one triple per timezone slot. Decoding
-    /// uses <see cref="NitroBgCodec"/>; writing rebuilds the archive's first file of each kind around the new
-    /// data, so every field the game might read keeps the value it ships with.
-    ///
-    /// Multiple rows/timezones can share the same archive index (most zones reuse their noon art for
-    /// evening), so import always allocates brand-new NARC members instead of overwriting the slot a
-    /// row currently points at, which would otherwise silently corrupt every other row/timezone sharing
-    /// that index (same pattern as OverworldSpriteTableExpansion.AllocateNewMmodelSlot). New members wait
-    /// in the editor's pending writes until it saves.
+    /// Reads and writes the dungeon cut-in graphics in a/1/5/0 (HGSS): a palette, tiles and screen for each time of day.
+    /// Rows share files, so an import always adds new files, which wait in the editor's pending writes until Save.
     /// </summary>
     public sealed class DungeonCutinGraphics
     {
@@ -41,8 +33,7 @@ namespace DSPRE.Avalonia.Data
             return Kind.Unknown;
         }
 
-        /// <summary>Finds the first member of each type by magic-sniffing rather than a fixed index,
-        /// since member order varies per ROM revision.</summary>
+        /// <summary>Finds the first member of each type by its magic, since member order varies per ROM revision.</summary>
         private void EnsureTemplates()
         {
             if (_templateNclr.HasValue && _templateNcgr.HasValue && _templateNscr.HasValue) return;
@@ -91,16 +82,16 @@ namespace DSPRE.Avalonia.Data
             newPaletteIdx = newTilesIdx = newScreenIdx = -1;
             error = null;
 
-            if (!Available) { error = "Dungeon Cutin graphics archive is not available for this ROM."; return false; }
+            if (!Available) { error = "This game doesn't have the dungeon cut-in archive."; return false; }
             if (img == null || img.IsEmpty) { error = "No image."; return false; }
             if (img.Width % 8 != 0 || img.Height % 8 != 0)
-            { error = $"Image must be a multiple of 8 pixels in both dimensions (got {img.Width}x{img.Height})."; return false; }
+            { error = $"That picture is {img.Width} by {img.Height}. Both sides have to be a multiple of 8."; return false; }
             if (img.Width > MaxDimension || img.Height > MaxDimension)
-            { error = $"Image must be at most {MaxDimension}x{MaxDimension} (got {img.Width}x{img.Height})."; return false; }
+            { error = $"That picture is {img.Width} by {img.Height}. The largest is {MaxDimension} by {MaxDimension}."; return false; }
 
             EnsureTemplates();
             if (!_templateNclr.HasValue || !_templateNcgr.HasValue || !_templateNscr.HasValue)
-            { error = "Could not find an existing palette/tiles/screen file in the archive to use as a format template."; return false; }
+            { error = "The archive has no palette, tile and screen files to copy the format from."; return false; }
 
             try
             {
@@ -164,8 +155,8 @@ namespace DSPRE.Avalonia.Data
                                 {
                                     if (colorToIndex.Count >= MaxPaletteColors - 1)
                                     {
-                                        error = $"Image uses more than {MaxPaletteColors - 1} distinct opaque colours " +
-                                            "(plus transparency). Reduce the palette before importing.";
+                                        error = $"That picture uses more than {MaxPaletteColors - 1} colours besides see-through. " +
+                                            "Reduce its colours and import it again.";
                                         return false;
                                     }
                                     index = (byte)(colorToIndex.Count + 1);
@@ -204,7 +195,7 @@ namespace DSPRE.Avalonia.Data
                 Put16(head, 0x0A, img.Height);
                 Put32(head, 0x10, squareBytes.Length);
             });
-            if (nclr == null || ncgr == null || nscr == null) { error = "The template files could not be read."; return false; }
+            if (nclr == null || ncgr == null || nscr == null) { error = "The template files couldn't be read."; return false; }
             return true;
         }
 

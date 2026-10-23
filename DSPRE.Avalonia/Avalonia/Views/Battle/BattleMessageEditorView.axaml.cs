@@ -50,6 +50,6 @@ namespace DSPRE.Avalonia.Views.Battle
         private void EditTrigger_Click(object sender, RoutedEventArgs e) => VM?.EditTrigger();
         private void SaveMessage_Click(object sender, RoutedEventArgs e) => VM?.SaveMessage();
 
-        private const string ErrorTitle = "Battle message editor error";
+        private const string ErrorTitle = "Trainer battle messages";
     }
 }

@@ -15,9 +15,8 @@ using DSPRE.HgEngine;
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
     /// <summary>
-    /// Avalonia port of the WinForms <c>SafariZoneEditor</c> (HGSS). Edits the five
-    /// encounter groups (Grass / Surf / Old Rod / Good Rod / Super Rod) of a selected
-    /// Safari Zone area file. Embedded as a tab in the Encounters editor.
+    /// A Safari Zone area's five encounter groups (HGSS): grass, surfing and the three rods. A tab of the
+    /// Special encounters editor.
     /// </summary>
     public class SafariZoneEncounterViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
@@ -83,7 +82,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool HasUnsavedChanges => _dirty;
         public string UnsavedChangesDescription => "Safari Zone encounters";
         public void SaveChanges() => Save();
-        // Closing the window goes through here, so that path reports a failed save rather than logging it.
+        // Closing the window saves through here, so a failed save is reported, not only logged.
         public async Task<bool> SaveChangesAsync() { await SaveAsync(); return !HasUnsavedChanges; }
         // Edits live in the loaded area, so discarding reads it again.
         public void DiscardChanges() { if (_dirty && _selectedFileIndex >= 0) LoadFile(_selectedFileIndex); SetClean(); }
@@ -165,7 +164,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync($"Failed to load Safari Zone data:\n{ex.Message}", "Safari Zone error");
+                await DialogHelper.ShowErrorAsync($"Couldn't load the Safari Zone data:\n{ex.Message}", "Special encounters editor");
             }
         }
 
@@ -189,13 +188,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 SetClean();
                 ResetUndo();
                 if (_hgeReadError != null)
-                    _ = DialogHelper.ShowErrorAsync($"{AreaName(id)} couldn't be read from SafariEncounters.c, so it can't be saved here:\n{_hgeReadError}", "Special encounters editor error");
+                    _ = DialogHelper.ShowErrorAsync($"{AreaName(id)} couldn't be read from SafariEncounters.c, so it can't be saved here:\n{_hgeReadError}", "Special encounters editor");
             }
             catch (Exception ex)
             {
                 if (UseHgEngineSource) _hgeReadError ??= ex.Message;
                 CrashReporter.LogHandled(ex);
-                _ = DialogHelper.ShowErrorAsync($"Failed to load Safari Zone file {id}:\n{ex.Message}", "Safari Zone error");
+                _ = DialogHelper.ShowErrorAsync($"Couldn't load Safari Zone file {id}:\n{ex.Message}", "Special encounters editor");
             }
         }
 
@@ -213,8 +212,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             SuperRodVM.SetData(_file.SuperRodEncounterGroup);
         }
 
-        // hg-engine isn't one of DSPRE's owned domains for the packed-ROM narc, so the vanilla read above
-        // would show a stale packed-ROM snapshot rather than the checkout's real data/SafariEncounters.c.
+        // With hg-engine the packed NARC is stale, so read the checkout's data/SafariEncounters.c instead.
         private void BindGroupsFromHgEngine(int areaId)
         {
             BindOne(GrassVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.Land);
@@ -242,7 +240,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (UseHgEngineSource) { await SaveHgEngineAsync(); return; }
             if (!SaveCore(out string failure))
-                await DialogHelper.ShowErrorAsync("Could not save the Safari Zone data:\n" + failure, "Special encounters editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't save the Safari Zone data:\n" + failure, "Special encounters editor");
         }
 
         public void Save()
@@ -257,7 +255,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_hgeReadError != null)
             {
                 await DialogHelper.ShowErrorAsync($"{AreaName(_selectedFileIndex)} couldn't be read from SafariEncounters.c, so saving it would replace "
-                    + "what is there:\n" + _hgeReadError, "Special encounters editor error");
+                    + "what is there:\n" + _hgeReadError, "Special encounters editor");
                 return;
             }
             List<(HgEngineSafariEncounters.RodType, SafariZoneEncounterGroup)> groups = new List<(DSPRE.HgEngine.HgEngineSafariEncounters.RodType, SafariZoneEncounterGroup)>
@@ -280,7 +278,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             else if (error != null)
             {
-                await DialogHelper.ShowErrorAsync("Could not save the Safari Zone data:\n" + error, "Special encounters editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't save the Safari Zone data:\n" + error, "Special encounters editor");
             }
         }
 
@@ -294,7 +292,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (_file == null) return true;
                 if (!_file.SaveToFile())
                 {
-                    failure = "the encounter data could not be turned into a file.";
+                    failure = "the encounter data couldn't be turned into a file.";
                     return false;
                 }
                 _undo?.MarkSaved();
@@ -319,12 +317,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 if (!_file.SaveToFile(path, showSuccessMessage: false))
                     await DialogHelper.ShowErrorAsync(
-                        "The encounter data could not be turned into a file.", "Special encounters editor error");
+                        "The encounter data couldn't be turned into a file.", "Special encounters editor");
                 else SaveNotice.Exported(path);
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync($"Could not write {path}:\n{ex.Message}", "Special encounters editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't write {path}:\n{ex.Message}", "Special encounters editor");
             }
         }
 
@@ -345,7 +343,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync($"Error importing file: {ex.Message}", "Special encounters editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't import the file: {ex.Message}", "Special encounters editor");
             }
         }
     }

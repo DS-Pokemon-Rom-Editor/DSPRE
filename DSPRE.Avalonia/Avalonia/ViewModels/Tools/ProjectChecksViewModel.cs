@@ -8,7 +8,7 @@ using DSPRE.Avalonia.Data;
 
 namespace DSPRE.Avalonia.ViewModels.Tools
 {
-    /// <summary>Drives the Project Checks window: a validation report + a where-used reverse lookup,
+    /// <summary>Drives the Validation and where used window: a validation report and a where-used lookup,
     /// both built from <see cref="ProjectIndex"/> (the map-header cross-references).</summary>
     public class ProjectChecksViewModel : INotifyPropertyChanged
     {
@@ -39,7 +39,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 foreach (ValidationIssue i in found) Issues.Add(i);
                 ValidationStatus = found.Count == 0
                     ? "No problems found. Every reference points at something that exists."
-                    : $"{found.Count} issue(s) found.";
+                    : $"{Plural.Of(found.Count, "problem")} found.";
             }
             catch (Exception ex) { ValidationStatus = "Validation failed: " + ex.Message; }
             finally { IsRunning = false; }

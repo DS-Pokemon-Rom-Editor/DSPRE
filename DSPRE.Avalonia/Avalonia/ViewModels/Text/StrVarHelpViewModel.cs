@@ -62,7 +62,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
     public sealed class StrVarHelpViewModel
     {
-        public string Title => "String Buffer (STRVAR) Reference";
+        public string Title => "String buffer (STRVAR) reference";
         public string Subtitle => "For Diamond, Pearl, Platinum, HeartGold, and SoulSilver";
         public IReadOnlyList<StrVarHelpSection> Sections { get; }
 
@@ -71,18 +71,18 @@ namespace DSPRE.Avalonia.ViewModels.Text
             Sections = Array.AsReadOnly(new[]
             {
                 new StrVarHelpSection(
-                    "Syntax and Tips",
+                    "Syntax and tips",
                     "{STRVAR_1, Type, BufferNumber, 0}",
                     "Type refers to the associated script command category.\n" +
                     "BufferNumber is the number specified in the script command's buffer parameter.\n" +
                     "The final 0 can be ignored.\n\n" +
                     "Tips\n" +
                     "• Replace ? with your buffer number (0, 1, 2, etc.). Buffer numbers must match between the script command and message.\n" +
-                    "• Refer to the SCRCMD Database for detailed command usage.\n" +
+                    "• See the script command database for how each command is used.\n" +
                     "• Check vanilla scripts for real-world examples."),
                 new StrVarHelpSection("Examples", examples: BuildExamples()),
                 new StrVarHelpSection(
-                    "Type Reference",
+                    "Type reference",
                     body: "Use the type associated with the command that filled the selected buffer.",
                     typeReferences: BuildTypeReferences()),
             });
@@ -91,18 +91,18 @@ namespace DSPRE.Avalonia.ViewModels.Text
         private static IReadOnlyList<StrVarHelpExample> BuildExamples() => Array.AsReadOnly(new[]
         {
             new StrVarHelpExample(
-                "Example 1: Simple String Buffer",
+                "Example 1: simple string buffer",
                 "TextPlayerName 0\nMessage 0",
                 "Hello, {STRVAR_1, 3, 0, 0}!"),
             new StrVarHelpExample(
-                "Example 2: Multiple Buffers in One Message",
+                "Example 2: several buffers in one message",
                 "CountSinnohDexSeen 0x8005\nTextNumber 0 0x8005\nTextNumber 1 210\nMessage 0",
                 "Ah, so you've seen {STRVAR_1, 50, 0, 0} Pokémon? \\r\n" +
                 "Current research indicates that there are \\n\n" +
                 "about {STRVAR_1, 50, 1, 0} species of Pokémon living \\f\n" +
                 "in the region of Sinnoh!"),
             new StrVarHelpExample(
-                "Example 3: Different Buffer Types",
+                "Example 3: different buffer types",
                 "TextPlayerName 0\nTextPokeNickname 1\nMessage 0",
                 "{STRVAR_1, 3, 0, 0} fed an Oran Berry\\nto {STRVAR_1, 0, 1, 0}!"),
         });

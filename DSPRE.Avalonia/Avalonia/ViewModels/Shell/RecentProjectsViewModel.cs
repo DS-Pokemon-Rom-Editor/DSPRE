@@ -22,7 +22,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             public override string ToString() => Path;
         }
 
-        /// <summary>Extracted and hg-engine folders, which is where work carries on.</summary>
+        /// <summary>Extracted and hg-engine project folders.</summary>
         public ObservableCollection<RecentEntry> RecentFolders { get; } = new();
         /// <summary>ROM files, kept for extracting afresh, as when testing on a clean base ROM.</summary>
         public ObservableCollection<RecentEntry> RecentRoms { get; } = new();

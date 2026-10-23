@@ -68,7 +68,7 @@ namespace DSPRE.Avalonia.Data
             oldIndices = null;
             oldColours = null;
             if (!HgEngineOverworlds.TryDecodeBtx(btx, out int width, out int height, out indices, out palettes))
-                return "This texture isn't a 16-colour overworld, which is all hg-engine builds from a PNG.";
+                return "hg-engine only builds 16-colour overworlds from a PNG, and this texture isn't one.";
             string png = Rel(member.Png);
             if (!File.Exists(member.Png) || !IndexedPng.TryRead(File.ReadAllBytes(member.Png), out oldIndices, out oldColours, out int pw, out int ph))
                 return $"{png} is missing or isn't an indexed PNG.";

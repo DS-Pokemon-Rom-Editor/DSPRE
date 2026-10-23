@@ -117,7 +117,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (!GraphicsAvailable)
             {
                 CardFrontPreview = CardBackPreview = null;
-                StatusText = "Trainer card graphics are not available for this ROM.";
+                StatusText = "Trainer card graphics aren't available for this ROM.";
                 OnPropertyChanged(nameof(HasChanges)); OnPropertyChanged(nameof(HasUnsavedChanges));
                 return;
             }
@@ -125,7 +125,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             RawImage back = _graphics.ComposeCardBack(SelectedRankIndex);
             CardFrontPreview = ImageConverter.ToAvaloniaBitmap(front);
             CardBackPreview = ImageConverter.ToAvaloniaBitmap(back);
-            StatusText = (front == null || back == null) ? "Could not decode the current card design." : string.Empty;
+            StatusText = (front == null || back == null) ? "Couldn't decode the current card design." : string.Empty;
             OnPropertyChanged(nameof(HasChanges)); OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
@@ -186,7 +186,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string ExportRankPalette(string nclrPath)
         {
             byte[] bytes = _graphics.ExportRankPaletteRaw(SelectedRankIndex);
-            if (bytes == null) return "Could not read the current palette.";
+            if (bytes == null) return "Couldn't read the current palette.";
             try { PlainFiles.WriteBytes(nclrPath, bytes); return null; }
             catch (Exception ex) { return ex.Message; }
         }
@@ -210,7 +210,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 using FileStream stream = System.IO.File.OpenRead(path);
                 RawImage raw = ImageConverter.DecodeRawImage(stream);
-                if (raw == null) error = "Could not read this PNG.";
+                if (raw == null) error = "Couldn't read this PNG.";
                 return raw;
             }
             catch (Exception ex) { error = ex.Message; return null; }
@@ -218,7 +218,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private static string SavePng(DSPRE.RawImage raw, string path)
         {
-            if (raw == null) return "Could not decode this image.";
+            if (raw == null) return "Couldn't decode this image.";
             try { ImageConverter.ToAvaloniaBitmap(raw).Save(path); return null; }
             catch (Exception ex) { return ex.Message; }
         }

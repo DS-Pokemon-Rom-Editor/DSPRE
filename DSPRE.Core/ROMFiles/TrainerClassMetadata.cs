@@ -279,7 +279,7 @@ namespace DSPRE.ROMFiles
             if (RomInfo.ClassMetadataHooks == null)
             {
                 _detectionState = TrainerClassMetadataDetectionState.Stock;
-                _detectionDetail = "TCM schema-v1 detection is limited to English HeartGold and SoulSilver.";
+                _detectionDetail = "The trainer class metadata patch works only on US HeartGold and SoulSilver.";
                 detail = _detectionDetail;
                 return _detectionState;
             }
@@ -314,12 +314,12 @@ namespace DSPRE.ROMFiles
             if (allMarkers)
             {
                 _detectionState = TrainerClassMetadataDetectionState.SchemaV1;
-                _detectionDetail = "TCM schema v1-compatible data detected.";
+                _detectionDetail = "The trainer class metadata patch is applied.";
             }
             else if (!anyMarker)
             {
                 _detectionState = TrainerClassMetadataDetectionState.Stock;
-                _detectionDetail = "No TCM schema-v1 markers detected.";
+                _detectionDetail = "The trainer class metadata patch isn't applied.";
             }
             else
             {
@@ -330,7 +330,7 @@ namespace DSPRE.ROMFiles
                 if (!eyeContactHookMarker) failedMarkers.Add("eye-contact hook");
                 if (!retiredTrainerTableMarker) failedMarkers.Add("retired trainer-to-combo table");
                 if (!speciesTableMarker) failedMarkers.Add("species-to-combo table with at least 43 rows");
-                _detectionDetail = "Partial TCM installation: missing or invalid " + string.Join(", ", failedMarkers) + ".";
+                _detectionDetail = "The trainer class metadata patch is only partly applied: " + string.Join(", ", failedMarkers) + " missing or damaged.";
             }
 
             detail = _detectionDetail;
@@ -353,7 +353,7 @@ namespace DSPRE.ROMFiles
                 string unpackedDir = RomInfo.GameDirs[DirNames.TrainerClassMetadata].unpackedDir;
                 if (!Directory.Exists(unpackedDir))
                 {
-                    error = "The trainer-class metadata archive could not be unpacked.";
+                    error = "The trainer-class metadata archive couldn't be unpacked.";
                     return false;
                 }
 
@@ -451,13 +451,13 @@ namespace DSPRE.ROMFiles
             }
 
             if (record.VsStyle > TrainerClassMetadataSchema.MaximumStyle)
-                result.Errors.Add("VS style must be in the range 0..13.");
+                result.Errors.Add("The VS style must be 0 to 13.");
             if (record.VsStyle == 1 && record.UseSavedRivalName > 1)
                 result.Errors.Add("Style 1 saved-rival selection must be 0 or 1.");
             if (record.Reserved != 0)
                 result.Errors.Add("Reserved byte 0x0F must be zero.");
             if (TrainerClassMetadataSchema.UsesStaticName(record) && record.TrainerNameId >= staticNameCount)
-                result.Errors.Add("Trainer-name message ID " + record.TrainerNameId + " does not exist.");
+                result.Errors.Add("Trainer-name message ID " + record.TrainerNameId + " doesn't exist.");
             if (record.VsStyle == 2 && record.Style2Timing > byte.MaxValue)
                 result.Errors.Add("Style 2 timing must be in the range 0..255.");
 
@@ -484,7 +484,7 @@ namespace DSPRE.ROMFiles
             Narc archive = null;
             try
             {
-                // The unpacked copy is what editors change and what Save ROM packs, so it is the one that counts.
+                // Editors change the unpacked copy and Save ROM packs it, so it wins.
                 if (RomInfo.GameDirs.TryGetValue(DirNames.EncounterEffectGraphics, out (string packedDir, string unpackedDir) art)
                     && Directory.Exists(art.unpackedDir) && Directory.EnumerateFiles(art.unpackedDir).Any())
                     archive = Narc.FromFolder(art.unpackedDir);
@@ -492,7 +492,7 @@ namespace DSPRE.ROMFiles
                     archive = Narc.Open(archivePath);
                 if (archive == null)
                 {
-                    result.Errors.Add("The current ROM's /a/1/0/9 file is not a valid NARC archive.");
+                    result.Errors.Add("The current ROM's /a/1/0/9 file isn't a valid NARC archive.");
                     return;
                 }
 
@@ -535,7 +535,7 @@ namespace DSPRE.ROMFiles
             }
             catch (Exception ex)
             {
-                result.Errors.Add("Could not inspect /a/1/0/9: " + ex.Message);
+                result.Errors.Add("Couldn't inspect /a/1/0/9: " + ex.Message);
             }
             finally
             {
@@ -561,7 +561,7 @@ namespace DSPRE.ROMFiles
             error = null;
             if (classId < 0)
             {
-                error = "Trainer-class index cannot be negative.";
+                error = "Trainer-class index can't be negative.";
                 return false;
             }
             if (!EnsureUnpacked(out error))
@@ -570,7 +570,7 @@ namespace DSPRE.ROMFiles
             }
             if (classId >= _recordCount)
             {
-                error = "Trainer-class metadata record " + classId + " does not exist.";
+                error = "Trainer-class metadata record " + classId + " doesn't exist.";
                 return false;
             }
 
@@ -643,7 +643,7 @@ namespace DSPRE.ROMFiles
                     reader.BaseStream.Position = 0x08;
                     if (reader.ReadUInt32() != reader.BaseStream.Length)
                     {
-                        detail = "NARC size does not match its header";
+                        detail = "NARC size doesn't match its header";
                         return false;
                     }
                 }
@@ -665,7 +665,7 @@ namespace DSPRE.ROMFiles
                 {
                     if (archive[i].Length != RecordLength)
                     {
-                        detail = "member " + i + " is not a 0x34-byte record";
+                        detail = "member " + i + " isn't a 0x34-byte record";
                         return false;
                     }
                 }
@@ -702,7 +702,7 @@ namespace DSPRE.ROMFiles
                 string expected = Path.GetFullPath(Path.Combine(directory, i.ToString("D4")));
                 if (!actual.Contains(expected))
                 {
-                    error = "Trainer-class metadata member sequence is not contiguous at " + expected + ".";
+                    error = "Trainer-class metadata member sequence isn't contiguous at " + expected + ".";
                     return false;
                 }
                 long length = new FileInfo(expected).Length;

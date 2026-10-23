@@ -37,7 +37,7 @@
         <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4">
           <TextBlock Text="Ground" Classes="label"/>
           <ComboBox Width="110" ItemsSource="{Binding TerrainNames}" SelectedIndex="{Binding TerrainIndex}"
-                    ToolTip.Tip="Which terrain the Pokémon stand on, which picks the platforms and their colours"/>
+                    ToolTip.Tip="What the Pokémon stand on. It sets the platforms and their colours."/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4">
           <TextBlock Text="Time" Classes="label"/>
@@ -106,14 +106,14 @@
                   HorizontalAlignment="Stretch" ToolTip.Tip="PNG image"/>
           <TextBlock Text="{Binding CannotPaintBecause}" Classes="hint"
                      IsVisible="{Binding CannotPaintBecause, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-          <Button Content="Open in Graphics" controls:Icon.Key="OpenLink" Click="HandOver_Click" IsEnabled="{Binding CanHandOver}"
+          <Button Content="Open in All graphics" controls:Icon.Key="OpenLink" Click="HandOver_Click" IsEnabled="{Binding CanHandOver}"
                   HorizontalAlignment="Stretch" ToolTip.Tip="{Binding HandOverWhat}"/>
 
           <StackPanel x:Name="BarPiecesSection" Spacing="6" IsVisible="{Binding ShowsBarPieces}">
             <Separator Margin="0,4"/>
             <StackPanel Orientation="Horizontal">
               <TextBlock Text="Bar pieces" FontWeight="SemiBold"/>
-              <controls:HelpTip Text="Copied over every bar as the battle runs: fill, status, gender and Lv, caught ball."/>
+              <controls:HelpTip Text="The battle copies these onto every bar: the fill, status, gender, Lv and caught ball."/>
             </StackPanel>
             <ItemsControl ItemsSource="{Binding BarPieceGroups}">
               <ItemsControl.ItemTemplate>
@@ -203,13 +203,13 @@
             <Image Source="{Binding TopScreen}" Width="512" Height="384" Stretch="Fill"
                    RenderOptions.BitmapInterpolationMode="None"
                    PointerPressed="TopScreen_Pressed"/>
-            <!-- The screens are drawn at twice size; scaling from the corner keeps the outline over
-                 the piece rather than pushing it off toward the middle. -->
+            <!-- Drawn at twice size; scaling from the corner keeps the outline on the piece. -->
             <Canvas IsHitTestVisible="False" RenderTransformOrigin="0,0">
               <Canvas.RenderTransform><ScaleTransform ScaleX="2" ScaleY="2"/></Canvas.RenderTransform>
-              <!-- The name, level, gender and status are written into each bar's own picture now,
-                   the way a battle writes them, so nothing is drawn over the screens here. Diamond
-                   and Pearl, whose letters cannot be read, keep the old written sample. -->
+              <!-- 
+                   Each bar's picture holds the name, level, gender and status, as in battle. Diamond and Pearl, whose
+                   font can't be read, keep the written sample.
+              -->
               <views:RomTextBlock Canvas.Left="3"   Canvas.Top="24"  Text="{Binding SampleName}"
                                   IsVisible="{Binding !GaugeTextIsReal}"/>
               <views:RomTextBlock Canvas.Left="78"  Canvas.Top="24"  Text="{Binding SampleLevelText}"
@@ -241,8 +241,7 @@
             <Image Source="{Binding TouchScreen}" Width="512" Height="384" Stretch="Fill"
                    RenderOptions.BitmapInterpolationMode="None"
                    PointerPressed="TouchScreen_Pressed"/>
-            <!-- The screens are drawn at twice size; scaling from the corner keeps the outline over
-                 the piece rather than pushing it off toward the middle. -->
+            <!-- Drawn at twice size; scaling from the corner keeps the outline on the piece. -->
             <Canvas IsHitTestVisible="False" RenderTransformOrigin="0,0">
               <Canvas.RenderTransform><ScaleTransform ScaleX="2" ScaleY="2"/></Canvas.RenderTransform>
               <Rectangle IsVisible="{Binding HighlightOnTouch}"

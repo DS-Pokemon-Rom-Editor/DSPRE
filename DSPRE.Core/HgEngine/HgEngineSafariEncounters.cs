@@ -7,13 +7,10 @@ using System.Text;
 
 namespace DSPRE.HgEngine
 {
-    /// <summary>Source-text read/write for data/SafariEncounters.c's <c>[SAFARI_ZONE_AREA_X] = { .land =
-    /// {...}, .surf = {...}, .oldRod = {...}, .goodRod = {...}, .superRod = {...} }</c> array. Reuses the
-    /// vanilla <see cref="SafariZoneEncounterGroup"/>/<see cref="SafariZoneEncounter"/>/
-    /// <see cref="SafariZoneObjectRequirement"/> POCOs as the in-memory shape, so the existing
-    /// SafariZoneGroupViewModel UI works unchanged; only the load/save call sites differ. The bonus-slot
-    /// count is per rod type and read dynamically from <c>include/safari_encounter.h</c>'s
-    /// <c>NUM_SAFARI_*_BONUS_ENCOUNTERS</c>/<c>NUM_ENCOUNTERS_SAFARI</c>, never assumed.</summary>
+    /// <summary>
+    /// data/SafariEncounters.c read into the vanilla Safari Zone classes; bonus-slot counts come from
+    /// include/safari_encounter.h.
+    /// </summary>
     public static class HgEngineSafariEncounters
     {
         private const string SourceRelPath = "data/SafariEncounters.c";
@@ -35,13 +32,13 @@ namespace DSPRE.HgEngine
         public static bool TryLoadGroup(int areaId, RodType type, out SafariZoneEncounterGroup group, out string error)
         {
             group = null; error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             HgEngineSymbolTable areas = HgEngineSymbolTable.Load(HeaderRelPath);
             if (areas == null || !areas.TryGetNameWithPrefix(areaId, AreaPrefix, out string areaDesignator))
-            { error = $"Could not resolve a safari area designator for id {areaId}."; return false; }
+            { error = $"Safari area {areaId} has no name in the checkout."; return false; }
 
             string text = TryReadSource(out string path);
-            if (text == null) { error = $"Source file not found: {path}"; return false; }
+            if (text == null) { error = $"{path} is missing from the checkout."; return false; }
 
             HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             string typeField = FieldNameFor(type);
@@ -102,13 +99,13 @@ namespace DSPRE.HgEngine
         public static bool TrySaveGroups(int areaId, IEnumerable<(RodType Type, SafariZoneEncounterGroup Group)> groups, out string error)
         {
             error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             HgEngineSymbolTable areas = HgEngineSymbolTable.Load(HeaderRelPath);
             if (areas == null || !areas.TryGetNameWithPrefix(areaId, AreaPrefix, out string areaDesignator))
-            { error = $"Could not resolve a safari area designator for id {areaId}."; return false; }
+            { error = $"Safari area {areaId} has no name in the checkout."; return false; }
 
             string text = TryReadSource(out string path);
-            if (text == null) { error = $"Source file not found: {path}"; return false; }
+            if (text == null) { error = $"{path} is missing from the checkout."; return false; }
 
             List<string> failed = new List<string>();
             foreach ((RodType type, SafariZoneEncounterGroup group) in groups)

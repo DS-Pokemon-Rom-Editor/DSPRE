@@ -6,19 +6,14 @@ using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Data
 {
-    /// <summary>The splash screens as the Graphics window lists them, from <see cref="DungeonCutinTable"/>.</summary>
+    /// <summary>The splash screens as All graphics lists them, from <see cref="DungeonCutinTable"/>.</summary>
     public static class DungeonCutinUnits
     {
         private static readonly string[] WhenNames = { "Morning", "Noon", "Evening", "Night" };
 
         /// <summary>
-        /// Rows for the Graphics window: one splash screen, with the files each time of day uses.
-        ///
-        /// Most locations reuse their noon art for the other three, so the same file turns up more than
-        /// once and is only listed the first time. Two pairs of locations go further and share the whole
-        /// screen: in HeartGold rows 4 and 5 both name files 27 to 35, and rows 17 and 18 both name 150
-        /// to 158. Those become one row naming both places, because listing them twice would say the
-        /// files exist twice.
+        /// One row per cut-in with the files each time of day uses. A file is listed once, and a cut-in two places share
+        /// (HeartGold rows 4 and 5, 17 and 18) is one row naming both.
         /// </summary>
         public static List<GraphicAssets.Unit> UnitsFor(GraphicAssets.Archive archive, int fileCount)
         {

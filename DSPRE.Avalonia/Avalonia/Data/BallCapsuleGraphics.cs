@@ -53,7 +53,7 @@ namespace DSPRE.Avalonia.Data
             }
             catch (Exception ex)
             {
-                AppLogger.Error("Ball capsule board could not be drawn: " + ex.Message);
+                AppLogger.Error("Ball capsule board couldn't be drawn: " + ex.Message);
                 return null;
             }
         }

@@ -13,7 +13,7 @@ namespace DSPRE.ROMFiles
             byte[] romFileToByteArray = ToByteArray();
             if (romFileToByteArray is null)
             {
-                AppLogger.Error(GetType().Name + " couldn't be saved!");
+                AppLogger.Error(GetType().Name + " couldn't be saved.");
                 return false;
             }
 
@@ -31,7 +31,7 @@ namespace DSPRE.ROMFiles
             byte[] romFileToByteArray = ToByteArray();
             if (romFileToByteArray is null)
             {
-                AppLogger.Error(GetType().Name + " couldn't be saved!");
+                AppLogger.Error(GetType().Name + " couldn't be saved.");
                 return false;
             }
 

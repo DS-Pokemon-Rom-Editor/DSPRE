@@ -26,7 +26,7 @@
                 StrokeLineCap="Round" StrokeJoin="Round"/>
         </Button>
         <CheckBox Content="Fuzzy" IsChecked="{Binding FuzzySearch}" VerticalAlignment="Center" Margin="4,0,0,0"
-                  ToolTip.Tip="Also match approximate spellings (typo-tolerant)"/>
+                  ToolTip.Tip="Always include close spellings"/>
         <Button Click="Search_Click" controls:Icon.Key="lens" Height="28" Margin="4,0,0,0"
                 ToolTip.Tip="Advanced header search that opens results here"/>
       </StackPanel>
@@ -34,8 +34,7 @@
 
     <TreeView ItemsSource="{Binding TreeFolders}"
               SelectedItem="{Binding SelectedTreeNode, Mode=TwoWay}">
-      <!-- TreeView doesn't bind a node's IsExpanded to its container by default; this is what
-           lets the ViewModel drive Expand/Collapse All, search, and initial selection. -->
+      <!-- TreeView doesn't bind IsExpanded by default; this lets the view model expand, collapse and select. -->
       <TreeView.Styles>
         <Style Selector="TreeViewItem">
           <Setter Property="IsVisible" Value="{ReflectionBinding IsVisible, Mode=OneWay}"/>

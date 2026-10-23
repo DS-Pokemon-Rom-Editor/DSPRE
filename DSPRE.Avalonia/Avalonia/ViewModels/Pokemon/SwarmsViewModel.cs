@@ -137,7 +137,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 EncounterFile enc;
                 if (DSPRE.HgEngine.HgEngineProject.IsActive)
                 {
-                    // Encounters.c is what the next build uses; the built file only fills what an entry leaves out.
+                    // The next build uses Encounters.c; the built file only fills what an entry leaves out.
                     EncounterFileHGSS source = File.Exists(path) ? new EncounterFileHGSS(new MemoryStream(File.ReadAllBytes(path))) : new EncounterFileHGSS();
                     if (!DSPRE.HgEngine.HgEngineEncounterSource.TryLoad(file, source, out string sourceError)) throw new IOException(sourceError);
                     enc = source;
@@ -162,7 +162,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             return (text, ids, read);
         }
 
-        // An unreadable file is left to the other checks rather than reported as empty.
+        // An unreadable file is left to the other checks, not reported as empty.
         private bool HasSwarmSpecies(SwarmTable.Row row)
         {
             (string Text, int[] Ids, bool Read) s = SpeciesFor(row);
@@ -226,7 +226,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             RefreshSpecies();
         }
 
-        /// <summary>Re-reads each destination's Pokémon, which the Wild editor may have changed.</summary>
+        /// <summary>Re-reads each destination's Pokémon, which the Wild Pokémon editor may have changed.</summary>
         public void RefreshSpecies()
         {
             if (_table == null) return;
@@ -270,9 +270,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 await PatchHandover.OfferAsync("swarmTableExpanded", "More swarm rows", "Swarms");
                 return false;
             }
-            // The Wild editor may have changed a swarm species since the rows were read.
+            // The Wild Pokémon editor may have changed a swarm species since the rows were read.
             _speciesCache.Clear();
-            if (HasProblem) { await DialogHelper.ShowErrorAsync(Problem, "Swarms error"); return false; }
+            if (HasProblem) { await DialogHelper.ShowErrorAsync(Problem, "Special encounters editor"); return false; }
             if (_table.FromSource)
             {
                 (bool saved, string error) = await HgEngineSave.RunAsync(() =>
@@ -282,7 +282,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 });
                 if (!saved)
                 {
-                    if (error != null) await DialogHelper.ShowErrorAsync("The swarms were not saved:\n" + error, "Swarms error");
+                    if (error != null) await DialogHelper.ShowErrorAsync("The swarms weren't saved:\n" + error, "Special encounters editor");
                     return false;
                 }
             }
@@ -291,7 +291,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 try { _table.Save(HeaderNames.Length, h => EncounterFileOf(h) != ushort.MaxValue, HasSwarmSpecies); }
                 catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException || e is InvalidDataException)
                 {
-                    await DialogHelper.ShowErrorAsync("The swarms were not saved:\n" + e.Message, "Swarms error");
+                    await DialogHelper.ShowErrorAsync("The swarms weren't saved:\n" + e.Message, "Special encounters editor");
                     return false;
                 }
             }
@@ -309,7 +309,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try { _table = SwarmTable.Load(); }
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException || e is ArgumentException)
             {
-                _ = DialogHelper.ShowErrorAsync("The saved swarms couldn't be read back:\n" + e.Message, "Swarms error");
+                _ = DialogHelper.ShowErrorAsync("The saved swarms couldn't be read back:\n" + e.Message, "Special encounters editor");
                 return;
             }
             _saved = _table.Snapshot();

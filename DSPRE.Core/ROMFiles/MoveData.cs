@@ -57,25 +57,22 @@ namespace DSPRE
             DEL_SHADOW = (1 << 7)
         }
 
-        // User-friendly range descriptions mapped to their flag values
+        // Range names and descriptions by flag value.
         public static readonly (ushort value, string name, string description)[] AttackRangeDescriptions = new (ushort, string, string)[] {
-            (0, "Opponent or Ally", "May target one adjacent opponent or ally"),
+            (0, "Opponent or ally", "May target one adjacent opponent or ally"),
             ((1 << 0), "Varies", "Variable based on move effect"),
-            ((1 << 1), "One Random Opponent", "Affects a random opponent"),
-            ((1 << 2), "All Opponents", "Affects all adjacent opponents"),
-            ((1 << 3), "All Others", "Affects all adjacent opponents and allies"),
+            ((1 << 1), "One random opponent", "Affects a random opponent"),
+            ((1 << 2), "All opponents", "Affects all adjacent opponents"),
+            ((1 << 3), "All others", "Affects all adjacent opponents and allies"),
             ((1 << 4), "User", "Affects the user"),
-            ((1 << 5), "User Side", "Affects the user's side of the field"),
-            ((1 << 6), "All Sides", "Affects the user's and opponent's sides of the field"),
-            ((1 << 7), "Opponent Side", "Affects the opponent's side of the field"),
-            ((1 << 8), "One Ally", "May target one adjacent ally"),
-            ((1 << 9), "User or Ally", "May target the user or one adjacent ally"),
-            ((1 << 10), "One Opponent", "May target any one adjacent opponent")
+            ((1 << 5), "User side", "Affects the user's side of the field"),
+            ((1 << 6), "All sides", "Affects the user's and opponent's sides of the field"),
+            ((1 << 7), "Opponent side", "Affects the opponent's side of the field"),
+            ((1 << 8), "One ally", "May target one adjacent ally"),
+            ((1 << 9), "User or ally", "May target the user or one adjacent ally"),
+            ((1 << 10), "One opponent", "May target any one adjacent opponent")
         };
 
-        /// <summary>
-        /// Gets the user-friendly name for an attack range value.
-        /// </summary>
         public static string GetAttackRangeName(ushort targetValue)
         {
             foreach ((ushort value, string name, string description) range in AttackRangeDescriptions)
@@ -175,7 +172,7 @@ namespace DSPRE
         }
         public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true)
         {
-            SaveToFileExplorePath("Gen IV Move Data", "bin", suggestedFileName, showSuccessMessage);
+            SaveToFileExplorePath("Move data", "bin", suggestedFileName, showSuccessMessage);
         }
 
         public static void UpdateFromText(MoveData m, string[] split)
@@ -189,7 +186,7 @@ namespace DSPRE
             {
                 if (!Enum.TryParse(split[target], true, out m.Movetype))
                 {
-                    AppMessages.Error($"Malformed entry: \"{string.Join(" ", split)}\".\nMove type is unreadable: \"{split[target]}\"", "Parser error");
+                    AppMessages.Error($"This line couldn't be read: \"{string.Join(" ", split)}\".\nThe move type \"{split[target]}\" isn't valid.", "Import error");
                     return;
                 }
                 target++;
@@ -202,7 +199,7 @@ namespace DSPRE
                 {
                     if (!Enum.TryParse(split[target], true, out m.Split))
                     {
-                        AppMessages.Error($"Malformed entry: \"{string.Join(" ", split)}\".\nMove split is unreadable: \"{split[target]}\"", "Parser error");
+                        AppMessages.Error($"This line couldn't be read: \"{string.Join(" ", split)}\".\nThe move split \"{split[target]}\" isn't valid.", "Import error");
                         return;
                     }
                     target++;
@@ -221,7 +218,7 @@ namespace DSPRE
                             }
                             else
                             {
-                                AppMessages.Error($"Malformed entry: \"{string.Join(" ", split)}\".\nMove power is unreadable: \"{split[target]}\"", "Parser error");
+                                AppMessages.Error($"This line couldn't be read: \"{string.Join(" ", split)}\".\nThe power \"{split[target]}\" isn't valid.", "Import error");
                                 return;
                             }
 
@@ -242,7 +239,7 @@ namespace DSPRE
                                 }
                                 else
                                 {
-                                    AppMessages.Error($"Malformed entry: \"{string.Join(" ", split)}\".\nMove accuracy is unreadable: \"{split[target]}\"", "Parser error");
+                                    AppMessages.Error($"This line couldn't be read: \"{string.Join(" ", split)}\".\nThe accuracy \"{split[target]}\" isn't valid.", "Import error");
                                     return;
                                 }
                             }
@@ -256,7 +253,7 @@ namespace DSPRE
                             {
                                 if (!byte.TryParse(split[target].Replace('%', ' '), out m.Pp))
                                 {
-                                    AppMessages.Error($"Malformed entry: \"{string.Join(" ", split)}\".\nMove PP count is unreadable: \"{split[target]}\"", "Parser error");
+                                    AppMessages.Error($"This line couldn't be read: \"{string.Join(" ", split)}\".\nThe PP \"{split[target]}\" isn't valid.", "Import error");
                                     return;
                                 }
                             }

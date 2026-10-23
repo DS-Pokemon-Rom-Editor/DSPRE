@@ -5,11 +5,7 @@ using System.Text;
 
 namespace DSPRE.Avalonia
 {
-    /// <summary>
-    /// Reads a PNG of any kind into plain pixels. <see cref="IndexedPng"/> only reads the numbered
-    /// sort, which is what going back into an existing drawing needs; making a drawing from scratch
-    /// has to take whatever picture somebody hands it.
-    /// </summary>
+    /// <summary>Reads any PNG into plain pixels. <see cref="IndexedPng"/> reads only indexed ones, but a new drawing can start from any picture.</summary>
     public static class AnyPng
     {
         /// <param name="rgba">Four bytes a pixel, left to right then top to bottom.</param>
@@ -19,7 +15,7 @@ namespace DSPRE.Avalonia
         {
             rgba = null; width = 0; height = 0; whynot = null;
             if (file == null || file.Length < 8 || !file.AsSpan(0, 8).SequenceEqual(IndexedPng.Signature))
-            { whynot = "That file is not a PNG."; return false; }
+            { whynot = "That file isn't a PNG."; return false; }
 
             int pos = 8, w = 0, h = 0, depth = 0, colour = -1, interlace = 0;
             byte[] plte = null, trns = null;
@@ -48,18 +44,18 @@ namespace DSPRE.Avalonia
                 pos = at + len + 4;
             }
 
-            if (w <= 0 || h <= 0) { whynot = "That PNG does not say how big it is."; return false; }
+            if (w <= 0 || h <= 0) { whynot = "That PNG doesn't say how big it is."; return false; }
             if (interlace != 0)
             {
                 whynot = "That PNG is saved interlaced. Save it again with interlacing turned off.";
                 return false;
             }
             int channels = colour switch { 0 => 1, 2 => 3, 3 => 1, 4 => 2, 6 => 4, _ => 0 };
-            if (channels == 0) { whynot = "That PNG stores its colours in a way this cannot read."; return false; }
-            if (colour == 3 && plte == null) { whynot = "That PNG says it has a colour list but does not carry one."; return false; }
+            if (channels == 0) { whynot = "DSPRE can't read how that PNG stores its colours."; return false; }
+            if (colour == 3 && plte == null) { whynot = "That PNG is missing its palette."; return false; }
             if (depth != 1 && depth != 2 && depth != 4 && depth != 8 && depth != 16)
-            { whynot = $"That PNG keeps {depth} bits a channel, which this cannot read."; return false; }
-            if (depth == 16 && colour == 3) { whynot = "That PNG is not a sort this can read."; return false; }
+            { whynot = $"DSPRE can't read PNGs with {depth} bits per channel."; return false; }
+            if (depth == 16 && colour == 3) { whynot = "DSPRE can't read this kind of PNG."; return false; }
 
             byte[] raw;
             try
@@ -70,7 +66,7 @@ namespace DSPRE.Avalonia
                 zlib.CopyTo(outMs);
                 raw = outMs.ToArray();
             }
-            catch (Exception ex) { whynot = "That PNG's pixels could not be unpacked: " + ex.Message; return false; }
+            catch (Exception ex) { whynot = "That PNG's pixels couldn't be unpacked: " + ex.Message; return false; }
 
             int bits = channels * depth;
             int stride = (w * bits + 7) / 8;

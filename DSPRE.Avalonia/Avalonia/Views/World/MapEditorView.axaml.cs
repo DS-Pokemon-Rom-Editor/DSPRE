@@ -14,8 +14,6 @@ using System.Collections.Generic;
 
 namespace DSPRE.Avalonia.Views.World
 {
-    /// <summary>Authored as a <see cref="UserControl"/> so it can be embedded as the Map tab in the Maps
-    /// workspace; standalone launches host it in an <see cref="EditorHostWindow"/>.</summary>
     public partial class MapEditorView : UserControl
     {
         private MapEditorViewModel VM => DataContext as MapEditorViewModel;
@@ -66,9 +64,7 @@ namespace DSPRE.Avalonia.Views.World
                 },
             };
 
-            // Arrow keys pan the camera / nudge a selected building, but only while the 3D
-            // viewport itself has keyboard focus (Gl3DPointerNavigation focuses it on click);
-            // otherwise they'd steal input from a focused dropdown/spinner in the side panel.
+            // Arrow keys act only while the 3D view has focus, so side-panel inputs keep theirs.
             GlHost.KeyDown += OnKeyDown;
 
             Loaded += OnLoadedSetup;
@@ -98,7 +94,6 @@ namespace DSPRE.Avalonia.Views.World
             }
         }
 
-        // ── Camera presets ───────────────────────────────────────────────────────────────
         /// <summary>2D locks the camera flat and drops perspective; 3D restores a normal orbit camera.</summary>
         private void ApplyViewMode()
         {
@@ -124,16 +119,9 @@ namespace DSPRE.Avalonia.Views.World
             if (!_setupDone) await EnsureSetupAsync();
         }
 
-        /// <summary>
-        /// VM setup. No-ops until a ROM is loaded; the embedded Maps-workspace instance is created at
-        /// app boot, before any ROM; <see cref="MapsWorkspaceView"/> re-invokes this after EVERY
-        /// successful load (including switching to a different ROM mid-session), so
-        /// <c>vm.SetupAsync</c> always re-runs; only the event-subscription wiring is one-time.
-        /// </summary>
-        /// <param name="ownerOverride">Pass the owning Window explicitly when this control may not be
-        /// attached to the visual tree yet (e.g. a non-selected TabItem's content in the Maps workspace,
-        /// right after a ROM load); <see cref="TopLevel.GetTopLevel"/> returns null in that case, which
-        /// used to make this whole setup silently no-op until the tab was manually visited once.</param>
+        /// <summary>Sets up the view model once a ROM is loaded; <see cref="MapsWorkspaceView"/> calls it after
+        /// every load. Events are wired once.</summary>
+        /// <param name="ownerOverride">The owning window, for a tab not attached yet, which has no TopLevel.</param>
         public async Task EnsureSetupAsync(Window ownerOverride = null)
         {
             if (Design.IsDesignMode) return;
@@ -349,6 +337,6 @@ namespace DSPRE.Avalonia.Views.World
             await DialogHelper.ShowInfoAsync($"Used types across all maps (copied to clipboard):\n\n{report}", "Used collision types");
         }
 
-        private const string ErrorTitle = "Map editor error";
+        private const string ErrorTitle = "Map editor";
     }
 }

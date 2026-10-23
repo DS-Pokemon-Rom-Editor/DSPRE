@@ -104,7 +104,7 @@ namespace DSPRE.ROMFiles
 
             RotomTool.Result compiled = await RotomTool.CompileProjectAsync().ConfigureAwait(false);
             List<int> kept = compiled.KeptBinaries;
-            return (compiled.Success ? null : "The project did not compile on the new rotom: " + RotomTool.FormatResult(compiled), kept);
+            return (compiled.Success ? null : "The project didn't compile on the new rotom: " + RotomTool.FormatResult(compiled), kept);
         }
     }
 }

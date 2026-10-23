@@ -5,8 +5,8 @@ using static DSPRE.RomInfo;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// Read-only tables the battle menus and summary icons take from code rather than from archives. Every
-    /// reader returns null when the table is not located for this ROM or does not look like the game's.
+    /// Read-only tables the battle menus and summary icons read from code, not archives. Each reader returns null when
+    /// the table isn't found or doesn't look right.
     /// </summary>
     public static class BattleUiTables
     {

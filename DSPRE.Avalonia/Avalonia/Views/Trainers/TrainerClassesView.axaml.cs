@@ -45,7 +45,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             if (VM == null) return;
             if (VM.MusicNeedsExpansion && !DSPRE.TrainerClassTableExpansion.MusicTableHasRoom)
             {
-                await PatchHandover.OfferAsync("trainerEncounterBgmRepointed", "Eye-contact music for this class", "Trainer Classes");
+                await PatchHandover.OfferAsync("trainerEncounterBgmRepointed", "Eye-contact music for this class", "Trainer classes");
                 return;
             }
             VM.EnableMusic(0, 0);
@@ -100,19 +100,19 @@ namespace DSPRE.Avalonia.Views.Trainers
             await BusyOverlay.RunAsync($"Checking class {last}",
                 "Looking for trainers, events, scripts, rematches and Battle Tower trainers that use it.",
                 () => uses = vm.LastClassUses(out error), TopLevel.GetTopLevel(this) as Window);
-            if (uses == null) { await DialogHelper.ShowErrorAsync(error, "Trainer classes error"); return; }
+            if (uses == null) { await DialogHelper.ShowErrorAsync(error, "Trainer editor"); return; }
             if (uses.Count > 0)
             {
                 await DialogHelper.ShowErrorAsync($"Class {last} can't be removed while these use it:\n\n" +
-                    DSPRE.ROMFiles.TrainerClassDatasetManager.DescribeUses(uses), "Trainer classes error");
+                    DSPRE.ROMFiles.TrainerClassDatasetManager.DescribeUses(uses), "Trainer editor");
                 return;
             }
             bool sure = await DialogHelper.AskYesNoAsync(
                 $"Remove class {last}? No trainer, event, script, rematch, phone contact or Battle Tower trainer uses it. " +
-                "Custom code isn't checked.", "Delete trainer class?");
+                "Custom code isn't checked.", "Remove trainer class?");
             if (!sure) return;
             error = VM.RemoveLastClass();
-            if (error != null) await DialogHelper.ShowErrorAsync(error, "Trainer classes error");
+            if (error != null) await DialogHelper.ShowErrorAsync(error, "Trainer editor");
         }
 
         private async void AddTrainerClass_Click(object sender, RoutedEventArgs e)
@@ -128,7 +128,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             bool hgEngine = DSPRE.HgEngine.HgEngineProject.IsActive;
             if (!hgEngine && !DSPRE.TrainerClassTableExpansion.ClassTablesHaveRoom)
             {
-                await PatchHandover.OfferAsync("trainerClassTablesExpanded", "A new trainer class", "Add Trainer Class");
+                await PatchHandover.OfferAsync("trainerClassTablesExpanded", "A new trainer class", "Add trainer class");
                 return;
             }
 

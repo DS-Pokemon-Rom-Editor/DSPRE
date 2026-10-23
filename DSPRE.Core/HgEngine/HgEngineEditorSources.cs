@@ -56,7 +56,7 @@ namespace DSPRE.HgEngine
         }
     }
 
-    /// <summary>The Move Data editor's Moves.c fields.</summary>
+    /// <summary>The Move data editor's Moves.c fields.</summary>
     public static class HgEngineMoveSource
     {
         private const string MoveDataHeader = "include/move_data.h";
@@ -110,11 +110,11 @@ namespace DSPRE.HgEngine
         {
             path = null;
             error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             HgEngineDomainInfo info = HgEngineDomains.All.First(d => d.Domain == HgEngineDomain.Moves);
             path = Path.Combine(HgEngineProject.RepoPathUnc, info.SourceFileRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (File.Exists(path)) return true;
-            error = $"Source file not found: {path}";
+            error = $"{path} is missing from the checkout.";
             return false;
         }
 
@@ -155,7 +155,7 @@ namespace DSPRE.HgEngine
             foreach ((string designator, MoveData move) in moves)
             {
                 if (!index.TryGetValue(designator, out (int Open, int Close) span) || span.Open < 0)
-                { error = $"{designator} is not in Moves.c, so nothing was written."; return false; }
+                { error = $"{designator} isn't in Moves.c, so nothing was written."; return false; }
                 if (!HgEngineEntryIndex.TryPatch(text.Substring(span.Open, span.Close - span.Open + 1), Fields, move, Headers, lookupFor, out string block, out List<string> unresolved))
                 { error = $"Moves.c has no {string.Join(", ", unresolved)} for {designator}, so nothing was written."; return false; }
                 patched.Add((span.Open, span.Close, block));
@@ -206,7 +206,7 @@ namespace DSPRE.HgEngine
         {
             if (HgEngineEntryIndex.TryGetBlock(text, index, designator, out HgEngineSourceBlock entry))
                 return HgEngineSourceFields.TryRead(entry, Fields, move, lookup, out error);
-            error = $"{designator} is not in Moves.c.";
+            error = $"{designator} isn't in Moves.c.";
             return false;
         }
     }
@@ -318,7 +318,7 @@ namespace DSPRE.HgEngine
             bool priced = HgEngineItemExpansion.TryGetPrice(entry, lookup, out int price, out string rawPrice, out bool outOfRange);
             if (!priced && rawPrice != null)
             {
-                error = outOfRange ? $"price = {rawPrice} is out of range." : $"price = {rawPrice} could not be read.";
+                error = outOfRange ? $"price = {rawPrice} is out of range." : $"price = {rawPrice} couldn't be read.";
                 return false;
             }
             if (!HgEngineSourceFields.TryRead(entry, Fields, item, lookup, out error)) return false;

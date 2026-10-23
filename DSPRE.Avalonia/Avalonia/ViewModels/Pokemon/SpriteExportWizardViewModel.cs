@@ -89,7 +89,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private ExportPickItem MakeFullSheetItem(bool shiny) => new ExportPickItem
         {
-            Label = "Both Genders Sheet" + (shiny ? " (Shiny)" : ""),
+            Label = "Both genders sheet" + (shiny ? " (shiny)" : ""),
             FileName = $"mon{_sprite.CurrentId:D3}_Both_{(shiny ? "Shiny" : "Normal")}_sheet.png",
             Width = _sprite.SpritePixelWidth * 4,
             Height = _sprite.SpritePixelHeight,
@@ -99,7 +99,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private ExportPickItem MakeSheetItem(string genderLabel, bool female, bool shiny) => new ExportPickItem
         {
-            Label = $"{genderLabel} Sheet" + (shiny ? " (Shiny)" : ""),
+            Label = $"{genderLabel} sheet" + (shiny ? " (shiny)" : ""),
             FileName = $"mon{_sprite.CurrentId:D3}_{genderLabel}_{(shiny ? "Shiny" : "Normal")}_sheet.png",
             Width = _sprite.SpritePixelWidth * 2,
             Height = _sprite.SpritePixelHeight,
@@ -143,7 +143,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                StatusText = $"Export failed: {ex.Message}";
+                StatusText = $"Couldn't export: {ex.Message}";
             }
         }
     }

@@ -22,7 +22,6 @@ namespace DSPRE.Avalonia.Views.Graphics
             EditorWindowChrome.Attach(this, _vm, title: () => _vm.Title, onClosed: () => _vm.DropUnsavedImports());
         }
 
-        // Parameterless constructor for previewer only
         public DungeonCutinEditorView()
         {
             AvaloniaXamlLoader.Load(this);
@@ -34,8 +33,8 @@ namespace DSPRE.Avalonia.Views.Graphics
             }
             throw new InvalidOperationException("Parameterless constructor only for design time.");
         }
-        /// <summary>Hands the picked splash screen to the Graphics window, on its noon drawing, which is
-        /// the one most locations reuse for the other three times of day.</summary>
+        /// <summary>Hands the picked splash screen to All graphics on its noon drawing, which most locations
+        /// reuse for the other times of day.</summary>
         private void OpenInGraphics_Click(object sender, RoutedEventArgs e)
         {
             DungeonCutinEditorViewModel vm = DataContext as DSPRE.Avalonia.ViewModels.Graphics.DungeonCutinEditorViewModel;
@@ -44,7 +43,7 @@ namespace DSPRE.Avalonia.Views.Graphics
                 ? DSPRE.ROMFiles.DungeonCutinTable.DrawingFor(row, DSPRE.ROMFiles.DungeonCutinTable.TimeOfDay.Noon) : -1;
             if (drawing < 0)
             {
-                _ = DialogHelper.ShowInfoAsync("Pick a splash screen first.", "Open in Graphics");
+                _ = DialogHelper.ShowInfoAsync("Pick a splash screen first.", "Open in All graphics");
                 return;
             }
             AvaloniaEditorLauncher.OpenGraphicAt(DSPRE.RomInfo.DirNames.DungeonCutinGraphics, drawing);
@@ -63,7 +62,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = "Export dungeon cutin table",
+                Title = "Export dungeon cut-in table",
                 DefaultExtension = "csv",
                 SuggestedFileName = "dungeon_cutin.csv",
                 FileTypeChoices = new List<FilePickerFileType> { DialogHelper.CsvFilter }
@@ -73,7 +72,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = await _vm.ExportCsvAsync(path);
             if (error != null)
-                await DialogHelper.ShowErrorAsync($"Export failed: {error}", "Dungeon cutin editor error", this);
+                await DialogHelper.ShowErrorAsync($"Couldn't export: {error}", "Dungeon cut-in editor", this);
             else SaveNotice.Exported(path);
         }
 
@@ -104,7 +103,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async System.Threading.Tasks.Task ImportTimezoneAsync(DungeonCutinTimezone tz)
         {
-            if (_vm.SelectedRow == null) { await DialogHelper.ShowErrorAsync("Select a row first.", "Dungeon cutin editor error", this); return; }
+            if (_vm.SelectedRow == null) { await DialogHelper.ShowErrorAsync("Select a row first.", "Dungeon cut-in editor", this); return; }
 
             IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
@@ -118,13 +117,13 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = _vm.ImportTimezoneImage(tz, path);
             if (error != null)
-                await DialogHelper.ShowErrorAsync($"Import failed: {error}", "Dungeon cutin editor error", this);
+                await DialogHelper.ShowErrorAsync($"Couldn't import: {error}", "Dungeon cut-in editor", this);
             else SaveNotice.Imported($"the {tz.ToString().ToLowerInvariant()} picture", path);
         }
 
         private async System.Threading.Tasks.Task ExportTimezoneAsync(DungeonCutinTimezone tz)
         {
-            if (_vm.SelectedRow == null) { await DialogHelper.ShowErrorAsync("Select a row first.", "Dungeon cutin editor error", this); return; }
+            if (_vm.SelectedRow == null) { await DialogHelper.ShowErrorAsync("Select a row first.", "Dungeon cut-in editor", this); return; }
 
             IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
@@ -138,7 +137,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = _vm.ExportTimezoneImage(tz, path);
             if (error != null)
-                await DialogHelper.ShowErrorAsync($"Export failed: {error}", "Dungeon cutin editor error", this);
+                await DialogHelper.ShowErrorAsync($"Couldn't export: {error}", "Dungeon cut-in editor", this);
             else SaveNotice.Exported(path);
         }
     }

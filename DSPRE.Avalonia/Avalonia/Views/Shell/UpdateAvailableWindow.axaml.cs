@@ -12,9 +12,7 @@ using global::Avalonia.Media;
 namespace DSPRE.Avalonia.Views.Shell
 {
     /// <summary>
-    /// The "a new version is available" prompt, showing the release notes rather than only the
-    /// version numbers. Built in code because it is a handful of stacked text blocks and the
-    /// Markdown has to become real controls anyway.
+    /// The update prompt with its release notes, built in code because the Markdown becomes controls.
     /// </summary>
     public class UpdateAvailableWindow : Window
     {
@@ -22,7 +20,7 @@ namespace DSPRE.Avalonia.Views.Shell
 
         public UpdateAvailableWindow(string currentVersion, string availableVersion, string notes, bool preview)
         {
-            Title = preview ? "Update Prompt Preview" : "New Update Available";
+            Title = preview ? "Update prompt preview" : "Update available";
             Width = 660;
             Height = 540;
             MinWidth = 460;
@@ -47,7 +45,7 @@ namespace DSPRE.Avalonia.Views.Shell
 
             StackPanel body = new StackPanel { Spacing = 6 };
             RenderMarkdown(body, string.IsNullOrWhiteSpace(notes)
-                ? "Release notes are not available for this version."
+                ? "Release notes aren't available for this version."
                 : notes);
 
             ScrollViewer scroller = new ScrollViewer

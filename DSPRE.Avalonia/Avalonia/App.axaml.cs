@@ -105,8 +105,7 @@ namespace DSPRE
 
                 CrashReporter.Initialize();   // global crash handlers + report file
 
-                // The WinForms shell does these in the MainProgram ctor; the pure-Avalonia shell must
-                // do them itself (ROM loads read Settings, and the logger needs its file path).
+                // ROM loads read Settings, and the logger needs its file path.
                 SettingsManager.Load();
                 DSPRE.Avalonia.ThemeManager.ApplySaved();
                 AppLogger.Initialize(DSPRE.Avalonia.ProjectWindows.LogFileName());
@@ -116,7 +115,7 @@ namespace DSPRE
                 DSPRE.RomInfo.ShowWarning = (msg, title) =>
                     global::Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = DSPRE.Avalonia.DialogHelper.ShowErrorAsync(msg, title));
 
-                // A write hg-engine's build would undo is refused rather than silently dropped.
+                // Refuse a write that hg-engine's build would undo, so it isn't lost silently.
                 DSPRE.HgEngine.HgEngineWriteGuard.OnRefused = msg =>
                     global::Avalonia.Threading.Dispatcher.UIThread.Post(
                         () => _ = DSPRE.Avalonia.DialogHelper.ShowErrorAsync(msg, "Built by hg-engine"));
@@ -124,7 +123,6 @@ namespace DSPRE
                 // Archive members saved from Core keep hg-engine's PNGs in step and reach open editors.
                 DSPRE.ArchiveMembers.Written += DSPRE.Avalonia.Data.BuiltPngSources.OnMemberWritten;
 
-                // Core (WinForms-free ROMFiles/DSUtils) user messages + save picker → native Avalonia dialogs.
                 DSPRE.Avalonia.CoreDialogs.Install();
 
                 // Velopack update check (cross-platform), unless the host already provided one.
@@ -139,15 +137,12 @@ namespace DSPRE
                 main.Show();
                 LogRenderingMode(main);
 
-                // "Open Default ROM" setting: auto-open it at boot (asking first unless
-                // "Open without asking" is also set). The welcome window is skipped when the
-                // default ROM opens, and shown as usual when it doesn't.
+                // The default ROM opens at boot, asking first unless "Open the default ROM without asking" is set, and the welcome window doesn't open.
                 string defaultRom = SettingsManager.Settings?.OpenDefaultRom;
                 bool haveDefaultRom = !string.IsNullOrWhiteSpace(defaultRom) &&
                     (System.IO.File.Exists(defaultRom) || System.IO.Directory.Exists(defaultRom));
 
-                // First-run / returning-user onboarding (recent projects + tutorial); user-toggleable,
-                // relaunchable from Tools → Welcome & Tutorial and from Settings.
+                // Reopened from Tools > Welcome & tutorial or Settings.
                 void ShowWelcomeIfEnabled()
                 {
                     if (SettingsManager.Settings?.ShowWelcomeOnStartup != false)

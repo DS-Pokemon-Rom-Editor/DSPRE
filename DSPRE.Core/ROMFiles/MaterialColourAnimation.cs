@@ -5,10 +5,7 @@ using System.Text;
 
 namespace DSPRE.ROMFiles
 {
-    /// <summary>
-    /// A material animation (NSBMA): it fades a material in and out over time, which is what makes a shop
-    /// sign glow and a waterfall's spray come and go.
-    /// </summary>
+    /// <summary>A material animation (NSBMA): it fades a material in and out, like a glowing shop sign or waterfall spray.</summary>
     public sealed class MaterialColourAnimation
     {
         /// <summary>The value a fully solid material has, both here and in a model.</summary>
@@ -27,10 +24,10 @@ namespace DSPRE.ROMFiles
         public int FrameCount { get; private set; }
         public IReadOnlyList<string> MaterialNames => _tracks.Select(t => t.Name).ToArray();
 
-        /// <summary>True when at least one material actually fades rather than sitting at one value.</summary>
+        /// <summary>True when at least one material fades.</summary>
         public bool Fades => _tracks.Any(t => t.Alpha != null && t.Alpha.Distinct().Count() > 1);
 
-        /// <summary>True when at least one material changes colour rather than only fading.</summary>
+        /// <summary>True when at least one material changes colour, not just fades.</summary>
         public bool Colours => _tracks.Any(t => t.Diffuse != null && t.Diffuse.Distinct().Count() > 1);
 
         /// <summary>
@@ -56,7 +53,7 @@ namespace DSPRE.ROMFiles
             if (Encoding.ASCII.GetString(d, 0, 4) != "BMA0") return null;
 
             try { return Parse(d); }
-            catch (Exception ex) { AppLogger.Error("Material animation failed to read: " + ex.Message); return null; }
+            catch (Exception ex) { AppLogger.Error("A material animation couldn't be read: " + ex.Message); return null; }
         }
 
         private static MaterialColourAnimation Parse(byte[] d)
@@ -131,9 +128,8 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        // The five channels are twenty bytes of the record, diffuse first. Each is a word: the value or
-        // an offset in its low half, how many frames in the next byte, and flags in the top byte, where
-        // 0x20 means the value is the colour itself rather than somewhere to read it from.
+        // Five 4-byte channels, diffuse first: value or offset in the low half, frame count in the next byte, flags in
+        // the top byte. Flag 0x20 means the value is the colour, not an offset.
         private const int DiffuseOffset = 0;
         private const int ConstantFlag = 0x20;
 

@@ -240,7 +240,7 @@ namespace DSPRE.Avalonia.Data
 
         private static short Clip(float v) => v >= 32767f ? (short)32767 : v <= -32768f ? (short)-32768 : (short)v;
 
-        /// <summary>A tune cut off by the time limit ends on a short fade rather than a click.</summary>
+        /// <summary>A tune cut off at the time limit fades out instead of clicking.</summary>
         private static void FadeTail(short[] pcm, int produced, int rate)
         {
             int n = Math.Min(produced, rate / 100);

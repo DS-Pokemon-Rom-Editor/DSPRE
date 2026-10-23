@@ -25,7 +25,7 @@ namespace DSPRE.ROMFiles
 
         public bool Orthographic { get; }
 
-        /// <summary>PerspWay. </summary>
+        /// <summary>PerspWay.</summary>
         public int RawHalfFieldOfView { get; }
 
         public int NearClip { get; }
@@ -61,10 +61,10 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public float RollDegrees => RawRoll * TurnDegrees / 2f;
 
-        /// <summary>Half the vertical view angle, which is what the table actually stores.</summary>
+        /// <summary>Half the vertical view angle, as the table stores it.</summary>
         public float HalfFieldOfViewDegrees => RawHalfFieldOfView * TurnDegrees;
 
-        /// <summary>The whole vertical view angle, which is what a renderer usually wants.</summary>
+        /// <summary>The whole vertical view angle, for renderers.</summary>
         public float FieldOfViewDegrees => HalfFieldOfViewDegrees * 2f;
 
         public float ShiftXInTiles => ShiftX / FixedPointOne / GameUnitsPerTile;
@@ -166,7 +166,7 @@ namespace DSPRE.ROMFiles
                 c.Fov, (int)(c.NearClip >> 12), (int)(c.FarClip >> 12), c.XOffset ?? 0, c.YOffset ?? 0, c.ZOffset ?? 0,
                 c.HoriRot, family == RomInfo.GameFamilies.DP ? 0 : c.ZRot);
 
-        /// <summary>The built-in name for a row; Diamond and Pearl's rows have none of their own.</summary>
+        /// <summary>The built-in name for a row; Diamond and Pearl's rows have none.</summary>
         public static string NameFor(int id, RomInfo.GameFamilies family)
         {
             if (family == RomInfo.GameFamilies.DP) return "Camera " + id;
@@ -190,10 +190,10 @@ namespace DSPRE.ROMFiles
             return _romRows;
         }
 
-        /// <summary>The ordinary walking-about camera, which is what most maps use.</summary>
+        /// <summary>The ordinary walking camera most maps use.</summary>
         public static FieldCameraEntry Normal => Table[0];
 
-        /// <summary>Which way the normal camera faces; every retail row has no turn.</summary>
+        /// <summary>Which way the normal camera faces; no retail row turns it.</summary>
         public const float YawDegrees = 0f;
 
         /// <summary>

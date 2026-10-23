@@ -11,7 +11,6 @@
 
   <DockPanel>
 
-    <!-- ── Toolbar ─────────────────────────────────────────────────────── -->
     <controls:EditorToolbar>
         <controls:HeadersButton controls:EditorToolbar.Slot="Picker" Source="Camera" FileId="{Binding SelectedCameraIndex}"
                                 ToolTip.Tip="Map headers that use this camera"/>
@@ -25,14 +24,12 @@
         <Button Content="Import camera…" controls:Icon.Key="import" Click="ImportCamera_Click" IsEnabled="{Binding IsReady}"/>
     </controls:EditorToolbar>
 
-    <!-- ── Status bar ──────────────────────────────────────────────────── -->
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8,3">
       <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"
                  VerticalAlignment="Center"/>
     </Border>
 
-    <!-- ── Camera list ─────────────────────────────────────────────────── -->
     <ListBox DockPanel.Dock="Left" Width="220" Margin="4"
              ItemsSource="{Binding Cameras}" SelectedItem="{Binding SelectedCamera}">
       <ListBox.ItemTemplate>
@@ -42,7 +39,6 @@
       </ListBox.ItemTemplate>
     </ListBox>
 
-    <!-- ── The selected camera, in tiles and degrees ───────────────────── -->
     <ScrollViewer DockPanel.Dock="Left" Width="220" Margin="0,4" DataContext="{Binding SelectedCamera}"
                   IsEnabled="{Binding $self.DataContext, Converter={x:Static ObjectConverters.IsNotNull}}">
       <StackPanel Spacing="6" Margin="0,0,8,0" x:DataType="vm:CameraRowVM">
@@ -148,7 +144,7 @@
       </StackPanel>
     </ScrollViewer>
 
-    <!-- ── Preview: the selected camera at a town's fly spot ───────────── -->
+    <!-- The preview shows the selected camera at a town's fly spot. -->
     <StackPanel Margin="4" Spacing="4" HorizontalAlignment="Left">
       <Border Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}"
               BorderThickness="1" Width="384" Height="288">

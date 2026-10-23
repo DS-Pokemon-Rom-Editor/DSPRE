@@ -38,7 +38,6 @@ namespace DSPRE.Avalonia.Views.Graphics
             vm.StatusText = "Saved.";
         }
 
-        // ── painting ───────────────────────────────────────────────────────────────────────────────
 
         /// <summary>Turns a click into the pixel underneath it. The picture is drawn at a whole number of
         /// screen pixels per drawing pixel, so this is a division and nothing more.</summary>
@@ -90,7 +89,6 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (ViewModel != null) ViewModel.Pointer = x < 0 ? "" : $"Column {x}, row {y}";
         }
 
-        // ── the rulers ─────────────────────────────────────────────────────────────────────────────
 
         private void CanvasScroll_ScrollChanged(object sender, ScrollChangedEventArgs e) => PlaceRulers();
         private void CanvasHost_LayoutUpdated(object sender, EventArgs e) => PlaceRulers();
@@ -108,7 +106,6 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (down is Point d && left.Start != d.Y) left.Start = d.Y;
         }
 
-        // ── the colours ────────────────────────────────────────────────────────────────────────────
 
         private async void ChangeColour_Click(object sender, RoutedEventArgs e)
         {

@@ -57,7 +57,7 @@ namespace DSPRE.ROMFiles
         public static Tex0Block ReadBtx0(byte[] d, out string error)
         {
             error = null;
-            if (d == null || d.Length < 0x14 || Encoding.ASCII.GetString(d, 0, 4) != "BTX0") { error = "The file does not have a BTX0 header."; return null; }
+            if (d == null || d.Length < 0x14 || Encoding.ASCII.GetString(d, 0, 4) != "BTX0") { error = "The file doesn't have a BTX0 header."; return null; }
             if (U16(d, 0x0E) < 1) { error = "The BTX file has no TEX0 section."; return null; }
             return Read(d, (int)U32(d, 0x10), out error);
         }

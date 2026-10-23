@@ -132,7 +132,7 @@ namespace DSPRE.ROMFiles
                 int ghostBytes = reader.ReadInt32();
 
                 if (HeaderSize + platformBytes + jumpBytes + cameraBytes + ghostBytes != data.Length)
-                    throw new ArgumentException("The section sizes do not add up to the file's length.");
+                    throw new ArgumentException("The section sizes don't add up to the file's length.");
 
                 ReadPlatforms(reader, platformBytes);
                 ReadJumpPoints(reader, jumpBytes);

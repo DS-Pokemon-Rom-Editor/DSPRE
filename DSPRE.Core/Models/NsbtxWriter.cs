@@ -15,7 +15,7 @@ namespace DSPRE.Models
             public string Whynot;
             public int Pictures;
             public List<string> Notes = new List<string>();
-            // Names Extend left out because the pack already has a texture by that name.
+            // Names Extend skipped because the pack already has a texture by that name.
             public HashSet<string> AlreadyThere = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             public string Summary => Whynot
@@ -155,7 +155,7 @@ namespace DSPRE.Models
                 r.Bytes = NsbmdWriter.Envelope(new[] { o }, "BTX0", version: 1);
                 r.Pictures = texNames.Count;
             }
-            catch (Exception ex) { r.Whynot = "Texture pack build failed: " + ex.Message; }
+            catch (Exception ex) { r.Whynot = "The texture pack couldn't be built: " + ex.Message; }
             return r;
         }
 
@@ -172,10 +172,10 @@ namespace DSPRE.Models
             foreach (DsTexture picture in pictures)
             {
                 if (string.IsNullOrEmpty(picture.Name))
-                { r.Whynot = "Texture without a name."; return r; }
+                { r.Whynot = "A texture has no name."; return r; }
 
                 if (!named.Add(picture.Name))
-                { r.Whynot = $"Duplicate texture name {picture.Name}."; return r; }
+                { r.Whynot = $"Two textures are named {picture.Name}."; return r; }
 
                 r.Notes.AddRange(picture.Notes);
             }
@@ -186,7 +186,7 @@ namespace DSPRE.Models
                 r.Bytes = NsbmdWriter.Envelope(new[] { NsbmdWriter.BuildTex0(pictures) }, "BTX0", version: 1);
                 r.Pictures = pictures.Count;
             }
-            catch (Exception ex) { r.Whynot = "Texture pack build failed: " + ex.Message; }
+            catch (Exception ex) { r.Whynot = "The texture pack couldn't be built: " + ex.Message; }
 
             return r;
         }

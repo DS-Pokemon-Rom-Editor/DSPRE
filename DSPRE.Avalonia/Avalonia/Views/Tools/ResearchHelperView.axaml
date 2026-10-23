@@ -28,7 +28,6 @@
 
     <TabControl Margin="4">
 
-      <!-- ── Tab 1: Scripts ──────────────────────────────────────────────── -->
       <TabItem Header="Scripts">
         <DockPanel Margin="4">
           <DataGrid ItemsSource="{Binding ScriptStats}"
@@ -49,7 +48,6 @@
         </DockPanel>
       </TabItem>
 
-      <!-- ── Tab 2: Level Scripts ────────────────────────────────────────── -->
       <TabItem Header="Level scripts">
         <DockPanel Margin="4">
           <DataGrid ItemsSource="{Binding LevelScriptStats}"
@@ -61,16 +59,15 @@
             <DataGrid.Columns>
               <DataGridTextColumn Header="File ID"       Binding="{Binding ID}"           Width="70"/>
               <DataGridTextColumn Header="Total"         Binding="{Binding Total}"         Width="60"/>
-              <DataGridTextColumn Header="MapChange"     Binding="{Binding MapChange}"     Width="90"/>
-              <DataGridTextColumn Header="ScreenReset"   Binding="{Binding ScreenReset}"   Width="95"/>
-              <DataGridTextColumn Header="LoadGame"      Binding="{Binding LoadGame}"      Width="80"/>
-              <DataGridTextColumn Header="VarValue"      Binding="{Binding VariableValue}" Width="80"/>
+              <DataGridTextColumn Header="Map change"    Binding="{Binding MapChange}"     Width="90"/>
+              <DataGridTextColumn Header="Screen reset"  Binding="{Binding ScreenReset}"   Width="95"/>
+              <DataGridTextColumn Header="Game load"     Binding="{Binding LoadGame}"      Width="80"/>
+              <DataGridTextColumn Header="Variable value" Binding="{Binding VariableValue}" Width="80"/>
             </DataGrid.Columns>
           </DataGrid>
         </DockPanel>
       </TabItem>
 
-      <!-- ── Tab 3: Variable Watcher ────────────────────────────────────── -->
       <TabItem Header="Variable watcher">
         <DockPanel Margin="4">
           <!-- Search bar -->
@@ -98,7 +95,6 @@
         </DockPanel>
       </TabItem>
 
-      <!-- ── Tab 4: Flag Watcher ─────────────────────────────────────────── -->
       <TabItem Header="Flag watcher">
         <DockPanel Margin="4">
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
@@ -178,7 +174,7 @@
         </DockPanel>
       </TabItem>
 
-      <!-- ── Tab 5: Script Watcher ──────────────────────────────────────── -->
+
       <TabItem Header="Class watcher">
         <DockPanel Margin="4">
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
@@ -265,7 +261,6 @@
         </TabControl>
       </TabItem>
 
-      <!-- ── Tab 6: Header Watcher ──────────────────────────────────────── -->
       <TabItem Header="Header watcher">
         <DockPanel Margin="4">
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
@@ -322,8 +317,8 @@
                     <DataGrid.Columns>
                       <DataGridTextColumn Header="Warp #"      Binding="{Binding WarpIndex}"  Width="70"/>
                       <DataGridTextColumn Header="Position"    Binding="{Binding Position}"   Width="100"/>
-                      <DataGridTextColumn Header="Dest header" Binding="{Binding DestHeader}" Width="90"/>
-                      <DataGridTextColumn Header="Dest warp"   Binding="{Binding DestAnchor}" Width="90"/>
+                      <DataGridTextColumn Header="Destination header" Binding="{Binding DestHeader}" Width="90"/>
+                      <DataGridTextColumn Header="Destination warp" Binding="{Binding DestAnchor}" Width="90"/>
                     </DataGrid.Columns>
                   </DataGrid>
                 </DockPanel>

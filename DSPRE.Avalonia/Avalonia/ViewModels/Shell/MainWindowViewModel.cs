@@ -10,13 +10,7 @@ using System.Collections.Generic;
 namespace DSPRE.Avalonia.ViewModels.Shell
 {
     /// <summary>
-    /// ViewModel for the Avalonia <c>MainWindowView</c> shell, the in-progress
-    /// replacement for the WinForms main window.
-    ///
-    /// For now it hosts the editors that have already been ported to Avalonia
-    /// <see cref="UserControl"/>s as embedded tabs (currently the Camera editor),
-    /// and exposes ROM state so the menu can launch the remaining editors (which
-    /// still open as standalone Avalonia windows) only when a ROM is loaded.
+    /// The main window: ROM state, menu availability and the embedded editor tabs.
     /// </summary>
     public class MainWindowViewModel : INotifyPropertyChanged
     {
@@ -30,12 +24,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         // ── ROM state ──────────────────────────────────────────────────────────
         public bool IsRomLoaded => AvaloniaEditorLauncher.IsRomLoaded;
 
-        // ── Per-editor availability (bound by menu items so unsupported editors are
-        //    greyed out instead of carrying "(HGSS)"-style labels or failing silently).
-        //    hg-engine ROMs: HGE owns/overwrites mon, move, item, trainer and encounter
-        //    data, so those editors are disabled (mirrors the WinForms shell's HGE list),
-        //    unless a source checkout is linked (HgEngineProject.IsActive), in which case
-        //    the 5 covered domains read/write straight from source instead.
+        // ── Per-editor availability: hg-engine ROMs disable editors for data hg-engine owns, unless a
+        //    checkout is linked.
         // ── editors still being tried out ─────────────────────────────────────────────────────────
 
         /// <summary>
@@ -44,9 +34,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public BetaLookup Beta { get; } = new BetaLookup();
 
         /// <summary>
-        /// Beta editors are left out of the menus rather than greyed out, so an ordinary run does not
-        /// look like it is missing half its tools. A new instance on every read, so raising it re-reads
-        /// the indexer after a ROM lets an editor through because it needs it.
+        /// Beta editors are hidden from the menus, not greyed out. A new instance on every read, so raising it
+        /// re-reads the indexer.
         /// </summary>
         public BetaLookup Shown => new BetaLookup();
 
@@ -114,8 +103,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public bool CanUseBannerEditor => EditorAvailability.Allows("BannerEditorView");
         public bool CanUseNamingScreenEditor => EditorAvailability.Allows("NamingScreenEditor");
         public bool CanUseDataExports => EditorAvailability.Allows("DataExports");
-        // The one editor that stays open on an hg-engine ROM with no checkout linked: it only reads,
-        // and reading the ROM is the point of it.
+        // This editor stays open on an hg-engine ROM with no checkout, since it only reads the ROM.
         public bool CanUseHgeRomReview => EditorAvailability.Allows("HgeRomReviewView");
         public bool CanUseDistortionWorld => EditorAvailability.Allows("DistortionWorldView");
         public bool CanUseWildHeldItems => EditorAvailability.Allows("WildHeldItemOddsView");
@@ -130,12 +118,11 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public bool CanUseBpShop => EditorAvailability.Allows("BpShopEditorView");
         public bool CanUseFriendship => EditorAvailability.Allows("FriendshipChangesView");
         public bool CanUseSlotOdds => EditorAvailability.Allows("EncounterSlotOddsView");
-        // Tables a game family doesn't have are hidden rather than greyed out.
+        // Tables a game family doesn't have are hidden, not greyed out.
         public bool HasMoveTutors => !IsRomLoaded || GameFamily != GameFamilies.DP;
         public bool IsDpOrPlatinum => !IsRomLoaded || GameFamily != GameFamilies.HGSS;
         public bool CanUsePokemonEditor => EditorAvailability.Allows("PokemonEditorView");
-        // PokeFormDataTbl.c is source-only (no packed-ROM equivalent), so this needs the checkout link
-        // itself rather than the isHGE/HgAllows gate the other 5 domains use.
+        // PokeFormDataTbl.c exists only in source, so this needs the checkout link, not the HgAllows gate.
         public bool CanUseHgEngineFormEditor => EditorAvailability.Allows("HgEngineFormEditorView");
         public bool CanUseAbilityFlagsEditor => EditorAvailability.Allows("AbilityFlagsEditorView");
         public bool CanUseBattleScreen => EditorAvailability.Allows("BattleScreenEditorView");
@@ -186,14 +173,13 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         /// <summary>Why Compile ROM and the source-backed editors are greyed out, or nothing when they are not.</summary>
         public string HgEngineNote =>
             !IsRomLoaded ? "Open a ROM first."
-            : !IsHGE ? "This ROM is not an hg-engine build."
-            : !HgEngineProject.IsLinked ? "No hg-engine checkout is linked to this project."
+            : !IsHGE ? "This ROM isn't an hg-engine build."
+            : !HgEngineProject.IsLinked ? "No hg-engine checkout is linked."
             : !HgEngineProject.Enabled ? "The linked hg-engine checkout is switched off for this project."
             : "Runs the linked checkout's real make build and produces test.nds.";
         public bool IsHgssRom           => IsRomLoaded && GameFamily == GameFamilies.HGSS;
 
-        /// <summary>The Headbutt editor needs an HGSS ROM, and it is still being tried out.</summary>
-        // Diamond and Pearl only have the battle music table, where it is supported.
+        // Music & battle tables; Diamond and Pearl only have the battle music table.
         public bool CanUseMiscTables => EditorAvailability.Allows("TableEditorView");
         public bool ShowMiscTables => !IsRomLoaded || !TableEditorViewModel.OnlyIntroLinks;
 

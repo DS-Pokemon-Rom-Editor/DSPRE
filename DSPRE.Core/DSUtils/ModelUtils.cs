@@ -27,7 +27,7 @@ namespace DSPRE
 
             if (!quiet && folder == null)
             {
-                AppMessages.Info("Choose output folder.\nDSPRE will automatically create a sub-folder in it.", "Awaiting user input");
+                AppMessages.Info("Choose a folder. DSPRE makes a sub-folder in it for the model.", "Export model");
             }
 
             string chosenDir = folder ?? AppMessages.PickFolder(quiet ? "Choose where the model's folder goes" : "Choose output folder");
@@ -42,7 +42,7 @@ namespace DSPRE
             {
                 if (Directory.GetFiles(outDir).Length > 0)
                 {
-                    if (!AppMessages.Confirm($"Directory \"{outDir}\" already exists and is not empty.\nIts contents will be lost.\n\nDo you want to proceed?", "Directory not empty"))
+                    if (!AppMessages.Confirm($"The folder \"{outDir}\" already has files in it. They will be replaced.\n\nReplace them?", "Folder not empty"))
                     {
                         return null;
                     }
@@ -94,17 +94,17 @@ namespace DSPRE
 
                 if (File.Exists(tempNSBMDPath))
                 {
-                    AppMessages.Warning("Temporary NSBMD file deletion failed.", "Warning");
+                    AppMessages.Warning("The temporary NSBMD file couldn't be deleted.", "Warning");
                 }
             }
             else
             {
-                AppMessages.Warning("Temporary NSBMD file corresponding to this map disappeared.", "Error");
+                AppMessages.Warning("The temporary NSBMD file for this map is missing.", "Warning");
             }
 
             if (apicula.ExitCode != 0)
             {
-                Fail($"NSBMD to {(glb ? "GLB" : "DAE")} conversion failed.", "Apicula error");
+                Fail($"The NSBMD couldn't be converted to {(glb ? "GLB" : "DAE")}.", "Apicula error");
                 return null;
             }
             if (!quiet)

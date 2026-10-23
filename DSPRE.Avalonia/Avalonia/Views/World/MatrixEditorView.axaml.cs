@@ -10,8 +10,6 @@ using DSPRE.Avalonia.ViewModels;
 
 namespace DSPRE.Avalonia.Views.World
 {
-    /// <summary>Authored as a <see cref="UserControl"/> so it can be embedded as the Matrix tab in the
-    /// Maps workspace; standalone launches host it in an <see cref="EditorHostWindow"/>.</summary>
     public partial class MatrixEditorView : UserControl
     {
         private MatrixEditorViewModel VM => DataContext as MatrixEditorViewModel;
@@ -65,15 +63,8 @@ namespace DSPRE.Avalonia.Views.World
             if (!_setupDone) await EnsureSetupAsync();
         }
 
-        /// <summary>
-        /// VM setup. No-ops until a ROM is loaded; the embedded Maps-workspace instance is created at
-        /// app boot, before any ROM; <see cref="MapsWorkspaceView"/> re-invokes this after EVERY
-        /// successful load (including switching ROMs mid-session), so <c>vm.SetupAsync</c> always
-        /// re-runs; only the event-subscription wiring is one-time.
-        /// </summary>
-        /// <param name="ownerOverride">Pass the owning Window explicitly when this control may not be
-        /// attached to the visual tree yet (a non-selected TabItem's content in the Maps workspace,
-        /// right after a ROM load); <see cref="TopLevel.GetTopLevel"/> returns null in that case.</param>
+        /// <summary>Sets up the view model; see <see cref="MapsWorkspaceView"/>.</summary>
+        /// <param name="ownerOverride">The owning window, for a tab not yet in the visual tree.</param>
         public async Task EnsureSetupAsync(Window ownerOverride = null)
         {
             if (Design.IsDesignMode) return;
@@ -147,7 +138,7 @@ namespace DSPRE.Avalonia.Views.World
         private async void Import_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ImportAsync() ?? Task.CompletedTask, "The matrix wasn't imported.", ErrorTitle);
         private async void Export_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ExportAsync() ?? Task.CompletedTask, "The matrix wasn't exported.", ErrorTitle);
 
-        private const string ErrorTitle = "Matrix editor error";
+        private const string ErrorTitle = "Matrix editor";
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {

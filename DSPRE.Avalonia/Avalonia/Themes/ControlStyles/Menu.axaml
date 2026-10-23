@@ -19,7 +19,7 @@
 
     <!-- This is the width of the ColumnDefinition that contains the icons -->
     <GridLength x:Key="MenuItemIconTrayGridLength">20</GridLength>
-    <!-- The same as above expect with the right padding of menu item icons or something like that -->
+    <!-- The icon column width plus the icons' right padding. -->
     <sys:Double x:Key="MenuItemIconTrayWithPaddingWidth">23</sys:Double>
 
     <!-- This MenuItem style is for the direct children of a menu; top-level. -->

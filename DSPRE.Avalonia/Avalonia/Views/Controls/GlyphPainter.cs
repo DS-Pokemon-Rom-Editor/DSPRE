@@ -48,8 +48,7 @@ namespace DSPRE.Avalonia.Views.Controls
 
         private const int Zoom = 20;
 
-        // The four shades a letter can hold. Paper is what the box behind the writing already painted,
-        // so it shows here as the box's own colour rather than as ink.
+        // The four shades a letter can hold. Paper is painted by the box behind, so it shows in the box's colour.
         private static readonly IBrush[] Shades =
         {
             new SolidColorBrush(Color.FromRgb(0xF4, 0xF4, 0xF4)),   // nothing

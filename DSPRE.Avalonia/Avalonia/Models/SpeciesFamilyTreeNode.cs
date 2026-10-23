@@ -4,12 +4,7 @@ using System.ComponentModel;
 
 namespace DSPRE.Avalonia.Models
 {
-    /// <summary>
-    /// Tree nodes for the TM/HM bulk editor (evolution-family parent, per-species leaves). Same
-    /// "suppress while cascading" discipline as <see cref="TrainerFlagTreeNode"/>, kept as its own
-    /// type rather than reused because species IDs need <c>int</c>, not the trainer tree's <c>byte</c>
-    /// class ID (species count regularly exceeds 255 once alt forms are counted).
-    /// </summary>
+    /// <summary>TM/HM bulk editor tree nodes, separate from <see cref="TrainerFlagTreeNode"/> because species numbers pass 255.</summary>
     public abstract class SpeciesFamilyTreeNode : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;

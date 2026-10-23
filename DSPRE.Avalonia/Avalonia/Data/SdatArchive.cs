@@ -39,16 +39,8 @@ namespace DSPRE.Avalonia.Data
     }
 
     /// <summary>
-    /// Parses an SDAT sound archive, the Nitro sound engine's container for every sequence (SSEQ), instrument
-    /// bank (SBNK) and wave archive (SWAR) in the game. Layout: a 48-byte file header giving the byte offset and
-    /// size of an optional SYMB (name) block, a mandatory INFO block and a mandatory FAT block, followed by the
-    /// raw sub-file bytes themselves. INFO holds one "offset table" per category (sequences/banks/wave archives/
-    /// ...), each entry pointing (relative to the INFO block's own start) at a small fixed record; FAT holds one
-    /// {byte offset, size} pair per sub-file, offsets absolute from the start of the .sdat file. SYMB mirrors
-    /// INFO's per-category offset tables but each entry points at a null-terminated name string instead.
-    /// This is the standard Nitro sound-archive format used by essentially every DS game, not something specific
-    /// to this project; only the exact file paths and the fact a move script's "sound" argument is a raw sequence
-    /// number are project-specific findings (see BattleAnimPlayer.cs's PlaySoundEffect handling).
+    /// Parses an SDAT: a 48-byte header pointing at SYMB (names, optional), INFO and FAT, then the sub-files. INFO has an
+    /// offset table per category, relative to the block; FAT has each sub-file's offset from the file start and size.
     /// </summary>
     public sealed class SdatArchive
     {
@@ -64,10 +56,10 @@ namespace DSPRE.Avalonia.Data
         public List<List<SdatGroupItem>> Groups { get; } = new List<List<SdatGroupItem>>();
         public Dictionary<int, string> GroupNames { get; } = new Dictionary<int, string>();
 
-        // seq number -> name (from SYMB), only entries that had a name are present.
+        // Sequence number to name, from SYMB, for the entries that have one.
         public Dictionary<int, string> SeqNames { get; } = new Dictionary<int, string>();
 
-        // The same, for banks and wave archives. A bank's name is what says whether it is a cry bank.
+        // The same for banks and wave archives; a bank's name says whether it's a cry bank.
         public Dictionary<int, string> BankNames { get; } = new Dictionary<int, string>();
         public Dictionary<int, string> WaveArcNames { get; } = new Dictionary<int, string>();
 
@@ -90,7 +82,7 @@ namespace DSPRE.Avalonia.Data
             if (infoOffset <= 0 || infoOffset + infoSize > d.Length) return a;
             a._fatOffset = fatOffset;
 
-            // ── INFO block: one offset-table per category, each entry relative to infoOffset ──
+            // ── INFO block: an offset table per category, each entry relative to infoOffset ──
             int seqTableOff = (int)U32(infoOffset + 8);
             int bankTableOff = (int)U32(infoOffset + 16);
             int waveArcTableOff = (int)U32(infoOffset + 20);
@@ -178,7 +170,7 @@ namespace DSPRE.Avalonia.Data
                 a.Groups.Add(items);
             }
 
-            // ── SYMB block (optional): mirrors INFO's per-category offset tables, entries point at C strings ──
+            // ── SYMB block (optional): INFO's tables again, pointing at C strings ──
             if (symbOffset > 0 && symbOffset + symbSize <= d.Length && symbOffset + 40 <= d.Length)
             {
                 void ReadNames(int tableRel, Dictionary<int, string> into)
@@ -201,8 +193,7 @@ namespace DSPRE.Avalonia.Data
                     }
                 }
 
-                // The block's own table order: sequences, sequence archives, banks, wave archives, then
-                // the player and group tables this does not need.
+                // Table order: sequences, sequence archives, banks, wave archives, then players and groups.
                 ReadNames((int)U32(symbOffset + 8), a.SeqNames);
                 ReadNames((int)U32(symbOffset + 16), a.BankNames);
                 ReadNames((int)U32(symbOffset + 20), a.WaveArcNames);
@@ -212,15 +203,9 @@ namespace DSPRE.Avalonia.Data
             return a;
         }
 
-        /// <summary>Raw bytes of sub-file <paramref name="fileId"/> (an SSEQ/SBNK/SWAR), or null if out of range.
-        /// FAT offsets are absolute from the start of the .sdat file, not relative to any block.</summary>
         /// <summary>
-        /// Puts different bytes in one of the archive's sub-files and hands back the whole archive as it
-        /// now stands, ready to write to disk. The original is left alone.
-        ///
-        /// Something the same size or smaller goes back where it was. Anything bigger is put on the end
-        /// and the table entry pointed at the new place, because moving everything after it would mean
-        /// fixing up every other offset in the file.
+        /// The whole archive with one sub-file replaced; the original is left alone. A file no bigger goes back in place; a
+        /// bigger one goes on the end, so no other offset moves.
         /// </summary>
         public byte[] ReplaceFile(int fileId, byte[] newBytes)
         {
@@ -263,8 +248,7 @@ namespace DSPRE.Avalonia.Data
             Put32(entryAt, newOff);
             Put32(entryAt + 4, newBytes.Length);
 
-            // The container carries its own length at byte 8, and the FILE block carries the length of
-            // everything it holds; both have to say how big the archive now is.
+            // The length at byte 8 and the FILE block's length both have to match the new size.
             Put32(8, o.Length);
             int fileBlockOffset = _d[40] | (_d[41] << 8) | (_d[42] << 16) | (_d[43] << 24);
             if (fileBlockOffset > 0 && fileBlockOffset + 8 <= o.Length)
@@ -273,6 +257,7 @@ namespace DSPRE.Avalonia.Data
             return o;
         }
 
+        /// <summary>Sub-file <paramref name="fileId"/>'s bytes (an SSEQ, SBNK or SWAR), or null when out of range.</summary>
         public byte[] GetFileBytes(int fileId)
         {
             if (_d == null || _fatOffset <= 0) return null;
@@ -292,19 +277,12 @@ namespace DSPRE.Avalonia.Data
             return bytes;
         }
 
-        // Decoding a bank/wave archive is expensive (SWAR decode walks every sample, each an ADPCM unpack
-        // loop), so cache per sub-file rather than re-decoding on every preview or animation frame.
-        //
-        // ConcurrentDictionary, not Dictionary: animation playback renders each triggered sound on its own
-        // background thread, and one move can fire several sounds sharing a bank on the same frame (e.g.
-        // Thunder Punch). A concurrent first-write race on a plain Dictionary can corrupt it and throw,
-        // which the animation path's best-effort exception handling swallows silently, so a sound just
-        // never plays with no visible cause.
+        // Decoding a bank or wave archive is slow, so it's cached. Concurrent, because one move can play several sounds
+        // from one bank on the same frame, each on its own thread, as Thunder Punch does.
         private readonly ConcurrentDictionary<int, List<SbnkInstrument>> _bankCache = new ConcurrentDictionary<int, List<SbnkInstrument>>();
         private readonly ConcurrentDictionary<int, List<SwavSample>> _waveArcCache = new ConcurrentDictionary<int, List<SwavSample>>();
 
-        /// <summary>Decoded instruments for bank <paramref name="bankNo"/> (an index into <see cref="Banks"/>),
-        /// decoded once and cached thereafter.</summary>
+        /// <summary>Bank <paramref name="bankNo"/>'s instruments, decoded once.</summary>
         public List<SbnkInstrument> GetBankInstruments(int bankNo)
         {
             if (bankNo < 0 || bankNo >= Banks.Count || Banks[bankNo] == null) return null;
@@ -315,8 +293,7 @@ namespace DSPRE.Avalonia.Data
             });
         }
 
-        /// <summary>Decoded waves for wave archive <paramref name="waveArcNo"/> (an index into
-        /// <see cref="WaveArcs"/>), decoded once and cached thereafter.</summary>
+        /// <summary>Wave archive <paramref name="waveArcNo"/>'s waves, decoded once.</summary>
         public List<SwavSample> GetWaveArchive(int waveArcNo)
         {
             if (waveArcNo == 0xFFFF || waveArcNo < 0 || waveArcNo >= WaveArcs.Count || WaveArcs[waveArcNo] == null) return null;

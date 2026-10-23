@@ -7,14 +7,10 @@ using System.Text.RegularExpressions;
 namespace DSPRE.HgEngine
 {
     /// <summary>
-    /// Archives hg-engine builds from one PNG per member, as pokegra.mk and itemgra.mk lay out battle sprites, party
-    /// icons and item icons, and from the PNGs, palettes and files narcs.mk's recipes convert or copy over a vanilla
-    /// archive (bag, battle HUD, weather icons, footprints, Pokédex and opening graphics). A member's drawing is the
-    /// PNG's pixels and its colours that PNG's palette, so a change to either is kept only once it is in that PNG.
-    /// Everything is read from the Makefile and the fragments it includes: the narchive recipe names the build folder
-    /// and the archive, the rules name each file's source, and the members are that folder's files in name order.
-    /// Members the recipe extracts from the ROM and leaves alone have no source.
+    /// Archives hg-engine builds from PNGs, read from the Makefile's recipes; an edit lasts only once it is in the
+    /// PNG. Members copied from the ROM unchanged have no source.
     /// </summary>
+    /// <remarks>The recipes are pokegra.mk, itemgra.mk and narcs.mk; the members are the build folder's files in name order.</remarks>
     public static class HgEngineBuiltPngs
     {
         public enum Part { Pixels, Colours, Copy, JascColours }
@@ -184,7 +180,7 @@ namespace DSPRE.HgEngine
 
                 if (byName.Count == 0) continue;
                 // Built members are listed whole, sourced or not, so positions match the archive; without a build
-                // only the sourced members are known, as before.
+                // only the sourced members are known.
                 into[HgEngineOwnedFiles.Normalise(target)] = names != null
                     ? names.Select(n => byName.TryGetValue(n, out Source src) ? src : null).ToList()
                     : byName.Values.ToList();

@@ -125,10 +125,10 @@ namespace DSPRE.ROMFiles
             string error = Save();
             if (error != null)
             {
-                AppMessages.Error("The Battle Tower Pokémon sets weren't saved:\n" + error, "Battle Tower error");
+                AppMessages.Error("The Battle Tower Pokémon sets weren't saved:\n" + error, "Battle Tower");
                 return false;
             }
-            if (showSuccessMessage) AppMessages.Info("Battle Tower Pokemon sets saved successfully!", "Success");
+            if (showSuccessMessage) AppMessages.Notice("Battle Tower Pokémon sets saved.");
             return true;
         }
 
@@ -139,7 +139,7 @@ namespace DSPRE.ROMFiles
             {
                 string narcDir = Filesystem.BattleTowerPokemon;
                 if (string.IsNullOrEmpty(narcDir) || !Directory.Exists(narcDir))
-                    return "The Battle Tower Pokémon set folder was not found.";
+                    return "The Battle Tower Pokémon set folder wasn't found.";
 
                 for (int i = 0; i < Sets.Count; i++)
                 {
@@ -166,13 +166,13 @@ namespace DSPRE.ROMFiles
 
                 if (showSuccessMessage)
                 {
-                    AppMessages.Info("Battle Tower Pokemon sets exported successfully!", "Success");
+                    AppMessages.Notice("Battle Tower Pokémon sets exported.");
                 }
                 return true;
             }
             catch (Exception ex)
             {
-                AppMessages.Error($"Error exporting Battle Tower Pokemon sets: {ex.Message}", "Error");
+                AppMessages.Error($"Couldn't export the Battle Tower Pokémon sets: {ex.Message}", "Battle Tower editor");
                 return false;
             }
         }
@@ -194,7 +194,7 @@ namespace DSPRE.ROMFiles
             }
             catch (Exception ex)
             {
-                AppMessages.Error($"Error importing Battle Tower Pokemon sets: {ex.Message}", "Error");
+                AppMessages.Error($"Couldn't import the Battle Tower Pokémon sets: {ex.Message}", "Battle Tower editor");
                 return false;
             }
         }

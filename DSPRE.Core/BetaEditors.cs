@@ -26,7 +26,7 @@ namespace DSPRE
         {
             ["AbilityFlagsEditorView"] = new("Ability flags (hg-engine)", "Pokémon"),
             ["AudioEditorView"] = new("Audio editor", "Audio"),
-            ["BallCapsuleEditorView"] = new("Ball Capsules", "Graphics"),
+            ["BallCapsuleEditorView"] = new("Ball capsules", "Graphics"),
             ["BannerEditorView"] = new("Game icon & banner", "Graphics"),
             ["BattleSceneBrowserView"] = new("Battle scenes", "Graphics"),
             ["BattleScreenEditorView"] = new("Battle screen", "Graphics"),
@@ -37,7 +37,7 @@ namespace DSPRE
             ["BreedingItemsView"] = new("Breeding items", "Pokémon"),
             ["CellAnimationEditorView"] = new("Cell animations", "Graphics"),
             ["DistortionWorldView"] = new("Distortion World", "World"),
-            ["DungeonCutinEditorView"] = new("Dungeon cutin editor", "Graphics"),
+            ["DungeonCutinEditorView"] = new("Dungeon cut-in editor", "Graphics"),
             ["EncounterSlotOddsView"] = new("Encounter slot odds", "Pokémon"),
             ["FontEditorView"] = new("Font editor", "Text"),
             ["FriendshipChangesView"] = new("Friendship changes", "Pokémon"),
@@ -54,7 +54,7 @@ namespace DSPRE
             ["PokegearPhoneBookView"] = new("Pokégear phone book", "Trainers"),
             ["SummaryScreenEditorView"] = new("Summary screen", "Graphics"),
             ["ScreensEditorView"] = new("Screens", "Graphics"),
-            ["ProjectChecksView"] = new("Validation & Where-Used", "Tools"),
+            ["ProjectChecksView"] = new("Validation and where used", "Tools"),
             ["TilesetBuilderView"] = new("Picture to background", "Graphics"),
             ["TitleScreenEditorView"] = new("Title screen editor", "Graphics"),
             ["TrainerCardEditorView"] = new("Trainer card editor", "Graphics"),
@@ -88,7 +88,7 @@ namespace DSPRE
             Enabled || string.IsNullOrEmpty(window) || !Testing.ContainsKey(window) || Needed.Contains(window);
 
         /// <summary>The message for a greyed-out editor, or null when it is allowed.</summary>
-        public static string WhyNot(string window) => Allows(window) ? null : $"{Named(window)} is not available yet.";
+        public static string WhyNot(string window) => Allows(window) ? null : $"{Named(window)} isn't available yet.";
 
         public static string Named(string window) => Testing.TryGetValue(window ?? "", out Editor e) ? e.Name : window;
 
@@ -105,8 +105,8 @@ namespace DSPRE
         public static IReadOnlyList<BetaFeature> Features { get; } = new List<BetaFeature>
         {
             new() { Name = "Walking the map", Where = "Event editor" },
-            new() { Name = "The animated preview", Where = "Event editor and Map editor" },
-            new() { Name = "The tile boundary overlay", Where = "Event editor and Map editor" },
+            new() { Name = "Animated preview", Where = "Event editor and Map editor" },
+            new() { Name = "Tile boundary overlay", Where = "Event editor and Map editor" },
             new() { Name = "Bug Contest opponents", Where = "Special encounters editor" },
             new() { Name = "Pokéathlon stats", Where = "Pokémon editor" },
             new() { Name = "Swarms", Where = "Special encounters editor" },

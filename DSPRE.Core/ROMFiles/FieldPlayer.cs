@@ -173,7 +173,7 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>The tile the player is looking at, which is what an interaction reaches.</summary>
+        /// <summary>The tile the player faces, which an interaction reaches.</summary>
         public (int x, int z) TileAhead
         {
             get { (int dx, int dz) = Step(Facing); return (TileX + dx, TileZ + dz); }
@@ -234,7 +234,6 @@ namespace DSPRE.ROMFiles
         public void Face(MoveFacing dir) { Facing = dir; _cycle.Face(dir); }
     }
 
-    /// <summary>What a spawnable is. </summary>
     public enum SpawnableKind { Normal = 0, Signboard = 1, HiddenItem = 2 }
 
     /// <summary>
@@ -255,12 +254,12 @@ namespace DSPRE.ROMFiles
         public const int DoubleFirst = 5000;
         public const int DoubleLast = 6999;
 
-        /// <summary>True when a script id is one of the ones that stands for a trainer battle.</summary>
+        /// <summary>True when a script id starts a trainer battle.</summary>
         public static bool IsTrainerScript(int scriptId) =>
             (scriptId >= SingleFirst && scriptId <= SingleLast) ||
             (scriptId >= DoubleFirst && scriptId <= DoubleLast);
 
-        /// <summary>Whether the script id is one of the two-against-two range.</summary>
+        /// <summary>Whether the script id is in the double battle range.</summary>
         public static bool IsDouble(int scriptId) => scriptId >= DoubleFirst && scriptId <= DoubleLast;
 
         /// <summary>The trainer a script id stands for, or null when it isn't a trainer script at all.</summary>

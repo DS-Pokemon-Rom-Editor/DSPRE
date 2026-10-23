@@ -4,9 +4,7 @@
     <!-- DSPRE-local tweaks layered on top of the Qt Fusion control themes. -->
 
     <!-- Rounded corners. The control templates bind {TemplateBinding CornerRadius}; these setters supply it. -->
-    <!-- The window itself must use our palette. We do not ship a separate Window theme, so without
-         this the window falls back to SimpleTheme's background and the whole palette looks "unchanged"
-         (only the controls were getting our colours). -->
+    <!-- Windows use our palette too; there is no separate Window theme. -->
     <Style Selector="Window">
         <Setter Property="Background" Value="{DynamicResource Window.Static.Background}"/>
         <Setter Property="FontFamily" Value="sans-serif"/>
@@ -45,24 +43,17 @@
          column). Pin it to the text-field background and round it. -->
     <Style Selector="NumericUpDown">
         <Setter Property="Background" Value="{DynamicResource TextBox.Static.Background}"/>
-        <!-- BorderThickness/Brush propagate to the inner ButtonSpinner frame (SimpleTheme's
-             NumericUpDown template binds them through), so THIS draws the spinbox's dark outline:
-             setting it to 0 earlier is exactly what removed the outline. Keep it dark + 1px; the
-             inner TextBox is separately de-bordered below so there's no double frame. -->
+        <!-- The border here draws the spin box outline; the inner TextBox has none, so there's no double frame. -->
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="BorderBrush" Value="{DynamicResource TextBox.Static.Border}"/>
         <Setter Property="CornerRadius" Value="3"/>
-        <!-- Compact + sizes to its content instead of stretching to fill the cell (Fusion spinboxes
-             are tight). HorizontalAlignment=Left stops it filling star columns; MinWidth keeps single
-             digits from collapsing. Shorter than the 28px default fields. -->
+        <!-- Spin boxes size to their content, as Fusion ones are tight. -->
         <Setter Property="HorizontalAlignment" Value="Left"/>
         <Setter Property="MinWidth" Value="54"/>
         <Setter Property="MinHeight" Value="22"/>
         <Setter Property="Padding" Value="0"/>
     </Style>
-    <!-- Avalonia NumericUpDown hosts a TextBox inside the ButtonSpinner; strip its frame/fill so it
-         doesn't double-border, RELEASE the global TextBox MinHeight=28 (that's what was forcing the
-         spin box tall), and centre the number vertically. -->
+    <!-- The spin box's TextBox drops its frame and the 28px minimum height, and centres the number. -->
     <Style Selector="NumericUpDown /template/ TextBox">
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Background" Value="Transparent"/>

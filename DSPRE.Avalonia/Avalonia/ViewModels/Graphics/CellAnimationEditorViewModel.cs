@@ -144,8 +144,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private uint _playMode;
         public uint PlayMode { get => _playMode; init => _playMode = value; }
 
-        // Editing a sequence changes what this row says about it. The row is updated in place rather than
-        // replaced, since replacing the selected item would knock the selection off it.
+        // The row is updated in place, since replacing the selected item would drop the selection.
         internal void Freshen(int frames, uint playMode)
         {
             _frames = frames; _playMode = playMode;
@@ -226,9 +225,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// number lands in the wrong place.
         /// </param>
         /// <param name="poketchApp">
-        /// The Pokétch application this animation belongs to, or -1. Given one, the sprite is drawn inside
-        /// that application's casing and screen rather than on an empty background, and the run is stepped
-        /// at the speed the Pokétch steps it.
+        /// The Pokétch application this animation belongs to, or -1. Given one, the sprite is drawn inside its
+        /// casing and stepped at the Pokétch's speed.
         /// </param>
         public CellAnimationEditorViewModel(DirNames dir, int animation, int cells, int sprites,
                                             int palette, int paletteRow, string what, int sharedSheet = -1,
@@ -306,7 +304,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string StatusText { get => _status; private set => Set(ref _status, value); }
 
         public string FileNote => _file == null
-            ? "This file could not be read."
+            ? "This file couldn't be read."
             : $"{_file.Sequences.Count} sequences, {_file.Sequences.Sum(s => s.Frames.Count)} frames"
               + (_file.HasExtendedData ? ", with an extended block that is kept as it is" : "");
 
@@ -331,16 +329,15 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 ArchiveFiles narc = _source;
-                if (!narc.Available) { StatusText = "This game does not have that archive."; return; }
+                if (!narc.Available) { StatusText = "This game doesn't have that archive."; return; }
 
-                // These files are kept squeezed down in the ROM. How each was stored is remembered, so
-                // saving puts it back the same way rather than as plain bytes the game cannot read.
+                // These files are compressed in the ROM, so saving compresses each one the same way again.
                 byte[] stored = narc.Get(_animation);
                 _animationMarker = GraphicAssets.SqueezeMarker(stored);
                 byte[] raw = GraphicAssets.Unsqueeze(stored);
 
                 _file = NanrFile.Read(raw);
-                if (_file == null) { StatusText = "That file is not a cell animation."; return; }
+                if (_file == null) { StatusText = "That file isn't a cell animation."; return; }
 
                 if (_cells >= 0)
                 {
@@ -356,8 +353,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 OnPropertyChanged(nameof(CanUndo));
                 OnPropertyChanged(nameof(CanRedo));
 
-                // Opened from a Pokétch application, the preview is drawn inside that application's own
-                // screen, so a frame is seen where a player would see it rather than floating on nothing.
+                // Opened from a Pokétch application, the preview draws inside that application's screen.
                 if (_poketchApp >= 0)
                 {
                     _app = PoketchApps.All.FirstOrDefault(a => a.Id == _poketchApp);
@@ -374,7 +370,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             catch (Exception ex)
             {
                 AppLogger.Error("Cell animation load: " + ex.Message);
-                StatusText = "That file could not be read. " + ex.Message;
+                StatusText = "That file couldn't be read. " + ex.Message;
             }
         }
 
@@ -451,8 +447,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             if (_loading || _filling || _file == null) return;
 
-            // A drawing number past the end of the layout is a sprite the game cannot find, so it is
-            // refused with the count rather than written and discovered later.
+            // A drawing number past the layout's end is one the game can't find, so it's refused with the count.
             if (row.Cell >= _banks.Count && _banks.Count > 0)
             {
                 StatusText = $"This layout holds {_banks.Count} drawings, numbered 0 to {_banks.Count - 1}.";
@@ -600,7 +595,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 _file.SetLoopStart(_sequence, value - 1);
                 Remember(before);
                 Dirty = true;
-                StatusText = $"It now comes back to frame {value}.";
+                StatusText = $"It now loops back to frame {value}.";
             }
         }
 
@@ -635,10 +630,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public bool HasAnimationTypeWarning => _animationType == 1;
 
-        /// <summary>Said out loud because a sequence set this way draws nothing without multi-cell data.</summary>
+        /// <summary>Shown because a sequence set this way draws nothing without multi-cell data.</summary>
         public string AnimationTypeWarning => _animationType != 1 ? null
-            : "Everything in these games indexes cell banks. Set this way, the sequence only draws if the "
-            + "game has multi-cell data for it.";
+            : "The games use cell banks. Set this way, the sequence only draws if the game has multi-cell "
+            + "data for it.";
 
         /// <summary>
         /// Adds a sequence on the end, copied from the last one. Only the end, because the games reach a
@@ -673,7 +668,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             Dirty = true;
             FillSequences();
             OnPropertyChanged(nameof(FileNote));
-            StatusText = "Took the last sequence off.";
+            StatusText = "Removed the last sequence.";
         }
 
         /// <summary>Copies a frame and puts the copy straight after it.</summary>
@@ -709,7 +704,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_sequence < Sequences.Count)
                 Sequences[_sequence].Freshen(Frames.Count, _file.Sequences[_sequence].PlayMode);
             OnPropertyChanged(nameof(FileNote));
-            StatusText = $"Took out frame {number + 1}.";
+            StatusText = $"Removed frame {number + 1}.";
         }
 
         // ── moving the pieces of a drawing ───────────────────────────────────────────
@@ -819,12 +814,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             OnPropertyChanged(nameof(CanRedo));
         }
 
-        public void Undo() { if (_history.CanUndo) StepTo(_history.Undo(), "Put back."); }
-        public void Redo() { if (_history.CanRedo) StepTo(_history.Redo(), "Done again."); }
+        public void Undo() { if (_history.CanUndo) StepTo(_history.Undo()); }
+        public void Redo() { if (_history.CanRedo) StepTo(_history.Redo()); }
 
-        private void StepTo(Step step, string said)
+        private void StepTo(Step step)
         {
-
             if (step.Animation != null) _file = NanrFile.Read(step.Animation);
             if (step.Layout != null)
             {
@@ -835,7 +829,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             Dirty = true;
             FillFrames();
             RefreshSequenceRows();
-            StatusText = said;
+            StatusText = "";
             OnPropertyChanged(nameof(CanUndo));
             OnPropertyChanged(nameof(CanRedo));
             OnPropertyChanged(nameof(FileNote));
@@ -876,29 +870,27 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             catch (Exception ex)
             {
                 AppLogger.Error("Cell animation save: " + ex.Message);
-                StatusText = "That could not be saved. " + ex.Message;
+                StatusText = "That couldn't be saved. " + ex.Message;
             }
         }
 
         /// <summary>
-        /// A file that was squeezed down goes back squeezed, checked the same way the graphics painter
-        /// checks its own. Both files are made ready before either is written, so a refusal cannot leave
-        /// one half of an edit saved.
+        /// A compressed file is saved compressed, checked as the graphics painter checks its files. Both files
+        /// are prepared before either is written, so a refusal can't leave half an edit saved.
         /// </summary>
         private static byte[] Ready(byte[] plain, byte marker, out string trouble)
         {
             trouble = null;
             if (marker == 0x11)
             {
-                trouble = "This file is squeezed down in a way DSPRE cannot put back yet, so nothing "
-                        + "was saved.";
+                trouble = "This file uses a compression DSPRE can't write yet, so nothing was saved.";
                 return null;
             }
             if (marker == 0) return plain;
 
             byte[] packed = GraphicAssets.Squeeze(plain, marker);
             if (packed == null)
-                trouble = "This file could not be squeezed back down, so nothing was saved.";
+                trouble = "This file couldn't be compressed again, so nothing was saved.";
             return packed;
         }
 
@@ -1004,7 +996,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         else { _frame = Frames.Count - 1; Stop(); break; }
                     }
 
-                    // Only a frame with a hold of its own is ever put on screen.
+                    // Only frames with a nonzero hold are shown.
                     if (Frames[_frame].Delay > 0) { _shown = _frame; break; }
                 }
             }
@@ -1033,8 +1025,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
                 if (InPoketch && _inCasing)
                 {
-                    // Seeing the frame is the point of this window, so one with no recorded position is
-                    // drawn in the middle and said to be.
+                    // A frame with no recorded position is drawn in the middle, with a note saying so.
                     (int X, int Y)[] slots = _app.SpriteSlots ?? new[] { PoketchScreen.MiddleOfScreen };
                     Preview = ImageConverter.FromRgba(_casing.RenderApp(
                         false, 0, false, _app.Tiles, _app.Arrangement, _app.Sprites, _app.Cells, cell,
@@ -1042,7 +1033,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         new PoketchScreen.Motion(degrees, scaleX, scaleY, sx, sy), _app.BgLayer), DsBgScreen.Width, DsBgScreen.Height);
                     OnPropertyChanged(nameof(PlayingFrame));
                     if (_app.SpriteSlots == null && string.IsNullOrEmpty(StatusText))
-                        StatusText = "Drawn in the middle; the game's code sets where";
+                        StatusText = "Drawn in the middle; the game sets its position in code";
                     return;
                 }
 
@@ -1061,7 +1052,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
         }
 
-        /// <summary>Opens the Bottom Screen editor on the application this animation belongs to.</summary>
+        /// <summary>Opens the Bottom screen editor on the application this animation belongs to.</summary>
         public void BackToPoketch()
         {
             if (!InPoketch) return;
@@ -1069,7 +1060,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             AvaloniaEditorLauncher.OpenBottomScreenEditor(_poketchApp);
         }
 
-        /// <summary>How many cell banks the paired layout holds, which is the limit on a drawing number.</summary>
+        /// <summary>How many cell banks the paired layout holds; drawing numbers stay below it.</summary>
         public int CellCount => _banks.Count;
 
         // Sprite memory holds the shared sheet first, then this screen's own, and the cells count tiles

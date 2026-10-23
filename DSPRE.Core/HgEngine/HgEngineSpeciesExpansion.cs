@@ -58,7 +58,7 @@ namespace DSPRE.HgEngine
         public static bool TryPlanFakemon(string displayName, out FakemonPlan plan, out string error)
         {
             plan = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             if (!TryGetPaths(out string headerPath, out string sourcePath, out error)) return false;
             return TryPlanFakemon(displayName, HgEngineSymbolTable.Load(HeaderRelPath),
                 HgEngineFileCache.GetText(headerPath), HgEngineFileCache.GetText(sourcePath), out plan, out error);
@@ -69,22 +69,22 @@ namespace DSPRE.HgEngine
         {
             plan = null;
             error = null;
-            if (species == null) { error = $"Could not load {HeaderRelPath}."; return false; }
+            if (species == null) { error = $"Couldn't load {HeaderRelPath}."; return false; }
             if (!species.TryGetValue("MAX_CANONICAL_MON_NUM", out int canonicalMax))
-            { error = "Could not find MAX_CANONICAL_MON_NUM in species.h."; return false; }
+            { error = "Couldn't find MAX_CANONICAL_MON_NUM in species.h."; return false; }
             if (!species.TryGetValue("NUM_OF_FAKEMONS", out int fakemonCount))
-            { error = "Could not find NUM_OF_FAKEMONS in species.h."; return false; }
+            { error = "Couldn't find NUM_OF_FAKEMONS in species.h."; return false; }
 
             int candidateId = canonicalMax + fakemonCount + 1;
             string designator = Prefix + HgEngineNameSlug.ToUniqueSlug(displayName, species, Prefix);
 
             if (!HgEngineHeaderEditor.TryInsertBeforeDefine(ref headerText, "NUM_OF_FAKEMONS", $"#define {designator} (MAX_CANONICAL_MON_NUM + {fakemonCount + 1})\n\n"))
-            { error = "Could not find NUM_OF_FAKEMONS in species.h to anchor the new species next to."; return false; }
+            { error = "Couldn't find NUM_OF_FAKEMONS in species.h to anchor the new species next to."; return false; }
             if (!HgEngineHeaderEditor.TryReplaceDefineValue(ref headerText, "NUM_OF_FAKEMONS", (fakemonCount + 1).ToString()))
-            { error = "Could not update NUM_OF_FAKEMONS."; return false; }
+            { error = "Couldn't update NUM_OF_FAKEMONS."; return false; }
 
             if (!HgEngineHeaderEditor.TryInsertBeforeFinalCloseBrace(ref sourceText, BuildSpeciesEntry(designator, displayName)))
-            { error = $"Could not find the end of {SourceRelPath} to insert the new species."; return false; }
+            { error = $"Couldn't find the end of {SourceRelPath} to insert the new species."; return false; }
 
             plan = new FakemonPlan(candidateId, designator, displayName, headerText, sourceText);
             return true;
@@ -125,8 +125,8 @@ namespace DSPRE.HgEngine
             error = null;
             headerPath = Path.Combine(HgEngineProject.RepoPathUnc, HeaderRelPath.Replace('/', Path.DirectorySeparatorChar));
             sourcePath = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(headerPath)) { error = $"Source file not found: {headerPath}"; return false; }
-            if (!File.Exists(sourcePath)) { error = $"Source file not found: {sourcePath}"; return false; }
+            if (!File.Exists(headerPath)) { error = $"{headerPath} is missing from the checkout."; return false; }
+            if (!File.Exists(sourcePath)) { error = $"{sourcePath} is missing from the checkout."; return false; }
             return true;
         }
 

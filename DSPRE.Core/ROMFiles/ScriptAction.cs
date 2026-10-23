@@ -68,15 +68,13 @@ namespace DSPRE.ROMFiles
                     string details;
                     if (wholeLine.Contains(':') && wholeLine.ContainsNumber())
                     {
-                        details = "This probably means you forgot to \"End\" the Action above it.";
+                        details = "The action above may be missing its End.";
                     }
                     else
                     {
-                        details = "Are you sure it's a proper Action Command?";
+                        details = "It doesn't look like an action command.";
                     }
-                    AppMessages.Error("This Script file could not be saved." +
-                        Environment.NewLine + "Parser failed to interpret line " + lineNumber + ": \"" + wholeLine + "\"." +
-                        Environment.NewLine + "\n" + details, "Parser error");
+                    AppMessages.Error("Line " + lineNumber + " can't be read: \"" + wholeLine + "\".\n\n" + details, "Script not saved");
                     Id = null;
                     return;
                 }
@@ -84,9 +82,7 @@ namespace DSPRE.ROMFiles
 
             if (Id == 0x00FE && nameParts.Length != 1 || Id != 0x00FE && nameParts.Length != 2)
             { //E.g.: End 0x2 0x40    OR     LookUp
-                AppMessages.Error("Wrong number of parameters for action " + nameParts[0] + " at line " + lineNumber + "." + Environment.NewLine +
-                    "Received: " + (nameParts.Length - 1) + Environment.NewLine + "Expected: 1"
-                    + Environment.NewLine + "\nThis Script File can not be saved.", "Error");
+                AppMessages.Error("Action " + nameParts[0] + " on line " + lineNumber + " takes 1 parameter but has " + (nameParts.Length - 1) + ".", "Script not saved");
                 Id = null;
             }
             else

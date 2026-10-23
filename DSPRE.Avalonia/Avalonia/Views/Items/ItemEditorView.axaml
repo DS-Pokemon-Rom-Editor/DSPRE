@@ -13,7 +13,7 @@
     </Design.DataContext>
 
     <DockPanel>
-        <!-- ── Top: Item Selector ── -->
+
         <controls:EditorToolbar x:Name="ItemBar">
                 <Button x:Name="SaveAllButton" Content="Save" controls:Icon.Key="saveButton" IsEnabled="{Binding HasUnsavedChanges}"/>
                 <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
@@ -30,10 +30,10 @@
                 <Button x:Name="ExportButton" Click="Export_Click" Content="Export…" controls:Icon.Key="export"/>
                 <Button x:Name="ImportButton" Click="Import_Click" Content="Import…" controls:Icon.Key="import"
                         ToolTip.Tip="Read an exported item data file into this item"/>
-                <Button Content="Open in Graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
-                        ToolTip.Tip="Open this item's icon in the Graphics window, where it can be painted by hand."/>
+                <Button Content="Open in All graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
+                        ToolTip.Tip="Open this item's icon in All graphics, where it can be painted by hand."/>
                 <Button x:Name="AddItemButton" Content="Add…" controls:Icon.Key="addIcon" IsVisible="{Binding ShowHgEngineBanner}"
-                        ToolTip.Tip="Mint a brand new item in the linked hg-engine checkout"/>
+                        ToolTip.Tip="Add a new item to the hg-engine checkout"/>
         </controls:EditorToolbar>
         <TextBlock DockPanel.Dock="Top" Margin="8,3" Text="{Binding SharedDataNote}" IsVisible="{Binding HasSharedDataNote}"
                    Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>
@@ -46,14 +46,14 @@
             <TextBlock Text="{Binding SourceLoadError, StringFormat='Saving is off: {0}'}" Foreground="White" FontSize="12" TextWrapping="Wrap"/>
         </Border>
 
-        <!-- ── Main Content ── -->
+
         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="6" Spacing="6">
 
-                <!-- Row 1: Icon + Table Entry | Hold + Pocket | Price + Functions -->
+
                 <Grid ColumnDefinitions="200,*,230" ColumnSpacing="6">
 
-                    <!-- Left: Icon preview + Table Entry -->
+
                     <StackPanel x:Name="TableEntryBox" Grid.Column="0" Spacing="4">
                         <Border Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
                                 Width="64" Height="64" HorizontalAlignment="Left"
@@ -92,7 +92,7 @@
                         </Border>
                     </StackPanel>
 
-                    <!-- Middle: Hold Effect + Pocket -->
+
                     <StackPanel x:Name="HoldPocketColumn" Grid.Column="1" Spacing="4">
                         <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
                                 BorderThickness="1" CornerRadius="4" Padding="6">
@@ -129,7 +129,7 @@
                         </Border>
                     </StackPanel>
 
-                    <!-- Right: Price + Functions -->
+
                     <StackPanel x:Name="UsageColumn" Grid.Column="2" Spacing="4">
                         <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
                                 BorderThickness="1" CornerRadius="4" Padding="6">
@@ -160,7 +160,7 @@
                     </StackPanel>
                 </Grid>
 
-                <!-- Row 2: Move Related -->
+
                 <Border x:Name="MoveRelatedBox" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
                         BorderThickness="1" CornerRadius="4" Padding="6">
                     <StackPanel Spacing="4">
@@ -187,7 +187,7 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Row 3: Usage Checks | Party Use -->
+
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6">
                     <Border x:Name="UsageChecksBox" Grid.Column="0" VerticalAlignment="Top"
                             BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
@@ -195,7 +195,7 @@
                         <StackPanel Spacing="4">
                             <TextBlock FontWeight="SemiBold" Margin="0,0,0,2">Usage checks</TextBlock>
                             <CheckBox IsChecked="{Binding PreventToss}">Prevent toss</CheckBox>
-                            <CheckBox IsChecked="{Binding Selectable}">Selectable (SELECT)</CheckBox>
+                            <CheckBox IsChecked="{Binding Selectable}">Can be registered to Select</CheckBox>
                         </StackPanel>
                     </Border>
 

@@ -9,8 +9,6 @@ namespace DSPRE
     /// <summary>
     /// Global crash handlers + crash-report files. Core (no UI-toolkit dependency): the crash dialog
     /// goes through <see cref="AppMessages"/> and folder reveal through <see cref="SystemShell"/>.
-    /// The WinForms host additionally routes <c>Application.ThreadException</c> to
-    /// <see cref="ReportCrash"/> and installs <see cref="RomPathProvider"/> for report context.
     /// </summary>
     public static class CrashReporter
     {
@@ -31,10 +29,8 @@ namespace DSPRE
         }
 
         /// <summary>
-        /// Writes a crash-report file for a NON-fatal, already-handled exception (e.g. one caught by the
-        /// Avalonia UI-thread net) and returns the file path. Unlike <see cref="ReportCrash"/> it does
-        /// NOT show the "application crashed" dialog, the caller surfaces a friendlier message and keeps
-        /// the app running. Returns null if the report could not be written.
+        /// Writes a crash report for an error DSPRE recovered from, without the crash dialog, and returns its
+        /// path. Null when the report can't be written.
         /// </summary>
         public static string LogHandled(Exception ex)
         {
@@ -67,8 +63,8 @@ namespace DSPRE
             }
 
             if (AppMessages.Confirm(
-                    $"An unexpected error occurred and the application crashed.\n\nA crash report was saved here:\n{filePath}\n\nOpen the folder?",
-                    "Application Error"))
+                    $"DSPRE crashed. A crash report was saved here:\n{filePath}\n\nOpen the folder?",
+                    "DSPRE crashed"))
             {
                 SystemShell.RevealInFileManager(filePath);
             }
@@ -93,7 +89,7 @@ namespace DSPRE
             }
             catch (Exception romEx)
             {
-                romPath = $"Failed to retrieve ROM path: {romEx.Message}";
+                romPath = $"Couldn't retrieve ROM path: {romEx.Message}";
             }
             sb.AppendLine($"Opened ROM Path: {romPath}");
             sb.AppendLine();

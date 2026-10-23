@@ -16,8 +16,7 @@ namespace DSPRE.Avalonia.Data
             public int FrontSpriteIndex;
             public int NormalPaletteIndex;
             public int ShinyPaletteIndex;
-            /// <summary>Set for an hg-engine form that has no place in the vanilla archive at all, which
-            /// is read straight from that species instead.</summary>
+            /// <summary>Set for an hg-engine form missing from the vanilla archive; its files come from this species.</summary>
             public int HgEngineSpeciesId = -1;
 
             public Form(string name, int backIdx, int frontIdx, int normalPal, int shinyPal)
@@ -109,7 +108,7 @@ namespace DSPRE.Avalonia.Data
                 if (u.Parts.Count > 0) units.Add(u);
             }
 
-            // Anything the table does not name still gets a row of its own rather than disappearing.
+            // A file the table doesn't name still gets a row.
             for (int i = 0; i < fileCount; i++)
             {
                 if (spokenFor.Contains(i)) continue;

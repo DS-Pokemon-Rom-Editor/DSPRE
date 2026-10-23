@@ -13,7 +13,6 @@
 
   <DockPanel>
 
-    <!-- ── Toolbar ─────────────────────────────────────────────────────────── -->
     <controls:EditorToolbar>
         <controls:FusionAutoCompleteBox x:Name="FilePicker" Width="160" ItemsSource="{Binding ArchiveNames}"
                                         SelectedIndex="{Binding SelectedArchiveIndex}"/>
@@ -26,12 +25,12 @@
         <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
         <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
         <Button Content="Show file" controls:Icon.Key="folder" Click="ShowArchiveFile_Click" ToolTip.Tip="The archive as last saved"/>
-        <Button Content="Open file" controls:Icon.Key="OpenLink" Click="OpenArchiveFile_Click" ToolTip.Tip="In the program your system opens it with"/>
+        <Button Content="Open file" controls:Icon.Key="OpenLink" Click="OpenArchiveFile_Click" ToolTip.Tip="Opens it in your system's default program"/>
         <CheckBox Content="Hex line numbers" IsChecked="{Binding HexNumbering}" VerticalAlignment="Center"/>
         <CheckBox Content="Message box" IsChecked="{Binding ShowPreview}" VerticalAlignment="Center"
-                  ToolTip.Tip="Show the selected line the way the game would, in its own message box."/>
+                  ToolTip.Tip="Show the selected line in the game's message box."/>
         <Button Content="STRVAR help" Click="StrVarHelp_Click"
-                ToolTip.Tip="Open the string buffer syntax, examples, and type reference"/>
+                ToolTip.Tip="How to put names and numbers into a message, with examples"/>
     </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Top" IsVisible="{Binding HasHgEngineNote}"
@@ -41,14 +40,12 @@
                  Foreground="{DynamicResource Editor.Subtle}"/>
     </Border>
 
-    <!-- ── Status bar ──────────────────────────────────────────────────────── -->
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8,3">
       <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"
                  VerticalAlignment="Center"/>
     </Border>
 
-    <!-- ── Search / replace panel ──────────────────────────────────────────── -->
     <Border x:Name="ReplacePanel" DockPanel.Dock="Right" Width="300" Background="{DynamicResource Editor.PanelBg}"
             BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1,0,0,0" Padding="8">
       <DockPanel>
@@ -70,7 +67,6 @@
       </DockPanel>
     </Border>
 
-    <!-- ── Message grid + line controls ────────────────────────────────────── -->
     <DockPanel>
       <controls:EditorToolbar x:Name="LineButtons" DockPanel.Dock="Bottom">
           <Button Content="Add message" controls:Icon.Key="addIcon"    Click="AddString_Click"/>
@@ -104,7 +100,7 @@
                           ToolTip.Tip="View larger" Cursor="Hand">
                     <Image Source="{Binding Picture}" Width="256" Height="192" RenderOptions.BitmapInterpolationMode="None"/>
                   </Button>
-                  <Button Content="Open in editor" Click="ShotOpen_Click" HorizontalAlignment="Left" IsVisible="{Binding HasEditor}"/>
+                  <Button Content="{Binding OpenText}" Click="ShotOpen_Click" HorizontalAlignment="Left" IsVisible="{Binding HasEditor}"/>
                 </StackPanel>
               </DataTemplate>
             </ItemsControl.ItemTemplate>

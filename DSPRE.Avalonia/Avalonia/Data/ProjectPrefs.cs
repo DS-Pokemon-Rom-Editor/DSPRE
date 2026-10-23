@@ -7,7 +7,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.Data
 {
     /// <summary>
-    /// Small editor choices that belong to one project rather than to DSPRE as a whole, such as which header a new
+    /// Small editor choices that belong to one project, not to DSPRE as a whole, such as which header a new
     /// header copies. Kept in <c>dspreDir/dspre_prefs.json</c> so they travel with the extracted ROM, like
     /// dspre_labels.json.
     /// </summary>

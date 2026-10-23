@@ -12,7 +12,7 @@ namespace DSPRE.HgEngine
         public IReadOnlyList<FieldPathSegment> Path { get; init; }
         public Func<T, int> Get { get; init; }
         public Action<T, int> Set { get; init; }
-        /// <summary>What the model can hold; a source value outside it is refused rather than truncated.</summary>
+        /// <summary>What the model can hold; a source value outside it is refused, not truncated.</summary>
         public int Min { get; init; } = int.MinValue;
         public int Max { get; init; } = int.MaxValue;
         public bool IsFlags { get; init; }
@@ -71,7 +71,7 @@ namespace DSPRE.HgEngine
                 if (!entry.TryGetRaw(field.Path, out string raw)) continue;
                 if (!HgEngineSourceExpression.TryEvaluate(raw, lookupFor(field), out int value))
                 {
-                    error = $"{field.Name} = {raw} could not be read.";
+                    error = $"{field.Name} = {raw} couldn't be read.";
                     return false;
                 }
                 if (value < field.Min || value > field.Max)

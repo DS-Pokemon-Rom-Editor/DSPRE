@@ -29,7 +29,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             string path = await DialogHelper.OpenFileAsync(this, "Pick a PNG to make a background from", PngOnly);
             if (path == null) return;
             string why = VM?.Open(path);
-            if (why != null) await DialogHelper.ShowErrorAsync(why, "That picture could not be opened", this);
+            if (why != null) await DialogHelper.ShowErrorAsync(why, "Picture to background", this);
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e)
@@ -46,14 +46,14 @@ namespace DSPRE.Avalonia.Views.Graphics
                 foreach (string ext in new[] { ".NCGR", ".NSCR" }) if (System.IO.File.Exists(stem + ext)) there.Add(System.IO.Path.GetFileName(stem + ext));
                 if (there.Count > 0 && !await DialogHelper.AskYesNoAsync(string.Join(" and ", there) + (there.Count == 1 ? " already exists beside it. Replace it?" : " already exist beside it. Replace them?"), "Replace files", this)) return;
                 string why = VM.Save(path);
-                if (why != null) await DialogHelper.ShowErrorAsync(why, "Those files could not be written", this);
+                if (why != null) await DialogHelper.ShowErrorAsync(why, "Picture to background", this);
                 else SaveNotice.Exported(path);
             }
             catch (System.Exception ex)
             {
                 AppLogger.Error("TilesetBuilder save failed: " + ex);
-                await DialogHelper.ShowErrorAsync("Those files could not be written: " + ex.Message,
-                                             "Those files could not be written", this);
+                await DialogHelper.ShowErrorAsync("Those files couldn't be written: " + ex.Message,
+                                             "Picture to background", this);
             }
         }
     }

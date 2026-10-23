@@ -9,9 +9,6 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.ROMFiles
 {
-    /// <summary>
-    /// Class to store message data from DS Pokémon games
-    /// </summary>
     public class TextArchive
     {
         #region Fields
@@ -48,7 +45,6 @@ namespace DSPRE.ROMFiles
 
         private void ReadMessages(string jsonPath, string binPath)
         {
-            // First try to read from json file if it exists
             if (TryReadJsonFile(jsonPath))
             {
                 return;
@@ -61,26 +57,24 @@ namespace DSPRE.ROMFiles
                 try
                 {
                     PlainFiles.Copy(jsonPath, kept, overwrite: true);
-                    AppMessages.Error($"Text archive {ID:D4}'s JSON could not be read, so it was read from the .bin again. "
+                    AppMessages.Error($"Text archive {ID:D4}'s JSON couldn't be read, so it was read from the .bin again. "
                         + $"The JSON was kept as {Path.GetFileName(kept)}.", "Text archive");
                 }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
                 {
-                    AppMessages.Error($"Text archive {ID:D4}'s JSON could not be read or kept aside ({ex.Message}). "
+                    AppMessages.Error($"Text archive {ID:D4}'s JSON couldn't be read or kept aside ({ex.Message}). "
                         + "It is being replaced from the .bin.", "Text archive");
                 }
             }
 
-            // Next try to read from legacy plain text file if it exists
             if (TryReadPlainTextFile(jsonPath))
             {
                 return;
             }
 
-            // If not, extract from the .bin file
             if (!ReadFromBinFile(jsonPath, binPath))
             {
-                AppMessages.Error($"Failed to read messages from .bin file {ID:D4}. Contents were replaced with empty message!", "Error");
+                AppMessages.Error($"Text archive {ID:D4} couldn't be read, so its messages were left empty.", "Error");
                 Messages = new List<string> { "" };
                 return;
             }
@@ -119,9 +113,8 @@ namespace DSPRE.ROMFiles
             {
                 if (!ConvertLegacyText())
                 {
-                    AppMessages.Error("One or more legacy text files could not be converted. " +
-                        "The build will be aborted.", "Legacy Text Conversion Failed");
-                    error = "One or more legacy text files could not be converted.";
+                    AppMessages.Error("Some old text files couldn't be converted, so the build stopped.", "Text files not converted");
+                    error = "One or more legacy text files couldn't be converted.";
                     return false;
                 }
             }
@@ -130,7 +123,7 @@ namespace DSPRE.ROMFiles
             if (!TextConverter.FolderToBin(expandedDir, GameDirs[DirNames.TextArchives].unpackedDir,
                     CharMapManager.GetCharMapPath(), out string encodeError))
             {
-                error = "Text archives could not be encoded:\n" + encodeError;
+                error = "Text archives couldn't be encoded:\n" + encodeError;
                 return false;
             }
 
@@ -142,17 +135,14 @@ namespace DSPRE.ROMFiles
 
             string expandedDir = TextConverter.GetExpandedFolderPath();
 
-            // Convert any legacy .txt files to .json first
             string[] txtFiles = Directory.GetFiles(expandedDir, "*.txt", SearchOption.TopDirectoryOnly);
 
             if (txtFiles.Length > 0)
             {
                 AppLogger.Info($"Found {txtFiles.Length} legacy text files to convert to JSON format.");
 
-                AppMessages.Info($"Found {txtFiles.Length} legacy text files in the expanded text archive directory.\n" +
-                    "These files need to be converted to the new JSON format to ensure compatibility with the current version of the tool.\n" +
-                    "DSPRE will now convert the files.",
-                    "Legacy Text Files Found");
+                AppMessages.Info($"This project has {Plural.Of(txtFiles.Length, "text file")} in the old format. DSPRE will convert them to JSON.",
+                    "Old text files found");
             }
             else
             {
@@ -176,7 +166,7 @@ namespace DSPRE.ROMFiles
                 }
                 else
                 {
-                    AppLogger.Error($"Could not parse Text Archive ID from legacy text file name: {fileName}. Skipping conversion for this file.");
+                    AppLogger.Error($"Couldn't parse Text Archive ID from legacy text file name: {fileName}. Skipping conversion for this file.");
                     failed = true;
                 }
             }
@@ -199,7 +189,7 @@ namespace DSPRE.ROMFiles
         {
             if (messageIndex < 0)
             {
-                AppLogger.Error($"Invalid message index {messageIndex} for Text Archive ID {ID:D4}");
+                AppLogger.Error($"Text archive {ID:D4} has no message {messageIndex}.");
                 return false;
             }
 
@@ -213,7 +203,6 @@ namespace DSPRE.ROMFiles
             string updatedMessage = TextConverter.ReplaceTrainerName(currentMessage, newSimpleName);
             if (updatedMessage == currentMessage)
             {
-                // No change made
                 return false;
             }
             Messages[messageIndex] = updatedMessage;
@@ -252,14 +241,12 @@ namespace DSPRE.ROMFiles
 
             try
             {
-                // Explicitly use UTF-8 encoding when reading the file
                 string jsonContent = File.ReadAllText(jsonPath, System.Text.Encoding.UTF8);
                 
                 JsonDocument doc = JsonDocument.Parse(jsonContent);
                 
                 JsonElement root = doc.RootElement;
                 
-                // Read key if present
                 if (root.TryGetProperty("key", out JsonElement keyElement))
                 {
                     _key = (UInt16)keyElement.GetInt32();
@@ -270,7 +257,6 @@ namespace DSPRE.ROMFiles
                     AppLogger.Warn($"No 'key' property found in JSON file {jsonPath}. Defaulting to 0.");
                 }
 
-                // Read messages array
                 if (root.TryGetProperty("messages", out JsonElement messagesElement) && 
                     messagesElement.ValueKind == JsonValueKind.Array)
                 {
@@ -281,13 +267,11 @@ namespace DSPRE.ROMFiles
                         string langCode = TextConverter.LangCodes[RomInfo.GameLanguage];
                         JsonElement textElement;
 
-                        // Try to get the message in the current game language
                         if (messageElement.TryGetProperty(langCode, out textElement))
                         {
                             string parsedMessage = ParseMessageValue(textElement);
                             Messages.Add(parsedMessage);
                         }
-                        // Fallback to en_US if current language not present
                         else if (messageElement.TryGetProperty("en_US", out textElement))
                         {
                             string parsedMessage = ParseMessageValue(textElement);
@@ -295,7 +279,6 @@ namespace DSPRE.ROMFiles
                         }
                         else
                         {
-                            // If neither language is present, add an empty string
                             Messages.Add("");
                         }
                     }
@@ -309,20 +292,14 @@ namespace DSPRE.ROMFiles
             }
             catch (Exception ex)
             {
-                AppLogger.Error($"Error reading JSON file {jsonPath}: {ex.Message}\nStack trace: {ex.StackTrace}");
+                AppLogger.Error($"Couldn't read JSON file {jsonPath}: {ex.Message}\nStack trace: {ex.StackTrace}");
                 return false;
             }
         }
 
-        /// <summary>
-        /// Attempts to read and parse a plain text file containing message data and a key in a specific format.
-        /// </summary>
-        /// <remarks>This method exists as legacy support for old projects to enable conversion.</remarks>
-        /// <returns>true if the text file exists, is properly formatted, and its contents are successfully read and parsed;
-        /// otherwise, false.</returns>
+        /// <summary>Reads an old plain text archive, for converting old projects; false when it is missing or malformed.</summary>
         private bool TryReadPlainTextFile(string jsonPath)
         {
-            // Convert .json path to .txt path
             string txtPath = Path.ChangeExtension(jsonPath, ".txt");
 
             if (!File.Exists(txtPath))
@@ -335,28 +312,25 @@ namespace DSPRE.ROMFiles
                 List<string> lines = File.ReadAllLines(txtPath).ToList();
                 if (lines.Count == 0)
                 {
-                    AppLogger.Error($"Text file {txtPath} is empty. Bin file will be reextracted.");
+                    AppLogger.Error($"Text file {txtPath} is empty. It will be read from the .bin again.");
                     return false;
                 }
 
-                // First line should be the key
                 string firstLine = lines[0];
                 if (!firstLine.StartsWith("# Key: "))
                 {
-                    AppLogger.Error($"Text file {txtPath} is missing the key in the first line. Bin file will be reextracted.");
+                    AppLogger.Error($"Text file {txtPath} is missing the key in the first line. It will be read from the .bin again.");
                     return false;
                 }
 
                 string keyHex = firstLine.Substring(7).Trim();
                 if (!UInt16.TryParse(keyHex.Replace("0x", ""), System.Globalization.NumberStyles.HexNumber, null, out _key))
                 {
-                    AppLogger.Error($"Text file {txtPath} has an invalid key format. Bin file will be reextracted.");
+                    AppLogger.Error($"Text file {txtPath} has an invalid key format. It will be read from the .bin again.");
                     return false;
                 }
 
-                // Check for newline character in last line and add a blank line if needed
-                // Since ReadAllLines() trims the newline, we read the last character of the file directly
-                // I hate this - Yako
+                // ReadAllLines drops a final newline, so check the last character and add the blank line back.
                 using (FileStream fs = new FileStream(txtPath, FileMode.Open, FileAccess.Read))
                 {
                     if (fs.Length > 0)
@@ -371,7 +345,6 @@ namespace DSPRE.ROMFiles
                     fs.Close();
                 }
 
-                // Remove the first line (the key) from the messages
                 lines.RemoveAt(0);
 
                 Messages = lines;
@@ -379,14 +352,12 @@ namespace DSPRE.ROMFiles
             }
             catch (Exception ex)
             {
-                AppLogger.Error($"Error reading text file {txtPath}: {ex.Message}. Bin file will be reextracted.");
+                AppLogger.Error($"Couldn't read text file {txtPath}: {ex.Message}. It will be read from the .bin again.");
                 return false;
             }
         }
 
-        /// <summary>
-        /// Parse a JSON message value that can be either a string or an array of strings
-        /// </summary>
+        /// <summary>A JSON message value, a string or an array of strings.</summary>
         private string ParseMessageValue(JsonElement element)
         {
             if (element.ValueKind == JsonValueKind.String)
@@ -395,7 +366,6 @@ namespace DSPRE.ROMFiles
             }
             else if (element.ValueKind == JsonValueKind.Array)
             {
-                // Join array elements into a single string
                 List<string> lines = new List<string>();
                 foreach (JsonElement line in element.EnumerateArray())
                 {
@@ -416,7 +386,7 @@ namespace DSPRE.ROMFiles
 
             if (!File.Exists(binPath))
             {
-                AppMessages.Error($"The .bin file for Text Archive ID {ID:D4} does not exist at the expected path: {binPath}", "File Not Found");
+                AppMessages.Error($"Text archive {ID:D4} is missing: {binPath}", "File not found");
                 return false;
             }
             try
@@ -428,12 +398,11 @@ namespace DSPRE.ROMFiles
 
                 TextConverter.BinToJSON(binPath, jsonPath, charmapPath);
                 
-                // After conversion, try to read the JSON file
                 return TryReadJsonFile(jsonPath);
             }
             catch (Exception ex)
             {
-                AppLogger.Error($"Error reading .bin file {binPath}: {ex.Message}");
+                AppLogger.Error($"Couldn't read .bin file {binPath}: {ex.Message}");
                 return false;
             }
         }
@@ -471,7 +440,7 @@ namespace DSPRE.ROMFiles
 
             if (showSuccessMessage)
             {
-                AppMessages.Info($"Text Archive ID {IDtoReplace:D4} saved to expanded directory:\n{jsonPath}", "Save Successful");
+                AppMessages.Notice($"Text archive {IDtoReplace:D4} saved.");
             }
         }
 
@@ -513,7 +482,6 @@ namespace DSPRE.ROMFiles
 
             string langCode = TextConverter.LangCodes[RomInfo.GameLanguage];
             
-            // Read existing JSON if it exists to preserve other languages
             Dictionary<string, JsonElement> existingMessages = new Dictionary<string, JsonElement>();
             UInt16 existingKey = _key;
             
@@ -524,13 +492,11 @@ namespace DSPRE.ROMFiles
                     string existingJson = File.ReadAllText(jsonPath, System.Text.Encoding.UTF8);
                     JsonDocument existingDoc = JsonDocument.Parse(existingJson);
                     
-                    // Preserve the existing key
                     if (existingDoc.RootElement.TryGetProperty("key", out JsonElement existingKeyElement))
                     {
                         existingKey = (UInt16)existingKeyElement.GetInt32();
                     }
                     
-                    // Store existing messages to merge with current language
                     if (existingDoc.RootElement.TryGetProperty("messages", out JsonElement existingMessagesElement) &&
                         existingMessagesElement.ValueKind == JsonValueKind.Array)
                     {
@@ -546,12 +512,11 @@ namespace DSPRE.ROMFiles
                 }
                 catch (Exception ex)
                 {
-                    AppLogger.Warn($"Could not read existing JSON file {jsonPath} for merging: {ex.Message}. Creating new file.");
+                    AppLogger.Warn($"Couldn't read existing JSON file {jsonPath} for merging: {ex.Message}. Creating new file.");
                     existingMessages.Clear();
                 }
             }
 
-            // Create JSON structure using System.Text.Json's native types with Unicode support
             using (MemoryStream stream = new MemoryStream())
             {
                 // Keep the file's own line ending; chatot writes LF.
@@ -560,7 +525,7 @@ namespace DSPRE.ROMFiles
                 {
                     Indented = true,
                     NewLine = crlf ? "\r\n" : "\n",
-                    // Don't escape Unicode characters, this is primarily for readability by humans
+                    // Unicode stays unescaped so people can read the file.
                     Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping 
                 };
                 
@@ -578,7 +543,7 @@ namespace DSPRE.ROMFiles
                         string msgId = $"msg_{ID:D4}_{messageIndex:D5}";
                         writer.WriteString("id", msgId);
                         
-                        // If this message exists in the file, copy all language properties except the current one
+                        // A message already in the file keeps its other languages.
                         if (existingMessages.ContainsKey(msgId))
                         {
                             JsonElement existingMessage = existingMessages[msgId];

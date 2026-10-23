@@ -90,7 +90,7 @@ namespace DSPRE.Avalonia.Data
             Plan plan = new Plan { Kind = kind };
             System.Drawing.Color[] palette = BattleGaugeTextRenderer.Colours();
             Dictionary<int, (int X, int Y)> squares = Squares(kind);
-            if (palette == null || squares.Count == 0) { plan.CannotBecause = "This bar's colours or layout could not be read."; return plan; }
+            if (palette == null || squares.Count == 0) { plan.CannotBecause = "This bar's colours or layout couldn't be read."; return plan; }
 
             uint At(int x, int y) => rgba[(y * width + x) * 4 + 3] < 128 ? 0xFF000000u
                 : Ds((uint)(rgba[(y * width + x) * 4] << 16 | rgba[(y * width + x) * 4 + 1] << 8 | rgba[(y * width + x) * 4 + 2]));
@@ -168,7 +168,7 @@ namespace DSPRE.Avalonia.Data
                 plan.Notes.Add("Some colours share numbers with the status words or the health fill, so those change colour too.");
 
             if (Theirs(kind))
-                plan.Notes.Add("In a wild battle the caught box shows the first status square until that Pokémon is caught.");
+                plan.Notes.Add("In a wild battle the caught box shows the first status tile until that Pokémon is caught.");
             else if (YourDouble(kind))
                 plan.Notes.Add(plan.ClearTextBackground ? "In doubles, Start shows the HP numbers where the gauge was."
                                                         : "In doubles, Start shows the HP numbers on the text background where the gauge was.");
@@ -245,7 +245,7 @@ namespace DSPRE.Avalonia.Data
             {
                 byte[] square = Bar(gauge[gauge.Count / 2]);
                 if (gauge.Select(Bar).Any(t => t == null || !t.AsSpan().SequenceEqual(square)))
-                    notes.Add("The health gauge is one piece repeated along its length, so it takes the look of its middle square.");
+                    notes.Add("The health gauge is one piece repeated along its length, so it takes the look of its middle tile.");
                 foreach (int colour in new[] { BattleGaugePieces.HpGreen, BattleGaugePieces.HpYellow, BattleGaugePieces.HpRed })
                 {
                     byte[] plain = Old(colour);
@@ -307,9 +307,9 @@ namespace DSPRE.Avalonia.Data
                     List<int> statusTiles = TilesOf(BattleGaugePieces.Slot.Status, kind).ToList();
                     byte[] firstStatus = statusTiles.Count > 0 ? Bar(statusTiles[0]) : null;
                     if (BattleGaugePieces.HasNumberEnds && after != null && firstStatus != null && !after.AsSpan().SequenceEqual(firstStatus))
-                        notes.Add("After Start is pressed twice, the square right of the bar end shows the first status square.");
+                        notes.Add("After Start is pressed twice, the tile right of the bar end shows the first status tile.");
                     if (!BattleGaugePieces.HasNumberEnds)
-                        notes.Add("With the numbers shown, the HP tag is covered by the first two status squares.");
+                        notes.Add("With the numbers shown, the HP tag is covered by the first two status tiles.");
                 }
             }
 

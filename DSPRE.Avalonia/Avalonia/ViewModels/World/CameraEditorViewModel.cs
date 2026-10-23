@@ -43,8 +43,8 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void Changed() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(null));
 
-        // The boxes show fewer digits than the table stores, so typing a camera's loaded number back must give
-        // its loaded raw value rather than the nearest one to the rounded number.
+        // The boxes show fewer digits than the table stores, so typing a camera's loaded number back keeps its
+        // loaded raw value.
         private GameCamera _loaded;
         private void Set<T>(ref T field, T fromBox, T loaded, decimal shown, Func<T, decimal> show)
         {
@@ -399,8 +399,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex)
             {
-                StatusText = $"Error loading camera data: {ex.Message}";
-                await DialogHelper.ShowErrorAsync($"Failed to load camera data:\n{ex.Message}", "Camera editor error");
+                StatusText = $"Couldn't load camera data: {ex.Message}";
+                await DialogHelper.ShowErrorAsync($"Couldn't load camera data:\n{ex.Message}", "Camera editor");
             }
         }
 
@@ -419,14 +419,14 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync($"Save failed:\n{ex.Message}", "Camera editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't save:\n{ex.Message}", "Camera editor");
             }
         }
 
         // ── Export / Import table ─────────────────────────────────────────────
         public async Task ExportTableAsync()
         {
-            FilePickerFileType filter = new FilePickerFileType("Camera Table File") { Patterns = new[] { "*.bin" } };
+            FilePickerFileType filter = new FilePickerFileType("Camera table file") { Patterns = new[] { "*.bin" } };
             string suggested = System.IO.Path.GetFileNameWithoutExtension(RomInfo.ProjectName) + " - CameraTable.bin";
             string path = await DialogHelper.SaveFileAsync(_owner, "Export camera table", new[] { filter }, suggested);
             if (path == null) return;
@@ -438,13 +438,13 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Camera editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Camera editor");
             }
         }
 
         public async Task ImportTableAsync()
         {
-            FilePickerFileType filter = new FilePickerFileType("Camera Table File") { Patterns = new[] { "*.bin" } };
+            FilePickerFileType filter = new FilePickerFileType("Camera table file") { Patterns = new[] { "*.bin" } };
             string path = await DialogHelper.OpenFileAsync(_owner, "Import camera table", new[] { filter });
             if (path == null) return;
 
@@ -454,8 +454,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (len % RomInfo.CameraSize != 0)
                 {
                     await DialogHelper.ShowErrorAsync(
-                        $"Not a {RomInfo.GameFamily} camera table file.\n" +
-                        $"File length must be a multiple of {RomInfo.CameraSize}.", "Camera editor error");
+                        "That isn't a camera table for this game.\n" +
+                        $"File length must be a multiple of {RomInfo.CameraSize}.", "Camera editor");
                     return;
                 }
 
@@ -472,7 +472,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Camera editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Camera editor");
             }
         }
 
@@ -481,9 +481,9 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             int index = SelectedCamera?.Index ?? -1;
             if (index < 0 || index >= Cameras.Count) return;
-            FilePickerFileType filter = new FilePickerFileType("Camera File") { Patterns = new[] { "*.bin" } };
+            FilePickerFileType filter = new FilePickerFileType("Camera file") { Patterns = new[] { "*.bin" } };
             string suggested = System.IO.Path.GetFileNameWithoutExtension(RomInfo.ProjectName) + $" - Camera {index}.bin";
-            string path = await DialogHelper.SaveFileAsync(_owner, $"Export Camera {index}", new[] { filter }, suggested);
+            string path = await DialogHelper.SaveFileAsync(_owner, $"Export camera {index}", new[] { filter }, suggested);
             if (path == null) return;
 
             try
@@ -494,7 +494,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Camera editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Camera editor");
             }
         }
 
@@ -502,8 +502,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             int index = SelectedCamera?.Index ?? -1;
             if (index < 0 || index >= Cameras.Count) return;
-            FilePickerFileType filter = new FilePickerFileType("Camera File") { Patterns = new[] { "*.bin" } };
-            string path = await DialogHelper.OpenFileAsync(_owner, $"Import Camera {index}", new[] { filter });
+            FilePickerFileType filter = new FilePickerFileType("Camera file") { Patterns = new[] { "*.bin" } };
+            string path = await DialogHelper.OpenFileAsync(_owner, $"Import camera {index}", new[] { filter });
             if (path == null) return;
 
             try
@@ -516,7 +516,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Camera editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Camera editor");
             }
         }
 
@@ -542,7 +542,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             DSPRE.Avalonia.Data.LabelStore.SetLabel(DSPRE.Avalonia.Data.LabelStore.CameraKey, row.Index, name, global: false);
             string error = DSPRE.Avalonia.Data.LabelStore.Save(global: false);
             AppEvents.RaiseLabelsChanged();
-            if (error != null) await DialogHelper.ShowErrorAsync("The name wasn't saved:\n" + error, "Camera editor error", _owner);
+            if (error != null) await DialogHelper.ShowErrorAsync("The name wasn't saved:\n" + error, "Camera editor", _owner);
         }
 
         private void OnLabelsChanged(object sender, EventArgs e)

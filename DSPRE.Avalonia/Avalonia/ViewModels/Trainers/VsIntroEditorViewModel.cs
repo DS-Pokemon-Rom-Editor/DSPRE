@@ -160,7 +160,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         /// <summary>
         /// Every run of files laid out the way the records' own sets are, so a set is only ever offered whole.
-        /// HGSS keeps a banner's tiles before its palette, so the layout is learnt rather than assumed.
+        /// HGSS keeps a banner's tiles before its palette, so the layout is read from the records.
         /// </summary>
         private void FindSets(List<int[]> sets, IEnumerable<int[]> used, params Kind[] roles)
         {
@@ -776,7 +776,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 (bool saved, string error) = await HgEngineSave.RunAsync(() => { _t.Save(); return null; });
                 if (!saved)
                 {
-                    if (error != null) await DialogHelper.ShowErrorAsync("The VS intros were not saved:\n" + error, Title);
+                    if (error != null) await DialogHelper.ShowErrorAsync("The VS intros weren't saved:\n" + error, Title);
                     return false;
                 }
             }
@@ -785,7 +785,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 try { _t.Save(); }
                 catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
                 {
-                    await DialogHelper.ShowErrorAsync("The VS intros were not saved:\n" + e.Message, Title);
+                    await DialogHelper.ShowErrorAsync("The VS intros weren't saved:\n" + e.Message, Title);
                     return false;
                 }
             }

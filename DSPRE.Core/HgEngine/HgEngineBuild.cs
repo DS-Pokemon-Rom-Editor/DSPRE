@@ -48,7 +48,7 @@ namespace DSPRE.HgEngine
         private static bool Run(string bashCommand, out string stdout, out string stderr)
         {
             stdout = ""; stderr = "";
-            if (!HgEngineProject.IsLinked) { stderr = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsLinked) { stderr = "No hg-engine checkout is linked."; return false; }
 
             using Process proc = new Process { StartInfo = BuildStartInfo(bashCommand, redirectOutput: true) };
             AppLogger.Info("hg-engine: " + bashCommand);
@@ -64,7 +64,7 @@ namespace DSPRE.HgEngine
             }
             catch (Win32Exception ex)
             {
-                stderr = $"Failed to start {ShellName}: " + ex.Message;
+                stderr = $"Couldn't start {ShellName}: " + ex.Message;
                 AppLogger.Error(stderr);
                 return false;
             }
@@ -82,7 +82,7 @@ namespace DSPRE.HgEngine
         {
             StringBuilder errBuf = new StringBuilder();
             stderr = "";
-            if (!HgEngineProject.IsLinked) { stderr = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsLinked) { stderr = "No hg-engine checkout is linked."; return false; }
 
             using Process proc = new Process { StartInfo = BuildStartInfo(bashCommand, redirectOutput: true), EnableRaisingEvents = true };
             proc.OutputDataReceived += (_, e) => { if (e.Data != null) onOutputLine?.Invoke(e.Data); };
@@ -98,7 +98,7 @@ namespace DSPRE.HgEngine
             }
             catch (Win32Exception ex)
             {
-                stderr = $"Failed to start {ShellName}: " + ex.Message;
+                stderr = $"Couldn't start {ShellName}: " + ex.Message;
                 AppLogger.Error(stderr);
                 return false;
             }
@@ -150,8 +150,7 @@ namespace DSPRE.HgEngine
             }
 
             psi.FileName = "wsl.exe";
-            // Only a checkout inside WSL names its distro. One on a Windows drive built through WSL
-            // has no distro in its path, so wsl.exe uses the default rather than being told a wrong one.
+            // Only a checkout inside WSL names its distro; one on a Windows drive uses the default.
             if (!string.IsNullOrWhiteSpace(HgEngineProject.WslDistro))
             {
                 psi.ArgumentList.Add("-d");

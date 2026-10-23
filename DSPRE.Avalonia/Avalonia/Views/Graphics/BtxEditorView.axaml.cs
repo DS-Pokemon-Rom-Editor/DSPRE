@@ -28,7 +28,7 @@ namespace DSPRE.Avalonia.Views.Graphics
                 AllowMultiple = false,
                 FileTypeFilter = new List<FilePickerFileType>
                 {
-                    new FilePickerFileType("PNG Image") { Patterns = new[] { "*.png" } }
+                    new FilePickerFileType("PNG image") { Patterns = new[] { "*.png" } }
                 }
             });
             if (files.Count == 0) return;
@@ -41,7 +41,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             bool needsProfile = VM.TryGetCompatibleProfiles(path, out List<OverworldGraphicsProfileOption> profiles, out string analysisError);
             if (analysisError != null)
             {
-                await DialogHelper.ShowErrorAsync($"Import failed: {analysisError}", "Overworld editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't import: {analysisError}", "Overworld editor");
                 return;
             }
 
@@ -73,7 +73,7 @@ namespace DSPRE.Avalonia.Views.Graphics
                 }
             }
             if (error != null)
-                await DialogHelper.ShowErrorAsync($"Import failed: {error}", "Overworld editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't import: {error}", "Overworld editor");
             else SaveNotice.Imported(null, path);
         }
 
@@ -85,7 +85,7 @@ namespace DSPRE.Avalonia.Views.Graphics
                 DefaultExtension = "png",
                 FileTypeChoices = new List<FilePickerFileType>
                 {
-                    new FilePickerFileType("PNG Image") { Patterns = new[] { "*.png" } }
+                    new FilePickerFileType("PNG image") { Patterns = new[] { "*.png" } }
                 }
             });
             if (file == null) return;
@@ -94,7 +94,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (path == null) return;
 
             if (VM?.ExportPng(path) == false)
-                await DialogHelper.ShowErrorAsync("Export failed.", "Overworld editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't export.", "Overworld editor");
             else SaveNotice.Exported(path);
         }
 
@@ -122,23 +122,23 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             if (dlgVm.SelectedSlot == null || dlgVm.SelectedCloneSource == null)
             {
-                await DialogHelper.ShowErrorAsync("Choose a texture slot and a clone source.");
+                await DialogHelper.ShowErrorAsync("Choose a texture slot and an overworld to copy.");
                 return;
             }
 
             string error = VM.AddEntryWithImage(dlgVm.AppearanceIdText, dlgVm.SelectedSlot.Id, dlgVm.SelectedCloneSource.Id, dlgVm.PngPath, dlgVm.RawBtxPath);
             if (error != null)
-                await DialogHelper.ShowErrorAsync($"Could not add entry: {error}");
+                await DialogHelper.ShowErrorAsync($"Couldn't add entry: {error}");
         }
 
         private async void DeleteEntry_Click(object sender, RoutedEventArgs e)
         {
-            if (!await DialogHelper.AskYesNoAsync("Delete this custom overworld entry? This cannot be undone.", "Delete overworld entry?", this))
+            if (!await DialogHelper.AskYesNoAsync("Delete this custom overworld entry? This can't be undone.", "Delete overworld entry?", this))
                 return;
 
             string error = VM?.DeleteSelectedEntry();
             if (error != null)
-                await DialogHelper.ShowErrorAsync($"Could not delete entry: {error}");
+                await DialogHelper.ShowErrorAsync($"Couldn't delete entry: {error}");
         }
     }
 }

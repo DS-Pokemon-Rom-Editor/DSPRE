@@ -13,14 +13,12 @@ namespace DSPRE.Avalonia.Views.Pokemon
     {
         private PokemonEditorViewModel ViewModel => (PokemonEditorViewModel)DataContext;
 
-        // Design-time constructor
         public PokemonEditorView()
         {
             InitializeComponent();
             DataContext = new PokemonEditorViewModel();
         }
 
-        // Runtime constructor
         public PokemonEditorView(PokemonEditorViewModel vm)
         {
             InitializeComponent();
@@ -57,7 +55,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
             string path = files.Count > 0 ? files[0].TryGetLocalPath() : null;
             if (path == null) return;
             string error = ViewModel.PokewalkerVM.Import(picture, path);
-            if (error != null) await DialogHelper.ShowErrorAsync(error, "Pokémon editor error", this);
+            if (error != null) await DialogHelper.ShowErrorAsync(error, "Pokémon editor", this);
             else SaveNotice.Imported("the Pokéwalker picture", path);
         }
 
@@ -74,7 +72,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
             string path = file?.TryGetLocalPath();
             if (path == null) return;
             string error = ViewModel.PokewalkerVM.Export(picture, path);
-            if (error != null) await DialogHelper.ShowErrorAsync(error, "Pokémon editor error", this);
+            if (error != null) await DialogHelper.ShowErrorAsync(error, "Pokémon editor", this);
             else SaveNotice.Exported(path);
         }
 
@@ -89,7 +87,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
             string path = files.Count > 0 ? files[0].TryGetLocalPath() : null;
             if (path == null) return;
             string error = ViewModel.PokedexVM.ImportFootprint(path);
-            if (error != null) await DialogHelper.ShowErrorAsync(error, "Pokémon editor error", this);
+            if (error != null) await DialogHelper.ShowErrorAsync(error, "Pokémon editor", this);
             else SaveNotice.Imported("the footprint", path);
         }
 
@@ -105,7 +103,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
             string path = file?.TryGetLocalPath();
             if (path == null) return;
             string error = ViewModel.PokedexVM.ExportFootprint(path);
-            if (error != null) await DialogHelper.ShowErrorAsync(error, "Pokémon editor error", this);
+            if (error != null) await DialogHelper.ShowErrorAsync(error, "Pokémon editor", this);
             else SaveNotice.Exported(path);
         }
 
@@ -135,8 +133,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         }
 
         /// <summary>
-        /// Opens this cry in the Audio editor, where saving it out and putting a new one in live alongside
-        /// every other sound in the ROM rather than being duplicated here.
+        /// Opens this cry in the Audio editor, which saves and replaces every sound.
         /// </summary>
         private void EditCry_Click(object sender, RoutedEventArgs e)
         {
@@ -145,7 +142,6 @@ namespace DSPRE.Avalonia.Views.Pokemon
             _ = AvaloniaEditorLauncher.OpenAudioEditorAsync(species);
         }
 
-        // ─── Learnset button handlers ─────────────────────────────────────────────
         private void Learnset_Add_Click(object sender, RoutedEventArgs e)
             => ViewModel.LearnsetVM.AddEntry();
 
@@ -174,7 +170,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
             string path = await DialogHelper.SaveFileAsync(this, "Export learnset (CSV)", new[] { filter }, $"learnset_{vm.CurrentId:D4}.csv");
             if (path == null) return;
             try { PlainFiles.WriteText(path, vm.BuildCsv()); SaveNotice.Exported(path); }
-            catch (System.Exception ex) { await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Pokémon editor error"); }
+            catch (System.Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Pokémon editor"); }
         }
     }
 }

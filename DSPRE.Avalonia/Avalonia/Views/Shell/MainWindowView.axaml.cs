@@ -13,10 +13,7 @@ using System.IO;
 namespace DSPRE.Avalonia.Views.Shell
 {
     /// <summary>
-    /// Avalonia MainWindow shell (preview). Hosts migrated editors as tabs and
-    /// launches the remaining standalone Avalonia editor windows via the menu.
-    /// All launch logic is delegated to <see cref="AvaloniaEditorLauncher"/> so the
-    /// behaviour stays identical to the WinForms main window.
+    /// The main window. Menus open editors through <see cref="AvaloniaEditorLauncher"/>.
     /// </summary>
     public partial class MainWindowView : Window
     {
@@ -112,7 +109,7 @@ namespace DSPRE.Avalonia.Views.Shell
         private async System.Threading.Tasks.Task OpenBannerEditorAsync()
             => await AvaloniaEditorLauncher.OpenBannerEditorAsync();
 
-        // ── Window placement persistence (size + maximized; centered by the OS otherwise) ──
+        // The window keeps its size and maximized state; the OS centres it.
         private void RestoreWindowPlacement()
         {
             DspreSettings s = SettingsManager.Settings;
@@ -138,7 +135,7 @@ namespace DSPRE.Avalonia.Views.Shell
             SettingsManager.Save();
         }
 
-        // ── Recent projects submenu (rebuilt each time it opens) ─────────────
+        // The recent projects submenu is rebuilt each time it opens.
         private void RebuildRecentMenu()
         {
             RecentMenu.Items.Clear();
@@ -178,12 +175,9 @@ namespace DSPRE.Avalonia.Views.Shell
             }
         }
 
-        /// <summary>Prompts the user about unsaved work across every open editor. Returns true if they
-        /// saved/discarded (or there was nothing to lose). Does NOT close any editor windows: callers
-        /// close them only once the new project is actually chosen, so cancelling the file picker or a
-        /// preflight prompt doesn't leave the current project editor-less.</summary>
-        /// <param name="openingAnother">False when the program itself is closing, where saying that
-        /// another project is about to open would be describing something that is not happening.</param>
+        /// <summary>Asks about unsaved work in every editor; true when saved, discarded or clean. Editors
+        /// close only once the new project is chosen.</summary>
+        /// <param name="openingAnother">False when the program is closing, not opening another project.</param>
         private async System.Threading.Tasks.Task<bool> ConfirmProjectCloseAsync(bool openingAnother = true)
         {
             IReadOnlyList<UnsavedChangesDialog.UnsavedEditorInfo> editors = OpenEditors.GetUnsavedEditors(this);
@@ -192,9 +186,7 @@ namespace DSPRE.Avalonia.Views.Shell
                 return await UnsavedChangesDialog.ShowIfNeededAsync(this, editors);
             }
 
-            // Nothing is dirty, but opening another project still closes this one and everything open
-            // in it. Without this the current project disappears the moment the menu item is clicked,
-            // which reads as a crash rather than a choice.
+            // Ask even with nothing unsaved: otherwise the project vanishes on click and looks like a crash.
             if (!openingAnother || !AvaloniaEditorLauncher.IsRomLoaded) return true;
             if (SettingsManager.Settings?.AskBeforeSwitchingProject == false) return true;
 
@@ -256,7 +248,7 @@ namespace DSPRE.Avalonia.Views.Shell
         {
             MenuItem menu = this.FindControl<MenuItem>("ToolsMenu");
             if (menu == null) return;
-            MenuItem item = new MenuItem { Header = "Generate Update Prompt Preview…" };
+            MenuItem item = new MenuItem { Header = "Preview the update prompt…" };
             item.Click += async (_, _) => await new ChangelogPreviewWindow().ShowDialog(this);
             menu.Items.Add(new Separator());
             menu.Items.Add(item);
@@ -282,7 +274,6 @@ namespace DSPRE.Avalonia.Views.Shell
             => Maps?.GetEmbeddedEditors()
                 ?? System.Linq.Enumerable.Empty<(string, IEditorWithUnsavedChanges)>();
 
-        // ── File ────────────────────────────────────────────────────────────
         private void Close_Click(object sender, RoutedEventArgs e) => Close();
 
         private async void OpenRom_Click(object sender, RoutedEventArgs e) => await OpenRomInteractiveAsync();
@@ -329,8 +320,8 @@ namespace DSPRE.Avalonia.Views.Shell
         }
 
         /// <summary>
-        /// If existing extracted data is found for this .nds, asks whether to reuse it or re-extract (matching
-        /// the WinForms "Extracted data detected" flow). Returns false = reuse, true = re-extract, null = abort.
+        /// If this .nds was extracted before, asks whether to reuse that folder or extract again. Returns false
+        /// to reuse, true to extract again, null to cancel.
         /// </summary>
         private async System.Threading.Tasks.Task<bool?> CheckExtractedDataChoiceAsync(string ndsPath)
         {
@@ -338,19 +329,17 @@ namespace DSPRE.Avalonia.Views.Shell
             if (folderType == -1) return false;   // nothing extracted yet, nothing to ask
 
             string message = folderType == 0
-                ? "Extracted data of this ROM has been found, do you want to use it?"
-                : "Extracted data of this ROM has been found, do you want to use it? It was extracted with a"
-                  + " version of DSPRE older than 1.15.0.";
-            message += "\n\nIf not, you can re-extract the ROM. This throws that folder away and unpacks the"
-                     + " ROM again, so anything you have already edited in it is lost.";
+                ? "This ROM was extracted before. Use that folder?"
+                : "This ROM was extracted before, by a DSPRE older than 1.15.0. Use that folder?";
+            message += "\n\nExtracting again replaces it, and any edits in it are lost.";
 
-            DialogHelper.MsgResult choice = await DialogHelper.AskThreeWayAsync(message, "Extracted data detected",
-                "Use it", "Re-extract the ROM");
+            DialogHelper.MsgResult choice = await DialogHelper.AskThreeWayAsync(message, "Extracted before",
+                "Use it", "Extract again");
             if (choice == DialogHelper.MsgResult.Cancel) return null;
             if (choice == DialogHelper.MsgResult.Yes) return false;
 
             bool confirmReExtract = await DialogHelper.AskYesNoAsync(
-                "All data of this ROM will be re-extracted. Proceed?", "Existing data will be deleted");
+                "Extract the ROM again? Edits in the extracted folder are lost.", "Extract again?");
             return confirmReExtract ? (bool?)true : null;
         }
 
@@ -399,7 +388,7 @@ namespace DSPRE.Avalonia.Views.Shell
             string path = folders != null && folders.Count > 0 ? folders[0].TryGetLocalPath() : null;
             if (string.IsNullOrEmpty(path)) return null;
             if (HgEngineProject.LooksLikeCheckout(path)) return path;
-            await DialogHelper.ShowErrorAsync("That folder is not an hg-engine checkout (no Makefile, data/ and armips/ at its root).", "Open hg-engine folder", this);
+            await DialogHelper.ShowErrorAsync("That folder isn't an hg-engine checkout (no Makefile, data/ and armips/ at its root).", "Open hg-engine folder", this);
             return null;
         }
 
@@ -438,7 +427,7 @@ namespace DSPRE.Avalonia.Views.Shell
                 List<string> missing = HgEngineFolder.MissingTools(checkout);
                 if (missing == null)
                 {
-                    await DialogHelper.ShowErrorAsync("DSPRE could not start the build shell for this folder.", title, this);
+                    await DialogHelper.ShowErrorAsync("DSPRE couldn't start the build shell for this folder.", title, this);
                     return;
                 }
                 if (missing.Count > 0)
@@ -515,7 +504,7 @@ namespace DSPRE.Avalonia.Views.Shell
                 return false;
             }
             if (HgEngineFolder.Sha1Of(HgEngineFolder.RomPath(checkout)) != HgEngineFolder.CleanRetailSha1)
-                await DialogHelper.ShowInfoAsync("This ROM is not a clean HeartGold (USA) dump. hg-engine builds on top of whatever it already holds.", "Open hg-engine folder");
+                await DialogHelper.ShowInfoAsync("This ROM isn't a clean HeartGold (USA) dump. hg-engine builds on top of whatever it already holds.", "Open hg-engine folder");
             return true;
         }
 
@@ -612,7 +601,7 @@ namespace DSPRE.Avalonia.Views.Shell
                 // A load that fails early leaves the previous project open, so it keeps its claim.
                 if (claimedBefore != null && openBefore != null && RomInfo.WorkDir == openBefore) ProjectWindows.TryClaim(claimedBefore);
                 if (vm != null) vm.StatusText = "ROM load failed.";
-                await DialogHelper.ShowErrorAsync(error ?? "Failed to load the ROM.", "Open ROM");
+                await DialogHelper.ShowErrorAsync(error ?? "Couldn't load the ROM.", "Open ROM");
                 return;
             }
             if (vm != null) vm.StatusText = $"Loaded {RomInfo.ProjectName ?? "project"}";
@@ -657,10 +646,8 @@ namespace DSPRE.Avalonia.Views.Shell
         }
 
         /// <summary>
-        /// A build that repacked a/0/2/8 with members left over from an earlier one moves every
-        /// hg-engine table away from the index its code reads, which shows up as wrong icon colours,
-        /// missing hidden abilities and wrong TM learnsets rather than as a crash. Saying so on load is
-        /// the difference between finding it here and shipping it.
+        /// Leftover members in a/0/2/8 shift every hg-engine table without crashing (wrong icon colours,
+        /// hidden abilities, TM learnsets), so this warns on load.
         /// </summary>
         private async System.Threading.Tasks.Task WarnIfCodeTablesShiftedAsync()
         {
@@ -669,14 +656,12 @@ namespace DSPRE.Avalonia.Views.Shell
                 HgEngineCodeAddons.Layout layout = await System.Threading.Tasks.Task.Run(() => HgEngineCodeAddons.Describe());
                 if (layout == null || layout.IsHealthy || layout.TableBlockStart < 0) return;
 
-                // The review is the only thing that mends this, and it is one of the editors still
-                // being tried out, so an ordinary build would grey out the very tool this message
-                // sends somebody to. A fault that is really there switches it on.
+                // The fix is a beta editor, so a real fault switches it on.
                 BetaEditors.AllowBecauseNeeded("HgeRomReviewView");
                 (DataContext as MainWindowViewModel)?.RefreshHgEngineState();
 
                 await DialogHelper.ShowInfoAsync(
-                    layout.Summary + "\n\nFile > hg-engine > hg-engine ROM Review shows which member holds what, and "
+                    layout.Summary + "\n\nFile > hg-engine > hg-engine ROM review shows which member holds what, and "
                     + "can repair the order. It has been switched on for this ROM because it is needed.",
                     "hg-engine tables are out of place");
             }
@@ -704,7 +689,7 @@ namespace DSPRE.Avalonia.Views.Shell
             }
             bool pick = await DialogHelper.AskYesNoAsync(
                 "This is an hg-engine ROM. Opened as a ROM, the editors for data hg-engine builds from its own source stay "
-                + "disabled, and edits made here are not in the hg-engine source.\n\nOpen its hg-engine folder instead?",
+                + "disabled, and edits made here aren't in the hg-engine source.\n\nOpen its hg-engine folder instead?",
                 "hg-engine ROM");
             return pick ? "" : null;
         }
@@ -725,7 +710,7 @@ namespace DSPRE.Avalonia.Views.Shell
             string names = string.Join(", ", paths.Select(System.IO.Path.GetFileName).Distinct());
             if (result.Success) { vm.StatusText = "Compiled " + names + " after an outside edit."; return; }
             List<string> failures = RotomTool.FailureLines(result);
-            vm.StatusText = "Did not compile: " + failures[0] + (failures.Count > 1 ? $" (and {failures.Count - 1} more)" : "");
+            vm.StatusText = "Didn't compile: " + failures[0] + (failures.Count > 1 ? $" (and {failures.Count - 1} more)" : "");
         }
 
         private async void SaveRom_Click(object sender, RoutedEventArgs e) => await SaveRomAsync();
@@ -844,8 +829,8 @@ namespace DSPRE.Avalonia.Views.Shell
                     RotomTool.Result compiled = await RotomTool.CompileProjectAsync();
                     if (!compiled.Success)
                     {
-                        if (vm != null) { vm.IsBusy = false; vm.StatusText = "ROM build stopped: scripts did not compile."; }
-                        await DialogHelper.ShowErrorAsync("These scripts did not compile, so no ROM was written:\n\n"
+                        if (vm != null) { vm.IsBusy = false; vm.StatusText = "ROM build stopped: scripts didn't compile."; }
+                        await DialogHelper.ShowErrorAsync("These scripts didn't compile, so no ROM was written:\n\n"
                                                      + string.Join("\n", RotomTool.FailureLines(compiled))
                                                      + "\n\nFix them and save again.",
                                                      "Save ROM", RotomTool.FormatDetails(compiled));
@@ -930,7 +915,7 @@ namespace DSPRE.Avalonia.Views.Shell
                 if (name == null)
                 {
                     name = await DialogHelper.PromptTextAsync(
-                        "Name of the ROM Build and Run makes. Emulators keep saves per ROM name, so keep it the same between runs.",
+                        "File name for the ROM that Build and run makes. Emulators keep saves by ROM name, so keep it the same between runs.",
                         "Build and run", "test.nds", this);
                     if (name == null) return;
                     if (!HgEngineProject.IsSafeBuildRomName(name))
@@ -1003,9 +988,8 @@ namespace DSPRE.Avalonia.Views.Shell
             {
                 if (RomInfo.IsDsRomProject || !ARM9.IsFlatButMarked()) return;
                 if (await DialogHelper.AskYesNoAsync(
-                        "The ARM9 file of this ROM is currently uncompressed, but marked as compressed.\n" +
-                        "This will prevent your ROM from working on native hardware.\n\n" +
-                        "Do you want to mark the ARM9 as uncompressed?", "ARM9 compression mismatch detected", this))
+                        "This ROM's ARM9 is decompressed but still marked as compressed, so it won't run on a real DS.\n\n" +
+                        "Fix the mark?", "ARM9 compression mark", this))
                     ARM9.ClearCompressionMark();
             }
             catch (System.Exception ex) when (ex is System.IO.IOException || ex is System.UnauthorizedAccessException)
@@ -1046,10 +1030,8 @@ namespace DSPRE.Avalonia.Views.Shell
                 sourcePath: folder);
         }
 
-        // ── Tools ───────────────────────────────────────────────────────────
         private void PatchToolbox_Click(object sender, RoutedEventArgs e)
         {
-            // Native Avalonia toolbox over the shared PatchToolboxDialog apply-logic (identical ROM writes).
             try { AvaloniaEditorLauncher.OpenPatchToolbox(); }
             catch (System.Exception ex) { _ = DialogHelper.ShowErrorAsync("Couldn't open the ROM patch toolbox: " + ex.Message, "ROM patch toolbox"); }
         }
@@ -1059,10 +1041,9 @@ namespace DSPRE.Avalonia.Views.Shell
         private void CustomCommandManager_Click(object sender, RoutedEventArgs e)
         {
             try { AvaloniaEditorLauncher.OpenCustomCommandManager(); }
-            catch (System.Exception ex) { _ = DialogHelper.ShowErrorAsync("Couldn't open the Custom Command Manager: " + ex.Message, "Custom script command manager error"); }
+            catch (System.Exception ex) { _ = DialogHelper.ShowErrorAsync("Couldn't open the Custom script command manager: " + ex.Message, "Custom script command manager"); }
         }
 
-        // ── Pokémon ─────────────────────────────────────────────────────────
         private void AudioEditor_Click(object sender, RoutedEventArgs e)
             => _ = AvaloniaEditorLauncher.OpenAudioEditorAsync();
 
@@ -1126,7 +1107,6 @@ namespace DSPRE.Avalonia.Views.Shell
         private void TableEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenTableEditor();
 
-        // ── World ───────────────────────────────────────────────────────────
         private void HeaderEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenHeaderEditor();
 
@@ -1320,7 +1300,7 @@ namespace DSPRE.Avalonia.Views.Shell
             else await DialogHelper.ShowErrorAsync("Generating the report failed:\n" + error, "Trainer usage CSV error");
         }
 
-        // ── Standalone file tools (no ROM required) ─────────────────────────
+        // These file tools work without a ROM.
         private async void NarcUnpack_Click(object sender, RoutedEventArgs e) => await FileToolActions.UnpackNarcToFolderAsync(this);
         private async void NarcPack_Click(object sender, RoutedEventArgs e) => await FileToolActions.PackFolderToNarcAsync(this);
         private async void RenameByList_Click(object sender, RoutedEventArgs e) => await FileToolActions.RenameByListAsync(this);
@@ -1331,7 +1311,6 @@ namespace DSPRE.Avalonia.Views.Shell
         private async void NsbmdRemoveTex_Click(object sender, RoutedEventArgs e) => await FileToolActions.RemoveTexturesFromNsbmdAsync(this);
         private async void NsbmdSaveTex_Click(object sender, RoutedEventArgs e) => await FileToolActions.SaveTexturesFromNsbmdAsync(this);
 
-        // ── Tools ───────────────────────────────────────────────────────────
         private void AddressHelper_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenAddressHelper();
 
@@ -1366,7 +1345,7 @@ namespace DSPRE.Avalonia.Views.Shell
             + "Largely inspired by Markitus95's \"Spiky's DS Map Editor\" (SDSME), from which certain assets were also reused.\n"
             + "Credits go to Markitus, Ark, Zark, Florian, and everyone else who deserves credit for SDSME.\n\n"
             + "Special thanks to Trifindo, Mikelan98, turtleisaac, JackHack96, Pleonex and BagBoy.\n"
-            + "Their help, research and expertise in many fields of NDS ROM Hacking made the development of this tool possible.",
+            + "Their help, research and expertise in many fields of NDS ROM hacking made the development of this tool possible.",
             "About");
 
         private void HgEnginePatches_Click(object sender, RoutedEventArgs e)

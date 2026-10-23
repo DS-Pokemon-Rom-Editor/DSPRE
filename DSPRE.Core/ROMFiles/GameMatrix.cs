@@ -20,13 +20,10 @@ namespace DSPRE.ROMFiles
 
    -------------------------------------------------------------------------------------- */
 
-    /// <summary>
-    /// Class to store map matrix data from Pok�mon NDS games
-    /// </summary>
     public class GameMatrix: RomFile
     {
         #region Fields (8)
-        public static readonly string DefaultFilter = "Game Matrix File (*.mtx)|*.mtx";
+        public static readonly string DefaultFilter = "Matrix file (*.mtx)|*.mtx";
 
 
         public bool HasHeadersSection { get; set; }
@@ -273,7 +270,7 @@ namespace DSPRE.ROMFiles
         }
         public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true)
         {
-            SaveToFileExplorePath("Gen IV Matrix File", "mtx", suggestedFileName, showSuccessMessage);
+            SaveToFileExplorePath("Matrix file", "mtx", suggestedFileName, showSuccessMessage);
         }
         #endregion
     }

@@ -7,12 +7,8 @@ namespace DSPRE.HgEngine
     public enum HgEngineDomain { Species, Trainers, Items, Moves, Encounters, SpriteOffsets, PokemonSprites, TrainerGraphics }
 
     /// <summary>
-    /// One hg-engine data domain: its source file, the isolated make target that rebuilds it (verified
-    /// against a real checkout to run in 0.5-3s), and which
-    /// RomInfo.DirNames each of its built narcs feeds when a source checkout is linked and enabled. A
-    /// domain's single make target can produce more than one narc: Trainers' single source
-    /// (data/Trainers.c) and single target (build/narc/a055.narc) also produces build/narc/a056.narc as
-    /// part of the same recipe, feeding trainerProperties and trainerParty respectively.
+    /// One hg-engine data domain: its source file, the make target that rebuilds it and the DirNames each built NARC
+    /// feeds. One target can build several NARCs: a055 also makes a056.
     /// </summary>
     public sealed class HgEngineDomainInfo
     {
@@ -27,7 +23,7 @@ namespace DSPRE.HgEngine
         public bool SyncOncePerSession { get; init; }
     }
 
-    /// <summary>The five v1 domains and the DirNames each one owns while an hg-engine checkout is linked+enabled.</summary>
+    /// <summary>The domains and the DirNames each owns while a checkout is linked and enabled.</summary>
     public static class HgEngineDomains
     {
         public static readonly IReadOnlyList<HgEngineDomainInfo> All = new[]

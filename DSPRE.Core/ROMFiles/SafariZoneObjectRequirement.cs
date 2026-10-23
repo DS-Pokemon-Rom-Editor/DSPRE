@@ -6,7 +6,7 @@ namespace DSPRE.ROMFiles
   public class SafariZoneObjectRequirement
   {
     public static Dictionary<int, string> ObjectTypes = new Dictionary<int, string>() {
-      { 0, "No Requirement" },
+      { 0, "No requirement" },
       { 1, "Plains" },
       { 2, "Forest" },
       { 3, "Peak" },

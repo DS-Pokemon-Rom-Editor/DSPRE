@@ -3,12 +3,8 @@ using System.Linq;
 
 namespace DSPRE.HgEngine
 {
-    /// <summary>Source-text read/write for two trainer-class-keyed tables outside the 5 narc-owned
-    /// domains: src/trainermoney.c's PrizeMoney[] (struct array keyed by `.class = TRAINERCLASS_X`) and
-    /// src/pokemon.c's sTrainerGenders[] (flat `[TRAINERCLASS_X] = TRAINER_MALE,` array). Neither has a
-    /// narc build target; both compile straight into the ARM9 overlay, so edits need a full "Compile
-    /// ROM" to take effect in-game, same as any other src/*.c change. Entries match by the class id their
-    /// name stands for, so an alias isn't taken for a missing entry.</summary>
+    /// <summary>src/trainermoney.c's PrizeMoney[] and src/pokemon.c's sTrainerGenders[]. They compile into code,
+    /// so a change needs Compile ROM; entries match by class id, so an alias isn't taken for a missing one.</summary>
     public static class HgEngineTrainerClassTables
     {
         private const string MoneyRelPath = "src/trainermoney.c";
@@ -56,16 +52,16 @@ namespace DSPRE.HgEngine
         public static bool TrySetPrizeMultiplier(int trainerClassId, int multiplier, out string error)
         {
             error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             if (!TryResolveClassDesignator(trainerClassId, out string designator))
-            { error = $"Could not resolve a trainer class designator for id {trainerClassId}."; return false; }
+            { error = $"Trainer class {trainerClassId} has no name in the checkout."; return false; }
 
             string text = TryReadSource(MoneyRelPath, out string path);
-            if (text == null) { error = $"Source file not found: {path}"; return false; }
+            if (text == null) { error = $"{path} is missing from the checkout."; return false; }
 
             CInitItem entry = MoneyEntry(text, trainerClassId, out CDeclaration table);
             if (table == null) { error = $"{MoneyRelPath} has no {MoneyTable}."; return false; }
-            if (CompiledOut(table)) { error = $"{MoneyTable} is only built with EXPAND_TRAINER_PRIZE_MONEY; turn it on in hg-engine Settings to change prize money."; return false; }
+            if (CompiledOut(table)) { error = $"{MoneyTable} is only built with EXPAND_TRAINER_PRIZE_MONEY; turn it on in hg-engine settings to change prize money."; return false; }
             if (entry != null)
             {
                 CInitItem field = entry.List.Field("multiplier");
@@ -102,17 +98,17 @@ namespace DSPRE.HgEngine
         public static bool TrySetGender(int trainerClassId, int gender, out string error)
         {
             error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             if (!TryResolveClassDesignator(trainerClassId, out string designator))
-            { error = $"Could not resolve a trainer class designator for id {trainerClassId}."; return false; }
+            { error = $"Trainer class {trainerClassId} has no name in the checkout."; return false; }
 
             string text = TryReadSource(GenderRelPath, out string path);
-            if (text == null) { error = $"Source file not found: {path}"; return false; }
+            if (text == null) { error = $"{path} is missing from the checkout."; return false; }
 
             string genderName = gender == 1 ? "TRAINER_FEMALE" : "TRAINER_MALE";
             CInitItem entry = GenderEntry(text, trainerClassId, out CDeclaration table);
             if (table == null) { error = $"{GenderRelPath} has no {GenderTable}."; return false; }
-            if (CompiledOut(table)) { error = $"{GenderTable} is only built with EXPAND_TRAINER_GENDER_TABLE; turn it on in hg-engine Settings to change genders."; return false; }
+            if (CompiledOut(table)) { error = $"{GenderTable} is only built with EXPAND_TRAINER_GENDER_TABLE; turn it on in hg-engine settings to change genders."; return false; }
             if (entry != null) text = text.Substring(0, entry.ValueStart) + genderName + text.Substring(entry.ValueEnd);
             else text = text.Insert(HgEngineSwarms.LineStart(text, table.Init.Close), $"    [{designator}] = {genderName},\n");
 

@@ -42,7 +42,7 @@ namespace DSPRE.ROMFiles
 
     public void ReadGroup(BinaryReader br)
     {
-      //#2 Section - Tall Grass Encounters
+      // Section 2: encounters
       for (int i = 0; i < EncounterSlots; i++)
       {
         MorningEncounters.Add(new SafariZoneEncounter(br));
@@ -61,7 +61,7 @@ namespace DSPRE.ROMFiles
         br.ReadByte();
       }
 
-      //#3 Section - Tall Grass Encounters (Object Arrangement)
+      // Section 3: object arrangement encounters
       for (int i = 0; i < ObjectSlots; i++)
       {
         MorningEncountersObject.Add(new SafariZoneEncounter(br));
@@ -80,7 +80,7 @@ namespace DSPRE.ROMFiles
         br.ReadByte();
       }
 
-      //#4 Section - Object Arrangement Requirements (Tall Grass)
+      // Section 4: object arrangement requirements
       for (int i = 0; i < ObjectSlots; i++)
       {
         ObjectRequirements.Add(new SafariZoneObjectRequirement(br));
@@ -90,7 +90,7 @@ namespace DSPRE.ROMFiles
 
     public void WriteGroup(BinaryWriter bw)
     {
-      //#2 Section - Tall Grass Encounters
+      // Section 2: encounters
       for (int i = 0; i < MorningEncounters.Count; i++)
       {
         MorningEncounters[i].WriteEncounter(bw);
@@ -109,7 +109,7 @@ namespace DSPRE.ROMFiles
         bw.Write((byte)0);
       }
 
-      //#3 Section - Tall Grass Encounters (Object Arrangement)
+      // Section 3: object arrangement encounters
       for (int i = 0; i < ObjectSlots; i++)
       {
         MorningEncountersObject[i].WriteEncounter(bw);
@@ -128,7 +128,7 @@ namespace DSPRE.ROMFiles
         bw.Write((byte)0);
       }
 
-      //#4 Section - Object Arrangement Requirements (Tall Grass)
+      // Section 4: object arrangement requirements
       for (int i = 0; i < ObjectSlots; i++)
       {
         ObjectRequirements[i].WriteRequirement(bw);

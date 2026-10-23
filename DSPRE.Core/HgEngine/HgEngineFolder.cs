@@ -23,7 +23,7 @@ namespace DSPRE.HgEngine
 
         public static string RomPath(string checkout) => Path.Combine(checkout, RomName);
 
-        /// <summary>A checkout that builds through ds-rom, which is what folder projects need.</summary>
+        /// <summary>A checkout that builds through ds-rom, as folder projects need.</summary>
         public static bool IsDsRomCheckout(string folder) =>
             HgEngineProject.LooksLikeCheckout(folder) && HgEngineBase.SupportsDsRomAt(folder);
 
@@ -36,7 +36,7 @@ namespace DSPRE.HgEngine
             List<string> problems = new List<string>();
             string dotGit = Path.Combine(checkout, ".git");
             if (!Directory.Exists(dotGit) && !File.Exists(dotGit))
-                problems.Add("It is not a git repository. Clone hg-engine with git rather than downloading it as a zip.");
+                problems.Add("It isn't a git repository. Clone hg-engine with git instead of downloading a zip.");
             if (checkout.IndexOf("onedrive", StringComparison.OrdinalIgnoreCase) >= 0)
                 problems.Add("It is inside OneDrive, which hg-engine refuses to build in. Clone it somewhere else.");
             string nitrogfx = Path.Combine(checkout, "tools", "source", "nitrogfx");
@@ -95,13 +95,13 @@ namespace DSPRE.HgEngine
             {
                 if (KeptAfterBuild.Contains(dir) || !Directory.Exists(paths.unpackedDir) || !File.Exists(paths.packedDir)) continue;
                 try { hashes[dir] = Sha1Of(paths.packedDir); }
-                catch (IOException ex) { AppLogger.Error($"HgEngineFolder: could not read {paths.packedDir}: {ex.Message}"); }
+                catch (IOException ex) { AppLogger.Error($"HgEngineFolder: couldn't read {paths.packedDir}: {ex.Message}"); }
             }
             return hashes;
         }
 
         /// <summary>
-        /// Unpacks again every archive make changed, so editors show what the build made rather than what DSPRE wrote
+        /// Unpacks again every archive make changed, so editors show what the build made, not what DSPRE wrote
         /// before it, and drops the cached checkout files. Returns the archives refreshed.
         /// </summary>
         public static List<RomInfo.DirNames> RefreshRebuiltArchives(Dictionary<RomInfo.DirNames, string> before)
@@ -123,7 +123,7 @@ namespace DSPRE.HgEngine
                 }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
                 {
-                    AppLogger.Error($"HgEngineFolder: could not refresh {dir}: {ex.Message}");
+                    AppLogger.Error($"HgEngineFolder: couldn't refresh {dir}: {ex.Message}");
                 }
             }
             if (changed.Count > 0) DSUtils.ForceUnpackNarcs(changed);
@@ -150,7 +150,7 @@ namespace DSPRE.HgEngine
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                return "Could not copy the ROM into the checkout: " + ex.Message;
+                return "Couldn't copy the ROM into the checkout: " + ex.Message;
             }
             return null;
         }

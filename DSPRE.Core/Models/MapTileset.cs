@@ -50,7 +50,7 @@ namespace DSPRE.Models
             public List<Corner> Corners = new List<Corner>();
             public List<Face> Faces = new List<Face>();
 
-            /// <summary>Ground rather than an object: a flat face covers the footprint and nothing rises more than a tile above it.</summary>
+            /// <summary>Ground, not an object: a flat face covers the footprint and nothing rises more than a tile above it.</summary>
             public bool IsGround
             {
                 get
@@ -734,7 +734,7 @@ namespace DSPRE.Models
             float down = Math.Max(1e-4f, (v.Max(q => q.Z) - v.Min(q => q.Z)) / TileWidth);
             float spanS = face.OnPicture.Max(q => q.s) - face.OnPicture.Min(q => q.s);
             float spanT = face.OnPicture.Max(q => q.t) - face.OnPicture.Min(q => q.t);
-            // The picture's axes may run along or across the map's; the pairing that gives square pixels is the one.
+            // The picture's axes may run along or across the map's; the pairing that gives square pixels is right.
             float sx = spanS / across, tz = spanT / down, sz = spanS / down, tx = spanT / across;
             (float perS, float perT) = Math.Abs(sx - tz) <= Math.Abs(sz - tx) ? (sx, tz) : (sz, tx);
             // Maps often inset a picture by half a texel, so a two-square repeat reads a little over two.
@@ -976,7 +976,7 @@ namespace DSPRE.Models
         }
 
         /// <summary>
-        /// Whether a face stands rather than lies: it rises at least as far as it leans, as a wall, fence or tree
+        /// Whether a face stands up instead of lying flat: it rises at least as far as it leans, as a wall, fence or tree
         /// canopy does, where a hill or a ramp rises gently over its length.
         /// </summary>
         private static bool Steep(MapMesh mesh, MapMesh.Face face)

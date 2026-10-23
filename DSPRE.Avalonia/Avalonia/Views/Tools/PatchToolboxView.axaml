@@ -14,7 +14,6 @@
 
   <DockPanel Margin="0">
 
-    <!-- ── Caution banner ─────────────────────────────────────────────── -->
     <Border x:Name="CautionBanner" DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}"
             BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
       <DockPanel>
@@ -29,7 +28,6 @@
       </DockPanel>
     </Border>
 
-    <!-- ── Patch list, one tab per area ───────────────────────────────── -->
     <TabControl ItemsSource="{Binding Tabs}" SelectedIndex="{Binding SelectedTab}">
       <TabControl.ItemTemplate>
         <DataTemplate x:DataType="vm:PatchTabViewModel">

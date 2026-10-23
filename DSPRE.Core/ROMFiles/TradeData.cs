@@ -13,7 +13,6 @@ namespace DSPRE.ROMFiles
 
         public int Id;
 
-        // TradeData structure in narc
         public int Species;
         public int HpIV;
         public int AtkIV;
@@ -77,7 +76,6 @@ namespace DSPRE.ROMFiles
 
             if (!File.Exists(Path.Combine(RomInfo.GameDirs[DirNames.TradeData].unpackedDir, id.ToString("D4"))))
             {
-                // If the file does not exist, create it with default values
                 FileStream fileStream = new FileStream(Path.Combine(RomInfo.GameDirs[DirNames.TradeData].unpackedDir, id.ToString("D4")), FileMode.Create);
                 fileStream.Write(new byte[0x50], 0, 0x50); // create an empty file
                 if (RomInfo.GameFamily == GameFamilies.HGSS)
@@ -133,7 +131,7 @@ namespace DSPRE.ROMFiles
         }
         public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true)
         {
-            SaveToFileExplorePath("Gen IV Trade data", "bin", suggestedFileName, showSuccessMessage);
+            SaveToFileExplorePath("Trade data", "bin", suggestedFileName, showSuccessMessage);
         }
 
         /// <summary>The text bank holding each trade's nickname, then each trade's OT name.</summary>

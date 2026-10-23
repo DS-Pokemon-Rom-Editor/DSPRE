@@ -35,7 +35,7 @@ namespace DSPRE.Avalonia
             }
             catch (Exception ex)
             {
-                AppLogger.Warn("Pokémon facts could not be read: " + ex.Message);
+                AppLogger.Warn("Pokémon facts couldn't be read: " + ex.Message);
                 return Array.Empty<string>();
             }
         }

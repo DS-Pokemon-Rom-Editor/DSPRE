@@ -24,7 +24,7 @@
         <Button Content="Show files" controls:Icon.Key="folder" Click="Locate_Click" ToolTip.Tip="Shows the open tab's files"/>
     </controls:EditorToolbar>
 
-    <TextBlock DockPanel.Dock="Top" Text="Battle Tower data was not found for this game." Margin="16" IsVisible="{Binding !IsAvailable}"/>
+    <TextBlock DockPanel.Dock="Top" Text="Battle Tower data wasn't found for this game." Margin="16" IsVisible="{Binding !IsAvailable}"/>
 
     <TabControl SelectedIndex="{Binding ActiveTabIndex}" IsVisible="{Binding IsAvailable}">
 

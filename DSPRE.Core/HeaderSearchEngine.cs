@@ -9,8 +9,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE
 {
     /// <summary>
-    /// Advanced map-header search (field / operator / value), extracted from the WinForms
-    /// <c>HeaderSearch</c> form so both shells share the same query logic. Core, UI-free.
+    /// Header search by field, operator and value.
     /// </summary>
     public static class HeaderSearchEngine
     {
@@ -31,7 +30,7 @@ namespace DSPRE
 
         public enum NumOperators : byte
         {
-            //Order matters!
+            // In the order the operator list shows them.
             Equal,
             Different,
             Less,
@@ -42,7 +41,7 @@ namespace DSPRE
 
         public enum TextOperators : byte
         {
-            //Order matters!
+            // In the order the operator list shows them.
             Contains,
             DoesNotContain,
             IsExactly,
@@ -51,22 +50,22 @@ namespace DSPRE
 
         public static readonly Dictionary<NumOperators, string> NumOperatorNames = new Dictionary<NumOperators, string>()
         {
-            //Order matters!
+            // In the order the operator list shows them.
             [NumOperators.Equal] = "Equals",
-            [NumOperators.Different] = "Is Different than",
-            [NumOperators.Less] = "Is Less than",
-            [NumOperators.Greater] = "Is Greater than",
-            [NumOperators.LessOrEqual] = "Is Less than or Equal to",
-            [NumOperators.GreaterOrEqual] = "Is Greater than or Equal to",
+            [NumOperators.Different] = "Isn't",
+            [NumOperators.Less] = "Is less than",
+            [NumOperators.Greater] = "Is more than",
+            [NumOperators.LessOrEqual] = "Is at most",
+            [NumOperators.GreaterOrEqual] = "Is at least",
         };
 
         public static readonly Dictionary<TextOperators, string> TextOperatorNames = new Dictionary<TextOperators, string>()
         {
-            //Order matters!
+            // In the order the operator list shows them.
             [TextOperators.Contains] = "Contains",
-            [TextOperators.DoesNotContain] = "Does not contain",
-            [TextOperators.IsExactly] = "Is Exactly",
-            [TextOperators.IsNot] = "Is Not",
+            [TextOperators.DoesNotContain] = "Doesn't contain",
+            [TextOperators.IsExactly] = "Is exactly",
+            [TextOperators.IsNot] = "Isn't",
         };
 
         /// <summary>Does this searchable field take numeric operators (vs. text operators)?</summary>
@@ -131,7 +130,7 @@ namespace DSPRE
                     }
                     catch (OverflowException)
                     {
-                        AppMessages.Error("Your input exceeds the range of 16-bit integers (" + ushort.MinValue + " - " + ushort.MaxValue + ").", "Overflow Error");
+                        AppMessages.Error("Enter a number from " + ushort.MinValue + " to " + ushort.MaxValue + ".", "Number too large");
                         return null;
                     }
 

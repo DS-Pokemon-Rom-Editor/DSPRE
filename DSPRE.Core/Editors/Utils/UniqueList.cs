@@ -62,24 +62,23 @@ namespace DSPRE.ROMFiles
         {
             if (_set.Contains(item))
             {
-                //If the item is already in the set, we just move it to the new index
+                // An item already in the set is moved to the new index.
                 int oldIndex = _list.FindIndex(x => x.Equals(item));
                 if (oldIndex != index)
                 {
                     _list.Move(oldIndex, index);
                 }
-                return false; //No insertion happened
+                return false;
             }
             else
             {
-                //New item, insert it
                 _list.Insert(index, item);
                 _set.Add(item);
-                return true; //Insertion happened
+                return true;
             }
         }
 
-        // Expose some methods from the internal List
+
         public T Find(Predicate<T> match)
         {
             return _list.Find(match);
@@ -105,21 +104,19 @@ namespace DSPRE.ROMFiles
             {
                 if (_set.Contains(value))
                 {
-                    //Then the list also contains the value
-
-                    int oldIndex = _list.FindIndex(x => x.Equals(value)); //this is where it is
+                    int oldIndex = _list.FindIndex(x => x.Equals(value));
                     if (index == oldIndex)
                     {
-                        //No operation, same index and same existing value.
+
                         return;
                     }
 
-                    //Otherwise, move the existing element in the list to the new index.
+
                     _list.Move(oldIndex, index);
                 }
                 else
                 {
-                    //New element
+
                     _list[index] = value;
                     _set.Add(value);
                 }

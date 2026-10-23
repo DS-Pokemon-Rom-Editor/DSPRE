@@ -217,7 +217,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             HoverNote = past
                 ? $"x {worldX}, y {worldY}, z {worldZ}  ·  outside"
-                : $"x {worldX}, y {worldY}, z {worldZ}  ·  {(blocked ? "blocked" : "walk")}  ·  {name}";
+                : $"x {worldX}, y {worldY}, z {worldZ}  ·  {(blocked ? "blocked" : "walkable")}  ·  {name}";
         }
 
         private string _gridNote = "";
@@ -308,7 +308,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex)
             {
                 AppLogger.Error("DistortionWorld.Load: " + ex.Message);
-                StatusText = "Could not read Distortion World data: " + ex.Message;
+                StatusText = "Couldn't read Distortion World data: " + ex.Message;
             }
         }
 
@@ -751,7 +751,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (RideActive)
             {
                 if (modelId == _rideAnchor) return null;
-                // Where the ride ends there is already a template, which the ridden platform becomes.
+                // The ridden platform becomes the template already waiting where the ride ends.
                 if (_ride.PlatformHeader == placed.Header && _ride.Platform == placed.Platform) return 0f;
             }
             return _runtime.IsPresent(placed.Platform) ? (float?)null : 0f;
@@ -988,7 +988,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
                 (int walkX, int walkZ) = landing.WalkTile(toCol, toRow);
 
-                // A walk that starts on a wall has no roll of its own yet; the wall's turn is the one being left.
+                // A walk that starts on a wall has no roll yet, so it leaves by the wall's turn.
                 float wasRoll = _playerRoll != 0f ? _playerRoll : SurfaceRoll(surface);
                 _playerRoll = ((wasRoll + point.SpriteRotationAngle) % 360f + 360f) % 360f;
 
@@ -1151,7 +1151,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                           ghost.TileX, ghost.TileY, ghost.TileZ,
                           new PlacedProp { Header = header, GhostGroup = ghost.GroupId });
 
-                // A floor loaded mid-ride gets the platform being ridden, where its current path set off from.
+                // A floor loaded mid-ride gets the ridden platform at the start of its current path.
                 if (RideActive && _ride.Header == header)
                 {
                     int id = Place(standing, tables, floors[index].Floor, index, _ride.Platform.PropKind,
@@ -1259,7 +1259,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 motion: rides ? new PlatformMotion(this, modelId, null) : null);
         }
 
-        /// <summary>A moving platform's bob, plus the ride when it is the one being ridden.</summary>
+        /// <summary>A moving platform's bob, plus the ride when the player is on it.</summary>
         private sealed class PlatformMotion : BuildingAnimationSet.WholeModelMotion
         {
             private readonly DistortionWorldViewModel _owner;
@@ -1639,9 +1639,9 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             int floors = _editedMembers.Count, grids = _editedGrids.Count;
             if (floors + grids == 0) { StatusText = $"{Floors.Count} floors."; return; }
-            StatusText = grids == 0 ? $"{floors} changed, not saved."
-                   : floors == 0 ? $"{grids} grid(s) changed, not saved."
-                   : $"{floors} floor(s) and {grids} grid(s) changed, not saved.";
+            StatusText = grids == 0 ? $"{Plural.Of(floors, "floor")} changed, not saved."
+                   : floors == 0 ? $"{Plural.Of(grids, "grid")} changed, not saved."
+                   : $"{Plural.Of(floors, "floor")} and {Plural.Of(grids, "grid")} changed, not saved.";
         }
 
         public bool HasUnsavedChanges =>
@@ -1772,7 +1772,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex)
             {
                 AppLogger.Error("DistortionWorld.SaveChanges: " + ex.Message);
-                AppMessages.Error("That could not be saved. " + ex.Message, "Distortion World error");
+                AppMessages.Error("That couldn't be saved. " + ex.Message, "Distortion World");
             }
         }
 

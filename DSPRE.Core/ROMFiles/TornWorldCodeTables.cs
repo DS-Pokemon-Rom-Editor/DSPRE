@@ -144,7 +144,7 @@ namespace DSPRE.ROMFiles
 
             byte[] data;
             try { data = File.ReadAllBytes(path); }
-            catch (Exception ex) { error = $"Overlay {OverlayNumber} could not be read: {ex.Message}"; return null; }
+            catch (Exception ex) { error = $"Overlay {OverlayNumber} couldn't be read: {ex.Message}"; return null; }
 
             uint ramBase = OverlayUtils.OverlayTable.GetRAMAddress(OverlayNumber);
             if (ramBase == 0) { error = $"Overlay {OverlayNumber} has no load address in the overlay table."; return null; }
@@ -167,7 +167,7 @@ namespace DSPRE.ROMFiles
 
             if (movingAt < 0 && propsAt < 0)
             {
-                error = "Platform and prop tables not found in the Distortion World overlay.";
+                error = "The platform and prop tables weren't found in the Distortion World overlay.";
                 return null;
             }
 

@@ -5,7 +5,7 @@ using System.Text;
 
 namespace DSPRE.Avalonia
 {
-    // Reads/writes real indexed (PNG color type 3) images, preserving the file's own literal index/PLTE order instead of re-quantizing by color like TryReadImageColors does.
+    // Reads and writes indexed PNGs in their palette order, without re-quantizing.
     public static class IndexedPng
     {
         internal static readonly byte[] Signature = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };

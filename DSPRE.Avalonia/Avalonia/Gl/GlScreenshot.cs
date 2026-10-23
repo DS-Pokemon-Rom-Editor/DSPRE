@@ -28,7 +28,7 @@ namespace DSPRE.Avalonia.Gl
                 }
                 catch (Exception ex) when (ex is InvalidOperationException || ex is System.IO.IOException || ex is UnauthorizedAccessException)
                 {
-                    _ = DialogHelper.ShowErrorAsync($"Could not save the screenshot:\n{ex.Message}", "Screenshot error");
+                    _ = DialogHelper.ShowErrorAsync($"Couldn't save the screenshot:\n{ex.Message}", "Screenshot");
                 }
             });
         }

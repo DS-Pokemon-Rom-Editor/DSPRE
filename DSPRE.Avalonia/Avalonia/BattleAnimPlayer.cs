@@ -135,7 +135,7 @@ namespace DSPRE.Avalonia
                 case 2: _bgX = value; break;
                 case 3: _bgY = value; break;
                 default:
-                    Note("This move changes a background setting part way through that the preview does not follow.");
+                    Note("This move changes a background setting partway through; the preview doesn't follow it.");
                     break;
             }
         }
@@ -502,7 +502,7 @@ namespace DSPRE.Avalonia
 
                     case "PlayPokemonCry":
                         if (PlayCry != null) PlayCry();
-                        else Note("This move plays the Pokémon's cry, which the preview cannot play here.");
+                        else Note("This move plays the Pokémon's cry, which the preview can't play here.");
                         break;
 
                     case "WaitForPokemonCries":
@@ -516,11 +516,11 @@ namespace DSPRE.Avalonia
 
                     case "StartTransform":
                     case "StartTransformRecolour":
-                        Note("This move swaps the Pokémon's graphic for another one, which the preview keeps as it is.");
+                        Note("This move swaps the Pokémon's graphic; the preview keeps the original.");
                         break;
 
                     case "LoadPokemonSpriteIntoBg":
-                        Note("This move draws a copy of the Pokémon into the background, which the preview does not do.");
+                        Note("This move draws a copy of the Pokémon into the background; the preview doesn't.");
                         break;
                     case "RemovePokemonSpriteFromBg":
                         break;
@@ -542,7 +542,7 @@ namespace DSPRE.Avalonia
                         break;
 
                     case "WaitForLRX":
-                        Note("This move has a developer's pause left in it, which the preview runs straight past.");
+                        Note("This move has a leftover debug pause; the preview skips it.");
                         break;
 
                     case "CallFunc":
@@ -573,10 +573,10 @@ namespace DSPRE.Avalonia
             SpaEmitter em = arc.Emitters[emitterNo];
             SpaTexture tex = (em.TexNo >= 0 && em.TexNo < arc.Textures.Count) ? arc.Textures[em.TexNo] : null;
             if (tex == null)
-                Note($"Particle {emitterNo} asks for picture {em.TexNo}, which is not in its file, so it "
+                Note($"Particle {emitterNo} asks for picture {em.TexNo}, which isn't in its file, so it "
                      + "is drawn as a plain dot.");
             else if (tex.Rgba == null)
-                Note($"Particle {emitterNo}'s picture is stored in a way DSPRE cannot read (format "
+                Note($"Particle {emitterNo}'s picture is stored in a way DSPRE can't read (format "
                      + $"{tex.Format}), so it is drawn as a plain dot.");
             (double cx, double cy, double ax, double ay, double z) = Place(callback, sepIndex, sepCount);
             cx += em.PosX; cy -= em.PosY;
@@ -803,7 +803,7 @@ namespace DSPRE.Avalonia
                 {
                     if (a[2] != 0)
                     {
-                        Note("This move fades an effect layer's colours, which the preview does not draw.");
+                        Note("This move fades an effect layer's colours, which the preview doesn't draw.");
                         break;
                     }
                     int wait = a[3];
@@ -1178,7 +1178,7 @@ namespace DSPRE.Avalonia
                     int wait = Math.Max(1, a[9]);
                     int rotTgt = a.Length > 10 ? a[10] : 0;
                     if (a.Length > 11 && a[11] != 0)
-                        Note("This move swings a second set of particles, which the preview does not show.");
+                        Note("This move swings a second set of particles, which the preview doesn't show.");
                     double rtX = rotTgt == 0 ? _atX : _dfX, rtY = rotTgt == 0 ? _atY : _dfY;
                     double shX = rtX - sim.AnchorX, shY = sim.AnchorY - rtY;
                     sim.SetEmitterMotion(f =>

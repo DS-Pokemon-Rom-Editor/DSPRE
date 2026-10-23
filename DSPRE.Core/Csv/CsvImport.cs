@@ -175,7 +175,7 @@ namespace DSPRE.Csv
             string text = Text(column);
             if (!int.TryParse(text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out value))
             {
-                Error(column, text.Length == 0 ? $"{ColumnName(column)} is empty." : $"{text} is not a whole number.");
+                Error(column, text.Length == 0 ? $"{ColumnName(column)} is empty." : $"{text} isn't a whole number.");
                 return false;
             }
             if (value < min || value > max)
@@ -243,7 +243,7 @@ namespace DSPRE.Csv
             List<CsvFix> fixes = new List<CsvFix> { new CsvFix(nameColumn, names[index], $"Use {names[index]} ({names.What} {index})") };
             if (named && byName != index)
                 fixes.Add(new CsvFix(numberColumn, byName.ToString(CultureInfo.InvariantCulture), $"Use {names[byName]} ({names.What} {byName})"));
-            Warn(nameColumn, $"{Capital(names.What)} {index} is {names[index]} in this ROM, not {nameText}. Keep to use number {index}.", fixes.ToArray());
+            Warn(nameColumn, $"{Capital(names.What)} {index} is {names[index]} in this ROM, not {nameText}. Choose Keep to use number {index}.", fixes.ToArray());
             return true;
         }
 
@@ -288,7 +288,7 @@ namespace DSPRE.Csv
             try { lines = CsvText.Read(path); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
-                session.FileProblems.Add("The file could not be read: " + e.Message);
+                session.FileProblems.Add("The file couldn't be read: " + e.Message);
                 return session;
             }
             session.Load(lines);

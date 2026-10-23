@@ -67,12 +67,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
     }
 
-    /// <summary>
-    /// Avalonia port of the WinForms <c>HeadbuttEncounterEditor</c>, data scope (HGSS). Edits a
-    /// headbutt encounter file: the 12 normal + 6 special wild-encounter slots, and the normal /
-    /// special tree groups (each a set of trees positioned by a global x/y). The on-map 3D tree
-    /// placement from WinForms is deferred; coordinates are editable numerically.
-    /// </summary>
+    /// <summary>A HeartGold and SoulSilver headbutt file: 12 normal and 6 special slots, and the normal and special
+    /// tree groups, each tree placed by a global x and y.</summary>
     public class HeadbuttEncounterViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -209,7 +205,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 if (GameFamily != GameFamilies.HGSS)
                 {
-                    StatusText = "Headbutt encounters are HeartGold/SoulSilver only.";
+                    StatusText = "Headbutt trees exist only in HeartGold and SoulSilver.";
                     return;
                 }
                 IsAvailable = true;
@@ -226,7 +222,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowErrorAsync($"Failed to set up Headbutt:\n{ex.Message}", "Headbutt editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't set up the Headbutt editor:\n{ex.Message}", "Special encounters editor");
             }
         }
 
@@ -247,11 +243,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowErrorAsync("Couldn't add headbutt files:\n" + ex.Message, "Headbutt editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't add headbutt files:\n" + ex.Message, "Special encounters editor");
             }
         }
 
-        // Opened without a file in mind: start on one with trees rather than the empty file 0.
+        // Opened without a file in mind: start on the first file with trees, since file 0 is empty.
         private static int FirstWithTrees(int count)
         {
             for (int i = 0; i < count; i++)
@@ -272,8 +268,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             try
             {
-                // Headbutt isn't one of DSPRE's owned domains for the packed NARC, so the vanilla read
-                // would show a stale packed-ROM snapshot rather than the checkout's real data/Headbutt.c.
+                // With hg-engine the packed NARC is stale, so read the checkout's data/Headbutt.c instead.
                 _hgeReadError = null;
                 if (HgEngineProject.IsActive)
                 {
@@ -296,8 +291,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     ? $"Headbutt file {index} couldn't be read from Headbutt.c: {_hgeReadError}"
                     : "";
                 OnPropertyChanged(nameof(UnsavedChangesDescription));
-                // Resolve + render the map ONCE per file, exactly like the event editor (full matrix when
-                // small, else the bounding box of all trees). Group selection only re-marks, never rebuilds.
+                // The map renders once per file, as in the Event editor; picking a group only re-marks trees.
                 ResolveMatrix();
                 DisplayMap();
                 if (_file.NormalTreeGroups.Count > 0) SelectedNormalGroupIndex = 0;
@@ -306,7 +300,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             catch (Exception ex)
             {
                 CrashReporter.LogHandled(ex);
-                _ = DialogHelper.ShowErrorAsync($"Failed to load headbutt file {index}:\n{ex.Message}", "Headbutt editor error");
+                _ = DialogHelper.ShowErrorAsync($"Couldn't load headbutt file {index}:\n{ex.Message}", "Special encounters editor");
             }
         }
 
@@ -331,9 +325,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             BindingList<HeadbuttTreeGroup> groups = _specialGroupActive ? _file.SpecialTreeGroups : _file.NormalTreeGroups;
             if (_selGroup >= groups.Count) return;
             List<HeadbuttTree> trees = groups[_selGroup].Trees;
-            // Only show USED tree slots; empty slots are the 65535/65535 sentinel and just look like
-            // broken numbers. The slot index is kept in the name so it's traceable. Add/Remove tree
-            // activates/clears a slot.
+            // Only used slots show, since empty ones read 65535, 65535; the name keeps the slot number.
             for (int i = 0; i < trees.Count; i++)
                 if (!trees[i].IsUnused)
                     SelectedGroupTrees.Add(new HeadbuttTreeRow($"Tree {i + 1}", trees[i], OnTreeChanged));
@@ -417,7 +409,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try { PlainFiles.WriteBytes(path, _file.ToByteArray()); SaveNotice.Exported(path); }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Headbutt error");
+                await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Special encounters editor");
             }
         }
 
@@ -431,7 +423,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try { read = new HeadbuttEncounterFile((ushort)_selFile, System.IO.File.ReadAllBytes(path)); }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is System.IO.EndOfStreamException || ex is ArgumentException)
             {
-                await DialogHelper.ShowErrorAsync($"That file could not be read as a headbutt file:\n{ex.Message}", "Headbutt error");
+                await DialogHelper.ShowErrorAsync($"That file couldn't be read as a headbutt file:\n{ex.Message}", "Special encounters editor");
                 return;
             }
             _file = read;
@@ -501,8 +493,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private int _headerId = -1;
 
-        /// <summary>Resolves this headbutt file's header → matrix + area EXACTLY like the WinForms editor:
-        /// the headbutt file index IS the header number (MapHeader.GetMapHeader(fileIndex)).</summary>
+        /// <summary>The headbutt file number is the header number, which gives the matrix and area.</summary>
         private void ResolveMatrix()
         {
             _matrix = null; _matrixId = -1; _areaDataId = 0; _headerId = -1;
@@ -520,9 +511,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             catch (Exception ex) { AppLogger.Error("Headbutt matrix resolve failed (file " + _selFile + "): " + ex.Message); }
         }
 
-        /// <summary>Builds the 3D scene EXACTLY like the WinForms headbutt editor: render the matrix cells
-        /// that belong to THIS header (where matrix.headers[y,x] == header.ID, or every non-empty cell if
-        /// the matrix has no headers section), plus any cell a tree sits on. Built once per file.</summary>
+        /// <summary>Renders the header's cells and any cell with a tree, once per file.</summary>
         private void DisplayMap()
         {
             Model3D = null;
@@ -548,13 +537,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             RefreshTreeMarkers();
         }
 
-        /// <summary>The matrix cells this header owns (headers[y,x]==header.ID, or all non-empty cells when
-        /// the matrix has no headers section) plus every cell a tree occupies, the WinForms map set.</summary>
+        /// <summary>The matrix cells this header owns (or all non-empty cells when the matrix has no headers)
+        /// plus every cell a tree stands on.</summary>
         private HashSet<(int x, int y)> HeaderCells()
         {
             HashSet<(int x, int y)> set = new HashSet<(int x, int y)>();
             if (_matrix == null) return set;
-            // The catch-all header owns no place of its own, only the cells its trees stand on.
+            // The catch-all header has no place, only the cells its trees stand on.
             if (_headerId != MapHeader.Everywhere)
                 for (int y = 0; y < _matrix.Height; y++)
                     for (int x = 0; x < _matrix.Width; x++)
@@ -726,7 +715,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             float tileN = (m.CellStrideX / MapTiles) * m.Scale;
             float maxSpan = tileN * 4f;   // bigger pieces are cliffs, fences or rows of buildings; thinner ones are edges
             Dictionary<int, TreeBox> pieceOwner = new Dictionary<int, TreeBox>();
-            // The selected group claims first, so a piece shared by two groups shows as the one being edited.
+            // The selected group claims first, so a piece two groups share shows as selected.
             // A tree's listed tiles can be only its bottom row, so a tree that finds nothing looks a little wider.
             foreach (TreeBox box in _treeBoxes.OrderByDescending(b => b.Special == _specialGroupActive && b.Group == _selGroup))
                 foreach (float margin in new[] { 0f, tileN * 0.5f, tileN })
@@ -1026,9 +1015,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try
             {
                 if (_file.SaveToFile(_selFile)) MarkSaved(_selFile);
-                else StatusText = "Save failed (see log).";
+                else StatusText = "Couldn't save; the log says why.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Save failed:\n{ex.Message}", "Headbutt editor error"); }
+            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't save:\n{ex.Message}", "Special encounters editor"); }
         }
 
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
@@ -1047,7 +1036,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_hgeReadError != null)
             {
                 await DialogHelper.ShowErrorAsync($"Headbutt file {_selFile} couldn't be read from Headbutt.c, so saving it would replace what is there:"
-                    + Environment.NewLine + _hgeReadError, "Headbutt editor error");
+                    + Environment.NewLine + _hgeReadError, "Special encounters editor");
                 return;
             }
             int fileId = _selFile;
@@ -1059,8 +1048,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return;
             }
             if (error == null) return;
-            StatusText = "Save failed.";
-            await DialogHelper.ShowErrorAsync($"Headbutt file {fileId} was not saved.\n{error}", "Headbutt editor error");
+            StatusText = "Couldn't save.";
+            await DialogHelper.ShowErrorAsync($"Headbutt file {fileId} wasn't saved.\n{error}", "Special encounters editor");
         }
 
         private void MarkSaved(int fileId)

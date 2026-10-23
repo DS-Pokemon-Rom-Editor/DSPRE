@@ -5,10 +5,8 @@ using Avalonia.Media.Imaging;
 namespace DSPRE.Avalonia.Views.Battle
 {
     /// <summary>
-    /// One 256×192 battle scene (background, platforms, shadows, the enemy/front + player/back sprites and the
-    /// UI chrome). The two sprites are passed in via <see cref="Enemy"/> / <see cref="Player"/>; everything
-    /// else (positions, shadows) binds to the inherited <c>BattleDisplayEditorViewModel</c> DataContext, so the
-    /// scene can be instantiated once (separate display) or twice (unified Male + Female display).
+    /// One battle scene. The two sprites are passed in; the rest binds to the BattleDisplayEditorViewModel DataContext,
+    /// so one or two scenes can share it.
     /// </summary>
     public partial class BattleSceneControl : UserControl
     {
@@ -26,10 +24,8 @@ namespace DSPRE.Avalonia.Views.Battle
         public double EnemyY  { get => GetValue(EnemyYProperty);  set => SetValue(EnemyYProperty, value); }
         public double PlayerY { get => GetValue(PlayerYProperty); set => SetValue(PlayerYProperty, value); }
 
-        // Static battle-scene chrome (background/platforms/shadows/health bars), loaded via code-behind
-        // instead of a literal XAML "avares://" Image.Source: the declarative form throws and crashes
-        // the whole editor if an asset can't be resolved, so this try/catch keeps a missing file to one
-        // blank image instead.
+        // Loaded in code: a XAML image source that can't resolve crashes the editor, so a missing file becomes a blank
+        // image.
         private static Bitmap LoadAsset(string name)
         {
             try { return new Bitmap(global::Avalonia.Platform.AssetLoader.Open(new System.Uri($"avares://DSPRE.Avalonia/Avalonia/Assets/Battle/{name}"))); }

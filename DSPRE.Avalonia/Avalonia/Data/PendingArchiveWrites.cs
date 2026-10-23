@@ -19,8 +19,7 @@ namespace DSPRE.Avalonia.Data
 
         private sealed record State(Dictionary<(DirNames, int), byte[]> Members, Dictionary<string, byte[]> Others);
 
-        // What each touched entry held on disk before its first import. An entry missing from a state stands
-        // at these bytes, which is what makes undoing past a save write the old bytes back.
+        // What each entry held on disk before its first import, so undoing past a save writes it back.
         private readonly ConcurrentDictionary<(DirNames, int), byte[]> _first = new();
         private readonly ConcurrentDictionary<string, (Target Target, byte[] Bytes)> _firstOthers = new();
         private State _state = new(new(), new());

@@ -37,7 +37,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         private async void Export_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ExportAsync() ?? Task.CompletedTask, "The textures weren't exported.", ErrorTitle);
         private void ShowFile_Click(object sender, RoutedEventArgs e) => VM?.ShowFile();
 
-        // ── Preview zoom: fitted until the wheel turns, then whole-pixel steps; dragging pans ─────────────
+        // Preview zoom: fitted until the wheel turns, then whole-pixel steps; dragging pans
         private int _zoom;           // 0 fits the box
         private global::Avalonia.Point? _panFrom;
 
@@ -91,6 +91,6 @@ namespace DSPRE.Avalonia.Views.Graphics
         private void AddPack_Click(object sender, RoutedEventArgs e) => VM?.AddPack();
         private async void RemPack_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.RemoveLastPackAsync() ?? Task.CompletedTask, "The texture pack wasn't removed.", ErrorTitle);
 
-        private const string ErrorTitle = "Map & building textures error";
+        private const string ErrorTitle = "Map & building textures";
     }
 }

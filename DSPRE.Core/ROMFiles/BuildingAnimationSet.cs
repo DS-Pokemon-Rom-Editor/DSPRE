@@ -145,7 +145,7 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// The texture-swapping animations a building model plays, which is what makes signs flash.
+        /// The texture-swapping animations a building model plays, such as flashing signs.
         /// </summary>
         public static IReadOnlyList<TexturePatternAnimation> PatternsFor(int modelId, bool indoor, FieldTimeZone? timeOfDay = null)
         {

@@ -152,8 +152,7 @@ namespace DSPRE
 
             if (offset <= 0 || offset + RowSize > data.Length)
             {
-                error = $"The {descriptor.Name} isn't where this ROM keeps it, and it couldn't be found " +
-                    $"in overlay {overlayNumber}.";
+                error = $"DSPRE couldn't find the {descriptor.Name} in overlay {overlayNumber}.";
                 return null;
             }
 
@@ -219,12 +218,12 @@ namespace DSPRE
             }
             if (rowIndex < 0 || rowIndex >= location.RowCount)
             {
-                error = "Row index out of range.";
+                error = "There is no such row.";
                 return false;
             }
             if (row?.Ids == null || row.Ids.Length != SlotCount)
             {
-                error = "The row does not have the six entries the game expects.";
+                error = "The row doesn't have the six entries the game expects.";
                 return false;
             }
 

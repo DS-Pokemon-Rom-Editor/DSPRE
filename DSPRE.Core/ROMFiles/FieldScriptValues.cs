@@ -13,7 +13,7 @@ namespace DSPRE.ROMFiles
 
         private const int LastSpecial = 0x800d;
 
-        /// <summary>Whether this number names a variable rather than being a value on its own.</summary>
+        /// <summary>Whether this number names a variable, not a plain value.</summary>
         public static bool IsVariable(int value) => value >= SavedFirst;
 
         /// <summary>The variable's name as the script database and rotom write it, or null when it has none.</summary>

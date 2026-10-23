@@ -33,7 +33,7 @@ namespace DSPRE
 
                 if (elem.level > atLevel)
                 {
-                    continue; // the moves should be sorted by level so we can probably break here but better safe than sorry
+                    continue;
                 }
 
                 if (elem.move == 0)
@@ -54,7 +54,6 @@ namespace DSPRE
 
             ushort[] learnset = moves.ToArray();
 
-            // Ensure we have exactly 4 moves, filling with 0 if necessary
             if (learnset.Length < 4)
             {
                 Array.Resize(ref learnset, 4);
@@ -179,7 +178,7 @@ namespace DSPRE
         }
         public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true)
         {
-            SaveToFileExplorePath("Gen IV Pokémon Learnset data", "bin", suggestedFileName, showSuccessMessage);
+            SaveToFileExplorePath("Learnset data", "bin", suggestedFileName, showSuccessMessage);
         }
     }
 }

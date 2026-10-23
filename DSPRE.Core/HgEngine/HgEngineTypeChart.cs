@@ -149,7 +149,7 @@ namespace DSPRE.HgEngine
         private static bool TryLoad(out Table table, out string error)
         {
             table = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             if (!File.Exists(FilePath)) { error = $"{SourceRelPath} is missing from the checkout."; return false; }
             error = Parse(HgEngineFileCache.GetText(FilePath).Replace("\r\n", "\n"), out table);
             return error == null;

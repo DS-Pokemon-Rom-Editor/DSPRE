@@ -5,7 +5,7 @@ using static DSPRE.MoveData;
 
 namespace DSPRE
 {
-    // ── Shared import data classes (moved from MoveDataEditor inner scope) ────
+
 
     public class MoveImportError
     {

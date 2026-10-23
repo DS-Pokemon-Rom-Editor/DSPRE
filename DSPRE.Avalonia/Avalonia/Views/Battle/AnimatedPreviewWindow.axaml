@@ -26,7 +26,7 @@
         <CheckBox Content="Scenery" IsChecked="{Binding AnimateTerrain}"
                   ToolTip.Tip="Play the water and the buildings that animate."/>
         <CheckBox Content="People" IsChecked="{Binding ShowPeople}"
-                  ToolTip.Tip="Show the people moving as their movement code says."/>
+                  ToolTip.Tip="Move the people the way their events say."/>
         <CheckBox Content="Step in" IsChecked="{Binding StepInto}" IsEnabled="{Binding CanStepInto}"
                   ToolTip.Tip="Walk the map yourself with the arrow keys."/>
         <CheckBox Content="Sound" IsChecked="{Binding PlaySounds}"
@@ -81,7 +81,7 @@
                                      Indent="{Binding ChoiceIndent}" CursorX="{Binding ChoiceCursorX}"
                                      RowOffset="{Binding ChoiceRowOffset}"/>
 
-          <!-- Something only the person watching can say, because the preview has no save to read. -->
+          <!-- Asks for what a save would hold; the preview has no save. -->
           <Panel IsVisible="{Binding HasStatePrompt}">
             <Border Background="#8C000000"/>
             <Border HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16" MaxWidth="440"
@@ -122,7 +122,7 @@
         </Panel>
       </views:DsScreenPanel>
 
-      <!-- Who is on the map. -->
+
       <Border Grid.Column="1" Width="230" Margin="0,4,4,4" IsVisible="{Binding ShowFlags}"
               Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
               BorderThickness="1" Padding="8">
@@ -147,7 +147,7 @@
         </DockPanel>
       </Border>
 
-      <!-- The words messages leave gaps for. -->
+
       <Border Grid.Column="4" Width="290" Margin="0,4,4,4" IsVisible="{Binding ShowStringVars}"
               Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
               BorderThickness="1" Padding="8">
@@ -176,7 +176,7 @@
         </DockPanel>
       </Border>
 
-      <!-- What the map runs on its own, out of its level script file. -->
+
       <Border Grid.Column="3" Width="270" Margin="0,4,4,4" IsVisible="{Binding ShowLevelScripts}"
               Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
               BorderThickness="1" Padding="8">
@@ -215,7 +215,7 @@
         </DockPanel>
       </Border>
 
-      <!-- The script as it plays, and what the preview has been told. Only shown while stepping in. -->
+      <!-- Only shown while stepping in. -->
       <Border Grid.Column="2" Width="360" Margin="0,4,4,4" IsVisible="{Binding StepInto}"
               Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
               BorderThickness="1" Padding="8">

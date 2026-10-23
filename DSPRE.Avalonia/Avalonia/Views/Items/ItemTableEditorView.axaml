@@ -28,7 +28,6 @@
 
     <!-- Main content -->
     <TabControl x:Name="Tabs" Margin="8">
-      <!-- ── Pickup tab ─────────────────────────────────────────────────── -->
       <TabItem Header="Pickup" IsVisible="{Binding ShowPickupTab}">
         <DockPanel Margin="4">
           <StackPanel x:Name="PickupRate" DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
@@ -422,7 +421,6 @@
         </DockPanel>
       </TabItem>
 
-      <!-- ── Hidden Items tab ──────────────────────────────────────────── -->
       <TabItem x:Name="HiddenTab" Header="Hidden items" IsVisible="{Binding ShowHiddenItemsTab}">
         <Grid ColumnDefinitions="300,8,*" Margin="4">
           <!-- Left: list -->
@@ -491,7 +489,6 @@
         </Grid>
       </TabItem>
 
-      <!-- ── Rock Smash tab (HGSS) ────────────────────────────────────────── -->
       <TabItem Header="Rock Smash" IsVisible="{Binding ShowRockSmashTab}">
         <DockPanel Margin="4">
           <!-- Item-drop tables: hardcoded in ov001.bin, only confirmed for English builds -->
@@ -528,7 +525,7 @@
                 <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item7, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item7}" AllowsNone="False" FontSize="11"/></DockPanel>
               </UniformGrid>
 
-              <TextBlock Text="Cliff cave" FontSize="11" FontWeight="SemiBold" Margin="0,4,0,0"/>
+              <TextBlock Text="Cliff Cave" FontSize="11" FontWeight="SemiBold" Margin="0,4,0,0"/>
               <UniformGrid Columns="4" DataContext="{Binding RockSmashCliffCaveTable}" x:DataType="vm:RockSmashItemSlotsRow">
                 <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item0, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item0}" AllowsNone="False" FontSize="11"/></DockPanel>
                 <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item1, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item1}" AllowsNone="False" FontSize="11"/></DockPanel>

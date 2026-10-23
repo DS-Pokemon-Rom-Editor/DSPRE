@@ -126,7 +126,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 PokemonPersonalData d = new PokemonPersonalData(id);
                 // The unpacked copy is the last build; Species.c is what the checkout holds now.
                 if (HgEngineProject.IsActive && !HgEngineSpeciesPersonalFields.TryLoadInto(id, d, out string error))
-                    return (null, "Species.c could not be read: " + error);
+                    return (null, "Species.c couldn't be read: " + error);
                 return (d, null);
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException) { return (null, e.Message); }
@@ -217,7 +217,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private int _item1Index; public int Item1Index { get => _item1Index; set { if (!Set(ref _item1Index, value)) return; RaiseHeldItemOdds(); if (!_loading && _current != null) { _current.Item1 = (ushort)value; SetDirty(); } } }
         private int _item2Index; public int Item2Index { get => _item2Index; set { if (!Set(ref _item2Index, value)) return; RaiseHeldItemOdds(); if (!_loading && _current != null) { _current.Item2 = (ushort)value; SetDirty(); } } }
 
-        // The game's own odds table, so the chances follow any edit made in the Wild Held Items editor.
+        // The game's odds table, so the chances follow any edit made in Wild held items.
         private DSPRE.ROMFiles.WildHeldItemOdds _heldItemOdds;
         public bool HasHeldItemOdds => _heldItemOdds != null;
         public bool CanOpenWildHeldItems => _heldItemOdds != null && BetaEditors.Allows("WildHeldItemOddsView");
@@ -453,13 +453,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (staged == null || loaded == null) return null;
             if (staged.OwFemaleForm != loaded.OwFemaleForm && !validateOwFemaleForm(staged.OwFemaleForm, out string owError))
-                return $"OW Female Form: {owError}";
+                return $"Female overworld form: {owError}";
             if (staged.HiddenAbility != loaded.HiddenAbility && staged.HiddenAbility < 0) return "Pick a hidden ability.";
             if (staged.BabyMon != loaded.BabyMon && staged.BabyMon < 0) return "Pick a baby Pokémon.";
             if (staged.BaseExp != loaded.BaseExp && (staged.BaseExp < 0 || staged.BaseExp > ushort.MaxValue))
-                return $"Base Exp must be 0 to {ushort.MaxValue}.";
+                return $"Base exp must be 0 to {ushort.MaxValue}.";
             if (staged.RegionalDex != loaded.RegionalDex && (staged.RegionalDex < 0 || staged.RegionalDex > ushort.MaxValue))
-                return $"Regional Dex # must be 0 to {ushort.MaxValue}.";
+                return $"Regional Dex number must be 0 to {ushort.MaxValue}.";
             if (staged.IconPalette != loaded.IconPalette && (staged.IconPalette < 0 || staged.IconPalette >= IconPaletteCount))
                 return "Pick an icon palette.";
             if (staged.FollowerSize != loaded.FollowerSize && staged.FollowerSize is < 0 or > 1) return "Follower size must be 0 or 1.";
@@ -615,7 +615,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 // pokegra.mk builds every follower from the species' own sprites/<name>/overworld.png.
                 _owDiskPngPath = HgEngineOverworldSprite.TryGetSpritePngPath(_currentId, out string ownPath) ? ownPath : null;
                 _owHasSpriteFiles = _owDiskPngPath != null;
-                OwStatusText = $"Overworld gfx #{_owGfxIndex}" + (_owHasSpriteFiles ? "" : " (no sprite art yet, import one below)");
+                OwStatusText = $"Overworld graphic {_owGfxIndex}" + (_owHasSpriteFiles ? "" : " (no sprite art yet, import one below)");
             }
             OnPropertyChanged(nameof(OwNeedsTemplate));
             RefreshOwPending();
@@ -822,7 +822,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try { onDisk = new PokemonPersonalData(id); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
-                AppLogger.Warn($"Personal Data: could not re-read species {id}: {e.Message}");
+                AppLogger.Warn($"Personal Data: couldn't re-read species {id}: {e.Message}");
                 return;
             }
 
@@ -876,7 +876,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private IDisposable _iconSaved;
         public void Detach() { _iconSaved?.Dispose(); AppEvents.LabelsChanged -= OnLabelsChanged; AppEvents.PersonalDataSaved -= OnPersonalDataSaved; DSPRE.ROMFiles.WildHeldItemOdds.Saved -= OnHeldItemOddsSaved; _owFrameTimer.Stop(); }
 
-        // The Wild Held Items editor saves on the UI thread, so the chances can be shown again straight away.
+        // Wild held items saves on the UI thread, so the chances can be shown again straight away.
         private void OnHeldItemOddsSaved()
         {
             LoadHeldItemOdds();
@@ -921,38 +921,38 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 // Operations that did finish are no longer pending.
                 if (partlySaved) _history.Capture(Snapshot(), coalesce: true);
-                string lead = partlySaved ? $"Species {_currentId} was only partly saved:" : $"Species {_currentId} was not saved:";
-                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"{lead}\n{sourceError}", "Personal data error");
+                string lead = partlySaved ? $"Species {_currentId} was only partly saved:" : $"Species {_currentId} wasn't saved:";
+                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"{lead}\n{sourceError}", "Personal data editor");
                 return;
             }
             string athlonProblem = PokeathlonSaveProblem();
             if (athlonProblem != null)
             {
-                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"Species {_currentId} was not saved:\n{athlonProblem}", "Personal data error");
+                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"Species {_currentId} wasn't saved:\n{athlonProblem}", "Personal data editor");
                 return;
             }
             string followerError = SaveRetailFollower();
             if (followerError != null)
             {
-                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"The follower of species {_currentId} was not saved:\n{followerError}", "Personal data error");
+                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"The follower of species {_currentId} wasn't saved:\n{followerError}", "Personal data editor");
                 return;
             }
             string athlonError = SavePokeathlon();
             if (athlonError != null)
             {
-                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"The Pokéathlon stats of species {_currentId} were not saved:\n{athlonError}", "Personal data error");
+                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"The Pokéathlon stats of species {_currentId} weren't saved:\n{athlonError}", "Personal data editor");
                 return;
             }
             string maskError = SaveExtraMaskTms();
             if (maskError != null)
             {
-                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"The TM121+ compatibility of species {_currentId} was not saved:\n{maskError}", "Personal data error");
+                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"The TM121+ compatibility of species {_currentId} wasn't saved:\n{maskError}", "Personal data editor");
                 return;
             }
             string machineError = SaveSourceMachineMoves();
             if (machineError != null)
             {
-                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"The machine moves of species {_currentId} were not saved:\n{machineError}", "Personal data error");
+                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"The machine moves of species {_currentId} weren't saved:\n{machineError}", "Personal data editor");
                 return;
             }
             if (!HgEngineProject.IsActive) FinishPending();
@@ -989,8 +989,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             int? templateSpecies = null;
             if (s.OwSpritePath != null)
             {
-                if (!File.Exists(s.OwSpritePath)) return $"{Path.GetFileName(s.OwSpritePath)} was not found.";
-                if (s.OwShinySpritePath != null && !File.Exists(s.OwShinySpritePath)) return $"{Path.GetFileName(s.OwShinySpritePath)} was not found.";
+                if (!File.Exists(s.OwSpritePath)) return $"{Path.GetFileName(s.OwSpritePath)} wasn't found.";
+                if (s.OwShinySpritePath != null && !File.Exists(s.OwShinySpritePath)) return $"{Path.GetFileName(s.OwShinySpritePath)} wasn't found.";
                 if (OwNeedsTemplate)
                 {
                     if (_owTemplateSpeciesIndex < 0 || _owTemplateSpeciesIndex >= PokemonNames.Count)
@@ -1018,20 +1018,20 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return false;
             }
 
-            if (Step(s.HiddenAbility != loaded.HiddenAbility, "Hidden Ability",
+            if (Step(s.HiddenAbility != loaded.HiddenAbility, "Hidden ability",
                     () => HgEngineHiddenAbility.TrySetAbilityId(id, s.HiddenAbility, out string e) ? null : e))
                 loaded = loaded with { HiddenAbility = s.HiddenAbility };
-            if (Step(s.BaseExp != loaded.BaseExp, "Base Exp",
+            if (Step(s.BaseExp != loaded.BaseExp, "Base exp",
                     () => HgEngineBaseExperience.TrySetBaseExp(id, s.BaseExp, out string e) ? null : e))
                 loaded = loaded with { BaseExp = s.BaseExp };
             if (Step(s.BabyMon != loaded.BabyMon, "Baby Pokémon",
                     () => HgEngineBabyMon.TrySetBabySpecies(id, s.BabyMon, out string e) ? null : e))
                 loaded = loaded with { BabyMon = s.BabyMon };
-            if (Step(s.RegionalDex != loaded.RegionalDex, "Regional Dex #",
+            if (Step(s.RegionalDex != loaded.RegionalDex, "Regional Dex number",
                     () => HgEngineRegionalDex.TrySetDexNumber(id, s.RegionalDex, out string e) ? null : e))
                 loaded = loaded with { RegionalDex = s.RegionalDex };
             // The Battle Display tab writes this table too, and also only when its own value changed.
-            if (Step(s.IconPalette != loaded.IconPalette, "Icon Palette",
+            if (Step(s.IconPalette != loaded.IconPalette, "Icon palette",
                     () => HgEngineIconPalette.TrySetPaletteId(id, s.IconPalette, out string e) ? null : e))
                 loaded = loaded with { IconPalette = s.IconPalette };
 
@@ -1043,7 +1043,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 loaded = loaded with { FollowerSize = s.FollowerSize, FollowerBounceIndex = s.FollowerBounceIndex };
                 _hgLoadedBounceValue = bounceValue;
             }
-            if (Step(s.OwFemaleForm != loaded.OwFemaleForm, "OW Female Form",
+            if (Step(s.OwFemaleForm != loaded.OwFemaleForm, "Female overworld form",
                     () => HgEngineSpeciesOwFormFemale.TrySetRawExpression(id, s.OwFemaleForm, out string e) ? null : e))
                 loaded = loaded with { OwFemaleForm = s.OwFemaleForm };
             if (Step(_owHasEntry && s.OwSizeClassIndex != loaded.OwSizeClassIndex, "Size Class",
@@ -1103,10 +1103,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     PersonalDataCsv.Write(writer, CsvLists(), rows);
                 SaveNotice.Exported(path);
                 if (unread.Count > 0)
-                    await DialogHelper.ShowInfoAsync($"{unread.Count} Pokémon could not be read and were left out: {string.Join(", ", unread.Take(10))}{(unread.Count > 10 ? ", ..." : "")}",
+                    await DialogHelper.ShowInfoAsync($"{unread.Count} Pokémon couldn't be read and were left out: {string.Join(", ", unread.Take(10))}{(unread.Count > 10 ? ", ..." : "")}",
                         "Pokémon left out");
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Error: {ex.Message}", "Pokémon editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Pokémon editor"); }
         }
 
         /// <summary>Imports the Pokémon in the file. Changes stay unsaved until Save.</summary>
@@ -1200,7 +1200,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _sourceLevelUpMoves = new HashSet<int>();
             if (!HgEngineProject.IsActive || _currentId < 0) return;
             _machineMoveIds = TMEditor.ReadMachineMoves();
-            // Inherited lists are the build's fallback for forms; saving gives the form a list of its own.
+            // Inherited lists are the build's fallback for forms; saving gives the form its own list.
             if (!HgEngineLearnsets.TryGetMoveNames(_currentId, HgEngineLearnsets.MachineMovesField, out List<int> moves, out _, out string error)
                 || !HgEngineLearnsets.TryGetLevelMoves(_currentId, out List<(int level, int move)> levelUp, out error))
             {
@@ -1308,7 +1308,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 if (Staged == null || value < 0 || value > 2) return;
                 HgssFollowers.Size size = value == 0 ? HgssFollowers.Size.Small : value == 1 ? HgssFollowers.Size.SmallNoShadow : HgssFollowers.Size.Large;
-                // Too tall also picks the large art in the Hall of Fame, so it follows the size on the model the game reads it from.
+                // Too tall also picks the large Hall of Fame art, so it follows the size of the model the game reads.
                 bool tooTall = OnBaseModel ? size == HgssFollowers.Size.Large : Staged.TooTall;
                 Stage(Staged with { Bits = HgssFollowers.BitsOf(size, Staged.Bits), TooTall = tooTall });
             }
@@ -1627,7 +1627,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             LoadMon(newId);
         }
 
-        // Set when Species.c couldn't be read for this Pokémon; Save refuses rather than write guessed values.
+        // Set when Species.c couldn't be read for this Pokémon; Save refuses so no guessed values are written.
         private string _hgLoadError;
         public string HgLoadError
         {
@@ -1662,7 +1662,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string loadError = null;
             if (HgEngineProject.IsActive && !HgEngineSpeciesPersonalFields.TryLoadInto(id, _current, out loadError))
                 AppLogger.Error($"hg-engine Species.c read failed for species {id}: {loadError}");
-            HgLoadError = loadError == null ? null : $"Species.c could not be read, so this Pokémon can't be saved: {loadError}";
+            HgLoadError = loadError == null ? null : $"Species.c couldn't be read, so this Pokémon can't be saved: {loadError}";
 
             LoadExtraMaskTms();
             LoadSourceMachineMoves();
@@ -1743,7 +1743,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 case (byte)PokemonGender.Male:    return "100% Male";
                 case (byte)PokemonGender.Female:  return "100% Female";
-                case (byte)PokemonGender.Unknown: return "Gender Unknown";
+                case (byte)PokemonGender.Unknown: return "Gender unknown";
                 default:
                     float femalePct = 100 * ((vec + 1) / 256f);
                     return $"{100 - femalePct:F1}% Male / {femalePct:F1}% Female";

@@ -35,7 +35,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private string[] _names = Array.Empty<string>();
         private Facts[] _facts;
 
-        public ObservableCollection<string> Operators { get; } = new ObservableCollection<string> { "Contains", "Does not contain", "Is exactly", "Is not" };
+        public ObservableCollection<string> Operators { get; } = new ObservableCollection<string> { "Contains", "Doesn't contain", "Is exactly", "Isn't" };
         public ObservableCollection<TrainerSearchResult> Results { get; } = new ObservableCollection<TrainerSearchResult>();
         public List<string> ClassChoices { get; } = new List<string> { "Any class" };
         public List<string> AiChoices { get; } = new List<string> { "Any AI" };

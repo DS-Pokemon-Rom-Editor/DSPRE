@@ -10,7 +10,7 @@ namespace DSPRE.ROMFiles
         private static readonly HashSet<byte> Water = new HashSet<byte> { 16, 17, 18, 19, 20, 21, 25, 42, 80, 81, 82, 83 };
         private const byte PlatinumOnlyWater = 34;
 
-        /// <summary>Whether this is water, which needs Surf rather than feet.</summary>
+        /// <summary>Whether this is water, which needs Surf.</summary>
         public static bool IsWater(byte behavior, RomInfo.GameFamilies family) =>
             Water.Contains(behavior) || (family != RomInfo.GameFamilies.HGSS && behavior == PlatinumOnlyWater);
 

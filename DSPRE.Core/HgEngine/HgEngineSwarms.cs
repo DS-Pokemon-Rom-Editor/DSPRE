@@ -51,8 +51,8 @@ namespace DSPRE.HgEngine
                 if (item.List == null || item.List.Items.Count != 2) return $"{RelPath}: swarm row {parsed.Raw.Count} isn't {{ map, kind }}.";
                 string header = item.List.Items[0].ValueText(text), method = item.List.Items[1].ValueText(text);
                 parsed.Raw.Add((header, method));
-                if (!HgEngineSourceExpression.TryEvaluate(header, Map, out int h) || h < 0 || h > ushort.MaxValue) return $"{RelPath}: map {header} could not be read.";
-                if (!HgEngineSourceExpression.TryEvaluate(method, n => p.Methods.TryGetValue(n, out int v) ? v : null, out int m) || m < 0 || m > 2) return $"{RelPath}: swarm kind {method} could not be read.";
+                if (!HgEngineSourceExpression.TryEvaluate(header, Map, out int h) || h < 0 || h > ushort.MaxValue) return $"{RelPath}: map {header} couldn't be read.";
+                if (!HgEngineSourceExpression.TryEvaluate(method, n => p.Methods.TryGetValue(n, out int v) ? v : null, out int m) || m < 0 || m > 2) return $"{RelPath}: swarm kind {method} couldn't be read.";
                 parsed.Rows.Add(((ushort)h, (ushort)m));
             }
             if (!int.TryParse(count.Groups[2].Value, out int n) || n != parsed.Rows.Count)

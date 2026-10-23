@@ -81,8 +81,7 @@ namespace DSPRE
             catch (Exception ex) { AppLogger.WarnOnce("HeaderLabels.LocationNameOf", ex); return ""; }
         }
 
-        /// <summary>Whether headers are read from their own files rather than out of arm9. Having a
-        /// folder for them is not the same as the patch being applied.</summary>
+        /// <summary>Whether the dynamic headers patch is applied; the folder alone doesn't say so.</summary>
         public static bool DynamicHeaders =>
             ROMFiles.MapHeader.UsesDynamicHeaders;
 

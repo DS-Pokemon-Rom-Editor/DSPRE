@@ -245,7 +245,7 @@ namespace DSPRE.HgEngine
         public static List<Member> Members(out string error)
         {
             error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine folder is open."; return null; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return null; }
             string root = HgEngineProject.RepoPathUnc;
             string dir = SpritesDir();
             if (!Directory.Exists(dir)) { error = $"{Rel(dir)} is missing from the checkout."; return null; }
@@ -414,7 +414,7 @@ namespace DSPRE.HgEngine
             text = null;
             error = null;
             path = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine folder is open."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             path = Path.Combine(HgEngineProject.RepoPathUnc, TableRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path)) { error = $"{TableRelPath} is missing from the checkout."; return false; }
             text = HgEngineFileCache.GetText(path);

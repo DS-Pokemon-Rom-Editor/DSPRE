@@ -17,9 +17,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
     /// <summary>
-    /// Avalonia port of the WinForms <c>GreatMarshEncounterEditor</c> (DPPt).
-    /// Edits the Great Marsh daily-Pokémon pools (only the species per slot is
-    /// editable). Embedded as a tab in the Encounters editor.
+    /// The Great Marsh daily Pokémon pools (DPPt), species only. A tab of the Special encounters editor.
     /// </summary>
     public class GreatMarshEncounterViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
@@ -145,7 +143,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (string.IsNullOrEmpty(Filesystem.EncounterExtended) || !Directory.Exists(Filesystem.EncounterExtended))
             {
                 await DialogHelper.ShowErrorAsync(
-                    "Great Marsh encounter files not found.\nExpected location: arc/encdata_ex.narc", "Special encounters editor error");
+                    "The Great Marsh encounter file, arc/encdata_ex.narc, is missing.", "Special encounters editor");
                 IsAvailable = false;
                 OnPropertyChanged(nameof(IsNotAvailable));
                 return;
@@ -176,7 +174,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                _ = DialogHelper.ShowErrorAsync($"Error loading Great Marsh encounters: {ex.Message}", "Special encounters editor error");
+                _ = DialogHelper.ShowErrorAsync($"Couldn't load the Great Marsh encounters: {ex.Message}", "Special encounters editor");
             }
         }
 
@@ -311,7 +309,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync($"Error importing file: {ex.Message}", "Special encounters editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't import the file: {ex.Message}", "Special encounters editor");
             }
         }
 

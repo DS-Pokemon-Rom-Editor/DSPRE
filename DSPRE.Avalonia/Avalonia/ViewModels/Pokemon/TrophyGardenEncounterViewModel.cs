@@ -200,7 +200,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Save()
         {
             if (_file == null) return;
-            if (_file.Problem() is string problem) { _ = DialogHelper.ShowErrorAsync(problem, "Trophy Garden error"); return; }
+            if (_file.Problem() is string problem) { _ = DialogHelper.ShowErrorAsync(problem, "Special encounters editor"); return; }
             // The file reports its own write error.
             if (!_file.SaveToNarc(showSuccessMessage: false)) return;
             _isDirty = false;
@@ -235,7 +235,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
                 SystemShell.RevealInFileManager(path);
             else
-                AppMessages.Warning("Trophy Garden encounter directory not found.", "Directory not found");
+                AppMessages.Warning("The Trophy Garden encounter folder wasn't found.", "Folder not found");
         }
 
         public void ShowHelp()

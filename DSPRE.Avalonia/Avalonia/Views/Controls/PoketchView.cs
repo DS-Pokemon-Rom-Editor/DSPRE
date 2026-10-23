@@ -12,9 +12,8 @@ using DSPRE.Avalonia.Data;
 namespace DSPRE.Avalonia.Views.Controls
 {
     /// <summary>
-    /// Platinum's bottom screen. Touching it reacts the way the Pokétch does, without ever changing app:
-    /// during a script the side buttons take their locked look and the face beeps; otherwise the buttons go
-    /// down and the face lights up while held.
+    /// Platinum's bottom screen: touches react as on the Pokétch without changing app, and a running script locks the
+    /// buttons.
     /// </summary>
     public sealed class PoketchView : Control, ICustomHitTest
     {

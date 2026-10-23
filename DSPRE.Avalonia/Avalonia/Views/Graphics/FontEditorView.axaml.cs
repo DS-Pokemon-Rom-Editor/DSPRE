@@ -29,13 +29,13 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (VM == null) return;
             bool whole = VM.WholeFontForPictures;
             string path = await DialogHelper.SaveFileAsync(this,
-                whole ? "Save the whole font as a PNG" : "Save this letter as a PNG",
+                whole ? "Export the whole font" : "Export this letter",
                 new[] { PngOnly },
                 whole ? "font.png" : $"letter_{VM.SelectedGlyphIndex}.png");
             if (path == null) return;
 
             string trouble = VM.ExportPng(path, whole);
-            if (trouble != null) await DialogHelper.ShowErrorAsync(trouble, "Font editor error");
+            if (trouble != null) await DialogHelper.ShowErrorAsync(trouble, "Font editor");
             else SaveNotice.Exported(path);
         }
 
@@ -44,12 +44,12 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (VM == null) return;
             bool whole = VM.WholeFontForPictures;
             string path = await DialogHelper.OpenFileAsync(this,
-                whole ? "Read a whole font from a PNG" : "Read this letter from a PNG",
+                whole ? "Import the whole font" : "Import this letter",
                 new[] { PngOnly });
             if (path == null) return;
 
             string trouble = VM.ImportPng(path, whole);
-            if (trouble != null) await DialogHelper.ShowErrorAsync(trouble, "Font editor error");
+            if (trouble != null) await DialogHelper.ShowErrorAsync(trouble, "Font editor");
             else SaveNotice.Imported(whole ? "the font" : $"letter {VM.SelectedGlyphIndex}", path);
         }
 

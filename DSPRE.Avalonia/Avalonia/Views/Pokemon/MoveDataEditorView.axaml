@@ -55,7 +55,6 @@
 	<!-- Main editing area -->
 	<Grid ColumnDefinitions="*,10,*" RowDefinitions="Auto,8,Auto,8,*,8,Auto">
 
-	  <!-- ── Left column ── -->
 
 	  <!-- Type / Split / Range -->
 	  <GroupBox x:Name="PropertiesBox" Grid.Row="0" Grid.Column="0" Header="Move properties">
@@ -111,7 +110,6 @@
 		</DockPanel>
 	  </GroupBox>
 
-	  <!-- ── Right column ── -->
 
 	  <!-- Numeric stats -->
 	  <GroupBox x:Name="StatsBox" Grid.Row="0" Grid.Column="2" Header="Stats">

@@ -17,10 +17,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
     }
 
     /// <summary>
-    /// Avalonia port of the WinForms <c>TmHmBulkEditor</c>: bulk-edit TM/HM compatibility across many
-    /// Pokémon at once, either by selecting species and toggling machines for all of them (By Pokémon),
-    /// or by picking one machine and checking/unchecking it per species (By TM/HM). Also carries the
-    /// evolution-family "Sync" helper (union/intersection) and "Copy Compatibility To…".
+    /// TM and HM compatibility for many Pokémon at once, by Pokémon or by machine, with family sync and copy.
     /// </summary>
     public class TmHmBulkEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
@@ -270,12 +267,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 || !HgEngine.HgEngineLearnsets.TryGetAllLevelMoves(out _levelLists, out error))
             {
                 _loadError = error;
-                AppLogger.Error("TM/HM bulk editor: learnsets.json could not be read: " + error);
+                AppLogger.Error("TM/HM bulk editor: learnsets.json couldn't be read: " + error);
             }
             _formBases = HgEngine.HgEngineLearnsets.FormBases();
         }
 
-        // A form with no list of its own uses its base species' one, as the build does.
+        // A form without a list uses its base species' list, as the build does.
         private void LoadSourceSpecies(int id)
         {
             List<T> Own<T>(Dictionary<int, List<T>> lists, int s) => lists != null && lists.TryGetValue(s, out global::System.Collections.Generic.List<T> l) ? l : new List<T>();
@@ -664,7 +661,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception e) when (e is System.IO.IOException || e is UnauthorizedAccessException)
             {
-                AppLogger.Warn($"TM/HM bulk editor: could not re-read species {id}: {e.Message}");
+                AppLogger.Warn($"TM/HM bulk editor: couldn't re-read species {id}: {e.Message}");
                 return;
             }
             _carriedDirty = _isDirty;
@@ -712,7 +709,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             catch (Exception e) when (e is System.IO.IOException || e is UnauthorizedAccessException || e is InvalidOperationException || e is ArgumentException)
             {
                 foreach (int id in written) AppEvents.RaisePersonalDataSaved(this, id);
-                _ = DialogHelper.ShowErrorAsync("Not everything was saved: the TM/HM compatibility couldn't be written.\n" + e.Message, "TM / HM bulk editor error");
+                _ = DialogHelper.ShowErrorAsync("Not everything was saved: the TM/HM compatibility couldn't be written.\n" + e.Message, "TM/HM bulk editor");
                 return;
             }
             foreach (int id in written) AppEvents.RaisePersonalDataSaved(this, id);
@@ -732,7 +729,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (IsByPokemonMode)
             {
                 StatusText = $"{_speciesCount} Pokémon in {_families.Count} evolution families, {_selectedSpeciesIds.Count} selected" +
-                    (_isDirty ? " [Unsaved Changes]" : "");
+                    (_isDirty ? ", unsaved changes" : "");
             }
             else
             {
@@ -740,7 +737,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     ? MachineNamesList[CurrentMachineIndex] : "?";
                 int compatCount = _compat.Count(kvp => kvp.Value.Contains(CurrentMachine));
                 StatusText = $"{machineLabel}: {compatCount} of {_speciesCount} Pokémon compatible." +
-                    (_isDirty ? " [Unsaved Changes]" : "");
+                    (_isDirty ? ", unsaved changes" : "");
             }
         }
     }

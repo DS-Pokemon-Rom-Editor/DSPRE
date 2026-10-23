@@ -44,7 +44,7 @@ namespace DSPRE.Avalonia.Views.Items
 
         private async void Save_Click(object sender, RoutedEventArgs e)
             => await DialogHelper.GuardAsync(() => { VM?.SaveChanges(); return System.Threading.Tasks.Task.CompletedTask; },
-                "The item tables weren't all saved.", "Item tables error", this);
+                "The item tables weren't all saved.", "Item tables", this);
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {

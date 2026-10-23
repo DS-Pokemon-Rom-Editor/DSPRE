@@ -39,7 +39,7 @@
         <controls:UndoRedoButtons/>
         <TextBox Text="{Binding NewName}" PlaceholderText="folder/new_test.c" Width="240" Margin="12,0,0,0"/>
         <AutoCompleteBox controls:EditorToolbar.Slot="Extra" Width="260" FilterMode="Contains" PlaceholderText="Start from the open test" Text="{Binding Template}" ItemsSource="{Binding Templates}"
-                         ToolTip.Tip="The test the new one starts as a copy of"/>
+                         ToolTip.Tip="The new test starts as a copy of this one"/>
         <Button Content="Add test" Click="Add_Click" ToolTip.Tip="A copy of the open test under the new name"/>
         <Button Content="Delete" Click="Delete_Click" Margin="12,0,0,0"/>
     </controls:EditorToolbar>

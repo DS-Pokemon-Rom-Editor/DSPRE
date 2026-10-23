@@ -37,9 +37,9 @@ namespace DSPRE.ROMFiles
             get
             {
                 string where = Scripts.Count > 0
-                    ? $"script {string.Join(", ", Scripts.Take(3))}{(Scripts.Count > 3 ? "…" : "")}"
+                    ? $"script {string.Join(", ", Scripts.Take(3))}{(Scripts.Count > 3 ? $" and {Scripts.Count - 3} more" : "")}"
                     : Messages.Count > 0
-                        ? $"message {string.Join(", ", Messages.Take(3))}{(Messages.Count > 3 ? "…" : "")}"
+                        ? $"message {string.Join(", ", Messages.Take(3))}{(Messages.Count > 3 ? $" and {Messages.Count - 3} more" : "")}"
                         : "not used by any script here";
                 return $"Slot {Buffer} · {KindName} · {where}";
             }

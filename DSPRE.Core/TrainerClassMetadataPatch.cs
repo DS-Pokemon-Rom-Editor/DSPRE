@@ -117,7 +117,7 @@ namespace DSPRE
                 byte[] file = File.ReadAllBytes(PathOf(t.Path));
                 foreach (Span s in t.Spans)
                     if (s.Offset + s.Original.Length > file.Length || !file.AsSpan((int)s.Offset, s.Original.Length).SequenceEqual(s.Original))
-                        return $"{t.Path} at 0x{s.Offset:X} is not the unmodified US HeartGold/SoulSilver code the patch hooks. " +
+                        return $"{t.Path} at 0x{s.Offset:X} isn't the unmodified US HeartGold/SoulSilver code the patch hooks. " +
                             "Another patch or edit has changed it.";
             }
             try { BuildRecords(); }
@@ -195,10 +195,10 @@ namespace DSPRE
 
         private static List<byte[]> BuildRecords()
         {
-            RomInfo.VsIntroSites sites = RomLocator.VsIntroSites ?? throw new InvalidDataException("This ROM's VS intro records are not mapped.");
-            RomInfo.TrainerPrizeTable prize = RomLocator.TrainerPrizeTable ?? throw new InvalidDataException("This ROM's prize table is not mapped.");
-            RomInfo.FrontierBrainTable brains = RomInfo.FrontierBrains ?? throw new InvalidDataException("This ROM's Frontier Brain table is not mapped.");
-            BattleMusicTables music = BattleMusicTables.LoadRom() ?? throw new InvalidDataException("The battle music tables could not be read.");
+            RomInfo.VsIntroSites sites = RomLocator.VsIntroSites ?? throw new InvalidDataException("This ROM's VS intro records aren't mapped.");
+            RomInfo.TrainerPrizeTable prize = RomLocator.TrainerPrizeTable ?? throw new InvalidDataException("This ROM's prize table isn't mapped.");
+            RomInfo.FrontierBrainTable brains = RomInfo.FrontierBrains ?? throw new InvalidDataException("This ROM's Frontier Brain table isn't mapped.");
+            BattleMusicTables music = BattleMusicTables.LoadRom() ?? throw new InvalidDataException("The battle music tables couldn't be read.");
             List<EncounterMusicTable.Row> eyeMusic = EncounterMusicTable.Read().Rows;
             int classCount = RomInfo.VanillaTrainerClassCount;
 
@@ -210,22 +210,22 @@ namespace DSPRE
             byte[] genders = Slice(arm9, RomInfo.TrainerClassGenderTableOffset, classCount, "gender table");
             ushort[] comboRows = music.Classes.Rows.Select(r => (ushort)((r.Class & 0x3FF) | (r.Combo << 10))).ToArray();
             if (!comboRows.SequenceEqual(ExpectedTrainerComboRows))
-                throw new InvalidDataException("The trainer-to-combo table is not the retail US HeartGold/SoulSilver one, which the patch's builder needs.");
+                throw new InvalidDataException("The trainer-to-combo table isn't the retail US HeartGold/SoulSilver one, which the patch's builder needs.");
             Dictionary<int, int> comboByClass = comboRows.ToDictionary(r => r & 0x3FF, r => r >> 10);
 
             (ushort Effect, ushort Music)[] combos = music.Combos.Rows.Select(c => (Effect: c.Transition, Music: c.Sequence)).ToArray();
             if (!combos.Select(c => c.Effect).SequenceEqual(ExpectedComboEffects))
-                throw new InvalidDataException("The combo table's effects are not the retail US HeartGold/SoulSilver ones.");
+                throw new InvalidDataException("The combo table's effects aren't the retail US HeartGold/SoulSilver ones.");
 
             (ushort Class, ushort Main, ushort Alt)[] eyeRows = eyeMusic.Select(e => (Class: e.Class, Main: e.Music, Alt: e.NightMusic ?? e.Music)).ToArray();
             if (!eyeRows.Select(e => e.Class).SequenceEqual(ExpectedEyeMusicClasses))
-                throw new InvalidDataException("The eye-contact music table's classes are not the retail US HeartGold/SoulSilver ones.");
+                throw new InvalidDataException("The eye-contact music table's classes aren't the retail US HeartGold/SoulSilver ones.");
             Dictionary<int, (ushort Main, ushort Alt)> eyeByClass = eyeRows.ToDictionary(e => (int)e.Class, e => (e.Main, e.Alt));
 
             byte[] prizeBlob = Slice(prizeOverlay, prize.Table, prize.Count * 4, "prize table");
             (int Class, ushort Coefficient)[] prizeRows = Enumerable.Range(0, prize.Count).Select(i => (Class: (int)U16(prizeBlob, i * 4), Coefficient: U16(prizeBlob, i * 4 + 2))).ToArray();
             if (!prizeRows.Select(p => p.Class).OrderBy(x => x).SequenceEqual(Enumerable.Range(0, classCount)))
-                throw new InvalidDataException("The prize table does not hold each trainer class 0 to 128 once.");
+                throw new InvalidDataException("The prize table doesn't hold each trainer class 0 to 128 once.");
             Dictionary<int, ushort> prizeByClass = prizeRows.ToDictionary(p => p.Class, p => p.Coefficient);
 
             byte[] brainTable = Slice(brainOverlay, brains.Table, brains.Count * brains.RowSize, "Frontier Brain table");

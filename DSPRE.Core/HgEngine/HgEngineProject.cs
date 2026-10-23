@@ -18,12 +18,8 @@ namespace DSPRE.HgEngine
     }
 
     /// <summary>
-    /// Per-project link to an hg-engine checkout (workDir/dspre_hgengine.json, same pattern as
-    /// LabelStore's project file). Distinct from <see cref="RomInfo.IsHGE"/>, which detects "this ROM
-    /// was built by hg-engine", this is "do we have a source checkout to edit its data through."
-    ///
-    /// The checkout may live inside WSL or on a Windows drive. hg-engine documents both (its README
-    /// has a MSYS2 setup section alongside the Linux one), so neither is a special case.
+    /// The project's link to an hg-engine checkout (workDir/dspre_hgengine.json). <see cref="RomInfo.IsHGE"/> says the
+    /// ROM is an hg-engine build; this says there is a checkout to edit. It can be in WSL or on a Windows drive.
     /// </summary>
     public static class HgEngineProject
     {
@@ -59,7 +55,7 @@ namespace DSPRE.HgEngine
         /// <summary>
         /// The checkout root as the chosen shell spells it, for the `make -C` argument. The same
         /// Windows folder resolves differently per shell, which is the whole reason the shell is
-        /// stored rather than guessed: C:\hg is /mnt/c/hg under WSL but /c/hg under MSYS2.
+        /// stored, not guessed: C:\hg is /mnt/c/hg under WSL but /c/hg under MSYS2.
         /// </summary>
         public static string RepoPathPosix
         {
@@ -94,8 +90,7 @@ namespace DSPRE.HgEngine
             return stored;
         }
 
-        /// <summary>Null unless active; the 5 source-backed editors show this so it's never ambiguous
-        /// which backend (ROM vs. linked source) is live.</summary>
+        /// <summary>Null unless active; source-backed editors show it so it's clear the checkout is being edited.</summary>
         public static string BannerText => IsActive
             ? $"Editing hg-engine source: {RepoRootWindows}"
             : null;
@@ -252,12 +247,12 @@ namespace DSPRE.HgEngine
 
             if (string.IsNullOrWhiteSpace(windowsPath) || !Directory.Exists(windowsPath))
             {
-                error = "That folder does not exist.";
+                error = "That folder doesn't exist.";
                 return false;
             }
             if (!LooksLikeCheckout(windowsPath))
             {
-                error = "That folder is not an hg-engine checkout (no Makefile, data/ and armips/ at its root).";
+                error = "That folder isn't an hg-engine checkout (no Makefile, data/ and armips/ at its root).";
                 return false;
             }
 
@@ -275,7 +270,7 @@ namespace DSPRE.HgEngine
                 string bash = string.IsNullOrWhiteSpace(msysBashPath) ? DefaultMsysBash : msysBashPath;
                 if (!File.Exists(bash))
                 {
-                    error = $"MSYS2's bash was not found at {bash}. Install MSYS2 or point DSPRE at its bash.exe.";
+                    error = $"MSYS2's bash wasn't found at {bash}. Install MSYS2 or point DSPRE at its bash.exe.";
                     return false;
                 }
                 MsysBashPath = bash;
@@ -285,7 +280,7 @@ namespace DSPRE.HgEngine
             {
                 MsysBashPath = DefaultMsysBash;
                 // Only a UNC checkout names its distro. A local one built through WSL runs in the
-                // default distro, which is what wsl.exe uses when no -d is passed.
+                // default distro, the one wsl.exe uses without -d.
                 WslDistro = isWslPath ? distro : null;
             }
 

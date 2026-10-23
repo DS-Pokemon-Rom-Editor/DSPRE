@@ -6,11 +6,9 @@ using System.Linq;
 namespace DSPRE.HgEngine
 {
     /// <summary>
-    /// hg-engine's roamers (EXPAND_ROAMERS), src/field_roamer.c: Save_CreateRoamerByID sets each slot's species and
-    /// level in a switch, SpeciesToRoamerIdx maps a battled species back to its slot, and sRoamerLocations lists the
-    /// maps a roamer is first placed on. Upstream, the game's own location lookup and next-route move still read the
-    /// vanilla tables in arm9, so routes are shown read-only. A checkout that hooks GetRoamMapByLocationIdx and
-    /// RoamerLocationUpdateEx to its own sRoamerAdjacencyTable reads every route from source, and then they are edited.
+    /// hg-engine's roamers (EXPAND_ROAMERS) in src/field_roamer.c: species and levels, the species-to-slot map and the
+    /// first maps. The routes stay read-only unless the checkout hooks GetRoamMapByLocationIdx and
+    /// RoamerLocationUpdateEx to sRoamerAdjacencyTable, since the game's lookup still reads arm9.
     /// </summary>
     public static class HgEngineRoamers
     {
@@ -94,7 +92,7 @@ namespace DSPRE.HgEngine
             HgEngineSymbolTable roamers = HgEngineSymbolTable.Load(RoamerH);
             HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesH);
             HgEngineSymbolTable maps = HgEngineSymbolTable.Load(MapsH);
-            if (roamers == null || species == null) return $"{RoamerH} or {SpeciesH} could not be read.";
+            if (roamers == null || species == null) return $"{RoamerH} or {SpeciesH} couldn't be read.";
             int? Eval(string expr, HgEngineSymbolTable table) =>
                 HgEngineSourceExpression.TryEvaluate(expr, n => table != null && table.TryGetValue(n, out int v) ? v : null, out int r) ? r : null;
 
@@ -171,7 +169,7 @@ namespace DSPRE.HgEngine
             bool hooked = hooks != null && new[] { "GetRoamMapByLocationIdx", "RoamerLocationUpdateEx" }
                 .All(n => hooks.Entries.Any(e => e.Parsed && e.Symbol == n));
             if (!hooked || p.Adjacency == null)
-                return "hg-engine places roamers on these routes from its own list, but encounters and the move to a next route still read the game's own table, so they aren't edited here.";
+                return "hg-engine places roamers from its list, but encounters and the move to the next route still use the game's table, so the routes can't be edited here.";
             if (p.Adjacency.Count != p.Routes.Count) return $"{RelPath}: sRoamerAdjacencyTable and sRoamerLocations have different lengths.";
             return null;
         }

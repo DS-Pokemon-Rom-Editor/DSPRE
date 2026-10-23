@@ -33,10 +33,10 @@ namespace DSPRE.Avalonia.Data
         public int Stamps = 30, SpecialStamps = 31;
         public int Cells = 106, Drawing = 108, Anim = 107, Colours = 14;
         public int DungeonX = 92, DungeonY = 32;
-        /// <summary>Markers already in screen pixels (HGSS's blocks) rather than grid cells.</summary>
+        /// <summary>Markers already in screen pixels (HGSS's blocks), not grid cells.</summary>
         public bool Absolute;
         public int Priority;
-        /// <summary>Blend weights in sixteenths for translucent markers (HGSS's), the markers' then what is under them; 0 for solid.</summary>
+        /// <summary>Blend weights in sixteenths for translucent markers (HGSS): the marker, then what is under it; 0 for solid.</summary>
         public int Blend, BlendUnder;
         /// <summary>The player's face where the player stands (HGSS); no face when Face is -1.</summary>
         public int Face = -1, FaceDrawing = -1, FaceAnim = -1, FaceColours = -1;

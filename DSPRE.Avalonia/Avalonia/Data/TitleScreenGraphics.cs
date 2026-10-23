@@ -7,17 +7,9 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.Data
 {
     /// <summary>
-    /// Reads and writes the HGSS main-menu title logo, background and copyright text strip in a/0/4/6.
-    /// All three are real NCGR (tiles) + NCLR (palette) + NSCR (screen/tilemap) trios, not flat bitmaps.
-    /// The logo and background share one palette (logo's colours first, background's appended right
-    /// after); the copyright strip has its own separate, dedicated palette.
-    ///
-    /// The logo's real screen is 256x256 with visible content only in rows y=24-160; the top 192 rows
-    /// (the actual DS screen height) are what this class exposes for preview/import/export, rows
-    /// 192-255 are permanently off-screen and are always written blank on import.
-    ///
-    /// Importing any one image re-derives the *other* shared-palette image's current colours too (by
-    /// re-decoding it) and rewrites both together, so the shared palette never drifts out of sync.
+    /// Reads and writes the HGSS title logo, background and copyright strip in a/0/4/6. The logo and background share a
+    /// palette, so importing either rewrites both. The logo's screen is 256 by 256; only the top 192 rows show, and the rest
+    /// is written blank.
     /// </summary>
     public sealed class TitleScreenGraphics
     {
@@ -34,10 +26,8 @@ namespace DSPRE.Avalonia.Data
         private readonly ScriptNarc _narc = new(DirNames.TitleScreenGraphics);
         public bool Available => _narc.Available;
 
-        /// <summary>Which game's logo/background/palette this instance reads and writes. Both HeartGold's
-        /// and SoulSilver's sets live in the same archive regardless of which one is actually loaded, so
-        /// this can be switched freely, e.g. to edit both from one ROM project. Defaults to the loaded
-        /// ROM's own version. Does not affect the copyright strip, which is shared between both.</summary>
+        /// <summary>Which game's logo set to read and write; both are in the archive. Defaults to the loaded game. The copyright
+        /// strip is shared.</summary>
         public GameVersions Version { get; set; } = GameVersion;
 
         /// <summary>Imports wait here until the owner saves; drawing and exports read through them.</summary>
@@ -110,10 +100,10 @@ namespace DSPRE.Avalonia.Data
 
         private string ImportLogoOrBackground(RawImage png, bool isLogo)
         {
-            if (!Available) return "Title screen graphics archive is not available for this ROM.";
+            if (!Available) return "This game doesn't have the title screen archive.";
             if (png == null || png.IsEmpty) return "No image.";
             if (png.Width != LogoWidth || png.Height != LogoHeight)
-                return $"Image must be exactly {LogoWidth}x{LogoHeight} (got {png.Width}x{png.Height}).";
+                return $"That picture is {png.Width} by {png.Height}. It has to be {LogoWidth} by {LogoHeight}.";
 
             (int logo, int palette, int background, int logoNscr, int backgroundNscr) members = TitleScreenMembersFor(Version);
             byte[] palRaw = NitroBgCodec.Inflate(Current(members.palette));
@@ -122,11 +112,11 @@ namespace DSPRE.Avalonia.Data
             byte[] bgChrRaw = NitroBgCodec.Inflate(Current(members.background));
             byte[] bgScrRaw = NitroBgCodec.Inflate(Current(members.backgroundNscr));
             if (palRaw == null || logoChrRaw == null || logoScrRaw == null || bgChrRaw == null || bgScrRaw == null)
-                return "Could not read the current title screen graphics.";
+                return "The current title screen couldn't be read.";
 
             RawImage logoPng = isLogo ? png : ComposeLogo();
             RawImage bgPng = isLogo ? ComposeBackground() : png;
-            if (logoPng == null || bgPng == null) return "Could not decode the current title screen graphics.";
+            if (logoPng == null || bgPng == null) return "The current title screen couldn't be read.";
 
             EncodedTiles logo, background;
             try
@@ -140,18 +130,17 @@ namespace DSPRE.Avalonia.Data
 
             int total = 1 + logo.Colors.Count + background.Colors.Count; // slot 0 is reserved for the logo's transparency
             if (total > 256)
-                return $"Combined logo + background palette needs {total} colours, only 256 are available.";
+                return $"The logo and background need {total} colours between them; there's room for 256.";
 
             int bgBase = 1 + logo.Colors.Count;
             (byte r, byte g, byte b)[] palette = new (byte r, byte g, byte b)[256];
             for (int i = 0; i < logo.Colors.Count; i++) palette[1 + i] = logo.Colors[i];
             for (int i = 0; i < background.Colors.Count; i++) palette[bgBase + i] = background.Colors[i];
 
-            // Logo tile pixel bytes are already final (0 = transparent, 1..N absolute); the background's
-            // need shifting by bgBase, since QuantizeAndTile numbered them from 0 with no reservation.
+            // The logo's pixel values are final (0 is see-through); the background's shift by bgBase, as they start from 0.
             byte[] shiftedBgTileData = ShiftIndices(background.TileData, bgBase);
 
-            // Logo's real NSCR is 32x32; only the top 24 rows are visible, pad the rest with blank (index 0).
+            // The logo's NSCR is 32 by 32; only the top 24 rows show, so the rest is blank.
             ushort[] logoMapEntries = new ushort[LogoRealMapCols * LogoRealMapRows];
             Array.Copy(logo.MapEntries, logoMapEntries, logo.MapEntries.Length);
 
@@ -176,17 +165,17 @@ namespace DSPRE.Avalonia.Data
         // ── Encode (copyright, standalone palette) ───────────────────────────
         public string ImportCopyright(RawImage png)
         {
-            if (!Available) return "Title screen graphics archive is not available for this ROM.";
+            if (!Available) return "This game doesn't have the title screen archive.";
             if (png == null || png.IsEmpty) return "No image.";
             if (png.Width != CopyrightWidth || png.Height != CopyrightHeight)
-                return $"Image must be exactly {CopyrightWidth}x{CopyrightHeight} (got {png.Width}x{png.Height}).";
+                return $"That picture is {png.Width} by {png.Height}. It has to be {CopyrightWidth} by {CopyrightHeight}.";
 
             (int ncgr, int nclr, int nscr) m = TitleScreenCopyrightMembers;
             byte[] palRaw = NitroBgCodec.Inflate(Current(m.nclr));
             byte[] chrRaw = NitroBgCodec.Inflate(Current(m.ncgr));
             byte[] scrRaw = NitroBgCodec.Inflate(Current(m.nscr));
             if (palRaw == null || chrRaw == null || scrRaw == null)
-                return "Could not read the current copyright graphics.";
+                return "The current copyright strip couldn't be read.";
 
             EncodedTiles encoded;
             try
@@ -216,10 +205,10 @@ namespace DSPRE.Avalonia.Data
 
         public string ImportPaletteRaw(byte[] nclrBytes)
         {
-            if (!Available) return "Title screen graphics archive is not available for this ROM.";
+            if (!Available) return "This game doesn't have the title screen archive.";
             if (nclrBytes == null || nclrBytes.Length < 4 ||
                 nclrBytes[0] != (byte)'R' || nclrBytes[1] != (byte)'L' || nclrBytes[2] != (byte)'C' || nclrBytes[3] != (byte)'N')
-                return "Not a valid colour file.";
+                return "That isn't a colour file.";
             int id = TitleScreenMembersFor(Version).palette;
             _narc.Put(id, nclrBytes);
             return null;
@@ -240,9 +229,8 @@ namespace DSPRE.Avalonia.Data
             public ushort[] MapEntries;  // tileCols * tileRows, bank 0, no flip
         }
 
-        /// <summary>Quantizes a PNG to palette indices and deduplicates its 8x8 tiles (first-seen order),
-        /// throwing a descriptive error if it needs more distinct colours or unique tiles than available.
-        /// With <paramref name="reserveZero"/>, transparent pixels map to index/colour 0 (not counted).</summary>
+        /// <summary>Turns a PNG into palette indices and unique 8 by 8 tiles, throwing when it needs too many of either. With
+        /// <paramref name="reserveZero"/>, see-through pixels take colour 0.</summary>
         private static EncodedTiles QuantizeAndTile(RawImage png, bool reserveZero, int tileCols, int tileRows,
             int tileCapacity, int bytesPerTile, int maxColors)
         {
@@ -266,7 +254,7 @@ namespace DSPRE.Avalonia.Data
                         if (!colorToIndex.TryGetValue(key, out v))
                         {
                             if (colors.Count >= maxColors)
-                                throw new InvalidOperationException($"Image uses more than {maxColors} distinct colours.");
+                                throw new InvalidOperationException($"That picture uses more than {maxColors} colours.");
                             v = (byte)(colors.Count + (reserveZero ? 1 : 0));
                             colorToIndex[key] = v;
                             colors.Add((r, g, b));
@@ -288,7 +276,7 @@ namespace DSPRE.Avalonia.Data
                     {
                         if (tileList.Count >= tileCapacity)
                             throw new InvalidOperationException(
-                                $"Image needs more than {tileCapacity} unique 8x8 tiles once deduplicated. Simplify the image (flatter colours, more repeated blocks).");
+                                $"That picture needs more than {tileCapacity} different 8 by 8 tiles. Use flatter colours or more repeated blocks.");
                         tileIndex = tileList.Count;
                         tileLookup[key] = tileIndex;
                         tileList.Add(block);
@@ -324,9 +312,8 @@ namespace DSPRE.Avalonia.Data
             return block;
         }
 
-        /// <summary>Shifts every index in a raw 8bpp tile-data byte array by <paramref name="shift"/>, used to
-        /// move the background's (never-transparent, 0-based) tile pixel values into its slice of the merged
-        /// palette. Safe from overflow because the caller already checked logo+background colours fit in 256.</summary>
+        /// <summary>Shifts every pixel value by <paramref name="shift"/>, moving the background into its part of the shared
+        /// palette; the caller has checked both fit in 256 colours.</summary>
         private static byte[] ShiftIndices(byte[] tileData, int shift)
         {
             byte[] shifted = new byte[tileData.Length];

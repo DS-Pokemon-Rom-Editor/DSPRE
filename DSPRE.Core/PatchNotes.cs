@@ -19,7 +19,7 @@ namespace DSPRE
                 "Where to edit\n" +
                 "The Trainer editor switches Ball Capsule to a Poké Ball picker, hides Edit and previews the item icon. " +
                 "The picker offers the 16 original balls and the eight HGSS balls, including Apricorn balls and Sport Ball. " +
-                "Park Ball is not supported by the game's setter. Unknown values are preserved until replaced.\n\n" +
+                "Park Ball isn't supported by the game's setter. Unknown values are preserved until replaced.\n\n" +
                 "Requirements\n" +
                 "HeartGold or SoulSilver, any language. No ARM9 expansion or synthetic overlay required. " +
                 "Not compatible with hg-engine.",
@@ -72,10 +72,10 @@ namespace DSPRE
             ["punchingMovesExpanded"] =
                 "What it does\n" +
                 "The battle code keeps the moves Iron Fist boosts as a list of 15 in its overlay. This moves the list into " +
-                "the expanded ARM9 area with room for 64 and points the code at it; the Move Data editor changes the " +
+                "the expanded ARM9 area with room for 64 and points the code at it; the Move data editor changes the " +
                 "list only once it is here.\n\n" +
                 "Where to edit\n" +
-                "The Move Data editor's Ability based group: tick Punching on a move.\n\n" +
+                "The Move data editor's Ability based group: tick Punching on a move.\n\n" +
                 "Trainer AI\n" +
                 "Nothing more to do: the AI scores a move's damage with Iron Fist counted, so it sees the new list.\n\n" +
                 "Guide\n" +
@@ -91,9 +91,9 @@ namespace DSPRE
                 "buffer size allows, and pads every evolution file to fill the new buffer, since a shorter file would leave " +
                 "leftover memory in the slots the game checks.\n\n" +
                 "Where to edit\n" +
-                "Pokémon > Evolutions editor, which then lists 42 slots.\n\n" +
+                "The Pokémon editor's Evolutions tab, which then lists 42 slots.\n\n" +
                 "Limits\n" +
-                "42 evolutions per Pokémon. The old WinForms editor still shows only the first 7.\n\n" +
+                "42 evolutions per Pokémon.\n\n" +
                 "Requirements\n" +
                 "US Diamond, Platinum (Rev 1) or HeartGold. Not for hg-engine, which sets its slots in its own source.",
             ["regionalDexCount"] =
@@ -101,7 +101,7 @@ namespace DSPRE
                 "The game checks the regional Pokédex against numbers built into its code: how many regional species " +
                 "complete it, the professor's last rating step before he calls it complete, and in Diamond, Pearl and " +
                 "Platinum the highest regional number it looks up. This sets them from the regional order saved in " +
-                "Pokédex Lists. Completion leaves out the mythicals the game ignores: Manaphy in Diamond and Pearl, Mew " +
+                "Pokédex lists. Completion leaves out the mythicals the game ignores: Manaphy in Diamond and Pearl, Mew " +
                 "and Celebi in HeartGold and SoulSilver.\n\n" +
                 "Where to edit\n" +
                 "Pokémon > Pokédex lists, Regional dex tab. Saving a different size there offers this patch.\n\n" +
@@ -113,12 +113,12 @@ namespace DSPRE
             ["soundMovesExpanded"] =
                 "What it does\n" +
                 "The battle code keeps the moves Soundproof blocks as a list of 12 in its overlay. This moves the list into " +
-                "the expanded ARM9 area with room for 64 and points the code at it; the Move Data editor changes the " +
+                "the expanded ARM9 area with room for 64 and points the code at it; the Move data editor changes the " +
                 "list only once it is here.\n\n" +
                 "Where to edit\n" +
-                "The Move Data editor's Ability based group: tick Sound on a move.\n\n" +
+                "The Move data editor's Ability based group: tick Sound on a move.\n\n" +
                 "Trainer AI\n" +
-                "The AI keeps its own list of sound moves in its overlay, which this patch does not change, so trainers " +
+                "The AI keeps its own list of sound moves in its overlay, which this patch doesn't change, so trainers " +
                 "with the Basic flag may still use a new sound move into Soundproof. The DS Pokémon Hacking wiki's move " +
                 "editing guide shows how to edit that table.\n\n" +
                 "Guide\n" +
@@ -133,14 +133,14 @@ namespace DSPRE
                 "Where to edit\n" +
                 "Items > Item tables (pickup, hidden, Rock Smash).\n\n" +
                 "Requirements\n" +
-                "Diamond, Pearl, Platinum, HeartGold or SoulSilver, with the ARM9 expansion. The toolbox lists the versions it is mapped for. Not compatible with hg-engine.",
+                "Diamond, Pearl, Platinum, HeartGold or SoulSilver, with the ARM9 expansion. The toolbox lists which versions it works on. Not compatible with hg-engine.",
             ["martsExpanded"] =
                 "What it does\n" +
                 "Moves every mart into the expanded ARM9 area with room for 64 marts of 64 items. Every mart keeps its items.\n\n" +
                 "Where to edit\n" +
                 "Items > Mart editor, which can then add items and custom marts.\n\n" +
                 "Requirements\n" +
-                "Diamond, Pearl, Platinum, HeartGold or SoulSilver, with the ARM9 expansion. English dumps and the other measured versions are supported. Not compatible with hg-engine.",
+                "Diamond, Pearl, Platinum, HeartGold or SoulSilver, with the ARM9 expansion. English dumps and the other versions DSPRE knows are supported. Not compatible with hg-engine.",
             ["bpShopExpanded"] =
                 "What it does\n" +
                 "Moves the Battle Point exchange counters and their prices into the expanded ARM9 area with room for 255 items on each counter.\n\n" +
@@ -154,14 +154,14 @@ namespace DSPRE
                 "Where to edit\n" +
                 "Pokémon > Special encounters editor, Swarms tab.\n\n" +
                 "Requirements\n" +
-                "US HeartGold, SoulSilver, Platinum (Rev 1) or Diamond and the other measured versions, with the ARM9 expansion. Not compatible with hg-engine.",
+                "US HeartGold, SoulSilver, Platinum (Rev 1) or Diamond and the other versions DSPRE knows, with the ARM9 expansion. Not compatible with hg-engine.",
             ["typeChartExpanded"] =
                 "What it does\n" +
                 "Moves the type chart into the expanded ARM9 area with room for 253 matchups. The existing matchups are kept.\n\n" +
                 "Where to edit\n" +
                 "Pokémon > Type chart.\n\n" +
                 "Requirements\n" +
-                "Diamond, Pearl, Platinum, HeartGold or SoulSilver on the measured versions, with the ARM9 expansion. Not compatible with hg-engine.",
+                "Diamond, Pearl, Platinum, HeartGold or SoulSilver on the versions DSPRE knows, with the ARM9 expansion. Not compatible with hg-engine.",
             ["vsIntroTimings"] =
                 "What it does\n" +
                 "Lets each trainer class set its own VS intro timings: flashes, slides and holds. A timing left at 0 keeps the game's value.\n\n" +
@@ -202,6 +202,17 @@ namespace DSPRE
                 "The panel art keeps its old shape until you rebuild it or draw your own.\n\n" +
                 "Requirements\n" +
                 "HeartGold or SoulSilver, any language. No ARM9 expansion or synthetic overlay. Not compatible with hg-engine.",
+            ["summaryFonts"] =
+                "What it does\n" +
+                "Each text box on the summary screen can print in any of the game's six fonts: system, dialogue, touch screen, Unown, " +
+                "button or Pokéwalker. The Pokéwalker font is narrower, so long names fit in smaller boxes. Nothing changes in game until " +
+                "you pick a font.\n\n" +
+                "Where to edit\n" +
+                "The Summary screen editor's Text boxes and bars list: one font for each box. The Font editor redraws the letters themselves.\n\n" +
+                "Good to know\n" +
+                "The fonts are shared with the rest of the game, so redrawing the Pokéwalker font also changes the Pokéwalker screens.\n\n" +
+                "Requirements\n" +
+                "English HeartGold or SoulSilver, with the ARM9 expansion. Not compatible with hg-engine.",
             ["hpBarText"] =
                 "What it does\n" +
                 "Removes the white box behind the name, level, HP, gender symbol and \"Lv\" in battle, so your HP bar art shows behind them.\n\n" +
@@ -216,7 +227,7 @@ namespace DSPRE
         {
             ["arm9"] = ("Two short code changes in the ARM9, a branch and a start-up routine, make the game load the synthetic overlay.",
                 "Creates the synthetic overlay: 88 KB that the other code patches and DSPRE's moved tables live in.",
-                "the ARM9 (the new synthetic overlay is not backed up)"),
+                "the ARM9 (the new synthetic overlay isn't backed up)"),
             ["bdhcam"] = ("A branch in the ARM9 and two code changes in overlay 5 (Platinum) or overlay 1 (HeartGold and SoulSilver) call the camera routine.",
                 "The camera routine in the synthetic overlay at offset 0x115B0.",
                 "the ARM9 and that overlay"),
@@ -288,6 +299,9 @@ namespace DSPRE
             ["partyPanelSize"] = ("76 instructions in seven of the ARM9's party menu functions hold the panel size instead of the game's 16 by 6, each changed in place.",
                 "No additional space or synthetic overlay.",
                 "the ARM9"),
+            ["summaryFonts"] = ("The summary screen's 29 text prints, eight width measurements and its font loading in the ARM9 go through the patch's routine.",
+                "About 1.2 KB in the synthetic overlay, with a font table that has room for every summary screen window.",
+                "the ARM9 and the synthetic overlay"),
             ["hpBarText"] = ("Six calls and twelve copies in the battle overlay (overlay 12 in HeartGold and SoulSilver, 16 in Platinum; five calls and eleven copies in overlay 11 in Diamond) go through the patch's routine.",
                 "140 bytes in the synthetic overlay.",
                 "the battle overlay and the synthetic overlay"),

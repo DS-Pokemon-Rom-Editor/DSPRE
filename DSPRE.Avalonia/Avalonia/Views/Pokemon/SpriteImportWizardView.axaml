@@ -19,7 +19,7 @@
 
     <StackPanel Spacing="8" IsVisible="{Binding ShowArtworkScope}">
       <Border Height="1" Background="{DynamicResource Editor.Border}"/>
-      <TextBlock Text="Which pose(s)?" FontWeight="SemiBold"/>
+      <TextBlock Text="Which poses?" FontWeight="SemiBold"/>
       <TextBlock Text="{Binding ExistingGender, StringFormat='Only {0} sprites exist for this species right now.'}"
                  IsVisible="{Binding GenderGapActive}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
       <TextBlock Text="Facing" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
@@ -38,10 +38,10 @@
 
     <StackPanel Spacing="8" IsVisible="{Binding ShowPaletteScope}">
       <Border Height="1" Background="{DynamicResource Editor.Border}"/>
-      <TextBlock Text="Which palette(s)?" FontWeight="SemiBold"/>
+      <TextBlock Text="Which palettes?" FontWeight="SemiBold"/>
       <CheckBox Content="Normal" IsChecked="{Binding IncludeNormalPalette}"/>
       <CheckBox Content="Shiny" IsChecked="{Binding IncludeShinyPalette}" IsVisible="{Binding ShowShinyPaletteOption}"/>
-      <TextBlock Text="Based on which pose's reference image?" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" Margin="0,6,0,0"/>
+      <TextBlock Text="Which pose should the colours come from?" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" Margin="0,6,0,0"/>
       <ComboBox ItemsSource="{Binding AvailableRefPoses}" SelectedItem="{Binding RefPose}" HorizontalAlignment="Stretch"/>
     </StackPanel>
 

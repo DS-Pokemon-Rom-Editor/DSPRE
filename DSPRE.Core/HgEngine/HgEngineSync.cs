@@ -63,7 +63,7 @@ namespace DSPRE.HgEngine
         public static bool SyncDomain(HgEngineDomainInfo domain, out string error)
         {
             error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
 
             lock (BuildLock)
             {
@@ -105,7 +105,7 @@ namespace DSPRE.HgEngine
                     string narcPath = Path.Combine(HgEngineProject.RepoPathUnc, kv.Value.Replace('/', Path.DirectorySeparatorChar));
                     if (!File.Exists(narcPath))
                     {
-                        error = $"Expected build output not found: {narcPath}";
+                        error = $"The build didn't make {narcPath}.";
                         return false;
                     }
 
@@ -116,7 +116,7 @@ namespace DSPRE.HgEngine
                         if (speciesCount < 0) speciesCount = ResolveSpeciesCount(domain);
                         if (speciesCount <= 0)
                         {
-                            error = "Could not determine species count for the learnsets sync.";
+                            error = "Couldn't work out the species count for the learnsets sync.";
                             return false;
                         }
                         if (!HgEngineLearnsets.Sync(narcPath, HgEngineProject.RepoPathUnc, paths.unpackedDir, speciesCount, out string learnsetError))
@@ -130,7 +130,7 @@ namespace DSPRE.HgEngine
                     Narc opened = Narc.Open(narcPath);
                     if (opened == null)
                     {
-                        error = $"Failed to parse built narc: {narcPath}";
+                        error = $"Couldn't read the built NARC: {narcPath}";
                         return false;
                     }
                     opened.ExtractToFolder(paths.unpackedDir);
@@ -161,7 +161,7 @@ namespace DSPRE.HgEngine
             {
                 if (stamp == _splitLearnsetsFrom && Directory.Exists(unpacked) && Directory.GetFiles(unpacked).Length > 0) return true;
                 Narc personal = File.Exists(GameDirs[DirNames.PersonalPokeData].packedDir) ? Narc.Open(GameDirs[DirNames.PersonalPokeData].packedDir) : null;
-                if (personal == null) { error = "Could not read the species count from the personal data archive."; return false; }
+                if (personal == null) { error = "Couldn't read the species count from the personal data archive."; return false; }
                 if (!HgEngineLearnsets.Sync(packed, HgEngineProject.RepoPathUnc, unpacked, personal.ElementCount, out error)) return false;
                 _splitLearnsetsFrom = stamp;
                 return true;
@@ -174,9 +174,8 @@ namespace DSPRE.HgEngine
             catch (Exception ex) { AppLogger.WarnOnce("HgEngineSync.SafeMtime", ex); return DateTime.MinValue; }
         }
 
-        /// <summary>Species count for the learnsets transform: the personalPokeData narc's element count
-        /// if this domain owns it (always true today, learnsets only exists alongside Species), else
-        /// falls back to whatever's already unpacked.</summary>
+        /// <summary>Species count for the learnsets split: the personal NARC's count, or what is already
+        /// unpacked.</summary>
         private static int ResolveSpeciesCount(HgEngineDomainInfo domain)
         {
             if (domain.NarcByDir.TryGetValue(DirNames.PersonalPokeData, out string personalRel))

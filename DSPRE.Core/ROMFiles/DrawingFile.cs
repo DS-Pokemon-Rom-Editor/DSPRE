@@ -17,7 +17,7 @@ namespace DSPRE.ROMFiles
         public bool EightBit => _head.EightBit;
         public int BitsPerPixel => _head.EightBit ? 8 : 4;
 
-        /// <summary>Kept in 8x8 tiles rather than row by row.</summary>
+        /// <summary>Stored as 8x8 tiles, not row by row.</summary>
         public bool Tiled => _head.Tiled;
 
         public int Width { get; }
@@ -44,7 +44,7 @@ namespace DSPRE.ROMFiles
         public void SetTiles(byte[] tiles)
         {
             if (tiles == null || tiles.Length != _head.DataSize)
-                throw new ArgumentException($"A drawing of {_head.DataSize} pixel bytes cannot take {tiles?.Length ?? 0}.");
+                throw new ArgumentException($"This drawing needs {_head.DataSize} bytes of pixels, not {tiles?.Length ?? 0}.");
             Tiles = tiles;
         }
 

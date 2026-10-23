@@ -106,7 +106,7 @@ namespace DSPRE
             {
                 if (!File.Exists(yamlPath))
                 {
-                    AppLogger.Warn($"Header YAML file does not exist at path: {yamlPath}");
+                    AppLogger.Warn($"Header YAML file doesn't exist at path: {yamlPath}");
                     return null;
                 }
 

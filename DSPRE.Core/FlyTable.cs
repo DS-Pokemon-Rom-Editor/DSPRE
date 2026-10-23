@@ -129,7 +129,7 @@ namespace DSPRE
         {
             if (string.IsNullOrEmpty(RomInfo.WorkDir)) return null;   // no project open, nothing to read
             try { return Read(); }
-            catch (System.Exception ex) { AppLogger.Warn("The fly table could not be read: " + ex.Message); return null; }
+            catch (System.Exception ex) { AppLogger.Warn("The fly table couldn't be read: " + ex.Message); return null; }
         }
     }
 }

@@ -10,8 +10,8 @@ using DSPRE.ROMFiles;
 namespace DSPRE.Avalonia.ViewModels.World
 {
     /// <summary>
-    /// What a map brought into the Map editor lacks here, most visible first: textures for its model, its buildings,
-    /// then the events now standing on squares it closed. Nothing is changed unless the user asks.
+    /// What an imported map is missing here, most visible first: textures, buildings, then events on squares it
+    /// closed. Nothing changes unless the user asks.
     /// </summary>
     public class MapImportReviewViewModel : INotifyPropertyChanged
     {
@@ -19,7 +19,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             public int Pack { get; init; }
             public int Undressed { get; init; }
-            public string Name => $"Map Tileset {Pack}";
+            public string Name => $"Map textures {Pack}";
             public string State => Undressed == 0 ? "Has them all" : $"{Undressed} still grey";
         }
 
@@ -65,8 +65,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             get
             {
                 List<string> lines = new List<string>();
-                lines.Add(HasTextures ? $"Textures: Map Tileset {_pack} has none for {_undressed} of the model's {_materials} materials, so they show grey."
-                                      : $"Textures: Map Tileset {_pack} has them all.");
+                lines.Add(HasTextures ? $"Textures: Map textures {_pack} has none for {_undressed} of the model's {_materials} materials, so they show grey."
+                                      : $"Textures: Map textures {_pack} has them all.");
                 if (HasBuildings)
                 {
                     int missingModels = Buildings.Count(b => b.NoSuchModel);
@@ -106,8 +106,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool Searching { get => _searching; private set { if (Set(ref _searching, value)) Raise(nameof(CanSearch)); } }
         public bool CanSearch => !_searching;
         /// <summary>
-        /// Use changes the area's map textures, which only the Map editor's own area can do from here. A map no header
-        /// uses has no area; its preview area is picked in the Map editor.
+        /// Use changes the map textures of the area open in the Map editor; a map no header uses picks its preview
+        /// area there.
         /// </summary>
         public bool CanUsePack => _areaId >= 0 && _editor.AreaIdForImport == _areaId;
         private string _packNote;
@@ -121,7 +121,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             try { ranked = await Task.Run(() => MapImportCheck.RankPacks(_map)); }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
             {
-                PackNote = "Could not read the packs: " + ex.Message;
+                PackNote = "Couldn't read the packs: " + ex.Message;
                 Searching = false;
                 return;
             }
@@ -131,7 +131,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             foreach ((int pack, int undressed) in better) Packs.Add(new PackRow { Pack = pack, Undressed = undressed });
             PackNote = better.Count > 0 ? (_areaId < 0 ? "No header uses this map. Pick its preview area in the Map editor." : null)
                 : ranked.All(r => r.Undressed >= _materials) ? "No map texture pack in this ROM has any of them."
-                : $"No pack does better than Map Tileset {_pack}.";
+                : $"No pack does better than Map textures {_pack}.";
             Searching = false;
         }
 
@@ -141,7 +141,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             _editor.MapTilesetIndex = row.Pack;
             _pack = row.Pack;
             CheckTextures();
-            PackNote = $"Map textures are now Map Tileset {row.Pack}, for every header on area {_areaId}. Save the map to keep it.";
+            PackNote = $"Map textures are now pack {row.Pack}, for every header on area {_areaId}. Save the map to keep it.";
         }
 
         // ── Events ────────────────────────────────────────────────────────────────

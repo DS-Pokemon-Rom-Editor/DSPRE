@@ -19,9 +19,10 @@ namespace DSPRE.HgEngine
         public override string ToString() => IsIndex ? $"[{Index}]" : $".{Name}";
     }
 
-    /// <summary>Locates and replaces exactly one field's value inside a C designated-initializer array
-    /// entry, without touching the rest of the file. A field that can't be located fails to match and
-    /// nothing is written, rather than guessing where to insert it.</summary>
+    /// <summary>
+    /// Replaces one field's value in a C designated-initializer entry and nothing else; a field that can't be found is
+    /// never guessed at.
+    /// </summary>
     public static class HgEngineSourcePatcher
     {
         /// <summary>Finds "[designatorToken] = { ... }" and returns the span of its braces (inclusive).</summary>
@@ -92,9 +93,10 @@ namespace DSPRE.HgEngine
             return sb.ToString();
         }
 
-        /// <summary>Like <see cref="TryReplaceField"/>, but if the field isn't declared yet, INSERTS
-        /// `.fieldName = value,` before its parent block's closing brace instead of failing. Every
-        /// ancestor block in the path must already exist.</summary>
+        /// <summary>
+        /// <see cref="TryReplaceField"/> that adds the field before its block's closing brace when it is missing; every
+        /// parent block must exist.
+        /// </summary>
         public static bool TryUpsertField(ref string text, string designatorToken, IReadOnlyList<FieldPathSegment> path, string newValueLiteral)
         {
             if (TryReplaceField(ref text, designatorToken, path, newValueLiteral)) return true;

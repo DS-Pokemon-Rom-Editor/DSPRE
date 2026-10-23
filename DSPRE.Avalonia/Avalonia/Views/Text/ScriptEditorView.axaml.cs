@@ -22,8 +22,6 @@ using static MKDS_Course_Editor.NSBTP.NSBTP.NSBTP_File;
 
 namespace DSPRE.Avalonia.Views.Text
 {
-    /// <summary>Authored as a <see cref="UserControl"/> so it can be embedded as the Scripts tab in the
-    /// Maps workspace; standalone launches host it in an <see cref="EditorHostWindow"/>.</summary>
     public partial class ScriptEditorView : UserControl
     {
         private ScriptEditorViewModel VM => DataContext as ScriptEditorViewModel;
@@ -32,11 +30,8 @@ namespace DSPRE.Avalonia.Views.Text
         private SearchPanel _fileSearchPanel;
         private CtrlHoverUnderlineColorizer _ctrlHoverUnderline;
         private bool _setupDone;
-        // SetGrammarFile() re-registers "source.rotom" into the underlying TextMateSharp registry every
-        // call; fine the first time, but throws ("An item with the same key has already been added")
-        // if called again, which now happens on every ROM load since ApplyGrammar() must re-run to pick
-        // up the newly loaded ROM's script text. Once loaded, switch grammars via the cheap scope-name
-        // overload instead of re-registering the file.
+        // SetGrammarFile throws when called twice and every ROM load reapplies the grammar, so later loads
+        // switch by scope name.
         private bool _rotomGrammarLoaded;
         private bool _syncing;
         private int _hoverRequestId;
@@ -127,15 +122,8 @@ namespace DSPRE.Avalonia.Views.Text
             if (!_setupDone) await EnsureSetupAsync();
         }
 
-        /// <summary>
-        /// VM setup. No-ops until a ROM is loaded: the embedded Maps-workspace instance is created at
-        /// app boot, before any ROM; <see cref="MapsWorkspaceView"/> re-invokes this after EVERY
-        /// successful load (including switching ROMs mid-session), so <c>vm.SetupAsync</c> always
-        /// re-runs; only the event-subscription wiring is one-time.
-        /// </summary>
-        /// <param name="ownerOverride">Pass the owning Window explicitly when this control may not be
-        /// attached to the visual tree yet (a non-selected TabItem's content in the Maps workspace,
-        /// right after a ROM load); <see cref="TopLevel.GetTopLevel"/> returns null in that case.</param>
+        /// <summary>Sets up the view model; see <see cref="MapsWorkspaceView"/>.</summary>
+        /// <param name="ownerOverride">The owning window, for a tab not yet in the visual tree.</param>
         public async Task EnsureSetupAsync(Window ownerOverride = null)
         {
             if (Design.IsDesignMode) return;
@@ -147,10 +135,7 @@ namespace DSPRE.Avalonia.Views.Text
             if (!_setupDone)
             {
                 _setupDone = true;
-                // Hook the owning Window's Closed (not this UserControl's DetachedFromVisualTree, which
-                // fires on every tab switch when embedded in the Maps workspace, which would tear down the
-                // LSP mid-session). For the embedded case the owner is the main window, whose Closed only
-                // fires at app exit, exactly when this cleanup should happen there too.
+                // Clean up on the owning window's Closed; DetachedFromVisualTree fires on every tab switch.
                 owner.Closed += (_, _) =>
                 {
                     RotomEditor.TextArea.TextView.LineTransformers.Remove(_ctrlHoverUnderline);
@@ -242,7 +227,7 @@ namespace DSPRE.Avalonia.Views.Text
             }
             catch (Exception ex)
             {
-                AppLogger.Error("Failed to apply Rotom TextMate grammar: " + ex.Message);
+                AppLogger.Error("Couldn't apply Rotom TextMate grammar: " + ex.Message);
             }
         }
 
@@ -263,7 +248,7 @@ namespace DSPRE.Avalonia.Views.Text
             }
             catch (Exception ex)
             {
-                AppLogger.Error("Failed to apply Rotom editor theme: " + ex.Message);
+                AppLogger.Error("Couldn't apply Rotom editor theme: " + ex.Message);
             }
         }
 
@@ -737,7 +722,7 @@ namespace DSPRE.Avalonia.Views.Text
             RotomEditor.Focus();
         }
 
-        private const string ErrorTitle = "Script editor error";
+        private const string ErrorTitle = "Script editor";
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {

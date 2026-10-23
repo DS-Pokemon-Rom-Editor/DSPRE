@@ -71,9 +71,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // ── Archive selection ────────────────────────────────────────────────────
         public string[] ArchiveOptions { get; } =
         {
-            "Move scripts (waza_seq)", "Move-effect scripts (be_seq)",
-            "Subroutines (sub_seq)", "Move animation (we)", "Animation subroutines (we_sub)",
+            "Move scripts", "Move effect scripts", "Subroutines", "Move animations", "Animation subroutines",
         };
+        private static readonly string[] ArchiveCodeNames = { "waza_seq", "be_seq", "sub_seq", "we", "we_sub" };
+        public string ArchiveTip => _archiveIndex < 0 ? null : ArchiveCodeNames[_archiveIndex];
 
         private int _archiveIndex = -1;
         public int ArchiveIndex
@@ -130,7 +131,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 string path = System.IO.Path.Combine(romRoot, "data", "sound", fileName);
                 if (!System.IO.File.Exists(path)) { _sdatLoadError = $"Sound archive not found at:\n{path}"; return null; }
                 _sdat = SdatArchive.Parse(System.IO.File.ReadAllBytes(path));
-                if (_sdat.Sequences.Count == 0) _sdatLoadError = $"Sound archive at {path} parsed to 0 sequences (unexpected format?).";
+                if (_sdat.Sequences.Count == 0) _sdatLoadError = $"The sound archive at {path} has no sequences DSPRE can read.";
             }
             catch (System.Exception ex) { _sdat = null; _sdatLoadError = ex.ToString(); }
             return _sdat;
@@ -140,14 +141,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// if it can't be resolved. Shown next to a "Sound" argument so the ID isn't just a bare number.</summary>
         private string SoundNameOf(int soundId) => LoadSdat()?.SeqNames.TryGetValue(soundId, out string n) == true ? n : null;
 
-        /// <summary>Renders and plays the given sound ID through the active <see cref="AudioOutput"/> backend.
-        /// Best-effort: an out-of-range ID or an unresolved instrument just stays silent rather than erroring.
-        /// Used during animation playback, where a popup per failed note would be disruptive.
-        ///
-        /// Rendering (SSEQ interpretation + PCM mixdown) runs on a background thread, not inline on the caller:
-        /// each render allocates several MB on the Large Object Heap, and doing that on the UI dispatcher thread
-        /// (which drives <see cref="BattleAnimPlayer"/>'s 60Hz preview timer) causes LOH-churn GC pauses that stall the
-        /// animation loop.</summary>
+        /// <summary>Plays a sound ID and stays silent on failure. Renders off the UI thread so its large
+        /// allocations don't stall the 60 Hz preview.</summary>
         /// <summary>
         /// The cry of whichever Pokemon the preview is showing as the attacker. PlayPokemonCry hands the
         /// games a pan and a volume as well; neither is applied here.
@@ -167,8 +162,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             });
         }
 
-        /// <summary>Stops what is playing. The output mixes everything together, so this stops all of it
-        /// rather than the one sound the script named.</summary>
+        /// <summary>Stops what is playing. The output is one mix, so this stops everything, not just the named
+        /// sound.</summary>
         private void PreviewStopSound(int soundId)
         {
             try { AudioOutput.Current.Stop(); } catch { }   // stopping a sound that already ended is harmless
@@ -194,13 +189,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         internal string TryPreviewSound(int soundId)
         {
             SdatArchive sdat = LoadSdat();
-            if (sdat == null) return _sdatLoadError ?? "Sound archive could not be loaded.";
+            if (sdat == null) return _sdatLoadError ?? "The sound archive couldn't be loaded.";
             try
             {
                 if (!sdat.SeqNames.ContainsKey(soundId) && (soundId < 0 || soundId >= sdat.Sequences.Count || sdat.Sequences[soundId] == null))
-                    return $"Sound ID {soundId} doesn't resolve to a sequence in this ROM's sound archive.";
+                    return $"Sound {soundId} isn't in this ROM's sound archive.";
                 short[] pcm = SseqPlayer.Render(sdat, soundId);
-                if (pcm == null || pcm.Length == 0) return $"Sound {soundId} rendered to no audio (an unsupported instrument type, most likely).";
+                if (pcm == null || pcm.Length == 0) return $"Sound {soundId} plays nothing, probably because it uses an instrument DSPRE can't play.";
                 AudioOutput.Current.Play(pcm, 32000);
                 if (AudioOutput.Current is NullAudioOutput) return "This build has no sound output yet.";
                 return null;
@@ -219,7 +214,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public ObservableCollection<BattleAnimLine> ViewLines { get; } = new ObservableCollection<BattleAnimLine>();
 
         private BattleAnimLine _pickedLine;
-        /// <summary>The line somebody clicked, which is what the panel beside it explains.</summary>
+        /// <summary>The clicked line, which the panel beside it explains.</summary>
         public BattleAnimLine PickedLine
         {
             get => _pickedLine;
@@ -254,11 +249,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         public string ViewNote => ViewMode switch
         {
-            0 => "Grouped by what part of the move each command belongs to, with the shorthands the scripts "
-               + "were written in folded back to one line.",
+            0 => "Commands grouped by part of the move, with each shorthand shown as one line.",
             1 => "One command a line, lined up in columns, with loops and subroutine bodies indented.",
-            _ => "Every word as it sits in the ROM: where it is, its number, its name, its values and their hex. "
-               + "Nothing folded and nothing hidden.",
+            _ => "Every word as stored in the ROM: offset, number, name, values and hex, with nothing folded or hidden.",
         };
 
         /// <summary>Builds the lines for whichever view is showing, from the commands as they stand now.</summary>
@@ -308,6 +301,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             _archiveIndex = Math.Clamp(index, 0, ArchiveOptions.Length - 1);
             OnPropertyChanged(nameof(ArchiveIndex));
+            OnPropertyChanged(nameof(ArchiveTip));
 
             OpcodeNames.Clear();
             if (IsAnimation)
@@ -332,7 +326,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         public bool ArchiveNotAvailable => IsAvailable && _archiveIndex >= 0 && !CurrentNarc.Available;
         public string ArchiveUnavailableText =>
-            $"This archive isn't mapped for {GameFamily} yet (no path wired). Provide the NARC path to enable it.";
+            $"This archive isn't available for {GameFamily} yet.";
 
         // ── Entry (file) selection ────────────────────────────────────────────────
         public ObservableCollection<string> FileItems { get; } = new ObservableCollection<string>();
@@ -436,13 +430,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         public bool HasUnsavedChanges => Dirty;
-        public string UnsavedChangesDescription => _fileIndex < 0 ? "Battle script" : $"{ArchiveOptions[_archiveIndex]} #{_fileIndex}";
+        public string UnsavedChangesDescription => _fileIndex < 0 ? "Battle script" : $"{ArchiveOptions[_archiveIndex]} {_fileIndex}";
         public void SaveChanges() => Save();
         public void DiscardChanges() { Dirty = false; if (_fileIndex >= 0) LoadEntry(); }
 
         public string EntryHeader =>
             _fileIndex < 0 ? "(no entry selected)"
-                           : $"{ArchiveOptions[_archiveIndex]}  -  #{_fileIndex}  ({Rows.Count} command{(Rows.Count == 1 ? "" : "s")})";
+                           : $"{ArchiveOptions[_archiveIndex]} {_fileIndex}, {Plural.Of(Rows.Count, "command")}";
 
         // ── Command list ───────────────────────────────────────────────────────────
         public ObservableCollection<ScriptCmdRow> Rows { get; } = new ObservableCollection<ScriptCmdRow>();
@@ -639,7 +633,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             byte[] bytes = IsAnimation ? BattleAnimScript.Serialize(cmds) : WazaSeqScript.Serialize(cmds);
             if (!ReadsBackTheSame(cmds, bytes))
             {
-                _ = DSPRE.Avalonia.DialogHelper.ShowErrorAsync("These commands would not read back the same once saved, so nothing was written. " +
+                _ = DSPRE.Avalonia.DialogHelper.ShowErrorAsync("These commands wouldn't read back the same once saved, so nothing was written. " +
                     "Check that each command has the number of values it takes.", "Not saved");
                 return;
             }
@@ -665,7 +659,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             if (!HgEngineOwnedFiles.TryWriteText(source, SourceText ?? "", out string error))
             {
-                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync(error, "Battle scripts error");
+                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync(error, "Move animations & battle scripts");
                 return;
             }
             _loadedSourceText = SourceText ?? "";
@@ -673,8 +667,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             if (HgEngineProject.SuppressManagedFileSaveNotice) return;
             bool never = await DSPRE.Avalonia.DialogHelper.ShowNoticeWithOptOutAsync(
-                $"This file is managed by hg-engine. {source.RelPath} has been saved, but you will need to " +
-                "compile, not just save the ROM, to see the change in game.",
+                $"{source.RelPath} is saved. hg-engine builds this file, so compile the ROM to see the change in game.",
                 "Managed by hg-engine");
             if (never) HgEngineProject.SuppressManagedFileSaveNoticeForProject();
         }
@@ -744,10 +737,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         // ── Text ⇄ container two-way sync ───────────────────────────────────────────
-        // The command list can be edited either as collapsible cards (Rows) or as plain text (CommandsText); the two are
-        // kept live-synced. Each text line is "OPCODE_NAME arg0 arg1 …" (decimal or 0xHEX). Editing the cards regenerates
-        // the text; editing the text re-parses into the cards, but ONLY when the text is error-free (else the cards keep
-        // the last good state and the errors are surfaced as red squiggles + block switching to card view).
+        // Cards (Rows) and text (CommandsText) stay in sync; text only rebuilds the cards when it has no errors.
         private bool _pushingText;     // Rows→text: a programmatic CommandsText push (don't re-parse it)
         private bool _rebuildingRows;  // text→Rows: rebuilding the cards from text (don't regenerate the text)
 
@@ -766,7 +756,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private IReadOnlyList<TextError> _textErrors = Array.Empty<TextError>();
         public IReadOnlyList<TextError> TextErrors { get => _textErrors; private set { _textErrors = value; OnPropertyChanged(nameof(TextErrors)); OnPropertyChanged(nameof(HasTextErrors)); OnPropertyChanged(nameof(TextErrorSummary)); } }
         public bool HasTextErrors => _textErrors.Count > 0;
-        public string TextErrorSummary => _textErrors.Count == 0 ? "" : _textErrors.Count + " error(s): " + _textErrors[0].Message;
+        public string TextErrorSummary => _textErrors.Count == 0 ? "" : Plural.Of(_textErrors.Count, "error") + ": " + _textErrors[0].Message;
 
         // Rows → text (called after any card edit). Suppressed while we are rebuilding the rows FROM text.
         private void SyncTextFromRows()
@@ -777,12 +767,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _pushingText = false;
         }
 
-        // The text format is a single-word command line: "CommandName label=value label=value ...", e.g.
-        // "AddParticles slot=0 data=482 behavior=3". Every command/argument/enum-value token is a single
-        // camel/Pascal-case word (BattleAnimSchema.CommandName/ArgToken/Token) so it types and greps like a real
-        // command line rather than a sentence. Args may be named (label=value, in any order; the label pins it
-        // to that parameter's slot) or bare (a plain number/enum name; fills the next slot not already claimed
-        // by a named arg, left to right). Raw internal opcode names and plain numbers still parse too.
+        // Each line is "CommandName label=value ...", e.g. "AddParticles slot=0 data=482 behavior=3". Named args
+        // take their slot; bare ones fill the next free slot. Raw opcode names and plain numbers parse too.
         private string RowsToText()
         {
             StringBuilder sb = new StringBuilder();
@@ -921,7 +907,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     }
                     if (!TryParseArgValue(raw, idx, valTok, out int v))
                     {
-                        errors.Add(new TextError(lineStart + Math.Max(0, col), tok.Length, $"'{valTok}' is not a number or known value"));
+                        errors.Add(new TextError(lineStart + Math.Max(0, col), tok.Length, $"'{valTok}' isn't a number or known value"));
                         argOk = false; continue;
                     }
                     slotValue[idx] = v;
@@ -934,7 +920,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     while (slotValue.ContainsKey(cursor)) cursor++;
                     if (!TryParseArgValue(raw, cursor, tok, out int v))
                     {
-                        errors.Add(new TextError(lineStart + Math.Max(0, col < 0 ? 0 : col), tok.Length, $"'{tok}' is not a number or known value"));
+                        errors.Add(new TextError(lineStart + Math.Max(0, col < 0 ? 0 : col), tok.Length, $"'{tok}' isn't a number or known value"));
                         argOk = false; cursor++; continue;
                     }
                     slotValue[cursor] = v;
@@ -953,7 +939,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     {
                         int col = Math.Max(0, rawLine.IndexOf(cmdName, StringComparison.Ordinal));
                         errors.Add(new TextError(lineStart + col, rawLine.TrimEnd().Length - col,
-                            $"{cmdName} takes {expected} value{(expected == 1 ? "" : "s")}, this line has {args.Length}"));
+                            $"{cmdName} takes {Plural.Of(expected, "value")} but this line has {args.Length}"));
                         continue;
                     }
                     parsed.Add((opId, args));
@@ -981,8 +967,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public bool ShowStoryboard => IsAvailable && HasRows;
         public string StoryboardTitle => IsAnimation ? "Animation storyboard" : "Effect summary";
 
-        // The animation storyboard is a column of frame numbers and reads best left alone; the effect
-        // summary is prose and was running off the right-hand edge behind a scrollbar.
+        // The storyboard is a column of numbers and stays unwrapped; the effect summary is prose, so it wraps.
         public global::Avalonia.Media.TextWrapping StoryboardWrap =>
             IsAnimation ? global::Avalonia.Media.TextWrapping.NoWrap : global::Avalonia.Media.TextWrapping.Wrap;
 
@@ -1078,7 +1063,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public double EnemyTintOpacity { get => _eTintA; private set => Set(ref _eTintA, value); }
         public IBrush TintBrush { get => _tintBrush; private set => Set(ref _tintBrush, value); }
 
-        // Backdrop + mon sprites are positioned exactly like the Battle Display editor (sprite-Y offset + heights),
+        // Backdrop + mon sprites are positioned like the Battle display tab (sprite-Y offset + heights),
         // reusing its VM, then composited with the real NDS blend so the GX blend is exact. Particles/cell/chrome
         // stay as overlays on top.
         private readonly BattleSceneCompositor _compositor = new BattleSceneCompositor();
@@ -1104,8 +1089,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             set { if (Set(ref _attackerIsEnemy, value)) { bool was = IsCellPlaying; SetupCellPreview(); if (was) ToggleCellPlay(); } }
         }
 
-        // Some moves hold two animations and the game alternates them by the battle's turn count
-        // (the games do this themselves).
+        // Some moves have two animations; the game alternates them by turn count.
         private bool _secondTurnVariant;
         public bool SecondTurnVariant
         {
@@ -1183,11 +1167,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private static System.Collections.Generic.List<string> BuildBackgroundOptions()
         {
             List<string> l = new System.Collections.Generic.List<string> { "No background" };
-            for (int i = 0; i < DSPRE.Avalonia.Data.BattleBgRenderer.BackdropCount; i++) l.Add($"Backdrop #{i}");
+            for (int i = 0; i < DSPRE.Avalonia.Data.BattleBgRenderer.BackdropCount; i++) l.Add($"Backdrop {i}");
             return l;
         }
-        // A real battle always has a backdrop and a real ground, so start on grass rather than on black with
-        // placeholder platforms: on black, every move that swaps the backdrop looks brighter than it does in game.
+        // Start on grass, not black: on black every move that swaps the backdrop looks brighter than in game.
         private int _backgroundIndex = 1;
         public int BackgroundIndex
         {
@@ -1221,9 +1204,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 if (!Set(ref _terrainIndex, value)) return;
                 ApplyGround();
-                // Auto-populate a matching scene backdrop for the terrain (terrain id and backdrop id are independent per-zone
-                // in the data, so this is an editor convenience using the platform and backdrop scene numbering; the Backdrop
-                // selector can still override). Index 0 (placeholder) leaves the backdrop untouched.
+                // Pick the matching backdrop for the terrain; the user can still change it. Index 0 leaves it alone.
                 if (_terrainIndex > 0)
                 {
                     int bg = DSPRE.Avalonia.Data.BattleGroundRenderer.BackdropForTerrain(_terrainIndex - 1);
@@ -1453,10 +1434,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 HasParticleAnimation = emitters > 0 && _particleNarc.Available;
 
                 CellAnimNote =
-                    HasCellAnimation && HasParticleAnimation ? "Cell + particle effect. Press Play."
+                    HasCellAnimation && HasParticleAnimation ? "Cell and particle effect. Press Play."
                   : HasCellAnimation ? $"Cell animation, {_cellFrames.Count} {(_cellFrames.Count == 1 ? "frame" : "frames")}"
-                  : HasParticleAnimation ? $"Particle effect: {emitters} emitter(s). Press Play."
-                  : "Pokémon-motion effect (no particles). Press Play to see the lunge / shake.";
+                  : HasParticleAnimation ? $"Particle effect with {Plural.Of(emitters, "emitter")}. Press Play."
+                  : "Moves the Pokémon only. Press Play to see it.";
             }
             RaisePreviewProps();
         }
@@ -1500,10 +1481,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private static readonly Random MetronomeRandom = new Random();
         private int _metronomeCalledMoveId = -1;
 
-        /// <summary>Picks a move id for Metronome's preview flourish to "call". Real Metronome excludes a long,
-        /// specific table of moves (other move-calling moves, signature/exclusive moves, Struggle, etc.), not
-        /// ported here, since this is a discretionary visual bonus, not an accuracy requirement; only excludes
-        /// Metronome itself, move id 0 (the no-move placeholder) and any id whose script fails to parse.</summary>
+        /// <summary>Picks a move for Metronome's preview to call. Skips only Metronome, move 0 and scripts that
+        /// don't parse, not the game's full exclusion table.</summary>
         private int PickRandomMetronomeTarget()
         {
             int count = CurrentNarc.Count;
@@ -1616,8 +1595,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 if (cellsViaActors && CellOpacity != 0) CellOpacity = 0;
                 _animPlayer.Step();
-                // A note is only found when the command that earns it runs, which is partway through,
-                // so the panel has to be told again rather than only when the preview was built.
+                // Notes appear only when their command runs, so the panel is updated during playback.
                 if (_animPlayer.Notes.Count != _notesShown)
                 {
                     _notesShown = _animPlayer.Notes.Count;
@@ -1691,8 +1669,6 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
     }
 
-    /// <summary>One editable command row: an opcode id (bound to the archive's opcode dropdown by index) plus its
-    /// argument words as an editable comma/space/0x list. <see cref="Hint"/> is set by the VM.</summary>
     /// <summary>One command in the structured editor: a collapsible card. Collapsed it shows <see cref="Summary"/>
     /// (read-only); expanded it shows the opcode dropdown + one typed editor per argument (<see cref="Params"/>) and
     /// a raw-args escape hatch for variable-length opcodes. <see cref="Args"/> is the canonical value store.</summary>
@@ -1800,8 +1776,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
     }
 
-    /// <summary>One argument editor inside a <see cref="ScriptCmdRow"/> card (currently an integer entry; enum
-    /// dropdowns can be added per-parameter later). Writes straight back into the row's canonical args.</summary>
+    /// <summary>One argument editor inside a <see cref="ScriptCmdRow"/> card. Writes straight back into the
+    /// row's args.</summary>
     public sealed class ParamVM : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;

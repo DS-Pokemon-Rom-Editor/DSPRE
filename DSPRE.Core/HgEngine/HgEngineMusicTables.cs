@@ -212,7 +212,6 @@ namespace DSPRE.HgEngine
             return (text.Remove(rows[row].Index, cut - rows[row].Index), null);
         }
 
-        /// <summary>Sets a class's eye-contact music, adding its row when it has none.</summary>
         /// <summary>Sets a class's eye-contact music. A new row raises the count the game searches, as hg-engine's
         /// guide to adding classes says it must.</summary>
         public static bool TrySetEncounterMusic(int trainerClass, ushort johto, ushort kanto, out string error)
@@ -298,7 +297,7 @@ namespace DSPRE.HgEngine
         private static bool Edit(out string error, Func<string, (string Text, string Error)> change)
         {
             error = null;
-            if (!TablesInSource) { error = $"This hg-engine checkout does not build its music tables from {SourceRelPath}."; return false; }
+            if (!TablesInSource) { error = $"This hg-engine checkout doesn't build its music tables from {SourceRelPath}."; return false; }
             string text = Read(SourceRelPath, out string path);
             (string edited, string err) = change(text);
             if (edited == null) { error = err; return false; }

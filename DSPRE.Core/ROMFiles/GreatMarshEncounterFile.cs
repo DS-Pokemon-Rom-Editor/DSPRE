@@ -5,10 +5,7 @@ using System.IO;
 
 namespace DSPRE.ROMFiles
 {
-    /// <summary>
-    /// Represents a single Great Marsh daily encounter slot.
-    /// Structure: 4 bytes total - 2 bytes species ID (little-endian) + 2 bytes padding (00 00)
-    /// </summary>
+    /// <summary>A daily slot: species (u16) and two zero bytes.</summary>
     public class GreatMarshEncounter
     {
         public ushort Species { get; set; }
@@ -39,15 +36,12 @@ namespace DSPRE.ROMFiles
         public override string ToString()
         {
             string[] pokemonNames = RomInfo.GetPokemonNames();
-            string name = Species < pokemonNames.Length ? pokemonNames[Species] : $"Pokemon {Species}";
+            string name = Species < pokemonNames.Length ? pokemonNames[Species] : $"Pokémon {Species}";
             return name;
         }
     }
 
-    /// <summary>
-    /// Represents a Great Marsh encounter group (Pre-National Dex or Post-National Dex).
-    /// Each group contains 32 Pokemon slots.
-    /// </summary>
+    /// <summary>A group of 32 slots, before or after the National Dex.</summary>
     public class GreatMarshEncounterGroup
     {
         public string Name { get; }
@@ -67,23 +61,8 @@ namespace DSPRE.ROMFiles
     }
 
     /// <summary>
-    /// Represents the Great Marsh Daily Changing Pokemon encounter data for Diamond, Pearl, and Platinum.
-    /// 
-    /// The Great Marsh (Safari Zone in Sinnoh) features special Pokemon every day that are 
-    /// randomly selected from a list. The random selections are independent for each of the 6 areas.
-    /// 
-    /// File location: files/arc/encdata_ex.narc (or data/arc/encdata_ex.narc)
-    /// 
-    /// File indices in the NARC (same for all DPPt versions):
-    /// - Post-National Dex: encdata_ex_9.bin (index 9)
-    /// - Pre-National Dex: encdata_ex_10.bin (index 10)
-    /// 
-    /// Each file contains 32 slots (4 bytes each = 128 bytes total):
-    /// - 2 bytes: Pokemon National Dex ID (little-endian)
-    /// - 2 bytes: Padding (always 0x0000)
-    /// 
-    /// The featured Pokemon replaces two 5% encounter slots from the regular 
-    /// Wild Encounters pool in each of the 6 Great Marsh areas.
+    /// The Great Marsh's daily Pokémon (DPPt) in encdata_ex files 9 (after the National Dex) and 10 (before), 32 slots
+    /// each. Each day's pick replaces two 5% slots in each of the six areas.
     /// </summary>
     public class GreatMarshEncounterFile : RomFile
     {
@@ -103,24 +82,16 @@ namespace DSPRE.ROMFiles
 
         public List<GreatMarshEncounterGroup> Groups { get; private set; }
 
-        /// <summary>
-        /// Creates a new empty Great Marsh encounter file with proper structure.
-        /// </summary>
         public GreatMarshEncounterFile()
         {
             Groups = new List<GreatMarshEncounterGroup> {
                 new GreatMarshEncounterGroup("Post-National Dex", 
-                    "Pokemon available after obtaining the National Pokédex.\n" +
-                    "These are typically rarer Pokemon from other regions."),
+                    "Pokémon you can find once you have the National Pokédex, mostly from other regions."),
                 new GreatMarshEncounterGroup("Pre-National Dex", 
-                    "Pokemon available before obtaining the National Pokédex.\n" +
-                    "Limited to Sinnoh-native Pokemon.")
+                    "Pokémon you can find before you have the National Pokédex, all from Sinnoh.")
             };
         }
 
-        /// <summary>
-        /// Loads the Great Marsh encounter files from the unpacked NARC directory.
-        /// </summary>
         public GreatMarshEncounterFile(bool load) : this()
         {
             if (load)
@@ -129,11 +100,7 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>
-        /// Gets the file indices for the two encounter groups.
-        /// Index 0 = Post-National Dex (file 9)
-        /// Index 1 = Pre-National Dex (file 10)
-        /// </summary>
+        /// <summary>Index 0 is after the National Dex (file 9), index 1 before it (file 10).</summary>
         public static int[] GetFileIndices()
         {
             return new int[] { PostNationalDexFileIndex, PreNationalDexFileIndex };
@@ -155,7 +122,6 @@ namespace DSPRE.ROMFiles
 
                 if (!File.Exists(filePath))
                 {
-                    // Fill with empty encounters if file doesn't exist
                     while (Groups[groupIndex].Encounters.Count < SlotsPerGroup)
                     {
                         Groups[groupIndex].Encounters.Add(new GreatMarshEncounter());
@@ -174,7 +140,7 @@ namespace DSPRE.ROMFiles
                     }
                 }
 
-                // Ensure exactly 32 slots
+                // Exactly 32 slots.
                 while (Groups[groupIndex].Encounters.Count < SlotsPerGroup)
                 {
                     Groups[groupIndex].Encounters.Add(new GreatMarshEncounter());
@@ -184,8 +150,7 @@ namespace DSPRE.ROMFiles
 
         public override byte[] ToByteArray()
         {
-            // This method returns all groups concatenated, but for saving
-            // we need to save each group to its respective file.
+            // Each group saves to its own file.
             using (MemoryStream ms = new MemoryStream())
             using (BinaryWriter bw = new BinaryWriter(ms))
             {
@@ -200,9 +165,6 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>
-        /// Converts a single group to byte array.
-        /// </summary>
         public byte[] GroupToByteArray(int groupIndex)
         {
             if (groupIndex < 0 || groupIndex >= Groups.Count)
@@ -221,9 +183,6 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>
-        /// Saves all Great Marsh encounter groups to the NARC directory.
-        /// </summary>
         public bool SaveToNarc(bool showSuccessMessage = true)
         {
             try
@@ -231,7 +190,7 @@ namespace DSPRE.ROMFiles
                 string narcDir = Filesystem.EncounterExtended;
                 if (string.IsNullOrEmpty(narcDir) || !Directory.Exists(narcDir))
                 {
-                    AppMessages.Error("Great Marsh encounter directory not found.", "Error");
+                    AppMessages.Error("Great Marsh encounter directory not found.", "Special encounters editor");
                     return false;
                 }
 
@@ -244,20 +203,17 @@ namespace DSPRE.ROMFiles
 
                 if (showSuccessMessage)
                 {
-                    AppMessages.Info("Great Marsh encounters saved successfully!", "Success");
+                    AppMessages.Notice("Great Marsh encounters saved.");
                 }
                 return true;
             }
             catch (Exception ex)
             {
-                AppMessages.Error($"Error saving Great Marsh encounters: {ex.Message}", "Error");
+                AppMessages.Error($"Couldn't save Great Marsh encounters: {ex.Message}", "Special encounters editor");
                 return false;
             }
         }
 
-        /// <summary>
-        /// Exports all groups to a single file.
-        /// </summary>
         public bool ExportToFile(string path, bool showSuccessMessage = true)
         {
             try
@@ -267,20 +223,17 @@ namespace DSPRE.ROMFiles
 
                 if (showSuccessMessage)
                 {
-                    AppMessages.Info("Great Marsh encounters exported successfully!", "Success");
+                    AppMessages.Notice("Great Marsh encounters exported.");
                 }
                 return true;
             }
             catch (Exception ex)
             {
-                AppMessages.Error($"Error exporting Great Marsh encounters: {ex.Message}", "Error");
+                AppMessages.Error($"Couldn't export Great Marsh encounters: {ex.Message}", "Special encounters editor");
                 return false;
             }
         }
 
-        /// <summary>
-        /// Imports all groups from a single file.
-        /// </summary>
         public bool ImportFromFile(string path)
         {
             try
@@ -295,7 +248,7 @@ namespace DSPRE.ROMFiles
                         {
                             group.Encounters.Add(new GreatMarshEncounter(br));
                         }
-                        // Ensure exactly 32 slots
+                        // Exactly 32 slots.
                         while (group.Encounters.Count < SlotsPerGroup)
                         {
                             group.Encounters.Add(new GreatMarshEncounter());
@@ -306,14 +259,12 @@ namespace DSPRE.ROMFiles
             }
             catch (Exception ex)
             {
-                AppMessages.Error($"Error importing Great Marsh encounters: {ex.Message}", "Error");
+                AppMessages.Error($"Couldn't import Great Marsh encounters: {ex.Message}", "Special encounters editor");
                 return false;
             }
         }
 
-        /// <summary>
-        /// Checks if Great Marsh encounters are available (DPPt only, not HGSS).
-        /// </summary>
+        /// <summary>Whether the game has Great Marsh encounters (DPPt only).</summary>
         public static bool IsAvailable()
         {
             return RomInfo.GameFamily == RomInfo.GameFamilies.DP || 

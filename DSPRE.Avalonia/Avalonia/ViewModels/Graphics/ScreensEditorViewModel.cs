@@ -838,7 +838,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         internal static string Readable(string text) => Words(text).Replace("\\n", " ").Replace("\\r", " ").Replace("\\f", " ").Trim();
     }
 
-    /// <summary>An archive file the screen is drawn from, opened in the Graphics browser.</summary>
+    /// <summary>An archive file the screen is drawn from, opened in All graphics.</summary>
     public sealed class ScreenPieceRow : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;

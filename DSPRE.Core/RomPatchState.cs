@@ -3,9 +3,7 @@ using DSPRE.Resources.ROMToolboxDB;
 namespace DSPRE
 {
     /// <summary>
-    /// Static ROM-patch state (which ROM patch toolbox patches are applied to the loaded ROM).
-    /// Extracted from the WinForms <c>PatchToolboxDialog</c> so the core (Filesystem, MapHeader, …)
-    /// can query it without a UI dependency; the dialog keeps forwarding members.
+    /// Which ROM patch toolbox patches the loaded ROM has.
     /// </summary>
     public static class RomPatchState
     {
@@ -35,9 +33,8 @@ namespace DSPRE
 
         public static bool FlagTrainerNamesExpanded { get; set; } = false;
 
-        /// <summary>Whether hzla's PlatPatches "overworld sprites" expansion (marker "OWTBLXPANDV1"
-        /// in the synthetic-overlay file) has been detected on the loaded ROM. DSPRE only detects
-        /// this patch, it never applies it. Platinum-only.</summary>
+        /// <summary>Whether hzla's PlatPatches overworld sprite expansion (marker "OWTBLXPANDV1") is in the ROM;
+        /// Platinum only, and DSPRE only detects it.</summary>
         public static bool FlagOverworldSpriteExpansionApplied { get; set; } = false;
         public static uint OverworldExpansionUsedCount { get; set; } = 0;
         public static uint OverworldExpansionCapacity { get; set; } = 0;

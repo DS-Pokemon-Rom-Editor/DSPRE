@@ -55,15 +55,14 @@ namespace DSPRE.Avalonia.Views.Controls
 
             if (_notes == null || _notes.Count == 0) return;
 
-            // Fit the pitches that are actually played rather than all hundred and twenty eight, so a
-            // sequence using one octave is not a thin line across the middle.
+            // Fit the pitches actually played, so a one-octave tune isn't a thin line.
             int lowest = _notes.Min(n => n.Number), highest = _notes.Max(n => n.Number);
             if (highest - lowest < 11) { int mid = (lowest + highest) / 2; lowest = mid - 6; highest = mid + 6; }
             lowest = Math.Max(0, lowest - 1); highest = Math.Min(127, highest + 1);
             int span = Math.Max(1, highest - lowest + 1);
             double lane = h / span;
 
-            // A line at every C, so the pitch can be read off rather than guessed at.
+            // A line at every C to read the pitch by.
             Pen ruler = new Pen(new SolidColorBrush(Color.FromArgb(48, 128, 128, 128)), 1);
             for (int note = lowest; note <= highest; note++)
                 if (note % 12 == 0)

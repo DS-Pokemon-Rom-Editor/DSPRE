@@ -186,12 +186,8 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// Where one square of the screen keeps its entry. A background wider than 32 squares is stored
-        /// in blocks of 32 by 32, block after block; a narrower one is stored straight across at its own
-        /// width. Read off the ROM's own files: complete narrow arrangements in HeartGold hold
-        /// width-by-height entries, and the wide ones only make a solid picture read as blocks. Some
-        /// screens deliberately carry fewer entries than their declared canvas; the compositor leaves
-        /// the missing part empty through its bounds check.
+        /// Where a square's entry sits: screens wider than 32 squares are stored in 32 by 32 blocks, narrower ones
+        /// straight across. Short arrangements leave the rest empty through the bounds check.
         /// </summary>
         public static int SquareIndex(int cols, int tx, int ty)
         {

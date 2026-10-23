@@ -7,9 +7,8 @@ using DSPRE.ROMFiles;
 namespace DSPRE
 {
     /// <summary>
-    /// Egg-move table reader (extracted from the Avalonia EggMoveEditorViewModel so core consumers
-    /// like DocTool can use it). HGSS reads the eggMoves NARC; DP/Plat read overlay 5, with the
-    /// "special" per-species file layout detected via the table magic.
+    /// The egg move tables: HGSS reads the eggMoves NARC; DP and Platinum read overlay 5, or one file per species when
+    /// the table magic says so.
     /// </summary>
     public static class EggMoveData
     {

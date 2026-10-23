@@ -7,8 +7,7 @@ namespace DSPRE.Avalonia.Gl
     /// and event editors and the matrix-scene builder so the maths lives in one place.</summary>
     public static class MapGeometry
     {
-        /// <summary>Builds the scale/translate/rotate transform that places a building model into
-        /// its map's local space (recovered from the original WinForms ScaleTranslateRotateBuilding).</summary>
+        /// <summary>The scale, move and turn that place a building model in its map.</summary>
         public static float[] BuildingTransform(Building b)
         {
             float fx = b.XPosition + b.XFraction / 65536f;

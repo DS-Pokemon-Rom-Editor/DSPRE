@@ -44,12 +44,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string Name;
         public string What;
         public DirNames Archive;
-        public int Drawing = -1;        // the picture, which is what a PNG can replace
+        public int Drawing = -1;        // the picture; a PNG import replaces it
         public int Arrangement = -1;    // NSCR, where its tiles go
         public int Cells = -1;          // NCER, how its pieces are grouped
         public int Animation = -1;      // NANR, the frame order
         public int Sprites = -1;        // the sheet the cells take their tiles from
-        public int SharedSheet = -1;    // a sheet loaded ahead of it, which the tile numbers count past
+        public int SharedSheet = -1;    // a sheet loaded before it; tile numbers start after it
         public int PaletteMember = -1;
         public int PaletteRow;
         public int PaletteRows = 1;     // more than one when the piece is painted from several rows
@@ -66,7 +66,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <summary>For a touch menu icon, which of overlay 27's icon kinds it is, or -1.</summary>
         public int IconKind = -1;
 
-        /// <summary>A rule worth saying before this one is changed, or null.</summary>
+        /// <summary>A warning to show before this piece is changed, or null.</summary>
         public string Warning;
 
         public string Where
@@ -183,7 +183,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             : "Pokétch";
 
         private int _hour, _minute;
-        /// <summary>The watch starts at the time now, which is what somebody would expect to see.</summary>
+        /// <summary>The watch starts at the current time.</summary>
         public int Hour { get => _hour; set { if (Set(ref _hour, Math.Clamp(value, 0, 23))) Draw(); } }
         public int Minute { get => _minute; set { if (Set(ref _minute, Math.Clamp(value, 0, 59))) Draw(); } }
 
@@ -195,8 +195,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             set
             {
                 if (!Set(ref _bank, Math.Max(0, value))) return;
-                // Stepping a bank by hand is a way of looking through the drawings, so it stops the run
-                // rather than fighting it for the same picture.
+                // Stepping a bank by hand stops the run so the two don't fight over the picture.
                 Stop();
                 _motion = PoketchScreen.Motion.Still;
                 OnPropertyChanged(nameof(BankNote));
@@ -309,14 +308,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string SelectedName => Selected?.Name ?? "Nothing picked";
         public string SelectedWhat => Selected == null ? "Pick a piece." : Selected.What ?? "";
 
-        /// <summary>Most pieces need no explaining, so the line goes away rather than stating the obvious.</summary>
+        /// <summary>Most pieces need no note, so the line hides.</summary>
         public bool HasWhat => Selected == null || !string.IsNullOrEmpty(Selected.What);
         public bool CanPaint => Selected != null && Selected.Drawing >= 0 && Selected.ReadOnlyBecause == null;
 
         /// <summary>Why the buttons are off for this piece, or null when they are on.</summary>
         public string CannotEditBecause => Selected?.ReadOnlyBecause;
 
-        /// <summary>Whether this piece is an animation, which has an editor of its own.</summary>
+        /// <summary>Whether this piece is an animation. Animations open in the Cell animations editor.</summary>
         public bool IsAnimation => Selected != null && Selected.Animation >= 0;
         public bool HasColours => Selected != null && Selected.PaletteMember >= 0;
 
@@ -411,14 +410,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public int SelectedApp
         {
             get => _app;
-            // Each application has its own animation file, so the run has to be given the new one rather
-            // than left holding the last application's frames.
+            // Each application has its own animation file, so the run is handed the new one.
             set { if (Set(ref _app, value)) { Stop(); LoadAnimation(); Refresh(); } }
         }
 
         /// <summary>
-        /// Which application is up, as the Pokétch itself numbers them, or -1 for the frame. An animation
-        /// opened from here is told this so it can draw inside the casing rather than on nothing.
+        /// Which application is up, as the Pokétch numbers them, or -1 for the frame. An animation opened from
+        /// here uses it to draw inside the casing.
         /// </summary>
         public int PoketchAppId =>
             _app >= 1 && _app <= PoketchApps.All.Length ? PoketchApps.All[_app - 1].Id : -1;
@@ -598,7 +596,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                                             && Overlaps(o, p))
                                    .Select(o => o.Name).ToList();
                 p.SharedWith = others.Count == 0 ? null
-                    : "These colours are shared with " + Join(others) + ", which change with it.";
+                    : "These colours are shared with " + Join(others) + ", so editing them changes those too.";
             }
         }
 
@@ -619,8 +617,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     rgba = _hgss.RenderMenu(_font, _iconFont, Word, MenuLook());
                 else if (IsChoicesTab && _hgss != null)
                 {
-                    // Picking a layout on the left shows that layout, so the boxes for five answers are
-                    // seen where they land rather than described.
+                    // Picking a layout on the left shows it, so the five answer boxes appear where they land.
                     (string[] labels, bool yesNo) = ChoiceShown();
                     rgba = _hgss.RenderChoices(_font, labels, yesNo, 0, labels != null);
                 }
@@ -628,12 +625,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     rgba = PoketchShot();
 
                 Screen = rgba == null ? null : ImageConverter.FromRgba(rgba, DsBgScreen.Width, DsBgScreen.Height);
-                if (rgba == null) StatusText = "This screen could not be read from the ROM.";
+                if (rgba == null) StatusText = "This screen couldn't be read from the ROM.";
             }
             catch (Exception ex)
             {
                 AppLogger.Error("Bottom screen draw: " + ex.Message);
-                StatusText = "This screen could not be drawn. " + ex.Message;
+                StatusText = "This screen couldn't be drawn. " + ex.Message;
             }
         }
 
@@ -652,8 +649,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             };
         }
 
-        // The Pokétch draws its casing round whichever application is up. The Digital Watch is the one with
-        // moving parts worth showing, so it keeps the fuller drawing with its digits in place.
+        // The Pokétch draws its casing round whichever application is up. The Digital Watch has moving parts
+        // worth showing, so it keeps the full drawing with its digits.
         private byte[] PoketchShot()
         {
             if (NoPoketchYet) { BankCount = 0; return _poketch.RenderUnavailable(); }
@@ -838,7 +835,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         // A frame names a drawing and what to do with it. Both come from the animation, so the preview shows
-        // the pose the game would show rather than whichever bank was last stepped to.
+        // the game's pose, not the last bank stepped to.
         private void ShowFrame()
         {
             if (_animation == null) return;
@@ -961,7 +958,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             catch (Exception ex)
             {
                 AppLogger.Error("Bottom screen colour: " + ex.Message);
-                StatusText = "That colour could not be saved. " + ex.Message;
+                StatusText = "That colour couldn't be saved. " + ex.Message;
             }
         }
 
@@ -1003,8 +1000,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public bool CanUndo => Pending.CanUndo;
         public bool CanRedo => Pending.CanRedo;
 
-        public void Undo() { if (!Pending.CanUndo) return; Pending.Undo(); ReloadAfterImport(); StatusText = "Put back."; }
-        public void Redo() { if (!Pending.CanRedo) return; Pending.Redo(); ReloadAfterImport(); StatusText = "Done again."; }
+        public void Undo() { if (!Pending.CanUndo) return; Pending.Undo(); ReloadAfterImport(); StatusText = ""; }
+        public void Redo() { if (!Pending.CanRedo) return; Pending.Redo(); ReloadAfterImport(); StatusText = ""; }
 
         private void RaiseSteps()
         {

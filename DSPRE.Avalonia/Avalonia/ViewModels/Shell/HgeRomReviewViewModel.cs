@@ -118,7 +118,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             string[] names;
             try { names = GetPokemonNames(); } catch (Exception ex) { AppLogger.WarnOnce("HgeRomReviewViewModel.LoadSpecies", ex); names = Array.Empty<string>(); }
 
-            // A linked checkout's count is the one its editors use.
+            // With a linked checkout, use the count its editors use.
             int count;
             try
             {
@@ -323,7 +323,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             string romSays = status switch
             {
                 HgEngineCodeAddons.PaletteStatus.Ok => $"bank {inRom}",
-                HgEngineCodeAddons.PaletteStatus.NotABank => $"{inRom}, which is not one of the {HgEngineCodeAddons.IconPaletteBanks} banks",
+                HgEngineCodeAddons.PaletteStatus.NotABank => $"{inRom}, which isn't one of the {HgEngineCodeAddons.IconPaletteBanks} banks",
                 HgEngineCodeAddons.PaletteStatus.PastEndOfTable => "nothing: this species is past the end of the table",
                 _ => "nothing: the ROM has no table there",
             };
@@ -490,7 +490,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
             if (!HgEngineCodeAddonRepair.TryRepair(Filesystem.SynthOverlay, _layout.StaleMembers, out string error))
             {
-                AppMessages.Error("The archive could not be repaired. " + error, "hg-engine ROM review");
+                AppMessages.Error("The archive couldn't be repaired. " + error, "hg-engine ROM review");
                 return;
             }
 

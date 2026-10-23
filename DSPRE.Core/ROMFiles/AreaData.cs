@@ -4,7 +4,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// Class to store area data in Pokémon NDS games
+    /// An area's texture packs, terrain animation, area type and light.
     /// </summary>
     public class AreaData : RomFile
     {
@@ -78,7 +78,7 @@ namespace DSPRE.ROMFiles
 
         public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true)
         {
-            SaveToFileExplorePath("Gen IV Area Data File", "bin", suggestedFileName, showSuccessMessage);
+            SaveToFileExplorePath("Area data file", "bin", suggestedFileName, showSuccessMessage);
         }
         #endregion
     }

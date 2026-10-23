@@ -51,7 +51,7 @@ namespace DSPRE.ROMFiles
 
             if (genericTarget == specialTarget)
             {
-                error = "The final shared trainer-script entry does not have a unique eye-meets body.";
+                error = "The final shared trainer-script entry doesn't have a unique eye-meets body.";
                 return false;
             }
 
@@ -59,7 +59,7 @@ namespace DSPRE.ROMFiles
             {
                 if (targets[i] != genericTarget)
                 {
-                    error = $"Shared trainer-script entry {i} does not alias the generic trainer body.";
+                    error = $"Shared trainer-script entry {i} doesn't alias the generic trainer body.";
                     return false;
                 }
             }
@@ -86,7 +86,7 @@ namespace DSPRE.ROMFiles
             {
                 if (scripts[i].ManualUserID != (uint)(i + 1))
                 {
-                    error = "The shared trainer-script IDs are not sequential.";
+                    error = "The shared trainer-script IDs aren't sequential.";
                     return false;
                 }
             }
@@ -102,7 +102,7 @@ namespace DSPRE.ROMFiles
 
             if (scripts.Count(script => script.UsedScriptID == -1) != 2)
             {
-                error = "The shared trainer-script file does not contain exactly two script bodies.";
+                error = "The shared trainer-script file doesn't contain exactly two script bodies.";
                 return false;
             }
 
@@ -111,7 +111,7 @@ namespace DSPRE.ROMFiles
             {
                 if (scripts[i].UsedScriptID != genericId)
                 {
-                    error = $"Shared trainer-script entry {i} does not reference the generic entry.";
+                    error = $"Shared trainer-script entry {i} doesn't reference the generic entry.";
                     return false;
                 }
             }
@@ -159,7 +159,7 @@ namespace DSPRE.ROMFiles
             {
                 if (scripts[i].ManualUserID != (uint)(i + 1))
                 {
-                    error = "The shared trainer-script IDs are not sequential.";
+                    error = "The shared trainer-script IDs aren't sequential.";
                     return false;
                 }
             }
@@ -172,12 +172,12 @@ namespace DSPRE.ROMFiles
                 removable.UsedScriptID != genericId || special.UsedScriptID != -1 ||
                 special.Commands == null)
             {
-                error = "The final shared trainer-script entries do not match the verified expansion layout.";
+                error = "The final shared trainer-script entries don't match the verified expansion layout.";
                 return false;
             }
             if (removable.ManualUserID + 1 != special.ManualUserID)
             {
-                error = "The removable trainer-script entry is not immediately before the eye-meets entry.";
+                error = "The removable trainer-script entry isn't immediately before the eye-meets entry.";
                 return false;
             }
 

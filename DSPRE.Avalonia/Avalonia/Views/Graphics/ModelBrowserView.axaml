@@ -6,7 +6,7 @@
         xmlns:gl="clr-namespace:DSPRE.Avalonia.Gl"
         x:Class="DSPRE.Avalonia.Views.Graphics.ModelBrowserView"
         x:DataType="vm:ModelBrowserViewModel"
-        Title="Models and textures"
+        Title="All models and textures"
         Width="980" Height="720" MinWidth="560" MinHeight="420"
         WindowStartupLocation="CenterScreen">
   <Design.DataContext>
@@ -107,8 +107,7 @@
       <ScrollViewer x:Name="SidePanel" Grid.Column="4" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Spacing="8" Margin="2,0,0,0">
 
-          <!-- An overworld person is a model, its pictures and its movement filed one after another.
-               They are one row now, with the pieces offered here. -->
+          <!-- An overworld's model, pictures and movement are filed together, so they share one row. -->
           <ListBox ItemsSource="{Binding Parts}" SelectedIndex="{Binding PartIndex, Mode=TwoWay}"
                    IsVisible="{Binding HasParts}" Background="Transparent" BorderThickness="0"
                    MaxHeight="72" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -191,7 +190,7 @@
             <TextBlock Text="{Binding FrameSummary}" VerticalAlignment="Center" Margin="8,0,0,0"
                        FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
           </WrapPanel>
-          <!-- Drag to a frame rather than waiting for it to come round again. -->
+
           <Slider Minimum="0" Maximum="{Binding FrameCount}" Value="{Binding Frame, Mode=TwoWay}"
                   IsVisible="{Binding CanPlay}" TickFrequency="1" IsSnapToTickEnabled="True"
                   ToolTip.Tip="Which frame to show."/>

@@ -6,7 +6,7 @@ namespace DSPRE.ROMFiles
     /// <summary>The DS's LZ77 (type 0x10) codec. The compressor is Nintenlord's.</summary>
     public static class Lz77
     {
-        static private unsafe int[] Search(byte* source, int position, int lenght) //Function taken from Nintenlord's compressor. All credits for this code goes to Nintenlord!
+        static private unsafe int[] Search(byte* source, int position, int lenght)
         {
             int SlidingWindowSize = 4096;
             int ReadAheadBufferSize = 18;
@@ -49,10 +49,10 @@ namespace DSPRE.ROMFiles
                     }
                 }
             }
-            return new int[2] { amountOfBytes, results[0] }; //lenght of data is first, then position
+            return new int[2] { amountOfBytes, results[0] }; // length first, then position
         }
 
-        static public unsafe byte[] Compress(byte[] source, bool header = false)//Function taken from Nintenlord's compressor. All credits for this code goes to Nintenlord!
+        static public unsafe byte[] Compress(byte[] source, bool header = false)
         {
             fixed (byte* pointer = &source[0])
             {
@@ -60,7 +60,7 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        static public unsafe byte[] Compress(byte* source, int lenght, bool header = false) //Function taken from Nintenlord's compressor. All credits for this code goes to Nintenlord!
+        static public unsafe byte[] Compress(byte* source, int lenght, bool header = false)
         {
             int position = 0;
             int BlockSize = 8;
@@ -172,7 +172,7 @@ namespace DSPRE.ROMFiles
 
         public static byte[] Decompress(byte[] source)
         {
-            // This code converted from Elitemap 
+            // Converted from Elitemap.
             int DataLen;
             DataLen = source[1] | (source[2] << 8) | (source[3] << 16);
             byte[] dest = new byte[DataLen];
@@ -235,7 +235,7 @@ namespace DSPRE.ROMFiles
 
         public static byte[] DecompressWithHeader(byte[] source)
         {
-            // This code converted from Elitemap 
+            // Converted from Elitemap.
             int DataLen;
             DataLen = source[5] | (source[6] << 8) | (source[7] << 16);
             byte[] dest = new byte[DataLen];

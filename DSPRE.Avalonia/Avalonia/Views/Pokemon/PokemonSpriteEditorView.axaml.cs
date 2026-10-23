@@ -17,7 +17,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private Window OwnerWindow => TopLevel.GetTopLevel(this) as Window;
 
-        /// <summary>Hands the sprites shown to the Graphics window, which can paint them by hand.</summary>
+        /// <summary>Hands the sprites shown to All graphics, which can paint them by hand.</summary>
         private void OpenInGraphics_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null) return;
@@ -31,7 +31,6 @@ namespace DSPRE.Avalonia.Views.Pokemon
             AvaloniaEditorLauncher.OpenOverworldEditor((uint)VM.FollowerSpriteEntry);
         }
 
-        // --- Import Wizard -------------------------------------------------------------
         private async void OpenImportWizard_Click(object sender, RoutedEventArgs e)
         {
             SpriteImportWizardViewModel wizardVm = new SpriteImportWizardViewModel(VM, OwnerWindow);
@@ -46,7 +45,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
             await wizard.ShowDialog(OwnerWindow);
         }
 
-        // --- Frame preview controls: each pose/color picks its frame independently ---------------
+        // Each pose and colour picks its own preview frame.
         private void FemaleBackNormalFrame1_Click(object sender, RoutedEventArgs e) => VM.FemaleBackNormalFrame.Frame = 0;
         private void FemaleBackNormalFrame2_Click(object sender, RoutedEventArgs e) => VM.FemaleBackNormalFrame.Frame = 1;
         private void MaleBackNormalFrame1_Click(object sender, RoutedEventArgs e) => VM.MaleBackNormalFrame.Frame = 0;
@@ -65,7 +64,6 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private void MaleFrontShinyFrame2_Click(object sender, RoutedEventArgs e) => VM.MaleFrontShinyFrame.Frame = 1;
         private void AnimateFrames_Click(object sender, RoutedEventArgs e) => VM.AnimateFrames = !VM.AnimateFrames;
 
-        // --- Import handlers ---------------------------------------------------------
         private async void ImportFemaleBackNormal_Click(object sender, RoutedEventArgs e)
             => await VM.ImportSpriteAsync(0, OwnerWindow);
         private async void ImportMaleBackNormal_Click(object sender, RoutedEventArgs e)
@@ -75,7 +73,6 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private async void ImportMaleFrontNormal_Click(object sender, RoutedEventArgs e)
             => await VM.ImportSpriteAsync(3, OwnerWindow);
 
-        // --- Export handlers ---------------------------------------------------------
         private async void ExportFemaleBackNormal_Click(object sender, RoutedEventArgs e)
             => await VM.ExportSpriteAsync(0, OwnerWindow);
         private async void ExportMaleBackNormal_Click(object sender, RoutedEventArgs e)
@@ -85,7 +82,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private async void ExportMaleFrontNormal_Click(object sender, RoutedEventArgs e)
             => await VM.ExportSpriteAsync(3, OwnerWindow);
 
-        // --- Shiny import handlers (derive palette only; artwork is shared with Normal) ---------
+        // Shiny imports only take the palette; the artwork is shared with Normal.
         private async void ImportFemaleBackShiny_Click(object sender, RoutedEventArgs e)
             => await VM.ImportShinyPaletteAsync(0, OwnerWindow);
         private async void ImportMaleBackShiny_Click(object sender, RoutedEventArgs e)
@@ -95,7 +92,6 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private async void ImportMaleFrontShiny_Click(object sender, RoutedEventArgs e)
             => await VM.ImportShinyPaletteAsync(3, OwnerWindow);
 
-        // --- Shiny export handlers ----------------------------------------------------
         private async void ExportFemaleBackShiny_Click(object sender, RoutedEventArgs e)
             => await VM.ExportSpriteAsync(0, OwnerWindow, shiny: true);
         private async void ExportMaleBackShiny_Click(object sender, RoutedEventArgs e)
@@ -105,11 +101,9 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private async void ExportMaleFrontShiny_Click(object sender, RoutedEventArgs e)
             => await VM.ExportSpriteAsync(3, OwnerWindow, shiny: true);
 
-        // --- Mono-gender / genderless sprite gap -------------------------------------
         private async void AddOppositeGenderSprites_Click(object sender, RoutedEventArgs e)
             => await VM.AddOppositeGenderSpritesAsync(OwnerWindow);
 
-        // --- Sprite sheet (Back+Front, one gender, art only) --------------------------
         private async void ImportFemaleSheet_Click(object sender, RoutedEventArgs e)
             => await VM.ImportSpriteSheetAsync(OwnerWindow, female: true);
         private async void ImportMaleSheet_Click(object sender, RoutedEventArgs e)
@@ -127,7 +121,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private async void ExportMaleShinySheet_Click(object sender, RoutedEventArgs e)
             => await VM.ExportSpriteSheetAsync(OwnerWindow, female: false, shiny: true);
 
-        // --- Both-genders sheet (only shown when the species genuinely has separate male/female art) ---
+        // The both-genders sheet only shows for species with separate male and female art.
         private async void ImportFullSheet_Click(object sender, RoutedEventArgs e)
             => await VM.ImportFullSheetAsync(OwnerWindow);
         private async void ExportFullSheet_Click(object sender, RoutedEventArgs e)
@@ -137,7 +131,6 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private async void ExportShinyFullSheet_Click(object sender, RoutedEventArgs e)
             => await VM.ExportFullSheetAsync(OwnerWindow, shiny: true);
 
-        // --- Palette swatch color editor -----------------------------------------------
         private void PaletteSwatch_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as Button)?.Tag is not PokemonSpriteEditorViewModel.PaletteSwatch swatch) return;

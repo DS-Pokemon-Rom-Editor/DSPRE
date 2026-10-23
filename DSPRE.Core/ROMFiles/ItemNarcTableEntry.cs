@@ -1,9 +1,6 @@
 namespace DSPRE.Editors
 {
-    /// <summary>
-    /// One row of the ARM9 item NARC table (data/icon/palette/AGB file indices).
-    /// Extracted from the WinForms ItemEditor so both UI layers share it.
-    /// </summary>
+    /// <summary>One row of the ARM9 item NARC table: data, icon, palette and AGB file indices.</summary>
     public struct ItemNarcTableEntry
     {
         public uint ItemData;

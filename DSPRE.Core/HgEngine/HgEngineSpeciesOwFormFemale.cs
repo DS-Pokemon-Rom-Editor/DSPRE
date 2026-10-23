@@ -32,16 +32,16 @@ namespace DSPRE.HgEngine
         public static bool TrySetRawExpression(int speciesId, string expression, out string error)
         {
             error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             if (!TryValidateRawExpression(expression, out error)) return false;
             HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator))
-            { error = $"Could not resolve a species designator for id {speciesId}."; return false; }
+            { error = $"Species {speciesId} has no SPECIES_ name in the checkout."; return false; }
 
             string text = TryReadSource(out string path);
-            if (text == null) { error = $"Source file not found: {path}"; return false; }
+            if (text == null) { error = $"{path} is missing from the checkout."; return false; }
             if (!HgEngineFlatArrayField.TrySetRawValue(ref text, designator, expression.Trim()))
-            { error = $"Could not locate or insert species {speciesId} in SpeciesToOWFormFemale.c."; return false; }
+            { error = $"Couldn't locate or insert species {speciesId} in SpeciesToOWFormFemale.c."; return false; }
 
             HgEngineFileCache.WriteText(path, text);
             return true;
@@ -84,11 +84,11 @@ namespace DSPRE.HgEngine
                     int digits = i;
                     while (i < s.Length && (hex ? Uri.IsHexDigit(s[i]) : char.IsDigit(s[i]))) i++;
                     if (i == digits || (i < s.Length && (char.IsLetterOrDigit(s[i]) || s[i] == '_')))
-                    { error = $"\"{s[start..Math.Min(i + 1, s.Length)]}\" is not a number."; return false; }
+                    { error = $"\"{s[start..Math.Min(i + 1, s.Length)]}\" isn't a number."; return false; }
                 }
                 else if ((c == '<' || c == '>') && i + 1 < s.Length && s[i + 1] == c) i += 2;
                 else if (c is '|' or '+' or '-' or '(' or ')') i++;
-                else { error = $"\"{c}\" is not allowed here."; return false; }
+                else { error = $"\"{c}\" isn't allowed here."; return false; }
                 tokens.Add(s[start..i]);
             }
 
@@ -112,14 +112,14 @@ namespace DSPRE.HgEngine
                 if (t == "(")
                 {
                     if (!ParseExpr()) return false;
-                    if (pos >= tokens.Count || tokens[pos] != ")") { problem = "A \"(\" is not closed."; return false; }
+                    if (pos >= tokens.Count || tokens[pos] != ")") { problem = "A \"(\" isn't closed."; return false; }
                     pos++;
                     return true;
                 }
                 if (char.IsDigit(t[0])) return true;
                 if (char.IsLetter(t[0]) || t[0] == '_')
                 {
-                    if (isKnownName != null && !isKnownName(t)) { problem = $"{t} is not defined."; return false; }
+                    if (isKnownName != null && !isKnownName(t)) { problem = $"{t} isn't defined."; return false; }
                     return true;
                 }
                 problem = $"\"{t}\" is out of place.";

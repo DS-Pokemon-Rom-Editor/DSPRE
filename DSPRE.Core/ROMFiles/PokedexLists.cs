@@ -7,13 +7,11 @@ using static DSPRE.RomInfo;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// The Pokédex's species lists in the Pokédex data archives, from member 11 on: national and regional order,
-    /// alphabetical, heaviest to shortest, the search's letter, type and body shape lists. The regional order is also
-    /// kept as each species' regional number and, in DP and Platinum, as the species at each regional number; those
-    /// files are written with it. Lists change only when edited here or when <see cref="Rebuild"/> is asked for,
-    /// which builds every list but the regional one the way the game's data was built (pokeplatinum
-    /// tools/dataproc/src/speciesproc.c pack_dexdata, pokeheartgold zukan_data.json).
+    /// The Pokédex sort lists, from member 11 on, plus the regional numbers saved with them. They change only when
+    /// edited or rebuilt; <see cref="Rebuild"/> follows pokeplatinum pack_dexdata and pokeheartgold zukan_data.json.
     /// </summary>
+    /// <remarks>The lists: national and regional order, alphabetical, heaviest, lightest, tallest and shortest, and the search's letter, type and
+    /// body shape lists. Rebuild follows tools/dataproc/src/speciesproc.c and builds every list but the regional one.</remarks>
     public sealed class PokedexLists
     {
         public enum Group { Order, Letter, LetterGroup, Type, BodyShape, Unused }
@@ -87,7 +85,7 @@ namespace DSPRE.ROMFiles
                     members[i] = File.ReadAllBytes(path);
                 }
                 if (File.Exists(Path.Combine(folder, l.MemberCount.ToString("D4"))))
-                { error = $"The Pokédex data has more than the game's {l.MemberCount} members, so its layout isn't the one DSPRE knows."; return false; }
+                { error = $"The Pokédex data has more than the game's {l.MemberCount} members, so DSPRE doesn't know its layout."; return false; }
                 Copy c = new Copy { Dir = dir, Folder = folder, Members = members, Lists = new List<ushort>[members.Length] };
                 for (int i = National; i < members.Length; i++) c.Lists[i] = ToList(members[i]);
                 l._copies.Add(c);
@@ -280,9 +278,8 @@ namespace DSPRE.ROMFiles
                 if (total != PickerSplits[g]) off.Add(LetterGroups[g]);
             }
             return off.Count == 0 ? null
-                : "The GTS and Battle Video species pickers split the alphabetical list at the game's own places, and the "
-                  + "letter groups no longer end there (" + string.Join(", ", off) + "), so some species show under a "
-                  + "neighbouring group in those pickers.";
+                : "The letter groups no longer end where the GTS and Battle Video pickers split the alphabetical list ("
+                  + string.Join(", ", off) + "), so some species show under the next group there.";
         }
 
         /// <summary>Writes every list that changed, and the regional number files, into the unpacked archives.</summary>

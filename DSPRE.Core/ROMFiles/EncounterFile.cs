@@ -71,13 +71,9 @@ namespace DSPRE.ROMFiles
     ----------------------------------------------------------------------------------*/
 
     /// <summary>
-    /// The wild Pokemon a map holds, across all four Gen IV games.
-    ///
-    /// The block above documents the map header, which is a different file; it is kept because the header
-    /// is what points at the wild file. The wild file itself is 196 bytes in HeartGold and 424 bytes in
-    /// Diamond, Pearl and Platinum, and the
-    /// two are laid out quite differently: HeartGold writes each fishing entry as min level, max level,
-    /// species, while Platinum writes max level, min level, species.
+    /// The wild Pokémon a map holds. The file is 196 bytes in HeartGold and 424 in Diamond, Pearl and Platinum;
+    /// HeartGold writes fishing entries as min level, max level, species and Platinum as max, min, species. The layout
+    /// above is the map header's, which points at this file.
     /// </summary>
     public abstract class EncounterFile : RomFile
     {
@@ -131,21 +127,18 @@ namespace DSPRE.ROMFiles
             }
             fullError += errorSections;
 
-            fullError += Environment.NewLine + "It is recommended that you check them before resaving.";
+            fullError += Environment.NewLine + "Check them before you save again.";
             
             if (errorSections.Contains(MsgFixed))
             {
-                fullError += Environment.NewLine + "Fields marked as " + '\'' + MsgFixed + '\'' + " have been repaired with a value of 0.";
+                fullError += Environment.NewLine + "Fields marked " + '\'' + MsgFixed + '\'' + " were set to 0.";
             }
 
-            AppMessages.Error(fullError, "Encounter File error");
+            AppMessages.Error(fullError, "Encounter file error");
         }
         #endregion
     }
 
-    /// <summary>
-    /// Class to store wild Pokemon data from Pokemon Diamond, Pearl and Platinum
-    /// </summary>
     public class EncounterFileDPPt : EncounterFile
     {
         #region Fields (9)       
@@ -297,7 +290,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileDPPt.ctor", ex);
                         RubyPokemon[i] = 0x00;
-                        fieldsWithErrors.Add("Dual-Slot Ruby" + ' ' + '[' + i + ']' + MsgFixed);
+                        fieldsWithErrors.Add("Dual-slot Ruby" + ' ' + '[' + i + ']' + MsgFixed);
                     }
                 }
 
@@ -311,7 +304,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileDPPt.ctor", ex);
                         SapphirePokemon[i] = 0x00;
-                        fieldsWithErrors.Add("Dual-Slot Sapphire" + ' ' + '[' + i + ']' + MsgFixed);
+                        fieldsWithErrors.Add("Dual-slot Sapphire" + ' ' + '[' + i + ']' + MsgFixed);
                     }
                 }
 
@@ -325,7 +318,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileDPPt.ctor", ex);
                         EmeraldPokemon[i] = 0x00;
-                        fieldsWithErrors.Add("Dual-Slot Emerald" + ' ' + '[' + i + ']' + MsgFixed);
+                        fieldsWithErrors.Add("Dual-slot Emerald" + ' ' + '[' + i + ']' + MsgFixed);
                     }
                 }
 
@@ -339,7 +332,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileDPPt.ctor", ex);
                         FireRedPokemon[i] = 0x00;
-                        fieldsWithErrors.Add("Dual-Slot FireRed" + ' ' + '[' + i + ']' + MsgFixed);
+                        fieldsWithErrors.Add("Dual-slot FireRed" + ' ' + '[' + i + ']' + MsgFixed);
                     }
                 }
 
@@ -353,7 +346,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileDPPt.ctor", ex);
                         LeafGreenPokemon[i] = 0x00;
-                        fieldsWithErrors.Add("Dual-Slot LeafGreen" + ' ' + '[' + i + ']' + MsgFixed);
+                        fieldsWithErrors.Add("Dual-slot LeafGreen" + ' ' + '[' + i + ']' + MsgFixed);
                     }
                 }
 
@@ -568,14 +561,11 @@ namespace DSPRE.ROMFiles
         }
         public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true)
         {
-            SaveToFileExplorePath("DPPt Encounter File", EncounterFile.Extension, suggestedFileName, showSuccessMessage);
+            SaveToFileExplorePath("Encounter file", EncounterFile.Extension, suggestedFileName, showSuccessMessage);
         }
         #endregion
     }
 
-    /// <summary>
-    /// Class to store wild Pokemon data from Pokemon HeartGold and SoulSilver
-    /// </summary>
     public class EncounterFileHGSS : EncounterFile
     {
         #region Fields (9)
@@ -608,7 +598,7 @@ namespace DSPRE.ROMFiles
                 {
                     AppLogger.WarnOnce("EncounterFileHGSS.ctor", ex);
                     WalkingRate = 0x00;
-                    fieldsWithErrors.Add("Regular Encounters rate" + MsgFixed);
+                    fieldsWithErrors.Add("Regular encounter rate" + MsgFixed);
                 }
 
                 try
@@ -679,7 +669,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileHGSS.ctor", ex);
                         WalkingLevels[i] = 0x00;
-                        fieldsWithErrors.Add("Regular Encounters" + ' ' + '[' + i + ']' + MsgFixed);
+                        fieldsWithErrors.Add("Regular encounters" + ' ' + '[' + i + ']' + MsgFixed);
                     }
                 }
 
@@ -694,7 +684,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileHGSS.ctor", ex);
                         MorningPokemon[i] = 0x00;
-                        fieldsWithErrors.Add("Morning Encounters" + ' ' + '[' + i + ']' + MsgFixed);
+                        fieldsWithErrors.Add("Morning encounters" + ' ' + '[' + i + ']' + MsgFixed);
                     }
                 }
 
@@ -709,7 +699,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileHGSS.ctor", ex);
                         DayPokemon[i] = 0x00;
-                        fieldsWithErrors.Add("Day Encounters" + ' ' + '[' + i + ']' + MsgFixed);
+                        fieldsWithErrors.Add("Day encounters" + ' ' + '[' + i + ']' + MsgFixed);
                     }
                 }
 
@@ -724,7 +714,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileHGSS.ctor", ex);
                         NightPokemon[i] = 0x00;
-                        fieldsWithErrors.Add("Night Encounters" + ' ' + '[' + i + ']' + MsgFixed);
+                        fieldsWithErrors.Add("Night encounters" + ' ' + '[' + i + ']' + MsgFixed);
                     }
                 }
 
@@ -739,7 +729,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileHGSS.ctor", ex);
                         HoennMusicPokemon[i] = 0x00;
-                        fieldsWithErrors.Add("Hoenn Music Encounters" + ' ' + '[' + i + ']' + MsgFixed);
+                        fieldsWithErrors.Add("Hoenn music encounters" + ' ' + '[' + i + ']' + MsgFixed);
                     }
                 }
 
@@ -753,7 +743,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileHGSS.ctor", ex);
                         SinnohMusicPokemon[i] = 0x00;
-                        fieldsWithErrors.Add("Sinnoh Music Encounters" + ' ' + '[' + i + ']' + MsgFixed);
+                        fieldsWithErrors.Add("Sinnoh music encounters" + ' ' + '[' + i + ']' + MsgFixed);
                     }
                 }
 
@@ -768,7 +758,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileHGSS.ctor", ex);
                         SurfMinLevels[i] = 0x01;
-                        fieldsWithErrors.Add("Surf Encounters" + ' ' + '[' + i + ']' + " min. level" + MsgFixed);
+                        fieldsWithErrors.Add("Surf encounters" + ' ' + '[' + i + ']' + " min. level" + MsgFixed);
                     }
 
                     try
@@ -779,7 +769,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileHGSS.ctor", ex);
                         SurfMaxLevels[i] = 0x01;
-                        fieldsWithErrors.Add("Surf Encounters" + ' ' + '[' + i + ']' + " max. level" + MsgFixed);
+                        fieldsWithErrors.Add("Surf encounters" + ' ' + '[' + i + ']' + " max. level" + MsgFixed);
                     }
 
                     try
@@ -790,7 +780,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileHGSS.ctor", ex);
                         SurfPokemon[i] = 0x00;
-                        fieldsWithErrors.Add("Surf Encounters" + ' ' + '[' + i + ']' + " Pokémon" + MsgFixed);
+                        fieldsWithErrors.Add("Surf encounters" + ' ' + '[' + i + ']' + " Pokémon" + MsgFixed);
                     }
                 }
 
@@ -805,7 +795,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileHGSS.ctor", ex);
                         RockSmashMinLevels[i] = 0x01;
-                        fieldsWithErrors.Add("Rock Smash Encounters" + ' ' + '[' + i + ']' + " min. level" + MsgFixed);
+                        fieldsWithErrors.Add("Rock Smash encounters" + ' ' + '[' + i + ']' + " min. level" + MsgFixed);
                     }
 
                     try
@@ -816,7 +806,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileHGSS.ctor", ex);
                         RockSmashMaxLevels[i] = 0x01;
-                        fieldsWithErrors.Add("Rock Smash Encounters" + ' ' + '[' + i + ']' + " max. level" + MsgFixed);
+                        fieldsWithErrors.Add("Rock Smash encounters" + ' ' + '[' + i + ']' + " max. level" + MsgFixed);
                     }
 
                     try
@@ -827,7 +817,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileHGSS.ctor", ex);
                         RockSmashPokemon[i] = 0x00;
-                        fieldsWithErrors.Add("Rock Smash Encounters" + ' ' + '[' + i + ']' + " Pokémon" + MsgFixed);
+                        fieldsWithErrors.Add("Rock Smash encounters" + ' ' + '[' + i + ']' + " Pokémon" + MsgFixed);
                     }
                 }
 
@@ -842,7 +832,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileHGSS.ctor", ex);
                         OldRodMinLevels[i] = 0x01;
-                        fieldsWithErrors.Add("Old Rod Encounters" + ' ' + '[' + i + ']' + " min. level" + MsgFixed);
+                        fieldsWithErrors.Add("Old Rod encounters" + ' ' + '[' + i + ']' + " min. level" + MsgFixed);
                     }
 
                     try
@@ -853,7 +843,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileHGSS.ctor", ex);
                         OldRodMaxLevels[i] = 0x01;
-                        fieldsWithErrors.Add("Old Rod Encounters" + ' ' + '[' + i + ']' + " max. level" + MsgFixed);
+                        fieldsWithErrors.Add("Old Rod encounters" + ' ' + '[' + i + ']' + " max. level" + MsgFixed);
                     }
 
                     try
@@ -864,7 +854,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileHGSS.ctor", ex);
                         OldRodPokemon[i] = 0x00;
-                        fieldsWithErrors.Add("Old Rod Encounters" + ' ' + '[' + i + ']' + " Pokémon" + MsgFixed);
+                        fieldsWithErrors.Add("Old Rod encounters" + ' ' + '[' + i + ']' + " Pokémon" + MsgFixed);
                     }
                 }
 
@@ -879,7 +869,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileHGSS.ctor", ex);
                         GoodRodMinLevels[i] = 0x01;
-                        fieldsWithErrors.Add("Good Rod Encounters" + ' ' + '[' + i + ']' + " min. level" + MsgFixed);
+                        fieldsWithErrors.Add("Good Rod encounters" + ' ' + '[' + i + ']' + " min. level" + MsgFixed);
                     }
 
                     try
@@ -890,7 +880,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileHGSS.ctor", ex);
                         GoodRodMaxLevels[i] = 0x01;
-                        fieldsWithErrors.Add("Good Rod Encounters" + ' ' + '[' + i + ']' + " max. level" + MsgFixed);
+                        fieldsWithErrors.Add("Good Rod encounters" + ' ' + '[' + i + ']' + " max. level" + MsgFixed);
                     }
 
                     try
@@ -901,7 +891,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileHGSS.ctor", ex);
                         GoodRodPokemon[i] = 0x00;
-                        fieldsWithErrors.Add("Good Rod Encounters" + ' ' + '[' + i + ']' + " Pokémon" + MsgFixed);
+                        fieldsWithErrors.Add("Good Rod encounters" + ' ' + '[' + i + ']' + " Pokémon" + MsgFixed);
                     }
                 }
 
@@ -916,7 +906,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileHGSS.ctor", ex);
                         SuperRodMinLevels[i] = 0x01;
-                        fieldsWithErrors.Add("Super Rod Encounters" + ' ' + '[' + i + ']' + " min. level" + MsgFixed);
+                        fieldsWithErrors.Add("Super Rod encounters" + ' ' + '[' + i + ']' + " min. level" + MsgFixed);
                     }
 
                     try
@@ -927,7 +917,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileHGSS.ctor", ex);
                         SuperRodMaxLevels[i] = 0x01;
-                        fieldsWithErrors.Add("Super Rod Encounters" + ' ' + '[' + i + ']' + " max. level" + MsgFixed);
+                        fieldsWithErrors.Add("Super Rod encounters" + ' ' + '[' + i + ']' + " max. level" + MsgFixed);
                     }
 
                     try
@@ -938,7 +928,7 @@ namespace DSPRE.ROMFiles
                     {
                         AppLogger.WarnOnce("EncounterFileHGSS.ctor", ex);
                         SuperRodPokemon[i] = 0x00;
-                        fieldsWithErrors.Add("Super Rod Encounters" + ' ' + '[' + i + ']' + " Pokémon" + MsgFixed);
+                        fieldsWithErrors.Add("Super Rod encounters" + ' ' + '[' + i + ']' + " Pokémon" + MsgFixed);
                     }
                 }
 
@@ -1072,7 +1062,7 @@ namespace DSPRE.ROMFiles
 
         public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true)
         {
-            SaveToFileExplorePath("HGSS Encounter File", EncounterFile.Extension, suggestedFileName, showSuccessMessage);
+            SaveToFileExplorePath("Encounter file", EncounterFile.Extension, suggestedFileName, showSuccessMessage);
         }
         #endregion
     }

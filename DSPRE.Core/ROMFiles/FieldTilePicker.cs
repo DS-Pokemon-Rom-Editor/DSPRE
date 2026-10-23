@@ -34,10 +34,8 @@ namespace DSPRE.ROMFiles
 
 
         /// <summary>
-        /// A picker that has already worked out where every tile lands on screen, for when the same
-        /// question gets asked over and over: dragging something across the map asks once per twitch of the
-        /// pointer, and a header that stitches the whole matrix has getting on for three hundred thousand
-        /// tiles, which is too many to walk that often.
+        /// Caches every tile's screen position: dragging asks on every pointer move, and a whole-matrix header has
+        /// about 300,000 tiles.
         /// </summary>
         public sealed class Prepared
         {
@@ -117,11 +115,7 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>
-        /// The tile under a point on screen, across however many maps are stitched together. Only the
-        /// few cells whose centres land nearest are walked tile by tile, since a header can stitch
-        /// hundreds of maps and every tile of every one of them is too many to reproject per move.
-        /// </summary>
+        /// <summary>The tile under a point on screen across stitched maps; only the nearest cells are walked tile by tile.</summary>
         /// <param name="project">Raw world x/z to (whether it is on screen at all, screenX, screenY).</param>
         /// <param name="withinTiles">How far off a tile centre the point may be and still count, in tiles
         /// as they appear on screen. A fixed pixel figure claims tiles for a pointer well off the map:

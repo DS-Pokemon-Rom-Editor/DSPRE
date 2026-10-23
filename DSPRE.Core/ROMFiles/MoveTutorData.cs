@@ -143,7 +143,7 @@ namespace DSPRE.ROMFiles
         private List<List<int>> _sourceOwn;
         private ulong[] _sourceMasks;
 
-        // A form with no list of its own uses its base species' one, as the build does.
+        // A form without a list uses its base species' list, as the build does.
         private static MoveTutorData LoadSource()
         {
             if (!HgEngine.HgEngineMoveTutors.TryRead(out List<HgEngineMoveTutors.Tutor> tutors, out string error)

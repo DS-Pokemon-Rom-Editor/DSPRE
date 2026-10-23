@@ -9,10 +9,8 @@ using System.Collections.Generic;
 namespace DSPRE.HgEngine
 {
     /// <summary>
-    /// Reads a trainer class's <c>NNN_cell.json</c> (NCER) and <c>NNN_anim.json</c> (NANR) straight from
-    /// hg-engine source instead of the compiled narc. This checkout's nitrogfx build has a real bug
-    /// compiling cell.json into NCER: negative-X OAMs get their whole Attr1 word overwritten with a raw
-    /// sign-extended value, clobbering the size/flip bits. Reading the JSON sidesteps that bug entirely.
+    /// Reads a trainer class's cell.json and anim.json from source: nitrogfx overwrites Attr1 of negative-X OAMs
+    /// when it builds the NCER, losing their size and flip bits.
     /// </summary>
     internal static class HgEngineTrainerGraphicsSource
     {
@@ -77,8 +75,8 @@ namespace DSPRE.HgEngine
             cells = null; error = null;
             CellJson doc;
             try { doc = JsonSerializer.Deserialize<CellJson>(File.ReadAllText(cellJsonPath)); }
-            catch (Exception ex) { error = "Failed to parse " + cellJsonPath + ": " + ex.Message; return false; }
-            if (doc?.Cells == null || doc.Cells.Length == 0) { error = "No cells in " + cellJsonPath; return false; }
+            catch (Exception ex) { error = cellJsonPath + " couldn't be read: " + ex.Message; return false; }
+            if (doc?.Cells == null || doc.Cells.Length == 0) { error = cellJsonPath + " has no cells."; return false; }
 
             List<NcerFile.Cell> list = new List<NcerFile.Cell>();
             for (int i = 0; i < doc.Cells.Length; i++)
@@ -102,10 +100,10 @@ namespace DSPRE.HgEngine
             cells = null; durations = null; error = null;
             AnimJson doc;
             try { doc = JsonSerializer.Deserialize<AnimJson>(File.ReadAllText(animJsonPath)); }
-            catch (Exception ex) { error = "Failed to parse " + animJsonPath + ": " + ex.Message; return false; }
+            catch (Exception ex) { error = animJsonPath + " couldn't be read: " + ex.Message; return false; }
             if (doc?.Sequences == null || doc.Sequences.Length == 0 || doc.AnimationResults == null || doc.AnimationResults.Length == 0)
             {
-                error = "No sequences/results in " + animJsonPath;
+                error = animJsonPath + " has no sequences.";
                 return false;
             }
 
@@ -113,7 +111,7 @@ namespace DSPRE.HgEngine
             // other sequence(s) are single-frame idle/default poses. See TrainerClassSpriteRenderer.Load
             // for how DefaultFrame then picks the "CellAnime0"-named bank out of this played sequence.
             SequenceJson longest = doc.Sequences.OrderByDescending(s => s.FrameData?.Length ?? 0).First();
-            if (longest.FrameData == null || longest.FrameData.Length == 0) { error = "Empty sequence in " + animJsonPath; return false; }
+            if (longest.FrameData == null || longest.FrameData.Length == 0) { error = animJsonPath + " has an empty sequence."; return false; }
 
             cells = longest.FrameData
                 .Select(f => f.ResultId >= 0 && f.ResultId < doc.AnimationResults.Length ? doc.AnimationResults[f.ResultId].Index : 0)

@@ -242,80 +242,7 @@ namespace DSPRE.ROMFiles
         EvolveMagmar = 144,
         EvolvePorygon2 = 145,
         EvolveDusclops = 146,
-        // These are hg-engine items, not in gen 4
-        //BurnDrive = 147,
-        //ChillDrive = 148,
-        //DouseDrive = 149,
-        //ShockDrive = 150,
-        //EvolveFeebas = 151,
-        //Eviolite = 152,
-        //HalveWeight = 153,
-        //DamageOnContact = 154,
-        //UngroundDestroyedOnHit = 155,
-        //ForceSwitchOnDamage = 156,
-        //LoseTypeImmunities = 157,
-        //TrappingDamageUp = 158,
-        //BoostSpecialAttackOnWaterHit = 159,
-        //BoostAtkOnElectricHit = 160,
-        //SwitchOutWhenHit = 161,
-        //BoostAtkAndSpAtkOnSe = 162,
-        //SpDefBoostNoStatusMoves = 163,
-        //ArceusFairy = 164,
-        //EvolveSwirlix = 165,
-        //EvolveSpritzee = 166,
-        //BoostSpecialDefenseOnWaterHit = 167,
-        //BoostAtkOnIceHit = 168,
-        //SporePowderImmunity = 169,
-        //WeakenSeFairy = 170,
-        //BoostDefOnPhysicalHit = 171,
-        //BoostSpDefOnSpecialHit = 172,
-        //IntimidateBoostSpeed = 173,
-        //ExtendTerrain = 174,
-        //PreventContactEffects = 175,
-        //BoostDefOnElectricTerrain = 176,
-        //BoostSpDefOnPsychicTerrain = 177,
-        //BoostSpDefOnMistyTerrain = 178,
-        //BoostDefOnGrassyTerrain = 179,
-        //FightingMemory = 180,
-        //FlyingMemory = 181,
-        //PoisonMemory = 182,
-        //GroundMemory = 183,
-        //RockMemory = 184,
-        //BugMemory = 185,
-        //GhostMemory = 186,
-        //SteelMemory = 187,
-        //FireMemory = 188,
-        //WaterMemory = 189,
-        //GrassMemory = 190,
-        //ElectricMemory = 191,
-        //PsychicMemory = 192,
-        //IceMemory = 193,
-        //DragonMemory = 194,
-        //DarkMemory = 195,
-        //FairyMemory = 196,
-        //TransformZacian = 197,
-        //TransformZamazenta = 198,
-        //BoostSpAtkOnSoundMove = 199,
-        //SwitchOutOnStatDrop = 200,
-        //IgnoreEntryHazards = 201,
-        //BoostSpeedOnMiss = 202,
-        //DropSpeedInTrickRoom = 203,
-        //UnaffectedByRainOrSun = 204,
-        //DialgaBoostAndTransform = 205,
-        //PalkiaBoostAndTransform = 206,
-        //GiratinaBoostAndTransform = 207,
-        //ArceusNormal = 208,
-        //ActivateParadoxAbilities = 209,
-        //PreventAbilityChanges = 210,
-        //PreventStatDrops = 211,
-        //CopyStatIncrease = 212,
-        //IncreasePunchingMoveDmg = 213,
-        //PreventSecondaryEffects = 214,
-        //IncreaseMultiStrikeMinimum = 215,
-        //StrengthenFairy = 216,
-        //CornerstoneMask = 217,
-        //WellspringMask = 218,
-        //HearthflameMask = 219
+        // hg-engine adds hold effects 147 to 219.
     }
 
     /// <summary>Per-game labels for the item fields whose values differ between DP, Pt and HGSS.</summary>
@@ -387,7 +314,6 @@ namespace DSPRE.ROMFiles
         public byte FlingPower;
         public byte NaturalGiftPower;
 
-        // Bit-packed 16-bit value
         public NaturalGiftType NaturalGiftType; // 5 bits
         public bool PreventToss;     // 1 bit
         public bool Selectable;      // 1 bit
@@ -471,7 +397,6 @@ namespace DSPRE.ROMFiles
                 writer.Write(NaturalGiftPower);
 
                 ushort bitfield = 0;
-                // Bitfield packing
                 bitfield |= (ushort)((byte)NaturalGiftType & 0b11111);         // Bits 0-4: NaturalGiftType
                 if (PreventToss) bitfield |= (1 << 5);                        // Bit 5: PreventToss
                 if (Selectable) bitfield |= (1 << 6);                         // Bit 6: Selectable
@@ -500,7 +425,7 @@ namespace DSPRE.ROMFiles
         }
         public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true)
         {
-            SaveToFileExplorePath("Gen IV Item data", "bin", suggestedFileName, showSuccessMessage);
+            SaveToFileExplorePath("Item data", "bin", suggestedFileName, showSuccessMessage);
         }
 
         public class ItemPartyUseParam

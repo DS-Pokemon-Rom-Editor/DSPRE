@@ -6,11 +6,8 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia
 {
     /// <summary>
-    /// UI-agnostic ROM loader for the Avalonia shell, the counterpart to the WinForms MainProgram open-ROM flow.
-    /// Unpacks a .nds (or opens an already-extracted folder), reads the game code from the header and constructs
-    /// <see cref="RomInfo"/> (which populates the static RomInfo.* state the Avalonia editors read). This class
-    /// itself has no UI: the caller decides (via <see cref="PeekFolderType"/>) whether to prompt the user about
-    /// reusing or re-extracting existing data, then passes that choice in as <c>reExtract</c>.
+    /// Unpacks a .nds or opens an extracted folder and builds <see cref="RomInfo"/>. The caller asks about extracting again,
+    /// using <see cref="PeekFolderType"/>, and passes the answer as <c>reExtract</c>.
     /// </summary>
     public static class AvaloniaRomLoader
     {
@@ -42,7 +39,7 @@ namespace DSPRE.Avalonia
                 try { Directory.Delete(workDir, true); }
                 catch (IOException)
                 {
-                    error = $"Concurrent access detected: make sure no other process is using {workDir} while DSPRE is running.";
+                    error = $"Another program is using {workDir}. Close it and try again.";
                     return false;
                 }
                 if (!DSUtils.UnpackRom(ndsPath, workDir)) { error = "Unpacking the ROM failed."; return false; }
@@ -63,10 +60,10 @@ namespace DSPRE.Avalonia
             if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder)) { error = "Folder not found."; return false; }
 
             int type = DSUtils.GetFolderType(folder);
-            if (type == -1) { error = "The selected folder is not a valid extracted ROM folder."; return false; }
+            if (type == -1) { error = "The selected folder isn't a valid extracted ROM folder."; return false; }
 
             string gameCode = ReadGameCode(folder, type);
-            if (string.IsNullOrEmpty(gameCode)) { error = "Could not read the game code from the ROM header."; return false; }
+            if (string.IsNullOrEmpty(gameCode)) { error = "Couldn't read the game code from the ROM header."; return false; }
             // Refused before anything is reset, so the ROM already open keeps working.
             if (!RomInfo.IsSupportedGameCode(gameCode)) { error = UnsupportedMessage(gameCode); return false; }
 
@@ -91,7 +88,7 @@ namespace DSPRE.Avalonia
             Data.LabelStore.DiscardDraft();
 
             try { _ = new RomInfo(gameCode, folder); }   // populates the static RomInfo.* (gameFamily, workDir, gameDirs, …)
-            catch (Exception ex) { error = "Failed to initialise ROM data: " + ex.Message; AppLogger.Error(error); return false; }
+            catch (Exception ex) { error = "Couldn't initialise ROM data: " + ex.Message; AppLogger.Error(error); return false; }
 
             if (GameFamily == GameFamilies.NULL) { error = "Unsupported ROM (Gen IV Pokémon only)."; return false; }
             AppLogger.Info($"ROM loaded: {RomInfo.RomID} ({RomInfo.ProjectName})");
@@ -101,7 +98,7 @@ namespace DSPRE.Avalonia
 
         /// <summary>
         /// Why a .nds file or extracted folder can't be opened, read from its header alone, or null when it
-        /// can. Lets the caller refuse before closing anything of the project that is open now.
+        /// can, so the caller can refuse before closing the open project.
         /// </summary>
         public static string WhyUnsupported(string path)
         {
@@ -129,7 +126,7 @@ namespace DSPRE.Avalonia
         }
 
         private static string UnsupportedMessage(string gameCode) =>
-            $"This ROM ({gameCode.Trim('\0')}) is not supported. DSPRE opens Gen IV Pokémon ROMs only.";
+            $"This ROM ({gameCode.Trim('\0')}) isn't supported. DSPRE opens Gen IV Pokémon ROMs only.";
 
         private static string ReadGameCode(string folder, int folderType)
         {

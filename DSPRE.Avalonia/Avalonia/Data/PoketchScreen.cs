@@ -37,9 +37,7 @@ namespace DSPRE.Avalonia.Data
         private PoketchScreen(Func<int, byte[]> member) { _member = member; }
 
         /// <summary>
-        /// Reads the Pokétch archive out of the loaded ROM, or null when this ROM has none. Every edit in
-        /// DSPRE lands in the unpacked files and the ROM save packs them, so reading them here is what makes
-        /// a changed graphic show up straight away instead of after a save and reload.
+        /// Reads the Pokétch archive from the unpacked files, so an edit shows right away; null when this ROM has none.
         /// </summary>
         public static PoketchScreen Load()
         {

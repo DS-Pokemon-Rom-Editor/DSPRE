@@ -17,15 +17,13 @@ namespace DSPRE.Avalonia
         /// <summary>A customisable dropdown-label category was edited (see <see cref="Data.LabelStore"/>).</summary>
         public static event EventHandler LabelsChanged;
 
-        /// <summary>A ROM patch toolbox patch was applied; editors gating a feature on a patch flag
-        /// (e.g. Map editor's Building Rotation fields) should re-check their state.</summary>
+        /// <summary>A patch was applied; editors gated on a patch check their state again.</summary>
         public static event EventHandler RomPatchStateChanged;
 
         /// <summary>The game banner (icon / titles) was edited; the main window refreshes its icon.</summary>
         public static event EventHandler BannerChanged;
 
-        /// <summary>The linked hg-engine checkout (or its enabled state) changed; the menu re-checks
-        /// which of the 5 source-backed editors are unblocked.</summary>
+        /// <summary>The linked hg-engine checkout, or whether it's on, changed; the menu checks which source-backed editors open.</summary>
         public static event EventHandler HgEngineLinkChanged;
 
         /// <summary>A member of a mapped archive was written, so previews built from it can redraw.</summary>

@@ -106,7 +106,7 @@ namespace DSPRE.ROMFiles
             return null;
         }
 
-        // The helper reads a word inside the patch's payload, so the payload must be the one it was measured on.
+        // The helper reads a word inside the patch payload, so the payload version must match.
         private static bool ActiveClassWordMatches()
         {
             uint? offset = TrainerClassMetadataPatch.InstalledOffset();

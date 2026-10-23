@@ -13,13 +13,8 @@ using Avalonia.Threading;
 namespace DSPRE.Avalonia
 {
     /// <summary>
-    /// Installs native-Avalonia implementations of the ROM patch toolbox prompt hooks
-    /// (<see cref="DSPRE.PatchToolboxLogic.ConfirmYesNo"/> etc.), so the native toolbox shows
-    /// Avalonia dialogs instead of WinForms MessageBoxes while the ROM-writing logic stays shared.
-    ///
-    /// The patch apply-methods are synchronous, so these dialogs block synchronously: the window is
-    /// shown modally and a nested Avalonia dispatcher frame is pumped until the user answers, which
-    /// keeps the window fully responsive without freezing the app (cross-platform, no WinForms).
+    /// The patch toolbox's prompts as modal Avalonia dialogs. The apply methods are synchronous, so each prompt waits
+    /// on a dispatcher frame.
     /// </summary>
     public static class PatchDialogs
     {
@@ -43,9 +38,7 @@ namespace DSPRE.Avalonia
             return null;
         }
 
-        // Block until the predicate is true. On the UI thread this runs a nested Avalonia dispatcher
-        // frame (cross-platform, pumps the native event loop, no WinForms). On a worker thread it
-        // just poll-sleeps while the dialog runs on the UI thread.
+        // Waits on a nested dispatcher frame on the UI thread, or polls on a worker thread.
         private static void PumpUntil(Func<bool> isDone)
         {
             if (!Dispatcher.UIThread.CheckAccess())
@@ -83,9 +76,7 @@ namespace DSPRE.Avalonia
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(16, 16, 16, 12),
             };
-            // Only override the foreground for errors: leaving it unset for Info/Confirm lets the
-            // theme's implicit TextBlock style apply; explicitly assigning null here (even via a
-            // ternary) used to win over the theme at Local priority and rendered the text invisible.
+            // Set the foreground only for errors; setting it at all, even to null, hides the theme's colour.
             if (error) msgText.Foreground = new SolidColorBrush(Color.FromRgb(0xC6, 0x28, 0x28));
 
             StackPanel btnRow = new StackPanel

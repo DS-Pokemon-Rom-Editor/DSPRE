@@ -45,7 +45,7 @@ namespace DSPRE.Avalonia.Data
         {
             document = null;
             if (bytes == null || bytes.Length < 32) { error = "The file is too short to be a particle archive."; return false; }
-            if (BitConverter.ToUInt32(bytes, 0) != Magic) { error = "The file is not a particle archive."; return false; }
+            if (BitConverter.ToUInt32(bytes, 0) != Magic) { error = "The file isn't a particle archive."; return false; }
 
             byte[] data = (byte[])bytes.Clone();
             SpaArchive a;
@@ -91,7 +91,7 @@ namespace DSPRE.Avalonia.Data
         {
             int at = RequireLocation(emitter, field);
             if (field.DecidesLayout)
-                throw new InvalidOperationException($"{field.Name} decides which blocks the record holds and cannot be changed.");
+                throw new InvalidOperationException($"{field.Name} decides which blocks the record holds and can't be changed.");
             if (raw < field.MinRaw || raw > field.MaxRaw)
                 throw new ArgumentOutOfRangeException(nameof(raw), raw, $"{field.Name} holds {field.MinRaw} to {field.MaxRaw}.");
 
@@ -126,9 +126,9 @@ namespace DSPRE.Avalonia.Data
                 info.CannotReplace = $"This texture reuses the pixels of texture {info.SharedWith}; replace that one instead.";
             }
             else if (info.Format == 5)
-                info.CannotReplace = "4x4 compressed textures cannot be re-encoded.";
+                info.CannotReplace = "4x4 compressed textures can't be re-encoded.";
             else if (info.Format < 1 || info.Format > 7)
-                info.CannotReplace = $"Texture format {info.Format} is not one the games draw.";
+                info.CannotReplace = $"Texture format {info.Format} isn't one the games draw.";
             else if (info.Format != 7 && info.PaletteColors == 0)
                 info.CannotReplace = "This texture has no palette to draw its colours from.";
             return info;

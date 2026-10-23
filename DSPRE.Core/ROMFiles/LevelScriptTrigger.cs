@@ -9,9 +9,6 @@ namespace DSPRE.ROMFiles
     public const int SCREENRESET = 3;
     public const int LOADGAME = 4;
 
-    /// <summary>
-    /// Controls whether ToString displays values in hex (true) or decimal (false).
-    /// </summary>
     public static bool DisplayInHex { get; set; } = false;
 
     private static int[] _triggerTypes;
@@ -34,9 +31,6 @@ namespace DSPRE.ROMFiles
       return Array.IndexOf(_triggerTypes, triggerType) != -1;
     }
 
-    /// <summary>
-    /// Formats an integer value based on the current display mode.
-    /// </summary>
     protected static string FormatValue(int value)
     {
       return DisplayInHex ? "0x" + value.ToString("X") : value.ToString();

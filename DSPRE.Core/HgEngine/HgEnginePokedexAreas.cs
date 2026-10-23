@@ -7,12 +7,11 @@ using DSPRE.ROMFiles;
 namespace DSPRE.HgEngine
 {
     /// <summary>
-    /// data/PokedexArea.c, which pokedexdatagen builds into a/1/3/3: sPokedexAreaLists names one u32 array per member,
-    /// in the game's order (<see cref="PokedexAreaData"/>) but counted from 0, the build adding the two map members.
-    /// Each array lists DEX_* area ids and ends in DEX_END_AREA_DATA. The special areas are the designators of
-    /// sPokedexAreaSpecialMapInfo and the routes and towns those of sPokedexAreaOverworldMapInfo.entries, which share
-    /// numbers, so a new id is spelled from its own group.
+    /// data/PokedexArea.c, built into a/1/3/3: sPokedexAreaLists holds one u32 array per member, in the game's order
+    /// but from 0 (the build adds the two map members), each ending in DEX_END_AREA_DATA. Special areas and overworld
+    /// areas share numbers, so a new id is named from its group.
     /// </summary>
+    /// <remarks>Special areas: sPokedexAreaSpecialMapInfo; routes and towns: sPokedexAreaOverworldMapInfo.entries.</remarks>
     public static class HgEnginePokedexAreas
     {
         public const string RelPath = "data/PokedexArea.c";
@@ -66,7 +65,7 @@ namespace DSPRE.HgEngine
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             if (!File.Exists(FilePath)) { error = $"{RelPath} is missing from the checkout."; return false; }
             table = HgEngineSymbolTable.Load(PokedexH);
-            if (table == null) { error = $"{PokedexH} could not be read."; return false; }
+            if (table == null) { error = $"{PokedexH} couldn't be read."; return false; }
             error = Parse(HgEngineFileCache.GetText(FilePath).Replace("\r\n", "\n"), table, out p);
             return error == null;
         }

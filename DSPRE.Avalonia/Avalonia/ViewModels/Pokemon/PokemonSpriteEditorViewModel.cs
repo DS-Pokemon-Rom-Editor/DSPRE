@@ -92,10 +92,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private AvaBitmap _femaleFrontNormal; public AvaBitmap FemaleFrontNormal { get => _femaleFrontNormal; private set => Set(ref _femaleFrontNormal, value); }
         private AvaBitmap _maleFrontNormal;   public AvaBitmap MaleFrontNormal   { get => _maleFrontNormal;   private set => Set(ref _maleFrontNormal,   value); }
 
-        // Battle-mock sprites: the sheet is N×80 = N 80×80 frames (N = width/80; usually 2 for the HGSS send-out
-        // animation, but future hacks may widen it). Exposed per gender (M/F) as a frame LIST, native size with
-        // palette index 0 transparent. The Battle Display tab picks the gender + frame. (Slots: 0 F-back, 1 M-back,
-        // 2 F-front, 3 M-front.)
+        // Battle sprites are N 80×80 frames side by side (usually 2); each gender gets a frame list with index 0
+        // transparent. Slots: 0 F-back, 1 M-back, 2 F-front, 3 M-front.
         private int _battleFrameCount = 2;
         public int BattleFrameCount { get => _battleFrameCount; private set => Set(ref _battleFrameCount, value); }
         private System.Collections.Generic.IReadOnlyList<AvaBitmap> _bFrontM, _bFrontF, _bBackM, _bBackF;
@@ -199,7 +197,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get => _animateFrames;
             set { if (Set(ref _animateFrames, value)) OnPropertyChanged(nameof(AnimateButtonText)); }
         }
-        public string AnimateButtonText => AnimateFrames ? "Stop Animating" : "Animate Frames";
+        public string AnimateButtonText => AnimateFrames ? "Stop" : "Animate";
         private global::Avalonia.Threading.DispatcherTimer _frameTimer;
 
         public void StopFrameAnimation() => _frameTimer?.Stop();
@@ -208,11 +206,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public string StatusText { get => _statusText; private set => Set(ref _statusText, value); }
 
         // --- Mono-gender / genderless sprite gap ---------------------------------------
-        // A species that can only be one gender (or is genderless) has its "other" gender's back+front
-        // slots stored as placeholder .bin stubs instead of real RGCN sprites, since the game never
-        // needs them. Widening that species' gender ratio later (Personal Data editor) leaves those
-        // slots empty and the game shows garbage or crashes. This offers a one-click fix: clone the
-        // existing gender's sprites into the missing slots, editable afterward like any other sprite.
+        // Single-gender species keep stubs for the other gender, which show garbage once the ratio widens;
+        // this copies the existing gender's sprites in.
         private bool _canAddOppositeGenderSprites;
         public bool CanAddOppositeGenderSprites { get => _canAddOppositeGenderSprites; private set => Set(ref _canAddOppositeGenderSprites, value); }
 
@@ -243,7 +238,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private const int SpriteWidth = 160;
         private const int SpriteHeight = 80;
 
-        private static readonly string[] SpriteLabels = { "Female Back", "Male Back", "Female Front", "Male Front" };
+        private static readonly string[] SpriteLabels = { "Female back", "Male back", "Female front", "Male front" };
 
         // --- Alternate forms support -------------------------------------------------
 
@@ -255,7 +250,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>Index into _currentFormData; only meaningful while IsAlternateForms is true (BattleDisplayEditorViewModel mirrors both).</summary>
         public int SelectedFormIndex { get => _selectedFormIndex; private set => Set(ref _selectedFormIndex, value); }
 
-        /// <summary>Where the Graphics window opens for the sprites shown: the picked form's back sprite, or the first of
+        /// <summary>Where All graphics opens for the sprites shown: the picked form's back sprite, or the first of
         /// the species' six files.</summary>
         public (DirNames Dir, int Member) GraphicsTarget =>
             IsAlternateForms && TryGetCurrentFormHeightIndices(out int back, out _)
@@ -480,7 +475,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void PopulateVariantList()
         {
             _currentFormData = HasAlternateForms ? GetAlternateFormsForCurrentSpecies() : Array.Empty<FormSpriteData>();
-            // ListSync, not Clear()+Add(): Clear() fires a Reset that crashed the app for real when it ran while the ComboBox was still handling the click that triggered this rebuild.
+            // ListSync, not Clear()+Add(): a Reset during the ComboBox click that started this rebuild crashes.
             DSPRE.Avalonia.Data.ListSync.Apply(VariantNames, _currentFormData.Select(f => f.Name).ToList());
             // -1, not 0: LoadMon always assigns SelectedVariantIndex right after this, and it needs to
             // register as a real change even when the target index is 0, so the form actually loads.
@@ -524,7 +519,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
                 if (normalPal == null)
                 {
-                    StatusText = "Could not load palette for this alternate form.";
+                    StatusText = "Couldn't load palette for this alternate form.";
                     return;
                 }
                 if (shinyPal == null) shinyPal = normalPal;
@@ -543,7 +538,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                StatusText = $"Error loading alternate form: {ex.Message}";
+                StatusText = $"Couldn't load alternate form: {ex.Message}";
             }
         }
 
@@ -567,8 +562,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             catch (Exception ex) { AppLogger.WarnOnce("PokemonSpriteEditorViewModel.ReadGenderRatio", ex); return 127; }
         }
 
-        // The tables live in AlternateFormSprites so the Graphics window reads the same ones rather
-        // than a second copy that could drift away from these.
+        // The tables live in AlternateFormSprites so All graphics reads the same ones.
         private static FormSpriteData[] GetFormDataForCurrentGame() => DSPRE.Avalonia.Data.AlternateFormSprites.ForCurrentGame();
 
 
@@ -698,7 +692,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
 
             // Species with form-table entries store their default form there, not in the main NARC. One
-            // that is itself an entry is selected in place rather than redirected back into itself.
+            // that is itself an entry is selected in place.
             int selfIndex = -1;
             for (int i = 0; i < _currentFormData.Length; i++)
             {
@@ -749,7 +743,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
                 if (normalPal == null)
                 {
-                    StatusText = "Could not load palette for this Pokémon.";
+                    StatusText = "Couldn't load palette for this Pokémon.";
                     return;
                 }
                 if (shinyPal == null) shinyPal = normalPal;
@@ -767,7 +761,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                StatusText = $"Error loading sprites: {ex.Message}";
+                StatusText = $"Couldn't load sprites: {ex.Message}";
             }
         }
 
@@ -798,7 +792,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     if (!IndexedPng.TryRead(pngBytes, out byte[] indices, out uint[] pal, out int w, out int h) ||
                         w != SpriteWidth || h != SpriteHeight || pal.Length > 16)
                     {
-                        StatusText = $"{SpriteLabels[i]}'s hg-engine sprite isn't a {SpriteWidth}×{SpriteHeight} 16-color indexed PNG.";
+                        StatusText = $"{SpriteLabels[i]}'s hg-engine sprite isn't a {SpriteWidth}×{SpriteHeight} 16-colour indexed PNG.";
                         return true;
                     }
                     rawBmps[i] = indices;
@@ -821,7 +815,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                StatusText = $"Error loading hg-engine sprites: {ex.Message}";
+                StatusText = $"Couldn't load hg-engine sprites: {ex.Message}";
             }
             return true;
         }
@@ -851,7 +845,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     imported = ImageConverter.DecodeRawImage(ms);
                 if (imported == null)
                 {
-                    StatusText = "Image could not be decoded.";
+                    StatusText = "Image couldn't be decoded.";
                     return;
                 }
                 if (imported.Width != SpriteWidth || imported.Height != SpriteHeight)
@@ -882,8 +876,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (_normalPal != null && !PaletteEqualsUpTo(_normalPal, newPalette, usedCount))
                 {
                     bool keepExisting = await DialogHelper.AskYesNoAsync(
-                        $"{SpriteLabels[slot]}'s image uses different colors than the palette already saved for this sprite.\n\n" +
-                        "Keep the saved palette and match this image's colors to it? Choosing No replaces the saved palette with this image's own colors instead, which affects every other sprite using it too.",
+                        $"{SpriteLabels[slot]}'s image uses different colours than the palette already saved for this sprite.\n\n" +
+                        "Keep the saved palette and match this image's colours to it? Choosing No replaces the saved palette with this image's colours, which changes every other sprite using it too.",
                         "Palette mismatch", owner);
                     if (keepExisting)
                     {
@@ -921,7 +915,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                StatusText = $"Import failed: {ex.Message}";
+                StatusText = $"Couldn't import: {ex.Message}";
             }
         }
 
@@ -952,7 +946,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     imported = ImageConverter.DecodeRawImage(ms);
                 if (imported == null)
                 {
-                    StatusText = "Image could not be decoded.";
+                    StatusText = "Image couldn't be decoded.";
                     return;
                 }
                 if (imported.Width != SpriteWidth || imported.Height != SpriteHeight)
@@ -969,7 +963,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 uint[] derived = DeriveAlternatePalette(_rawSprites[slot], childIndices, childPalette, out bool[] derivedUsed);
                 if (derived == null)
                 {
-                    StatusText = $"Could not get a {label} palette from this image.";
+                    StatusText = $"Couldn't get a {label} palette from this image.";
                     return;
                 }
 
@@ -987,7 +981,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                StatusText = $"Import failed: {ex.Message}";
+                StatusText = $"Couldn't import: {ex.Message}";
             }
         }
 
@@ -1003,7 +997,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 bool fillBlack = await DialogHelper.AskYesNoAsync(
                     $"This image has a palette of {usedCount} colours, not the full 16.\n\n" +
-                    "Fill in the blanks with black? Choosing No keeps it as a " + usedCount + "-color palette.",
+                    "Fill in the blanks with black? Choosing No keeps it as a " + usedCount + "-colour palette.",
                     "Palette isn't full", owner);
                 if (fillBlack)
                 {
@@ -1022,11 +1016,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 byte[] indices = _rawSprites[slot];
                 uint[] pal = shiny ? _shinyPal : _normalPal;
-                if (indices == null || pal == null) { StatusText = "Export failed: nothing to export."; return; }
+                if (indices == null || pal == null) { StatusText = "There's nothing to export."; return; }
                 PlainFiles.WriteBytes(path, IndexedPng.Write(indices, pal, SpriteWidth, SpriteHeight));
                 SaveNotice.Exported(path);
             }
-            catch (Exception ex) { StatusText = $"Export failed: {ex.Message}"; }
+            catch (Exception ex) { StatusText = $"Couldn't export: {ex.Message}"; }
         }
 
         // --- Sprite sheet export/import ------------------------------------------------
@@ -1071,18 +1065,18 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (pal == null) { StatusText = "Load a Pokémon first."; return; }
             string genderLabel = female ? "Female" : "Male";
             string colorLabel = shiny ? "Shiny" : "Normal";
-            string path = await DialogHelper.SaveFileAsync(owner, $"Export {genderLabel} {colorLabel} Sprite Sheet",
+            string path = await DialogHelper.SaveFileAsync(owner, $"Export {genderLabel.ToLowerInvariant()} {colorLabel.ToLowerInvariant()} sprite sheet",
                 new[] { DialogHelper.PngFilter, DialogHelper.AllFilter },
                 $"mon{_currentId:D3}_{genderLabel}_{colorLabel}_sheet.png");
             if (string.IsNullOrEmpty(path)) return;
             try
             {
                 byte[] indices = BuildGenderSheetIndices(female);
-                if (indices == null) { StatusText = "Export failed: nothing to export."; return; }
+                if (indices == null) { StatusText = "There's nothing to export."; return; }
                 PlainFiles.WriteBytes(path, IndexedPng.Write(indices, pal, SpriteWidth * 2, SpriteHeight));
                 SaveNotice.Exported(path);
             }
-            catch (Exception ex) { StatusText = $"Export failed: {ex.Message}"; }
+            catch (Exception ex) { StatusText = $"Couldn't export: {ex.Message}"; }
         }
 
         /// <summary>Both genders' Back and Front together in one sheet, for species with real male/female differences. Only makes sense when both genders actually exist (see CanUseFullSheet).</summary>
@@ -1091,25 +1085,25 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             uint[] pal = shiny ? _shinyPal : _normalPal;
             if (pal == null) { StatusText = "Load a Pokémon first."; return; }
             string colorLabel = shiny ? "Shiny" : "Normal";
-            string path = await DialogHelper.SaveFileAsync(owner, $"Export {colorLabel} Sprite Sheet (Both Genders)",
+            string path = await DialogHelper.SaveFileAsync(owner, $"Export {colorLabel.ToLowerInvariant()} sprite sheet (both genders)",
                 new[] { DialogHelper.PngFilter, DialogHelper.AllFilter },
                 $"mon{_currentId:D3}_Both_{colorLabel}_sheet.png");
             if (string.IsNullOrEmpty(path)) return;
             try
             {
                 byte[] indices = BuildFullSheetIndices();
-                if (indices == null) { StatusText = "Export failed: nothing to export."; return; }
+                if (indices == null) { StatusText = "There's nothing to export."; return; }
                 PlainFiles.WriteBytes(path, IndexedPng.Write(indices, pal, SpriteWidth * 4, SpriteHeight));
                 SaveNotice.Exported(path);
             }
-            catch (Exception ex) { StatusText = $"Export failed: {ex.Message}"; }
+            catch (Exception ex) { StatusText = $"Couldn't export: {ex.Message}"; }
         }
 
         private async Task<(RawImage image, byte[] fileBytes)> OpenGenderSheetAsync(Window owner, string title) =>
             await OpenSheetFileAsync(owner, title, 2, "Back on the left, Front on the right, each with both animation frames");
 
         private async Task<(RawImage image, byte[] fileBytes)> OpenFullSheetAsync(Window owner, string title) =>
-            await OpenSheetFileAsync(owner, title, 4, "Female Back, Male Back, Female Front, Male Front left to right, each with both animation frames");
+            await OpenSheetFileAsync(owner, title, 4, "Female back, male back, female front and male front, left to right, each with both animation frames");
 
         private async Task<(RawImage image, byte[] fileBytes)> OpenSheetFileAsync(Window owner, string title, int poseCount, string layoutHint)
         {
@@ -1119,7 +1113,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             RawImage imported;
             using (MemoryStream ms = new MemoryStream(fileBytes))
                 imported = ImageConverter.DecodeRawImage(ms);
-            if (imported == null) { StatusText = "Image could not be decoded."; return (null, null); }
+            if (imported == null) { StatusText = "Image couldn't be decoded."; return (null, null); }
             int expectedWidth = SpriteWidth * poseCount;
             if (imported.Width != expectedWidth || imported.Height != SpriteHeight)
             {
@@ -1134,7 +1128,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string genderLabel = female ? "Female" : "Male";
             try
             {
-                (RawImage imported, byte[] fileBytes) = await OpenGenderSheetAsync(owner, $"Import {genderLabel} Sprite Sheet");
+                (RawImage imported, byte[] fileBytes) = await OpenGenderSheetAsync(owner, $"Import {genderLabel.ToLowerInvariant()} sprite sheet");
                 if (imported == null) return;
 
                 byte[] oldSheetIndices = BuildGenderSheetIndices(female);
@@ -1159,8 +1153,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (_normalPal != null && !PaletteEqualsUpTo(_normalPal, newPalette, usedCount))
                 {
                     bool keepExisting = await DialogHelper.AskYesNoAsync(
-                        $"This sheet uses different colors than the palette already saved for {genderLabel}.\n\n" +
-                        "Keep the saved palette and match the sheet's colors to it? Choosing No replaces the saved palette with the sheet's own colors instead, which affects every other sprite using it too.",
+                        $"This sheet's colours differ from the saved {genderLabel.ToLowerInvariant()} palette.\n\n" +
+                        "Keep the saved palette and match the sheet's colours to it? Choosing No replaces the saved palette with the sheet's colours, which affects every other sprite using it too.",
                         "Palette mismatch", owner);
                     if (keepExisting)
                     {
@@ -1196,7 +1190,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 SaveNotice.Imported($"{genderLabel}'s back and front", null);
             }
-            catch (Exception ex) { StatusText = $"Import failed: {ex.Message}"; }
+            catch (Exception ex) { StatusText = $"Couldn't import: {ex.Message}"; }
         }
 
         /// <summary>Gets the shiny palette from a sheet; doesn't touch pixels, since shiny shares artwork with Normal.</summary>
@@ -1211,7 +1205,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     StatusText = $"Needs {genderLabel}'s back and front artwork first.";
                     return;
                 }
-                (RawImage imported, byte[] fileBytes) = await OpenGenderSheetAsync(owner, $"Import {genderLabel} Shiny Reference Sheet");
+                (RawImage imported, byte[] fileBytes) = await OpenGenderSheetAsync(owner, $"Import {genderLabel.ToLowerInvariant()} shiny reference sheet");
                 if (imported == null) return;
                 if (!TryReadIndexedOrQuantize(fileBytes, imported, out byte[] childIndices, out uint[] childPalette, out _))
                 {
@@ -1220,7 +1214,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 }
 
                 uint[] derived = DeriveAlternatePalette(parentIndices, childIndices, childPalette, out bool[] derivedUsed);
-                if (derived == null) { StatusText = "Could not get a shiny palette from this image."; return; }
+                if (derived == null) { StatusText = "Couldn't get a shiny palette from this image."; return; }
 
                 uint[] pal = _shinyPal ??= new uint[16];
                 for (int i = 0; i < 16; i++)
@@ -1232,7 +1226,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 SaveNotice.Imported($"{genderLabel}'s shiny palette from the reference sheet", null);
             }
-            catch (Exception ex) { StatusText = $"Import failed: {ex.Message}"; }
+            catch (Exception ex) { StatusText = $"Couldn't import: {ex.Message}"; }
         }
 
         /// <summary>Imports both genders' artwork at once from one sheet (see ExportFullSheet).</summary>
@@ -1240,7 +1234,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             try
             {
-                (RawImage imported, byte[] fileBytes) = await OpenFullSheetAsync(owner, "Import Sprite Sheet (Both Genders)");
+                (RawImage imported, byte[] fileBytes) = await OpenFullSheetAsync(owner, "Import sprite sheet (both genders)");
                 if (imported == null) return;
 
                 byte[] oldSheetIndices = BuildFullSheetIndices();
@@ -1265,8 +1259,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (_normalPal != null && !PaletteEqualsUpTo(_normalPal, newPalette, usedCount))
                 {
                     bool keepExisting = await DialogHelper.AskYesNoAsync(
-                        "This sheet uses different colors than the palette already saved.\n\n" +
-                        "Keep the saved palette and match the sheet's colors to it? Choosing No replaces the saved palette with the sheet's own colors instead, which affects every other sprite using it too.",
+                        "This sheet uses different colours than the palette already saved.\n\n" +
+                        "Keep the saved palette and match the sheet's colours to it? Choosing No replaces the saved palette with the sheet's colours, which affects every other sprite using it too.",
                         "Palette mismatch", owner);
                     if (keepExisting)
                     {
@@ -1302,7 +1296,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 SaveNotice.Imported("both genders' back and front", null);
             }
-            catch (Exception ex) { StatusText = $"Import failed: {ex.Message}"; }
+            catch (Exception ex) { StatusText = $"Couldn't import: {ex.Message}"; }
         }
 
         /// <summary>Gets the shiny palette from a both-genders sheet; doesn't touch pixels (see ImportShinySpriteSheet).</summary>
@@ -1316,7 +1310,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     StatusText = "Needs the back and front artwork of both genders first.";
                     return;
                 }
-                (RawImage imported, byte[] fileBytes) = await OpenFullSheetAsync(owner, "Import Shiny Reference Sheet (Both Genders)");
+                (RawImage imported, byte[] fileBytes) = await OpenFullSheetAsync(owner, "Import shiny reference sheet (both genders)");
                 if (imported == null) return;
                 if (!TryReadIndexedOrQuantize(fileBytes, imported, out byte[] childIndices, out uint[] childPalette, out _))
                 {
@@ -1325,7 +1319,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 }
 
                 uint[] derived = DeriveAlternatePalette(parentIndices, childIndices, childPalette, out bool[] derivedUsed);
-                if (derived == null) { StatusText = "Could not get a shiny palette from this image."; return; }
+                if (derived == null) { StatusText = "Couldn't get a shiny palette from this image."; return; }
 
                 uint[] pal = _shinyPal ??= new uint[16];
                 for (int i = 0; i < 16; i++)
@@ -1337,7 +1331,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 SaveNotice.Imported("both genders' shiny palette from the reference sheet", null);
             }
-            catch (Exception ex) { StatusText = $"Import failed: {ex.Message}"; }
+            catch (Exception ex) { StatusText = $"Couldn't import: {ex.Message}"; }
         }
 
         // --- Helpers -----------------------------------------------------------------
@@ -1566,10 +1560,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             OnPropertyChanged(nameof(ShowShinyFullSheetImport));
         }
 
-        // Slots: 0=FemaleBack, 1=MaleBack, 2=FemaleFront, 3=MaleFront. A species can add the missing
-        // gender's sprites only when that gender's back+front are BOTH placeholders and the other
-        // gender's back+front are BOTH real; anything else (already has all 4, or a partial/corrupt
-        // set) is left alone rather than guessed at.
+        // Slots: 0=FemaleBack, 1=MaleBack, 2=FemaleFront, 3=MaleFront. The missing gender is added only when
+        // its back and front are both stubs and the other gender's are both real; anything else is left alone.
         private void UpdateOppositeGenderGap(bool[] hasRealSprite)
         {
             bool femaleReal = hasRealSprite[0] && hasRealSprite[2];
@@ -1581,13 +1573,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 _missingGenderIsFemale = true;
                 CanAddOppositeGenderSprites = true;
-                AddOppositeGenderLabel = "Add Female Sprites (copy from Male)";
+                AddOppositeGenderLabel = "Add female sprites (copied from male)";
             }
             else if (femaleReal && maleMissing)
             {
                 _missingGenderIsFemale = false;
                 CanAddOppositeGenderSprites = true;
-                AddOppositeGenderLabel = "Add Male Sprites (copy from Female)";
+                AddOppositeGenderLabel = "Add male sprites (copied from female)";
             }
             else
             {
@@ -1598,10 +1590,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         /// <summary>
-        /// Clones the existing gender's back+front sprites into the currently-missing gender's slots,
-        /// so the species has graphics for both genders (needed before its gender ratio can be widened
-        /// in the Personal Data editor). The clones are byte-identical to the source until the user
-        /// re-imports something different over them. The copies, with their height data, wait until Save.
+        /// Copies the existing gender's back and front sprites and heights into the missing gender's slots, so
+        /// the gender ratio can widen. The copies wait until Save.
         /// </summary>
         public async Task AddOppositeGenderSpritesAsync(Window owner)
         {
@@ -1610,10 +1600,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string missingGender = _missingGenderIsFemale ? "female" : "male";
             string sourceGender = _missingGenderIsFemale ? "male" : "female";
             bool confirmed = await DialogHelper.AskYesNoAsync(
-                $"This Pokémon has no {missingGender} sprites. This will duplicate its {sourceGender} " +
-                "back and front sprites into the missing slots, so a gender ratio change won't leave it " +
-                "with blank graphics. The duplicates look identical to the existing sprites until you " +
-                "import something different over them.\n\nContinue?",
+                $"This Pokémon has no {missingGender} sprites. Copy its {sourceGender} back and front sprites " +
+                "into the empty slots?\n\n" +
+                "Then a gender ratio change won't leave it blank.",
                 "Add opposite gender sprites", owner);
             if (!confirmed) return;
 
@@ -1652,7 +1641,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                StatusText = $"Failed to add {missingGender} sprites: {ex.Message}";
+                StatusText = $"Couldn't add {missingGender} sprites: {ex.Message}";
             }
         }
 
@@ -1672,7 +1661,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             bool pending = _genderGapAtLoad && _pending.Changes(DirNames.PokemonBattleSprites, GenderSlots().dstBack);
             CanAddOppositeGenderSprites = _genderGapAtLoad && !pending;
             AddOppositeGenderLabel = !CanAddOppositeGenderSprites ? ""
-                : _missingGenderIsFemale ? "Add Female Sprites (copy from Male)" : "Add Male Sprites (copy from Female)";
+                : _missingGenderIsFemale ? "Add female sprites (copied from male)" : "Add male sprites (copied from female)";
             OnPropertyChanged(nameof(CanUseFullSheet));
         }
 
@@ -1699,7 +1688,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                StatusText = $"Failed to add {missingGender} sprites: {ex.Message}";
+                StatusText = $"Couldn't add {missingGender} sprites: {ex.Message}";
                 return;
             }
 
@@ -1760,9 +1749,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                         failed.Add($"{SpriteLabels[i]}: {MissingSlotReason(i)}");
                 }
                 if (_normalPal != null && !narc.WritePalette(baseOffset + 4, _normalPal))
-                    failed.Add("Normal palette: its file is not a 16-color palette.");
+                    failed.Add("Normal palette: its file isn't a 16-colour palette.");
                 if (_shinyPal != null && !narc.WritePalette(baseOffset + 5, _shinyPal))
-                    failed.Add("Shiny palette: its file is not a 16-color palette.");
+                    failed.Add("Shiny palette: its file isn't a 16-colour palette.");
             }
             catch (Exception ex)
             {
@@ -1777,7 +1766,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             bool female = slot == 0 || slot == 2;
             if (CanAddOppositeGenderSprites && female == _missingGenderIsFemale)
                 return $"this Pokémon has no {(female ? "female" : "male")} sprite slot yet. Use {AddOppositeGenderLabel} first.";
-            return "its file is not a battle sprite.";
+            return "its file isn't a battle sprite.";
         }
 
         // Anything not written keeps the editor dirty, so unsaved work is never reported as saved.
@@ -1859,7 +1848,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                StatusText = $"Error saving hg-engine sprites: {ex.Message}";
+                StatusText = $"Couldn't save hg-engine sprites: {ex.Message}";
                 AppLogger.Error("hg-engine sprite save failed: " + ex.Message);
             }
             return true;
@@ -1962,13 +1951,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             return free;
         }
 
-        // Always this destructive (one shared palette, every pose), so this always asks, no threshold.
+        // One palette covers every pose, so this always asks.
         private async Task<bool> ConfirmFullPaletteReplaceAsync(Window owner)
         {
             return await DialogHelper.AskYesNoAsync(
-                "Replacing the palette changes every Normal sprite that uses it, not just this one, " +
-                "and can also change how the shiny sprites look since they're drawn from the same artwork. Continue anyway?",
-                "This will change other sprites too", owner);
+                "Replacing the palette changes every normal sprite that uses it, not just this one, and can " +
+                "change the shiny sprites too, since they share the artwork. Replace it anyway?",
+                "Other sprites change too", owner);
         }
 
         // Only warns when there isn't enough free room; filling genuine placeholders alone is always safe.
@@ -1979,9 +1968,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (unmatched <= free) return true;
             int overwrite = unmatched - free;
             return await DialogHelper.AskYesNoAsync(
-                $"This image has {overwrite} color(s) that don't match the saved palette and won't fit in the free slots.\n\n" +
-                "Continuing will overwrite existing colors to make room, which can also change the shiny sprites since they're drawn from this same artwork. Continue anyway?",
-                "This will overwrite existing colours", owner);
+                $"This image has {Plural.Of(overwrite, "colour")} not in the saved palette " +
+                "and no free slots for them.\n\n" +
+                "Existing colours will be overwritten to make room, which can also change the shiny sprites, since they share the artwork. Import anyway?",
+                "Existing colours are overwritten", owner);
         }
 
         // Matches colors by value first; a color with no match takes a genuine placeholder slot, never a used one, if any remain.

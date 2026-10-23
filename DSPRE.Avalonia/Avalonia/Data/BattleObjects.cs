@@ -177,7 +177,7 @@ namespace DSPRE.Avalonia.Data
             ("CaughtBall.Unused", "Caught ball"),
             ("PartyBalls.Yours", "Your six balls"),
             ("PartyBalls.Theirs", "Their six balls"),
-            ("MessageFrame.Debug", "Unused spare message frame colours"),
+            ("MessageFrame.Debug", "Unused message frame colours"),
             ("MessageFrame.Shared", "Message frame colours"),
             ("Cursor.Choice", "Choice cursor"),
             ("LevelUp.Panel", "Level up panel"),
@@ -193,11 +193,7 @@ namespace DSPRE.Avalonia.Data
             ("BugContest.Net", "Bug Contest net"),
         };
 
-        // The icons are all one shape, and the game keeps one cell layout for the lot of them, so the
-        // drawings themselves record no size. The games' own icon table says which of the
-        // three banks of the shared icon colours each one is painted with; without it they all came out
-        // in the first bank's colours. The table is read from the ROM where it can be; these are the
-        // retail values, used when it cannot.
+        // The game's icon table picks each icon's colour bank. It's read from the ROM; these retail values are the fallback.
         private static readonly Dictionary<string, int> IconBank = new(StringComparer.Ordinal)
         {
             ["TypeIcon.Normal"] = 0, ["TypeIcon.Fighting"] = 0, ["TypeIcon.Flying"] = 1, ["TypeIcon.Poison"] = 1,
@@ -258,7 +254,7 @@ namespace DSPRE.Avalonia.Data
                     || thing.StartsWith("MoveIcon.", StringComparison.Ordinal));
         }
 
-        /// <summary>The icons are thirty two by sixteen. Nothing in the file says so, so it is said here.</summary>
+        /// <summary>The icons are 32 by 16; the file doesn't record a size.</summary>
         public static int WidthFor(int index)
         {
             IReadOnlyList<string> names = Names();
@@ -342,8 +338,7 @@ namespace DSPRE.Avalonia.Data
                     Name = Friendly(thing),
                     In = GroupFor(SectionOf(thing)),
                 };
-                // Drawing first, then how it is put together, then its colours: the order somebody works
-                // in rather than the order the archive happens to store them.
+                // Drawing, then layout, then colours: the order people work in.
                 foreach ((int index, string part) in pieces[thing].OrderBy(p => Rank(p.Part)).ThenBy(p => p.Index))
                     u.Parts.Add(new GraphicAssets.UnitPart { Archive = a, Index = index, Name = part });
                 units.Add(u);
@@ -372,7 +367,7 @@ namespace DSPRE.Avalonia.Data
         };
 
         /// <summary>
-        /// The drawing a layout puts together, which is the one belonging to the same thing.
+        /// The drawing that belongs to the same thing as the layout.
         /// </summary>
         public static int DrawingFor(int fileIndex)
         {
@@ -411,8 +406,7 @@ namespace DSPRE.Avalonia.Data
             int own = IndexOf(names, thing, "Colours");
             if (own >= 0) return own;
 
-            // Every type, contest and move-category icon is painted from the one set, which is what
-            // the games load for all of them.
+            // Every type, contest and move category icon uses this one set, as the games load it.
             if (IsIcon(names[fileIndex]))
             {
                 int icons = IndexOf(names, "TypeIcon.Shared", "Colours");
@@ -427,7 +421,7 @@ namespace DSPRE.Avalonia.Data
                 if (frame >= 0) return frame;
             }
 
-            // Everything on the gauge shares one set, which is what the games load for all of them.
+            // Everything on the gauge shares the one set the games load.
             Section section = SectionOf(thing);
             if (section == Section.Gauges)
             {

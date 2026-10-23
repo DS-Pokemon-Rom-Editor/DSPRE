@@ -18,8 +18,8 @@
 	  <controls:UndoRedoButtons/>
 	  <Button Content="Export CSV…" controls:Icon.Key="export" Click="Export_Click"/>
 	  <Button Content="Import CSV…" controls:Icon.Key="import" Click="Import_Click"/>
-	  <Button Content="Open in Graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
-	          ToolTip.Tip="Open in the Graphics window"/>
+	  <Button Content="Open in All graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
+	          ToolTip.Tip="Open in All graphics"/>
 	  <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Bad}"/>
 	</controls:EditorToolbar>
 

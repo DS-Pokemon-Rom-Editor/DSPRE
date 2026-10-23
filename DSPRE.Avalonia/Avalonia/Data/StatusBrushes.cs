@@ -12,8 +12,7 @@ namespace DSPRE.Avalonia.Data
         public static IBrush None => Brushes.Transparent;
         public static IBrush Quiet => Look("Editor.Subtle", Brushes.Gray);
 
-        // A dark green that reads on white is nearly invisible on the dark theme, and the other way round,
-        // so the colour has to come from the theme rather than be written into the editor.
+        // A dark green that reads on white is nearly invisible on the dark theme, so the colour comes from the theme.
         private static IBrush Look(string key, IBrush fallback)
         {
             Application app = Application.Current;

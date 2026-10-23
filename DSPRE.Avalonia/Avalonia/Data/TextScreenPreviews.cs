@@ -13,7 +13,9 @@ namespace DSPRE.Avalonia.Data
         public Bitmap Picture { get; init; }
         /// <summary>Opens the editor for these graphics at this page.</summary>
         public Action Open { get; init; }
+        public string EditorName { get; init; }
         public bool HasEditor => Open != null;
+        public string OpenText => EditorName != null ? "Open in " + EditorName : "Open";
         public int Stops { get; init; } = 1;
         /// <summary>True when the game moves to the next box on its own.</summary>
         public bool MovesOnByItself { get; init; }
@@ -55,6 +57,7 @@ namespace DSPRE.Avalonia.Data
                     Name = $"{name}: {(top ? "top" : "bottom")}",
                     Picture = ImageConverter.FromRgba(rgba, 256, 192),
                     Open = move ? () => AvaloniaEditorLauncher.OpenMoveDataEditor(line) : () => AvaloniaEditorLauncher.OpenItemEditor(line),
+                    EditorName = move ? "Move data editor" : "Item editor",
                 });
             }
         }
@@ -92,6 +95,7 @@ namespace DSPRE.Avalonia.Data
                         Name = $"Script {file} touch menu: bottom",
                         Picture = ImageConverter.FromRgba(choices, 256, 192),
                         Open = () => AvaloniaEditorLauncher.OpenScriptEditor(file),
+                        EditorName = "Script editor",
                     });
                     continue;
                 }
@@ -107,6 +111,7 @@ namespace DSPRE.Avalonia.Data
                     Name = $"Script {file} {(menu.IsList ? "list" : "menu")}: top",
                     Picture = OnScreen(window, w, h, menu.X, menu.Y),
                     Open = () => AvaloniaEditorLauncher.OpenScriptEditor(file),
+                    EditorName = "Script editor",
                 });
             }
         }
@@ -144,6 +149,7 @@ namespace DSPRE.Avalonia.Data
                 MovesOnByItself = stops > 1,
                 Picture = ImageConverter.FromRgba(top, 256, 192),
                 Open = AvaloniaEditorLauncher.OpenBattleScreenEditor,
+                EditorName = "Battle screen",
             });
         }
 
@@ -174,6 +180,7 @@ namespace DSPRE.Avalonia.Data
                 Name = "Touch screen graphics: bottom",
                 Picture = ImageConverter.FromRgba(rgba, 256, 192),
                 Open = () => AvaloniaEditorLauncher.OpenBottomScreenEditor(),
+                EditorName = "Bottom screen",
             });
         }
 
@@ -191,7 +198,7 @@ namespace DSPRE.Avalonia.Data
             }
         }
 
-        // Placeholders filled with sample words; markup the window doesn't show is removed.
+        // Fills placeholders with sample words and removes markup the window doesn't show.
         private static string Shown(string text)
         {
             string expanded = FieldStringVars.Expand(MenuLabel(text), GameTextScreens.SampleWord);
@@ -310,6 +317,7 @@ namespace DSPRE.Avalonia.Data
                                     Name = $"{graphics}: {(top ? "top" : "bottom")}",
                                     Open = bookIndex == 0 ? () => AvaloniaEditorLauncher.OpenPokedexGraphics(sample, pageId)
                                                           : () => _ = AvaloniaEditorLauncher.OpenSummaryScreenAsync(sample, pageId),
+                                    EditorName = "Screens",
                                     Picture = ImageConverter.FromRgba(composed.Rgba, ScreenPageComposer.Width, ScreenPageComposer.Height),
                                 });
                             }
@@ -325,7 +333,8 @@ namespace DSPRE.Avalonia.Data
                 catch (Exception ex) { AppLogger.WarnOnce("TextScreenPreviews.FieldWindows", ex); }
                 foreach (GameTextScreens.Shot shot in GameTextScreens.For(bank, line, text, ArchiveLine, stop))
                     shots.Add(new TextScreenShot { Name = shot.Name, Picture = ImageConverter.FromRgba(shot.Rgba, 256, 192),
-                                                     Open = shot.Open ?? (() => AvaloniaEditorLauncher.OpenScreensEditor(shot.Key, bank, line)), Stops = shot.Stops,
+                                                     Open = shot.Open ?? (() => AvaloniaEditorLauncher.OpenScreensEditor(shot.Key, bank, line)),
+                                                     EditorName = shot.Open == null ? "Screens" : null, Stops = shot.Stops,
                                                      MovesOnByItself = shot.MovesOnByItself });
             }
             return shots;

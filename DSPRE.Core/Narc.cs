@@ -149,7 +149,7 @@ namespace NarcAPI
                 curOffset += (uint)_elements[i].Length;
                 bw.Write(curOffset);
             }
-            // Write FNTB Section (No names, sorry =( )
+            // FNTB: no file names
             bw.Write(0x464E5442);       //"BTNF"
             bw.Write(0x10);             //FNTB Size
             bw.Write(0x4);              //the offset of the first name directory
@@ -166,7 +166,7 @@ namespace NarcAPI
                 { // Force offsets to be a multiple of 4
                     bw.Write((Byte)0xFF); curOffset++; 
                 }     
-                // Data writin'
+
                 buffer = new byte[_elements[i].Length];
                 _elements[i].Seek(0, SeekOrigin.Begin);
                 _elements[i].Read(buffer, 0, (int)_elements[i].Length);
@@ -181,7 +181,7 @@ namespace NarcAPI
                 curOffset++;
             }
 
-            // Writes sizes
+
             int fileSize = (int)bw.BaseStream.Position;
             bw.Seek((int)fileSizeOffset, SeekOrigin.Begin);         // File size
             bw.Write((UInt32)fileSize);
@@ -209,7 +209,7 @@ namespace NarcAPI
         {
             if ( string.IsNullOrWhiteSpace(dirPath) )
             {
-                AppMessages.Error("Dir path + \"" + dirPath + "\" is invalid.", "Can't create directory");
+                AppMessages.Error("The folder \"" + dirPath + "\" isn't a valid path.", "Couldn't unpack archive");
                 return;
             }
 
@@ -226,8 +226,8 @@ namespace NarcAPI
                         }
                         else
                         {
-                            if (AppMessages.Confirm("Directory \"" + dirPath + "\" already exists and is not empty.\n" +
-                                "Do you want to delete its contents?", "Directory not empty"))
+                            if (AppMessages.Confirm("The folder \"" + dirPath + "\" already has files in it. " +
+                                "Delete them?", "Folder not empty"))
                             {
                                 Directory.Delete(dirPath, true);
                                 AppLogger.Debug("Deleted non-DSPRE-related folder \"" + dirPath + "\" after user confirmation.");
@@ -240,7 +240,7 @@ namespace NarcAPI
                     }
                     catch (IOException)
                     {
-                        AppMessages.Error("NARC has not been extracted.\nCan't delete directory: \n" + dirPath + "\nThis might be a temporary issue.\nMake sure no other process is using it and try again.", "Delete Error");
+                        AppMessages.Error("The archive couldn't be unpacked because " + dirPath + " couldn't be deleted. Close anything using it and try again.", "Couldn't unpack archive");
                         return;
                     }
                 }
@@ -255,7 +255,7 @@ namespace NarcAPI
                 }
                 catch (IOException)
                 {
-                    AppMessages.Error("NARC has not been extracted.\nCan't create directory: \n" + dirPath + "\nThis might be a temporary issue.\nMake sure no other process is using it and try again.", "Creation Error");
+                    AppMessages.Error("The archive couldn't be unpacked because " + dirPath + " couldn't be created. Close anything using it and try again.", "Couldn't unpack archive");
                     return;
                 }
             }
@@ -278,7 +278,7 @@ namespace NarcAPI
         }
 
         public void Free()
-        { // Libera todos los recursos de memoria asociados (cierra los streams)
+        { // releases the streams
             Parallel.For(0, _elements.Length, i => {
                 _elements[i].Close();
             });
@@ -313,11 +313,11 @@ namespace NarcAPI
         {
             uint numberOfElements;
             uint[] startOffsets, endOffsets;
-            // Create array of elements
+
             br.BaseStream.Position = FileAllocationTableNumElementsOffset;
             _elements = new MemoryStream[numberOfElements = br.ReadUInt32()];
 
-            // Read offsets of each element
+
             startOffsets = new uint[numberOfElements]; 
             endOffsets = new uint[numberOfElements];
             br.BaseStream.Position = FileAllocationTableOffset + FileAllocationTableHeaderLength;
@@ -326,7 +326,7 @@ namespace NarcAPI
                 startOffsets[i] = br.ReadUInt32(); 
                 endOffsets[i] = br.ReadUInt32(); 
             }
-            // Read elements
+
             for(int i = 0; i < numberOfElements; i++)
             {
                 br.BaseStream.Position = _fileImageOffset + startOffsets[i] + FileImageHeaderSize;

@@ -73,7 +73,7 @@ namespace DSPRE.HgEngine
         }
 
         /// <summary>Resolves a flags-style field written as an OR-expression of names to its combined
-        /// int value. Fails if any term can't be resolved, rather than guessing.</summary>
+        /// int value. Fails if any term can't be resolved.</summary>
         public bool TryGetFlagsValue(IReadOnlyList<FieldPathSegment> path, string headerRelPath, out int value)
         {
             value = 0;
@@ -155,14 +155,14 @@ namespace DSPRE.HgEngine
         {
             block = default;
             error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
 
             string path = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(path)) { error = $"Source file not found: {path}"; return false; }
+            if (!File.Exists(path)) { error = $"{path} is missing from the checkout."; return false; }
 
             string text = HgEngineFileCache.GetText(path);
             if (!HgEngineSourcePatcher.TryFindEntry(text, trainerId.ToString(), out int open, out int close))
-            { error = $"Trainer {trainerId} not found in Trainers.c."; return false; }
+            { error = $"Trainers.c has no trainer {trainerId}."; return false; }
 
             block = new HgEngineSourceBlock(text.Substring(open, close - open + 1));
             return true;
@@ -179,7 +179,7 @@ namespace DSPRE.HgEngine
             foreach (string token in ElementScanner.SplitElementValues(text, open, close))
             {
                 if (!HgEngineSourceBlock.TryResolveToken(token, (string)null, out int id))
-                { error = $"sTrainerTextOrder lists \"{token.Trim()}\", which is not a trainer number."; return false; }
+                { error = $"sTrainerTextOrder lists \"{token.Trim()}\", which isn't a trainer number."; return false; }
                 listed.Add(id);
             }
             return true;
@@ -214,12 +214,12 @@ namespace DSPRE.HgEngine
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
 
             path = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(path)) { error = $"Source file not found: {path}"; return false; }
+            if (!File.Exists(path)) { error = $"{path} is missing from the checkout."; return false; }
 
             text = HgEngineFileCache.GetText(path);
             Match m = TextOrderStart.Match(text);
             if (!m.Success || !BraceScanner.TryFindMatchingBrace(text, m.Index + m.Length - 1, out close))
-            { error = "sTrainerTextOrder was not found in Trainers.c."; return false; }
+            { error = "sTrainerTextOrder wasn't found in Trainers.c."; return false; }
             open = m.Index + m.Length - 1;
             return true;
         }

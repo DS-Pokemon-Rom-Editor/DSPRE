@@ -182,7 +182,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             _readAll = readAll;
             if (!IsAvailable)
             {
-                StatusText = "No hg-engine checkout linked";
+                StatusText = "No hg-engine checkout is linked.";
                 return;
             }
 
@@ -225,9 +225,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             MarkClashes();
             int clashes = Rows.Count(r => r.HasClash);
             int off = all.Count(x => x.Entry.Built == false);
-            StatusText = $"{Rows.Count} patch(es)" +
+            StatusText = Plural.Of(Rows.Count, "patch", "patches") +
                 (off > 0 ? $", {off} off in your config{(BuiltOnly ? " and hidden" : "")}" : "") +
-                (clashes > 0 ? $", {clashes} running into another" : "") +
+                (clashes > 0 ? $", {clashes} overlapping another" : "") +
                 (_pending.Count > 0 ? $", {_pending.Count} not saved" : "") + ".";
         }
 
@@ -313,7 +313,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                 foreach (string token in (NewBytes ?? "").Split((char[])null, StringSplitOptions.RemoveEmptyEntries))
                 {
                     if (!byte.TryParse(token, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out byte b))
-                        return $"'{token}' is not a hex byte.";
+                        return $"'{token}' isn't a hex byte.";
                     bytes.Add(b);
                 }
                 if (bytes.Count == 0) return "Give at least one byte to write.";
@@ -382,7 +382,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                 foreach (string token in (NewBytes ?? "").Split((char[])null, StringSplitOptions.RemoveEmptyEntries))
                 {
                     if (!byte.TryParse(token, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out byte b))
-                        return $"'{token}' is not a hex byte.";
+                        return $"'{token}' isn't a hex byte.";
                     bytes.Add(b);
                 }
                 if (bytes.Count == 0) return "Give at least one byte to write.";
@@ -407,7 +407,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             return null;
         }
 
-        /// <summary>Writes every list holding added patches. Null on success, otherwise why not.</summary>
+        /// <summary>Writes every list with added patches. Returns null on success, otherwise the reason.</summary>
         public string Save()
         {
             if (!IsAvailable) return "No hg-engine checkout is linked.";

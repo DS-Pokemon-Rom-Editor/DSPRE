@@ -137,7 +137,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             public int Number => _i + 1;
 
-            // HeartGold's Ilex Forest tutor always teaches Headbutt, whatever its entry says.
+            // The Ilex Forest tutor in HeartGold and SoulSilver always teaches Headbutt, whatever its entry says.
             private const int HeadbuttTutor = 3;
             private bool HeartGold => !_o._data.Platinum;
             public bool Editable => !(HeartGold && T.Where == HeadbuttTutor);
@@ -260,13 +260,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task<bool> SaveChangesAsync()
         {
             if (_data == null) return true;
-            if (HasProblem) { await DialogHelper.ShowErrorAsync(Problem, "Move tutors error"); return false; }
+            if (HasProblem) { await DialogHelper.ShowErrorAsync(Problem, "Move tutors"); return false; }
             if (_data.FromSource)
             {
                 (bool saved, string error) = await HgEngineSave.RunAsync(() => { _data.Save(MoveNames.Count); return null; });
                 if (!saved)
                 {
-                    if (error != null) await DialogHelper.ShowErrorAsync("The move tutors were not saved:\n" + error, "Move tutors error");
+                    if (error != null) await DialogHelper.ShowErrorAsync("The move tutors weren't saved:\n" + error, "Move tutors");
                     return false;
                 }
             }
@@ -275,7 +275,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 try { _data.Save(MoveNames.Count); }
                 catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
                 {
-                    await DialogHelper.ShowErrorAsync("The move tutors were not saved:\n" + e.Message, "Move tutors error");
+                    await DialogHelper.ShowErrorAsync("The move tutors weren't saved:\n" + e.Message, "Move tutors");
                     return false;
                 }
             }
@@ -292,7 +292,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try { _data = MoveTutorData.Load(); }
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException)
             {
-                _ = DialogHelper.ShowErrorAsync("The saved tutors couldn't be read back:\n" + e.Message, "Move tutors error");
+                _ = DialogHelper.ShowErrorAsync("The saved tutors couldn't be read back:\n" + e.Message, "Move tutors");
                 return;
             }
             _tutorNames = null;

@@ -16,16 +16,16 @@ namespace DSPRE.HgEngine
         {
             block = default;
             error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             if (!HgEngineDesignators.TryResolve(HgEngineDomain.SpriteOffsets, speciesId, out string designator))
-            { error = $"Could not resolve a species designator for id {speciesId}."; return false; }
+            { error = $"Species {speciesId} has no SPECIES_ name in the checkout."; return false; }
 
             string path = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(path)) { error = $"Source file not found: {path}"; return false; }
+            if (!File.Exists(path)) { error = $"{path} is missing from the checkout."; return false; }
 
             string text = HgEngineFileCache.GetText(path);
             if (!TryFindEntry(text, designator, out int open, out int close))
-            { error = $"Species {speciesId} not found in SpriteOffsets.c."; return false; }
+            { error = $"SpriteOffsets.c has no entry for species {speciesId}."; return false; }
 
             block = new HgEngineSourceBlock(text.Substring(open, close - open + 1));
             return true;

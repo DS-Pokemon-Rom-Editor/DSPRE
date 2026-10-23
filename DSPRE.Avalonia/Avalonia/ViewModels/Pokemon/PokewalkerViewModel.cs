@@ -89,7 +89,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (female != male) Add(art, female, "Female");
             }
 
-            // Pokéwalker icons follow the party icons, whose own entry for a species is that species plus the lead-in.
+            // Pokéwalker icons follow the party icons, where a species' entry is its number plus the lead-in.
             int partyIcon = species + PokemonIconFiles.SharedFiles;
             PokemonIconFiles.Icon icon = PokemonIconFiles.Describe(partyIcon);
             if (icon != null && icon.Species == species && icon.Form == null && PokewalkerIconLeadIn >= 0)
@@ -185,7 +185,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 (bool saved, string error) = await HgEngineSave.RunAsync(WriteChanged);
                 if (!saved)
                 {
-                    if (error != null) await DialogHelper.ShowErrorAsync($"The Pokéwalker pictures were not saved:\n{error}", "Pokéwalker error");
+                    if (error != null) await DialogHelper.ShowErrorAsync($"The Pokéwalker pictures weren't saved:\n{error}", "Pokémon editor");
                     return;
                 }
             }

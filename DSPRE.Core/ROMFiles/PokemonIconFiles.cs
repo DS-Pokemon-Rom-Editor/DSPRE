@@ -70,7 +70,7 @@ namespace DSPRE.ROMFiles
             return null;
         }
 
-        /// <summary>A form with a Pokémon editor entry of its own opens that entry, any other its species.</summary>
+        /// <summary>A form with its own Pokémon editor entry opens it; any other form opens its species.</summary>
         private static int EditorEntry(int file, int species)
         {
             PokeDatabase.PersonalData.PersonalExtraFiles[] extras = PokeDatabase.PersonalData.ExtraFiles;

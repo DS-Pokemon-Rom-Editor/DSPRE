@@ -12,11 +12,8 @@ using System.Threading.Tasks;
 namespace DSPRE.Avalonia.ViewModels.Text
 {
     /// <summary>
-    /// The open project's script command database: a Rotom project's own (the file its rotom.toml names), or, for a
-    /// project whose scripts haven't been converted to Rotom yet, its legacy copy under
-    /// <c>AppPaths.DatabasePath\edited_databases</c>, which rotom carries over when it converts them. Import replaces
-    /// it (a Rotom project's is backed up under .rotom/backups first) and can reload the app's command list; Export
-    /// copies it out; Open folder shows where it lives.
+    /// The open project's script command database: the Rotom project's, or the legacy copy under
+    /// <c>AppPaths.DatabasePath\edited_databases</c> for unconverted projects.
     /// </summary>
     public class CustomScrcmdManagerViewModel : INotifyPropertyChanged
     {
@@ -101,7 +98,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
             if (rotom && WhyNotRotomDatabase(picked) is string why)
             {
-                await DialogHelper.ShowErrorAsync(why, "Custom script command manager error");
+                await DialogHelper.ShowErrorAsync(why, "Custom script command manager");
                 return;
             }
             try
@@ -117,15 +114,15 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync($"Could not replace the database:\n{ex.Message}", "Custom script command manager error");
+                await DialogHelper.ShowErrorAsync($"Couldn't replace the database:\n{ex.Message}", "Custom script command manager");
                 return;
             }
 
             Refresh();
 
             bool reload = await DialogHelper.AskTwoWayAsync(
-                "Reparse every script with the new database now, or wait for the next ROM load?",
-                "Reload database?", "Reparse now", "Next load");
+                "Read every script again with the new database now, or wait until the ROM is next opened?",
+                "Reload database?", "Read now", "Next time");
             if (reload)
             {
                 // The app's command list is built from the legacy copy with the Rotom project's names laid over it.
@@ -176,7 +173,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                         databasePath,
                         progressCallback: (current, total) =>
                             global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-                                StatusText = $"Reparsing scripts with new database… {current}/{total}"));
+                                StatusText = $"Reading scripts with the new database… {current}/{total}"));
                 });
 
                 if (invalidCommands != null && invalidCommands.Count > 0)
@@ -187,21 +184,21 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     string commandList = string.Join(", ", uniqueCommands.Select(c => $"0x{c:X4}"));
 
                     await DialogHelper.ShowErrorAsync(
-                        $"Database reloaded, but {invalidCommands.Count} script command(s) across {affectedFiles.Count} file(s) still could not be parsed.\n\n" +
+                        $"The database is reloaded, but {Plural.Of(invalidCommands.Count, "command")} in {Plural.Of(affectedFiles.Count, "file")} still can't be read.\n\n" +
                         $"Affected files: {fileList}\n" +
-                        $"Unrecognized commands: {commandList}\n\n" +
+                        $"Unrecognised commands: {commandList}\n\n" +
                         $"Affected script files will be incomplete and read-only.",
                         "Unrecognised commands");
                 }
                 else
                 {
-                    SaveNotice.Show("Reparsed every script with this database.");
+                    SaveNotice.Show("Every script was read again with this database.");
                 }
                 StatusText = "";
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync($"Error reloading database: {ex.Message}", "Custom script command manager error");
+                await DialogHelper.ShowErrorAsync($"Couldn't reload the database: {ex.Message}", "Custom script command manager");
                 StatusText = "";
             }
             finally
@@ -217,7 +214,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
             if (!File.Exists(sourcePath))
             {
-                await DialogHelper.ShowErrorAsync($"Script command database not found:\n{sourcePath}", "Custom script command manager error");
+                await DialogHelper.ShowErrorAsync($"Script command database not found:\n{sourcePath}", "Custom script command manager");
                 return;
             }
 
@@ -233,15 +230,15 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (DirectoryNotFoundException)
             {
-                await DialogHelper.ShowErrorAsync($"That folder doesn't exist:\n{Path.GetDirectoryName(dest)}", "Custom script command manager error");
+                await DialogHelper.ShowErrorAsync($"That folder doesn't exist:\n{Path.GetDirectoryName(dest)}", "Custom script command manager");
             }
             catch (UnauthorizedAccessException)
             {
-                await DialogHelper.ShowErrorAsync($"That folder can't be written to:\n{Path.GetDirectoryName(dest)}", "Custom script command manager error");
+                await DialogHelper.ShowErrorAsync($"That folder can't be written to:\n{Path.GetDirectoryName(dest)}", "Custom script command manager");
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Custom script command manager error");
+                await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Custom script command manager");
             }
         }
 
@@ -250,7 +247,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             string folder = Path.GetDirectoryName(Selected.Path ?? "");
             if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder))
             {
-                await DialogHelper.ShowErrorAsync($"Folder not found:\n{folder}", "Custom script command manager error");
+                await DialogHelper.ShowErrorAsync($"Folder not found:\n{folder}", "Custom script command manager");
                 return;
             }
             SystemShell.OpenWithDefaultApp(folder);

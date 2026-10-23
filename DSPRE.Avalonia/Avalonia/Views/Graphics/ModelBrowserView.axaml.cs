@@ -68,7 +68,6 @@ namespace DSPRE.Avalonia.Views.Graphics
             vm.Playing = !vm.Playing;
         }
 
-        /// <summary>Empties the search box, which is what the button beside it is for.</summary>
         private void ClearSearch_Click(object sender, RoutedEventArgs e)
         {
             SearchBox.Text = "";
@@ -105,7 +104,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (path == null) return;
 
             string err = vm.SaveAsThreeD(path, glb, out string written);
-            if (err != null) { await DialogHelper.ShowErrorAsync(err, "Models and textures error"); return; }
+            if (err != null) { await DialogHelper.ShowErrorAsync(err, "All models and textures"); return; }
             if (written == null) return;
             SaveNotice.Exported(written);
         }
@@ -140,7 +139,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (err != null)
             {
                 vm.StatusText = err;
-                await DialogHelper.ShowErrorAsync(err, "Models and textures error");
+                await DialogHelper.ShowErrorAsync(err, "All models and textures");
                 return;
             }
 
@@ -164,7 +163,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (path == null) return;
 
             string err = vm.SaveFileAsItIs(path);
-            if (err != null) { await DialogHelper.ShowErrorAsync(err, "Models and textures error"); return; }
+            if (err != null) { await DialogHelper.ShowErrorAsync(err, "All models and textures"); return; }
             SaveNotice.Exported(path);
         }
     }

@@ -5,7 +5,7 @@ using System.Linq;
 namespace DSPRE.HgEngine
 {
     /// <summary>
-    /// Tools for working on hg-engine itself rather than on a hack, switched on by starting DSPRE with
+    /// Tools for working on hg-engine itself, not a hack, switched on by starting DSPRE with
     /// <c>--hge-dev</c>. They stay out of the menus otherwise.
     /// </summary>
     public static class HgEngineDev

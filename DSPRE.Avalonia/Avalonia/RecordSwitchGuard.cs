@@ -5,18 +5,7 @@ using DSPRE.Editors;
 
 namespace DSPRE.Avalonia
 {
-    /// <summary>
-    /// Shared guard for leaving a record that has unsaved changes, used when the user picks a
-    /// different header, map, trainer, script or archive inside an editor rather than closing it.
-    ///
-    /// Closing an editor is already guarded once for everybody by <see cref="EditorWindowChrome"/>.
-    /// Switching records is the other way edits get lost, and it was handled in only a handful of
-    /// editors, each with its own prompt. This is that prompt in one place so the wording, the button
-    /// order and the save-failure behaviour are the same everywhere.
-    ///
-    /// It offers Save as well as Discard. A guard that can only discard trains people to save first
-    /// and then switch, which is the habit the prompt exists to make unnecessary.
-    /// </summary>
+    /// <summary>Asks to save, discard or cancel before an editor switches away from a record with unsaved changes.</summary>
     public static class RecordSwitchGuard
     {
         /// <summary>
@@ -57,7 +46,7 @@ namespace DSPRE.Avalonia
             // A failed save must not be treated as permission to move on, or the edit is lost
             // precisely when the user asked for it to be kept.
             await DialogHelper.ShowErrorAsync(
-                $"Could not save {subject}:\n{failure}\n\nStaying on the current {what}.",
+                $"Couldn't save {subject}:\n{failure}\n\nStaying on the current {what}.",
                 "Couldn't save", owner);
             return false;
         }

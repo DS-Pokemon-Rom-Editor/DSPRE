@@ -48,7 +48,6 @@ namespace DSPRE.Avalonia.Views.Audio
             Closed += (_, _) => { _playhead.Stop(); AudioOutput.Current.Stop(); vm.PropertyChanged -= OnViewModelChanged; };
         }
 
-        // ── keeping the picture up to date ──────────────────────────────────────────
 
         private void OnViewModelChanged(object sender, PropertyChangedEventArgs e)
         {
@@ -89,7 +88,7 @@ namespace DSPRE.Avalonia.Views.Audio
             _drawing = false;
             if (_playWhenDrawn) { _playWhenDrawn = false; PlayFromStart(); }
 
-            // The notes come from the sequence itself rather than from the sound, so a cry has none.
+            // Notes come from the sequence, so a cry has none.
             IReadOnlyList<SseqPlayer.Note> notes = await Task.Run(() => { try { return vm.ReadSelectedNotes(); } catch (Exception ex) { AppLogger.WarnOnce("AudioEditorView.DrawSelectedAsync", ex); return null; } }, token);
             if (token.IsCancellationRequested) return;
             Notes.SetNotes(notes, Wave.Seconds);
@@ -103,7 +102,6 @@ namespace DSPRE.Avalonia.Views.Audio
             TimeText.Text = $"{Fmt(at)} / {Fmt(Wave.Seconds)}";
         }
 
-        // ── playing ─────────────────────────────────────────────────────────────────
 
         private void List_DoubleTapped(object sender, TappedEventArgs e) => Play_Click(sender, null);
 
@@ -205,9 +203,7 @@ namespace DSPRE.Avalonia.Views.Audio
             ShowTime(at);
         }
 
-        // ── taking it out and putting it back ───────────────────────────────────────
 
-        /// <summary>Empties the search box, which is what the button beside it is for.</summary>
         private void ClearSearch_Click(object sender, RoutedEventArgs e)
         {
             SearchBox.Text = "";
@@ -241,8 +237,8 @@ namespace DSPRE.Avalonia.Views.Audio
             catch (System.Exception ex)
             {
                 AppLogger.Error("ExportSoundFont failed: " + ex);
-                await DialogHelper.ShowErrorAsync("That SoundFont could not be written: " + ex.Message,
-                                             "Audio editor error", this);
+                await DialogHelper.ShowErrorAsync("That SoundFont couldn't be written: " + ex.Message,
+                                             "Audio editor", this);
             }
         }
 
@@ -272,8 +268,8 @@ namespace DSPRE.Avalonia.Views.Audio
             catch (Exception ex)
             {
                 AppLogger.Error("Audio MIDI export failed: " + ex.Message);
-                vm.StatusText = "That file could not be written.";
-                await DialogHelper.ShowErrorAsync("That file could not be written:\n" + ex.Message, "Audio editor error");
+                vm.StatusText = "That file couldn't be written.";
+                await DialogHelper.ShowErrorAsync("That file couldn't be written:\n" + ex.Message, "Audio editor");
             }
         }
 
@@ -289,8 +285,7 @@ namespace DSPRE.Avalonia.Views.Audio
 
             try
             {
-                // A cry is saved as the sample it is made from, so it can be worked on and put back.
-                // Everything else has no sample of its own, so what is saved is how it sounds when played.
+                // A cry is saved as its sample so it can go back in; other sounds are saved as they play.
                 if (vm.Selected.IsCry)
                 {
                     if (!vm.ExportSelectedSample(path))
@@ -299,25 +294,24 @@ namespace DSPRE.Avalonia.Views.Audio
                     return;
                 }
 
-                // A sound is a sample too, so it is saved as it sits in the ROM rather than as it sounds
-                // once a tune has put volume and pitch on it.
+                // A sound is saved as stored, without a tune's volume and pitch.
                 if (vm.Selected.IsSample)
                 {
                     if (!vm.ExportSelectedSample(path))
-                        await DialogHelper.ShowInfoAsync("There is nothing in that one to save.", "Save sound");
+                        await DialogHelper.ShowInfoAsync("This sound is empty, so there is nothing to save.", "Save sound");
                     else SaveNotice.Exported(path);
                     return;
                 }
 
                 if (_pcm == null || _pcm.Length == 0)
                 {
-                    await DialogHelper.ShowInfoAsync("Nothing came out of that one.", "Save sound");
+                    await DialogHelper.ShowInfoAsync("This one plays silence, so there is nothing to save.", "Save sound");
                     return;
                 }
                 SseqPlayer.WriteWav(path, _pcm, Rate);
                 SaveNotice.Exported(path);
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync("It could not be saved:\n" + ex.Message, "Audio editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync("It couldn't be saved:\n" + ex.Message, "Audio editor"); }
         }
 
         private async void Import_Click(object sender, RoutedEventArgs e)
@@ -328,11 +322,10 @@ namespace DSPRE.Avalonia.Views.Audio
             bool sample = vm.Selected.IsSample;
             string title = sample ? "Import a sound" : "Import a cry";
 
-            // Replacing a shared sound changes everything that plays it, so say so before it happens
-            // rather than leaving somebody to find out by playing a tune that now sounds wrong.
+            // A shared sound changes every tune that plays it, so warn first.
             if (sample && !await DialogHelper.AskYesNoAsync(
                     "This sound may be used by more than one tune or sound effect, and all of them will "
-                    + "play the new one.\n\nPut a WAV in over it?", title, this))
+                    + "play the new one.\n\nReplace it with a WAV?", title, this))
                 return;
 
             string path = await DialogHelper.OpenFileAsync(this,
@@ -357,9 +350,9 @@ namespace DSPRE.Avalonia.Views.Audio
                         : SoundArchive.PrepareCry(item.Number, path, out why);
                     if (held != null) { vm.StageSample(item, held); SaveNotice.Imported(item.Name, path); return; }
                 }
-                await DialogHelper.ShowInfoAsync(why ?? "That could not be imported.", title);
+                await DialogHelper.ShowInfoAsync(why ?? "That couldn't be imported.", title);
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync("It could not be imported:\n" + ex.Message, "Audio editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync("It couldn't be imported:\n" + ex.Message, "Audio editor"); }
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e)

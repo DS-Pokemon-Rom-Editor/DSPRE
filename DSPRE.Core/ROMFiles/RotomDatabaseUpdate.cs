@@ -24,7 +24,7 @@ namespace DSPRE.ROMFiles
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                AppLogger.Warn("The hg-engine flag names could not be added to the project database: " + ex.Message);
+                AppLogger.Warn("The hg-engine flag names couldn't be added to the project database: " + ex.Message);
             }
         }
     }

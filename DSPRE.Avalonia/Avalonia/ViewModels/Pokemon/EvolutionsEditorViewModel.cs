@@ -68,9 +68,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             set { if (_param != value) { _param = value; OnPropertyChanged(); OnPropertyChanged(nameof(ParamLabel)); Changed?.Invoke(); } }
         }
 
-        /// <summary>Forces the bound method combo to re-resolve its displayed text after the label list was
-        /// edited in place (Avalonia keeps a stale SelectedItem when the selected entry is replaced). Toggles
-        /// the index via the backing field only, no data write, no Changed event.</summary>
+        /// <summary>Makes the method box show a renamed label, which Avalonia otherwise keeps stale. Writes no
+        /// data.</summary>
         public void RefreshMethodDisplay()
         {
             if (_methodIndex < 0) return;
@@ -84,11 +83,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }, global::Avalonia.Threading.DispatcherPriority.Background);
         }
 
-        // The param's MEANING comes from the customisable LabelStore attribute (Tools ▸ Edit Dropdown
-        // Labels ▸ Evolution Methods ▸ Parameter), defaulting to EvolutionFile.evoDescriptions. This lets a
-        // ROM hack repurpose/add methods AND say what their parameter is (level / item / move / species…).
-        // hg-engine mode has no equivalent per-index customisation store (the method list itself is read
-        // live from the checkout, not user-curated), so it infers a meaning from the real EVO_* name instead.
+        // The LabelStore says what a method's parameter means, so a hack can define it; hg-engine infers it
+        // from the EVO_* name.
         private EvolutionParamMeaning Meaning => MeaningFor(_methodIndex, UseHgEngineNames, HgMethodNames);
 
         internal static EvolutionParamMeaning MeaningFor(int method, bool hgEngine, string[] hgNames)
@@ -140,7 +136,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 switch (meaning)
                 {
                     case EvolutionParamMeaning.FromLevel:
-                        return $"From Level: {_param}";
+                        return $"From level {_param}";
                     case EvolutionParamMeaning.ItemName:
                         if (ItemNames != null && _param >= 0 && _param < ItemNames.Length)
                             return $"({ItemNames[_param]})";
@@ -154,7 +150,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                             return $"({PokemonNames[_param]})";
                         return $"(Pokémon #{_param})";
                     case EvolutionParamMeaning.BeautyValue:
-                        return $"Beauty >= {_param}";
+                        return $"Beauty {_param} or more";
                     case EvolutionParamMeaning.CustomNumber:
                         return $"Value: {_param}";
                     default:
@@ -235,10 +231,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private System.Collections.Generic.List<(string Name, int Value)> _hgMethodOptions = new();
         private string[] _hgMethodNamesArray = System.Array.Empty<string>();
 
-        /// <summary>Vanilla: labels come from the customisable LabelStore (Tools ▸ Edit Dropdown Labels) so
-        /// a ROM hack can rename/add methods, indices kept stable, combos refresh in place. hg-engine:
-        /// the real EVO_* names are read live from the linked checkout and rebuilt outright instead,
-        /// since that list isn't user-curated.</summary>
+        /// <summary>Method names come from the LabelStore so a hack can rename them; hg-engine's are read from
+        /// the checkout.</summary>
         private void ReloadMethodNames()
         {
             if (UseHgEngineSource)
@@ -362,7 +356,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // game; the base Pokemon's own entry is what the game reads.
         private bool _isAltForm;
         public bool IsAltForm { get => _isAltForm; private set { if (_isAltForm != value) { _isAltForm = value; OnPropertyChanged(); } } }
-        public string AltFormNotice => "Alternate forms have no evolutions of their own. Set them on the base Pokémon's entry instead.";
+        public string AltFormNotice => "Alternate forms use the base Pokémon's evolutions. Set them there.";
         private EvolutionFile _current;
         private bool _loading;
 
@@ -494,7 +488,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     HgEngineEvolutions.EvoEntry e = hgEntries[i];
                     int idx = _hgMethodOptions.FindIndex(o => o.Value == e.MethodValue);
                     bool targetListed = e.TargetSpeciesId >= 0 && e.TargetSpeciesId < PokemonNames.Count;
-                    if (e.Unresolved) error ??= $"Evolution {i + 1} could not be read: {e.RawText}";
+                    if (e.Unresolved) error ??= $"Evolution {i + 1} couldn't be read: {e.RawText}";
                     if (idx < 0) error ??= $"Evolution {i + 1} uses method {e.MethodValue}, which this checkout doesn't name.";
                     if (!targetListed) error ??= $"Evolution {i + 1} targets species {e.TargetSpeciesId}, which isn't in the species list.";
                     slots[i] = new EvolutionCsv.Slot(idx >= 0 ? idx : 0, e.Param, targetListed ? e.TargetSpeciesId : 0, e.TargetFormId);
@@ -575,7 +569,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Evolutions error", owner);
+                await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Pokémon editor", owner);
             }
         }
 
@@ -610,7 +604,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 string pendingProblem = BuildFile(slots, out EvolutionFile pendingFile);
                 if (pendingProblem != null)
                 {
-                    _ = DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"Evolutions of {NameOf(id)} were not saved: {pendingProblem}.", "Evolutions error");
+                    _ = DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"Evolutions of {NameOf(id)} weren't saved: {pendingProblem}.", "Pokémon editor");
                     return;
                 }
                 pendingFile.SaveToFileDefaultDir(id, showSuccessMessage: false);
@@ -620,7 +614,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string problem = BuildFile(CurrentSlots(), out EvolutionFile newFile);
             if (problem != null)
             {
-                _ = DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"Evolutions were not saved: {problem}.", "Evolutions error");
+                _ = DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"Evolutions weren't saved: {problem}.", "Pokémon editor");
                 return;
             }
             newFile.SaveToFileDefaultDir(_currentId, showSuccessMessage: false);
@@ -647,7 +641,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 bool needsTarget = EvolutionRowViewModel.NeedsTargetFor(slots[i].Method, false, null);
                 string problem = ed.Problem(needsTarget);
                 if (problem == null && needsTarget && slots[i].Target > _lastTarget)
-                    problem = $"targets #{slots[i].Target}, which is not a species";
+                    problem = $"targets #{slots[i].Target}, which isn't a species";
                 if (problem != null) return $"evolution {i + 1} {problem}";
                 data.Add(ed);
             }
@@ -670,7 +664,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // Saving rows that didn't load faithfully would overwrite the real entries.
             if (_hgLoadError != null)
             {
-                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"Evolutions were not saved:\n{_hgLoadError}", "Evolutions error");
+                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"Evolutions weren't saved:\n{_hgLoadError}", "Pokémon editor");
                 return;
             }
             List<(int Species, List<(string MethodName, int Param, int TargetSpeciesId, int TargetFormId)> Entries)> work =
@@ -688,7 +682,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 if (error == null) return;
                 AppLogger.Error($"hg-engine evolutions write failed for species {failed ?? species.ToString()}: {error}");
-                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"Evolutions{(failed != null ? " of " + failed : "")} were not saved:\n{error}", "Evolutions error");
+                await DSPRE.Avalonia.DialogHelper.ShowErrorAsync($"Evolutions{(failed != null ? " of " + failed : "")} weren't saved:\n{error}", "Pokémon editor");
                 return;
             }
             foreach ((int id, _) in work) _pending.Remove(id);

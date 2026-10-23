@@ -17,7 +17,7 @@ namespace DSPRE.Avalonia.Data
         public string Name { get; init; }
     }
 
-    /// <summary>Trainer capsules shared by the Trainer editor and Ball Capsules, reloaded when Ball Capsules saves.</summary>
+    /// <summary>Trainer capsules shared by the Trainer editor and Ball capsules, reloaded when Ball capsules saves.</summary>
     public static class TrainerCapsuleCatalog
     {
         /// <summary>Raised on the window thread after the capsules were saved.</summary>
@@ -47,7 +47,7 @@ namespace DSPRE.Avalonia.Data
                 _capsules = TrainerCapsules.ReadAll();
                 _seals = BallSeals.Read().Where(s => s != null).ToDictionary(s => s.Id);
             }
-            catch (Exception ex) { AppLogger.Error("Trainer capsules could not be read: " + ex.Message); }
+            catch (Exception ex) { AppLogger.Error("Trainer capsules couldn't be read: " + ex.Message); }
         }
 
         /// <summary>Row 0 is no capsule; row N is capsule N, the number a party entry stores.</summary>

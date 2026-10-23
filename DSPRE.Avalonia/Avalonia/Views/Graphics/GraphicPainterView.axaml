@@ -107,8 +107,7 @@
       <ScrollViewer x:Name="CanvasScroll" Grid.Row="1" Grid.Column="1"
                     HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
                     ScrollChanged="CanvasScroll_ScrollChanged">
-        <!-- Sized from the zoom rather than stretched to fit, so one pixel of the drawing is always a
-             whole number of screen pixels and the grid lines land on the edges. -->
+        <!-- Sized from the zoom so each drawing pixel is whole screen pixels and the grid lines land on edges. -->
         <Panel x:Name="CanvasHost"
                Width="{Binding CanvasWidth}" Height="{Binding CanvasHeight}" Margin="16"
                HorizontalAlignment="Center" VerticalAlignment="Center"

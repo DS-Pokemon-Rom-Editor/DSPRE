@@ -4,13 +4,8 @@ using Avalonia.Threading;
 namespace DSPRE.Avalonia
 {
     /// <summary>
-    /// Last-resort net for exceptions thrown on the Avalonia UI thread, chiefly from <c>async void</c>
-    /// event handlers (Save / Import / close, etc.) that have no try/catch of their own. Without this a
-    /// single throw (corrupt file, bad ROM offset, disk full) tears down the whole process and every OTHER
-    /// open editor's unsaved work with it. Here we log it, tell the user, and KEEP the app alive.
-    ///
-    /// This complements <see cref="CrashReporter"/> (which handles truly fatal AppDomain/Task exceptions):
-    /// those fire while the process is already dying, whereas this one recovers.
+    /// Catches UI-thread exceptions from async void handlers, so one failing editor doesn't take the others' unsaved work down.
+    /// <see cref="CrashReporter"/> handles the fatal ones.
     /// </summary>
     public static class AvaloniaErrorHandler
     {

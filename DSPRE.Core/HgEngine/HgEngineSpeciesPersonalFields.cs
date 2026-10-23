@@ -109,9 +109,9 @@ namespace DSPRE.HgEngine
 
             HgEngineDomainInfo info = HgEngineDomains.All.FirstOrDefault(d => d.Domain == HgEngineDomain.Species);
             HgEngineSymbolTable species = HgEngineSymbolTable.Load("include/constants/species.h");
-            if (info == null || species == null) { error = "include/constants/species.h could not be read."; return false; }
+            if (info == null || species == null) { error = "include/constants/species.h couldn't be read."; return false; }
             string path = System.IO.Path.Combine(HgEngineProject.RepoPathUnc, info.SourceFileRelPath.Replace('/', System.IO.Path.DirectorySeparatorChar));
-            if (!System.IO.File.Exists(path)) { error = $"Source file not found: {path}"; return false; }
+            if (!System.IO.File.Exists(path)) { error = $"{path} is missing from the checkout."; return false; }
 
             HgEngineSourceField<PokemonPersonalData>[] abilityFields = All.Where(f => f.Path[1].Name == "abilities").ToArray();
             Func<string, int?>[] lookups = abilityFields.Select(f => HgEngineSourceFields.NameLookup(f.Headers, HgEngineSymbolTable.Load)).ToArray();
@@ -130,7 +130,7 @@ namespace DSPRE.HgEngine
                 {
                     if (!entry.TryGetRaw(abilityFields[i].Path, out string raw)) { values[i] = -1; continue; }
                     if (!HgEngineSourceExpression.TryEvaluate(raw, lookups[i], out values[i]))
-                    { error = $"{m.Groups[1].Value} {abilityFields[i].Name} = {raw} could not be read."; return false; }
+                    { error = $"{m.Groups[1].Value} {abilityFields[i].Name} = {raw} couldn't be read."; return false; }
                 }
                 abilities[id] = (values[0], values[1]);
             }

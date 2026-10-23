@@ -45,7 +45,7 @@
       <DockPanel Grid.Column="2" Margin="0,0,4,0">
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,2">
           <TextBlock Text="Palettes" FontWeight="Bold"/>
-          <controls:HelpTip Text="Preview only. Picked by name."/>
+          <controls:HelpTip Text="Preview only. The game picks the palette by name."/>
         </StackPanel>
         <ListBox x:Name="PaletteList" ItemsSource="{Binding PaletteNames}" SelectedIndex="{Binding PaletteIndex}"/>
       </DockPanel>

@@ -49,7 +49,7 @@
       <ComboBox ItemsSource="{Binding SlotOptions}" SelectedItem="{Binding SelectedSlot}" HorizontalAlignment="Stretch"
                 ToolTip.Tip="{Binding SlotSectionTooltip}"/>
 
-      <TextBlock Text="Clone render/animation profile from" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,4,0,0"/>
+      <TextBlock Text="Copy settings from" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,4,0,0"/>
       <ComboBox ItemsSource="{Binding CloneOptions}" SelectedItem="{Binding SelectedCloneSource}" HorizontalAlignment="Stretch"
                 ToolTip.Tip="The overworld whose settings the new one copies."/>
     </StackPanel>

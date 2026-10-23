@@ -214,7 +214,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             if (error != null)
             {
                 HasUnsavedChanges = LabelStore.HasDraft;
-                _ = DialogHelper.ShowErrorAsync("The labels weren't saved:\n" + error, "Dropdown labels error");
+                _ = DialogHelper.ShowErrorAsync("The labels weren't saved:\n" + error, "Dropdown labels");
                 return;
             }
             HasUnsavedChanges = false;

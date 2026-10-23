@@ -18,11 +18,13 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         /// <summary>Where to find it: a sequence number, or a species number for a cry.</summary>
         public int Number;
 
-        /// <summary>Whether this is a cry, which is the one kind made from a sample of its own.</summary>
+        /// <summary>Whether this is a cry, which has a sample to itself.</summary>
         public bool IsCry;
 
-        /// <summary>Whether this is one of the ROM's other sounds: an instrument a tune plays, or the
-        /// noise a sound effect is made of. Like a cry, it is a sample, so it can be replaced.</summary>
+        /// <summary>
+        /// Whether this is another of the ROM's samples, an instrument or a sound effect's noise; it can be replaced
+        /// like a cry.
+        /// </summary>
         public bool IsSample;
 
         /// <summary>For a sample, which set it lives in and where in that set.</summary>
@@ -104,9 +106,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
 
         private enum Player { None, Music, Fanfare, Effect }
 
-        /// <summary>
-        /// Which tab a sequence belongs on, from the player the game hands it to rather than from its name.
-        /// </summary>
+        /// <summary>Which tab a sequence goes on, by the player the game uses for it, not by its name.</summary>
         private static Player PlayerOf(SdatArchive sdat, int seq, string name)
         {
             int player = -1;
@@ -118,8 +118,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
                 case 1: case 7: return Player.Music;
                 case 2: return Player.Fanfare;
                 case 3: case 4: case 5: case 6: return Player.Effect;
-                // The cry player. What is left on it is the machinery around a cry rather than music, so
-                // it goes with the rest of the noises.
+                // The rest of the cry player's sequences aren't music, so they go with the sound effects.
                 case 0: return Player.Effect;
             }
 
@@ -172,8 +171,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
                 _allCries.Add(new AudioItem { Number = cry, Name = label, IsCry = true, NamedNumber = cry });
             }
 
-            // The samples that are not cries. These are what the tunes and the sound effects are actually
-            // made of, and nothing in DSPRE could reach them before.
+            // The samples that aren't cries: what tunes and sound effects are made of.
             foreach ((int Arc, string Name, int Count) set in SoundArchive.SampleArchives())
             {
                 string shown = set.Name.StartsWith("WAVE_ARC_", StringComparison.Ordinal)
@@ -313,7 +311,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         }
 
         private int _tab;
-        /// <summary>Which tab is open, which is what decides whose choice the buttons act on.</summary>
+        /// <summary>The open tab; the buttons act on its selection.</summary>
         public int SelectedTab
         {
             get => _tab;
@@ -355,7 +353,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
 
         public bool CanPlay => Selected != null;
 
-        /// <summary>A sample can be replaced. A sequence cannot, because it is notes rather than sound.</summary>
+        /// <summary>A sample can be replaced. A sequence can't, because it's notes, not sound.</summary>
         public bool CanImport => Selected != null && (Selected.IsCry || Selected.IsSample);
 
         public string SelectedDescription
@@ -376,12 +374,11 @@ namespace DSPRE.Avalonia.ViewModels.Audio
                 : "Import a WAV as this Pokémon's cry.\n\n")
             + SoundArchive.HowItWorks + "\n\n"
             + CryFiles.AcceptedFormat + "\n\n"
-            + "It is squeezed down the way the games squeeze their own sounds, so it takes about the same "
-            + "room. That costs a little detail, so put a sound in once from your own source rather than "
-            + "exporting and importing the same one repeatedly.\n\n"
-            + "Cries and the sounds on the Sounds tab can be replaced this way. The music, fanfares and "
-            + "sound effects cannot: they are written-out notes rather than sound, and what they play is "
-            + "on the Sounds tab.";
+            + "It's compressed as the game compresses its sounds, so it takes about the same room. That loses "
+            + "a little detail, so import from your own source each time instead of exporting and importing "
+            + "the same sound again.\n\n"
+            + "Cries and the sounds on the Sounds tab can be replaced this way. Music, fanfares and sound "
+            + "effects can't: they're notes, not sound, and what they play is on the Sounds tab.";
 
         private string _status = "";
         public string StatusText { get => _status; set => Set(ref _status, value); }
@@ -529,7 +526,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             StatusText = "";
         }
 
-        /// <summary>The sound archive as it will be once saved, which is what is played until then.</summary>
+        /// <summary>The sound archive with the held imports in it, which plays until Save.</summary>
         private SdatArchive Archive()
         {
             List<SoundArchive.PendingSample> held;
@@ -546,15 +543,17 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             SdatArchive built = SoundArchive.WithSamples(held, out string problem);
             if (built == null)
             {
-                AppLogger.Error("Held sounds could not be previewed: " + problem);
+                AppLogger.Error("Held sounds couldn't be previewed: " + problem);
                 return SoundArchive.Load();
             }
             lock (_heldLock) if (version == _heldVersion) _withHeld = built;
             return built;
         }
 
-        /// <summary>Writes everything held: the sound archive in one rewrite, then any checkout cries. Null on
-        /// success, otherwise why not, with whatever was not written still held.</summary>
+        /// <summary>
+        /// Writes everything held: the sound archive in one rewrite, then any checkout cries. Returns null, or why it
+        /// failed, with anything not written still held.
+        /// </summary>
         public string Save()
         {
             if (!HasUnsavedChanges) return null;
@@ -686,7 +685,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         /// </summary>
         public const double PreviewSeconds = 45.0;
 
-        /// <summary>The same sound in both ears, which is the shape everything here plays, draws and saves.</summary>
+        /// <summary>The same sound in both channels, the format everything here plays, draws and saves.</summary>
         private static short[] Stereo(short[] mono)
         {
             if (mono == null) return null;
@@ -713,8 +712,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             return outp;
         }
 
-        /// <summary>The notes of whatever is picked, for drawing and for saving as a MIDI. A cry is a
-        /// sample rather than written-out notes, so there are none for one.</summary>
+        /// <summary>The selection's notes, for drawing and MIDI export; a cry is a recording, so it has none.</summary>
         public System.Collections.Generic.IReadOnlyList<SseqPlayer.Note> ReadSelectedNotes()
         {
             AudioItem item = Selected;
@@ -733,20 +731,16 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         public string SaveMidiHelp => Selected == null
             ? "Pick a piece of music, a fanfare or a sound effect first."
             : Selected.IsSample
-                ? "This is one of the sounds the game plays rather than written-out notes, so there is "
-                  + "nothing to save as MIDI. Save it as a WAV instead."
+                ? "This is a recorded sound, not notes, so it can't be saved as MIDI. Save it as a WAV instead."
             : Selected.IsCry
-                ? "A cry is a recorded sample rather than written-out notes, so there is nothing to save "
-                  + "as MIDI. Save it as a WAV instead."
-                : "Save the notes as a MIDI other music programs open. The notes and their timing are "
-                  + "exact. The instruments are not: the game plays these on samples kept in the ROM, "
-                  + "which a MIDI cannot carry, so it names an instrument number and the program you open "
-                  + "it in picks its own sound for that number. Save the SoundFont beside it and load "
-                  + "both, and it sounds like the game.";
+                ? "A cry is a recording, not notes, so it can't be saved as MIDI. Save it as a WAV instead."
+                : "Saves the notes as a MIDI for other music programs, with exact notes and timing. The game "
+                  + "plays them on samples a MIDI can't carry, so your program picks its own instruments; "
+                  + "save the SoundFont too and load both to hear it as the game does.";
 
         // ── the instruments, as a SoundFont ─────────────────────────────────────────
 
-        /// <summary>Which of the ROM's instrument banks whatever is picked is played on.</summary>
+        /// <summary>The instrument bank the selection plays on.</summary>
         public int BankOfSelection
         {
             get
@@ -772,7 +766,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
                 if (item.IsSample)
                     return "This is a single recording, so there is no bank to save. Save it as a WAV.";
                 if (BankOfSelection < 0)
-                    return "This does not say which bank of instruments it plays on, so there is nothing "
+                    return "This doesn't say which bank of instruments it plays on, so there is nothing "
                          + "to save.";
                 SdatArchive sdat = SoundArchive.Load();
                 string name = sdat != null && sdat.BankNames.TryGetValue(BankOfSelection, out string n)
@@ -782,7 +776,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             }
         }
 
-        /// <summary>Turns the bank whatever is picked plays on into a SoundFont, or says why it cannot.</summary>
+        /// <summary>Builds a SoundFont from the selection's instrument bank, or says why it can't.</summary>
         public byte[] BuildSoundFont(out string whynot, out string note)
         {
             whynot = null; note = null;
@@ -819,14 +813,14 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             // The preview only renders the first few seconds, which is all anyone wants to hear before
             // deciding. A file is different: it should hold the whole tune, so this reads much further.
             SdatArchive sdat = SoundArchive.Load();
-            if (sdat == null) { whynot = "This game's sound archive could not be read."; return null; }
+            if (sdat == null) { whynot = "This game's sound archive couldn't be read."; return null; }
             System.Collections.Generic.IReadOnlyList<SseqPlayer.Note> notes;
             try { notes = SseqPlayer.ReadNotes(sdat, item.Number, WholeTuneSeconds); }
             catch (Exception ex) { AppLogger.WarnOnce("AudioEditorViewModel.BuildMidi", ex); notes = null; }
-            if (notes == null) { whynot = "This sequence could not be read."; return null; }
+            if (notes == null) { whynot = "This sequence couldn't be read."; return null; }
             if (notes.Count == 0) { whynot = "This sequence plays no notes, so a MIDI of it would be empty."; return null; }
             byte[] midi = MidiFile.FromNotes(notes, item.Name);
-            if (midi == null) { whynot = "This sequence could not be turned into a MIDI."; return null; }
+            if (midi == null) { whynot = "This sequence couldn't be turned into a MIDI."; return null; }
             return midi;
         }
 

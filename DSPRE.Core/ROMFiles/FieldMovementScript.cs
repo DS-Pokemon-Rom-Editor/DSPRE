@@ -12,7 +12,7 @@ namespace DSPRE.ROMFiles
         Face,
         /// <summary>Walks, which may be on the spot when it covers no ground.</summary>
         Walk,
-        /// <summary>Hops, which arcs up and comes back down.</summary>
+        /// <summary>A hop, up and back down.</summary>
         Jump,
         /// <summary>Stands still for a while.</summary>
         Delay,
@@ -43,8 +43,8 @@ namespace DSPRE.ROMFiles
     }
 
     /// <summary>
-    /// Reads a movement the way the games do, so the preview can play it out rather than just name it.
-    /// Durations follow unk_020655F4.c in the Platinum decomp; HGSS uses the same action numbers.
+    /// Reads a movement the way the games do, so the preview can play it. Durations follow unk_020655F4.c in
+    /// pokeplatinum; HGSS uses the same action numbers.
     /// </summary>
     public static class FieldMovementScript
     {

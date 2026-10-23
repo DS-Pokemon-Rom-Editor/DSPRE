@@ -175,8 +175,8 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             if (_isDsRomProject)
             {
                 await DialogHelper.ShowInfoAsync(
-                    "Overlay compression cannot be modified in ds-rom format.\n\n" +
-                    "ds-rom automatically decompresses overlays when extracting and recompresses them when building the ROM.",
+                    "Overlay compression can't be changed in a ds-rom project.\n\n" +
+                    "ds-rom decompresses overlays when it extracts and compresses them again when it builds the ROM.",
                     "Read-only mode");
                 return;
             }
@@ -199,15 +199,13 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             if (HasMismatches())
             {
                 await DialogHelper.ShowInfoAsync(
-                    "There are some overlays in a compression state that does not match the set value for compression in the y9 table.\n" +
-                    "This may cause errors or lack of usability on hardware.\n" +
-                    "You can find the mismatched rows highlighted in RED.\nThis message is purely informational.",
+                    "Some overlays are compressed differently from what the overlay table says, which can fail on " +
+                    "hardware.\nThe mismatched rows are highlighted in red.",
                     "Compression mark mismatch");
             }
 
             bool proceed = await DialogHelper.AskYesNoAsync(
-                "This operation will modify the following overlays: " + Environment.NewLine +
-                string.Join(", ", modifiedNumbers) + "\nProceed?",
+                "Change overlays " + string.Join(", ", modifiedNumbers) + "?",
                 "Change overlays?");
 
             if (!proceed) return;
@@ -217,7 +215,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             {
                 OverlayUtils.OverlayTable.SetDefaultCompressed(ovl.Number, ovl.IsMarkedCompressed);
                 if (ovl.IsCompressed && !OverlayUtils.IsCompressed(ovl.Number))
-                    hasCompressing = true; // compression temporarily disabled
+                    hasCompressing = true; // compressing isn't done here; the user is told below
                 if (!ovl.IsCompressed && OverlayUtils.IsCompressed(ovl.Number))
                     OverlayUtils.Decompress(ovl.Number);
             }
@@ -231,7 +229,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             SaveNotice.Saved(UnsavedChangesDescription);
 
             if (hasCompressing)
-                await DialogHelper.ShowInfoAsync("Compression is temporarily disabled until we work on a fix.", "Warning");
+                await DialogHelper.ShowInfoAsync("Compressing overlays isn't available yet.", "Overlay editor");
         }
 
 

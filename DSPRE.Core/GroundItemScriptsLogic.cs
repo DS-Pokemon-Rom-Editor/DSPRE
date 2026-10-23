@@ -6,11 +6,7 @@ using DSPRE.ROMFiles;
 
 namespace DSPRE
 {
-    /// <summary>
-    /// Shared, UI-agnostic logic for managing the ground-item script list (the entries an Overworld
-    /// Item event's script number, 7000+index, can point at). Both the WinForms and Avalonia shells
-    /// can call this directly, no UI-toolkit dependency.
-    /// </summary>
+    /// <summary>The ground item scripts. An item event picks one with script number 7000 plus its index.</summary>
     public static class GroundItemScriptsLogic
     {
         public const int ItemScrMin = 7000;
@@ -70,7 +66,7 @@ namespace DSPRE
 
         private static bool IsItemScriptNumber(int n) => n >= ItemScrMin && n <= ItemScrMax;
 
-        /// <summary>Platinum's Distortion World Griseous Orb, which overlay 9 names by script number rather than through an event file.</summary>
+        /// <summary>Platinum's Distortion World Griseous Orb, which overlay 9 names by script number, not through an event file.</summary>
         private static int? ReadDistortionWorldItemScript()
         {
             uint offset = RomInfo.DistortionWorldItemScriptOffset;
@@ -119,7 +115,7 @@ namespace DSPRE
             int scriptNumber = ItemScrMin + scriptIndex;
             if (GetUsedScriptNumbers().Contains(scriptNumber))
             {
-                return "This entry is currently used by an Overworld Item event and can't be removed.\nChange or delete that event first.";
+                return "An item event on the map still uses this entry. Change or delete that event first.";
             }
 
             ScriptFile itemScript = new ScriptFile(RomInfo.ItemScriptFileNumber);
@@ -258,7 +254,7 @@ namespace DSPRE
                 HasChanges = true;
             }
 
-            // Rebuilt from text rather than patching parameter bytes, so the command's text form stays in step.
+            // Rebuilt from text so the command's text form stays in step.
             private static ScriptCommand SetVarLike(ScriptCommand original, int value)
             {
                 ushort variable = BitConverter.ToUInt16(original.CmdParams[0], 0);
@@ -292,7 +288,7 @@ namespace DSPRE
                 int Remap(int n)
                 {
                     if (moved.TryGetValue(n, out int m)) return m;
-                    // Removed or past the end: slide down past removed entries only, as before.
+                    // Removed or past the end: slide down past removed entries only.
                     int below = 0;
                     foreach (int r in removed) if (r < n) below++;
                     return n - below;

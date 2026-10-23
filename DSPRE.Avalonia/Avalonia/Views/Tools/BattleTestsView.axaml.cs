@@ -100,7 +100,7 @@ namespace DSPRE.Avalonia.Views.Tools
             if (VM?.Selected == null) return;
             if (!await DialogHelper.AskYesNoAsync($"Delete {VM.Selected} from the checkout?", "Delete battle test?", this)) return;
             string error = VM.DeleteSelected();
-            if (error != null) await DialogHelper.ShowErrorAsync(error, "Battle tests error", this);
+            if (error != null) await DialogHelper.ShowErrorAsync(error, "Battle tests", this);
         }
     }
 }

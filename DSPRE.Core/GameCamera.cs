@@ -104,11 +104,11 @@ public class GameCamera
             }
             catch (OverflowException e)
             {
-                AppMessages.Error("The value you selected is invalid.\n\n" + '"' + e.Message + '"', "Overflow");
+                AppMessages.Error("That number is too large for this field.", "Number too large");
             }
             catch (FormatException)
             {
-                AppMessages.Error("Only numeric values are allowed.", "Invalid input");
+                AppMessages.Error("Only numbers are allowed.", "Invalid input");
             }
         }
     }
@@ -141,7 +141,7 @@ public class GameCamera
     {
         if (camData.Length != 36 && camData.Length != 24)
         {
-            AppMessages.Error("This is not a camera file.\nMake sure the file is 36 or 24 bytes long and try again.", "Wrong file!");
+            AppMessages.Error("This isn't a camera file. A camera file is 24 or 36 bytes long.", "Not a camera file");
             return;
         }
         try
@@ -171,7 +171,7 @@ public class GameCamera
         }
         catch (EndOfStreamException)
         {
-            AppMessages.Info("You might have to manually fill in the last three camera fields, since DPPt cameras don't have them.", "DPPt Cam detected");
+            AppMessages.Info("Diamond, Pearl and Platinum cameras don't have the last three fields, so fill those in yourself.", "Camera from Diamond, Pearl or Platinum");
         }
     }
     public byte[] ToByteArray()
@@ -211,6 +211,5 @@ public class GameCamera
         return newData.ToArray();
     }
 
-    // NOTE: the WinForms grid helper ShowInGridView(DataGridView, int) moved to
-    // GameCameraGridExtensions (DSPRE WinForms project) so this class stays core/cross-platform.
+
 }

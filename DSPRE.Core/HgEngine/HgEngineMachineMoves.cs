@@ -30,12 +30,12 @@ namespace DSPRE.HgEngine
         {
             machines = new List<Machine>();
             error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine folder is open."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
 
             HgEngineSymbolTable moves = HgEngineSymbolTable.Load(MovesHeaderRelPath);
-            if (moves == null) { error = "Could not read include/constants/moves.h from the checkout."; return false; }
+            if (moves == null) { error = "Couldn't read include/constants/moves.h from the checkout."; return false; }
             string text = ReadSource(out string path);
-            if (text == null) { error = $"Could not read {SourceRelPath} from the checkout."; return false; }
+            if (text == null) { error = $"Couldn't read {SourceRelPath} from the checkout."; return false; }
 
             if (_parsed != null && string.Equals(text, _parsedText, System.StringComparison.Ordinal))
             {
@@ -60,7 +60,7 @@ namespace DSPRE.HgEngine
 
                 string token = m.Groups["move"].Value;
                 if (!moves.TryGetValue(token, out int move) && !int.TryParse(token, out move))
-                { error = $"{token} in {SourceRelPath} is not a move moves.h names."; return false; }
+                { error = $"{token} in {SourceRelPath} isn't a move that moves.h names."; return false; }
 
                 string label = m.Groups["label"].Success ? m.Groups["label"].Value : $"Machine {machines.Count}";
                 machines.Add(new Machine(label, move, lineStart + m.Groups["move"].Index, token.Length));

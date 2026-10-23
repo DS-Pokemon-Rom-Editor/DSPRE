@@ -75,7 +75,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             GraphicAssets.Kind held = KindOf?.Invoke(_value) ?? GraphicAssets.Kind.Unknown;
             bool known = held is GraphicAssets.Kind.Palette or GraphicAssets.Kind.TileGraphic or GraphicAssets.Kind.TileMap
                              or GraphicAssets.Kind.CellLayout or GraphicAssets.Kind.CellAnimation;
-            string now = known && held != Role ? $"Member {_value} holds {KindName(held)}, not {KindName(Role)}." : null;
+            string now = known && held != Role ? $"File {_value} holds {KindName(held)}, not {KindName(Role)}." : null;
             if (now == Mismatch) return;
             Mismatch = now;
             Raise(nameof(Mismatch));
@@ -323,7 +323,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         /// <summary>The still art previews have nothing to play.</summary>
         public bool CanAnimate => !IsClassRecords || ClassScene()?.Kind != VsIntroPreview.Layout.Pieces;
 
-        /// <summary>Shows one class's intro, for the editor opened again from the Trainer Classes window.</summary>
+        /// <summary>Shows one class's intro, when opened again from the Trainer editor's Classes tab.</summary>
         public void ShowClassRecord(int trainerClass)
         {
             if (IsClassIntroPatch) { StartClass = trainerClass; CiSelectedIndex = trainerClass; SelectedTab = ClassIntroPatchTab; return; }
@@ -541,7 +541,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             OpenCells(m, -1, $"{ClassRecordNames[_recordIndex]}: {slot.Label}");
         }
 
-        /// <summary>Shows one file in the graphics browser, which edits every kind.</summary>
+        /// <summary>Shows one file in All graphics, which edits every kind.</summary>
         public void ShowPart(IntroArtFile part)
         {
             if (Record == null || part == null || !part.CanShow || RefuseUnsavedArt(new[] { (int)Record.GetAsset(part.Field) })) return;

@@ -67,9 +67,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             "Import a WAV as this Pokémon's cry.\n\n"
             + DSPRE.Avalonia.Data.SoundArchive.HowItWorks + "\n\n"
             + DSPRE.Avalonia.Data.CryFiles.AcceptedFormat + "\n\n"
-            + "It is squeezed down the way the games squeeze their own cries, so it takes about the same "
-            + "room rather than making the sound file bigger. That costs a little detail, so import a cry "
-            + "once from your own source rather than exporting and importing the same one over and over.\n\n"
+            + "It's compressed as the game compresses its cries, so the sound file stays about the same size. "
+            + "That loses a little detail, so import from your own source each time instead of exporting and "
+            + "importing the same cry again.\n\n"
             + "The ROM's sound file is written straight away.";
 
         public int SelectedMonIndex
@@ -246,9 +246,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             PokewalkerVM.PropertyChanged += OnChildUndoState;
             BattleDisplayVM.PropertyChanged += OnChildUndoState;
 
-            // Picking a form in the Sprites tab that has its own main-list entry (e.g. Deoxys - Attack) should
-            // move the main selector there too, so Personal Data/Learnset/Evolutions and Save all agree on
-            // which form is actually loaded instead of quietly staying on the base species.
+            // A form with its own list entry (e.g. Deoxys - Attack) moves the main selector too, so every tab
+            // and Save work on that form.
             SpriteVM.FormPseudoIdSelected += pseudoId => { if (pseudoId != _selectedMonIndex) SelectedMonIndex = pseudoId; };
 
             _selectedMonIndex = initialMon;
@@ -258,11 +257,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ─── Load (sync all sub-VMs) ──────────────────────────────────────────────
         private void LoadMon(int id)
         {
-            // Update icon. hg-engine doesn't keep icons in personal.narc at all; each species' icon is
-            // a source PNG in the checkout (data/graphics/sprites/<name>/icon.png), so load that
-            // directly rather than through the vanilla NCGR/NCLR/ARM9-palette-table pipeline, which
-            // relies on a hardcoded byte offset that's meaningless against hg-engine's recompiled ARM9
-            // (see HgEnginePokemonIcons for the full story).
+            // hg-engine keeps each icon as data/graphics/sprites/<name>/icon.png, so it's read directly
+            // (see HgEnginePokemonIcons).
             MonIconBitmap = null;
             if (id > 0 && HgEngineProject.IsActive && HgEnginePokemonIcons.TryGetIconPath(id, out string iconPath))
             {
@@ -279,11 +275,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 catch (System.Exception ex) { AppLogger.WarnOnce("PokemonEditorViewModel.LoadMon", ex); MonIconBitmap = null; }
             }
 
-            // Update title
             string name = (id >= 0 && id < PokemonNames.Count) ? PokemonNames[id] : $"#{id}";
             SetBaseTitle($"Pokémon editor - {name}");
 
-            // Sync all child VMs
             PersonalVM.LoadMon(id);
             LearnsetVM.LoadMon(id);
             EvolutionsVM.LoadMon(id);
@@ -389,7 +383,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // Checked now so a name the checkout can't take is refused before it looks added.
             if (!HgEngineSpeciesExpansion.TryPlanFakemon(name, out HgEngineSpeciesExpansion.FakemonPlan plan, out string error))
             {
-                await DialogHelper.ShowErrorAsync($"Could not add the species:\n{error}", "Add new Pokémon", owner);
+                await DialogHelper.ShowErrorAsync($"Couldn't add the species:\n{error}", "Add new Pokémon", owner);
                 return;
             }
 
@@ -428,7 +422,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 HgEngineSpeciesExpansion.TryWriteFakemon(name, out written, out string writeError) ? null : writeError);
             if (!saved)
             {
-                if (error != null) await DialogHelper.ShowErrorAsync($"Could not add the species:\n{error}", "Add new Pokémon", _owner);
+                if (error != null) await DialogHelper.ShowErrorAsync($"Couldn't add the species:\n{error}", "Add new Pokémon", _owner);
                 return -1;
             }
 

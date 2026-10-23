@@ -43,7 +43,7 @@ namespace DSPRE.ROMFiles
             {
                 string why = RomLocator.WhyNot(t, 2);
                 if (why != null) return why;
-                // The byte must still be the immediate of a `cmp rN, #imm8`, or the code isn't the one DSPRE knows.
+                // The byte must still be the immediate of a `cmp rN, #imm8`, or DSPRE doesn't know this code.
                 byte op = RomLocator.Read(t, 2)[1];
                 if (op < 0x28 || op > 0x2F) return "The code that checks the regional Pokédex size has been changed, so DSPRE leaves it alone.";
             }

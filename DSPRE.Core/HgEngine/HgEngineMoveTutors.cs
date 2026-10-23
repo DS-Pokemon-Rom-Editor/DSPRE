@@ -60,7 +60,7 @@ namespace DSPRE.HgEngine
         {
             text = null; rows = null; npcs = null; error = null;
             moves = HgEngineSymbolTable.Load(MovesHeaderRelPath);
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             string path = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path) || moves == null) { error = $"{SourceRelPath} or {MovesHeaderRelPath} is missing from the checkout."; return false; }
             text = HgEngineFileCache.GetText(path);

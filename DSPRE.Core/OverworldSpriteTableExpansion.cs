@@ -74,11 +74,8 @@ namespace DSPRE
         public static uint UsedCount => _usedCount;
         public static uint Capacity => _capacity;
 
-        /// <summary>The full byte range this patch owns in <see cref="Filesystem.ExpArmPath"/> (marker
-        /// + header + all 4 tables, including their still-zero-filled unused capacity headroom).
-        /// Other synthetic-overlay writers that scan for "free" (zero) space must skip this range even
-        /// where it reads as zero, since it's pre-reserved for future <see cref="AddEntry"/> calls,
-        /// not actually free. Returns null when the patch isn't detected.</summary>
+        /// <summary>The bytes this patch reserves in <see cref="Filesystem.ExpArmPath"/>; free-space scans must skip
+        /// them even where they are zero. Null without the patch.</summary>
         public static (long Start, long End)? GetReservedByteRange() =>
             _detected ? ((long Start, long End)?)(_markerOffset, _reservedEnd) : null;
 
@@ -268,7 +265,7 @@ namespace DSPRE
                 return true;
             }
 
-            error = $"Appearance ID 0x{appearanceId:X} was not found in the render-state table.";
+            error = $"Appearance ID 0x{appearanceId:X} wasn't found in the render-state table.";
             return false;
         }
 
@@ -349,7 +346,7 @@ namespace DSPRE
             error = null;
             if (!_detected)
             {
-                error = "The overworld sprite expansion patch is not applied to this ROM.";
+                error = "The overworld sprite expansion patch isn't applied to this ROM.";
                 return false;
             }
             if (_usedCount >= _capacity)
@@ -360,7 +357,7 @@ namespace DSPRE
             if (!IsAllowedAppearanceId(appearanceId, out error)) return false;
             if (!IsAllowedAppearanceId(cloneFrom, out string cloneErr))
             {
-                error = "Clone-source ID: " + cloneErr;
+                error = "The overworld to copy from: " + cloneErr;
                 return false;
             }
 
@@ -382,7 +379,7 @@ namespace DSPRE
                 int idx = FindRowIndex(data, _tables[t], cloneFrom);
                 if (idx < 0)
                 {
-                    error = $"Clone source 0x{cloneFrom:X} was not found (table {t}).";
+                    error = $"The overworld to copy from, 0x{cloneFrom:X}, wasn't found (table {t}).";
                     return false;
                 }
                 cloneRowIndex[t] = idx;
@@ -425,7 +422,7 @@ namespace DSPRE
             error = null;
             if (!_detected)
             {
-                error = "The overworld sprite expansion patch is not applied to this ROM.";
+                error = "The overworld sprite expansion patch isn't applied to this ROM.";
                 return false;
             }
 
@@ -433,12 +430,12 @@ namespace DSPRE
             int texRowIndex = FindRowIndex(data, _tables[TextureTableIndex], appearanceId);
             if (texRowIndex < 0)
             {
-                error = $"Appearance ID 0x{appearanceId:X} was not found.";
+                error = $"Appearance ID 0x{appearanceId:X} wasn't found.";
                 return false;
             }
             if (texRowIndex < _tables[TextureTableIndex].OriginalRowCount)
             {
-                error = "Cannot delete an original (non-custom) overworld entry.";
+                error = "Can't delete an original (non-custom) overworld entry.";
                 return false;
             }
 
@@ -467,17 +464,14 @@ namespace DSPRE
             error = null;
             if (id > 0xFFFF) { error = $"0x{id:X} is outside the 16-bit appearance-ID range."; return false; }
             if (id == 0xFFFF) { error = "0xFFFF is the reserved table-terminator ID."; return false; }
-            if (id == 0x64 || (id >= 0x65 && id <= 0x74)) { error = $"0x{id:X} is reserved for field-graphics."; return false; }
+            if (id == 0x64 || (id >= 0x65 && id <= 0x74)) { error = $"0x{id:X} is reserved for field graphics."; return false; }
             if (id >= 0x1000 && id <= 0x10C0) { error = $"0x{id:X} is reserved for berry-growth resources."; return false; }
             if (id == 0x2000) { error = "0x2000 is reserved."; return false; }
             return true;
         }
 
-        /// <summary>Finds a free appearance ID nobody's using yet, starting right after the
-        /// highest one already in the table (so the suggested default reads as "next in line"
-        /// instead of an arbitrary-looking jump) and scanning upward past it for the first one
-        /// that isn't reserved or already taken. Returns null if the expansion patch isn't
-        /// detected or the table is empty.</summary>
+        /// <summary>The first free, unreserved appearance id above the highest in the table; null without the patch
+        /// or with an empty table.</summary>
         public static uint? SuggestNewAppearanceId()
         {
             if (!_detected) return null;
@@ -494,12 +488,8 @@ namespace DSPRE
             return null;
         }
 
-        /// <summary>Finds an mmodel NARC member number nobody's using yet, so a newly imported
-        /// texture can get its own genuinely new file instead of overwriting one that an existing
-        /// overworld entry (or another custom one) already points at. <c>Narc.FromFolder</c> packs
-        /// every numbered file present in the unpacked directory as a member at save time (see
-        /// Narc.cs), so simply writing a fresh highest-numbered file here is enough to grow the
-        /// NARC by one slot; nothing needs to be pre-reserved the way the table capacity is.</summary>
+        /// <summary>The next free mmodel member number; <c>Narc.FromFolder</c> packs every numbered file, so writing
+        /// it grows the NARC.</summary>
         public static uint AllocateNewMmodelSlot()
         {
             string dir = RomInfo.GameDirs[DirNames.OWSprites].unpackedDir;

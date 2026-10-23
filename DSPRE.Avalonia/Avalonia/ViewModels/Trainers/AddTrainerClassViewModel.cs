@@ -6,10 +6,8 @@ using System.Runtime.CompilerServices;
 
 namespace DSPRE.Avalonia.ViewModels.Trainers
 {
-    /// <summary>Backing model for the "Add Trainer Class…" dialog. Pure input collection,
-    /// <see cref="TrainerClassesViewModel.AddTrainerClass"/> does the actual write once the dialog
-    /// closes with <see cref="Confirmed"/>. Platinum-only (see IsExpansionSupported gating on the
-    /// button that opens this), so there's no HGSS "night music" variant to collect here.</summary>
+    /// <summary>Backs the Add trainer class dialog; <see cref="TrainerClassesViewModel.AddTrainerClass"/>
+    /// writes once it closes with <see cref="Confirmed"/>.</summary>
     public class AddTrainerClassViewModel : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -18,7 +16,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
         { if (EqualityComparer<T>.Default.Equals(f, v)) return false; f = v; OnPropertyChanged(n); return true; }
 
-        /// <summary>Adding to an hg-engine checkout rather than a Platinum ROM.</summary>
+        /// <summary>Adding to an hg-engine checkout, not a Platinum ROM.</summary>
         public bool ForHgEngine { get; init; }
 
         public string Note => ForHgEngine
@@ -28,7 +26,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         /// <summary>Whether the eye-contact music table has room for the class; without its patch the option is off.</summary>
         public bool CanAddMusic { get; init; } = true;
         public bool MusicNeedsPatch => !CanAddMusic;
-        public string MusicHelp => MusicNeedsPatch ? "Needs the Trainer encounter music table patch" : null;
+        public string MusicHelp => MusicNeedsPatch ? "Needs the \"Trainer encounter music table\" patch" : null;
 
         private string _className = "";
         public string ClassName { get => _className; set => Set(ref _className, value); }

@@ -8,16 +8,14 @@ using static DSPRE.RomInfo;
 namespace DSPRE
 {
     /// <summary>
-    /// Lets DSPRE perform the "add a new trainer class" repoint documented in a community write-up
-    /// (repoint+extend sTrainerClassGender, sTrainerClassPrizeMul, sTrainerEncounterBGMs into the
-    /// synthetic overlay, then append name and name-with-article text-archive entries) instead of requiring
-    /// manual hex editing. The new class also gets a front sprite, copied from a class the user picks.
-    /// Platinum only, wherever sTrainerClassPrizeMul and the gender-table pointer are measured. Every other
-    /// family is refused outright rather than guessed at, since neither array has any bounds checking in the game.
+    /// Adds Platinum trainer classes: the gender, prize and eye-contact music tables move into the synthetic overlay
+    /// with room for every class, the names are added and a front sprite is copied. Other games are refused, since
+    /// the game doesn't bounds-check these tables.
     ///
     /// Each table moves once, through <see cref="PlaceRoomyTable"/>, into a marked block of the synthetic overlay with
     /// room for every class; later additions write into that room and only change the count.
     /// </summary>
+    /// <remarks>The tables are sTrainerClassGender, sTrainerClassPrizeMul and sTrainerEncounterBGMs.</remarks>
     public static class TrainerClassTableExpansion
     {
         public static bool IsSupportedForCurrentRom =>
@@ -125,7 +123,7 @@ namespace DSPRE
             int at;
             try { at = SyntheticOverlaySpace.Place(synth, block.Length, reserved); }
             catch (InvalidOperationException e) { error = e.Message; return -1; }
-            if (at < 0) { error = "No free space was found in the expanded ARM9 area for this table."; return -1; }
+            if (at < 0) { error = "The synthetic overlay has no room left for this table."; return -1; }
             block.CopyTo(synth, at);
             DSUtils.WriteWholeFile(Filesystem.ExpArmPath, synth);
             _writtenThisOperation?.Add((at, at + block.Length));
@@ -139,7 +137,7 @@ namespace DSPRE
         /// tracked for every language/family DSPRE supports (RomLocator.Thing.EncounterMusicPointer),
         /// so its repoint status can be checked regardless of IsSupportedForCurrentRom. This is used
         /// by the ROM patch toolbox status row so it doesn't require the Trainer editor to have been
-        /// opened first (which is what normally triggers the check as a side effect of loading).</summary>
+        /// opened first, since loading it normally runs the check.</summary>
         public static bool DetectMusicTableRepointed()
         {
             try
@@ -178,10 +176,7 @@ namespace DSPRE
         }
 
         // ── Generic byte-array table resolve/read ────────────────────────────────────────────────
-        // Once repointed, the table's real length is derived from the trainer-class NAME text
-        // archive's current entry count (kept in lockstep by AddTrainerClass, which is the only
-        // thing that ever grows any of these tables) rather than a separate length field, since neither
-        // the gender nor the prize-mul table has one in the ROM itself.
+        // A moved table's length is the class name count, which AddTrainerClass keeps in step; the ROM stores none.
         private static bool TryResolveByteTable(string pointerFilePath, uint pointerFileOffset,
             string vanillaFilePath, uint vanillaFileOffset, int vanillaCount,
             out byte[] bytes, out string error)
@@ -215,10 +210,10 @@ namespace DSPRE
         {
             gender = 0;
             error = null;
-            if (!IsSupportedForCurrentRom) { error = "Only implemented for Platinum."; return false; }
+            if (!IsSupportedForCurrentRom) { error = "Only Platinum is supported."; return false; }
             if (!TryResolveByteTable(RomInfo.Arm9Path, RomLocator.TrainerClassGenderPointer, RomInfo.Arm9Path, RomInfo.TrainerClassGenderTableOffset, RomInfo.VanillaTrainerClassCount, out byte[] table, out error))
                 return false;
-            if (classId < 0 || classId >= table.Length) { error = "Class index out of range."; return false; }
+            if (classId < 0 || classId >= table.Length) { error = $"There is no trainer class {classId}."; return false; }
             gender = table[classId];
             return true;
         }
@@ -226,10 +221,10 @@ namespace DSPRE
         public static bool TryWriteGender(int classId, byte gender, out string error)
         {
             error = null;
-            if (!IsSupportedForCurrentRom) { error = "Only implemented for Platinum."; return false; }
+            if (!IsSupportedForCurrentRom) { error = "Only Platinum is supported."; return false; }
             if (!TryResolveByteTable(RomInfo.Arm9Path, RomLocator.TrainerClassGenderPointer, RomInfo.Arm9Path, RomInfo.TrainerClassGenderTableOffset, RomInfo.VanillaTrainerClassCount, out byte[] table, out error))
                 return false;
-            if (classId < 0 || classId >= table.Length) { error = "Class index out of range."; return false; }
+            if (classId < 0 || classId >= table.Length) { error = $"There is no trainer class {classId}."; return false; }
 
             uint ptr = BitConverter.ToUInt32(DSUtils.ReadFromFile(RomInfo.Arm9Path, RomLocator.TrainerClassGenderPointer, 4), 0);
             if (ptr < RomInfo.SynthOverlayLoadAddress)
@@ -277,7 +272,7 @@ namespace DSPRE
                 return false;
             }
 
-            if (classId < 0 || classId >= table.Length) { error = "Class index out of range."; return false; }
+            if (classId < 0 || classId >= table.Length) { error = $"There is no trainer class {classId}."; return false; }
             multiplier = table[classId];
             return true;
         }
@@ -308,7 +303,7 @@ namespace DSPRE
             {
                 return false;
             }
-            if (classId < 0 || classId >= table.Length) { error = "Class index out of range."; return false; }
+            if (classId < 0 || classId >= table.Length) { error = $"There is no trainer class {classId}."; return false; }
 
             bool repointed = false;
             if (pointerOffset != 0)
@@ -328,7 +323,7 @@ namespace DSPRE
             return true;
         }
 
-        // HGSS stores {u16 classId, u16 multiplier} pairs rather than a plain array indexed by class,
+        // HGSS stores {u16 classId, u16 multiplier} pairs, not an array indexed by class,
         // so entries are matched by their classId field instead of by position.
         private static bool TryReadPairedPrizeMul(string ovPath, uint vanillaOffset, int pairCount, int classId, out byte multiplier, out string error)
         {
@@ -345,7 +340,7 @@ namespace DSPRE
                         return true;
                     }
                 }
-                error = "No prize-multiplier entry found for this class.";
+                error = "This class has no prize money entry.";
                 return false;
             }
             catch (Exception ex)
@@ -369,7 +364,7 @@ namespace DSPRE
                     DSUtils.WriteToFile(ovPath, BitConverter.GetBytes((ushort)multiplier), offset);
                     return true;
                 }
-                error = "No prize-multiplier entry found for this class.";
+                error = "This class has no prize money entry.";
                 return false;
             }
             catch (Exception ex)
@@ -564,10 +559,8 @@ namespace DSPRE
             finally { _writtenThisOperation = null; }
         }
 
-        /// <summary>Appends a new eye-contact-music entry for a trainer class that doesn't already
-        /// have one (both a brand-new class from <see cref="AddTrainerClass"/>, and an existing
-        /// class the "Enable eye-contact music" UI action targets). Fails if the class already has
-        /// an entry, use the normal Trainer Classes editing flow to change an existing one instead.</summary>
+        /// <summary>Adds eye-contact music for a class that has none, new or existing; fails when it already
+        /// has an entry.</summary>
         public static bool AddEncounterMusicEntry(byte classId, ushort musicMain, ushort musicNight, out string error)
         {
             byte[] newEntry = new byte[RomInfo.GameFamily == GameFamilies.HGSS ? 6 : 4];

@@ -7,10 +7,7 @@ using MKDS_Course_Editor.NSBCA;
 
 namespace DSPRE.ROMFiles
 {
-    /// <summary>
-    /// A joint animation (NSBCA) ready to play: it moves, turns and resizes the separate parts a model is
-    /// built from, which is what makes a windmill turn and a lift platform rise.
-    /// </summary>
+    /// <summary>A joint animation (NSBCA): it moves, turns and resizes model parts, like windmill sails or a lift platform.</summary>
     public sealed class JointAnimation
     {
         /// <summary>A turn is stored in six bytes: which way it turns, then its sine and cosine.</summary>
@@ -24,8 +21,7 @@ namespace DSPRE.ROMFiles
         /// <summary>The model parts this animation drives. Anything else keeps the pose the model gives it.</summary>
         public IReadOnlyList<int> AnimatedObjects { get; }
 
-        /// <summary>What the file calls this animation. The JNT0 block carries a sixteen character name
-        /// for each one, which is what the people who made them called it.</summary>
+        /// <summary>The animation's 16-character name in the JNT0 block.</summary>
         public string Name { get; }
 
         /// <summary>How many animations the file holds. One file can carry several.</summary>
@@ -70,7 +66,7 @@ namespace DSPRE.ROMFiles
             return new JointAnimation(file, animation);
         }
 
-        /// <summary>True when any part of this animation actually moves rather than standing still.</summary>
+        /// <summary>True when any part of this animation moves.</summary>
         public bool Moves => AnimatedObjects.Count > 0;
 
         private static bool Drives(NSBCA.NSBCA_File.J_AC.objInfo o) =>
@@ -93,9 +89,7 @@ namespace DSPRE.ROMFiles
         /// </summary>
         /// <param name="modelObject">The part as the model has it, for whatever the animation leaves alone.</param>
         /// <param name="modelScale">
-        /// The model's own scale. Distances in an animation are stored the same way the model stores its
-        /// own, so they have to be brought down by it too; without that a part is flung out of place by
-        /// however much the model is scaled by, which for a windmill puts its sails somewhere above the sky.
+        /// The model's scale; animation distances are divided by it too, or parts fly out of place.
         /// </param>
         public float[] MatrixFor(int objectId, int frame, NSBMDObject modelObject = null, float modelScale = 1f)
         {

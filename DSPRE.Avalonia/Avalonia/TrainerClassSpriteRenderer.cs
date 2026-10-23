@@ -58,13 +58,11 @@ namespace DSPRE.Avalonia
             return ImageConverter.ToAvaloniaBitmap(CellRenderer.Draw(_cells, bankIndex, _tile.ToBytes(), Colours, width, height));
         }
 
-        /// <summary>Duration of the given frame in 60fps game ticks (the NANR frame header's own delay
-        /// field), or 4 (a reasonable default) if unavailable.</summary>
+        /// <summary>A frame's duration in 60ths of a second, or 4 when unknown.</summary>
         public int GetFrameDuration(int frame) =>
             frame >= 0 && frame < _frameDurations.Length && _frameDurations[frame] > 0 ? _frameDurations[frame] : 4;
 
-        /// <summary>Index into the played sequence for the class's default/idle pose (the bank hg-engine
-        /// itself names "CellAnime0"), not "whichever cell the animation happens to end on".</summary>
+        /// <summary>The frame of the class's idle pose, hg-engine's CellAnime0.</summary>
         public int DefaultFrame { get; private set; }
 
         /// <summary>Loads the graphics for a trainer class. Returns the max frame index (FrameCount-1)
@@ -112,7 +110,7 @@ namespace DSPRE.Avalonia
                 if (memberClass != trClassID) { _rows = null; _tile = null; return 0; }
 
                 _cells = NcerFile.Read(File.ReadAllBytes(Path.Combine(dir, TrainerGraphicsLayout.CellsEntry(trClassID).ToString("D4"))));
-                if (_cells == null) throw new InvalidDataException("The cell file could not be read.");
+                if (_cells == null) throw new InvalidDataException("The cell file couldn't be read.");
 
                 NanrFile anim = ReadNanr(dir, trClassID);
                 _sequences = anim == null ? Array.Empty<(int, int)[]>()

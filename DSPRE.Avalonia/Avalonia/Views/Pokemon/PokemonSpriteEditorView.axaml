@@ -82,9 +82,9 @@
                     Padding="14,8" FontWeight="Bold" FontSize="14"/>
             <Button Content="Export wizard…" controls:Icon.Key="export" Click="OpenExportWizard_Click"
                     Padding="14,8" FontSize="14"/>
-            <Button Content="Open in Graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
+            <Button Content="Open in All graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
                     Padding="14,8" FontSize="14"
-                    ToolTip.Tip="Open in the Graphics window"/>
+                    ToolTip.Tip="Open in All graphics"/>
           </StackPanel>
 
           <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">

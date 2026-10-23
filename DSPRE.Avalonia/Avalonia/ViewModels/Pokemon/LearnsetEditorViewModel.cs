@@ -159,7 +159,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_current == null) return;
             if (_loadError != null)
             {
-                await DialogHelper.ShowErrorAsync("The learnset could not be read.\n" + _loadError, "Import CSV", owner);
+                await DialogHelper.ShowErrorAsync("The learnset couldn't be read.\n" + _loadError, "Import CSV", owner);
                 return;
             }
             LearnsetCsv importer = new LearnsetCsv(RomInfo.GetPokemonNames(), _moveNamesArr, _currentId + 1, _currentId, _ => (Moves(), null));
@@ -336,7 +336,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (_loadError != null)
                 {
                     StatusText = "Not saved: " + _loadError;
-                    _ = DialogHelper.ShowErrorAsync("The learnset could not be saved.\n" + _loadError, "Pokémon editor error");
+                    _ = DialogHelper.ShowErrorAsync("The learnset couldn't be saved.\n" + _loadError, "Pokémon editor");
                     return;
                 }
                 List<(int level, int move)> entries = new System.Collections.Generic.List<(int level, int move)>(_current.List.Count);
@@ -349,7 +349,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (!ok)
                 {
                     StatusText = "Not saved: " + error;
-                    _ = DialogHelper.ShowErrorAsync("The learnset could not be saved.\n" + error, "Pokémon editor error");
+                    _ = DialogHelper.ShowErrorAsync("The learnset couldn't be saved.\n" + error, "Pokémon editor");
                     return;
                 }
             }

@@ -31,7 +31,7 @@ namespace DSPRE.Avalonia.Data
                 int top = block * from.Height, w = from.Width, h = from.Height;
                 ushort corner00 = At(0, top), corner10 = At(w - 1, top), corner01 = At(0, top + h - 1), corner11 = At(w - 1, top + h - 1);
                 ushort edgeTop = At(w / 2, top), edgeBottom = At(w / 2, top + h - 1), edgeLeft = At(0, top + h / 2), edgeRight = At(w - 1, top + h / 2);
-                // The tile eggs blank the strip with, so it's plain.
+                // Eggs blank the strip with this tile.
                 ushort body = (ushort)(At(w / 2, top + h / 2) & 0xF000 | from.StripTile);
                 // The strip: two label tiles, the bar repeated, then its end. Empty panels have none.
                 bool strip = block < 2;

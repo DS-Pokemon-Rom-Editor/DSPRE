@@ -550,7 +550,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (_book == null) return;
             if (!PokegearPhoneBook.Save(_book, out string error))
             {
-                AppMessages.Error(error, "Pokégear phone book error");
+                AppMessages.Error(error, "Pokégear phone book");
                 return;
             }
             _saved = _book.ToBytes();

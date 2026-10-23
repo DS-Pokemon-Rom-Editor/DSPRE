@@ -3,17 +3,15 @@ using System.Text;
 namespace DSPRE.HgEngine
 {
     /// <summary>
-    /// Turns free-form display text (e.g. "Fire Blast Deluxe") into a valid, unique C identifier
-    /// fragment for a brand new hg-engine source constant (e.g. "FIRE_BLAST_DELUXE" for a new
-    /// "#define ITEM_FIRE_BLAST_DELUXE ..."). Used only when DSPRE mints a new named entry; existing
-    /// entries are always referenced by their real constant, never re-derived from display text.
+    /// A C name for a new entry from its display text ("Fire Blast Deluxe" to FIRE_BLAST_DELUXE). Existing entries keep
+    /// their real constants.
     /// </summary>
     public static class HgEngineNameSlug
     {
-        /// <summary>Uppercases, collapses every run of characters outside [A-Z0-9] into a single
-        /// underscore, trims leading/trailing underscores, and prefixes with "_" if the result would
-        /// start with a digit (not a legal C identifier). Falls back to "UNNAMED" if nothing usable
-        /// survives (e.g. the input was empty or pure punctuation).</summary>
+        /// <summary>
+        /// Uppercase, with runs of other characters as one underscore, the ends trimmed and a leading "_" before a digit;
+        /// "UNNAMED" when nothing is left.
+        /// </summary>
         public static string ToSlug(string displayText)
         {
             if (string.IsNullOrWhiteSpace(displayText)) return "UNNAMED";
@@ -33,9 +31,7 @@ namespace DSPRE.HgEngine
             return slug;
         }
 
-        /// <summary>Same as <see cref="ToSlug"/>, but appends a numeric suffix (_2, _3, ...) until
-        /// "&lt;prefix&gt;&lt;slug&gt;" isn't already a name in <paramref name="existing"/>, so two
-        /// entries typed with the same display text never collide on one constant.</summary>
+        /// <summary><see cref="ToSlug"/> with _2, _3 and so on added until the name is free in <paramref name="existing"/>.</summary>
         public static string ToUniqueSlug(string displayText, HgEngineSymbolTable existing, string prefix)
         {
             string baseSlug = ToSlug(displayText);

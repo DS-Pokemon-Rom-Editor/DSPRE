@@ -14,7 +14,7 @@ namespace DSPRE.ROMFiles
        0x8  //  ushort:     Text Archive number
        0xA  //  ushort:     Day music track number
        0xC  //  ushort:     Night music track number
-       0xE  //  ushort:     Wild Pok�mon file number
+       0xE  //  ushort:     Wild Pokémon file number
        0x10 //  ushort:     Event file number
 
        * D/P:
@@ -40,7 +40,7 @@ namespace DSPRE.ROMFiles
 
     /* ---------------------- HEADER DATA STRUCTURE (HGSS):----------------------------
         
-       0x0  //  byte:       Wild Pok�mon file number
+       0x0  //  byte:       Wild Pokémon file number
        0x1  //  byte:       Area data value
        0x2  //  byte:       ?
        0x3  //  byte:       ?
@@ -55,7 +55,7 @@ namespace DSPRE.ROMFiles
        0x13 //  byte:       Map name textbox type value
        0x14 //  byte:       Weather value
        0x15 //  byte:       Camera value
-       0x16 //  byte:       Follow mode (for the Pok�mon following hero)
+       0x16 //  byte:       Follow mode (for the Pokémon following hero)
        0x17 //  byte:       Bitwise permission flags:
 
         DPPT
@@ -80,12 +80,12 @@ namespace DSPRE.ROMFiles
     ----------------------------------------------------------------------------------*/
 
     /// <summary>
-    /// General class to store common map header data across all Gen IV Pok�mon NDS games
+    /// General class to store common map header data across all Gen IV Pokémon NDS games
     /// </summary>
     public abstract class MapHeader : RomFile
     {
         /*System*/
-        public static readonly string DefaultFilter = "DSPRE Header File (*.dsh; *.bin)|*.dsh;*.bin";
+        public static readonly string DefaultFilter = "DSPRE header file (*.dsh; *.bin)|*.dsh;*.bin";
         public ushort ID { get; set; }
         public static readonly byte Length = 24;
         public static readonly string NameSeparator = " -   ";
@@ -104,9 +104,7 @@ namespace DSPRE.ROMFiles
             LevelScriptID,
             MatrixID,
             MusicDayID,
-            //MusicDayName,
             MusicNightID,
-            //MusicNightName,
             ScriptFileID,
             TextArchiveID,
             WeatherID,
@@ -138,10 +136,8 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// Reads just the location-name index (offset 0x12) of one header without building a full
-        /// <see cref="MapHeader"/>, for the Header editor's location-grouped sidebar. Pass the
-        /// already-known dynamic-headers flag so this doesn't re-probe the patch state per call.
-        /// DP stores it as a ushort; Plat/HGSS as a byte.
+        /// Reads only the location-name index (0x12), a ushort in DP and a byte in Platinum and HGSS. Takes the
+        /// dynamic-headers flag so it doesn't probe per call.
         /// </summary>
         public static bool TryReadLocationNameIndex(ushort headerId, bool dynamicHeaders, out int locationNameIndex)
         {
@@ -223,14 +219,8 @@ namespace DSPRE.ROMFiles
 
         public static MapHeader GetMapHeader(ushort headerNumber)
         {
-            // Callers routinely probe a header number that comes from ROM data (e.g. a warp's
-            // destination-header field) rather than from a UI control already clamped to a valid
-            // range, so an out-of-range value here is an expected "no such header" case, not a
-            // corrupt-file situation. Without this guard, LoadFromFile reads past the end of the
-            // header table, LoadFromByteArray sees a too-short buffer and pops an "Header file too
-            // small" error dialog for what is really just "there is no header this large", return
-            // null quietly instead, matching what every caller (e.g. EventEditorViewModel.TestWarp)
-            // already expects a not-found lookup to look like.
+            // Header numbers often come from ROM data such as warp destinations, so one past the table is a normal
+            // miss: null, not a "file too small" dialog.
             if (headerNumber >= GetHeaderCount())
             {
                 return null;
@@ -279,8 +269,8 @@ namespace DSPRE.ROMFiles
         public static void WriteInternalName(int id, string name) =>
             DSUtils.WriteToFile(RomInfo.InternalNamesPath, InternalNameBytes(name), (uint)(id * RomInfo.InternalNameLength));
 
-        /// <summary>Appends a header copied from header 0 with this internal name; dynamic headers only. Returns its id.</summary>
-        /// <summary>Adds a header at the end, a copy of header <paramref name="copyFrom"/>; dynamic headers only.</summary>
+        /// <summary>Adds a header at the end, copied from header <paramref name="copyFrom"/>, with this internal name.
+        /// Dynamic headers only; returns its id.</summary>
         public static int AddDynamicHeader(string internalName, int copyFrom = 0)
         {
             int id = GetHeaderCount();
@@ -342,7 +332,7 @@ namespace DSPRE.ROMFiles
     }
 
     /// <summary>
-    /// Class to store map header data from Pok�mon D and P
+    /// Class to store map header data from Pokémon D and P
     /// </summary>
     public class HeaderDP : MapHeader
     {
@@ -409,7 +399,7 @@ namespace DSPRE.ROMFiles
     }
 
     /// <summary>
-    /// Class to store map header data from Pok�mon Plat
+    /// Class to store map header data from Pokémon Plat
     /// </summary>
     public class HeaderPt : MapHeader
     {
@@ -450,7 +440,7 @@ namespace DSPRE.ROMFiles
                 }
                 catch (EndOfStreamException)
                 {
-                    AppMessages.Error("Error loading header " + ID + '.', "Unexpected EOF");
+                    AppMessages.Error("Header " + ID + " couldn't be read.", "Header error");
                 }
             }
         }
@@ -486,7 +476,7 @@ namespace DSPRE.ROMFiles
     }
 
     /// <summary>
-    /// Class to store map header data from Pok�mon HG and SS
+    /// Class to store map header data from Pokémon HG and SS
     /// </summary>
     public class HeaderHGSS : MapHeader
     {
@@ -514,9 +504,9 @@ namespace DSPRE.ROMFiles
                     AreaDataID = reader.ReadByte();
 
                     ushort coords = reader.ReadUInt16();
-                    Unknown0 = (byte)(coords & 0b_1111); //get 4 bits
-                    WorldmapX = (byte)((coords >> 4) & 0b_1111_11); //get 6 bits after the first 4
-                    WorldmapY = (byte)((coords >> 10) & 0b_1111_11); //get 6 bits after the first 10
+                    Unknown0 = (byte)(coords & 0b_1111);
+                    WorldmapX = (byte)((coords >> 4) & 0b_1111_11);
+                    WorldmapY = (byte)((coords >> 10) & 0b_1111_11);
 
                     MatrixID = reader.ReadUInt16();
                     ScriptFileID = reader.ReadUInt16();
@@ -528,23 +518,23 @@ namespace DSPRE.ROMFiles
                     LocationName = reader.ReadByte();
                     
                     byte areaProperties = reader.ReadByte();
-                    AreaIcon = (byte)(areaProperties & 0b_1111); //get 4 bits
-                    MomCallIntroParam = (byte)((areaProperties >> 4) & 0b_1111); //get 4 bits after the first 4
+                    AreaIcon = (byte)(areaProperties & 0b_1111);
+                    MomCallIntroParam = (byte)((areaProperties >> 4) & 0b_1111);
 
                     uint last32 = reader.ReadUInt32();
-                    KantoFlag = (last32 & 0b_1) == 1; //get 1 bit
-                    WeatherID = (byte)((last32 >> 1) & 0b_1111_111); //get 7 bits after the first one
+                    KantoFlag = (last32 & 0b_1) == 1;
+                    WeatherID = (byte)((last32 >> 1) & 0b_1111_111);
 
-                    LocationType = (byte)((last32 >> 8) & 0b_1111); //get 4 bits after the first 8
-                    CameraAngleID = (byte)((last32 >> 12) & 0b_1111_11); //get 6 bits after the first 12
-                    FollowMode = (byte)((last32 >> 18) & 0b_11); //get 2 bits after the first 17
-                    BattleBackground = (byte)((last32 >> 20) & 0b_1111_1); //get 5 bits after the first 19
-                    Flags = (byte)(last32 >> 25 & 0b_1111_111); //get 7 bits after the first 24
+                    LocationType = (byte)((last32 >> 8) & 0b_1111);
+                    CameraAngleID = (byte)((last32 >> 12) & 0b_1111_11);
+                    FollowMode = (byte)((last32 >> 18) & 0b_11);
+                    BattleBackground = (byte)((last32 >> 20) & 0b_1111_1);
+                    Flags = (byte)(last32 >> 25 & 0b_1111_111);
 
                 }
                 catch (EndOfStreamException)
                 {
-                    AppMessages.Error("Error loading header " + ID + '.', "Unexpected EOF");
+                    AppMessages.Error("Header " + ID + " couldn't be read.", "Header error");
                     ID = ushort.MaxValue;
                 }
             }

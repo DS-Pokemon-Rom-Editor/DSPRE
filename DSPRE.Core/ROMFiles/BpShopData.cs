@@ -31,7 +31,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Where the lists were found, for the window's status line.</summary>
         public string Where { get; private set; } = "";
         public bool InExpansion => _blockStart >= 0 && !_inPlace;
-        /// <summary>Moved by some other patch; saving refuses rather than guess where to write.</summary>
+        /// <summary>Moved by another patch; saving refuses to guess where to write.</summary>
         public bool MovedByPatch => IsPlatinum && !_inPlace && _blockStart < 0;
         public bool InPlace => _inPlace;
 
@@ -48,8 +48,8 @@ namespace DSPRE.ROMFiles
                 return "HeartGold and SoulSilver build their Battle Point exchange menus in scripts. Use the Script and Text editors.";
             BpShopSites sites = RomLocator.BpShopSites;
             if (sites == null) return "Only US Platinum (Rev 1) and Diamond are supported.";
-            if (!IsDsRomProject && ARM9.CheckCompressionMark()) return "arm9 is still compressed. Convert this project to ds-rom format first.";
-            if (!File.Exists(Arm9Path)) return "arm9 is missing from this project.";
+            if (!IsDsRomProject && ARM9.CheckCompressionMark()) return "The ARM9 is still compressed. Convert this project to ds-rom format first.";
+            if (!File.Exists(Arm9Path)) return "The ARM9 is missing from this project.";
             if (sites.ListPointers >= 0 && !File.Exists(OverlayUtils.GetPath(7))) return "Overlay 7 is missing from this project.";
             return null;
         }
@@ -154,7 +154,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Whether the lists sit in a block with room for the game's limits, as the toolbox patch leaves them.</summary>
         public bool Expanded => InExpansion && _blockLength >= FixedBlockLength;
 
-        /// <summary>The lists outgrew their room; the "Expand the Battle Point lists" toolbox patch makes more.</summary>
+        /// <summary>The lists outgrew their room; the "Battle Point list expansion" toolbox patch makes more.</summary>
         public bool NeedsExpansion => IsPlatinum && !Expanded && !FitsCurrentRoom;
 
         // A block an older DSPRE sized to its lists still takes them while they fit.
@@ -278,10 +278,10 @@ namespace DSPRE.ROMFiles
                 Where = "moved to the expanded ARM9 area";
             }
             else if (_inPlace || _blockStart >= 0)
-                throw new InvalidOperationException("The Battle Point lists don't fit where they are; apply the \"Expand the Battle Point lists\" patch in the ROM patch toolbox.");
+                throw new InvalidOperationException("The Battle Point lists don't fit where they are; apply the \"Battle Point list expansion\" patch in the ROM patch toolbox.");
             else throw new InvalidOperationException("The Battle Point lists were moved by a patch DSPRE doesn't know, so it won't write them.");
 
-            // The script command's copy is read by no retail script; keep it matching while it still fits.
+            // No retail script reads the script command's copy; keep it matching while it fits.
             if (Left.Count + Right.Count <= ExchangeRows && SplitLooksVanilla(arm9)) WriteExchangeRows(arm9);
 
             try
@@ -355,7 +355,7 @@ namespace DSPRE.ROMFiles
             {
                 if (!_inPlace && _blockStart < 0) return "A patch moved these lists somewhere DSPRE doesn't follow, so they can't be saved here.";
                 if (NeedsExpansion)
-                    return $"The item counter holds {VanillaLeft} items and the TM counter {VanillaRight} where they are. The \"Expand the Battle Point lists\" patch in the ROM patch toolbox makes room for {MaxListItems} each.";
+                    return $"The item counter only has room for {VanillaLeft} items and the TM counter for {VanillaRight}. The \"Battle Point list expansion\" patch in the ROM patch toolbox makes room for {MaxListItems} each.";
                 if (Left.Count > MaxListItems || Right.Count > MaxListItems) return $"Each counter can show up to {MaxListItems} items.";
                 // The price lookup's row count is a byte immediate.
                 if (PriceRows().Count > 255) return "The game can price up to 255 different items across both counters.";
@@ -365,7 +365,7 @@ namespace DSPRE.ROMFiles
             else
             {
                 if (Left.Count != _split || Right.Count != ExchangeRows - _split)
-                    return $"Diamond and Pearl keep {_split} items and {ExchangeRows - _split} TMs; change items rather than adding or removing them.";
+                    return $"Diamond and Pearl keep {_split} items and {ExchangeRows - _split} TMs. You can change items but not add or remove them.";
             }
             return null;
         }

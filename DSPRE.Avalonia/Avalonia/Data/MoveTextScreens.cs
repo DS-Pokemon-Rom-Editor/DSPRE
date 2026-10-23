@@ -72,7 +72,7 @@ namespace DSPRE.Avalonia.Data
             {
                 s.InitLayer(bg, priority, charBase);
                 if (ncgr >= 0) s.LoadTiles(charBase, m(ncgr));
-                // Wide arrangements are stored as 32 by 32 blocks; at no scroll the first block is the one shown.
+                // Wide arrangements are stored as 32 by 32 blocks; with no scroll the first block shows.
                 s.LoadMap(bg, NitroBgCodec.ReadMap(m(nscr)).Entries, DsBgScreen.MapSide);
             }
             void Palettes(ushort[] colours) { for (int slot = 0; slot < 16; slot++) s.SetPalette(slot, colours, slot * 16); }

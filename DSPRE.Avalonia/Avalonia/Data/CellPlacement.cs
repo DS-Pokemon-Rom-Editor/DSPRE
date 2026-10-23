@@ -6,8 +6,8 @@ using DSPRE.ROMFiles;
 namespace DSPRE.Avalonia.Data
 {
     /// <summary>
-    /// Drawings whose tiles a cell puts in place, as footprints are: the tiles are one run that the cell's pieces take
-    /// in turn, so the picture is only right once each piece is set at its own spot. Reads the first cell of an NCER.
+    /// Drawings like footprints, whose tiles are one run the cell's pieces use in order, so the picture is right only once
+    /// each piece is placed. Reads the first cell of an NCER.
     /// </summary>
     internal static class CellPlacement
     {

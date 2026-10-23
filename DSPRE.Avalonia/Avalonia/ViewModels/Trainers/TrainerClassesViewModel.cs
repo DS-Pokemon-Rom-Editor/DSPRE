@@ -17,10 +17,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Trainers
 {
     /// <summary>
-    /// Avalonia port of the trainer-class panel of the WinForms <c>TrainerEditor</c>: rename a trainer
-    /// class and edit its "eye contact" encounter music (the SSEQ that plays when that class of trainer
-    /// spots the player), a small ARM9-backed table, separate from any single trainer's own data, so it
-    /// gets its own tab rather than crowding the main Trainer editor window.
+    /// Renames trainer classes and edits their eye-contact music, an ARM9 table separate from trainer data.
     /// </summary>
     public class TrainerClassesViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
@@ -62,9 +59,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             RefreshSpritePreview();
         }
 
-        /// <summary>Which file _musicDict's entryOffsets are relative to. The table may have been
-        /// repointed into the synthetic overlay (e.g. by hand, following the "adding a new trainer
-        /// class" community write-up). Mirrors TrainerEditor.cs's (WinForms) identical field.</summary>
+        /// <summary>Which file _musicDict's entryOffsets are relative to; the table may have been moved into
+        /// the synthetic overlay.</summary>
         private bool _musicTableRepointed;
 
         public ObservableCollection<string> ClassNames { get; } = new();
@@ -338,8 +334,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private bool _musicAltEnabled;
         public bool MusicAltEnabled { get => _musicAltEnabled; private set => Set(ref _musicAltEnabled, value); }
 
-        /// <summary>"Add Trainer Class" is only implemented for Platinum (English), see
-        /// TrainerClassTableExpansion's doc comment for why.</summary>
+        /// <summary>Adding a class through the ARM9 tables works on Platinum (English); see
+        /// TrainerClassTableExpansion.</summary>
         public bool IsExpansionSupported => TrainerClassTableExpansion.IsSupportedForCurrentRom;
 
         /// <summary>New classes: Platinum (English) through the ARM9 tables, hg-engine through its source.</summary>
@@ -542,7 +538,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                _ = DialogHelper.ShowErrorAsync($"Failed to load trainer classes:\n{ex.Message}", "Trainer classes error");
+                _ = DialogHelper.ShowErrorAsync($"Couldn't load trainer classes:\n{ex.Message}", "Trainer editor");
             }
         }
 
@@ -577,8 +573,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (mine.BattleMusic != loaded.BattleMusic) BattleMusic = mine.BattleMusic;
         }
 
-        /// <summary>Mirrors the WinForms <c>SetupTrainerClassEncounterMusicTable</c>: a variable-size ARM9
-        /// table, one entry per trainer class that HAS eye-contact music (not every class does).</summary>
+        /// <summary>A variable-size ARM9 table with an entry for each class that has eye-contact music.</summary>
         private void SetupEncounterMusicTable()
         {
             if (_musicFromSource)
@@ -740,7 +735,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 : TrainerClassTableExpansion.AddTrainerClass(p.Name, p.NameWithArticle, p.Gender, p.Prize, p.AddMusic, p.MusicMain, p.MusicNight, p.SpriteFrom, out error);
             if (!added)
             {
-                StatusText = "The new trainer class was not added.";
+                StatusText = "The new trainer class wasn't added.";
                 _ = DialogHelper.ShowErrorAsync(error, "Add trainer class");
                 return false;
             }
@@ -855,15 +850,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (!TrySaveClassName(savedIndex, ClassName, out string nameError))
             {
                 failures.Add(nameError);
-                StatusText = $"Trainer class {savedIndex} was not fully saved.";
-                _ = DialogHelper.ShowErrorAsync(string.Join("\n", failures), "Trainer classes error");
+                StatusText = $"Trainer class {savedIndex} wasn't fully saved.";
+                _ = DialogHelper.ShowErrorAsync(string.Join("\n", failures), "Trainer editor");
                 return false;
             }
 
-            // Replacing the currently-selected item's text can make the ListBox re-fire its selection
-            // (some containers get regenerated), reentrantly resetting _selectedIndex to -1 through the
-            // SelectedClassIndex setter; _suppress only stops LoadClass from re-running, it doesn't stop
-            // the field write. Restore the real index afterward rather than trusting it mid-call.
+            // Replacing the selected item's text can reset the index through the setter, so restore it afterwards.
             _suppress = true;
             ClassNames[savedIndex] = $"[{savedIndex:D3}] {ClassName}";
             _selectedIndex = savedIndex;
@@ -873,8 +865,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             AppEvents.RaiseNamesChanged();
             if (failures.Count > 0)
             {
-                StatusText = $"Trainer class {savedIndex} was not fully saved.";
-                _ = DialogHelper.ShowErrorAsync(string.Join("\n", failures), "Trainer classes error");
+                StatusText = $"Trainer class {savedIndex} wasn't fully saved.";
+                _ = DialogHelper.ShowErrorAsync(string.Join("\n", failures), "Trainer editor");
                 return false;
             }
             _undo?.MarkSaved();

@@ -7,9 +7,6 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.ROMFiles
 {
-    /// <summary>
-    /// Classes to store event data in Pokémon NDS games
-    /// </summary>
     public class EventFile : RomFile
     {
         public enum serializationOrder
@@ -21,7 +18,7 @@ namespace DSPRE.ROMFiles
         }
 
         #region Fields
-        public static readonly string DefaultFilter = "Event File (*.evt, *.ev)|*.evt;*.ev";
+        public static readonly string DefaultFilter = "Event file (*.evt, *.ev)|*.evt;*.ev";
 
         /// <summary>The game runs a file whose only command is End for script 0.</summary>
         public const ushort NoScript = 0;
@@ -120,7 +117,7 @@ namespace DSPRE.ROMFiles
         }
         public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true)
         {
-            SaveToFileExplorePath("Gen IV Event File", "ev", suggestedFileName, showSuccessMessage);
+            SaveToFileExplorePath("Event file", "ev", suggestedFileName, showSuccessMessage);
         }
 
         internal bool IsEmpty() => (Spawnables is null || Spawnables.Count == 0) &&
@@ -145,7 +142,7 @@ namespace DSPRE.ROMFiles
 
         public short XMapPosition;
         public short YMapPosition;
-        public int ZPosition; //fixed point!
+        public int ZPosition; // fixed point
         public ushort XMatrixPosition;
         public ushort YMatrixPosition;
         #endregion
@@ -283,8 +280,7 @@ namespace DSPRE.ROMFiles
         // between looks for types 4-6; +0x12 is never read for a map-placed object.
         public ushort Param1;
         public ushort Param2;
-        // Signed: -1 means it isn't fenced in on that axis at all, anything else is how many tiles
-        // either side of where it starts it may walk.
+        // Signed: -1 means no limit on that axis; otherwise how many tiles it may walk either side of its start.
         public short XRange;
         public short YRange;
         public bool Is3D = new bool();
@@ -497,8 +493,7 @@ namespace DSPRE.ROMFiles
         public ushort ScriptNumber;
         public ushort WidthX;
         public ushort HeightY;
-        // No zPosition of its own: it inherits Event.zPosition. A separate field here shadowed the base
-        // one, so anything holding the trigger as an Event wrote a value this class never saved.
+        // Uses Event.zPosition; a separate field here would hide it and lose the value on save.
         public ushort ExpectedVarValue;
         public ushort VariableWatched;
         #endregion Fields

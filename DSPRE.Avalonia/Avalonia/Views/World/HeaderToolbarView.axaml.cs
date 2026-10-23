@@ -16,7 +16,7 @@ namespace DSPRE.Avalonia.Views.World
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e)
-            => await DialogHelper.GuardAsync(() => { VM?.Save(); return System.Threading.Tasks.Task.CompletedTask; }, "The header wasn't saved.", "Header editor error");
+            => await DialogHelper.GuardAsync(() => { VM?.Save(); return System.Threading.Tasks.Task.CompletedTask; }, "The header wasn't saved.", "Header editor");
         private void Undo_Click(object sender, RoutedEventArgs e) => VM?.Undo();
         private void Redo_Click(object sender, RoutedEventArgs e) => VM?.Redo();
         private async void Reset_Click(object sender, RoutedEventArgs e)
@@ -31,6 +31,6 @@ namespace DSPRE.Avalonia.Views.World
         private async void AddHeader_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.AddHeaderAsync() ?? Task.CompletedTask, "The header wasn't added.", ErrorTitle);
         private async void RemoveHeader_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.RemoveHeaderAsync() ?? Task.CompletedTask, "The header wasn't removed.", ErrorTitle);
 
-        private const string ErrorTitle = "Header editor error";
+        private const string ErrorTitle = "Header editor";
     }
 }

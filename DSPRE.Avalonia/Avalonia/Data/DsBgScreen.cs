@@ -232,13 +232,8 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>
-        /// Draws a cell turned and stretched about its own centre. Animations that carry a turn are the
-        /// reason this exists: the Analog Watch stores its hands as one drawing at 420 different angles, so
-        /// without a turn the preview shows a hand that never moves.
-        ///
-        /// The work is done backwards, a screen pixel at a time: each one is mapped back through the turn to
-        /// ask which pixel of the drawing belongs there. Going forwards instead leaves gaps wherever the
-        /// stretch spreads the source out.
+        /// Draws a cell rotated and scaled about its centre, so the Analog Watch's hands move. It works back from each screen
+        /// pixel, so scaling up leaves no gaps.
         /// </summary>
         public static void DrawCellTurned(byte[] rgba, Oam[] cell, byte[] characters,
                                           Func<int, ushort[]> paletteFor, int ox, int oy,
@@ -270,9 +265,7 @@ namespace DSPRE.Avalonia.Data
                               * Math.Max(Math.Abs(scaleX), Math.Abs(scaleY));
                 int reach = (int)Math.Ceiling(spread / 2) + 2;
 
-                // A cell turns about its own origin, not about each piece separately, so the piece's offset
-                // from that origin is carried through the turn first. Leaving it out pins a clock hand in
-                // place and spins it where it stands, instead of swinging it round the dial.
+                // A cell turns about its origin, so the piece's offset turns too, or a clock hand spins in place.
                 double offX = (s.X + s.Width / 2.0) * scaleX, offY = (s.Y + s.Height / 2.0) * scaleY;
                 double midX = ox + offX * cos - offY * sin;
                 double midY = oy + offX * sin + offY * cos;

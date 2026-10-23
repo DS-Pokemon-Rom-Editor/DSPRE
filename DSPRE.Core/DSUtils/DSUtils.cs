@@ -207,9 +207,7 @@ namespace DSPRE
         }
 
         // ── Mon party-icon palette table (1 byte per species: 0/1/2) ──────────────────────────────
-        // The table lives at RomInfo.monIconPalTableAddress; which file + offset depends on the overlay
-        // setup, exactly as GetPokePicRaw resolves it when rendering icons. Reused here for the editor.
-        // Requires RomInfo.SetMonIconsPalTableAddress() to have been called first.
+        // Resolved as GetPokePicRaw does; needs RomInfo.SetMonIconsPalTableAddress() first.
         public static bool TryResolveMonIconPalTable(out string path, out int baseOffset)
         {
             path = null; baseOffset = 0;
@@ -390,9 +388,7 @@ namespace DSPRE
         public static bool IsWsl() =>
             !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WSL_DISTRO_NAME"));
 
-        /// <summary>No path rewriting needed here: WSL interop already resolves plain Linux paths in a
-        /// launched .exe's arguments on its own (confirmed directly against ndstool.exe; a \\wsl.localhost
-        /// UNC rewrite, the Wine-style fix, actually broke it).</summary>
+        /// <summary>WSL interop already resolves Linux paths in an .exe's arguments; a \\wsl.localhost rewrite broke ndstool.</summary>
         private static void ConfigureWslStartInfo(ProcessStartInfo startInfo, string toolPath)
         {
             startInfo.FileName = toolPath;
@@ -454,12 +450,12 @@ namespace DSPRE
         {
             string toolPath = ToolPath(name);
             if (!File.Exists(toolPath))
-                return $"{name} was not found in DSPRE's Tools folder.";
+                return $"{name} wasn't found in DSPRE's Tools folder.";
 
             if (toolPath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && RequiresWineButUnavailable())
             {
                 return $"Wine is required to run {Path.GetFileName(toolPath)} on this platform, "
-                    + "but Wine was not found on PATH.";
+                    + "but Wine wasn't found on PATH.";
             }
 
             return $"Unable to launch {Path.GetFileName(toolPath)}.";
@@ -603,14 +599,14 @@ namespace DSPRE
             }
             catch (System.ComponentModel.Win32Exception)
             {
-                AppMessages.Error("Failed to call ndstool.exe" + Environment.NewLine + "Make sure DSPRE's Tools folder is intact.",
+                AppMessages.Error("ndstool couldn't be started." + Environment.NewLine + "Make sure DSPRE's Tools folder is intact.",
                     "Couldn't unpack ROM");
                 return false;
             }
 
             if (!string.IsNullOrWhiteSpace(errors))
             {
-                AppLogger.Error("ndstool returned the following error(s):" + errors);
+                AppLogger.Error("ndstool failed:" + errors);
                 AppMessages.Error("An error occurred while unpacking the ROM:" + Environment.NewLine + errors + Environment.NewLine,
                     "Couldn't unpack ROM");
                 return false;
@@ -659,7 +655,7 @@ namespace DSPRE
             }
             catch (System.ComponentModel.Win32Exception ex)
             {
-                string message = "Failed to start dsrom: " + ex.Message;
+                string message = "Couldn't start dsrom: " + ex.Message;
                 AppLogger.Error(message);
                 AppMessages.Error(message + Environment.NewLine + "Make sure DSPRE's Tools folder is intact.",
                     "Couldn't unpack ROM");
@@ -668,7 +664,7 @@ namespace DSPRE
 
             if (unpack.ExitCode != 0)
             {
-                AppLogger.Error("dsrom returned the following error(s): " + errors);
+                AppLogger.Error("dsrom failed: " + errors);
                 AppMessages.Error("An error occurred while unpacking the ROM:" + Environment.NewLine + errors + Environment.NewLine,
                     "Couldn't unpack ROM");
                 return false;
@@ -682,8 +678,8 @@ namespace DSPRE
             if (!File.Exists(Path.Combine(workDir, "config.yaml")))
             {
                 AppLogger.Error("Validation failed: config.yaml not found after extraction");
-                AppMessages.Error("ROM extraction failed: config.yaml not found in output directory.",
-                    "Extraction Validation Failed");
+                AppMessages.Error("The ROM was unpacked but config.yaml is missing.",
+                    "Couldn't unpack ROM");
                 return false;
             }
 
@@ -692,16 +688,16 @@ namespace DSPRE
             if (!File.Exists(Path.Combine(workDir, "arm9", "arm9.bin")))
             {
                 AppLogger.Error("Validation failed: arm9/arm9.bin not found after extraction");
-                AppMessages.Error("ROM extraction failed: arm9/arm9.bin not found in output directory.",
-                    "Extraction Validation Failed");
+                AppMessages.Error("The ROM was unpacked but arm9/arm9.bin is missing.",
+                    "Couldn't unpack ROM");
                 return false;
             }
 
             if (!Directory.Exists(Path.Combine(workDir, "files")))
             {
                 AppLogger.Error("Validation failed: files/ directory not found after extraction");
-                AppMessages.Error("ROM extraction failed: files/ directory not found in output directory.",
-                    "Extraction Validation Failed");
+                AppMessages.Error("The ROM was unpacked but the files folder is missing.",
+                    "Couldn't unpack ROM");
                 return false;
             }
 
@@ -714,8 +710,8 @@ namespace DSPRE
 
             if (!File.Exists(configPath))
             {
-                AppLogger.Error("config.yaml not found, cannot build with ds-rom");
-                AppMessages.Error("Cannot build ROM: config.yaml not found in the working directory.",
+                AppLogger.Error("config.yaml not found, can't build with ds-rom");
+                AppMessages.Error("The ROM can't be built because config.yaml is missing from the project folder.",
                     "Couldn't repack ROM");
                 return false;
             }
@@ -758,7 +754,7 @@ namespace DSPRE
             }
             catch (System.ComponentModel.Win32Exception ex)
             {
-                string message = "Failed to start dsrom: " + ex.Message;
+                string message = "Couldn't start dsrom: " + ex.Message;
                 AppLogger.Error(message);
                 AppMessages.Error(message + Environment.NewLine + "Make sure DSPRE's Tools folder is intact.",
                     "Couldn't repack ROM");
@@ -767,7 +763,7 @@ namespace DSPRE
 
             if (repack.ExitCode != 0)
             {
-                AppLogger.Error("dsrom returned the following error(s): " + errors);
+                AppLogger.Error("dsrom failed: " + errors);
                 AppMessages.Error("An error occurred while repacking the ROM:" + Environment.NewLine + errors + Environment.NewLine,
                     "Couldn't repack ROM");
                 return false;
@@ -833,21 +829,12 @@ namespace DSPRE
 
         }
         
-        /// <summary>
-        /// Determines the type of folder based on the presence of specific configuration files.
-        /// </summary>
-        /// <remarks>This method checks for the existence of specific files to classify the folder type.
-        /// It is important to ensure that the provided path is valid and accessible.</remarks>
-        /// <param name="folderPath">The path to the folder to be checked. Must be a valid directory path.</param>
-        /// <returns>Returns 0 if the folder contains a 'config.yaml' file, indicating it is a dsrom folder; returns 1 if it
-        /// contains a 'header.bin' file, indicating it is a ndstool folder; returns -1 if the folder does not exist or
-        /// does not match either type.</returns>
+        /// <summary>0 for a ds-rom project, 1 for ndstool, 2 for an hg-engine tree, -1 for anything else.</summary>
         public static int GetFolderType(string folderPath)
         {
             if (!Directory.Exists(folderPath))
                 return -1;
 
-            // Check if the folder contains a config.yaml file
             string configPath = Path.Combine(folderPath, "config.yaml");
             string headerPath = Path.Combine(folderPath, "header.bin");
             if (File.Exists(configPath))
@@ -856,8 +843,8 @@ namespace DSPRE
             }
             else if (File.Exists(headerPath))
             {
-                // hg-engine extracts to the same shape but names the filesystem root/ rather than data/,
-                // and its overlay tables overarm9/overarm7 rather than y9/y7.
+                // hg-engine extracts to the same shape, but calls the filesystem root/ instead of data/ and the
+                // overlay tables overarm9/overarm7 instead of y9/y7.
                 return Directory.Exists(Path.Combine(folderPath, "root")) ? 2 : 1;
             }
             else if (HgEngineDsRomMetaDir(folderPath) != null)
@@ -889,31 +876,21 @@ namespace DSPRE
             }
         }
 
-        /// <summary>
-        /// Converts a project directory from ndstool format to ds-rom format in place, creating a backup of
-        /// the original project.
-        /// </summary>
-        /// <remarks>A ZIP backup of the original ndstool project is created in the same location as the
-        /// project directory before any changes are made. If the conversion fails, the project directory remains
-        /// unchanged and can be restored from the backup. User interaction may be required during the process to
-        /// confirm actions or handle errors. The method displays message boxes to inform the user of progress and
-        /// errors.</remarks>
-        /// <param name="workDir">The full path to the project directory in ndstool format to be converted. Must be a valid directory path.</param>
-        /// <returns>1 if the conversion to ds-rom format succeeds; 2 if the conversion fails but the user chooses to continue
-        /// with the original ndstool format; 0 if the conversion fails and no changes are made.</returns>
+        /// <summary>Converts an ndstool project to ds-rom in place, after zipping a backup beside it. Returns 1 on
+        /// success, 2 when it failed and the user kept ndstool, 0 when it failed and nothing changed.</summary>
         public static int ConvertNdstoolToDsRom(string workDir)
         {
             // RomInfo.workDir ends in a separator, which would put the backup and temp files inside the folder being zipped.
             workDir = ProjectFolderPath(workDir);
 
-            // 1. Verify project is ndstool format
+
             if (GetFolderType(workDir) != 1)
             {
-                AppMessages.Warning("This project is not in ndstool format.", "Conversion Failed");
+                AppMessages.Warning("This project isn't in ndstool format.", "Conversion failed");
                 return 0;
             }
 
-            // 2. Create ZIP backup
+
             string backupPath = workDir + ".ndstool_backup.zip";
             try
             {
@@ -924,17 +901,17 @@ namespace DSPRE
             }
             catch (Exception ex)
             {
-                AppMessages.Error($"Failed to create backup: {ex.Message}", "Conversion Failed");
+                AppMessages.Error($"Couldn't create backup: {ex.Message}", "Conversion failed");
                 return 0;
             }
 
-            // 3. Build temp ROM using ndstool (the project is still in ndstool format)
+
             string tempRomPath = Path.Combine(Path.GetDirectoryName(workDir), "temp_conversion.nds");
             string tempDsRomDir = workDir + "_dsrom_temp";
 
             try
             {
-                // Use ndstool directly to build temp ROM
+
                 Process buildTemp = new Process();
                 buildTemp.StartInfo.Arguments = "-c \"" + tempRomPath + "\""
                     + " -9 \"" + Path.Combine(workDir, "arm9.bin") + "\""
@@ -966,23 +943,19 @@ namespace DSPRE
                 if (buildTemp.ExitCode != 0)
                 {
                     AppLogger.Error("ndstool build failed: " + errors);
-                    AppMessages.Error("Failed to build temporary ROM: " + errors, "Conversion Failed");
+                    AppMessages.Error("The temporary ROM couldn't be built: " + errors, "Conversion failed");
                     return 0;
                 }
 
-                // 4. Extract with ds-rom to get new structure
+
                 if (!UnpackRomDsRom(tempRomPath, tempDsRomDir))
                 {
                     AppLogger.Error("ds-rom extraction failed during conversion. This may indicate overlay compression issues.");
 
                     AppMessages.ConfirmResult result = AppMessages.ConfirmYesNoCancel(
-                        "Conversion to ds-rom format failed during ROM extraction.\n\n" +
-                        "This is usually caused by corrupted or incompatible overlay compression in the ndstool project.\n\n" +
-                        "Would you like to:\n" +
-                        "• Yes: Continue loading with ndstool format (no conversion)\n" +
-                        "• No: Cancel and restore from backup\n" +
-                        "• Cancel: Abort loading",
-                        "Conversion Failed");
+                        "The project couldn't be converted to ds-rom. This usually means its overlay compression is broken.\n\n" +
+                        "Yes keeps loading it as ndstool, No restores the backup, and Cancel stops loading.",
+                        "Conversion failed");
 
                     if (Directory.Exists(tempDsRomDir))
                         Directory.Delete(tempDsRomDir, true);
@@ -1004,21 +977,21 @@ namespace DSPRE
                     {
 
                         AppMessages.Info("Conversion cancelled. Your ndstool project remains unchanged.\n\nBackup available at:\n" + backupPath,
-                            "Conversion Cancelled");
+                            "Conversion cancelled");
                         return 0;
                     }
                 }
 
-                // 5. Validate temp output
+
                 if (!File.Exists(Path.Combine(tempDsRomDir, "config.yaml")))
                 {
-                    AppMessages.Error("Conversion validation failed: config.yaml not found.", "Conversion Failed");
+                    AppMessages.Error("The converted project has no config.yaml.", "Conversion failed");
                     Directory.Delete(tempDsRomDir, true);
                     File.Delete(tempRomPath);
                     return 0;
                 }
 
-                // 6. Delete old ndstool files from workDir
+
                 string[] oldFiles = { "arm9.bin", "arm7.bin", "y9.bin", "y7.bin", "banner.bin", "header.bin" };
                 string[] oldDirs = { "data", "overlay" };
 
@@ -1033,7 +1006,7 @@ namespace DSPRE
                     if (Directory.Exists(path)) Directory.Delete(path, true);
                 }
 
-                // 7. Move temp contents to workDir
+
                 foreach (string entry in Directory.GetFileSystemEntries(tempDsRomDir))
                 {
                     string destPath = Path.Combine(workDir, Path.GetFileName(entry));
@@ -1049,22 +1022,22 @@ namespace DSPRE
                     }
                 }
 
-                // 8. Cleanup
+
                 Directory.Delete(tempDsRomDir, true);
                 File.Delete(tempRomPath);
 
                 AppLogger.Info("Successfully converted project to ds-rom format.");
-                AppMessages.Info("Project converted to ds-rom format successfully.\n\nBackup saved at:\n" + backupPath,
-                    "Conversion Complete");
+                AppMessages.Info("The project is now in ds-rom format.\n\nThe backup is at:\n" + backupPath,
+                    "Project converted");
                 return 1;
             }
             catch (Exception ex)
             {
                 AppLogger.Error("Conversion failed: " + ex.Message);
                 AppMessages.Error($"Conversion failed: {ex.Message}\n\nYour backup is at:\n{backupPath}",
-                    "Conversion Failed");
+                    "Conversion failed");
 
-                // Cleanup temp files on failure
+
                 if (Directory.Exists(tempDsRomDir))
                     Directory.Delete(tempDsRomDir, true);
                 if (File.Exists(tempRomPath))
@@ -1081,8 +1054,8 @@ namespace DSPRE
         
         if (!File.Exists(backupPath))
         {
-            AppMessages.Error("Backup file not found:\n" + backupPath, 
-                "Restore Failed");
+            AppMessages.Error("The backup is missing:\n" + backupPath, 
+                "Restore failed");
             return false;
         }
         
@@ -1099,19 +1072,19 @@ namespace DSPRE
                 Directory.Delete(dir, true);
             }
             
-            // Extract backup
+
             ZipFile.ExtractToDirectory(backupPath, workDir);
             
             AppLogger.Info("Successfully restored from backup: " + backupPath);
-            AppMessages.Info("Project restored from backup successfully.", 
-                "Restore Complete");
+            AppMessages.Info("The project was restored from the backup.", 
+                "Backup restored");
             return true;
         }
         catch (Exception ex)
         {
             AppLogger.Error("Restore failed: " + ex.Message);
             AppMessages.Error($"Restore failed: {ex.Message}", 
-                "Restore Failed");
+                "Restore failed");
             return false;
         }
     }
@@ -1121,7 +1094,6 @@ namespace DSPRE
 
     public static byte[] StringToByteArray(String hex)
     {
-            //Ummm what?
             int NumberChars = hex.Length;
             byte[] bytes = new byte[NumberChars / 2];
             for (int i = 0; i < NumberChars; i += 2)
@@ -1130,10 +1102,7 @@ namespace DSPRE
         }
         public static byte[] HexStringToByteArray(string hexString)
         {
-            //FC B5 05 48 C0 46 41 21 
-            //09 22 02 4D A8 47 00 20 
-            //03 21 FC BD F1 64 00 02 
-            //00 80 3C 02
+            // Takes hex such as "FC B5 05 48 C0 46", spaces allowed.
             if (hexString is null)
                 return null;
 
@@ -1185,10 +1154,10 @@ namespace DSPRE
                     {
                         if (IsOptionalNarc(id, GameFamily))
                         {
-                            AppLogger.Debug($"Skipping optional NARC at {paths.packedPath}; it is not present in this project.");
+                            AppLogger.Debug($"Skipping optional NARC at {paths.packedPath}; it isn't present in this project.");
                             return;
                         }
-                        AppLogger.Error($"Tried to unpack NARC at {paths.packedPath}, but file does not exist.");
+                        AppLogger.Error($"Tried to unpack NARC at {paths.packedPath}, but file doesn't exist.");
                         return;
                     }
 
@@ -1217,10 +1186,10 @@ namespace DSPRE
                     {
                         if (IsOptionalNarc(id, GameFamily))
                         {
-                            AppLogger.Debug($"Skipping optional NARC at {paths.packedPath}; it is not present in this project.");
+                            AppLogger.Debug($"Skipping optional NARC at {paths.packedPath}; it isn't present in this project.");
                             return;
                         }
-                        AppLogger.Error($"Tried to unpack NARC at {paths.packedPath}, but file does not exist.");
+                        AppLogger.Error($"Tried to unpack NARC at {paths.packedPath}, but file doesn't exist.");
                         return;
                     }
 
@@ -1245,12 +1214,11 @@ namespace DSPRE
         /// </summary>
         public static Func<RawImage> MonIconFallbackHook = null;
 
-        /// <summary>Alt-form pseudo-ids (personalExtraFiles list position, vanilla-only) aren't icon indices;
         /// <summary>Alt-form pseudo-ids aren't icon indices; resolves one to the real icon id.</summary>
         public static int ResolveIconId(int id)
         {
             string[] names = GetPokemonNames();
-            // Bad Egg has no icon of its own; shows the plain egg icon.
+            // Bad Egg has no icon, so it shows the plain egg icon.
             if (id == names.Length - 1) id = names.Length - 2;
             int excess = id - names.Length;
             PokeDatabase.PersonalData.PersonalExtraFiles[] extras = DSPRE.Resources.PokeDatabase.PersonalData.ExtraFiles;
@@ -1268,7 +1236,7 @@ namespace DSPRE
         /// <summary>
         /// The party icon a form shows, as the game picks it: the extra icons after the two eggs, one run per species
         /// with form icons, in the same order in DP, Pt and HGSS (DP stops after Gastrodon). The species itself when
-        /// the form has no icon of its own, or the ROM lacks it.
+        /// the form has no icon or the ROM lacks it.
         /// </summary>
         public static int MonIconIndex(int species, int form, out int paletteIndex)
         {
@@ -1311,10 +1279,7 @@ namespace DSPRE
             return CellRenderer.Draw(icon.Cells, 0, icon.Drawing, icon.Colours, w, h);
         }
 
-        /// <summary>GDI-free item icon lookup, same NCLR/NCGR/NCER decode as the WinForms <c>GetItemPic</c>
-        /// (item icon table entry → palette/sprite/cell files in the itemIcons NARC), returned as a
-        /// <see cref="RawImage"/> instead of a System.Drawing Image. Returns null (not a placeholder) on
-        /// failure, callers that want a fallback icon supply their own, same as PokemonIconCache.</summary>
+        /// <summary>An item's icon, or null when it can't be decoded; callers supply their own fallback.</summary>
         public static RawImage GetItemPicRaw(int itemId, int w, int h)
         {
             try
@@ -1339,11 +1304,7 @@ namespace DSPRE
             }
         }
 
-        // Icon NCGRs store nTilesX/nTilesY as the 0xFFFF "unspecified" sentinel, so any size worked out from
-        // the file is a guess unrelated to how the game reads this data. The cell renderer used everywhere
-        // else addresses tiles directly by index, and icon-graphic editing does the same: raw 8×8 tile blocks
-        // at the real, universal Gen4 icon width (32px = 4 tiles); height comes from the tile count
-        // (normally 64px = 2 stacked 32×32 animation frames, frame 0 on top).
+        // Icon NCGRs leave their size unset (0xFFFF), so icons are read 32 px wide with the height from the tile count.
         private const int MonIconTileSize = 8;
         private const int MonIconTilesWide = 4;
         private const int MonIconWidth = MonIconTilesWide * MonIconTileSize;   // 32
@@ -1359,11 +1320,7 @@ namespace DSPRE
             return DecodeMonIconTiles(icon.Tiles(), icon.FirstRow());
         }
 
-        /// <summary>Same tile walk as <see cref="DecodeMonIconTiles"/>, but returns the raw 0-15 palette
-        /// indices instead of resolving them to colors, plus the palette itself. RawImage is always
-        /// flattened BGRA (see its own doc comment) so it can't carry an indexed image; callers that want
-        /// a genuine indexed PNG (preserving the real 16-color palette table, not just its resolved
-        /// pixels) need this instead.</summary>
+        /// <summary><see cref="DecodeMonIconTiles"/> as palette indices plus the palette, for exporting an indexed PNG.</summary>
         public static bool TryGetMonIconIndexedPixels(int species, int paletteIdOverride, out byte[] indices, out int width, out int height, out Color[] palette)
         {
             MonIcon icon = LoadMonIconParts(species, paletteIdOverride);
@@ -1431,14 +1388,14 @@ namespace DSPRE
         {
             if (newImage == null || newImage.IsEmpty) return "The image is empty.";
             if (!icon.SixteenColour)
-                return "This icon isn't a 16-color image; graphic editing isn't supported for this format.";
+                return "Only 16-colour icons can be replaced.";
 
             int tileBytes = MonIconTileSize * MonIconTileSize * 4 / 8;
             int totalTiles = icon.Header.Value.DataSize / tileBytes;
             int tilesTall = Math.Max(1, totalTiles / MonIconTilesWide);
             int expectedH = tilesTall * MonIconTileSize;
             if (newImage.Width != MonIconWidth || newImage.Height != expectedH)
-                return $"Size mismatch: this icon is {MonIconWidth}×{expectedH}, the image is {newImage.Width}×{newImage.Height}.";
+                return $"This icon is {MonIconWidth}×{expectedH} but the image is {newImage.Width}×{newImage.Height}.";
             return null;
         }
 
@@ -1451,12 +1408,8 @@ namespace DSPRE
         }
 
         /// <summary>
-        /// Replaces a species' icon graphic (NCGR tile data) with <paramref name="newImage"/>, which must
-        /// be the exact pixel dimensions the icon already is (see <see cref="ValidateMonIconGraphic"/>).
-        /// Quantizes onto the icon's currently-assigned (or overridden) 16-color palette bank via
-        /// nearest-RGB match; pixels with alpha &lt; 128 map to palette index 0 (the conventional
-        /// transparent slot). Writes the NCGR back to disk immediately. Returns null on success, or a
-        /// user-facing error string.
+        /// Writes a new icon graphic matched to the icon's palette (alpha under 128 is transparent) straight to disk.
+        /// Null on success, otherwise the error.
         /// </summary>
         public static string SetMonIconGraphic(int species, int paletteIdOverride, RawImage newImage)
         {
@@ -1544,7 +1497,7 @@ namespace DSPRE
         private static MonIcon LoadMonIconParts(int species, int paletteIdOverride)
         {
             string dir = GameDirs[DirNames.MonIcons].unpackedDir;
-            string digits = File.Exists(Path.Combine(dir, "0000")) || !File.Exists(Path.Combine(dir, "00000")) ? "D4" : "D5";   // some extreme future proofing
+            string digits = File.Exists(Path.Combine(dir, "0000")) || !File.Exists(Path.Combine(dir, "00000")) ? "D4" : "D5";   // an archive of 10000 or more members uses five digits
             ushort[] colours = NitroBgCodec.ReadColours(File.ReadAllBytes(Path.Combine(dir, 0.ToString(digits))));
 
             // Palette id: caller override (preview) or the value stored in the ARM9 table.

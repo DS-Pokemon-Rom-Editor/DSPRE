@@ -17,14 +17,8 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Tools
 {
     /// <summary>
-    /// Avalonia port of the WinForms <c>TableEditor</c> (data only: the animated
-    /// trainer-class sprite preview is intentionally omitted; it will return once
-    /// the Trainer editor is ported and its sprite renderer can be reused).
-    ///
-    /// Edits three/four ARM9-backed tables, gated by game family:
-    ///   • Conditional Music table        (HGSS)
-    ///   • Battle Effects Combo table      (HGSS + Plat)
-    ///   • VS Trainer / VS Pokémon tables  (HGSS)
+    /// Edits the ARM9 music and battle tables, by game family: conditional music (HGSS), battle effects
+    /// (Platinum and HGSS) and the VS trainer and Pokémon tables (HGSS).
     /// </summary>
     public class TableEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
@@ -34,7 +28,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
         { if (EqualityComparer<T>.Default.Equals(f, v)) return false; f = v; OnPropertyChanged(n); return true; }
 
-        // ── Suppress handlers during population (mirrors Helpers.DisableHandlers) ──
+        // ── Suppress handlers while filling the fields ──
         private bool _suppress;
 
         // ── Backing tables ───────────────────────────────────────────────────────
@@ -259,7 +253,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                     SetupConditionalMusic();
                     SetupBattleEffects();
                 }
-                catch (Exception ex) { StatusText = $"Error loading tables: {ex.Message}"; }
+                catch (Exception ex) { StatusText = $"Couldn't load tables: {ex.Message}"; }
                 finally { _suppress = false; }
                 Reselect(cond, combo, vs, poke);
             }
@@ -429,8 +423,8 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             catch (Exception ex)
             {
                 _suppress = false;
-                StatusText = $"Error loading tables: {ex.Message}";
-                await DialogHelper.ShowErrorAsync($"Failed to load tables:\n{ex.Message}", "Table editor error");
+                StatusText = $"Couldn't load tables: {ex.Message}";
+                await DialogHelper.ShowErrorAsync($"Couldn't load tables:\n{ex.Message}", "Music & battle tables");
             }
         }
 

@@ -28,7 +28,7 @@ namespace DSPRE.HgEngine
         }
 
         /// <summary>Parses every "[SPECIES_X] = { ... }" entry, keyed by the base species' designator.
-        /// Unrecognized slot text is skipped rather than guessed; a save refuses such an entry.</summary>
+        /// Unrecognised slot text is skipped, never guessed; a save refuses such an entry.</summary>
         public static Dictionary<string, List<FormSlot>> LoadAll()
         {
             Dictionary<string, List<FormSlot>> result = new Dictionary<string, List<FormSlot>>(StringComparer.Ordinal);
@@ -104,15 +104,15 @@ namespace DSPRE.HgEngine
         {
             error = null;
             if (desiredSlots.Count > MaxFormSlots) { error = $"A species can have at most {MaxFormSlots} forms."; return false; }
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
 
             HgEngineSymbolTable speciesTable = HgEngineSymbolTable.Load("include/constants/species.h");
             if (speciesTable == null || !speciesTable.TryGetNameWithPrefix(baseSpeciesId, "SPECIES_", out string designator))
-            { error = $"Could not resolve a species designator for id {baseSpeciesId}."; return false; }
+            { error = $"Species {baseSpeciesId} has no SPECIES_ name in the checkout."; return false; }
 
             string path = Path.Combine(HgEngineProject.RepoPathUnc, RelPath.Replace('/', Path.DirectorySeparatorChar));
             string text = ReadSource(RelPath);
-            if (text == null) { error = $"Source file not found: {path}"; return false; }
+            if (text == null) { error = $"{path} is missing from the checkout."; return false; }
             CDeclaration table = Table(text);
             if (table == null) { error = $"{RelPath} has no form table."; return false; }
 

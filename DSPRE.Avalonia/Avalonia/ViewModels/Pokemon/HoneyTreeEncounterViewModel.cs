@@ -17,9 +17,8 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
     /// <summary>
-    /// Avalonia port of the WinForms <c>HoneyTreeEncounterEditor</c> (DPPt).
-    /// Edits the honey-tree encounter groups (fixed slot rates; only the species
-    /// per slot is editable). Embedded as a tab in the Encounters editor.
+    /// The honey tree encounter groups (DPPt), species only since the slot rates are fixed. A tab of the
+    /// Special encounters editor.
     /// </summary>
     public class HoneyTreeEncounterViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
@@ -145,7 +144,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (string.IsNullOrEmpty(Filesystem.EncounterExtended) || !Directory.Exists(Filesystem.EncounterExtended))
             {
                 await DialogHelper.ShowErrorAsync(
-                    "Honey Tree encounter files not found.\nExpected location: arc/encdata_ex.narc", "Special encounters editor error");
+                    "The honey tree encounter file, arc/encdata_ex.narc, is missing.", "Special encounters editor");
                 IsAvailable = false;
                 OnPropertyChanged(nameof(IsNotAvailable));
                 return;
@@ -176,7 +175,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                _ = DialogHelper.ShowErrorAsync($"Error loading Honey Tree encounters: {ex.Message}", "Special encounters editor error");
+                _ = DialogHelper.ShowErrorAsync($"Couldn't load the honey tree encounters: {ex.Message}", "Special encounters editor");
             }
         }
 
@@ -320,7 +319,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync($"Error importing file: {ex.Message}", "Special encounters editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't import the file: {ex.Message}", "Special encounters editor");
             }
         }
 

@@ -3,13 +3,10 @@ using System.IO;
 
 namespace DSPRE.HgEngine
 {
-    /// <summary>Source-text read/write for data/FollowerProperties.c's <c>FollowerProperties[]</c>
-    /// (<c>.size</c>, <c>.bounce</c>; <c>unk0</c>/<c>unk3</c> are never set, left alone). A real
-    /// designated-initializer struct array, so this goes through <see cref="HgEngineSourcePatcher"/>
-    /// rather than <see cref="HgEngineFlatArrayField"/>. <c>.size</c> is exposed as a raw 0/1
-    /// (<c>OVERWORLD_CAN_ENTER</c>/<c>OVERWORLD_NO_ENTRY</c>): despite the name, 1 keeps the follower out
-    /// of maps that restrict tall followers. <c>.bounce</c> resolves through
-    /// the real <c>OVERWORLD_BOUNCE_*</c> names, read dynamically from this file.</summary>
+    /// <summary>data/FollowerProperties.c's .size and .bounce. Despite the name, a .size of 1 keeps the follower out
+    /// of maps that limit tall followers.</summary>
+    /// <remarks>.size is OVERWORLD_CAN_ENTER (0) or OVERWORLD_NO_ENTRY (1); .bounce uses the file's OVERWORLD_BOUNCE_* names.
+    /// unk0 and unk3 are left alone.</remarks>
     public static class HgEngineFollowerProperties
     {
         private const string SourceRelPath = "data/FollowerProperties.c";
@@ -17,19 +14,20 @@ namespace DSPRE.HgEngine
         private static readonly FieldPathSegment[] SizePath = { FieldPathSegment.Field("size") };
         private static readonly FieldPathSegment[] BouncePath = { FieldPathSegment.Field("bounce") };
 
-        /// <summary>Species with no entry at all (never dumped, or a fakemon added after the last dump)
-        /// read as size=0/bounce=0 (the struct's own C zero-init default) with <paramref name="hasEntry"/>
-        /// false, rather than failing.</summary>
+        /// <summary>
+        /// A species with no entry reads as size 0 and bounce 0, the struct's zero default, with <paramref
+        /// name="hasEntry"/> false.
+        /// </summary>
         public static bool TryGet(int speciesId, out int size, out int bounce, out bool hasEntry, out string error)
         {
             size = 0; bounce = 0; hasEntry = false; error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator))
-            { error = $"Could not resolve a species designator for id {speciesId}."; return false; }
+            { error = $"Species {speciesId} has no SPECIES_ name in the checkout."; return false; }
 
             string text = TryReadSource(out string path);
-            if (text == null) { error = $"Source file not found: {path}"; return false; }
+            if (text == null) { error = $"{path} is missing from the checkout."; return false; }
             if (!HgEngineSourcePatcher.TryFindEntry(text, designator, out _, out _)) return true;   // no entry: defaults
             hasEntry = true;
 
@@ -47,13 +45,13 @@ namespace DSPRE.HgEngine
         public static bool TrySet(int speciesId, int size, int bounce, out string error)
         {
             error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator))
-            { error = $"Could not resolve a species designator for id {speciesId}."; return false; }
+            { error = $"Species {speciesId} has no SPECIES_ name in the checkout."; return false; }
 
             string text = TryReadSource(out string path);
-            if (text == null) { error = $"Source file not found: {path}"; return false; }
+            if (text == null) { error = $"{path} is missing from the checkout."; return false; }
 
             HgEngineSymbolTable bounceNames = HgEngineSymbolTable.Load(SourceRelPath);
             string bounceLiteral = bounceNames != null && bounceNames.TryGetNameWithPrefix(bounce, "OVERWORLD_BOUNCE_", out string bn)
@@ -63,13 +61,13 @@ namespace DSPRE.HgEngine
             {
                 bool okSize = HgEngineSourcePatcher.TryUpsertField(ref text, designator, SizePath, size.ToString());
                 bool okBounce = HgEngineSourcePatcher.TryUpsertField(ref text, designator, BouncePath, bounceLiteral);
-                if (!okSize || !okBounce) { error = "Could not locate or insert .size/.bounce in the existing entry."; return false; }
+                if (!okSize || !okBounce) { error = "Couldn't locate or insert .size/.bounce in the existing entry."; return false; }
             }
             else
             {
                 string newEntry = $"\n    [{designator}] = {{.size = {size}, .bounce = {bounceLiteral}}},";
                 if (!HgEngineHeaderEditor.TryInsertBeforeFinalCloseBrace(ref text, newEntry))
-                { error = $"Could not insert a new FollowerProperties entry for species {speciesId}."; return false; }
+                { error = $"Couldn't insert a new FollowerProperties entry for species {speciesId}."; return false; }
             }
 
             HgEngineFileCache.WriteText(path, text);

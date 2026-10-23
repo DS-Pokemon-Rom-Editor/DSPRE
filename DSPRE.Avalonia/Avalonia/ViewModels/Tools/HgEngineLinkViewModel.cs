@@ -7,8 +7,8 @@ using DSPRE.HgEngine;
 namespace DSPRE.Avalonia.ViewModels.Tools
 {
     /// <summary>Backs the "Link hg-engine checkout" window: link/unlink an hg-engine checkout and
-    /// toggle whether it's active, so the Pokémon/Trainer/Item/Move/Wild-Encounter editors read and
-    /// write its data/*.c source instead of the packed ROM.</summary>
+    /// toggle whether it's active, so the Pokémon, Trainer, Item, Move data and Wild Pokémon editors read
+    /// and write its data/*.c source instead of the packed ROM.</summary>
     public class HgEngineLinkViewModel : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -19,7 +19,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         public string StatusText => IsLinked
             ? $"Linked to {HgEngineProject.RepoRootWindows}  (builds with {ShellLabel})"
-            : "No hg-engine checkout linked for this project.";
+            : "No hg-engine checkout is linked.";
 
         private static string ShellLabel => HgEngineProject.Shell switch
         {

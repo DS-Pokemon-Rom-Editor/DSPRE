@@ -12,8 +12,8 @@ namespace DSPRE.Avalonia.Data
     public static class ModelTexturePairing
     {
         /// <summary>
-        /// The palette whose name follows the texture's, or -1 when none does. The rule is the one DSPRE has always
-        /// used: the texture name, then shorter and shorter cuts of it, each tried as "name_pl" and as "name"; then a
+        /// The palette whose name follows the texture's, or -1 when none does. DSPRE's rule: the texture name, then
+        /// shorter and shorter cuts of it, each tried as "name_pl" and as "name"; then a
         /// palette that starts with the whole texture name. Nothing looser, because a near name is often the wrong
         /// palette (sea_on is drawn with sea_f02_pl, not the first "sea_" palette).
         /// </summary>

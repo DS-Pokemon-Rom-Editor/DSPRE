@@ -6,9 +6,7 @@
         xmlns:world="clr-namespace:DSPRE.Avalonia.Views.World"
         x:Class="DSPRE.Avalonia.Views.World.HeaderFieldsView"
         x:DataType="vm:HeaderEditorViewModel">
-  <!-- The header detail form. Shared by the standalone Header editor and the Maps workspace's Header tab.
-       Each preview sits in the group whose fields it shows: the area icon with the location, the field view
-       with the weather and camera. -->
+  <!-- The header form, shared by the Header editor and the Maps workspace; each preview sits with the fields it shows. -->
   <UserControl.Styles>
     <Style Selector="TextBlock.fieldlabel">
       <Setter Property="FontSize" Value="12"/>
@@ -109,7 +107,7 @@
             <StackPanel Orientation="Horizontal" Spacing="6">
               <controls:IdNameSelector Width="260" Maximum="{Binding BattleBackgroundMax}" Value="{Binding BattleBackground}" Names="{Binding BattleBackgroundNames}"/>
               <Button x:Name="OpenBattleSceneryButton" Content="Open" controls:Icon.Key="OpenLink" Click="OpenBattleScenery_Click" Padding="8,2"
-                      ToolTip.Tip="Show this scenery and every place that fights on it"/>
+                      ToolTip.Tip="Show this scenery and every place that uses it"/>
             </StackPanel>
           </StackPanel>
           <!-- The header's camera and weather at the top screen's own size, 256 by 192. -->

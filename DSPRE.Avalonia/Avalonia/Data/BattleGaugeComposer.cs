@@ -26,12 +26,12 @@ namespace DSPRE.Avalonia.Data
             public (int pos, int size)[] LvDigits; // the level number, upper then lower
             public (int pos, int size)[] Hp;       // the current HP number; one entry is unused
             public (int pos, int size) HpMax;      // the maximum HP number
-            public int Status;                     // the word for what is wrong, three tiles
+            public int Status;                     // the status condition word, three tiles
             public int Slash;                      // the "/" between the two numbers, when it is not
                                                    // already part of the picture (double battles only)
             public (int pos, int size)[] Gauge;    // the health fill, first piece then second
             public int Caught;                     // the caught ball, on their side
-            public int HpLeft, HpRight;            // the bar's ends the doubles swap for the numbers' ends
+            public int HpLeft, HpRight;            // bar end tiles that doubles replace with the number ends
         }
 
         // Tile numbers, not bytes: multiplied up when used. Straight from the gauge's own tables.
@@ -261,7 +261,7 @@ namespace DSPRE.Avalonia.Data
             }
             catch (Exception ex)
             {
-                AppLogger.Error("A battle gauge could not be put together: " + ex.Message);
+                AppLogger.Error("A battle gauge couldn't be put together: " + ex.Message);
                 return null;
             }
         }
@@ -302,9 +302,7 @@ namespace DSPRE.Avalonia.Data
 
             if (showing.ShowHealthNumbers)
             {
-                // A double battle's bars normally show the bar and no numbers; the games swap the two
-                // over on a press, and only then do they put the "/" in. A single battle's bars have
-                // it in the picture already, which is why only these two write one.
+                // Double battle bars show numbers only after a press, and add the "/" then; single battle bars have it drawn in.
                 if (layout.Slash > 0)
                 {
                     // The games copy this tile as it is, so its colours are the sheet's own.

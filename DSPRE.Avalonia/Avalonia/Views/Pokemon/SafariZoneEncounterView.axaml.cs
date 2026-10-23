@@ -18,7 +18,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private async void SaveAs_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.SaveAsAsync() ?? Task.CompletedTask, "The Safari Zone area wasn't saved.", ErrorTitle);
         private async void Import_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ImportAsync() ?? Task.CompletedTask, "The Safari Zone area wasn't imported.", ErrorTitle);
 
-        private const string ErrorTitle = "Special encounters editor error";
+        private const string ErrorTitle = "Special encounters editor";
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {

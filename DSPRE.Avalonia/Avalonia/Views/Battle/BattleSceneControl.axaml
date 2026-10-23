@@ -9,9 +9,7 @@
   <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="4" Background="Black">
     <Viewbox Stretch="Uniform">
       <Canvas Width="256" Height="192" ClipToBounds="True">
-        <!-- Real battle-scene backdrop + terrain platforms (Arena Type selector: DSUtils.BattleGroundRenderer /
-             BattleBgRenderer, the same renderers the Move animations & battle scripts editor uses), falling back to the
-             bundled placeholder art if the ROM/NARC is unavailable or decoding fails. -->
+        <!-- The ROM's backdrop and platforms, or the bundled art when they can't be read. -->
         <Image Source="{Binding ArenaBackdrop}" Canvas.Left="{Binding BackdropX}" Canvas.Top="0" Stretch="None" IsVisible="{Binding HasArenaGraphics}"/>
         <Image Source="{x:Static views:BattleSceneControl.BackgroundAsset}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192" Stretch="Fill" IsVisible="{Binding !HasArenaGraphics}"/>
 
@@ -44,9 +42,10 @@
           </Image>
         </Canvas>
 
-        <!-- Enemy (front) + player (back) sprites; passed in per scene. Each sprite and its palette-fade tint share
-             one program-animation transform, and the tint is masked to the sprite's own alpha so the transparent
-             (palette index 0) pixels are never coloured. -->
+        <!-- 
+             Enemy (front) and player (back) sprites, passed in per scene. The tint follows the sprite's alpha so
+             transparent pixels stay clear.
+        -->
         <Grid Canvas.Left="{Binding EnemyLeft}" Canvas.Top="{Binding #SceneRoot.EnemyY}" Width="80" Height="80"
                RenderTransformOrigin="0,0" IsVisible="{Binding EnemyShown}">
           <Grid.RenderTransform>
@@ -117,16 +116,16 @@
         <Image Source="{Binding PartyRowsImage}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192"
                RenderOptions.BitmapInterpolationMode="None" IsHitTestVisible="False"/>
 
-        <!-- Battle UI chrome: the real pl_batt_obj gauge frames so an edited gauge graphic shows here,
-             falling back to the bundled placeholders when the NARC can't be decoded. Each side's bar slides
-             in on its own during a send-out. -->
+        <!-- The ROM's gauge frames, or the bundled ones when they can't be read. Each side's bar slides in alone during a send-out. -->
         <Canvas Canvas.Left="{Binding EnemyGaugeX}" IsVisible="{Binding EnemyGaugeShown}">
           <Image Source="{Binding GaugeEnemyImage}"  Canvas.Left="-70" Canvas.Top="-92" Width="256" Height="256"
                  IsVisible="{Binding HasRealGauges}" RenderOptions.BitmapInterpolationMode="None"/>
           <Image Source="{x:Static views:BattleSceneControl.HealthOpponentAsset}" Canvas.Left="0"   Canvas.Top="18"
                  IsVisible="{Binding PlaceholderGaugesVisible}"/>
-          <!-- The name and level are written into each bar's own picture now, so only the health fill
-               goes on top. Games whose letters cannot be read keep the plain written sample. -->
+          <!-- 
+               Each bar's picture holds the name and level, so only the HP fill goes on top. Games whose font can't be
+               read keep the written sample.
+          -->
           <Canvas IsVisible="{Binding HasRealGauges}">
             <TextBlock Canvas.Left="3"   Canvas.Top="24"  Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
             <TextBlock Canvas.Left="78"  Canvas.Top="24"  Text="{Binding GaugeLevelText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>

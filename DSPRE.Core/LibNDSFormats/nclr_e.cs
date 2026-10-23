@@ -4,9 +4,7 @@ using System.Drawing;
 
 namespace MKDS_Course_Editor
 {
-    // Historically a WinForms Form (Tinke/MKDS Course Editor palette editor), but DSPRE only ever
-    // used its static color-format helpers (encodeColor/CColorFormat via convertir.cs), now a
-    // plain class so the color math is core/cross-platform.
+    // From the Tinke and MKDS Course Editor palette editor; only its colour helpers are kept.
     public class nclr_e
     {
         int _r = 255;

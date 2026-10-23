@@ -78,7 +78,7 @@ namespace DSPRE
             if (!Supports(romId)) return "This patch is for HeartGold and SoulSilver.";
             if (Inspect(romId, arm9)) return "The trainer custom Poké Balls patch is already applied.";
             return Only(Find(arm9, Original, OriginalCalls)) >= 0 ? null :
-                "The ARM9 trainer capsule routine does not match the original code. Another patch or edit may have changed it.";
+                "The ARM9 trainer capsule routine doesn't match the original code. Another patch or edit may have changed it.";
         }
 
         /// <summary>Validates the entire overwritten routine before changing any byte.</summary>

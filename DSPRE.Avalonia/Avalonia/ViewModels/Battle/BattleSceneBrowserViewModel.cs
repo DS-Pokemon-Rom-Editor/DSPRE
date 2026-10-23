@@ -44,8 +44,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         public string FoundSummary => Scenes.Count == 0
             ? "This game has no battle scenery DSPRE can list. Open a ROM first."
-            : $"{Scenes.Count} sets of battle scenery. The number beside each is what a map header carries "
-              + "to ask for it.";
+            : $"{Scenes.Count} sets of battle scenery. A map header picks one by the number beside it.";
 
         private BattleScenes.Scene _selected;
         public BattleScenes.Scene Selected
@@ -56,7 +55,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         public ObservableCollection<string> Terrains { get; } = new();
 
-        private int _terrainIndex = 2;      // Lawn, the one most places use
+        private int _terrainIndex = 2;      // Lawn, used by most places
         public int TerrainIndex
         {
             get => _terrainIndex;
@@ -81,12 +80,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public bool HasPicture => _picture != null;
         public bool HasNoPicture => _picture == null && !string.IsNullOrEmpty(_whynot);
 
-        private string _details = "Pick a place on the left to see what it fights on.";
+        private string _details = "Pick a place on the left to see its battle scenery.";
         public string Details { get => _details; private set => Set(ref _details, value); }
 
         public ObservableCollection<DetailFact> Facts { get; } = new();
 
-        /// <summary>Every place that fights on this scenery, so the number means something.</summary>
+        /// <summary>Every place whose battles use this scenery.</summary>
         public ObservableCollection<string> Places { get; } = new();
 
         private string _placesHeader = "";
@@ -118,8 +117,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             Facts.Add(new DetailFact("Palette", (s.PaletteDay + _timeOfDay).ToString()));
             Facts.Add(new DetailFact("Headers", s.Headers.Count == 0 ? "None" : s.Headers.Count.ToString()));
 
-            // The whole list rather than the first forty, in a box that scrolls, so nothing trails off
-            // into "and more".
+            // The whole list in a scrolling box, not cut off at forty.
             Places.Clear();
             for (int i = 0; i < s.Headers.Count; i++)
             {
@@ -145,7 +143,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             catch (Exception ex)
             {
                 AppLogger.Error("BattleSceneBrowser.Look: " + ex.Message);
-                Whynot = "This scenery could not be drawn.";
+                Whynot = "This scenery couldn't be drawn.";
             }
             RaiseAll();
         }
@@ -153,8 +151,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// <summary>What one screen of a battle looks like. </summary>
         private const int ScreenWidth = 256, ScreenHeight = 192;
 
-        /// <summary>Puts the ground on top of the backdrop, cropped to the screen, which is what a battle
-        /// actually looks like before anything stands on it.</summary>
+        /// <summary>Puts the ground over the backdrop, cropped to the screen, as a battle looks before anyone
+        /// is in it.</summary>
         private (byte[] Rgba, int Width, int Height) Compose(BattleBgRenderer.BgImage bg)
         {
             int w = Math.Min(ScreenWidth, bg.Width), h = Math.Min(ScreenHeight, bg.Height);
@@ -195,7 +193,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private string _status = "";
         public string StatusText { get => _status; set => Set(ref _status, value); }
 
-        /// <summary>Which file the Graphics window should open for the piece asked for.</summary>
+        /// <summary>Which file All graphics should open for the piece asked for.</summary>
         public int FileFor(string piece) => _selected == null ? -1 : piece switch
         {
             "drawing" => _selected.Drawing,

@@ -97,14 +97,14 @@
                   <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding Item2Odds}" Classes="subtle" IsVisible="{Binding HasHeldItemOdds}"/>
                   <Button Grid.Row="8" Grid.Column="1" Content="Wild held items" controls:Icon.Key="OpenLink" HorizontalAlignment="Left"
                           Click="WildHeldItems_Click" IsVisible="{Binding CanOpenWildHeldItems}"
-                          ToolTip.Tip="The chances every wild Pokémon holds its items with"/>
+                          ToolTip.Tip="How often wild Pokémon hold their items"/>
                 </Grid>
               </GroupBox>
             </Grid>
           </StackPanel></controls:CappedWidth>
         </ScrollViewer>
       </TabItem>
-      <TabItem Header="Misc">
+      <TabItem Header="Other">
         <ScrollViewer HorizontalScrollBarVisibility="Disabled">
           <controls:CappedWidth Cap="980"><StackPanel Spacing="8" Margin="8">
             <GroupBox Header="General">
@@ -130,7 +130,7 @@
                 </StackPanel>
                 <TextBlock Grid.Row="8" Grid.Column="0" Text="Growth curve"    Classes="label"/>
                 <ComboBox  Grid.Row="8" Grid.Column="1" ItemsSource="{Binding GrowthCurveNames}" SelectedIndex="{Binding GrowthCurveIndex}"/>
-                <TextBlock Grid.Row="10" Grid.Column="0" Text="Dex color"      Classes="label"/>
+                <TextBlock Grid.Row="10" Grid.Column="0" Text="Dex colour"      Classes="label"/>
                 <ComboBox  Grid.Row="10" Grid.Column="1" ItemsSource="{Binding DexColorNames}"   SelectedIndex="{Binding DexColorIndex}"/>
               </Grid>
             </GroupBox>
@@ -141,7 +141,7 @@
                 <TextBlock Grid.Row="0" Grid.Column="2" Text="Egg group 2" Classes="label" Margin="12,0,6,0"/>
                 <ComboBox  Grid.Row="0" Grid.Column="3" ItemsSource="{Binding EggGroupNames}" SelectedIndex="{Binding EggGroup2Index}"/>
                 <TextBlock Grid.Row="2" Grid.Column="0" Text="Hatch result" Classes="label" IsVisible="{Binding !ShowHgEngineExtras}"
-                           ToolTip.Tip="Babies that need an incense are set in Pokémon > Breeding Items"/>
+                           ToolTip.Tip="Babies that need an incense are set in Pokémon > Breeding items"/>
                 <controls:FusionAutoCompleteBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding HatchResultIndex}" AllowsNone="False" IsVisible="{Binding !ShowHgEngineExtras}"/>
                 <TextBlock Grid.Row="2" Grid.Column="2" Text="Egg steps"    Classes="label" Margin="12,0,6,0"/>
                 <NumericUpDown Grid.Row="2" Grid.Column="3" Value="{Binding EggSteps}" Minimum="0" Maximum="255"/>
@@ -158,7 +158,7 @@
                              IsVisible="{Binding HasFollowerModelChoice}"/>
                   <TextBlock Grid.Row="2" Grid.Column="0" Text="Size" Classes="label"/>
                   <ComboBox  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding FollowerSizeOptions}" SelectedIndex="{Binding FollowerSizeIndex}"/>
-                  <TextBlock Grid.Row="2" Grid.Column="2" Text="Raw bits" Classes="label" Margin="12,0,6,0"/>
+                  <TextBlock Grid.Row="2" Grid.Column="2" Text="Stored value" Classes="label" Margin="12,0,6,0" ToolTip.Tip="Raw bits"/>
                   <TextBox   Grid.Row="2" Grid.Column="3" Text="{Binding FollowerRawBits}" MaxLength="4" FontFamily="Consolas,monospace"
                              Width="70" HorizontalAlignment="Left"/>
                   <TextBlock Grid.Row="4" Grid.Column="0" Text="Hover" Classes="label"/>
@@ -227,7 +227,7 @@
                   <ComboBox Grid.Row="4" Grid.Column="1" MinWidth="0" HorizontalAlignment="Stretch"
                             ItemsSource="{Binding AthlonLiftOptions}" SelectedIndex="{Binding AthlonLiftIndex}"/>
                   <TextBlock Grid.Row="6" Grid.Column="0" Text="Offset" Classes="label" Margin="0,0,12,0"
-                             ToolTip.Tip="Its bottom edge against the sprites drawn with it"/>
+                             ToolTip.Tip="Where its bottom edge sits against the sprites drawn with it"/>
                   <ComboBox Grid.Row="6" Grid.Column="1" MinWidth="0" HorizontalAlignment="Stretch"
                             ItemsSource="{Binding AthlonOffsetOptions}" SelectedIndex="{Binding AthlonOffsetIndex}"/>
                 </Grid></controls:CappedWidth>
@@ -245,7 +245,7 @@
                    ToolTip.Tip="Edit TM/HM compatibility for many Pokémon at once"/>
           <Grid ColumnDefinitions="*,8,Auto,8,*">
             <DockPanel Grid.Column="0">
-              <TextBlock DockPanel.Dock="Top" Text="Cannot learn" FontWeight="SemiBold" Margin="0,0,0,4"/>
+              <TextBlock DockPanel.Dock="Top" Text="Can't learn" FontWeight="SemiBold" Margin="0,0,0,4"/>
               <Grid DockPanel.Dock="Top" ColumnDefinitions="74,190,Auto" Margin="12,0,0,2" TextElement.FontSize="11" TextElement.Foreground="{DynamicResource Editor.Subtle}">
                 <Grid Grid.Column="2" ColumnDefinitions="40,44,28" Margin="6,0,0,0">
                   <TextBlock Text="Power" HorizontalAlignment="Right"/>
@@ -308,7 +308,7 @@
                 <NumericUpDown Grid.Row="0" Grid.Column="3" Value="{Binding HgBaseExp}" Minimum="0" Maximum="65535"/>
                 <TextBlock Grid.Row="2" Grid.Column="0" Text="Baby Pokémon"    Classes="label"/>
                 <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon"  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding HgBabyMonIndex}"/>
-                <TextBlock Grid.Row="2" Grid.Column="2" Text="Regional Dex #"  Classes="label" Margin="12,0,6,0"/>
+                <TextBlock Grid.Row="2" Grid.Column="2" Text="Regional Dex number" Classes="label" Margin="12,0,6,0"/>
                 <NumericUpDown Grid.Row="2" Grid.Column="3" Value="{Binding HgRegionalDexNumber}" Minimum="0" Maximum="65535"/>
                 <TextBlock Grid.Row="4" Grid.Column="0" Text="Icon palette"    Classes="label"/>
                 <ComboBox  Grid.Row="4" Grid.Column="1" ItemsSource="{Binding IconPaletteOptions}" SelectedIndex="{Binding HgIconPaletteIndex}"/>
@@ -320,7 +320,7 @@
                 <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding HgFollowerSize}" Minimum="0" Maximum="1"/>
                 <TextBlock Grid.Row="0" Grid.Column="2" Text="Bounce speed" Classes="label" Margin="12,0,6,0"/>
                 <ComboBox  Grid.Row="0" Grid.Column="3" ItemsSource="{Binding FollowerBounceOptions}" SelectedIndex="{Binding HgFollowerBounceIndex}"/>
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="OW female form" Classes="label"
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Female overworld" Classes="label"
                            ToolTip.Tip="The female overworld, or FALSE for none."/>
                 <TextBox   Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding HgOwFemaleFormExpression}"/>
                 <TextBlock Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding HgOwFemaleFormError}" IsVisible="{Binding HasHgOwFemaleFormError}"

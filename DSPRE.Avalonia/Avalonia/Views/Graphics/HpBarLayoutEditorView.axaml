@@ -32,7 +32,7 @@
         <TextBlock Text="Bar" VerticalAlignment="Center"/>
         <ComboBox Width="220" ItemsSource="{Binding BarNames}" SelectedIndex="{Binding BarIndex}"/>
       </StackPanel>
-      <Button Content="Import PNG…" controls:Icon.Key="import" Click="Import_Click" ToolTip.Tip="A picture of this bar as it appears"/>
+      <Button Content="Import PNG…" controls:Icon.Key="import" Click="Import_Click" ToolTip.Tip="A picture of this bar as it looks in battle"/>
       <StackPanel Orientation="Horizontal" Spacing="6" Margin="16,0,0,4">
         <TextBlock Text="Sample name" VerticalAlignment="Center"/>
         <TextBox Width="120" Text="{Binding SampleName}"/>

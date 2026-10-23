@@ -4,17 +4,12 @@ using System.Linq;
 
 namespace DSPRE.ROMFiles
 {
-    /// <summary>
-    /// The scripts a map runs by itself, rather than because you talked to somebody or walked onto a
-    /// trigger.
-    /// </summary>
+    /// <summary>The scripts a map runs by itself, not ones started by talking to someone or stepping on a trigger.</summary>
     public static class FieldLevelScripts
     {
         /// <summary>
-        /// The order the engine runs the arrival scripts in: the map change during the warp, then the two
-        /// passes of field setup. Platinum field_map_change.c runs ON_TRANSITION before the field map
-        /// starts, and fieldmap.c runs ON_LOAD during graphics setup and ON_RESUME after the music;
-        /// HeartGold does the same in field_warp_tasks.c and fieldmap.c.
+        /// The order the arrival scripts run: ON_TRANSITION during the warp, then ON_LOAD in graphics setup and
+        /// ON_RESUME after the music (Platinum field_map_change.c and fieldmap.c; HGSS field_warp_tasks.c).
         /// </summary>
         public static readonly int[] ArrivalOrder =
         {
@@ -80,7 +75,7 @@ namespace DSPRE.ROMFiles
                 case LevelScriptTrigger.MAPCHANGE: return "On warping in, before the map loads";
                 case LevelScriptTrigger.SCREENRESET: return "While the map sets up, once the music starts";
                 case LevelScriptTrigger.LOADGAME: return "While the map sets up, before its data loads";
-                default: return "Under something this editor does not recognise";
+                default: return "When a trigger DSPRE doesn't know fires";
             }
         }
     }

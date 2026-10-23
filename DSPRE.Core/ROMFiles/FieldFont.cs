@@ -6,14 +6,11 @@ using DSPRE.CharMaps;
 
 namespace DSPRE.ROMFiles
 {
-    /// <summary>
-    /// The font the games write with, read out of the ROM that is loaded so it shows whatever the person
-    /// using DSPRE has put there.
-    /// </summary>
+    /// <summary>The game font, read from the open ROM so edits show.</summary>
     public sealed class FieldFont
     {
-        /// <summary>Entry 1 of the archive, NARC_font_talk_dat, which is the one dialogue uses.</summary>
         public const int SystemFontEntry = 0;
+        /// <summary>Entry 1 of the archive, NARC_font_talk_dat, the dialogue font.</summary>
         public const int TalkFontEntry = 1;
 
         public const int HeaderSize = 16;
@@ -90,10 +87,7 @@ namespace DSPRE.ROMFiles
             return new FieldFont(pixels, widths, count, maxWidth, height, bpp, header, tail);
         }
 
-        /// <summary>
-        /// The font back as the bytes an archive entry holds. The header and anything past the width
-        /// table are the ones it was read with, so a font nobody edited comes out exactly as it went in.
-        /// </summary>
+        /// <summary>The font as archive entry bytes; the header and trailing data are kept, so an unedited font round-trips.</summary>
         public byte[] Write()
         {
             int tableStart = HeaderSize + GlyphCount * BytesPerGlyph;
@@ -189,7 +183,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Writes this font over an unpacked archive entry.</summary>
         public void Save(int entry)
         {
-            if (EntryPath(entry) == null) throw new FileNotFoundException($"Font archive entry {entry} is not unpacked.");
+            if (EntryPath(entry) == null) throw new FileNotFoundException($"Font archive entry {entry} isn't unpacked.");
             ArchiveMembers.Put(RomInfo.DirNames.Fonts, entry, Write());
         }
 

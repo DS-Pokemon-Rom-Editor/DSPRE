@@ -11,7 +11,7 @@ namespace DSPRE.Avalonia.Data
     /// <summary>Taking a graphic out of the game and putting one back.</summary>
     public static partial class GraphicAssets
     {
-        /// <summary>The numbers and the colours of one entry, which is what a drawing really is.</summary>
+        /// <summary>An entry's pixel numbers and colours.</summary>
         public sealed class Indexed
         {
             public byte[] Indices;    // one number per pixel
@@ -31,7 +31,7 @@ namespace DSPRE.Avalonia.Data
         {
             whynot = null;
             ScriptNarc narc = source ?? new ScriptNarc(a.Dir);
-            if (!narc.Available) { whynot = "This game does not have this archive."; return null; }
+            if (!narc.Available) { whynot = "This game doesn't have this archive."; return null; }
 
             if (a.Pokewalker is { } pw)
             {
@@ -51,7 +51,7 @@ namespace DSPRE.Avalonia.Data
                 whynot = kind == Kind.Palette
                     ? "This entry is a set of colours, not a drawing. The colours can be changed but there "
                       + "are no pixels here to paint."
-                    : "This entry is not a drawing, so it has no pixels to paint.";
+                    : "This entry isn't a drawing, so it has no pixels to paint.";
                 return null;
             }
 
@@ -60,12 +60,12 @@ namespace DSPRE.Avalonia.Data
 
             byte[] raw = Unsqueeze(rawStored);
             (byte r, byte g, byte b)[] colours = NitroBgCodec.ReadPalette(Unsqueeze(pal), out int count);
-            if (colours == null || count == 0) { whynot = "The colours could not be read."; return null; }
+            if (colours == null || count == 0) { whynot = "The colours couldn't be read."; return null; }
 
             (int dataOff, int dataSize, int bpp, int width, int height, bool tiled)? shape = ReadShape(raw, WidthFor(a, index));
             if (shape == null)
             {
-                whynot = "This drawing is stored in a way DSPRE cannot take apart yet.";
+                whynot = "This drawing is stored in a way DSPRE can't take apart yet.";
                 return null;
             }
 
@@ -183,8 +183,7 @@ namespace DSPRE.Avalonia.Data
             int numTiles = bytesPerTile > 0 ? dataSize / bytesPerTile : 0;
             if (numTiles <= 0) return null;
 
-            // Width is recorded far more often than height. When only the height is missing, work it out
-            // from how many tiles there are rather than falling back to a guess about the whole shape.
+            // Width is recorded far more often than height; when only the height is missing, work it out from the tile count.
             int acrossTiles = tilesAcross > 0 ? tilesAcross : 0;
             int downTiles = tilesDown > 0 ? tilesDown : 0;
 
@@ -318,7 +317,7 @@ namespace DSPRE.Avalonia.Data
 
         private static int Key555(byte r, byte g, byte b) => (r >> 3) | ((g >> 3) << 5) | ((b >> 3) << 10);
 
-        /// <summary>Whether Replace takes this entry as the whole picture it draws rather than its tiles.</summary>
+        /// <summary>Whether Replace takes this entry as the whole picture it draws, not its tiles.</summary>
         private static bool SavedAsWholePicture(Archive a, int index)
         {
             try
@@ -337,7 +336,7 @@ namespace DSPRE.Avalonia.Data
         public static string ExportRaw(Archive a, int index, string path)
         {
             ScriptNarc narc = new ScriptNarc(a.Dir);
-            if (!narc.Available) return "This game does not have this archive.";
+            if (!narc.Available) return "This game doesn't have this archive.";
             byte[] b = narc.Get(index);
             if (b == null || b.Length == 0) return "This entry is empty.";
             PlainFiles.WriteBytes(path, b);
@@ -364,17 +363,17 @@ namespace DSPRE.Avalonia.Data
             if (whole != Skipped) return whole;
 
             Indexed ix = ReadIndexed(a, index, out string whynot, paletteIndex: paletteIndex, paletteBank: paletteBank);
-            if (ix == null) return whynot ?? "This entry is not a drawing, so a PNG cannot take its place.";
+            if (ix == null) return whynot ?? "This entry isn't a drawing, so a PNG can't take its place.";
 
             byte[] file;
             try { file = File.ReadAllBytes(path); }
-            catch (Exception ex) { return "That file could not be read: " + ex.Message; }
+            catch (Exception ex) { return "That file couldn't be read: " + ex.Message; }
 
             if (IndexedPng.IsInterlaced(file))
                 return "That PNG is interlaced. Save it without interlacing and import it again.";
             if (!IndexedPng.TryRead(file, out byte[] indices, out uint[] pal, out int w, out int h))
-                return "That PNG does not keep its colours in a numbered list. Export this entry first and "
-                     + "paint over what comes out, or save yours as an indexed PNG.";
+                return "That PNG isn't indexed. Export this entry first and paint over it, or save yours as an "
+                     + "indexed PNG.";
 
             if (w != ix.Width || h != ix.Height)
                 return $"This drawing is {ix.Width} by {ix.Height} and that PNG is {w} by {h}. Export this "
@@ -437,17 +436,17 @@ namespace DSPRE.Avalonia.Data
 
             Preview shown = Render(a, index);
             if (shown.Rgba == null || shown.Width <= 0)
-                return shown.Whynot ?? "This entry could not be drawn, so nothing can be put back into it.";
+                return shown.Whynot ?? "This entry couldn't be drawn, so nothing can be put back into it.";
 
             byte[] file;
             try { file = File.ReadAllBytes(path); }
-            catch (Exception ex) { return "That file could not be read: " + ex.Message; }
+            catch (Exception ex) { return "That file couldn't be read: " + ex.Message; }
 
             if (IndexedPng.IsInterlaced(file))
                 return "That PNG is interlaced. Save it without interlacing and import it again.";
             if (!IndexedPng.TryRead(file, out byte[] indices, out uint[] pal, out int w, out int h))
-                return "That PNG does not keep its colours in a numbered list. Save this one first and "
-                     + "paint over what comes out, or save yours as an indexed PNG.";
+                return "That PNG isn't indexed. Export this one first and paint over it, or save yours as an "
+                     + "indexed PNG.";
             if (w != shown.Width || h != shown.Height)
                 return $"This is {shown.Width} by {shown.Height} and that PNG is {w} by {h}. Save this one "
                      + "first to get one the right size.";
@@ -462,14 +461,12 @@ namespace DSPRE.Avalonia.Data
                                            out int fought);
             if (why != null) return why;
             if (shared > 0)
-                note = $"{changed} squares changed, and {shared} of them are drawn from a piece that is "
-                     + "used elsewhere in this background, so those places changed too. That is how "
-                     + "backgrounds save room rather than something going wrong.";
+                note = $"{changed} tiles changed, and {shared} of them are used elsewhere in this background, so "
+                     + "those places changed too. Backgrounds share tiles to save room, so nothing went wrong.";
             if (fought > 0)
                 note = (note == null ? "" : note + " ")
-                     + $"{fought} pixels were asked to be two colours at once because the places sharing "
-                     + "a piece were painted differently. A piece can only be one thing, so the last one "
-                     + "won.";
+                     + $"{fought} pixels were painted different colours in places that share a tile. A tile "
+                     + "holds one picture, so the last one painted wins.";
             return null;
         }
 
@@ -486,7 +483,7 @@ namespace DSPRE.Avalonia.Data
             if (CannotWriteBecause(a, index) is string refused) return refused;
             ScriptNarc narc = new ScriptNarc(a.Dir);
             byte[] storedRaw = narc.Get(index);
-            if (storedRaw == null) return "This entry could not be read.";
+            if (storedRaw == null) return "This entry couldn't be read.";
 
             if (a.Pokewalker is { } pw)
             {
@@ -494,21 +491,19 @@ namespace DSPRE.Avalonia.Data
                 if (plain == null) return "A Pokéwalker picture has four shades, numbered 0 to 3.";
                 byte pwMarker = SqueezeMarker(storedRaw);
                 byte[] packed = pwMarker != 0 ? Squeeze(plain, pwMarker) : plain;
-                if (packed == null) return "This picture could not be squeezed back down, so nothing was changed.";
+                if (packed == null) return "This picture couldn't be compressed again, so nothing was changed.";
                 narc.Put(index, packed);
                 return null;
             }
 
-            // Some of these are kept squeezed down. Work on the opened-out file and squeeze it again at
-            // the end, so the edit lands in the same shape the game reads.
+            // Some of these are compressed: edit the decompressed file and compress it again, as the game reads it.
             byte marker = SqueezeMarker(storedRaw);
             byte[] stored = marker != 0 ? Unsqueeze(storedRaw) : storedRaw;
             if (marker == 0x11)
-                return "This drawing is squeezed down in a way DSPRE cannot put back yet, so nothing was "
-                     + "changed.";
+                return "This drawing uses a compression DSPRE can't write yet, so nothing was changed.";
 
             (int dataOff, int dataSize, int bpp, int width, int height, bool tiled)? shape = ReadShape(stored, WidthFor(a, index));
-            if (shape == null) return "This drawing could not be taken apart, so nothing was changed.";
+            if (shape == null) return "This drawing couldn't be taken apart, so nothing was changed.";
             (int dataOff, int dataSize, int bpp, int width, int height, bool isTiled) = shape.Value;
 
             byte[] tiled = null;
@@ -556,7 +551,7 @@ namespace DSPRE.Avalonia.Data
             {
                 byte[] packed = Squeeze(outp, marker);
                 if (packed == null)
-                    return "This drawing could not be squeezed back down, so nothing was changed.";
+                    return "This drawing couldn't be compressed again, so nothing was changed.";
                 outp = packed;
             }
 
@@ -587,7 +582,7 @@ namespace DSPRE.Avalonia.Data
         public static string WritePalette(Archive a, int index, uint[] palette, int paletteIndex = -1, int paletteBank = -1)
         {
             ScriptNarc narc = new ScriptNarc(a.Dir);
-            if (!narc.Available) return "This game does not have this archive.";
+            if (!narc.Available) return "This game doesn't have this archive.";
 
             // Where in the file this entry's colours start, matching what ReadIndexed took out: a bank is
             // 256 colours for an 8bpp drawing.
@@ -602,9 +597,9 @@ namespace DSPRE.Avalonia.Data
             if (a.Colours == Pairing.SameIndexInOtherArchive && a.ColourArchive != null)
             {
                 ScriptNarc other = new ScriptNarc(a.ColourArchive.Value);
-                if (!other.Available) return "The colours for this drawing are in an archive this game does not have.";
+                if (!other.Available) return "The colours for this drawing are in an archive this game doesn't have.";
                 palStored = other.Get(index); palIndex = index;
-                if (palStored == null) return "The colours for this drawing could not be found.";
+                if (palStored == null) return "The colours for this drawing couldn't be found.";
                 string err = PatchPalette(ref palStored, palette, startAt);
                 if (err != null) return err;
                 other.Put(palIndex, palStored);
@@ -612,7 +607,7 @@ namespace DSPRE.Avalonia.Data
             }
 
             palIndex = paletteIndex >= 0 ? paletteIndex : FindColourIndex(a, narc, index);
-            if (palIndex < 0) return "The colours for this drawing could not be found.";
+            if (palIndex < 0) return "The colours for this drawing couldn't be found.";
             palStored = narc.Get(palIndex);
             string e = PatchPalette(ref palStored, palette, startAt);
             if (e != null) return e;
@@ -634,9 +629,9 @@ namespace DSPRE.Avalonia.Data
         public static string WritePaletteColour(Archive a, int index, int number, byte r, byte g, byte b)
         {
             ScriptNarc narc = new ScriptNarc(a.Dir);
-            if (!narc.Available) return "This game does not have this archive.";
+            if (!narc.Available) return "This game doesn't have this archive.";
             byte[] raw = narc.Get(index);
-            if (raw == null || Identify(raw) != Kind.Palette) return "This entry is not a set of colours.";
+            if (raw == null || Identify(raw) != Kind.Palette) return "This entry isn't a set of colours.";
             string err = PatchPalette(ref raw, new[] { (uint)(r << 16 | g << 8 | b) }, number);
             if (err != null) return err;
             narc.Put(index, raw);
@@ -645,15 +640,15 @@ namespace DSPRE.Avalonia.Data
 
         internal static string PatchPalette(ref byte[] nclr, uint[] palette, int startAt = 0)
         {
-            if (nclr == null) return "The colours could not be read.";
+            if (nclr == null) return "The colours couldn't be read.";
 
             byte marker = SqueezeMarker(nclr);
             if (marker == 0x11)
-                return "These colours are squeezed down in a way DSPRE cannot put back yet.";
+                return "These colours use a compression DSPRE can't write yet.";
             if (marker != 0) nclr = Unsqueeze(nclr);
 
             int held = NitroBgCodec.ColourCount(nclr);
-            if (held <= 0) return "These colours are not stored in a way DSPRE can write back.";
+            if (held <= 0) return "These colours aren't stored in a way DSPRE can write back.";
 
             // Write into the same bank the colours were read from. These files often hold many banks side
             // by side, so starting at the front would repaint whatever owns the first one.
@@ -672,7 +667,7 @@ namespace DSPRE.Avalonia.Data
             if (marker != 0)
             {
                 byte[] packed = Squeeze(outp, marker);
-                if (packed == null) return "These colours could not be squeezed back down.";
+                if (packed == null) return "These colours couldn't be compressed again.";
                 outp = packed;
             }
 

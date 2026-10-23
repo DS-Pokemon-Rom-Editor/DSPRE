@@ -13,7 +13,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         private GraphicsBrowserViewModel ViewModel => (GraphicsBrowserViewModel)DataContext;
 
         private static readonly FilePickerFileType Png =
-            new FilePickerFileType("PNG picture") { Patterns = new[] { "*.png" } };
+            new FilePickerFileType("PNG image") { Patterns = new[] { "*.png" } };
 
         public GraphicsBrowserView() : this(new GraphicsBrowserViewModel()) { }
 
@@ -53,7 +53,6 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (await DialogHelper.ConfirmDiscardAsync(this)) ViewModel?.DiscardChanges();
         }
 
-        /// <summary>Empties the search box, which is what the button beside it is for.</summary>
         private void ClearSearch_Click(object sender, RoutedEventArgs e)
         {
             SearchBox.Text = "";
@@ -98,8 +97,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             GraphicsBrowserViewModel vm = ViewModel;
             if (vm?.Selected == null) return;
 
-            // The button is off when this cannot work, and its tooltip says why, but somebody may still get
-            // here another way, so say it plainly rather than doing nothing.
+            // The button is off when this can't work, but other paths reach it, so say why.
             if (!vm.CanReplace)
             {
                 await DialogHelper.ShowInfoAsync(vm.ReplaceHelp, "Import PNG");
@@ -132,8 +130,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (err != null) { vm.StatusText = err; await DialogHelper.ShowErrorAsync(err, ErrorTitle); return; }
             SaveNotice.Imported(vm.Selected.Name ?? $"{vm.Selected.Archive.Title} {vm.Selected.Index}", path);
 
-            // A background shares its pieces, so painting one square changes every square drawn from the
-            // same one. Say so rather than leaving it to be found later.
+            // A background shares its pieces, so warn that painting one square changes the others.
             if (!string.IsNullOrEmpty(note))
             {
                 vm.StatusText = note;
@@ -141,8 +138,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             }
         }
 
-        /// <summary>Sends you to whatever decides this graphic's numbers, which is the other half of the
-        /// hand-off those editors make coming this way.</summary>
+        /// <summary>Opens the editor that sets this graphic's numbers.</summary>
         private void OpenOwner_Click(object sender, RoutedEventArgs e) => ViewModel?.OpenOwningEditor();
 
         private async Task PaintAsync()

@@ -6,8 +6,8 @@ using System.Text;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// Which parts of a model are showing on which frame, out of an NSBVA. One bit per part per frame,
-    /// which is how a shop sign lights up or a door panel disappears without the shape itself moving.
+    /// Which model parts show on each frame, from an NSBVA: one bit per part per frame, such as a sign lighting up or a
+    /// door panel vanishing.
     /// </summary>
     public sealed class VisibilityAnimation
     {
@@ -52,7 +52,7 @@ namespace DSPRE.ROMFiles
             if (Encoding.ASCII.GetString(d, 0, 4) != "BVA0") return null;
 
             try { return Parse(d); }
-            catch (Exception ex) { AppLogger.Error("Visibility animation failed to read: " + ex.Message); return null; }
+            catch (Exception ex) { AppLogger.Error("A visibility animation couldn't be read: " + ex.Message); return null; }
         }
 
         private static VisibilityAnimation Parse(byte[] d)

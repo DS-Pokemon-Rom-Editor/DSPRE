@@ -288,7 +288,7 @@ namespace DSPRE.ROMFiles
                     break;
 
                 case ScriptEffectKind.WaitFrames:
-                    // Wait 0 counts down from 65536, which is what the games do with it too.
+                    // Wait 0 counts down from 65536, as in the games.
                     _holdFrames = effect.A == 0 ? 65536 : effect.A;
                     Waiting = WaitKind.Frames;
                     break;

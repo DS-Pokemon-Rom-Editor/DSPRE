@@ -7,16 +7,12 @@ using static DSPRE.RomInfo;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// The roaming Pokémon, all in arm9: each roamer slot's species and level (pokeplatinum
-    /// RoamingPokemon_ActivateSlot, pokeheartgold Save_CreateRoamerByID, DP's equivalent), the route table the
-    /// roamers move between (map header ids) and its adjacency table (indexes into the routes, the ones a roamer can
-    /// move to next). Everything is found through the code that reads it, not fixed offsets.
-    ///
-    /// The game sets species and level with immediates per slot, which can't hold every species. Saving replaces the
-    /// slot switch with a lookup into a (species, level) table in the same bytes, and in Platinum and HGSS also the
-    /// routine that maps a battled species back to its slot (SystemVars_SetRoamingSpeciesState, SpeciesToRoamerIdx),
-    /// so a changed species keeps its after-battle state. Route and adjacency counts stay as the game has them.
+    /// The roamers in arm9: slot species and levels, the route table and its adjacency, all found through the code that
+    /// reads them. Saving turns the slot switch into a (species, level) lookup in the same bytes, and in Platinum and
+    /// HGSS the species-to-slot routine too.
     /// </summary>
+    /// <remarks>Slots: pokeplatinum RoamingPokemon_ActivateSlot, pokeheartgold Save_CreateRoamerByID. Species to slot:
+    /// SystemVars_SetRoamingSpeciesState, SpeciesToRoamerIdx. Route and adjacency counts stay as the game has them.</remarks>
     public sealed class RoamerData
     {
         public sealed class Slot

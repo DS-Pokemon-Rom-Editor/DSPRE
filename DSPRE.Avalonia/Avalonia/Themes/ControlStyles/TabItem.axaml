@@ -1,8 +1,6 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- Qt Fusion tab (CE_TabBarTabShape): the selected tab is a lighter gradient at full height
-         with a rounded top that joins the content (no bottom edge); unselected tabs are a darker
-         gradient recessed by 2px. Tabs overlap by 1px. -->
+    <!-- Qt Fusion tab (CE_TabBarTabShape): the selected tab joins the content, others sit 2px lower. -->
     <ControlTheme x:Key="{x:Type TabItem}" TargetType="{x:Type TabItem}">
         <Setter Property="Foreground" Value="{DynamicResource ABrush.Foreground.Static}"/>
         <Setter Property="Background" Value="{DynamicResource TabItem.Static.Background}"/>

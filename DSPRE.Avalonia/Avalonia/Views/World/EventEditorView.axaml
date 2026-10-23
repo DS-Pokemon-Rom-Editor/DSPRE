@@ -25,7 +25,7 @@
                 PointerPressed="Pegman_PointerPressed"
                 PointerMoved="Pegman_PointerMoved"
                 PointerReleased="Pegman_PointerReleased"
-                ToolTip.Tip="Drag me onto the map to set where the walk starts.">
+                ToolTip.Tip="Drag onto the map to set where the walk starts.">
           <StackPanel Orientation="Horizontal" Spacing="5">
             <Image x:Name="PegmanIcon" Width="26" Height="26"
                    RenderOptions.BitmapInterpolationMode="None"/>
@@ -35,7 +35,7 @@
         <Button Content="Step in here" controls:Icon.Key="play" Click="StepInHere_Click" IsVisible="{Binding ShowBetaFeatures}"
                 ToolTip.Tip="Walk the map from beside the selected event."/>
         <Button Content="Animate" controls:Icon.Key="play" Click="AnimatedPreview_Click" IsVisible="{Binding ShowBetaFeatures}"
-                ToolTip.Tip="Plays the map on its own: water, buildings and people moving. Scripts do not run."/>
+                ToolTip.Tip="Plays the map on its own: water, buildings and people moving. Scripts don't run."/>
         <Button Content="Screenshot" controls:Icon.Key="cameraIcon" Click="Screenshot_Click"
                 ToolTip.Tip="Saves what the map view is currently showing as a PNG."/>
         <Button Content="Report…" controls:Icon.Key="bug" Click="ExportDebug_Click"
@@ -128,7 +128,6 @@
       <GridSplitter Grid.Column="1" Width="5" ResizeDirection="Columns" Background="Transparent"/>
       <TabControl x:Name="EventTabs" Grid.Column="2" Margin="0,4,4,4" SelectedIndex="{Binding SelectedTabIndex}">
 
-        <!-- ── Overworlds (NPCs/trainers) ─────────────────────────────────────── -->
         <TabItem Header="Overworlds">
           <DockPanel Margin="4">
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
@@ -138,8 +137,8 @@
                       ToolTip.Tip="Remove the selected overworld (Del while the list is focused)"/>
               <Button Content="Duplicate" controls:Icon.Key="copy" Click="DupOw_Click" IsEnabled="{Binding HasOw}"/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-              <Button controls:Icon.Key="sortAscending" Click="SortAsc_Click" ToolTip.Tip="Sort by OW id, low to high"/>
-              <Button controls:Icon.Key="sortDescending" Click="SortDesc_Click" ToolTip.Tip="Sort by OW id, high to low"/>
+              <Button controls:Icon.Key="sortAscending" Click="SortAsc_Click" ToolTip.Tip="Sort by overworld ID, low to high"/>
+              <Button controls:Icon.Key="sortDescending" Click="SortDesc_Click" ToolTip.Tip="Sort by overworld ID, high to low"/>
             </StackPanel>
             <Grid ColumnDefinitions="180,*">
               <ListBox Grid.Column="0" ItemsSource="{Binding Overworlds}"
@@ -273,7 +272,7 @@
                   </StackPanel>
 
                   <TextBlock Text="Hide flag" FontWeight="Bold" Margin="0,4,0,0"
-                             ToolTip.Tip="While this flag is set, the overworld is not placed on the map."/>
+                             ToolTip.Tip="While this flag is set, the overworld isn't placed on the map."/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwFlag}"/>
                   <TextBlock Text="Parameter 3" FontWeight="Bold" Margin="0,4,0,0"
                              ToolTip.Tip="HeartGold reads this for walking Pokémon."/>
@@ -293,7 +292,6 @@
           </DockPanel>
         </TabItem>
 
-        <!-- ── Warps ──────────────────────────────────────────────────────────── -->
         <TabItem Header="Warps">
           <DockPanel Margin="4">
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
@@ -335,7 +333,6 @@
           </DockPanel>
         </TabItem>
 
-        <!-- ── Triggers ───────────────────────────────────────────────────────── -->
         <TabItem Header="Triggers">
           <DockPanel Margin="4">
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
@@ -415,7 +412,6 @@
           </DockPanel>
         </TabItem>
 
-        <!-- ── Spawnables (signs / hidden items) ──────────────────────────────── -->
         <TabItem Header="Spawnables">
           <DockPanel Margin="4">
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">

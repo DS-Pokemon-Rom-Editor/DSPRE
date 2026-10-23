@@ -3,9 +3,8 @@ using DSPRE;
 namespace DSPRE.HgEngine
 {
     /// <summary>
-    /// Graphics and other assets a linked checkout builds from its own files. The source is what a
-    /// picture should be edited as, the same way the Pokemon and trainer sprite editors already work,
-    /// so importing over the ROM's copy is refused and the file to edit is named instead.
+    /// Assets a checkout builds from source files: importing over the ROM's copy is refused and the file to edit is
+    /// named instead.
     /// </summary>
     public static class HgEngineSourceAssets
     {
@@ -38,7 +37,7 @@ namespace DSPRE.HgEngine
             try { return System.IO.File.ReadAllBytes(file.FullPath); }
             catch (System.Exception ex) when (ex is System.IO.IOException || ex is System.UnauthorizedAccessException)
             {
-                AppLogger.Error($"HgEngineSourceAssets: could not read {file.RelPath}: {ex.Message}");
+                AppLogger.Error($"HgEngineSourceAssets: couldn't read {file.RelPath}: {ex.Message}");
                 return null;
             }
         }
@@ -113,7 +112,7 @@ namespace DSPRE.HgEngine
                      + "here would be replaced on the next compile. Edit that file instead.";
             }
 
-            // The rule may still own the archive even when this member has no source of its own.
+            // The rule may still own the archive even when this member has no source.
             HgEngineRule rule = HgEngineOwnedFiles.RuleForArchive(HgEngineOwnedFiles.ArchiveOf(dir));
             if (rule == null || rule.Ownership != HgEngineOwnership.Asset || !rule.ReplacesWholeArchive)
                 return null;

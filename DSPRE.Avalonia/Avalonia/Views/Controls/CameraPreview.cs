@@ -117,7 +117,7 @@ namespace DSPRE.Avalonia.Views.Controls
 
             HashSet<(int x, int y)> cells = matrix.CellsOfHeader(headerId);
             if (cells != null && FieldCatchAllHeader.IsCatchAll(cells.Count))
-                return (null, "This header has no place of its own to show.", null);
+                return (null, "This header covers the whole matrix, so there's no one place to show.", null);
             // Without a headers section the whole matrix is the place, unless it is world-sized.
             if (cells == null && matrix.Width * matrix.Height > 256)
                 return (null, "No preview for this header.", null);
@@ -159,7 +159,6 @@ namespace DSPRE.Avalonia.Views.Controls
             return ((rawX - scene.Cx) * scene.Scale, (rawY - scene.Cy) * scene.Scale, (rawZ - scene.Cz) * scene.Scale);
         }
 
-        // ── HGSS darkness ────────────────────────────────────────────────────────
 
         // The light model draws its front face only and without fog.
         private static NsbmdGlControl.LightSpot _spotShape;
@@ -210,7 +209,7 @@ namespace DSPRE.Avalonia.Views.Controls
                     Triangles = corners.ToArray(), Rgba = tex.Rgba, Width = tex.Width, Height = tex.Height,
                 };
             }
-            catch (Exception ex) { AppLogger.Warn("The Flash light model could not be read: " + ex.Message); }
+            catch (Exception ex) { AppLogger.Warn("The Flash light model couldn't be read: " + ex.Message); }
             return _spotShape;
         }
 

@@ -142,10 +142,10 @@ namespace DSPRE.ROMFiles
             string error = Save();
             if (error != null)
             {
-                AppMessages.Error("The Battle Tower trainers weren't saved:\n" + error, "Battle Tower error");
+                AppMessages.Error("The Battle Tower trainers weren't saved:\n" + error, "Battle Tower");
                 return false;
             }
-            if (showSuccessMessage) AppMessages.Info("Battle Tower trainers saved successfully!", "Success");
+            if (showSuccessMessage) AppMessages.Notice("Battle Tower trainers saved.");
             return true;
         }
 
@@ -156,7 +156,7 @@ namespace DSPRE.ROMFiles
             {
                 string narcDir = Filesystem.BattleTowerTrainers;
                 if (string.IsNullOrEmpty(narcDir) || !Directory.Exists(narcDir))
-                    return "The Battle Tower trainer folder was not found.";
+                    return "The Battle Tower trainer folder wasn't found.";
 
                 // Read-modify-write, same as TrainerEditor's own name/class archive saves,
                 // so the archive's existing encryption key is preserved.
@@ -207,13 +207,13 @@ namespace DSPRE.ROMFiles
 
                 if (showSuccessMessage)
                 {
-                    AppMessages.Info("Battle Tower trainers exported successfully!", "Success");
+                    AppMessages.Notice("Battle Tower trainers exported.");
                 }
                 return true;
             }
             catch (Exception ex)
             {
-                AppMessages.Error($"Error exporting Battle Tower trainers: {ex.Message}", "Error");
+                AppMessages.Error($"Couldn't export Battle Tower trainers: {ex.Message}", "Battle Tower editor");
                 return false;
             }
         }
@@ -242,7 +242,7 @@ namespace DSPRE.ROMFiles
             }
             catch (Exception ex)
             {
-                AppMessages.Error($"Error importing Battle Tower trainers: {ex.Message}", "Error");
+                AppMessages.Error($"Couldn't import Battle Tower trainers: {ex.Message}", "Battle Tower editor");
                 return false;
             }
         }

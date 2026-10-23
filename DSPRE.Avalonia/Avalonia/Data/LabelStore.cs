@@ -13,17 +13,15 @@ namespace DSPRE.Avalonia.Data
     /// <summary>One customisable dropdown category: its built-in default labels plus the data-type cap.</summary>
     public sealed class LabelCategory
     {
-        public string Key { get; init; }            // stable id, e.g. "evolution_methods"
+        public string Key { get; init; }            // stable id, such as "evolution_methods"
         public string DisplayName { get; init; }    // shown in the editor
-        public string Group { get; init; } = "General";   // which editor it belongs to (tab in the Label editor)
+        public string Group { get; init; } = "General";   // which editor it belongs to (a tab in Dropdown labels)
         public string Singular { get; init; } = "Entry";   // for generated labels beyond the defaults
         public int Cap { get; init; } = 256;        // max entries the underlying field can hold (u8 = 256)
         public IReadOnlyList<string> Defaults { get; init; } = Array.Empty<string>();
         public GameFamilies[] Games { get; init; }   // null: every game
 
-        // Optional secondary per-entry ATTRIBUTE (a small enum choice). e.g. evolution methods carry a
-        // "param meaning" (Level / Item / Move / Species / Beauty) so the editor knows how to interpret the
-        // method's parameter. Null AttrName = no attribute. AttrDefaults is value-indexed like Defaults.
+        // An optional choice per entry, such as what an evolution method's parameter means; null AttrName for none.
         public string AttrName { get; init; }
         public IReadOnlyList<string> AttrOptions { get; init; }
         public IReadOnlyList<int> AttrDefaults { get; init; }
@@ -32,11 +30,8 @@ namespace DSPRE.Avalonia.Data
     }
 
     /// <summary>
-    /// Customisable labels for hardcoded enums/dropdowns. The game stores fixed-width numeric values;
-    /// DSPRE only relabels them, useful when a ROM hack repurposes or adds values (e.g. a new evolution
-    /// method). Resolution order per index: PROJECT override → GLOBAL override → built-in default →
-    /// generated "Singular N". Project overrides live in <c>dspreDir/dspre_labels.json</c> (travels with
-    /// the extracted ROM); global overrides in <c>%AppData%/DSPRE/databases/labels.global.json</c>.
+    /// Custom labels for fixed dropdown values, for hacks that reuse or add values. A label comes from the project
+    /// (dspreDir/dspre_labels.json), then the global file (labels.global.json), then the built-in default, then "Singular N".
     /// </summary>
     public static class LabelStore
     {
@@ -183,7 +178,7 @@ namespace DSPRE.Avalonia.Data
             GameFamilies.DP => "field_weather_dp", GameFamilies.Plat => "field_weather_pt", _ => "field_weather_hgss",
         };
 
-        /// <summary>Default "param meaning" per evolution method (method index → EvolutionParamMeaning value),
+        /// <summary>Default "param meaning" per evolution method (method index to EvolutionParamMeaning value),
         /// from EvolutionFile.evoDescriptions, the attribute defaults for the evolution_methods category.</summary>
         private static int[] EvoParamDefaults()
         {
@@ -194,9 +189,7 @@ namespace DSPRE.Avalonia.Data
             return arr;
         }
 
-        /// <summary>Builds a VALUE-indexed default-label array for an enum (slot i = the member whose value
-        /// is i, or null for a gap → resolved to a generated "Singular i"). Needed for combos bound by the
-        /// raw byte value rather than the declaration position.</summary>
+        /// <summary>An enum's default labels indexed by value, gaps left for "Singular i", for combos bound to the raw byte.</summary>
         private static string[] ByValue<TEnum>() where TEnum : struct, Enum
         {
             TEnum[] vals = Enum.GetValues<TEnum>();
@@ -283,9 +276,8 @@ namespace DSPRE.Avalonia.Data
             (global ? GlobalAttr : ProjectAttr).Remove(key);
         }
 
-        // ── Per-entry attribute (e.g. evolution param meaning) ────────────────────────────
         /// <summary>The attribute value (an index into <see cref="LabelCategory.AttrOptions"/>) for an entry,
-        /// resolved project → global → built-in default.</summary>
+        /// resolved from the project, then global, then the built-in default.</summary>
         public static int GetAttr(string key, int index)
         {
             Ensure();
@@ -313,10 +305,8 @@ namespace DSPRE.Avalonia.Data
             if (d.Count == 0) map.Remove(key);
         }
 
-        // ── Draft layer (Label editor) ────────────────────────────────────────────────────
-        // The Label editor edits a DRAFT that other editors never see; only Commit (= Save) promotes it to
-        // the real store + persists + raises LabelsChanged. This stops unsaved edits leaking into editors
-        // that read GetAttr/Get live (e.g. the evolution param meaning).
+        // ── Draft layer (Dropdown labels) ────────────────────────────────────────────────────
+        // Dropdown labels edits a draft no other editor sees; Commit saves it and raises LabelsChanged.
         private static readonly Dictionary<(bool g, string k, int i), string> DraftLabels = new();
         private static readonly Dictionary<(bool g, string k, int i), int> DraftAttrs = new();
         private static readonly HashSet<(bool g, string k)> DraftResets = new();
@@ -333,7 +323,7 @@ namespace DSPRE.Avalonia.Data
             foreach ((bool g, string k, int i) k in DraftAttrs.Keys.Where(k => k.g == global && k.k == key).ToList()) DraftAttrs.Remove(k);
         }
 
-        /// <summary>A label as the Label editor should DISPLAY it (committed value overlaid with the draft).</summary>
+        /// <summary>A label as Dropdown labels shows it: the saved value with the draft over it.</summary>
         public static string GetDraftLabel(string key, int idx, bool global)
         {
             if (DraftLabels.TryGetValue((global, key, idx), out string v)) return string.IsNullOrEmpty(v) ? GetDefault(key, idx) : v;
@@ -384,7 +374,7 @@ namespace DSPRE.Avalonia.Data
 
         public static void DiscardDraft() { DraftLabels.Clear(); DraftAttrs.Clear(); DraftResets.Clear(); }
 
-        // The Label editor's undo: the whole draft as one value.
+        // Undo in Dropdown labels: the whole draft as one value.
         private sealed record DraftState(List<object[]> Labels, List<object[]> Attrs, List<object[]> Resets);
 
         public static byte[] DraftSnapshot() => JsonSerializer.SerializeToUtf8Bytes(new DraftState(
@@ -417,7 +407,7 @@ namespace DSPRE.Avalonia.Data
                     Labels = StringKeyed(global ? Global : Project),
                     Attrs  = StringKeyed(global ? GlobalAttr : ProjectAttr),
                 };
-                // Nothing overridden: leave no file behind rather than an empty one.
+                // Nothing overridden: leave no file behind.
                 if (file.Labels.Count == 0 && file.Attrs.Count == 0)
                 {
                     if (File.Exists(path)) File.Delete(path);
@@ -466,7 +456,7 @@ namespace DSPRE.Avalonia.Data
                     foreach (KeyValuePair<string, Dictionary<string, string>> kv in file.Labels) labels[CurrentKey(kv.Key)] = IntKeyed(kv.Value);
                     if (file.Attrs != null) foreach (KeyValuePair<string, Dictionary<string, int>> kv in file.Attrs) attrs[CurrentKey(kv.Key)] = IntKeyed(kv.Value);
                 }
-                else   // old flat format (root = cat → idx → label)
+                else   // old flat format: category, then index, then label
                 {
                     Dictionary<string, Dictionary<string, string>> flat = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, string>>>(json);
                     if (flat != null) foreach (KeyValuePair<string, Dictionary<string, string>> kv in flat) labels[CurrentKey(kv.Key)] = IntKeyed(kv.Value);

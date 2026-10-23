@@ -14,7 +14,7 @@ namespace DSPRE.Avalonia.Data
     /// </summary>
     public static partial class GraphicAssets
     {
-        /// <summary>Where a person would look for something, rather than where the ROM keeps it. </summary>
+        /// <summary>Where a person would look for something, not where the ROM keeps it.</summary>
         public enum Group
         {
             PokemonSprites, PokemonIcons,
@@ -36,7 +36,7 @@ namespace DSPRE.Avalonia.Data
             SameIndexInOtherArchive,
             /// <summary>One palette in this archive serves everything in it.</summary>
             OnePaletteForAll,
-            /// <summary>Not worked out yet. Say so rather than show wrong colours.</summary>
+            /// <summary>Not worked out yet; say so instead of showing wrong colours.</summary>
             NotKnown,
         }
 
@@ -102,7 +102,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Which entry holds the drawing a layout arranges, when the game says so.</summary>
         public Func<int, int> DrawingEntry;
 
-            /// <summary>Colour numbers of a palette bank that something outside the archive's drawings draws with, and what.</summary>
+            /// <summary>Colour numbers in a bank that something outside the archive draws with, and what that is.</summary>
             public Func<int, int, IEnumerable<(int Slot, string Who)>> AlsoUsesColours;
 
             /// <summary>The members are Pokéwalker pictures of this size (PokewalkerImage), not Nitro files.</summary>
@@ -178,14 +178,7 @@ namespace DSPRE.Avalonia.Data
             public Group? In;
         }
 
-        /// <summary>Breaks an archive into the things it holds rather than the files it holds.</summary>
-        /// <summary>
-        /// The order a thing's pieces are shown in, which is the order somebody works in rather than the
-        /// order the archive stores them.
-        /// The assembled picture comes first where there is one, because that is the thing itself: a
-        /// trainer or an HP bar looks like nothing as a sheet of loose tiles. Then the drawing, then how
-        /// it moves, then its colours.
-        /// </summary>
+        /// <summary>Pieces show in working order: the assembled picture, then the drawing, the animation and the colours.</summary>
         public static int PartRank(string part)
         {
             if (part == "As it appears") return 0;
@@ -295,7 +288,7 @@ namespace DSPRE.Avalonia.Data
                 units.Add(u);
             }
 
-            // A sprite is named by its drawing, which is what differs between sprites sharing one cell layout.
+            // Sprites sharing a cell layout differ only in their drawing, so they're named by it.
             foreach (ScreenGraphicsLayouts.Entry e in entries)
             {
                 if (e.Index >= fileCount || e.Kind != "NCGR" || e.Cells < 0 || e.Cells >= fileCount) continue;
@@ -452,9 +445,7 @@ namespace DSPRE.Avalonia.Data
                         int drawing = (int)row.ItemIcon;
                         int colours = (int)row.ItemPalette;
 
-                        // Items with the same drawing and the same colours look identical, so they share a
-                        // row. Items sharing only the drawing get a row each: four of the status healers
-                        // are one bottle in four colours, and folding those together lost three of them.
+                        // Items with the same drawing and colours share a row; the same drawing in other colours gets its own.
                         if (!byPair.TryGetValue((drawing, colours), out Icon icon))
                         {
                             icon = new Icon { Drawing = drawing, Colours = colours };
@@ -585,7 +576,7 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public static readonly Archive[] All =
         {
-            // Six files per Pokemon, in this order, per PokemonSpriteEditorViewModel.cs:24 and :855.
+            // Six files per Pokémon, in the order PokemonSpriteEditorViewModel reads them.
             new Archive { Dir = DirNames.PokemonBattleSprites, Title = "Pokémon battle sprites", In = Group.PokemonSprites,
                 What = "Front and back of every Pokémon as it appears in a battle, with its normal and shiny colours.",
                 Colours = Pairing.NearestInSameArchive, DeepEditor = "Pokémon editor",
@@ -601,7 +592,7 @@ namespace DSPRE.Avalonia.Data
             // This archive is not laid out in runs: a form's two drawings sit near the front and its two
             // sets of colours a hundred files further on.
             new Archive { Dir = DirNames.OtherPokemonBattleSprites, Title = "Alternate form sprites", In = Group.PokemonSprites,
-                What = "Battle sprites for the forms that are not a Pokémon's default one.",
+                What = "Battle sprites for Pokémon's alternate forms.",
                 Colours = Pairing.NearestInSameArchive, DeepEditor = "Pokémon editor",
                 ScrambledPixels = true, FrameWidth = 80, FrameHeight = 80,
                 ColourEntry = i => AlternateFormSprites.ColoursFor(i, shiny: false),
@@ -670,7 +661,7 @@ namespace DSPRE.Avalonia.Data
                     All.First(x => x.Dir == DirNames.TrainerCardGraphics), n) },
 
             new Archive { Dir = DirNames.EncounterEffectGraphics, Title = "Battle intros", In = Group.Trainers,
-                What = "The faces, banners, frames and VS mark special trainer battles open with.",
+                What = "The faces, banners, frames and VS mark shown when a special trainer battle starts.",
                 DeepEditor = "VS intro editor",
                 // Sets keep their palette next to the drawing, before it or, in HGSS banners, after it.
                 ColourEntry = i =>
@@ -706,8 +697,7 @@ namespace DSPRE.Avalonia.Data
             new Archive { Dir = DirNames.BattleBgPlanm, Title = "Battle background colour cycles", In = Group.BattleChrome,
                 What = "Colour changes played over a battle background. HeartGold and SoulSilver only.",
                 Colours = Pairing.NotKnown,
-                // One per entry rather than the archive's title on all of them, which listed thirty one
-                // rows reading the same thing and made the tab unusable.
+                // A name per entry, so the 31 rows don't all read the archive's title.
                 NameOf = i => "Colour cycle " + i,
                 CannotImportBecause = "These are lists of colour changes played over a background, not pictures. "
                                     + "There is nothing here to put a PNG in place of." },
@@ -743,15 +733,13 @@ namespace DSPRE.Avalonia.Data
                 ColourEntry = i => NamedArchives.ColoursFor(DirNames.Fonts, i),
                 BuildUnits = n => NamedArchives.Units(All.First(x => x.Dir == DirNames.Fonts), n) },
             new Archive { Dir = DirNames.WindowFrames, Title = "Text box frames", In = Group.Windows,
-                What = "The borders drawn around text boxes and menus. The cursors have no colours of "
-                     + "their own: the game draws each one in the colours of the box it appears in, so "
-                     + "what is shown here is a stand-in.",
+                What = "The borders drawn around text boxes and menus. The cursors take the colours of the box they "
+                     + "appear in, so the colours shown here are a stand-in.",
                 ColourEntry = i => GraphicUnits.WindowFrameColours(i),
                 BuildUnits = n => GraphicUnits.WindowFrames(All.First(x => x.Dir == DirNames.WindowFrames), n) },
             // Left ungrouped on purpose.
             new Archive { Dir = DirNames.SynthOverlay, Title = "Map screen overlay", In = Group.Windows,
-                What = "Pieces drawn over the map screen. In Diamond, Pearl and Platinum this is the "
-                     + "weather; in HeartGold and SoulSilver it is something else.",
+                What = "Pieces drawn over the map screen. In Diamond, Pearl and Platinum this is the weather.",
                 DeepEditor = "Header editor" },
             new Archive { Dir = DirNames.WeatherGraphics, Title = "Weather", In = Group.Windows,
                 What = "The weather drawn over the map screen.",
@@ -899,8 +887,7 @@ namespace DSPRE.Avalonia.Data
             public Kind Kind;
         }
 
-        /// <summary>Unsqueezes a file if it is stored squeezed down. The move effect archives all are, and
-        /// handing a squeezed file to the reader gets nothing back.</summary>
+        /// <summary>Decompresses a file if it's compressed, as every move effect archive is; the reader can't read it otherwise.</summary>
         public static byte[] Unsqueeze(byte[] b)
         {
             if (b == null || b.Length < 5) return b;
@@ -926,7 +913,7 @@ namespace DSPRE.Avalonia.Data
             catch (Exception ex) { AppLogger.Error("GraphicAssets.Squeeze failed: " + ex.Message); return null; }
         }
 
-        /// <summary>How a file is squeezed, or zero when it is not.</summary>
+        /// <summary>How a file is compressed, or zero when it isn't.</summary>
         public static byte SqueezeMarker(byte[] b)
             => b != null && b.Length > 4 && (b[0] == 0x10 || b[0] == 0x11) ? b[0] : (byte)0;
 
@@ -1015,8 +1002,7 @@ namespace DSPRE.Avalonia.Data
 
                 case Pairing.NearestInSameArchive:
                 {
-                        // The closest set of colours to the drawing, looking through the whole archive rather
-                        // than a window around it.
+                        // The closest palette to the drawing anywhere in the archive.
                         List<int> palettes = PaletteIndexes(a.Dir, narc);
                     if (palettes.Count == 0) return null;
                     int best = -1, bestGap = int.MaxValue;
@@ -1064,30 +1050,28 @@ namespace DSPRE.Avalonia.Data
         public static string PutAssembledBack(Archive a, int layoutIndex, byte[] painted, int width, int height)
         {
             ScriptNarc narc = new ScriptNarc(a.Dir);
-            if (!narc.Available) return "This game does not have this archive.";
+            if (!narc.Available) return "This game doesn't have this archive.";
 
             byte[] raw = narc.Get(layoutIndex);
             if (raw == null || Identify(raw) != Kind.CellLayout)
-                return "This entry is not a layout, so there is no assembled picture to put back.";
+                return "This entry isn't a layout, so there is no assembled picture to put back.";
 
             int drawingAt = -1;
-            try { drawingAt = a.DrawingEntry?.Invoke(layoutIndex) ?? -1; } catch { }   // without the game's pairing the drawing the picture was shown with is used
+            try { drawingAt = a.DrawingEntry?.Invoke(layoutIndex) ?? -1; } catch { }
             // Where the game's pairing is not known, the drawing the picture was shown with is the one written.
             if (drawingAt < 0 && a.DrawingArchive == null) drawingAt = FindDrawingIndex(narc, layoutIndex);
             byte[] drawing = drawingAt >= 0 ? narc.Get(drawingAt) : null;
             if (drawing == null)
-                return "The drawing this layout arranges is not known, so it cannot be put back.";
-            if (drawingAt < 0) return "The drawing this layout arranges is not known, so it cannot be put back.";
+                return "The drawing this layout arranges isn't known, so it can't be put back.";
+            if (drawingAt < 0) return "The drawing this layout arranges isn't known, so it can't be put back.";
 
             byte[] pal = FindColours(a, narc, layoutIndex, false);
             if (pal == null) return "No colours could be found for this sprite.";
 
-            // The drawing may be kept squeezed down. Work on the opened-out file and squeeze it again, the
-            // same way painting a flat drawing does.
+            // The drawing may be compressed: edit it decompressed and compress it again, as for a flat drawing.
             byte drawMarker = SqueezeMarker(drawing);
             if (drawMarker == 0x11)
-                return "This drawing is squeezed down in a way DSPRE cannot put back yet, so nothing was "
-                     + "changed.";
+                return "This drawing uses a compression DSPRE can't write yet, so nothing was changed.";
             byte[] openDrawing = drawMarker != 0 ? Unsqueeze(drawing) : drawing;
 
             try
@@ -1096,10 +1080,9 @@ namespace DSPRE.Avalonia.Data
                 if (ncer == null || ncer.Cells.Count == 0) return "This layout has no pieces in it.";
                 ushort[] colours = NitroBgCodec.ReadColours(Unsqueeze(pal));
 
-                // Draw it once to find where the crop cut, so the pieces can be put back against the
-                // canvas they were laid out on rather than against the cropped picture.
+                // Draw it once to find the crop, so the pieces go back against the full canvas.
                 RawImage whole = CellRenderer.Draw(ncer, 0, openDrawing, colours, CellCanvas, CellCanvas);
-                if (whole.IsEmpty) return "This sprite could not be put together.";
+                if (whole.IsEmpty) return "This sprite couldn't be put together.";
                 (byte[] _, int shownW, int shownH) = CropToPieces(ToRgba(whole), whole.Width, whole.Height, ncer.Cells[0],
                                                        out int cutLeft, out int cutTop);
 
@@ -1117,7 +1100,7 @@ namespace DSPRE.Avalonia.Data
                 {
                     byte[] packed = Squeeze(outp, drawMarker);
                     if (packed == null)
-                        return "This drawing could not be squeezed back down, so nothing was changed.";
+                        return "This drawing couldn't be compressed again, so nothing was changed.";
                     outp = packed;
                 }
 
@@ -1127,7 +1110,7 @@ namespace DSPRE.Avalonia.Data
             catch (Exception ex)
             {
                 AppLogger.Error("GraphicAssets.PutAssembledBack: " + ex.Message);
-                return "This sprite could not be put back.";
+                return "This sprite couldn't be put back.";
             }
         }
 
@@ -1135,9 +1118,8 @@ namespace DSPRE.Avalonia.Data
         /// <summary>
         /// Puts a painted picture of a whole background back into the tiles it is drawn from.
         /// </summary>
-        /// <param name="drawingIndex">The background's own drawing, which is what the picture was drawn
-        /// from. Several backgrounds share one arrangement, so the drawing is what names which one this
-        /// is, not the other way round.</param>
+        /// <param name="drawingIndex">The background's drawing. Several backgrounds share one arrangement, so the drawing
+        /// identifies the background.</param>
         public static string PutBackgroundBack(Archive a, int drawingIndex, byte[] painted,
                                                int width, int height, out int changed, out int shared,
                                                out int fought)
@@ -1145,32 +1127,31 @@ namespace DSPRE.Avalonia.Data
             changed = 0; shared = 0; fought = 0;
 
             ScriptNarc narc = new ScriptNarc(a.Dir);
-            if (!narc.Available) return "This game does not have this archive.";
+            if (!narc.Available) return "This game doesn't have this archive.";
 
             int drawingAt = drawingIndex;
             byte[] drawing = narc.Get(drawingAt);
             if (drawing == null || Identify(drawing) != Kind.TileGraphic)
-                return "This entry is not a drawing, so there is no background to put back.";
+                return "This entry isn't a drawing, so there is no background to put back.";
 
             int arrangementAt = -1;
             try { arrangementAt = a.ArrangementEntry?.Invoke(drawingIndex) ?? -1; } catch { }   // without the game's pairing there is no arrangement to put back
             byte[] scr = arrangementAt >= 0 ? narc.Get(arrangementAt) : null;
             if (scr == null)
-                return "The arrangement this drawing is laid out by is not known, so it cannot be put back.";
+                return "The arrangement this drawing is laid out by isn't known, so it can't be put back.";
 
             byte[] pal = FindColours(a, narc, drawingIndex, false);
             if (pal == null) return "No colours could be found for this background.";
 
             byte marker = SqueezeMarker(drawing);
             if (marker == 0x11)
-                return "This drawing is squeezed down in a way DSPRE cannot put back yet, so nothing was "
-                     + "changed.";
+                return "This drawing uses a compression DSPRE can't write yet, so nothing was changed.";
             byte[] open = marker != 0 ? Unsqueeze(drawing) : drawing;
 
             BackgroundDecompose.Result it = BackgroundDecompose.PutBack(open, Unsqueeze(pal), Unsqueeze(scr),
                                                  painted, width, height);
             if (it.Whynot != null) return it.Whynot;
-            if (it.Tiles == null) return "This background could not be taken apart.";
+            if (it.Tiles == null) return "This background couldn't be taken apart.";
 
             changed = it.SquaresChanged;
             shared = it.SquaresSharingATile;
@@ -1181,7 +1162,7 @@ namespace DSPRE.Avalonia.Data
             {
                 byte[] packed = Squeeze(outp, marker);
                 if (packed == null)
-                    return "This drawing could not be squeezed back down, so nothing was changed.";
+                    return "This drawing couldn't be compressed again, so nothing was changed.";
                 outp = packed;
             }
 
@@ -1190,14 +1171,13 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>A picture of one entry of one archive, or why there is not one.</summary>
-        /// <param name="source">Where to read the archive from, for a caller that wants the ROM's own
-        /// bytes rather than the unpacked copy. Defaults to the unpacked copy every editor uses.</param>
+        /// <param name="source">Where to read the archive; by default the unpacked copy every editor uses.</param>
         /// <param name="paletteIndex">The colours to show it in, when the caller knows the game's pairing.</param>
         public static Preview Render(Archive a, int index, bool shiny = false, ScriptNarc source = null, int paletteIndex = -1)
         {
             ScriptNarc narc = source ?? new ScriptNarc(a.Dir);
             if (!narc.Available)
-                return new Preview { Whynot = "This game does not have this archive." };
+                return new Preview { Whynot = "This game doesn't have this archive." };
 
             if (a.Pokewalker != null)
             {
@@ -1233,7 +1213,7 @@ namespace DSPRE.Avalonia.Data
             try
             {
                 if (pal.Length == 0)
-                    return new Preview { Kind = kind, Whynot = "This entry could not be read." };
+                    return new Preview { Kind = kind, Whynot = "This entry couldn't be read." };
 
                 if (kind == Kind.TileMap || kind == Kind.CellLayout)
                 {
@@ -1255,21 +1235,21 @@ namespace DSPRE.Avalonia.Data
                     }
                     if (drawing == null)
                         return new Preview { Kind = kind, Whynot = kind == Kind.TileMap
-                            ? "This arranges a background's tiles, and the drawing it arranges could not be found."
-                            : "This arranges the pieces of a sprite, and the drawing it arranges could not be found." };
+                            ? "This arranges a background's tiles, and the drawing it arranges couldn't be found."
+                            : "This arranges the pieces of a sprite, and the drawing it arranges couldn't be found." };
 
                     if (kind == Kind.TileMap)
                     {
                         NitroBgCodec.BgImage bg = NitroBgCodec.Composite(Unsqueeze(drawing), Unsqueeze(pal), Unsqueeze(raw));
                         if (bg?.Rgba == null)
-                            return new Preview { Kind = kind, Whynot = "This background could not be put together." };
+                            return new Preview { Kind = kind, Whynot = "This background couldn't be put together." };
                         return new Preview { Rgba = bg.Rgba, Width = bg.Width, Height = bg.Height, Kind = kind };
                     }
 
                     NcerFile ncer = NcerFile.Read(Unsqueeze(raw));
                     byte[] openDrawing = Unsqueeze(drawing);
                     if (ncer == null || !(NitroBgCodec.ReadDrawingHeader(openDrawing) is NitroBgCodec.DrawingHeader head))
-                        return new Preview { Kind = kind, Whynot = "This sprite could not be put together." };
+                        return new Preview { Kind = kind, Whynot = "This sprite couldn't be put together." };
                     ushort[] colours = NitroBgCodec.ReadColours(Unsqueeze(pal));
                     // A sprite whose palette the game picks at run time (the dex's type icons) has its cells on palette 0;
                     // turning the rows round puts the chosen one there.
@@ -1285,16 +1265,14 @@ namespace DSPRE.Avalonia.Data
                         colours = turned;
                     }
                     RawImage cell = CellRenderer.Draw(ncer, 0, openDrawing, colours, CellCanvas, CellCanvas);
-                    // These are laid out on a whole screen's worth of room and most of them use a corner of
-                    // it, so show the pieces rather than a mostly empty screen.
+                    // These are laid out on a whole screen and most use a corner of it, so show only the pieces.
                     (byte[] crop, int cw, int ch) = ncer.Cells.Count > 0
                         ? CropToPieces(ToRgba(cell), cell.Width, cell.Height, ncer.Cells[0], out _, out _)
                         : TrimBlank(ToRgba(cell), cell.Width, cell.Height);
                     return new Preview { Rgba = crop, Width = cw, Height = ch, Kind = kind };
                 }
 
-                // A drawing that needs an arrangement is only a heap of tiles without it, so put the two
-                // together the way the game does rather than showing the heap.
+                // A drawing that needs an arrangement is a heap of tiles without it, so put the two together as the game does.
                 int arrangedBy = a.ArrangementEntry?.Invoke(index) ?? -1;
                 if (arrangedBy >= 0 && kind == Kind.TileGraphic)
                 {
@@ -1312,7 +1290,7 @@ namespace DSPRE.Avalonia.Data
                 Indexed art = ReadIndexed(a, index, out string cannot, shiny, narc, paletteIndex);
                 if (art != null)
                     return new Preview { Rgba = Flatten(art), Width = art.Width, Height = art.Height, Kind = kind };
-                return new Preview { Kind = kind, Whynot = cannot ?? "This drawing could not be turned into a picture." };
+                return new Preview { Kind = kind, Whynot = cannot ?? "This drawing couldn't be turned into a picture." };
             }
             catch (Exception ex)
             {

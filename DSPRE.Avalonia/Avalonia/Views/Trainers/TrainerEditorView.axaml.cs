@@ -49,9 +49,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             _setupDone = true;
             await vm.SetupAsync(this);
 
-            // The Classes tab is a separate ViewModel (trainer classes aren't per-trainer data),
-            // give it its own instance now that the ROM/trainer data is actually loaded, starting
-            // on whichever class the current trainer uses.
+            // The Classes tab has its own view model, made once the ROM loads, on the current trainer's class.
             ClassesTabView.DataContext = vm.Classes = new TrainerClassesViewModel(vm.TrainerClassIndex);
             vm.Classes.OpenTrainer = id => { MainTabs.SelectedIndex = 0; vm.GoToTrainer(id); };
         }
@@ -90,7 +88,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         private async void ExportParty_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ExportPartyAsync() ?? Task.CompletedTask, "The party wasn't exported.", ErrorTitle);
         private async void ImportParty_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ImportPartyAsync() ?? Task.CompletedTask, "The party wasn't imported.", ErrorTitle);
 
-        private const string ErrorTitle = "Trainer editor error";
+        private const string ErrorTitle = "Trainer editor";
 
         private async void Search_Click(object sender, RoutedEventArgs e)
         {

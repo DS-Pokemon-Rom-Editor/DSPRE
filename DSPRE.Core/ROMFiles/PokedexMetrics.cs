@@ -66,7 +66,7 @@ namespace DSPRE.ROMFiles
         {
             archive = null;
             error = null;
-            if (GameDirs == null || !GameDirs.ContainsKey(DirNames.PokedexData)) { error = "This game's Pokédex data isn't mapped."; return false; }
+            if (GameDirs == null || !GameDirs.ContainsKey(DirNames.PokedexData)) { error = "DSPRE doesn't know this game's Pokédex data."; return false; }
 
             int memberCount = GameFamily == GameFamilies.HGSS ? 102 : 58;
 
@@ -86,7 +86,7 @@ namespace DSPRE.ROMFiles
                     members[i] = File.ReadAllBytes(f);
                 }
                 if (File.Exists(Path.Combine(folder, memberCount.ToString("D4"))))
-                { error = $"The Pokédex data has more than the game's {memberCount} members, so its layout isn't the one DSPRE knows."; return false; }
+                { error = $"The Pokédex data has more than the game's {memberCount} members, so DSPRE doesn't know its layout."; return false; }
                 copies.Add(new Copy { Dir = dir, Folder = folder, Members = members, Dirty = new bool[memberCount] });
             }
 

@@ -99,10 +99,10 @@ namespace DSPRE.Avalonia.Data
             while (pos < Words())
             {
                 int opVal = ReadWord(pos);
-                if (opVal < 0 || opVal >= ArgCount.Length) break;   // not a valid opcode → stop
+                if (opVal < 0 || opVal >= ArgCount.Length) break;   // not a valid opcode
                 PokemonAnimOp op = (PokemonAnimOp)opVal;
                 int n = ArgCount[opVal];
-                if (pos + 1 + n > Words()) break;                   // args would overrun → stop
+                if (pos + 1 + n > Words()) break;                   // arguments would overrun
                 int[] args = new int[n];
                 for (int i = 0; i < n; i++) args[i] = ReadWord(pos + 1 + i);
                 cmds.Add(new PokemonAnimCommand(op, args));

@@ -2,7 +2,7 @@ using Avalonia.Controls;
 
 namespace DSPRE.Avalonia.Views.Controls
 {
-    /// <summary>Opening a tab strip on a tab that is actually there.</summary>
+    /// <summary>Opens a tab strip on a tab this game has.</summary>
     public static class TabDefault
     {
         /// <summary>

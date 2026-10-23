@@ -213,7 +213,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             try { (data, loadError) = ReadItemData(dataId); }
             catch (Exception ex)
             {
-                AppLogger.Error($"Item editor: item data {dataId} could not be read: {ex}");
+                AppLogger.Error($"Item editor: item data {dataId} couldn't be read: {ex}");
                 _itemDataId = (int)_currentEntry.ItemData;
                 OnPropertyChanged(nameof(ItemDataId));
                 return;
@@ -581,7 +581,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         private async Task ConfirmDropPendingAsync(int newIndex)
         {
-            if (!await DialogHelper.AskYesNoAsync("The new item is not saved. Discard it and proceed?", "Unsaved changes"))
+            if (!await DialogHelper.AskYesNoAsync("The new item isn't saved. Discard it?", "Unsaved changes"))
             {
                 RecordSwitchGuard.SnapBack(() => _selectedItemIndex, v => _selectedItemIndex = v, () => OnPropertyChanged(nameof(SelectedItemIndex)));
                 return;
@@ -602,7 +602,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             (bool saved, string error) = await HgEngineSave.RunAsync(() => HgEngineItemExpansion.TryCommitItem(pending, data, out string commitError) ? null : commitError);
             if (!saved)
             {
-                if (error != null) await DialogHelper.ShowErrorAsync($"{pending.DisplayName} was not saved.\n{error}", "Item editor error");
+                if (error != null) await DialogHelper.ShowErrorAsync($"{pending.DisplayName} wasn't saved.\n{error}", "Item editor");
                 return false;
             }
 
@@ -626,12 +626,12 @@ namespace DSPRE.Avalonia.ViewModels.Items
         {
             if (_currentData == null) return;
             string path = await DialogHelper.SaveFileAsync(owner, "Export item data",
-                new[] { new FilePickerFileType("Gen IV item data") { Patterns = new[] { "*.bin" } } }, $"itemdata_{_itemDataId:D4}.bin");
+                new[] { new FilePickerFileType("Item data") { Patterns = new[] { "*.bin" } } }, $"itemdata_{_itemDataId:D4}.bin");
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _currentData.ToByteArray()); SaveNotice.Exported(path); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowErrorAsync($"Export failed:\n{e.Message}", "Item editor error", owner);
+                await DialogHelper.ShowErrorAsync($"Couldn't export:\n{e.Message}", "Item editor", owner);
             }
         }
 
@@ -640,14 +640,14 @@ namespace DSPRE.Avalonia.ViewModels.Items
         {
             if (_currentData == null) return;
             string path = await DialogHelper.OpenFileAsync(owner, "Import item data",
-                new[] { new FilePickerFileType("Gen IV item data") { Patterns = new[] { "*.bin" } } });
+                new[] { new FilePickerFileType("Item data") { Patterns = new[] { "*.bin" } } });
             if (path == null) return;
 
             byte[] bytes;
             try { bytes = File.ReadAllBytes(path); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowErrorAsync($"The file could not be read.\n{e.Message}", "Import item data", owner);
+                await DialogHelper.ShowErrorAsync($"The file couldn't be read.\n{e.Message}", "Import item data", owner);
                 return;
             }
             // Retail members are 34 bytes and hg-engine's 36; either fits, at the length this item's member already has.
@@ -690,7 +690,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             if (!HgEngineItemExpansion.TryPrepareItem(name, out HgEngineItemExpansion.PendingItem pending, out string error)
                 || !HgEngineItemExpansion.TryReadTemplate(pending, data, out error))
             {
-                await DialogHelper.ShowErrorAsync($"Could not add the item:\n{error}", "Add new item", owner);
+                await DialogHelper.ShowErrorAsync($"Couldn't add the item:\n{error}", "Add new item", owner);
                 return;
             }
             data.ID = pending.Id;
@@ -720,7 +720,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             RaiseUndoState();
         }
 
-        // RecordUndoSnapshot runs BEFORE the dirty-flag short-circuit, so EVERY edit is captured (not just the first).
+        // Snapshot before the dirty check, so every edit is undoable, not just the first.
         private void SetDataDirty()  { RecordUndoSnapshot(); if (_dataDirty)  return; _dataDirty  = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetEntryDirty() { RecordUndoSnapshot(); if (_entryDirty) return; _entryDirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
@@ -823,8 +823,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
             }
             catch (Exception ex)
             {
-                AppLogger.Error($"Item editor: item {id} could not be read: {ex}");
-                _ = DialogHelper.ShowErrorAsync($"Item {id} could not be read.\n{ex.Message}", "Item editor error");
+                AppLogger.Error($"Item editor: item {id} couldn't be read: {ex}");
+                _ = DialogHelper.ShowErrorAsync($"Item {id} couldn't be read.\n{ex.Message}", "Item editor");
                 return false;
             }
 
@@ -1011,14 +1011,14 @@ namespace DSPRE.Avalonia.ViewModels.Items
             {
                 if (SourceLoadError != null)
                 {
-                    await DialogHelper.ShowErrorAsync($"Item {item} was not saved.\n{SourceLoadError}", "Item editor error");
+                    await DialogHelper.ShowErrorAsync($"Item {item} wasn't saved.\n{SourceLoadError}", "Item editor");
                     return false;
                 }
-                // The source is what the next sync rebuilds from, so a save that can't reach it is no save.
+                // The next sync rebuilds from the source, so a save that can't write it fails.
                 (bool saved, string error) = await HgEngineSave.RunAsync(() => HgEngineItemSource.TryWrite(item, data, out string writeError) ? null : writeError);
                 if (!saved)
                 {
-                    if (error != null) await DialogHelper.ShowErrorAsync($"Item {item} was not saved.\n{error}", "Item editor error");
+                    if (error != null) await DialogHelper.ShowErrorAsync($"Item {item} wasn't saved.\n{error}", "Item editor");
                     return false;
                 }
             }
@@ -1068,8 +1068,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
             }
         }
 
-        // Item enum dropdowns now bind by SelectedIndex == raw byte value and pull their labels from the
-        // customisable LabelStore (Tools ▸ Edit Dropdown Labels). Synced in place to keep the selection.
+        // Item enum boxes bind by index as the raw byte and take labels from the LabelStore; synced in place
+        // to keep the selection.
         private void PopulateEnumCollections()
         {
             DSPRE.Avalonia.Data.LabelStore.Sync(HoldEffectNames,      HoldEffectKey);

@@ -53,7 +53,7 @@ namespace DSPRE.ROMFiles
         public override string ToString()
         {
             string[] pokemonNames = RomInfo.GetPokemonNames();
-            string name = Species < pokemonNames.Length ? pokemonNames[Species] : $"Pokemon {Species}";
+            string name = Species < pokemonNames.Length ? pokemonNames[Species] : $"Pokémon {Species}";
             return $"{name} (Lv.{MinLevel}-{MaxLevel}, Rate:{Rate}, Score:{Score})";
         }
     }
@@ -79,14 +79,8 @@ namespace DSPRE.ROMFiles
     }
 
     /// <summary>
-    /// Represents the Bug Contest encounter file for HeartGold/SoulSilver.
-    /// Contains 4 sets of 10 encounters each (40 total).
-    /// File: data/mushi/mushi_encount.bin
-    /// 
-    /// Set selection logic from game code:
-    /// - Without National Dex: Always Set 0
-    /// - With National Dex: set = day_of_week / 2, and the contest only runs on
-    ///   Tuesday (Set 1), Thursday (Set 2) and Saturday (Set 3)
+    /// data/mushi/mushi_encount.bin (HGSS): four sets of 10. Set 0 before the National Dex, then day_of_week / 2, so
+    /// Tuesday, Thursday and Saturday use sets 1 to 3.
     /// </summary>
     public class BugContestEncounterFile : RomFile
     {
@@ -97,9 +91,7 @@ namespace DSPRE.ROMFiles
 
         public List<BugContestEncounterSet> Sets { get; private set; }
 
-        /// <summary>
-        /// Gets all encounters as a flat list for backward compatibility.
-        /// </summary>
+        /// <summary>Every encounter in one list, for callers that still want one.</summary>
         public BindingList<BugContestEncounter> Encounters
         {
             get
@@ -116,9 +108,7 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>
-        /// Creates a new empty Bug Contest encounter file with proper structure.
-        /// </summary>
+
         public BugContestEncounterFile()
         {
             Sets = new List<BugContestEncounterSet> {
@@ -129,9 +119,7 @@ namespace DSPRE.ROMFiles
             };
         }
 
-        /// <summary>
-        /// Loads the Bug Contest encounter file from the default path.
-        /// </summary>
+
         public BugContestEncounterFile(bool load) : this()
         {
             if (load)
@@ -144,9 +132,7 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>
-        /// Loads the Bug Contest encounter file from a specific path.
-        /// </summary>
+
         public BugContestEncounterFile(string path) : this()
         {
             long size = new FileInfo(path).Length;
@@ -160,7 +146,7 @@ namespace DSPRE.ROMFiles
             using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read))
             using (BinaryReader br = new BinaryReader(fs))
             {
-                // Clear existing encounters in each set
+
                 foreach (BugContestEncounterSet set in Sets)
                 {
                     set.Encounters.Clear();
@@ -169,7 +155,7 @@ namespace DSPRE.ROMFiles
                 int totalEntries = (int)(fs.Length / EntrySize);
                 int entryIndex = 0;
 
-                // Read entries and distribute to sets
+
                 while (fs.Position + EntrySize <= fs.Length && entryIndex < TotalEntries)
                 {
                     int setIndex = entryIndex / EncountersPerSet;
@@ -180,7 +166,7 @@ namespace DSPRE.ROMFiles
                     entryIndex++;
                 }
 
-                // Ensure each set has exactly 10 entries (fill with empty if needed)
+                // Every set gets exactly 10 entries, filled with empty ones if short.
                 foreach (BugContestEncounterSet set in Sets)
                 {
                     while (set.Encounters.Count < EncountersPerSet)
@@ -204,7 +190,7 @@ namespace DSPRE.ROMFiles
                     if (e.MaxLevel < e.MinLevel) return $"{set.Name}, entry {i + 1}: the maximum level is below the minimum.";
                 }
                 if (list.Count > 0 && list[list.Count - 1].Rate != 0)
-                    return $"{set.Name}: the last entry's rate must be 0, or low rolls read past the list.";
+                    return $"{set.Name}: the last entry's rate must be 0, or the game reads past the end of the list.";
             }
             return null;
         }
@@ -214,7 +200,7 @@ namespace DSPRE.ROMFiles
             using (MemoryStream ms = new MemoryStream())
             using (BinaryWriter bw = new BinaryWriter(ms))
             {
-                // Write all sets in order
+
                 foreach (BugContestEncounterSet set in Sets)
                 {
                     foreach (BugContestEncounter encounter in set.Encounters)
@@ -226,18 +212,14 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>
-        /// Saves the Bug Contest encounter file to the default path.
-        /// </summary>
+
         public bool SaveToFile(bool showSuccessMessage = true)
         {
             string path = Filesystem.GetBugContestEncounterPath();
             return SaveToFile(path, showSuccessMessage);
         }
 
-        /// <summary>
-        /// Saves the Bug Contest encounter file to a specific path.
-        /// </summary>
+
         public new bool SaveToFile(string path, bool showSuccessMessage = true)
         {
             try
@@ -247,20 +229,18 @@ namespace DSPRE.ROMFiles
 
                 if (showSuccessMessage)
                 {
-                    AppMessages.Info("Bug Contest encounters saved successfully!", "Success");
+                    AppMessages.Notice("Bug Contest encounters saved.");
                 }
                 return true;
             }
             catch (Exception ex)
             {
-                AppMessages.Error($"Error saving Bug Contest encounters: {ex.Message}", "Error");
+                AppMessages.Error($"Couldn't save Bug Contest encounters: {ex.Message}", "Special encounters editor");
                 return false;
             }
         }
 
-        /// <summary>
-        /// Checks if Bug Contest encounters are available (HGSS only).
-        /// </summary>
+        /// <summary>Whether the game has Bug Contest encounters (HGSS only).</summary>
         public static bool IsAvailable()
         {
             return RomInfo.GameFamily == RomInfo.GameFamilies.HGSS;

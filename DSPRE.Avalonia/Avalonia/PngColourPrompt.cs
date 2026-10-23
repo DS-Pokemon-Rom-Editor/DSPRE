@@ -40,13 +40,13 @@ namespace DSPRE.Avalonia
             string said = check.KeepsNumbers
                 ? (missing == 1 ? "1 of the colours in that PNG differs" : $"{missing} of the colours in that PNG differ")
                   + " from the palette at the same colour numbers."
-                : $"That PNG uses {missing} colour{(missing == 1 ? "" : "s")} this graphic's palette does not have.";
+                : $"That PNG uses {missing} colour{(missing == 1 ? "" : "s")} this graphic's palette doesn't have.";
             StackPanel root = new StackPanel { Margin = new global::Avalonia.Thickness(16), Spacing = 8 };
             root.Children.Add(new TextBlock { Text = said, TextWrapping = TextWrapping.Wrap });
 
             StackPanel rows = new StackPanel { Spacing = 4 };
-            // A sprite's new colours can go in any number the picture does not keep, so each gets a choice; a flat
-            // drawing's numbers are the PNG's own.
+            // A sprite's new colours can take any free slot, so each gets a choice; a flat drawing keeps the PNG's
+            // numbers.
             bool choosing = check.CannotAddBecause == null && !check.KeepsNumbers;
             ComboBox[] picks = new ComboBox[check.Missing.Count];
             for (int i = 0; i < check.Missing.Count; i++)

@@ -119,7 +119,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _orthographic = orthographic;
             _entry = entry;
             _changed = changed;
-            _saved = source.Get(entry) ?? throw new InvalidOperationException($"Particle file {entry} is not there.");
+            _saved = source.Get(entry) ?? throw new InvalidOperationException($"Particle file {entry} isn't there.");
             if (!SpaDocument.TryLoad(_saved, out _doc, out string why))
                 throw new InvalidOperationException(why);
 
@@ -252,7 +252,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _restWait = 0;
             SpaArchive arc;
             try { arc = _doc.Parse(); }
-            catch (Exception ex) { StatusText = "This file cannot be played: " + ex.Message; return; }
+            catch (Exception ex) { StatusText = "This file can't be played: " + ex.Message; return; }
             SplRandom rng = new SplRandom(0x5EED);
             for (int i = 0; i < arc.Emitters.Count; i++)
             {
@@ -289,9 +289,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             ok = false;
             byte[] file;
             try { file = File.ReadAllBytes(path); }
-            catch (Exception ex) { return StatusText = "That file could not be read: " + ex.Message; }
+            catch (Exception ex) { return StatusText = "That file couldn't be read: " + ex.Message; }
             if (!AnyPng.TryReadRgba(file, out byte[] rgba, out int w, out int h, out string whynot))
-                return StatusText = whynot ?? "That file is not a readable PNG.";
+                return StatusText = whynot ?? "That file isn't a readable PNG.";
 
             SpaTextureImport result = _doc.ReplaceTexture(index, w, h, rgba);
             if (!result.Succeeded) return StatusText = result.Error;
@@ -308,14 +308,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string ExportTexture(int index, string path)
         {
             ParticleTextureRow row = Textures.FirstOrDefault(t => t.Index == index);
-            if (row?.Rgba == null) return StatusText = "This texture cannot be exported.";
+            if (row?.Rgba == null) return StatusText = "This texture can't be exported.";
             try
             {
                 using Bitmap bmp = ImageConverter.FromRgba(row.Rgba, row.Width, row.Height);
                 bmp.Save(path);
                 return null;
             }
-            catch (Exception ex) { return StatusText = "Could not save: " + ex.Message; }
+            catch (Exception ex) { return StatusText = "Couldn't save: " + ex.Message; }
         }
 
         // ── saving ─────────────────────────────────────────────────────────────────────────────
@@ -332,7 +332,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 StatusText = "Saved.";
                 _changed?.Invoke(_entry);
             }
-            catch (Exception ex) { StatusText = "Could not save: " + ex.Message; }
+            catch (Exception ex) { StatusText = "Couldn't save: " + ex.Message; }
         }
 
         public void DiscardChanges()

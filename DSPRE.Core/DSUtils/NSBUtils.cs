@@ -28,7 +28,7 @@ namespace DSPRE
                 msWriter.Write(NSBMD.HEADERSIZE); //Header size, always 16
                 msWriter.Write(nBlocks); //Number of blocks, now it's 2 because we are inserting textures
 
-                msWriter.Write((uint)(msWriter.BaseStream.Position + 4 * nBlocks)); //Absolute offset to model data. We are gonna have to write two offsets
+                msWriter.Write((uint)(msWriter.BaseStream.Position + 4 * nBlocks)); // absolute offset to the model data; the texture offset follows
 
                 msWriter.Write(modelLength); //Copy offset to TEX0
                 msWriter.Write(wholeMDL0);
@@ -42,12 +42,12 @@ namespace DSPRE
 
             using (BinaryWriter bw = new BinaryWriter(ms))
             {
-                bw.Write(Encoding.UTF8.GetBytes("BTX0")); // Write magic code BTX0
+                bw.Write(Encoding.UTF8.GetBytes("BTX0"));
                 bw.Write((ushort)0xFEFF); // Byte order
-                bw.Write((ushort)0x0001); // ???
-                bw.Write(texturesSize); // Write size of textures block
+                bw.Write((ushort)0x0001); // unknown, always 1
+                bw.Write(texturesSize);
                 bw.Write((short)0x10); //Header size 
-                bw.Write((short)0x01); //Number of sub-files???
+                bw.Write((short)0x01); // sub-file count
                 bw.Write((uint)0x14); // Offset to sub-file
             }
             return ms.ToArray();
@@ -58,7 +58,7 @@ namespace DSPRE
             {
                 if (modelFile.Length < 0x10 || byteArrReader.ReadUInt32() != NSBMD.NdsTypeBmd0)
                 {
-                    AppMessages.Error("Please select an NSBMD file.", "Invalid File");
+                    AppMessages.Error("Pick an NSBMD file.", "Not an NSBMD file");
                     return -1;
                 }
 
@@ -86,7 +86,7 @@ namespace DSPRE
                 nsbmdHeaderData = modelReader.ReadBytes(0x8);
 
                 modelReader.BaseStream.Position = 0x1C;
-                mdl0Size = modelReader.ReadUInt32(); // Read mdl0 file size
+                mdl0Size = modelReader.ReadUInt32();
 
                 modelReader.BaseStream.Position = 0x18;
                 mdl0Data = modelReader.ReadBytes((int)mdl0Size);
@@ -96,13 +96,13 @@ namespace DSPRE
             using (BinaryWriter writer = new BinaryWriter(output))
             {
 
-                writer.Write(nsbmdHeaderData); // Write first header bytes, same for all NSBMD.
+                writer.Write(nsbmdHeaderData); // the same for every NSBMD
                 writer.Write(mdl0Size + 0x14);
-                writer.Write((short)0x10); // Writes BMD0 header size (always 16)
-                writer.Write((short)0x1); // Write new number of sub-files, since embedded textures are removed
-                writer.Write((uint)0x14); // Writes new start offset of MDL0
+                writer.Write((short)0x10); // BMD0 header size
+                writer.Write((short)0x1); // one sub-file, since the embedded textures are removed
+                writer.Write((uint)0x14); // MDL0 start
 
-                writer.Write(mdl0Data); // Writes MDL0;
+                writer.Write(mdl0Data);
             }
             return output.ToArray();
         }

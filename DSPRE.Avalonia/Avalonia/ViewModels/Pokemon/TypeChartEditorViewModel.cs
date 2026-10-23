@@ -254,13 +254,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task<bool> SaveChangesAsync()
         {
             if (_chart == null) return true;
-            if (HasProblem) { await DialogHelper.ShowErrorAsync(Problem, "Type chart error"); return false; }
+            if (HasProblem) { await DialogHelper.ShowErrorAsync(Problem, "Type chart"); return false; }
             if (_chart.FromSource)
             {
                 (bool saved, string error) = await HgEngineSave.RunAsync(() => { _chart.Save(); return null; });
                 if (!saved)
                 {
-                    if (error != null) await DialogHelper.ShowErrorAsync("The type chart was not saved:\n" + error, "Type chart error");
+                    if (error != null) await DialogHelper.ShowErrorAsync("The type chart wasn't saved:\n" + error, "Type chart");
                     return false;
                 }
             }
@@ -269,7 +269,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 try { _chart.Save(); }
                 catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
                 {
-                    await DialogHelper.ShowErrorAsync("The type chart was not saved:\n" + e.Message, "Type chart error");
+                    await DialogHelper.ShowErrorAsync("The type chart wasn't saved:\n" + e.Message, "Type chart");
                     return false;
                 }
             }
@@ -280,7 +280,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         public bool CanMakeRoom => _chart != null && !_chart.InExpansion && !_chart.FromSource;
-        public string MakeRoomTip => $"The \"Expand the type chart\" patch in the ROM patch toolbox moves the chart to the expanded ARM9 area, where it holds up to {TypeChart.ExpandedCapacity - 2} matchups";
+        public string MakeRoomTip => $"The \"Type chart expansion\" patch in the ROM patch toolbox moves the chart to the expanded ARM9 area, where it holds up to {TypeChart.ExpandedCapacity - 2} matchups";
 
         /// <summary>Moving the chart changes the game's code, so the toolbox does it.</summary>
         public Task MakeRoomAsync() => PatchHandover.OfferAsync("typeChartExpanded", "Room for more matchups", "Type chart");
@@ -302,7 +302,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try { _chart = TypeChart.Load(); }
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException)
             {
-                _ = DialogHelper.ShowErrorAsync("The saved type chart couldn't be read back:\n" + e.Message, "Type chart error");
+                _ = DialogHelper.ShowErrorAsync("The saved type chart couldn't be read back:\n" + e.Message, "Type chart");
                 return;
             }
             _savedKey = Key();

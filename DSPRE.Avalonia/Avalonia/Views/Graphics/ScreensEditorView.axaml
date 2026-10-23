@@ -116,7 +116,7 @@
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:ScreenPieceRow">
                     <Button Margin="0,0,0,4" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Click="OpenPiece_Click"
-                            ToolTip.Tip="Open in Graphics" Classes.lit="{Binding IsLit}"
+                            ToolTip.Tip="Open in All graphics" Classes.lit="{Binding IsLit}"
                             PointerEntered="Piece_PointerEntered" PointerExited="Piece_PointerExited">
                       <StackPanel>
                         <TextBlock Text="{Binding Name}"/>
@@ -151,7 +151,7 @@
       </DockPanel>
     </DataTemplate>
 
-    <!-- Edit and Layout: the screen's own editor, or a button while it still has a window of its own. -->
+    <!-- Edit and Layout: the screen's editor, or a button when it opens in a separate window. -->
     <DataTemplate DataType="vm:ScreenEditorView">
       <Panel>
         <ContentControl Content="{Binding Control}" IsVisible="{Binding !OpensApart}"/>

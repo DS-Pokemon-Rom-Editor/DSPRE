@@ -22,7 +22,7 @@
         <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
         <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
         <Button Content="Show file" controls:Icon.Key="folder" Click="ShowFile_Click" ToolTip.Tip="The level script as last saved"/>
-        <CheckBox Content="Word-align padding" IsChecked="{Binding WordAlignmentPadding}" VerticalAlignment="Center"/>
+        <CheckBox Content="Pad to 4 bytes" IsChecked="{Binding WordAlignmentPadding}" ToolTip.Tip="Word-align padding" VerticalAlignment="Center"/>
         <ToggleButton Content="Hex" IsChecked="{Binding ShowHex}" ToolTip.Tip="Numbers in hex instead of decimal"/>
     </controls:EditorToolbar>
 

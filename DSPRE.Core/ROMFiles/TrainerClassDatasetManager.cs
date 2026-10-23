@@ -89,7 +89,7 @@ namespace DSPRE.ROMFiles
             if (!TryInspect(out TrainerClassDatasetState state, out error)) return false;
             if (sourceClassId < 0 || sourceClassId >= state.MetadataCount)
             {
-                error = "The source trainer class does not exist.";
+                error = "The source trainer class doesn't exist.";
                 return false;
             }
             // Trainers store their class in one byte.
@@ -154,7 +154,7 @@ namespace DSPRE.ROMFiles
                     RestoreTiming(timing, timingBefore, rollbackErrors);
                 }
                 newClassId = -1;
-                error = "The trainer class was not added: " + ex.Message +
+                error = "The trainer class wasn't added: " + ex.Message +
                     (mutationStarted ? RollbackSummary(rollbackErrors) : " No files were changed.");
                 return false;
             }
@@ -178,7 +178,7 @@ namespace DSPRE.ROMFiles
                 string directory = GameDirs[DirNames.TrainerProperties].unpackedDir;
                 if (!Directory.Exists(directory))
                 {
-                    error = "The trainer properties archive could not be unpacked.";
+                    error = "The trainer properties archive couldn't be unpacked.";
                     return false;
                 }
 
@@ -252,7 +252,7 @@ namespace DSPRE.ROMFiles
             catch (Exception ex)
             {
                 uses.Clear();
-                error = "The uses of class " + classId + " could not be checked: " + ex.Message;
+                error = "The uses of class " + classId + " couldn't be checked: " + ex.Message;
                 return false;
             }
         }
@@ -335,7 +335,7 @@ namespace DSPRE.ROMFiles
                     RestoreTiming(timing, timingBefore, rollbackErrors);
                 }
                 removedClassId = -1;
-                error = "The trainer class was not removed: " + ex.Message +
+                error = "The trainer class wasn't removed: " + ex.Message +
                     (mutationStarted ? RollbackSummary(rollbackErrors) : " No files were changed.");
                 return false;
             }

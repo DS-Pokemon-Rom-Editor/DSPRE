@@ -66,7 +66,7 @@ namespace DSPRE.Models
             whynot = null;
             byte[] bytes;
             try { bytes = File.ReadAllBytes(path); }
-            catch (Exception ex) { whynot = "Could not read file: " + ex.Message; return null; }
+            catch (Exception ex) { whynot = "Couldn't read file: " + ex.Message; return null; }
 
             float perSquare = squareSize > 0f ? squareSize : MapTileset.TileWidth;
 

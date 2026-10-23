@@ -10,12 +10,8 @@ using DSPRE.Avalonia.Data;
 namespace DSPRE.Avalonia
 {
     /// <summary>
-    /// Drives one or more <see cref="SpaSimulator"/>s and renders the current particle state to a transparent
-    /// <see cref="WriteableBitmap"/> ready to overlay on the battle scene. Each particle is drawn as its emitter's
-    /// real decoded NDS texture, modulated by the particle's colour + alpha and alpha-blended, matching the in-game look.
-    /// Emitters whose texture couldn't be decoded fall back to a soft colour dot. Projection is the REAL battle
-    /// particle camera (eye (0,0,+4.0) world units, 96px focal); nothing here is
-    /// eye-tuned: every path reproduces the corresponding step of the NDS particle-library render pipeline.
+    /// Draws <see cref="SpaSimulator"/> particles to a transparent bitmap as the battle particle camera sees them, for
+    /// overlay on the battle scene. A texture that can't be decoded draws as a soft dot.
     /// </summary>
     public sealed class SpaParticlePreview
     {
@@ -25,7 +21,7 @@ namespace DSPRE.Avalonia
             public readonly IReadOnlyList<SpaTexture> Textures;   // archive textures; each particle's TexNo indexes this
             public readonly SpaTexture BaseTex;        // fallback (the emitter's base TexNo) when no texture animation
             public readonly double CenterX, CenterY;   // where this emitter sits (attacker / defender, per callback)
-            public readonly int DrawType;              // the draw-type constants*: 1/3 = directional billboard (oriented along velocity)
+            public readonly int DrawType;              // draw type: 1 and 3 are directional billboards, turned along the velocity
             public readonly bool RepeatS, RepeatT;     // emitter tex_repeat ≥ 1; with a texture's flip bit → mirror
             public readonly double Aspect, DbbScale;   // base.aspect (sclX = sclY×aspect); directional stretch along vel
             public readonly double OffsetX, OffsetY;    // base.offset_x/offset_y: quad centre offset in half-size units
@@ -56,13 +52,11 @@ namespace DSPRE.Avalonia
         public int Height { get; }
 
         public double WorldToPx { get; set; } = 1.0;      // particle pixels → screen pixels (positions already /172)
-        // billboard half-size px = base_scl × this. The the particle library quad is ±FX32_ONE (±1.0 world) scaled by base_scl, and
-        // world→pixels is /172, so the faithful factor is 4096/172 = 4096/172 ≈ 23.8.
+        // Billboard half-size px = base_scl × this: the particle library's quad is ±1.0 world units scaled by base_scl,
+        // and world to pixels is /172, so 4096/172 ≈ 23.8.
         public double ScalePx { get; set; } = 4096.0 / 172.0;
-        // The real battle particle camera: eye at (0,0,0x4000) = z +4.0 world units,
-        // looking at the origin. 172 is exactly this camera's px-per-unit at the z=0 plane
-        // (96px focal / 4.0 ≈ 24 px/unit = 4096/170.7 ≈ /172), which is why the flat mapping was "almost right":
-        // it IS the projection at z=0; depth only matters off that plane (the enemy sits at z −1.28).
+        // The battle particle camera sits at z +4.0 looking at the origin; at the z=0 plane that's 4096/172 px a unit,
+        // and depth only matters off it (the opponent sits at z −1.28).
         private const double EyeDist = 4.0;
         private const double PxPerUnit = 4096.0 / 172.0;
         public double DotRadiusPx { get; set; } = 4.0;    // soft-dot fallback radius
@@ -94,7 +88,7 @@ namespace DSPRE.Avalonia
 
         public void Step() { foreach (Layer l in _layers) l.Sim.Step(); }
 
-        /// <summary>Where every live particle is, for anything that needs to look at them rather than draw them.</summary>
+        /// <summary>Every live particle's position, for callers that look at particles without drawing them.</summary>
         public IEnumerable<SpaParticleState> LiveParticles()
         {
             foreach (Layer l in _layers)
@@ -158,14 +152,8 @@ namespace DSPRE.Avalonia
                     double worldY = (Height / 2.0 - layer.CenterY) / fBase + p.Y * WorldToPx;
                     double px = Width / 2.0 + worldX * f;
                     double py = Height / 2.0 - worldY * f;
-                    // The quad is sized by base_scale (NOT the texture's pixel size); p.Scale already carries
-                    // base_scl × scale-anim. sclX = sclY × aspect (billboard). The texture's S axis maps to the
-                    // quad's local-X half-axis, its T axis to local-Y.
-                    // NOTE: quads must render at their TRUE size: screen-covering sheets are real data
-                    // (Ominous Wind is ONE 128×128 particle at base_scl 11.06 × aspect 4.10 ≈ 2158×526 px,
-                    // whose edges must stay off-screen through the flight; an old 96px cap squared it into
-                    // a small box, and even 512 exposed its edges mid-flight). BlitQuad clips its bounding
-                    // box to the screen, so oversized quads cost nothing; the cap only guards absurd data.
+                    // Quads draw at full size, as screen-covering sheets like Ominous Wind need; BlitQuad clips to the
+                    // screen, so big ones cost nothing.
                     double sc = p.Scale <= 0 ? 1.0 : p.Scale;
                     // Per-axis scales (the scale-anim-direction flag): a Y-only scale anim extends the
                     // quad lengthwise while its width stays base_scl (Seed Flare slashes). Raw values, no
@@ -244,9 +232,10 @@ namespace DSPRE.Avalonia
                         double nyx = ayx * ca - ayy * sa, nyy = ayx * sa + ayy * ca;
                         axx = nxx; axy = nxy; ayx = nyx; ayy = nyy;
                     }
-                    // base.offset_x/offset_y: the the particle library quad is centred at (offset_x, offset_y) in half-size units
-                    // (drawXYPlane), so shift the screen centre along the local axes. Local +Y is world-up = screen-up,
-                    // but our ay points screen-down, hence −offsetY. Anchors asymmetric billboards (Bite jaws).
+                    // base.offset_x/offset_y: the particle library centres the quad at (offset_x, offset_y) in
+                    // half-size units (drawXYPlane), so the screen centre shifts along the local axes. Local +Y is
+                    // screen-up but ay points down, hence −offsetY. It anchors asymmetric billboards like the Bite
+                    // jaws.
                     if (layer.OffsetX != 0 || layer.OffsetY != 0)
                     {
                         px += layer.OffsetX * axx - layer.OffsetY * ayx;
@@ -410,10 +399,8 @@ namespace DSPRE.Avalonia
             return new[,] { { d1x, d1y, d1z }, { ux, uy, uz }, { d2x, d2y, d2z } };
         }
 
-        // Draws the texture onto an oriented quad centred at (cx,cy) whose two half-axes are (axX,axY) [local X /
-        // texture S] and (ayX,ayY) [local Y / texture T] in screen pixels, the exact billboard/dbb quad. For an
-        // axis-aligned billboard the axes are (sclX,0)/(0,sclY); for a directional billboard they rotate with the
-        // particle's velocity. Modulated by the particle colour+alpha and blended additively (the glow look).
+        // Draws one textured quad from its centre and two half-axes in screen pixels (local X along texture S, local Y
+        // along T), tinted by the particle's colour and alpha and laid over what is below.
         private void BlitQuad(SpaTexture tex, double cx, double cy, double axX, double axY, double ayX, double ayY,
                               byte r, byte g, byte b, double alpha, int tileS, int tileT,
                               bool flipS = false, bool flipT = false)
@@ -448,9 +435,7 @@ namespace DSPRE.Avalonia
                     int ti = (ty * tex.Width + tx) * 4;
                     double ta = tex.Rgba[ti + 3] / 255.0;
                     if (ta <= 0) continue;
-                    // Faithful DS blend = ALPHA-OVER (G3X_AlphaBlend(TRUE)), NOT additive: the particle
-                    // is laid OVER what's underneath by its coverage, premultiplied (the layer is composited Premul).
-                    // Additive over-brightened everything into a glow ("fake" powders/beams).
+                    // The DS blends alpha-over (G3X_AlphaBlend), premultiplied.
                     double contrib = ta * alpha;   // source coverage
                     double invc = 1.0 - contrib;
                     int i = (y * Width + x) * 4;

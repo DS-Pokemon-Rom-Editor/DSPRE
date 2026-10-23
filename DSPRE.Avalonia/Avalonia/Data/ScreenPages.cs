@@ -117,8 +117,8 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Added to each piece's own palette number to find its row in the colours file.</summary>
         public int Row;
         /// <summary>
-        /// The colours row every piece uses instead of its own, for a sprite the game gives a palette of its own
-        /// (the summary screen's templates do); -1 keeps the pieces' rows.
+        /// The colour row every piece uses instead of its own, for a sprite the game assigns a palette, as the summary
+        /// screen's templates do; -1 keeps the pieces' rows.
         /// </summary>
         public int Palette = -1;
         public int X, Y;

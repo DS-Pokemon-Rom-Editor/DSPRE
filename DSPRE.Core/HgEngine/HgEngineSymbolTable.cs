@@ -9,7 +9,7 @@ namespace DSPRE.HgEngine
 {
     /// <summary>Parses a hg-engine C header's constant declarations into name/value maps: both plain
     /// `#define NAME 123` and C enum `NAME = 123,` styles, resolving references between #defines
-    /// (e.g. "(SPECIES_MEGA_START + 1)") recursively rather than assuming a plain literal.</summary>
+    /// (e.g. "(SPECIES_MEGA_START + 1)") recursively, not only plain literals.</summary>
     public sealed class HgEngineSymbolTable
     {
         public IReadOnlyDictionary<string, int> ByName { get; }

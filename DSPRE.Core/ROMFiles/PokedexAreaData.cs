@@ -152,7 +152,7 @@ namespace DSPRE.ROMFiles
             for (int k = 0; k < Lists; k++)
             {
                 if (now[k].SequenceEqual(lists[k])) continue;
-                // DP and Pt keep the lists sorted, which is how the game's own build writes them.
+                // DP and Pt keep the lists sorted, as the game build writes them.
                 IEnumerable<int> ids = _dppt ? lists[k].OrderBy(i => i) : (IEnumerable<int>)lists[k];
                 ArchiveMembers.Write(MemberPath(k, species), ids.Append(0).SelectMany(id => BitConverter.GetBytes((uint)id)).ToArray());
             }

@@ -79,7 +79,7 @@ namespace DSPRE.Avalonia
                     tab = FindTab(root, tabName);
                     if (tab == null || !tab.IsVisible || !tab.IsEnabled) continue;
                 }
-                // Outside a tab the controls already exist, so one only another game shows can be skipped now.
+                // Outside a tab the controls already exist, so a step for a control this game hides is skipped now.
                 if (tab == null && target != null && target.Contains(':') && Resolve(root, target) == null) continue;
                 TabItem capturedTab = tab;
                 string inner = target;
@@ -105,8 +105,23 @@ namespace DSPRE.Avalonia
                 };
                 steps.Add((resolve, step.Title, step.Body, onEnter));
             }
+            if (!tour.Steps.Any(s => s.Title == "Saving") && SaveStep(root) is { } save) steps.Add(save);
             GuidedTour.StartSteps(root, steps);
         }
+
+        // Every tour with a Save button ends on it, so no tour repeats the keys.
+        private static (Func<Control>, string, string, Action)? SaveStep(Control root)
+        {
+            if (FindButton(root, "Save") == null) return null;
+            bool discard = FindButton(root, "Discard") != null, undo = FindButton(root, "Undo") != null;
+            string keys = undo ? "Ctrl+S saves, Ctrl+Z undoes and Ctrl+Y redoes." : "Ctrl+S saves too.";
+            string body = "Save writes your changes" + (discard ? " and Discard drops them" : "") + ". "
+                        + (root is Window ? keys : "In its own window, " + keys);
+            return (() => FindButton(root, "Save"), "Saving", body, null);
+        }
+
+        private static Button FindButton(Control root, string text) =>
+            Descendants(root).OfType<Button>().FirstOrDefault(b => b.Content as string == text);
 
         /// <summary>Wires an editor window or embedded editor to its tour: a "?" button, F1, and a one-time offer.</summary>
         public static void Attach(Control root, string key)
@@ -207,7 +222,7 @@ namespace DSPRE.Avalonia
             buttons.Children.Add(later);
             buttons.Children.Add(show);
             StackPanel stack = new StackPanel { Spacing = 8 };
-            stack.Children.Add(new TextBlock { Text = "New to the " + All[key].Name + "?", FontWeight = FontWeight.SemiBold, FontSize = 14, TextWrapping = TextWrapping.Wrap });
+            stack.Children.Add(new TextBlock { Text = "Take the " + All[key].Name + " tour?", FontWeight = FontWeight.SemiBold, FontSize = 14, TextWrapping = TextWrapping.Wrap });
             stack.Children.Add(new TextBlock { Text = "A short tour shows what each part does. " + (HasButton.Contains(root) ? "F1 or ? shows it again later." : "F1 shows it again later."), TextWrapping = TextWrapping.Wrap, Opacity = 0.9 });
             stack.Children.Add(buttons);
             Border card = new Border

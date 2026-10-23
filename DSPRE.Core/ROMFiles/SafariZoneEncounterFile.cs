@@ -54,7 +54,7 @@ namespace DSPRE.ROMFiles
       using (BinaryReader br = new BinaryReader(fs))
       {
         if (br.BaseStream.Length < 5){ return; }
-        //#1 Section - Object Arrangement Allocation
+        // Section 1: object arrangement
         GrassEncounterGroup.ReadObjectSlots(br);
         SurfEncounterGroup.ReadObjectSlots(br);
         OldRodEncounterGroup.ReadObjectSlots(br);
@@ -97,7 +97,7 @@ namespace DSPRE.ROMFiles
       return newData.ToArray();
     }
 
-    // The editor says nothing of its own when a save works, so don't pop the base class's message.
+    // The editor shows nothing after a save, so the base class message is skipped.
     public bool SaveToFile()
     {
       string path = Filesystem.GetSafariZonePath(ID);

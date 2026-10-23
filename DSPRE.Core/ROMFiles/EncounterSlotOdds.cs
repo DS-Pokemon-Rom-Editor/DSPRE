@@ -72,7 +72,7 @@ namespace DSPRE.ROMFiles
                 foreach (int[] sites in m.Boundaries)
                 {
                     List<int> values = sites.Select(s => Imm(d, s, m.Name)).Distinct().ToList();
-                    if (values.Count != 1) throw new InvalidDataException($"The {m.Name} slot code compares one boundary against different values.");
+                    if (values.Count != 1) throw new InvalidDataException($"The {m.Name} slot code doesn't look like the game's; it may have been patched.");
                     bounds.Add(values[0]);
                 }
                 if (m.Slots - 1 > m.Boundaries.Length)

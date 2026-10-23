@@ -126,9 +126,7 @@
             </Grid>
           </GroupBox>
 
-          <!-- Trainer data type (hg-engine only): the real TRAINER_DATA_TYPE_* flags, dynamically named
-               from the linked checkout's include/trainer_data.h. Each one gates the matching party-mon
-               field(s) below (see TrainerPartyMonViewModel's Hge*Enabled properties). -->
+          <!-- hg-engine trainer data types from include/trainer_data.h; each one gates its party fields. -->
           <GroupBox Header="Trainer data type" IsVisible="{Binding IsHgeActive}">
             <ItemsControl ItemsSource="{Binding TrainerDataTypeFlags}">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel ItemSpacing="4" LineSpacing="6"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
@@ -153,9 +151,7 @@
             </ItemsControl>
           </GroupBox>
 
-          <!-- AI flags: dynamically named from trainer_data.h's real F_* bits when hg-engine is active
-               (repopulated in code, see TrainerEditorViewModel.SetupAsync); the same static, generic
-               labels as before otherwise. -->
+          <!-- AI flags: named from trainer_data.h on hg-engine, generic labels otherwise. -->
           <GroupBox Header="AI flags">
             <DockPanel>
             <Button DockPanel.Dock="Right" VerticalAlignment="Top" Content="AI notes" controls:Icon.Key="OpenLink" Click="AiNotes_Click"
@@ -222,7 +218,7 @@
                           <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding AbilityItems}" SelectedIndex="{Binding AbilityIndex}" IsEnabled="{Binding AbilityEnabled}"/>
                         </StackPanel>
                         <StackPanel Width="80" Margin="0,0,6,0">
-                          <TextBlock Text="DV" FontSize="10" ToolTip.Tip="Sets every IV, and with the trainer and species, the nature"/>
+                          <TextBlock Text="DV" FontSize="10" ToolTip.Tip="Sets every IV. With the trainer and species, it also sets the nature."/>
                           <NumericUpDown Minimum="0" Maximum="255" Increment="1" Value="{Binding Difficulty}"/>
                         </StackPanel>
                         <StackPanel Width="56" Margin="0,0,6,0">
@@ -275,7 +271,7 @@
                               <ComboBox Width="150" ItemsSource="{Binding CapsuleNames}" SelectedIndex="{Binding CapsuleIndex}"
                                         MaxDropDownHeight="360"/>
                               <Button Content="Edit" controls:Icon.Key="pencil" Click="DesignCapsule_Click"
-                                      ToolTip.Tip="Open in Ball Capsules" IsVisible="{Binding HasCapsule}"/>
+                                      ToolTip.Tip="Open in Ball capsules" IsVisible="{Binding HasCapsule}"/>
                             </StackPanel>
                             <TextBlock Text="{Binding BallValueNote}" IsVisible="{Binding HasUnsupportedBallValue}" FontSize="10"
                                        TextWrapping="Wrap" MaxWidth="150" HorizontalAlignment="Left"/>
@@ -380,7 +376,7 @@
                           </WrapPanel>
 
                           <StackPanel IsEnabled="{Binding HgeIvEvEnabled}">
-                            <TextBlock Text="Explicit IVs" FontSize="10"/>
+                            <TextBlock Text="Set IVs" FontSize="10" ToolTip.Tip="Explicit IVs"/>
                             <WrapPanel>
                               <NumericUpDown Width="70" Margin="0,0,4,0" Minimum="0" Maximum="31" ToolTip.Tip="HP"      Value="{Binding HgeExtras.SetIvs.Hp}"/>
                               <NumericUpDown Width="70" Margin="0,0,4,0" Minimum="0" Maximum="31" ToolTip.Tip="Attack"  Value="{Binding HgeExtras.SetIvs.Attack}"/>
@@ -458,7 +454,7 @@
           <GroupBox Header="Battle messages" IsVisible="{Binding !IsHgeActive}">
             <DockPanel>
               <Button DockPanel.Dock="Right" VerticalAlignment="Top" Content="Edit" controls:Icon.Key="pencil" Click="BattleMessages_Click"
-                      ToolTip.Tip="Open this trainer in the Battle Message editor"/>
+                      ToolTip.Tip="Open this trainer's battle messages"/>
               <ItemsControl ItemsSource="{Binding BattleLines}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:TrainerEditorViewModel+BattleLine">

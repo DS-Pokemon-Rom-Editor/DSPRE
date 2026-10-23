@@ -173,7 +173,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public int ThemeIndex
         {
             get => _themeIndex;
-            // Applied as it is picked rather than on Save, so the window shows what was chosen.
+            // Applied when picked, not on Save, so the window shows the choice.
             set { if (Set(ref _themeIndex, value) && value >= 0) ThemeManager.SetDark(value == 0); }
         }
 
@@ -315,7 +315,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             if (!path.EndsWith("DSPRE_contents"))
             {
                 bool proceed = await DialogHelper.AskYesNoAsync(
-                    "The folder you selected does not appear to be a DSPRE folder (DSPRE_contents), are you sure you want to proceed?",
+                    "That folder doesn't look like a DSPRE project folder (..._DSPRE_contents). Use it anyway?",
                     "Warning");
                 if (!proceed) return;
             }
@@ -340,7 +340,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             if (!dirty) return true;
 
             return await DialogHelper.AskYesNoAsync(
-                "You still have unsaved modifications, are you sure you want to quit?",
+                "You have unsaved changes. Close without saving?",
                 "Exit");
         }
     }

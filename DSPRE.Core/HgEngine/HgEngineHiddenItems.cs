@@ -29,12 +29,12 @@ namespace DSPRE.HgEngine
         public static bool TryLoad(out List<Entry> entries, out string error)
         {
             entries = null; error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
 
             string text = TryReadSource(out string path);
-            if (text == null) { error = $"Source file not found: {path}"; return false; }
+            if (text == null) { error = $"{path} is missing from the checkout."; return false; }
             if (!TryFindArrayBlock(text, out int open, out int close))
-            { error = "Could not locate sHiddenItemParam[] in HiddenItems.c."; return false; }
+            { error = "Couldn't locate sHiddenItemParam[] in HiddenItems.c."; return false; }
 
             HgEngineSymbolTable items = HgEngineSymbolTable.Load(ItemHeaderRelPath);
             entries = ParseEntries(text.Substring(open, close - open + 1), items);
@@ -63,12 +63,12 @@ namespace DSPRE.HgEngine
         public static bool TrySave(IReadOnlyList<Entry> entries, out string error)
         {
             error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
 
             string original = TryReadSource(out string path);
-            if (original == null) { error = $"Source file not found: {path}"; return false; }
+            if (original == null) { error = $"{path} is missing from the checkout."; return false; }
             if (!TryFindArrayBlock(original, out int open, out int close))
-            { error = "Could not locate sHiddenItemParam[] in HiddenItems.c."; return false; }
+            { error = "Couldn't locate sHiddenItemParam[] in HiddenItems.c."; return false; }
 
             HgEngineSymbolTable items = HgEngineSymbolTable.Load(ItemHeaderRelPath);
             string ItemSymbol(int id) => items != null && items.TryGetNameWithPrefix(id, "ITEM_", out string n) ? n : id.ToString();
@@ -77,10 +77,10 @@ namespace DSPRE.HgEngine
             string text = original.Substring(0, open) + newBlock + original.Substring(close + 1);
 
             string consumerPath = Path.Combine(HgEngineProject.RepoPathUnc, ConsumerRelPath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(consumerPath)) { error = $"Source file not found: {consumerPath}"; return false; }
+            if (!File.Exists(consumerPath)) { error = $"{consumerPath} is missing from the checkout."; return false; }
             string consumerText = HgEngineFileCache.GetText(consumerPath);
             if (!HgEngineHeaderEditor.TryReplaceDefineValue(ref consumerText, CountDefineName, entries.Count.ToString()))
-            { error = $"Could not find {CountDefineName} in {ConsumerRelPath}, so nothing was written."; return false; }
+            { error = $"Couldn't find {CountDefineName} in {ConsumerRelPath}, so nothing was written."; return false; }
 
             try { HgEngineFileCache.WriteText(path, text); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)

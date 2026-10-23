@@ -249,7 +249,7 @@ namespace DSPRE.ROMFiles
             if (bytes[Length - 1] != GameHpBarLength && !HpBarLengthEditable) return "This game's HP bar length can't be changed.";
             PartyPanelSizePatch.Size size = PartyPanelSizePatch.FromBytes(bytes.Skip(_data.Length).Take(6).ToArray());
             if (size == PartyPanelSizePatch.Original) return null;
-            if (PartyPanelSizePatch.Read() == null) return "The panel size patch isn't in, so the panels can't change size.";
+            if (PartyPanelSizePatch.Read() == null) return "The panel size patch isn't applied, so the panels can't change size.";
             return PartyPanelSizePatch.WhyNotSize(size);
         }
 

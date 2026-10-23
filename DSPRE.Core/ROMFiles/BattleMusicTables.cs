@@ -32,8 +32,8 @@ namespace DSPRE.ROMFiles
         public ClassJumpTable ClassJumps { get; private set; }
 
         /// <summary>
-        /// False when the music reader's own pointer does not sit two bytes into the combo table, so the
-        /// music actually played is not the one read here. True where that pointer is not known.
+        /// False when the music reader's pointer isn't two bytes into the combo table, so the game may play other
+        /// music. True where that pointer isn't known.
         /// </summary>
         public bool MusicPointerAgrees { get; private set; } = true;
 
@@ -107,7 +107,7 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>True when the rows came from hg-engine's source rather than the ROM.</summary>
+        /// <summary>True when the rows came from hg-engine's source, not the ROM.</summary>
         public bool FromHgEngineSource { get; }
 
         internal BattleMusicTables(bool fromHgEngineSource = false) => FromHgEngineSource = fromHgEngineSource;

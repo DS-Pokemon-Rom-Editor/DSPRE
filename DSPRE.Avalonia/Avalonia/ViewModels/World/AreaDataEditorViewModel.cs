@@ -17,19 +17,14 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.World
 {
     /// <summary>
-    /// Avalonia editor for AreaData files: the records that tie a map area to its texture packs.
-    /// Each entry sets the map tileset and buildings tileset (the NSBTX pack indices), plus the
-    /// dynamic-texture/area-type/light fields. This is the data the map &amp; event 3D views resolve
-    /// to pick the correct textures; it had no Avalonia editor before (was only in WinForms NSBTX).
+    /// Area data: the map and building texture packs, terrain animation, area type and light each area uses.
     /// </summary>
     public class AreaDataEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
-        // NOTE: Set() does NOT mark dirty; only the actual area-field edits below do (via Dirty()). Otherwise
-        // selecting a different area or updating StatusText would falsely flag unsaved changes (and saving,
-        // which sets StatusText after SetClean, would immediately re-dirty the editor).
+        // Set() doesn't mark dirty, so selecting an area or setting StatusText never flags unsaved changes.
         private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
         { if (EqualityComparer<T>.Default.Equals(f, v)) return false; f = v; OnPropertyChanged(n); return true; }
 
@@ -132,7 +127,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
         /// <summary>Third field of the area record. HGSS keeps the terrain animation index
         /// here; DP/Pt keeps a model set index that nothing in the game reads, so the label follows the game.</summary>
-        public string ThirdFieldLabel => IsHGSS ? "Global NSBTA" : "Unused";
+        public string ThirdFieldLabel => IsHGSS ? "Terrain animation" : "Unused";
         public string ThirdFieldTip => IsHGSS
             ? "Area-wide texture animation, like moving water. 65535 is none."
             : "Diamond, Pearl and Platinum store a model set number here but never read it, so changing it does nothing.";
@@ -149,7 +144,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
         }
 
-        /// <summary>65535 is the game's way of saying there is no animation, so say that rather than the number.</summary>
+        /// <summary>65535 means no animation, so that is what's shown.</summary>
         public string ThirdFieldNote => IsHGSS && _thirdField == 65535 ? "none" : "";
         public decimal LightType
         {
@@ -207,7 +202,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             for (int i = 0; i < count; i++) AreaNames.Add("Area data " + i);
             OnPropertyChanged(nameof(RemoveTip));
         }
-        // RecordUndoSnapshot runs BEFORE the _dirty short-circuit so EVERY edit is captured (not just the first).
+        // Snapshot before the dirty check, so every edit is undoable, not just the first.
         private void Dirty() { RecordUndoSnapshot(); if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         // Notifies even when only staged entries were waiting, so the title mark clears after a save.
         private void SetClean() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
@@ -277,8 +272,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public async Task SetupAsync(Window owner)
         {
-            // The Maps workspace builds this before any ROM is open, when every game-dependent label reads as
-            // Diamond/Pearl/Platinum; say them again for the game now open.
+            // The Maps workspace builds this before a ROM is open, so the game's labels are raised again here.
             OnPropertyChanged(nameof(IsHGSS));
             OnPropertyChanged(nameof(ThirdFieldLabel));
             OnPropertyChanged(nameof(ThirdFieldTip));
@@ -297,7 +291,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowErrorAsync($"Failed to set up Area data editor:\n{ex.Message}", "Area data error");
+                await DialogHelper.ShowErrorAsync($"Couldn't set up the Area data editor:\n{ex.Message}", "Area data editor");
             }
         }
 
@@ -316,7 +310,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 StatusText = "";
                 OnPropertyChanged(nameof(UnsavedChangesDescription));
             }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Failed to load area data {index}:\n{ex.Message}", "Area data error"); }
+            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't load area data {index}:\n{ex.Message}", "Area data editor"); }
         }
 
         // ── Import / export of the shown entry ──────────────────────────────────────────
@@ -334,7 +328,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             try { PlainFiles.WriteBytes(path, _area.ToByteArray()); SaveNotice.Exported(path); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Area data error");
+                await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Area data editor");
             }
         }
 
@@ -348,13 +342,13 @@ namespace DSPRE.Avalonia.ViewModels.World
             try { data = File.ReadAllBytes(path); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Area data error");
+                await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Area data editor");
                 return;
             }
             // Every game's entry is eight bytes; anything else is some other file.
             if (data.Length != _area.ToByteArray().Length)
             {
-                await DialogHelper.ShowErrorAsync($"That file is {data.Length} bytes; an area data entry is {_area.ToByteArray().Length}.", "Area data error");
+                await DialogHelper.ShowErrorAsync($"That file is {data.Length} bytes; an area data entry is {_area.ToByteArray().Length}.", "Area data editor");
                 return;
             }
             _area = new AreaData(new MemoryStream(data));
@@ -378,7 +372,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task AddAsync()
         {
             int count = AreaNames.Count;
-            if (count >= 256) { await DialogHelper.ShowErrorAsync("Headers can only point at area data 0 to 255.", "Area data error"); return; }
+            if (count >= 256) { await DialogHelper.ShowErrorAsync("Headers can only point at area data 0 to 255.", "Area data editor"); return; }
             _archive.Add(_archive.Read(0));
             _removedAreas.Clear();
             AreaNames.Add("Area data " + count);
@@ -390,8 +384,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task RemoveLastAsync()
         {
             int last = AreaNames.Count - 1;
-            if (last <= 0) { await DialogHelper.ShowErrorAsync("There has to be at least one area data entry.", "Area data error"); return; }
-            if (!await DialogHelper.AskYesNoAsync($"Remove area data {last}? Only the last entry can be removed. Ctrl+Z puts it back.", "Delete area data?"))
+            if (last <= 0) { await DialogHelper.ShowErrorAsync("There has to be at least one area data entry.", "Area data editor"); return; }
+            if (!await DialogHelper.AskYesNoAsync($"Remove area data {last}? Only the last entry can be removed. Ctrl+Z puts it back.", "Remove area data?"))
                 return;
             if (_selectedIndex == last && _dirty) SetClean();
             _removedAreas.Push(_archive.Read(last));
@@ -427,7 +421,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (_area == null || _selectedIndex < 0) return;
             try { _archive.Save(_selectedIndex, _area.ToByteArray()); if (_areaPacks != null && _selectedIndex < _areaPacks.Length) _areaPacks[_selectedIndex] = (_area.MapTileset, _area.BuildingsTileset); SetClean(); _history.MarkSaved(); RaiseUndoState(); StatusText = $"Saved area data {_selectedIndex}."; SaveNotice.Saved(UnsavedChangesDescription); AppEvents.RaiseAreaDataSaved(this, _selectedIndex); }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Save failed:\n{ex.Message}", "Area data error"); }
+            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't save:\n{ex.Message}", "Area data editor"); }
         }
     }
 }

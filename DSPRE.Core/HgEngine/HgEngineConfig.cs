@@ -43,7 +43,7 @@ namespace DSPRE.HgEngine
         {
             settings = new List<Setting>();
             error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             string header = Read(HeaderRelPath);
             if (header == null) { error = $"{HeaderRelPath} is missing from the checkout."; return false; }
             settings.AddRange(ReadHeader(header));

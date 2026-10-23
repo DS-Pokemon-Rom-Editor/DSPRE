@@ -46,7 +46,7 @@ namespace DSPRE.HgEngine
             if (begin != end || begin > 1) return "A test file holds one BEGIN_TEST { ... } END_TEST block, or one { ... }, on its own.";
             // The build pastes each file into one array, so what it sees has to be a single { ... },.
             string built = AsBuilt(code).Trim();
-            if (!built.StartsWith('{') || !built.EndsWith(',')) return "Built, the test has to read { ... }, so the next test can follow it.";
+            if (!built.StartsWith('{') || !built.EndsWith(',')) return "Once built, the test must come out as { ... }, so the next test can follow it.";
             int depth = 0;
             foreach (char c in code)
             {
@@ -59,9 +59,8 @@ namespace DSPRE.HgEngine
         private static string AsBuilt(string code) => Visible(code, endTestAsComma: true);
 
         /// <summary>
-        /// The test as BattleTests.c sees it, same length as the text so offsets still match: comments, directives and
-        /// the GET_TEST_CASE_ONLY #ifndef sections (that macro is defined there) become spaces, BEGIN_TEST is empty and
-        /// END_TEST, as it expands to a comma there, becomes one when asked.
+        /// The test as BattleTests.c compiles it, kept the same length so offsets match: comments, directives and
+        /// GET_TEST_CASE_ONLY sections become spaces, BEGIN_TEST is empty and END_TEST becomes a comma when asked.
         /// </summary>
         public static string Visible(string text, bool endTestAsComma = false)
         {
@@ -148,7 +147,7 @@ namespace DSPRE.HgEngine
             if (declared.Count > BuildDefined.Length)
                 foreach (Match m in ConstantName.Matches(bare))
                     if (!declared.Contains(m.Value) && !IsInsideInclude(bare, m.Index))
-                        found.Add(new Problem(m.Index, m.Length, $"{m.Value} is not defined in the headers this test includes."));
+                        found.Add(new Problem(m.Index, m.Length, $"{m.Value} isn't defined in the headers this test includes."));
             return found;
         }
 

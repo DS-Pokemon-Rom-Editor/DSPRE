@@ -42,7 +42,7 @@ namespace DSPRE.Avalonia
         public async Task StartAsync()
         {
             if (!RotomTool.IsLspAvailable)
-                throw new FileNotFoundException("rotom-lsp was not found in DSPRE's Tools folder.", RotomTool.LspPath);
+                throw new FileNotFoundException("rotom-lsp wasn't found in DSPRE's Tools folder.", RotomTool.LspPath);
 
             _process = new Process
             {
@@ -327,7 +327,7 @@ namespace DSPRE.Avalonia
             if (await Task.WhenAny(completion.Task, Task.Delay(TimeSpan.FromSeconds(RequestTimeoutSeconds), _cts.Token)) != completion.Task)
             {
                 lock (_pendingLock) _pendingRequests.Remove(id);
-                throw new TimeoutException("rotom-lsp did not answer " + method + " within " + RequestTimeoutSeconds + " seconds.");
+                throw new TimeoutException("rotom-lsp didn't answer " + method + " within " + RequestTimeoutSeconds + " seconds.");
             }
 
             return await completion.Task;
@@ -347,9 +347,7 @@ namespace DSPRE.Avalonia
             await _writeLock.WaitAsync(_cts.Token);
             try
             {
-                // A caller (e.g. a fire-and-forget document-open notification) can still be mid-write
-                // when Dispose() runs from elsewhere (a ROM switch restarting the LSP); bail before
-                // touching the now-torn-down process/stream rather than throwing into the caller.
+                // A ROM switch can dispose the client mid-write, so stop here before using the closed stream.
                 if (_disposed) return;
                 Stream stream = _process.StandardInput.BaseStream;
                 await stream.WriteAsync(header, 0, header.Length, _cts.Token);

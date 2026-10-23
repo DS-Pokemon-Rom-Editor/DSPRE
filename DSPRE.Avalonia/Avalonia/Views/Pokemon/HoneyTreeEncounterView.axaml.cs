@@ -23,6 +23,6 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private async void Import_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.ImportAsync() ?? Task.CompletedTask, "The Honey Tree encounters weren't imported.", ErrorTitle);
         private void Locate_Click(object sender, RoutedEventArgs e) => VM?.Locate();
 
-        private const string ErrorTitle = "Special encounters editor error";
+        private const string ErrorTitle = "Special encounters editor";
     }
 }

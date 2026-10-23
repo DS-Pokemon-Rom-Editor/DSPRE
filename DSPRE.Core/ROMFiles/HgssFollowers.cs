@@ -58,8 +58,8 @@ namespace DSPRE.ROMFiles
             if (GameFamily != GameFamilies.HGSS) return "Followers exist only in HeartGold and SoulSilver.";
             if (HgEngineProject.IsActive || IsHgEngineBaseProject) return "hg-engine keeps follower data in its source.";
             FollowerTableSites tables = RomLocator.FollowerTables;
-            if (tables == null || !File.Exists(Arm9Path)) return "Follower tables not found.";
-            if (ARM9.CheckCompressionMark()) return "arm9 is compressed.";
+            if (tables == null || !File.Exists(Arm9Path)) return "The follower tables weren't found.";
+            if (ARM9.CheckCompressionMark()) return "The ARM9 is still compressed.";
             // The tables must still read as the retail ones: Bulbasaur 0, Ivysaur 1, Venusaur 2 with a female model, Unown 27 forms.
             if (Lut(tables.Models, 4) is not [0, 0, 1, 2]
                 || Lut(tables.FormCounts + 200 * 2, 1)[0] != 27
@@ -166,7 +166,7 @@ namespace DSPRE.ROMFiles
             long row = RowOffset(FirstSprite + m.Index);
             if (row < 0) throw new InvalidOperationException($"No overworld row for follower model {m.Index}.");
             DSUtils.WriteToFile(OWtablePath, BitConverter.GetBytes(m.Bits), (uint)(row + 4));
-            // The standing-still sprites used in scenes have rows of their own on the same model file.
+            // The standing sprites used in scenes have their own rows for the same model file.
             ushort modelFile = BitConverter.ToUInt16(DSUtils.ReadFromFile(OWtablePath, row + 2, 2), 0);
             foreach (long other in RowsUsingModelFile(modelFile))
                 if (other != row) DSUtils.WriteToFile(OWtablePath, BitConverter.GetBytes(m.Bits), (uint)(other + 4));

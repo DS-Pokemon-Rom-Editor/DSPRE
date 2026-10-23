@@ -11,7 +11,7 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
-    /// <summary>The Bug-Catching Contest opponents (HGSS), a tab of the Encounters editor.</summary>
+    /// <summary>The Bug-Catching Contest opponents (HGSS), a tab of the Special encounters editor.</summary>
     public class BugContestTrainersViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -114,7 +114,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is UnauthorizedAccessException)
             {
                 _file = null;
-                _unavailable = $"The contest opponents could not be read: {e.Message}";
+                _unavailable = $"The contest opponents couldn't be read: {e.Message}";
             }
             OnPropertyChanged(nameof(IsAvailable));
             OnPropertyChanged(nameof(Unavailable));
@@ -157,7 +157,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_file == null || !HasUnsavedChanges) return;
             if (HasProblems)
             {
-                await DialogHelper.ShowErrorAsync($"The contest opponents were not saved:\n{Problems}", "Bug Contest opponents error");
+                await DialogHelper.ShowErrorAsync($"The contest opponents weren't saved:\n{Problems}", "Bug Contest opponents");
                 return;
             }
             try
@@ -166,7 +166,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowErrorAsync($"The contest opponents were not saved:\n{e.Message}", "Bug Contest opponents error");
+                await DialogHelper.ShowErrorAsync($"The contest opponents weren't saved:\n{e.Message}", "Bug Contest opponents");
                 return;
             }
             _saved = _file.ToBytes();

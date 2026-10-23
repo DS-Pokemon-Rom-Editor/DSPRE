@@ -35,7 +35,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty || _archive.IsDirty;
         public string UnsavedChangesDescription
-            => DSPRE.Avalonia.Data.StagedArchive.Join($"Wild Encounters (HGSS #{SelectedEncounterIndex})", _dirty, _archive.Describe("encounter file", "encounter files"));
+            => DSPRE.Avalonia.Data.StagedArchive.Join($"Encounter file {SelectedEncounterIndex}", _dirty, _archive.Describe("encounter file", "encounter files"));
         void IEditorWithUnsavedChanges.SaveChanges() => DialogHelper.Watch(SaveCommandAsync());
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
@@ -196,7 +196,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             RaiseUndoState();
         }
 
-        // Subscribe grid-row edits → SetDirty once (also fixes "edited rows close without prompting").
+        // Grid rows don't reach the dirty path otherwise, so each is subscribed once.
         private void HookRowsOnce()
         {
             if (_rowsHooked) return;
@@ -248,7 +248,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             return _current.HasEncounters ? 2 : 0;
         }
 
-        // Opened without a file in mind: start on one that has encounters rather than the empty file 0.
+        // Opened without a file in mind: start on the first file with encounters, since file 0 is empty.
         private int FirstWithEncounters(int count)
         {
             for (int id = 0; id < count; id++)
@@ -303,7 +303,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_current == null) return;
             if (HgEngineProject.IsActive && SourceLoadError != null)
             {
-                await DialogHelper.ShowErrorAsync($"Encounter table {_selectedEncounterIndex} was not saved.\n{SourceLoadError}", "Wild Pokémon editor error");
+                await DialogHelper.ShowErrorAsync($"Encounter table {_selectedEncounterIndex} wasn't saved.\n{SourceLoadError}", "Wild Pokémon editor");
                 return;
             }
             List<string> problems = new List<string>();
@@ -321,7 +321,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     + "\n\nSave anyway?", "Wild Pokémon editor")) return;
             WriteWalkingRowsToFile();
             WriteWaterRowsToFile();
-            // The source is what the next sync rebuilds from, so a save that can't reach it is no save.
+            // The next sync rebuilds from the source, so a save that can't write it fails.
             if (HgEngineProject.IsActive)
             {
                 int table = _selectedEncounterIndex;
@@ -329,14 +329,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 (bool saved, string error) = await HgEngineSave.RunAsync(() => HgEngineEncounterSource.TryWrite(table, encounters, out string writeError) ? null : writeError);
                 if (!saved)
                 {
-                    if (error != null) await DialogHelper.ShowErrorAsync($"Encounter table {table} was not saved.\n{error}", "Wild Pokémon editor error");
+                    if (error != null) await DialogHelper.ShowErrorAsync($"Encounter table {table} wasn't saved.\n{error}", "Wild Pokémon editor");
                     return;
                 }
             }
             try { _archive.Save(_selectedEncounterIndex, _current.ToByteArray()); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowErrorAsync("The encounter files could not be saved:" + Environment.NewLine + ex.Message, "Wild Pokémon editor");
+                await DialogHelper.ShowErrorAsync("The encounter files couldn't be saved:" + Environment.NewLine + ex.Message, "Wild Pokémon editor");
                 StagedChanged();
                 return;
             }
@@ -461,7 +461,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             RaiseUndoState();
         }
 
-        /// <summary>Re-reads the slot chances into the row labels, for after the Slot Odds editor saved. Keeps unsaved edits.</summary>
+        /// <summary>Re-reads the slot chances into the row labels, for after Encounter slot odds saved. Keeps unsaved edits.</summary>
         public void RefreshSlotLabels()
         {
             foreach (ObservableCollection<WildEncounterRow> rows in new[] { MorningRows, DayRows, NightRows })

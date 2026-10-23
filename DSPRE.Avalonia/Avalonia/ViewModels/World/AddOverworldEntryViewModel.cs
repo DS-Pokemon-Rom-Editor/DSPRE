@@ -22,16 +22,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         public override string ToString() => Label;
     }
 
-    /// <summary>Backing model for the "Add Custom Entry…" dialog opened from the Overworld
-    /// Editor. Both the texture slot and the clone-source are picked from real, existing data
-    /// (never typed as a raw internal number). <see cref="BtxEditorViewModel.AddEntryWithImage"/>
-    /// does the actual ROM write once the dialog closes with <see cref="Confirmed"/>.
-    ///
-    /// A texture slot can only be reused at its own exact size/colour-count, since DSPRE can't create a
-    /// brand-new slot from scratch (see MaxUnusedSlotOptions notes). So once the user picks an
-    /// image (PNG or a raw already-BTX0-formatted texture), the slot list is re-sorted with any
-    /// slot whose existing dimensions/colour limit actually fit that image pushed to the top and
-    /// marked, instead of leaving the user to guess by trial and error.</summary>
+    /// <summary>Backs the Add custom entry dialog of the Overworld editor;
+    /// <see cref="BtxEditorViewModel.AddEntryWithImage"/> writes once it closes with <see cref="Confirmed"/>.
+    /// DSPRE can't make a slot from scratch, so slots are reused at their size and colour count, and slots
+    /// that fit the picked image go first.</summary>
     public class AddOverworldEntryViewModel : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -74,22 +68,16 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public bool HasImage => HasPng || HasRawBtx;
 
-        /// <summary>With an image picked, the imported pixels always land in a brand-new mmodel
-        /// slot (see <see cref="OverworldSpriteTableExpansion.AllocateNewMmodelSlot"/>). The slot
-        /// picked below is read-only, just a size/color-count template BTX0.Write needs, and is
-        /// never modified. Without an image, the picked slot IS the destination and its existing art
-        /// is shared on purpose (no write happens either way).</summary>
-        public string SlotSectionLabel => HasImage ? "Format template (existing texture to copy dimensions/colors from)" : "Texture slot (this entry's art)";
+        /// <summary>With an image the picked slot is only a size template, never written; without one the
+        /// entry shares its art.</summary>
+        public string SlotSectionLabel => HasImage ? "Size template" : "Texture slot";
         public string SlotSectionTooltip => HasImage
-            ? "Your image is written into a brand-new texture slot that's created just for this entry, nothing here gets modified. The template must match both the image and the chosen animation profile, including its dictionary and repeated-frame layout. Matching slots say so and come first."
-            : "No image was picked, so this entry will point straight at the chosen slot's existing art. Its complete BTX structure must match the chosen animation profile; matching slots say so.";
+            ? "Your image goes into a new texture slot made for this entry, and nothing here changes. The template has to fit the image and the animation profile; slots that fit say so and come first."
+            : "No image picked, so this entry uses the chosen slot's art. The slot has to fit the animation profile; slots that fit say so.";
 
         private Bitmap _imagePreview;
         public Bitmap ImagePreview { get => _imagePreview; private set => Set(ref _imagePreview, value); }
 
-        /// <summary>Dimensions/colors of whichever image is currently picked, shown right under
-        /// the preview so the user can tell which texture slot will actually fit it, before they
-        /// even look at the slot dropdown.</summary>
         private string _imageInfoText = "";
         public string ImageInfoText { get => _imageInfoText; private set => Set(ref _imageInfoText, value); }
 
@@ -120,9 +108,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             LoadOptions();
         }
 
-        // mmodel.narc holds a mix of file types (flat billboard textures AND full 3D models for
-        // "3D model" draw-type overworlds), so an "unused" member number is not necessarily a
-        // texture at all. Only offer/measure ones BTX0 can actually read.
+        // mmodel.narc also holds 3D models, so only members BTX0 can read are offered.
         private const int MaxUnusedSlotCandidatesToScan = 400;
         private const int MaxUnusedSlotOptions = 60;
 
@@ -153,7 +139,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 string path = Path.Combine(dir, kv.Value.spriteID.ToString("D4"));
                 if (!TryReadTextureInfo(path, out int w, out int h, out uint colorLimit, out Btx0Structure structure)) continue;
                 _cloneProfiles[kv.Key] = structure;
-                _allSlots.Add(new SlotInfo { Id = kv.Value.spriteID, Width = w, Height = h, ColorLimit = colorLimit, Structure = structure, BaseLabel = $"Existing art from OW Entry {kv.Key} (slot #{kv.Value.spriteID})" });
+                _allSlots.Add(new SlotInfo { Id = kv.Value.spriteID, Width = w, Height = h, ColorLimit = colorLimit, Structure = structure, BaseLabel = $"Art from overworld {kv.Key} (slot #{kv.Value.spriteID})" });
             }
             RebuildSlotOptions();
 
@@ -180,7 +166,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 bool fits = (haveTarget || haveProfile) && Fits(s);
                 string label = haveTarget || haveProfile
-                    ? $"{s.BaseLabel}, {s.Width}×{s.Height}, up to {s.ColorLimit} colours{(fits ? " (matches image and profile)" : " (different image/profile layout)")}"
+                    ? $"{s.BaseLabel}, {s.Width}×{s.Height}, up to {s.ColorLimit} colours{(fits ? " (matches image and profile)" : " (doesn't fit)")}"
                     : $"{s.BaseLabel}, {s.Width}×{s.Height}, up to {s.ColorLimit} colours";
                 SlotOptions.Add(new OwIdOption { Id = s.Id, Label = label, Fits = fits });
             }
@@ -219,7 +205,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     PngPath = null;
                     ImagePreview = null;
                     ImageInfoText = "";
-                    StatusText = "Could not decode that image.";
+                    StatusText = "Couldn't decode that image.";
                 }
                 else
                 {
@@ -235,7 +221,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 PngPath = null;
                 ImagePreview = null;
                 ImageInfoText = "";
-                StatusText = "Could not read that image.";
+                StatusText = "Couldn't read that image.";
             }
             OnPropertyChanged(nameof(HasPng));
             RaiseImageStateChanged();
@@ -255,7 +241,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     RawBtxPath = null;
                     ImagePreview = null;
                     ImageInfoText = "";
-                    StatusText = "That file isn't a texture DSPRE can read (BTX0, 16-color format).";
+                    StatusText = "That file isn't a texture DSPRE can read (a 16-colour BTX0).";
                 }
                 else
                 {
@@ -271,7 +257,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 RawBtxPath = null;
                 ImagePreview = null;
                 ImageInfoText = "";
-                StatusText = "Could not read that file.";
+                StatusText = "Couldn't read that file.";
             }
             OnPropertyChanged(nameof(HasRawBtx));
             RaiseImageStateChanged();

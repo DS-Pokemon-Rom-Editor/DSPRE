@@ -423,7 +423,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             MapTileset.Tile template = RampTemplate();
             MapTileset.Face fill = RampFill();
             if (_rampFillIndex == FillBrushTile && template == null) { Warning = "Select the slope tile to fit first."; return; }
-            if (_rampFillIndex != FillGround && _rampFillIndex != FillBrushTile && fill == null) { Warning = "That picture has no look to copy; pick another fill."; return; }
+            if (_rampFillIndex != FillGround && _rampFillIndex != FillBrushTile && fill == null) { Warning = "That picture can't be copied; pick another fill."; return; }
             _rampRuns.Add(new TileRamps.Run
             {
                 Squares = new HashSet<(int x, int z)>(picked),
@@ -638,7 +638,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private TileGrid _ripped;
 
-        // Ground faces From map cut into squares; each goes back in whole while none of its squares change.
+        // From map cuts ground faces into squares; a face goes back whole while none of its squares change.
         private List<TileBake.WholeFace> _wholeFaces;
 
         private List<TileBake.WholeFace> _leftFaces;
@@ -958,7 +958,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             foreach (IGrouping<string, KeyValuePair<MapTileset.Tile, (string path, int listed)>> file in _tileSource.GroupBy(kv => kv.Value.path, StringComparer.OrdinalIgnoreCase))
             {
                 int n = TileCollisions.WriteMeta(file.Key, file.Select(kv => (kv.Key, kv.Value.listed)), out string whynot);
-                if (n < 0) { Warning = $"Could not write {Path.GetFileName(file.Key)}.meta: {whynot}"; return; }
+                if (n < 0) { Warning = $"Couldn't write {Path.GetFileName(file.Key)}.meta: {whynot}"; return; }
                 written += n;
             }
             CollisionUnsaved = false;
@@ -1000,7 +1000,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public sealed class TexturePlan
         {
             public List<PictureChoice> Pictures { get; } = new List<PictureChoice>();
-            /// <summary>The ones that need a look: clashes first, then new textures.</summary>
+            /// <summary>Textures to check: clashes first, then new ones.</summary>
             public List<PictureChoice> Shown => Pictures.Where(p => p.Said != Same).OrderByDescending(p => p.Clash).ThenBy(p => p.Name).ToList();
             public string AlreadyThere
             {
@@ -1021,10 +1021,10 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private const string Same = "Already there";
 
-        // The field gives all 3D textures on screen these, map, buildings and people together (VRAM banks A+B and E).
+        // The field's 3D texture budget, shared by the map, buildings and people (VRAM banks A+B and E).
         private const int FieldTextureBytes = 256 * 1024, FieldPaletteBytes = 64 * 1024;
 
-        // Tiles drawn with the tileset's own pictures rather than the area's.
+        // Tiles drawn with the tileset's pictures, not the area's.
         private readonly HashSet<int> _ownTiles = new HashSet<int>();
 
         public TexturePlan PlanPictures()
@@ -1033,7 +1033,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             HashSet<string> used = new HashSet<string>(PicturesInUse(), StringComparer.OrdinalIgnoreCase);
             List<KeyValuePair<string, string>> wanted = _set.PictureFiles.Where(kv => used.Contains(kv.Key)).ToList();
             if (wanted.Count == 0) { Warning = "No painted tile uses the tileset's textures."; return null; }
-            if (wanted.Count > NsbtxWriter.MostPictures) { Warning = $"{wanted.Count} textures needed, a texture pack holds {NsbtxWriter.MostPictures}."; return null; }
+            if (wanted.Count > NsbtxWriter.MostPictures) { Warning = $"{wanted.Count} textures are needed, but a texture pack holds at most {NsbtxWriter.MostPictures}."; return null; }
 
             TexturePlan plan = new TexturePlan();
             Dictionary<string, (byte[] rgba, int w, int h)> ours = new Dictionary<string, (byte[] rgba, int w, int h)>(StringComparer.OrdinalIgnoreCase);
@@ -1114,7 +1114,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (plan.Adding == 0) { Warning = null; Note = "Every texture these tiles use is already there."; return null; }
             plan.Where = plan.Packs.Count == 1
                 ? $"Area {string.Join(", ", plan.Packs[0].areas)} gets a new pack: its own textures plus these."
-                : $"This map shows under areas {string.Join(", ", plan.Packs.SelectMany(p => p.areas))}; each gets a new pack of its own textures plus these.";
+                : $"This map shows under areas {string.Join(", ", plan.Packs.SelectMany(p => p.areas))}; each gets a new pack with its textures plus these.";
             return plan;
         }
 
@@ -1188,7 +1188,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
                 else if (c.Clash && c.Choice == 2) replace.Add(t.Name);
 
-                // A palette sharing a name with a different one already in a pack gets a name of its own.
+                // A palette is renamed when a different one in the pack already has its name.
                 if (!replace.Contains(t.Name))
                 {
                     byte[] mine = t.Colours.SelectMany(v => new[] { (byte)v, (byte)(v >> 8) }).ToArray();
@@ -1682,7 +1682,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (found.Count == 0) return null;
                 SortedDictionary<uint, List<string>> bad = new SortedDictionary<uint, List<string>>(
                     found.ToDictionary(t => t.Model, t => t.NoSuchModel ? new List<string> { "no such model" } : t.Lacking));
-                return $"Buildings drawn pink, their textures are not in area {_areaId}'s building pack {area.BuildingsTileset}: "
+                return $"These buildings draw pink because building pack {area.BuildingsTileset} of area {_areaId} lacks their textures: "
                      + string.Join("; ", bad.Take(4).Select(kv => $"{kv.Key} ({string.Join(", ", kv.Value.Take(3))})"))
                      + (bad.Count > 4 ? $" and {bad.Count - 4} more" : "") + ".";
             }
@@ -1782,7 +1782,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             Note = $"Moved building {index:D2} to {b.XPosition},{b.ZPosition}"
                  + (moved > 0 ? $", its {moved} blocked squares" : "")
                  + (warps > 0 ? $" and {warps} warp{(warps > 1 ? "s" : "")}." : ".")
-                 + " Save from the map editor.";
+                 + " Save from the Map editor.";
         }
 
         /// <summary>Moves blocked and typed squares under a building's old outline with it, leaving plain ground behind.</summary>
@@ -1991,7 +1991,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 if (!CanAnimate) return "";
                 FieldTextureAnimations.Entry entry = MatrixSceneBuilder.FieldAnimations()?.For(_lookPicture);
-                return entry == null ? $"{_lookPicture} is not animated."
+                return entry == null ? $"{_lookPicture} isn't animated."
                     : $"{_lookPicture}: {entry.Frames.Count} frames, {string.Join(" ", entry.Frames.Select(f => f.Duration))} steps.";
             }
         }
@@ -2006,7 +2006,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 string pack = Path.Combine(GameDirs[DirNames.MapTextures].unpackedDir, new AreaData(_areaId).MapTileset.ToString("D4"));
                 NSBTXLoader.LoadNsbtx(new MemoryStream(File.ReadAllBytes(pack)), out List<NSBMDTexture> textures, out List<NSBMDPalette> palettes);
                 NSBMDTexture target = textures?.FirstOrDefault(t => t.Texname == name);
-                if (target == null) return Fail($"{name} is not in this area's textures. Add textures to ROM first.");
+                if (target == null) return Fail($"{name} isn't in this area's textures. Add textures to ROM first.");
 
                 MapTileset.Face face = _set.Tiles.SelectMany(t => t.Faces).FirstOrDefault(f => f.Picture == name && !string.IsNullOrEmpty(f.Palette));
                 NSBMDPalette palette = palettes?.FirstOrDefault(pl => pl.Palname == (face?.Palette ?? name))
@@ -2018,7 +2018,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 for (int i = 0; i < framePaths.Count; i++)
                 {
                     if (!AnyPng.TryReadRgba(File.ReadAllBytes(framePaths[i]), out byte[] rgba, out int w, out int h, out _))
-                        return Fail($"{Path.GetFileName(framePaths[i])} could not be read.");
+                        return Fail($"{Path.GetFileName(framePaths[i])} couldn't be read.");
                     if (w != target.Width || h != target.Height)
                         return Fail($"{Path.GetFileName(framePaths[i])} is {w}x{h}; {name} is {target.Width}x{target.Height}.");
                     byte[] texels = DsTexture.TexelsLike(rgba, w, h, target.Format, colours, target.Color0 != 0, out string whynot);
@@ -2603,7 +2603,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                         }
                     }
                 }
-                catch (Exception ex) { Warning = "Could not read PDSMS files: " + ex.Message; }
+                catch (Exception ex) { Warning = "Couldn't read PDSMS files: " + ex.Message; }
             }
 
             int stamped = AlsoMovement && SetHasMovement && !savedMovement

@@ -22,7 +22,7 @@ namespace DSPRE.ROMFiles
         public int SourceId { get; init; } = -1;
         /// <summary>Its place there: overworld, script number, row or entry; -1 when there is none.</summary>
         public int Index { get; init; } = -1;
-        /// <summary>For a script reference, whether it sits in a function rather than a numbered script.</summary>
+        /// <summary>For a script reference, whether it sits in a function, not a numbered script.</summary>
         public bool InFunction { get; init; }
         public override string ToString() => $"{Kind}: {Location}";
     }
@@ -163,7 +163,7 @@ namespace DSPRE.ROMFiles
             error = null;
             if (table.Length % 4 != 0)
             {
-                error = "The trainer battle-message table is not a sequence of four-byte entries.";
+                error = "The trainer battle-message table isn't a sequence of four-byte entries.";
                 return false;
             }
 
@@ -190,7 +190,7 @@ namespace DSPRE.ROMFiles
             error = null;
             if (data.Length < PhoneBookHeaderSize)
             {
-                error = "The Pokégear phonebook header is truncated.";
+                error = "The Pokégear phone book header is truncated.";
                 return false;
             }
 
@@ -198,7 +198,7 @@ namespace DSPRE.ROMFiles
             long requiredLength = PhoneBookHeaderSize + (long)count * PhoneBookEntrySize;
             if (requiredLength > data.Length)
             {
-                error = "The Pokégear phonebook entries are truncated.";
+                error = "The Pokégear phone book entries are truncated.";
                 return false;
             }
 
@@ -208,7 +208,7 @@ namespace DSPRE.ROMFiles
                 int trainerId = BinaryPrimitives.ReadUInt16LittleEndian(data.Slice(offset + PhoneBookTrainerIdOffset, 2));
                 if (trainerIds.Contains(trainerId))
                 {
-                    references.Add(new TrainerReference("Pokégear phonebook", $"entry {i}") { TrainerId = trainerId, Index = i });
+                    references.Add(new TrainerReference("Pokégear phone book", $"entry {i}") { TrainerId = trainerId, Index = i });
                 }
             }
             return true;
@@ -237,7 +237,7 @@ namespace DSPRE.ROMFiles
             }
             catch (Exception ex)
             {
-                error = $"The event files could not be checked for trainer references: {ex.Message}";
+                error = $"The event files couldn't be checked for trainer references: {ex.Message}";
                 return false;
             }
         }
@@ -260,7 +260,7 @@ namespace DSPRE.ROMFiles
                     ScriptFile scriptFile = new ScriptFile(id, readFunctions: true, readActions: false);
                     if (scriptFile.ParseFailedDueToInvalidCommand)
                     {
-                        error = $"Script file {id} did not parse completely, so trainer removal was cancelled.";
+                        error = $"Script file {id} didn't parse completely, so trainer removal was cancelled.";
                         return false;
                     }
                     FindScriptReferences(RomInfo.GameFamily, id, scriptFile, trainerIds, references);
@@ -270,7 +270,7 @@ namespace DSPRE.ROMFiles
             }
             catch (Exception ex)
             {
-                error = $"The scripts could not be checked for trainer references: {ex.Message}";
+                error = $"The scripts couldn't be checked for trainer references: {ex.Message}";
                 return false;
             }
         }
@@ -299,7 +299,7 @@ namespace DSPRE.ROMFiles
             try { rows = VsSeekerRematchTable.ReadAll(); }
             catch (Exception ex)
             {
-                error = $"The Vs. Seeker rematch table could not be checked: {ex.Message}";
+                error = $"The Vs. Seeker rematch table couldn't be checked: {ex.Message}";
                 return false;
             }
             if (rows.Count != VsSeekerRematchTable.RowCount)
@@ -338,7 +338,7 @@ namespace DSPRE.ROMFiles
             try { rows = PokegearRematchTable.ReadAll(out _, out error); }
             catch (Exception ex)
             {
-                error = $"The Pokégear rematch table could not be checked: {ex.Message}";
+                error = $"The Pokégear rematch table couldn't be checked: {ex.Message}";
                 return false;
             }
             if (error != null) return false;
@@ -376,7 +376,7 @@ namespace DSPRE.ROMFiles
             string path = PokegearPhoneBook.FilePath;
             if (!File.Exists(path))
             {
-                error = "The Pokégear phonebook is missing, so trainer removal was cancelled.";
+                error = "The Pokégear phone book is missing, so trainer removal was cancelled.";
                 return false;
             }
             return TryFindPhoneBookReferences(File.ReadAllBytes(path), trainerIds, references,

@@ -59,18 +59,18 @@ namespace DSPRE.HgEngine
             tables = new List<List<Slot>>();
             error = null;
             text = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine folder is open."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
 
             HgEngineSymbolTable names = HgEngineSymbolTable.Load(ItemHeaderRelPath);
-            if (names == null) { error = $"Could not read {ItemHeaderRelPath} from the checkout."; return false; }
+            if (names == null) { error = $"Couldn't read {ItemHeaderRelPath} from the checkout."; return false; }
             string path = SourcePath();
             text = File.Exists(path) ? HgEngineFileCache.GetText(path) : null;
-            if (text == null) { error = $"Could not read {SourceRelPath} from the checkout."; return false; }
+            if (text == null) { error = $"Couldn't read {SourceRelPath} from the checkout."; return false; }
 
             Match table = Table.Match(text);
             if (!table.Success) { error = $"{SourceRelPath} has no RockSmashItemTable array."; return false; }
 
-            // Comments are blanked rather than removed, so every position still points into the real text.
+            // Comments are blanked, not removed, so every position still points into the real text.
             string body = Comment.Replace(table.Groups["body"].Value, m => new string(' ', m.Length));
             int bodyStart = table.Groups["body"].Index;
             foreach (Match group in Group.Matches(body))
@@ -79,7 +79,7 @@ namespace DSPRE.HgEngine
                 foreach (Match token in Token.Matches(group.Groups["items"].Value))
                 {
                     if (!names.TryGetValue(token.Value, out int item) && !int.TryParse(token.Value, out item))
-                    { error = $"{token.Value} in {SourceRelPath} is not an item item.h names."; return false; }
+                    { error = $"{token.Value} in {SourceRelPath} isn't an item that item.h names."; return false; }
                     slots.Add(new Slot(item, bodyStart + group.Groups["items"].Index + token.Index, token.Length));
                 }
                 tables.Add(slots);

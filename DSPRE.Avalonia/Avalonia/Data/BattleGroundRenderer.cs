@@ -7,12 +7,8 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.Data
 {
     /// <summary>
-    /// Decodes the real in-game battle ground "tray" the Pokémon stand on (the terrain platforms) from
-    /// <c>battle/graphic/pl_batt_obj.narc</c> (<see cref="DirNames.BattleObj"/>, Platinum).
-    /// The OAM cell layout (NCER) is SHARED across every terrain (platform 0's mine/enemy cell), only the tiles (NCGR)
-    /// and palette (NCLR, day/eve/night) change per <c>terrain id</c>; the game's own tables
-    /// remap the terrain id to a platform graphic set. Renders bank 0 of the shared cell with each terrain's
-    /// tiles + palette to a straight-RGBA platform, positioned at the game's platform screen coordinates.
+    /// Draws the platforms Pokémon stand on in battle, from <see cref="DirNames.BattleObj"/>: one cell layout shared by every
+    /// terrain, with each terrain's tiles and palette, at the game's platform positions.
     /// </summary>
     public sealed class BattleGroundRenderer
     {
@@ -54,7 +50,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>
         /// Which files make up the ground one Pokemon stands on, found by the names the game gives
         /// them. The numbers differ per game, so a constant is right for one family and wrong for the
-        /// others. platform 0 carries the layout every terrain is drawn with.
+        /// others. Platform 0 has the layout every terrain uses.
         /// </summary>
         public static (int MineDrawing, int EnemyDrawing, int MineLayout, int EnemyLayout, int PaletteDay)?
             TerrainFiles(int terrainId)

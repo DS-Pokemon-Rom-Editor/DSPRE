@@ -50,7 +50,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = import(path);
             if (error != null)
-                await DialogHelper.ShowErrorAsync($"Import failed: {error}", "Title screen editor error", Owner);
+                await DialogHelper.ShowErrorAsync($"Couldn't import: {error}", "Title screen", Owner);
             else SaveNotice.Imported(null, path);
         }
 
@@ -68,7 +68,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = export(path);
             if (error != null)
-                await DialogHelper.ShowErrorAsync($"Export failed: {error}", "Title screen editor error", Owner);
+                await DialogHelper.ShowErrorAsync($"Couldn't export: {error}", "Title screen", Owner);
             else SaveNotice.Exported(path);
         }
 
@@ -86,7 +86,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = _vm.ImportPalette(path);
             if (error != null)
-                await DialogHelper.ShowErrorAsync($"Import failed: {error}", "Title screen editor error", Owner);
+                await DialogHelper.ShowErrorAsync($"Couldn't import: {error}", "Title screen", Owner);
             else SaveNotice.Imported(null, path);
         }
 
@@ -112,7 +112,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = _vm.ExportPalette(path);
             if (error != null)
-                await DialogHelper.ShowErrorAsync($"Export failed: {error}", "Title screen editor error", Owner);
+                await DialogHelper.ShowErrorAsync($"Couldn't export: {error}", "Title screen", Owner);
             else SaveNotice.Exported(path);
         }
 
@@ -120,10 +120,8 @@ namespace DSPRE.Avalonia.Views.Graphics
         private const double PreviewScale = 2.0;
 
         /// <summary>
-        /// Steps through the same integer frame counter as the game's logo entrance: a 3-frame delay, then
-        /// 31 frames where the logo's alpha climbs by 1/31 per frame while its vertical offset shrinks
-        /// from 15px to 0, i.e. it starts invisible, slightly below its resting spot, and fades/rises up
-        /// into place, rather than a smooth tween.
+        /// Steps the game's logo entrance frame by frame: 3 frames' wait, then 31 frames rising 15 px and
+        /// fading in.
         /// </summary>
         private async void PlayIntro_Click(object sender, RoutedEventArgs e)
         {

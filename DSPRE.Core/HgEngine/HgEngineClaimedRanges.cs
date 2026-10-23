@@ -79,8 +79,7 @@ namespace DSPRE.HgEngine
         }
 
         /// <summary>
-        /// Built from the checkout's own patch lists, so there is one parser and one piece of offset
-        /// arithmetic rather than a second copy that can drift from it.
+        /// Built from the checkout's patch lists, so there is only one parser.
         /// </summary>
         internal static Dictionary<int, List<HgEngineClaim>> ReadAll(string root, Func<int, long> overlayRam)
         {
@@ -106,7 +105,7 @@ namespace DSPRE.HgEngine
                         Length = entry.Length,
                         Source = list.FileName,
                         Detail = entry.Kind == HgEnginePatchKind.ByteReplacement
-                            ? $"{entry.Bytes.Count} byte(s)" : entry.Symbol,
+                            ? Plural.Of(entry.Bytes.Count, "byte") : entry.Symbol,
                     });
                 }
             }

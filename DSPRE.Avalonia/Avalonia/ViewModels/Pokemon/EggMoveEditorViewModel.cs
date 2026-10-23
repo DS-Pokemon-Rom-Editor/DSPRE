@@ -258,7 +258,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             UpdateEntryCountLabel();
             UpdateListSizeLabel();
 
-            // Start on the first Pokemon, so the moves list shows one rather than sitting empty.
+            // Start on the first Pokémon so the moves list isn't empty.
             if (MonList.Count > 0) SelectedMonIndex = 0;
             ResetUndo();
         }
@@ -282,7 +282,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 await DialogHelper.ShowErrorAsync(
                     $"Nothing was saved: the egg move table uses {used} of {_maxTableSize} bytes. Remove some moves or Pokémon first.",
-                    "Egg move editor error");
+                    "Egg move editor");
                 return;
             }
 
@@ -292,7 +292,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 {
                     string monName = entry.SpeciesID < _monNames.Length ? _monNames[entry.SpeciesID] : $"SPECIES_{entry.SpeciesID}";
                     await DialogHelper.ShowInfoAsync(
-                        $"{monName} has more than the maximum allowed Egg Moves ({_maxEggMoves}). This may cause issues in-game.",
+                        $"{monName} has more than {_maxEggMoves} egg moves, the most the game allows.",
                         "Warning");
                 }
             }
@@ -300,7 +300,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string error = SaveEggMoveData();
             if (error != null)
             {
-                await DialogHelper.ShowErrorAsync("The egg moves were not saved:\n" + error, "Egg move editor error");
+                await DialogHelper.ShowErrorAsync("The egg moves weren't saved:\n" + error, "Egg move editor");
                 return;
             }
             SaveNotice.Saved(UnsavedChangesDescription);
@@ -379,7 +379,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (CbReplaceeIndex < 0 || CbReplacerIndex < 0)
             {
-                await DialogHelper.ShowErrorAsync("Please select valid moves for the bulk replace.", "Egg move editor error");
+                await DialogHelper.ShowErrorAsync("Pick the move to replace and the one to put in.", "Egg move editor");
                 return;
             }
             ushort from = (ushort)CbReplaceeIndex, to = (ushort)CbReplacerIndex;
@@ -397,7 +397,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 RefreshMoveList(_selectedMonIndex);
                 SetDirty(true);
-                await DialogHelper.ShowInfoAsync($"Replaced {count} occurrence(s) of {_moveNames[from]} with {_moveNames[to]}.\nAffected: {string.Join(", ", affected)}", "Bulk replace");
+                await DialogHelper.ShowInfoAsync($"Replaced {_moveNames[from]} with {_moveNames[to]} {Plural.Of(count, "time")}.\nAffected: {string.Join(", ", affected)}", "Bulk replace");
             }
             else
                 await DialogHelper.ShowInfoAsync($"No occurrences of {_moveNames[from]} were found.", "Bulk replace");
@@ -407,7 +407,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (CbDeleteAllIndex < 0)
             {
-                await DialogHelper.ShowErrorAsync("Please select a valid move to delete.", "Egg move editor error");
+                await DialogHelper.ShowErrorAsync("Pick the move to delete.", "Egg move editor");
                 return;
             }
             ushort del = (ushort)CbDeleteAllIndex;
@@ -427,7 +427,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 UpdateMoveCountLabel();
                 UpdateListSizeLabel();
                 SetDirty(true);
-                await DialogHelper.ShowInfoAsync($"Deleted {count} occurrence(s) of {_moveNames[del]}.\nAffected: {string.Join(", ", affected)}", "Bulk delete");
+                await DialogHelper.ShowInfoAsync($"Deleted {_moveNames[del]} {Plural.Of(count, "time")}.\nAffected: {string.Join(", ", affected)}", "Bulk delete");
             }
             else
                 await DialogHelper.ShowInfoAsync($"No occurrences of {_moveNames[del]} were found.", "Bulk delete");
@@ -462,7 +462,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (path == null) return;
             bool ok = EggMoveCsv.Export(_eggMoveData, path, _monNames, _moveNames);
             if (ok) SaveNotice.Exported(path);
-            else await DialogHelper.ShowErrorAsync("The egg moves could not be exported. The log has the reason.", "Egg move editor error");
+            else await DialogHelper.ShowErrorAsync("The egg moves couldn't be exported. The log has the reason.", "Egg move editor");
         }
 
         public async Task ImportCommandAsync(Window owner)
@@ -543,7 +543,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             CbMoveIndex = _eggMoveData[_selectedMonIndex].MoveIDs[idx];
             UpdateMoveStatus();
-            MoveIdText = $"Move Index: {idx}";
+            MoveIdText = $"Move index: {idx}";
             RefreshButtonEnables();
         }
 
@@ -589,12 +589,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_selectedMonIndex < 0 || _selectedMonIndex >= _eggMoveData.Count)
             {
-                MoveCountText = "Move Count: N/A";
+                MoveCountText = "Moves: -";
                 MoveCountBrush = Brushes.Transparent;
                 return;
             }
             int cnt = _eggMoveData[_selectedMonIndex].MoveIDs.Count;
-            MoveCountText = $"Move Count: {cnt}";
+            MoveCountText = $"Moves: {cnt}";
             MoveCountBrush = cnt > _maxEggMoves ? StatusBrushes.Bad : cnt == _maxEggMoves ? StatusBrushes.Warn : StatusBrushes.None;
         }
 
@@ -645,7 +645,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 // An empty table saved back would wipe every list, so a failed read blocks saving.
                 _loadError = ex.Message;
-                AppLogger.Error($"Failed to populate egg move data: {ex.Message}");
+                AppLogger.Error($"Couldn't populate egg move data: {ex.Message}");
             }
         }
 
@@ -664,7 +664,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                AppLogger.Error($"Failed to save egg move data: {ex.Message}");
+                AppLogger.Error($"Couldn't save egg move data: {ex.Message}");
                 return ex.Message;
             }
         }

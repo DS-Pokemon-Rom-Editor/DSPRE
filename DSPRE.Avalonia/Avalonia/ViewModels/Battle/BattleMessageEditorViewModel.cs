@@ -20,11 +20,8 @@ using DSPRE.Avalonia.Data;
 namespace DSPRE.Avalonia.ViewModels.Battle
 {
     /// <summary>
-    /// Avalonia port of the WinForms <c>TrainerMessageEditor</c> (battle messages).
-    /// Edits the trainer-text table (which maps a trainer + a message trigger to a
-    /// message in a shared text archive). The Scintilla message control is replaced by
-    /// a plain multi-line TextBox. Save rewrites the whole table + offset file +
-    /// message archive (a global operation, exactly like the original).
+    /// Edits the trainer message table, which maps a trainer and trigger to a message in a shared text
+    /// archive. Save rewrites the table, offset file and message archive.
     /// </summary>
     public class BattleMessageEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
@@ -34,7 +31,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
         { if (EqualityComparer<T>.Default.Equals(f, v)) return false; f = v; OnPropertyChanged(n); return true; }
 
-        // ── Trigger types (copied from the WinForms editor) ─────────────────────────
+        // ── Trigger types ─────────────────────────────────────────────────────────────
         public enum TrainerMessageType : ushort
         {
             PRE_BATTLE = 0, DEFEAT = 1, POST_BATTLE = 2,
@@ -336,7 +333,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             catch (Exception ex)
             {
                 StatusText = $"Error: {ex.Message}";
-                await DialogHelper.ShowErrorAsync($"Failed to load trainer messages:\n{ex.Message}", "Battle message editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't load the trainer messages:\n{ex.Message}", "Trainer battle messages");
             }
         }
 
@@ -458,7 +455,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             // Rebuilding the list clears its selection; keep the row being edited (the last one after a removal).
             keep = Math.Min(keep, Entries.Count - 1);
             if (keep >= 0) { _selectedEntryIndex = keep; OnPropertyChanged(nameof(SelectedEntryIndex)); }
-            // A trainer opened fresh shows its first message rather than empty fields.
+            // A newly opened trainer shows its first message, not empty fields.
             else if (!keepSelection && Entries.Count > 0) { _selectedEntryIndex = -1; SelectedEntryIndex = 0; }
             CheckForMistakes();
         }
@@ -513,7 +510,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // ── Commands ────────────────────────────────────────────────────────────────────
         private bool HgeRefusesEdit(string title)
         {
-            string why = _hgeLoadError != null ? "This trainer's messages could not be read from Trainers.c:\n" + _hgeLoadError
+            string why = _hgeLoadError != null ? "This trainer's messages couldn't be read from Trainers.c:\n" + _hgeLoadError
                 : _hgeTriggers.Length == 0 ? "No TRMSG_ message triggers were found in include/trainer_data.h."
                 : null;
             if (why == null) return false;
@@ -606,11 +603,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private async Task SaveHgeMessagesAsync()
         {
             int trainerId = _currentTrainerId;
-            string problem = _hgeLoadError != null ? "Its messages could not be read from Trainers.c:\n" + _hgeLoadError
-                : _hgeMaxMessages <= 0 ? "TRAINER_SOURCE_MAX_TEXT_ENTRY_COUNT was not found in include/trainer_data.h."
+            string problem = _hgeLoadError != null ? "Its messages couldn't be read from Trainers.c:\n" + _hgeLoadError
+                : _hgeMaxMessages <= 0 ? "TRAINER_SOURCE_MAX_TEXT_ENTRY_COUNT wasn't found in include/trainer_data.h."
                 : _hgeCurrent.Count > _hgeMaxMessages ? $"A trainer can have at most {_hgeMaxMessages} messages."
                 : null;
-            if (problem != null) { await DialogHelper.ShowErrorAsync($"Trainer {trainerId} messages were not saved. {problem}", "Battle message editor error"); return; }
+            if (problem != null) { await DialogHelper.ShowErrorAsync($"Trainer {trainerId} messages weren't saved. {problem}", "Trainer battle messages"); return; }
 
             List<HgeMessage> messages = _hgeCurrent.Select(m => new HgeMessage { Token = HgeLabel(m), Value = m.Value, Text = m.Text }).ToList();
             (bool saved, string error) = await HgEngineSave.RunAsync(() =>
@@ -631,7 +628,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             });
             if (!saved)
             {
-                if (error != null) await DialogHelper.ShowErrorAsync($"Trainer {trainerId} messages were not saved:\n{error}", "Battle message editor error");
+                if (error != null) await DialogHelper.ShowErrorAsync($"Trainer {trainerId} messages weren't saved:\n{error}", "Trainer battle messages");
                 return;
             }
 
@@ -665,8 +662,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (_current != null) _byTrainer[(uint)_currentTrainerId] = _current;
 
             bool ok = await DialogHelper.AskYesNoAsync(
-                $"This writes ALL trainer text entries back to the ROM. Text archive {TrainerMessageTextNumber} " +
-                "will be overwritten entirely and unused messages will be lost.\n\nContinue?", "Save all trainer text?");
+                $"Saving writes every trainer message back. Text archive {TrainerMessageTextNumber} is rewritten " +
+                "and unused messages are lost.\n\nSave?", "Save all trainer text?");
             if (!ok) return;
 
             try
@@ -684,7 +681,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync($"Error writing trainer text table:\n{ex.Message}", "Battle message editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't write the trainer message table:\n{ex.Message}", "Trainer battle messages");
             }
         }
 
@@ -694,13 +691,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 MessageId = e.MessageID, TrainerId = e.TrainerId, TriggerId = e.TriggerId,
             }), _archive.Messages);
 
-        // ── Validation warnings (ported) ────────────────────────────────────────────────
+        // ── Validation warnings ───────────────────────────────────────────────────────
         private void CheckForMistakes()
         {
             if (IsHgeActive) { CheckHgeMistakes(); return; }
             if (_current == null || _archive == null) { Info("", Brushes.Gray); return; }
 
-            if (_current.Any(e => e.TrainerId != (uint)_currentTrainerId)) { Info("Error: Some entries have a trainer ID that does not match the selected trainer.", StatusBrushes.Bad); return; }
+            if (_current.Any(e => e.TrainerId != (uint)_currentTrainerId)) { Info("Error: Some entries have a trainer ID that doesn't match the selected trainer.", StatusBrushes.Bad); return; }
 
             List<string> dups = _current.GroupBy(e => e.TriggerId).Where(g => g.Count() > 1).Select(g => TriggerDescription(g.Key)).ToList();
             if (dups.Any()) { Info($"Warning: Duplicate message trigger types: {string.Join(", ", dups)}", StatusBrushes.Warn); return; }
@@ -709,8 +706,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             { Info("Warning: One or more messages are empty.", StatusBrushes.Warn); return; }
 
             bool HasDoubleTriggers() => _current.Any(e => e.TriggerId >= (ushort)TrainerMessageType.PRE_DOUBLE_BATTLE_1 && e.TriggerId <= (ushort)TrainerMessageType.DOUBLE_BATTLE_NOT_ENOUGH_POKEMON_2);
-            if (!_currentIsDouble && HasDoubleTriggers()) { Info("Warning: Single-battle trainer has double-battle message triggers.", StatusBrushes.Warn); return; }
-            if (_currentIsDouble && _current.Count > 0 && !HasDoubleTriggers()) { Info("Warning: Double-battle trainer has no double-battle message triggers.", StatusBrushes.Warn); return; }
+            if (!_currentIsDouble && HasDoubleTriggers()) { Info("Warning: This single battle trainer has double battle messages.", StatusBrushes.Warn); return; }
+            if (_currentIsDouble && _current.Count > 0 && !HasDoubleTriggers()) { Info("Warning: This double battle trainer has no double battle messages.", StatusBrushes.Warn); return; }
 
             Info("", Brushes.Gray);
         }
@@ -722,10 +719,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             { Info($"Error: A trainer can have at most {_hgeMaxMessages} messages.", StatusBrushes.Bad); return; }
 
             if (_hgeCurrent.Count > 0 && _hgeTextOrder != null && !_hgeTextOrder.Contains(_currentTrainerId))
-            { Info("Warning: This trainer is not in sTrainerTextOrder, so the build leaves its messages out. Saving adds it.", StatusBrushes.Warn); return; }
+            { Info("Warning: This trainer isn't in sTrainerTextOrder, so the build leaves its messages out. Saving adds it.", StatusBrushes.Warn); return; }
 
             List<string> unknown = _hgeCurrent.Where(m => m.Value < 0).Select(HgeLabel).Distinct().ToList();
-            if (unknown.Any()) { Info($"Warning: {string.Join(", ", unknown)} is not defined in trainer_data.h.", StatusBrushes.Warn); return; }
+            if (unknown.Any()) { Info($"Warning: {string.Join(", ", unknown)} isn't defined in trainer_data.h.", StatusBrushes.Warn); return; }
 
             List<string> dups = _hgeCurrent.GroupBy(m => m.Value).Where(g => g.Count() > 1).Select(g => HgeLabel(g.First())).ToList();
             if (dups.Any()) { Info($"Warning: Duplicate message trigger types: {string.Join(", ", dups)}", StatusBrushes.Warn); return; }
@@ -733,8 +730,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (_hgeCurrent.Any(m => string.IsNullOrWhiteSpace(m.Text))) { Info("Warning: One or more messages are empty.", StatusBrushes.Warn); return; }
 
             bool HasDoubleTriggers() => _hgeCurrent.Any(m => (HgeTriggerName(m.Value) ?? "").StartsWith("TRMSG_DBL_", StringComparison.Ordinal));
-            if (!_currentIsDouble && HasDoubleTriggers()) { Info("Warning: Single-battle trainer has double-battle message triggers.", StatusBrushes.Warn); return; }
-            if (_currentIsDouble && _hgeCurrent.Count > 0 && !HasDoubleTriggers()) { Info("Warning: Double-battle trainer has no double-battle message triggers.", StatusBrushes.Warn); return; }
+            if (!_currentIsDouble && HasDoubleTriggers()) { Info("Warning: This single battle trainer has double battle messages.", StatusBrushes.Warn); return; }
+            if (_currentIsDouble && _hgeCurrent.Count > 0 && !HasDoubleTriggers()) { Info("Warning: This double battle trainer has no double battle messages.", StatusBrushes.Warn); return; }
 
             Info("", Brushes.Gray);
         }

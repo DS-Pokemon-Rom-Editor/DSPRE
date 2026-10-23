@@ -218,7 +218,7 @@ namespace DSPRE.Avalonia.Data
                 Covers = f.Count,
                 Depth = depth,
                 Text = sb.ToString(),
-                Detail = f.Macro.Summary + $" One line in the games' own scripts, {f.Count} commands in the ROM.",
+                Detail = f.Macro.Summary + $" The game's scripts write this as one line; it's {f.Count} commands in the ROM.",
             };
         }
 

@@ -125,7 +125,7 @@ namespace DSPRE.Avalonia.Data
             if (_drawing >= 0) _pokemonPieces.Add((dir, member, _drawing));
         }
 
-        // Tiles each window still shows on after later windows.
+        // The tiles of each window that later windows leave uncovered.
         private static Dictionary<string, bool[]> _shownTiles;
 
         /// <summary>A window's position in tiles in a state: its own, or the row the game's code forces.</summary>
@@ -310,7 +310,7 @@ namespace DSPRE.Avalonia.Data
 
         private static ushort Rgb(int r, int g, int b) => (ushort)(r | g << 5 | b << 10);
 
-        /// <summary>Placeholders filled with sample words, markup removed, line breaks kept.</summary>
+        /// <summary>Fills placeholders with sample words and removes markup, keeping line breaks.</summary>
         private static string Text(int usBank, int id) => Line(TextBank(usBank), id);
 
         private static string Line(int bank, int id)

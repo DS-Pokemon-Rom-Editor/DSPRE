@@ -26,7 +26,7 @@ namespace DSPRE.ROMFiles
 
         /// <summary>
         /// Records that script file <paramref name="fileId"/>'s binary was written outside the Script
-        /// Editor. Its source is regenerated shortly after, in the background, so a save that writes
+        /// editor. Its source is regenerated shortly after, in the background, so a save that writes
         /// several files costs one pass. The returned task completes when that pass has.
         /// </summary>
         public static Task BinaryWrittenAsync(int fileId)
@@ -84,7 +84,7 @@ namespace DSPRE.ROMFiles
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException)
             {
-                AppLogger.Warn("Could not refresh the Rotom script sources of " + string.Join(", ", ids.Select(i => i.ToString("D4"))) + ": " + ex.Message);
+                AppLogger.Warn("Couldn't refresh the Rotom script sources of " + string.Join(", ", ids.Select(i => i.ToString("D4"))) + ": " + ex.Message);
             }
             finally
             {
@@ -98,12 +98,11 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// Rebuilds these files' sources with <c>rotom decompile --file</c> in the project at
-        /// <paramref name="root"/>, which uses the whole project for names but writes only these sources
-        /// and their compile-state entries. Each replaced source is backed up under
-        /// <c>.rotom/backups</c> first, since hand-written names and comments do not survive a decompile.
-        /// Files with no source are skipped: the project compile only builds existing sources.
+        /// Regenerates these files' sources with <c>rotom decompile --file</c>, backing each up under .rotom/backups
+        /// first; files with no source are skipped.
         /// </summary>
+        /// <remarks>The backup is there because a decompile drops hand-written names and comments; the project compile only
+        /// builds existing sources, so nothing is gained by making new ones.</remarks>
         internal static async Task<IReadOnlyList<int>> RegenerateAsync(IReadOnlyCollection<int> ids, string root, string sourceDir,
             Func<int, string> binaryOf = null)
         {

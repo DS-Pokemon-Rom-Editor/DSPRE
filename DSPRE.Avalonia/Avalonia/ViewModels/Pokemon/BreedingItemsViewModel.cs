@@ -71,7 +71,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             public int Item { get => _row.Item; set => Put(value, _row.Item, v => _row.Item = v, nameof(Item)); }
             public int Fallback { get => _row.Fallback; set => Put(value, _row.Fallback, v => _row.Fallback = v, nameof(Fallback)); }
 
-            // A cleared box sends -1; the stored value is raised after the binding finishes, as one raised mid-write is ignored.
+            // A cleared box sends -1; the stored value is raised after the binding finishes, since a raise during the write is ignored.
             private void Put(int value, ushort now, Action<ushort> set, string name)
             {
                 if (value < 0) { global::Avalonia.Threading.Dispatcher.UIThread.Post(() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name))); return; }
@@ -105,11 +105,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task<bool> SaveChangesAsync()
         {
             if (_table == null) return true;
-            if (HasProblem) { await DialogHelper.ShowErrorAsync(Problem, "Breeding items error"); return false; }
+            if (HasProblem) { await DialogHelper.ShowErrorAsync(Problem, "Breeding items"); return false; }
             try { _table.Save(SpeciesNames.Count, ItemNames.Count); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
             {
-                await DialogHelper.ShowErrorAsync("The breeding items were not saved:\n" + e.Message, "Breeding items error");
+                await DialogHelper.ShowErrorAsync("The breeding items weren't saved:\n" + e.Message, "Breeding items");
                 return false;
             }
             _saved = _table.ToBytes();

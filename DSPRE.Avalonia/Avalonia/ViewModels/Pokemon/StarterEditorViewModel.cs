@@ -232,13 +232,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         /// <summary>
-        /// Finds the command that hands the starter over. Two cheap reads of one file cover everything
-        /// but a starter somebody has moved: whatever was chosen for this project last time, then the
-        /// place an untouched game keeps it. Only when neither holds up is the whole game read, and only
-        /// then can the editor have anything new to say about which command is the right one. Changing
-        /// the held item or the level leaves both of those pointing where they did, so the ordinary use
-        /// of this editor never reaches the scan. Diamond and Pearl are left alone: their scripts are
-        /// handled elsewhere.
+        /// Finds the command that gives the starter: last time's choice, then the retail spot, and only then a
+        /// read of the whole game. Diamond and Pearl scripts are handled elsewhere.
         /// </summary>
         private void LocateStarterCommand()
         {
@@ -365,8 +360,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (!StarterPokemonData.ApplyStarters(newStarters, out touchedScripts))
                 {
                     AppMessages.Error(
-                        "Couldn't safely locate the starter species table on this ROM (it may already be modified " +
-                        "by another tool); nothing was changed.",
+                        "The starter table couldn't be found in this ROM, maybe because another tool changed it. " +
+                        "Nothing was changed.",
                         "Starter Pokémon editor");
                     return;
                 }
@@ -434,8 +429,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         /// <summary>
-        /// Rewrites the give command's level and held item and compiles, which is what the Script
-        /// Editor's own Save does. Reports what went wrong rather than leaving it silent.
+        /// Rewrites the give command's level and held item and compiles, as the Script editor's Save does, and
+        /// reports any failure.
         /// </summary>
         private async System.Threading.Tasks.Task<bool> SaveThroughTheScriptAsync()
         {
@@ -453,7 +448,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
-                AppMessages.Error("The script could not be saved: " + ex.Message, "Starter Pokémon editor");
+                AppMessages.Error("The script couldn't be saved: " + ex.Message, "Starter Pokémon editor");
             }
             return false;
         }

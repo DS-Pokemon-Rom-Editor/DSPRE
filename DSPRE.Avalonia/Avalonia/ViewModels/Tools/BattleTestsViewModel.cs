@@ -61,7 +61,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private bool _restoring;
         private DateTime _lastCapture;
 
-        // Typing, in either tab, lands one step per pause rather than one per key.
+        // Typing in either tab makes one undo step per pause, not per key.
         private void Capture()
         {
             DateTime now = DateTime.UtcNow;

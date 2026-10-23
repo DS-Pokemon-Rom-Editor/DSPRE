@@ -81,8 +81,8 @@ namespace DSPRE
         /// <summary>Starts the emulator on a ROM. Null on success, or why it could not start.</summary>
         public static string Launch(EmulatorKind kind, string emulatorPath, string romPath)
         {
-            if (!Exists(emulatorPath)) return $"{DisplayName(kind)} was not found at {emulatorPath}.";
-            if (!File.Exists(romPath)) return $"The ROM was not found at {romPath}.";
+            if (!Exists(emulatorPath)) return $"{DisplayName(kind)} wasn't found at {emulatorPath}.";
+            if (!File.Exists(romPath)) return $"The ROM wasn't found at {romPath}.";
             try
             {
                 Process.Start(StartInfo(emulatorPath, romPath))?.Dispose();
@@ -91,7 +91,7 @@ namespace DSPRE
             }
             catch (Exception ex)
             {
-                return $"{DisplayName(kind)} could not be started: {ex.Message}";
+                return $"{DisplayName(kind)} couldn't be started: {ex.Message}";
             }
         }
     }

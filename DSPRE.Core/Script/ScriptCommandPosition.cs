@@ -1,5 +1,4 @@
-﻿// ScriptCommandPosition.cs
-using System;
+﻿using System;
 
 namespace DSPRE.ROMFiles
 {

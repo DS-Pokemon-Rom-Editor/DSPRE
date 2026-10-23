@@ -51,7 +51,7 @@
 
     <Border Height="1" Background="{DynamicResource Editor.Border}"/>
 
-    <TextBlock Text="Favorites" FontWeight="SemiBold" FontSize="12"/>
+    <TextBlock Text="Favourites" FontWeight="SemiBold" FontSize="12"/>
     <ItemsControl ItemsSource="{Binding Favorites}">
       <ItemsControl.ItemsPanel>
         <ItemsPanelTemplate><WrapPanel MaxWidth="128"/></ItemsPanelTemplate>

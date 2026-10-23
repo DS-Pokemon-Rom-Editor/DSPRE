@@ -107,24 +107,24 @@ namespace DSPRE.Avalonia.Data
 
         private string ImportCardDesign(RawImage png, bool front, IReadOnlyCollection<int> ranks)
         {
-            if (!Available) return "Trainer card graphics archive is not available for this ROM.";
+            if (!Available) return "This game doesn't have the trainer card archive.";
             if (ranks == null || ranks.Count == 0) return "Pick at least one rank for the design's colours.";
             if (png == null || png.IsEmpty) return "No image.";
             if (png.Width != CardWidth || png.Height != CardHeight)
-                return $"Image must be exactly {CardWidth}x{CardHeight} (got {png.Width}x{png.Height}).";
+                return $"That picture is {png.Width} by {png.Height}. It has to be {CardWidth} by {CardHeight}.";
 
             (int ncgr, int facaNscr, int backNscr, int[] rankPalettes) m = TrainerCardMembers;
             byte[] chrRaw = NitroBgCodec.Inflate(Current(m.ncgr));
             byte[] facaRaw = NitroBgCodec.Inflate(Current(m.facaNscr));
             byte[] backRaw = NitroBgCodec.Inflate(Current(m.backNscr));
             if (chrRaw == null || facaRaw == null || backRaw == null)
-                return "Could not read the current card design.";
+                return "The current card design couldn't be read.";
 
             // The side not being replaced is read in the colours of a rank it will be written to.
             int lookRank = System.Linq.Enumerable.First(ranks);
             RawImage frontPng = front ? png : ComposeCardFront(lookRank);
             RawImage backPng = front ? ComposeCardBack(lookRank) : png;
-            if (frontPng == null || backPng == null) return "Could not decode the current card design.";
+            if (frontPng == null || backPng == null) return "The current card design couldn't be read.";
 
             int capacity = TileCapacity(chrRaw, facaRaw, backRaw);
             EncodedTiles frontTiles, backTiles;
@@ -152,7 +152,7 @@ namespace DSPRE.Avalonia.Data
 
             MergedTiles merged = MergeTilePools(frontTiles, backTiles, 0, capacity, reserveZero: false);
             if (merged == null)
-                return $"Front + back design needs more than {capacity} unique 8x8 tiles once deduplicated. Simplify the images.";
+                return $"The front and back need more than {capacity} different 8 by 8 tiles between them. Simplify the pictures.";
 
             if (!WriteMapData(facaRaw, merged.FrontMapEntries) || !WriteMapData(backRaw, merged.BackMapEntries))
                 return "The card's arrangement files are too small for a whole card.";
@@ -178,10 +178,10 @@ namespace DSPRE.Avalonia.Data
 
         private string ImportTrainer(RawImage png, bool male)
         {
-            if (!Available) return "Trainer card graphics archive is not available for this ROM.";
+            if (!Available) return "This game doesn't have the trainer card archive.";
             if (png == null || png.IsEmpty) return "No image.";
             if (png.Width != TrainerWidth || png.Height != TrainerHeight)
-                return $"Image must be exactly {TrainerWidth}x{TrainerHeight} (got {png.Width}x{png.Height}).";
+                return $"That picture is {png.Width} by {png.Height}. It has to be {TrainerWidth} by {TrainerHeight}.";
 
             (int ncgr, int maleNscr, int femaleNscr) t = TrainerCardTrainerMembers;
             (int ncgr, int facaNscr, int backNscr, int[] rankPalettes) m = TrainerCardMembers;
@@ -190,11 +190,11 @@ namespace DSPRE.Avalonia.Data
             byte[] femaleRaw = NitroBgCodec.Inflate(Current(t.femaleNscr));
             byte[] palRaw = NitroBgCodec.Inflate(Current(m.rankPalettes[0]));
             if (chrRaw == null || maleRaw == null || femaleRaw == null || palRaw == null)
-                return "Could not read the current trainer pose.";
+                return "The current trainer pose couldn't be read.";
 
             RawImage malePng = male ? png : ComposeTrainer(true);
             RawImage femalePng = male ? ComposeTrainer(false) : png;
-            if (malePng == null || femalePng == null) return "Could not decode the current trainer pose.";
+            if (malePng == null || femalePng == null) return "The current trainer pose couldn't be read.";
 
             int capacity = TileCapacity(chrRaw, maleRaw, femaleRaw);
             EncodedTiles maleTiles, femaleTiles;
@@ -219,7 +219,7 @@ namespace DSPRE.Avalonia.Data
             MergedTiles merged = MergeTilePools(maleTiles, femaleTiles, PoseFirstSlot - 1 + maleTiles.Colors.Count, capacity,
                 reserveZero: true, firstShift: PoseFirstSlot - 1);
             if (merged == null)
-                return $"Male + female pose needs more than {capacity} unique 8x8 tiles once deduplicated. Simplify the images.";
+                return $"The two poses need more than {capacity} different 8 by 8 tiles between them. Simplify the pictures.";
 
             if (!WriteMapData(maleRaw, merged.FrontMapEntries) || !WriteMapData(femaleRaw, merged.BackMapEntries))
                 return "The trainer's arrangement files are too small for a whole pose.";
@@ -243,10 +243,10 @@ namespace DSPRE.Avalonia.Data
         // ── Raw rank palette (advanced) ─────────
         public string ImportRankPaletteRaw(int rankIndex, byte[] nclrBytes)
         {
-            if (!Available) return "Trainer card graphics archive is not available for this ROM.";
+            if (!Available) return "This game doesn't have the trainer card archive.";
             if (nclrBytes == null || nclrBytes.Length < 4 ||
                 nclrBytes[0] != (byte)'R' || nclrBytes[1] != (byte)'L' || nclrBytes[2] != (byte)'C' || nclrBytes[3] != (byte)'N')
-                return "Not a valid colour file.";
+                return "That isn't a colour file.";
             int id = TrainerCardMembers.rankPalettes[rankIndex];
             _narc.Put(id, nclrBytes);
             return null;
@@ -297,7 +297,7 @@ namespace DSPRE.Avalonia.Data
                         if (!colorToIndex.TryGetValue(key, out v))
                         {
                             if (colors.Count >= maxColors)
-                                throw new InvalidOperationException($"Image uses more than {maxColors} distinct colours.");
+                                throw new InvalidOperationException($"That picture uses more than {maxColors} colours.");
                             v = (byte)(colors.Count + (reserveZero ? 1 : 0));
                             colorToIndex[key] = v;
                             colors.Add((r, g, b));

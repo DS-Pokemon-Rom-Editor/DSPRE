@@ -67,7 +67,7 @@ namespace DSPRE
             }
             catch (Exception ex)
             {
-                AppLogger.Error($"Failed to load overlays.yaml: {ex.Message}");
+                AppLogger.Error($"Couldn't load overlays.yaml: {ex.Message}");
                 return null;
             }
         }
@@ -76,9 +76,7 @@ namespace DSPRE
         {
             private const int EntryLen = 32;
 
-            /**
-            * Only checks if the overlay is CONFIGURED as compressed
-            **/
+            /// <summary>Whether the overlay table marks it compressed, not whether the file is.</summary>
             public static bool IsDefaultCompressed(int ovNumber)
             {
                 if (RomInfo.IsDsRomProject)
@@ -99,7 +97,7 @@ namespace DSPRE
             {
                 if (RomInfo.OverlaysStayFlat)
                 {
-                    AppLogger.Warn("Cannot modify overlay compression flag in ds-rom format (compression is automatic)");
+                    AppLogger.Warn("Can't modify overlay compression flag in ds-rom format (compression is automatic)");
                     return;
                 }
 
@@ -165,7 +163,6 @@ namespace DSPRE
 
                 using (FileStream fileStream = File.OpenRead(RomInfo.OverlayTablePath))
                 {
-                    // Get the length of the file in bytes
                     return (int)(fileStream.Length / EntryLen);
                 }
             }
@@ -181,9 +178,6 @@ namespace DSPRE
             return Path.Combine(WorkDir, "overlay", $"overlay_{overlayNumber:D4}.bin");
         }
 
-        /**
-         * Checks the actual size of the overlay file
-         **/
         /// <summary>Whether the overlay on disk is still compressed. ds-rom projects keep overlays flat until build.</summary>
         public static bool IsStillCompressed(int ovNumber) =>
             !RomInfo.OverlaysStayFlat && OverlayTable.IsDefaultCompressed(ovNumber) && IsCompressed(ovNumber);
@@ -240,7 +234,7 @@ namespace DSPRE
             }
             else
             {
-                string msg = $"Overlay File {overlayFilePath}{DSUtils.BackupSuffix} couldn't be found and restored.";
+                string msg = $"{overlayFilePath}{DSUtils.BackupSuffix} is missing, so the overlay can't be restored.";
                 AppLogger.Debug(msg);
 
                 if (eventEditorIsReady)
@@ -251,7 +245,6 @@ namespace DSPRE
         }
         public static int Compress(int overlayNumber)
         {
-            // ds-rom handles compression automatically during build
             if (RomInfo.OverlaysStayFlat)
             {
                 AppLogger.Info("ds-rom handles overlay compression automatically during ROM build.");
@@ -262,7 +255,7 @@ namespace DSPRE
 
             if (!File.Exists(overlayFilePath))
             {
-                AppMessages.Error("Overlay to decompress #" + overlayNumber + " doesn't exist",
+                AppMessages.Error("Overlay " + overlayNumber + " doesn't exist.",
                     "Overlay not found");
                 return ErrOverlayNotfound;
             }
@@ -285,7 +278,6 @@ namespace DSPRE
 
         public static int Decompress(string overlayFilePath, bool makeBackup = true)
         {
-            // ds-rom overlays are always decompressed on disk
             if (RomInfo.OverlaysStayFlat)
             {
                 AppLogger.Info("ds-rom overlays are always stored decompressed on disk.");
@@ -294,7 +286,7 @@ namespace DSPRE
 
             if (!File.Exists(overlayFilePath))
             {
-                AppMessages.Error($"File to decompress \"{overlayFilePath}\" doesn't exist",
+                AppMessages.Error($"\"{overlayFilePath}\" doesn't exist.",
                     "Overlay not found");
                 return ErrOverlayNotfound;
             }

@@ -5,8 +5,7 @@ using DSPRE.ROMFiles;
 namespace DSPRE
 {
     /// <summary>
-    /// Header list-box / internal-name readers (extracted from the WinForms <c>Helpers</c> so the
-    /// cross-platform shells can build header lists without a WinForms dependency).
+    /// Header list names and internal names.
     /// </summary>
     public static class HeaderLists
     {
@@ -25,7 +24,7 @@ namespace DSPRE
                 for (int i = 0; i < headerCount; i++)
                 {
                     byte[] row = reader.ReadBytes(RomInfo.InternalNameLength);
-                    string internalName = Encoding.ASCII.GetString(row); //.TrimEnd();
+                    string internalName = Encoding.ASCII.GetString(row);
                     headerListBoxNames.Add(MapHeader.BuildName(i, internalName));
                 }
             }
@@ -43,7 +42,7 @@ namespace DSPRE
                 for (int i = 0; i < headerCount; i++)
                 {
                     byte[] row = reader.ReadBytes(RomInfo.InternalNameLength);
-                    string internalName = Encoding.ASCII.GetString(row); //.TrimEnd();
+                    string internalName = Encoding.ASCII.GetString(row);
                     internalNames.Add(internalName.TrimEnd('\0'));
                 }
             }

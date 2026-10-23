@@ -3,10 +3,7 @@ using System.Collections.Generic;
 
 namespace DSPRE.ROMFiles
 {
-    /// <summary>
-    /// Drives one overworld's idle motion for a preview, following what the games do rather than inventing
-    /// something.
-    /// </summary>
+    /// <summary>Drives one overworld's idle motion for a preview, the way the games do.</summary>
     public sealed class OverworldAnimator
     {
         public const int SpinIntervalFrames = 24;                            // frames between turns for the spinning types
@@ -221,7 +218,7 @@ namespace DSPRE.ROMFiles
             }
             else Cycle.Rest();
 
-            // A hop rises and falls over the step, which is what tells a jump apart from a walk.
+            // A hop rises and falls over the step; a walk stays on the ground.
             _hop = step.Kind == FieldActionKind.Jump ? (float)Math.Sin(gone * Math.PI) * 0.5f : 0f;
 
             if (_scriptFramesLeft <= 0)
@@ -232,7 +229,7 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>Where a scripted step has got to, between the tile it left and the one it is heading for.</summary>
+        /// <summary>How far a scripted step has got between the tile it left and the next.</summary>
         private float ScriptBlend(int from, int to)
         {
             FieldMovementStep step = CurrentScriptStep;

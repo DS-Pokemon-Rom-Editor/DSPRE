@@ -165,7 +165,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty || _archive.IsDirty;
         public string UnsavedChangesDescription
-            => DSPRE.Avalonia.Data.StagedArchive.Join($"Wild Encounters (DPPt #{SelectedEncounterIndex})", _dirty, _archive.Describe("encounter file", "encounter files"));
+            => DSPRE.Avalonia.Data.StagedArchive.Join($"Encounter file {SelectedEncounterIndex}", _dirty, _archive.Describe("encounter file", "encounter files"));
         void IEditorWithUnsavedChanges.SaveChanges() => DialogHelper.Watch(SaveCommandAsync());
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
@@ -242,8 +242,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>Which Unown letters appear here. </summary>
         public ObservableCollection<string> UnownTableNames  { get; } = new()
         {
-            "Most Forms (0)",
-            "Most Forms", "Only F", "Only R", "Only I", "Only N",
+            "Most forms (0)",
+            "Most forms", "Only F", "Only R", "Only I", "Only N",
             "Only E", "Only D", "! and ?"
         };
 
@@ -333,8 +333,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             RaiseUndoState();
         }
 
-        // Grid-row edits don't otherwise reach the dirty/undo pipeline; subscribe each row once so a species
-        // or level change marks the editor dirty (also fixes a latent "edited rows close without prompting").
+        // Grid rows don't reach the dirty and undo path otherwise, so each row is subscribed once.
         private void HookRowsOnce()
         {
             if (_rowsHooked) return;
@@ -384,7 +383,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             return _current.HasEncounters ? 2 : 0;
         }
 
-        // Opened without a file in mind: start on one that has encounters rather than the empty file 0.
+        // Opened without a file in mind: start on the first file with encounters, since file 0 is empty.
         private int FirstWithEncounters(int count)
         {
             for (int id = 0; id < count; id++)
@@ -453,7 +452,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try { _archive.Save(_selectedEncounterIndex, _current.ToByteArray()); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowErrorAsync("The encounter files could not be saved:" + Environment.NewLine + ex.Message, "Wild Pokémon editor");
+                await DialogHelper.ShowErrorAsync("The encounter files couldn't be saved:" + Environment.NewLine + ex.Message, "Wild Pokémon editor");
                 StagedChanged();
                 return;
             }
@@ -567,7 +566,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             RaiseUndoState();
         }
 
-        /// <summary>Re-reads the slot chances into the row labels, for after the Slot Odds editor saved. Keeps unsaved edits.</summary>
+        /// <summary>Re-reads the slot chances into the row labels, for after Encounter slot odds saved. Keeps unsaved edits.</summary>
         public void RefreshSlotLabels()
         {
             for (int i = 0; i < WalkingRows.Count; i++) WalkingRows[i].Label = EncounterSlotOdds.SlotLabel("Walking", i);
@@ -656,7 +655,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 List<string> times = new List<string>();
                 if (walks && DayRows[i].PokemonIndex <= 0) times.Add("day");
                 if (walks && NightRows.Count > i && NightRows[i].PokemonIndex <= 0) times.Add("night");
-                WalkingRows[i + 2].Warning = times.Count > 0 ? $"The {string.Join(" and ", times)} Pokémon is empty: then this slot gives a glitch Pokémon." : null;
+                WalkingRows[i + 2].Warning = times.Count > 0 ? $"The {string.Join(" and ", times)} Pokémon {(times.Count == 1 ? "is" : "are")} empty, so at {(times.Count == 1 ? "that time" : "those times")} this slot gives a glitch Pokémon." : null;
             }
             int[] radarSlots = { 5, 6, 11, 12 };
             for (int i = 0; i < RadarRows.Count && i < radarSlots.Length; i++)

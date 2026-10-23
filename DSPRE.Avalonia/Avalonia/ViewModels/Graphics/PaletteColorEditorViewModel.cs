@@ -45,7 +45,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public bool HasLastUsed => LastUsed.Count > 0;
 
         public PaletteColorEditorViewModel(PokemonSpriteEditorViewModel sprite, bool shiny, int index)
-            : this($"{(shiny ? "Shiny" : "Normal")} Palette, Color {index}",
+            : this($"{(shiny ? "Shiny" : "Normal")} palette, colour {index}",
                    sprite.GetPalette(shiny) is uint[] pal && index < pal.Length ? pal[index] : 0xFF000000u,
                    (argb, group) => sprite.SetPaletteColor(shiny, index, argb, group))
         {

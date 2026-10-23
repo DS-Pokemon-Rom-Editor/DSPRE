@@ -5,13 +5,8 @@ using System.Linq;
 namespace DSPRE.Avalonia.Data
 {
     /// <summary>
-    /// What each Pokétch application is made of, and the rules an edit has to keep. Recipes from the
-    /// pokeplatinum decomp's applications/poketch and its generated graphics index, checked against a real
-    /// Platinum archive.
-    ///
-    /// The game does no bounds checking when it uploads these to VRAM: an oversized drawing runs off the end
-    /// of the app's room and into the casing's tiles rather than being clipped. So the numbers here are what
-    /// an import has to be refused against.
+    /// What each Pokétch app is made of and the limits an edit keeps, from pokeplatinum's applications/poketch. The game
+    /// doesn't bounds-check these uploads, so an oversized drawing spills into the casing's tiles; imports past them are refused.
     /// </summary>
     public static class PoketchApps
     {
@@ -94,7 +89,7 @@ namespace DSPRE.Avalonia.Data
             /// <summary>Room left for a bigger drawing, once the text windows are accounted for.</summary>
             public int TileRoom => MaxTiles > 0 ? MaxTiles : TileCeiling - (TilesUsed - Drawn);
 
-            // How much of TilesUsed is the drawing itself rather than a window the app opens after it.
+            // How much of TilesUsed is the drawing itself, not a window the app opens after it.
             private int Drawn => MaxTiles > 0 ? MaxTiles : TilesUsed;
 
             /// <summary>
@@ -107,14 +102,14 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>
-        /// The applications in the order the Pokétch cycles through them. Two of them draw nothing from this
-        /// archive at all, and are listed so the editor can say why rather than leave them out.
+        /// The apps in the order the Pokétch cycles through them. Two draw nothing from this archive, and are listed so the
+        /// editor can say why.
         /// </summary>
         public static readonly App[] All =
         {
             new App { Id = 0,  Name = "Digital Watch", Tiles = 23, Arrangement = 24, TilesUsed = 48,
-                      Warning = "The four digits come out of member 25, which is stored as 32 columns then a "
-                              + "tail of 8 rather than one 40-wide strip. It has to keep that shape." },
+                      Warning = "The four digits come from member 25, stored as 32 columns plus a tail of 8, not "
+                              + "one 40-wide strip. Keep that shape." },
             new App { Id = 1,  Name = "Calculator", Tiles = 16, Arrangement = 17, TilesUsed = 360,
                       FixedWidthTiles = 40,
                       Warning = "Every key is found by counting 40 tiles per row, and seventeen pressed-key "
@@ -122,8 +117,7 @@ namespace DSPRE.Avalonia.Data
             new App { Id = 2,  Name = "Memo Pad", Tiles = 30, Arrangement = 31, Sprites = 32, Cells = 33,
                       Animation = 34, TilesUsed = 392, SpriteTilesUsed = 160, MaxTiles = 12,
                       Warning = "The canvas starts at tile 12, so anything drawn past that is painted over.",
-                      // The note page is a 20 by 19 tile window at tile 2,2, and an empty one is filled
-                      // with the theme's fourth colour rather than left blank.
+                      // The note page is a 20 by 19 tile window at tile 2,2; an empty one fills with the theme's fourth colour.
                       Fills = new[] { (16, 16, 160, 152, 4) } },
             new App { Id = 3,  Name = "Pedometer", Tiles = 49, Arrangement = 48, Sprites = 52, Cells = 50,
                       Animation = 51, TilesUsed = 8, SpriteTilesUsed = 208, UsesDigitSheet = true },
@@ -142,11 +136,11 @@ namespace DSPRE.Avalonia.Data
             new App { Id = 6,  Name = "Dowsing Machine", Tiles = 39, Arrangement = 38, Sprites = 42,
                       Cells = 40, Animation = 41, TilesUsed = 64, SpriteTilesUsed = 101,
                       Warning = "Two of its cells ask for sprite colours 13 and 14, which the game builds as "
-                              + "it runs. Those numbers cannot be moved." },
+                              + "it runs. Those numbers can't be moved." },
             new App { Id = 7,  Name = "Berry Searcher", Tiles = 117, Arrangement = 116, Sprites = 120,
                       Cells = 118, Animation = 119, TilesUsed = 124, SpriteTilesUsed = 60,
                       Warning = "Shares its drawing, sprites, cells and animation with Marking Map. Only the "
-                              + "arrangement is its own." },
+                              + "arrangement is separate." },
             new App { Id = 8,  Name = "Daycare Checker", Tiles = 81, Arrangement = 80, Sprites = 84,
                       Cells = 82, Animation = 83, TilesUsed = 16, SpriteTilesUsed = 172,
                       UsesPokemonIcons = true,
@@ -157,15 +151,15 @@ namespace DSPRE.Avalonia.Data
                                             (152, 40), (168, 40), (184, 40), (200, 40) } },
             new App { Id = 9,  Name = "Pokémon History", TilesUsed = 49, SpriteTilesUsed = 192,
                       UsesPokemonIcons = true,
-                      ReadOnlyBecause = "This screen has no drawing of its own. It fills with one blank tile "
-                                      + "and writes its heading with the font." },
+                      ReadOnlyBecause = "This screen has no drawing. It fills with one blank tile and writes its "
+                                      + "heading in the font." },
             new App { Id = 10, Name = "Counter", Tiles = 44, Arrangement = 43, Sprites = 47, Cells = 45,
                       Animation = 46, TilesUsed = 6, SpriteTilesUsed = 208, UsesDigitSheet = true,
                       SpriteSlots = new[] { (114, 128) } },
             new App { Id = 11, Name = "Analog Watch", Tiles = 23, Arrangement = 26, Sprites = 29, Cells = 27,
                       Animation = 28, TilesUsed = 48, SpriteTilesUsed = 48,
                       Warning = "Its animation holds 420 entries, the minute angles then the hour angles, "
-                              + "found by counting. They cannot be reordered or trimmed.",
+                              + "found by counting. They can't be reordered or trimmed.",
                       // Both hands pivot on the same point; which one you see is the cell bank.
                       SpriteSlots = new[] { (116, 100) } },
             new App { Id = 12, Name = "Marking Map", Tiles = 117, Arrangement = 115, Sprites = 120,
@@ -216,7 +210,7 @@ namespace DSPRE.Avalonia.Data
                                             (80, 112), (96, 112), (128, 112), (144, 112) } },
             new App { Id = 21, Name = "Color Changer", Tiles = 66, Arrangement = 65, Sprites = 69, Cells = 67,
                       Animation = 68, TilesUsed = 96, SpriteTilesUsed = 16,
-                      Warning = "This is the screen that picks the theme every other application draws with.",
+                      Warning = "This screen picks the theme colours every other app uses.",
                       // The knob rests at the left end of the slider.
                       SpriteSlots = new[] { (56, 148) } },
             new App { Id = 22, Name = "Matchup Checker", Tiles = 71, Arrangement = 70, Sprites = 74,

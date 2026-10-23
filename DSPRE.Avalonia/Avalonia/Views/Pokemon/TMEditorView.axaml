@@ -35,7 +35,6 @@
 		<!-- Two columns: list, detail panel -->
 		<Grid Margin="8" ColumnDefinitions="280,*">
 
-			<!-- ── Left column: TM/HM list ─────────────────────────────── -->
 			<DockPanel Grid.Column="0" Margin="0,0,8,0">
 				<Label DockPanel.Dock="Top" Content="TM / HM list" FontWeight="SemiBold" Margin="0,0,0,4"/>
 				<ListBox ItemsSource="{Binding MachineItems}"
@@ -52,7 +51,6 @@
 				</ListBox>
 			</DockPanel>
 
-			<!-- ── Right column: detail controls ──────────────────────── -->
 			<StackPanel x:Name="MachineDetail" Grid.Column="1" Classes="detail"
 						Spacing="8" VerticalAlignment="Top" MaxWidth="360" HorizontalAlignment="Left" MinWidth="220">
 
@@ -80,7 +78,7 @@
 				<Button Content="Auto palette all"
 						Click="AutoPaletteAllButton_Click"
 						IsEnabled="{Binding PalettesKnown}"
-						ToolTip.Tip="Apply automatic palette based on move type to all TMs/HMs."
+						ToolTip.Tip="Set every TM and HM palette from its move's type."
 						HorizontalAlignment="Stretch"/>
 
 			</StackPanel>

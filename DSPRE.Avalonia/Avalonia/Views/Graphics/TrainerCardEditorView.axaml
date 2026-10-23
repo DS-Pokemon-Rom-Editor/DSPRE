@@ -21,7 +21,7 @@
       <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
       <Button Content="Discard" controls:Icon.Key="resetIcon" Click="RevertChanges_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
       <controls:UndoRedoButtons/>
-      <Button Content="Open in Graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"/>
+      <Button Content="Open in All graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"/>
     </controls:EditorToolbar>
 
     <!-- The pieces -->

@@ -9,12 +9,8 @@ using YamlDotNet.Serialization;
 namespace DSPRE
 {
     /// <summary>
-    /// Reads (and, for ds-rom projects, edits) the DS ROM banner: the 32×32 game icon and the
-    /// per-language titles shown in the DS system menu. Two on-disk shapes exist:
-    /// legacy ndstool projects keep the raw <c>banner.bin</c> (4bpp tiled icon + BGR555 palette +
-    /// UTF-16 titles), while ds-rom projects get an editable <c>banner/</c> folder
-    /// (<c>banner.yaml</c> + <c>bitmap.png</c> + <c>palette.png</c>) that <c>dsrom build</c>
-    /// re-encodes automatically. UI-toolkit-free: images go through <see cref="RawImage"/>.
+    /// The DS menu icon and titles: read from <c>banner.bin</c> on ndstool projects, edited in <c>banner/</c>
+    /// (yaml plus two PNGs) on ds-rom ones, which <c>dsrom build</c> encodes.
     /// </summary>
     public static class GameBanner
     {
@@ -117,7 +113,7 @@ namespace DSPRE
             }
             catch (Exception ex)
             {
-                AppLogger.Error($"Failed to parse banner.yaml: {ex.Message}");
+                AppLogger.Error($"Couldn't parse banner.yaml: {ex.Message}");
                 return null;
             }
         }
@@ -128,31 +124,26 @@ namespace DSPRE
             PlainFiles.WriteText(DsRomYamlPath, serializer.Serialize(banner));
         }
 
-        /// <summary>
-        /// Validates a candidate icon and writes it as the ds-rom project's <c>bitmap.png</c> +
-        /// <c>palette.png</c> pair (palette slot 0 = transparent, then the opaque colors in
-        /// first-seen order). Returns null on success, or a user-displayable error message.
-        /// </summary>
         /// <summary>Why an image can't be the game icon, or null.</summary>
         public static string IconProblem(RawImage img)
         {
-            if (img == null) return "The image could not be decoded.";
+            if (img == null) return "The image couldn't be decoded.";
             if (img.Width != IconSize || img.Height != IconSize)
-                return $"The icon must be exactly {IconSize}×{IconSize} pixels (got {img.Width}×{img.Height}).";
+                return $"The icon must be {IconSize}×{IconSize} pixels, and this image is {img.Width}×{img.Height}.";
             HashSet<int> colours = new HashSet<int>();
             byte[] src = img.Bgra;
             for (int i = 0; i < src.Length; i += 4)
                 if (src[i + 3] >= 128) colours.Add((src[i + 2] << 16) | (src[i + 1] << 8) | src[i]);
             return colours.Count > MaxOpaqueColors
-                ? $"Too many colors: DS icons allow at most {MaxOpaqueColors} opaque colors plus transparency. Reduce the color count and try again."
+                ? $"A DS icon can have {MaxOpaqueColors} colours plus transparency, and this image has more."
                 : null;
         }
 
         public static string ValidateAndWriteDsRomIcon(RawImage img)
         {
-            if (img == null) return "The image could not be decoded.";
+            if (img == null) return "The image couldn't be decoded.";
             if (img.Width != IconSize || img.Height != IconSize)
-                return $"The icon must be exactly {IconSize}×{IconSize} pixels (got {img.Width}×{img.Height}).";
+                return $"The icon must be {IconSize}×{IconSize} pixels, and this image is {img.Width}×{img.Height}.";
 
             // Normalize: alpha < 128 → the transparent slot; opaque pixels forced to alpha 255.
             RawImage normalized = new RawImage(IconSize, IconSize);
@@ -167,8 +158,8 @@ namespace DSPRE
                 if (!colorIndex.ContainsKey(key))
                 {
                     if (opaqueColors.Count >= MaxOpaqueColors)
-                        return $"Too many colors: DS icons allow at most {MaxOpaqueColors} opaque colors " +
-                               "plus transparency. Reduce the color count and try again.";
+                        return $"A DS icon can have {MaxOpaqueColors} colours plus transparency, " +
+                               "and this image has more.";
                     colorIndex[key] = opaqueColors.Count + 1;
                     opaqueColors.Add((r, g, b));
                 }

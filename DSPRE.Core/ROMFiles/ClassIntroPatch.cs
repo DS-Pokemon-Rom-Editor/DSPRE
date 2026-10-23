@@ -8,12 +8,12 @@ using static DSPRE.RomInfo;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// Diamond, Pearl and Platinum: the class-to-intro switch (EncEffects_TrainerClassEffect, sub_020475C0 in Diamond and
-    /// Pearl) is replaced by one 32-byte row per class in the synthetic overlay: style, battle music, a gym leader record
-    /// and an Elite Four record. Each style borrows an effect pair only the switch picks; the routine writes the class's
-    /// music into it and copies the record into the buffer one gym leader's and Aaron's intro read. Applying fills every
-    /// row with the game's current intros. Source: Resources/ROMToolboxDB/ClassIntros/class_intros.s.
+    /// Diamond, Pearl and Platinum: replaces the class-to-intro switch (EncEffects_TrainerClassEffect) with a 32-byte
+    /// row per class: style, music, gym leader record and Elite Four record. Applying fills every row with the current
+    /// intros. Source: Resources/ROMToolboxDB/ClassIntros/class_intros.s.
     /// </summary>
+    /// <remarks>The switch is sub_020475C0 in Diamond and Pearl. Each style borrows an effect pair only the switch picks;
+    /// the routine writes the class's music into it and copies the record into the buffer the gym leader and Aaron intros read.</remarks>
     public static class ClassIntroPatch
     {
         public const string Marker = "CLASSINTRO01";
@@ -68,7 +68,7 @@ namespace DSPRE.ROMFiles
 
         private sealed record Sites(int SwitchStart, uint PairTable, int Overlay, int GymLiteral, int LeagueLiteral, uint GymTable, uint LeagueTable);
 
-        // European English reads these through its code twins.
+        // European English uses the same sites through its matching US code.
         private static readonly HashSet<(string, int)> Measured = new() { ("CPUE", 1), ("ADAE", 5), ("APAE", 5) };
 
         /// <summary>The dumps the patch is mapped for, with the European English revisions that copy their code.</summary>
@@ -94,7 +94,7 @@ namespace DSPRE.ROMFiles
             why = null;
             VsIntroSites s = RomLocator.VsIntroSites;
             uint pairs = BitConverter.ToUInt32(ARM9.ReadBytes(EffectsComboTableOffsetToRAMAddress, 4), 0);
-            if (pairs < ARM9.Address || pairs >= SynthOverlayLoadAddress) { why = "The intro table isn't where the game keeps it."; return null; }
+            if (pairs < ARM9.Address || pairs >= SynthOverlayLoadAddress) { why = "Something else has already changed the class intro code, so DSPRE leaves it alone."; return null; }
             string ovPath = OverlayUtils.GetPath(s.RecordOverlay);
             if (OverlayUtils.IsCompressed(s.RecordOverlay)) OverlayUtils.Decompress(s.RecordOverlay);
             byte[] ov = File.ReadAllBytes(ovPath);
@@ -134,9 +134,9 @@ namespace DSPRE.ROMFiles
         /// <summary>Why the patch can't go in now, or null.</summary>
         public static string WhyNotApplicable()
         {
-            if (!SupportsCurrentRom) return "The intro code isn't mapped for this ROM.";
+            if (!SupportsCurrentRom) return "This patch doesn't support this ROM yet.";
             if (!SyntheticOverlaySpace.Available()) return "Apply the ARM9 expansion first.";
-            if (BattleMusicTables.LoadRom()?.ClassJumps == null) return "The class intro switch has already been changed by something else.";
+            if (BattleMusicTables.LoadRom()?.ClassJumps == null) return "Something else has already changed the class intro switch, so DSPRE leaves it alone.";
             return Find(out string why) == null ? why : null;
         }
 
@@ -230,7 +230,7 @@ namespace DSPRE.ROMFiles
         public static void WriteRow(int trainerClass, Row row)
         {
             int block = InstalledOffset();
-            if (block < 0 || trainerClass < 0 || trainerClass >= Classes) throw new InvalidOperationException("The class intros patch is not applied.");
+            if (block < 0 || trainerClass < 0 || trainerClass >= Classes) throw new InvalidOperationException("The class intros patch isn't applied.");
             DSUtils.WriteToFile(Filesystem.ExpArmPath, row.Bytes, (uint)(block + CodeStart + RowsAt + trainerClass * RowSize));
         }
 
@@ -243,7 +243,7 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public static void Apply(int blockOffset)
         {
-            if (blockOffset % 4 != 0) throw new ArgumentException("The block must start on a word.", nameof(blockOffset));
+            if (blockOffset % 4 != 0) throw new ArgumentException("The block must start on a 4-byte boundary.", nameof(blockOffset));
             Sites sites = Find(out string why) ?? throw new InvalidOperationException(why);
             List<Row> rows = RowsFromGame(sites);
 

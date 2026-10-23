@@ -9,9 +9,6 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.ROMFiles
 {
-    /// <summary>
-    /// Class to store script file data in Pokémon NDS games
-    /// </summary>
     public class ScriptFile : RomFile
     {
         // Cache for parsed plaintext scripts to avoid reparsing during search
@@ -20,9 +17,7 @@ namespace DSPRE.ROMFiles
         private static List<(int fileID, ushort commandID, long offset)> _invalidCommandsEncountered = new List<(int, ushort, long)>();
         private static bool _suppressInvalidCommandErrors = false;
 
-        /// <summary>
-        /// Clears the plaintext script cache. Useful when closing ROM or reloading.
-        /// </summary>
+        /// <summary>Clears the plaintext script cache, as when a ROM closes.</summary>
         public static void ClearPlaintextCache()
         {
             _plaintextCache.Clear();
@@ -118,7 +113,7 @@ namespace DSPRE.ROMFiles
                 {
                     if (!IsLevelScript)
                     {
-                        AppMessages.Error("Script File couldn't be read correctly.", "Unexpected EOF");
+                        AppMessages.Error("The script file couldn't be read.", "Script error");
                     }
                 }
 
@@ -127,7 +122,6 @@ namespace DSPRE.ROMFiles
                     return;
                 }
 
-                // Skip the 0xFD13 marker
                 br.ReadUInt16();
                 /* Read scripts */
                 for (uint current = 0; current < scriptOffsets.Count; current++)
@@ -165,7 +159,7 @@ namespace DSPRE.ROMFiles
 
                         if (invalidCommandFound)
                         {
-                            AppLogger.Warn($"Script file {fileID}: Stopped parsing at Script {current + 1} due to invalid command. Remaining scripts, functions, and actions will not be loaded.");
+                            AppLogger.Warn($"Script file {fileID}: Stopped parsing at Script {current + 1} due to invalid command. Remaining scripts, functions, and actions won't be loaded.");
                             return;
                         }
                     }
@@ -211,7 +205,7 @@ namespace DSPRE.ROMFiles
 
                             if (invalidCommandFound)
                             {
-                                AppLogger.Warn($"Script file {fileID}: Stopped parsing at Function {current + 1} due to invalid command. Remaining functions and actions will not be loaded.");
+                                AppLogger.Warn($"Script file {fileID}: Stopped parsing at Function {current + 1} due to invalid command. Remaining functions and actions won't be loaded.");
                                 return;
                             }
                         }
@@ -263,7 +257,7 @@ namespace DSPRE.ROMFiles
             if (!File.Exists(Filesystem.GetScriptPath(fileID)))
             {
                 // Reads as an empty file did, without leaving one behind.
-                AppLogger.Warn($"Script file {fileID:D4} does not exist.");
+                AppLogger.Warn($"Script file {fileID:D4} doesn't exist.");
                 IsLevelScript = true;
                 return;
             }
@@ -277,7 +271,6 @@ namespace DSPRE.ROMFiles
             _readFull = readFunctions && readActions;
             using (MemoryStream fs = new MemoryStream(_read))
             {
-                // Copy the logic from the Stream constructor
                 ScriptFile tempScript = new ScriptFile(fs, readFunctions, readActions, fileID);
                 this.AllScripts = tempScript.AllScripts;
                 this.AllFunctions = tempScript.AllFunctions;
@@ -293,9 +286,6 @@ namespace DSPRE.ROMFiles
             return new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         }
 
-        /// <summary>
-        /// Gets the file paths for both binary and plaintext versions of a script file
-        /// </summary>
         public static (string binPath, string txtPath) GetFilePaths(int fileID)
         {
             string binPath = Filesystem.GetScriptPath(fileID);
@@ -304,7 +294,6 @@ namespace DSPRE.ROMFiles
             return (binPath, txtPath);
         }
 
-        // ScriptFile.cs (inside the ScriptFile class)
 
         public string ToPlainText(bool includeActions)
         {
@@ -314,13 +303,12 @@ namespace DSPRE.ROMFiles
             // Matches the safety behavior in WritePlainTextFile().
             if (ParseFailedDueToInvalidCommand)
             {
-                AppLogger.Warn($"Script file {FileID:D4} was not fully parsed due to invalid commands. Skipping plaintext generation to prevent data loss.");
+                AppLogger.Warn($"Script file {FileID:D4} wasn't fully parsed due to invalid commands. Skipping plaintext generation to prevent data loss.");
                 return string.Empty;
             }
 
             StringBuilder content = new StringBuilder();
 
-            // Header (same style as WritePlainTextFile())
             content.AppendLine("/*");
             content.AppendLine(" * DSPRE Script File");
 
@@ -336,18 +324,14 @@ namespace DSPRE.ROMFiles
             content.AppendLine(" */");
             content.AppendLine();
 
-            // Ensure IDs/references are stable before emitting text
             RenumberContainers();
 
-            // Scripts
             content.AppendLine("//===== SCRIPTS =====//");
             AppendContainerList(content, AllScripts, ScriptFile.ContainerTypes.Script);
 
-            // Functions
             content.AppendLine("//===== FUNCTIONS =====//");
             AppendContainerList(content, AllFunctions, ScriptFile.ContainerTypes.Function);
 
-            // Optional actions (you’ll pass false from DocTool)
             if (includeActions)
             {
                 content.AppendLine("//===== ACTIONS =====//");
@@ -369,12 +353,7 @@ namespace DSPRE.ROMFiles
         }
 
 
-        /// <summary>
-        /// Tries to read the script file from plaintext ONLY if it's newer than the binary
-        /// This is used during batch operations (like search) to respect external edits without slowdown
-        /// Returns true if plaintext exists, is newer, and was successfully parsed
-        /// Uses caching to avoid reparsing the same file multiple times
-        /// </summary>
+        /// <summary>Reads the .script only when it is newer than the binary, so batch searches see outside edits; results are cached.</summary>
         private bool TryReadPlaintextIfNewer()
         {
             if (FileID < 0)
@@ -443,9 +422,6 @@ namespace DSPRE.ROMFiles
                     : new ScriptAction { Id = x.Id, RepetitionCount = x.RepetitionCount, Name = x.Name }).ToList()))
                 .ToList();
 
-        /// <summary>
-        /// Core parsing logic for reading plaintext script files
-        /// </summary>
         private bool TryReadPlainTextFileCore()
         {
             string txtPath = GetFilePaths(FileID).txtPath;
@@ -454,7 +430,6 @@ namespace DSPRE.ROMFiles
             {
                 string content = File.ReadAllText(txtPath);
 
-                // Split content into sections
                 const string SCRIPTS_HEADER = "//===== SCRIPTS =====//";
                 const string FUNCTIONS_HEADER = "//===== FUNCTIONS =====//";
                 const string ACTIONS_HEADER = "//===== ACTIONS =====//";
@@ -469,7 +444,6 @@ namespace DSPRE.ROMFiles
                     return false;
                 }
 
-                // Extract each section
                 string scriptsSection = content.Substring(
                     scriptsStart + SCRIPTS_HEADER.Length,
                     functionsStart - scriptsStart - SCRIPTS_HEADER.Length
@@ -484,22 +458,18 @@ namespace DSPRE.ROMFiles
                     actionsStart + ACTIONS_HEADER.Length
                 ).Trim();
 
-                // Parse each section using existing logic
                 string[] scriptLines = scriptsSection.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
                 string[] functionLines = functionsSection.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
                 string[] actionLines = actionsSection.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
 
-                // Use the existing string-based constructor
                 ScriptFile tempScript = new ScriptFile(scriptLines, functionLines, actionLines, FileID);
 
-                // Check if parsing failed (constructor returns with null lists)
                 if (tempScript.AllScripts == null)
                 {
                     AppLogger.Error($"Script file {FileID:D4} ({txtPath}) failed to parse. Binary will be re-extracted.");
                     return false;
                 }
 
-                // Copy parsed data to this instance
                 this.AllScripts = tempScript.AllScripts;
                 this.AllFunctions = tempScript.AllFunctions;
                 this.AllActions = tempScript.AllActions;
@@ -517,12 +487,10 @@ namespace DSPRE.ROMFiles
 
         public void RenumberContainers()
         {
-            // Maps to store OldID -> NewID
             Dictionary<uint, uint> scriptMap = new Dictionary<uint, uint>();
             Dictionary<uint, uint> functionMap = new Dictionary<uint, uint>();
             Dictionary<uint, uint> actionMap = new Dictionary<uint, uint>();
 
-            // 1. Build Maps and Renumber Definitions
             if (AllScripts != null)
             {
                 for (int i = 0; i < AllScripts.Count; i++)
@@ -565,14 +533,12 @@ namespace DSPRE.ROMFiles
                 }
             }
 
-            // 2. Update References in Scripts and Functions
             List<ScriptCommandContainer> containersToUpdate = new List<ScriptCommandContainer>();
             if (AllScripts != null) containersToUpdate.AddRange(AllScripts);
             if (AllFunctions != null) containersToUpdate.AddRange(AllFunctions);
 
             foreach (ScriptCommandContainer container in containersToUpdate)
             {
-                // Update UseScript reference
                 if (container.UsedScriptID > 0)
                 {
                     if (scriptMap.TryGetValue((uint)container.UsedScriptID, out uint newScriptID))
@@ -581,7 +547,6 @@ namespace DSPRE.ROMFiles
                     }
                 }
 
-                // Update Command References
                 if (container.Commands != null)
                 {
                     for (int i = 0; i < container.Commands.Count; i++)
@@ -625,7 +590,6 @@ namespace DSPRE.ROMFiles
 
                                 if (valChanged && newVal != oldVal)
                                 {
-                                    // Update byte array
                                     if (cmd.CmdParams[p].Length == 1) cmd.CmdParams[p] = new byte[] { (byte)newVal };
                                     else if (cmd.CmdParams[p].Length == 2) cmd.CmdParams[p] = BitConverter.GetBytes((ushort)newVal);
                                     else if (cmd.CmdParams[p].Length == 4) cmd.CmdParams[p] = BitConverter.GetBytes(newVal);
@@ -638,7 +602,7 @@ namespace DSPRE.ROMFiles
 
                     if (commandUpdated)
                     {
-                        // Re-create command to update the 'name' property (text representation)
+                        // Recreated so its text form shows the new reference.
                         container.Commands[i] = new ScriptCommand((ushort)cmd.Id, cmd.CmdParams);
                     }
                 }
@@ -646,9 +610,6 @@ namespace DSPRE.ROMFiles
         }
     }
 
-        /// <summary>
-        /// Helper method to format script/function containers to plaintext (matches ScriptEditor.displayScriptFile logic)
-        /// </summary>
         private static void AppendContainerList(StringBuilder content, List<ScriptCommandContainer> commandList, ScriptFile.ContainerTypes containerType)
         {
             for (int i = 0; i < commandList.Count; i++)
@@ -682,9 +643,6 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>
-        /// Helper method to format action containers to plaintext (matches ScriptEditor.displayScriptFileActions logic)
-        /// </summary>
         private static void AppendActionList(StringBuilder content, List<ScriptActionContainer> commandList, ScriptFile.ContainerTypes containerType)
         {
             for (int i = 0; i < commandList.Count; i++)
@@ -709,9 +667,7 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>
-        /// Writes the script file to plaintext .script format in expanded/scripts/
-        /// </summary>
+        /// <summary>Writes the file as a .script in expanded/scripts.</summary>
         public void WritePlainTextFile()
         {
             if (FileID < 0)
@@ -724,13 +680,13 @@ namespace DSPRE.ROMFiles
 
             if (ParseFailedDueToInvalidCommand)
             {
-                AppLogger.Warn($"Script file {FileID:D4} was not fully parsed due to invalid commands. Skipping plaintext export to prevent data loss.");
+                AppLogger.Warn($"Script file {FileID:D4} wasn't fully parsed due to invalid commands. Skipping plaintext export to prevent data loss.");
                 return;
             }
 
             if (PlaintextParseFailed)
             {
-                AppLogger.Warn($"Script file {FileID:D4}: its .script did not parse, so it is left as it is rather than regenerated.");
+                AppLogger.Warn($"Script file {FileID:D4}: its .script didn't parse, so it wasn't regenerated.");
                 return;
             }
 
@@ -744,7 +700,7 @@ namespace DSPRE.ROMFiles
             }
             catch (Exception ex)
             {
-                AppLogger.Error($"Failed to write plaintext script file {txtPath}: {ex.Message}");
+                AppLogger.Error($"Couldn't write plaintext script file {txtPath}: {ex.Message}");
             }
         }
 
@@ -753,7 +709,6 @@ namespace DSPRE.ROMFiles
         {
             StringBuilder content = new StringBuilder();
 
-            // Add file header
             content.AppendLine("/*");
             content.AppendLine(" * DSPRE Script File");
 
@@ -768,41 +723,33 @@ namespace DSPRE.ROMFiles
             content.AppendLine(" */");
             content.AppendLine();
 
-            // Renumber containers and update references before writing
             RenumberContainers();
 
-            // Add Scripts section
             content.AppendLine("//===== SCRIPTS =====//");
             AppendContainerList(content, AllScripts, ScriptFile.ContainerTypes.Script);
 
-            // Add Functions section
             content.AppendLine("//===== FUNCTIONS =====//");
             AppendContainerList(content, AllFunctions, ScriptFile.ContainerTypes.Function);
 
-            // Add Actions section
             content.AppendLine("//===== ACTIONS =====//");
             AppendActionList(content, AllActions, ScriptFile.ContainerTypes.Action);
 
             return content.ToString();
         }
 
-        /// <summary>
-        /// Reloads script command database and reparses all scripts
-        /// used when loading a custom database or replacing database through DB Manager
-        /// </summary>
+        /// <summary>Reloads the command database and reparses every script, for a custom or replaced database.</summary>
         /// <param name="databasePath">Path to the JSON database file to load</param>
         /// <param name="progressCallback">Optional callback to report progress during reparse</param>
         /// <returns>List of remaining invalid commands after reload, empty if all successful</returns>
         public static List<(int fileID, ushort commandID, long offset)> ReloadDatabaseAndReparseAll(string databasePath, Action<int, int> progressCallback = null)
         {
-            // Get the ROM database folder (parent directory of scrcmd_database.json)
             string romDatabaseFolder = Path.GetDirectoryName(databasePath);
 
             // Another ROM's database would be applied to this ROM's scripts, and its name files
             // rewritten with this ROM's names.
             if (!IsCurrentRomDatabaseFolder(romDatabaseFolder))
             {
-                AppLogger.Warn($"Script: {databasePath} belongs to another ROM, so it was not loaded into this one.");
+                AppLogger.Warn($"Script: {databasePath} belongs to another ROM, so it wasn't loaded into this one.");
                 return new List<(int, ushort, long)>();
             }
 
@@ -810,10 +757,9 @@ namespace DSPRE.ROMFiles
 
             RomInfo.ReloadScriptCommandDictionaries();
 
-            // Unpack text archives NARC if needed - required for reading Pokemon/Item/Move/Trainer names
+            // The name dictionaries read the text archives.
             DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.TextArchives });
 
-            // Initialize enum dictionaries from ROM data
             Resources.ScriptDatabase.InitializePokemonNames();
             Resources.ScriptDatabase.InitializeItemNames();
             Resources.ScriptDatabase.InitializeMoveNames();
@@ -821,8 +767,7 @@ namespace DSPRE.ROMFiles
             Resources.ScriptDatabase.InitializeNpcTradeNames();
             Resources.ScriptDatabase.InitializeTrainerClassNames();
 
-            // Export the enum JSONs for external tools (like Rotom) to use
-            // Always regenerate to ensure they match current ROM data
+            // Rotom reads these enum JSONs, so they are rewritten to match this ROM.
             Resources.ScriptDatabase.ExportEnumJsons(romDatabaseFolder);
 
             ClearInvalidCommands();
@@ -893,14 +838,14 @@ namespace DSPRE.ROMFiles
                 }
                 catch (Exception ex)
                 {
-                    AppLogger.Error($"Failed to regenerate script {i:D4}: {ex.Message}");
+                    AppLogger.Error($"Couldn't regenerate script {i:D4}: {ex.Message}");
                 }
 
                 progressCallback?.Invoke(i + 1, scriptCount);
             }
 
             ClearPlaintextCache();
-            AppLogger.Info($"Script: {rewritten} .script export(s) regenerated, {kept} kept as they were.");
+            AppLogger.Info($"Script: {Plural.Of(rewritten, ".script export")} regenerated, {kept} kept as they were.");
         }
 
         private static void WriteDatabaseHashMarker()
@@ -935,9 +880,7 @@ namespace DSPRE.ROMFiles
             catch (Exception ex) { AppLogger.WarnOnce("ScriptFile.IsCurrentRomDatabaseFolder", ex); return false; }
         }
 
-        /// <summary>
-        /// Gets the hash of the current script command database to detect changes
-        /// </summary>
+        /// <summary>The current script command database hash, to notice changes.</summary>
         private static string GetDatabaseHash()
         {
             string databasePath = Path.Combine(CurrentRomDatabaseFolder(), "scrcmd_database.json");
@@ -955,23 +898,17 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>
-        /// Scans expanded/scripts/ directory and rebuilds binary script files that are older than their plaintext versions
-        /// Call this during ROM save, similar to TextArchive.BuildRequiredBins()
-        /// </summary>
+        /// <summary>Rebuilds binaries older than their .script in expanded/scripts, during Save ROM.</summary>
         public static bool BuildRequiredBins() => BuildRequiredBins(out _);
 
         /// <param name="error">Names every .script that could not be built, which were all left untouched.</param>
         public static bool BuildRequiredBins(out string error)
         {
             error = null;
-            // Unpack text archives NARC if needed - required for reading Pokemon/Item/Move/Trainer names
-            // The InitializeXxxNames() methods below depend on TextArchive being readable
+            // The name dictionaries read the text archives.
             DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.TextArchives });
 
-            // Initialize parameter dictionaries needed for parsing plaintext scripts
-            // These dictionaries must be populated before parsing scripts that contain
-            // friendly names like TRAINER_NONE, SPECIES_PIKACHU, ITEM_POTION, etc.
+            // .script parsing needs these for names such as SPECIES_PIKACHU.
             Resources.ScriptDatabase.InitializePokemonNames();
             Resources.ScriptDatabase.InitializeItemNames();
             Resources.ScriptDatabase.InitializeMoveNames();
@@ -1011,7 +948,6 @@ namespace DSPRE.ROMFiles
 
                 string binPath = ScriptFile.GetFilePaths(scriptID).binPath;
 
-                // Skip if .bin is newer than .script
                 if (File.Exists(binPath) && File.GetLastWriteTimeUtc(binPath) > File.GetLastWriteTimeUtc(expandedScriptFile))
                 {
                     newerBinCount++;
@@ -1025,23 +961,23 @@ namespace DSPRE.ROMFiles
                     // the .script from it, throwing the edit away.
                     if (scriptFile.PlaintextParseFailed)
                     {
-                        failed.Add(Path.GetFileName(expandedScriptFile) + " does not parse");
+                        failed.Add(Path.GetFileName(expandedScriptFile) + " doesn't parse");
                         continue;
                     }
 
                     if (!scriptFile.SaveToFileDefaultDir(scriptID, false))
                     {
-                        failed.Add(Path.GetFileName(expandedScriptFile) + " could not be compiled");
+                        failed.Add(Path.GetFileName(expandedScriptFile) + " couldn't be compiled");
                         continue;
                     }
                     rebuiltCount++;
 
-                    // Update .script last write time to prevent it being overwritten when reopening the ROM
+                    // Touch the .script so reopening the ROM doesn't regenerate it.
                     File.SetLastWriteTimeUtc(expandedScriptFile, DateTime.UtcNow);
                 }
                 catch (Exception ex)
                 {
-                    AppLogger.Error($"Failed to rebuild script {scriptID:D4} from plaintext: {ex.Message}");
+                    AppLogger.Error($"Couldn't rebuild script {scriptID:D4} from plaintext: {ex.Message}");
                     failed.Add(Path.GetFileName(expandedScriptFile) + ": " + ex.Message);
                 }
             }
@@ -1050,7 +986,7 @@ namespace DSPRE.ROMFiles
 
             if (failed.Count > 0)
             {
-                error = "These script files could not be built and were left as they are:\n" + string.Join("\n", failed);
+                error = "These script files couldn't be built and were left as they are:\n" + string.Join("\n", failed);
                 AppLogger.Error(error);
                 return false;
             }
@@ -1060,8 +996,7 @@ namespace DSPRE.ROMFiles
 
         public override string ToString()
         {
-            string prefix = IsLevelScript ? "Level " : "";
-            return $"{prefix}Script File " + this.FileID;
+            return (IsLevelScript ? "Level script " : "Script file ") + this.FileID;
         }
 
         public ScriptFile(List<ScriptCommandContainer> scripts, List<ScriptCommandContainer> functions, List<ScriptActionContainer> movements, int fileID = -1)
@@ -1075,9 +1010,6 @@ namespace DSPRE.ROMFiles
 
         public ScriptFile(IEnumerable<string> scriptLines, IEnumerable<string> functionLines, IEnumerable<string> actionLines, int fileID = -1)
         {
-            //TODO: give user the possibility to jump to/call a script
-            //once it's done, this Predicate below will be the only one needed, since there will be no distinction between
-            //a script and a function
             bool functionEndCondition(List<(int linenum, string text)> source, int x, ushort? id)
             {
                 return source[x].text.TrimEnd().IgnoreCaseEquals(RomInfo.ScriptCommandNamesDict[0x0002]) //End
@@ -1147,9 +1079,8 @@ namespace DSPRE.ROMFiles
                         case 0x19: //JumpIfPlayerDir
                         case 0x1C: //JumpIf
                         case 0x1D: //CallIf
-                                   //in the case of JumpIf and CallIf, the first param is a comparisonOperator
-                                   //for JumpIfPlayerDir it's a directionID
-                                   //for JumpIfObjID, it's an EventID
+                            // The first parameter is a comparison for JumpIf and CallIf, a direction for JumpIfPlayerDir
+                            // and an event for JumpIfObjID.
                             parameterList.Add(new byte[] { dataReader.ReadByte() });
                             ProcessRelativeJump(dataReader, ref parameterList, ref functionOffsets);
                             break;
@@ -1313,7 +1244,7 @@ namespace DSPRE.ROMFiles
                                 }
                             }
                             break;
-                        case 0x1D1: // Number of parameters differ depending on the first parameter value
+                        case 0x1D1: // The parameter count depends on the first parameter
                             {
                                 short parameter1 = dataReader.ReadInt16();
                                 parameterList.Add(BitConverter.GetBytes(parameter1));
@@ -1340,7 +1271,7 @@ namespace DSPRE.ROMFiles
                                 }
                             }
                             break;
-                        case 0x1E9: // Number of parameters differ depending on the first parameter value
+                        case 0x1E9: // The parameter count depends on the first parameter
                             {
                                 short parameter1 = dataReader.ReadInt16();
                                 parameterList.Add(BitConverter.GetBytes(parameter1));
@@ -1414,8 +1345,7 @@ namespace DSPRE.ROMFiles
 
                 if (!_suppressInvalidCommandErrors)
                 {
-                    AppMessages.Error("Script command " + id + "can't be handled for now." +
-                                    Environment.NewLine + "Reference offset 0x" + offset.ToString("X"), "Error");
+                    AppMessages.Error("DSPRE doesn't know script command " + id + " (at 0x" + offset.ToString("X") + ").", "Unknown script command");
                 }
                 parameterList = null;
                 return;
@@ -1427,8 +1357,7 @@ namespace DSPRE.ROMFiles
 
                 if (!_suppressInvalidCommandErrors)
                 {
-                    AppMessages.Error("Error: ID Read - " + id +
-                                    Environment.NewLine + "Reference offset 0x" + offset.ToString("X"), "Unrecognized script command");
+                    AppMessages.Error("Script command " + id + " couldn't be read (at 0x" + offset.ToString("X") + ").", "Unknown script command");
                 }
                 parameterList = null;
                 return;
@@ -1459,7 +1388,6 @@ namespace DSPRE.ROMFiles
             {
                 string line = linelist[l];
 
-                // handle block comments first
                 if (inBlockComment)
                 {
                     int endComment = line.IndexOf("*/");
@@ -1526,7 +1454,7 @@ namespace DSPRE.ROMFiles
 
                         if (positionOfScriptKeyword > 0)
                         {
-                            AppMessages.Error("Unrecognized container keyword: \"" + lineSource[i] + '"', "Error");
+                            AppMessages.Error("Expected a script, function or action line here: \"" + lineSource[i] + '"', "Script error");
                             return null;
                         }
                         else if (positionOfScriptKeyword < 0)
@@ -1538,7 +1466,7 @@ namespace DSPRE.ROMFiles
                         {
                             if ((positionOfScriptNumber = lineSource[i].text.IndexOfFirstNumber()) < positionOfScriptKeyword)
                             {
-                                AppMessages.Error("Unspecified Script/Function label.", "Error");
+                                AppMessages.Error("This script or function has no label.", "Script error");
                                 return null;
                             }
                         }
@@ -1578,9 +1506,7 @@ namespace DSPRE.ROMFiles
             }
             catch (ArgumentOutOfRangeException)
             {
-                AppMessages.Error($"Unexpectedly reached end of lines.\n\n" +
-                                $"Last line index: {lineSource[i].linenum}.\n" +
-                                $"Managed to parse {ls.Count} Command Containers.", "Fatal Error");
+                AppMessages.Error($"The script ends before its last section is closed (line {lineSource[i].linenum}).", "Script error");
                 return null;
             }
 
@@ -1616,7 +1542,7 @@ namespace DSPRE.ROMFiles
 
                         if (positionOfActionKeyword > 0)
                         {
-                            AppMessages.Error("Unrecognized container keyword: \"" + lineSource[i] + '"', "Error");
+                            AppMessages.Error("Expected a script, function or action line here: \"" + lineSource[i] + '"', "Script error");
                             return null;
                         }
                         else if (positionOfActionKeyword < 0)
@@ -1628,7 +1554,7 @@ namespace DSPRE.ROMFiles
                         {
                             if ((positionOfActionNumber = lineSource[i].text.IndexOfFirstNumber()) < positionOfActionKeyword)
                             {
-                                AppMessages.Error("Unspecified Action label.", "Error");
+                                AppMessages.Error("This action has no label.", "Script error");
                                 return null;
                             }
                         }
@@ -1657,9 +1583,7 @@ namespace DSPRE.ROMFiles
             }
             catch (ArgumentOutOfRangeException)
             {
-                AppMessages.Error($"Unexpectedly reached end of lines.\n\n" +
-                                $"Last line index: {i}.\n" +
-                                $"Managed to parse {ls.Count} Command Containers.", "Fatal Error");
+                AppMessages.Error($"The script ends before its last section is closed (line {i}).", "Script error");
                 return null;
             }
 
@@ -1699,13 +1623,11 @@ namespace DSPRE.ROMFiles
                             foreach (ScriptCommand currentCmd in currentScript.Commands)
                             {
                                 writer.Write((ushort)currentCmd.Id);
-                                //System.Diagnostics.Debug.Write(BitConverter.ToString(BitConverter.GetBytes(commandID)) + " ");
 
                                 List<byte[]> parameterList = currentCmd.CmdParams;
                                 foreach (byte[] b in parameterList)
                                 {
                                     writer.Write(b);
-                                    //System.Diagnostics.Debug.WriteLine(BitConverter.ToString(parameterList[k]) + " ");
                                 }
 
                                 /* If command calls a function/movement, store reference position */
@@ -1741,8 +1663,7 @@ namespace DSPRE.ROMFiles
                         // A missing header entry would shift every later script id by one.
                         if (!resolved)
                         {
-                            AppMessages.Error($"Script #{caller.ManualUserID} refers to Script {caller.UsedScriptID}, which does not exist.\n" +
-                                            $"This Script File can't be saved.", "Can't resolve UseScript reference");
+                            AppMessages.Error($"Script {caller.ManualUserID} uses script {caller.UsedScriptID}, which doesn't exist, so the file can't be saved.", "Missing script");
                             return null;
                         }
                     }
@@ -1762,13 +1683,11 @@ namespace DSPRE.ROMFiles
                             foreach (ScriptCommand currentCmd in currentFunction.Commands)
                             {
                                 writer.Write((ushort)currentCmd.Id);
-                                //System.Diagnostics.Debug.Write(BitConverter.ToString(BitConverter.GetBytes(commandID)) + " ");
 
                                 List<byte[]> parameterList = currentCmd.CmdParams;
                                 foreach (byte[] b in parameterList)
                                 {
                                     writer.Write(b);
-                                    //System.Diagnostics.Debug.Write(BitConverter.ToString(parameterList[k]) + " ");
                                 }
 
                                 /* If command calls a function/movement, store reference position */
@@ -1781,8 +1700,7 @@ namespace DSPRE.ROMFiles
                             int functionUsescript = currentFunction.UsedScriptID - 1;
                             if (functionUsescript >= scriptOffsets.Count)
                             {
-                                AppMessages.Error($"Function #{currentFunction.ManualUserID} refers to Script {currentFunction.UsedScriptID}, which does not exist.\n" +
-                                                $"This Script File can't be saved.", "Can't resolve UseScript reference");
+                                AppMessages.Error($"Function {currentFunction.ManualUserID} uses script {currentFunction.UsedScriptID}, which doesn't exist, so the file can't be saved.", "Missing script");
                                 return null;
                             }
 
@@ -1794,7 +1712,7 @@ namespace DSPRE.ROMFiles
                         }
                     }
 
-                    // Movements must be halfword-aligned
+                    // Movements must be halfword aligned
                     if (writer.BaseStream.Position % 2 == 1)
                     { //Check if the writer's head is on an odd byte
                         writer.Write((byte)0x00); //Add padding
@@ -1831,7 +1749,6 @@ namespace DSPRE.ROMFiles
                     SortedSet<uint> uninvokedFuncs = new SortedSet<uint>(AllFunctions.Select(x => x.ManualUserID).ToArray());
                     SortedSet<uint> unreferencedActions = new SortedSet<uint>(AllActions.Select(x => x.ManualUserID).ToArray());
 
-                    //refList = refList.OrderBy(x => x.invokedID).ToList(); //Sorting is not necessary, after all...
 
                     for (int i = 0; i < refList.Count; i++)
                     {
@@ -1871,34 +1788,28 @@ namespace DSPRE.ROMFiles
                                     uninvokedFuncs.Remove(refList[i].InvokedID);
                                 }
 
-                                //if (refList[i].callerType != containerTypes.Function ||
-                                //    (refList[i].callerType == refList[i].invokedType && refList[i].callerID == refList[i].invokedID) ||
-                                //    !uninvokedFuncs.Contains(refList[i].callerID)) { //remove reference if caller is a script, or if caller calls itself, or if caller is a function that's been invoked already
-                                //    uninvokedFuncs.Remove(refList[i].invokedID);
-                                //}
                             }
                         }
                     }
 
-                    //Error check
                     string errorMsg = "";
                     if (undeclaredFuncs.Count > 0)
                     {
                         string[] errorFunctionsUndeclared = undeclaredFuncs.ToArray().Select(x => x.ToString()).ToArray();
-                        errorMsg += "These Functions have been invoked but not declared: " + Environment.NewLine + string.Join(separator: ",", errorFunctionsUndeclared);
+                        errorMsg += "These functions are called but don't exist: " + Environment.NewLine + string.Join(separator: ",", errorFunctionsUndeclared);
                         errorMsg += Environment.NewLine;
                     }
 
                     if (undeclaredActions.Count > 0)
                     {
                         string[] errorActionsUndeclared = undeclaredActions.ToArray().Select(x => x.ToString()).ToArray();
-                        errorMsg += "These Actions have been referenced but not declared: " + Environment.NewLine + string.Join(separator: ",", errorActionsUndeclared);
+                        errorMsg += "These actions are used but don't exist: " + Environment.NewLine + string.Join(separator: ",", errorActionsUndeclared);
                         errorMsg += Environment.NewLine;
                     }
 
                     if (!string.IsNullOrEmpty(errorMsg))
                     {
-                        AppMessages.Error(errorMsg + Environment.NewLine + "This Script File has not been overwritten since it can not be saved.", "Error!");
+                        AppMessages.Error(errorMsg + Environment.NewLine + "The script file wasn't saved.", "Script not saved");
                         errorMsg = "";
                         return null;
                     }
@@ -1906,9 +1817,9 @@ namespace DSPRE.ROMFiles
                     if (uninvokedFuncs.Count > 0)
                     {
                         string[] orphanedFunctions = uninvokedFuncs.ToArray().Select(x => x.ToString()).ToArray();
-                        errorMsg += "Unused Function IDs detected: " + Environment.NewLine + string.Join(", ", orphanedFunctions);
+                        errorMsg += "These functions aren't called by anything: " + Environment.NewLine + string.Join(", ", orphanedFunctions);
                         errorMsg += Environment.NewLine;
-                        errorMsg += "\nIn order for a Function to be saved, it must be invoked by a Script or by another used Function.";
+                        errorMsg += "\nA function is only saved when a script or a used function calls it.";
                         errorMsg += Environment.NewLine;
                         errorMsg += Environment.NewLine;
                     }
@@ -1916,16 +1827,16 @@ namespace DSPRE.ROMFiles
                     if (unreferencedActions.Count > 0)
                     {
                         string[] orphanedActions = unreferencedActions.ToArray().Select(x => x.ToString()).ToArray();
-                        errorMsg += "Unused Action IDs detected: " + Environment.NewLine + string.Join(", ", orphanedActions);
+                        errorMsg += "These actions aren't used by anything: " + Environment.NewLine + string.Join(", ", orphanedActions);
                         errorMsg += Environment.NewLine;
-                        errorMsg += "\nIn order for an Action to be saved, it must be called by a Script or by a used Function.";
+                        errorMsg += "\nAn action is only saved when a script or a used function uses it.";
                         errorMsg += Environment.NewLine;
                         errorMsg += Environment.NewLine;
                     }
 
                     if (!string.IsNullOrEmpty(errorMsg))
                     {
-                        AppMessages.Info(errorMsg + Environment.NewLine + "Remember that every unused Function or Action is always lost upon reloading the Script File.", "Warning!");
+                        AppMessages.Info(errorMsg + Environment.NewLine + "Unused functions and actions are lost when the file is reloaded.", "Unused code");
                         errorMsg = "";
                     }
                 }
@@ -1943,9 +1854,7 @@ namespace DSPRE.ROMFiles
         {
             if (callCount >= 30)
             {
-                AppMessages.Error("Something went very wrong saving this Script File!" +
-                                "\nIt is recommended that you backup its code somewhere, to avoid losing progress.",
-                  "Fatal error");
+                AppMessages.Error("The script couldn't be saved. Copy its code somewhere safe before you go on.", "Script not saved");
                 return false;
             }
 
@@ -1962,13 +1871,11 @@ namespace DSPRE.ROMFiles
                 return false;
             }
 
-            //Find the first instance of funcID being called, excluding calls coming from an excludedCaller
-            //if excludedCaller is null, there's nothing to exclude: a normal search is performed.
             ScriptReference sr = refList.Find(x => x.InvokedID == funcID && (excludedCaller == null || x.CallerID != excludedCaller));
 
             if (sr is null)
             {
-                AppLogger.Debug("No reference found!!!");
+                AppLogger.Debug("No reference found.");
                 return false;
             }
 
@@ -2031,8 +1938,8 @@ namespace DSPRE.ROMFiles
 
         public void SaveToFileExplorePath(string suggestedFileName, bool blindmode)
         {
-            string chosenPath = AppMessages.PickSaveFile("Export Script File",
-                "Gen IV Script File (*.scr)|*.scr", suggestedFileName);
+            string chosenPath = AppMessages.PickSaveFile("Export script file",
+                "Script file (*.scr)|*.scr", suggestedFileName);
 
             if (string.IsNullOrEmpty(chosenPath))
             {
@@ -2044,13 +1951,7 @@ namespace DSPRE.ROMFiles
                 string path = Filesystem.GetScriptPath(FileID);
                 PlainFiles.Copy(path, chosenPath, overwrite: true);
 
-                string msg = "";
-                if (!IsLevelScript)
-                {
-                    msg += "The last saved version of this ";
-                }
-
-                AppMessages.Info(msg + GetType().Name + " has been exported successfully.", "");
+                AppMessages.Notice(IsLevelScript ? "Level script exported." : "Exported the last saved version of this script file.");
             }
             else
             {

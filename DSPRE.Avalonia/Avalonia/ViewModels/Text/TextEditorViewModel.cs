@@ -47,9 +47,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
     }
 
     /// <summary>
-    /// Avalonia port of the WinForms <c>TextEditor</c>. Edits in-game text archives
-    /// (dual binary/JSON format): archive selection, per-line editing, add/remove
-    /// strings &amp; archives, reorder, import/export, and search &amp; replace.
+    /// Edits text archives: lines, adding and removing lines and archives, import and export, and search
+    /// and replace.
     /// </summary>
     public class TextEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
@@ -145,7 +144,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         private int StopCount => HasScreenShots ? ShotStops : _previewFrames.Count;
 
-        /// <summary>True when the screens move on by themselves, so the boxes play in turn.</summary>
+        /// <summary>True when the screens advance by themselves, so the boxes play one after another.</summary>
         public bool ShotsMoveOn => ShotsHaveStops && ScreenShots.Where(s => s.Stops > 1).All(s => s.MovesOnByItself);
 
         public bool ShotsWaitForPress => ShotsHaveStops && !ShotsMoveOn;
@@ -219,7 +218,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
         }
 
-        /// <summary>Whether the box is waiting on the player here rather than finishing.</summary>
+        /// <summary>Whether the box waits for the player here instead of finishing.</summary>
         public bool PreviewHasMore => CurrentPreview != null && CurrentPreview.Wait != MessageWait.None;
 
         /// <summary>Which of the message's stops this is.</summary>
@@ -274,7 +273,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         /// <summary>Raised when a different border is picked, so the view can read it out of the ROM.</summary>
         public event EventHandler BorderChanged;
 
-        /// <summary>Says when the letters are a stand-in rather than the game's own.</summary>
+        /// <summary>Says when the font is a stand-in, not the game's.</summary>
         public string PreviewFontNote { get; set; }
         public bool HasPreviewFontNote => !string.IsNullOrEmpty(PreviewFontNote);
 
@@ -287,7 +286,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (ShotsHaveStops) _ = RefreshScreenShotsAsync();
         }
 
-        /// <summary>Works the selected line out again, after picking a different one or editing it.</summary>
+        /// <summary>Rebuilds the selected line's preview after it is picked or edited.</summary>
         public void RefreshPreview()
         {
             _previewFrames.Clear();
@@ -548,8 +547,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex)
             {
-                StatusText = $"Error loading text archives: {ex.Message}";
-                await DialogHelper.ShowErrorAsync($"Failed to load text archives:\n{ex.Message}", "Text editor error");
+                StatusText = $"Couldn't load text archives: {ex.Message}";
+                await DialogHelper.ShowErrorAsync($"Couldn't load text archives:\n{ex.Message}", "Text editor");
             }
             finally
             {
@@ -770,7 +769,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public async Task RemoveArchiveAsync()
         {
             if (ArchiveNames.Count == 0) return;
-            if (!await DialogHelper.AskYesNoAsync("Delete the last text archive? It goes when you save.", "Delete text archive?"))
+            if (!await DialogHelper.AskYesNoAsync("Delete the last text archive? It's removed when you save.", "Delete text archive?"))
                 return;
 
             int lastIndex = ArchiveNames.Count - 1;
@@ -838,7 +837,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             SetClean();
             OnPropertyChanged(nameof(HasUnsavedChanges));
             SaveNotice.Saved(UnsavedChangesDescription);
-            StatusText = $"Saved Text archive {_current.ID}.";
+            StatusText = $"Saved text archive {_current.ID}.";
             // Names (Pokémon/item/move/…) come from text archives; tell open editors to refresh their combos.
             AppEvents.RaiseNamesChanged();
         }
@@ -901,7 +900,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (!HgEngineOwnedFiles.TryWriteLines(source, _current.Messages, out string error))
             {
                 StatusText = error;
-                await DialogHelper.ShowErrorAsync(error, "Text editor error");
+                await DialogHelper.ShowErrorAsync(error, "Text editor");
                 return;
             }
 
@@ -920,8 +919,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (HgEngineProject.SuppressManagedFileSaveNotice) return;
 
             bool never = await DialogHelper.ShowNoticeWithOptOutAsync(
-                $"This file is managed by hg-engine. {source.RelPath} has been saved, but you will need to " +
-                "compile, not just save the ROM, to see the change in game.",
+                $"{source.RelPath} is saved. hg-engine builds this file, so compile the ROM to see the change in game.",
                 "Managed by hg-engine");
             if (never) HgEngineProject.SuppressManagedFileSaveNoticeForProject();
         }
@@ -938,7 +936,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 if (error != null)
                 {
                     StatusText = error;
-                    await DialogHelper.ShowErrorAsync(error, "Text editor error");
+                    await DialogHelper.ShowErrorAsync(error, "Text editor");
                 }
                 return;
             }
@@ -957,8 +955,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (await RefusedForManagedArchiveAsync("Importing")) return;
             FilePickerFileType[] filters = new[]
             {
-                new FilePickerFileType("JSON Text archive") { Patterns = new[] { "*.json" } },
-                new FilePickerFileType("Binary Text archive") { Patterns = new[] { "*.msg", "*.bin" } },
+                new FilePickerFileType("JSON text archive") { Patterns = new[] { "*.json" } },
+                new FilePickerFileType("Binary text archive") { Patterns = new[] { "*.msg", "*.bin" } },
             };
             string path = await DialogHelper.OpenFileAsync(_owner, "Import text archive", filters);
             if (path == null) return;
@@ -970,7 +968,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 List<string> lines = TextArchive.ReadMessagesFrom(path);
                 if (lines.SequenceEqual(_current.Messages))
                 {
-                    StatusText = $"That file matches Text archive {_current.ID} already.";
+                    StatusText = $"That file already matches text archive {_current.ID}.";
                     return;
                 }
                 _current.Messages.Clear();
@@ -978,11 +976,11 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 ShowLines();
                 RefreshPreview();
                 SetDirty();
-                SaveNotice.Imported($"{lines.Count} lines into Text archive {_current.ID}", path);
+                SaveNotice.Imported($"{lines.Count} lines into text archive {_current.ID}", path);
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Text editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Text editor");
             }
         }
 
@@ -993,8 +991,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
             int id = _current.ID;
             FilePickerFileType[] filters = new[]
             {
-                new FilePickerFileType("JSON Text archive") { Patterns = new[] { "*.json" } },
-                new FilePickerFileType("Binary Text archive") { Patterns = new[] { "*.msg" } },
+                new FilePickerFileType("JSON text archive") { Patterns = new[] { "*.json" } },
+                new FilePickerFileType("Binary text archive") { Patterns = new[] { "*.msg" } },
             };
             string path = await DialogHelper.SaveFileAsync(_owner, "Export text archive", filters, "Text archive " + id);
             if (path == null) return;
@@ -1022,7 +1020,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Text editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Text editor");
             }
         }
 
@@ -1054,7 +1052,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     }
                 }
             }
-            StatusText = $"Found {SearchResults.Count} match(es).";
+            StatusText = $"Found {Plural.Of(SearchResults.Count, "match", "matches")}.";
         }
 
         public async Task ReplaceAsync()
@@ -1107,13 +1105,12 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 StatusText = "";
                 await DialogHelper.ShowErrorAsync(one
                     ? $"Text archive {first} wasn't changed:\n{ex.Message}"
-                    : $"Replace stopped partway; the text archives before the failure were already changed:\n{ex.Message}", "Text editor error");
+                    : $"Replace stopped partway; the text archives before the failure were already changed:\n{ex.Message}", "Text editor");
                 return;
             }
             foreach (int cur in edited)
                 SearchResults.Add(new TextSearchResultVM(cur, 0, $"Text archive {cur} edited"));
 
-            // Reload the currently displayed archive so edits are visible.
             if (SelectedArchiveIndex >= 0) LoadArchive(SelectedArchiveIndex);
             if (edited.Count > 0) AppEvents.RaiseNamesChanged();
             StatusText = skipped == 0 ? ""

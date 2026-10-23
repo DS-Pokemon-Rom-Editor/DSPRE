@@ -102,7 +102,7 @@ namespace DSPRE.Avalonia.Views.World
         {
             if (VM?.Model3D == null)
             {
-                await DialogHelper.ShowErrorAsync("This floor has no map to play.", "Distortion World error");
+                await DialogHelper.ShowErrorAsync("This floor has no map to play.", "Distortion World");
                 return;
             }
             DistortionWorldViewModel vm = VM;

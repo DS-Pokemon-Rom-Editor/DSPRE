@@ -74,7 +74,7 @@ namespace DSPRE.ROMFiles
             try { found = MapTextures(map, MapPackPath(pack)); }
             catch (Exception ex) when (ex is IOException || ex is EndOfStreamException || ex is ArgumentException || ex is IndexOutOfRangeException) { return null; }
             if (found.Undressed == 0) return null;
-            return $"Map Tileset {pack} has no textures for {found.Undressed} of this model's {found.Materials} materials"
+            return $"Map textures {pack} have nothing for {found.Undressed} of this model's {found.Materials} materials"
                  + $" ({string.Join(", ", found.Names.Take(4).Select(n => n.Name))}{(found.Names.Count > 4 ? " ..." : "")}), so they show grey.";
         }
 

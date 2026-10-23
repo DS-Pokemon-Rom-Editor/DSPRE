@@ -86,7 +86,7 @@ namespace DSPRE.Models
             ObjMesh m = new ObjMesh { Name = Path.GetFileNameWithoutExtension(path) };
             string[] lines;
             try { lines = File.ReadAllLines(path); }
-            catch (Exception ex) { whynot = "Could not read file: " + ex.Message; return null; }
+            catch (Exception ex) { whynot = "Couldn't read file: " + ex.Message; return null; }
 
             string dir = Path.GetDirectoryName(path) ?? ".";
             int material = -1, ignored = 0, badFaces = 0;

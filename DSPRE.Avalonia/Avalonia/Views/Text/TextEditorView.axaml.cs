@@ -7,8 +7,6 @@ using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Views.Text
 {
-    /// <summary>Authored as a <see cref="UserControl"/> so it can be embedded as the Text tab in
-    /// the Maps workspace; standalone launches host it in an <see cref="EditorHostWindow"/>.</summary>
     public partial class TextEditorView : UserControl
     {
         private TextEditorViewModel VM => DataContext as TextEditorViewModel;
@@ -68,7 +66,7 @@ namespace DSPRE.Avalonia.Views.Text
             FieldMessageBoxView.Frame = DSPRE.Avalonia.Data.WindowFrames.Load(VM.BorderIndex);
             VM.MeasureText = FieldMessageBoxView.Measure;
             VM.PreviewFontNote = FieldMessageBoxView.Font == null
-                ? "Showing stand-in letters: the game's own font could not be read from this ROM."
+                ? "Showing stand-in letters: the game's own font couldn't be read from this ROM."
                 : null;
             VM.RefreshPreview();
         }
@@ -104,19 +102,12 @@ namespace DSPRE.Avalonia.Views.Text
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
         {
-            // TabControl raises Loaded again whenever this embedded tab is revisited. ROM loads call
-            // EnsureSetupAsync(owner) explicitly, so automatic attachment only needs to bootstrap once.
+            // Loaded fires on every tab revisit; ROM loads call EnsureSetupAsync themselves.
             if (!_setupDone) await EnsureSetupAsync();
         }
 
-        /// <summary>
-        /// VM setup. No-ops until a ROM is loaded; the embedded Maps-workspace instance is created at
-        /// app boot, before any ROM; <see cref="MapsWorkspaceView"/> re-invokes this after EVERY
-        /// successful load (including switching ROMs mid-session), so <c>vm.SetupAsync</c> always re-runs.
-        /// </summary>
-        /// <param name="ownerOverride">Pass the owning Window explicitly when this control may not be
-        /// attached to the visual tree yet (a non-selected TabItem's content in the Maps workspace,
-        /// right after a ROM load), since <see cref="TopLevel.GetTopLevel"/> returns null in that case.</param>
+        /// <summary>Sets up the view model; see <see cref="MapsWorkspaceView"/>.</summary>
+        /// <param name="ownerOverride">The owning window, for a tab not yet in the visual tree.</param>
         public async Task EnsureSetupAsync(Window ownerOverride = null)
         {
             if (Design.IsDesignMode) return;
@@ -130,7 +121,6 @@ namespace DSPRE.Avalonia.Views.Text
             AttachPreviewFont();
         }
 
-        // ── Archive toolbar ──────────────────────────────────────────────────
         private void AddArchive_Click(object sender, RoutedEventArgs e) => VM?.AddArchive();
         private async void RemoveArchive_Click(object sender, RoutedEventArgs e)
             => await DialogHelper.GuardAsync(() => VM?.RemoveArchiveAsync() ?? Task.CompletedTask, "The text archive wasn't removed.", ErrorTitle);
@@ -140,13 +130,11 @@ namespace DSPRE.Avalonia.Views.Text
         private async void Export_Click(object sender, RoutedEventArgs e)
             => await DialogHelper.GuardAsync(() => VM?.ExportAsync() ?? Task.CompletedTask, "The text archive wasn't exported.", ErrorTitle);
 
-        // ── Line controls ────────────────────────────────────────────────────
         private void AddString_Click(object sender, RoutedEventArgs e) => VM?.AddString();
         private void RemoveString_Click(object sender, RoutedEventArgs e) => VM?.RemoveString();
         private void MoveUp_Click(object sender, RoutedEventArgs e) => VM?.MoveSelectedUp();
         private void MoveDown_Click(object sender, RoutedEventArgs e) => VM?.MoveSelectedDown();
 
-        // ── Search / replace ─────────────────────────────────────────────────
         private void Search_Click(object sender, RoutedEventArgs e) => VM?.Search();
         private async void Replace_Click(object sender, RoutedEventArgs e)
             => await DialogHelper.GuardAsync(() => VM?.ReplaceAsync() ?? Task.CompletedTask, "The replace didn't finish.", ErrorTitle);
@@ -174,7 +162,7 @@ namespace DSPRE.Avalonia.Views.Text
             _ = DialogHelper.GuardAsync(() => VM.GoToResultAsync(r) ?? Task.CompletedTask, "The search result couldn't be opened.", ErrorTitle);
         }
 
-        private const string ErrorTitle = "Text editor error";
+        private const string ErrorTitle = "Text editor";
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {

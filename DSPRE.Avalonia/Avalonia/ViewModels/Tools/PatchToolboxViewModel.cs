@@ -10,9 +10,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Tools
 {
     /// <summary>
-    /// ViewModel for the native ROM patch toolbox. It renders the patch catalogue and
-    /// applied/supported state via the shared, UI-agnostic <see cref="DSPRE.PatchToolboxLogic"/>
-    /// logic, so applying a patch here runs byte-for-byte the same ROM code as the WinForms dialog.
+    /// The ROM patch toolbox. Status and applying go through <see cref="DSPRE.PatchToolboxLogic"/>.
     /// </summary>
     public class PatchToolboxViewModel : INotifyPropertyChanged
     {
@@ -36,7 +34,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             ["sentenceCase"] = "Items and Pokémon", ["itemSentenceCase"] = "Items and Pokémon", ["trainerNames"] = "Trainers",
             ["sameHeldItemOdds"] = "Items and Pokémon", ["itemStandardize"] = "Items and Pokémon",
             ["punchingMovesExpanded"] = "Moves", ["soundMovesExpanded"] = "Moves", ["regionalDexCount"] = "Items and Pokémon", ["evolutionSlots"] = "Items and Pokémon", ["typeChartExpanded"] = "Moves", ["swarmTableExpanded"] = "Items and Pokémon", ["bpShopExpanded"] = "Items and Pokémon", ["martsExpanded"] = "Items and Pokémon", ["pickupSlots"] = "Items and Pokémon",
-            ["bdhcam"] = "Maps and graphics", ["buildingRotation"] = "Maps and graphics", ["disableTextures"] = "Maps and graphics", ["hpBarText"] = "Maps and graphics", ["partyPanelSize"] = "Maps and graphics",
+            ["bdhcam"] = "Maps and graphics", ["buildingRotation"] = "Maps and graphics", ["disableTextures"] = "Maps and graphics", ["hpBarText"] = "Maps and graphics", ["partyPanelSize"] = "Maps and graphics", ["summaryFonts"] = "Maps and graphics",
             ["platPatches"] = "External", ["g4Patcher"] = "External",
         };
 
@@ -52,6 +50,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             ["punchingMovesExpanded"] = "punch punching iron fist move list table expand repoint", ["soundMovesExpanded"] = "sound soundproof move list table expand repoint ai", ["regionalDexCount"] = "regional pokedex dex size count complete professor rating", ["evolutionSlots"] = "evolution evolutions evo slots methods more expand", ["typeChartExpanded"] = "type chart matchups effectiveness expand", ["swarmTableExpanded"] = "swarm swarms outbreak table expand rows", ["bpShopExpanded"] = "battle point bp shop counter tm exchange expand", ["martsExpanded"] = "mart marts shop poke mart items custom expand", ["pickupSlots"] = "pickup ability items level range slots rare independent",
             ["bdhcam"] = "camera cameras dynamic", ["buildingRotation"] = "building rotation map editor", ["disableTextures"] = "textures dynamic disable", ["hpBarText"] = "hp bar health gauge name level numbers text box background white transparent clear battle",
             ["partyPanelSize"] = "party menu panel size resize width height square layout pokemon slots",
+            ["summaryFonts"] = "summary screen font fonts text size small narrow pokewalker names",
             ["platPatches"] = "external platinum patches link", ["g4Patcher"] = "external asm code injection armips patches link kalaay",
         };
 

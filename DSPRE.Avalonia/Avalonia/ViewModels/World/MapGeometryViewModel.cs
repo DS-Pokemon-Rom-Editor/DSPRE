@@ -322,7 +322,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             PickedFace = PickedCorner = -1;
             Dirty = true;
             Apply();
-            Note = "Took the face away.";
+            Note = "Face deleted.";
             Raise(nameof(HasPickedFace));
         }
 
@@ -518,7 +518,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             _map.KeptPlates = _plates.Where(p => p.Mine).Select(p => p.Copy()).ToList();
             _map.ImportTerrain(made);
             int blocked = BdhcBuild.BlockUngrounded(_map.Bdhc, _map.Collisions);
-            if (blocked > 0) said += $" {blocked} squares without ground blocked.";
+            if (blocked > 0) said += $" Blocked {Plural.Of(blocked, "square")} with no ground.";
             Dirty = true;
             Note = said;
             CheckTerrain();
@@ -771,7 +771,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             Remember();
             _map.ImportTerrain(made);
             int blocked = BdhcBuild.BlockUngrounded(_map.Bdhc, _map.Collisions);
-            if (blocked > 0) Note = $"Terrain rebuilt. {blocked} squares without ground blocked.";
+            if (blocked > 0) Note = $"Terrain rebuilt; blocked {Plural.Of(blocked, "square")} with no ground.";
             Dirty = true;
             Warning = null;
             CheckTerrain();

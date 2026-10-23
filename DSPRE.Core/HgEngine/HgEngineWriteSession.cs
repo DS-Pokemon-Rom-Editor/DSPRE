@@ -84,7 +84,7 @@ namespace DSPRE.HgEngine
                 try { HgEngineFileCache.WriteText(path, text, p.Encoding, p.Crlf, keepLostComments: false); }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
                 {
-                    error = $"Could not write {Path.GetFileName(path)}: {ex.Message}";
+                    error = $"Couldn't write {Path.GetFileName(path)}: {ex.Message}";
                     return false;
                 }
             }

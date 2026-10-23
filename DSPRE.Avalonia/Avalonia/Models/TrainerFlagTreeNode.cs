@@ -4,12 +4,7 @@ using System.ComponentModel;
 
 namespace DSPRE.Avalonia.Models
 {
-    /// <summary>
-    /// Tree nodes for the Trainer flag bulk editor. Mirrors the WinForms editor's TreeView
-    /// (class-group parent, per-trainer leaves) with the same "suppress while cascading"
-    /// discipline: <see cref="IsChecked"/> setters always fire <c>OnCheckedChanged</c>, and it's
-    /// the owning ViewModel's job to ignore that callback while it's the one driving the change.
-    /// </summary>
+    /// <summary>Trainer flag bulk editor tree nodes; the view model ignores OnCheckedChanged while it makes a change itself.</summary>
     public abstract class TrainerFlagTreeNode : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;

@@ -24,7 +24,6 @@
 	<!-- Three tabs -->
 	<TabControl Margin="8">
 
-	  <!-- ── Tab 1: Whiteout warps ─────────────────────────────── -->
 	  <TabItem Header="Whiteout warps">
 		<DataGrid ItemsSource="{Binding Rows}"
 				  CanUserReorderColumns="False" CanUserResizeColumns="True"
@@ -50,7 +49,6 @@
 		</DataGrid>
 	  </TabItem>
 
-	  <!-- ── Tab 2: Fly Warps ────────────────────────────────────────────── -->
 	  <TabItem Header="Fly warps">
 		<DataGrid ItemsSource="{Binding Rows}"
 				  CanUserReorderColumns="False" CanUserResizeColumns="True"
@@ -75,7 +73,6 @@
 		</DataGrid>
 	  </TabItem>
 
-	  <!-- ── Tab 3: Unlock Settings ─────────────────────────────────────── -->
 	  <TabItem Header="Unlock settings">
 		<DataGrid x:Name="UnlockGrid" ItemsSource="{Binding Rows}"
 				  CanUserReorderColumns="False" CanUserResizeColumns="True"
@@ -84,7 +81,7 @@
 		  <DataGrid.Columns>
 
 			<!-- DP / Plat columns -->
-			<DataGridTemplateColumn Header="Is teleport pos"
+			<DataGridTemplateColumn Header="Teleport spot"
 									Width="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).IsDpOrPlat, Converter={x:Static vmcontrols:BoolToGridLengthConverter.Instance}}">
 			  <DataGridTemplateColumn.CellTemplate>
 				<DataTemplate x:DataType="vm:FlyRow">
@@ -125,7 +122,7 @@
 			<DataGridTextColumn Header="Flag index" Binding="{Binding FlagIdx}"
 								Width="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).IsHgss, Converter={x:Static vmcontrols:BoolToGridLengthConverter.Instance}}"/>
 
-			<DataGridTemplateColumn Header="Is blackout spawn"
+			<DataGridTemplateColumn Header="Whiteout spot"
 									Width="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).IsHgss, Converter={x:Static vmcontrols:BoolToGridLengthConverter.Instance}}">
 			  <DataGridTemplateColumn.CellTemplate>
 				<DataTemplate x:DataType="vm:FlyRow">
@@ -134,7 +131,7 @@
 			  </DataGridTemplateColumn.CellTemplate>
 			</DataGridTemplateColumn>
 
-			<DataGridTemplateColumn Header="Is Fly point"
+			<DataGridTemplateColumn Header="Fly spot"
 									Width="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).IsHgss, Converter={x:Static vmcontrols:BoolToGridLengthConverter.Instance}}">
 			  <DataGridTemplateColumn.CellTemplate>
 				<DataTemplate x:DataType="vm:FlyRow">

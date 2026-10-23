@@ -18,7 +18,7 @@ namespace DSPRE
             }
             catch (Exception ex)
             {
-                AppLogger.Error($"Failed to export egg move data to CSV: {ex.Message}");
+                AppLogger.Error($"Couldn't export egg move data to CSV: {ex.Message}");
                 return false;
             }
         }

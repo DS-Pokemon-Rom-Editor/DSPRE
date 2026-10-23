@@ -260,7 +260,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowErrorAsync("Couldn't remove the script file:" + Environment.NewLine + ex.Message, "Script editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't remove the script file:" + Environment.NewLine + ex.Message, "Script editor");
             }
         }
         public bool CanSearchProject => !IsBusy && _sourceFiles.Count > 0 && !string.IsNullOrWhiteSpace(SearchText);
@@ -281,15 +281,14 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public string ManagedNote => ManagedSource == null
             ? ""
             : $"hg-engine assembles script {ManagedSource.Id} from {ManagedSource.RelPath}. " +
-              "Editing it here edits that file, and Rotom does not read it.";
+              "Editing it here edits that file, and Rotom doesn't read it.";
 
         private async Task ShowManagedSaveNoticeAsync(HgEngineOwnedFile source)
         {
             if (HgEngineProject.SuppressManagedFileSaveNotice) return;
 
             bool never = await DialogHelper.ShowNoticeWithOptOutAsync(
-                $"This file is managed by hg-engine. {source.RelPath} has been saved, but you will need to " +
-                "compile, not just save the ROM, to see the change in game.",
+                $"{source.RelPath} is saved. hg-engine builds this file, so compile the ROM to see the change in game.",
                 "Managed by hg-engine");
             if (never) HgEngineProject.SuppressManagedFileSaveNoticeForProject();
         }
@@ -398,7 +397,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 if (!current || result.Success) return;
                 UpdateCompileDiagnostics(result);
                 List<string> failures = RotomTool.FailureLines(result);
-                StatusText = "Edited outside DSPRE and did not compile: " + failures[0] + (failures.Count > 1 ? $" (and {failures.Count - 1} more)" : "");
+                StatusText = "Edited outside DSPRE and didn't compile: " + failures[0] + (failures.Count > 1 ? $" (and {failures.Count - 1} more)" : "");
             });
         }
 
@@ -476,7 +475,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             try
             {
                 if (!RotomTool.IsAvailable)
-                    throw new FileNotFoundException("rotom was not found in DSPRE's Tools folder.", RotomTool.ExePath);
+                    throw new FileNotFoundException("rotom wasn't found in DSPRE's Tools folder.", RotomTool.ExePath);
 
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.Scripts });
 
@@ -496,7 +495,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     StatusText = "Building edited legacy scripts...";
                     string buildFailure = await Task.Run(() => DSPRE.ROMFiles.ScriptFile.BuildRequiredBins(out string error) ? null : error);
                     if (buildFailure != null)
-                        throw new InvalidOperationException("These legacy scripts don't build, so they were not converted:\n" + buildFailure);
+                        throw new InvalidOperationException("These legacy scripts don't build, so they weren't converted:\n" + buildFailure);
 
                     StatusText = "Converting legacy scripts to Rotom...";
                     await RunRequiredRotomCommandAsync("convert", "--non-interactive");
@@ -544,7 +543,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             {
                 IsReadOnly = true;
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowErrorAsync("Failed to prepare Rotom scripts:\n" + ex.Message, "Script editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't prepare Rotom scripts:\n" + ex.Message, "Script editor");
             }
             finally
             {
@@ -623,7 +622,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 if (limited) break;
             }
 
-            string suffix = readErrors == 0 ? "" : " (" + readErrors + " file(s) could not be read)";
+            string suffix = readErrors == 0 ? "" : " (" + Plural.Of(readErrors, "file") + " couldn't be read)";
             SearchStatusText = SearchResults.Count == 1
                 ? "1 result" + suffix + "."
                 : SearchResults.Count + " results" + suffix + (limited ? " (limited)." : ".");
@@ -726,7 +725,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (scriptNumber <= 0 || string.IsNullOrWhiteSpace(_currentPath)) return null;
             if (_lsp == null || !_lsp.IsRunning)
             {
-                StatusText = "Couldn't jump to script #" + scriptNumber + ": live language service is not running.";
+                StatusText = "Couldn't jump to script #" + scriptNumber + ": the script checker isn't running.";
                 return null;
             }
 
@@ -737,7 +736,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
                 int? line = FindScriptEntryLine(await _lsp.DocumentSymbolsAsync(_currentPath), scriptNumber);
                 StatusText = line == null
-                    ? "Script #" + scriptNumber + " was not found in " + DisplayPath(_currentPath) + "."
+                    ? "Script #" + scriptNumber + " wasn't found in " + DisplayPath(_currentPath) + "."
                     : "Opened script #" + scriptNumber + " in " + DisplayPath(_currentPath) + ".";
                 return line;
             }
@@ -805,7 +804,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             catch (Exception ex)
             {
                 AppLogger.Warn("rotom-lsp definition failed: " + ex.Message);
-                StatusText = "Goto definition failed: " + ex.Message;
+                StatusText = "Go to definition failed: " + ex.Message;
                 return null;
             }
         }
@@ -846,7 +845,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync("Save failed:\n" + ex.Message, "Script editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't save:\n" + ex.Message, "Script editor");
                 return false;
             }
             finally
@@ -874,7 +873,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 {
                     StatusText = diagnostics == 0
                         ? "Compile successful: " + summary
-                        : "Compile successful with " + diagnostics + " warning(s): " + summary;
+                        : "Compile successful with " + Plural.Of(diagnostics, "warning") + ": " + summary;
                     if (result.KeptBinaries.Count > 0)
                         await DialogHelper.ShowInfoAsync(KeptBinariesMessage(result.KeptBinaries), "Compile");
                 }
@@ -884,14 +883,14 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 }
 
                 if (!result.Success && diagnostics == 0)
-                    await DialogHelper.ShowErrorAsync("rotom compile failed:\n" + RotomTool.FormatDetails(result), "Script editor error");
+                    await DialogHelper.ShowErrorAsync("rotom compile failed:\n" + RotomTool.FormatDetails(result), "Script editor");
                 return result.Success;
             }
             catch (Exception ex)
             {
                 StatusText = "Compile failed: " + ex.Message;
                 DiagnosticsStatusText = "Compile failed before diagnostics were available.";
-                await DialogHelper.ShowErrorAsync("Compile failed:\n" + ex.Message, "Script editor error");
+                await DialogHelper.ShowErrorAsync("Compile failed:\n" + ex.Message, "Script editor");
                 return false;
             }
             finally
@@ -952,8 +951,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex)
             {
-                AppLogger.Error("Failed to parse rotom compile diagnostics: " + ex.Message);
-                DiagnosticsStatusText = "Could not parse compile diagnostics.";
+                AppLogger.Error("Couldn't parse rotom compile diagnostics: " + ex.Message);
+                DiagnosticsStatusText = "Couldn't parse compile diagnostics.";
                 OnPropertyChanged(nameof(HasDiagnostics));
                 return 0;
             }
@@ -962,7 +961,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             int warningsCount = Diagnostics.Count(d => d.Severity == "Warning");
             DiagnosticsStatusText = errors == 0 && warningsCount == 0
                 ? "No compile diagnostics."
-                : errors + " error(s), " + warningsCount + " warning(s).";
+                : Plural.Of(errors, "error") + ", " + Plural.Of(warningsCount, "warning") + ".";
             if (Diagnostics.Count > 0) SelectedSidebarTabIndex = 1;
             OnPropertyChanged(nameof(HasDiagnostics));
             return Diagnostics.Count;
@@ -1015,7 +1014,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             catch (Exception ex)
             {
                 ShutdownLsp();
-                AppLogger.Warn("Failed to start rotom-lsp: " + ex.Message);
+                AppLogger.Warn("Couldn't start rotom-lsp: " + ex.Message);
                 DiagnosticsStatusText = "Live diagnostics unavailable: " + ex.Message;
             }
         }
@@ -1055,7 +1054,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             int warnings = Diagnostics.Count(d => d.Severity == "Warning");
             DiagnosticsStatusText = Diagnostics.Count == 0
                 ? "No live diagnostics."
-                : "Live diagnostics: " + errors + " error(s), " + warnings + " warning(s).";
+                : "Live diagnostics: " + Plural.Of(errors, "error") + ", " + Plural.Of(warnings, "warning") + ".";
             if (Diagnostics.Count > 0) SelectedSidebarTabIndex = 1;
             OnPropertyChanged(nameof(HasDiagnostics));
         }
@@ -1071,7 +1070,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex)
             {
-                _ = DialogHelper.ShowErrorAsync("Couldn't add Rotom script:\n" + ex.Message, "Script editor error");
+                _ = DialogHelper.ShowErrorAsync("Couldn't add Rotom script:\n" + ex.Message, "Script editor");
             }
         }
 
@@ -1091,7 +1090,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync("Import failed:\n" + ex.Message, "Script editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't import:\n" + ex.Message, "Script editor");
             }
         }
 
@@ -1112,7 +1111,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync("Export failed:\n" + ex.Message, "Script editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't export:\n" + ex.Message, "Script editor");
             }
         }
 
@@ -1178,9 +1177,9 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     left.Add(id);
             left.Sort();
             if (left.Count == 0) return null;
-            if (left.Count == 1) return $"Script {left[0]} could not be decompiled and keeps its binary.";
+            if (left.Count == 1) return $"Script {left[0]} couldn't be decompiled and keeps its binary.";
             string ids = string.Join(", ", left.Take(10)) + (left.Count > 10 ? $" and {left.Count - 10} more" : "");
-            return $"Scripts {ids} could not be decompiled and keep their binaries.";
+            return $"Scripts {ids} couldn't be decompiled and keep their binaries.";
         }
 
         private async Task RunRequiredRotomCommandAsync(params string[] args)
@@ -1659,7 +1658,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 "ShadowedAlias" => "Alias '" + name + "' shadows a previous alias definition",
                 "MissingSlot" => "Script slot #" + details.ReadString("slot") + " is empty; the next available script pointer will be reused",
                 "MessageLineTooLong" => "Message line " + details.ReadString("line_index") + " exceeds the maximum dialog width",
-                "VariantConditionUnresolvable" => "Could not evaluate variant condition '" + condition + "' for command '" + command + "'",
+                "VariantConditionUnresolvable" => "Couldn't evaluate variant condition '" + condition + "' for command '" + command + "'",
                 _ => kind
             };
         }
@@ -1815,8 +1814,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public int SelectionLength { get; }
     }
 
-    /// <summary>One outline row: indented by nesting, jumps to <see cref="Line"/> when picked.</summary>
-    /// <summary>One outline row. A script that has a number in the file's jump table shows it.</summary>
+    /// <summary>One outline row, indented by nesting; a numbered script shows its jump-table number.</summary>
     public sealed record OutlineEntry(string Name, int Line, int Depth, int? Number = null)
     {
         public string Display => Number is int n ? $"#{n}  {Name}" : new string(' ', Depth * 2) + Name;

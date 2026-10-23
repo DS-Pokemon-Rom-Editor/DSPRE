@@ -9,9 +9,8 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Trainers
 {
     /// <summary>
-    /// Avalonia port of the WinForms <c>VsSeekerRematchEditor</c>: a master-detail view over the
-    /// 240-row Vs. Seeker rematch table (<see cref="VsSeekerRematchTable"/>), keyed by the stored
-    /// encounter trainer ID rather than row index. Diamond/Pearl/Platinum (English) only.
+    /// The 240-row Vs. Seeker rematch table (<see cref="VsSeekerRematchTable"/>), keyed by encounter trainer
+    /// ID, not row. Diamond, Pearl and Platinum (English) only.
     /// </summary>
     public class VsSeekerRematchViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
@@ -296,7 +295,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 if (!VsSeekerRematchTable.WriteRow(r, _rows[r], out string error))
                 {
-                    AppMessages.Error($"Row {r} wasn't saved:\n{error}", "Vs. Seeker rematch editor error");
+                    AppMessages.Error($"Row {r} wasn't saved:\n{error}", "Vs. Seeker rematch editor");
                     return;
                 }
             }

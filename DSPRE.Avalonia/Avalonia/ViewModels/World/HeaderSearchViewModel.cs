@@ -13,9 +13,8 @@ using System.Threading.Tasks;
 namespace DSPRE.Avalonia.ViewModels.World
 {
     /// <summary>
-    /// Avalonia port of the WinForms Advanced Header Search: pick a header field, an operator and a
-    /// value; results list every matching header. Query logic is the shared core
-    /// <see cref="HeaderSearchEngine"/>. Double-tapping a result opens the Header editor on it.
+    /// Finds headers by field, operator and value through <see cref="HeaderSearchEngine"/>; double-tap a result
+    /// to open it in the Header editor.
     /// </summary>
     public class HeaderSearchViewModel : INotifyPropertyChanged
     {
@@ -153,7 +152,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             CancellationTokenSource cancellation = new CancellationTokenSource();
             _searchCancellation = cancellation;
-            StatusText = debounce ? "Waiting for more input..." : "Searching...";
+            StatusText = debounce ? "Waiting for more input…" : "Searching…";
             _ = RunSearchAsync(cancellation, generation, debounce, internalNames, finalID,
                 fieldKey, operatorIndex, _valueText, searchConfiguration);
         }
@@ -188,7 +187,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 catch (FormatException)
                 {
                     PostSearchUpdate(token, generation,
-                        () => StatusText = "Make sure the value to search is correct.");
+                        () => StatusText = "That value isn't valid for this field.");
                     return;
                 }
 

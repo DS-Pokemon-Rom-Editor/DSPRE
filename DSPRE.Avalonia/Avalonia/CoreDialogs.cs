@@ -11,11 +11,7 @@ using Avalonia.Threading;
 
 namespace DSPRE.Avalonia
 {
-    /// <summary>
-    /// Installs native-Avalonia implementations of the core <see cref="DSPRE.AppMessages"/> hooks, so
-    /// the WinForms-free ROM core (ROMFiles/DSUtils) shows Avalonia dialogs when running under the
-    /// Avalonia shell instead of WinForms MessageBoxes.
-    /// </summary>
+    /// <summary>Shows the core's <see cref="DSPRE.AppMessages"/> as Avalonia dialogs.</summary>
     public static class CoreDialogs
     {
         public static void Install()
@@ -27,6 +23,7 @@ namespace DSPRE.Avalonia
                 Dispatcher.UIThread.Post(() => _ = DialogHelper.ShowInfoAsync(msg, Coalesce(title, "Information")));
             DSPRE.AppMessages.WarningHook = (msg, title) =>
                 Dispatcher.UIThread.Post(() => _ = DialogHelper.ShowErrorAsync(msg, Coalesce(title, "Warning")));
+            DSPRE.AppMessages.NoticeHook = msg => Dispatcher.UIThread.Post(() => SaveNotice.Show(msg));
 
             // Save picker must return synchronously (the core export APIs are sync); pump a nested
             // Avalonia dispatcher frame while the async picker runs.
@@ -49,7 +46,7 @@ namespace DSPRE.Avalonia
         private static Window ActiveOwner()
         => OwnerWindow.Current;
 
-        // Convert a WinForms-style filter ("Gen IV Script File (*.scr)|*.scr") into an Avalonia file type.
+        // Convert a WinForms-style filter ("Script file (*.scr)|*.scr") into an Avalonia file type.
         private static FilePickerFileType ToFileType(string filter)
         {
             string name = "File";
@@ -173,8 +170,8 @@ namespace DSPRE.Avalonia
         }
 
         /// <summary>
-        /// One row per archive whose unpacked folder no longer matches it: the user says which side is newer. While
-        /// Save ROM waits every row needs an answer, since it packs each folder over its archive next.
+        /// One row per archive that differs from its unpacked folder, asking which side is newer. During Save ROM every row
+        /// needs an answer, since each folder is packed over its archive next.
         /// </summary>
         private static IReadOnlyList<DSPRE.NarcSync.Choice> AskArchiveDrift(IReadOnlyList<DSPRE.NarcSync.Conflict> conflicts, bool saving)
         {
@@ -340,9 +337,7 @@ namespace DSPRE.Avalonia
             return result;
         }
 
-        // Block until the predicate is true. On the UI thread this runs a nested Avalonia dispatcher
-        // frame (cross-platform, pumps the native event loop, no WinForms). On a worker thread it
-        // just poll-sleeps while the dialog runs on the UI thread.
+        // Waits on a nested dispatcher frame on the UI thread, or polls on a worker thread.
         private static void PumpUntil(Func<bool> isDone)
         {
             if (!Dispatcher.UIThread.CheckAccess())

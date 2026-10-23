@@ -13,10 +13,8 @@ using DSPRE.ROMFiles;
 namespace DSPRE.Avalonia.Views.Controls
 {
     /// <summary>
-    /// HeartGold and SoulSilver's bottom screen. The touch menu reacts to a touch the way the game does without
-    /// opening anything: the A button presses A, the running shoes flip, an icon lights up while held. While a
-    /// script runs the icons, item slots and shoes are dimmed and ignore touches. The Poké Ball screen takes a touch
-    /// on one of its entries as picking it.
+    /// HeartGold and SoulSilver's bottom screen: touches react as in game without opening anything, and a running
+    /// script dims it.
     /// </summary>
     public sealed class HgssTouchScreenView : Control, ICustomHitTest
     {

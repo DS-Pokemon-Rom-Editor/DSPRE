@@ -12,18 +12,7 @@ using DSPRE.Avalonia.Data;
 
 namespace DSPRE.Avalonia
 {
-    /// <summary>
-    /// Centralised launch points for the already-migrated Avalonia editor windows.
-    ///
-    /// These mirror the per-editor launch logic that currently lives inline in the
-    /// WinForms <c>Main Window.cs</c> handlers. Keeping them here lets the new
-    /// Avalonia <see cref="Views.Shell.MainWindowView"/> open the same editors without
-    /// duplicating the NARC-unpack + data-sourcing steps, and gives the WinForms
-    /// side a single place to delegate to once it is retired.
-    ///
-    /// Every launcher is a no-op when no ROM is loaded, so callers can wire them to
-    /// menu items without re-checking ROM state at each call site.
-    /// </summary>
+    /// <summary>Opens every editor. Each launcher does nothing when no ROM is loaded, so menu items needn't check.</summary>
     public static class AvaloniaEditorLauncher
     {
         /// <summary>True once a ROM has been opened and <see cref="RomInfo"/> populated.</summary>
@@ -42,7 +31,6 @@ namespace DSPRE.Avalonia
             return true;
         }
 
-        /// <summary>Runs unpack-heavy file I/O off the UI thread behind the app's busy overlay. Only pass plain file I/O, not UI/bitmap work.</summary>
         /// <summary>" at NAME" for a busy title when an editor opens on a particular record, or nothing.</summary>
         private static string At(System.Func<string[]> names, int index)
         {
@@ -54,6 +42,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex) { AppLogger.WarnOnce("AvaloniaEditorLauncher.At", ex); return ""; }
         }
 
+        /// <summary>Runs plain file work off the UI thread behind the busy card; no UI or bitmap work.</summary>
         private static System.Threading.Tasks.Task RunBusyAsync(string busyText, string busyHint, System.Action work)
         => BusyOverlay.RunAsync(busyText, busyHint, work);
 
@@ -69,12 +58,8 @@ namespace DSPRE.Avalonia
             window?.ShowManaged();
         }
 
-        /// <summary>
-        /// Everything in the ROM that makes a noise: the cries, the music, the fanfares and the sound
-        /// effects, listed out of the sound archive's own names.
-        /// </summary>
-        /// <param name="showCryFor">A species to open on, for the Pokemon editor's own Edit cry button.
-        /// Zero opens on nothing in particular.</param>
+        /// <summary>Every sound in the ROM, named from the sound archive.</summary>
+        /// <param name="showCryFor">A species to open on, for the Pokémon editor's Edit cry button; 0 for none.</param>
         public static async System.Threading.Tasks.Task OpenAudioEditorAsync(int showCryFor = 0)
         {
             if (Refused("AudioEditorView")) return;
@@ -96,7 +81,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowErrorAsync("The Audio editor could not be opened:" + System.Environment.NewLine + ex.Message, "Audio editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Audio editor: " + ex.Message, "Audio editor");
             }
         }
 
@@ -112,7 +97,7 @@ namespace DSPRE.Avalonia
                 PokemonEditorView view = null;
                 // Every tab reads its archives up front, and the window is built while the card is still up, so the
                 // editor is smooth once it shows.
-                await BusyOverlay.RunAsync("Opening Pokémon editor…" + (initialMon != 1 ? At(GetPokemonNames, initialMon) : "") + "…",
+                await BusyOverlay.RunAsync("Opening Pokémon editor" + (initialMon != 1 ? At(GetPokemonNames, initialMon) : "") + "…",
                     "Reading species data, learnsets, evolutions, the Pokédex and sprites.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> {
                         DirNames.PersonalPokeData, DirNames.Learnsets, DirNames.Evolutions, DirNames.MonIcons,
@@ -137,7 +122,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowErrorAsync("Couldn't open the Pokémon editor: " + ex.Message, "Pokémon editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Pokémon editor: " + ex.Message, "Pokémon editor");
             }
         }
 
@@ -173,7 +158,7 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await OpenBehindCardAsync("Opening Move data editor…" + (initialIndex > 0 ? At(GetAttackNames, initialIndex) : "") + "…", "Reading every move.",
+                await OpenBehindCardAsync("Opening Move data editor" + (initialIndex > 0 ? At(GetAttackNames, initialIndex) : "") + "…", "Reading every move.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.MoveData }),
                     () =>
                     {
@@ -185,7 +170,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowErrorAsync("Couldn't open the Move data editor: " + ex.Message, "Move data editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Move data editor: " + ex.Message, "Move data editor");
             }
         }
 
@@ -229,7 +214,7 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await OpenBehindCardAsync("Opening Item editor…" + (initialIndex > 1 ? At(GetItemNames, initialIndex) : "") + "…", "Reading every item and its icon.",
+                await OpenBehindCardAsync("Opening Item editor" + (initialIndex > 1 ? At(GetItemNames, initialIndex) : "") + "…", "Reading every item and its icon.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.ItemData, DirNames.ItemIcons }),
                     () =>
                     {
@@ -240,7 +225,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowErrorAsync("Couldn't open the Item editor: " + ex.Message, "Item editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Item editor: " + ex.Message, "Item editor");
             }
         }
 
@@ -281,8 +266,8 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                _ = DialogHelper.ShowErrorAsync("The Mart editor could not be opened:" + System.Environment.NewLine + ex.Message,
-                    "Mart editor error");
+                _ = DialogHelper.ShowErrorAsync("Couldn't open the Mart editor: " + ex.Message,
+                    "Mart editor");
             }
         }
 
@@ -306,7 +291,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowErrorAsync("Couldn't open the Trade editor: " + ex.Message, "Trade editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Trade editor: " + ex.Message, "Trade editor");
             }
         }
 
@@ -328,7 +313,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowErrorAsync("Couldn't open the Text editor: " + ex.Message, "Text editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Text editor: " + ex.Message, "Text editor");
             }
         }
 
@@ -347,10 +332,7 @@ namespace DSPRE.Avalonia
                 980, 760).ShowManaged();
         }
 
-        /// <summary>
-        /// Opens the Script editor on a stored script number: a common script in the file that holds it, any other
-        /// number in the paired script file, which is only looked up when needed. Returns a status line.
-        /// </summary>
+        /// <summary>Opens the Script editor on a script number, in its common file or the paired one; returns a status line.</summary>
         public static string GoToScript(int scriptNumber, System.Func<int> pairedScriptFile) =>
             GoToScript(scriptNumber, pairedScriptFile, out _);
 
@@ -429,7 +411,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex) when (ex is System.IO.IOException || ex is System.IO.InvalidDataException || ex is System.InvalidOperationException
                                               || ex is System.ArgumentException || ex is System.UnauthorizedAccessException)
             {
-                _ = DialogHelper.ShowErrorAsync(title + " could not be opened:\n" + ex.Message, title);
+                _ = DialogHelper.ShowErrorAsync("Couldn't open " + title + ": " + ex.Message, title);
             }
         }
 
@@ -486,7 +468,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowErrorAsync("Couldn't open the TM/HM bulk editor: " + ex.Message, "TM / HM bulk editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the TM/HM bulk editor: " + ex.Message, "TM/HM bulk editor");
             }
         }
 
@@ -512,7 +494,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowErrorAsync("Couldn't open the Wild Pokémon editor: " + ex.Message, "Wild Pokémon editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Wild Pokémon editor: " + ex.Message, "Wild Pokémon editor");
             }
 
             global::Avalonia.Controls.Window BuildWild()
@@ -520,10 +502,7 @@ namespace DSPRE.Avalonia
                 string path = GameDirs[DirNames.Encounters].unpackedDir;
                 string[] names = GetPokemonNames();
                 int headerCount = GetHeaderCount();
-                // Standalone instances aren't shared with the embedded Maps-workspace tab, so each one must
-                // unsubscribe its own AppEvents.NamesChanged hook when its window closes (EditorHostWindow has
-                // no generic post-close hook for this; the embedded tab's single long-lived instance never
-                // needs Detach at all, matching every other embedded-editor VM's lifetime).
+                // A standalone window unsubscribes NamesChanged when it closes; the embedded tab lives as long as the app.
                 if (GameFamily == GameFamilies.DP || GameFamily == GameFamilies.Plat)
                 {
                     WildEditorDPPtViewModel vm = new WildEditorDPPtViewModel(path, names, initialIndex, headerCount);
@@ -587,7 +566,7 @@ namespace DSPRE.Avalonia
             WildIntroEditorViewModel.Title, "Reading the intro tables and the Pokémon names.",
             () => new WildIntroEditorViewModel(), vm => vm.Load(), vm => vm.Ready(), vm => new WildIntroEditorView(vm), 820, 620);
 
-        // Both intro editors read the same tables, each one window at most, so neither edits a stale copy of its own bytes.
+        // Both intro editors read the same tables, so each opens once and neither saves a stale copy.
         private static async System.Threading.Tasks.Task OpenIntroEditorAsync<TView, TModel>(string title, string busyHint,
             System.Func<TModel> make, System.Action<TModel> load, System.Action<TModel> ready, System.Func<TModel, TView> view,
             double width, double height, System.Action<TModel> goTo = null, double minWidth = 0)
@@ -607,7 +586,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex) when (ex is System.IO.IOException || ex is System.IO.InvalidDataException
                                               || ex is System.InvalidOperationException || ex is System.UnauthorizedAccessException)
             {
-                _ = DialogHelper.ShowErrorAsync(title + " could not be opened:\n" + ex.Message, title);
+                _ = DialogHelper.ShowErrorAsync("Couldn't open " + title + ": " + ex.Message, title);
             }
         }
 
@@ -625,13 +604,13 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await OpenBehindCardAsync("Opening Trainer editor…" + (initialIndex > 0 ? At(GetSimpleTrainerNames, initialIndex) : "") + "…", "Reading every trainer, party and trainer sprite.",
+                await OpenBehindCardAsync("Opening Trainer editor" + (initialIndex > 0 ? At(GetSimpleTrainerNames, initialIndex) : "") + "…", "Reading every trainer, party and trainer sprite.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TrainerProperties, DirNames.TrainerParty, DirNames.TrainerGraphics }),
                     () => new TrainerEditorView(new TrainerEditorViewModel(true) { InitialIndex = initialIndex }));
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowErrorAsync("Couldn't open the Trainer editor: " + ex.Message, "Trainer editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Trainer editor: " + ex.Message, "Trainer editor");
             }
         }
 
@@ -655,7 +634,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowErrorAsync("Couldn't open the Trainer sprite editor: " + ex.Message, "Trainer sprite editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Trainer sprite editor: " + ex.Message, "Trainer sprite editor");
             }
         }
 
@@ -745,7 +724,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowErrorAsync("The Pokégear Phone Book could not be opened:" + System.Environment.NewLine + ex.Message, "Pokégear phone book error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Pokégear phone book: " + ex.Message, "Pokégear phone book");
             }
         }
 
@@ -763,7 +742,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowErrorAsync("Couldn't open the Starter Pokémon editor: " + ex.Message, "Starter editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Starter Pokémon editor: " + ex.Message, "Starter Pokémon editor");
             }
         }
 
@@ -773,7 +752,7 @@ namespace DSPRE.Avalonia
             if (Refused("FlyEditorView")) return;
             if (RomInfo.FlyTableUnverified)
             {
-                _ = DialogHelper.ShowErrorAsync("The Fly / warp editor isn't checked against Japanese Pearl yet, so it stays closed rather than risk writing the wrong place.", "Fly / warp editor error");
+                _ = DialogHelper.ShowErrorAsync("The Fly / warp editor doesn't support Japanese Pearl yet, so it can't open.", "Fly / warp editor");
                 return;
             }
             new FlyEditorView(HeaderLabels.Friendly().ToList()).ShowManaged();
@@ -799,8 +778,7 @@ namespace DSPRE.Avalonia
             if (Refused("CellAnimationEditorView")) return;
             try
             {
-                // Reading every archive to find the animations takes a moment, so the looking happens
-                // behind the busy overlay. The window itself is built here, on the thread that owns it.
+                // Finding the animations reads every archive, so it runs behind the busy card; the window is built here, on the UI thread.
                 CellAnimationPickerViewModel vm = new ViewModels.Graphics.CellAnimationPickerViewModel();
                 await OpenBehindCardAsync("Looking for animations…", "Reading every archive in the ROM.", vm.Gather,
                     () => { vm.Ready(); return new Views.Graphics.CellAnimationPickerView(vm); });
@@ -808,15 +786,12 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenCellAnimationPicker failed: " + ex.Message);
-                await DialogHelper.ShowInfoAsync("The animations could not be listed. " + ex.Message,
+                await DialogHelper.ShowInfoAsync("Couldn't list the animations: " + ex.Message,
                                             "Cell animations");
             }
         }
 
-        /// <summary>
-        /// Opens one cell animation for editing. The caller says which files go together, because an
-        /// animation on its own has no drawing: it names cells in a layout, which in turn names tiles.
-        /// </summary>
+        /// <summary>Opens one cell animation. The caller names its files, since the animation names cells and the cells name tiles.</summary>
         /// <param name="sharedSheet">
         /// A sheet the game loads into sprite memory ahead of this one, or -1. The cells of some screens
         /// count their tiles from where that sheet ends.
@@ -865,14 +840,13 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenCellAnimationEditor failed: " + ex.Message);
-                _ = DialogHelper.ShowInfoAsync("That animation could not be opened. " + ex.Message,
+                _ = DialogHelper.ShowInfoAsync("Couldn't open that animation: " + ex.Message,
                                           "Cell animation");
             }
         }
 
         /// <param name="poketchApp">
-        /// A Pokétch application to open on, or -1 for whatever the window shows by default. An animation
-        /// opened from an application uses this to go back to the one it belongs to.
+        /// A Pokétch app to open on, or -1 for the window's default. An animation opened from an app uses it to go back to that app.
         /// </param>
         public static void OpenBottomScreenEditor(int poketchApp = -1)
         {
@@ -880,8 +854,7 @@ namespace DSPRE.Avalonia
             OpenScreensEditor("bottomscreen", view: "Edit", then: model => ShowPoketchApp(model, poketchApp));
         }
 
-        // The list the window offers starts with the casing itself, so an application sits one along from
-        // where it is in the Pokétch's own table.
+        // The list starts with the casing, so each app is one row below its Pokétch table index.
         private static void ShowPoketchApp(object model, int poketchApp)
         {
             if (poketchApp < 0 || model is not ViewModels.Graphics.BottomScreenEditorViewModel vm)
@@ -900,7 +873,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 CrashReporter.LogHandled(ex);
-                await DialogHelper.ShowErrorAsync("The naming screen didn't open:\n" + ex.Message, "Naming screen error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the naming screen: " + ex.Message, "Naming screen");
             }
         }
 
@@ -944,7 +917,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenParticleEditor failed: " + ex.Message);
-                _ = DialogHelper.ShowInfoAsync("These particles could not be opened. " + ex.Message, "Particles");
+                _ = DialogHelper.ShowInfoAsync("Couldn't open these particles: " + ex.Message, "Particles");
             }
         }
 
@@ -970,13 +943,13 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenParticleLibrary failed: " + ex.Message);
-                await DialogHelper.ShowInfoAsync("The particles could not be listed. " + ex.Message, "Particles");
+                await DialogHelper.ShowInfoAsync("Couldn't list the particles: " + ex.Message, "Particles");
             }
         }
 
         public static void OpenBallCapsuleEditor() => _ = OpenBallCapsuleEditorAsync();
 
-        /// <summary>Opens Ball Capsules on one trainer capsule, numbered the way a party entry names it.</summary>
+        /// <summary>Opens Ball capsules on one trainer capsule, numbered as a party entry names it.</summary>
         public static void OpenBallCapsuleEditorAt(int trainerCapsule) => _ = OpenBallCapsuleEditorAsync(trainerCapsule);
 
         public static async System.Threading.Tasks.Task OpenBallCapsuleEditorAsync(int trainerCapsule = 0)
@@ -1006,7 +979,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenBallCapsuleEditor failed: " + ex.Message);
-                await DialogHelper.ShowErrorAsync("The Ball Capsule editor could not be opened: " + ex.Message, "Ball Capsules error");
+                await DialogHelper.ShowErrorAsync("Couldn't open Ball capsules: " + ex.Message, "Ball capsules");
             }
         }
 
@@ -1016,8 +989,8 @@ namespace DSPRE.Avalonia
             if (!RomInfo.IsDsRomProject)
             {
                 await DialogHelper.ShowInfoAsync(
-                    "Editing the game icon and banner titles requires a ds-rom-format project.\n" +
-                    "Use File > Convert to ds-rom format, then reopen this editor.",
+                    "The game icon and banner titles need a ds-rom project.\n" +
+                    "Use File > Convert to ds-rom format, then open this editor again.",
                     "ds-rom project required");
                 return;
             }
@@ -1170,7 +1143,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowErrorAsync("Couldn't open the Overworld editor: " + ex.Message, "Overworld editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Overworld editor: " + ex.Message, "Overworld editor");
             }
         }
 
@@ -1187,10 +1160,7 @@ namespace DSPRE.Avalonia
             new ResearchHelperView(new ResearchHelperViewModel(true)).ShowManaged();
         }
 
-        /// <summary>
-        /// Deliberately not gated on a linked checkout: this is how someone with only the ROM sees what
-        /// the game reads out of it, which is the case the gate leaves with nothing to look at.
-        /// </summary>
+        /// <summary>Not gated on a linked checkout, so someone with only the ROM can see what the game reads.</summary>
         public static void OpenHgeRomReview() => _ = OpenHgeRomReviewAsync();
 
         public static async System.Threading.Tasks.Task OpenHgeRomReviewAsync()
@@ -1203,7 +1173,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowErrorAsync("The hg-engine ROM review could not be opened:" + System.Environment.NewLine + ex.Message, "hg-engine ROM review");
+                await DialogHelper.ShowErrorAsync("Couldn't open the hg-engine ROM review: " + ex.Message, "hg-engine ROM review");
             }
         }
 
@@ -1225,7 +1195,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowErrorAsync("The Distortion World editor could not be opened:" + System.Environment.NewLine + ex.Message, "Distortion World error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Distortion World editor: " + ex.Message, "Distortion World");
             }
         }
 
@@ -1263,8 +1233,7 @@ namespace DSPRE.Avalonia
 
         public static void OpenPatchToolbox()
         {
-            // Writes to the ROM binary (ARM9 / overlays / NARCs). Native Avalonia UI over the shared
-            // PatchToolboxDialog apply-logic, so it runs identical code to the WinForms dialog.
+            // Writes to the ARM9, overlays and archives.
             if (Refused("PatchToolboxView")) return;
             if (BringForwardWindow<PatchToolboxView>()) return;
             new PatchToolboxView().ShowManaged();
@@ -1288,8 +1257,6 @@ namespace DSPRE.Avalonia
 
         public static void OpenCustomCommandManager()
         {
-            // Manages the custom script-command databases. Still a WinForms tool (self-contained, file-based);
-            // reused directly over the shared Win32 pump until a native port exists.
             if (!IsRomLoaded) return;
             new CustomScrcmdManagerView(new CustomScrcmdManagerViewModel(true)).ShowManaged();
         }
@@ -1331,22 +1298,22 @@ namespace DSPRE.Avalonia
             (string label, string keywords, System.Action run)[] jumps =
             {
                 ($"Go to Pokémon #{n}",        "pokemon species mon personal", () => { _ = OpenPokemonEditorAsync(n); }),
-                ($"Go to Move #{n}",           "move attack",                  () => OpenMoveDataEditor(n)),
-                ($"Go to Move animation #{n}", "move animation effect particles", () => OpenBattleScriptEditor(3, n)),
+                ($"Go to move #{n}",           "move attack",                  () => OpenMoveDataEditor(n)),
+                ($"Go to move animation #{n}", "move animation effect particles", () => OpenBattleScriptEditor(3, n)),
                 ($"Go to TM / HM #{n}",        "tm hm machine",                () => OpenTMEditor(n)),
-                ($"Go to Item #{n}",           "item",                         () => OpenItemEditor(n)),
-                ($"Go to Trainer #{n}",        "trainer battle party",         () => OpenTrainerEditor(n)),
-                ($"Go to Trade #{n}",          "trade in-game",                () => OpenTradeEditor(n)),
-                ($"Go to Header #{n}",         "header map",                   () => OpenHeaderEditor(n)),
-                ($"Go to Building #{n}",       "building model",               () => OpenBuildingEditor(n)),
+                ($"Go to item #{n}",           "item",                         () => OpenItemEditor(n)),
+                ($"Go to trainer #{n}",        "trainer battle party",         () => OpenTrainerEditor(n)),
+                ($"Go to trade #{n}",          "trade in-game",                () => OpenTradeEditor(n)),
+                ($"Go to header #{n}",         "header map",                   () => OpenHeaderEditor(n)),
+                ($"Go to building #{n}",       "building model",               () => OpenBuildingEditor(n)),
                 ($"Go to Headbutt file #{n}",  "headbutt tree",                () => OpenSpecialEncountersEditor(n)),
-                ($"Go to Event file #{n}",     "event warp trigger overworld", () => OpenEventEditor(n)),
-                ($"Go to Script #{n}",         "script",                       () => OpenScriptEditor(n)),
-                ($"Go to Level Script #{n}",   "level script",                 () => OpenLevelScriptEditor(n)),
-                ($"Go to Text archive #{n}",   "text string message archive",  () => OpenTextEditor(n)),
-                ($"Go to Matrix #{n}",         "matrix world grid",            () => OpenMatrixEditor(n)),
-                ($"Go to Area Data #{n}",      "area data tileset",            () => OpenAreaDataEditor(n)),
-                ($"Go to Wild encounters #{n}","wild encounter grass surf",    () => OpenWildEditor(n)),
+                ($"Go to event file #{n}",     "event warp trigger overworld", () => OpenEventEditor(n)),
+                ($"Go to script #{n}",         "script",                       () => OpenScriptEditor(n)),
+                ($"Go to level script #{n}",   "level script",                 () => OpenLevelScriptEditor(n)),
+                ($"Go to text archive #{n}",   "text string message archive",  () => OpenTextEditor(n)),
+                ($"Go to matrix #{n}",         "matrix world grid",            () => OpenMatrixEditor(n)),
+                ($"Go to area data #{n}",      "area data tileset",            () => OpenAreaDataEditor(n)),
+                ($"Go to wild encounters #{n}","wild encounter grass surf",    () => OpenWildEditor(n)),
             };
 
             foreach ((string label, string keywords, System.Action run) in jumps)
@@ -1366,20 +1333,16 @@ namespace DSPRE.Avalonia
             try
             {
                 GraphicsBrowserViewModel vm = new ViewModels.Graphics.GraphicsBrowserViewModel(loadImmediately: false);
-                await OpenBehindCardAsync("Opening Graphics…", "Finding every picture in the ROM.", vm.Scan,
+                await OpenBehindCardAsync("Opening All graphics…", "Finding every picture in the ROM.", vm.Scan,
                     () => { vm.Publish(); return new Views.Graphics.GraphicsBrowserView(vm); });
             }
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenGraphicsBrowser failed: " + ex.Message);
-                await DialogHelper.ShowInfoAsync("The graphics list could not be opened. Open a ROM first.", "Graphics");
+                await DialogHelper.ShowInfoAsync("Couldn't open All graphics. Open a ROM first.", "All graphics");
             }
         }
 
-        /// <summary>
-        /// Opens the Pokédex pages put together with a sample Pokémon, or, where that editor is not on, the
-        /// graphics window at the Pokédex's first screen.
-        /// </summary>
         /// <summary>Opens the Screens editor, at a screen and a line when given.</summary>
         public static void OpenScreensEditor(string key = null, int bank = -1, int line = -1, string view = null,
                                              System.Action<object> then = null, bool fresh = false)
@@ -1392,6 +1355,7 @@ namespace DSPRE.Avalonia
             new EditorHostWindow("Screens", new Views.Graphics.ScreensEditorView(model), 1400, 860).ShowManaged();
         }
 
+        /// <summary>Opens the Pokédex pages with a sample Pokémon, or All graphics at the Pokédex's first screen when that editor is off.</summary>
         public static void OpenPokedexGraphics() => OpenPokedexGraphics(0, null);
 
         /// <summary>Opens the Pokédex graphics editor showing <paramref name="species"/> on page <paramref name="pageId"/>.</summary>
@@ -1425,7 +1389,7 @@ namespace DSPRE.Avalonia
             await System.Threading.Tasks.Task.CompletedTask;
         }
 
-        /// <summary>Opens the graphics window already looking at one file.</summary>
+        /// <summary>Opens All graphics already looking at one file.</summary>
         /// <param name="palette">The colours to show it in, when the caller knows the game's pairing.</param>
         public static void OpenGraphicAt(RomInfo.DirNames archive, int fileIndex, bool preferAssembled = false, int palette = -1)
             => _ = OpenGraphicAtAsync(archive, fileIndex, preferAssembled, palette);
@@ -1439,11 +1403,11 @@ namespace DSPRE.Avalonia
                 GraphicAssets.Archive a = Data.GraphicAssets.All.FirstOrDefault(x => x.Dir == archive);
                 if (a == null)
                 {
-                    await DialogHelper.ShowInfoAsync("That kind of graphic is not one this window lists yet.", "Graphics");
+                    await DialogHelper.ShowInfoAsync("All graphics doesn't list that kind of graphic yet.", "All graphics");
                     return;
                 }
 
-                // An open Graphics window already holds the list, so finding every picture again is wasted time.
+                // All graphics, when open, already holds the list, so finding every picture again is wasted time.
                 IReadOnlyList<Window> open = (global::Avalonia.Application.Current?.ApplicationLifetime
                             as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Windows;
                 Views.Graphics.GraphicsBrowserView already = open?.OfType<Views.Graphics.GraphicsBrowserView>().FirstOrDefault();
@@ -1451,7 +1415,7 @@ namespace DSPRE.Avalonia
                 if (vm == null)
                 {
                     vm = new ViewModels.Graphics.GraphicsBrowserViewModel(loadImmediately: false);
-                    await RunBusyAsync("Opening Graphics…", "Finding every picture in the ROM.", vm.Scan);
+                    await RunBusyAsync("Opening All graphics…", "Finding every picture in the ROM.", vm.Scan);
                     vm.Publish();
                 }
                 bool found = vm.JumpTo(a, fileIndex, preferAssembled, palette);
@@ -1467,7 +1431,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenGraphicAt failed: " + ex.Message);
-                await DialogHelper.ShowInfoAsync("The graphics list could not be opened. Open a ROM first.", "Graphics");
+                await DialogHelper.ShowInfoAsync("Couldn't open All graphics. Open a ROM first.", "All graphics");
             }
         }
 
@@ -1489,7 +1453,7 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
-                await DialogHelper.ShowErrorAsync("Couldn't open the Trainer back sprite editor: " + ex.Message, "Trainer back sprite editor error");
+                await DialogHelper.ShowErrorAsync("Couldn't open the Trainer back sprite editor: " + ex.Message, "Trainer back sprite editor");
             }
         }
 
@@ -1526,7 +1490,7 @@ namespace DSPRE.Avalonia
                     return ("Battle scenes", OpenBattleSceneBrowser);
 
                 case RomInfo.DirNames.DungeonCutinGraphics:
-                    return ("Dungeon cutin editor", OpenDungeonCutinEditor);
+                    return ("Dungeon cut-in editor", OpenDungeonCutinEditor);
 
                 case RomInfo.DirNames.TrainerCardGraphics:
                     return ("Trainer card editor", OpenTrainerCardEditor);
@@ -1555,10 +1519,6 @@ namespace DSPRE.Avalonia
             return -1;
         }
 
-        /// <summary>
-        /// Opens the battle scenes list: the scenery every place in the game fights on, with the header
-        /// number that chooses it.
-        /// </summary>
         /// <summary>Opens the window that turns a picture into a background.</summary>
         public static void OpenTilesetBuilder()
         {
@@ -1571,7 +1531,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenTilesetBuilder failed: " + ex.Message);
-                _ = DialogHelper.ShowInfoAsync("That window could not be opened.", "Picture to background");
+                _ = DialogHelper.ShowInfoAsync("Couldn't open Picture to background.", "Picture to background");
             }
         }
 
@@ -1586,7 +1546,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenFontEditor failed: " + ex.Message);
-                _ = DialogHelper.ShowInfoAsync("The fonts could not be opened. Open a ROM first.",
+                _ = DialogHelper.ShowInfoAsync("Couldn't open the fonts. Open a ROM first.",
                                           "Font editor");
             }
         }
@@ -1609,6 +1569,7 @@ namespace DSPRE.Avalonia
             await System.Threading.Tasks.Task.CompletedTask;
         }
 
+        /// <summary>Opens the battle scenes list, with the headers that use each scene.</summary>
         public static void OpenBattleSceneBrowser()
         {
             if (Refused("BattleSceneBrowserView")) return;
@@ -1620,12 +1581,12 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenBattleSceneBrowser failed: " + ex.Message);
-                _ = DialogHelper.ShowInfoAsync("The battle scenes could not be opened. Open a ROM first.",
+                _ = DialogHelper.ShowInfoAsync("Couldn't open the battle scenes. Open a ROM first.",
                                           "Battle scenes");
             }
         }
 
-        /// <summary>Opens the models and textures list, which is its own place, not part of the flat one.</summary>
+        /// <summary>Opens the models and textures list, which is separate from All graphics.</summary>
         public static void OpenModelBrowser() => _ = OpenModelBrowserAsync();
 
         public static async System.Threading.Tasks.Task OpenModelBrowserAsync()
@@ -1634,16 +1595,15 @@ namespace DSPRE.Avalonia
 
             try
             {
-                // Listing means reading every 3D archive to see what is in it, which is far too much
-                // file work to do on the click.
+                // Listing reads every 3D archive, too much to do on the click.
                 ModelBrowserViewModel vm = new ViewModels.Graphics.ModelBrowserViewModel();
-                await OpenBehindCardAsync("Opening Models and textures…", "Finding every model and texture in the ROM.", vm.Scan,
+                await OpenBehindCardAsync("Opening All models and textures…", "Finding every model and texture in the ROM.", vm.Scan,
                     () => { vm.Publish(); return new Views.Graphics.ModelBrowserView(vm); });
             }
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenModelBrowser failed: " + ex.Message);
-                await DialogHelper.ShowInfoAsync("The models list could not be opened. Open a ROM first.", "Models");
+                await DialogHelper.ShowInfoAsync("Couldn't open All models and textures. Open a ROM first.", "All models and textures");
             }
         }
 
@@ -1681,7 +1641,7 @@ namespace DSPRE.Avalonia
             new() { Beta = "TitleScreenEditorView", Name = "Title screen",          Keywords = "logo copyright intro hgss", Run = OpenTitleScreenEditor },
             new() { Beta = "BottomScreenEditorView", Name = "Bottom screen",         Keywords = "touch menu poketch pokétch bottom screen field panel icons poke ball", Run = () => OpenBottomScreenEditor() },
             new() { Beta = "CellAnimationEditorView", Name = "Cell animations",       Keywords = "nanr animation frames cell sprite sequence playback timing", Run = OpenCellAnimationPicker },
-            new() { Beta = "DungeonCutinEditorView", Name = "Dungeon cutin editor",  Keywords = "dungeon location splash hgss", Run = OpenDungeonCutinEditor },
+            new() { Beta = "DungeonCutinEditorView", Name = "Dungeon cut-in editor",  Keywords = "dungeon location splash hgss", Run = OpenDungeonCutinEditor },
             new() { Beta = "TrainerSpriteEditorView", Name = "Naming screen", Keywords = "name entry player rival box icon keyboard", Run = OpenNamingScreenEditor },
             new() { Beta = "TrainerCardEditorView", Name = "Trainer card",          Keywords = "rank front back graphics", Run = OpenTrainerCardEditor },
             new() { Beta = "ParticleLibraryView", Name = "Particles",             Keywords = "spa particle emitter effect move animation seal burst sparkle", Run = OpenParticleLibrary },
@@ -1753,10 +1713,10 @@ namespace DSPRE.Avalonia
             new() { Beta = "FontEditorView", Name = "Font editor",           Keywords = "font letter glyph character typeface text", Run = OpenFontEditor },
             new() { Beta = "BannerEditorView", Name = "Game icon & banner",    Keywords = "rom icon ds menu title", Run = () => { _ = OpenBannerEditorAsync(); } },
             new() { Name = "Edit dropdown labels",  Keywords = "enum custom", Run = OpenLabelEditor },
-            new() { Beta = "ProjectChecksView", Name = "Validation & Where-Used", Keywords = "check broken references project health", Run = OpenProjectChecks },
+            new() { Beta = "ProjectChecksView", Name = "Validation and where used", Keywords = "check broken references project health", Run = OpenProjectChecks },
             new() { Name = "Settings",              Run = OpenSettings },
             // ── Actions (not editors) ──
-            new() { Name = "Toggle theme (dark / light)", Keywords = "dark light appearance", Run = ThemeManager.Toggle },
+            new() { Name = "Toggle theme (light / dark)", Keywords = "dark light appearance", Run = ThemeManager.Toggle },
         };
     }
 }

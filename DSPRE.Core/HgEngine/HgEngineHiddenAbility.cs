@@ -29,19 +29,19 @@ namespace DSPRE.HgEngine
         public static bool TrySetAbilityId(int speciesId, int abilityId, out string error)
         {
             error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator))
-            { error = $"Could not resolve a species designator for id {speciesId}."; return false; }
+            { error = $"Species {speciesId} has no SPECIES_ name in the checkout."; return false; }
 
             HgEngineSymbolTable abilities = HgEngineSymbolTable.Load(AbilityHeaderRelPath);
             string valueLiteral = abilities != null && abilities.TryGetNameWithPrefix(abilityId, "ABILITY_", out string abilityName)
                 ? abilityName : abilityId.ToString();
 
             string text = TryReadSource(out string path);
-            if (text == null) { error = $"Source file not found: {path}"; return false; }
+            if (text == null) { error = $"{path} is missing from the checkout."; return false; }
             if (!HgEngineFlatArrayField.TrySetRawValue(ref text, designator, valueLiteral))
-            { error = $"Could not locate or insert species {speciesId} in HiddenAbilityTable.c."; return false; }
+            { error = $"Couldn't locate or insert species {speciesId} in HiddenAbilityTable.c."; return false; }
 
             HgEngineFileCache.WriteText(path, text);
             return true;

@@ -27,7 +27,7 @@ namespace DSPRE.Avalonia.Data
                 _cached = sdat; _cachedFor = path; _crySequence = null;
                 return sdat;
             }
-            catch (Exception ex) { AppLogger.Error("Sound archive could not be read: " + ex.Message); return null; }
+            catch (Exception ex) { AppLogger.Error("Sound archive couldn't be read: " + ex.Message); return null; }
         }
 
         /// <summary>Forgets what was read, for when a different ROM is opened.</summary>
@@ -54,8 +54,8 @@ namespace DSPRE.Avalonia.Data
         /// How a cry is put together, for telling somebody what they are about to change.
         /// </summary>
         public const string HowItWorks =
-            "Every cry plays the same short sequence; what makes them different is the sample it is given, "
-            + "one per Pokémon. Taking a cry out gives you that sample on its own, as ordinary sound.";
+            "Every cry plays the same short sequence with a different sample for each Pokémon. Exporting a cry gives "
+            + "you that sample as ordinary sound.";
 
         /// <summary>The prefix the sound archive puts on the name of every bank that holds a cry.</summary>
         public const string CryBankPrefix = "BANK_PV";
@@ -89,7 +89,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>
         /// The cry number the game would play for a species. hg-engine's GrabCryNumSpeciesForm returns the
         /// species itself (its mega branch cancels out, both bases being SPECIES_MAX_MON_NUM + 1), except
-        /// for the slots between the old last species and its first new one, which have no cry of their own.
+        /// for the slots between the old last species and the first new one, which have no cry.
         /// </summary>
         private const int LimboFirst = 494, LimboLast = 543, LimboFallback = 1;
 
@@ -215,7 +215,7 @@ namespace DSPRE.Avalonia.Data
 
             byte[] file;
             try { file = File.ReadAllBytes(path); }
-            catch (Exception ex) { problem = "That file could not be read: " + ex.Message; return false; }
+            catch (Exception ex) { problem = "That file couldn't be read: " + ex.Message; return false; }
 
             short[] pcm = CryFiles.ReadWav(file, out int rate, out problem);
             if (pcm == null) return false;
@@ -234,16 +234,16 @@ namespace DSPRE.Avalonia.Data
 
             byte[] rebuilt = CryFiles.BuildArchive(replaced);
             byte[] whole = sdat.ReplaceFile(arcInfo.FileId, rebuilt);
-            if (whole == null) { problem = "The sound archive could not be rewritten."; return false; }
+            if (whole == null) { problem = "The sound archive couldn't be rewritten."; return false; }
 
             try { PlainFiles.WriteBytes(sdatPath, whole); }
-            catch (Exception ex) { problem = "The sound archive could not be saved: " + ex.Message; return false; }
+            catch (Exception ex) { problem = "The sound archive couldn't be saved: " + ex.Message; return false; }
 
             Reset();          // read it again next time, so what plays is what is now on disk
             return true;
         }
 
-        /// <summary>True when an imported cry goes into the linked checkout rather than the ROM.</summary>
+        /// <summary>True when an imported cry goes into the linked checkout instead of the ROM.</summary>
         public static bool CriesGoToCheckout => CriesLiveInWaveArchives;
 
         /// <summary>A replacement for one sample of the ROM's sound archive, checked and held until the
@@ -324,7 +324,7 @@ namespace DSPRE.Avalonia.Data
             rate = 0;
             byte[] file;
             try { file = File.ReadAllBytes(path); }
-            catch (Exception ex) { problem = "That file could not be read: " + ex.Message; return null; }
+            catch (Exception ex) { problem = "That file couldn't be read: " + ex.Message; return null; }
 
             short[] pcm = CryFiles.ReadWav(file, out rate, out problem);
             if (pcm == null) return null;
@@ -374,7 +374,7 @@ namespace DSPRE.Avalonia.Data
                 }
 
                 whole = current.ReplaceFile(current.WaveArcs[arc].FileId, CryFiles.BuildArchive(replaced));
-                if (whole == null) { problem = "The sound archive could not be rewritten."; return null; }
+                if (whole == null) { problem = "The sound archive couldn't be rewritten."; return null; }
                 // The next replacement has to see where this one left the file table.
                 if (k + 1 < order.Count) current = SdatArchive.Parse(whole);
             }
@@ -401,7 +401,7 @@ namespace DSPRE.Avalonia.Data
             if (whole == null) return false;
 
             try { PlainFiles.WriteBytes(sdatPath, whole); }
-            catch (Exception ex) { problem = "The sound archive could not be saved: " + ex.Message; return false; }
+            catch (Exception ex) { problem = "The sound archive couldn't be saved: " + ex.Message; return false; }
 
             Reset();          // read it again next time, so what plays is what is now on disk
             return true;
@@ -427,13 +427,13 @@ namespace DSPRE.Avalonia.Data
             int cry = CryNumberFor(species);
             if (cry != species)
             {
-                problem = "That slot has no cry of its own in hg-engine; it falls back to another one.";
+                problem = "In hg-engine this slot has no cry and uses another one.";
                 return null;
             }
 
             byte[] file;
             try { file = File.ReadAllBytes(path); }
-            catch (Exception ex) { problem = "That file could not be read: " + ex.Message; return null; }
+            catch (Exception ex) { problem = "That file couldn't be read: " + ex.Message; return null; }
 
             // Parsed only to refuse a file its build would choke on; what gets written is the WAV itself,
             // since the build converts it with its own tool and settings.
@@ -444,7 +444,7 @@ namespace DSPRE.Avalonia.Data
             return new PendingCry { Cry = cry, RelPath = "sound/cries/" + cry.ToString("D3") + ".wav", Wav = file };
         }
 
-        /// <summary>Writes a held cry into the linked checkout, which is what its build reads.</summary>
+        /// <summary>Writes a held cry into the linked checkout, where its build reads it.</summary>
         public static bool WriteCheckoutCry(PendingCry cry, out string problem)
             => WriteCheckoutCry(cry, HgEngineProject.RepoPathUnc, out problem);
 
@@ -460,7 +460,7 @@ namespace DSPRE.Avalonia.Data
                 Directory.CreateDirectory(Path.GetDirectoryName(full));
                 PlainFiles.WriteBytes(full, cry.Wav);
             }
-            catch (Exception ex) { problem = "That cry could not be saved to the checkout: " + ex.Message; return false; }
+            catch (Exception ex) { problem = "That cry couldn't be saved to the checkout: " + ex.Message; return false; }
             return true;
         }
 
@@ -499,8 +499,8 @@ namespace DSPRE.Avalonia.Data
             SdatArchive sdat = Load();
             if (sdat == null) return found;
 
-            // Which archives are already listed as cries, so they are not offered a second time as
-            // ordinary samples. On hg-engine that is one archive per cry rather than one per cry bank.
+            // Archives already listed as cries, so they aren't offered again as samples; on hg-engine there's one per cry,
+            // not one per cry bank.
             HashSet<int> cryArcs = new HashSet<int>();
             if (CriesLiveInWaveArchives)
             {
@@ -574,7 +574,7 @@ namespace DSPRE.Avalonia.Data
 
             byte[] file;
             try { file = File.ReadAllBytes(path); }
-            catch (Exception ex) { problem = "That file could not be read: " + ex.Message; return false; }
+            catch (Exception ex) { problem = "That file couldn't be read: " + ex.Message; return false; }
 
             short[] pcm = CryFiles.ReadWav(file, out int rate, out problem);
             if (pcm == null) return false;
@@ -597,10 +597,10 @@ namespace DSPRE.Avalonia.Data
 
             byte[] rebuilt = CryFiles.BuildArchive(replaced);
             byte[] whole = sdat.ReplaceFile(sdat.WaveArcs[waveArc].FileId, rebuilt);
-            if (whole == null) { problem = "The sound archive could not be rewritten."; return false; }
+            if (whole == null) { problem = "The sound archive couldn't be rewritten."; return false; }
 
             try { PlainFiles.WriteBytes(sdatPath, whole); }
-            catch (Exception ex) { problem = "The sound archive could not be saved: " + ex.Message; return false; }
+            catch (Exception ex) { problem = "The sound archive couldn't be saved: " + ex.Message; return false; }
 
             Reset();
             return true;
@@ -630,8 +630,8 @@ namespace DSPRE.Avalonia.Data
                     GameFamilies.Plat => "pl_sound_data.sdat",
                     _ => "sound_data.sdat",
                 };
-                // The ROM's own filesystem sits one level in, named for the layout: ds-rom uses files,
-                // a DSPRE ndstool project data, and an hg-engine checkout's own tree root.
+                // The ROM's filesystem is one folder in: "files" for ds-rom, "data" for an ndstool project, "root" for an
+                // hg-engine checkout.
                 foreach (string root in new[] { "files", "data", "root" })
                 {
                     string path = Path.Combine(WorkDir, root, "data", "sound", name);

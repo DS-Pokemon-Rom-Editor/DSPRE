@@ -10,12 +10,8 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.Gl
 {
     /// <summary>
-    /// Loads every non-VOID map of a <see cref="GameMatrix"/>, resolves each cell's texture
-    /// packs through the real ROM linkage (per-cell header section when present, else a
-    /// supplied map→area lookup or a fallback area), binds map + building textures, and
-    /// stitches the whole matrix into one <see cref="NsbmdRenderModel"/> positioned by the
-    /// matrix grid. Shared by the Event editor (show all maps an event spans) and the Map
-    /// editor (full-matrix fly-around view).
+    /// Stitches a matrix's maps, with their textures and buildings, into one model for the Event and Map editors. Each cell's
+    /// textures come from its header, or from a given map to area lookup.
     /// </summary>
     public static class MatrixSceneBuilder
     {
@@ -81,9 +77,7 @@ namespace DSPRE.Avalonia.Gl
         }
 
         /// <summary>
-        /// Like <see cref="Build"/>, but stitches ALREADY-LOADED <see cref="MapFile"/> instances instead
-        /// of reading fresh copies from disk, used to re-render a scene that has in-memory, not-yet-saved
-        /// edits (e.g. the Map editor's "This header" view after painting or moving a building).
+        /// Like <see cref="Build"/>, but uses maps already in memory, so unsaved edits show.
         /// </summary>
         public static NsbmdRenderModel BuildFromLoaded(
             GameFamilies gameFamily,
@@ -132,10 +126,8 @@ namespace DSPRE.Avalonia.Gl
             return cells.Count > 0 ? NsbmdGeometry.BuildMatrixScene(cells, mode) : null;
         }
 
-        /// <summary>Binds textures + building models for one already-loaded map and packs it into
-        /// stitchable cell geometry. Mutates the map's building NSBMD/material bindings in place
-        /// (same as the rest of this class), so callers that keep the <see cref="MapFile"/> around for
-        /// editing (rather than throwing it away after one render) see it come back textured too.</summary>
+        /// <summary>Binds one loaded map's textures and buildings in place and packs it as a cell, so a map kept for editing
+        /// stays textured.</summary>
         private static NsbmdGeometry.MatrixCellGeometry BuildCellGeometry(MapFile map, byte areaId,
             GameFamilies gameFamily, int cellX, int cellY, float altitudeY,
             string mapTexDir, string extBldDir, string intBldDir, string bldTexDir,

@@ -31,13 +31,13 @@ namespace DSPRE.HgEngine
         /// <summary>Why the rolls can't be edited in this checkout, or null.</summary>
         public static string WhyNot()
         {
-            if (!HgEngineProject.IsActive) return "No hg-engine checkout is open.";
+            if (!HgEngineProject.IsActive) return "No hg-engine checkout is linked.";
             if (!File.Exists(FullPath)) return $"{RelPath} isn't in the checkout.";
             HgEnginePatchList hooks = HgEnginePatchList.ReadAll().FirstOrDefault(l => l.Kind == HgEnginePatchKind.Hook);
             List<HgEnginePatchEntry> wrong = hooks?.Entries.Where(e => e.Parsed && e.Symbol.StartsWith("EncounterSlot_WildMonSlotRoll_") && e.OverlayNumber != 2).ToList();
             if (wrong != null && wrong.Count > 0)
-                return $"The checkout's hooks list sends {wrong.Count} slot rolls to arm9 rather than overlay 2, where the game's rolls are, "
-                     + "so the odds in encounter_check.c are never used. Change those hooks to 0002 in hg-engine Patches first.";
+                return $"The checkout's hooks list sends {wrong.Count} slot rolls to arm9 instead of overlay 2, where the game rolls them, "
+                     + "so the odds in encounter_check.c are never used. Change those hooks to 0002 in hg-engine patches first.";
             return TryLoad(out _, out string error) ? null : error;
         }
 

@@ -9,10 +9,8 @@ using System.Threading.Tasks;
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
     /// <summary>
-    /// Guided front end for the sprite editor's existing import actions: asks what to change and
-    /// which pose(s)/palette(s), then calls the same ImportSprite/ImportNormalPalette/ImportShinyPalette
-    /// methods the individual buttons already use, so file-picking and palette-mismatch prompts still
-    /// happen exactly the way they already do.
+    /// A guided front end for the sprite editor's imports. It calls the same methods as the buttons, so file
+    /// picking and palette prompts work as they do there.
     /// </summary>
     public class SpriteImportWizardViewModel : INotifyPropertyChanged
     {
@@ -21,7 +19,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
         { if (EqualityComparer<T>.Default.Equals(f, v)) return false; f = v; OnPropertyChanged(n); return true; }
 
-        public static readonly string[] AllPoses = { "Female Back", "Male Back", "Female Front", "Male Front" };
+        public static readonly string[] AllPoses = { "Female back", "Male back", "Female front", "Male front" };
 
         private readonly PokemonSpriteEditorViewModel _sprite;
         private readonly Window _owner;
@@ -38,7 +36,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             GenderGapActive = sprite.CanAddOppositeGenderSprites || sprite.IsAlternateForms;
             ExistingGender = sprite.IsAlternateForms ? "Male" : sprite.ExistingGenderName;
             AvailableRefPoses = GenderGapActive
-                ? new[] { ExistingGender + " Back", ExistingGender + " Front" }
+                ? new[] { ExistingGender + " back", ExistingGender + " front" }
                 : AllPoses;
             RefPose = AvailableRefPoses[AvailableRefPoses.Length > 2 ? 2 : 0];
         }
@@ -99,7 +97,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
         }
 
-        public string RunButtonText => Mode switch { "palette" => "Import Palette", "sheet" => "Import Sheet", _ => "Import Artwork" };
+        public string RunButtonText => Mode switch { "palette" => "Import palette", "sheet" => "Import sheet", _ => "Import artwork" };
 
         public List<string> ComputePoseList()
         {

@@ -42,7 +42,7 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>Adds one map's tile kinds, which say what a tile is rather than whether you can cross it.</summary>
+        /// <summary>Adds one map's tile kinds, which say what a tile is, not whether you can cross it.</summary>
         public void AddTypes(int cellX, int cellY, byte[,] types)
         {
             if (types != null) _types[(cellX, cellY)] = types;

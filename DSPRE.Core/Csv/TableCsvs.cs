@@ -167,7 +167,7 @@ namespace DSPRE.Csv
                 if (!_palettesKnown) c.Warn(Palette, "Palettes can't be changed: a machine has no item row.");
                 else if (ok &= c.Number(Palette, 0, ushort.MaxValue, out palette))
                 {
-                    if (!_isDiscPalette(palette)) c.Warn(Palette, $"Palette {palette} is not one of the type colours.");
+                    if (!_isDiscPalette(palette)) c.Warn(Palette, $"Palette {palette} isn't one of the type colours.");
                 }
             }
             if (ok) c.Record.Value = new Entry(machine, move, _palettesKnown ? palette : _paletteNow[machine]);

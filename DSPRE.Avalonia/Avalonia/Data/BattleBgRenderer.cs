@@ -41,7 +41,7 @@ namespace DSPRE.Avalonia.Data
         };
         public const int TradePokemonMapCount = 4;
 
-        /// <summary>Which files in the archive make up one backdrop. </summary>
+        /// <summary>Which files in the archive make up one backdrop.</summary>
         public static (int Drawing, int Tilemap, int PaletteDay) BackdropFiles(int bgId)
             => (BackdropChr0 + bgId, BackdropScr, BackdropPal0 + bgId * 3);
 
@@ -53,8 +53,7 @@ namespace DSPRE.Avalonia.Data
             byte[] chr = Inflate(_narc.Get(BackdropChr0 + bgId));
             byte[] pal = Inflate(_narc.Get(BackdropPal0 + bgId * 3 + tz));
             byte[] scr = Inflate(_narc.Get(BackdropScr));
-            // Guard against a wrong palette index quietly reading non-palette bytes (e.g. another NSCR) as
-            // colours, which renders as garbled noise instead of failing; fall back to placeholder art instead.
+            // A wrong palette index would read other bytes as colours and draw noise, so placeholder art is used.
             if (chr == null || pal == null || scr == null || NitroBgCodec.Find(pal, "TTLP", 0) < 0) return null;
             try { return Composite(chr, pal, scr); } catch (Exception ex) { AppLogger.WarnOnce("BattleBgRenderer.BuildBackdrop", ex); return null; }
         }
@@ -89,9 +88,7 @@ namespace DSPRE.Avalonia.Data
             NitroBgCodec.BgImage c = NitroBgCodec.Composite(chr, pal, scr);
             byte[] rgba = c.Rgba; int w = c.Width, h = c.Height;
 
-            // Detect the vertical repeat period: a seamless-scroll BG stores N identical bands stacked (Surf = 2),
-            // so an effect SWEEP should move only ONE band, else it visibly runs N times. period = h/2 if the top
-            // and bottom halves are pixel-identical, else h.
+            // Scrolling backgrounds stack identical bands (Surf has two), so a sweep moves one band: h/2 when the halves match.
             int period = h;
             if ((h & 1) == 0)
             {

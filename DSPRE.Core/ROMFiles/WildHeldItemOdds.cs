@@ -25,7 +25,7 @@ namespace DSPRE.ROMFiles
 
         public WildHeldItemOdds(byte[] data)
         {
-            if (data == null || data.Length < Size) throw new ArgumentException($"The held item odds are {Size} bytes.");
+            if (data == null || data.Length < Size) throw new ArgumentException($"The held item odds need {Size} bytes.");
             Normal.NoneBelow = BitConverter.ToUInt16(data, 0);
             Normal.RareFrom = BitConverter.ToUInt16(data, 2);
             CompoundEyes.NoneBelow = BitConverter.ToUInt16(data, 4);

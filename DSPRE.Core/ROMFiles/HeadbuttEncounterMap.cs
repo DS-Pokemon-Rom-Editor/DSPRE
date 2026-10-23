@@ -1,7 +1,6 @@
 ﻿namespace DSPRE.ROMFiles
 {
-  //This class is in case a MapHeader uses the same MapFile more than once
-  //ToString is the matrix x,y and mapID
+    // A header can use one map file more than once, so each use has its own entry, shown as matrix x,y and map.
   class HeadbuttEncounterMap
   {
     public readonly int MapID;
@@ -22,7 +21,6 @@
 
     public override bool Equals(object obj)
     {
-      // If the passed object is null
       if (obj == null)
       {
         return false;

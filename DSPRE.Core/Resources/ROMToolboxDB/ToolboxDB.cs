@@ -49,11 +49,11 @@ namespace DSPRE.Resources.ROMToolboxDB
 
                 // Initialization Routines
                 // DP
-                ["initString" + "_" + RomInfo.GameFamilies.DP + "_" + RomInfo.GameLanguages.English]    = "FC B5 04 48 41 21 09 22 FF F6 D4 FC 00 20 03 21 FC BD 00 00 00 80 3C 02 00",  //Valid also for P            
-                ["initString" + "_" + RomInfo.GameFamilies.DP + "_" + RomInfo.GameLanguages.Spanish]    = "FC B5 04 48 41 21 09 22 FF F6 04 FC 00 20 03 21 FC BD 00 00 00 80 3C 02 00",  //Valid also for P            
-                ["initString" + "_" + RomInfo.GameFamilies.DP + "_" + RomInfo.GameLanguages.Italian]    = "FC B5 04 48 41 21 09 22 FF F6 64 FC 00 20 03 21 FC BD 00 00 00 80 3C 02 00",  //Valid also for P            
-                ["initString" + "_" + RomInfo.GameFamilies.DP + "_" + RomInfo.GameLanguages.French]     = "FC B5 04 48 41 21 09 22 FF F6 14 FC 00 20 03 21 FC BD 00 00 00 80 3C 02 00",  //Valid also for P            
-                ["initString" + "_" + RomInfo.GameFamilies.DP + "_" + RomInfo.GameLanguages.German]     = "FC B5 04 48 41 21 09 22 FF F6 34 FC 00 20 03 21 FC BD 00 00 00 80 3C 02 00",  //Valid also for P            
+                ["initString" + "_" + RomInfo.GameFamilies.DP + "_" + RomInfo.GameLanguages.English]    = "FC B5 04 48 41 21 09 22 FF F6 D4 FC 00 20 03 21 FC BD 00 00 00 80 3C 02 00",  // Pearl too
+                ["initString" + "_" + RomInfo.GameFamilies.DP + "_" + RomInfo.GameLanguages.Spanish]    = "FC B5 04 48 41 21 09 22 FF F6 04 FC 00 20 03 21 FC BD 00 00 00 80 3C 02 00",  // Pearl too
+                ["initString" + "_" + RomInfo.GameFamilies.DP + "_" + RomInfo.GameLanguages.Italian]    = "FC B5 04 48 41 21 09 22 FF F6 64 FC 00 20 03 21 FC BD 00 00 00 80 3C 02 00",  // Pearl too
+                ["initString" + "_" + RomInfo.GameFamilies.DP + "_" + RomInfo.GameLanguages.French]     = "FC B5 04 48 41 21 09 22 FF F6 14 FC 00 20 03 21 FC BD 00 00 00 80 3C 02 00",  // Pearl too
+                ["initString" + "_" + RomInfo.GameFamilies.DP + "_" + RomInfo.GameLanguages.German]     = "FC B5 04 48 41 21 09 22 FF F6 34 FC 00 20 03 21 FC BD 00 00 00 80 3C 02 00",  // Pearl too
 
                 // Plat
                 ["initString" + "_" + RomInfo.GameFamilies.Plat + "_" + RomInfo.GameLanguages.English]  = "FC B5 04 48 41 21 09 22 05 F7 92 FA 00 20 03 21 FC BD 00 00 00 80 3C 02 00", 
@@ -74,9 +74,9 @@ namespace DSPRE.Resources.ROMToolboxDB
             };
             public static Dictionary<string, uint> Arm9ExpansionOffsetsDB = new Dictionary<string, uint>() {
                 // Branch offsets
-                ["branchOffset" + "_" + RomInfo.GameFamilies.DP]    = 0x02000C80, //Valid also for P
+                ["branchOffset" + "_" + RomInfo.GameFamilies.DP]    = 0x02000C80, // Pearl too
                 ["branchOffset" + "_" + RomInfo.GameFamilies.Plat]  = 0x02000CB4, 
-                ["branchOffset" + "_" + RomInfo.GameFamilies.HGSS]  = 0x02000CD0, //Valid also for SS
+                ["branchOffset" + "_" + RomInfo.GameFamilies.HGSS]  = 0x02000CD0, // SoulSilver too
                 ["branchOffset" + "_" + RomInfo.GameFamilies.HGSS + "_" + RomInfo.GameLanguages.Japanese]  = 0x02000CB4, // JP HGSS is different
 
                 // DP init offsets
@@ -172,7 +172,7 @@ namespace DSPRE.Resources.ROMToolboxDB
             public static Dictionary<string, string> BDHCamCodeDB = new Dictionary<string, string>() {
                 ["branchString" + "_" + RomInfo.GameFamilies.Plat + "_" + RomInfo.GameLanguages.English] = "B9 F3 E2 F8",
                 ["branchString" + "_" + RomInfo.GameFamilies.Plat + "_" + RomInfo.GameLanguages.Spanish] = "B9 F3 AA F8",
-                ["branchString" + "_" + RomInfo.GameFamilies.HGSS] = "B6 F3 2E FA", //Also valid for SS, both ESP and ENG
+                ["branchString" + "_" + RomInfo.GameFamilies.HGSS] = "B6 F3 2E FA", // SoulSilver too, English and Spanish
 
                 ["overlayString1"] = "00 4B 18 47 41 9C 3D 02",
                 ["overlayString2"] = "00 4B 18 47 01 9C 3D 02",

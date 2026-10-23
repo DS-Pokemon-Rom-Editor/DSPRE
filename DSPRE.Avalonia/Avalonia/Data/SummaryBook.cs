@@ -187,8 +187,7 @@ namespace DSPRE.Avalonia.Data
 
         // ── pictures ──────────────────────────────────────────────────────────────────────────────
 
-        // Type and move category icons, which the summary screen borrows from the battle graphics, and the "Lv" glyph
-        // its level is printed after.
+        // Type and move category icons, borrowed from the battle graphics, and the "Lv" glyph before the level.
         private readonly Dictionary<string, ScreenPicture> _pictures = new();
 
         private ScreenPicture Picture(ScreenSprite sprite)
@@ -214,8 +213,8 @@ namespace DSPRE.Avalonia.Data
             return picture;
         }
 
-        // The "Lv" glyph: two tiles from tile 11 of the font archive's special characters (Platinum file 4, HGSS file 5),
-        // whose pixel values 1 and 2 the game turns into ink 1 and shadow 2 of the box's colour row.
+        // The "Lv" glyph: two tiles from tile 11 of the font archive's special characters (Platinum file 4, HGSS file 5). The
+        // game draws its pixel values 1 and 2 as the ink and shadow of the box's colour row.
         private ScreenPicture LevelGlyph(int row)
         {
             byte[] chr = NitroBgCodec.Inflate(new ScriptNarc(DirNames.Fonts).Get(_hgss ? 5 : 4));
@@ -297,7 +296,7 @@ namespace DSPRE.Avalonia.Data
                 };
                 page.Side(side).Texts.Add(new ScreenText
                 {
-                    Kind = p.Kind, Line = p.Line, Bank = p.Bank, Args = p.Args, Font = p.Font,
+                    Kind = p.Kind, Line = p.Line, Bank = p.Bank, Args = p.Args, Font = w.Font >= 0 ? SummaryFontPatch.Fonts[w.Font].Entry : p.Font,
                     Bg = bg, X = w.X * 8 + p.X, Y = w.Y * 8 + p.Y, Align = p.At, Span = p.Span, Row = w.Palette, Ink = ink, Shadow = shadow,
                     WinX = w.X, WinY = w.Y, WinW = w.Width, WinH = w.Height, When = box.When,
                 });
@@ -733,12 +732,25 @@ namespace DSPRE.Avalonia.Data
                 items.Add(new ScreenLayoutItem
                 {
                     Name = box.Name, Side = Where(w.Layer).Side, X = w.X, Y = w.Y, Width = w.Width, Height = w.Height,
-                    CanResize = true, Key = (box.Table, box.Index),
+                    CanResize = true, Key = (box.Table, box.Index), Font = !_now.HasFonts ? -1 : w.Font >= 0 ? w.Font : GameFont(box),
                 });
             }
             if (spec.Hp) items.Add(BarItem("HP bar", _now.Hp));
             if (spec.Exp) items.Add(BarItem("EXP bar", _now.Exp));
             return items;
+        }
+
+        // A box uses the font of its first print; fonts 0 to 4 are archive entries 0 to 4.
+        private static int GameFont(Box box) => box.Prints.Length > 0 ? box.Prints[0].Font : 0;
+
+        private (byte[] Bytes, string Error) SetFont(ScreenLayoutItem item, int font)
+        {
+            if (!_now.HasFonts) return (null, "Apply the summary screen fonts patch first.");
+            if (font < 0 || font >= SummaryFontPatch.Fonts.Length || item.Key is not ValueTuple<string, int> key) return (null, null);
+            byte[] original = SummaryScreenLayout.ReadBytes();
+            SummaryScreenLayout next = SummaryScreenLayout.FromBytes(_now.ToBytes(original));
+            next.Tables.First(t => t.Page == key.Item1).Windows[key.Item2].Font = font;
+            return (next.ToBytes(original), null);
         }
 
         private static ScreenLayoutItem BarItem(string name, SummaryScreenLayout.Bar bar) => new()
@@ -795,6 +807,12 @@ namespace DSPRE.Avalonia.Data
 
             public override (byte[] Bytes, string Error) Place(ScreenLayoutItem item, int x, int y, int width, int height) =>
                 _book.Place(item, x, y, width, height);
+
+            public override (byte[] Bytes, string Error) SetFont(ScreenLayoutItem item, int font) => _book.SetFont(item, font);
+
+            public override IReadOnlyList<string> FontNames => SummaryFontPatch.Fonts.Select(f => f.Name).ToList();
+
+            public override bool OffersFontPatch => _book._now?.HasFonts == false && !IsHGE && SummaryFontPatch.SupportsCurrentRom;
         }
     }
 }

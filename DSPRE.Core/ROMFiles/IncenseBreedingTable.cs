@@ -20,7 +20,7 @@ namespace DSPRE.ROMFiles
 
         public IncenseBreedingTable(byte[] data)
         {
-            if (data == null || data.Length < Size) throw new ArgumentException($"The incense table is {Size} bytes.");
+            if (data == null || data.Length < Size) throw new ArgumentException($"The incense table needs {Size} bytes.");
             for (int r = 0; r < RowCount; r++)
                 Rows.Add(new Row
                 {

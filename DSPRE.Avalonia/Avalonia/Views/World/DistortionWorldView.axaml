@@ -180,7 +180,7 @@
                 <DataGridTextColumn Header="Sprite angle" Binding="{Binding SpriteRotationAngle}" Width="95"/>
                 <DataGridTextColumn Header="Steps" Binding="{Binding MovementSteps}" Width="70"/>
                 <DataGridTextColumn Header="Ends facing" Binding="{Binding FinalFacingDirection}" Width="95"/>
-                <DataGridTextColumn Header="Lands on kind" Binding="{Binding TargetKind}" Width="105"/>
+                <DataGridTextColumn Header="Landing kind" Binding="{Binding TargetKind}" Width="105"/>
                 <DataGridTextColumn Header="Lands on" Binding="{Binding TargetPlatformIndex}" Width="*"/>
               </DataGrid.Columns>
             </DataGrid>

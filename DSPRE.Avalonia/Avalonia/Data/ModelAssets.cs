@@ -43,7 +43,7 @@ namespace DSPRE.Avalonia.Data
             /// <summary>True for the models inside buildings. </summary>
             public bool Indoor { get; init; }
 
-            /// <summary>The archive mixes 3D with flat pictures, which the graphics browser lists; only the 3D shows here.</summary>
+            /// <summary>The archive mixes 3D with flat pictures, which All graphics lists; only the 3D shows here.</summary>
             public bool OnlyThreeD { get; init; }
         }
 
@@ -110,7 +110,7 @@ namespace DSPRE.Avalonia.Data
             Kind.VisibilityAnimation => "A list of which parts of a model to show or hide when.",
             Kind.MaterialAnimation => "Changes to how a model's surface is lit or coloured over time.",
             Kind.Empty => "This entry is empty.",
-            _ => "This entry is not 3D data.",
+            _ => "This entry isn't 3D data.",
         };
 
         /// <summary>A short name for a kind, for use inside a sentence. Describe says what it is; this
@@ -125,7 +125,7 @@ namespace DSPRE.Avalonia.Data
             Kind.VisibilityAnimation => "a list of parts to show and hide",
             Kind.MaterialAnimation => "changes to a surface over time",
             Kind.Empty => "nothing",
-            _ => "something that is not 3D data",
+            _ => "something that isn't 3D data",
         };
 
         /// <summary>A kind as a label for the details pane.</summary>
@@ -158,8 +158,8 @@ namespace DSPRE.Avalonia.Data
         {
             ScriptNarc narc = new ScriptNarc(a.Dir);
             if (!narc.Available)
-                return new Options { Kind = Kind.Empty, ShowNote = "This game does not have this archive.",
-                                     SaveNote = "This game does not have this archive." };
+                return new Options { Kind = Kind.Empty, ShowNote = "This game doesn't have this archive.",
+                                     SaveNote = "This game doesn't have this archive." };
 
             byte[] b = narc.Get(index);
             Kind kind = Identify(b);
@@ -170,7 +170,7 @@ namespace DSPRE.Avalonia.Data
                 case Kind.Model:
                     o.CanShow = true;
                     o.CanSaveModel = true;
-                    o.SaveNote = "Animations are separate entries and are not included";
+                    o.SaveNote = "Animations are separate entries and aren't included";
                     break;
 
                 case Kind.TextureBundle:
@@ -461,8 +461,7 @@ namespace DSPRE.Avalonia.Data
             return null;
         }
 
-        /// <summary>The name of the first picture in a set, read with the real reader rather than by
-        /// hunting for readable bytes, which found rubbish in half the files.</summary>
+        /// <summary>The name of a set's first texture, read with the texture reader.</summary>
         private static string FirstTextureName(byte[] file)
         {
             try
@@ -474,8 +473,8 @@ namespace DSPRE.Avalonia.Data
                 if (string.IsNullOrEmpty(name)) return null;
                 foreach (char c in name) if (c < 32 || c > 126) return null;
 
-                // The pictures in a set are numbered off the set's name, as babyboy1.1, babyboy1.2 and so
-                // on, so the number belongs to the picture rather than to the set.
+                // A set's textures are numbered off its name, like babyboy1.1 and babyboy1.2, so the number belongs to the
+                // texture, not the set.
                 int dot = name.LastIndexOf('.');
                 if (dot > 0 && dot < name.Length - 1 && name.Skip(dot + 1).All(char.IsDigit))
                     name = name.Substring(0, dot);
@@ -485,17 +484,8 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>
-        /// How well a movement's own name says it belongs to a model: 2 when the two names are the same,
-        /// 1 when one starts with the other, 0 when they have nothing to do with each other.
-        ///
-        /// The names really do line up. Across HeartGold's 340 building models and 273 movements, 85 of
-        /// the movements carry a name at all; 8 of those are exactly a model's name and 46 share a start
-        /// with one, so this finds real pairs rather than coincidences.
-        /// </summary>
-        /// <summary>
-        /// A name cut down to the thing it names: lower case, without the game's own prefix, and with
-        /// anything after the first underscore dropped. So pl_manene and manene_aruku both come out as
-        /// manene, which is what lets a clip be matched to the model it was written for.
+        /// A name cut down to the thing it names: lower case, no game prefix, nothing after the first underscore. So
+        /// pl_manene and manene_aruku both become manene.
         /// </summary>
         public static string BaseName(string name)
         {
@@ -595,8 +585,7 @@ namespace DSPRE.Avalonia.Data
             return narc.Available ? narc.Count : 0;
         }
 
-        /// <summary>One movement out of the archive these models take theirs from, or the one filed next
-        /// to the model when it keeps its own.</summary>
+        /// <summary>One movement from the archive this kind of model uses, or the movement filed next to the model.</summary>
         public static JointAnimation AnimationFor(Archive a, int index, int chosen)
         {
             byte[] raw = null;
@@ -633,9 +622,8 @@ namespace DSPRE.Avalonia.Data
         /// What a mesh from a 3D program cannot do, said once so every place that needs it says the same.
         /// </summary>
         public const string CanConvertAMesh =
-            "An OBJ is turned into a model as it goes in: its corners, the way they face, where they " + 
-            "land on their pictures, and the colours and pictures its materials name. A finished model file " + 
-            "goes in as it is.";
+            "An OBJ is converted to a model on import: its vertices, normals, texture coordinates, and the colours " +
+            "and textures its materials name. A finished model file goes in unchanged.";
 
         /// <summary>Puts a file back into an archive, in place of one entry.</summary>
         /// <summary>
@@ -646,11 +634,11 @@ namespace DSPRE.Avalonia.Data
         {
             note = null;
             ScriptNarc narc = new ScriptNarc(a.Dir);
-            if (!narc.Available) return "This game does not have this archive.";
+            if (!narc.Available) return "This game doesn't have this archive.";
             byte[] there = narc.Get(index);
             if (there == null) return "There is no entry here to put a model in place of.";
             if (Identify(there) != Kind.Model)
-                return $"This entry holds {ShortName(Identify(there))}, not a model, so a mesh does not "
+                return $"This entry holds {ShortName(Identify(there))}, not a model, so a mesh doesn't "
                      + "belong here. Pick an entry that holds a model.";
 
             ObjMesh mesh = ObjMesh.Read(path, out string whynot);
@@ -669,7 +657,7 @@ namespace DSPRE.Avalonia.Data
                     continue;
                 }
                 if (!AnyPng.TryReadRgba(png, out byte[] rgba, out int w, out int h, out string pngWhy))
-                    return $"{Path.GetFileName(m.TexturePath)} could not be read: {pngWhy}";
+                    return $"{Path.GetFileName(m.TexturePath)} couldn't be read: {pngWhy}";
                 DsTexture t = DsTexture.From(rgba, w, h, m.Name);
                 if (t.Whynot != null) return t.Whynot;
                 textures.Add(t);
@@ -680,14 +668,14 @@ namespace DSPRE.Avalonia.Data
 
             narc.Put(index, made.Bytes);
             note = made.Summary + (made.Notes.Count > 0 ? " " + string.Join(" ", made.Notes) : "")
-                 + (unread.Count > 0 ? " Left untextured, could not read: " + string.Join(", ", unread) + "." : "");
+                 + (unread.Count > 0 ? " Left untextured, couldn't read: " + string.Join(", ", unread) + "." : "");
             return null;
         }
 
         public static string ImportRaw(Archive a, int index, string path)
         {
             ScriptNarc narc = new ScriptNarc(a.Dir);
-            if (!narc.Available) return "This game does not have this archive.";
+            if (!narc.Available) return "This game doesn't have this archive.";
 
             byte[] there = narc.Get(index);
             if (there == null) return "There is no entry here to put a file in place of.";
@@ -699,14 +687,14 @@ namespace DSPRE.Avalonia.Data
 
             byte[] file;
             try { file = File.ReadAllBytes(path); }
-            catch (Exception ex) { return "That file could not be read: " + ex.Message; }
+            catch (Exception ex) { return "That file couldn't be read: " + ex.Message; }
             if (file.Length < 4) return "That file is too short to be 3D data.";
 
             Kind was = Identify(there);
             Kind now = Identify(file);
 
             if (now == Kind.NotThreeD || now == Kind.Empty)
-                return "That file is not 3D data. " + CanConvertAMesh;
+                return "That file isn't 3D data. " + CanConvertAMesh;
 
             if (HoldsTextureSets(a) && now != Kind.TextureBundle)
                 return $"Only a texture file (BTX0) goes in this archive, and that file holds {ShortName(now)}.";
@@ -719,13 +707,13 @@ namespace DSPRE.Avalonia.Data
             if (a.Dir == DirNames.OWSprites)
             {
                 if (!DSPRE.LibNDSFormats.Btx0Structure.TryInspect(there, out Btx0Structure target, out string targetWhy))
-                    return "This entry could not be read as an overworld texture: " + targetWhy;
+                    return "This entry couldn't be read as an overworld texture: " + targetWhy;
                 if (!DSPRE.LibNDSFormats.Btx0Structure.TryInspect(file, out Btx0Structure source, out string sourceWhy))
-                    return "That file could not be read as an overworld texture: " + sourceWhy;
+                    return "That file couldn't be read as an overworld texture: " + sourceWhy;
                 if (target.ProfileDifference(source) is string why)
                     return $"That file can't go in overworld texture {index}: {why}, and the game would draw it wrong.";
                 if (DSPRE.LibNDSFormats.BTX0.ReadRaw(file, 0) == null)
-                    return "That file isn't a texture DSPRE can write (BTX0, 16-color format).";
+                    return "That file isn't a texture DSPRE can write (BTX0, 16 colours).";
             }
 
             narc.Put(index, file);
@@ -751,22 +739,22 @@ namespace DSPRE.Avalonia.Data
         public static string CannotImportBecause(Archive a, int index)
         {
             ScriptNarc narc = new ScriptNarc(a.Dir);
-            if (!narc.Available) return "This game does not have this archive.";
+            if (!narc.Available) return "This game doesn't have this archive.";
             byte[] there = narc.Get(index);
             // A texture archive says what belongs in it, so an empty or stand-in entry can still be filled.
             if (HoldsTextureSets(a) && Identify(there) == Kind.Empty) return null;
             if (there == null || there.Length == 0)
-                return "This entry is empty, so there is nothing to say what belongs here.";
+                return "This entry is empty, so DSPRE can't tell what belongs here.";
             Kind kind = Identify(there);
             if (kind == Kind.NotThreeD)
-                return "This entry is not 3D data, so this window does not know what could go in it.";
+                return "This entry isn't 3D data, so DSPRE can't tell what could go in it.";
             return null;
         }
 
         public static string SaveRaw(Archive a, int index, string path)
         {
             ScriptNarc narc = new ScriptNarc(a.Dir);
-            if (!narc.Available) return "This game does not have this archive.";
+            if (!narc.Available) return "This game doesn't have this archive.";
             byte[] b = narc.Get(index);
             if (b == null || b.Length == 0) return "This entry is empty.";
             PlainFiles.WriteBytes(path, b);

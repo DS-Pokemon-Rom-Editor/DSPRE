@@ -174,7 +174,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { failed = " " + ex.Message; }
             if (failed != null)
             {
-                StatusText = "The item script file could not be saved." + failed;
+                StatusText = "The item script file couldn't be saved." + failed;
                 return;
             }
             _history.Reset(_session.Take());

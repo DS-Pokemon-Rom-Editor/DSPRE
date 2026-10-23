@@ -5,7 +5,7 @@ using System.IO;
 namespace DSPRE
 {
     /// <summary>
-    /// Cross-platform "show me this file" helpers (extracted from the WinForms <c>Helpers</c>).
+    /// Opens a file or shows it in the system file manager.
     /// Windows opens Explorer; Linux falls back to xdg-open on the containing folder.
     /// </summary>
     public static class SystemShell
@@ -30,7 +30,7 @@ namespace DSPRE
             }
             catch (Exception ex)
             {
-                AppLogger.Error($"Failed to reveal '{path}' in the file manager: {ex.Message}");
+                AppLogger.Error($"Couldn't reveal '{path}' in the file manager: {ex.Message}");
             }
         }
 
@@ -55,7 +55,7 @@ namespace DSPRE
             }
             catch (Exception ex)
             {
-                AppLogger.Error($"Failed to open '{path}' with default app: {ex.Message}");
+                AppLogger.Error($"Couldn't open '{path}' with default app: {ex.Message}");
                 AppMessages.Error($"Unable to open file with the default application:\n{ex.Message}", "Error");
             }
         }

@@ -15,7 +15,7 @@ namespace DSPRE.HgEngine
         /// <summary>Built from another domain's source, so there is nothing here to edit.</summary>
         Generated,
 
-        /// <summary>Built from images or binaries, which want the source-backed graphics path.</summary>
+        /// <summary>Built from images or binaries, edited through the source graphics path.</summary>
         Asset,
     }
 
@@ -86,14 +86,14 @@ namespace DSPRE.HgEngine
             ("FOOTPRINTS",    "footprints",              HgEngineOwnership.Asset),
             ("BAGGFX",        "bag graphics",            HgEngineOwnership.Asset),
             ("OVERWORLDS",    "overworld sprites",       HgEngineOwnership.Asset),
-            ("DEXGFX",        "Pokedex graphics",        HgEngineOwnership.Asset),
+            ("DEXGFX",        "Pokédex graphics",        HgEngineOwnership.Asset),
             ("BATTLEGFX",     "battle graphics",         HgEngineOwnership.Asset),
             ("OTHERPOKE",     "alternate-form sprites",  HgEngineOwnership.Asset),
             ("FONT",          "fonts",                   HgEngineOwnership.Asset),
             ("TEXTBOX",       "message box graphics",    HgEngineOwnership.Asset),
             ("BALL_SPA",      "ball particles",          HgEngineOwnership.Asset),
-            ("PW_POKEGRA",    "Pokewalker sprites",      HgEngineOwnership.Asset),
-            ("PW_POKEICON",   "Pokewalker icons",        HgEngineOwnership.Asset),
+            ("PW_POKEGRA",    "Pokéwalker sprites",      HgEngineOwnership.Asset),
+            ("PW_POKEICON",   "Pokéwalker icons",        HgEngineOwnership.Asset),
             ("TRAINER_GFX",   "trainer sprites",         HgEngineOwnership.Asset),
             ("SDAT",          "sound",                   HgEngineOwnership.Asset),
         };
@@ -145,7 +145,7 @@ namespace DSPRE.HgEngine
             return ArchiveOfPath(paths.packedDir);
         }
 
-        /// <summary>The same, for anything resolved by path rather than through the directory table.</summary>
+        /// <summary>The same, for anything resolved by path instead of the directory table.</summary>
         public static string ArchiveOfPath(string packedPath)
         {
             string packed = (packedPath ?? "").Replace('\\', '/');
@@ -179,8 +179,8 @@ namespace DSPRE.HgEngine
             string from = rule.Ownership == HgEngineOwnership.Generated
                 ? "its own data"
                 : rule.SourceDirRelPath ?? "its own source";
-            return $"hg-engine builds the {rule.Label} from {from} on every build, so anything changed " +
-                "here is overwritten the next time you compile.";
+            return $"hg-engine rebuilds the {rule.Label} from {from} every time you compile, so changes made here " +
+                "would be lost.";
         }
 
         /// <summary>Every file of one archive, empty when hg-engine does not build it.</summary>
@@ -370,7 +370,7 @@ namespace DSPRE.HgEngine
             return into;
         }
 
-        /// <summary>Archives the msgdata rule encodes from build output rather than from its source directory.</summary>
+        /// <summary>Archives the msgdata rule encodes from build output, not its source directory.</summary>
         internal static IEnumerable<int> GeneratedTextArchives(string fragment)
         {
             foreach (Match m in Regex.Matches(fragment ?? "",

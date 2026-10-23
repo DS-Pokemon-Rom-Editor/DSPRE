@@ -29,17 +29,16 @@ namespace DSPRE.ROMFiles
     public string Problem()
     {
       if (VariableToWatch < FirstVariable || VariableToWatch > LastVariable)
-        return $"watches {FormatValue(VariableToWatch)}, which is not a save variable ({FormatValue(FirstVariable)} to {FormatValue(LastVariable)})";
+        return $"watches {FormatValue(VariableToWatch)}, which isn't a save variable ({FormatValue(FirstVariable)} to {FormatValue(LastVariable)})";
       if (ExpectedValue >= FirstScriptLocal)
         return $"expects {FormatValue(ExpectedValue)}, which the game reads as script memory and freezes the map";
       if (ExpectedValue > LastVariable)
-        return $"expects {FormatValue(ExpectedValue)}, which the game reads as a variable it does not have";
+        return $"expects {FormatValue(ExpectedValue)}, which the game reads as a variable it doesn't have";
       return null;
     }
 
     public override bool Equals(object obj)
     {
-      // If the passed object is null
       if (obj == null)
       {
         return false;

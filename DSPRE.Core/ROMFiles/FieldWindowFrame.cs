@@ -225,8 +225,8 @@ namespace DSPRE.ROMFiles
             return tiles;
         }
 
-        // The first sixteen colours, which is the half a palette window.c loads. Colour 0 is the one the
-        // hardware leaves see-through on a background layer, which is what rounds the corners off.
+        // The first 16 colours, the half window.c loads. Colour 0 is see-through on a background layer, which rounds
+        // the corners.
         private static uint[] ReadColours(byte[] nclr)
         {
             ushort[] raw = NitroBgCodec.ReadColours(nclr);

@@ -22,7 +22,6 @@ namespace DSPRE.Avalonia.Views.Trainers
             DataContext = vm;
         }
 
-        // ── Toolbar ──────────────────────────────────────────────────────
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveChanges();
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
@@ -38,7 +37,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             bool sets = SetsTabActive;
             IStorageFile file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = sets ? "Export Battle Tower Pokémon Sets" : "Export Battle Tower Trainers",
+                Title = sets ? "Export Battle Tower Pokémon sets" : "Export Battle Tower trainers",
                 DefaultExtension = "bin",
                 SuggestedFileName = sets ? "battle_tower_sets.bin" : "battle_tower_trainers.bin",
                 FileTypeChoices = new List<FilePickerFileType> { new FilePickerFileType("Binary file") { Patterns = new[] { "*.bin" } } }
@@ -55,7 +54,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             bool sets = SetsTabActive;
             IReadOnlyList<IStorageFile> files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                Title = sets ? "Import Battle Tower Pokémon Sets" : "Import Battle Tower Trainers",
+                Title = sets ? "Import Battle Tower Pokémon sets" : "Import Battle Tower trainers",
                 AllowMultiple = false,
                 FileTypeFilter = new List<FilePickerFileType> { new FilePickerFileType("Binary file") { Patterns = new[] { "*.bin" } } }
             });
@@ -66,13 +65,11 @@ namespace DSPRE.Avalonia.Views.Trainers
 
         private void Locate_Click(object sender, RoutedEventArgs e) => VM?.LocateActive();
 
-        // ── Trainers tab ─────────────────────────────────────────────────
         private void NewTrainer_Click(object sender, RoutedEventArgs e) => VM?.NewTrainer();
         private void AddSet_Click(object sender, RoutedEventArgs e) => VM?.AddSetToTrainer();
         private void RemoveSet_Click(object sender, RoutedEventArgs e) => VM?.RemoveSetFromTrainer();
         private void SetIdList_DoubleTapped(object sender, TappedEventArgs e) => VM?.NavigateToSetId();
 
-        // ── Sets tab ─────────────────────────────────────────────────────
         private void NewSet_Click(object sender, RoutedEventArgs e) => VM?.NewSet();
     }
 }

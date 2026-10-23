@@ -2,9 +2,6 @@ using System.Collections.Generic;
 
 namespace DSPRE.Resources
 {
-    /// <summary>
-    /// Represents metadata for a script command loaded from JSON database
-    /// </summary>
     public class ScriptCommandInfo
     {
         public ushort CommandId { get; set; }
@@ -36,9 +33,6 @@ namespace DSPRE.Resources
         public bool HasConditionalParameters => ParameterSizes != null && ParameterSizes.Length > 0 && ParameterSizes[0] == 0xFF;
     }
 
-    /// <summary>
-    /// Represents metadata for a movement/action command
-    /// </summary>
     public class MovementCommandInfo
     {
         public ushort CommandId { get; set; }

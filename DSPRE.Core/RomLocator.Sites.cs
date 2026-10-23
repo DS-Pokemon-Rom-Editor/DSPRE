@@ -551,6 +551,33 @@ namespace DSPRE
             new SummaryBarSite(0x8A1F4, 0x8A1D6, 7, 6, 0xE03F),
             302, 722, -1);
 
+        // pokeheartgold asm/unk_0208C3E4.s and unk_02088288.s.
+        private static readonly SummaryFontSites HgssSummaryFonts = new(
+            new uint[]
+            {
+                0x0208C5A6, 0x0208C698, 0x0208C7EC, 0x0208C926, 0x0208C966, 0x0208C994, 0x0208CB24, 0x0208CB50, 0x0208CE56, 0x0208CE90,
+                0x0208CEC0, 0x0208CFE4, 0x0208D006, 0x0208D028, 0x0208D04A, 0x0208D15A, 0x0208D3F0, 0x0208D5AA, 0x0208D5DA, 0x0208D60A,
+                0x0208D63A, 0x0208D66A, 0x0208D7A0, 0x0208D8F0, 0x0208D920, 0x0208D98C, 0x0208DCB2, 0x0208DD6A, 0x0208DE26,
+            },
+            new uint[] { 0x0208C79C, 0x0208C7BE },
+            new uint[] { 0x0208C8F0, 0x0208C944 },
+            new uint[] { 0x0208D96A },
+            0x0208CE36,
+            new uint[] { 0x0208CE6E, 0x0208CEA0 },
+            0x02088386, 0x020885AC);
+
+        /// <summary>The summary screen's font calls, measured on the English dumps.</summary>
+        public static SummaryFontSites SummaryFontSitesIn(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.HeartGold or GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.English when revision == 10 => HgssSummaryFonts,   // Europe
+                GameLanguages.English => HgssSummaryFonts,   // US, and any English revision not listed
+                _ => null,
+            },
+            _ => null,
+        };
+
         /// <summary>The summary screen's window tables and bars (arm9 file offsets), measured on the English dumps.</summary>
         public static SummaryScreenSites SummaryScreenSitesIn(GameVersions game, GameLanguages language, int revision) => game switch
         {

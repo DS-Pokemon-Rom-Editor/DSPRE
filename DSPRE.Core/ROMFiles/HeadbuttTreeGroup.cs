@@ -38,9 +38,9 @@ namespace DSPRE.ROMFiles
         {
             if (Trees.Count == 0)
             {
-                return "Empty Tree Group";
+                return "Empty tree group";
             }
-            return $"Tree Group at {Trees[0].GlobalX}, {Trees[0].GlobalY}";
+            return $"Tree group at {Trees[0].GlobalX}, {Trees[0].GlobalY}";
         }
     }
 }

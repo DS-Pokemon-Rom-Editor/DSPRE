@@ -91,7 +91,7 @@ namespace DSPRE.Avalonia.Data
             byte[] file = File.Exists(png) ? File.ReadAllBytes(png) : null;
             if (file == null || file.Length == 0 || !IndexedPng.TryRead(file, out byte[] indices, out uint[] old, out int w, out int h)) return;
             (byte r, byte g, byte b)[] stored = NitroBgCodec.ReadPalette(GraphicAssets.Unsqueeze(nclr), out int count);
-            // Only colours this save changed go in: the build leaves values past the drawing's own that the PNG doesn't hold.
+            // Only colours this save changed go in; the build keeps the colours past the PNG's end.
             (byte r, byte g, byte b)[] was = previous == null ? null : NitroBgCodec.ReadPalette(GraphicAssets.Unsqueeze(previous), out _);
             int depth = file.Length > 24 ? file[24] : 8;
             int length = Math.Max(old.Length, Math.Min(count, 1 << Math.Min(depth, 8)));

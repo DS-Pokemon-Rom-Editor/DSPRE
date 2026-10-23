@@ -65,7 +65,7 @@ namespace DSPRE.ROMFiles
             HashSet<uint> distinct = new HashSet<uint>();
             foreach (GreatMarshEncounter e in Encounters) distinct.Add(e.Species | ((uint)e.Padding << 16));
             return distinct.Count < 3
-                ? "The pool needs at least 3 different species, or the game freezes picking a new daily Pokemon."
+                ? "The pool needs at least 3 different species, or the game freezes picking the daily Pokémon."
                 : null;
         }
 
@@ -89,7 +89,7 @@ namespace DSPRE.ROMFiles
                 string narcDir = Filesystem.EncounterExtended;
                 if (string.IsNullOrEmpty(narcDir) || !Directory.Exists(narcDir))
                 {
-                    AppMessages.Error("Trophy Garden encounter directory not found.", "Error");
+                    AppMessages.Error("Trophy Garden encounter directory not found.", "Special encounters editor");
                     return false;
                 }
 
@@ -97,13 +97,13 @@ namespace DSPRE.ROMFiles
 
                 if (showSuccessMessage)
                 {
-                    AppMessages.Info("Trophy Garden encounters saved successfully!", "Success");
+                    AppMessages.Notice("Trophy Garden encounters saved.");
                 }
                 return true;
             }
             catch (Exception ex)
             {
-                AppMessages.Error($"Error saving Trophy Garden encounters: {ex.Message}", "Error");
+                AppMessages.Error($"Couldn't save Trophy Garden encounters: {ex.Message}", "Special encounters editor");
                 return false;
             }
         }
@@ -116,13 +116,13 @@ namespace DSPRE.ROMFiles
 
                 if (showSuccessMessage)
                 {
-                    AppMessages.Info("Trophy Garden encounters exported successfully!", "Success");
+                    AppMessages.Notice("Trophy Garden encounters exported.");
                 }
                 return true;
             }
             catch (Exception ex)
             {
-                AppMessages.Error($"Error exporting Trophy Garden encounters: {ex.Message}", "Error");
+                AppMessages.Error($"Couldn't export Trophy Garden encounters: {ex.Message}", "Special encounters editor");
                 return false;
             }
         }
@@ -148,7 +148,7 @@ namespace DSPRE.ROMFiles
             }
             catch (Exception ex)
             {
-                AppMessages.Error($"Error importing Trophy Garden encounters: {ex.Message}", "Error");
+                AppMessages.Error($"Couldn't import Trophy Garden encounters: {ex.Message}", "Special encounters editor");
                 return false;
             }
         }

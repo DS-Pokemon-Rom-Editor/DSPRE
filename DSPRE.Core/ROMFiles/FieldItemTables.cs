@@ -16,7 +16,7 @@ namespace DSPRE.ROMFiles
         public ushort[] Rare = new ushort[RareCount];
         public byte Divisor;
         public byte[] Weights = new byte[WeightSize];
-        /// <summary>Read from the patch's tables, where every range's slots are its own.</summary>
+        /// <summary>Read from the patch's tables, where each range has its own slots.</summary>
         public bool Independent;
 
         public int CommonIndex(int range, int slot) => Independent ? range * PickupSlotsPatch.Stride + slot : range + slot;

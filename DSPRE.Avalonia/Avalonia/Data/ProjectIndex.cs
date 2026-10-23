@@ -18,10 +18,8 @@ namespace DSPRE.Avalonia.Data
     }
 
     /// <summary>
-    /// Scans every map header once and exposes two project-health views: VALIDATION (references that point
-    /// past the end of their NARC, e.g. a header still pointing at a deleted matrix/event) and WHERE-USED
-    /// (reverse lookup: which headers reference a given matrix / event / script / … id). Cheap: one read per
-    /// header, all the cross-references live on the header.
+    /// Scans every map header once for two views: references past the end of their archive, and which headers use a given
+    /// matrix, event file, script or other file.
     /// </summary>
     public static class ProjectIndex
     {
@@ -154,7 +152,7 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>Flags trainer party members whose species, held item, or a move points past the end of
-        /// its list (e.g. a party mon still referencing a species removed by a ROM hack). Each trainer and each
+        /// its list (such as a party Pokémon whose species a ROM hack removed). Each trainer and each
         /// slot is read defensively so one unreadable file never aborts the whole scan.</summary>
         private static void ValidateTrainers(List<ValidationIssue> issues)
         {

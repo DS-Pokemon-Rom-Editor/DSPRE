@@ -2,10 +2,7 @@ using Avalonia.Media.Imaging;
 
 namespace DSPRE.Avalonia
 {
-    /// <summary>
-    /// The editor icons the WinForms shell used, exposed as bindable properties so XAML can reach them with
-    /// <c>{x:Static}</c>.
-    /// </summary>
+    /// <summary>Editor icons as static properties, for <c>{x:Static}</c> in XAML.</summary>
     public static class EditorIcons
     {
         public static Bitmap Header       { get; } = ResourceImages.GetBitmap("map_header");

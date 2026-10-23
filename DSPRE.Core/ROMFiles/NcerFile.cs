@@ -6,13 +6,8 @@ using System.Text;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// The one reader of cell files (NCER), kept as the bytes it came in as. Moving a piece patches the two
-    /// halfwords that hold its position and nothing else, so a file that is opened and saved without an edit
-    /// comes back identical.
-    ///
-    /// The reader in Images sorts pieces by priority when it loads and by number when it saves, which
-    /// reorders them, and it writes without truncating. Neither is survivable for files the games index by
-    /// position, hence this one.
+    /// The one NCER reader, kept as bytes so moving a piece patches only its position. The Images reader reorders
+    /// pieces and doesn't truncate, which breaks files the games index by position.
     /// </summary>
     public sealed class NcerFile
     {
@@ -21,7 +16,7 @@ namespace DSPRE.ROMFiles
 
         public sealed class Piece
         {
-            /// <summary>Where this piece's six bytes start, which is what an edit patches.</summary>
+            /// <summary>Where this piece's six bytes start; edits patch them here.</summary>
             public int At;
             public int X, Y, Width, Height, Tile, Palette;
             public bool FlipH, FlipV;
@@ -114,7 +109,7 @@ namespace DSPRE.ROMFiles
         public int CharacterOf(Cell cell, Piece piece)
             => (piece.Tile << Math.Clamp((int)(Mapping & 0xFF), 0, 3)) + (int)(cell.TransferOffset / 32);
 
-        /// <summary>Cells built in memory, for a layout kept as source rather than as a file. Not for writing.</summary>
+        /// <summary>Cells built in memory for a layout kept as source, not a file. Not for writing.</summary>
         public static NcerFile FromCells(uint mapping, IEnumerable<Cell> cells)
         {
             NcerFile f = new NcerFile { Mapping = mapping };
@@ -318,8 +313,8 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// Moves a piece within its cell. Returns why it could not be moved, or null when it was. The fields
-        /// are nine bits across and eight down, so a position outside that is refused rather than wrapped.
+        /// Moves a piece within its cell; returns why not, or null. The fields are 9 bits across and 8 down, so a
+        /// position outside them is refused.
         /// </summary>
         public string Move(int cell, int piece, int x, int y)
         {

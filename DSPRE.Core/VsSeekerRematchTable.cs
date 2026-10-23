@@ -5,7 +5,7 @@ namespace DSPRE
 {
     /// <summary>
     /// The Vs. Seeker rematch table (Diamond/Pearl/Platinum): 240 rows in overlay 5, sparse
-    /// and keyed by the encounter trainer in slot 0 rather than by row index. The address and row count
+    /// and keyed by the encounter trainer in slot 0, not by row index. The address and row count
     /// are read from the lookup code, with the known offset as a checked fallback.
     /// </summary>
     public static class VsSeekerRematchTable

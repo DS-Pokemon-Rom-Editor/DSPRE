@@ -68,7 +68,7 @@ namespace DSPRE
             error = null;
             List<string> candidates = NewerJsonFiles(inputFolderPath, outputFolderPath);
             ChatotResult result = ChatotWrapperDirectory(inputFolderPath, outputFolderPath, charMapPath, "encode", true, extraArgs: "--newer");
-            if (result == null) { error = "chatot could not be run."; return false; }
+            if (result == null) { error = "chatot couldn't be run."; return false; }
 
             List<string> unknown = UnknownCodeWarnings(result.Stderr);
             if (unknown.Count == 0 && result.ExitCode == 0) return true;
@@ -95,7 +95,7 @@ namespace DSPRE
             }
 
             error = string.Join("\n", problems.Distinct());
-            AppLogger.Error("Text archives could not be encoded:\n" + error);
+            AppLogger.Error("Text archives couldn't be encoded:\n" + error);
             return false;
         }
 
@@ -175,7 +175,6 @@ namespace DSPRE
         private static ChatotResult ChatotWrapper(string plainTextPath, string binaryPath, string charMapPath,
             string mode, bool isDirectory, bool isJson, string lang = "", string extraArgs = "")
         {
-            // Ensure all paths are absolute
             plainTextPath = Path.GetFullPath(plainTextPath);
             binaryPath = Path.GetFullPath(binaryPath);
             charMapPath = Path.GetFullPath(charMapPath);
@@ -186,7 +185,7 @@ namespace DSPRE
 
             if (!File.Exists(chatotPath))
             {
-                AppMessages.Error($"{Path.GetFileName(chatotPath)} not found in Tools folder.", "Error");
+                AppMessages.Error($"{Path.GetFileName(chatotPath)} isn't in DSPRE's Tools folder.", "Tool missing");
                 return null;
             }
 
@@ -214,7 +213,7 @@ namespace DSPRE
             {
                 chatot.StartInfo.Arguments += " --json";
                 
-                // If no language was specified read from the langcodes dictionary
+                // No language given: read it from the langcodes dictionary.
                 if (string.IsNullOrEmpty(lang))
                 {
                     lang = LangCodes[RomInfo.GameLanguage];
@@ -235,10 +234,10 @@ namespace DSPRE
                 return null;
             }
 
-            // Set working directory to the directory containing the chatot tool
+
             chatot.StartInfo.WorkingDirectory = Path.GetDirectoryName(chatotPath);
 
-            // Debug
+
             string commandText = $"{chatot.StartInfo.FileName} {chatot.StartInfo.Arguments}";
             AppLogger.Debug("Executing command: " + commandText);
 
@@ -255,13 +254,13 @@ namespace DSPRE
                 standardOutput = chatot.StandardOutput.ReadToEnd();
                 errorOutput = stderrTask.Result;
 
-                // Wait for the process to finish
+
                 chatot.WaitForExit();
                 exitCode = chatot.ExitCode;
             }
             catch (Exception e)
             {
-                AppMessages.Error("An error occurred while converting JSON/TXT to BIN:\n" + e.Message, "Error");
+                AppMessages.Error("The text archives couldn't be encoded:\n" + e.Message, "Error");
                 errorOutput += e.Message;
             }
             finally

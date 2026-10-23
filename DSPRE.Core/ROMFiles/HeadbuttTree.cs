@@ -121,9 +121,9 @@ namespace DSPRE.ROMFiles
         {
             if (IsUnused)
             {
-                return "Unused Tree";
+                return "Unused tree";
             }
-            return $"Tree at Global X: {GlobalX}, Global Y: {GlobalY}";
+            return $"Tree at {GlobalX}, {GlobalY}";
         }
     }
 }

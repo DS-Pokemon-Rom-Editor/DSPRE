@@ -22,7 +22,7 @@ namespace DSPRE.Avalonia.Views.World
             if (vm != null) AvaloniaEditorLauncher.OpenHeaderSearchFor(id => vm.GoToHeader(id));
         }
 
-        // ── Leaf context menu: select the right-clicked header, then open the editor ──
+        // Right-click selects the header first, so the menu opens the editor on it.
         private void CtxOpen(object sender, System.Action<HeaderEditorViewModel> open)
         {
             HeaderEditorViewModel vm = VM;

@@ -445,7 +445,7 @@ namespace DSPRE.Avalonia.Data
                 {
                     _musicTablesRead = true;
                     try { _musicTables = BattleMusicTables.Load(); }
-                    catch (Exception ex) { AppLogger.Error("Battle music tables could not be read: " + ex.Message); }
+                    catch (Exception ex) { AppLogger.Error("Battle music tables couldn't be read: " + ex.Message); }
                 }
             }
             if (_musicTables == null) return -1;

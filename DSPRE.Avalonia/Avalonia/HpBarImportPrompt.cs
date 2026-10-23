@@ -83,7 +83,7 @@ namespace DSPRE.Avalonia
             body.Children.Clear();
             if (shown.Preview == null)
             {
-                body.Children.Add(new TextBlock { Text = shown.WhyNot ?? "This bar cannot be fitted.", TextWrapping = TextWrapping.Wrap });
+                body.Children.Add(new TextBlock { Text = shown.WhyNot ?? "This bar can't be fitted.", TextWrapping = TextWrapping.Wrap });
                 return;
             }
             HpBarFit.Plan plan = shown.Plan;

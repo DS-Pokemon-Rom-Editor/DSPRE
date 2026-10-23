@@ -49,7 +49,7 @@ namespace DSPRE.ROMFiles
                 (string workDir, bool IsActive) key = (WorkDir, HgEngine.HgEngineProject.IsActive);
                 if (_cache == null || _cacheFor != key)
                 {
-                    // An unreadable table is empty rather than read again on every use.
+                    // An unreadable table stays empty so it isn't read again on every use.
                     if (!TryLoad(out _cache, out _)) _cache = new MoveBackgroundTable();
                     _cacheFor = key;
                 }
@@ -77,7 +77,7 @@ namespace DSPRE.ROMFiles
                 if (OverlayUtils.IsCompressed(overlay)) OverlayUtils.Decompress(overlay);
                 byte[] code = File.ReadAllBytes(OverlayUtils.GetPath(overlay));
                 int at = FindGetter(code);
-                if (at < 0) { error = at == -2 ? "The move background routine appears twice in its overlay." : "The move background routine isn't where the game keeps it; the overlay may have been patched."; return false; }
+                if (at < 0) { error = at == -2 ? "The move background routine appears twice in its overlay." : "Something else has already changed the move background routine, so DSPRE leaves it alone."; return false; }
                 int literal = ((at + 8) & ~3) + code[at + 4] * 4;
                 uint ram = BitConverter.ToUInt32(code, literal), start = OverlayUtils.OverlayTable.GetRAMAddress(overlay);
                 long offset = (long)ram - start;

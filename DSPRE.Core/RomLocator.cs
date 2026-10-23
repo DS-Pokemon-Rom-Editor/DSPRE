@@ -178,6 +178,8 @@ namespace DSPRE
         public static BdhcamSites BdhcamSites => Here(BdhcamSitesIn);
         public static SummaryScreenSites SummaryScreenSites => Here(SummaryScreenSitesIn);
         public static List<(string id, int rev)> SummaryScreenDumps => WorksOn(SummaryScreenSitesIn);
+        public static SummaryFontSites SummaryFontSites => Here(SummaryFontSitesIn);
+        public static List<(string id, int rev)> SummaryFontDumps => WorksOn(SummaryFontSitesIn);
         public static TrainerPrizeTable TrainerPrizeTable => Here(TrainerPrizeTableIn);
         public static FollowerTableSites FollowerTables => Here(FollowerTablesIn);
 

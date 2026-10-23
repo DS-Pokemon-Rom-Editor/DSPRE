@@ -34,7 +34,7 @@ namespace DSPRE.Models
             whynot = null;
             string[] lines;
             try { lines = File.ReadAllLines(path); }
-            catch (Exception ex) { whynot = "Could not read file: " + ex.Message; return null; }
+            catch (Exception ex) { whynot = "Couldn't read file: " + ex.Message; return null; }
 
             Project project = new Project();
             string folder = Path.GetDirectoryName(path) ?? ".";

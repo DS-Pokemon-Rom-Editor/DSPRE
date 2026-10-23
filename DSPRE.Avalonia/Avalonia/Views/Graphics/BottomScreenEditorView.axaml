@@ -59,7 +59,7 @@
                     IsVisible="{Binding IsMenuTab}" Margin="0,0,16,0"/>
           <ComboBox Width="130" Margin="0,0,16,0" IsVisible="{Binding IsMenuTab}"
                     ItemsSource="{Binding ALabelNames}" SelectedIndex="{Binding ALabelIndex}"
-                    ToolTip.Tip="The A button's word"/>
+                    ToolTip.Tip="What the A button says"/>
 
           <ComboBox Width="190" Margin="0,0,16,0" IsVisible="{Binding HasPoketch}"
                     ItemsSource="{Binding AppNames}" SelectedIndex="{Binding SelectedApp}"/>
@@ -185,8 +185,7 @@
       </ScrollViewer>
     </Border>
 
-    <!-- The screen being edited. Sized to the room it has rather than stretched to fill it, so the
-         casing is never cut off at the edges. -->
+    <!-- The screen being edited, not stretched, so the casing is never cut off. -->
     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
       <StackPanel Margin="12" Spacing="6" HorizontalAlignment="Center">
         <TextBlock Text="Bottom screen" Classes="screenCaption"/>

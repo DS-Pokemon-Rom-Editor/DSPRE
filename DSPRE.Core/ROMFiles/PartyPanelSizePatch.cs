@@ -179,9 +179,9 @@ namespace DSPRE.ROMFiles
             if (code == null) return "Only HeartGold and SoulSilver have this patch.";
             ushort[] now = ReadSites(code);
             if (now == null) return "The ARM9 couldn't be read.";
-            if (Read() != null) return "The patch is already in.";
+            if (Read() != null) return "The patch is already applied.";
             for (int i = 0; i < Sites.Length; i++)
-                if (now[i] != Sites[i].Old) return "The party menu's code has been changed by something else.";
+                if (now[i] != Sites[i].Old) return "Something else has already changed the party menu code, so DSPRE leaves it alone.";
             return null;
         }
 
@@ -206,7 +206,7 @@ namespace DSPRE.ROMFiles
         public static void Write(Size size)
         {
             if (WhyNotSize(size) is string why) throw new ArgumentException(why);
-            if (Read() == null) throw new InvalidOperationException("The panel size patch isn't in.");
+            if (Read() == null) throw new InvalidOperationException("The panel size patch isn't applied.");
             WriteSites(size);
         }
 

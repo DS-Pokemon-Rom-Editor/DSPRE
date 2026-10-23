@@ -1,8 +1,6 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- Qt Fusion CC_SpinBox: the field is a line-edit (sunken base); the up/down area is filled with
-         ONE gradient over the COMBINED rect (not per-button), buttons are transparent over it, a dark
-         vertical separator sits at the island's left, and hovering a half overlays innerContrastLine. -->
+    <!-- Qt Fusion spin box (CC_SpinBox): one gradient over both buttons, a dark separator on the left. -->
 
     <!-- Spin up/down buttons: transparent (the island's single gradient shows through); hover/press
          just overlay a translucent highlight/shadow on the hovered half. -->

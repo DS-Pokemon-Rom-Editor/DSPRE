@@ -33,7 +33,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             _ciRows.Clear();
             _ciSaved.Clear();
-            List<Row> rows = ClassIntroPatch.ReadRows() ?? throw new InvalidOperationException("The class intros patch could not be read.");
+            List<Row> rows = ClassIntroPatch.ReadRows() ?? throw new InvalidOperationException("The class intros patch couldn't be read.");
             foreach (Row r in rows) { _ciRows.Add(r); _ciSaved.Add((byte[])r.Bytes.Clone()); }
             try { _ciClassNames = GetTrainerClassNames(); } catch (Exception ex) { AppLogger.WarnOnce("VsIntroEditorViewModel.LoadCiRows", ex); _ciClassNames = Array.Empty<string>(); }
         }
@@ -111,7 +111,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             set
             {
                 if (_suppress || !CiHasRecord || value < 0 || value >= ClassChoices.Count || value == CiColoursIndex) return;
-                if (IsDp && CiIsLeague && value > byte.MaxValue) { StatusText = "An Elite Four record keeps a class up to 255."; Raise(nameof(CiColoursIndex)); return; }
+                if (IsDp && CiIsLeague && value > byte.MaxValue) { StatusText = "An Elite Four record can only hold class numbers up to 255."; Raise(nameof(CiColoursIndex)); return; }
                 if (IsDp) { if (CiIsGym) CiRow.DpGymClass = value; else CiRow.DpLeagueClass = value; }
                 else if (CiIsGym) CiRow.GymClass = value; else CiRow.LeagueClass = value;
                 CiEdited();
@@ -155,7 +155,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 if (_suppress || !CiHasRecord || value < 0 || value >= _faceSets.Count || value == CiFaceIndex) return;
                 int[] set = _faceSets[value];
-                if (CiIsGym && set.Any(m => m > byte.MaxValue)) { StatusText = "A gym leader record keeps file numbers up to 255."; Raise(nameof(CiFaceIndex)); return; }
+                if (CiIsGym && set.Any(m => m > byte.MaxValue)) { StatusText = "A gym leader record can only hold file numbers up to 255."; Raise(nameof(CiFaceIndex)); return; }
                 if (CiIsLeague && !set.SequenceEqual(LeagueFace(set[0]))) { StatusText = "An Elite Four portrait has to be four files in a row: palette, tiles, cells, animation."; Raise(nameof(CiFaceIndex)); return; }
                 // The face is tinted with a class's sprite colours and named after a trainer. When those still match the
                 // record the old face came from, they follow the new face's record; anything set by hand stays.
@@ -183,7 +183,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             set
             {
                 if (_suppress || !CiIsGym || value < 0 || value >= _bannerSets.Count || value == CiBannerIndex) return;
-                if (_bannerSets[value].Any(m => m > byte.MaxValue)) { StatusText = "A gym leader record keeps file numbers up to 255."; Raise(nameof(CiBannerIndex)); return; }
+                if (_bannerSets[value].Any(m => m > byte.MaxValue)) { StatusText = "A gym leader record can only hold file numbers up to 255."; Raise(nameof(CiBannerIndex)); return; }
                 CiRow.GymBanner = _bannerSets[value];
                 CiEdited();
             }
@@ -195,7 +195,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             set
             {
                 if (_suppress || !CiIsLeague || value < 0 || value >= _palettes.Count || value == CiFrameIndex) return;
-                if (_palettes[value] > byte.MaxValue) { StatusText = "An Elite Four record keeps a frame palette up to 255."; Raise(nameof(CiFrameIndex)); return; }
+                if (_palettes[value] > byte.MaxValue) { StatusText = "An Elite Four record can only hold frame palettes up to 255."; Raise(nameof(CiFrameIndex)); return; }
                 if (IsDp) CiRow.DpBannerPalette = _palettes[value]; else CiRow.LeagueFrame = _palettes[value];
                 CiEdited();
             }
@@ -344,7 +344,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
             {
-                await DialogHelper.ShowErrorAsync("The class intros were not saved:\n" + e.Message, Title);
+                await DialogHelper.ShowErrorAsync("The class intros weren't saved:\n" + e.Message, Title);
                 Raise(nameof(HasUnsavedChanges));
                 return false;
             }

@@ -6,8 +6,7 @@ using DSPRE.Avalonia.Models;
 
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
-    /// <summary>Avalonia port of the WinForms <c>CopyMachinesForm</c>: pick a source Pokémon and a set
-    /// of target Pokémon (individuals or whole evolution families) to copy TM/HM compatibility to.</summary>
+    /// <summary>Copies one Pokémon's TM and HM compatibility to the picked Pokémon or families.</summary>
     public class CopyMachinesDialogViewModel : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;

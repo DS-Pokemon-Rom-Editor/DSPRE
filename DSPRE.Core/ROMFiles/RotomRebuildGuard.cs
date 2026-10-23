@@ -61,7 +61,7 @@ namespace DSPRE.ROMFiles
             }
             catch (Exception ex) when (ex is IOException || ex is JsonException || ex is InvalidOperationException || ex is KeyNotFoundException)
             {
-                AppLogger.Warn("Could not read the Rotom compile state before compiling: " + ex.Message);
+                AppLogger.Warn("Couldn't read the Rotom compile state before compiling: " + ex.Message);
                 return null;
             }
         }
@@ -106,7 +106,7 @@ namespace DSPRE.ROMFiles
             }
             catch (Exception ex) when (ex is IOException || ex is JsonException || ex is InvalidOperationException || ex is FormatException)
             {
-                AppLogger.Warn("Could not check the Rotom rebuild against the previous binaries: " + ex.Message);
+                AppLogger.Warn("Couldn't check the Rotom rebuild against the previous binaries: " + ex.Message);
             }
             return kept;
         }

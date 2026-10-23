@@ -98,7 +98,7 @@
               <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding ShowFaceColumn}">
                 <TextBlock Text="Cut from column" VerticalAlignment="Center"/>
                 <NumericUpDown Value="{Binding FaceColumn}" Minimum="0" Maximum="8" Increment="1" FormatString="0" Width="110"
-                               ToolTip.Tip="How many 8 pixel columns into the battle sprite the face starts"/>
+                               ToolTip.Tip="Where the face starts in the battle sprite, in 8-pixel columns"/>
               </StackPanel>
 
               <TextBlock Text="Banner" Classes="section" IsVisible="{Binding ShowBanner}"/>
@@ -106,7 +106,7 @@
                         IsVisible="{Binding ShowBanner}" PlaceholderText="{Binding BannerFiles}"/>
               <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding ShowBanner}">
                 <Button Content="Paint" controls:Icon.Key="brush" Click="PaintBanner_Click"/>
-                <Button Content="In graphics" Click="BannerGraphics_Click"/>
+                <Button Content="Open in All graphics" Click="BannerGraphics_Click"/>
                 <Button Content="New copy" Click="NewBannerCopy_Click" IsVisible="{Binding CanCopyArt}"
                         ToolTip.Tip="Copy this art so painting it changes only this intro"/>
               </StackPanel>
@@ -272,7 +272,7 @@
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="{Binding ClassNote}" Classes="subtle" VerticalAlignment="Center"/>
                 <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Click="MakeClassRoom_Click" IsVisible="{Binding CanMakeClassRoom}"
-                        ToolTip.Tip="The &quot;Expand the VS intro class table&quot; patch gives room for up to 255 classes"/>
+                        ToolTip.Tip="The &quot;VS intro class table expansion&quot; patch gives room for up to 255 classes"/>
               </StackPanel>
               <TextBlock Text="Music" Classes="section"/>
               <ComboBox x:Name="ClassMusicBox" ItemsSource="{Binding SequenceChoices}" SelectedIndex="{Binding ClassMusicIndex}" Width="320"
@@ -348,7 +348,7 @@
                                   </Border.Styles>
                                   <NumericUpDown Value="{Binding Value}" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Width="96"/>
                                 </Border>
-                                <Button controls:Icon.Key="OpenLink" Tag="{Binding}" Click="ShowPart_Click" ToolTip.Tip="Show in the graphics browser"
+                                <Button controls:Icon.Key="OpenLink" Tag="{Binding}" Click="ShowPart_Click" ToolTip.Tip="Show in All graphics"
                                         IsVisible="{Binding CanShow}"/>
                               </StackPanel>
                             </StackPanel>
@@ -362,7 +362,7 @@
               <StackPanel Spacing="2" IsVisible="{Binding ShowMotion}">
                 <TextBlock Text="Portrait stops at X"/>
                 <NumericUpDown Value="{Binding Motion}" Minimum="0" Maximum="255" Increment="1" FormatString="0" Width="110" HorizontalAlignment="Left"
-                               ToolTip.Tip="Where the portrait's slide in ends, in pixels from the left"/>
+                               ToolTip.Tip="Where the portrait stops sliding, in pixels from the left"/>
               </StackPanel>
               <StackPanel Spacing="2" IsVisible="{Binding ShowTiming}">
                 <TextBlock Text="Clash shake"/>
@@ -373,7 +373,7 @@
               <StackPanel Spacing="4" Margin="0,10,0,0" IsVisible="{Binding ShowTimingSection}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <TextBlock Text="Timings" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                  <controls:HelpTip Text="This class's intro speeds in frames. 0 keeps the game's value."/>
+                  <controls:HelpTip Text="How long each part of this class's intro takes, in frames. 0 keeps the game's timing."/>
                 </StackPanel>
                 <TextBlock Text="{Binding TimingNote}" IsVisible="{Binding !HasTimings}" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
                 <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Click="InstallTimings_Click" IsVisible="{Binding CanInstallTimings}" HorizontalAlignment="Left"/>
@@ -439,7 +439,7 @@
                   </StackPanel>
                   <TextBlock Text="Portrait stops at X" Classes="section"/>
                   <NumericUpDown Value="{Binding CiEndX}" Minimum="0" Maximum="255" Increment="1" FormatString="0" Width="110" HorizontalAlignment="Left"
-                                 ToolTip.Tip="Where the portrait's slide in ends, in pixels from the left"/>
+                                 ToolTip.Tip="Where the portrait stops sliding, in pixels from the left"/>
                 </StackPanel>
                 <StackPanel Spacing="6" IsVisible="{Binding CiIsLeague}">
                   <TextBlock Text="Frame colours" Classes="section"/>
@@ -458,12 +458,12 @@
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <TextBlock Text="Cut from column" VerticalAlignment="Center"/>
                   <NumericUpDown Value="{Binding CiFaceColumn}" Minimum="0" Maximum="8" Increment="1" FormatString="0" Width="110"
-                                 ToolTip.Tip="How many 8 pixel columns into the battle sprite the face starts"/>
+                                 ToolTip.Tip="Where the face starts in the battle sprite, in 8-pixel columns"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <TextBlock Text="Stops at X" VerticalAlignment="Center"/>
                   <NumericUpDown Value="{Binding CiEndX}" Minimum="0" Maximum="255" Increment="1" FormatString="0" Width="110"
-                                 ToolTip.Tip="Where the face's slide in ends, in pixels from the left"/>
+                                 ToolTip.Tip="Where the face stops sliding, in pixels from the left"/>
                 </StackPanel>
               </StackPanel>
               <StackPanel Spacing="6" IsVisible="{Binding CiDpLeague}">

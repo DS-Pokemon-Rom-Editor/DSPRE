@@ -6,10 +6,7 @@ using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Views.Controls
 {
-    /// <summary>
-    /// A line of writing in the font the open ROM carries, so a preview shows the real letterforms
-    /// rather than the computer's own. Falls back to a plain face when the ROM's font cannot be read.
-    /// </summary>
+    /// <summary>Text in the open ROM's font, or a plain face when that can't be read.</summary>
     public sealed class RomTextBlock : Control
     {
         public static readonly StyledProperty<string> TextProperty =

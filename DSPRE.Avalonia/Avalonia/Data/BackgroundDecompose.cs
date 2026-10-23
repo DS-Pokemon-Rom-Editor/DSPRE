@@ -11,16 +11,14 @@ namespace DSPRE.Avalonia.Data
         {
             /// <summary>The tile sheet with the painting in it.</summary>
             public byte[] Tiles;
-            /// <summary>How many squares of the screen were actually changed.</summary>
+            /// <summary>How many squares of the screen changed.</summary>
             public int SquaresChanged;
-            /// <summary>How many of those share their tile with a square somewhere else, which will have
-            /// changed to match whether that was wanted or not.</summary>
+            /// <summary>How many of those share a tile with another square, which changes too.</summary>
             public int SquaresSharingATile;
-            /// <summary>Pixels two squares sharing a tile asked to be different colours. The tile can
-            /// only be one thing, so the last square painted wins and the other comes out wrong.</summary>
+            /// <summary>Pixels painted different colours in two spots that share a tile; the last one painted wins.</summary>
             public int PixelsPaintedTwoWays;
 
-            /// <summary>Why it could not be done, when it could not.</summary>
+            /// <summary>Why it failed, or null.</summary>
             public string Whynot;
         }
 
@@ -36,7 +34,7 @@ namespace DSPRE.Avalonia.Data
 
             (byte r, byte g, byte b)[] colours = NitroBgCodec.ReadPalette(pal, out int palCount);
             if (colours == null || colours.Length == 0)
-            { it.Whynot = "This background's colours could not be read."; return it; }
+            { it.Whynot = "This background's colours couldn't be read."; return it; }
 
             (bool is8, int tileBytes) = NitroBgCodec.ReadTileHeader(chr);
             (int w, int h, int mapData) = NitroBgCodec.ReadScreenHeader(scr);
@@ -44,14 +42,13 @@ namespace DSPRE.Avalonia.Data
             if (width != w || height != h)
             {
                 it.Whynot = $"This background is {w} by {h} and that picture is {width} by {height}. "
-                          + "Save this one first and paint over what comes out.";
+                          + "Export this one first and paint over it.";
                 return it;
             }
             if (painted.Length < w * h * 4)
             { it.Whynot = "That picture is smaller than it says it is."; return it; }
 
-            // How many squares of the screen use each tile, so sharing can be reported rather than
-            // discovered afterwards.
+            // Counts the spots using each tile, so shared tiles are reported up front.
             int cols = w / 8, rows = h / 8, entryBytes = NitroBgCodec.EntryBytes(scr);
             Dictionary<int, int> usedBy = new Dictionary<int, int>();
             for (int ty = 0; ty < rows; ty++)

@@ -225,7 +225,7 @@ namespace DSPRE.ROMFiles
         public string Problem()
         {
             if (TreasureMin < 1 || TreasureMax > MaxTreasures || TreasureMax < TreasureMin)
-                return $"Treasures per wall must be between 1 and {MaxTreasures}, the smallest no larger than the largest.";
+                return $"Treasures per wall must be 1 to {MaxTreasures}, and the minimum can't be above the maximum.";
             if (FirstDig < 1 || FirstDig > MaxTreasures) return $"The first dig needs 1 to {MaxTreasures} treasures.";
             if (Tries < 1 || Tries > 255) return "Rock placement tries must be 1 to 255.";
             return null;

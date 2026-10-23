@@ -114,7 +114,7 @@ namespace DSPRE.ROMFiles
         {
             for (int s = 0; s < StatCount; s++)
                 if (!(Min(s) <= Base(s) && Base(s) <= Max(s) && Max(s) <= HighestStar))
-                    return $"{Stats[s]} needs minimum ≤ base ≤ maximum, all from 1 to 5 stars.";
+                    return $"{Stats[s]}: minimum, base and maximum must each be 1 to 5 stars, in that order.";
             // The event code asserts on anything but its three types.
             if (Hitbox is < 1 or > 3 || Lift is < 1 or > 3 || Offset is < 1 or > 3)
                 return "Hitbox, Lift and Offset must each be one of their three choices.";

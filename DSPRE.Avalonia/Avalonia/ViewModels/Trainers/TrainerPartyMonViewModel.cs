@@ -122,11 +122,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
     }
 
     /// <summary>
-    /// One slot of a trainer's party (up to 6). Holds species/form/level/moves/item/
-    /// gender/ability/IV/ball-seal (vanilla-compatible base set), plus <see cref="HgeExtras"/> for
-    /// hg-engine's extended per-mon fields. The ability list is rebuilt per selected species
-    /// (Default + the species' two abilities, mirroring the WinForms editor). Raises
-    /// <see cref="Changed"/> on any edit so the parent can mark itself dirty.
+    /// One party slot, with <see cref="HgeExtras"/> for hg-engine's extra fields. Raises <see cref="Changed"/>
+    /// on any edit so the parent marks itself dirty.
     /// </summary>
     public class TrainerPartyMonViewModel : INotifyPropertyChanged
     {
@@ -552,7 +549,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 }
                 else if (!_abilityEditable)
                 {
-                    // DPPt: ability not editable, show ability 1 three times (matches WinForms padding).
+                    // DPPt: ability isn't editable, so ability 1 fills all three rows.
                     AbilityItems.Add(a1); AbilityItems.Add(a1); AbilityItems.Add(a1);
                 }
                 else
@@ -650,11 +647,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _suppress = false;
         }
 
-        // Mirrors PokemonEditorViewModel.LoadMon's icon handling: hg-engine doesn't keep icons in
-        // personal.narc at all (each species' icon is a source PNG, data/graphics/sprites/<name>/
-        // icon.png), so it's loaded directly rather than through the vanilla NCGR/NCLR/ARM9-palette-table
-        // pipeline, which relies on a hardcoded byte offset that's meaningless against hg-engine's
-        // recompiled ARM9 (see HgEnginePokemonIcons).
+        // hg-engine icons are source PNGs, so load the file directly (see HgEnginePokemonIcons).
         private void UpdateIcon()
         {
             try

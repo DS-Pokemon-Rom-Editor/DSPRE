@@ -8,10 +8,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE
 {
     /// <summary>
-    /// Script-command database bootstrap: pulls updates from the scrcmd-database git repo and
-    /// initializes the per-ROM database JSONs. Moved out of the WinForms <c>Helpers</c> class, 
-    /// this is core logic (LibGit2Sharp is cross-platform; user messages go through
-    /// <see cref="AppMessages"/>).
+    /// Updates the script command databases from the scrcmd-database repo and sets up each ROM's copy.
     /// </summary>
     public static class ScriptDatabaseSetup
     {
@@ -30,7 +27,6 @@ namespace DSPRE
                         Remote remote = repo.Network.Remotes.Add("origin", "https://github.com/DS-Pokemon-Rom-Editor/scrcmd-database.git");
                         Commands.Fetch(repo, remote.Name, new string[] { "refs/heads/main:refs/heads/main" }, null, null);
 
-                        // Check if main branch exists
                         Branch main = repo.Branches["main"] ?? repo.CreateBranch("main", repo.Branches["refs/heads/main"].Tip);
                         repo.Branches.Update(main, b => b.TrackedBranch = "refs/remotes/origin/main");
                         Commands.Checkout(repo, main);
@@ -42,13 +38,11 @@ namespace DSPRE
                     Remote remote = repo.Network.Remotes["origin"];
                     try
                     {
-                        // Reset any changes
                         if (repo.Head.Tip != null)
                         {
                             repo.Reset(ResetMode.Hard);
                         }
 
-                        // Clean up untracked files
                         foreach (StatusEntry item in repo.RetrieveStatus().Untracked)
                         {
                             string fullPath = Path.Combine(pathToDbRepo, item.FilePath);
@@ -60,7 +54,6 @@ namespace DSPRE
 
                         Commands.Fetch(repo, remote.Name, remote.FetchRefSpecs.Select(x => x.Specification), null, null);
 
-                        // Get the remote main branch and force checkout
                         Branch remoteBranch = repo.Branches["origin/main"];
                         CheckoutOptions options = new CheckoutOptions { CheckoutModifiers = CheckoutModifiers.Force };
                         Commands.Checkout(repo, repo.Branches["main"], options);
@@ -69,25 +62,25 @@ namespace DSPRE
                         AppLogger.Info("Script databases updated successfully");
                         if (!silent)
                         {
-                            AppMessages.Info("Script database updated successfully.", "Success");
+                            AppMessages.Notice("Script database updated.");
                         }
                     }
                     catch (Exception ex)
                     {
-                        AppLogger.Warn($"Could not fetch updates: {ex.Message}");
+                        AppLogger.Warn($"Couldn't fetch updates: {ex.Message}");
                         if (!silent)
                         {
-                            AppMessages.Warning("Could not fetch database updates. Using local database files.", "Warning");
+                            AppMessages.Warning("Couldn't fetch database updates. Using local database files.", "Warning");
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                AppLogger.Warn($"Could not access git repository: {ex.Message}");
+                AppLogger.Warn($"Couldn't access git repository: {ex.Message}");
                 if (!silent)
                 {
-                    AppMessages.Warning("Could not access database repository. Using local database files.", "Warning");
+                    AppMessages.Warning("Couldn't access database repository. Using local database files.", "Warning");
                 }
             }
         }
@@ -107,7 +100,6 @@ namespace DSPRE
             string editedDatabasesDir = Path.Combine(AppPaths.DatabasePath, "edited_databases");
             Directory.CreateDirectory(editedDatabasesDir);
 
-            // Create ROM-specific folder
             string romDatabaseFolder = Path.Combine(editedDatabasesDir, romFileNameClean);
             Directory.CreateDirectory(romDatabaseFolder);
 
@@ -131,10 +123,8 @@ namespace DSPRE
 
             if (!File.Exists(targetJsonPath))
             {
-                // The base databases come from the scrcmd-database git repo (cloned into
-                // AppPaths.DatabasePath) or from a bundled databases/ folder copied by
-                // DatabaseSetup. On a fresh machine with no network, neither may exist, 
-                // degrade gracefully instead of failing the whole ROM load.
+                // The base databases come from the scrcmd-database repo or the bundled databases/ folder; offline on
+                // a fresh machine neither may exist, and the ROM still loads.
                 if (!File.Exists(databaseJsonPath) && SettingsManager.Settings?.AutomaticallyUpdateDBs != true)
                 {
                     CheckForDatabaseUpdates();   // one clone attempt even when auto-update is off
@@ -143,7 +133,7 @@ namespace DSPRE
                 {
                     AppLogger.Error($"Script database not found: {databaseJsonPath}");
                     AppMessages.Error(
-                        "The script command database could not be found:\n" + databaseJsonPath +
+                        "The script command database couldn't be found:\n" + databaseJsonPath +
                         "\n\nIt is normally downloaded automatically (internet required) or bundled as a " +
                         "'databases' folder next to the DSPRE executable.\n\n" +
                         "The ROM will still load, but script editing features will be limited.",
@@ -161,7 +151,7 @@ namespace DSPRE
                 }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
                 {
-                    AppLogger.Warn("Script database could not be brought up to date: " + ex.Message);
+                    AppLogger.Warn("Script database couldn't be brought up to date: " + ex.Message);
                 }
             }
 
@@ -169,10 +159,9 @@ namespace DSPRE
             {
                 ScriptDatabaseJsonLoader.InitializeFromJson(targetJsonPath, gameVersion);
 
-                // Unpack text archives NARC if needed - required for reading Pokemon/Item/Move/Trainer names
+                // The name dictionaries read the text archives.
                 DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.TextArchives });
 
-                // Initialize enum dictionaries from ROM data (Pokemon, Items, Moves, Trainers)
                 Resources.ScriptDatabase.InitializePokemonNames();
                 Resources.ScriptDatabase.InitializeItemNames();
                 Resources.ScriptDatabase.InitializeMoveNames();
@@ -180,14 +169,13 @@ namespace DSPRE
                 Resources.ScriptDatabase.InitializeNpcTradeNames();
                 Resources.ScriptDatabase.InitializeTrainerClassNames();
 
-                // Export the enum JSONs for external tools (like Rotom) to use
-                // Always regenerate to ensure they match current ROM data
+                // Rotom reads these enum JSONs, so they are rewritten to match this ROM.
                 Resources.ScriptDatabase.ExportEnumJsons(romDatabaseFolder);
             }
             catch (Exception ex)
             {
-                AppLogger.Error($"Failed to load script database: {ex.Message}");
-                AppMessages.Error("Failed to load script database. Script editing features may be limited.", "Error");
+                AppLogger.Error($"Couldn't load script database: {ex.Message}");
+                AppMessages.Error("The script database couldn't be loaded, so script editing may not work fully.", "Script database not loaded");
             }
         }
     }

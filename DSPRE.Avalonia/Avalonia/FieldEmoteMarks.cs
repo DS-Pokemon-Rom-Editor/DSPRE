@@ -3,10 +3,7 @@ using System.Collections.Generic;
 
 namespace DSPRE.Avalonia
 {
-    /// <summary>
-    /// The marks an emote action puts over somebody's head, drawn to the games' shape rather than read out
-    /// of the field effect archive.
-    /// </summary>
+    /// <summary>The marks an emote puts over someone's head, drawn in code to match the games.</summary>
     public static class FieldEmoteMarks
     {
         // '#' outline, '.' balloon, 'r' the mark itself, ' ' see-through.

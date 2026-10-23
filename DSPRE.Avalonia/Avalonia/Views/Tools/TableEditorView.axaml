@@ -14,7 +14,6 @@
 
   <DockPanel>
 
-    <!-- ── Status bar ──────────────────────────────────────────────────────── -->
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8,3">
       <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"
@@ -43,7 +42,6 @@
 
     <TabControl x:Name="Tabs" Margin="4" IsVisible="{Binding AnyTableShown}">
 
-      <!-- ── Conditional Music (HGSS) ───────────────────────────────────────── -->
       <TabItem Header="Conditional music" IsVisible="{Binding ShowConditionalMusic}">
         <controls:CappedWidth Cap="900"><Grid ColumnDefinitions="*,260" Margin="4">
           <ListBox Grid.Column="0"
@@ -62,13 +60,12 @@
                       SelectedIndex="{Binding CondMusicComboIndex}"
                       PlaceholderText="Unnamed track"/>
             <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding CondMusic}"/>
-            <controls:HelpTip Text="For each location in the list, the header's music is replaced by the chosen music while the flag is set."
+            <controls:HelpTip Text="While the flag is set, each listed header plays the chosen music."
                               HorizontalAlignment="Left" Margin="0,8,0,0"/>
           </StackPanel>
         </Grid></controls:CappedWidth>
       </TabItem>
 
-      <!-- ── Effect Combos (HGSS + Plat) ────────────────────────────────────── -->
       <TabItem Header="Effect combos" IsVisible="{Binding ShowEffectsCombos}">
         <controls:CappedWidth Cap="900"><Grid ColumnDefinitions="*,260" Margin="4">
           <ListBox Grid.Column="0"
@@ -79,13 +76,12 @@
             <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding VsAnimation}"/>
             <TextBlock Text="Battle music" FontWeight="Bold"/>
             <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding BattleSseq}"/>
-            <controls:HelpTip Text="Each entry pairs a VS. animation with battle music."
+            <controls:HelpTip Text="Each entry pairs a VS animation with battle music."
                               HorizontalAlignment="Left" Margin="0,8,0,0"/>
           </StackPanel>
         </Grid></controls:CappedWidth>
       </TabItem>
 
-      <!-- ── VS Trainer (HGSS) ──────────────────────────────────────────────── -->
       <TabItem Header="VS trainer" IsVisible="{Binding ShowVsTables}">
         <controls:CappedWidth Cap="900"><Grid ColumnDefinitions="*,260" Margin="4">
           <ListBox Grid.Column="0"
@@ -110,13 +106,12 @@
                                Increment="1" Value="{Binding TrainerSpriteFrame}"/>
               </StackPanel>
             </StackPanel>
-            <controls:HelpTip Text="Every trainer of the class gets this combo's VS. animation and music."
+            <controls:HelpTip Text="Every trainer of the class gets this combo's VS animation and music."
                               HorizontalAlignment="Left" Margin="0,8,0,0"/>
           </StackPanel>
         </Grid></controls:CappedWidth>
       </TabItem>
 
-      <!-- ── VS Pokémon (HGSS) ────────────────────────────────────────────────── -->
       <TabItem Header="VS Pokémon" IsVisible="{Binding ShowVsTables}">
         <controls:CappedWidth Cap="900"><Grid ColumnDefinitions="*,260" Margin="4">
           <ListBox Grid.Column="0"

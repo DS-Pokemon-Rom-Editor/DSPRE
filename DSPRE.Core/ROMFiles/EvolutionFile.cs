@@ -181,7 +181,7 @@ namespace DSPRE
         }
         public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true)
         {
-            SaveToFileExplorePath("Gen IV Evolution data", "bin", suggestedFileName, showSuccessMessage);
+            SaveToFileExplorePath("Evolution data", "bin", suggestedFileName, showSuccessMessage);
         }
     }
 }

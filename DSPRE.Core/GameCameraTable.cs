@@ -84,7 +84,7 @@ namespace DSPRE
             }
             catch (Exception ex)
             {
-                AppLogger.Warn("The camera table could not be read: " + ex.Message);
+                AppLogger.Warn("The camera table couldn't be read: " + ex.Message);
                 return null;
             }
         }

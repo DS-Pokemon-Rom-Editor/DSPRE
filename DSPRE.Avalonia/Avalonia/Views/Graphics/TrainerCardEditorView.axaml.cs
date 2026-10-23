@@ -55,7 +55,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = import(path);
             if (error != null)
-                await DialogHelper.ShowErrorAsync($"Import failed: {error}", "Trainer card editor error", Owner);
+                await DialogHelper.ShowErrorAsync($"Couldn't import: {error}", "Trainer card", Owner);
             else SaveNotice.Imported(null, path);
         }
 
@@ -73,7 +73,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = export(path);
             if (error != null)
-                await DialogHelper.ShowErrorAsync($"Export failed: {error}", "Trainer card editor error", Owner);
+                await DialogHelper.ShowErrorAsync($"Couldn't export: {error}", "Trainer card", Owner);
             else SaveNotice.Exported(path);
         }
 
@@ -91,7 +91,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = _vm.ImportRankPalette(path);
             if (error != null)
-                await DialogHelper.ShowErrorAsync($"Import failed: {error}", "Trainer card editor error", Owner);
+                await DialogHelper.ShowErrorAsync($"Couldn't import: {error}", "Trainer card", Owner);
             else SaveNotice.Imported(null, path);
         }
 
@@ -109,18 +109,18 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             string error = _vm.ExportRankPalette(path);
             if (error != null)
-                await DialogHelper.ShowErrorAsync($"Export failed: {error}", "Trainer card editor error", Owner);
+                await DialogHelper.ShowErrorAsync($"Couldn't export: {error}", "Trainer card", Owner);
             else SaveNotice.Exported(path);
         }
-        /// <summary>Hands the card to the Graphics window, where its drawing, its two arrangements and
+        /// <summary>Hands the card to All graphics, where its drawing, its two arrangements and
         /// every rank's colours are one row.</summary>
         private void OpenInGraphics_Click(object sender, RoutedEventArgs e)
         {
             int drawing = Data.GraphicUnits.TrainerCardDrawing();
             if (drawing < 0)
             {
-                _ = DialogHelper.ShowInfoAsync("This game does not lay its trainer card out in a way DSPRE knows.",
-                                          "Open in Graphics");
+                _ = DialogHelper.ShowInfoAsync("DSPRE doesn't know this game's trainer card layout.",
+                                          "Open in All graphics");
                 return;
             }
             AvaloniaEditorLauncher.OpenGraphicAt(DSPRE.RomInfo.DirNames.TrainerCardGraphics, drawing);

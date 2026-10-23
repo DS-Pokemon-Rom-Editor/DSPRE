@@ -36,7 +36,7 @@ namespace DSPRE.HgEngine
 
     /// <summary>Ties designator resolution + the anchored patcher together into the one call every
     /// editor's Save needs: write these curated fields of this entry back to hg-engine source. A field
-    /// that can't be located is reported back rather than silently dropped; every other field in the
+    /// that can't be located is reported back, never dropped; every other field in the
     /// same call still gets written.</summary>
     public static class HgEngineWriter
     {
@@ -49,17 +49,17 @@ namespace DSPRE.HgEngine
         {
             unresolvedFields = new List<string>();
             error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
 
             HgEngineDomainInfo domainInfo = HgEngineDomains.All.FirstOrDefault(d => d.Domain == domain);
             if (domainInfo == null) { error = $"Unknown hg-engine domain: {domain}"; return false; }
 
             string sourcePath = Path.Combine(HgEngineProject.RepoPathUnc, domainInfo.SourceFileRelPath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(sourcePath)) { error = $"Source file not found: {sourcePath}"; return false; }
+            if (!File.Exists(sourcePath)) { error = $"{sourcePath} is missing from the checkout."; return false; }
 
             if (!HgEngineDesignators.TryResolve(domain, id, out string designator))
             {
-                error = $"Could not resolve a source designator for id {id} in {domain}.";
+                error = $"Entry {id} of {domain} has no name in the checkout.";
                 return false;
             }
 
@@ -94,7 +94,7 @@ namespace DSPRE.HgEngine
             }
             if (allOrNothing && unresolvedFields.Count > 0)
             {
-                error = $"Could not place {string.Join(", ", unresolvedFields)}; nothing was written.";
+                error = $"Couldn't place {string.Join(", ", unresolvedFields)}; nothing was written.";
                 return false;
             }
             if (anyWritten)

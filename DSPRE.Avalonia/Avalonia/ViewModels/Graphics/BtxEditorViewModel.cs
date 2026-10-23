@@ -113,7 +113,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 }
                 catch (Exception ex)
                 {
-                    AppLogger.Error("Overworld pictures could not be read: " + ex.Message);
+                    AppLogger.Error("Overworld pictures couldn't be read: " + ex.Message);
                     _pictures.Clear();
                 }
             }
@@ -305,8 +305,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string ExpansionStatusText => HgEngine.HgEngineProject.IsActive
             ? "Saved into the hg-engine checkout. New NPCs go in data/graphics/overworlds/custom."
             : IsExpansionApplied
-            ? $"Custom Overworld Sprites patch detected. {OverworldSpriteTableExpansion.UsedCount}/{OverworldSpriteTableExpansion.Capacity} custom slots used."
-            : "Custom Overworld Sprites patch (hzla PlatPatches) not detected. Add/Delete are disabled. Render-state properties below are still editable.";
+            ? $"The overworld sprite expansion patch is applied. {OverworldSpriteTableExpansion.UsedCount} of {OverworldSpriteTableExpansion.Capacity} custom slots used."
+            : "Adding and deleting entries needs hzla's overworld sprite expansion (PlatPatches). The drawing settings below can still be edited.";
 
         private bool _isSelectedEntryCustom;
         public bool IsSelectedEntryCustom { get => _isSelectedEntryCustom; private set => Set(ref _isSelectedEntryCustom, value); }
@@ -497,16 +497,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         // ── Add / Delete custom entries (expansion patch only) ───────────────────
-        /// <summary>Adds a new custom overworld entry (called from the "Add Custom Entry…" dialog
-        /// once the user confirms it). If an image was picked, it is NEVER written into
-        /// <paramref name="templateMember"/> (the slot the user chose in the dropdown); that slot
-        /// is only read as a structural template (matching width/height/color-count), which
-        /// <see cref="LibNDSFormats.BTX0.WriteNewPalette"/> requires. The actual pixels are written into a
-        /// brand-new mmodel NARC member (<see cref="OverworldSpriteTableExpansion.AllocateNewMmodelSlot"/>)
-        /// so no existing overworld's art is ever touched. Without an image, the entry just points at
-        /// <paramref name="templateMember"/> directly and shares that art on purpose, no write happens.
-        /// Image and profile compatibility are validated before the table row is added, so a bad
-        /// import cannot leave behind a partially added entry.</summary>
+        /// <summary>Adds a custom overworld entry. A picked image goes into a new mmodel member, never into
+        /// <paramref name="templateMember"/>, which is only a layout template; without one the entry shares the
+        /// template's art. Everything is checked before the table row is added.</summary>
         public string AddEntryWithImage(string appearanceIdText, uint templateMember, uint cloneFrom, string pngPath, string rawBtxPath)
         {
             if (HgEngine.HgEngineProject.IsActive) return AddSourceNpc(templateMember, cloneFrom, pngPath, rawBtxPath);
@@ -545,8 +538,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     catch (Exception removeError) { AppLogger.Warn("BTX editor: removing the new member: " + removeError.Message); }
 
                     if (!OverworldSpriteTableExpansion.DeleteEntry(appearanceId, out string rollbackError))
-                        return $"Could not create the new texture member: {ex.Message}. The table rollback also failed: {rollbackError}";
-                    return "Could not create the new texture member; the table entry was rolled back: " + ex.Message;
+                        return $"The new texture couldn't be created ({ex.Message}), and the table entry couldn't be undone: {rollbackError}";
+                    return "The new texture couldn't be created, so the table entry was undone: " + ex.Message;
                 }
             }
 
@@ -605,16 +598,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             return null;
         }
 
-        /// <summary>Reads <paramref name="templateMember"/>'s existing BTX0 file purely as a
-        /// read-only structural template (its bytes are never written back to that slot) and stages
-        /// a pixel-perfect copy of <paramref name="rawBtxPath"/>'s texture data for the new entry's
-        /// own (already-allocated, independent) mmodel member. Returns null on success.</summary>
+        /// <summary>Stages a copy of <paramref name="rawBtxPath"/>'s texture for the new entry, using
+        /// <paramref name="templateMember"/> only as a layout template, which is never written.</summary>
         private static bool TryBuildRawBtx(uint templateMember, string rawBtxPath, out byte[] stagedImage, out string error)
         {
             stagedImage = null;
             error = null;
             string templatePath = Path.Combine(RomInfo.GameDirs[DirNames.OWSprites].unpackedDir, templateMember.ToString("D4"));
-            if (!File.Exists(templatePath)) { error = "Template texture slot file not found."; return false; }
+            if (!File.Exists(templatePath)) { error = "The template's texture file is missing."; return false; }
             try
             {
                 byte[] templateData = File.ReadAllBytes(templatePath);
@@ -623,13 +614,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
                 byte[] sourceData = File.ReadAllBytes(rawBtxPath);
                 if (!Btx0Structure.TryInspect(sourceData, out Btx0Structure sourceStructure, out string sourceError))
-                { error = "Source file isn't a structurally readable BTX0: " + sourceError; return false; }
+                { error = "That file isn't a texture DSPRE can read: " + sourceError; return false; }
 
                 if (targetStructure.ProfileDifference(sourceStructure) is string why)
                 { error = $"That file can't replace this overworld: {why}."; return false; }
 
                 RawImage source = BTX0.ReadRaw(sourceData, 0);
-                if (source == null) { error = "Source file isn't a texture DSPRE can write (BTX0, 16-color format)."; return false; }
+                if (source == null) { error = "That file isn't a texture DSPRE can write (a 16-colour BTX0)."; return false; }
 
                 stagedImage = sourceData;
                 return true;
@@ -641,27 +632,25 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
         }
 
-        /// <summary>Reads <paramref name="templateMember"/>'s existing BTX0 file purely as a
-        /// read-only structural template (its bytes are never written back to that slot, only cloned
-        /// into memory and patched there) and stages the patched result for the new entry's own
-        /// (already-allocated, independent) mmodel member. Returns null on success.</summary>
+        /// <summary>Clones <paramref name="templateMember"/>'s BTX0 in memory, puts the PNG in it and stages it
+        /// for the new entry. The template itself is never written.</summary>
         private static bool TryBuildPngBtx(uint templateMember, string pngPath, out byte[] stagedImage, out string error)
         {
             stagedImage = null;
             error = null;
             string templatePath = Path.Combine(RomInfo.GameDirs[DirNames.OWSprites].unpackedDir, templateMember.ToString("D4"));
-            if (!File.Exists(templatePath)) { error = "Template texture slot file not found."; return false; }
+            if (!File.Exists(templatePath)) { error = "The template's texture file is missing."; return false; }
             try
             {
                 byte[] btxData = File.ReadAllBytes(templatePath);
                 RawImage import;
                 using (FileStream fs = File.OpenRead(pngPath))
                     import = ImageConverter.DecodeRawImage(fs);
-                if (import == null) { error = "Image could not be decoded."; return false; }
+                if (import == null) { error = "Image couldn't be decoded."; return false; }
                 RawImage current = BTX0.ReadRaw(btxData, 0);
                 if (current == null) { error = "Template texture slot is unreadable."; return false; }
                 if (import.Width != current.Width || import.Height != current.Height)
-                { error = $"Size mismatch. Template slot: {current.Width}×{current.Height}, PNG: {import.Width}×{import.Height}"; return false; }
+                { error = $"The PNG is {import.Width}×{import.Height} but the template is {current.Width}×{current.Height}."; return false; }
 
                 // New art has no palette of its own to keep, so it gets one in the template's normal slot.
                 stagedImage = BTX0.WriteNewPalette(btxData, import, 0, out error);
@@ -688,18 +677,18 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             string clonePath = Path.Combine(directory, cloneEntry.spriteID.ToString("D4"));
             if (!File.Exists(templatePath) || !File.Exists(clonePath))
             {
-                error = "The format template or clone source texture file was not found.";
+                error = "The template's or the copied entry's texture file is missing.";
                 return false;
             }
 
             if (!Btx0Structure.TryInspect(File.ReadAllBytes(templatePath), out Btx0Structure template, out string templateError))
             {
-                error = "The format template is not a readable BTX0: " + templateError;
+                error = "The template isn't a texture DSPRE can read: " + templateError;
                 return false;
             }
             if (!Btx0Structure.TryInspect(File.ReadAllBytes(clonePath), out Btx0Structure clone, out string cloneError))
             {
-                error = "The clone source is not a readable BTX0: " + cloneError;
+                error = "The entry to copy isn't a texture DSPRE can read: " + cloneError;
                 return false;
             }
             if (template.ProfileDifference(clone) is string why)
@@ -710,7 +699,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             return true;
         }
 
-        /// Returns null on success, error message on failure.
+        /// <summary>Deletes the selected entry. Returns null on success, otherwise the error.</summary>
         public string DeleteSelectedEntry()
         {
             if (!HasSelectedEntry) return "No entry selected.";
@@ -758,7 +747,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             bool ok = text.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
                 ? uint.TryParse(text.Substring(2), System.Globalization.NumberStyles.HexNumber, null, out value)
                 : uint.TryParse(text, out value);
-            if (!ok) error = $"{label}: \"{text}\" is not a valid number (decimal or 0x hex).";
+            if (!ok) error = $"{label}: \"{text}\" isn't a valid number (decimal or 0x hex).";
             return ok;
         }
 
@@ -788,9 +777,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private uint CurrentPaletteIndex => _isShiny && HasShinyPalette ? 1u : 0u;
 
         // ── Import PNG ─────────────────────────────────────────────────────────
-        /// Returns null on success, error message on failure.
         /// <summary>Imports a PNG into the selected entry, or with <paramref name="apply"/> false only
-        /// reports why it would fail, so a caller can ask its questions before anything changes.</summary>
+        /// reports why it would fail, so a caller can ask its questions first. Null on success.</summary>
         public string ImportPng(string filePath, bool apply = true)
         {
             if (_btxData == null || _selectedIndex < 0) return "No entry selected.";
@@ -799,11 +787,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 RawImage import;
                 using (FileStream fs = File.OpenRead(filePath))
                     import = ImageConverter.DecodeRawImage(fs);
-                if (import == null) return "Image could not be decoded.";
+                if (import == null) return "Image couldn't be decoded.";
                 RawImage current = BTX0.ReadRaw(_btxData, CurrentPaletteIndex);
                 if (current == null) return "This entry's texture file isn't a readable image (it may be a 3D model, not a flat texture).";
                 if (import.Width != current.Width || import.Height != current.Height)
-                    return $"Size mismatch. Existing texture: {current.Width}×{current.Height}, PNG: {import.Width}×{import.Height}";
+                    return $"The PNG is {import.Width}×{import.Height} but the texture is {current.Width}×{current.Height}.";
 
                 // Both palettes share the pixels, so the imported one keeps its slot order.
                 byte[] newData = BTX0.WriteKeepingPalette(_btxData, import, CurrentPaletteIndex, out string writeError);
@@ -819,7 +807,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 OnPropertyChanged(nameof(ModifiedCount));
                 Edited();
-                return null; // success
+                return null;
             }
             catch (Exception ex)
             {
@@ -852,14 +840,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     import = ImageConverter.DecodeRawImage(fs);
                 if (import == null)
                 {
-                    error = "Image could not be decoded.";
+                    error = "Image couldn't be decoded.";
                     return false;
                 }
 
                 RawImage current = BTX0.ReadRaw(_btxData, 0);
                 if (current == null)
                 {
-                    error = "This entry's texture file isn't a readable 16-color BTX image.";
+                    error = "This entry's texture isn't a 16-colour BTX0 DSPRE can read.";
                     return false;
                 }
                 if (import.Width == current.Width && import.Height == current.Height)
@@ -930,21 +918,21 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 RawImage import;
                 using (FileStream fs = File.OpenRead(filePath))
                     import = ImageConverter.DecodeRawImage(fs);
-                if (import == null) return "Image could not be decoded.";
+                if (import == null) return "Image couldn't be decoded.";
 
                 string sourcePath = Path.Combine(
                     RomInfo.GameDirs[DirNames.OWSprites].unpackedDir,
                     sourceEntry.spriteID.ToString("D4"));
-                if (!File.Exists(sourcePath)) return "The selected profile's BTX file was not found.";
+                if (!File.Exists(sourcePath)) return "The selected profile's BTX file wasn't found.";
 
                 byte[] sourceData = File.ReadAllBytes(sourcePath);
                 if (!Btx0Structure.TryInspect(sourceData, out Btx0Structure structure, out string structureError))
-                    return "The selected profile is not structurally readable: " + structureError;
+                    return "DSPRE can't read the selected profile: " + structureError;
                 if (structure.SheetWidth != import.Width || structure.SheetHeight != import.Height)
                     return $"The selected profile expects {structure.SheetWidth}×{structure.SheetHeight}, but the PNG is {import.Width}×{import.Height}.";
                 uint colors = CountColors(import);
                 if (structure.Palettes.Count == 0 || colors > structure.Palettes[0].ColorCapacity)
-                    return $"The selected profile cannot hold the PNG's {colors} colours.";
+                    return $"The selected profile can't hold the PNG's {colors} colours.";
 
                 if (!OverworldSpriteProfileMetadata.TryCreatePatch(
                     targetAppearanceId, sourceAppearanceId, out OverworldSpriteProfileMetadataPatch metadataPatch, out string metadataError))
@@ -952,7 +940,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
                 RawImage profileImage = BTX0.ReadRaw(sourceData, 0);
                 if (profileImage == null || profileImage.Width != import.Width || profileImage.Height != import.Height)
-                    return "The selected profile is not writable by DSPRE's 16-color importer.";
+                    return "DSPRE can only write 16-colour textures, and this profile isn't one.";
 
                 // The profile's own art is replaced, so its palette is rebuilt from the picture.
                 byte[] newData = BTX0.WriteNewPalette(sourceData, import, 0, out string writeError);
@@ -964,7 +952,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 _knownPatches[targetAppearanceId] = metadataPatch;
 
                 RefreshImage();
-                StatusText = $"Staged {import.Width}×{import.Height} image with the profile from {OverworldLabels.Of(sourceAppearanceId)}.";
+                StatusText = $"Imported a {import.Width}×{import.Height} picture using {OverworldLabels.Of(sourceAppearanceId)}'s profile.";
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 OnPropertyChanged(nameof(ModifiedCount));
                 Edited();
@@ -986,7 +974,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 .Select(kv => kv.Key)
                 .ToArray();
             if (users.Length <= 1) return null;
-            return $"Texture slot {member} is shared by {users.Length} appearances. Saving this import will change their artwork too. Continue?";
+            return $"Texture slot {member} is shared by {users.Length} appearances. Saving this import changes their art too. Import anyway?";
         }
 
         // ── Export PNG ─────────────────────────────────────────────────────────
@@ -1027,7 +1015,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_saveErrors.Count == 0) return;
             string message = string.Join("\n\n", _saveErrors.Distinct());
             _saveErrors.Clear();
-            _ = DialogHelper.ShowErrorAsync(message, "Overworld editor error");
+            _ = DialogHelper.ShowErrorAsync(message, "Overworld editor");
         }
 
         public int SaveSelected()

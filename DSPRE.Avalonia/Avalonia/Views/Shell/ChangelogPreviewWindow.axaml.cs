@@ -10,9 +10,8 @@ using global::Avalonia.Layout;
 namespace DSPRE.Avalonia.Views.Shell
 {
     /// <summary>
-    /// Debug-only. Shows the update prompt exactly as a given release would produce it, reading the
-    /// changelog files in the working tree so notes for a version that has not shipped yet can be
-    /// checked before tagging. Nothing here contacts GitHub or installs anything.
+    /// Debug only: previews the update prompt from the working tree's changelogs before tagging. Nothing
+    /// contacts GitHub or installs anything.
     /// </summary>
     public class ChangelogPreviewWindow : Window
     {
@@ -25,7 +24,7 @@ namespace DSPRE.Avalonia.Views.Shell
 
         public ChangelogPreviewWindow()
         {
-            Title = "Generate Update Prompt Preview";
+            Title = "Preview the update prompt";
             Width = 620;
             Height = 250;
             WindowStartupLocation = WindowStartupLocation.CenterOwner;

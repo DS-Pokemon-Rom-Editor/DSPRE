@@ -6,13 +6,8 @@ using global::Avalonia.Input;
 namespace DSPRE.Avalonia.Gl
 {
     /// <summary>
-    /// Shared mouse-drag camera + pick/gizmo wiring for every 3D viewport (Map/Event/Building/
-    /// Headbutt editors), so the button mapping and click-to-focus behavior stay consistent
-    /// instead of drifting per view.
-    ///
-    /// Button roles match PDSMS's convention, not DSPRE's old default: right-drag orbits (tilts)
-    /// the camera, left-drag pans, middle-drag also pans. Left is still the "action" button
-    /// first, falling back to pan only when paint/edit mode didn't claim the press.
+    /// Mouse camera and picking for every 3D view, as in PDSMS: right-drag orbits, left and middle drag pan. Left acts first
+    /// and pans only when painting or editing didn't take the press.
     /// </summary>
     public sealed class Gl3DPointerNavigation
     {

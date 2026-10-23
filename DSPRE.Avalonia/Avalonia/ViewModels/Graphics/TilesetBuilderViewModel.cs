@@ -11,8 +11,8 @@ using DSPRE.ROMFiles;
 namespace DSPRE.Avalonia.ViewModels.Graphics
 {
     /// <summary>
-    /// Making a background out of a picture: the colours, the tile sheet and the arrangement, with a
-    /// look at exactly what the game would draw before anything is written.
+    /// Makes a background from a picture: palette, tiles and arrangement, previewed before anything is
+    /// written.
     /// </summary>
     public sealed class TilesetBuilderViewModel : INotifyPropertyChanged
     {
@@ -43,12 +43,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private Bitmap _after;
         public Bitmap After { get => _after; private set => Set(ref _after, value); }
 
-        /// <summary>Loads a picture and works out what it would come to. Returns why not, or null.</summary>
+        /// <summary>Loads a picture and builds the result. Returns the error, or null.</summary>
         public string Open(string path)
         {
             byte[] file;
             try { file = File.ReadAllBytes(path); }
-            catch (Exception ex) { return "That file could not be read: " + ex.Message; }
+            catch (Exception ex) { return "That file couldn't be read: " + ex.Message; }
 
             if (!AnyPng.TryReadRgba(file, out byte[] rgba, out int w, out int h, out string whynot))
                 return whynot;
@@ -73,8 +73,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         public string DepthNote => _eightBit
-            ? "One list for the whole picture. More colours, but twice the room."
-            : "Each square picks a bank of sixteen. What almost every background here uses.";
+            ? "One bank of 256 colours for the whole picture: more colours, twice the size."
+            : "Each square picks a bank of 16 colours, as almost every background does.";
 
         private bool _keepClearSlot = true;
         /// <summary>Leave the first colour of every bank clear, so whatever is behind shows through.</summary>
@@ -136,15 +136,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 Facts.Add(new Fact { Name = "Tiles", Value = _built.TilesKept.ToString(),
                     Detail = $"out of {TilesetBuilder.MostTiles} an arrangement can point at" });
                 Facts.Add(new Fact { Name = "Shared", Value = shared.ToString(),
-                    Detail = $"{_built.RepeatedAsIs} squares repeat a tile as it is, "
-                           + $"{_built.RepeatedTurnedOver} repeat one turned over" });
+                    Detail = $"{_built.RepeatedAsIs} squares reuse a tile, {_built.RepeatedTurnedOver} reuse a flipped tile" });
                 Facts.Add(new Fact { Name = "Colour banks", Value = _built.Banks.ToString(),
-                    Detail = _eightBit ? "one list of 256, which is what 256 colours means"
+                    Detail = _eightBit ? "one bank of 256 colours"
                                        : $"out of {TilesetBuilder.MostBanks} a screen holds" });
                 Facts.Add(new Fact { Name = "Colours", Value = _built.ColoursKept.ToString(),
                     Detail = _built.ClearSlotKept ? "with the first slot of each bank left clear"
-                           : _keepClearSlot ? "nothing in this picture is see-through, so no slot had to "
-                                            + "be held clear and every colour of a bank is free"
+                           : _keepClearSlot ? "nothing is see-through, so every colour of a bank is free"
                            : "with no slot held clear" });
                 Facts.Add(new Fact { Name = "Room taken", Value = Size(_built.Colours.Length
                                                                      + _built.Tiles.Length
@@ -156,7 +154,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             RaiseAll();
         }
 
-        private static string Size(int bytes) => bytes < 1024 ? bytes + " bytes" : (bytes / 1024) + "kb";
+        private static string Size(int bytes) => bytes < 1024 ? bytes + " bytes" : (bytes / 1024) + " KB";
 
         private void RaiseAll()
         {
@@ -166,12 +164,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         public string Summary => _rgba == null
-            ? "Open a PNG to see what it would come to."
+            ? "Open a PNG to see the result."
             : _built?.Whynot ?? _built?.Summary ?? "";
 
         // ── writing it out ────────────────────────────────────────────────────────────────────────
 
-        /// <summary>The three files, under the name given, beside each other. Returns why not, or null.</summary>
+        /// <summary>Writes the three files side by side under the given name. Returns the error, or null.</summary>
         public string Save(string basePath)
         {
             if (!CanSave) return CannotSaveBecause ?? _built?.Whynot ?? "There is nothing to save.";
@@ -182,11 +180,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 PlainFiles.WriteBytes(Path.Combine(dir, stem + ".NCLR"), _built.Colours);
                 PlainFiles.WriteBytes(Path.Combine(dir, stem + ".NCGR"), _built.Tiles);
                 PlainFiles.WriteBytes(Path.Combine(dir, stem + ".NSCR"), _built.Arrangement);
-                SavedAs = $"{stem}.NCLR, {stem}.NCGR and {stem}.NSCR written beside each other in {dir}.";
+                SavedAs = $"Saved {stem}.NCLR, {stem}.NCGR and {stem}.NSCR in {dir}.";
                 OnPropertyChanged(nameof(SavedAs));
                 return null;
             }
-            catch (Exception ex) { return "Those files could not be written: " + ex.Message; }
+            catch (Exception ex) { return "Those files couldn't be written: " + ex.Message; }
         }
 
         public string SavedAs { get; private set; }

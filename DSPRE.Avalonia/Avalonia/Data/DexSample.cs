@@ -15,7 +15,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Shuckle: plain shapes and two types, which makes misplaced pieces easy to spot.</summary>
         public const int DefaultSpecies = 213;
 
-        /// <summary>Heracross, beside Shuckle and one of the few DP keeps foreign entries for.</summary>
+        /// <summary>Heracross: next to Shuckle, and one of the few species DP has foreign entries for.</summary>
         public const int DiamondPearlSpecies = 214;
 
         public int Species { get; }
@@ -179,7 +179,7 @@ namespace DSPRE.Avalonia.Data
         private DexHabitatData BuildHabitat(string variant)
         {
             int time = variant == "Morning" ? 0 : variant == "Night" ? 2 : 1;
-            // The sample needs the National Pokédex, so the special list is the one used after it.
+            // The sample has the National Pokédex, so it uses the special list.
             try
             {
                 if (variant == "Area unknown") return DexHabitatBuilder.HgssPlayerOnly(kanto: false);
@@ -216,8 +216,8 @@ namespace DSPRE.Avalonia.Data
 
         private static bool Female(string variant) => variant != null && (variant.Contains("Dawn") || variant.Contains("Female"));
 
-        // pokeplatinum ov21_021E737C.c: the first row whose difference reaches the weights' gives the angle; the
-        // player's side goes down when the Pokémon is lighter.
+        // pokeplatinum ov21_021E737C.c: the first row whose difference reaches the weight difference gives the angle;
+        // the player's side goes down when the Pokémon is lighter.
         private static readonly (int Difference, int Angle)[] DpptTilts =
         {
             (0x0, 0x0), (0xA, 0x2D8), (0x14, 0x222), (0x1E, 0x2D8), (0x28, 0x38E), (0x32, 0x444), (0x3C, 0x4FA),
@@ -234,8 +234,8 @@ namespace DSPRE.Avalonia.Data
             return 0;
         }
 
-        // The difference in kilograms picks a pattern; patterns 1-7 swing and settle where their steps add up to, the
-        // rest stop at the dial's limit, 0xA00. The players weigh 40.0 and 41.0 kg.
+        // The difference in kilograms picks a pattern; patterns 1-7 swing and settle at the sum of their steps, the rest
+        // stop at the dial's limit, 0xA00. The players weigh 40.0 and 41.0 kg.
         private static readonly int[] HgssPatternTop = { 0, 1, 2, 3, 4, 5, 6, 7, 15, 30, 50, 75, 105, 155, 235, 350, 65535 };
         private static readonly (int Start, int Step, int Stop)[] HgssSwings =
         {

@@ -231,7 +231,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             DrawingFile.Read(ncgr) ?? throw new InvalidDataException("The drawing has no pixel section.");
 
         private static NcerFile ReadCells(byte[] ncer) =>
-            NcerFile.Read(ncer) ?? throw new InvalidDataException("The cell file could not be read.");
+            NcerFile.Read(ncer) ?? throw new InvalidDataException("The cell file couldn't be read.");
 
         // ── Mode A: composited cell editing (Plat/HGSS) ─────────────────────────
         private sealed class EditCell
@@ -617,9 +617,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             return AnimJsonDirty ? SaveAnimJson() : null;
         }
 
-        /// <summary>Edits are applied straight into the in-memory <see cref="_tile"/>/<see cref="_flatIndices"/>
-        /// buffers as you paint (there's no separate undo buffer), so discarding just means throwing all of
-        /// that away and re-reading the class fresh from disk.</summary>
+        /// <summary>Discarding re-reads the class from disk, since paint goes straight into the in-memory
+        /// buffers.</summary>
         public void DiscardChanges() => Load(_trClassID);
 
         // ── Animations tab: NNN_anim.json read/written straight from the linked hg-engine checkout's
@@ -668,12 +667,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
             catch (Exception ex)
             {
-                AppLogger.Error("TrainerSpriteEditorViewModel: animation file could not be read: " + ex.Message);
+                AppLogger.Error("TrainerSpriteEditorViewModel: animation file couldn't be read: " + ex.Message);
                 return null;
             }
         }
 
-        // A changed frame takes its own result entry rather than retargeting every frame that shares it.
+        // A changed frame gets a new result entry, so frames sharing the old one keep it.
         private void ApplyRomAnimEdits()
         {
             if (_romAnim == null || _animRoot == null || _parts.Count == 0) return;
@@ -707,7 +706,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
             catch (Exception ex)
             {
-                StatusText = "Save failed: " + ex.Message;
+                StatusText = "Couldn't save: " + ex.Message;
                 return ex.Message;
             }
         }
@@ -750,7 +749,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 catch (Exception ex)
                 {
                     SetAnimJsonTextSilent("");
-                    AnimJsonStatusText = "Failed to read: " + ex.Message;
+                    AnimJsonStatusText = "Couldn't read: " + ex.Message;
                 }
             }
             else
@@ -783,7 +782,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
             catch (Exception ex)
             {
-                AppLogger.Error("TrainerSpriteEditorViewModel: animation could not be read: " + ex.Message);
+                AppLogger.Error("TrainerSpriteEditorViewModel: animation couldn't be read: " + ex.Message);
                 return null;
             }
         }
@@ -792,7 +791,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         /// before writing.</summary>
         public string SaveAnimJson()
         {
-            if (_animJsonPath == null) return "No hg-engine checkout linked.";
+            if (_animJsonPath == null) return "No hg-engine checkout is linked.";
             try
             {
                 using (JsonDocument.Parse(AnimJsonText)) { }
@@ -823,7 +822,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         /// single-frame classes use) for a class that doesn't have one yet.</summary>
         public string CreateAnimJson()
         {
-            if (_animJsonPath == null) return "No hg-engine checkout linked.";
+            if (_animJsonPath == null) return "No hg-engine checkout is linked.";
             const string template = """
                 {
                 	"labelEnabled":	true,
@@ -861,7 +860,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         }
 
         // ── Structured animation editor: sequences/frames built from AnimJsonText, kept in sync with it
-        // both ways, like the Battle Script editor's Cards/Text tabs.
+        // both ways, like the Cards and Script tabs in Move animations & battle scripts.
         private AnimJsonRoot _animRoot;
         private bool _syncingAnimText;   // guards the structured-model <-> AnimJsonText echo loop
 
@@ -1161,7 +1160,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         }
 
         // ── Load ───────────────────────────────────────────────────────────────
-        /// Returns null on success, error message on failure.
+        /// <summary>Loads the class. Returns null on success, otherwise the error.</summary>
         public string Load(int trClassID)
         {
             _trClassID = trClassID;
@@ -1268,7 +1267,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             catch (Exception ex)
             {
                 _tile = null; _pal = null; _sprite = null;
-                StatusText = "Load failed: " + ex.Message;
+                StatusText = "Couldn't load: " + ex.Message;
                 AppLogger.Error("TrainerSpriteEditorViewModel.Load failed: " + ex.Message);
                 return ex.Message;
             }
@@ -1330,7 +1329,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 int byteStart = _sprite.CharacterOf(bank, oam) * 0x20;
                 int byteLen = oam.Width * oam.Height * bpp / 8;
                 if (byteStart < 0 || byteLen <= 0 || byteStart + byteLen > _tile.Tiles.Length)
-                    continue; // malformed/out-of-range cell, skip rather than risk corrupting unrelated bytes
+                    continue; // malformed cell: skip so unrelated bytes aren't overwritten
 
                 int bank_ = oam.Palette;
                 if (bank_ >= _pal.Length) bank_ = 0; // matches CellRenderer's own clamp
@@ -1614,10 +1613,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         }
 
         // ── Import / Export PNG ────────────────────────────────────────────────
-        /// Returns null on success, error message on failure. In composited mode, the PNG must match
-        /// the fixed canvas size (export first to get a correctly-sized/aligned template). Each pixel
-        /// is re-hit-tested the same way a click would be, and validated against whichever cell (and
-        /// therefore palette bank) owns it.
+        /// <summary>Imports a PNG the size of the canvas, checking each pixel against the palette bank of the
+        /// cell a click there would hit. Returns null on success, otherwise the error.</summary>
         public string ImportPng(string filePath)
         {
             if (_tile == null) return "No sprite loaded.";
@@ -1626,7 +1623,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 DSPRE.RawImage import;
                 using (FileStream fs = File.OpenRead(filePath))
                     import = ImageConverter.DecodeRawImage(fs);
-                if (import == null) return "Image could not be decoded.";
+                if (import == null) return "Image couldn't be decoded.";
 
                 return BankCount > 0 ? ImportPngComposited(import) : ImportPngFlat(import);
             }
@@ -1639,7 +1636,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private string ImportPngComposited(DSPRE.RawImage import)
         {
             if (import.Width != CanvasSize || import.Height != CanvasSize)
-                return $"Size mismatch. This editor's canvas is {CanvasSize}×{CanvasSize} (fixed), PNG: {import.Width}×{import.Height}. Export first to get a correctly-sized template.";
+                return $"The PNG is {import.Width}×{import.Height} but the canvas is {CanvasSize}×{CanvasSize}. Export first to get a picture of the right size.";
 
             Dictionary<int, Dictionary<int, int>> lookups = new Dictionary<int, Dictionary<int, int>>();
             Dictionary<int, int> LookupFor(int bank)
@@ -1671,7 +1668,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     int key = (import.Bgra[i + 2] << 16) | (import.Bgra[i + 1] << 8) | import.Bgra[i];
                     int idx = 0;
                     if (!IsTransparent(import, i) && !LookupFor(cell.PaletteBank).TryGetValue(key, out idx))
-                        return $"Pixel ({x},{y}) isn't one of that area's {_pal[cell.PaletteBank].Length} palette colors (bank {cell.PaletteBank}). Recolor to match exactly, or use the pencil tool instead.";
+                        return $"Pixel ({x},{y}) isn't one of that area's {_pal[cell.PaletteBank].Length} palette colours (bank {cell.PaletteBank}). Match the colours exactly, or paint it with the pencil.";
 
                     CellLocal(cell, x, y, out int lx, out int ly);
                     idxArr[ly * cell.Width + lx] = idx;
@@ -1733,7 +1730,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private string ImportPngFlat(DSPRE.RawImage import)
         {
             if (import.Width != _flatWidth || import.Height != _flatHeight)
-                return $"Size mismatch. Sprite sheet: {_flatWidth}×{_flatHeight}, PNG: {import.Width}×{import.Height}";
+                return $"The PNG is {import.Width}×{import.Height} but the sprite sheet is {_flatWidth}×{_flatHeight}.";
 
             System.Drawing.Color[] pal = _pal[0];
             Dictionary<int, int> lookup = new Dictionary<int, int>();
@@ -1752,8 +1749,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     int key = (import.Bgra[i + 2] << 16) | (import.Bgra[i + 1] << 8) | import.Bgra[i];
                     int idx = 0;
                     if (!IsTransparent(import, i) && !lookup.TryGetValue(key, out idx))
-                        return $"Pixel ({x},{y}) isn't one of this sprite's {pal.Length} palette colors. " +
-                               "Recolor the PNG to match the current palette exactly, or use the pencil tool instead.";
+                        return $"Pixel ({x},{y}) isn't one of this sprite's {pal.Length} palette colours. " +
+                               "Match the PNG to the palette exactly, or paint it with the pencil.";
                     newIndices[y * _flatWidth + x] = idx;
                 }
             }
@@ -1858,7 +1855,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             catch (Exception ex)
             {
                 _tile = null; _pal = null; _sprite = null;
-                StatusText = "Load failed: " + ex.Message;
+                StatusText = "Couldn't load: " + ex.Message;
                 AppLogger.Error("TrainerSpriteEditorViewModel.LoadNamingIcon failed: " + ex.Message);
                 return ex.Message;
             }
@@ -2011,12 +2008,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (!File.Exists(path)) return null;
 
             byte[] file = File.ReadAllBytes(path);
-            if (!(NitroBgCodec.ReadDrawingHeader(file) is NitroBgCodec.DrawingHeader head)) { error = "the scan copy has no pixel block"; return null; }
+            if (!(NitroBgCodec.ReadDrawingHeader(file) is NitroBgCodec.DrawingHeader head)) { error = "the two-frame copy of the sprite has no pixels"; return null; }
             int size = head.DataSize, dataOff = head.DataAt;
             int width = ScanFrame * 2, height = ScanFrame;
             if (head.TilesAcross * 8 != width || head.TilesDown * 8 != height || head.EightBit || size != width * height / 2)
             {
-                error = $"the scan copy is not the usual {width}x{height} 4bpp picture";
+                error = $"the two-frame copy of the sprite isn't the usual {width}x{height} 16-colour picture";
                 return null;
             }
 
@@ -2080,7 +2077,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                                 halves[half] = new ScanHalf { Frame = bestFrame, Base = crops[bestFrame] };
                         }
                     }
-                    catch (Exception ex) { AppLogger.Error("TrainerSpriteEditorViewModel: scan copy could not be matched: " + ex.Message); }
+                    catch (Exception ex) { AppLogger.Error("TrainerSpriteEditorViewModel: scan copy couldn't be matched: " + ex.Message); }
                 }
                 _parts[p].Scan = halves;
                 AppLogger.Debug($"Trainer sprite {_parts[p].Entry}: scan halves follow frames {halves[0]?.Frame ?? -1} and {halves[1]?.Frame ?? -1}.");
@@ -2266,7 +2263,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 if (animation && File.Exists(json))
                 {
                     steps = Data.TrainerSpriteSheet.ReadSteps(File.ReadAllText(json), out string jsonWhy);
-                    if (steps == null) { why = $"{Path.GetFileName(json)} could not be read: {jsonWhy}"; return null; }
+                    if (steps == null) { why = $"{Path.GetFileName(json)} couldn't be read: {jsonWhy}"; return null; }
                 }
 
                 List<TrainerSheetImportViewModel.Target> targets = new List<TrainerSheetImportViewModel.Target>();
@@ -2424,7 +2421,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         // ── Save ──────────────────────────────────────────────────────────────
         // On a linked hg-engine project the drawing and colours come from, and go back to, the source PNG.
         private string _sourcePngPath;
-        /// Returns null on success, error message on failure.
+        /// <summary>Saves the class. Returns null on success, otherwise the error.</summary>
         public string Save()
         {
             if (_tile == null) return "No sprite loaded.";
@@ -2445,7 +2442,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 if (_sourcePngPath != null)
                 {
                     string sourceError = Data.TrainerSpriteSourcePng.Write(_sourcePngPath, _tile, _pal[0]);
-                    if (sourceError != null) { StatusText = "Save failed: " + sourceError; return sourceError; }
+                    if (sourceError != null) { StatusText = "Couldn't save: " + sourceError; return sourceError; }
                 }
 
                 int keep = _activePart;
@@ -2465,14 +2462,14 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                             int entry = _parts.Count > 0 ? _parts[p].Entry : _trClassID;
                             string scanError = WriteScan(entry);
                             if (scanError == null && _sourcePngPath != null) scanError = WriteScanPng(entry, _sourcePngPath[..^4] + "_enc.png");
-                            if (scanError != null) { StatusText = "Save failed: " + scanError; return scanError; }
+                            if (scanError != null) { StatusText = "Couldn't save: " + scanError; return scanError; }
                         }
                         if (_paletteDirty || _sourcePngPath != null)
                         {
                             byte[] nclr = File.ReadAllBytes(_palPath);
                             uint[] colours = _pal.SelectMany(bank => bank.Select(c => 0xFF000000u | ((uint)c.R << 16) | ((uint)c.G << 8) | c.B)).ToArray();
                             string error = Data.GraphicAssets.PatchPalette(ref nclr, colours);
-                            if (error != null) { StatusText = "Save failed: " + error; return error; }
+                            if (error != null) { StatusText = "Couldn't save: " + error; return error; }
                             ArchiveMembers.Write(_palPath, nclr);
                         }
                     }
@@ -2489,7 +2486,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
             catch (Exception ex)
             {
-                StatusText = "Save failed: " + ex.Message;
+                StatusText = "Couldn't save: " + ex.Message;
                 AppLogger.Error("TrainerSpriteEditorViewModel.Save failed: " + ex.Message);
                 return ex.Message;
             }
@@ -2512,7 +2509,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                         indices[i] = data[i];
                     break;
                 default:
-                    throw new NotSupportedException($"Unsupported color depth ({bpp} bpp) for sprite editing.");
+                    throw new NotSupportedException($"Sprites with {bpp} bits per pixel can't be edited.");
             }
             return indices;
         }
@@ -2540,7 +2537,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     return result;
                 }
                 default:
-                    throw new NotSupportedException($"Unsupported color depth ({bpp} bpp) for sprite editing.");
+                    throw new NotSupportedException($"Sprites with {bpp} bits per pixel can't be edited.");
             }
         }
 

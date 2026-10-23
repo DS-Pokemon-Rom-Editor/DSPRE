@@ -389,7 +389,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 if (!PokegearRematchTable.WriteRow(_location, r, _rows[r], out string error))
                 {
-                    AppMessages.Error($"Row {r} wasn't saved:\n{error}", "Pokégear rematch editor error");
+                    AppMessages.Error($"Row {r} wasn't saved:\n{error}", "Pokégear rematch editor");
                     return;
                 }
             }

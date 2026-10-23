@@ -18,6 +18,8 @@ namespace DSPRE.ROMFiles
         public sealed class Window
         {
             public int Layer, X, Y, Width, Height, Palette, BaseTile;
+            /// <summary>The font picked with the fonts patch, or -1 for the game's.</summary>
+            public int Font = -1;
             public int EndTile => BaseTile + Width * Height;
             public Window Copy() => (Window)MemberwiseClone();
         }
@@ -35,10 +37,14 @@ namespace DSPRE.ROMFiles
 
         public List<Table> Tables = new();
         public Bar Hp, Exp;
+        /// <summary>Whether the bytes include fonts, as they do once the fonts patch is applied.</summary>
+        public bool HasFonts;
+
+        public IEnumerable<Window> AllWindows => Tables.SelectMany(t => t.Windows);
 
         public static bool SupportsCurrentRom => RomLocator.SummaryScreenSites != null;
 
-        private static SummaryScreenSites Sites => RomLocator.SummaryScreenSites ?? throw new NotSupportedException("The summary screen layout is not known for this ROM.");
+        private static SummaryScreenSites Sites => RomLocator.SummaryScreenSites ?? throw new NotSupportedException("The summary screen layout isn't known for this ROM.");
 
         /// <summary>The always-there windows, which share their backgrounds with every page's own.</summary>
         public Table Static => Tables.FirstOrDefault(t => t.Page == "Static");
@@ -50,25 +56,34 @@ namespace DSPRE.ROMFiles
             foreach (uint at in new[] { s.Hp.X, s.Hp.Y, s.Exp.X, s.Exp.Y }) yield return (at, 2);
         }
 
-        /// <summary>The layout's bytes as arm9 holds them now.</summary>
+        private static int LayoutLength(SummaryScreenSites s) => Ranges(s).Sum(r => r.Length);
+        private static int WindowCount(SummaryScreenSites s) => s.Windows.Sum(t => t.Count);
+
+        /// <summary>The layout's bytes as arm9 holds them now, then one font byte per window when the fonts patch is applied.</summary>
         public static byte[] ReadBytes()
         {
             using MemoryStream all = new();
             foreach ((uint offset, int length) in Ranges(Sites)) all.Write(ARM9.ReadBytes(offset, length));
+            int[] fonts = SummaryFontPatch.ReadFonts(FromBytes(all.ToArray()).AllWindows.ToList());
+            if (fonts != null) all.Write(fonts.Select(f => (byte)f).ToArray());
             return all.ToArray();
         }
 
         /// <summary>Writes layout bytes from <see cref="ToBytes"/> or <see cref="ReadBytes"/> into arm9.</summary>
         public static void WriteBytes(byte[] bytes)
         {
-            using ARM9.Writer writer = new();
-            int at = 0;
-            foreach ((uint offset, int length) in Ranges(Sites))
+            using (ARM9.Writer writer = new())
             {
-                writer.BaseStream.Position = offset;
-                writer.Write(bytes, at, length);
-                at += length;
+                int at = 0;
+                foreach ((uint offset, int length) in Ranges(Sites))
+                {
+                    writer.BaseStream.Position = offset;
+                    writer.Write(bytes, at, length);
+                    at += length;
+                }
             }
+            SummaryScreenLayout layout = FromBytes(bytes);
+            if (layout.HasFonts) SummaryFontPatch.WriteFonts(layout.AllWindows.ToList(), layout.AllWindows.Select(w => w.Font).ToList());
         }
 
         public static SummaryScreenLayout FromBytes(byte[] bytes)
@@ -89,6 +104,14 @@ namespace DSPRE.ROMFiles
             }
             layout.Hp = new Bar { X = bytes[at], Y = bytes[at + 2], Tiles = s.Hp.Tiles, Layer = s.Hp.Layer, FullTile = s.Hp.FullTile };
             layout.Exp = new Bar { X = bytes[at + 4], Y = bytes[at + 6], Tiles = s.Exp.Tiles, Layer = s.Exp.Layer, FullTile = s.Exp.FullTile };
+            int fontsAt = LayoutLength(s);
+            layout.HasFonts = bytes.Length >= fontsAt + WindowCount(s);
+            if (layout.HasFonts)
+                foreach (Window w in layout.AllWindows)
+                {
+                    byte font = bytes[fontsAt++];
+                    w.Font = font == 0xFF ? -1 : font;
+                }
             return layout;
         }
 
@@ -110,15 +133,15 @@ namespace DSPRE.ROMFiles
                 }
             bytes[at] = (byte)Hp.X; bytes[at + 2] = (byte)Hp.Y;
             bytes[at + 4] = (byte)Exp.X; bytes[at + 6] = (byte)Exp.Y;
+            at += 8;
+            if (HasFonts && bytes.Length >= at + AllWindows.Count())
+                foreach (Window w in AllWindows) bytes[at++] = (byte)w.Font;
             return bytes;
         }
 
         /// <summary>
-        /// Why a window can't have this place and size, or null when it can. A window has to stay on its background's
-        /// map, and its tiles can't run into those of another window that is up at the same time: the always-there
-        /// windows are up with every page's, while two pages are never up together. Windows the game itself lets
-        /// share tiles (it never shows them together) may go on sharing them. The tiles keep within what the game's
-        /// own layout uses on that background, since tiles past it aren't known to be free.
+        /// Why a window can't go here, or null. It must stay on its background map and not share tiles with a window
+        /// shown at the same time (two pages are never up together), and must stay within the tiles the game's layout already uses.
         /// </summary>
         /// <param name="original">The layout as the ROM had it when the editor opened.</param>
         public string WhyNot(Table table, int index, Window wanted, SummaryScreenLayout original)

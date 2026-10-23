@@ -5,11 +5,10 @@ using System.Linq;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// Where the battle writes each part of an HP bar, as boxes on the bar's 16 by 8 grid of squares. Every bar in
-    /// the three games is two 64 by 64 pieces side by side, tiles 0 to 63 on the left and 64 to 127 on the right,
-    /// row by row, so a square always has the same tile number and moving a part only changes the slot tables
-    /// (and, for experience, a few numbers in the code). The cell layouts are never touched.
+    /// Each HP bar part as a box on the bar's 16 by 8 grid. Every bar is two 64 by 64 pieces, so moving a part only
+    /// changes the slot tables and, for experience, a few numbers in the code.
     /// </summary>
+    /// <remarks>Tiles run 0 to 63 on the left and 64 to 127 on the right, row by row; the cell layouts are never touched.</remarks>
     public sealed class BattleGaugeLayout
     {
         public const int Columns = 16, Rows = 8, Half = 8;
@@ -19,7 +18,7 @@ namespace DSPRE.ROMFiles
         public BattleGaugePieces.Bar Bar;
         public Dictionary<Part, (int X, int Y)> At = new();
         public int ScreenX, ScreenY;
-        public int? ExtraPiece;                       // Pt and HGSS never create this piece, so it is only kept
+        public int? ExtraPiece;                       // Platinum and HGSS never create this piece; kept as read
 
         public static int TileAt(int x, int y) => (x >= Half ? 64 : 0) + y * Half + x % Half;
 
@@ -91,19 +90,19 @@ namespace DSPRE.ROMFiles
         /// <summary>A run of squares that has to be one unbroken stretch of tiles, so it cannot cross the middle.</summary>
         private static bool OneRun(Part part) => part is Part.LvMark or Part.LvDigits or Part.MaxHp or Part.Status or Part.HpTag or Part.BarEnd;
 
-        /// <summary>What is wrong with where a part sits, in the user's words, or null.</summary>
+        /// <summary>Why the part can't sit there, or null.</summary>
         public string Problem(Part part)
         {
             if (!At.TryGetValue(part, out (int X, int Y) at)) return null;
             (int w, int h) = SizeOf(part);
             if (at.X < 0 || at.Y < 0 || at.X + w > Columns || at.Y + h > Rows) return NameOf(part) + " is outside the bar.";
             bool crosses = at.X < Half && at.X + w > Half;
-            if (crosses && OneRun(part)) return NameOf(part) + " cannot cross the middle of the bar.";
+            if (crosses && OneRun(part)) return NameOf(part) + " can't cross the middle of the bar.";
             if (part == Part.Exp)
             {
                 int first = Half - at.X;
                 if (!crosses || first > 7 || w - first > Half)
-                    return $"Experience must cross the middle of the bar, starting at column {Half - 7} to {Half - 1}.";
+                    return $"Experience must cross the middle of the bar and start in a column from {Half - 7} to {Half - 1}.";
             }
             foreach ((Part other, (int X, int Y) o) in At)
             {

@@ -5,10 +5,8 @@ using DSPRE.ROMFiles;
 namespace DSPRE.Avalonia.Gl
 {
     /// <summary>
-    /// Plays the buildings of a built scene the way the field does: sliding and swapped textures, colour fades, moving
-    /// joints (windmills) and whole-model motion. Each building names its own animations, so an animation is matched
-    /// only against that building's own materials. Doors and time-of-day animations wait for something to start them,
-    /// so they are counted but not played. Shared by the map's animated preview and the header's field view.
+    /// Plays a scene's building animations as the field does, each matched to its building's materials. Doors and
+    /// time-of-day animations wait for a trigger, so they're counted but not played.
     /// </summary>
     public sealed class SceneBuildingAnimator
     {

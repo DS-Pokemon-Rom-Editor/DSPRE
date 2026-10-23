@@ -6,7 +6,6 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE
 {
-    // Putting this class here is bad practice, however it's just a really small utility class
     public class DVIVNatureTriplet
     {
         public int DV { get; set; }
@@ -40,7 +39,7 @@ namespace DSPRE
         {
             _state = 1103515245 * _state + 24691;
 
-            // Upper 16 bit are random value
+            // The upper 16 bits are random.
             return _state >> 16;
         }
 
@@ -107,13 +106,13 @@ namespace DSPRE
                     _genderMod = baseGenderRatio - 2u;
                 }
 
-                // Force Ability 1 --> Force lowest bit to 0
+                // Ability 1: lowest bit clear.
                 if (abilityOverride == 1)
                 {
                     _genderMod = (uint)(_genderMod & ~1);
                 }
 
-                // Force Ability 2 --> Force lowest bit to 1
+                // Ability 2: lowest bit set.
                 else if (abilityOverride == 2)
                 {
                     _genderMod = (uint)(_genderMod | 1);
@@ -247,8 +246,8 @@ namespace DSPRE
                 uint length = (uint)RomInfo.VanillaTrainerClassCount;
                 if (offset == 0 || length == 0)
                 {
-                    AppMessages.Error("Couldn't load trainer class gender table from arm9." +
-                        "\nTrainers will default to male when calculating natures.", "Error");
+                    AppMessages.Error("The trainer class gender table couldn't be read, so natures are worked out " +
+                        "as if every trainer were male.", "Error");
                     _tableLoaded = true;
                     return;
                 }

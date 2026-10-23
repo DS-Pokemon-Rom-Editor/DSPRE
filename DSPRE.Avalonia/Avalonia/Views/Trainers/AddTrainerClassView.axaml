@@ -33,7 +33,7 @@
       <TextBox Text="{Binding NameWithArticle}" PlaceholderText="a Youngster"/>
 
       <TextBlock Text="Gender" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,4,0,0"
-                 ToolTip.Tip="Used for DV/nature calculations."/>
+                 ToolTip.Tip="Affects the natures of the class's Pokémon."/>
       <ComboBox SelectedIndex="{Binding GenderIndex}" HorizontalAlignment="Stretch">
         <ComboBoxItem>Male</ComboBoxItem>
         <ComboBoxItem>Female</ComboBoxItem>
@@ -54,7 +54,7 @@
                 IsVisible="{Binding MusicNeedsPatch}"/>
       </StackPanel>
       <StackPanel Spacing="2" IsEnabled="{Binding AddMusic}">
-        <TextBlock Text="Eye contact music" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"
+        <TextBlock Text="Eye-contact music" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"
                    ToolTip.Tip="Plays when a trainer of this class spots the player."/>
         <DockPanel>
           <NumericUpDown DockPanel.Dock="Right" Width="110" Margin="4,0,0,0" Minimum="0" Maximum="65535" Increment="1" Value="{Binding MusicMain}"/>

@@ -10,7 +10,7 @@ using DSPRE.Avalonia.Data;
 
 namespace DSPRE.Avalonia.ViewModels.Graphics
 {
-    /// <summary>Painting one graphic, by the numbers it is really made of.</summary>
+    /// <summary>Paints one graphic by palette index.</summary>
     public sealed class GraphicPainterViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -22,8 +22,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             f = v; OnPropertyChanged(n); return true;
         }
 
-        /// <summary>One colour in the list, with the number that picks it.</summary>
-        /// <summary>Properties, not fields: the compiled bindings this project uses cannot see fields.</summary>
+        /// <summary>One colour in the list, with its number. Properties, not fields, so compiled bindings see them.</summary>
         public sealed class Swatch
         {
             public int Number { get; init; }
@@ -60,7 +59,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _art = GraphicAssets.ReadIndexed(_archive, _index, out string why, paletteIndex: _palette, paletteBank: _paletteBank);
             if (_art == null)
             {
-                Trouble = why ?? "This entry cannot be painted.";
+                Trouble = why ?? "This entry can't be painted.";
                 OnPropertyChanged(nameof(Trouble));
                 OnPropertyChanged(nameof(HasTrouble));
                 OnPropertyChanged(nameof(CanPaint));
@@ -125,7 +124,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
 
             if (Frames.Count > 1)
-                Frames.Add(new Frame { Name = "All of it", X = 0, Y = 0, W = _art.Width, H = _art.Height });
+                Frames.Add(new Frame { Name = "Whole picture", X = 0, Y = 0, W = _art.Width, H = _art.Height });
             else Frames.Clear();
 
             // Clear it first: the list was just refilled, so the box has dropped to nothing selected.
@@ -203,7 +202,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 string size = Showing != null && (Showing.W < _art.Width || Showing.H < _art.Height)
                     ? $"{ViewWidth} by {ViewHeight}, out of {_art.Width} by {_art.Height}"
                     : $"{_art.Width} by {_art.Height}";
-                return $"{size}. {_art.ColourCount} colours. Shown {_zoom} times over.";
+                return $"{size}, {_art.ColourCount} colours, zoom {_zoom}×";
             }
         }
 
@@ -222,7 +221,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         i == 0 ? (byte)255 : (byte)255,
                         (byte)((c >> 16) & 0xFF), (byte)((c >> 8) & 0xFF), (byte)(c & 0xFF))),
                     Tip = i == 0
-                        ? "Colour 0. In most of these graphics this one is the see-through part."
+                        ? "Colour 0, usually see-through."
                         : $"Colour {i}.",
                 });
             }
@@ -234,8 +233,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         private Swatch _selectedSwatch;
-        /// <summary>The colour picked in the strip below, which is both what the brush lays down and what
-        /// Change this colour would alter.</summary>
+        /// <summary>The colour picked in the strip below. The brush paints with it and Change this colour
+        /// edits it.</summary>
         public Swatch SelectedSwatch
         {
             get => _selectedSwatch;
@@ -315,8 +314,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string UndoHelp => _art == null
             ? "There is nothing here to paint."
             : _undo.Count == 0
-                ? "Nothing has been changed yet, so there is nothing to step back from."
-                : "Step back to how it was before the last stroke or colour change.";
+                ? "Nothing to undo yet."
+                : "Undo the last stroke or colour change.";
 
         public void Undo()
         {
@@ -327,7 +326,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             Redraw();
             OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(HasUnsavedChanges));
             OnPropertyChanged(nameof(UndoHelp));
-            StatusText = "Put back the way it was.";
+            StatusText = "";
         }
 
         /// <summary>Lays the current number down at one spot. Called as the pointer moves, so it only
@@ -380,7 +379,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 string perr = GraphicAssets.WritePalette(_archive, _index, _colours, _palette, _paletteBank);
                 if (perr != null)
-                    return "The picture went in, but the colours did not: " + perr;
+                    return "The picture was saved, but the colours weren't: " + perr;
             }
             _undo.Clear();
             OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(HasUnsavedChanges));

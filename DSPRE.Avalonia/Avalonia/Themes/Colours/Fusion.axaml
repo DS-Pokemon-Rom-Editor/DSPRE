@@ -1,8 +1,6 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- Internal reimplementation of Qt Fusion palette roles from qt_fusionPalette()
-         and QFusionStylePrivate. Values are split by ThemeVariant so controls can
-         switch between the canonical light and dark Fusion palettes at runtime. -->
+    <!-- Qt Fusion palette roles (qt_fusionPalette), split by theme variant. -->
 
     <ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary x:Key="Dark">

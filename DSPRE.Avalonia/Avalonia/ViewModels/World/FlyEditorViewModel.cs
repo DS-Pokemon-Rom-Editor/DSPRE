@@ -191,7 +191,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync($"Could not save: {ex.Message}", "Fly / warp editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't save:\n{ex.Message}", "Fly / warp editor");
             }
         }
 
@@ -229,7 +229,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex)
             {
                 AppLogger.Error($"FlyEditorViewModel.LoadRows: {ex.Message}");
-                StatusText = $"Error loading: {ex.Message}";
+                StatusText = $"Couldn't load: {ex.Message}";
             }
             _undo = new ByteStateUndo(() => UndoJson.Take(Rows), ApplyState, RaiseUndo);
             RaiseUndo();

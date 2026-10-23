@@ -155,11 +155,7 @@
                 </Setter.Value>
             </Setter>
         </Style>
-        <!-- (Removed the hover "track pit" that toggled visible on pointerover: it darkened the track
-             behind the thumb and flickered as the pointer moved on/off the bar while scrolling.) -->
-        <!-- Hover feedback (perpendicular gradient). The earlier flicker was the track pit, now gone.
-             :pressed is listed AFTER, so during a drag it wins and stays stable (thumb has capture),
-             which means the hover gradient shows only while hovering and not while holding. -->
+        <!-- Hover gradient; :pressed comes later, so it wins while dragging. -->
         <Style Selector="^ /template/ Thumb#thumb:pointerover">
             <Setter Property="Background" Value="{DynamicResource ScrollBar.MouseOver.Thumb}"/>
         </Style>

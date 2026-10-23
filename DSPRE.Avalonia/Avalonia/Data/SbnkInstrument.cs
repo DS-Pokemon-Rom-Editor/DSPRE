@@ -14,11 +14,8 @@ namespace DSPRE.Avalonia.Data
         public int WaveIndex;
         public int BaseNote = 60;   // middle C, the common default when a record doesn't specify one
 
-        // Raw SNDInstParam envelope bytes (0-127, Nitro SDK's own rate/level encoding, NOT plain milliseconds
-        // or a linear 0-1 level; see NitroEnvelope for the conversion. 127 means "fast/instant" for
-        // attack/decay/release, "full level" for sustain). All-127 is a flat, unshaped envelope, matching a
-        // record that (for whatever reason) didn't carry real envelope bytes rather than silently applying a
-        // slow ramp or an inaudible decay.
+        // Raw envelope bytes (0-127 in the SDK's rate and level encoding; NitroEnvelope converts them). All 127 is a
+        // flat envelope, for records without real envelope bytes.
         public int Attack = 127, Decay = 127, Sustain = 127, Release = 127;
 
         /// <summary>Instrument pan, 0-127 with 64 centred; the sequence's pan adds to it.</summary>
@@ -93,7 +90,7 @@ namespace DSPRE.Avalonia.Data
                 int relOff = (int)(packed >> 8);
                 if (recordType == 0 || relOff == 0) { list.Add(null); continue; }
 
-                // The offset is relative to this SBNK sub-file's own byte 0, NOT the DATA block's start (same
+                // The offset is relative to this SBNK sub-file's own byte 0, not the DATA block's start (same
                 // base the format's own instCount lookup uses).
                 int at = relOff;
                 SbnkInstrument inst = new SbnkInstrument();
@@ -166,9 +163,8 @@ namespace DSPRE.Avalonia.Data
                         break;
                     }
 
-                    // A null record (5) is a program the bank deliberately leaves silent, and a direct record
-                    // (4) plays from an address in memory that an archive on disk cannot resolve. Both leave the
-                    // instrument with no regions, so notes on them are silent rather than the program being lost.
+                    // A null record (5) is silent on purpose and a direct one (4) plays from a memory address the file can't
+                    // resolve; both leave the program listed with no regions, so its notes are silent.
                     case 4:
                     case 5:
                         break;

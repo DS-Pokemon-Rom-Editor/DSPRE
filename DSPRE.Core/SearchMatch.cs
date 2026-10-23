@@ -7,7 +7,7 @@ namespace DSPRE
     /// <summary>Search box matching with case and accents ignored.</summary>
     public static class SearchMatch
     {
-        // Decomposed rather than culture-compared, so it works without culture data.
+        // Decomposed, not culture-compared, so it works without culture data.
         public static string Fold(string s)
         {
             if (string.IsNullOrEmpty(s)) return "";
@@ -55,8 +55,7 @@ namespace DSPRE
                 {
                     int cost = a[i - 1] == b[j - 1] ? 0 : 1;
                     d[i, j] = Math.Min(Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1), d[i - 1, j - 1] + cost);
-                    //Usual mixone typo joye but not jyoe so only one neighbour
-                    // TODO: Get less fat fingres
+                    // Only neighbouring letters swap: "joye" for "joey" counts, "jyoe" doesn't.
                     if (i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1])
                         d[i, j] = Math.Min(d[i, j], d[i - 2, j - 2] + 1);
                 }

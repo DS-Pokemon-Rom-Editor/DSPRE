@@ -199,7 +199,7 @@ namespace DSPRE.LibNDSFormats
             error = null;
             if (!TryGetLayout(BTXFile, paletteIndex, out int imageOffset, out int paletteBase, out int colorCount, out int width, out int height))
             {
-                error = "This texture isn't a 16-color BTX0 image with that palette.";
+                error = "This texture isn't a 16-colour BTX0 image with that palette.";
                 return null;
             }
             if (bm.Width != width || bm.Height != height)
@@ -305,7 +305,7 @@ namespace DSPRE.LibNDSFormats
             error = null;
             if (!TryGetLayout(BTXFile, paletteIndex, out int imageOffset, out int paletteBase, out int colorCount, out int width, out int height))
             {
-                error = "This texture isn't a 16-color BTX0 image with that palette.";
+                error = "This texture isn't a 16-colour BTX0 image with that palette.";
                 return null;
             }
             if (bm.Width != width || bm.Height != height)
@@ -327,7 +327,7 @@ namespace DSPRE.LibNDSFormats
                 {
                     if (colours.Count >= slots)
                     {
-                        error = $"Too many colors. Limit: {slots}.";
+                        error = $"Too many colours. Limit: {slots}.";
                         return null;
                     }
                     i = colours.Count;

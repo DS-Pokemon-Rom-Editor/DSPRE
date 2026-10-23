@@ -6,9 +6,6 @@ using DSPRE.Avalonia.ViewModels;
 
 namespace DSPRE.Avalonia.Views.Pokemon
 {
-    /// <summary>Authored as a <see cref="UserControl"/> so it can be embedded as the Encounters tab in
-    /// the Maps workspace; standalone launches host it in an <see cref="EditorHostWindow"/> (which calls
-    /// <see cref="WildEditorDPPtViewModel.Detach"/> on close, see AvaloniaEditorLauncher.OpenWildEditor).</summary>
     public partial class WildEditorDPPtView : UserControl
     {
         private WildEditorDPPtViewModel ViewModel => (WildEditorDPPtViewModel)DataContext;
@@ -33,7 +30,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private async void RepairAll_Click(object sender, RoutedEventArgs e) => await ViewModel.RepairAllAsync();
         private void SlotOdds_Click(object sender, RoutedEventArgs e) => AvaloniaEditorLauncher.OpenEncounterSlotOdds();
 
-        // Coming back from the Slot Odds editor shows the new chances in the slot labels.
+        // Coming back from Encounter slot odds shows the new chances in the slot labels.
         private Window _window;
         protected override void OnAttachedToVisualTree(global::Avalonia.VisualTreeAttachmentEventArgs e)
         {
@@ -57,7 +54,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
             string path = await DialogHelper.OpenFileAsync(TopLevel.GetTopLevel(this) as Window, "Import encounter file", new[] { filter });
             if (path == null) return;
             try { ViewModel.ImportEncounterFile(path); SaveNotice.Imported($"encounter file {ViewModel.SelectedEncounterIndex}", path); }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Wild Pokémon editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Wild Pokémon editor"); }
         }
 
         private async void ExportFile_Click(object sender, RoutedEventArgs e)
@@ -66,7 +63,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
             string path = await DialogHelper.SaveFileAsync(TopLevel.GetTopLevel(this) as Window, "Export encounter file", new[] { filter }, $"encounters_{ViewModel.SelectedEncounterIndex:D4}.wld");
             if (path == null) return;
             try { ViewModel.ExportEncounterFile(path); SaveNotice.Exported(path); }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Wild Pokémon editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Wild Pokémon editor"); }
         }
     }
 }

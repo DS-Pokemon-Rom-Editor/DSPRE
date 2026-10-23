@@ -19,16 +19,8 @@ using Avalonia.Threading;
 namespace DSPRE.Avalonia.ViewModels.Trainers
 {
     /// <summary>
-    /// Avalonia port of the WinForms <c>TrainerEditor</c>. Core scope: trainer
-    /// selection + properties (name, class, AI flags, held items, battle flags) and
-    /// the full 6-Pokémon party (species/form/level/moves/item/gender/ability/IV/ball
-    /// seals), plus the trainer-class sprite preview (shared
-    /// <see cref="TrainerClassSpriteRenderer"/>).
-    ///
-    /// Deferred (sub-forms): Battle Message editor, DV Calculator, Mon Reorder,
-    /// Trainer Search. Simplification: the per-species "more than one gender" gate is
-    /// not applied: the gender selector is editable whenever the game supports it
-    /// (HGSS / AI-backport).
+    /// Edits a trainer's properties and party, with the class sprite preview. The gender selector is
+    /// editable whenever the game supports it, whatever the species.
     /// </summary>
     public class TrainerEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
@@ -72,7 +64,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public ObservableCollection<TrainerPartyMonViewModel> Party { get; } = new ObservableCollection<TrainerPartyMonViewModel>();
         public ObservableCollection<AiFlagViewModel> AiFlags { get; } = new ObservableCollection<AiFlagViewModel>();
 
-        /// <summary>The trainer's battle messages, read-only here; the Battle Message editor changes them.</summary>
+        /// <summary>The trainer's battle messages, read-only here; the Trainer battle messages window changes them.</summary>
         public sealed record BattleLine(string When, string Text);
         public ObservableCollection<BattleLine> BattleLines { get; } = new ObservableCollection<BattleLine>();
         public bool HasBattleLines => BattleLines.Count > 0;
@@ -233,7 +225,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             try
             {
                 if (IsHgeActive) return HgeLevelUpMoves(mon.DataSpeciesId, (int)mon.Level);
-                // Read before anything else unpacked them, the files are missing and the defaults would stay empty.
+                // If read before anything unpacks them, the files are missing and the defaults stay empty.
                 if (!_learnsetsUnpacked) { DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.Learnsets }); _learnsetsUnpacked = true; }
                 return new LearnsetData(mon.SpeciesIndex).GetLearnsetAtLevel((int)mon.Level);
             }
@@ -369,17 +361,17 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public const string AiNotesUrl = "https://gist.github.com/lhearachel/ff61af1f58c84c96592b0b8184dba096";
         private static readonly string[] AiFlagTips =
         {
-            "Discourage moves which would result in a (literally or functionally) wasted turn or which would immediately benefit the opponent.",
-            "Prioritize raw damage output over all other outcomes.",
-            "Provide additional logic to encourage/discourage certain move effects in particular circumstances.",
-            "On the first turn of the battle (for the entire battle, not the battler), prioritize setup moves.",
-            "Prioritize \"Risky\" attacking or status moves.",
-            "Prioritize moves with variable power, flat damage, high base power, or zero power.",
-            "Prioritize setting up when at higher HP thresholds and passing stat stage bonuses to party members.",
-            "Encourage moves which would benefit our partner and discourage moves which would harm them.",
-            "Discourage certain move effects at particular HP thresholds for both the attacker and target.",
-            "Set up weather effects on the first turn of battle if they are not already present.",
-            "Incentivize usage of moves which harass or disrupt the opponent's strategy.",
+            "Avoids moves that waste a turn or help the opponent right away.",
+            "Puts raw damage ahead of everything else.",
+            "Favours or avoids some move effects in certain situations.",
+            "Favours setup moves on the battle's first turn, not each Pokémon's first turn.",
+            "Favours risky attacking or status moves.",
+            "Favours moves with variable power, fixed damage, high base power or no power.",
+            "Favours setting up at high HP and passing stat boosts on to the party.",
+            "Favours moves that help its partner and avoids moves that harm it.",
+            "Avoids some move effects when the attacker or the target is at certain HP.",
+            "Sets up weather on the first turn of battle if there is none.",
+            "Favours moves that harass or disrupt the opponent.",
         };
         private static string AiFlagTip(int i) => i >= 0 && i < AiFlagTips.Length ? AiFlagTips[i] : null;
 
@@ -791,8 +783,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     TrainerItems.Add(slot);
                 }
 
-                // hg-engine's real TrainerPokemonData struct has no gender field, nowhere to write a
-                // forced gender to, so the selector is hidden rather than shown-but-silently-ignored.
+                // hg-engine's TrainerPokemonData has no gender field, so the selector is hidden.
                 bool genderVisibleForMode = _genderEditable && !IsHgeActive;
                 for (int i = 0; i < TrainerFile.PokeInParty; i++)
                 {
@@ -814,8 +805,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
             catch (Exception ex)
             {
-                StatusText = $"Error loading trainers: {ex.Message}";
-                await DialogHelper.ShowErrorAsync($"Failed to load trainers:\n{ex.Message}", "Trainer editor error");
+                StatusText = $"Couldn't load trainers: {ex.Message}";
+                await DialogHelper.ShowErrorAsync($"Couldn't load trainers:\n{ex.Message}", "Trainer editor");
             }
             finally { PopLoading(); }
         }
@@ -843,7 +834,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (!IsHgeActive) return;
             if (!HgEngineSpeciesPersonalFields.TryLoadAllAbilities(out Dictionary<int, (int first, int second)> fromSource, out string error))
             {
-                AppLogger.Error("Trainer editor abilities could not be read from Species.c: " + error);
+                AppLogger.Error("Trainer editor abilities couldn't be read from Species.c: " + error);
                 return;
             }
             foreach (KeyValuePair<int, (int first, int second)> pair in fromSource)
@@ -886,7 +877,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
             catch (Exception ex)
             {
-                _ = DialogHelper.ShowErrorAsync($"Failed to load trainer {index}:\n{ex.Message}", "Trainer editor error");
+                _ = DialogHelper.ShowErrorAsync($"Couldn't load trainer {index}:\n{ex.Message}", "Trainer editor");
             }
         }
 
@@ -906,7 +897,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (!HgEngineTrainerSource.TryLoad(index, out HgEngineSourceBlock block, out string error))
             {
-                _ = DialogHelper.ShowErrorAsync($"Failed to load trainer {index} from hg-engine source:\n{error}", "Trainer editor error");
+                _ = DialogHelper.ShowErrorAsync($"Couldn't load trainer {index} from hg-engine source:\n{error}", "Trainer editor");
                 return;
             }
             _trainer = null;   // no binary model for hg-engine trainers, see TryLoad's doc comment
@@ -930,7 +921,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             TrainerName = block.TryGetString(new[] { FieldPathSegment.Field("name") }, out string name) ? name : "";
 
-            // An unresolved class stays blank and unwritten rather than inheriting the previous trainer's.
+            // An unresolved class stays blank and unwritten, not the previous trainer's.
             TrainerClassIndex = block.TryGetSymbol(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("trainerClass") }, TrainerClassHeader, out int classId)
                 ? classId : -1;
 
@@ -1004,8 +995,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 abilityIndex = slot.Name == null ? -1 : Array.IndexOf(TrainerPartyMonViewModel.HgeAbilitySlotNames, slot.Name);
             }
 
-            // hg-engine's TrainerPokemonData has no gender field at all, nowhere to read a forced
-            // gender from, so it's always "Default" here (the Gender selector is hidden in the UI too).
+            // hg-engine has no gender field, so this is always Default.
             mon.Load(species, form, Math.Max(1, level), moves, itemVal, 0, abilityIndex, ivs, ballSeal);
 
             TrainerPartyMonHgeExtras extras = mon.HgeExtras;
@@ -1280,8 +1270,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 if (Party[i].SpeciesIndex > 0) continue;
                 string error = $"Party slot {i + 1} has no Pokémon.";
-                StatusText = $"Trainer {_selectedTrainerIndex} was not saved: {error}";
-                _ = DialogHelper.ShowErrorAsync($"Trainer {_selectedTrainerIndex} was not saved:\n{error}", "Trainer editor error");
+                StatusText = $"Trainer {_selectedTrainerIndex} wasn't saved: {error}";
+                _ = DialogHelper.ShowErrorAsync($"Trainer {_selectedTrainerIndex} wasn't saved:\n{error}", "Trainer editor");
                 return;
             }
 
@@ -1293,8 +1283,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (UpdateTrainerName(_trainerName) is string nameError)
             {
                 // The record is written; the name stays unsaved so Save or the close prompt tries it again.
-                StatusText = $"Trainer {_selectedTrainerIndex}'s name was not saved.";
-                _ = DialogHelper.ShowErrorAsync($"Trainer {_selectedTrainerIndex}'s name was not saved:\n{nameError}", "Trainer editor error");
+                StatusText = $"Trainer {_selectedTrainerIndex}'s name wasn't saved.";
+                _ = DialogHelper.ShowErrorAsync($"Trainer {_selectedTrainerIndex}'s name wasn't saved:\n{nameError}", "Trainer editor");
                 return;
             }
 
@@ -1332,8 +1322,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (!saved)
             {
                 if (error == null) return;
-                StatusText = $"Trainer {trainer} was not saved: {error}";
-                await DialogHelper.ShowErrorAsync($"Trainer {trainer} was not saved:\n{error}", "Trainer editor error");
+                StatusText = $"Trainer {trainer} wasn't saved: {error}";
+                await DialogHelper.ShowErrorAsync($"Trainer {trainer} wasn't saved:\n{error}", "Trainer editor");
                 return;
             }
 
@@ -1495,7 +1485,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (unresolved.Count > 0)
             {
                 string missing = string.Join(", ", unresolved);
-                AppLogger.Error($"hg-engine write for trainer {_selectedTrainerIndex} could not place {missing}");
+                AppLogger.Error($"hg-engine write for trainer {_selectedTrainerIndex} couldn't place {missing}");
                 return $"Trainers.c has no place for {missing}.";
             }
             return null;
@@ -1516,25 +1506,21 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
         }
 
-        // ── Add / Export / Import ─────────────────────────────────────────────────────
-        /// <summary>Atomically appends a trainer and expands every verified dependent resource.</summary>
         // The add and remove report the roster's room; the trainer they select loads afterwards and would replace it.
         private string _statusAfterLoad;
 
+        /// <summary>Appends a trainer and grows every table that depends on the count, all or nothing.</summary>
         public void AddTrainer()
         {
-            // Adding a brand-new trainer entry to Trainers.c isn't built yet. Writing a blank trainer
-            // straight to the local a055/a056 binaries here would be silently discarded on the next
-            // hg-engine source sync and never reach a real build, so this is refused rather than doing
-            // something that looks like it worked but doesn't.
+            // Adding to Trainers.c isn't supported yet, and a binary-only add would be lost on the next build.
             if (IsHgeActive)
             {
-                _ = DialogHelper.ShowErrorAsync("Adding new trainers isn't supported yet for hg-engine source-backed ROMs.", "Trainer editor error");
+                _ = DialogHelper.ShowErrorAsync("Adding trainers isn't supported yet on a linked hg-engine project.", "Trainer editor");
                 return;
             }
             if (HasUnsavedChanges)
             {
-                _ = DialogHelper.ShowErrorAsync("Save or discard the current trainer's changes before adding another trainer.", "Trainer editor error");
+                _ = DialogHelper.ShowErrorAsync("Save or discard the current trainer's changes before adding another trainer.", "Trainer editor");
                 return;
             }
             try
@@ -1555,7 +1541,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     : $"Added trainer {newIndex}. {after.RefusalReason}";
                 SelectedTrainerIndex = newIndex;
             }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't add trainer:\n{ex.Message}", "Trainer editor error"); }
+            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't add trainer:\n{ex.Message}", "Trainer editor"); }
         }
 
         /// <summary>Removes only the final appended trainer after every known reference source is clear.</summary>
@@ -1564,15 +1550,15 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (HgEngineProject.IsActive)
             {
                 await DialogHelper.ShowErrorAsync(
-                    "Removing trainers isn't supported for hg-engine source-backed ROMs.",
-                    "Trainer editor error");
+                    "Removing trainers isn't supported on a linked hg-engine project.",
+                    "Trainer editor");
                 return;
             }
             if (HasUnsavedChanges)
             {
                 await DialogHelper.ShowErrorAsync(
                     "Save or discard the current trainer's changes before removing a trainer.",
-                    "Trainer editor error");
+                    "Trainer editor");
                 return;
             }
             if (TrainerNames.Count == 0) return;
@@ -1580,8 +1566,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             int candidate = TrainerNames.Count - 1;
             bool confirmed = await DialogHelper.AskYesNoAsync(
                 $"Remove trainer {candidate}? Only the final trainer can be removed. " +
-                "DSPRE will cancel if an event, script, rematch table, battle message, or phonebook entry still uses it.",
-                "Delete trainer?");
+                "DSPRE stops if an event, script, rematch table, battle message or phone book entry still uses it.",
+                "Remove trainer?");
             if (!confirmed) return;
 
             StatusText = $"Checking references to trainer {candidate}…";
@@ -1605,7 +1591,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 if (!removed)
                 {
                     StatusText = error;
-                    await DialogHelper.ShowErrorAsync(error, "Trainer editor error");
+                    await DialogHelper.ShowErrorAsync(error, "Trainer editor");
                     return;
                 }
 
@@ -1618,7 +1604,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             catch (Exception ex)
             {
                 await DialogHelper.ShowErrorAsync($"Couldn't remove trainer:\n{ex.Message}",
-                    "Trainer editor error");
+                    "Trainer editor");
             }
             finally { PopLoading(); }
         }
@@ -1627,7 +1613,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (_trainer == null) return;
             SyncToTrainer();
-            FilePickerFileType filter = new FilePickerFileType("Gen IV Trainer File") { Patterns = new[] { "*.trf" } };
+            FilePickerFileType filter = new FilePickerFileType("Trainer file") { Patterns = new[] { "*.trf" } };
             string path = await DialogHelper.SaveFileAsync(_owner, "Export trainer", new[] { filter }, $"trainer_{_selectedTrainerIndex:D4}.trf");
             if (path == null) return;
             try
@@ -1635,16 +1621,15 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 PlainFiles.WriteBytes(path, _trainer.ToByteArray());
                 SaveNotice.Exported(path);
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Trainer editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Trainer editor"); }
         }
 
-        /// <summary>Loads a combined .trf (name + properties + party) into the CURRENTLY SELECTED
-        /// trainer slot's in-memory state. Like Replace Properties/Import Party below, this stages the
-        /// change (marks dirty) rather than writing to disk immediately, so Undo and the Save button work.</summary>
+        /// <summary>Loads a .trf (name, properties, party) into the selected trainer. Like the other imports,
+        /// it waits for Save, so Undo works.</summary>
         public async Task ImportTrainerAsync()
         {
             if (_trainer == null || _selectedTrainerIndex < 0) return;
-            FilePickerFileType filter = new FilePickerFileType("Gen IV Trainer File") { Patterns = new[] { "*.trf" } };
+            FilePickerFileType filter = new FilePickerFileType("Trainer file") { Patterns = new[] { "*.trf" } };
             string path = await DialogHelper.OpenFileAsync(_owner, "Import trainer", new[] { filter });
             if (path == null) return;
             try
@@ -1665,14 +1650,14 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 SetDirty();
                 SaveNotice.Imported($"trainer {_selectedTrainerIndex}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Trainer editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Trainer editor"); }
         }
 
         public async Task ExportPropertiesAsync()
         {
             if (_trainer == null) return;
             SyncToTrainer();
-            FilePickerFileType filter = new FilePickerFileType("Gen IV Trainer Properties") { Patterns = new[] { "*.trp" } };
+            FilePickerFileType filter = new FilePickerFileType("Trainer properties") { Patterns = new[] { "*.trp" } };
             string path = await DialogHelper.SaveFileAsync(_owner, "Export trainer properties", new[] { filter }, $"trainer_{_selectedTrainerIndex:D4}.trp");
             if (path == null) return;
             try
@@ -1680,13 +1665,13 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 PlainFiles.WriteBytes(path, _trainer.Trp.ToByteArray());
                 SaveNotice.Exported(path);
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Trainer editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Trainer editor"); }
         }
 
         public async Task ReplacePropertiesAsync()
         {
             if (_trainer == null || _selectedTrainerIndex < 0) return;
-            FilePickerFileType filter = new FilePickerFileType("Gen IV Trainer Properties") { Patterns = new[] { "*.trp" } };
+            FilePickerFileType filter = new FilePickerFileType("Trainer properties") { Patterns = new[] { "*.trp" } };
             string path = await DialogHelper.OpenFileAsync(_owner, "Import trainer properties", new[] { filter });
             if (path == null) return;
             try
@@ -1698,14 +1683,14 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 SetDirty();
                 SaveNotice.Imported($"the properties of trainer {_selectedTrainerIndex}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Trainer editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Trainer editor"); }
         }
 
         public async Task ExportPartyAsync()
         {
             if (_trainer == null) return;
             SyncToTrainer();
-            FilePickerFileType filter = new FilePickerFileType("Gen IV Party Data") { Patterns = new[] { "*.pdat" } };
+            FilePickerFileType filter = new FilePickerFileType("Party data") { Patterns = new[] { "*.pdat" } };
             string path = await DialogHelper.SaveFileAsync(_owner, "Export trainer party", new[] { filter }, $"party_{_selectedTrainerIndex:D4}.pdat");
             if (path == null) return;
             try
@@ -1717,13 +1702,13 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 PlainFiles.WriteBytes(path, condensed);
                 SaveNotice.Exported(path);
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Trainer editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Trainer editor"); }
         }
 
         public async Task ImportPartyAsync()
         {
             if (_trainer == null) return;
-            FilePickerFileType filter = new FilePickerFileType("Gen IV Party Data") { Patterns = new[] { "*.pdat" } };
+            FilePickerFileType filter = new FilePickerFileType("Party data") { Patterns = new[] { "*.pdat" } };
             string path = await DialogHelper.OpenFileAsync(_owner, "Import trainer party", new[] { filter });
             if (path == null) return;
             try
@@ -1735,7 +1720,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 SetDirty();
                 SaveNotice.Imported($"the party of trainer {_selectedTrainerIndex}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Import failed:\n{ex.Message}", "Trainer editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Trainer editor"); }
         }
 
         // ── Party order ───────────────────────────────────────────────────────────────
@@ -1788,7 +1773,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (!IsHgeActive)
             {
                 try { DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.Learnsets }); }
-                catch (Exception ex) { AppLogger.Error("Learnsets could not be unpacked: " + ex.Message); return; }
+                catch (Exception ex) { AppLogger.Error("Learnsets couldn't be unpacked: " + ex.Message); return; }
             }
             for (int i = 0; i < (int)_partyCount && i < Party.Count; i++)
             {
@@ -1801,16 +1786,16 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     if (moves == null) continue;
                     mon.Move1 = moves[0]; mon.Move2 = moves[1]; mon.Move3 = moves[2]; mon.Move4 = moves[3];
                 }
-                catch (Exception ex) { AppLogger.Error($"Level-up moves for species {mon.SpeciesIndex} could not be read: {ex.Message}"); }
+                catch (Exception ex) { AppLogger.Error($"Level-up moves for species {mon.SpeciesIndex} couldn't be read: {ex.Message}"); }
             }
         }
 
-        // The same pick as a learnset file, taken from learnsets.json rather than the last build.
+        // The same pick as a learnset file, from learnsets.json, not the last build.
         private static ushort[] HgeLevelUpMoves(int speciesId, int level)
         {
             if (!HgEngineLearnsets.TryGetLevelMoves(speciesId, out List<(int level, int move)> list, out string error))
             {
-                AppLogger.Error($"Level-up moves for species {speciesId} could not be read: {error}");
+                AppLogger.Error($"Level-up moves for species {speciesId} couldn't be read: {error}");
                 return null;
             }
             MemoryStream stream = new MemoryStream();

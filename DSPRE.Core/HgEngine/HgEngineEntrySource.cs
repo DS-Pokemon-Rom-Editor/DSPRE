@@ -3,8 +3,8 @@ using System.Linq;
 
 namespace DSPRE.HgEngine
 {
-    /// <summary>Loads one entry of a source-owned domain from the checkout's own file, so an editor shows
-    /// what the source says rather than the last built copy.</summary>
+    /// <summary>Loads one entry from the checkout's source file, so an editor shows the source, not the last
+    /// build.</summary>
     public static class HgEngineEntrySource
     {
         public static bool TryLoad(HgEngineDomain domain, int id, out HgEngineSourceBlock entry, out string error)
@@ -19,11 +19,11 @@ namespace DSPRE.HgEngine
             { error = $"No source name was found for {domain} {id}."; return false; }
 
             string path = Path.Combine(HgEngineProject.RepoPathUnc, info.SourceFileRelPath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(path)) { error = $"Source file not found: {path}"; return false; }
+            if (!File.Exists(path)) { error = $"{path} is missing from the checkout."; return false; }
 
             string text = HgEngineFileCache.GetText(path);
             if (!HgEngineSourcePatcher.TryFindEntry(text, designator, out int open, out int close))
-            { error = $"{designator} is not in {info.SourceFileRelPath}."; return false; }
+            { error = $"{designator} isn't in {info.SourceFileRelPath}."; return false; }
 
             entry = new HgEngineSourceBlock(text.Substring(open, close - open + 1));
             return true;

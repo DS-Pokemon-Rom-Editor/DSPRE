@@ -48,7 +48,6 @@ namespace DSPRE.Avalonia.Views.Battle
         }
         private static ScriptCmdRow Row(object sender) => (sender as Control)?.DataContext as ScriptCmdRow;
 
-        // ── Script tab: two-way sync with the view model and squiggles under errors ──
         private void SetupEditor()
         {
             if (_editorReady || CommandsTextEditor == null) return;

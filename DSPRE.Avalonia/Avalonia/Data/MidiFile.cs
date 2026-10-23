@@ -23,8 +23,7 @@ namespace DSPRE.Avalonia.Data
         {
             if (notes == null) return null;
 
-            // One MIDI track per track of the sequence, plus a first track holding the name and the speed,
-            // which is what a Type 1 file is.
+            // A Type 1 file: one MIDI track per sequence track, plus a first track with the name and tempo.
             List<IGrouping<int, SseqPlayer.Note>> byTrack = notes.GroupBy(n => n.Track).OrderBy(g => g.Key).ToList();
             List<byte[]> chunks = new List<byte[]> { HeaderTrack(name) };
             foreach (IGrouping<int, SseqPlayer.Note> g in byTrack) chunks.Add(OneTrack(g.ToList(), g.Key));

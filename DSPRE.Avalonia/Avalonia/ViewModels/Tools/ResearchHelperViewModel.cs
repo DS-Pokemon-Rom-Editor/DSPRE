@@ -26,8 +26,8 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         public int Functions { get; set; }
         public int Actions { get; set; }
 
-        /// <summary>Names the source when hg-engine assembles this file, since the counts then describe
-        /// the last build rather than what would go into the next one.</summary>
+        /// <summary>Names the source when hg-engine builds this file, since the counts then describe the
+        /// last build.</summary>
         public string Source { get; set; } = "";
     }
 
@@ -299,7 +299,6 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 _cachedLevelScriptFiles = levelScripts;
                 _cachedEventFiles = events;
 
-                // Build stats
                 foreach (ScriptFile sf in _cachedScriptFiles)
                 {
                     int total = (sf.AllScripts?.Count ?? 0) + (sf.AllFunctions?.Count ?? 0) + (sf.AllActions?.Count ?? 0);
@@ -343,10 +342,9 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                     });
                 }
 
-                // Populate script file dropdown for ID watcher
                 ScriptFileEntries.Clear();
                 foreach (ScriptFile sf in _cachedScriptFiles)
-                    ScriptFileEntries.Add($"{sf.FileID}: Script File");
+                    ScriptFileEntries.Add($"Script file {sf.FileID}");
 
                 if (ScriptFileEntries.Count > 0)
                     SelectedScriptFileIndex = 0;
@@ -365,7 +363,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             }
             catch (Exception ex)
             {
-                StatusText = $"Error loading data: {ex.Message}";
+                StatusText = $"Couldn't load data: {ex.Message}";
             }
             finally
             {
@@ -401,7 +399,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             foreach (LevelScriptFile ls in _cachedLevelScriptFiles)
             {
                 int count = CountVariableInLevelScript(ls, varNum);
-                if (count > 0) VariableResults.Add(new VariableUsageResult { FileType = "Level Script", FileID = ls.ID, UsageCount = count });
+                if (count > 0) VariableResults.Add(new VariableUsageResult { FileType = "Level script", FileID = ls.ID, UsageCount = count });
             }
 
             foreach (EventFile ev in _cachedEventFiles)
@@ -458,7 +456,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                     {
                         FileType = "Script",
                         FileID = sf.FileID,
-                        Details = $"{count} flag operation(s)",
+                        Details = Plural.Of(count, "flag operation"),
                         UsageCount = count,
                         EventIndex = -1
                     });
@@ -525,7 +523,6 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             ScriptIdResults.Clear();
             StatusText = $"Searching script file {sf.FileID} for {label}…";
 
-            // Find event files linked to headers that use this script file
             HashSet<int> assocEventIds = new HashSet<int>();
             int headerCount = RomInfo.GetHeaderCount();
             for (ushort i = 0; i < headerCount; i++)
@@ -578,7 +575,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
             int owEntryId = OwEntryIdSearch;
             OwWatcherResults.Clear();
-            StatusText = $"Searching for OW Entry ID {owEntryId}...";
+            StatusText = $"Searching for overworld {owEntryId}…";
 
             foreach (EventFile eventFile in _cachedEventFiles)
             {
@@ -604,7 +601,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             StatusText = $"Overworld {owEntryId}: {OwWatcherResults.Count} uses";
         }
 
-        public void ClearOwResults() { OwWatcherResults.Clear(); OwEntryIdSearch = 0; StatusText = "Overworld Watcher search cleared"; }
+        public void ClearOwResults() { OwWatcherResults.Clear(); OwEntryIdSearch = 0; StatusText = "Overworld watcher search cleared"; }
 
         public void NavigateToOwResult(OwEntryUsageResult result)
         {
@@ -620,13 +617,13 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
             int trainerId = SelectedTrainerIndex;
             TrainerWatcherResults.Clear();
-            StatusText = $"Searching for Trainer {trainerId} usage...";
+            StatusText = $"Searching for uses of trainer {trainerId}…";
 
             Dictionary<ushort, ScriptCommandInfo> commandInfoDict = RomInfo.GetScriptCommandInfoDict();
             foreach (ScriptFile scriptFile in _cachedScriptFiles)
             {
-                ScanContainersForTrainerParameter(scriptFile.AllScripts, commandInfoDict, trainerId, scriptFile.FileID, "Script Command");
-                ScanContainersForTrainerParameter(scriptFile.AllFunctions, commandInfoDict, trainerId, scriptFile.FileID, "Function Command");
+                ScanContainersForTrainerParameter(scriptFile.AllScripts, commandInfoDict, trainerId, scriptFile.FileID, "Script command");
+                ScanContainersForTrainerParameter(scriptFile.AllFunctions, commandInfoDict, trainerId, scriptFile.FileID, "Function command");
             }
 
             // Mirrors EventEditor.NavigateToOverworldTarget's decode formula.
@@ -647,7 +644,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                     TrainerWatcherResults.Add(new TrainerUsageResult
                     {
                         SourceId = eventFile.ID,
-                        Type = isPartner ? "Overworld (Partner)" : "Overworld",
+                        Type = isPartner ? "Overworld (partner)" : "Overworld",
                         Index = i,
                         Details = ow.ToString()
                     });
@@ -665,7 +662,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                         TrainerWatcherResults.Add(new TrainerUsageResult
                         {
                             SourceId = -1,
-                            Type = "Vs. Seeker Encounter",
+                            Type = "Vs. Seeker encounter",
                             Index = r,
                             Details = $"Row {r}: owns this rematch chain"
                         });
@@ -677,7 +674,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                         TrainerWatcherResults.Add(new TrainerUsageResult
                         {
                             SourceId = -1,
-                            Type = $"Vs. Seeker Rematch {(char)('A' + s)}",
+                            Type = $"Vs. Seeker rematch {(char)('A' + s)}",
                             Index = r,
                             Details = $"Row {r}: rematch {(char)('A' + s)} for encounter trainer {row.BaseTrainerId}"
                         });
@@ -696,7 +693,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                         TrainerWatcherResults.Add(new TrainerUsageResult
                         {
                             SourceId = -1,
-                            Type = "Pokégear Rematch Base",
+                            Type = "Pokégear rematch base",
                             Index = r,
                             Details = $"Row {r}: owns this rematch chain"
                         });
@@ -708,7 +705,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                         TrainerWatcherResults.Add(new TrainerUsageResult
                         {
                             SourceId = -1,
-                            Type = $"Pokégear Rematch {s + 1}",
+                            Type = $"Pokégear rematch {s + 1}",
                             Index = r,
                             Details = $"Row {r}: rematch {s + 1} for base trainer {row.BaseTrainerId}"
                         });
@@ -721,7 +718,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 foreach (TrainerReference reference in tables) TrainerWatcherResults.Add(TrainerUsageResult.From(reference));
             else StatusText = tableError;
 
-            StatusText = $"Found {TrainerWatcherResults.Count} use(s) of Trainer {trainerId}";
+            StatusText = $"Found {Plural.Of(TrainerWatcherResults.Count, "use")} of trainer {trainerId}";
         }
 
         // ── Class Watcher ────────────────────────────────────────────────────────
@@ -738,12 +735,12 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 return;
             }
             foreach (TrainerReference reference in uses) ClassWatcherResults.Add(TrainerUsageResult.From(reference));
-            StatusText = $"Found {ClassWatcherResults.Count} use(s) of class {classId}";
+            StatusText = $"Found {Plural.Of(ClassWatcherResults.Count, "use")} of class {classId}";
         }
 
-        public void ClearClassResults() { ClassWatcherResults.Clear(); StatusText = "Class Watcher search cleared"; }
+        public void ClearClassResults() { ClassWatcherResults.Clear(); StatusText = "Class watcher search cleared"; }
 
-        public void ClearTrainerResults() { TrainerWatcherResults.Clear(); StatusText = "Trainer Watcher search cleared"; }
+        public void ClearTrainerResults() { TrainerWatcherResults.Clear(); StatusText = "Trainer watcher search cleared"; }
 
         private void ScanContainersForTrainerParameter(List<ScriptCommandContainer> containers,
             Dictionary<ushort, ScriptCommandInfo> commandInfoDict, int trainerId, int sourceFileId, string typeLabel)
@@ -826,11 +823,11 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             {
                 AvaloniaEditorLauncher.OpenEventEditorWithOverworld(result.SourceId, result.Index);
             }
-            else if (result.Type == "Script Command" || result.Type == "Function Command")
+            else if (result.Type == "Script command" || result.Type == "Function command")
             {
                 // A script container occupies jump-table slot Index, so the editor can land on it;
                 // a function's number has no slot in the source and only the file is opened.
-                int scriptNumber = result.Type == "Script Command" ? result.Index : 0;
+                int scriptNumber = result.Type == "Script command" ? result.Index : 0;
                 AvaloniaEditorLauncher.OpenScriptEditor(result.SourceId, scriptNumber);
             }
         }
@@ -842,27 +839,27 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             int headerCount = RomInfo.GetHeaderCount();
 
             if (id < 0 || id >= headerCount)
-            { StatusText = $"Header ID must be 0, {headerCount - 1}."; return; }
+            { StatusText = $"Header ID must be between 0 and {headerCount - 1}."; return; }
 
             try
             {
                 MapHeader header = MapHeader.GetMapHeader((ushort)id);
-                if (header == null) { StatusText = $"Could not load header {id}."; return; }
+                if (header == null) { StatusText = $"Couldn't load header {id}."; return; }
 
                 HeaderProperties.Clear();
-                HeaderProperties.Add(new HeaderProperty { Name = "Header ID",          Value = header.ID.ToString() });
-                HeaderProperties.Add(new HeaderProperty { Name = "Script File ID",      Value = header.ScriptFileID.ToString() });
-                HeaderProperties.Add(new HeaderProperty { Name = "Level Script ID",     Value = header.LevelScriptID.ToString() });
-                HeaderProperties.Add(new HeaderProperty { Name = "Event File ID",       Value = header.EventFileID.ToString() });
-                HeaderProperties.Add(new HeaderProperty { Name = "Text Archive ID",     Value = header.TextArchiveID.ToString() });
-                HeaderProperties.Add(new HeaderProperty { Name = "Matrix ID",           Value = header.MatrixID.ToString() });
-                HeaderProperties.Add(new HeaderProperty { Name = "Area Data ID",        Value = header.AreaDataID.ToString() });
-                HeaderProperties.Add(new HeaderProperty { Name = "Camera Angle ID",     Value = header.CameraAngleID.ToString() });
-                HeaderProperties.Add(new HeaderProperty { Name = "Music Day ID",        Value = header.MusicDayID.ToString() });
-                HeaderProperties.Add(new HeaderProperty { Name = "Music Night ID",      Value = header.MusicNightID.ToString() });
-                HeaderProperties.Add(new HeaderProperty { Name = "Weather ID",          Value = header.WeatherID.ToString() });
+                HeaderProperties.Add(new HeaderProperty { Name = "Header",          Value = header.ID.ToString() });
+                HeaderProperties.Add(new HeaderProperty { Name = "Script file",      Value = header.ScriptFileID.ToString() });
+                HeaderProperties.Add(new HeaderProperty { Name = "Level script",     Value = header.LevelScriptID.ToString() });
+                HeaderProperties.Add(new HeaderProperty { Name = "Event file",       Value = header.EventFileID.ToString() });
+                HeaderProperties.Add(new HeaderProperty { Name = "Text archive",     Value = header.TextArchiveID.ToString() });
+                HeaderProperties.Add(new HeaderProperty { Name = "Matrix",           Value = header.MatrixID.ToString() });
+                HeaderProperties.Add(new HeaderProperty { Name = "Area data",        Value = header.AreaDataID.ToString() });
+                HeaderProperties.Add(new HeaderProperty { Name = "Camera",     Value = header.CameraAngleID.ToString() });
+                HeaderProperties.Add(new HeaderProperty { Name = "Day music",        Value = header.MusicDayID.ToString() });
+                HeaderProperties.Add(new HeaderProperty { Name = "Night music",      Value = header.MusicNightID.ToString() });
+                HeaderProperties.Add(new HeaderProperty { Name = "Weather",          Value = header.WeatherID.ToString() });
                 HeaderProperties.Add(new HeaderProperty { Name = "Wild Pokémon",        Value = header.WildPokemon.ToString() });
-                HeaderProperties.Add(new HeaderProperty { Name = "Location Specifier",  Value = header.LocationSpecifier.ToString() });
+                HeaderProperties.Add(new HeaderProperty { Name = "Location",  Value = header.LocationSpecifier.ToString() });
                 HeaderProperties.Add(new HeaderProperty { Name = "Flags",               Value = $"0x{header.Flags:X2}" });
 
                 // Incoming warps
@@ -910,7 +907,6 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             }
         }
 
-        // Navigate header watcher to another header (double-click warp row)
         public void NavigateToHeader(int id)
         {
             HeaderSearchId = id;

@@ -8,7 +8,7 @@ namespace DSPRE.HgEngine
 {
     /// <summary>
     /// The bag icons of hg-engine's TMs, HMs and TRs. hg-engine gives every item its own icon and palette, built
-    /// from the PNG data/graphics/itemgra.mk names for it, so a disc's colour is that PNG's palette rather than a
+    /// from the PNG data/graphics/itemgra.mk names for it, so a disc's colour comes from that PNG's palette, not a
     /// shared palette id as in the base games.
     /// </summary>
     public static class HgEngineMachineIcons

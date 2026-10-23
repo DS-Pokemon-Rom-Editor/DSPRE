@@ -12,16 +12,8 @@ using DSPRE.Avalonia.Data;
 namespace DSPRE.Avalonia
 {
     /// <summary>
-    /// The one place an editor says a save worked.
-    ///
-    /// Editors save through their own buttons rather than a shared command, so there is no single
-    /// call site to hook. What they do share is a window, so the notice is drawn into the active
-    /// window's overlay layer instead of needing a status bar, a bound property, or any XAML at all.
-    /// An editor with no StatusText gets the same confirmation as one that has it.
-    ///
-    /// A brief overlay rather than a message box on purpose: saving is the common case and often
-    /// repeated, and a dialog that has to be dismissed after every save trains people to click
-    /// through it. The underlying save calls pass showSuccessMessage:false for the same reason.
+    /// The one place an editor says a save worked: a short notice on the active window, since a dialog after every save
+    /// just gets clicked through.
     /// </summary>
     public static class SaveNotice
     {
@@ -33,11 +25,7 @@ namespace DSPRE.Avalonia
         /// verb; the word Saved is added here so every editor phrases it the same way.</summary>
         public static void Saved(string subject) => Show(Compose(subject));
 
-        /// <summary>
-        /// Builds the confirmation line. Editors pass their UnsavedChangesDescription, which is
-        /// already a per-editor human phrase, so the wording stays in one place per editor instead of
-        /// being invented twice. A blank subject falls back rather than rendering "Saved ".
-        /// </summary>
+        /// <summary>Builds the line from the editor's UnsavedChangesDescription; a blank subject gets a fallback.</summary>
         public static string Compose(string subject)
             => string.IsNullOrWhiteSpace(subject) ? "Saved." : "Saved " + subject.Trim();
 
@@ -80,9 +68,8 @@ namespace DSPRE.Avalonia
                 OverlayLayer layer = window == null ? null : OverlayLayer.GetOverlayLayer(window);
                 if (layer == null) return;
 
-                // Only ever one notice on screen. A composite editor saves several children in a row,
-                // and stacked toasts would sit on top of each other; the last message is also the one
-                // worth reading, since it names the whole save rather than a part of it.
+                // One notice at a time: a composite editor saves several children, and the last message names the whole
+                // save.
                 Clear();
 
                 _showing = Build(message, file, opensFolder);

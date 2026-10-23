@@ -65,7 +65,7 @@ namespace DSPRE.ROMFiles
                 return true;
             }
 
-            error = $"Trainer roster expansion is not verified for {version} {language}.";
+            error = $"Adding trainers isn't supported for {version} ({language}) yet.";
             return false;
         }
 

@@ -186,7 +186,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public ObservableCollection<DungeonCutinRow> Rows { get; } = new();
         public ObservableCollection<string> Headers { get; } = new();
 
-        private string _title = "Dungeon cutin editor";
+        private string _title = "Dungeon cut-in editor";
         public string Title { get => _title; private set => Set(ref _title, value); }
 
         private string _statusText = string.Empty;
@@ -246,7 +246,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (SelectedRow == null) return "No row selected.";
             (int pal, int tiles, int scr) = GetIds(SelectedRow, tz);
             RawImage raw = _graphics.Composite(pal, tiles, scr);
-            if (raw == null) return "Could not decode this slot's graphics.";
+            if (raw == null) return "Couldn't decode this slot's graphics.";
             try { ImageConverter.ToAvaloniaBitmap(raw).Save(pngPath); return null; }
             catch (Exception ex) { return ex.Message; }
         }
@@ -266,7 +266,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 raw = ImageConverter.DecodeRawImage(stream);
             }
             catch (Exception ex) { return ex.Message; }
-            if (raw == null) return "Could not read this PNG.";
+            if (raw == null) return "Couldn't read this PNG.";
 
             if (!_graphics.Import(raw, out int pal, out int tiles, out int scr, out string error))
                 return error;
@@ -298,7 +298,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 }
                 SelectedRow = Rows.Count > 0 ? Rows[0] : null;
                 StatusText = "Design-time preview (dummy data)";
-                Title = "Dungeon cutin editor (Preview)";
+                Title = "Dungeon cut-in editor (Preview)";
                 return;
             }
             throw new InvalidOperationException("Parameterless constructor only for design time.");
@@ -319,7 +319,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
             catch (Exception ex)
             {
-                await DialogHelper.ShowErrorAsync($"Could not save: {ex.Message}", "Dungeon cutin editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't save: {ex.Message}", "Dungeon cut-in editor");
             }
         }
 
@@ -367,7 +367,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             Rows.Clear();
             try
             {
-                // One read of the table, shared with the Graphics window, so the field order is not
+                // One read of the table, shared with All graphics, so the field order is not
                 // written out twice and cannot drift.
                 foreach (DSPRE.ROMFiles.DungeonCutinTable.Row t in DSPRE.ROMFiles.DungeonCutinTable.Read())
                 {
@@ -399,7 +399,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             catch (Exception ex)
             {
                 AppLogger.Error($"DungeonCutinEditorViewModel.LoadRows: {ex.Message}");
-                StatusText = $"Error loading: {ex.Message}";
+                StatusText = $"Couldn't load: {ex.Message}";
             }
         }
 

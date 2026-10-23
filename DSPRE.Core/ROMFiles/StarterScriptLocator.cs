@@ -6,20 +6,12 @@ using System.Linq;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// Finds the command that hands the player their starter, so the editor can change its held item and
-    /// level without writing to a byte offset.
-    ///
-    /// This reads the binaries, for projects with no decompiled sources to search. Where a project has
-    /// them, StarterRotomSource is better: the sources name the starter outright. This looks for the
-    /// shape instead, a give-a-Pokemon command whose species comes from a variable rather than being
-    /// written into the script, which is weaker and matches twice in an untouched Platinum.
-    ///
-    /// Two candidates already exist in an untouched Platinum, so a single match is never assumed: the
-    /// editor picks the best one and lets the user say otherwise.
+    /// Finds the starter's GivePokemon in the binaries, for projects without sources: a give whose species comes from a
+    /// variable. Untouched Platinum has two, so the user confirms the pick.
     /// </summary>
     public static class StarterScriptLocator
     {
-        /// <summary>Anything at or above this is a variable rather than a literal.</summary>
+        /// <summary>Anything at or above this is a variable.</summary>
         public const int FirstVariable = 0x4000;
 
         /// <summary>Anything at or above this is one of the script's own slots.</summary>
@@ -110,7 +102,7 @@ namespace DSPRE.ROMFiles
                     result.Outcome = grew ? Outcome.NewOneAppeared : Outcome.Remembered;
                     return result;
                 }
-                // The saved choice is gone: fall through and ask rather than write somewhere else.
+                // The saved choice is gone: ask instead of writing somewhere else.
                 result.Outcome = all.Count == 0 ? Outcome.NotFound : Outcome.NeedsChoosing;
                 return result;
             }
@@ -184,10 +176,7 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>
-        /// A give-a-Pokemon command, read by NAME rather than by opcode: Diamond calls it 0x0089 and
-        /// Platinum 0x0096, so an opcode written down here would be wrong for one of them.
-        /// </summary>
+        /// <summary>A GivePokemon command, matched by name: Diamond calls it 0x0089 and Platinum 0x0096.</summary>
         private static Candidate Describe(int fileId, bool inFunction, int containerId, int index, ScriptCommand cmd)
         {
             string name = cmd?.Name;

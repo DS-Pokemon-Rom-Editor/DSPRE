@@ -53,7 +53,6 @@ namespace DSPRE
             string[] trainerClassNames = RomInfo.GetTrainerClassNames();
             string[] typeNames = RomInfo.GetTypeNames();
 
-            // Create the Docs folder if it doesn't exist
             if (!Directory.Exists(docsFolderPath))
             {
                 Directory.CreateDirectory(docsFolderPath);
@@ -80,7 +79,7 @@ namespace DSPRE
             if (_eventEditorPrereqsReady) return;
             _eventEditorPrereqsReady = true;
 
-            // Match the core unpack set from EventEditor.SetupEventEditor (minus UI stuff)
+            // The archives the Event editor unpacks.
             DSUtils.TryUnpackNarcs(new List<DirNames> {
                 DirNames.AreaData,
                 DirNames.TrainerProperties,
@@ -405,14 +404,12 @@ namespace DSPRE
             {
                 try
                 {
-                    // Read scripts + functions only (no actions)
                     ScriptFile sf = new ScriptFile(i, readFunctions: true, readActions: false);
 
-                    // Skip “level scripts” / empty script files
+                    // Level scripts and empty files are skipped.
                     if (sf.IsLevelScript || sf.HasNoScripts)
                         continue;
 
-                    // Emit Scripts + Functions only
                     string outPath = Path.Combine(scriptsDocsDir, $"{i:D4}.txt");
                     sf.WritePlainTextFile(outPath, includeActions: false);
                     exported++;
@@ -428,7 +425,7 @@ namespace DSPRE
 
         private static void ExportMapHeadersToCSV(string mapHeadersPath)
         {
-            int headerCount = MapHeader.GetHeaderCount(); // handles dynamic headers patch vs ARM9 table :contentReference[oaicite:3]{index=3}
+            int headerCount = MapHeader.GetHeaderCount();
 
             using (StreamWriter sw = new StreamWriter(mapHeadersPath))
             {
@@ -436,7 +433,7 @@ namespace DSPRE
 
                 for (ushort headerId = 0; headerId < headerCount; headerId++)
                 {
-                    MapHeader h = MapHeader.GetMapHeader(headerId); // loads from ARM9 or dynamic headers path :contentReference[oaicite:4]{index=4}
+                    MapHeader h = MapHeader.GetMapHeader(headerId);
                     if (h == null) continue;
 
                     int mapNameIndex = GetMapNameIndex(h);
@@ -455,10 +452,10 @@ namespace DSPRE
 
         private static int GetMapNameIndex(MapHeader h)
         {
-            // DP: locationName is ushort; Pt/HGSS: locationName is byte :contentReference[oaicite:5]{index=5} :contentReference[oaicite:6]{index=6}
-            if (h is HeaderDP dp) return dp.LocationName;     // read as UInt16 in DP :contentReference[oaicite:7]{index=7}
-            if (h is HeaderPt pt) return pt.LocationName;     // read as Byte in Pt :contentReference[oaicite:8]{index=8}
-            if (h is HeaderHGSS hgss) return hgss.LocationName; // read as Byte in HGSS :contentReference[oaicite:9]{index=9}
+            // DP stores the location name in two bytes, Pt and HGSS in one.
+            if (h is HeaderDP dp) return dp.LocationName;
+            if (h is HeaderPt pt) return pt.LocationName;
+            if (h is HeaderHGSS hgss) return hgss.LocationName;
 
             return -1; // should not happen, but keeps export robust
         }
@@ -560,7 +557,7 @@ namespace DSPRE
                         }
                         else
                         {
-                            // No match; keep empty (or you could use "-1")
+                            // No match; left empty.
                             owSpriteIdStr = "";
                         }
 
@@ -580,7 +577,6 @@ namespace DSPRE
 
         private static void ExportPersonalDataToCSV(string pokePersonalDataPath, string[] pokeNames, string[] abilityNames, string[] typeNames, string[] itemNames)
         {
-            // Write the Pokemon Personal Data to the CSV file
             PokemonPersonalData curPersonalData = null;
             StreamWriter sw = new StreamWriter(pokePersonalDataPath);
 
@@ -608,7 +604,6 @@ namespace DSPRE
         {
             using (StreamWriter sw = new StreamWriter(learnsetDataPath))
             {
-                // ---- Write Header ----
                 sw.Write("ID,Name");
 
                 for (int i = 0; i < 20; i++)
@@ -618,7 +613,6 @@ namespace DSPRE
 
                 sw.WriteLine();
 
-                // ---- Write Data ----
                 for (int i = 0; i < RomInfo.GetLearnsetFilesCount(); i++)
                 {
                     LearnsetData curLearnsetData = new LearnsetData(i);
@@ -626,7 +620,6 @@ namespace DSPRE
                     sw.Write($"{i},{pokeNames[i]}");
 
                     int entryIndex = 0;
-                    // Write up to 20 entries
                     foreach ((byte level, ushort move) entry in curLearnsetData.List)
                     {
                         if (entryIndex >= 20)
@@ -637,7 +630,6 @@ namespace DSPRE
 
                         entryIndex++;
                     }
-                    // Pad remaining columns if less than 20
                     while (entryIndex < 20)
                     {
                         sw.Write(",");
@@ -671,7 +663,6 @@ namespace DSPRE
                 }
                 else if (i < pokeNames.Length)
                 {
-                    // Fall back to the pokeNames array for forms and other Pokemon not in ScriptDatabase
                     speciesName = $"SPECIES_{pokeNames[i].ToUpper().Replace(" ", "_").Replace("-", "_").Replace("__", "_")}";
                 }
 
@@ -704,7 +695,6 @@ namespace DSPRE
 
         private static void ExportEvolutionDataToCSV(string evolutionDataPath, string[] pokeNames, string[] itemNames, string[] moveNames)
         {
-            // Write the Evolution Data to the CSV file
             EvolutionFile curEvolutionFile = null;
             StreamWriter sw = new StreamWriter(evolutionDataPath);
 
@@ -763,13 +753,11 @@ namespace DSPRE
             return EggMoveData.ReadFromRom();
         }
 
-        // Moved to the core EggMoveCsv class; forwarders for existing call sites.
         public static bool ExportEggMoveDataToCSV(List<EggMoveEntry> eggMoveData, string filePath, string[] pokeNames, string[] moveNames)
             => EggMoveCsv.Export(eggMoveData, filePath, pokeNames, moveNames);
 
         private static void ExportTrainersToText(string trainerDataPath, string[] trainerNames, string[] trainerClassNames, string[] pokeNames, string[] itemNames, string[] moveNames, string[] abilityNames)
         {
-            // Write the Trainer Data to the Text file
             TrainerFile curTrainerFile = null;
             TrainerProperties curTrainerProperties = null;
             FileStream curTrainerParty = null;
@@ -793,10 +781,8 @@ namespace DSPRE
                 string trainerClass = trainerClassNames[curTrainerProperties.TrainerClass];
                 string[] trainerItems = curTrainerProperties.TrainerItems.Select(item => item != 0 ? itemNames[(int)item] : "None").ToArray();
 
-                // Create array of party pokemon
                 PartyPokemon[] partyPokemon = new PartyPokemon[curTrainerProperties.PartyCount];
 
-                // Now that we have the party pokemons, we can declare the arrays to store the data
                 string[] monNames = new string[partyPokemon.Length];
                 PartyPokemon.GenderAndAbilityFlags[] monFlags = new PartyPokemon.GenderAndAbilityFlags[partyPokemon.Length];
                 string[] items = new string[partyPokemon.Length];
@@ -806,14 +792,12 @@ namespace DSPRE
 
                 for (int j = 0; j < partyPokemon.Length; j++)
                 {
-                    // This assumes that the non-empty mons are at the beginning of the party array which they should be
-                    // if there is some way for this not to be the case, the program will crash
+                    // Assumes the filled slots come first, as the game stores them.
                     partyPokemon[j] = curTrainerFile.Party[j];
                     // Type cast can be done because CountNonEmptyMons() only returns non-empty mons i.e. mons with non-null pokeID
                     monNames[j] = pokeNames[(int)partyPokemon[j].PokeID];
                     monFlags[j] = partyPokemon[j].GenderAndAbility;
 
-                    // Need to account for the case where the mon has no held item
                     if (partyPokemon[j].HeldItem != null)
                     {
                         items[j] = itemNames[(int)partyPokemon[j].HeldItem];
@@ -826,7 +810,6 @@ namespace DSPRE
                     levels[j] = partyPokemon[j].Level;
                     ivs[j] = partyPokemon[j].Difficulty * 31 / 255;
 
-                    // Need to account for the case where the mon has no moves
                     if (partyPokemon[j].Moves == null)
                     {
                         LearnsetData learnset = new LearnsetData((int)partyPokemon[j].PokeID);
@@ -843,9 +826,6 @@ namespace DSPRE
                 string[] abilities = new string[partyPokemon.Length];
                 string[] natures = new string[partyPokemon.Length];
 
-                // This function sets the monGenders, abilities and natures arrays
-                // We hide this away in a function because it's a bit complex
-                // and we don't want to clutter the main function more than it already is
                 SetMonGendersAndAbilitiesAndNature(i, curTrainerProperties.TrainerClass, partyPokemon, monFlags, ref abilityNames, ref monGenders, ref abilities, ref natures, shinyPatch);
 
 
@@ -869,11 +849,10 @@ namespace DSPRE
             {
                 MoveData curMoveDataFile = new MoveData(i);
 
-                // Lambda magic to select the flags that are set, skipping the first enum entry (no flags)
+                // The set flags, skipping the no-flags entry.
                 string moveFlagsString = string.Join("|", moveFlags.Skip(1).Select((flag, index)
                     => (curMoveDataFile.FlagField & (1 << index)) != 0 ? flag : "").Where(flag => !string.IsNullOrEmpty(flag)));
 
-                // Use user-friendly range name from MoveData
                 string attackRangeString = MoveData.GetAttackRangeName(curMoveDataFile.Target);
 
                 string battleSeqDescString = curMoveDataFile.Battleeffect < battleSeqDesc.Length ?
@@ -893,7 +872,6 @@ namespace DSPRE
 
         private static void ExportTMHMDataToCSV(string THHMDataPath, string[] pokeNames)
         {
-            // Write the TM/HM Data to the CSV file
             PokemonPersonalData curPersonalData = null;
             StreamWriter sw = new StreamWriter(THHMDataPath);
 
@@ -902,7 +880,6 @@ namespace DSPRE
             string[] machineMoveNames = TMEditor.ReadMachineMoveNames();
             int totalTMs = PokemonPersonalData.TmsCount + PokemonPersonalData.HmsCount;
 
-            // Write Header (List of all TMs/HMs)
             for (int i = 0; i < totalTMs; i++)
             {
                 string currentItem = TMEditor.MachineLabelFromIndex(i);
@@ -917,7 +894,6 @@ namespace DSPRE
                 curPersonalData = new PokemonPersonalData(i);
                 sw.Write($"{i},{pokeNames[i]},[");
 
-                // Slight code duplication to PersonalDataEditor here
                 for (byte b = 0; b < totalTMs; b++)
                 {
                     sw.Write(b == 0 ? "" : ",");
@@ -998,12 +974,11 @@ namespace DSPRE
             trainerMale = DVCalculator.TrainerClassGender.GetTrainerClassGender(trainerClassID);
             DVCalculator.ResetGenderMod(trainerMale);
 
-            // Get Pokemon Genders and Abilities from flags
             for (int j = 0; j < partyPokemon.Length; j++)
             {
 
                 byte baseGenderRatio = new PokemonPersonalData((int)partyPokemon[j].PokeID).GenderVec;
-                byte genderOverride = (byte)((byte)monFlags[j] & 0x0F); // Get the lower 4 bits
+                byte genderOverride = (byte)((byte)monFlags[j] & 0x0F);
                 byte abilityOverride = (byte)TrainerShinyPatch.AbilityOverride((byte)monFlags[j], shinyPatch);
 
                 uint PID = DVCalculator.GeneratePID((uint)trainerID, (uint)trainerClassID, (uint)partyPokemon[j].PokeID, (byte)partyPokemon[j].Level, baseGenderRatio, genderOverride, abilityOverride, partyPokemon[j].Difficulty);

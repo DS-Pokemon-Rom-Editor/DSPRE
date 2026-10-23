@@ -151,7 +151,7 @@ namespace DSPRE.Avalonia.Data
 
         private static int Rank(string part) => GraphicAssets.PartRank(part);
 
-        /// <summary>The drawing a layout or arrangement belongs with, which is the one of the same thing.</summary>
+        /// <summary>The drawing for the same thing as a layout or arrangement.</summary>
         public static int DrawingFor(DirNames dir, int fileIndex)
         {
             IReadOnlyList<string> names = Names(dir);

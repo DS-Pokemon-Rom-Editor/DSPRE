@@ -97,7 +97,7 @@ namespace DSPRE
         {
             string target = SavePathFor(kind, emulatorPath, romPath)
                 ?? throw new InvalidOperationException($"DSPRE can't place a save for {Emulators.DisplayName(kind)}.");
-            if (!File.Exists(savePath)) throw new FileNotFoundException("The save was not found at " + savePath);
+            if (!File.Exists(savePath)) throw new FileNotFoundException("The save wasn't found at " + savePath);
             byte[] raw = ReadRaw(savePath);
             Directory.CreateDirectory(Path.GetDirectoryName(target) ?? ".");
             if (File.Exists(target)) PlainFiles.Copy(target, target + ".bak", overwrite: true);

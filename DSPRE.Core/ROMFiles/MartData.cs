@@ -13,7 +13,7 @@ namespace DSPRE.ROMFiles
         private const string ExpansionMarker = "MARTEXPANDV1";
         private const int ExpansionHeaderSize = 0x20;
         private const int MaxCommonItems = 63;
-        /// <summary>The "Expand the marts" toolbox patch lays the marts out with room for this many marts of this many
+        /// <summary>The "Mart expansion" toolbox patch lays the marts out with room for this many marts of this many
         /// items each, so growing them writes in place and never moves a table or rewrites a pointer.</summary>
         public const int RoomyShops = 64, RoomyItems = 64;
         private const uint RoomyVersion = 2;
@@ -77,10 +77,10 @@ namespace DSPRE.ROMFiles
         {
             if (HgEngine.HgEngineMarts.Enabled) return LoadSource();
             if (!RomInfo.IsMartEditorAvailable())
-                throw new InvalidOperationException("The Mart editor is not available for this ROM.");
+                throw new InvalidOperationException("The Mart editor isn't available for this ROM.");
 
             if (!ARM9.DecompressIfMarked())
-                throw new InvalidOperationException("The ARM9 could not be decompressed.");
+                throw new InvalidOperationException("The ARM9 couldn't be decompressed.");
 
             DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.SynthOverlay });
             bool expanded = (RomPatchState.FlagArm9Expanded || PatchToolboxLogic.CheckFilesArm9ExpansionApplied())
@@ -117,7 +117,7 @@ namespace DSPRE.ROMFiles
             if (specialtyShopCount <= 0)
                 throw new InvalidOperationException("The mart layout has no specialty shops.");
             if (specialtyNames == null || specialtyNames.Count != specialtyShopCount)
-                throw new InvalidOperationException("The mart shop-name table does not match the ROM layout.");
+                throw new InvalidOperationException("The mart shop-name table doesn't match the ROM layout.");
 
             EnsureRange(_arm9, commonCountOffset, 1, "common mart count");
             _originalCommonCount = _arm9[commonCountOffset];
@@ -155,7 +155,7 @@ namespace DSPRE.ROMFiles
                     if (item == ushort.MaxValue) break;
                     items.Add(item);
                 }
-                string name = i < specialtyNames.Count ? specialtyNames[i] : $"Custom Mart {i}";
+                string name = i < specialtyNames.Count ? specialtyNames[i] : $"Custom mart {i}";
                 SpecialtyShops.Add(new SpecialtyShop(i, name, items, i >= specialtyShopCount));
             }
         }
@@ -186,11 +186,11 @@ namespace DSPRE.ROMFiles
             if (FromSource)
                 throw new InvalidOperationException("hg-engine puts its marts in the game's own slots, so no mart can be added.");
             if (!Expanded)
-                throw new InvalidOperationException("Adding a mart needs the \"Expand the marts\" patch from the ROM patch toolbox.");
+                throw new InvalidOperationException("Adding a mart needs the \"Mart expansion\" patch from the ROM patch toolbox.");
             if (SpecialtyShops.Count >= RoomyShops)
                 throw new InvalidOperationException($"The marts have room for {RoomyShops} marts.");
             int id = SpecialtyShops.Count;
-            SpecialtyShop shop = new SpecialtyShop(id, $"Custom Mart {id}", new List<ushort> { 1 }, true);
+            SpecialtyShop shop = new SpecialtyShop(id, $"Custom mart {id}", new List<ushort> { 1 }, true);
             SpecialtyShops.Add(shop);
             return shop;
         }
@@ -238,7 +238,7 @@ namespace DSPRE.ROMFiles
                 catch { WriteReplacementFile(Filesystem.ExpArmPath, overlayBefore); throw; }
                 return true;
             }
-            throw new InvalidOperationException("Changing mart sizes needs the \"Expand the marts\" patch from the ROM patch toolbox.");
+            throw new InvalidOperationException("Changing mart sizes needs the \"Mart expansion\" patch from the ROM patch toolbox.");
         }
 
         public static int RoomyLength => RoomyPointersAt + RoomyShops * 4 + RoomyShops * (RoomyItems + 1) * 2;
@@ -316,8 +316,8 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// The arm9 on disk, refused when the mart count or pointers no longer match what was loaded, since then
-        /// the tables this window shows are not the ones the game reads.
+        /// The arm9 on disk, refused when the mart count or pointers changed since loading, because the game would no
+        /// longer read these tables.
         /// </summary>
         private byte[] Arm9AsItIsNow()
         {
@@ -335,7 +335,7 @@ namespace DSPRE.ROMFiles
         {
             ValidateInventories();
             if (CommonItems.Count != _originalCommonCount)
-                throw new InvalidOperationException("Changing the common mart table size is not supported yet.");
+                throw new InvalidOperationException("Changing the common mart table size isn't supported yet.");
 
             byte[] result = (byte[])(_saveBase ?? _arm9).Clone();
             for (int i = 0; i < CommonItems.Count; i++)
@@ -350,7 +350,7 @@ namespace DSPRE.ROMFiles
                 SpecialtyShop shop = SpecialtyShops[shopIndex];
                 if (shop.Items.Count != shop.OriginalCapacity)
                     throw new InvalidOperationException(
-                        $"Changing the size of {shop.Name} is not supported yet.");
+                        $"Changing the size of {shop.Name} isn't supported yet.");
 
                 int offset = _specialtyDataOffsets[shopIndex];
                 for (int itemIndex = 0; itemIndex < shop.Items.Count; itemIndex++)
@@ -369,7 +369,7 @@ namespace DSPRE.ROMFiles
             if (CommonItems.Count < 1 || CommonItems.Count > CommonItemLimit)
                 throw new InvalidOperationException($"The common mart must contain between 1 and {CommonItemLimit} items.");
             if (SpecialtyShops.Count < _vanillaSpecialtyShopCount)
-                throw new InvalidOperationException("Vanilla specialty marts cannot be removed.");
+                throw new InvalidOperationException("Vanilla specialty marts can't be removed.");
             foreach (CommonEntry entry in CommonItems)
             {
                 if (entry.ItemId == 0 || entry.ItemId == ushort.MaxValue)
@@ -416,7 +416,7 @@ namespace DSPRE.ROMFiles
                 RamAddress.Synthetic(syntheticOverlay?.Length ?? 0), RamAddress.Arm9(arm9.Length));
             if (region == 0) return new DataLocation(syntheticOverlay, offset, false);
             if (region == 1) return new DataLocation(arm9, offset, true);
-            throw new InvalidOperationException($"The {label} pointer is outside supported ARM9 memory.");
+            throw new InvalidOperationException($"The {label} points somewhere DSPRE can't read.");
         }
 
         private readonly struct DataLocation
@@ -500,7 +500,7 @@ namespace DSPRE.ROMFiles
                 return names;
             }
             if (family == RomInfo.GameFamilies.HGSS) return Hgss;
-            throw new InvalidOperationException("This game does not use the supported mart layout.");
+            throw new InvalidOperationException("DSPRE doesn't know this game's mart layout.");
         }
     }
 }

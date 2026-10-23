@@ -11,7 +11,7 @@ namespace DSPRE.ROMFiles
     {
         public ushort ID;
 
-        //get encounter tables, 12 normal pokemon definitions, 6 special pokemon definitions, 4 bytes per definition
+        // 12 normal and 6 special slots, 4 bytes each.
         const int NormalEncountersCount = 12;
         const int SpecialEncountersCount = 6;
 
@@ -57,7 +57,6 @@ namespace DSPRE.ROMFiles
         {
             using (BinaryReader br = new BinaryReader(fs))
             {
-                //get the number of tree group definitions
                 NormalTreeGroupsCount = br.ReadUInt16();
                 SpecialTreeGroupsCount = br.ReadUInt16();
 
@@ -95,8 +94,7 @@ namespace DSPRE.ROMFiles
                     SpecialEncounters.Add(new HeadbuttEncounter(br));
                 }
 
-                //tree groups have 6 sets of xy global coordinates x treeGroupsCount
-                //coordinates need to be converted to matrix and local coordinates to be useful
+                // Each group holds six trees in global x/y, turned into matrix and local tiles here.
                 for (int i = 0; i < NormalTreeGroupsCount; i++)
                 {
                     NormalTreeGroups.Add(new HeadbuttTreeGroup(br));

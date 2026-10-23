@@ -83,7 +83,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public ObservableCollection<string> BackdropNames { get; } = new();
         private IReadOnlyList<TouchMenu> _menus = Array.Empty<TouchMenu>();
 
-        private int _terrainIndex = 2;      // Lawn, the one most battles use
+        private int _terrainIndex = 2;      // Lawn, used by most battles
         public int TerrainIndex { get => _terrainIndex; set { if (Set(ref _terrainIndex, value)) Refresh(); } }
 
         private int _timeIndex;
@@ -143,12 +143,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public bool CanPaint => CannotPaintBecause == null;
         public string CannotPaintBecause =>
             Selected == null ? ""
-            : Selected.IsMissing ? "This piece could not be drawn, so there is nothing to paint."
+            : Selected.IsMissing ? "This piece couldn't be drawn, so there is nothing to paint."
             : Selected.Piece.CannotEditBecause
-              ?? (Selected.Piece.Drawing < 0 ? "This piece is not a single drawing in an archive." : null);
+              ?? (Selected.Piece.Drawing < 0 ? "This piece isn't a single drawing in an archive." : null);
 
         /// <summary>
-        /// Whether the sheet this piece is drawn from can be opened in the Graphics window. That works
+        /// Whether the sheet this piece is drawn from can be opened in All graphics. That works
         /// even for the pieces the painter has to refuse: the touch screen layers share one sheet, so a
         /// painted picture cannot go back into a single layer, but the sheet itself is still editable.
         /// </summary>
@@ -291,11 +291,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 int missing = _pieces.Count(p => p.Rgba == null);
                 StatusText = missing == 0
                     ? $"{_pieces.Count} pieces."
-                    : $"{_pieces.Count} pieces, {missing} of them could not be drawn.";
+                    : $"{_pieces.Count} pieces, {missing} of them couldn't be drawn.";
             }
             catch (Exception ex)
             {
-                StatusText = "The battle screen could not be put together: " + ex.Message;
+                StatusText = "The battle screen couldn't be put together: " + ex.Message;
                 AppLogger.Error("BattleScreenEditor.Refresh: " + ex);
             }
         }
@@ -336,9 +336,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         // ── the gauge's own letters ───────────────────────────────────────────────
         //
-        // The name, the level and the gender symbol are drawn with the pictures the game itself uses,
-        // rather than typed out in a desktop font, and go into the bar's own picture, and so do the
-        // health and experience fill, copied from the pieces the battle code keeps.
+        // The name, level and gender symbol use the game's own letters and are drawn into the bar, along
+        // with the health and experience fill copied from the battle code's pieces.
 
         /// <summary>Whether the real pictures can be used, and what to say when they cannot.</summary>
         public bool GaugeTextIsReal => BattleGaugeTextRenderer.IsAvailable;
@@ -409,7 +408,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public bool HasBarPieces => BarPieceGroups.Count > 0;
 
         public string BarPiecesNote => HasBarPieces ? null
-            : BattleGaugePieces.WhyNot ?? "The HP bar colours could not be read.";
+            : BattleGaugePieces.WhyNot ?? "The HP bar colours couldn't be read.";
 
         private void DrawBarPieces()
         {

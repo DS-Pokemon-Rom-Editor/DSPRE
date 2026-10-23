@@ -6,8 +6,8 @@ namespace DSPRE.Avalonia.Data
     /// <summary>
     /// Every Pokédex page of DP, Platinum and HGSS as the games put it together: which arrangements, drawings and
     /// colours go on each background, which sprites, text and pictures of the sample Pokémon, and the states a page
-    /// can be in. Read from each game's own load code (pokediamond, pokeplatinum, pokeheartgold). Generated: change
-    /// the page specs and regenerate rather than editing by hand.
+    /// can be in. Read from each game's load code (pokediamond, pokeplatinum, pokeheartgold). Generated: change the page
+    /// specs and regenerate; don't edit by hand.
     /// </summary>
     public static class DexPageRecipes
     {

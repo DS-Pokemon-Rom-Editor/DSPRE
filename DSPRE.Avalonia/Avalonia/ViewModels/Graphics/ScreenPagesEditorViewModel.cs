@@ -13,7 +13,6 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.ViewModels.Graphics
 {
-    /// <summary>One layer of the page in the list: a background, a sprite, a label or the sample Pokémon.</summary>
     /// <summary>A text box or bar in the layout list and on the screen.</summary>
     public sealed class ScreenBoxRow : INotifyPropertyChanged
     {
@@ -24,14 +23,26 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public const double Tile = 16;
 
         private readonly Action<ScreenBoxRow, int, int> _place;
+        private readonly Action<ScreenBoxRow, int> _pickFont;
         private int _x, _y;
 
-        public ScreenBoxRow(ScreenLayoutItem item, bool onTop, string colour, Action<ScreenBoxRow, int, int> place)
+        public ScreenBoxRow(ScreenLayoutItem item, bool onTop, string colour, Action<ScreenBoxRow, int, int> place,
+                            IReadOnlyList<string> fonts = null, Action<ScreenBoxRow, int> pickFont = null)
         {
             OnTop = onTop;
             Colour = colour;
             _place = place;
+            FontNames = fonts ?? Array.Empty<string>();
+            _pickFont = pickFont;
             Use(item);
+        }
+
+        public IReadOnlyList<string> FontNames { get; }
+        public bool CanPickFont => Item.Font >= 0 && FontNames.Count > 0;
+        public int FontIndex
+        {
+            get => Item.Font;
+            set { if (value >= 0 && value != Item.Font) _pickFont?.Invoke(this, value); }
         }
 
         public ScreenLayoutItem Item { get; private set; }
@@ -52,7 +63,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             Item = item;
             _x = item.X;
             _y = item.Y;
-            foreach (string n in new[] { nameof(Across), nameof(Down), nameof(Left), nameof(Top), nameof(Width), nameof(Height) }) Raise(n);
+            foreach (string n in new[] { nameof(Across), nameof(Down), nameof(Left), nameof(Top), nameof(Width), nameof(Height), nameof(FontIndex), nameof(CanPickFont) })
+                Raise(n);
         }
 
         /// <summary>Follows a drag; <see cref="Drop"/> places it.</summary>
@@ -236,7 +248,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             catch (Exception ex)
             {
                 AppLogger.Error(_book.Title + " page compose: " + ex.Message);
-                StatusText = "This page could not be put together. " + ex.Message;
+                StatusText = "This page couldn't be put together. " + ex.Message;
             }
         }
 
@@ -581,6 +593,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             // The setter stays quiet when nothing is picked again, and the fields would keep the last page's box.
             RaiseBox();
             FillBoxRows();
+            OnPropertyChanged(nameof(OffersFontPatch));
         }
 
         private void RaiseBox()
@@ -627,7 +640,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             foreach (ScreenLayoutItem item in Boxes)
             {
                 ScreenBoxRow row = new ScreenBoxRow(item, item.Side == topSide,
-                    HpBarLayoutEditorViewModel.Colours[colour++ % HpBarLayoutEditorViewModel.Colours.Length], PlaceItem);
+                    HpBarLayoutEditorViewModel.Colours[colour++ % HpBarLayoutEditorViewModel.Colours.Length], PlaceItem, _book.Layout.FontNames, PickFont);
                 BoxRows.Add(row);
                 (row.OnTop ? TopBoxes : BottomBoxes).Add(row);
             }
@@ -644,6 +657,20 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             StatusText = "Moved.";
             Compose();
         }
+
+        private void PickFont(ScreenBoxRow row, int font)
+        {
+            if (_book.Layout == null) return;
+            (byte[] bytes, string error) = _book.Layout.SetFont(row.Item, font);
+            if (bytes == null) { StatusText = error ?? ""; row.Use(row.Item); return; }
+            PendingArchiveWrites.Target target = _book.Layout.Target;
+            Pending.Import(() => { Pending.Stage(target, bytes); return null; });
+            StatusText = "";
+            Compose();
+        }
+
+        public bool OffersFontPatch => _book.Layout?.OffersFontPatch == true;
+        public void OpenFontPatch() => AvaloniaEditorLauncher.OpenPatchToolboxAt("summaryFonts");
 
         // ── changes ────────────────────────────────────────────────────────────────────────────────
 

@@ -37,14 +37,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             public ModelAssets.Group In { get; init; }
             public int Index { get; init; }
             public ModelAssets.Unit Unit { get; init; }
-            /// <summary>What the file calls itself, which is the name GameFreak gave it.</summary>
+            /// <summary>The name stored in the file, Game Freak's own.</summary>
             public string Name { get; init; }
             public string Label => Name == null
                 ? $"{Index,5}  {Archive.Title}"
                 : $"{Index,5}  {Name}";
             public string Search { get; init; }
 
-            /// <summary>An animation, and no model in the game is named for it.</summary>
+            /// <summary>An animation that no model is named for.</summary>
             public bool Unclaimed { get; set; }
         }
 
@@ -61,7 +61,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             public string Title { get; init; }
             public ModelAssets.Group? Only { get; init; }   // null means everything
-            /// <summary>A tab for the animations nothing is named for, rather than a kind of thing.</summary>
+            /// <summary>A tab for animations no model is named for.</summary>
             public bool OnlyUnclaimed { get; init; }
             public int Count { get; init; }
             public string What { get; init; }
@@ -112,8 +112,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private List<CategoryTab> _scanned;
 
         /// <summary>
-        /// Walks every archive and works out what it holds. Touches files and nothing else, so it is
-        /// safe to run away from the UI thread; it fills plain lists rather than the bound collections.
+        /// Reads every archive. It only touches files and fills plain lists, so it can run off the UI thread.
         /// </summary>
         public void Scan()
         {
@@ -123,7 +122,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             catch (Exception ex)
             {
                 _buildingTextureSets = Array.Empty<BuildingModelTextureSet>();
-                AppLogger.Error("ModelBrowser could not read building texture associations: " + ex.Message);
+                AppLogger.Error("ModelBrowser couldn't read building texture associations: " + ex.Message);
             }
             foreach (ModelAssets.Group g in Enum.GetValues<ModelAssets.Group>())
             {
@@ -153,9 +152,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (orphans > 0)
                 tabs.Add(new CategoryTab
                 {
-                    Title = "Nothing claims these", OnlyUnclaimed = true, Count = orphans,
-                    What = "Animations no model in this game is named for. They still belong to something, "
-                         + "but the names do not say what.",
+                    Title = "Unclaimed animations", OnlyUnclaimed = true, Count = orphans,
+                    What = "Animations no model in this game is named for. They belong to something, but the "
+                         + "names don't say what.",
                 });
 
             if (tabs.Count > 0)
@@ -457,7 +456,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (Model3D != null) ModelReady?.Invoke(this, EventArgs.Empty);
         }
 
-        /// <summary>What this model can be dressed in. </summary>
+        /// <summary>The texture sets this model can use.</summary>
         public ObservableCollection<string> TextureChoices { get; } = new();
         public bool HasTextureChoice => TextureChoices.Count > 1;
         private readonly List<int> _textureSetEntries = new();
@@ -514,8 +513,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 AddTextureChoice(candidate.id,
                     $"Likely match: set {candidate.id} · {CoverageText(candidate.coverage)}");
 
-            // Clear the choice first, then set it. The list was just refilled, so the box has dropped back
-            // to nothing selected, and going straight to the same number as before would say nothing.
+            // Clear then set: the refilled box has nothing selected, and setting the same number raises no change.
             _textureChoice = -1;
             OnPropertyChanged(nameof(TextureChoice));
             _textureChoice = uses.Count > 0 && TextureChoices.Count > 1 ? 1 : 0;
@@ -531,9 +529,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private static string CoverageText(ModelAssets.TextureCoverage coverage)
         {
-            if (coverage.RequiredTextures == 0) return "model requests no textures";
+            if (coverage.RequiredTextures == 0) return "the model uses no textures";
             string textures = coverage.MatchedTextures == coverage.RequiredTextures
-                ? $"all {coverage.RequiredTextures} texture{(coverage.RequiredTextures == 1 ? "" : "s")} found"
+                ? $"all {Plural.Of(coverage.RequiredTextures, "texture")} found"
                 : $"{coverage.MatchedTextures} of {coverage.RequiredTextures} textures found";
             if (coverage.RequiredPalettes == 0) return textures;
             string palettes = coverage.MatchedPalettes == coverage.RequiredPalettes
@@ -582,7 +580,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             if (!ModelAssets.LoadTextureBundle(archive, index, out _previewTextures, out _previewPalettes))
             {
-                Whynot = "This texture set would not open.";
+                Whynot = "This texture set couldn't be opened.";
                 return;
             }
 
@@ -637,8 +635,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (decoded == null)
             {
                 Whynot = texture.Format == 7 || palette != null
-                    ? "This texture is malformed or uses data the preview cannot decode."
-                    : "This texture needs a palette, but this set does not contain one.";
+                    ? "This texture is malformed or uses data the preview can't decode."
+                    : "This texture needs a palette, but this set doesn't contain one.";
                 ShowFacts();
                 OnPropertyChanged(nameof(HasNoModel));
                 return;
@@ -675,7 +673,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private readonly List<int> _animationEntries = new();   // what each row above points at
 
-        /// <summary>How many rows got there by name rather than by the game's own table.</summary>
+        /// <summary>How many rows matched by name, not by the game's table.</summary>
         private int _namedForThisModel;
 
         /// <summary>Where the movement now showing came from.</summary>
@@ -727,7 +725,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 JointAnimation anim = ModelAssets.AnimationFor(a, ShowingIndex, code);
                 if (anim == null) continue;
                 if (startOn == 0) startOn = AnimationChoices.Count;
-                AnimationChoices.Add($"The one it uses: {Called(anim, code)}, {anim.FrameCount} frames");
+                AnimationChoices.Add($"Used by the game: {Called(anim, code)}, {anim.FrameCount} frames");
                 _animationEntries.Add(code);
             }
 
@@ -807,8 +805,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                                || CompanionFrames > 1;
 
         public string PlayHelp => CanPlay
-            ? "Run it. Buildings mostly move on a clock rather than on their own, so this is a "
-            + "way to see what an animation does, not what the game does with it."
+            ? "Play it. Buildings mostly animate on a clock, so this shows what the animation does, not when "
+            + "the game plays it."
             : "Pick a movement or one of the other animations first. Still means nothing is moving.";
 
         /// <summary>Says whether the movement showing is the one the game gives this model or one that
@@ -858,8 +856,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string MovementNote { get => _movementNote; private set => Set(ref _movementNote, value); }
         public bool HasMovementNote => !string.IsNullOrEmpty(_movementNote);
 
-        /// <summary>Whether a movement changes this model at all, checked once when it is picked rather
-        /// than on every frame.</summary>
+        /// <summary>Whether a movement changes this model at all, checked once when it's picked.</summary>
         private void CheckTheMovementDoesSomething(NSBMD nsbmd, JointAnimation anim)
         {
             MovementNote = "";
@@ -878,8 +875,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         (objectId, part) => anim.MatrixFor(objectId, f, part, scale), still, showMissingTextures: true);
                     differs = Differs(still, at);
                 }
-                // Whose movement it is decides why nothing moved, and saying the wrong one of these is
-                // worse than saying neither.
+                // The movement's owner decides which reason is shown when nothing moves.
                 if (!differs)
                     MovementNote = WhoseMovement() switch
                     {
@@ -936,7 +932,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
         }
 
-        /// <summary>The frame showing, which can be dragged to rather than only played through.</summary>
+        /// <summary>The frame showing; the slider can jump to any frame.</summary>
         public int Frame
         {
             get => _frame;
@@ -971,7 +967,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 NSBMD nsbmd = ModelAssets.LoadModel(a, ShowingIndex);
                 if (nsbmd == null || nsbmd.Models == null || nsbmd.Models.Length == 0)
                 {
-                    Whynot = "This model would not open.";
+                    Whynot = "This model couldn't be opened.";
                     return;
                 }
 
@@ -993,7 +989,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     : NsbmdGeometry.BuildModel(nsbmd.Models[0],
                         (objectId, part) => anim.MatrixFor(objectId, _frame % Math.Max(1, anim.FrameCount), part, scale),
                         _placeLike, showMissingTextures: true);
-                if (Model3D == null) { Whynot = "This model would not open."; return; }
+                if (Model3D == null) { Whynot = "This model couldn't be opened."; return; }
 
                 if (!dressed && TextureChoices.Count <= 1) ShowFacts(new DetailFact("Textures", "None"));
                 else ShowFacts();
@@ -1001,7 +997,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             catch (Exception ex)
             {
                 AppLogger.Error("ModelBrowser.Draw failed: " + ex.Message);
-                Whynot = "This model would not open.";
+                Whynot = "This model couldn't be opened.";
             }
 
             ApplyCompanions(_frame);
@@ -1087,7 +1083,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <summary>Puts a file in over the entry showing. Comes back with a reason when it could not.</summary>
         public string PutFileIn(string path) => PutFileIn(path, out _);
 
-        /// <param name="note">What a mesh came to once it was turned into a model, when it was one.</param>
+        /// <param name="note">A note on the converted model when a mesh was imported.</param>
         public string PutFileIn(string path, out string note)
         {
             note = null;
@@ -1115,7 +1111,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             written = null;
             if (_selected == null) return "Pick something first.";
-            if (!CanSaveModel) return _options?.SaveNote ?? "This is not a model.";
+            if (!CanSaveModel) return _options?.SaveNote ?? "This isn't a model.";
 
             ScriptNarc narc = new ScriptNarc(_selected.Archive.Dir);
             byte[] model = narc.Get(ShowingIndex);
@@ -1133,7 +1129,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             catch (Exception ex)
             {
                 AppLogger.Error("ModelBrowser.SaveAsThreeD failed: " + ex.Message);
-                return "This model could not be turned into a 3D file. The whole file can still be saved "
+                return "This model couldn't be turned into a 3D file. The whole file can still be saved "
                      + "as it is.";
             }
         }

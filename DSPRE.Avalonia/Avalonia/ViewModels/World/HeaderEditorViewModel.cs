@@ -76,16 +76,8 @@ namespace DSPRE.Avalonia.ViewModels.World
     }
 
     /// <summary>
-    /// Avalonia port of the WinForms <c>HeaderEditor</c>. Edits map headers: all
-    /// common fields plus the game-family-specific ones (DP/Plat location specifier
-    /// &amp; Plat area icon; HGSS area icon, world-map coords, follow mode, Kanto flag,
-    /// location type). Camera/weather/music expose synced combo+numeric pairs with
-    /// preview images. Save writes through <c>MapHeader.ToByteArray()</c> (which does
-    /// the per-family bit-packing) to ARM9 or the dynamic-headers file.
-    ///
-    /// Not yet ported (cross-editor / peripheral): the "create associated files"
-    /// prompt on add-header, the Advanced Header Search sub-form, and the
-    /// open-wild/script/level-script/area-data navigation buttons.
+    /// Edits map headers, including each game family's own fields. Save writes through
+    /// <c>MapHeader.ToByteArray()</c> to ARM9 or the dynamic headers file.
     /// </summary>
     public class HeaderEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
@@ -106,7 +98,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public ObservableCollection<string> LocationNames { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> AreaSettingsItems { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> AreaIconItems { get; } = new ObservableCollection<string>();
-        public ObservableCollection<string> FollowModeItems { get; } = new ObservableCollection<string> { "Unallowed", "Small only", "All" };
+        public ObservableCollection<string> FollowModeItems { get; } = new ObservableCollection<string> { "None", "Small only", "All" };
 
         public MappedCombo Camera { get; } = new MappedCombo();
         public MappedCombo Weather { get; } = new MappedCombo();
@@ -143,13 +135,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         public int CurrentHeaderId => _header?.ID ?? -1;
 
         // ── Sidebar tree (location-grouped) ──────────────────────────────────────────
-        // Bound directly to the TreeView's ItemsSource, so this MUST be typed HeaderTreeNode (the base
-        // type), even though only HeaderTreeFolder instances are ever added at the root: Avalonia's
-        // TreeView resolves a clicked item's container via ItemsSourceView.IndexOf against this
-        // collection's IList.IndexOf(object), which does an unchecked (T)value cast before comparing;
-        // clicking a HeaderTreeLeaf nested under a folder throws InvalidCastException there if T is
-        // narrowed to HeaderTreeFolder, because the cast fails before it ever gets to "not found in this
-        // list, must be nested deeper." Root-only, strongly-typed iteration should use _allTreeFolders.
+        // Typed HeaderTreeNode: TreeView casts a clicked nested leaf to T and throws if T is HeaderTreeFolder.
+        // Use _allTreeFolders to walk the folders.
         private readonly AvaloniaList<HeaderTreeNode> _treeFolders = new AvaloniaList<HeaderTreeNode>();
         public AvaloniaList<HeaderTreeNode> TreeFolders => _treeFolders;
         private List<HeaderTreeFolder> _allTreeFolders = new List<HeaderTreeFolder>();
@@ -254,8 +241,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private decimal _wildPokemon; public decimal WildPokemon { get => _wildPokemon; set { if (Set(ref _wildPokemon, value)) { Apply(h => h.WildPokemon = (ushort)value); OnPropertyChanged(nameof(CanOpenEncounters)); } } }
         private decimal _battleBackground; public decimal BattleBackground { get => _battleBackground; set { if (Set(ref _battleBackground, value)) Apply(h => h.BattleBackground = (byte)value); } }
 
-        // No-encounter sentinel (0xffff DPPt / 0xff HGSS): the wild editor clamps it to file 0, so the
-        // "Open" affordance is disabled/no-op there rather than silently opening an unrelated file.
+        // No-encounter value (0xffff DPPt, 0xff HGSS): the wild editor would open file 0, so Open is disabled.
         private int NullEncounterId => IsHgss ? MapHeader.HgssNullEncounterFileId : MapHeader.DpptNullEncounterFileId;
         public bool CanOpenEncounters => _header != null && (int)_wildPokemon != NullEncounterId;
         /// <summary>The encounter number that means "no wild Pokémon" in the open game.</summary>
@@ -596,7 +582,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex)
             {
                 AppLogger.Error("HeaderEditorViewModel.SetupAsync: " + ex);
-                await DialogHelper.ShowErrorAsync($"Failed to load headers:\n{ex.Message}", "Header editor error");
+                await DialogHelper.ShowErrorAsync($"Couldn't load headers:\n{ex.Message}", "Header editor");
             }
         }
 
@@ -699,10 +685,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         /// <summary>
-        /// Rebuilds <see cref="TreeFolders"/> from the header list, grouped by location (all "Route *"
-        /// in one "Routes" bucket); folders and leaves come out ascending by ID. A non-empty
-        /// <see cref="TreeFilterText"/> is projected into the flat filtered list; an empty one
-        /// restores the tree and collapses all but the selected header's folder. Selection is preserved.
+        /// Rebuilds <see cref="TreeFolders"/> by location, with routes together; a <see cref="TreeFilterText"/> shows a
+        /// flat list. The selection is kept.
         /// </summary>
         private void RebuildTree()
         {
@@ -1112,10 +1096,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                         break;
                 }
 
-                // IsHgss/IsDp/ShowHgssOnly are computed straight off the static gameFamily, so Avalonia's
-                // binding never re-evaluates them on its own once the view is already visible; without
-                // this, HGSS-only fields (Out Calls/In Calls/Radio, Mom's Call, world map, follow mode)
-                // silently never show up even on a real HGSS ROM.
+                // IsHgss and the rest read a static, so they are raised here or the HGSS-only fields never show.
                 OnPropertyChanged(nameof(IsHgss));
                 OnPropertyChanged(nameof(IsDp));
                 OnPropertyChanged(nameof(ShowHgssOnly));
@@ -1298,7 +1279,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void Paste()
         {
             if (_header == null || _clipboard.Bytes == null) { StatusText = "Nothing to paste."; return; }
-            if (_clipboard.Family != GameFamily) { StatusText = $"The copied header is from a {_clipboard.Family} ROM and can't be pasted here."; return; }
+            if (_clipboard.Family != GameFamily) { StatusText = $"The copied header is from {(_clipboard.Family == GameFamilies.HGSS ? "HeartGold or SoulSilver" : _clipboard.Family == GameFamilies.Plat ? "Platinum" : "Diamond or Pearl")} and can't be pasted here."; return; }
             MapHeader h = MapHeader.LoadFromByteArray(_clipboard.Bytes, (ushort)_header.ID, GameFamily);
             if (h == null) { StatusText = "Clipboard header is incompatible."; return; }
             _header = h;
@@ -1330,7 +1311,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 SetDirty();
                 SaveNotice.Imported($"header {_header.ID}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Import failed: malformed or not a header file.\n{ex.Message}", "Header editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't import: this isn't a header file, or it's damaged.\n{ex.Message}", "Header editor"); }
         }
 
         public async Task ExportAsync()
@@ -1340,7 +1321,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             string path = await DialogHelper.SaveFileAsync(_owner, "Export header", new[] { filter }, $"header_{_header.ID:D4}.dsh");
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _header.ToByteArray()); SaveNotice.Exported(path); }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Export failed:\n{ex.Message}", "Header editor error"); }
+            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Header editor"); }
         }
 
         /// <summary>Shows a header asked for from another editor.</summary>
@@ -1357,11 +1338,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         // Jump to the related editor at this header's referenced file.
-        /// <summary>
-        /// Shows a linked file in the main view's tab of that name instead of a window, when this header is shown there.
-        /// The tabs always show this header's own files, so the tab is already on the right one. Returns false to fall
-        /// back to the editor window.
-        /// </summary>
+        /// <summary>Shows a linked file in its Maps tab when this header is shown there; false means open the editor window.</summary>
         public Func<string, bool> OpenInTab
         {
             get => _openInTab;
@@ -1375,7 +1352,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             ("Matrix", "matrix", "Matrix editor"), ("AreaData", "area data", "Area data editor"),
             ("Script", "script file", "Script editor"), ("LevelScript", "level script file", "Level script editor"),
             ("Event", "event file", "Event editor"), ("Text", "text archive", "Text editor"),
-            ("Encounters", "encounters", "Encounters editor"),
+            ("Encounters", "encounters", "Wild Pokémon editor"),
         };
 
         /// <summary>The Open buttons' tooltips: where the linked file opens, here or in its own window.</summary>
@@ -1398,8 +1375,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void OpenTexts() { if (_header != null && _openInTab?.Invoke("Text") != true) AvaloniaEditorLauncher.OpenTextEditor(_header.TextArchiveID); }
         public void OpenEncounters() { if (CanOpenEncounters && _openInTab?.Invoke("Encounters") != true) AvaloniaEditorLauncher.OpenWildEditor(_header.WildPokemon); }
 
-        /// <summary>Opens the battle scenery this place fights on. Every other linked field on this row
-        /// has a button to the thing it names; this one was a bare number.</summary>
+        /// <summary>Opens the battle scenery this place fights on.</summary>
         public void OpenBattleScenery() => AvaloniaEditorLauncher.OpenBattleSceneBrowser();
 
         private void UpdateCurrentInternalName()
@@ -1474,7 +1450,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             };
             if (hgss) options.Add(("Headbutt file", true));
             (bool create, bool[] pick) = await DialogHelper.AskWithChecksAsync(
-                $"Header {newId} was added as a copy, so it uses the copied header's files. Give it new ones of its own?",
+                $"Header {newId} is a copy, so it uses the copied header's files. Make new ones for it?",
                 "Header added", "Create", "Keep the copied ones", options.ToArray());
             if (!create) return;
 
@@ -1519,14 +1495,14 @@ namespace DSPRE.Avalonia.ViewModels.World
             int lastIndex = _headerListNames.Count - 1;
             if (lastIndex <= 0)
             {
-                await DialogHelper.ShowErrorAsync("There has to be at least one header.", "Header editor error");
+                await DialogHelper.ShowErrorAsync("There has to be at least one header.", "Header editor");
                 return;
             }
 
             string name = lastIndex < _internalNames.Count ? _internalNames[lastIndex] : "";
             if (!await DialogHelper.AskYesNoAsync(
                     $"Remove header {lastIndex:D3} ({name})? Only the last header can be removed. It is deleted now, not on Save; Ctrl+Z puts it back.",
-                    "Delete header?"))
+                    "Remove header?"))
                 return;
 
             byte[] data = File.ReadAllBytes(Filesystem.GetDynamicHeaderPath(lastIndex));

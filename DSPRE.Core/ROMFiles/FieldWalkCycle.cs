@@ -1,11 +1,8 @@
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// The clock a field object's pictures run on. A person's walk is a sixteen-frame loop for each facing that
-    /// moves on at a rate set by how fast the step is, so every tile moves it on one foot, eight frames. It
-    /// settles back onto a foot when they stop and starts again from the first foot when they turn. Rates and
-    /// the settle rule follow the field object animation code in the pokeplatinum decomp; HeartGold and
-    /// SoulSilver use the same animation tables.
+    /// The clock a field object's pictures run on: a 16-frame walk loop per facing, one foot per tile, settling on a
+    /// foot at a stop. Rates follow pokeplatinum's field object animation code; HGSS uses the same tables.
     /// </summary>
     public sealed class FieldWalkCycle
     {
@@ -97,7 +94,7 @@ namespace DSPRE.ROMFiles
                 case 7: halves = SevenFrames[_pattern++ % SevenFrames.Length]; break;
                 default: halves = System.Math.Max(1, (16 + stepFrames / 2) / System.Math.Max(1, stepFrames)); break;
             }
-            // Running off the end of the loop goes back to its start rather than wrapping round.
+            // Running off the end of the loop goes back to its start instead of wrapping round.
             _half = _half + halves > 31 ? 0 : _half + halves;
         }
     }

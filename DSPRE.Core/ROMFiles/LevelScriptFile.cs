@@ -76,9 +76,8 @@ namespace DSPRE.ROMFiles
         private void ParseTriggers(string path)
         {
             FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            // Basic implementation to check if the file is a level script or not from ScriptFile.cs
             /* Read script offsets from the header */
-            bool isLevelScript = true; // Is Level Script as long as magic number FD13 doesn't exist
+            bool isLevelScript = true; // until the script magic FD13 turns up
 
             using (BinaryReader br = new BinaryReader(fs))
             {
@@ -113,34 +112,29 @@ namespace DSPRE.ROMFiles
                 {
                     if (!isLevelScript)
                     {
-                        AppMessages.Error("Script File couldn't be read correctly.", "Unexpected EOF");
+                        AppMessages.Error("The level script couldn't be read.", "Level script error");
                     }
                 }
 
                 if (!isLevelScript)
                 {
-                    throw new InvalidDataException("The file you attempted to load is not a Level Script file.");
+                    throw new InvalidDataException("This file isn't a level script.");
                 }
                 br.BaseStream.Position = 0;
 
                 bool hasConditionalStructure = false;
 
-                //conditionalStructureOffset is used to ensure the structure of the file is correct
+                // Counts down to where the variable table must start, to catch damaged files.
                 int conditionalStructureOffset = -1;
 
                 int screenTriggers = 0;
                 while (br.BaseStream.Position < br.BaseStream.Length)
                 {
-                    //first byte is the script type
-                    //if not a valid script type, break loop
                     byte triggerType = br.ReadByte();
                     if (!LevelScriptTrigger.IsValidTriggerType(triggerType)) { break; }
 
-                    //subtract triggerType length from conditionalStructureOffset
                     if (hasConditionalStructure) { conditionalStructureOffset -= sizeof(byte); }
 
-                    //if trigger type is a variable value, that doesn't immediately mean we're processing that trigger
-                    //the trigger data is processed last if it is there
                     if (triggerType == LevelScriptTrigger.VARIABLEVALUE)
                     {
                         _tableEntryAt = screenTriggers;
@@ -149,53 +143,40 @@ namespace DSPRE.ROMFiles
                         continue;
                     }
 
-                    //map screen load trigger doesn't have a value or variable
                     uint scriptToTrigger = br.ReadUInt32();
                     BufferSet.Add(new MapScreenLoadTrigger(triggerType, (int)scriptToTrigger));
                     screenTriggers++;
 
-                    //subtract scriptToTrigger length from conditionalStructureOffset
                     if (hasConditionalStructure) { conditionalStructureOffset -= sizeof(UInt32); }
                 }
 
-                //the earliest position a trigger can be
                 const int SMALLEST_TRIGGER_SIZE = 5;
 
-                //if triggerType is invalid
-                //and next uint16 == 0
-                //and the file stream length is shorter than the earliest position a trigger can be
                 if (br.BaseStream.Position == 1 && fs.Length < SMALLEST_TRIGGER_SIZE
                     && (fs.Length < 3 || br.ReadUInt16() == 0))
                 {
                     return;
-                    throw new InvalidDataException("This level script does nothing."); // "Interesting..."
+                    throw new InvalidDataException("This level script does nothing.");
                 }
 
-                //br.BaseStream.Position == 3
-                //triggerType is valid,
-                //stream position is earlier than the first possible trigger, or
-                //there is no start script condition specified
                 if (br.BaseStream.Position < SMALLEST_TRIGGER_SIZE)
                 {
-                    throw new InvalidDataException("Parser failure: The input file you attempted to load is either malformed or not a Level Script file.");
+                    throw new InvalidDataException("This file is damaged or isn't a level script.");
                 }
 
-                //there are no instances of a variable value trigger
                 if (!hasConditionalStructure)
                 {
                     return;
                 }
 
-                //if there's a variable value trigger but the offset is incorrect, the file is corrupt
                 if (conditionalStructureOffset != 1)
                 {
-                    throw new InvalidDataException($"Field error: The Level Script file you attempted to load is broken. {conditionalStructureOffset}");
+                    AppLogger.Error($"LevelScriptFile: conditionalStructureOffset is {conditionalStructureOffset}, expected 1.");
+                    throw new InvalidDataException("This level script's variable triggers are damaged.");
                 }
 
-                //get the variable value trigger parts
                 while (true)
                 {
-                    //there are no variables below 1
                     int variableID = br.ReadUInt16();
                     if (variableID <= 0) { break; }
 

@@ -8,12 +8,7 @@ using global::Avalonia.Styling;
 
 namespace DSPRE.Avalonia
 {
-    /// <summary>
-    /// Central place to read/switch the Avalonia UI theme at runtime. The editor chrome brushes
-    /// (Editor.*) are defined per ThemeVariant in App.axaml, so flipping
-    /// <see cref="Application.RequestedThemeVariant"/> re-skins every editor. This keeps the door
-    /// open for a user-facing Light/Dark toggle (wired to the main-window View menu).
-    /// </summary>
+    /// <summary>Reads and switches the light or dark theme; the Editor.* brushes in App.axaml follow it.</summary>
     public static class ThemeManager
     {
         public static bool IsDark

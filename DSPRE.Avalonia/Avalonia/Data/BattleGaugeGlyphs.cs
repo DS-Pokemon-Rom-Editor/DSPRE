@@ -57,9 +57,8 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>
-        /// A number across so many tiles, in the gauge's own colours. The games put the level and the
-        /// maximum health against the left and the current health against the right, padding it with
-        /// blanks, which is why the two numbers either side of the "/" line up the way they do.
+        /// A number over the given count of tiles, in the gauge's colours. The level and maximum HP sit on the left and
+        /// the current HP on the right, padded with blanks.
         /// </summary>
         public static byte[] NumberRow(int value, int tiles, bool againstTheRight = false)
         {
@@ -94,8 +93,8 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>
-        /// The three placeholders a font uses become the three colours a battle asks for. Both the field
-        /// font and the number font mean the same by them: nothing, the letter, then its shadow.
+        /// Turns a font's three placeholders into the battle's colours. Both fonts use them the same way: background,
+        /// letter, shadow.
         /// </summary>
         internal static byte Ink(byte placeholder) => placeholder switch
         {

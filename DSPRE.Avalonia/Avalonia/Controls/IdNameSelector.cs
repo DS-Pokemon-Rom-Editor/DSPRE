@@ -9,10 +9,8 @@ using Avalonia.Layout;
 namespace DSPRE.Avalonia.Controls
 {
     /// <summary>
-    /// A value that has names: a number box and a searchable list side by side, kept in step. Typing a number picks its
-    /// name, picking a name sets the number, and a number with no name leaves the list empty rather than lying. Every
-    /// editor picks named numbers this way (camera, weather, music, light type, move, species, battle type).
-    /// <see cref="Keys"/> maps list rows to values when the rows are not simply 0, 1, 2 and so on.
+    /// A number box and a searchable name list kept in step; a number with no name leaves the list empty.
+    /// <see cref="Keys"/> maps rows to values when they aren't 0, 1, 2 and so on.
     /// </summary>
     public class IdNameSelector : Grid
     {

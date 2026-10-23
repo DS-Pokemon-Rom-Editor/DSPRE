@@ -25,7 +25,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         private void ByFlagMode_Click(object sender, RoutedEventArgs e) => VM?.SetMode(true);
 
         private async void SaveAll_Click(object sender, RoutedEventArgs e)
-            => await DialogHelper.GuardAsync(() => { VM?.SaveAllChanges(); return System.Threading.Tasks.Task.CompletedTask; }, "The trainer flags weren't saved.", "Trainer flag bulk editor error");
+            => await DialogHelper.GuardAsync(() => { VM?.SaveAllChanges(); return System.Threading.Tasks.Task.CompletedTask; }, "The trainer flags weren't saved.", "Trainer flag bulk editor");
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {

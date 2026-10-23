@@ -26,7 +26,7 @@ namespace DSPRE.ROMFiles
         {
             string[] pokemonNames = RomInfo.GetPokemonNames();
             string pokemon = pokemonNames[PokemonID];
-            return $"({PokemonID,4}) {pokemon,10}: Lv {MinLevel,3} to Lv.{MaxLevel,3}";
+            return $"({PokemonID,4}) {pokemon,10}: Lv {MinLevel,3} to {MaxLevel,3}";
         }
     }
 }

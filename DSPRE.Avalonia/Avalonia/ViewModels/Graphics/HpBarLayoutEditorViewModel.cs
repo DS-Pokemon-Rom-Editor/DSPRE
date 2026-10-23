@@ -56,7 +56,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
     /// <summary>
     /// Moves the parts the battle writes into an HP bar (name, level, HP numbers, gauges, status and the rest) to
     /// wherever a design puts them, and moves the bars themselves on screen. Everything it changes is in the battle
-    /// overlay, staged until Save like the Graphics window's imports.
+    /// overlay, staged until Save like imports in All graphics.
     /// </summary>
     public sealed class HpBarLayoutEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
@@ -288,7 +288,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         });
                     }
                 }
-                catch (Exception ex) { StatusText = "The preview could not be drawn: " + ex.Message; }
+                catch (Exception ex) { StatusText = "The preview couldn't be drawn: " + ex.Message; }
                 finally { BattleGaugeTextRenderer.Reset(); }
             }
         }
@@ -309,7 +309,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             GraphicAssets.Archive archive = GraphicAssets.All.FirstOrDefault(a => a.Dir == RomInfo.DirNames.BattleObj);
             BattleGaugePieces.Found found = BattleGaugePieces.Locate();
-            if (archive == null || found == null) return "The battle graphics could not be read.";
+            if (archive == null || found == null) return "The battle graphics couldn't be read.";
             Commit();
             string trouble = _pending.Import(() =>
             {

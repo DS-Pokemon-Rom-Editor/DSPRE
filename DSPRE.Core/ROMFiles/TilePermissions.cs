@@ -400,8 +400,8 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// Normalized RGB for a tile. Behaviours take the colour of their meaning, placed at the meaning's Platinum
-        /// value, so a meaning looks the same in every game. Unknown values keep a colour of their own value.
+        /// Normalized RGB for a tile. Behaviours take their meaning's colour at its Platinum value, so a meaning looks
+        /// the same in every game; unknown values get a colour from their own number.
         /// </summary>
         public static (float r, float g, float b) Colour(byte value, bool isCollision, GameFamilies family)
         {

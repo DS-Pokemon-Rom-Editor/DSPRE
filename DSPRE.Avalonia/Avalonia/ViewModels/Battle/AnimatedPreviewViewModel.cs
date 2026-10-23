@@ -21,9 +21,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         { if (EqualityComparer<T>.Default.Equals(f, v)) return false; f = v; OnPropertyChanged(n); return true; }
 
         /// <summary>
-        /// The field runs at thirty frames a second, which is what every timing in the games is written
-        /// against: a one-frame wait is documented as a thirtieth of a second, and a normal walking step of
-        /// eight frames as 3.75 tiles per second.
+        /// The field runs at 30 frames a second: a one-frame wait is 1/30 s, and a walking step of 8 frames is 3.75
+        /// tiles a second.
         /// </summary>
         public const int FramesPerSecond = 30;
 
@@ -115,9 +114,6 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private bool _showPeople = true;
         public bool ShowPeople { get => _showPeople; set { if (Set(ref _showPeople, value)) Rebuild(); } }
 
-        // ── Stepping in ────────────────────────────────────────────────────────────────── The player
-        // walks the map the way they do in game, and talking to somebody walks that person's script and
-        // says what it would do.
         public FieldPlayer Player { get; private set; }
 
         private bool _showLevelScripts;
@@ -130,24 +126,21 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private bool _showStringVars;
 
-        /// <summary>Whether the panel of words the messages leave gaps for is on show.</summary>
+        /// <summary>Whether the placeholders panel is showing.</summary>
         public bool ShowStringVars
         {
             get => _showStringVars;
             set => Set(ref _showStringVars, value);
         }
 
-        /// <summary>
-        /// The gaps this map's messages leave for words the game fills in, with what the preview will put
-        /// in them.
-        /// </summary>
+        /// <summary>The placeholders in this map's messages, each with the word the preview shows.</summary>
         public ObservableCollection<StringVarEntry> StringVars { get; } = new ObservableCollection<StringVarEntry>();
 
         public bool HasStringVars => StringVars.Count > 0;
 
         public string StringVarSummary => StringVars.Count == 0
-            ? "No message here leaves a gap for a word."
-            : $"{StringVars.Count} {(StringVars.Count == 1 ? "gap" : "gaps")} across this map's messages";
+            ? "No message on this map has a placeholder."
+            : $"{Plural.Of(StringVars.Count, "placeholder")} in this map's messages";
 
         /// <summary>One editable word, wrapping the gap it fills.</summary>
         public sealed class StringVarEntry : INotifyPropertyChanged
@@ -200,10 +193,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             StatusText = Describe();
         }
 
-        /// <summary>
-        /// Puts the map's words into a line so the box reads the way the game would show it, rather than
-        /// leaving the raw tag on screen.
-        /// </summary>
+        /// <summary>Fills a line's placeholders, so the box shows what the game would.</summary>
         public string ExpandVars(string line) =>
             FieldStringVars.Expand(line, (family, kind, buffer) =>
                 _stringVarByKey.TryGetValue(FieldStringVars.KeyOf(family, kind, buffer), out StringVarEntry e)
@@ -221,7 +211,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// <summary>The entries that run on arriving, one line each saying when and which script.</summary>
         public ObservableCollection<string> LevelScriptArrivals { get; } = new ObservableCollection<string>();
 
-        /// <summary>The entries that sit watching a variable, with the value set so one can be tried out.</summary>
+        /// <summary>The entries waiting on a variable, each with a value to try.</summary>
         public ObservableCollection<LevelScriptWatcher> LevelScriptWatchers { get; } =
             new ObservableCollection<LevelScriptWatcher>();
 
@@ -276,7 +266,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             get
             {
                 int n = LevelScriptArrivals.Count + LevelScriptWatchers.Count;
-                if (n == 0) return "This map runs nothing by itself.";
+                if (n == 0) return "This map has no level scripts.";
                 return $"{n} level script {(n == 1 ? "entry" : "entries")}";
             }
         }
@@ -323,10 +313,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private int VariableValue(int variable) =>
             GameState.TryGetVar(variable, out long v) ? (int)v : 0;
 
-        /// <summary>
-        /// Sets one of the map's variables, which is how somebody makes a watching level script go off
-        /// without having to play the game up to that point.
-        /// </summary>
+        /// <summary>Sets a map variable, so a level script waiting on it can be tried without playing up to it.</summary>
         public void SetVariable(int variable, int value)
         {
             GameState.SetVar(variable, value);
@@ -352,8 +339,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 }
                 else
                 {
-                    // Stepping onto the map is arriving on it, which is when the games run the level
-                    // scripts that set the place up.
+                    // Stepping in counts as arriving, so the map's setup level scripts run.
                     RunArrivalLevelScripts();
                 }
                 OnPropertyChanged(nameof(CanStepInto));
@@ -410,7 +396,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         public string PlaceHint => _placingStart
-            ? "Drag on the map to say where the walk starts."
+            ? "Drag on the map to set where the walk starts."
             : "";
 
         /// <summary>Where each entry of the start list puts you, in whole-matrix tiles.</summary>
@@ -472,7 +458,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             StartTile = (ox, oz + 1);
         }
 
-        /// <summary>Stands the player on a tile outright, rather than next to something. </summary>
+        /// <summary>Stands the player on the tile itself, not next to it.</summary>
         public void StandOn(int x, int z, MoveFacing facing = MoveFacing.Down)
         {
             (int x, int z)? free = NearestFreeTile(x, z);
@@ -657,7 +643,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         public string HiddenSummary => HiddenCount == 0
             ? "Everybody is on the map."
-            : $"{HiddenCount} {(HiddenCount == 1 ? "person is" : "people are")} away.";
+            : $"{HiddenCount} {(HiddenCount == 1 ? "person is hidden by a flag" : "people are hidden by flags")}.";
 
         /// <summary>The map's people, for checking where they have got to.</summary>
         public IReadOnlyList<Npc> Npcs => _npcs;
@@ -945,7 +931,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _flagsSet.Clear();
             if (events?.Overworlds == null) return;
 
-            // Flag 0 is the one nothing ever sets, so an overworld carrying it is simply always there.
+            // Nothing sets flag 0, so an overworld with it always shows.
             foreach (IGrouping<ushort, Overworld> g in events.Overworlds.Where(o => o.Flag != 0)
                                                .GroupBy(o => o.Flag)
                                                .OrderBy(g => g.Key))
@@ -954,9 +940,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private int _cameraId;
 
-        /// <summary>
-        /// The header's camera number, which is the row the games look up in their own camera table.
-        /// </summary>
+        /// <summary>The header's camera number: its row in the game's camera table.</summary>
         public int CameraId
         {
             get => _cameraId;
@@ -992,7 +976,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private int _touchBlink = -1;
         private int _touchLabelShown = -1;
 
-        /// <summary>Whether the Poké Ball screen touch questions use is up instead of the touch menu.</summary>
+        /// <summary>Whether the Poké Ball screen for touch questions shows instead of the touch menu.</summary>
         public bool TouchScreenShowsChoices => _touchShowsChoices;
 
         /// <summary>How bright the touch screen is, dipping to black and back while it swaps.</summary>
@@ -1009,7 +993,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// <summary>Whether the red frame is up round the touch entry the cursor is on; it blinks when one is picked.</summary>
         public bool TouchCursorShown => global::DSPRE.Avalonia.Data.HgssTouchScreen.BlinkShows(_touchBlink);
 
-        /// <summary>Whether the touch question on show is a yes/no rather than a list.</summary>
+        /// <summary>Whether the touch question showing is a yes or no, not a list.</summary>
         public bool TouchChoiceIsYesNo => _question?.Kind == ScriptQuestion.QuestionKind.YesNo;
 
         /// <summary>The entries of the touch question on show, or none.</summary>
@@ -1173,7 +1157,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// <summary>A line saying what is going on, at the top of the side panel.</summary>
         public string ScriptStatusText => ScriptRunning ? ScriptProgressText
             : HasStatePrompt ? "Waiting for an answer"
-            : "Arrow keys act as the D-pad. Enter acts as A, X acts as B";
+            : "Arrow keys act as the D-pad, Enter as A and X as B.";
 
         /// <summary>Stops the script where it is, taking the box and any question down.</summary>
         public void StopScript()
@@ -1207,7 +1191,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public string QuestionTitle => _question == null ? ""
             : _question.FromPreview ? "Step on it?"
             : _question.Kind == ScriptQuestion.QuestionKind.Flag ? "Is this flag set?"
-            : _question.Kind == ScriptQuestion.QuestionKind.Fact ? "Something the game knows"
+            : _question.Kind == ScriptQuestion.QuestionKind.Fact ? "What does the game know here?"
             : "What does this variable hold?";
 
         public bool AcceptsTypedAnswer => _question?.AcceptsAnyNumber == true;
@@ -1222,7 +1206,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             : ChoiceIsList ? _question.Options.Skip(_choiceScroll).Take(ListRows).Select(o => o.Label).ToList()
             : _question.Options.Select(o => o.Label).ToList();
 
-        /// <summary>Every entry, which is what the window's width is measured from.</summary>
+        /// <summary>Every entry; the window's width comes from them.</summary>
         public IReadOnlyList<string> ChoiceAllItems =>
             _question == null ? Array.Empty<string>() : _question.Options.Select(o => o.Label).ToList();
 
@@ -1349,7 +1333,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             public bool IsFlag { get; }
             public int Number { get; }
-            /// <summary>Set for something the save would know, remembered by what was asked.</summary>
+            /// <summary>Set when the answer comes from the save, keyed by the question asked.</summary>
             public string Fact { get; }
             public bool IsVariable => !IsFlag;
 
@@ -1522,8 +1506,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         /// <summary>
-        /// What happens by standing somewhere rather than pressing anything: a warp says where it goes, and
-        /// a trigger runs its script once its watched variable holds the value it waits for.
+        /// What happens when the player stands on a tile: a warp says where it goes, and a trigger runs its script once
+        /// its variable matches.
         /// </summary>
         private void ArriveOnTile()
         {
@@ -1532,8 +1516,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             Warp warp = FieldInteraction.WarpAt(_events, Player.TileX, Player.TileZ);
             if (warp != null)
             {
-                ScriptLines.Add($"A way through to header {warp.Header}, warp {warp.Anchor}. "
-                                + "The preview stays put.");
+                ScriptLines.Add($"A warp to header {warp.Header}, warp {warp.Anchor}. The preview doesn't follow it.");
                 OpenDoorAt(Player.TileX, Player.TileZ);
             }
 
@@ -1640,7 +1623,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (_walkerFor == null) { _walker = null; Question = null; return; }
 
             _walker = _walkerFor(scriptNumber);
-            if (_walker == null) { ScriptLines.Add("That script could not be read."); return; }
+            if (_walker == null) { ScriptLines.Add("That script couldn't be read."); return; }
 
             ConfigureWalker(_walker);
             _walker.Begin(_walkerStartId?.Invoke(scriptNumber) ?? scriptNumber);
@@ -1656,10 +1639,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             OnPropertyChanged(nameof(ScriptStatusText));
         }
 
-        /// <summary>
-        /// Runs a script straight through with nobody to ask, the way the ones that set a map up as it loads
-        /// run before anything is on screen.
-        /// </summary>
+        /// <summary>Runs a script through without stopping, as a map's setup scripts run before anything is on screen.</summary>
         private void RunWhileLoading(int scriptNumber, string opening)
         {
             ScriptLines.Add(opening);
@@ -1681,7 +1661,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             Rebuild();
         }
 
-        /// <summary>Plays the door on a tile, which is the only time the games play one. </summary>
+        /// <summary>Plays the door animation on a tile.</summary>
         private void OpenDoorAt(int tileX, int tileZ)
         {
             if (_scene == null) return;
@@ -1709,7 +1689,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             }
         }
 
-        /// <summary>An animation playing through once because something set it off, rather than looping.</summary>
+        /// <summary>An animation that plays once when triggered, not looping.</summary>
         private sealed class OneShot
         {
             public NsbmdRenderModel.BuildingMaterials Building;
@@ -1849,7 +1829,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// <summary>Raised when a different border is picked, so the window can read it out of the ROM.</summary>
         public event EventHandler BorderChanged;
 
-        /// <summary>Says when the letters are a stand-in rather than the game's own.</summary>
+        /// <summary>Says when the font is a stand-in, not the game's.</summary>
         public string MessageFontNote { get; set; }
         public bool HasMessageFontNote => !string.IsNullOrEmpty(MessageFontNote);
 
@@ -1935,8 +1915,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             OnPropertyChanged(nameof(HasMessageFontNote));
         }
 
-        // Which part of the day the preview is showing, which decides what the buildings that change
-        // with the clock are doing.
+        // The time of day the preview shows; clock-driven buildings follow it.
         private FieldTimeZone _timeOfDay = FieldTimeOfDay.Now;
         public FieldTimeZone TimeOfDay
         {
@@ -2103,7 +2082,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             string times = _timeBuildings > 0
                 ? $", {_timeBuildings} showing their {FieldTimeOfDay.Name(_timeOfDay).ToLowerInvariant()} animation" : "";
             int away = HiddenCount;
-            string hidden = away > 0 ? $", {away} away on a flag" : "";
+            string hidden = away > 0 ? $", {away} hidden by flags" : "";
             return $"{water}{buildings}{joints}{colours}{doors}{times}, "
                  + $"{people} {(people == 1 ? "person" : "people")}{hidden}";
         }
@@ -2239,8 +2218,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             bool haveEvents = _events?.Overworlds != null && _events.Overworlds.Count > 0;
             if (!haveEvents && StartTile == null) return null;
 
-            // Start where the watcher asked, if they picked somewhere; otherwise stand in the middle of
-            // whoever is on the map, which is usually near enough to whatever they came to look at.
+            // Start where the user picked, or else in the middle of the map's people.
             int cx, cz;
             if (StartTile != null) { cx = StartTile.Value.x; cz = StartTile.Value.z; }
             else
@@ -2358,7 +2336,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     float halfW = HalfWidthOf(pix), halfH = HalfHeightOf(pix);
                     sprites.Add(new NsbmdGlControl.SpriteInstance
                     {
-                        // Drawn where it actually is, which is between two tiles while it is walking.
+                        // Drawn at its real position, between tiles while walking.
                         Cx = npc.FootX + npc.Motion.DrawOffsetX * _tileX,
                         Cy = npc.FootY + halfH + npc.Motion.HopHeight * _tileX,
                         Cz = npc.FootZ + npc.Motion.DrawOffsetZ * _tileZ,
@@ -2369,8 +2347,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                         Height = pix.Height,
                     });
                 }
-            // Before you step in, the starting point is shown as the player standing there, so picking one
-            // off the list or dragging the marker about says plainly where the walk would begin.
+            // Before stepping in, the player stands on the start point to show where the walk begins.
             if (!_stepInto && _startTile != null && _tileToWorld != null)
             {
                 OverworldSprites.SpritePixels pix = OverworldSprites.Get(PlayerSpriteEntry, (ushort)_startFacing,

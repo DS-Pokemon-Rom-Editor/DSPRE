@@ -119,9 +119,9 @@
                    RenderOptions.BitmapInterpolationMode="None" Width="96" Height="96"/>
           </Border>
           <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" RowSpacing="4" ColumnSpacing="8">
-            <TextBlock Grid.Row="0" Text="Tiles member" VerticalAlignment="Center"/>
+            <TextBlock Grid.Row="0" Text="Tiles file" VerticalAlignment="Center"/>
             <NumericUpDown Grid.Row="0" Grid.Column="1" Classes="n" Value="{Binding SelectedSprite}" Minimum="0" Maximum="{Binding MaxMember}"/>
-            <TextBlock Grid.Row="1" Text="Palette member" VerticalAlignment="Center"/>
+            <TextBlock Grid.Row="1" Text="Palette file" VerticalAlignment="Center"/>
             <NumericUpDown Grid.Row="1" Grid.Column="1" Classes="n" Value="{Binding SelectedPalette}" Minimum="0" Maximum="{Binding MaxMember}"/>
           </Grid>
           <TextBlock Text="{Binding ArtProblem}" Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap" FontSize="12"/>

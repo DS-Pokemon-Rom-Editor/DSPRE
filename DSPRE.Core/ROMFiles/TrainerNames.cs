@@ -5,7 +5,7 @@ using DSPRE.ROMFiles;
 
 namespace DSPRE
 {
-    /// <summary>Trainer "[id] Class Name" list builder (extracted from the WinForms <c>Helpers</c>; core).</summary>
+    /// <summary>Builds the "[id] Class Name" trainer list.</summary>
     public static class TrainerNames
     {
         private const string TrainerClassHeader = "include/constants/trainerclass.h";

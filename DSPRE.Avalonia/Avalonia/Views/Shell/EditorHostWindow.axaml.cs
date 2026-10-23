@@ -5,10 +5,8 @@ using DSPRE.Editors;
 namespace DSPRE.Avalonia.Views.Shell
 {
     /// <summary>
-    /// Generic host window for editors authored as <see cref="UserControl"/>s (so they
-    /// can be embedded as shell tabs) when they need to be shown standalone. Forwards the
-    /// unsaved-changes guard to the hosted control's <see cref="IEditorWithUnsavedChanges"/>
-    /// view-model, if any.
+    /// Shows a <see cref="UserControl"/> editor in its own window and forwards the unsaved-changes guard to
+    /// its <see cref="IEditorWithUnsavedChanges"/> view model.
     /// </summary>
     public class EditorHostWindow : Window
     {

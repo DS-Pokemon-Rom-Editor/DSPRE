@@ -5,7 +5,7 @@ namespace DSPRE.Avalonia.Data
 {
     /// <summary>
     /// What each particle file outside the per-move files is for, named from the code that loads it.
-    /// Files the game never loads go under Unused rather than being guessed at.
+    /// Files the game never loads go under Unused instead of being guessed at.
     /// </summary>
     public static class ParticleFileNames
     {
@@ -17,7 +17,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The categories in the order the library lists them.</summary>
         public static readonly string[] Order = { Moves, BattleEffects, Balls, Seals, Intros, Story, Menus, Frontier, Unused, Other };
 
-        /// <summary>The leading files of the move archive, which effect scripts and battle code load rather than moves.</summary>
+        /// <summary>The leading files of the move archive, loaded by effect scripts and battle code, not by moves.</summary>
         public static (string Category, string Name)? MoveArchive(GameFamilies family, int file)
         {
             bool hgss = family == GameFamilies.HGSS;

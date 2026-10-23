@@ -29,7 +29,7 @@ namespace DSPRE.HgEngine
         public static int NextId(out string error)
         {
             error = null;
-            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return -1; }
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return -1; }
             HgEngineOwnedFile names = NameFile(RomInfo.TrainerClassMessageNumber);
             if (names == null || !HgEngineOwnedFiles.TryReadLines(names, out List<string> lines, out error)) { error ??= "The trainer class names text isn't in the checkout."; return -1; }
             int next = lines.Count;
@@ -48,13 +48,13 @@ namespace DSPRE.HgEngine
         /// <summary>Why a class can't be added now, or null; the name is checked when given.</summary>
         public static string AddRefusal(string name = null)
         {
-            if (!HgEngineProject.IsActive) return "No hg-engine checkout linked.";
+            if (!HgEngineProject.IsActive) return "No hg-engine checkout is linked.";
             if (name != null && string.IsNullOrWhiteSpace(name)) return "Give the class a name.";
             HashSet<string> defined = HgEngineConfigState.DefinedNames();
             if (!defined.Contains(GenderSwitch))
-                return $"Turn on {GenderSwitch} in hg-engine Settings first. Without it the game reads a new class's gender from past the end of its own table.";
+                return $"Turn on {GenderSwitch} in hg-engine settings first. Without it the game reads a new class's gender from past the end of the table.";
             if (!defined.Contains(MoneySwitch))
-                return $"Turn on {MoneySwitch} in hg-engine Settings first. Without it the game has no prize money row for a new class.";
+                return $"Turn on {MoneySwitch} in hg-engine settings first. Without it the game has no prize money row for a new class.";
             foreach (int archive in new[] { RomInfo.TrainerClassMessageNumber, RomInfo.TrainerClassMessageNumber + 1 })
             {
                 HgEngineOwnedFile file = NameFile(archive);

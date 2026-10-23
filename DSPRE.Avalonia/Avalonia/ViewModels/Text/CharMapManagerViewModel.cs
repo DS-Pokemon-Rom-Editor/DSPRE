@@ -87,7 +87,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             string alias = NewAliasText.Trim();
             if (string.IsNullOrEmpty(alias))
             {
-                await DialogHelper.ShowErrorAsync("Alias name cannot be empty.", "Invalid alias");
+                await DialogHelper.ShowErrorAsync("Alias name can't be empty.", "Invalid alias");
                 return;
             }
 
@@ -129,7 +129,6 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 PopulateListsFromMap();
                 NewAliasText = string.Empty;
 
-                // Select newly added alias
                 for (int i = 0; i < AliasItems.Count; i++)
                 {
                     if (AliasItems[i].StartsWith(alias + " "))
@@ -156,7 +155,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
             if (code == null)
             {
-                await DialogHelper.ShowErrorAsync("Could not find the code for this alias.", "Alias not found");
+                await DialogHelper.ShowErrorAsync("Couldn't find the code for this alias.", "Alias not found");
                 return;
             }
 
@@ -168,7 +167,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             else
             {
-                await DialogHelper.ShowErrorAsync("Failed to remove alias.", "Character map manager error");
+                await DialogHelper.ShowErrorAsync("Couldn't remove the alias.", "Character map manager");
             }
         }
 
@@ -183,8 +182,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex)
             {
-                AppLogger.Error("Failed to save custom character map: " + ex);
-                await DialogHelper.ShowErrorAsync("Failed to save custom character map: " + ex.Message, "Character map manager error");
+                AppLogger.Error("Couldn't save the custom character map: " + ex);
+                await DialogHelper.ShowErrorAsync("Couldn't save the custom character map: " + ex.Message, "Character map manager");
             }
         }
 
@@ -205,14 +204,14 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             else
             {
-                await DialogHelper.ShowErrorAsync("Failed to create custom character map.", "Character map manager error");
+                await DialogHelper.ShowErrorAsync("Couldn't create the custom character map.", "Character map manager");
             }
         }
 
         public async Task DeleteMapCommandAsync()
         {
             bool confirm = await DialogHelper.AskYesNoAsync(
-                "Are you sure you want to delete the custom character map? This cannot be undone.",
+                "Delete the custom character map? This can't be undone.",
                 "Delete custom character map?");
             if (!confirm) return;
 
@@ -226,7 +225,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             else
             {
-                await DialogHelper.ShowErrorAsync("Failed to delete custom character map.", "Character map manager error");
+                await DialogHelper.ShowErrorAsync("Couldn't delete the custom character map.", "Character map manager");
             }
         }
 
@@ -264,7 +263,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (!CharMapManager.IsCustomMapOutdated())
             {
                 bool proceed = await DialogHelper.AskYesNoAsync(
-                    "The custom character map is already up to date. Rebase anyway?", "Rebase character map");
+                    "The custom character map is already up to date. Update it anyway?", "Update from the built-in map");
                 if (!proceed) return;
             }
 
@@ -289,13 +288,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 }
                 else
                 {
-                    await DialogHelper.ShowInfoAsync("Rebased the character map.\n\n" + summary, "Rebase");
+                    await DialogHelper.ShowInfoAsync("Updated the character map from the built-in one.\n\n" + summary, "Update from the built-in map");
                 }
             }
             catch (Exception ex)
             {
-                AppLogger.Error("Failed to rebase character map: " + ex);
-                await DialogHelper.ShowErrorAsync("Failed to rebase character map: " + ex.Message, "Character map manager error");
+                AppLogger.Error("Character map update from the built-in map failed: " + ex);
+                await DialogHelper.ShowErrorAsync("Couldn't update the character map: " + ex.Message, "Character map manager");
             }
         }
 
@@ -372,7 +371,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             {
                 _currentMap = null;
                 HasMap = false;
-                AppLogger.Error("Failed to load custom character map: " + ex);
+                AppLogger.Error("Couldn't load custom character map: " + ex);
             }
         }
 
@@ -408,13 +407,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             DialogHelper.MsgResult mode = await DialogHelper.AskThreeWayAsync(
                 "Merge your custom map with the built-in one, or replace the built-in map with only your characters and aliases?",
-                "Rebase character map", "Merge", "Replace");
+                "Update from the built-in map", "Merge", "Replace");
             if (mode == DialogHelper.MsgResult.Cancel) return null;
             if (mode == DialogHelper.MsgResult.No) return MergeStrategy.ReplaceBase;
 
             DialogHelper.MsgResult keep = await DialogHelper.AskThreeWayAsync(
                 "When both maps define a code, keep which character? Aliases from both are kept.",
-                "Rebase character map", "Custom", "Built-in");
+                "Update from the built-in map", "Custom", "Built-in");
             return keep == DialogHelper.MsgResult.Yes ? MergeStrategy.PreferCustom
                  : keep == DialogHelper.MsgResult.No  ? MergeStrategy.PreferBase
                  : (MergeStrategy?)null;

@@ -13,9 +13,7 @@ namespace DSPRE.Avalonia.Views.World
         public CameraEditorView()
         {
             InitializeComponent();
-            // Run setup once attached to the visual tree, regardless of whether the
-            // VM arrives via the (vm) constructor or via DataContext binding when the
-            // control is embedded as a tab in the Avalonia MainWindow.
+            // Set up once attached, however the view model arrives.
             Loaded += OnLoadedSetup;
             DetachedFromVisualTree += (_, _) => VM?.Detach();
             AttachedToVisualTree += (_, _) => { if (_setupDone) VM?.Reattach(); };
@@ -71,7 +69,6 @@ namespace DSPRE.Avalonia.Views.World
             CameraPreviewBox.Show(spot.HeaderId, vm.SelectedEntry, (spot.X, spot.Z));
         }
 
-        // ── Toolbar handlers ─────────────────────────────────────────────────
         private async void SaveTable_Click(object sender, RoutedEventArgs e)
             => await DialogHelper.GuardAsync(() => VM?.SaveAsync() ?? Task.CompletedTask, "The camera table wasn't saved.", ErrorTitle);
 
@@ -95,6 +92,6 @@ namespace DSPRE.Avalonia.Views.World
         private async void ImportCamera_Click(object sender, RoutedEventArgs e)
             => await DialogHelper.GuardAsync(() => VM?.ImportCameraAsync() ?? Task.CompletedTask, "The camera wasn't imported.", ErrorTitle);
 
-        private const string ErrorTitle = "Camera editor error";
+        private const string ErrorTitle = "Camera editor";
     }
 }

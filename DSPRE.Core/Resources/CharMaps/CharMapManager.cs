@@ -9,9 +9,6 @@ namespace DSPRE.CharMaps
 {
     #region Charmap Data Structures
     
-    /// <summary>
-    /// Represents the complete charmap JSON structure
-    /// </summary>
     public class CharMap
     {
         [JsonPropertyName("metadata")]
@@ -30,77 +27,50 @@ namespace DSPRE.CharMaps
             CommandMap = new Dictionary<string, string>();
         }
         
-        /// <summary>
-        /// Get a character map entry by hex code (supports both ushort and int)
-        /// </summary>
         public CharMapEntry GetEntry(ushort code)
         {
             string hexKey = code.ToString("X4");
             return CharacterMap.TryGetValue(hexKey, out CharMapEntry entry) ? entry : null;
         }
         
-        /// <summary>
-        /// Get a character map entry by hex code (supports both ushort and int)
-        /// </summary>
         public CharMapEntry GetEntry(int code)
         {
             return GetEntry((ushort)code);
         }
         
-        /// <summary>
-        /// Set or update a character map entry by hex code
-        /// </summary>
         public void SetEntry(ushort code, CharMapEntry entry)
         {
             string hexKey = code.ToString("X4");
             CharacterMap[hexKey] = entry;
         }
         
-        /// <summary>
-        /// Set or update a character map entry by hex code
-        /// </summary>
         public void SetEntry(int code, CharMapEntry entry)
         {
             SetEntry((ushort)code, entry);
         }
         
-        /// <summary>
-        /// Remove a character map entry by hex code
-        /// </summary>
         public bool RemoveEntry(ushort code)
         {
             string hexKey = code.ToString("X4");
             return CharacterMap.Remove(hexKey);
         }
         
-        /// <summary>
-        /// Remove a character map entry by hex code
-        /// </summary>
         public bool RemoveEntry(int code)
         {
             return RemoveEntry((ushort)code);
         }
         
-        /// <summary>
-        /// Check if a character map entry exists for the given code
-        /// </summary>
         public bool HasEntry(ushort code)
         {
             string hexKey = code.ToString("X4");
             return CharacterMap.ContainsKey(hexKey);
         }
         
-        /// <summary>
-        /// Check if a character map entry exists for the given code
-        /// </summary>
         public bool HasEntry(int code)
         {
             return HasEntry((ushort)code);
         }
         
-        /// <summary>
-        /// Get all character codes as ushort values
-        /// </summary>
         public IEnumerable<ushort> GetAllCodes()
         {
             foreach (string hexKey in CharacterMap.Keys)
@@ -112,12 +82,8 @@ namespace DSPRE.CharMaps
             }
         }
         
-        /// <summary>
-        /// Find the code for a given character or alias
-        /// </summary>
         public ushort? FindCode(string characterOrAlias)
         {
-            // First check if it's a direct character match
             foreach (KeyValuePair<string, CharMapEntry> kvp in CharacterMap)
             {
                 if (kvp.Value.Character == characterOrAlias)
@@ -129,7 +95,6 @@ namespace DSPRE.CharMaps
                 }
             }
             
-            // Then check aliases
             foreach (KeyValuePair<string, CharMapEntry> kvp in CharacterMap)
             {
                 if (kvp.Value.Aliases != null && kvp.Value.Aliases.Contains(characterOrAlias))
@@ -144,21 +109,16 @@ namespace DSPRE.CharMaps
             return null;
         }
         
-        /// <summary>
-        /// Create a deep clone of this CharMap
-        /// </summary>
         public CharMap Clone()
         {
             CharMap cloned = new CharMap();
             
-            // Clone metadata
             cloned.Metadata = new CharMapMetadata
             {
                 Description = this.Metadata.Description,
                 Version = this.Metadata.Version
             };
             
-            // Clone character map
             foreach (KeyValuePair<string, CharMapEntry> kvp in this.CharacterMap)
             {
                 CharMapEntry clonedEntry = new CharMapEntry(
@@ -168,7 +128,6 @@ namespace DSPRE.CharMaps
                 cloned.CharacterMap[kvp.Key] = clonedEntry;
             }
             
-            // Clone command map
             foreach (KeyValuePair<string, string> kvp in this.CommandMap)
             {
                 cloned.CommandMap[kvp.Key] = kvp.Value;
@@ -178,9 +137,6 @@ namespace DSPRE.CharMaps
         }
     }
     
-    /// <summary>
-    /// Represents metadata information about the charmap
-    /// </summary>
     public class CharMapMetadata
     {
         [JsonPropertyName("description")]
@@ -196,9 +152,6 @@ namespace DSPRE.CharMaps
         }
     }
     
-    /// <summary>
-    /// Represents a single character mapping entry
-    /// </summary>
     public class CharMapEntry
     {
         [JsonPropertyName("char")]
@@ -219,9 +172,6 @@ namespace DSPRE.CharMaps
             Aliases = aliases;
         }
         
-        /// <summary>
-        /// Add an alias to this entry
-        /// </summary>
         public void AddAlias(string alias)
         {
             if (Aliases == null)
@@ -235,9 +185,6 @@ namespace DSPRE.CharMaps
             }
         }
         
-        /// <summary>
-        /// Remove an alias from this entry
-        /// </summary>
         public bool RemoveAlias(string alias)
         {
             if (Aliases == null)
@@ -247,7 +194,6 @@ namespace DSPRE.CharMaps
             
             bool removed = Aliases.Remove(alias);
             
-            // Clean up the list if it's now empty
             if (Aliases.Count == 0)
             {
                 Aliases = null;
@@ -256,9 +202,6 @@ namespace DSPRE.CharMaps
             return removed;
         }
         
-        /// <summary>
-        /// Check if this entry has a specific alias
-        /// </summary>
         public bool HasAlias(string alias)
         {
             return Aliases != null && Aliases.Contains(alias);
@@ -286,9 +229,6 @@ namespace DSPRE.CharMaps
         ReplaceBase
     }
     
-    /// <summary>
-    /// Result of a charmap merge operation
-    /// </summary>
     public class MergeResult
     {
         public CharMap MergedMap { get; set; }
@@ -327,16 +267,10 @@ namespace DSPRE.CharMaps
         public static readonly string CustomCharmapFilePath = Path.Combine(AppPaths.DspreDataPath, "charmap.json");
         private static string _loadedCharmapPath = null;
         
-        // Cache the loaded charmap for quick access
         private static CharMap _cachedCharMap = null;
 
         #region Serialization / Deserialization
 
-        /// <summary>
-        /// Deserialize a charmap from a JSON file
-        /// </summary>
-        /// <param name="filePath">Path to the charmap JSON file</param>
-        /// <returns>Deserialized CharMap object</returns>
         public static CharMap DeserializeCharMap(string filePath)
         {
             try
@@ -356,7 +290,7 @@ namespace DSPRE.CharMaps
                 
                 if (charMap == null)
                 {
-                    throw new InvalidDataException("Failed to deserialize charmap - result was null");
+                    throw new InvalidDataException("The character map file is empty.");
                 }
                 
                 AppLogger.Debug($"Successfully deserialized charmap from {filePath} with {charMap.CharacterMap.Count} character entries and {charMap.CommandMap.Count} command entries");
@@ -365,16 +299,11 @@ namespace DSPRE.CharMaps
             }
             catch (Exception ex)
             {
-                AppLogger.Error($"Failed to deserialize charmap from {filePath}: {ex.Message}");
+                AppLogger.Error($"Couldn't deserialize charmap from {filePath}: {ex.Message}");
                 throw;
             }
         }
         
-        /// <summary>
-        /// Serialize a CharMap object to a JSON file
-        /// </summary>
-        /// <param name="charMap">CharMap object to serialize</param>
-        /// <param name="filePath">Path where the JSON file will be saved</param>
         public static void SerializeCharMap(CharMap charMap, string filePath)
         {
             try
@@ -388,30 +317,23 @@ namespace DSPRE.CharMaps
                 
                 string jsonString = JsonSerializer.Serialize(charMap, options);
                 
-                // Ensure directory exists
                 string directory = Path.GetDirectoryName(filePath);
                 if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
                 {
                     Directory.CreateDirectory(directory);
                 }
                 
-                // Write without BOM for consistency
                 PlainFiles.WriteText(filePath, jsonString, new System.Text.UTF8Encoding(false));
                 
                 AppLogger.Debug($"Successfully serialized charmap to {filePath} with {charMap.CharacterMap.Count} character entries and {charMap.CommandMap.Count} command entries");
             }
             catch (Exception ex)
             {
-                AppLogger.Error($"Failed to serialize charmap to {filePath}: {ex.Message}");
+                AppLogger.Error($"Couldn't serialize charmap to {filePath}: {ex.Message}");
                 throw;
             }
         }
         
-        /// <summary>
-        /// Load and cache the current charmap
-        /// </summary>
-        /// <param name="forceReload">If true, forces reloading even if already cached</param>
-        /// <returns>The loaded CharMap object</returns>
         public static CharMap LoadCharMap(bool forceReload = false)
         {
             if (_cachedCharMap != null && !forceReload)
@@ -425,37 +347,25 @@ namespace DSPRE.CharMaps
             return _cachedCharMap;
         }
         
-        /// <summary>
-        /// Save the current charmap to the appropriate file
-        /// </summary>
-        /// <param name="charMap">CharMap object to save</param>
-        /// <param name="saveToCustomPath">If true, saves to custom charmap path; otherwise uses current loaded path</param>
+        /// <summary>Saves the charmap to the custom path, or to the path it was loaded from.</summary>
         public static void SaveCharMap(CharMap charMap, bool saveToCustomPath = true)
         {
             string savePath = saveToCustomPath ? CustomCharmapFilePath : GetCharMapPath();
             SerializeCharMap(charMap, savePath);
             
-            // Update cache
             _cachedCharMap = charMap;
             
-            // Update loaded path if saving to custom
             if (saveToCustomPath)
             {
                 _loadedCharmapPath = CustomCharmapFilePath;
             }
         }
         
-        /// <summary>
-        /// Get the currently loaded or cached charmap
-        /// </summary>
         public static CharMap GetCurrentCharMap()
         {
             return LoadCharMap();
         }
         
-        /// <summary>
-        /// Clear the cached charmap, forcing a reload on next access
-        /// </summary>
         public static void ClearCache()
         {
             _cachedCharMap = null;
@@ -467,18 +377,11 @@ namespace DSPRE.CharMaps
 
         #region Merge Operations
 
-        /// <summary>
-        /// Merge two charmaps together, typically used to rebase custom map onto updated default map
-        /// </summary>
-        /// <param name="baseMap">The base charmap (usually the updated default)</param>
-        /// <param name="customMap">The custom charmap to merge onto base</param>
-        /// <param name="strategy">Strategy for handling conflicts</param>
-        /// <returns>Result of the merge operation including the merged map and statistics</returns>
+        /// <summary>Merges a custom charmap onto a newer built-in one, resolving clashes by <paramref name="strategy"/>.</summary>
         public static MergeResult MergeCharMaps(CharMap baseMap, CharMap customMap, MergeStrategy strategy = MergeStrategy.PreferCustom)
         {
             MergeResult result = new MergeResult();
 
-            // If strategy is ReplaceBase, just return the custom map
             if (strategy == MergeStrategy.ReplaceBase)
             {
                 result.MergedMap = customMap.Clone();
@@ -494,7 +397,6 @@ namespace DSPRE.CharMaps
             result.MergedMap.Metadata.Description = customMap.Metadata.Description;
             result.MergedMap.Metadata.Version = baseMap.Metadata.Version; // Keep base version
             
-            // Merge character maps
             foreach (KeyValuePair<string, CharMapEntry> customEntry in customMap.CharacterMap)
             {
                 string hexCode = customEntry.Key;
@@ -564,7 +466,6 @@ namespace DSPRE.CharMaps
                 }
             }
             
-            // Merge command maps 
             foreach (KeyValuePair<string, string> customCommand in customMap.CommandMap)
             {
                 if (!result.MergedMap.CommandMap.ContainsKey(customCommand.Key))
@@ -588,9 +489,7 @@ namespace DSPRE.CharMaps
             return result;
         }
         
-        /// <summary>
-        /// Merge two alias lists, removing duplicates
-        /// </summary>
+        /// <summary>Both alias lists, without duplicates.</summary>
         private static List<string> MergeAliasLists(List<string> list1, List<string> list2)
         {
             if (list1 == null && list2 == null)
@@ -625,16 +524,12 @@ namespace DSPRE.CharMaps
             return merged.Count > 0 ? merged : null;
         }
         
-        /// <summary>
-        /// Merge the custom charmap with the default charmap (rebase operation)
-        /// </summary>
-        /// <param name="strategy">Strategy for handling conflicts</param>
-        /// <returns>Result of the merge operation</returns>
+        /// <summary>Merges the custom charmap onto the built-in one.</summary>
         public static MergeResult MergeCustomWithDefault(MergeStrategy strategy = MergeStrategy.PreferCustom)
         {
             if (!File.Exists(CustomCharmapFilePath))
             {
-                throw new FileNotFoundException("Custom charmap does not exist. Cannot merge.");
+                throw new FileNotFoundException("Custom charmap doesn't exist. Can't merge.");
             }
             
             CharMap defaultMap = DeserializeCharMap(CharmapFilePath);
@@ -645,15 +540,7 @@ namespace DSPRE.CharMaps
         
         #endregion
 
-        /// <summary>
-        /// Retrieves the file path of the character map JSON file to be used by the application.
-        /// </summary>
-        /// <remarks>This method checks for the existence of a custom character map file in the user data
-        /// directory. If the custom file is not found, it falls back to the default character map file in the
-        /// application directory. If neither file is found, an exception is thrown.</remarks>
-        /// <returns>The file path of the character map JSON file. This will be either the custom file path or the default file
-        /// path, depending on which file is available.</returns>
-        /// <exception cref="FileNotFoundException">Thrown if neither the custom character map file nor the default character map file exists.</exception>
+        /// <summary>The custom charmap if there is one, else the built-in one; throws when neither exists.</summary>
         public static string GetCharMapPath()
         {
             if (_loadedCharmapPath != null)
@@ -707,19 +594,11 @@ namespace DSPRE.CharMaps
             }
         }
 
-        /// <summary>
-        /// Determines whether the custom character map is outdated compared to the default character map.
-        /// </summary>
-        /// <remarks>This method compares the versions of the default and custom character maps to
-        /// determine if the custom map needs to be updated.</remarks>
-        /// <returns><see langword="true"/> if the version of the custom character map is older than the version of the default
-        /// character map; otherwise, <see langword="false"/>.</returns>
+        /// <summary>Whether the custom charmap is older than the built-in one.</summary>
         public static bool IsCustomMapOutdated()
         {
-            // Check if custom charmap file exists
             if (File.Exists(CustomCharmapFilePath))
             {
-                // Both files exist, compare versions
                 try
                 {
                     Version defaultVersion = GetCharMapVersion(CharmapFilePath);
@@ -738,14 +617,7 @@ namespace DSPRE.CharMaps
 
         }
 
-        /// <summary>
-        /// Creates a custom character map file by copying the default character map file to a specified location.
-        /// </summary>
-        /// <remarks>This method ensures that the directory for the custom character map file exists
-        /// before attempting to copy the file. If the operation succeeds, the custom character map file will overwrite
-        /// any existing file at the target location.</remarks>
-        /// <returns><see langword="true"/> if the custom character map file is successfully created; otherwise, <see
-        /// langword="false"/>.</returns>
+        /// <summary>Copies the built-in charmap to the custom path, replacing any file there.</summary>
         public static bool CreateCustomCharMapFile()
         {
             try
@@ -761,18 +633,12 @@ namespace DSPRE.CharMaps
             }
             catch (Exception ex)
             {
-                AppLogger.Error($"Failed to create custom charmap file: {ex.Message}");
+                AppLogger.Error($"Couldn't create custom charmap file: {ex.Message}");
                 return false;
             }
         }
 
-        /// <summary>
-        /// Deletes the custom character map file if it exists.
-        /// </summary>
-        /// <remarks>This method checks for the existence of the custom character map file at the
-        /// predefined path and deletes it if found.</remarks>
-        /// <returns><see langword="true"/> if the operation completes successfully, regardless of whether the file existed;
-        /// otherwise, <see langword="false"/> if an error occurs during the deletion process.</returns>
+        /// <summary>Deletes the custom charmap if there is one; false only on an error.</summary>
         public static bool DeleteCustomCharMapFile()
         {
             try
@@ -791,7 +657,7 @@ namespace DSPRE.CharMaps
             }
             catch (Exception ex)
             {
-                AppLogger.Error($"Failed to delete custom charmap file: {ex.Message}");
+                AppLogger.Error($"Couldn't delete custom charmap file: {ex.Message}");
                 return false;
             }
         }

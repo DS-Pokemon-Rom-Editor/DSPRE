@@ -4,8 +4,7 @@ using DSPRE.ROMFiles;
 namespace DSPRE.Avalonia.Data
 {
     /// <summary>
-    /// Gauge pictures ready to show, so the three previews that draw a battle all ask the ROM the
-    /// same question rather than writing the name in a desktop font.
+    /// Gauge pictures ready to show, so the three battle previews all use the ROM's letters instead of a desktop font.
     /// </summary>
     public static class GaugeTextImages
     {

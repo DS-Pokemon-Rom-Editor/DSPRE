@@ -18,7 +18,7 @@ namespace DSPRE.HgEngine
             { problem = e.Message; }
             if (problem != null)
             {
-                error = $"{relPath} would not read back as saved ({problem}), so it was left unchanged.";
+                error = $"{relPath} wouldn't read back as saved ({problem}), so it was left unchanged.";
                 return false;
             }
             HgEngineFileCache.WriteText(path, newText, keepLostComments: keepLostComments);

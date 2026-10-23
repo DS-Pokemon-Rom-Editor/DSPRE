@@ -30,7 +30,7 @@ namespace DSPRE.Models
                 return Fail(t, "Empty image.");
             if (!IsPowerOfTwo(width) || !IsPowerOfTwo(height) || width < 8 || height < 8
                 || width > 1024 || height > 1024)
-                return Fail(t, $"Texture size must be a power of two from 8 to 1024, got {width}x{height}, nearest {NearestPowerOfTwo(width)}x{NearestPowerOfTwo(height)}.");
+                return Fail(t, $"Texture sizes must be a power of two from 8 to 1024. This one is {width}x{height}; the nearest is {NearestPowerOfTwo(width)}x{NearestPowerOfTwo(height)}.");
 
             int n = width * height;
             bool[] clear = new bool[n];

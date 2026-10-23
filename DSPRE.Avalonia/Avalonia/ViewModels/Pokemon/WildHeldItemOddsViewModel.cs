@@ -102,11 +102,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task<bool> SaveChangesAsync()
         {
             if (_odds == null) return true;
-            if (_odds.Problem() is string problem) { await DialogHelper.ShowErrorAsync(problem, "Wild held items error"); return false; }
+            if (_odds.Problem() is string problem) { await DialogHelper.ShowErrorAsync(problem, "Wild held items"); return false; }
             try { _odds.Save(); }
             catch (Exception e) when (e is IOException || e is InvalidOperationException || e is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowErrorAsync("The odds were not saved:\n" + e.Message, "Wild held items error");
+                await DialogHelper.ShowErrorAsync("The odds weren't saved:\n" + e.Message, "Wild held items");
                 return false;
             }
             _saved = _odds.ToBytes();

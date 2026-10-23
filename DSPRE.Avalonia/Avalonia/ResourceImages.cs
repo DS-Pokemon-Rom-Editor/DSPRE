@@ -9,12 +9,7 @@ using AvaloniaBitmap = Avalonia.Media.Imaging.Bitmap;
 
 namespace DSPRE.Avalonia
 {
-    /// <summary>
-    /// GDI-free replacement for the <c>Properties.Resources</c> image lookups in the Avalonia shell.
-    /// Avalonia keeps its own copy of the WinForms .resx images in <c>Assets/Legacy</c>, apart from
-    /// <c>Assets/Icons</c> so same-named files cannot collide; this resolves a .resx key to the asset by
-    /// file basename. Unknown keys return null, matching <c>ResourceManager.GetObject</c>.
-    /// </summary>
+    /// <summary>Finds an image in Assets/Legacy by its old resource key; an unknown key gives null.</summary>
     internal static class ResourceImages
     {
         private const string AssetRoot = "avares://DSPRE.Avalonia/Avalonia/Assets/Legacy/";

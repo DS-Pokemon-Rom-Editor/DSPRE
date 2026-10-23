@@ -40,7 +40,7 @@ namespace DSPRE.ROMFiles
                     maximumSpecialIndex: 999,
                     defeatedFlagBase: 0x550,
                     exclusiveDefeatedFlagLimit: 0x960,
-                    specialIndexLimitReason: "The shared trainer-script range has no room for another entry.");
+                    specialIndexLimitReason: "No more trainers can be added.");
                 return true;
             }
 
@@ -55,11 +55,11 @@ namespace DSPRE.ROMFiles
                     maximumSpecialIndex: 741,
                     defeatedFlagBase: 0x550,
                     exclusiveDefeatedFlagLimit: 0x834,
-                    specialIndexLimitReason: "English HeartGold currently supports at most two added trainers because its separate trainer-boundary comparison is not expanded.");
+                    specialIndexLimitReason: "English HeartGold takes two more trainers at most.");
                 return true;
             }
 
-            error = $"Trainer roster capacity is not verified for {version} {language}.";
+            error = $"Adding trainers isn't supported for {version} ({language}) yet.";
             return false;
         }
 
@@ -68,14 +68,14 @@ namespace DSPRE.ROMFiles
             error = null;
             if (trainerRecordCount < RetailTrainerRecordCount || specialIndex < RetailSpecialIndex)
             {
-                error = "The trainer roster is smaller than its verified retail baseline.";
+                error = "This ROM has fewer trainers than the game it came from, so DSPRE won't change the list.";
                 return false;
             }
 
             int rosterGrowth = trainerRecordCount - RetailTrainerRecordCount;
             if (specialIndex != RetailSpecialIndex + rosterGrowth)
             {
-                error = "The trainer count and shared trainer-script boundary have diverged.";
+                error = "The trainer count and the shared trainer script no longer agree, so DSPRE won't change the list.";
                 return false;
             }
 
@@ -89,7 +89,7 @@ namespace DSPRE.ROMFiles
             int nextDefeatedFlag = checked(DefeatedFlagBase + nextTrainerId);
             if (nextDefeatedFlag >= ExclusiveDefeatedFlagLimit)
             {
-                error = "The next trainer defeated flag is outside the verified expansion range.";
+                error = "No more trainers can be added: the next one has no free defeated flag.";
                 return false;
             }
 

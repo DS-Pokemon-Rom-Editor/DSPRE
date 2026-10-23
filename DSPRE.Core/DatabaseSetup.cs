@@ -5,7 +5,7 @@ namespace DSPRE
 {
     /// <summary>
     /// First-run copy of the bundled script databases from the install folder into the per-user
-    /// data folder (extracted from the WinForms <c>Program.SetupDatabase</c>; core, cross-platform).
+    /// data folder.
     /// </summary>
     public static class DatabaseSetup
     {
@@ -32,13 +32,13 @@ namespace DSPRE
                     // After a successful copy, remove the bundled source (best-effort: the install
                     // dir may be read-only, e.g. a system-wide install on Linux) and update settings.
                     try { Directory.Delete(sourceDbPath, true); }
-                    catch (Exception delEx) { AppLogger.Warn($"Could not remove bundled databases folder: {delEx.Message}"); }
+                    catch (Exception delEx) { AppLogger.Warn($"Couldn't remove bundled databases folder: {delEx.Message}"); }
                     SettingsManager.Settings.DatabasesPulled = true;
                 }
             }
             catch (Exception ex)
             {
-                AppMessages.Error($"Failed to copy databases: {ex.Message}", "Database Setup Error");
+                AppMessages.Error($"The script databases couldn't be copied: {ex.Message}", "Couldn't set up the databases");
             }
         }
     }

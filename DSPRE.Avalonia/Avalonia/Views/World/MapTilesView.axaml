@@ -296,7 +296,7 @@
                   BorderThickness="1" BorderBrush="{DynamicResource Editor.Separator}">
             <Panel>
               <gl:TileGridControl x:Name="Painter" AutomationProperties.Name="Squares"/>
-              <TextBlock Text="Start with from map or import…"
+              <TextBlock Text="Start with From map or Import."
                          IsVisible="{Binding !Ready}" TextWrapping="Wrap" MaxWidth="360" TextAlignment="Center"
                          HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"
                          IsHitTestVisible="False"/>

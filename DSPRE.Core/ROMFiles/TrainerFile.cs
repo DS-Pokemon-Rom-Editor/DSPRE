@@ -92,7 +92,7 @@ namespace DSPRE.ROMFiles
                     }
                 }
                 if (RomInfo.GameFamily == RomInfo.GameFamilies.HGSS || RomInfo.GameFamily == RomInfo.GameFamilies.Plat)
-                    writer.Write(BallSeals); // Diamond and Pearl apparently dont save ball capsule data in enemy trainer pokedata!!!
+                    writer.Write(BallSeals); // Diamond and Pearl party records have no ball capsule field
             }
             return newData.ToArray();
         }
@@ -217,7 +217,7 @@ namespace DSPRE.ROMFiles
 
         public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true)
         {
-            SaveToFileExplorePath("Gen IV Trainer Properties", "trp", suggestedFileName, showSuccessMessage);
+            SaveToFileExplorePath("Trainer properties", "trp", suggestedFileName, showSuccessMessage);
         }
         #endregion
 
@@ -301,7 +301,7 @@ namespace DSPRE.ROMFiles
                 }
                 catch (EndOfStreamException)
                 {
-                    AppMessages.Error("There was a problem reading the party data of this " + this.GetType().Name + ".", "Read Error");
+                    AppMessages.Error("This trainer's party couldn't be read.", "Party not read");
                 }
             }
             for (int i = 0; i < _content.Length; i++)
@@ -414,7 +414,7 @@ namespace DSPRE.ROMFiles
 
         public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true)
         {
-            SaveToFileExplorePath("Gen IV Party Data", "pdat", suggestedFileName, showSuccessMessage);
+            SaveToFileExplorePath("Party data", "pdat", suggestedFileName, showSuccessMessage);
         }
     }
 
@@ -444,10 +444,10 @@ namespace DSPRE.ROMFiles
     {
         public const int DefaultNameLen = 7; // battle copies the name into an 8-character buffer with its end mark
 
-        /// <summary>Letters a compressed trainer name fits in a buffer of this many units.</summary>
+        /// <summary>How many letters of a compressed trainer name fit in a buffer this many units long.</summary>
         public static int CompressedNameLen(int bufferUnits) => Math.Max(0, (bufferUnits - 2) * 15 / 9);
         public const int PokeInParty = 6;
-        public static readonly string NAME_NOT_FOUND = "NAME READ ERROR";
+        public static readonly string NAME_NOT_FOUND = "(name not found)";
 
         #region Fields
         public string Name;
@@ -492,7 +492,7 @@ namespace DSPRE.ROMFiles
 
         public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true)
         {
-            SaveToFileExplorePath("Gen IV Trainer File", "trf", suggestedFileName, showSuccessMessage);
+            SaveToFileExplorePath("Trainer file", "trf", suggestedFileName, showSuccessMessage);
         }
         #endregion
 

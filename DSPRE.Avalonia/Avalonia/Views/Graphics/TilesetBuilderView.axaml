@@ -42,8 +42,7 @@
             BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1,0,0,0">
       <DockPanel>
 
-      <!-- Saving stays at the bottom of the panel rather than at the end of a long scroll, so the one
-           thing this window is for is never below the fold. -->
+      <!-- Save stays pinned at the bottom so it never scrolls away. -->
       <StackPanel x:Name="SavePanel" DockPanel.Dock="Bottom" Margin="12,10,12,12" Spacing="8">
         <Separator Background="{DynamicResource Editor.Separator}"/>
         <Button Content="Save the three files…" controls:Icon.Key="saveButton" Click="Save_Click"
@@ -52,7 +51,7 @@
         <TextBlock Text="{Binding CannotSaveBecause}" Classes="hint"
                    IsVisible="{Binding ShowSaveReason}"/>
         <controls:HelpTip HorizontalAlignment="Left" IsVisible="{Binding CanSave}"
-                          Text="Writes the three files side by side, ready for the Graphics workbench"/>
+                          Text="Writes the three files side by side, ready to import in All graphics"/>
       </StackPanel>
 
       <ScrollViewer x:Name="OptionsPanel" VerticalScrollBarVisibility="Auto">
@@ -78,7 +77,7 @@
                   Background="{DynamicResource Editor.StatusBg}"
                   BorderBrush="{DynamicResource Editor.Warn}" BorderThickness="1">
             <StackPanel Spacing="6">
-              <TextBlock Text="This will not fit" Classes="head"
+              <TextBlock Text="This won't fit" Classes="head"
                          Foreground="{DynamicResource Editor.Warn}"/>
               <TextBlock Text="{Binding Whynot}" TextWrapping="Wrap"/>
               <TextBlock Classes="hint" Text="Nothing was written."/>
@@ -114,8 +113,7 @@
       </DockPanel>
     </Border>
 
-    <!-- The picture, before and after. The words sit outside the scroller so they wrap to whatever
-         width there is, while a picture wider than the window scrolls sideways on its own. -->
+    <!-- The picture, before and after. Text sits outside the scroller so it wraps; a wide picture scrolls sideways. -->
     <DockPanel x:Name="PictureArea" Margin="14,12,14,10">
 
       <TextBlock DockPanel.Dock="Top" Classes="hint" IsVisible="{Binding HasNoPicture}"

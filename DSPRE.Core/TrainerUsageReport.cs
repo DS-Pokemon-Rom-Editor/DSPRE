@@ -7,8 +7,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE
 {
     /// <summary>
-    /// "Generate CSV" trainer-usage report (which Pokémon each trainer class uses, with counts).
-    /// Extracted from the WinForms main window; core, UI-free.
+    /// The trainer usage CSV: which Pokémon each trainer class uses, with counts.
     /// </summary>
     public static class TrainerUsageReport
     {
@@ -82,28 +81,22 @@ namespace DSPRE
 
         public static void WriteCsv(Dictionary<string, Dictionary<string, int>> trainerUsage, string csvFilePath)
         {
-            // Create the StreamWriter to write data to the CSV file
             IOrderedEnumerable<string> sortedTrainerClasses = trainerUsage.Keys.OrderBy(className => className);
 
             using (StreamWriter sw = new StreamWriter(csvFilePath))
             {
-                // Write the header row
-                sw.WriteLine("Trainer Class;Pokemon Name;Occurrences");
+                sw.WriteLine("Trainer class;Pokémon;Count");
 
-                // Iterate over the sorted trainer class names
                 foreach (string className in sortedTrainerClasses)
                 {
                     Dictionary<string, int> innerDict = trainerUsage[className];
 
-                    // Sort the Pokemon names alphabetically
                     IOrderedEnumerable<string> sortedPokemonNames = innerDict.Keys.OrderByDescending(pokeName => innerDict[pokeName]);
 
-                    // Iterate over the sorted mon names
                     foreach (string pokeName in sortedPokemonNames)
                     {
                         int occurrences = innerDict[pokeName];
 
-                        // Write the data row
                         sw.WriteLine($"{className};{pokeName};{occurrences}");
                     }
                     sw.WriteLine($"-;-;-");

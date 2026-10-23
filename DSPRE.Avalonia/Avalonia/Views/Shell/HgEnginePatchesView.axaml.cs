@@ -53,7 +53,7 @@ namespace DSPRE.Avalonia.Views.Shell
             if (vm == null) return;
             // Reading the lists again drops patches that were added and not saved.
             if (vm.HasUnsavedChanges && !await DialogHelper.AskYesNoAsync(
-                    "Reloading drops the patches you have not saved. Reload anyway?",
+                    "Reloading drops the patches you haven't saved. Reload anyway?",
                     "hg-engine patches", TopLevel.GetTopLevel(this) as Window))
                 return;
 

@@ -34,17 +34,12 @@ namespace DSPRE.ROMFiles
         /// <summary>Only plays at certain times of day.</summary>
         public bool IsTimeOfDay => !ShortLayout && Flags == TypeTimeOfDay;
 
-        /// <summary>
-        /// The animation waits for something to set it off rather than running by itself.
-        /// </summary>
+        /// <summary>The animation waits for something to start it.</summary>
         public bool IsConditional => Flags != 0xFF
                                   && (ShortLayout ? (Flags & ConditionalBit) != 0
                                                   : Flags != TypeTimeOfDay && (Flags & ConditionalBit) != 0);
 
-        /// <summary>
-        /// Something has to put this animation on the map in the first place, rather than it being there
-        /// from the start.
-        /// </summary>
+        /// <summary>Something has to put this animation on the map; it isn't there from the start.</summary>
         public bool NeedsSetting => Flags != 0xFF
                                  && (ShortLayout ? (Flags & SetConditionalBit) != 0
                                                  : Flags == TypeTimeOfDay || (Flags & SetConditionalBit) != 0);

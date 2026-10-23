@@ -68,7 +68,7 @@ namespace DSPRE.HgEngine
                 }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
                 {
-                    AppLogger.Error($"HgEngineBuildCache: could not clear the cached {part.Archive}: {ex.Message}");
+                    AppLogger.Error($"HgEngineBuildCache: couldn't clear the cached {part.Archive}: {ex.Message}");
                 }
             }
         }

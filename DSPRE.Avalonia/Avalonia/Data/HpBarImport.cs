@@ -23,7 +23,7 @@ namespace DSPRE.Avalonia.Data
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { whynot = ex.Message; return null; }
             if (!IndexedPng.TryRead(file, out byte[] indices, out uint[] palette, out int w, out int h))
             {
-                whynot = "That PNG does not keep its colours in a numbered list. Save it as an indexed PNG.";
+                whynot = "That PNG isn't indexed. Save it as an indexed PNG.";
                 return null;
             }
             HpBarFit.Plan plan = HpBarFit.Make(kind, GraphicAssets.Flatten(indices, palette, w, h), w, h);
@@ -84,7 +84,7 @@ namespace DSPRE.Avalonia.Data
                     return shown;
                 }
             }
-            catch (Exception ex) { trouble = "The preview could not be drawn: " + ex.Message; return null; }
+            catch (Exception ex) { trouble = "The preview couldn't be drawn: " + ex.Message; return null; }
             finally { BattleGaugeTextRenderer.Reset(); }
         }
     }

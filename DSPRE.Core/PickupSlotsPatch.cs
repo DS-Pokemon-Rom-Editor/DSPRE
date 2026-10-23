@@ -56,14 +56,14 @@ namespace DSPRE
         /// <summary>Why the patch can't go in now, or null.</summary>
         public static string WhyNotApplicable()
         {
-            if (!SupportsCurrentRom) return "The Pickup code isn't mapped for this ROM.";
+            if (!SupportsCurrentRom) return "DSPRE doesn't know where this ROM's Pickup code is.";
             if (!SyntheticOverlaySpace.Available()) return "Apply the ARM9 expansion first.";
             RomInfo.PickupSlotSites s = RomLocator.PickupSlotSites;
             byte[] ov = ReadOverlay();
             bool vanilla = ov.AsSpan((int)s.Clamp, 6).SequenceEqual(Clamp(s.Register))
                 && BitConverter.ToUInt32(ov, (int)s.CommonLiteral) == OverlayAddress + RomInfo.PickupCommonItemsOffset
                 && BitConverter.ToUInt32(ov, (int)s.RareLiteral) == OverlayAddress + RomInfo.PickupRareItemsOffset;
-            return vanilla ? null : "The Pickup code has already been changed by something else.";
+            return vanilla ? null : "Something else has already changed the Pickup code, so DSPRE leaves it alone.";
         }
 
         /// <summary>Writes the tables, filled from the sliding lists, into a marked block at <paramref name="blockOffset"/> and points the code at them.</summary>

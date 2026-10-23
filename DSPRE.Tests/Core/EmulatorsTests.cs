@@ -39,12 +39,12 @@ namespace DSPRE.Tests
         public void AMissingEmulatorOrRomIsReportedWithoutStartingAnything()
         {
             string missing = Path.Combine(Path.GetTempPath(), $"dspre-no-such-{Guid.NewGuid():N}.exe");
-            Assert.Contains("was not found", Emulators.Launch(EmulatorKind.MelonDS, missing, missing));
+            Assert.Contains("wasn't found", Emulators.Launch(EmulatorKind.MelonDS, missing, missing));
 
             string emulator = Path.GetTempFileName();
             try
             {
-                Assert.Contains("The ROM was not found", Emulators.Launch(EmulatorKind.MelonDS, emulator, missing));
+                Assert.Contains("The ROM wasn't found", Emulators.Launch(EmulatorKind.MelonDS, emulator, missing));
             }
             finally { File.Delete(emulator); }
         }

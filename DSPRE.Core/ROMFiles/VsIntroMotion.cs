@@ -7,8 +7,8 @@ using static DSPRE.RomInfo;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// The motion tables the intro code reads rather than computes: how the grunt intro's six emblems fly in, and
-    /// the column order of the black block wipe. Both are edited in place and written back only where changed.
+    /// The motion tables the intro code reads: how the grunt intro's six emblems fly in and the column order of the
+    /// black block wipe. Both are edited in place.
     /// </summary>
     public sealed class VsIntroMotion
     {

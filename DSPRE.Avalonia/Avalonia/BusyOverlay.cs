@@ -55,8 +55,8 @@ namespace DSPRE.Avalonia
         public static bool IsWorking => OneAtATime.CurrentCount == 0;
 
         /// <summary>
-        /// Runs <paramref name="work"/> off the UI thread under the same lock as <see cref="RunAsync"/>, with
-        /// no card of its own, so a ROM load or build never overlaps an editor's unpacking.
+        /// Runs <paramref name="work"/> under <see cref="RunAsync"/>'s lock without a card, so a ROM load or build never
+        /// overlaps an editor's unpacking.
         /// </summary>
         public static async Task<T> RunLockedAsync<T>(Func<T> work)
         {

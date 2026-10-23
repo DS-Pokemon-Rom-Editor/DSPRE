@@ -34,7 +34,7 @@
           <Button Content="Export PNG…" controls:Icon.Key="export" Click="Export_Click"/>
           <Button Content="Export sheet…" controls:Icon.Key="export" Click="ExportSheet_Click" IsVisible="{Binding CanUseSheets}"/>
           <Button Content="Import sheet…" controls:Icon.Key="import" Click="ImportSheet_Click" IsVisible="{Binding CanUseSheets}"/>
-          <Button Content="Open in Graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click" IsVisible="{Binding ShowsAnimationsTab}"/>
+          <Button Content="Open in All graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click" IsVisible="{Binding ShowsAnimationsTab}"/>
         </StackPanel>
         <StackPanel x:Name="SpritePicker" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2">
           <TextBlock Text="{Binding ItemLabel}" VerticalAlignment="Center"/>
@@ -216,7 +216,7 @@
                                 </ComboBox.ItemTemplate>
                               </ComboBox>
 
-                              <TextBlock Text="Delay" FontSize="10" Foreground="{DynamicResource Editor.Subtle}" ToolTip.Tip="In 60ths of a second"/>
+                              <TextBlock Text="Delay" FontSize="10" Foreground="{DynamicResource Editor.Subtle}" ToolTip.Tip="In sixtieths of a second"/>
                               <NumericUpDown Value="{Binding Delay}" Minimum="1" Maximum="600" Increment="1" FormatString="0"
                                              IsEnabled="{Binding #RootWindow.DataContext.CanEditAnimFrames}"/>
 

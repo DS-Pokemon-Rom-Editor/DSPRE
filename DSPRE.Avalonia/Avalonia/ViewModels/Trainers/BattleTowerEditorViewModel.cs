@@ -13,9 +13,8 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Trainers
 {
     /// <summary>
-    /// Avalonia port of the WinForms <c>BattleTowerEditor</c>: the Battle Tower's trainer roster
-    /// (class + rematch messages + which Pokémon sets they can draw from) and the shared pool of
-    /// Pokémon sets those trainers reference by index.
+    /// The Battle Tower's trainers (class, messages and the sets they draw from) and the shared pool of
+    /// Pokémon sets.
     /// </summary>
     public class BattleTowerEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
@@ -60,7 +59,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     ? (trainersError == setsError ? "The trainers and Pokémon sets weren't saved:\n" + trainersError
                         : "The trainers weren't saved:\n" + trainersError + "\n\nThe Pokémon sets weren't saved:\n" + setsError)
                     : trainersError != null ? "The trainers weren't saved:\n" + trainersError : "The Pokémon sets weren't saved:\n" + setsError;
-                _ = DialogHelper.ShowErrorAsync(message, "Battle Tower editor error");
+                _ = DialogHelper.ShowErrorAsync(message, "Battle Tower editor");
                 return;
             }
             _isDirty = false;
@@ -270,7 +269,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (!IsAvailable)
             {
-                StatusText = "Battle Tower data was not found for this game.";
+                StatusText = "Battle Tower data wasn't found for this game.";
                 return;
             }
 

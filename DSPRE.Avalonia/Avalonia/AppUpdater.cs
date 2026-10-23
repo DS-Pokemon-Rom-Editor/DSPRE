@@ -8,12 +8,7 @@ using Velopack.Sources;
 
 namespace DSPRE.Avalonia
 {
-    /// <summary>
-    /// Velopack-based update check for the Avalonia shell, the cross-platform counterpart of the
-    /// WinForms <c>Helpers.CheckForUpdates</c> (Velopack ships Windows installers and Linux
-    /// AppImages from the same release feed). Installed as the default
-    /// <see cref="ShellIntegration.CheckForUpdatesHook"/> when no host provides one.
-    /// </summary>
+    /// <summary>The Velopack update check, used as <see cref="ShellIntegration.CheckForUpdatesHook"/> when no host sets one.</summary>
     public static class AppUpdater
     {
         private const string RepoUrl = "https://github.com/DS-Pokemon-Rom-Editor/DSPRE";
@@ -31,7 +26,7 @@ namespace DSPRE.Avalonia
                 {
                     AppLogger.Info("Not a Velopack-installed build; skipping update check.");
                     if (!silent)
-                        await DialogHelper.ShowInfoAsync("Update checks are only available in installed builds (not portable/dev runs).", "Check for updates");
+                        await DialogHelper.ShowInfoAsync("Update checks only work in an installed copy of DSPRE.", "Check for updates");
                     return;
                 }
 
@@ -40,7 +35,7 @@ namespace DSPRE.Avalonia
                 {
                     AppLogger.Info("No updates available.");
                     if (!silent)
-                        await DialogHelper.ShowInfoAsync("No update is available.", "Information");
+                        await DialogHelper.ShowInfoAsync("DSPRE is up to date.", "Check for updates");
                     return;
                 }
 

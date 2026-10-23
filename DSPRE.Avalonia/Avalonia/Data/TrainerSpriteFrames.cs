@@ -39,15 +39,15 @@ namespace DSPRE.Avalonia.Data
         {
             why = null;
             TrainerCellFile cells = TrainerCellFile.Read(ncer);
-            if (cells == null) { why = "The cell file is not laid out like a trainer sprite's."; return null; }
+            if (cells == null) { why = "The cell file isn't laid out like a trainer sprite's."; return null; }
             NanrFile anims = NanrFile.Read(nanr);
-            if (anims == null) { why = "The animation file could not be read."; return null; }
+            if (anims == null) { why = "The animation file couldn't be read."; return null; }
 
             if (!(NitroBgCodec.ReadDrawingHeader(ncgr) is NitroBgCodec.DrawingHeader head)) { why = "The drawing has no pixel block."; return null; }
             if (head.EightBit || !head.Tiled) { why = "Only tiled 16-colour drawings can be rebuilt."; return null; }
             int rahc = head.SectionAt, size = head.DataSize, data = head.DataAt;
             int end = rahc + head.SectionSize;
-            if (data + size != end || end > ncgr.Length) { why = "The drawing's pixel block is not the usual shape."; return null; }
+            if (data + size != end || end > ncgr.Length) { why = "The drawing's pixel block isn't the usual shape."; return null; }
 
             foreach (TrainerCellFile.Cell c in cells.Cells)
                 if (c.TransferOffset + c.TransferSize > size) { why = "A frame points past the end of the drawing."; return null; }
@@ -60,7 +60,7 @@ namespace DSPRE.Avalonia.Data
 
         public void ReplaceTiles(byte[] tiles)
         {
-            if (tiles == null || tiles.Length != Tiles.Length) throw new ArgumentException("The drawing in the editor is not the size of the one on disk.");
+            if (tiles == null || tiles.Length != Tiles.Length) throw new ArgumentException("The drawing in the editor isn't the size of the one on disk.");
             Tiles = (byte[])tiles.Clone();
         }
         public bool IsBlank(int frame) => Cells.Cells[frame].IsBlank;

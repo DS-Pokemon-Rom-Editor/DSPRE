@@ -7,21 +7,13 @@ using System.Threading.Tasks;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// Reads and writes the starter Pokémon (Turtwig/Chimchar/Piplup on DP/Pt, Chikorita/Cyndaquil/Totodile
-    /// on HGSS) plus everything that has to stay in sync with them: the DP/Pt starter-selection-scene ASM
-    /// routine, the rival's early-game team, tag-battle partners, the starter-cries table (HGSS), and the
-    /// professor/rival dialogue that names the chosen species.
-    ///
-    /// Starters aren't a NARC table in Gen 4: DP and Platinum keep them as a fixed word-table in an overlay,
-    /// HGSS bakes them into compiled ARM9 code. Ported from Universal Pokemon Randomizer FVX's
-    /// <c>Gen4RomHandler.getStarters</c>/<c>setStarters</c>. Dialogue is patched by swapping the old name and
-    /// type for the new ones, so localized ROMs keep their language, and the script search patterns are built
-    /// from the current starter species, so editing twice in one project still works.
+    /// The starters and what must follow them: the DP and Platinum selection scene, the rival team, tag partners, HGSS
+    /// cries and the dialogue naming them. Ported from UPR FVX's Gen4RomHandler.
     /// </summary>
+    /// <remarks>DP and Platinum keep the starters in an overlay word table; HGSS builds them into ARM9 code.</remarks>
     public static class StarterPokemonData
     {
-        // ── Byte patterns (species bytes are placeholders, always rebuilt from the CURRENT starters via
-        //    BuildPatternWithSpeciesAt before use, per the repeat-edit-safe design above). ────────────────────
+        // ── Byte patterns: species bytes are placeholders, rebuilt from the current starters before use ──
         private static readonly byte[] HgssRivalScriptMagicTemplate =
             { 0xCE, 0x00, 0x0C, 0x80, 0x11, 0x00, 0x0C, 0x80, 0x98, 0x00, 0x1C, 0x00, 0x05 };
         private static readonly byte[] DpptRivalScriptMagicTemplate =
@@ -75,9 +67,8 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// Which script inside the starter script file holds the GivePokemon command, worked out from
-        /// the file's own header rather than written down, so it stays right for Pearl and for a ROM
-        /// whose scripts have been shuffled. Returns -1 when it cannot be worked out.
+        /// The script in the starter file that holds GivePokemon, found from the file header so Pearl and shuffled ROMs
+        /// work; -1 when not found.
         /// </summary>
         public static int GetStarterScriptNumber()
         {
@@ -137,15 +128,11 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// Applies a new set of 3 starter species: species table (+ DP/Pt selection-scene ASM patch, HGSS
-        /// starter cries), the rival's early-game team and tag-battle partners, and the professor/rival
-        /// dialogue that names the species. Returns false (nothing was written) only if the species table
-        /// itself couldn't be safely located/written, see <see cref="GetStarters"/>'s HGSS ARM9-signature
-        /// guard.
+        /// Writes three new starters and everything that follows them. False, with nothing written, only when the
+        /// species table couldn't be found.
         /// </summary>
-        /// <param name="scriptFilesTouched">Script file IDs whose raw bytes were patched (rival/tag-battle
-        /// scripts), pass these to <see cref="RefreshRotomSourcesAsync"/> afterward (not done here; that
-        /// call shells out to an external process per file and must not block the caller's UI thread).</param>
+        /// <param name="scriptFilesTouched">Script files whose bytes were patched; pass them to
+        /// <see cref="RefreshRotomSourcesAsync"/> off the UI thread afterwards.</param>
         public static bool ApplyStarters(int[] newSpecies, out List<int> scriptFilesTouched)
         {
             scriptFilesTouched = new List<int>();
@@ -164,9 +151,7 @@ namespace DSPRE.ROMFiles
             else if (!SetSpeciesAndGraphics(newSpecies))
                 return false; // couldn't safely locate the species table, leave everything else untouched
 
-            // The species table (the part that actually matters for gameplay) is already written at this
-            // point. Everything below is best-effort follow-up, a failure in one (a malformed script file,
-            // a text archive that fails to decode, ...) must not make it look like the save itself failed.
+            // The species table is written; the rest is best effort, so one failure doesn't fail the save.
             RunBestEffort("starter cries", () =>
             {
                 if (RomInfo.GameFamily == RomInfo.GameFamilies.HGSS && !HgEngine.HgEngineStarters.Available) PatchStarterCries(newSpecies);
@@ -231,11 +216,8 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// Rewrites the Thumb instructions the DP/Pt starter-selection 3D minigame uses to pick which model to
-        /// render, so it can show any species instead of only the 3 vanilla ones (their original layout only
-        /// supported a narrow, contiguous species range via a single fixed pointer offset). Byte-for-byte port
-        /// of UPR-FVX's <c>Gen4RomHandler.setStarters</c> DP/Pt graphics block, without this, the minigame
-        /// keeps rendering the vanilla starter model even though the player ends up receiving the right species.
+        /// Rewrites the DP and Platinum selection scene so it can show any species (a port of UPR-FVX setStarters);
+        /// without it the scene shows the old models.
         /// </summary>
         internal static void PatchDpPtSelectionSceneAsm(byte[] starterData, int[] newSpecies)
         {
@@ -329,7 +311,7 @@ namespace DSPRE.ROMFiles
                 int at = literals[i];
                 if (at < 4 || at + 4 > data.Length || ReadLong(data, at - 4) != 0x204 + 4 * i)
                 {
-                    AppLogger.Warn("StarterPokemonData: the selection scene's sprite species were not found where expected, " +
+                    AppLogger.Warn("StarterPokemonData: the selection scene's sprite species weren't found where expected, " +
                         "so the scene keeps its old sprites. The overlay may already be modified by another tool.");
                     return;
                 }
@@ -342,8 +324,7 @@ namespace DSPRE.ROMFiles
             && ReadWord(data, offset) == 0x182D
             && ReadWord(data, offset + 2) == 0x6828;
 
-        // What sits around each site in the ROM as it ships. A site whose surroundings differ was changed by something
-        // else, so it is left alone rather than written over.
+        // The bytes around each site as shipped; a site with different bytes around it is left alone.
         private static readonly byte[] HgssSpeciesTail = { 0x03, 0x03, 0x1A, 0x12, 0x01, 0x23, 0x00, 0x00 };
         private static readonly byte[] SceneInnerPrefix = { 0x02, 0x90, 0x03, 0x90, 0x02, 0x20, 0x00, 0x02 };
         private static readonly byte[] CriesPrefix = DSUtils.StringToByteArray("0004000C10BD0000000000000000000000E000000000000000E0000000000200");
@@ -504,35 +485,15 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// Rotom-format projects (<see cref="RomInfo.HasRotomProject"/>) keep a decompiled <c>.rotom</c> text
-        /// source per script file (<c>expanded/scripts/&lt;id&gt;.rotom</c>) that the Script editor reads
-        /// directly off disk, it is only ever decompiled from the binary ONCE, the very first time the
-        /// project has no <c>.rotom</c> files at all, and never reconciled against the binary again after
-        /// that. Since <see cref="PatchRivalAndTagBattleScripts"/>/<see cref="SetHeldItem"/> only touch the
-        /// raw <c>.bin</c>, an existing <c>.rotom</c> source would otherwise go stale, showing the OLD
-        /// species literal in the editor, and silently reverting this fix the next time anyone hits
-        /// "Compile" for any unrelated script edit (project-wide recompile from the stale text).
-        ///
-        /// This is genuinely async (properly awaited, never <c>.GetAwaiter().GetResult()</c>'d), each file
-        /// spawns a real <c>rotom.exe</c> process, and calling this synchronously from a UI-thread call chain
-        /// (as the first version of this fix did) deadlocks Avalonia's dispatcher: the awaited
-        /// <c>Process.WaitForExitAsync</c> needs the UI thread to resume on, but the UI thread would be
-        /// blocked waiting for this call to return. Callers must `await` this from an async context (or fire
-        /// it in the background) rather than block on it, see <see cref="StarterEditorViewModel"/>'s
-        /// SaveChanges, which runs it after the synchronous save returns so the UI never freezes.
-        /// Best-effort throughout: a failure here only affects the Script editor's display / future
-        /// recompiles, not the ROM data itself (already correctly patched by the time this runs).
+        /// Rotom sources go stale when only the .bin changes, so this regenerates them. It runs rotom per file and must
+        /// be awaited off the UI thread, or the dispatcher deadlocks.
         /// </summary>
         public static Task RefreshRotomSourcesAsync(IEnumerable<int> fileIds)
             => ScriptSourceSync.RefreshAsync(fileIds);
 
         // ── Dialogue text ───────────────────────────────────────────────────────────────────────────────────
 
-        /// <summary>
-        /// Surgically swaps the old starters' species name (and, where the template embeds it, primary-type
-        /// name) for the new ones inside the professor/rival dialogue, never a hardcoded English rewrite, so
-        /// localized ROMs keep their own language for everything except the species/type words themselves.
-        /// </summary>
+        /// <summary>Swaps the old species and type names for the new ones in the dialogue, so other languages keep their text.</summary>
         private static void PatchStarterText(int[] oldSpecies, int[] newSpecies)
         {
             if (RomInfo.StarterScreenTextNumber < 0) return;

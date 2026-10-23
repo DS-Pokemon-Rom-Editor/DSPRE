@@ -8,8 +8,8 @@ using System.Linq;
 namespace DSPRE.Avalonia.Data
 {
     /// <summary>
-    /// Puts the pictures <see cref="BattleGaugeText"/> finds into colour, using the gauge's own palette
-    /// because that is what a battle draws them with. Nothing here writes to the ROM.
+    /// Colours the pictures <see cref="BattleGaugeText"/> finds with the gauge's palette, as a battle does. Nothing here
+    /// writes to the ROM.
     /// </summary>
     public sealed class BattleGaugeTextRenderer
     {
@@ -23,7 +23,7 @@ namespace DSPRE.Avalonia.Data
         public static bool IsAvailable => BattleGaugeText.IsAvailable && Palette() != null;
         public static string Unavailable =>
             BattleGaugeText.Unavailable
-            ?? (Palette() == null ? "The gauge's colours could not be read." : null);
+            ?? (Palette() == null ? "The gauge's colours couldn't be read." : null);
 
         // ── the gauge's colours ───────────────────────────────────────────────────────────────────
 
@@ -56,7 +56,7 @@ namespace DSPRE.Avalonia.Data
                 if (row >= 16)
                     _palette = all.Take(row).Select(c => { (byte r, byte g, byte b) = NitroBgCodec.Colour(c); return System.Drawing.Color.FromArgb(r, g, b); }).ToArray();
             }
-            catch (Exception ex) { AppLogger.Warn("The gauge palette could not be read: " + ex.Message); }
+            catch (Exception ex) { AppLogger.Warn("The gauge palette couldn't be read: " + ex.Message); }
 
             return _palette;
         }
@@ -128,11 +128,7 @@ namespace DSPRE.Avalonia.Data
             Drawn made = Blank(widthInTiles * 8, 16);
             if (made == null) return null;
 
-            // Only the letters. The games do fill this block with the panel colour first, but they
-            // write it into the gauge's own tiles, split across two sprite pieces, so it can never
-            // land outside the gauge. Drawn flat at one spot it can: a 64 pixel block of panel colour
-            // painted straight over the frame's slanted edge, which is what it was doing. The panel is
-            // already there behind the letters, so leaving it be looks the same and stays inside.
+            // Only the letters: the panel is already behind them, and a flat fill would cover the frame's slanted edge.
 
             int at = 0;
             foreach (char c in name ?? "")
@@ -215,9 +211,8 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>
-        /// Somewhere to draw, or nothing at all when this ROM is not one we read. Every picture starts
-        /// here, so refusing here refuses all of them: the HP numbers used to come back as an empty
-        /// strip on Diamond because only the colours were checked, and the colours read fine there.
+        /// Somewhere to draw, or null when this ROM isn't one DSPRE reads. Every picture starts here, so this refuses them
+        /// all.
         /// </summary>
         private static Drawn Blank(int width, int height)
         {
@@ -226,8 +221,7 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>
-        /// Paints one tile in. Index zero is the hole the gauge shows through, so it stays clear rather
-        /// than being painted the palette's first colour.
+        /// Paints one tile in. Index zero is the hole the gauge shows through, so it stays clear.
         /// </summary>
         private static void Put(Drawn into, BattleGaugeText.Tile tile, int atX, int atY)
         {

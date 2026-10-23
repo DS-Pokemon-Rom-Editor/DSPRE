@@ -5,10 +5,7 @@ using System.Globalization;
 namespace DSPRE
 {
     /// <summary>
-    /// UI-free extension methods used throughout the ROM core (scripts, text, data files).
-    /// Moved here from the WinForms-coupled <c>Extensions</c> class so the core stays
-    /// cross-platform; call sites are unchanged (same namespace, extension resolution is
-    /// class-name-agnostic).
+    /// Extension methods the ROM core uses for scripts, text and data files.
     /// </summary>
     public static class CoreExtensions
     {
@@ -56,7 +53,7 @@ namespace DSPRE
                 case 4:
                     return BitConverter.GetBytes(num);
                 default:
-                    AppMessages.Error("Invalid size for number conversion!", "Error!");
+                    AppMessages.Error("This number size isn't supported.", "Error");
                     throw new InvalidOperationException();
             }
         }

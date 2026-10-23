@@ -85,9 +85,7 @@ namespace DSPRE.ROMFiles
             return lines;
         }
 
-        /// <summary>
-        /// The text fitted into boxfuls, for text that carries none of the games' own breaks.
-        /// </summary>
+        /// <summary>The text split into boxfuls, for text with no line breaks.</summary>
         public List<string> Pages(string text)
         {
             List<string> pages = new List<string>();

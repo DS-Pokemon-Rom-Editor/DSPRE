@@ -24,15 +24,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private bool _needsReversion;
         public bool NeedsReversion { get => _needsReversion; set { if (_needsReversion != value) { _needsReversion = value; OnPropertyChanged(); Changed?.Invoke(); } } }
 
-        /// <summary>Fired on any edit so the owning VM can mark itself dirty without a full event-hookup dance.</summary>
+        /// <summary>Fired on any edit so the owner can mark itself dirty.</summary>
         public System.Action Changed;
     }
 
     /// <summary>
-    /// hg-engine-only editor for data/PokeFormDataTbl.c: which form species exist for a base Pokémon
-    /// (Mega Evolutions, regional forms, Gmax, etc.) and each one's NEEDS_REVERSION flag. Forms
-    /// themselves (base stats, types, abilities...) are edited through the normal Pokémon editor; this
-    /// editor only manages which form entries exist and how they're flagged, not their contents.
+    /// hg-engine only: the forms a Pokémon has in data/PokeFormDataTbl.c and their NEEDS_REVERSION flags.
+    /// Form stats are edited in the Pokémon editor.
     /// </summary>
     public class HgEngineFormEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
@@ -146,7 +144,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 }
             }
             StatusText = Slots.Count > 0
-                ? $"{Slots.Count} form(s) found in PokeFormDataTbl.c."
+                ? $"{Plural.Of(Slots.Count, "form")} found in PokeFormDataTbl.c."
                 : "No forms registered for this species in PokeFormDataTbl.c.";
             StartUndo();
             OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -193,7 +191,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             foreach (FormSlotRow row in Slots)
             {
                 string symbol = SymbolFor(row.PokemonIndex);
-                if (symbol == null) continue;   // couldn't resolve, skip rather than write garbage
+                if (symbol == null) continue;   // unresolved: skipped so nothing wrong is written
                 desired.Add(new HgEngineFormRegistry.FormSlot(row.NeedsReversion, symbol));
             }
 
@@ -203,7 +201,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (!saved)
             {
                 if (error == null) return;
-                StatusText = $"Save failed: {error}";
+                StatusText = $"Couldn't save: {error}";
                 AppLogger.Error($"hg-engine form registry write failed for species {species}: {error}");
                 return;
             }

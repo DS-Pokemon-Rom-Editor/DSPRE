@@ -14,19 +14,17 @@ using DSPRE.ROMFiles;
 namespace DSPRE.Avalonia.Views.World
 {
     /// <summary>
-    /// Maps workspace: the shared header sidebar + a context strip + map-bound tabs, all over one
-    /// <see cref="HeaderEditorViewModel"/>. Every tab embeds the real editor and follows the selected
-    /// header's linked file id; the header sidebar's context menu can still pop any of them out into
-    /// their own window via <see cref="HeaderEditorViewModel"/>'s OpenXxx methods.
+    /// The Maps workspace: the header sidebar, a context strip and tabs that follow the selected header; the sidebar
+    /// menu can open any of them in a window.
     /// </summary>
     public partial class MapsWorkspaceView : UserControl
     {
         private HeaderEditorViewModel VM => DataContext as HeaderEditorViewModel;
-        // Only gates one-time event-subscription wiring (below), NOT the actual data setup, which must
-        // re-run every time a ROM is loaded (including switching to a DIFFERENT rom mid-session), or the
-        // header sidebar and every tab stay frozen on whatever ROM was loaded first in the app's lifetime.
+        // Wires events once; data setup reruns on every ROM load.
         private bool _wiringDone;
 
+        // The tabs are UserControls because a Window can't be embedded. A tab opened alone sits in an EditorHostWindow,
+        // and EnsureSetupAsync reruns on every ROM load.
         public EventEditorViewModel EventVM { get; } = new EventEditorViewModel(true);
         public MapEditorViewModel MapVM { get; } = new MapEditorViewModel(true);
         public MatrixEditorViewModel MatrixVM { get; } = new MatrixEditorViewModel(true);
@@ -35,9 +33,8 @@ namespace DSPRE.Avalonia.Views.World
         public LevelScriptEditorViewModel LevelScriptsVM { get; } = new LevelScriptEditorViewModel(true);
         public TextEditorViewModel TextVM { get; } = new TextEditorViewModel(true);
 
-        // The Wild Encounters editor needs gameFamily/NARC paths that don't exist at app boot, and its
-        // VM type (DPPt vs HGSS) depends on gameFamily, so it's built once inside EnsureSetupAsync
-        // instead of via a field initializer + XAML DataContext binding like the other tabs.
+        // The Wild Pokémon editor needs game paths that don't exist at boot, and its view model depends on the game
+        // family, so it's built in EnsureSetupAsync.
         private object _encountersVm;
         private bool _encountersEmbedded;
 
@@ -186,9 +183,7 @@ namespace DSPRE.Avalonia.Views.World
                 };
             }
 
-            // Every tab follows the selected header's linked file id; refresh on every ROM load (a
-            // coincidental same numeric id across two different ROMs must still force a real reload,
-            // so reset first rather than relying on the property setters' equality-skip).
+            // Every tab follows the header's linked file; reset on each ROM load so an equal id still reloads.
             EventVM.InitialIndex = (int)vm.EventFileId;
             MatrixVM.InitialIndex = (int)vm.MatrixId;
             MatrixVM.FocusHeader = vm.CurrentHeaderId;
@@ -202,17 +197,10 @@ namespace DSPRE.Avalonia.Views.World
             EventVM.TextArchiveId = (int)vm.TextArchiveId;
             TextVM.InitialIndex = (int)vm.TextArchiveId;
 
-            // Tabs that latched their no-ROM state at boot get to set up now. Pass our own resolved
-            // owner through explicitly: these controls live in non-selected TabItems (Header is the
-            // default), so TopLevel.GetTopLevel(this) on them returns null this early. Their own
-            // EnsureSetupAsync used to silently no-op until the tab was manually visited once, which
-            // for Map meant BuildHeaderPreview() built a real stitched model with zero MapLoaded
-            // subscribers (GlView never got it, so it stayed stuck showing its placeholder cube).
+            // Pass the owner: an unselected tab has no TopLevel yet.
             await EventsEmbed.EnsureSetupAsync(owner);
             await MapEmbed.EnsureSetupAsync(owner);
-            // Default the embedded Map tab to "This header" (rather than an arbitrary single map) now
-            // that SetupAsync has unpacked everything BuildHeaderPreview needs. Reset first so this
-            // always forces a rebuild even if it was already 2 from a previous ROM in this session.
+            // Default the Map tab to This header once setup has unpacked what it needs; reset first to force a rebuild.
             MapVM.ViewModeIndex = 0;
             MapVM.HeaderId = -1;
             MapVM.HeaderId = vm.CurrentHeaderId;
@@ -274,9 +262,8 @@ namespace DSPRE.Avalonia.Views.World
         }
 
         /// <summary>
-        /// A tab here shows the selected header's own file, so its file picker follows the header instead of being
-        /// pickable: editing a file you think belongs to this header but does not is the mistake this prevents.
-        /// The tab's Open in window gives the free editor.
+        /// The tab's file follows the header so another header's file can't be edited by mistake; Open in window picks
+        /// freely.
         /// </summary>
         private static void LockToHeader(Control embed)
         {
@@ -294,8 +281,7 @@ namespace DSPRE.Avalonia.Views.World
             Opacity = 0.75,
         };
 
-        /// <summary>Shows the encounter editor, or says there is nothing when the header links no encounter file (255),
-        /// rather than leaving the last header's table up.</summary>
+        /// <summary>Shows the encounter editor, or a note when the header links no encounter file (255).</summary>
         private void ShowEncountersFor(bool hasEncounters)
         {
             if (_encountersView == null) return;
@@ -377,10 +363,10 @@ namespace DSPRE.Avalonia.Views.World
             EventVM.TextArchiveId = id;
         }
 
-        /// <summary>Builds the Wild Encounters tab's editor. Rebuilds from scratch on EVERY ROM load
-        /// (not just the first): the pokemon names, NARC path and header count are all ROM-specific,
-        /// and the VM type itself (DPPt vs HGSS) depends on gameFamily, so a ROM switch that changes
-        /// game family needs a genuinely different VM/View, not just a retarget.</summary>
+        /// <summary>
+        /// Builds the Encounters tab's editor afresh on every ROM load, since its data and view model type depend on
+        /// the ROM.
+        /// </summary>
         private void EnsureEncountersEmbedded()
         {
             if (!AvaloniaEditorLauncher.IsRomLoaded) return;
@@ -446,11 +432,11 @@ namespace DSPRE.Avalonia.Views.World
             catch (System.Exception ex)
             {
                 _encountersEmbedded = false;
-                _ = DialogHelper.ShowErrorAsync($"Failed to set up the Wild Encounters editor:\n{ex.Message}", "Wild encounters error");
+                _ = DialogHelper.ShowErrorAsync($"Couldn't set up the Wild Pokémon editor:\n{ex.Message}", "Wild Pokémon editor");
             }
         }
 
-        /// <summary>Point the embedded Wild Encounters tab at the current header's encounter table.</summary>
+        /// <summary>Points the Encounters tab at the current header's encounter table.</summary>
         private void RetargetEncounters()
         {
             if (!_encountersEmbedded) { EnsureEncountersEmbedded(); return; }
@@ -488,7 +474,7 @@ namespace DSPRE.Avalonia.Views.World
                 && await DialogHelper.AskYesNoAsync("Save this tab's changes first? The window opens what is saved.", "Open in window"))
             {
                 string failed = await UnsavedChangesDialog.TrySaveEditorAsync(editor);
-                if (failed != null) { await DialogHelper.ShowErrorAsync("The tab was not saved:\n" + failed, "Open in window"); return; }
+                if (failed != null) { await DialogHelper.ShowErrorAsync("The tab wasn't saved:\n" + failed, "Open in window"); return; }
             }
 
             switch (tab)

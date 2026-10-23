@@ -43,7 +43,7 @@ namespace DSPRE.Avalonia.Views.Controls
 
         /// <summary>The rows on show.</summary>
         public IReadOnlyList<string> Items { get => GetValue(ItemsProperty); set => SetValue(ItemsProperty, value); }
-        /// <summary>Every entry, rows off screen included, which is what a list's width is measured from.</summary>
+        /// <summary>Every entry, off-screen rows included; a list's width is measured from these.</summary>
         public IReadOnlyList<string> WidthItems { get => GetValue(WidthItemsProperty); set => SetValue(WidthItemsProperty, value); }
         /// <summary>The row the cursor is on, counted from the first row on show.</summary>
         public int Cursor { get => GetValue(CursorProperty); set => SetValue(CursorProperty, value); }

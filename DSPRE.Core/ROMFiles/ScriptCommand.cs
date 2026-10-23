@@ -23,7 +23,6 @@ namespace DSPRE.ROMFiles
             ScriptCommandInfo cmdInfo = null;
             commandInfoDict?.TryGetValue(id, out cmdInfo);
 
-            // Get command name
             if (cmdInfo != null && !string.IsNullOrEmpty(cmdInfo.Name))
             {
                 Name = cmdInfo.Name;
@@ -86,16 +85,14 @@ namespace DSPRE.ROMFiles
                     string details;
                     if (wholeLine.Contains(':') && wholeLine.ContainsNumber())
                     {
-                        details = "This probably means you forgot to \"End\" the Script or Function above it.";
-                        details += Environment.NewLine + "Please, also note that only Functions can be terminated\nwith \"Return\".";
+                        details = "The script or function above may be missing its End. Only functions can end with Return.";
                     }
                     else
                     {
-                        details = "Are you sure it's a proper Script Command?";
+                        details = "It doesn't look like a script command.";
                     }
 
-                    AppMessages.Error("This Script file could not be saved." +
-                                    $"\nParser failed to interpret line {lineNumber}: \"{wholeLine}\".\n\n{details}", "Parser error");
+                    AppMessages.Error($"Line {lineNumber} can't be read: \"{wholeLine}\".\n\n{details}", "Script not saved");
                     return;
                 }
             }
@@ -124,8 +121,7 @@ namespace DSPRE.ROMFiles
 
                     if (parametersSizeArr[i] == firstParamValue)
                     {
-                        //Firstly, build subarray of parameter sizes, starting from the chosen option [firstParamValue]
-                        //FOR EXAMPLE: CMD 0x235 and firstParamValue = 5
+                        // The sizes for the chosen option, after the option byte; for example CMD 0x235 with option 5:
 
                         // { 0xFF, 2,
                         // 0, 1,   2,
@@ -138,16 +134,12 @@ namespace DSPRE.ROMFiles
                         // },
                         byte[] subParametersSize = parametersSizeArr.SubArray(i + 2, paramLength++);
 
-                        //Create a slightly bigger temp array
                         byte[] temp = new byte[1 + subParametersSize.Length];
 
-                        //Store the size of the firstParamValue there
                         temp[0] = firstParamSize;
 
-                        //Then copy the whole subarray of parameter sizes
                         Array.Copy(subParametersSize, 0, temp, 1, temp.Length - 1);
 
-                        //Replace the original parametersSizeArr with the new array
                         parametersSizeArr = temp;
                         found = true;
                         break;
@@ -159,8 +151,7 @@ namespace DSPRE.ROMFiles
 
                 if (!found)
                 {
-                    AppMessages.Error($"Command {nameParts[0]} is a special Script Command.\n" +
-                                    $"The value of the first parameter must be a number in the range [0 - {optionsCount}].\n\n" +
+                    AppMessages.Error($"{nameParts[0]} needs a first parameter from 0 to {optionsCount}.\n\n" +
                                     $"Line {lineNumber}: {wholeLine}", "Error");
                     Id = null;
                     return;
@@ -179,7 +170,6 @@ namespace DSPRE.ROMFiles
             {
                 for (int i = paramsProcessed; i < paramLength; i++)
                 {
-                    //AppLogger.Debug($"Parameter #{i}: {nameParts[i + 1]}");
 
                     if (RomInfo.ScriptComparisonOperatorsReverseDict.TryGetValue(nameParts[i + 1].ToLower(), out cmdID))
                     { //Check succeeds when command is like "asdfg LESS" or "asdfg DIFFERENT"
@@ -270,7 +260,7 @@ namespace DSPRE.ROMFiles
                                                         }
                                                         else
                                                         {
-                                                            AppMessages.Error($"Argument {paramToCheck} couldn't be parsed as a valid Condition, Overworld ID, Direction ID, Pokemon, Item, Move, Sound, Trainer, Trainer class, Trade, Script, Function or Action number.\n\n" +
+                                                            AppMessages.Error($"{paramToCheck} isn't a condition, overworld, direction, Pokémon, item, move, sound, trainer, trainer class, trade, or script, function or action number.\n\n" +
                                                                 $"Line {lineNumber}: {wholeLine}", "Invalid identifier");
                                                             Id = null;
                                                             return;
@@ -297,9 +287,9 @@ namespace DSPRE.ROMFiles
                         }
                         catch (OverflowException)
                         {
-                            string errorMsg = $"Argument {nameParts[i + 1]} at line {lineNumber} is not in the range [0, {Math.Pow(2, 8 * parametersSizeArr[i]) - 1}].";
+                            string errorMsg = $"{nameParts[i + 1]} on line {lineNumber} must be 0 to {Math.Pow(2, 8 * parametersSizeArr[i]) - 1}.";
                             AppLogger.Error($"ScriptCommand parse error: {errorMsg} | Command: {nameParts[0]} (ID: 0x{Id:X3}) | Full line: {wholeLine} | Expected param size: {parametersSizeArr[i]} bytes | This may indicate a database error for conditional commands.");
-                            AppMessages.Error(errorMsg + $"\n\nCommand: {nameParts[0]} (ID: 0x{Id:X3})\nFull line: {wholeLine}\n\nNote: If this is a conditional command like UnionGroup, check your script command database for parameter size errors.", "Argument error");
+                            AppMessages.Error(errorMsg + $"\n\nCommand: {nameParts[0]} (ID: 0x{Id:X3})\nFull line: {wholeLine}\n\nIf this is a conditional command such as UnionGroup, check its parameter sizes in the command database.", "Argument error");
                             Id = null;
                         }
                     }
@@ -350,7 +340,6 @@ namespace DSPRE.ROMFiles
 
         private string ProcessBracketedItems(string line)
         {
-            // Early exit if no brackets
             if (!line.Contains('[')) return line;
 
             StringBuilder result = new StringBuilder(line);
@@ -381,7 +370,6 @@ namespace DSPRE.ROMFiles
 
         private string FindClosestMatch(string input, IEnumerable<string> possibilities, int threshold = 3)
         {
-            // Remove brackets and spaces for comparison
             input = input.Trim('[', ']').Replace(" ", "").ToLower();
 
             var closest = possibilities
@@ -450,37 +438,37 @@ namespace DSPRE.ROMFiles
             string closestItem = FindClosestMatch(parameter, ScriptDatabase.ItemNames.Values);
             if (!string.IsNullOrWhiteSpace(closestItem))
             {
-                throw new ArgumentException($"'{parameter}' is not a valid Item.\nDid you mean {closestItem}?");
+                throw new ArgumentException($"'{parameter}' isn't an item.\nDid you mean {closestItem}?");
             }
             string closestPokemon = FindClosestMatch(parameter, ScriptDatabase.PokemonNames.Values);
             if (!string.IsNullOrWhiteSpace(closestPokemon))
             {
-                throw new ArgumentException($"'{parameter}' is not a valid Pokemon.\nDid you mean {closestPokemon}?");
+                throw new ArgumentException($"'{parameter}' isn't a Pokémon.\nDid you mean {closestPokemon}?");
             }
             string closestMove = FindClosestMatch(parameter, ScriptDatabase.MoveNames.Values);
             if (!string.IsNullOrWhiteSpace(closestMove))
             {
-                throw new ArgumentException($"'{parameter}' is not a valid Move.\nDid you mean {closestMove}?");
+                throw new ArgumentException($"'{parameter}' isn't a move.\nDid you mean {closestMove}?");
             }
             string closestSound = FindClosestMatch(parameter, ScriptDatabase.SoundNames.Values);
             if (!string.IsNullOrWhiteSpace(closestSound))
             {
-                throw new ArgumentException($"'{parameter}' is not a valid Sound name.\nDid you mean {closestSound}?");
+                throw new ArgumentException($"'{parameter}' isn't a sound.\nDid you mean {closestSound}?");
             }
             string closestTrainer = FindClosestMatch(parameter, ScriptDatabase.TrainerNames.Values);
             if (!string.IsNullOrWhiteSpace(closestTrainer))
             {
-                throw new ArgumentException($"'{parameter}' is not a valid Trainer.\nDid you mean {closestTrainer}?");
+                throw new ArgumentException($"'{parameter}' isn't a trainer.\nDid you mean {closestTrainer}?");
             }
             string closestClass = FindClosestMatch(parameter, ScriptDatabase.TrainerClassNames.Values);
             if (!string.IsNullOrWhiteSpace(closestClass))
             {
-                throw new ArgumentException($"'{parameter}' is not a valid trainer class.\nDid you mean {closestClass}?");
+                throw new ArgumentException($"'{parameter}' isn't a trainer class.\nDid you mean {closestClass}?");
             }
             string closestTrade = FindClosestMatch(parameter, ScriptDatabase.NpcTradeNames.Values);
             if (!string.IsNullOrWhiteSpace(closestTrade))
             {
-                throw new ArgumentException($"'{parameter}' is not a valid trade.\nDid you mean {closestTrade}?");
+                throw new ArgumentException($"'{parameter}' isn't a trade.\nDid you mean {closestTrade}?");
             }
 
             return parameter;

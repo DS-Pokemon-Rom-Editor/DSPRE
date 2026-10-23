@@ -128,7 +128,7 @@ namespace DSPRE
                     return TryCreateDppPatch(RomInfo.OWtablePath, RomInfo.OWTableOffset, targetAppearanceId, sourceAppearanceId, out patch, out error);
                 }
 
-                error = "Overworld graphics profiles are not supported for this game.";
+                error = "Overworld graphics profiles aren't supported for this game.";
                 return false;
             }
             catch (Exception ex)
@@ -170,7 +170,7 @@ namespace DSPRE
             error = null;
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
             {
-                error = "The overworld table file was not found.";
+                error = "The overworld table file wasn't found.";
                 return false;
             }
 
@@ -178,7 +178,7 @@ namespace DSPRE
             long sentinel = FindU32Row(data, textureTableOffset, 8, 0xFFFF);
             if (sentinel < 0)
             {
-                error = "The end of the overworld texture table could not be found.";
+                error = "The end of the overworld texture table couldn't be found.";
                 return false;
             }
 
@@ -213,7 +213,7 @@ namespace DSPRE
             }
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
             {
-                error = "The overworld table file was not found.";
+                error = "The overworld table file wasn't found.";
                 return false;
             }
 

@@ -69,7 +69,7 @@ namespace DSPRE.Avalonia.Data
                 ids = new int[w * h];
                 for (int i = 0; i < ids.Length; i++)
                 {
-                    if (indices[i] >= plte.Length) { why = $"The picture uses colour {indices[i]}, which its own palette does not have."; return null; }
+                    if (indices[i] >= plte.Length) { why = $"The picture uses colour {indices[i]}, which its own palette doesn't have."; return null; }
                     ids[i] = (plte[indices[i]] >> 24) < 128 ? 0 : indices[i];
                 }
             }
@@ -115,7 +115,7 @@ namespace DSPRE.Avalonia.Data
             why = null;
             if (columns < 1 || rows < 1 || Width(columns) != w || Height(rows) != h)
             {
-                why = $"The picture is {w}x{h}, which is not a sheet of whole {CellSize}x{CellSize} cells. Export a sheet to start from.";
+                why = $"The picture is {w}x{h}, which isn't a sheet of whole {CellSize}x{CellSize} cells. Export a sheet to start from.";
                 return false;
             }
             return true;

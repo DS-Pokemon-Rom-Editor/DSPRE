@@ -15,10 +15,8 @@ namespace DSPRE.Avalonia.Controls
     public enum ToolbarSlot { Auto = -1, Picker = 0, Save = 1, Discard = 2, Undo = 3, Redo = 4, Add = 5, Remove = 6, Import = 7, Export = 8, Extra = 9 }
 
     /// <summary>
-    /// Every editor's toolbar: the same height, padding, background and border, and the same order, so Save, Undo or
-    /// Import is always found in the same place. The file or record picker comes first, then Save, Discard, Undo and
-    /// Redo, then Add and Remove, then Import and Export, then whatever the editor adds. A control's slot comes from
-    /// <see cref="SlotProperty"/>, or from its label when that is not set; a label in front of a picker goes with it.
+    /// Every editor's toolbar, in one order: the picker, Save to Redo, Add and Remove, Import and Export, then the editor's
+    /// extras. A control's slot comes from <see cref="SlotProperty"/>, or else from its label.
     /// </summary>
     public class EditorToolbar : Border
     {
@@ -263,7 +261,7 @@ namespace DSPRE.Avalonia.Controls
             IOrderedEnumerable<(Control Item, ToolbarSlot Slot, int Order)> ordered =
                 slotted.OrderBy(x => GroupOf(x.Slot)).ThenBy(x => x.Slot == ToolbarSlot.Extra || x.Slot == ToolbarSlot.Picker ? 0 : (int)x.Slot).ThenBy(x => x.Order);
 
-            // Each group sits in one piece, so a toolbar that has to wrap never splits Add from Remove last.
+            // Each group stays in one piece, so a wrapping toolbar never splits Add from Remove.
             int lastGroup = -1;
             StackPanel groupPanel = null;
             foreach ((Control item, ToolbarSlot slot, int _) in ordered)

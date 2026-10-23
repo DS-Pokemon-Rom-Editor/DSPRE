@@ -25,7 +25,7 @@ namespace DSPRE.Avalonia.Data
 
         public override ScreenPageComposer MakeComposer(Func<int, FieldFont> font) => ComposerFor(_sample, font);
 
-        // The sample's sprite, icon and footprint come from editors of their own.
+        // The sample's sprite, icon and footprint are edited in other editors.
         public override DirNames[] PictureArchives => new[] { DirNames.PokemonBattleSprites, DirNames.MonIcons, DirNames.FootprintGraphics };
 
         public override int SpriteDrawing(ScreenSprite s) =>

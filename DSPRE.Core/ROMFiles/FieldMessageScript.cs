@@ -60,8 +60,7 @@ namespace DSPRE.ROMFiles
 
             List<(Token token, string value)> parts = Tokenise(text);
 
-            // Script text that carries none of the games' own breaks has nothing to say about how it
-            // should sit in the box, so it is fitted to the box instead of running off the edge.
+            // Script text with no line breaks is fitted to the box so it doesn't run off the edge.
             bool marked = parts.Exists(p => p.token != Token.Text);
             if (!marked && wrapWhenUnmarked)
                 return Wrapped(text, measure, width, linesPerBox);
