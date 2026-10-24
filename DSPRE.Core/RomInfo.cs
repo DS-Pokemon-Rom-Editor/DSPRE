@@ -270,6 +270,9 @@ namespace DSPRE
         /// </summary>
         public sealed record HpBarTextSites(int Overlay, int[] Hooks, int[] Copies, int[] TileHooks, int[] TileCopies);
 
+        /// <summary>Where the battle overlay sets the HP and experience gauge lengths (healthbox.c HEALTHBOX_HP_CELL_COUNT, HEALTHBOX_EXP_CELL_COUNT).</summary>
+        public sealed record GaugeLengthSites(int Overlay, int[] Health, int[] Experience);
+
         /// <summary>
         /// Battle Point exchange code sites: Platinum's corner list pointers, overlay 7 price literal (the next one is +2)
         /// and row-count compare, plus both games' exchange command table and its <c>movs r1, #firstTmRow</c>.

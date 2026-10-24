@@ -161,6 +161,9 @@ namespace DSPRE
         public static HpBarTextSites HpBarTextSites => Here(HpBarTextSitesIn);
         public static List<(string id, int rev)> HpBarTextDumps => WorksOn(HpBarTextSitesIn);
 
+        public static GaugeLengthSites GaugeLengthSites => Here(GaugeLengthSitesIn);
+        public static List<(string id, int rev)> GaugeLengthDumps => WorksOn(GaugeLengthSitesIn);
+
         public static SlotOddsMethod[] SlotOddsMethods => Here(SlotOddsIn);
         public static List<(string id, int rev)> SlotOddsDumps => WorksOn(SlotOddsIn);
 

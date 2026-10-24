@@ -42,7 +42,7 @@
     </controls:EditorToolbar>
 
     <!-- The parts, by name -->
-    <Border x:Name="PartList" DockPanel.Dock="Left" Width="300" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,1,0">
+    <Border x:Name="PartList" DockPanel.Dock="Left" Width="370" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,1,0">
       <DockPanel Margin="8">
         <TextBlock DockPanel.Dock="Top" Text="Parts" FontWeight="SemiBold" Margin="0,0,0,6"/>
         <ItemsControl ItemsSource="{Binding Parts}">
@@ -59,6 +59,8 @@
                                ToolTip.Tip="Column"/>
                 <NumericUpDown Value="{Binding Row}" Minimum="0" Maximum="7" Increment="1" FormatString="0" Width="64"
                                ToolTip.Tip="Row"/>
+                <NumericUpDown Value="{Binding Length}" Minimum="1" Maximum="{Binding MaxLength}" Increment="1" FormatString="0" Width="64"
+                               IsVisible="{Binding HasLength}" ToolTip.Tip="Length in squares"/>
               </StackPanel>
             </DataTemplate>
           </ItemsControl.ItemTemplate>

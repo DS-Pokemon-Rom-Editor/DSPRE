@@ -20,6 +20,10 @@ namespace DSPRE.ROMFiles
         public int ScreenX, ScreenY;
         public int? ExtraPiece;                       // Platinum and HGSS never create this piece; kept as read
 
+        /// <summary>The gauges' lengths in squares, shared by every bar; they can only be made shorter than the game's.</summary>
+        public int HpCells = BattleGaugePieces.GameHpCells, ExpCells = BattleGaugePieces.GameExpCells;
+        public bool LengthsEditable;
+
         public static int TileAt(int x, int y) => (x >= Half ? 64 : 0) + y * Half + x % Half;
 
         public static (int X, int Y) SquareOf(int tile) => (tile >= 64 ? Half + tile % Half : tile % Half, tile % 64 / Half);
@@ -30,6 +34,13 @@ namespace DSPRE.ROMFiles
             BattleGaugePieces.Bar.YoursDouble or BattleGaugePieces.Bar.YourPartner =>
                 new[] { Part.Name, Part.LvMark, Part.LvDigits, Part.HpGauge, Part.Status, Part.CurrentHp, Part.Slash, Part.MaxHp, Part.HpTag, Part.BarEnd },
             _ => new[] { Part.Name, Part.LvMark, Part.LvDigits, Part.HpGauge, Part.Status, Part.Caught },
+        };
+
+        public (int W, int H) Size(Part part) => part switch
+        {
+            Part.HpGauge => (HpCells, 1),
+            Part.Exp => (ExpCells, 1),
+            _ => SizeOf(part),
         };
 
         public static (int W, int H) SizeOf(Part part) => part switch
@@ -59,6 +70,7 @@ namespace DSPRE.ROMFiles
             if (BattleGaugePieces.Locate()?.HasSlots != true) return null;
             BattleGaugeLayout layout = new BattleGaugeLayout { Bar = bar, ExtraPiece = BattleGaugePieces.ReadExtraPiece(bar) };
             if (BattleGaugePieces.ReadPosition(bar) is { } pos) (layout.ScreenX, layout.ScreenY) = pos;
+            if (BattleGaugePieces.ReadLengths() is { } lengths) (layout.HpCells, layout.ExpCells, layout.LengthsEditable) = (lengths.Hp, lengths.Exp, true);
             foreach (Part part in PartsOf(bar))
             {
                 int first = FirstTile(part, bar);
@@ -94,19 +106,16 @@ namespace DSPRE.ROMFiles
         public string Problem(Part part)
         {
             if (!At.TryGetValue(part, out (int X, int Y) at)) return null;
-            (int w, int h) = SizeOf(part);
+            (int w, int h) = Size(part);
             if (at.X < 0 || at.Y < 0 || at.X + w > Columns || at.Y + h > Rows) return NameOf(part) + " is outside the bar.";
             bool crosses = at.X < Half && at.X + w > Half;
             if (crosses && OneRun(part)) return NameOf(part) + " can't cross the middle of the bar.";
-            if (part == Part.Exp)
-            {
-                int first = Half - at.X;
-                if (!crosses || first > 7 || w - first > Half)
-                    return $"Experience must cross the middle of the bar and start in a column from {Half - 7} to {Half - 1}.";
-            }
+            // The code counts the first run with a number up to 7.
+            if (part == Part.Exp && (crosses ? Half - at.X > 7 : at.X < Half && w > 7))
+                return "Experience can have at most 7 squares left of the middle of the bar.";
             foreach ((Part other, (int X, int Y) o) in At)
             {
-                if (other == part || !Overlaps(at, (w, h), o, SizeOf(other))) continue;
+                if (other == part || !Overlaps(at, (w, h), o, Size(other))) continue;
                 if (MayOverlap(part, other)) continue;
                 return $"{NameOf(part)} overlaps {NameOf(other)}.";
             }
@@ -138,7 +147,7 @@ namespace DSPRE.ROMFiles
                 HashSet<int> under = new();
                 foreach ((Part part, (int X, int Y) at) in saved.At)
                 {
-                    (int w, int h) = SizeOf(part);
+                    (int w, int h) = saved.Size(part);
                     for (int y = at.Y; y < at.Y + h; y++)
                         for (int x = at.X; x < at.X + w; x++) under.Add(TileAt(x, y));
                 }
@@ -149,9 +158,9 @@ namespace DSPRE.ROMFiles
             bool swaps = Bar is BattleGaugePieces.Bar.YoursDouble or BattleGaugePieces.Bar.YourPartner;
             foreach ((Part part, (int X, int Y) at) in At)
             {
-                (int w, int h) = SizeOf(part);
+                (int w, int h) = Size(part);
                 foreach ((Part other, (int X, int Y) o) in At)
-                    if (other != part && !swaps && MayOverlap(part, other) && Overlaps(at, (w, h), o, SizeOf(other)))
+                    if (other != part && !swaps && MayOverlap(part, other) && Overlaps(at, (w, h), o, Size(other)))
                         clashes.Add(part);
                 for (int y = at.Y; y < at.Y + h && empty != null; y++)
                     for (int x = at.X; x < at.X + w; x++)
@@ -177,7 +186,7 @@ namespace DSPRE.ROMFiles
             BattleGaugePieces.Span none = new(0, 0);
             foreach ((Part part, (int x, int y)) in At)
             {
-                (int w, int h) = SizeOf(part);
+                (int w, int h) = Size(part);
                 List<BattleGaugePieces.Span> top = Runs(x, y, w);
                 List<BattleGaugePieces.Span> spans = part switch
                 {
@@ -190,13 +199,18 @@ namespace DSPRE.ROMFiles
                 };
                 if (part == Part.Exp)
                 {
-                    string trouble = BattleGaugePieces.PutExp(overlay, top[0].FirstTile, top[0].Tiles, top[1].FirstTile);
+                    // A run the gauge doesn't use keeps the tile it had.
+                    (int FirstTile, int FirstCount, int SecondTile, int SecondCount) had = BattleGaugePieces.ReadExp() ?? (0, 0, 0, 0);
+                    string trouble = top.Count > 1 ? BattleGaugePieces.PutExp(overlay, top[0].FirstTile, top[0].Tiles, top[1].FirstTile)
+                        : x < Half ? BattleGaugePieces.PutExp(overlay, top[0].FirstTile, w, had.SecondTile)
+                        : BattleGaugePieces.PutExp(overlay, had.FirstTile, 0, top[0].FirstTile);
                     if (trouble != null) return trouble;
                     continue;
                 }
                 BattleGaugePieces.Slot? slot = SlotOf(part);
                 if (slot != null) BattleGaugePieces.PutSlot(overlay, slot.Value, Bar, spans.ToArray());
             }
+            if (LengthsEditable && BattleGaugePieces.PutLengths(overlay, HpCells, ExpCells) is string lengths) return lengths;
             BattleGaugePieces.PutPosition(overlay, Bar, ScreenX, ScreenY);
             if (ExtraPiece is int extra) BattleGaugePieces.PutExtraPiece(overlay, Bar, extra);
             return null;

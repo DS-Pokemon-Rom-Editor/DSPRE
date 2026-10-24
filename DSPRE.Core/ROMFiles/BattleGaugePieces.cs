@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace DSPRE.ROMFiles
 {
@@ -60,8 +61,50 @@ namespace DSPRE.ROMFiles
             ? new[] { new Span(0x680, 4 * TileBytes), new Span(0xE00, 7 * TileBytes) }
             : new[] { new Span(0x660, 5 * TileBytes), new Span(0xE00, 7 * TileBytes) };
 
-        public const int HpCells = 6;
-        public static int ExpCells => Sinnoh ? 11 : 12;
+        public const int GameHpCells = 6;
+        public static int GameExpCells => Sinnoh ? 11 : 12;
+
+        /// <summary>The health gauge's current length in squares.</summary>
+        public static int HpCells => ReadLengths()?.Hp ?? GameHpCells;
+        public static int ExpCells => ReadLengths()?.Exp ?? GameExpCells;
+
+        // The instruction each length constant sits in (movs, cmp), and for health how many pixels a square counts for.
+        private static readonly (byte Op, int Times)[] HpLengthOps = { (0x20, 1), (0x20, 1), (0x21, 8), (0x2C, 1) };
+        private static readonly byte[] ExpLengthOps = { 0x23, 0x21, 0x20, 0x28, 0x2C };
+
+        private static RomInfo.GaugeLengthSites LengthSites()
+        {
+            RomInfo.GaugeLengthSites sites = RomLocator.GaugeLengthSites;
+            Found f = Locate();
+            return sites != null && f != null && sites.Overlay == f.Overlay
+                && sites.Health.Length == HpLengthOps.Length && sites.Experience.Length == ExpLengthOps.Length ? sites : null;
+        }
+
+        /// <summary>Both gauges' lengths in squares, or null when this dump's code isn't laid out as DSPRE expects.</summary>
+        public static (int Hp, int Exp)? ReadLengths(byte[] overlay = null)
+        {
+            RomInfo.GaugeLengthSites sites = LengthSites();
+            byte[] bytes = sites == null ? null : overlay ?? ReadOverlay(sites.Overlay);
+            if (bytes == null || sites.Health.Concat(sites.Experience).Any(at => at < 0 || at + 2 > bytes.Length)) return null;
+            int hp = bytes[sites.Health[0]], exp = bytes[sites.Experience[0]];
+            for (int i = 0; i < HpLengthOps.Length; i++)
+                if (bytes[sites.Health[i] + 1] != HpLengthOps[i].Op || bytes[sites.Health[i]] != hp * HpLengthOps[i].Times) return null;
+            for (int i = 0; i < ExpLengthOps.Length; i++)
+                if (bytes[sites.Experience[i] + 1] != ExpLengthOps[i] || bytes[sites.Experience[i]] != exp) return null;
+            return (hp, exp);
+        }
+
+        /// <summary>Sets both gauges' lengths, never longer than the game's. Returns the error message, or null.</summary>
+        public static string PutLengths(byte[] overlay, int hp, int exp)
+        {
+            RomInfo.GaugeLengthSites sites = LengthSites();
+            if (sites == null || ReadLengths(overlay) == null) return "The gauges' lengths weren't found in this game's code.";
+            if (hp < 1 || hp > GameHpCells) return $"Health has to be 1 to {GameHpCells} squares long.";
+            if (exp < 1 || exp > GameExpCells) return $"Experience has to be 1 to {GameExpCells} squares long.";
+            for (int i = 0; i < HpLengthOps.Length; i++) overlay[sites.Health[i]] = (byte)(hp * HpLengthOps[i].Times);
+            foreach (int at in sites.Experience) overlay[at] = (byte)exp;
+            return null;
+        }
 
         // The sheet, tile by tile. The fills, the status words and the doubles pieces sit at the same tiles in all
         // three games; Diamond and Pearl keep their blank status after the words and have no ends for the numbers.
@@ -246,19 +289,20 @@ namespace DSPRE.ROMFiles
             int a = f.ExpCodeAt;
             int first = bytes[a + ExpFirst] << ((BitConverter.ToUInt16(bytes, a + ExpFirstShift) >> 6) & 31);
             int second = bytes[a + ExpSecond] << ((BitConverter.ToUInt16(bytes, a + ExpSecondShift) >> 6) & 31);
-            int split = bytes[a + ExpSplit];
-            return (first / TileBytes, split, second / TileBytes, ExpCells - split);
+            int length = ReadLengths(bytes)?.Exp ?? GameExpCells;
+            int split = Math.Min(bytes[a + ExpSplit], length);
+            return (first / TileBytes, split, second / TileBytes, length - split);
         }
 
         /// <summary>
         /// Moves the experience gauge: the first run from <paramref name="firstTile"/>, <paramref name="firstCount"/>
-        /// long (1 to 7), the rest from <paramref name="secondTile"/>. Returns the trouble, or null.
+        /// long (0 to 7), the rest from <paramref name="secondTile"/>. Returns the error message, or null.
         /// </summary>
         public static string PutExp(byte[] overlay, int firstTile, int firstCount, int secondTile)
         {
             Found f = Locate();
             if (f == null || f.ExpCodeAt < 0) return "The experience gauge's code wasn't found in this game.";
-            if (firstCount < 1 || firstCount > 7) return "The experience gauge's first part has to be 1 to 7 squares long.";
+            if (firstCount < 0 || firstCount > 7) return "The experience gauge's first part has to be 0 to 7 squares long.";
             if (firstTile is < 0 or > 255 || secondTile is < 0 or > 255) return "The experience gauge is outside the bar.";
             int a = f.ExpCodeAt;
             overlay[a + ExpFirst] = (byte)firstTile;
@@ -431,7 +475,11 @@ namespace DSPRE.ROMFiles
         {
             int tables = f.SheetAt + ExtraPiecesFrom;
             (int, int) data = (tables, f.SheetAt + f.TileCount * TileBytes - tables);
-            return f.ExpCodeAt >= 0 ? new[] { data, (f.ExpCodeAt, ExpSplitAgain + 2) } : new[] { data };
+            List<(int, int)> owned = new() { data };
+            if (f.ExpCodeAt >= 0) owned.Add((f.ExpCodeAt, ExpSplitAgain + 2));
+            if (LengthSites() is RomInfo.GaugeLengthSites sites)
+                owned.AddRange(sites.Health.Concat(sites.Experience).Select(at => (at, 1)));
+            return owned.ToArray();
         }
 
         public static string WriteOverlay(byte[] overlay)

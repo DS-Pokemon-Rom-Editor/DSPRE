@@ -18,8 +18,18 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public BattleGaugeLayout.Part Part { get; init; }
         public string Name => BattleGaugeLayout.NameOf(Part);
-        public int W { get; init; }
+        private int _w;
+        public int W { get => _w; set { _w = value; Raise(); Raise(nameof(Width)); Raise(nameof(Length)); } }
         public int H { get; init; }
+
+        /// <summary>The game's length. A gauge can be shorter, never longer.</summary>
+        public int MaxLength { get; init; }
+        public bool HasLength => MaxLength > 0;
+
+        /// <summary>Set by the editor, so typing a length resizes the part.</summary>
+        public Action<HpBarPartRow, int> ResizeTo;
+
+        public int Length { get => _w; set => ResizeTo?.Invoke(this, value); }
         public string Colour { get; init; }
 
         private int _x, _y;
@@ -151,11 +161,15 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 foreach (BattleGaugeLayout.Part part in BattleGaugeLayout.PartsOf(Bar))
                 {
                     if (!layout.At.TryGetValue(part, out (int X, int Y) at)) continue;
-                    (int w, int h) = BattleGaugeLayout.SizeOf(part);
+                    (int w, int h) = layout.Size(part);
+                    int most = !layout.LengthsEditable ? 0
+                        : part == BattleGaugeLayout.Part.HpGauge ? BattleGaugePieces.GameHpCells
+                        : part == BattleGaugeLayout.Part.Exp ? BattleGaugePieces.GameExpCells : 0;
                     Parts.Add(new HpBarPartRow
                     {
-                        Part = part, W = w, H = h, X = at.X, Y = at.Y, Colour = Colours[c++ % Colours.Length],
+                        Part = part, W = w, H = h, X = at.X, Y = at.Y, Colour = Colours[c++ % Colours.Length], MaxLength = most,
                         MoveTo = (row, x, y) => { Move(row, x, y); Commit(); },
+                        ResizeTo = (row, length) => { Resize(row, length); Commit("Resized."); },
                     });
                 }
             }
@@ -233,8 +247,24 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             Redraw();
         }
 
+        /// <summary>Sets a gauge's length, up to the game's. All bars share the length.</summary>
+        public void Resize(HpBarPartRow row, int length)
+        {
+            BattleGaugeLayout layout = Layout;
+            if (layout == null || row == null || !row.HasLength) return;
+            length = Math.Clamp(length, 1, Math.Min(row.MaxLength, BattleGaugeLayout.Columns - row.X));
+            if (length == row.W) return;
+            row.W = length;
+            if (row.Part == BattleGaugeLayout.Part.HpGauge) layout.HpCells = length;
+            else layout.ExpCells = length;
+            // The other bars' drafts keep their parts but take the new length.
+            foreach (BattleGaugeLayout other in _drafts.Values) (other.HpCells, other.ExpCells) = (layout.HpCells, layout.ExpCells);
+            Recheck();
+            Redraw();
+        }
+
         /// <summary>Makes the layout as it stands one undo step, when nothing about it breaks the game's rules.</summary>
-        public void Commit()
+        public void Commit(string done = "Moved.")
         {
             BattleGaugeLayout layout = Layout;
             if (layout == null || layout.Problems().Any()) return;
@@ -243,7 +273,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (trouble != null) { StatusText = trouble; return; }
             if (copy.AsSpan().SequenceEqual(Overlay)) return;
             _pending.Import(() => { _pending.Stage(OverlayTarget, copy); return null; });
-            StatusText = "Moved.";
+            StatusText = done;
         }
 
         public int ScreenX

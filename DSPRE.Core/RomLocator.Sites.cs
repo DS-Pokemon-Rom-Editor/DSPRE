@@ -281,6 +281,71 @@ namespace DSPRE
             _ => null,
         };
 
+        public static GaugeLengthSites GaugeLengthSitesIn(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Diamond => language switch
+            {
+                GameLanguages.English when revision == 13 => new GaugeLengthSites(11, new[] { 0x2A636, 0x2A6E2, 0x2A6F4, 0x2A788 }, new[] { 0x2A656, 0x2A66E, 0x2A794, 0x2A7BC, 0x2A816 }),   // Europe
+                GameLanguages.English => new GaugeLengthSites(11, new[] { 0x2A636, 0x2A6E2, 0x2A6F4, 0x2A788 }, new[] { 0x2A656, 0x2A66E, 0x2A794, 0x2A7BC, 0x2A816 }),   // US, and any English revision not listed
+                GameLanguages.Japanese => null,   // the Japanese gauge code is laid out differently
+                GameLanguages.French => new GaugeLengthSites(11, new[] { 0x2A79E, 0x2A84A, 0x2A85C, 0x2A8F0 }, new[] { 0x2A7BE, 0x2A7D6, 0x2A8FC, 0x2A924, 0x2A97E }),
+                GameLanguages.German => new GaugeLengthSites(11, new[] { 0x2A6B2, 0x2A75E, 0x2A770, 0x2A804 }, new[] { 0x2A6D2, 0x2A6EA, 0x2A810, 0x2A838, 0x2A892 }),
+                GameLanguages.Italian => new GaugeLengthSites(11, new[] { 0x2A6B2, 0x2A75E, 0x2A770, 0x2A804 }, new[] { 0x2A6D2, 0x2A6EA, 0x2A810, 0x2A838, 0x2A892 }),
+                GameLanguages.Spanish => new GaugeLengthSites(11, new[] { 0x2A79E, 0x2A84A, 0x2A85C, 0x2A8F0 }, new[] { 0x2A7BE, 0x2A7D6, 0x2A8FC, 0x2A924, 0x2A97E }),
+                GameLanguages.Korean => new GaugeLengthSites(11, new[] { 0x2A626, 0x2A6D2, 0x2A6E4, 0x2A778 }, new[] { 0x2A646, 0x2A65E, 0x2A784, 0x2A7AC, 0x2A806 }),
+                _ => null,
+            },
+            GameVersions.Pearl => language switch
+            {
+                GameLanguages.English when revision == 13 => new GaugeLengthSites(11, new[] { 0x2A636, 0x2A6E2, 0x2A6F4, 0x2A788 }, new[] { 0x2A656, 0x2A66E, 0x2A794, 0x2A7BC, 0x2A816 }),   // Europe
+                GameLanguages.English => new GaugeLengthSites(11, new[] { 0x2A636, 0x2A6E2, 0x2A6F4, 0x2A788 }, new[] { 0x2A656, 0x2A66E, 0x2A794, 0x2A7BC, 0x2A816 }),   // US, and any English revision not listed
+                GameLanguages.Japanese => null,   // the Japanese gauge code is laid out differently
+                GameLanguages.French => new GaugeLengthSites(11, new[] { 0x2A79E, 0x2A84A, 0x2A85C, 0x2A8F0 }, new[] { 0x2A7BE, 0x2A7D6, 0x2A8FC, 0x2A924, 0x2A97E }),
+                GameLanguages.German => new GaugeLengthSites(11, new[] { 0x2A6B2, 0x2A75E, 0x2A770, 0x2A804 }, new[] { 0x2A6D2, 0x2A6EA, 0x2A810, 0x2A838, 0x2A892 }),
+                GameLanguages.Italian => new GaugeLengthSites(11, new[] { 0x2A6B2, 0x2A75E, 0x2A770, 0x2A804 }, new[] { 0x2A6D2, 0x2A6EA, 0x2A810, 0x2A838, 0x2A892 }),
+                GameLanguages.Spanish => new GaugeLengthSites(11, new[] { 0x2A79E, 0x2A84A, 0x2A85C, 0x2A8F0 }, new[] { 0x2A7BE, 0x2A7D6, 0x2A8FC, 0x2A924, 0x2A97E }),
+                GameLanguages.Korean => new GaugeLengthSites(11, new[] { 0x2A626, 0x2A6D2, 0x2A6E4, 0x2A778 }, new[] { 0x2A646, 0x2A65E, 0x2A784, 0x2A7AC, 0x2A806 }),
+                _ => null,
+            },
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English when revision == 10 => new GaugeLengthSites(16, new[] { 0x2CDA6, 0x2CE52, 0x2CE64, 0x2CEF8 }, new[] { 0x2CDC6, 0x2CDDE, 0x2CF04, 0x2CF2C, 0x2CF86 }),   // Europe
+                GameLanguages.English => new GaugeLengthSites(16, new[] { 0x2CDA6, 0x2CE52, 0x2CE64, 0x2CEF8 }, new[] { 0x2CDC6, 0x2CDDE, 0x2CF04, 0x2CF2C, 0x2CF86 }),   // US, and any English revision not listed
+                GameLanguages.Japanese => new GaugeLengthSites(16, new[] { 0x2CD9A, 0x2CE46, 0x2CE58, 0x2CEEC }, new[] { 0x2CDBA, 0x2CDD2, 0x2CEF8, 0x2CF20, 0x2CF7A }),
+                GameLanguages.French => new GaugeLengthSites(16, new[] { 0x2CEAE, 0x2CF5A, 0x2CF6C, 0x2D000 }, new[] { 0x2CECE, 0x2CEE6, 0x2D00C, 0x2D034, 0x2D08E }),
+                GameLanguages.German => new GaugeLengthSites(16, new[] { 0x2CDC2, 0x2CE6E, 0x2CE80, 0x2CF14 }, new[] { 0x2CDE2, 0x2CDFA, 0x2CF20, 0x2CF48, 0x2CFA2 }),
+                GameLanguages.Italian => new GaugeLengthSites(16, new[] { 0x2CDC2, 0x2CE6E, 0x2CE80, 0x2CF14 }, new[] { 0x2CDE2, 0x2CDFA, 0x2CF20, 0x2CF48, 0x2CFA2 }),
+                GameLanguages.Spanish => new GaugeLengthSites(16, new[] { 0x2CEAE, 0x2CF5A, 0x2CF6C, 0x2D000 }, new[] { 0x2CECE, 0x2CEE6, 0x2D00C, 0x2D034, 0x2D08E }),
+                GameLanguages.Korean => new GaugeLengthSites(16, new[] { 0x2CDBE, 0x2CE6A, 0x2CE7C, 0x2CF10 }, new[] { 0x2CDDE, 0x2CDF6, 0x2CF1C, 0x2CF44, 0x2CF9E }),   // needs verifying: measured on a dump that is not a known good dump
+                _ => null,
+            },
+            GameVersions.HeartGold => language switch
+            {
+                GameLanguages.English when revision == 10 => new GaugeLengthSites(12, new[] { 0x2DF2E, 0x2DFDA, 0x2DFEC, 0x2E080 }, new[] { 0x2DF4E, 0x2DF66, 0x2E08C, 0x2E0B4, 0x2E10E }),   // Europe
+                GameLanguages.English => new GaugeLengthSites(12, new[] { 0x2DF2E, 0x2DFDA, 0x2DFEC, 0x2E080 }, new[] { 0x2DF4E, 0x2DF66, 0x2E08C, 0x2E0B4, 0x2E10E }),   // US, and any English revision not listed
+                GameLanguages.Japanese => new GaugeLengthSites(12, new[] { 0x2DEEA, 0x2DF96, 0x2DFA8, 0x2E03C }, new[] { 0x2DF0A, 0x2DF22, 0x2E048, 0x2E070, 0x2E0CA }),
+                GameLanguages.French => new GaugeLengthSites(12, new[] { 0x2DF2E, 0x2DFDA, 0x2DFEC, 0x2E080 }, new[] { 0x2DF4E, 0x2DF66, 0x2E08C, 0x2E0B4, 0x2E10E }),   // needs verifying: measured on a dump that is not a known good dump
+                GameLanguages.German => new GaugeLengthSites(12, new[] { 0x2DF2E, 0x2DFDA, 0x2DFEC, 0x2E080 }, new[] { 0x2DF4E, 0x2DF66, 0x2E08C, 0x2E0B4, 0x2E10E }),
+                GameLanguages.Italian => new GaugeLengthSites(12, new[] { 0x2DF2E, 0x2DFDA, 0x2DFEC, 0x2E080 }, new[] { 0x2DF4E, 0x2DF66, 0x2E08C, 0x2E0B4, 0x2E10E }),
+                GameLanguages.Spanish => new GaugeLengthSites(12, new[] { 0x2DF2E, 0x2DFDA, 0x2DFEC, 0x2E080 }, new[] { 0x2DF4E, 0x2DF66, 0x2E08C, 0x2E0B4, 0x2E10E }),   // needs verifying: measured on a dump that is not a known good dump
+                GameLanguages.Korean => new GaugeLengthSites(12, new[] { 0x2DF32, 0x2DFDE, 0x2DFF0, 0x2E084 }, new[] { 0x2DF52, 0x2DF6A, 0x2E090, 0x2E0B8, 0x2E112 }),
+                _ => null,
+            },
+            GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.English when revision == 10 => new GaugeLengthSites(12, new[] { 0x2DF2E, 0x2DFDA, 0x2DFEC, 0x2E080 }, new[] { 0x2DF4E, 0x2DF66, 0x2E08C, 0x2E0B4, 0x2E10E }),   // Europe
+                GameLanguages.English => new GaugeLengthSites(12, new[] { 0x2DF2E, 0x2DFDA, 0x2DFEC, 0x2E080 }, new[] { 0x2DF4E, 0x2DF66, 0x2E08C, 0x2E0B4, 0x2E10E }),   // US, and any English revision not listed
+                GameLanguages.Japanese => new GaugeLengthSites(12, new[] { 0x2DEEA, 0x2DF96, 0x2DFA8, 0x2E03C }, new[] { 0x2DF0A, 0x2DF22, 0x2E048, 0x2E070, 0x2E0CA }),
+                GameLanguages.French => new GaugeLengthSites(12, new[] { 0x2DF2E, 0x2DFDA, 0x2DFEC, 0x2E080 }, new[] { 0x2DF4E, 0x2DF66, 0x2E08C, 0x2E0B4, 0x2E10E }),   // needs verifying: measured on a dump that is not a known good dump
+                GameLanguages.German => new GaugeLengthSites(12, new[] { 0x2DF2E, 0x2DFDA, 0x2DFEC, 0x2E080 }, new[] { 0x2DF4E, 0x2DF66, 0x2E08C, 0x2E0B4, 0x2E10E }),
+                GameLanguages.Italian => new GaugeLengthSites(12, new[] { 0x2DF2E, 0x2DFDA, 0x2DFEC, 0x2E080 }, new[] { 0x2DF4E, 0x2DF66, 0x2E08C, 0x2E0B4, 0x2E10E }),
+                GameLanguages.Spanish => new GaugeLengthSites(12, new[] { 0x2DF2E, 0x2DFDA, 0x2DFEC, 0x2E080 }, new[] { 0x2DF4E, 0x2DF66, 0x2E08C, 0x2E0B4, 0x2E10E }),
+                GameLanguages.Korean => new GaugeLengthSites(12, new[] { 0x2DF32, 0x2DFDE, 0x2DFF0, 0x2E084 }, new[] { 0x2DF52, 0x2DF6A, 0x2E090, 0x2E0B8, 0x2E112 }),
+                _ => null,
+            },
+            _ => null,
+        };
+
         // Japanese Diamond and Pearl compare each boundary once more, so their selectors are not the US ones moved.
         private static readonly SlotOddsMethod[] JapaneseDpSlotOdds =
         {
