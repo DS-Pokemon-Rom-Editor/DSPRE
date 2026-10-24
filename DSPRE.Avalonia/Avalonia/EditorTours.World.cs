@@ -5,109 +5,118 @@ namespace DSPRE.Avalonia
         static partial void RegisterWorld()
         {
             Add("MapEditorView", "Map editor",
-                S("type:NsbmdGlControl", "The map", "Drag to pan, right-drag to orbit, wheel to zoom. Turn on Paint to paint squares onto the map, or Move buildings to drag them and nudge them with the arrow keys."),
-                S("name:ViewModeBox", "What you edit", "One map, the whole matrix, or every map of this header at once."),
-                S("toolbar", "Textures and overlays", "The second row picks this area's map and building textures and what is drawn over the map: collisions, square types or nothing."),
-                S("tab:Permissions", "Permissions", "Where the player can walk, and what each square is: grass, water, ledges, doors. Pick a value, then paint on the grids or the map."),
-                S("tab:Buildings", "Buildings", "Every building placed on this map. Pick one to move, turn or swap it; drag its handles in the 3D view."),
-                S("tab:Area", "Area", "The light of this map's area and, in some games, its terrain animation and indoor setting. Every header in the same area shares them."),
-                S("tab:Files", "Files", "Export this map's model, and bring in or save out its terrain, sound plates and movement permissions."),
-                S("name:EditModelButton", "Changing the ground", "Build or reshape this map from tiles, or import a Pokémon DS Map Studio map, a model (.nsbmd) or a whole map (.bin)."));
+                S("type:NsbmdGlControl", "Map", "Drag to pan, right-drag to orbit, wheel to zoom. Paint and Move buildings edit it."),
+                S("name:ViewModeBox", "View", "One map, the whole matrix, or every map of this header."),
+                S("toolbar", "Textures and overlays", "The area's textures, and the collision or square type overlay."),
+                S("tab:Permissions", "Permissions", "Where the player can walk and what each square is."),
+                S("tab:Buildings", "Buildings", "Every building on this map. Drag its handles in 3D."),
+                S("tab:Area", "Area", "The area's light, terrain animation and indoor setting, shared by its headers."),
+                S("tab:Files", "Files", "Export the model, or import and export terrain, sound plates and permissions."),
+                S("name:EditModelButton", "Ground", "Build the map from tiles, or import a map or model."),
+                S(null, "Shortcuts", "Arrow keys nudge a building. Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("EventEditorView", "Event editor",
-                S("name:GlHost", "The map", "Every event on this header's maps; click one to pick it. Turn on Move to drag events or nudge them with the arrow keys. Drag to pan, right-drag to orbit, wheel to zoom."),
-                S("name:ShowBar", "What's shown", "Hide kinds of events, switch to a flat 2D view, or centre the camera on the selected event."),
-                S("tab:Overworlds", "People and objects", "Everyone and everything standing on the map. Pick one to set its sprite, script and movement and, for a trainer, who they are."),
-                S("tab:Warps", "Warps", "Doors and exits. Each one sends the player to a warp in another header; Go to destination opens it."),
-                S("tab:Triggers", "Triggers", "Squares that run a script when stepped on, if a variable holds the right value."),
-                S("tab:Spawnables", "Spawnables", "Signs, hidden items and other things the player reads or finds by facing a square."),
-                S("name:EventTabs", "Jump to other editors", "A field that shows a link button opens another editor, like a person's trainer or a warp's destination. Right-click and pick Open, or Ctrl+click."));
+                S("name:GlHost", "Map", "Click an event to pick it. Move drags events. Drag pans, wheel zooms."),
+                S("name:ShowBar", "View", "Hide kinds of events, switch to 2D, or centre on the picked event."),
+                S("tab:Overworlds", "People and objects", "Everyone on the map, with their sprite, script and movement."),
+                S("tab:Warps", "Warps", "Doors and exits. Go to destination opens the other side."),
+                S("tab:Triggers", "Triggers", "Squares that run a script when a variable matches."),
+                S("tab:Spawnables", "Spawnables", "Signs, hidden items and things read by facing a square."),
+                S("name:EventTabs", "Linked editors", "Ctrl+click a trainer or warp target to edit it in its editor."),
+                S(null, "Shortcuts", "Arrows nudge, Delete removes, Ctrl+D copies an event. Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("HeaderEditorView", "Header editor",
-                S("list", "Headers", "Every place in the game, grouped by location. Right-click a header to open its map, events, scripts, text, wild Pokémon or matrix."),
-                S("name:LocationGroup", "Name and type", "The name shown on screen when you arrive, the kind of place it is and, in some games, its area icon, shown beside it."),
-                S("name:SoundGroup", "Music, weather and camera", "Day and night music, weather, camera and battle background. Type a number or pick from the list."),
-                S("name:LinkedFilesGroup", "Linked files", "The matrix, area data, scripts, events, text and encounters this place uses. Open takes you to each one."),
-                S("name:MapSettingsGroup", "Map settings", "Whether the player can bike, run, use an Escape Rope or fly here. HeartGold and SoulSilver add phone, radio, town map, following Pokémon, Mom's call and region."),
-                S("toolbar", "Tools", "Copy and paste a whole header, move headers in and out as files, or add and remove headers when the ROM allows it."));
+                S("list", "Headers", "Every place, by location. Right-click one to open its other parts."),
+                S("name:LocationGroup", "Name and type", "The arrival name, the kind of place and its area icon."),
+                S("name:SoundGroup", "Music, weather and camera", "Music, weather, camera and battle background."),
+                S("name:LinkedFilesGroup", "Linked files", "The files this place uses. Open goes to each."),
+                S("name:MapSettingsGroup", "Map settings", "Bike, run, Escape Rope, Fly, and the HeartGold and SoulSilver extras."),
+                S("toolbar", "Tools", "Copy, paste, import, export, add or remove headers."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("HeaderFieldsView", "Header tab",
-                S("name:LocationGroup", "Name and type", "The name shown on screen when you arrive, the kind of place it is and, in some games, its area icon, shown beside it."),
-                S("name:SoundGroup", "Music, weather and camera", "Day and night music, weather, camera and battle background. Type a number or pick from the list."),
-                S("name:LinkedFilesGroup", "Linked files", "The matrix, area data, scripts, events, text and encounters this place uses. Open shows each one in its tab."),
-                S("name:MapSettingsGroup", "Map settings", "Whether the player can bike, run, use an Escape Rope or fly here. HeartGold and SoulSilver add phone, radio, town map, following Pokémon, Mom's call and region."),
-                S(null, "Saving", "The toolbar above saves these fields, and Reset goes back to the saved header. The other tabs save their own data."));
+                S("name:LocationGroup", "Name and type", "The arrival name, the kind of place and its area icon."),
+                S("name:SoundGroup", "Music, weather and camera", "Music, weather, camera and battle background."),
+                S("name:LinkedFilesGroup", "Linked files", "The files this place uses. Open shows each in its tab."),
+                S("name:MapSettingsGroup", "Map settings", "Bike, run, Escape Rope, Fly, and the HeartGold and SoulSilver extras."),
+                S(null, "Saving", "These fields save with the toolbar. Other tabs save separately."));
 
             Add("MatrixEditorView", "Matrix editor",
-                S("toolbar", "The matrix", "A matrix is the grid that joins maps into one seamless world. Pick one here."),
-                S("name:LegendBar", "Colours", "Cells are coloured by the kind of place they belong to: town, route, cave and so on. Heights are coloured from low to high."),
-                S("tab:Maps", "Maps", "Which map sits in each cell. With Paint off, click a cell to see its value and double-click it to open that map."),
-                S("tab:Headers", "Headers", "Which header each cell belongs to, and so its name, music and events. With Paint off, click a cell to open its header."),
-                S("tab:Heights", "Heights", "How high each map sits, so maps at different levels line up. A matrix without headers or heights offers to add them."),
-                S("name:PaintToggle", "Painting", "Turn on Paint, set the value beside it, then click or drag across cells to fill them. Each tab keeps its own value."),
-                S("name:SpawnButton", "Starting point", "Makes the selected cell the place a new game begins."),
-                S("toolbar", "Files", "Import and Export move a matrix in and out as a file."));
+                S("toolbar", "Matrix", "The grid that joins maps into one world."),
+                S("name:LegendBar", "Colours", "Cells by kind of place, and heights from low to high."),
+                S("tab:Maps", "Maps", "The map in each cell. Double-click to edit it in the Map editor."),
+                S("tab:Headers", "Headers", "The header for each cell. Click to edit it in the Header editor."),
+                S("tab:Heights", "Heights", "How high each map sits."),
+                S("name:PaintToggle", "Painting", "Turn on Paint, set the value, then click or drag cells."),
+                S("name:SpawnButton", "Starting point", "Makes the picked cell where a new game begins."),
+                S("toolbar", "Files", "Import or export a matrix."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("AreaDataEditorView", "Area data editor",
-                S("toolbar", "Area data", "An area sets the look shared by every header that uses it. Pick one here."),
-                S("name:AreaFields", "Textures", "The texture sets the map and its buildings are drawn with. Every header using this area changes with them."),
-                S("name:AreaFields", "Light and more", "The light type, and in some games the terrain animation, such as moving water, and whether the area is indoors."),
-                S("toolbar", "Saving", "Save writes your edits, and Undo and Redo step back and forward. In its own window Ctrl+S, Ctrl+Z and Ctrl+Y work too."));
+                S("toolbar", "Area data", "The look shared by every header in an area."),
+                S("name:AreaFields", "Textures", "The map and building texture sets."),
+                S("name:AreaFields", "Light and more", "Light type, terrain animation and indoor setting."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("CameraEditorView", "Camera editor",
-                S("list", "Camera angles", "Each row is a camera a header can use. Headers pick one by its number."),
-                S("list", "Changing a camera", "Double-click a cell to change its distance, rotation, field of view or clipping. Some games also have offsets."),
-                S("list", "One camera", "Export and Import at the end of a row move that single camera in and out as a file."),
-                S("toolbar", "The whole table", "The table buttons move every camera at once."));
+                S("list", "Camera angles", "Each camera a header can pick by number."),
+                S("list", "Changing a camera", "Double-click a cell to change it."),
+                S("list", "One camera", "The row's Export and Import move one camera."),
+                S("toolbar", "Whole table", "Export or import every camera."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("BuildingEditorView", "Building editor",
-                S("list", "Buildings", "Every building model in the game. Pick one to see it."),
-                S("name:GlHost", "Preview", "The picked building in 3D. Drag to pan, right-drag to orbit, wheel to zoom."),
-                S("toolbar", "Textures and sets", "Pick the texture set to view it with. Interior switches to indoor buildings in games that have them."),
-                S("toolbar", "Models", "Import replaces the picked building's model and Export saves it out."));
+                S("list", "Buildings", "Every building model."),
+                S("name:GlHost", "Preview", "Drag to pan, right-drag to orbit, wheel to zoom."),
+                S("toolbar", "Textures and sets", "The texture set, and indoor buildings where the game has them."),
+                S("toolbar", "Models", "Import or export the picked model."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("FlyEditorView", "Fly / warp editor",
-                S("tab:Whiteout warps", "After a loss", "Where the player wakes up after losing a battle: the header and the square to stand on."),
-                S("tab:Fly warps", "Fly", "Where the player lands when flying to each place."),
-                S("tab:Unlock settings", "Unlocking", "When each place opens up for Fly, and which ones are fly spots or whiteout spots. The columns depend on the game."));
+                S("tab:Whiteout warps", "After a loss", "Where the player wakes after losing."),
+                S("tab:Fly warps", "Fly", "Where the player lands for each place."),
+                S("tab:Unlock settings", "Unlocking", "When each place opens for Fly, and its flags."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("SpawnEditorView", "Spawn point editor",
-                S("name:SpawnHeaderRow", "Where you start", "The header a new game begins in, and which way the player faces."),
-                S("name:CoordsGrid", "Exact square", "The matrix cell and the square inside that map where the player appears."),
-                S("name:MoneyRow", "Starting money", "How much money the player has at the start."),
-                S("toolbar", "All headers", "Show all headers brings back the full list after it was narrowed to one map."));
+                S("name:SpawnHeaderRow", "Start", "The header a new game begins in, and the facing."),
+                S("name:CoordsGrid", "Exact square", "The matrix cell and square the player appears on."),
+                S("name:MoneyRow", "Starting money", "The player's money at the start."),
+                S("toolbar", "All headers", "Shows the full header list again."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("HeaderSearchView", "Advanced header search",
-                S("name:QueryPanel", "What to search", "Pick a field such as music, weather or script file, then how to compare it."),
-                S("name:ValueBox", "Value", "Type the value to look for, then Search. Tick Auto to search as you type."),
-                S("name:ResultList", "Results", "Every header that matches your search."),
-                S("name:ResultList", "Open one", "Double-click a result to open it in the Header editor."));
+                S("name:QueryPanel", "Field", "The field to search and how to compare it."),
+                S("name:ValueBox", "Value", "The value to look for. Auto searches as you type."),
+                S("name:ResultList", "Results", "Every matching header."),
+                S("name:ResultList", "Editing", "Double-click a result to edit it in the Header editor."));
 
             Add("DistortionWorldView", "Distortion World",
-                S("name:FloorList", "Floors", "Each floor of the Distortion World. Pick one to edit it."),
-                S("tab:Map>name:GlHost", "The map", "The floor in 3D. Drag to pan, right-drag to orbit, wheel to zoom."),
-                S("tab:Map>name:MapViewBar", "View", "Change the camera, show one floor or the whole world, or colour squares by gravity. Animate plays it, and Modify map model edits the map picked beside it."),
-                S("tab:Map>name:SurfaceBox", "Surfaces", "Pick the ground or a wall, floor or ceiling surface to paint."),
-                S("tab:Collision", "Collision", "Pick Walkable or Blocked and paint the grid for the chosen surface."),
-                S("tab:Tiles", "Tiles", "Pick a square type and paint it onto the chosen surface."),
-                S("tab:Gravity", "Gravity", "The surfaces the player walks on: which way each one faces, where it is and how big."),
-                S("tab:Gravity changes", "Gravity changes", "Spots where the player flips onto another surface: where, how they move and where they land."),
-                S("tab:Camera", "Camera", "Zones that turn the camera as the player walks through them."),
-                S("tab:Fading props", "Fading props", "Objects that appear or vanish, grouped so a trigger can show them."),
-                S("tab:Prop triggers", "Prop triggers", "Zones that show or hide a group of fading props when the player walks in facing a set way."));
+                S("name:FloorList", "Floors", "Each Distortion World floor."),
+                S("tab:Map>name:GlHost", "Map", "Drag to pan, right-drag to orbit, wheel to zoom."),
+                S("tab:Map>name:MapViewBar", "View", "Camera, one floor or all, and gravity colours."),
+                S("tab:Map>name:SurfaceBox", "Surfaces", "The surface to paint."),
+                S("tab:Collision", "Collision", "Paint walkable or blocked squares."),
+                S("tab:Tiles", "Tiles", "Paint square types."),
+                S("tab:Gravity", "Gravity", "Each walkable surface's facing, place and size."),
+                S("tab:Gravity changes", "Gravity changes", "Where the player flips onto another surface."),
+                S("tab:Camera", "Camera", "Zones that turn the camera."),
+                S("tab:Fading props", "Fading props", "Objects that appear or vanish, in groups."),
+                S("tab:Prop triggers", "Prop triggers", "Zones that show or hide a group of props."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("MapModelEditorView", "Map model editor",
-                S("tab:Tiles>name:SetupBar", "Getting started", "Start with From map to use this map's tiles, or Import a Pokémon DS Map Studio tileset, map or model; an .nsbmd or map .bin replaces the map straight away. Apply builds the map from your tiles."),
-                S("tab:Tiles>name:TilePalette", "Tiles", "Pick a tile to paint with, or search by name or texture."),
-                S("tab:Tiles>name:Painter", "Painting", "Paint the map square by square. With the pen, right-click picks a tile and middle-click fills."),
-                S("tab:Tiles>name:ToolStrip", "Tools", "Paint, erase, fill, lines, shapes and selections. Heights paints how high each square is; a selection can become a ramp or stairs."),
-                S("tab:Tiles>name:LayerPanel", "Layers", "Tiles stack in layers. Pick one to paint on, hide it, or shift, copy and clear it."),
-                S("tab:Smart", "Smart drawings", "Drawings that join their edges for you as you paint. + adds one and − removes it."),
-                S("tab:Tile", "One tile", "Change the picked tile's size, material, offset and default collision."),
-                S("tab:Shape>name:GlHost", "Shape", "Click a face of the model to pick it; Shift+click corners to build a new face."),
-                S("tab:Shape>name:ShapePanel", "Editing faces", "Paint a face with a texture, delete or add faces, move corners, and set the walkable plates."),
-                S("tab:Shape>name:ShapeBar", "Camera and files", "Turn the camera, undo, or bring the shape in and out as a model file."),
-                S("name:DoneButton", "Done", "Done returns to the map. Save the map there to keep what you changed."));
+                S("tab:Tiles>name:SetupBar", "Getting started", "Start from this map's tiles or an import. Apply builds the map."),
+                S("tab:Tiles>name:TilePalette", "Tiles", "Pick a tile, or search by name or texture."),
+                S("tab:Tiles>name:Painter", "Painting", "Right-click picks a tile, middle-click fills."),
+                S("tab:Tiles>name:ToolStrip", "Tools", "Paint, erase, fill, shapes, heights, ramps and stairs."),
+                S("tab:Tiles>name:LayerPanel", "Layers", "Pick, hide, shift, copy or clear a layer."),
+                S("tab:Smart", "Smart drawings", "Drawings that join their edges as you paint."),
+                S("tab:Tile", "Tile", "Size, material, offset and default collision."),
+                S("tab:Shape>name:GlHost", "Shape", "Click a face to pick it. Shift+click corners for a new face."),
+                S("tab:Shape>name:ShapePanel", "Faces", "Texture, add, delete and move faces, and walkable plates."),
+                S("tab:Shape>name:ShapeBar", "Camera and files", "Turn the camera, undo, or import and export the shape."),
+                S("name:DoneButton", "Done", "Back to the map. Save it there."));
         }
     }
 }

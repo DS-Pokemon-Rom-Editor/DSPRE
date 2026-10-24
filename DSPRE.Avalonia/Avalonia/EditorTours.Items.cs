@@ -5,52 +5,59 @@ namespace DSPRE.Avalonia
         static partial void RegisterItems()
         {
             Add("ItemEditorView", "Item editor",
-                S("name:ItemBar", "Pick an item", "Search by name or type its number. Everything below edits this item."),
-                S("name:TableEntryBox", "Icon and data", "Its icon, colours and data. A note says when other items share that data."),
-                S("name:HoldPocketColumn", "Hold effect and pocket", "What it does when held and how strongly, and its bag and battle pockets."),
-                S("name:UsageColumn", "Price and use", "Its price, and what it does when used outside or in battle."),
-                S("name:MoveRelatedBox", "Move effects", "Its Natural Gift type and power, its Fling effect and power, and its Pluck effect."),
-                S("name:UsageChecksBox", "Checks", "Whether it can be tossed and registered to SELECT."),
-                S("name:PartyUseBox", "Party use", "Tick Party use so it can be used on a party Pokémon, then set what it does in the tabs."),
-                S("tab:Status heals", "Status heals", "The conditions it cures, and whether it revives, levels up or evolves."),
-                S("tab:Stat stages", "Stat stages", "The battle stats it raises. Any value above 0 raises that stat one stage, and Crit rate gives Focus Energy."),
-                S("tab:Restore", "Restore", "How much HP or PP it restores, and whether it raises a move's max PP like PP Up."),
-                S("tab:EVs", "Effort values", "Tick a stat and set how much its effort value changes."),
-                S("tab:Friendship", "Friendship", "How much friendship changes when it is low, middling or high."),
-                S("name:ExportButton", "More", "Export and Import move this item's data in and out as a file. Open in All graphics lets you paint the icon by hand."));
+                S("name:ItemBar", "Item", "Search by name or number."),
+                S("name:TableEntryBox", "Icon and data", "Its icon, colours and data, and which items share them."),
+                S("name:HoldPocketColumn", "Hold effect and pocket", "Its held effect, and its bag and battle pockets."),
+                S("name:UsageColumn", "Price and use", "Its price, and its effect outside and in battle."),
+                S("name:MoveRelatedBox", "Move effects", "Natural Gift, Fling and Pluck."),
+                S("name:UsageChecksBox", "Checks", "Whether it can be tossed or registered."),
+                S("name:PartyUseBox", "Party use", "Tick it to use the item on a party Pokémon."),
+                S("tab:Status heals", "Status heals", "Conditions it cures, and whether it revives, levels up or evolves."),
+                S("tab:Stat stages", "Stat stages", "Battle stats it raises by one stage. Crit rate gives Focus Energy."),
+                S("tab:Restore", "Restore", "HP or PP restored, and PP Up."),
+                S("tab:EVs", "Effort values", "How much each effort value changes."),
+                S("tab:Friendship", "Friendship", "Friendship change at low, middling and high friendship."),
+                S("name:ExportButton", "More", "Export or import the item's data, or paint its icon."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("MartEditorView", "Mart editor",
-                S("list", "Marts", "The common mart, whose stock grows with the story, and every specialty mart."),
-                S("name:MartGrid", "Stock", "Each slot holds one item. In the common mart, Stock tier sets when it goes on sale; tier 0 is always on sale. Ctrl+click an item to open it."),
-                S("toolbar", "Slots and marts", "Add or remove slots, or add a mart. These need the mart expansion patch from the ROM patch toolbox."),
-                S("name:MartNotes", "Showing a new mart", "A new mart gets a number; call it from an event script to open the mart in game."));
+                S("list", "Marts", "The common mart and every specialty mart."),
+                S("name:MartGrid", "Stock", "One item per slot. Ctrl+click edits it in the Item editor."),
+                S("name:MartGrid", "Stock tier", "When the item goes on sale in the common mart."),
+                S("toolbar", "Slots and marts", "Adding slots or marts needs the mart expansion patch."),
+                S("name:MartNotes", "New marts", "Open a new mart by its number from an event script."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("BerryDataEditorView", "Berry data",
-                S("list", "Berries", "Every berry. Pick one to edit it; a dot marks berries with unsaved changes."),
-                S("name:GrowthBox", "Growth", "Hours per growth stage, how fast the soil dries, and how many berries a plant yields."),
-                S("name:LookBox", "Look and taste", "Its size, firmness, five flavours and smoothness. The bar shows each flavour's share."));
+                S("list", "Berries", "Every berry. A dot marks unsaved changes."),
+                S("name:GrowthBox", "Growth", "Hours per stage, soil drying and yield."),
+                S("name:LookBox", "Look and taste", "Size, firmness, flavours and smoothness."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("BpShopEditorView", "Battle Point shop",
-                S("name:ItemCounter", "Item counter", "What the item counter sells for Battle Points, and at what price. Ctrl+click an item to open it."),
-                S("name:TmCounter", "TM counter", "The same for the counter that sells TMs."),
-                S("name:ItemCounter", "Arranging", "The arrows move the picked entry. In Platinum you can also add, remove or move entries to the other counter."));
+                S("name:ItemCounter", "Item counter", "Items sold for Battle Points. Ctrl+click edits an item."),
+                S("name:TmCounter", "TM counter", "The same for the TM counter."),
+                S("name:ItemCounter", "Arranging", "The arrows move an entry. Platinum can also add and remove them."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("UndergroundMiningView", "Underground mining",
-                S("name:WallSettings", "Wall settings", "Treasures per wall, the first dig, and how hard the game tries to fit rocks in."),
-                S("list", "Treasures and rocks", "Every treasure, then the rocks. A treasure with several shapes has a row for each."),
-                S("name:MiningColumns", "Four columns", "Diamond and Pearl each use their own column, Platinum picks by odd or even trainer ID; the later two count once you have the National Dex."),
-                S("list", "Weights", "The higher a weight, the more often it comes up; the percentage beside it is its chance."),
-                S("name:MiningDetail", "Art and shape", "The row's picture, its ug_parts files and its shape. Click cells to make them solid or empty."),
-                S("name:MiningTotals", "Totals", "Each column's total, and why the table can't be saved if something is wrong."));
+                S("name:WallSettings", "Wall settings", "Treasures per wall, the first dig and rock placement tries."),
+                S("list", "Treasures and rocks", "Every treasure, then the rocks, one row per shape."),
+                S("name:MiningColumns", "Four columns", "Diamond, Pearl, and Platinum by odd or even trainer ID."),
+                S("list", "Weights", "A higher weight comes up more often."),
+                S("name:MiningDetail", "Art and shape", "The row's picture and shape. Click cells to toggle them."),
+                S("name:MiningTotals", "Totals", "Each column's total, and anything that blocks saving."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("ItemTableEditorView", "Item tables",
-                S("tabs", "Item tables", "Where items come from besides shops: Pickup, hidden items and Rock Smash, for the tables this game has."),
-                S("tab:Pickup>name:PickupRate", "How often", "Pickup happens on one battle in this many, when the Pokémon holds nothing."),
-                S("tab:Pickup>name:PickupGrid", "Slots and items", "The Chance row is how often each slot comes up; each level range has nine slots and two rare ones."),
-                S("tab:Hidden items>list", "Hidden items", "Each hidden item's amount, script number and place. Add or Remove below the list."),
-                S("tab:Hidden items>name:HiddenEditPanel", "Setting one up", "Pick the item, amount and script number; the hidden item on the map uses the number underneath."),
-                S("tab:Rock Smash>name:RockSmashGrid", "Rock Smash odds", "Each header's chance of an item from a smashed rock, and its drop table."),
-                S("tab:Rock Smash>name:RockSmashTables", "Drop tables", "The eight items in each drop table, each slot with its own fixed chance."));
+                S("tabs", "Item tables", "Pickup, hidden items and Rock Smash."),
+                S("tab:Pickup>name:PickupRate", "Pickup rate", "One battle in this many, when holding nothing."),
+                S("tab:Pickup>name:PickupGrid", "Slots and items", "Nine slots and two rare ones per level range."),
+                S("tab:Hidden items>list", "Hidden items", "Each hidden item's amount, script number and place. Ctrl+click edits the item."),
+                S("tab:Hidden items>name:HiddenEditPanel", "Setup", "The item, amount and the script number the map uses."),
+                S("tab:Rock Smash>name:RockSmashGrid", "Rock Smash odds", "Each header's item chance and drop table."),
+                S("tab:Rock Smash>name:RockSmashTables", "Drop tables", "Eight items per table, each with a fixed chance."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
         }
     }
 }

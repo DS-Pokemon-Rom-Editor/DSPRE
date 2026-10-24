@@ -5,86 +5,92 @@ namespace DSPRE.Avalonia
         static partial void RegisterTools()
         {
             Add("ProjectChecksView", "Validation and where used",
-                S(null, "Project checks", "Look for broken links in your project, and find what uses a given file."),
-                S("tab:Validation", "Validation", "Run validation to check every header for links to files that don't exist."),
-                S("tab:Validation>list", "Findings", "Each row gives the kind of file, the header it was found in and what is wrong."),
-                S("tab:Where used", "Where used", "Pick a kind of file and its number, then Find headers lists every header that uses it."));
+                S(null, "Project checks", "Broken links in the project, and what uses a file."),
+                S("tab:Validation", "Validation", "Checks every header for links to missing files."),
+                S("tab:Validation>list", "Findings", "The file kind, the header and what is wrong."),
+                S("tab:Where used", "Where used", "Every header that uses a file."));
 
             Add("PatchToolboxView", "ROM patch toolbox",
-                S(null, "Patches", "Ready-made changes to the game's code and data, applied with one button."),
-                S("name:CautionBanner", "Back up first", "Some patches can't be undone, so keep a copy of your project before applying one."),
-                S("name:PatchList", "Each patch", "What it does, and whether it is applied, can be applied or doesn't fit this game."),
-                S("name:PatchList", "Applying", "The button on the right applies the patch after asking you to confirm. It takes effect straight away, with nothing to save."));
+                S(null, "Patches", "Ready-made changes to the game's code and data."),
+                S("name:CautionBanner", "Back up first", "Some patches can't be undone."),
+                S("name:PatchList", "Patches", "What each one does, and whether it is applied or fits this game."),
+                S("name:PatchList", "Applying", "Applies after you confirm, with nothing to save."));
 
             Add("OverlayEditorView", "Overlay editor",
-                S(null, "Code overlays", "The game loads extra pieces of code as it needs them. This lists each one and whether it is packed down."),
-                S("list", "The list", "Compressed shows how each file is now and Marked compressed shows how the game expects it. A highlighted cell means the two disagree."),
-                S("toolbar", "Changing them", "Decompress all and Toggle marked change every row at once. Some projects show the list read only, as the ROM build handles packing."));
+                S(null, "Code overlays", "Code the game loads as it needs it, and whether it is compressed."),
+                S("list", "Overlays", "A highlighted cell means the file and the game disagree."),
+                S("toolbar", "Changing them", "Decompress all or toggle every row. Some projects show it read only."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("TableEditorView", "Music & battle tables",
-                S(null, "Music and battle tables", "Small tables that pick music and battle intros. Only the tables this game has are shown."),
-                S("tab:Conditional music", "Conditional music", "Places whose music changes while a flag is set. Pick a row, then set the place, the flag and the music to play."),
-                S("tab:Effect combos", "Effect combos", "Each entry pairs a battle intro animation with a battle theme. Trainer classes and wild Pokémon pick one by number."),
-                S("tab:VS trainer", "VS trainer", "Gives a trainer class an effect combo, so all its trainers get the same intro and theme."),
-                S("tab:VS Pokémon", "VS Pokémon", "Which wild Pokémon have their own intro and theme. This one can only be looked at."));
+                S(null, "Music and battle tables", "Tables that pick music and battle intros."),
+                S("tab:Conditional music", "Conditional music", "Places whose music changes while a flag is set."),
+                S("tab:Effect combos", "Effect combos", "Battle intro animations paired with battle themes."),
+                S("tab:VS trainer", "VS trainer", "The effect combo each trainer class uses."),
+                S("tab:VS Pokémon", "VS Pokémon", "Wild Pokémon with their own intro and theme. Read only."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("AddressHelperView", "Address helper",
-                S(null, "Address helper", "Turns a memory address from a debugger into the file and place it comes from."),
-                S("name:AddressBox", "The address", "Type the address in hex and press Search."),
-                S("list", "Results", "Every piece of game code loaded at that address, and how far into it the address falls."),
-                S(null, "No match", "If no code covers the address, a note under the box says so."));
+                S(null, "Address helper", "Finds which file a debugger address is in."),
+                S("name:AddressBox", "Address", "Type it in hex and press Search."),
+                S("list", "Results", "The code loaded at that address, and the offset into it."),
+                S(null, "No match", "A note says when no code covers the address."));
 
             Add("ResearchHelperView", "Research helper",
-                S(null, "Research helper", "Answers questions about your project, like what uses a flag or which warps lead somewhere. It reads everything as it opens, so give it a moment."),
-                S("tab:Scripts", "Scripts", "Every script file with how many scripts, functions and movements it has. Click a heading to sort."),
-                S("tab:Level scripts", "Level scripts", "Every level script file and how many triggers of each kind it has."),
-                S("tab:Variable watcher", "Variable watcher", "Type a variable number and press Search to list every file that uses it. Double-click a row to copy its number."),
-                S("tab:Flag watcher", "Flag watcher", "Every script that sets or checks a flag, and every person a flag hides. Double-click a row to copy it."),
-                S("tab:Overworld watcher", "Overworld watcher", "Everyone placed on a map with a given sprite. Double-click a row to open it in the Event editor."),
-                S("tab:Trainer watcher", "Trainer watcher", "Every script, person and rematch that names a trainer. Double-click a row to open it."),
-                S("tab:File watcher", "File watcher", "Which headers use a script file. Double-click a row to copy it."),
-                S("tab:ID watcher", "ID watcher", "Pick a script file and one of its scripts to list the events that run it."),
-                S("tab:Header watcher", "Header watcher", "A header's settings, the warps that lead into it and the warps that leave it. Double-click a warp to go to that header."));
+                S(null, "Research helper", "What uses a flag, variable, trainer or script, across the project."),
+                S("tab:Scripts", "Scripts", "Each script file's scripts, functions and movements."),
+                S("tab:Level scripts", "Level scripts", "Each level script file's triggers."),
+                S("tab:Variable watcher", "Variable watcher", "Every file that uses a variable."),
+                S("tab:Flag watcher", "Flag watcher", "Every script and person that uses a flag."),
+                S("tab:Overworld watcher", "Overworld watcher", "Everyone on a map with a given sprite."),
+                S("tab:Trainer watcher", "Trainer watcher", "Every script, person and rematch that names a trainer."),
+                S("tab:File watcher", "File watcher", "Which headers use a script file."),
+                S("tab:ID watcher", "ID watcher", "The events that run a script."),
+                S("tab:Header watcher", "Header watcher", "A header's settings and the warps in and out."));
 
             Add("LabelEditorView", "Dropdown labels",
-                S(null, "Dropdown labels", "Rename the choices shown in dropdowns across the editors, for example to match your hack's changes."),
-                S("toolbar", "Where it applies", "This project keeps the names with the current ROM. Global applies them to every ROM you open."),
-                S("name:GroupStrip", "Editors", "Each tab is one editor's set of dropdowns."),
-                S("list", "Categories", "Pick which dropdown to rename."),
-                S("name:EntryRows", "Entries", "Type a new name next to each number. The default name is shown beside it for reference."),
-                S("toolbar", "Choices", "Add entry adds a choice, and Reset category brings back the defaults."));
+                S(null, "Dropdown labels", "Rename the choices in dropdowns across the editors."),
+                S("toolbar", "Where it applies", "This project only, or every ROM you open."),
+                S("name:GroupStrip", "Editors", "One tab per editor."),
+                S("list", "Categories", "The dropdown to rename."),
+                S("name:EntryRows", "Entries", "A new name beside each number and its default."),
+                S("toolbar", "Choices", "Add a choice, or reset to the defaults."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("AudioEditorView", "Audio editor",
-                S(null, "Audio", "Listen to every sound in the game, save it out, and put your own cries and sounds in."),
-                S("name:SearchBox", "Search", "Type a name or number to filter every tab at once."),
-                S("tab:Cries", "Cries", "Each Pokémon's cry. You can import your own sound as a cry."),
-                S("tab:Music", "Music", "Every song. Double-click one to play it."),
-                S("tab:Fanfares", "Fanfares", "The short jingles for things like healing or getting an item."),
-                S("tab:Sound effects", "Sound effects", "Every sound effect the game plays."),
-                S("tab:Sounds", "Sounds", "The sounds the music and effects are made of. Each can be heard, saved and replaced."),
-                S("name:PlayBar", "Playing", "Click the notes or the wave to play from there. Space plays or stops, Enter plays from the start, and Up and Down pick another row."),
-                S("name:AudioActions", "Export and import", "Export saves the selection as a sound file, a song or its instruments. Import puts your own sound in for a cry or sound effect."),
-                S("name:SaveButtons", "Saving", "Imports wait until you press Save, and Discard drops them. Ctrl+S saves too."));
+                S(null, "Audio", "Every sound in the game, to play, export or replace."),
+                S("name:SearchBox", "Search", "Filters every tab by name or number."),
+                S("tab:Cries", "Cries", "Each Pokémon's cry. Import your own."),
+                S("tab:Music", "Music", "Every song. Double-click to play."),
+                S("tab:Fanfares", "Fanfares", "The short jingles."),
+                S("tab:Sound effects", "Sound effects", "Every sound effect."),
+                S("tab:Sounds", "Sounds", "The sounds music and effects are made of."),
+                S("name:PlayBar", "Playing", "Space plays or stops, Enter restarts, Up and Down change row."),
+                S("name:AudioActions", "Export and import", "Export a sound, song or instruments, or import a cry or effect."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("HgEnginePatchesView", "hg-engine patches",
-                S(null, "Code patches", "Every patch your hg-engine checkout applies to the game's code on each build."),
-                S("toolbar", "Filter", "Show picks which part of the code to list. Reload reads the lists again."),
-                S("list", "The patches", "Where each one lands, what it does and which list it comes from. Runs into shows patches that overlap."),
-                S("toolbar", "Built only", "Lines your config's #ifdefs leave out are hidden. Untick it to see them greyed, with Built and When saying why."),
-                S("name:AddPatchPanel", "Adding a patch", "Pick a list, where it goes and what it does, then press Add."));
+                S(null, "Code patches", "The patches hg-engine applies on each build."),
+                S("toolbar", "Filter", "Which part of the code to list."),
+                S("list", "Patches", "Where each lands, what it does and what it overlaps."),
+                S("toolbar", "Built only", "Untick to see lines your #ifdefs leave out."),
+                S("name:AddPatchPanel", "Adding a patch", "Pick a list, the place and the change, then Add."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("BattleTestsView", "Battle tests",
-                S(null, "Battle tests", "hg-engine's battle test scenarios, one file each under data/battle_tests."),
-                S("list", "The tests", "Pick a test to open it. Search narrows the list."),
-                S("tab:Code", "Code", "The test as written. Underlined names aren't defined in the headers the build uses; the line below says why."),
-                S("tab:Form", "Form", "The same test as fields: battle, both parties, turns and what to expect. Changes go straight into the code."),
-                S("toolbar", "New tests", "Type a name, pick a test to start from, then press Add test. Save (Ctrl+S) writes to the checkout."));
+                S(null, "Battle tests", "hg-engine's battle test scenarios."),
+                S("list", "Tests", "Pick a test to open it."),
+                S("tab:Code", "Code", "The test as written. Undefined names are underlined."),
+                S("tab:Form", "Form", "The same test as fields."),
+                S("toolbar", "New tests", "Name it, pick a test to copy, then Add test."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("HgeRomReviewView", "hg-engine ROM review",
-                S(null, "ROM review", "See what the game will actually show from this build, without the source."),
-                S("tab:Pokémon graphics>list", "Pick a Pokémon", "Search or scroll the list to pick a Pokémon."),
-                S("tab:Pokémon graphics", "Pokémon graphics", "Its party icon, follower and battle sprites as the game reads them. Anything wrong is noted in orange."),
-                S("tab:Archive check", "Archive check", "Checks the graphics archive for leftover pieces from earlier builds. Repair member order drops them, and Save (Ctrl+S) writes the fix."));
+                S(null, "ROM review", "What the game shows from this build."),
+                S("tab:Pokémon graphics>list", "Pokémon", "Pick a Pokémon."),
+                S("tab:Pokémon graphics", "Pokémon graphics", "Icon, follower and battle sprites. Problems show in orange."),
+                S("tab:Archive check", "Archive check", "Finds leftover pieces from earlier builds, and repairs them."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
         }
     }
 }

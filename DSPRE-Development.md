@@ -142,8 +142,8 @@ An editor shows what the open game has, under the names that game uses, and noth
 
 ### UI
 
-Labels are short nouns, in the words players already use for the thing, and longer explanations go in tooltips
-and tours. Titles use sentence case. Buttons say what
+Labels are short nouns, in the words players already use for the thing, never questions. A tooltip is a few words
+and only says what the label can't, and a tour step is one sentence. Titles use sentence case. Buttons say what
 they do, and one that takes you to another editor says "Open in <editor>". "…" appears only when the action asks
 for more input.
 
