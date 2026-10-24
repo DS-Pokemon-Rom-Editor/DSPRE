@@ -5,6 +5,7 @@
              xmlns:views="clr-namespace:DSPRE.Avalonia.Views.Battle"
              xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
              xmlns:data="clr-namespace:DSPRE.Avalonia.Data"
+             xmlns:viewcontrols="clr-namespace:DSPRE.Avalonia.Views.Controls"
              x:Class="DSPRE.Avalonia.Views.Battle.BattleScriptEditorView"
              x:DataType="vm:BattleScriptEditorViewModel">
   <Design.DataContext>
@@ -13,15 +14,11 @@
 
   <DockPanel>
   <controls:EditorToolbar>
-      <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"
-              ToolTip.Tip="{Binding SaveHint}" ToolTip.ShowOnDisabled="True"/>
+      <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
       <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
       <controls:UndoRedoButtons/>
       <StackPanel x:Name="EntryPicker" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2" IsVisible="{Binding IsAvailable}">
-        <TextBlock Text="Archive" VerticalAlignment="Center"/>
-        <ComboBox ItemsSource="{Binding ArchiveOptions}" SelectedIndex="{Binding ArchiveIndex}" Width="260"
-                  ToolTip.Tip="{Binding ArchiveTip}"/>
-        <TextBlock Text="Entry" VerticalAlignment="Center" Margin="12,0,0,0"/>
+        <TextBlock Text="Entry" VerticalAlignment="Center"/>
         <controls:FusionAutoCompleteBox ItemsSource="{Binding FileItems}" SelectedIndex="{Binding SelectedFileIndex}" Width="320" MaxDropDownHeight="420"/>
       </StackPanel>
       <StackPanel x:Name="ScriptButtons" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2" IsVisible="{Binding IsAvailable}">
@@ -29,6 +26,13 @@
         <Button Content="Command guide" controls:Icon.Key="questionMark" Click="CommandGuide_Click"/>
       </StackPanel>
   </controls:EditorToolbar>
+  <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="24" IsVisible="{Binding IsAvailable}" Margin="12,2,12,0">
+    <TabStrip SelectedIndex="{Binding GroupIndex}">
+      <TabStripItem Content="Move animations"/>
+      <TabStripItem Content="Battle scripts"/>
+    </TabStrip>
+    <TabStrip ItemsSource="{Binding PartNames}" SelectedIndex="{Binding PartIndex}" VerticalAlignment="Bottom"/>
+  </StackPanel>
 
   <Grid Margin="12" RowDefinitions="Auto,Auto,*">
 
@@ -43,7 +47,7 @@
       <TextBlock IsVisible="{Binding ArchiveNotAvailable}" Text="{Binding ArchiveUnavailableText}"
                  FontSize="12" Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap"/>
       <TextBlock Text="{Binding EntryHeader}" FontWeight="SemiBold"/>
-      <controls:HelpTip IsVisible="{Binding ShowTextHelp}" HorizontalAlignment="Left" Text="One command per line; // starts a comment"/>
+      <controls:HelpTip IsVisible="{Binding ShowTextHelp}" HorizontalAlignment="Left" Text="// starts a comment"/>
     </StackPanel>
 
     <!-- 50/50 so the argument column can't crowd out the preview controls. -->
@@ -60,243 +64,278 @@
                ScrollViewer.VerticalScrollBarVisibility="Auto"/>
     </DockPanel>
 
-    <Grid Grid.Row="2" ColumnDefinitions="*,6,440">
+    <Grid x:Name="EditorArea" Grid.Row="2" RowDefinitions="*,6,180">
       <Grid.IsVisible>
         <MultiBinding Converter="{x:Static BoolConverters.And}">
           <Binding Path="IsAvailable"/>
           <Binding Path="!IsHgEngineSource"/>
         </MultiBinding>
       </Grid.IsVisible>
-      <Grid Grid.Column="0" RowDefinitions="*,Auto">
-        <TabControl x:Name="EditorTabs" Grid.Row="0" Padding="0" SelectionChanged="EditorTabs_SelectionChanged">
-          <!-- Card view: each command as a collapsible container -->
-          <TabItem Header="Cards">
-            <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3">
-              <ScrollViewer>
-                <ItemsControl ItemsSource="{Binding Rows}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="vm:ScriptCmdRow">
-                <!-- Each command is a collapsible card: collapsed → one-line summary; expanded → opcode picker +
-                     a labelled editor per argument (+ a raw-args box for adding/removing variable payload). -->
-                <Expander IsExpanded="{Binding IsExpanded}" Margin="0,1" Padding="6,2"
-                          HorizontalAlignment="Stretch" Background="{DynamicResource Editor.StatusBg}">
-                  <Expander.Header>
-                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="2" HorizontalAlignment="Stretch">
-                      <TextBlock Grid.Column="0" Text="{Binding Summary}" TextTrimming="CharacterEllipsis"
-                                 FontFamily="Consolas,monospace" FontSize="12" VerticalAlignment="Center"
-                                 ToolTip.Tip="Click to change this command and its values"/>
-                      <Button Grid.Column="1" controls:Icon.Key="arrowup" Click="Up_Click" ToolTip.Tip="Move up" Padding="6,0" FontSize="12"/>
-                      <Button Grid.Column="2" controls:Icon.Key="arrowdown" Click="Down_Click" ToolTip.Tip="Move down" Padding="6,0" FontSize="12"/>
-                      <Button Grid.Column="3" controls:Icon.Key="deleteIcon" Click="Remove_Click" ToolTip.Tip="Remove" Padding="6,0" FontSize="12"/>
-                    </Grid>
-                  </Expander.Header>
-                  <StackPanel Spacing="3" Margin="0,4,0,2">
-                    <Grid ColumnDefinitions="86,*" ColumnSpacing="6">
-                      <TextBlock Grid.Column="0" Text="Command" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" ToolTip.Tip="Opcode"/>
-                      <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" MaxDropDownHeight="420"
-                                ItemsSource="{Binding $parent[ItemsControl].((vm:BattleScriptEditorViewModel)DataContext).OpcodeDisplayNames}"
-                                SelectedIndex="{Binding OpId}"/>
-                    </Grid>
-                    <TextBlock Text="{Binding OpDoc}" IsVisible="{Binding HasDoc}" TextWrapping="Wrap" FontSize="11"
-                               FontStyle="Italic" Margin="92,0,0,2" Foreground="{DynamicResource Editor.Subtle}"/>
-                    <ItemsControl ItemsSource="{Binding Params}">
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:ParamVM">
-                          <Grid ColumnDefinitions="86,*,Auto" ColumnSpacing="6" Margin="0,1">
-                            <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="12"
-                                       Foreground="{DynamicResource Editor.Subtle}"/>
-                            <!-- enum param → dropdown; otherwise → numeric entry -->
-                            <ComboBox Grid.Column="1" IsVisible="{Binding IsEnum}" HorizontalAlignment="Stretch" MaxDropDownHeight="420"
-                                      ItemsSource="{Binding EnumItems}" SelectedIndex="{Binding SelectedEnumIndex}"/>
-                            <NumericUpDown Grid.Column="1" IsVisible="{Binding IsInt}" Value="{Binding ValueDec}"
-                                           FormatString="0" Increment="1" HorizontalAlignment="Stretch"/>
-                            <!-- Sound arguments (PlaySoundEffect and friends): show the real sound name + a preview button. -->
-                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" IsVisible="{Binding IsSound}" VerticalAlignment="Center">
-                              <TextBlock Text="{Binding SoundName}" FontSize="11" VerticalAlignment="Center"
-                                         Foreground="{DynamicResource Editor.Subtle}" MaxWidth="180" TextTrimming="CharacterEllipsis"/>
-                              <Button controls:Icon.Key="speaker" Padding="6,2" Click="PreviewSound_Click" ToolTip.Tip="Play this sound"/>
-                            </StackPanel>
-                          </Grid>
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <Grid ColumnDefinitions="86,*" ColumnSpacing="6">
-                      <TextBlock Grid.Column="0" Text="Raw values" VerticalAlignment="Center" FontSize="12"
-                                 Foreground="{DynamicResource Editor.Subtle}"
-                                 ToolTip.Tip="The arguments as the game stores them. Edit them above."/>
-                      <TextBox Grid.Column="1" Text="{Binding RawArgs, Mode=OneWay}" IsReadOnly="True"
-                               FontFamily="Consolas,monospace" FontSize="12" Background="Transparent"/>
-                    </Grid>
-                  </StackPanel>
-                </Expander>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-                </ItemsControl>
-              </ScrollViewer>
-            </Border>
-          </TabItem>
-          <!-- The same commands as typed lines; Cards stays locked while a line has an error. -->
-          <TabItem Header="Script">
-            <ae:TextEditor x:Name="CommandsTextEditor" ShowLineNumbers="True" WordWrap="False"
-                           FontFamily="Consolas,monospace" FontSize="12"
-                           BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"/>
-          </TabItem>
-          <TabItem Header="Read">
-            <Panel>
-            <TextBlock IsVisible="{Binding !IsAnimation}" Margin="16" TextWrapping="Wrap"
-                       VerticalAlignment="Top" Foreground="{DynamicResource Editor.Subtle}"
-                       Text="Only move animations open here"/>
-            <Grid RowDefinitions="Auto,Auto,*,Auto" IsVisible="{Binding IsAnimation}">
-              <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="4,4,4,2">
-                <TextBlock Text="Show as" VerticalAlignment="Center" FontSize="12"/>
-                <ComboBox SelectedIndex="{Binding ViewMode}" MinWidth="150" VerticalAlignment="Center">
-                  <ComboBoxItem Content="Guided"/>
-                  <ComboBoxItem Content="Script"/>
-                  <ComboBoxItem Content="Raw"/>
-                </ComboBox>
-                <TextBlock Text="{Binding ViewSummary}" VerticalAlignment="Center" FontSize="12"
-                           Foreground="{DynamicResource Editor.Subtle}"/>
-              </StackPanel>
-              <TextBlock Grid.Row="1" Text="{Binding ViewNote}" TextWrapping="Wrap" Margin="4,0,4,4"
-                         FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
-              <Border Grid.Row="2" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3">
-                <ScrollViewer HorizontalScrollBarVisibility="Auto">
-                  <ListBox ItemsSource="{Binding ViewLines}" SelectedItem="{Binding PickedLine}"
-                           Background="Transparent" BorderThickness="0">
-                    <ListBox.ItemTemplate>
-                      <DataTemplate>
-                        <TextBlock Text="{Binding Display}" FontFamily="Consolas,monospace" FontSize="12"/>
-                      </DataTemplate>
-                    </ListBox.ItemTemplate>
-                  </ListBox>
+      <!-- The preview keeps its exact size; spare width is shared by the commands and the scene settings. The view
+           sets the widths. -->
+      <Grid x:Name="TopArea" Grid.Row="0" ColumnDefinitions="*,Auto,Auto">
+        <Grid Grid.Column="0" MinWidth="380" RowDefinitions="*,Auto">
+          <TabControl x:Name="EditorTabs" Grid.Row="0" Padding="0" SelectionChanged="EditorTabs_SelectionChanged">
+            <!-- Card view: each command as a collapsible container -->
+            <TabItem Header="Cards">
+              <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3">
+                <ScrollViewer>
+                  <ItemsControl x:Name="CardList" ItemsSource="{Binding Rows}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ScriptCmdRow">
+                  <Expander IsExpanded="{Binding IsExpanded}" Margin="0,1" Padding="6,2"
+                            HorizontalAlignment="Stretch" Background="{DynamicResource Editor.StatusBg}">
+                    <Expander.Header>
+                      <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="2" HorizontalAlignment="Stretch">
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" ToolTip.Tip="{Binding Summary}">
+                          <TextBlock Text="{Binding OpDisplay}" TextTrimming="CharacterEllipsis" FontSize="12" FontWeight="SemiBold"/>
+                          <TextBlock Text="{Binding ValuesSummary}" IsVisible="{Binding HasValues}" TextTrimming="CharacterEllipsis"
+                                     FontFamily="Consolas,monospace" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" controls:Icon.Key="arrowup" Click="Up_Click" ToolTip.Tip="Move up" Padding="6,0" FontSize="12"/>
+                        <Button Grid.Column="2" controls:Icon.Key="arrowdown" Click="Down_Click" ToolTip.Tip="Move down" Padding="6,0" FontSize="12"/>
+                        <Button Grid.Column="3" controls:Icon.Key="deleteIcon" Click="Remove_Click" ToolTip.Tip="Remove" Padding="6,0" FontSize="12"/>
+                      </Grid>
+                    </Expander.Header>
+                    <StackPanel Spacing="3" Margin="0,4,0,2">
+                      <Grid ColumnDefinitions="86,*" ColumnSpacing="6">
+                        <TextBlock Grid.Column="0" Text="Command" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
+                        <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" MaxDropDownHeight="420"
+                                  ItemsSource="{Binding $parent[ItemsControl].((vm:BattleScriptEditorViewModel)DataContext).OpcodeDisplayNames}"
+                                  SelectedIndex="{Binding OpId}"/>
+                      </Grid>
+                      <TextBlock Text="{Binding OpDoc}" IsVisible="{Binding HasDoc}" TextWrapping="Wrap" FontSize="11"
+                                 FontStyle="Italic" Margin="92,0,0,2" Foreground="{DynamicResource Editor.Subtle}"/>
+                      <ItemsControl ItemsSource="{Binding Params}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:ParamVM">
+                            <Grid ColumnDefinitions="86,*,Auto" ColumnSpacing="6" Margin="0,1">
+                              <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="12"
+                                         Foreground="{DynamicResource Editor.Subtle}"/>
+                              <!-- enum param → dropdown; otherwise → numeric entry -->
+                              <ComboBox Grid.Column="1" IsVisible="{Binding IsEnum}" HorizontalAlignment="Stretch" MaxDropDownHeight="420"
+                                        ItemsSource="{Binding EnumItems}" SelectedIndex="{Binding SelectedEnumIndex}"/>
+                              <NumericUpDown Grid.Column="1" IsVisible="{Binding IsInt}" Value="{Binding ValueDec}"
+                                             FormatString="0" Increment="1" HorizontalAlignment="Stretch"/>
+                              <!-- Sound arguments (PlaySoundEffect and friends): show the real sound name + a preview button. -->
+                              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" IsVisible="{Binding IsSound}" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding SoundName}" FontSize="11" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource Editor.Subtle}" MaxWidth="180" TextTrimming="CharacterEllipsis"/>
+                                <Button controls:Icon.Key="speaker" Padding="6,2" Click="PreviewSound_Click" ToolTip.Tip="Play this sound"/>
+                              </StackPanel>
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                      <Grid ColumnDefinitions="86,*" ColumnSpacing="6">
+                        <TextBlock Grid.Column="0" Text="Raw values" VerticalAlignment="Center" FontSize="12"
+                                   Foreground="{DynamicResource Editor.Subtle}"/>
+                        <TextBox Grid.Column="1" Text="{Binding RawArgs, Mode=OneWay}" IsReadOnly="True"
+                                 FontFamily="Consolas,monospace" FontSize="12" Background="Transparent"/>
+                      </Grid>
+                    </StackPanel>
+                  </Expander>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+                  </ItemsControl>
                 </ScrollViewer>
               </Border>
-              <Border Grid.Row="3" Margin="4,4,4,0" Padding="6,4" IsVisible="{Binding HasPickedDetail}"
-                      Background="{DynamicResource Editor.StatusBg}" CornerRadius="3">
-                <StackPanel Spacing="2">
-                  <TextBlock Text="{Binding PickedDetail}" TextWrapping="Wrap" FontSize="12"/>
-                  <TextBlock Text="{Binding PickedSource}" FontSize="11" FontStyle="Italic"
+            </TabItem>
+            <!-- The same commands as typed lines; Cards stays locked while a line has an error. -->
+            <TabItem Header="Script">
+              <ae:TextEditor x:Name="CommandsTextEditor" ShowLineNumbers="True" WordWrap="False"
+                             FontFamily="Consolas,monospace" FontSize="12"
+                             BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"/>
+            </TabItem>
+            <TabItem Header="Read">
+              <Panel>
+              <TextBlock IsVisible="{Binding !IsAnimation}" Margin="16" TextWrapping="Wrap"
+                         VerticalAlignment="Top" Foreground="{DynamicResource Editor.Subtle}"
+                         Text="Move animations only"/>
+              <Grid RowDefinitions="Auto,Auto,*,Auto" IsVisible="{Binding IsAnimation}">
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="4,4,4,2">
+                  <TextBlock Text="Show as" VerticalAlignment="Center" FontSize="12"/>
+                  <ComboBox SelectedIndex="{Binding ViewMode}" MinWidth="150" VerticalAlignment="Center">
+                    <ComboBoxItem Content="Guided"/>
+                    <ComboBoxItem Content="Script"/>
+                    <ComboBoxItem Content="Raw"/>
+                  </ComboBox>
+                  <TextBlock Text="{Binding ViewSummary}" VerticalAlignment="Center" FontSize="12"
                              Foreground="{DynamicResource Editor.Subtle}"/>
                 </StackPanel>
-              </Border>
-            </Grid>
-            </Panel>
-          </TabItem>
-        </TabControl>
-        <!-- Shown while the script has errors. -->
-        <Border Grid.Row="1" IsVisible="{Binding HasTextErrors}" Background="#3A1414" CornerRadius="3" Margin="0,4,0,0" Padding="8,4">
-          <TextBlock Text="{Binding TextErrorSummary}" Foreground="{DynamicResource Editor.Bad}" FontSize="12" TextWrapping="Wrap"/>
-        </Border>
+                <Border Grid.Row="2" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3">
+                  <ScrollViewer HorizontalScrollBarVisibility="Auto">
+                    <ListBox ItemsSource="{Binding ViewLines}" SelectedItem="{Binding PickedLine}"
+                             Background="Transparent" BorderThickness="0">
+                      <ListBox.ItemTemplate>
+                        <DataTemplate>
+                          <TextBlock Text="{Binding Display}" FontFamily="Consolas,monospace" FontSize="12"/>
+                        </DataTemplate>
+                      </ListBox.ItemTemplate>
+                    </ListBox>
+                  </ScrollViewer>
+                </Border>
+                <Border Grid.Row="3" Margin="4,4,4,0" Padding="6,4" IsVisible="{Binding HasPickedDetail}"
+                        Background="{DynamicResource Editor.StatusBg}" CornerRadius="3">
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="{Binding PickedDetail}" TextWrapping="Wrap" FontSize="12"/>
+                    <TextBlock Text="{Binding PickedSource}" FontSize="11" FontStyle="Italic"
+                               Foreground="{DynamicResource Editor.Subtle}"/>
+                  </StackPanel>
+                </Border>
+              </Grid>
+              </Panel>
+            </TabItem>
+          </TabControl>
+          <!-- Shown while the script has errors. -->
+          <Border Grid.Row="1" IsVisible="{Binding HasTextErrors}" Background="#3A1414" CornerRadius="3" Margin="0,4,0,0" Padding="8,4">
+            <TextBlock Text="{Binding TextErrorSummary}" Foreground="{DynamicResource Editor.Bad}" FontSize="12" TextWrapping="Wrap"/>
+          </Border>
+        </Grid>
+
+        <StackPanel x:Name="PreviewPanel" Grid.Column="1" Margin="10,0,0,0" Spacing="4" IsVisible="{Binding HasPreview}">
+          <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="4" HorizontalAlignment="Left" ClipToBounds="True">
+            <!-- Whole screen pixels per game pixel, never stretched; the view sets the scale for the display's DPI. -->
+            <LayoutTransformControl x:Name="PreviewTransform">
+              <LayoutTransformControl.LayoutTransform>
+                <ScaleTransform ScaleX="2" ScaleY="2"/>
+              </LayoutTransformControl.LayoutTransform>
+              <!-- The control scales its child through RenderTransform, so the shaking canvas sits inside a panel. -->
+              <Panel>
+                  <!-- Plays over the battle scene; the RenderTransform carries the screen shake. -->
+                  <Canvas Width="256" Height="192" ClipToBounds="True" Background="Black" RenderTransformOrigin="0.5,0.5">
+                    <Canvas.RenderTransform>
+                      <TranslateTransform X="{Binding ShakeX}" Y="{Binding ShakeY}"/>
+                    </Canvas.RenderTransform>
+                    <Image Source="{Binding SceneComposite}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192" Stretch="Fill" RenderOptions.BitmapInterpolationMode="None"/>
+                    <Image Source="{Binding CellPreview}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192" Stretch="Fill"
+                           RenderOptions.BitmapInterpolationMode="None" Opacity="{Binding CellOpacity}" RenderTransformOrigin="{Binding CellOrigin}">
+                      <Image.RenderTransform>
+                        <TransformGroup>
+                          <ScaleTransform ScaleX="{Binding CellScaleX}" ScaleY="{Binding CellScaleY}"/>
+                          <TranslateTransform X="{Binding CellOffsetX}" Y="{Binding CellOffsetY}"/>
+                        </TransformGroup>
+                      </Image.RenderTransform>
+                    </Image>
+                    <Image Source="{Binding GaugeEnemyImage}"  Canvas.Left="-70" Canvas.Top="-92" Width="256" Height="256"
+                           IsVisible="{Binding RealGaugesVisible}" RenderOptions.BitmapInterpolationMode="None"/>
+                    <Image Source="{Binding GaugePlayerImage}" Canvas.Left="{Binding PlayerGaugeImageLeft}" Canvas.Top="-12" Width="256" Height="256"
+                           IsVisible="{Binding RealGaugesVisible}" RenderOptions.BitmapInterpolationMode="None"/>
+                    <Image Source="{x:Static views:BattleSceneControl.HealthOpponentAsset}" Canvas.Left="0"   Canvas.Top="18"  IsVisible="{Binding PlaceholderGaugesVisible}"/>
+                    <Image Source="{x:Static views:BattleSceneControl.HealthYouAsset}"      Canvas.Left="129" Canvas.Top="95"  IsVisible="{Binding PlaceholderGaugesVisible}"/>
+                    <Canvas IsVisible="{Binding GaugesVisible}">
+                      <!-- Measured from Platinum battles: the frame has the HP label, so the fill, the groove rows and the text go on top. -->
+                      <!-- enemy (upper-left) -->
+                      <TextBlock Canvas.Left="3"  Canvas.Top="24" Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
+                      <TextBlock Canvas.Left="78" Canvas.Top="24" Text="{Binding GaugeLevelText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
+                      <Rectangle Canvas.Left="50" Canvas.Top="42" Width="48" Height="1" Fill="#FBFBFB"/>
+                      <Rectangle Canvas.Left="50" Canvas.Top="43" Width="48" Height="2" Fill="#000000"/>
+                      <Rectangle Canvas.Left="50" Canvas.Top="43" Width="{Binding GaugeHpBarWidth}" Height="2" Fill="{Binding GaugeHpBrush}"/>
+                      <Rectangle Canvas.Left="50" Canvas.Top="45" Width="48" Height="1" Fill="#FBFBFB"/>
+                      <Rectangle Canvas.Left="50" Canvas.Top="46" Width="48" Height="1" Fill="#000000"/>
+                      <!-- player (lower-right) -->
+                      <TextBlock Canvas.Left="149" Canvas.Top="102" Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
+                      <TextBlock Canvas.Left="210" Canvas.Top="102" Text="{Binding GaugeLevelText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
+                      <Rectangle Canvas.Left="{Binding PlayerHealthFillLeft}" Canvas.Top="118" Width="48" Height="1" Fill="#FBFBFB"/>
+                      <Rectangle Canvas.Left="{Binding PlayerHealthFillLeft}" Canvas.Top="119" Width="48" Height="2" Fill="#000000"/>
+                      <Rectangle Canvas.Left="{Binding PlayerHealthFillLeft}" Canvas.Top="119" Width="{Binding GaugeHpBarWidth}" Height="2" Fill="{Binding GaugeHpBrush}"/>
+                      <Rectangle Canvas.Left="{Binding PlayerHealthFillLeft}" Canvas.Top="121" Width="48" Height="1" Fill="#FBFBFB"/>
+                      <Rectangle Canvas.Left="{Binding PlayerHealthFillLeft}" Canvas.Top="122" Width="48" Height="1" Fill="#000000"/>
+                      <!-- Only your own bar shows HP numbers. -->
+                      <TextBlock Canvas.Left="210" Canvas.Top="121" Text="{Binding GaugeHpText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
+                    </Canvas>
+                    <Image Source="{x:Static views:BattleSceneControl.TextBarAsset}"        Canvas.Left="0"   Canvas.Top="144"
+                           IsVisible="{Binding PlainMessageBoxVisible}"/>
+                    <Image Source="{Binding MessageImage}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192"
+                           RenderOptions.BitmapInterpolationMode="None"/>
+                  </Canvas>
+              </Panel>
+            </LayoutTransformControl>
+          </Border>
+          <StackPanel x:Name="PlaybackBar" Orientation="Horizontal" Spacing="6">
+            <Button controls:Icon.Key="{Binding CellPlayButtonIcon}" controls:Icon.Text="{Binding CellPlayButtonText}" MinWidth="76"
+                    Click="PlayCell_Click" ToolTip.Tip="Space"/>
+            <Button controls:Icon.Key="stop" controls:Icon.Text="Stop" Click="StopCell_Click" IsEnabled="{Binding CanStopPreview}"/>
+            <Button controls:Icon.Key="arrowleft" Click="FrameBack_Click" ToolTip.Tip="Back one frame (Left)"/>
+            <Button controls:Icon.Key="arrowright" Click="FrameOn_Click" ToolTip.Tip="Forward one frame (Right)"/>
+            <CheckBox Content="Loop" IsChecked="{Binding Loop}" VerticalAlignment="Center"/>
+            <ComboBox ItemsSource="{Binding SpeedNames}" SelectedIndex="{Binding SpeedIndex}" VerticalAlignment="Center"
+                      ToolTip.Tip="No sound below normal speed"/>
+            <CheckBox Content="Sound" IsChecked="{Binding SoundsOn}" VerticalAlignment="Center"/>
+            <Slider Value="{Binding Volume}" Minimum="0" Maximum="100" Width="80" VerticalAlignment="Center"
+                    IsEnabled="{Binding SoundsOn}" ToolTip.Tip="Volume"/>
+          </StackPanel>
+        </StackPanel>
+
+        <!-- Scene settings beside the preview. -->
+        <ScrollViewer Grid.Column="2" MinWidth="230" Margin="10,0,0,0" IsVisible="{Binding HasPreview}"
+                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel x:Name="SceneOptions" Spacing="6">
+            <TextBlock Text="Scene" FontWeight="SemiBold"/>
+            <CheckBox Content="Performed by enemy" IsChecked="{Binding AttackerIsEnemy}"/>
+            <CheckBox Content="Second animation" IsChecked="{Binding SecondTurnVariant}" IsVisible="{Binding HasTurnCheck}"/>
+            <CheckBox Content="Contest" IsChecked="{Binding Contest}" IsVisible="{Binding HasContestCheck}"
+                      ToolTip.Tip="Plays the contest branch"/>
+            <StackPanel Spacing="6" IsVisible="{Binding HasWeatherCheck}">
+              <TextBlock Text="Weather" FontSize="12"/>
+              <ComboBox ItemsSource="{Binding WeatherNames}" SelectedIndex="{Binding WeatherIndex}" HorizontalAlignment="Stretch"/>
+            </StackPanel>
+            <TextBlock Text="Backdrop" FontSize="12"/>
+            <ComboBox ItemsSource="{Binding BackgroundOptions}" SelectedIndex="{Binding BackgroundIndex}"
+                      HorizontalAlignment="Stretch" MaxDropDownHeight="360"/>
+            <TextBlock Text="Message box" FontSize="12"/>
+            <ComboBox ItemsSource="{Binding MessageBoxNames}" SelectedIndex="{Binding MessageBoxIndex}"
+                      HorizontalAlignment="Stretch" MaxDropDownHeight="360"/>
+            <TextBlock Text="Terrain" FontSize="12"/>
+            <ComboBox ItemsSource="{Binding TerrainOptions}" SelectedIndex="{Binding TerrainIndex}"
+                      HorizontalAlignment="Stretch" MaxDropDownHeight="360"/>
+            <Button Content="HP bars" HorizontalAlignment="Left">
+              <Button.Flyout>
+                <Flyout>
+                  <StackPanel Spacing="6" Width="190">
+                    <TextBlock Text="HP bars" FontWeight="SemiBold"/>
+                    <TextBlock Text="Pokémon" FontSize="12"/>
+                    <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding GaugeSpeciesIndex}"
+                              HorizontalAlignment="Stretch" MaxDropDownHeight="360"/>
+                    <TextBlock Text="Level" FontSize="12"/>
+                    <NumericUpDown Value="{Binding GaugeLevel}" Minimum="1" Maximum="100" Increment="1" FormatString="0"/>
+                    <TextBlock Text="Max HP" FontSize="12"/>
+                    <NumericUpDown Value="{Binding GaugeMaxHp}" Minimum="1" Maximum="999" Increment="1" FormatString="0"/>
+                    <TextBlock Text="HP %" FontSize="12"/>
+                    <Slider Value="{Binding GaugeHpPercent}" Minimum="0" Maximum="100"/>
+                    <TextBlock Text="{Binding GaugeHpText, StringFormat='{}{0} HP'}" FontSize="12" HorizontalAlignment="Right"/>
+                  </StackPanel>
+                </Flyout>
+              </Button.Flyout>
+            </Button>
+            <Button x:Name="EditParticlesButton" Content="Edit particles" controls:Icon.Key="pencil" Click="EditParticles_Click"/>
+            <TextBlock Text="{Binding CellAnimNote}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+            <TextBlock Text="{Binding PreviewNotes}" IsVisible="{Binding HasPreviewNotes}" TextWrapping="Wrap" FontSize="12"
+                       Foreground="{DynamicResource Editor.Subtle}"/>
+          </StackPanel>
+        </ScrollViewer>
       </Grid>
 
-      <!-- Scrolls, since the preview, controls and storyboard can be taller than the window. -->
-      <GridSplitter Grid.Column="1" Width="6" Background="Transparent" ResizeDirection="Columns"
-                    HorizontalAlignment="Stretch"/>
-      <ScrollViewer x:Name="PreviewPanel" Grid.Column="2" IsVisible="{Binding ShowStoryboard}" Margin="10,0,0,0"
-                    VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-      <Grid MinHeight="420" RowDefinitions="Auto,Auto,Auto,Auto,*">
-        <StackPanel Grid.Row="0" Spacing="1" Margin="0,0,0,4" IsVisible="{Binding HasPreview}">
-          <TextBlock Text="Animation preview" FontWeight="SemiBold"/>
+      <GridSplitter Grid.Row="1" Height="6" Background="Transparent" ResizeDirection="Rows" HorizontalAlignment="Stretch"/>
+      <!-- Move animations show their recorded run; other scripts keep the written summary. -->
+      <DockPanel Grid.Row="2" IsVisible="{Binding HasTimeline}">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,4,0,4">
+          <TextBlock Text="Timeline" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          <TextBlock Text="{Binding FrameText}" FontSize="12" MinWidth="150" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+          <TextBlock Text="Zoom" FontSize="12" VerticalAlignment="Center"/>
+          <Slider x:Name="TimelineZoom" Minimum="1" Maximum="20" Value="6" Width="140" VerticalAlignment="Center"
+                  ToolTip.Tip="Ctrl+wheel"/>
         </StackPanel>
-        <Border Grid.Row="1" Height="225" CornerRadius="4"
-                BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" IsVisible="{Binding HasPreview}">
-          <Viewbox Stretch="Uniform">
-            <!-- Plays over the battle scene; the RenderTransform carries the screen shake. -->
-            <Canvas Width="256" Height="192" ClipToBounds="True" Background="Black" RenderTransformOrigin="0.5,0.5">
-              <Canvas.RenderTransform>
-                <TranslateTransform X="{Binding ShakeX}" Y="{Binding ShakeY}"/>
-              </Canvas.RenderTransform>
-              <Image Source="{Binding SceneComposite}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192" Stretch="Fill" RenderOptions.BitmapInterpolationMode="None"/>
-              <Image Source="{Binding CellPreview}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192" Stretch="Fill"
-                     RenderOptions.BitmapInterpolationMode="None" Opacity="{Binding CellOpacity}" RenderTransformOrigin="{Binding CellOrigin}">
-                <Image.RenderTransform>
-                  <TransformGroup>
-                    <ScaleTransform ScaleX="{Binding CellScaleX}" ScaleY="{Binding CellScaleY}"/>
-                    <TranslateTransform X="{Binding CellOffsetX}" Y="{Binding CellOffsetY}"/>
-                  </TransformGroup>
-                </Image.RenderTransform>
-              </Image>
-              <Image Source="{Binding ParticlePreview}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192" Stretch="Fill" RenderOptions.BitmapInterpolationMode="None"/>
-              <Image Source="{Binding GaugeEnemyImage}"  Canvas.Left="-70" Canvas.Top="-92" Width="256" Height="256"
-                     IsVisible="{Binding RealGaugesVisible}" RenderOptions.BitmapInterpolationMode="None"/>
-              <Image Source="{Binding GaugePlayerImage}" Canvas.Left="{Binding PlayerGaugeImageLeft}" Canvas.Top="-12" Width="256" Height="256"
-                     IsVisible="{Binding RealGaugesVisible}" RenderOptions.BitmapInterpolationMode="None"/>
-              <Image Source="{x:Static views:BattleSceneControl.HealthOpponentAsset}" Canvas.Left="0"   Canvas.Top="18"  IsVisible="{Binding PlaceholderGaugesVisible}"/>
-              <Image Source="{x:Static views:BattleSceneControl.HealthYouAsset}"      Canvas.Left="129" Canvas.Top="95"  IsVisible="{Binding PlaceholderGaugesVisible}"/>
-              <Canvas IsVisible="{Binding GaugesVisible}">
-                <!-- Measured from Platinum battles: the frame has the HP label, so the fill, the groove rows and the text go on top. -->
-                <!-- enemy (upper-left) -->
-                <TextBlock Canvas.Left="3"  Canvas.Top="24" Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
-                <TextBlock Canvas.Left="78" Canvas.Top="24" Text="{Binding GaugeLevelText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
-                <Rectangle Canvas.Left="50" Canvas.Top="42" Width="48" Height="1" Fill="#FBFBFB"/>
-                <Rectangle Canvas.Left="50" Canvas.Top="43" Width="48" Height="2" Fill="#000000"/>
-                <Rectangle Canvas.Left="50" Canvas.Top="43" Width="{Binding GaugeHpBarWidth}" Height="2" Fill="{Binding GaugeHpBrush}"/>
-                <Rectangle Canvas.Left="50" Canvas.Top="45" Width="48" Height="1" Fill="#FBFBFB"/>
-                <Rectangle Canvas.Left="50" Canvas.Top="46" Width="48" Height="1" Fill="#000000"/>
-                <!-- player (lower-right) -->
-                <TextBlock Canvas.Left="149" Canvas.Top="102" Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
-                <TextBlock Canvas.Left="210" Canvas.Top="102" Text="{Binding GaugeLevelText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
-                <Rectangle Canvas.Left="{Binding PlayerHealthFillLeft}" Canvas.Top="118" Width="48" Height="1" Fill="#FBFBFB"/>
-                <Rectangle Canvas.Left="{Binding PlayerHealthFillLeft}" Canvas.Top="119" Width="48" Height="2" Fill="#000000"/>
-                <Rectangle Canvas.Left="{Binding PlayerHealthFillLeft}" Canvas.Top="119" Width="{Binding GaugeHpBarWidth}" Height="2" Fill="{Binding GaugeHpBrush}"/>
-                <Rectangle Canvas.Left="{Binding PlayerHealthFillLeft}" Canvas.Top="121" Width="48" Height="1" Fill="#FBFBFB"/>
-                <Rectangle Canvas.Left="{Binding PlayerHealthFillLeft}" Canvas.Top="122" Width="48" Height="1" Fill="#000000"/>
-                <!-- Only your own bar shows HP numbers. -->
-                <TextBlock Canvas.Left="210" Canvas.Top="121" Text="{Binding GaugeHpText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
-              </Canvas>
-              <Image Source="{x:Static views:BattleSceneControl.TextBarAsset}"        Canvas.Left="0"   Canvas.Top="144"/>
-            </Canvas>
-          </Viewbox>
+        <Border Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3">
+          <ScrollViewer x:Name="TimelineScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <viewcontrols:MoveTimelineView x:Name="Timeline" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                       ToolTip.Tip="Click a bar to edit it"/>
+          </ScrollViewer>
         </Border>
-        <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="0,4,0,4">
-          <Button controls:Icon.Key="{Binding CellPlayButtonIcon}" controls:Icon.Text="{Binding CellPlayButtonText}" Click="PlayCell_Click" IsVisible="{Binding HasPreview}" Margin="0,2,6,2"/>
-          <Button x:Name="EditParticlesButton" Content="Edit particles" controls:Icon.Key="pencil" Click="EditParticles_Click" IsVisible="{Binding HasPreview}" Margin="0,2,6,2"
-                  ToolTip.Tip="This move's particle files"/>
-          <CheckBox Content="Performed by enemy" IsChecked="{Binding AttackerIsEnemy}"
-                    IsVisible="{Binding HasPreview}" VerticalAlignment="Center" Margin="0,2,6,2"
-                    ToolTip.Tip="Play the move as the opponent uses it."/>
-          <CheckBox Content="Second animation" IsChecked="{Binding SecondTurnVariant}"
-                    IsVisible="{Binding HasTurnCheck}" VerticalAlignment="Center" Margin="0,2,6,2"
-                    ToolTip.Tip="The game alternates two animations for this move by turn."/>
-          <TextBlock Text="Backdrop" VerticalAlignment="Center" IsVisible="{Binding HasPreview}" FontSize="12" Margin="0,2,4,2"/>
-          <ComboBox ItemsSource="{Binding BackgroundOptions}" SelectedIndex="{Binding BackgroundIndex}"
-                    IsVisible="{Binding HasPreview}" VerticalAlignment="Center" MinWidth="150" MaxDropDownHeight="360" Margin="0,2,6,2"
-                    ToolTip.Tip="The battle backdrop behind the platforms."/>
-          <Button Content="HP bars" IsVisible="{Binding HasPreview}" VerticalAlignment="Center" Margin="0,2,6,2"
-                  ToolTip.Tip="Set the Pokémon, level and HP the HP bars show.">
-            <Button.Flyout>
-              <Flyout>
-                <StackPanel Spacing="6" Width="190">
-                  <TextBlock Text="HP bars" FontWeight="SemiBold"/>
-                  <TextBlock Text="Pokémon to display" FontSize="12"/>
-                  <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding GaugeSpeciesIndex}"
-                            HorizontalAlignment="Stretch" MaxDropDownHeight="360"
-                            ToolTip.Tip="Shows this Pokémon's battle sprites in the preview and its name on the HP bar."/>
-                  <TextBlock Text="Level" FontSize="12"/>
-                  <NumericUpDown Value="{Binding GaugeLevel}" Minimum="1" Maximum="100" Increment="1" FormatString="0"/>
-                  <TextBlock Text="Max HP" FontSize="12"/>
-                  <NumericUpDown Value="{Binding GaugeMaxHp}" Minimum="1" Maximum="999" Increment="1" FormatString="0"/>
-                  <TextBlock Text="HP %" FontSize="12"/>
-                  <Slider Value="{Binding GaugeHpPercent}" Minimum="0" Maximum="100"/>
-                  <TextBlock Text="{Binding GaugeHpText, StringFormat='{}{0} HP'}" FontSize="12" HorizontalAlignment="Right"/>
-                </StackPanel>
-              </Flyout>
-            </Button.Flyout>
-          </Button>
-          <TextBlock Text="Terrain" VerticalAlignment="Center" IsVisible="{Binding HasPreview}" FontSize="12" Margin="0,2,4,2"/>
-          <ComboBox ItemsSource="{Binding TerrainOptions}" SelectedIndex="{Binding TerrainIndex}"
-                    IsVisible="{Binding HasPreview}" VerticalAlignment="Center" MinWidth="130" MaxDropDownHeight="360" Margin="0,2,6,2"
-                    ToolTip.Tip="The platforms the Pokémon stand on."/>
-          <TextBlock Text="{Binding CellAnimNote}" VerticalAlignment="Center" TextWrapping="Wrap"
-                     FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
-          <TextBlock Text="{Binding PreviewNotes}" IsVisible="{Binding HasPreviewNotes}"
-                     VerticalAlignment="Center" TextWrapping="Wrap" FontSize="12" Margin="8,2,0,2"
-                     Foreground="{DynamicResource Editor.Subtle}"
-                     ToolTip.Tip="Parts of this move the preview can't draw. The move itself is unchanged."/>
-        </WrapPanel>
-
-        <TextBlock Grid.Row="3" Text="{Binding StoryboardTitle}" FontWeight="SemiBold" Margin="0,6,0,4"/>
-        <Border Grid.Row="4" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3">
+      </DockPanel>
+      <DockPanel Grid.Row="2" IsVisible="{Binding ShowStoryboardText}">
+        <TextBlock DockPanel.Dock="Top" Text="{Binding StoryboardTitle}" FontWeight="SemiBold" Margin="0,6,0,4"/>
+        <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3">
           <ScrollViewer>
             <StackPanel>
               <TextBox Text="{Binding Storyboard}" IsReadOnly="True" AcceptsReturn="True"
@@ -322,8 +361,7 @@
             </StackPanel>
           </ScrollViewer>
         </Border>
-      </Grid>
-      </ScrollViewer>
+      </DockPanel>
     </Grid>
   </Grid>
   </DockPanel>

@@ -27,6 +27,8 @@ namespace DSPRE.Avalonia.Data
             public int FrameAnim = -1;
             /// <summary>League: the fire and bar particle files, or null where the game has none.</summary>
             public int[] Particles;
+            /// <summary>How many emitters each burst starts, as the game's code sets them; null for the game's 3 and 4.</summary>
+            public int[] ParticleEmitters;
             public int FramePalette = -1, NamePalette = -1, EndX = 214, ClashFrames = 32;
             /// <summary>HGSS Rocket executive backdrop: palette, tiles, then the streaks, outlined R and filled R screens.</summary>
             public int[] Backdrop;
@@ -341,7 +343,7 @@ namespace DSPRE.Avalonia.Data
             byte[] rgba = FieldGrid();
             if (f >= FlashesEnd(Flashes(s))) Brightness(rgba, -15);
             // The bars start on the flash-in tick and sit behind the portraits: the 3D layer drops to the sprites' priority.
-            if (s.Particles?.Length == 2 && f >= t.Reveal) DrawParticles(rgba, _bars, s.Particles[1], BarEmitters, f - t.Reveal + 1);
+            if (s.Particles?.Length == 2 && f >= t.Reveal) DrawParticles(rgba, _bars, s.Particles[1], Emitters(s, 1, BarEmitters), f - t.Reveal + 1);
 
             int k = f - t.In;
             double px = AddMove(-128, 56, 80, 6, k), ox = AddMove(384, 200, -80, 6, k), py = 92, oy = 92;
@@ -376,7 +378,7 @@ namespace DSPRE.Avalonia.Data
             }
             // The fire starts a tick before the VS mark and draws between the portraits and the finished letters.
             VsMark(s, s.Vs, rgba, 128, 96, f, t.Vs, letters: false);
-            if (s.Particles?.Length == 2 && f >= t.Vs - 1 && f < t.FlashOut) DrawParticles(rgba, _fire, s.Particles[0], FireEmitters, f - t.Vs + 2);
+            if (s.Particles?.Length == 2 && f >= t.Vs - 1 && f < t.FlashOut) DrawParticles(rgba, _fire, s.Particles[0], Emitters(s, 0, FireEmitters), f - t.Vs + 2);
             VsMark(s, s.Vs, rgba, 128, 96, f, t.Vs, copies: false);
             if (f >= t.Vs && f < t.Leave) Name(s, rgba, 168, 105);
 

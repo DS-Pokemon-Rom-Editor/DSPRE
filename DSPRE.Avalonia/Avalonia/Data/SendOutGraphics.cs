@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using DSPRE.Avalonia.BattleAnim.Particles;
 using DSPRE.HgEngine;
 using DSPRE.ROMFiles;
 using AvaBitmap = global::Avalonia.Media.Imaging.Bitmap;
@@ -57,8 +58,9 @@ namespace DSPRE.Avalonia.Data
         private readonly Dictionary<int, (WeCellAnimRenderer Cells, CellSequence[] Seqs)> _balls = new();
         private readonly Dictionary<(int Ball, int Cell), AvaBitmap> _ballCells = new();
         private readonly ScriptNarc _burstNarc = new ScriptNarc(DirNames.BallParticles);
-        private readonly Dictionary<int, SpaArchive> _bursts = new();
-        private readonly Random _sealRandom = new();
+        private readonly Dictionary<int, (byte[] Bytes, SpaArchive Arc)> _bursts = new();
+        // One generator for every burst; the game never reseeds it.
+        private readonly SplRandom _rng = new SplRandom(BattleAnimPlayer.DefaultSeed);
 
         public CellSequence[] BallSequences(int ball) => LoadBall(ball).Seqs;
 
@@ -83,57 +85,55 @@ namespace DSPRE.Avalonia.Data
             return loaded;
         }
 
-        // On the ground below each Pokémon; the enemy's sits further back, so it draws smaller.
-        private const double EnemyBurstX = 193.0, EnemyBurstY = 85.1, PlayerBurstX = 57.9, PlayerBurstY = 149.6;
-        private const double EnemyDepth = -5248.0 / 172.0, PlayerDepth = 64.0 / 172.0;
+        // On the ground below each Pokemon: the battler's orthographic world position less this lift, in the game's
+        // 172 units per pixel. Index 0 is the player, 1 the enemy.
+        private static readonly (int X, int Y)[] BurstLift = { (10 + 0, 32 - 16), (10 - 15, 32 - 25) };
+        private const int UnitsPerPixel = 172;
 
-        /// <summary>Adds every emitter of a ball's open burst to <paramref name="into"/>. False when the ROM has none.</summary>
-        public bool AddBurst(SpaParticlePreview into, int ball, bool enemySide)
+        private static (int X, int Y, int Z) BurstPos(bool enemySide)
         {
-            int entry = BurstEntry(ball);
-            if (!_bursts.TryGetValue(entry, out SpaArchive arc))
-            {
-                byte[] bytes = _burstNarc.Available ? _burstNarc.Get(entry) : null;
-                arc = bytes != null ? SpaArchive.Parse(bytes) : null;
-                _bursts[entry] = arc;
-            }
-            if (arc == null || arc.Emitters.Count == 0) return false;
+            (int x, int y, int z) = BattleParticles.BattlerTypeWorldPos(!enemySide, contest: false, ortho: true);
+            (int X, int Y) lift = BurstLift[enemySide ? 1 : 0];
+            return (x - lift.X * UnitsPerPixel, y - lift.Y * UnitsPerPixel, z);
+        }
 
-            double baseX = enemySide ? EnemyBurstX : PlayerBurstX, baseY = enemySide ? EnemyBurstY : PlayerBurstY;
-            double depth = enemySide ? EnemyDepth : PlayerDepth;
-            foreach (SpaEmitter em in arc.Emitters)
-            {
-                SpaTexture tex = em.TexNo >= 0 && em.TexNo < arc.Textures.Count ? arc.Textures[em.TexNo] : null;
-                double cx = baseX + em.PosX, cy = baseY - em.PosY;
-                SpaSimulator sim = new SpaSimulator(em, em.AxisX, em.AxisY) { AnchorX = cx, AnchorY = cy };
-                into.AddLayer(new SpaParticlePreview.Layer(sim, arc.Textures, tex, cx, cy, em.DrawType,
-                    em.RepeatS, em.RepeatT, em.Aspect, em.DbbScale, em.OffsetX, em.OffsetY,
-                    baseZ: depth + em.PosZ, viewReversed: false, flipS: em.FlipS, flipT: em.FlipT, em: em));
-            }
+        private (byte[] Bytes, SpaArchive Arc) Burst(int entry)
+        {
+            if (_bursts.TryGetValue(entry, out (byte[] Bytes, SpaArchive Arc) burst)) return burst;
+            byte[] bytes = _burstNarc.Available ? _burstNarc.Get(entry) : null;
+            SpaArchive arc = null;
+            try { arc = bytes != null ? SpaArchive.Parse(bytes) : null; }
+            catch (Exception ex) { AppLogger.WarnOnce("SendOutGraphics.Burst", ex); }
+            burst = (arc != null ? bytes : null, arc);
+            _bursts[entry] = burst;
+            return burst;
+        }
+
+        /// <summary>Starts every emitter of a ball's open burst in <paramref name="into"/>. False when the ROM has none.</summary>
+        public bool AddBurst(SplScene into, int ball, bool enemySide)
+        {
+            (byte[] bytes, SpaArchive arc) = Burst(BurstEntry(ball));
+            if (arc == null || arc.Emitters.Count == 0) return false;
+            SplManager mgr = into.Add(bytes, _rng, orthographic: true, arc.Textures);
+            if (mgr == null) return false;
+            (int x, int y, int z) = BurstPos(enemySide);
+            for (int i = 0; i < mgr.Resources.Count; i++) mgr.CreateEmitter(i, e => e.SetPos(x, y, z));
             return true;
         }
 
-        /// <summary>Adds a placed seal's burst, the first emitter of its particle file, at the seal's spot. False when there is none.</summary>
-        public bool AddSeal(SpaParticlePreview into, BallSeal seal, int x, int y, bool enemySide)
+        /// <summary>Starts a placed seal's burst, the first emitter of its particle file, at the seal's spot. False when
+        /// there is none.</summary>
+        public bool AddSeal(SplScene into, BallSeal seal, int x, int y, bool enemySide)
         {
             if (seal == null) return false;
-            if (!_bursts.TryGetValue(seal.Particle, out SpaArchive arc))
-            {
-                byte[] bytes = _burstNarc.Available ? _burstNarc.Get(seal.Particle) : null;
-                arc = bytes != null ? SpaArchive.Parse(bytes) : null;
-                _bursts[seal.Particle] = arc;
-            }
+            (byte[] bytes, SpaArchive arc) = Burst(seal.Particle);
             if (arc == null || arc.Emitters.Count == 0) return false;
-
-            SpaEmitter em = arc.Emitters[0];
-            (double baseX, double baseY) = SealEffect.ScreenPosition(x, y, enemySide);
-            SpaTexture tex = em.TexNo >= 0 && em.TexNo < arc.Textures.Count ? arc.Textures[em.TexNo] : null;
-            double cx = baseX + em.PosX, cy = baseY - em.PosY;
-            // One shared generator, so no two bursts repeat.
-            SpaSimulator sim = new SpaSimulator(em, em.AxisX, em.AxisY, seed: _sealRandom.Next()) { AnchorX = cx, AnchorY = cy };
-            into.AddLayer(new SpaParticlePreview.Layer(sim, arc.Textures, tex, cx, cy, em.DrawType,
-                em.RepeatS, em.RepeatT, em.Aspect, em.DbbScale, em.OffsetX, em.OffsetY,
-                baseZ: em.PosZ, viewReversed: false, flipS: em.FlipS, flipT: em.FlipT, em: em, orthographic: true));
+            SplManager mgr = into.Add(bytes, _rng, orthographic: true, arc.Textures);
+            if (mgr == null) return false;
+            (int px, int py, int pz) = BurstPos(enemySide);
+            px += (x - BallCapsule.BoardCentreX) * UnitsPerPixel;
+            py += (BallCapsule.BoardCentreY - y + 30) * UnitsPerPixel;
+            mgr.CreateEmitter(0, e => e.SetPos(px, py, pz));
             return true;
         }
 
@@ -468,8 +468,8 @@ namespace DSPRE.Avalonia.Data
                 try
                 {
                     SdatArchive sdat = SoundArchive.Load();
-                    short[] pcm = sdat != null ? SseqPlayer.Render(sdat, seqId, 32000, MusicSeconds + MusicLeadInSeconds) : null;
-                    int skip = (int)(MusicLeadInSeconds * 32000) * 2;
+                    short[] pcm = sdat != null ? SseqPlayer.Render(sdat, seqId, AudioOutput.RenderRate, MusicSeconds + MusicLeadInSeconds) : null;
+                    int skip = (int)(MusicLeadInSeconds * AudioOutput.RenderRate) * 2;
                     return pcm == null || pcm.Length <= skip ? pcm : pcm[skip..];
                 }
                 catch (Exception ex) { AppLogger.WarnOnce("SendOutGraphics.MusicAsync", ex); return null; }
@@ -479,7 +479,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Starts rendered music and returns a handle for <see cref="StopMusic"/>.</summary>
         public static object StartMusic(short[] pcm)
         {
-            try { return pcm != null && pcm.Length > 0 ? AudioOutput.Current.Start(pcm, 32000) : null; } catch (Exception ex) { AppLogger.WarnOnce("SendOutGraphics.StartMusic", ex); return null; }
+            try { return pcm != null && pcm.Length > 0 ? AudioOutput.Current.Start(pcm, AudioOutput.RenderRate) : null; } catch (Exception ex) { AppLogger.WarnOnce("SendOutGraphics.StartMusic", ex); return null; }
         }
 
         public static void StopMusic(object handle)
@@ -503,7 +503,8 @@ namespace DSPRE.Avalonia.Data
 
         private static void Start(short[] pcm)
         {
-            try { if (pcm != null && pcm.Length > 0) AudioOutput.Current.Play(pcm, 32000); } catch { }   // a preview that can't play stays silent
+            try { if (pcm != null && pcm.Length > 0) AudioOutput.Current.Play(pcm, AudioOutput.RenderRate); }
+            catch (Exception ex) { AppLogger.WarnOnce("SendOutGraphics.Start", ex); }
         }
     }
 }

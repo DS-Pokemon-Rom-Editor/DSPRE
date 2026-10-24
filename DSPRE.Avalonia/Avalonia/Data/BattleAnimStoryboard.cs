@@ -34,7 +34,7 @@ namespace DSPRE.Avalonia.Data
             switch (name)
             {
                 case "Delay": { int n = a.Length > 0 ? a[0] : 0; (string, string) s = ("wait", $"Wait {Plural.Of(n, "frame")}"); frame += n < 0 ? 0 : n; return s; }
-                case "WaitForAnimTasks": return ("wait", "Wait for the current action to finish");
+                case "WaitForAnimTasks": return ("wait", "Wait for effects");
                 case "End": return ("stop", "End");
 
                 case "LoadParticleSystem":
@@ -42,12 +42,12 @@ namespace DSPRE.Avalonia.Data
                 case "CreateEmitter":
                 case "CreateEmitterEx":
                 case "CreateEmitterForMove":
-                case "CreateEmitterForFriendlyFire": return ("particle", $"Start emitter {Arg(1)} from slot {Arg(0)}");
+                case "CreateEmitterForFriendlyFire": return ("particle", $"Emitter {Arg(1)} from slot {Arg(0)}");
                 case "WaitForAllEmitters": return ("particle", "Wait for the particles to finish");
                 case "UnloadParticleSystem": return ("particle", $"Stop the particles in slot {Arg(0)}");
 
-                case "CallFunc":
-                case "Nop11": return ("gear", $"Run built-in effect {Hex(0)}");
+                case "CallFunc": return ("gear", BattleAnimScriptDisplay.RoutineName(a.Length > 0 ? a[0] : -1));
+                case "Nop11": return ("gear", $"Cell routine {Hex(0)}");
                 case "Nop3": return ("gear", $"Background sound {Hex(0)}");
 
                 case "PlaySoundEffect":
@@ -62,7 +62,7 @@ namespace DSPRE.Avalonia.Data
 
                 case "SetBG0BG1AlphaBlending": return ("blend", $"Set blending to {Arg(0)} and {Arg(1)}");
                 case "SetDefaultAlphaBlending": return ("blend", "Reset blending");
-                case "Nop2": return ("blend", "Pick the layers that blend");
+                case "Nop2": return ("blend", "Blend layers");
 
                 case "SwitchBg":
                 case "SwitchBgAnimated":
@@ -78,7 +78,7 @@ namespace DSPRE.Avalonia.Data
                 case "FlashScreen": return ("flash", "Flash the screen");
 
                 case "Call": return ("right", $"Run subroutine {Arg(0)}");
-                case "Return": return ("left", "Back from the subroutine");
+                case "Return": return ("left", "Return");
 
                 default:
                     string args = a.Length == 0 ? "" : " " + string.Join(", ", a);

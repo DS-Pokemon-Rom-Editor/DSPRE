@@ -1,9 +1,13 @@
 using System.Collections.Generic;
 using System.ComponentModel;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using Avalonia.Threading;
 using DSPRE.Avalonia.ViewModels;
+using DSPRE.Avalonia.Views.Controls;
 
 namespace DSPRE.Avalonia.Views.Battle
 {
@@ -17,12 +21,41 @@ namespace DSPRE.Avalonia.Views.Battle
         public BattleScriptEditorView()
         {
             InitializeComponent();
-            Loaded += (_, _) => SetupEditor();
+            Loaded += (_, _) => { SetupEditor(); FitPreviewScale(); };
+            Timeline.CommandPicked += cmd => VM?.PickCommand(cmd);
+            Timeline.SeekRequested += frame => VM?.SeekTo(frame);
+            Timeline.FindKnob = (item, movesBar) => VM?.FindKnob(item, movesBar);
+            Timeline.KnobDropped += (knob, value) => VM?.SetKnob(knob, value);
+            AddHandler(KeyDownEvent, OnTransportKey, RoutingStrategies.Tunnel);
+            EditorArea.SizeChanged += (_, e) => { if (e.HeightChanged) FitTimelineHeight(); };
+            TimelineZoom.PropertyChanged += (_, e) => { if (e.Property == Slider.ValueProperty) Timeline.FrameWidth = TimelineZoom.Value; };
+            Unloaded += (_, _) => { if (_scaleSource != null) _scaleSource.ScalingChanged -= OnScalingChanged; _scaleSource = null; };
             DataContextChanged += (_, _) => HookVm();
             NameRefresh.Bind(this, () => VM?.RefreshNames());
         }
 
         private BattleScriptEditorViewModel VM => DataContext as BattleScriptEditorViewModel;
+
+        private TopLevel _scaleSource;
+
+        // Twice the game's size in screen pixels, rounded to whole device pixels, so every game pixel is the same size.
+        private void FitPreviewScale()
+        {
+            TopLevel top = TopLevel.GetTopLevel(this);
+            if (top == null) return;
+            if (!ReferenceEquals(_scaleSource, top))
+            {
+                if (_scaleSource != null) _scaleSource.ScalingChanged -= OnScalingChanged;
+                _scaleSource = top;
+                top.ScalingChanged += OnScalingChanged;
+            }
+            double scaling = top.RenderScaling > 0 ? top.RenderScaling : 1;
+            int devicePixels = System.Math.Max(1, (int)System.Math.Round(2 * scaling, System.MidpointRounding.AwayFromZero));
+            double scale = devicePixels / scaling;
+            PreviewTransform.LayoutTransform = new global::Avalonia.Media.ScaleTransform(scale, scale);
+        }
+
+        private void OnScalingChanged(object sender, System.EventArgs e) => FitPreviewScale();
 
         private void EditParticles_Click(object sender, RoutedEventArgs e)
         {
@@ -71,6 +104,8 @@ namespace DSPRE.Avalonia.Views.Battle
             _hookedVm = vm;
             if (vm != null) vm.PropertyChanged += OnVmChanged;
             if (_editorReady) { PushTextToEditor(); RefreshSquiggles(); }
+            PushTimeline();
+            FitColumns();
         }
 
         private void OnVmChanged(object sender, PropertyChangedEventArgs e)
@@ -79,7 +114,52 @@ namespace DSPRE.Avalonia.Views.Battle
             {
                 case nameof(BattleScriptEditorViewModel.CommandsText): PushTextToEditor(); break;
                 case nameof(BattleScriptEditorViewModel.TextErrors): RefreshSquiggles(); break;
+                case nameof(BattleScriptEditorViewModel.Timeline): PushTimeline(); break;
+                case nameof(BattleScriptEditorViewModel.HasPreview): FitColumns(); break;
+                case nameof(BattleScriptEditorViewModel.PreviewFrame): Timeline.Playhead = VM.PreviewFrame; FollowPlayhead(); break;
+                case nameof(BattleScriptEditorViewModel.PickedCommand):
+                    Timeline.SelectedCommand = VM.PickedCommand;
+                    // The card opens on the next layout pass, so bring it into sight after that.
+                    Dispatcher.UIThread.Post(() => CardList.ContainerFromIndex(VM.PickedCommand)?.BringIntoView(), DispatcherPriority.Background);
+                    break;
             }
+        }
+
+        // Keeps the playhead in sight when the timeline is zoomed wider than its box.
+        private void FollowPlayhead()
+        {
+            if (VM == null || VM.PreviewFrame < 0) return;
+            double x = Timeline.XOf(VM.PreviewFrame);
+            double left = TimelineScroll.Offset.X, width = TimelineScroll.Viewport.Width;
+            if (width <= 0 || (x >= left + MoveTimelineView.Gutter && x <= left + width - 20)) return;
+            TimelineScroll.Offset = new Vector(System.Math.Max(0, x - MoveTimelineView.Gutter - 20), TimelineScroll.Offset.Y);
+        }
+
+        private void PushTimeline()
+        {
+            if (VM == null) return;
+            Timeline.SetBars(VM.Timeline?.Items, VM.Timeline?.TotalPasses ?? 1);
+            Timeline.Playhead = VM.PreviewFrame;
+            FitTimelineHeight();
+        }
+
+        // The timeline gets the height of all its lanes, as far as the preview and its controls leave room; the cards
+        // take the rest.
+        private void FitTimelineHeight()
+        {
+            if (VM?.Timeline == null) return;
+            const double HeaderAndScrollBar = 44, Splitter = 6;
+            PreviewPanel.Measure(Size.Infinity);
+            double room = EditorArea.Bounds.Height > 0 ? EditorArea.Bounds.Height - PreviewPanel.DesiredSize.Height - Splitter : 400;
+            double h = System.Math.Min(Timeline.ContentHeight + HeaderAndScrollBar, room);
+            EditorArea.RowDefinitions[2].Height = new GridLength(System.Math.Max(120, h));
+        }
+
+        private void FitColumns()
+        {
+            bool preview = VM?.HasPreview == true;
+            TopArea.ColumnDefinitions[0].Width = new GridLength(preview ? 3 : 1, GridUnitType.Star);
+            TopArea.ColumnDefinitions[2].Width = preview ? new GridLength(2, GridUnitType.Star) : GridLength.Auto;
         }
 
         private void PushTextToEditor()
@@ -137,5 +217,27 @@ namespace DSPRE.Avalonia.Views.Battle
         private void Down_Click(object sender, RoutedEventArgs e) { ScriptCmdRow r = Row(sender); if (r != null) VM?.MoveCommand(r, 1); }
         private void Remove_Click(object sender, RoutedEventArgs e) { ScriptCmdRow r = Row(sender); if (r != null) VM?.RemoveCommand(r); }
         private void PlayCell_Click(object sender, RoutedEventArgs e) => VM?.ToggleCellPlay();
+        private void StopCell_Click(object sender, RoutedEventArgs e) => VM?.StopPreview();
+        private void FrameBack_Click(object sender, RoutedEventArgs e) => VM?.StepFrame(-1);
+        private void FrameOn_Click(object sender, RoutedEventArgs e) => VM?.StepFrame(1);
+
+        // Transport keys work from the preview and the timeline, not while typing or in a list.
+        private void OnTransportKey(object sender, KeyEventArgs e)
+        {
+            if (VM == null || e.KeyModifiers != KeyModifiers.None || e.Source is not Visual source) return;
+            if (!(PreviewPanel.IsVisualAncestorOf(source) || ReferenceEquals(source, Timeline) || Timeline.IsVisualAncestorOf(source))) return;
+            if (source is ComboBox || source.FindAncestorOfType<ComboBox>() != null) return;
+            if (e.Key == Key.Space && (source is Button || source is CheckBox)) return;
+            switch (e.Key)
+            {
+                case Key.Space: VM.ToggleCellPlay(); break;
+                case Key.Left: VM.StepFrame(-1); break;
+                case Key.Right: VM.StepFrame(1); break;
+                case Key.Home: VM.SeekTo(0); break;
+                case Key.End: VM.SeekToEnd(); break;
+                default: return;
+            }
+            e.Handled = true;
+        }
     }
 }

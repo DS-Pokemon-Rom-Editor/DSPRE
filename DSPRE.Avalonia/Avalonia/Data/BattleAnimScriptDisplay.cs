@@ -37,53 +37,53 @@ namespace DSPRE.Avalonia.Data
         {
             "LoadParticleSystem" or "LoadDebugParticleSystem" or "InitPokemonSpriteManager" or "LoadPokemonSpriteDummyResources"
                 or "InitSpriteManager" or "LoadCharResObj" or "LoadPlttRes"
-                or "LoadCellResObj" or "LoadAnimResObj" => "What it loads",
+                or "LoadCellResObj" or "LoadAnimResObj" => "Loading",
 
             "PlaySoundEffect" or "PlayPannedSoundEffect" or "PanSoundEffects" or "PlayMovingSoundEffectAtkDef" or "PlayLoopedSoundEffect"
                 or "PlayDelayedSoundEffect" or "Nop3" or "StopSoundEffect" or "PlayPokemonCry"
-                or "WaitForPokemonCries" => "What it sounds like",
+                or "WaitForPokemonCries" => "Sound",
 
             "SwitchBg" or "SwitchBgAnimated" or "RestoreBg" or "WaitForBgSwitch"
                 or "WaitForPartialBgSwitch" or "SetBgSwitchVar" or "FlashScreen"
-                or "LoadPokemonSpriteIntoBg" or "RemovePokemonSpriteFromBg" => "What the screen does",
+                or "LoadPokemonSpriteIntoBg" or "RemovePokemonSpriteFromBg" => "Screen",
 
             "AddPokemonSprite" or "RemovePokemonSprite" or "FreePokemonSpriteManager" or "CreatePokemonCopy"
                 or "RemovePokemonCopy" or "FreeSpriteManager" or "UnloadParticleSystem"
-                or "SetPokemonSpriteVisible" => "What it puts back",
+                or "SetPokemonSpriteVisible" => "Clean-up",
 
-            "End" => "Where it ends",
+            "End" => "End",
 
             "Delay" or "WaitForAnimTasks" or "WaitForAllEmitters" or "EndLoop"
-                or "BeginLoop" => "How it is timed",
+                or "BeginLoop" => "Timing",
 
             "JumpByTurn" or "JumpIfBattlerSide" or "Jump" or "JumpIfWeather" or "JumpIfContest"
-                or "JumpIfFriendlyFire" or "Call" or "Return" => "Which version plays",
+                or "JumpIfFriendlyFire" or "Call" or "Return" => "Branches",
 
-            "SetVar" or "ResetVars" => "Settings for the next command",
+            "SetVar" or "ResetVars" => "Settings",
 
-            _ => "What happens",
+            _ => "Effects",
         };
 
         private static string GroupOfCall(int[] args)
         {
-            if (args.Length < 1) return "What happens";
+            if (args.Length < 1) return "Effects";
             BattleAnimFunc r = BattleAnimFuncs.Get(args[0]);
-            if (r == null) return "What happens";
+            if (r == null) return "Effects";
 
             for (int w = 0; w < r.Words.Length && w + 2 < args.Length; w++)
             {
                 string meaning = r.Words[w];
                 if (string.IsNullOrEmpty(meaning) || !meaning.Contains("target flag")) continue;
                 int flag = args[w + 2];
-                if ((flag & BattleAnimTargetFlags.Background) != 0) return "What the screen does";
-                if ((flag & BattleAnimTargetFlags.Attacker) != 0 && (flag & BattleAnimTargetFlags.Defender) == 0) return "What the attacker does";
-                return "What hits the target";
+                if ((flag & BattleAnimTargetFlags.Background) != 0) return "Screen";
+                if ((flag & BattleAnimTargetFlags.Attacker) != 0 && (flag & BattleAnimTargetFlags.Defender) == 0) return "Attacker";
+                return "Target";
             }
 
             string sum = r.Summary ?? "";
-            if (sum.Contains("background") || sum.Contains("screen") || sum.Contains("colour")) return "What the screen does";
-            if (sum.Contains("attacker")) return "What the attacker does";
-            return "What happens";
+            if (sum.Contains("background") || sum.Contains("screen") || sum.Contains("colour")) return "Screen";
+            if (sum.Contains("attacker")) return "Attacker";
+            return "Effects";
         }
 
         public static List<BattleAnimLine> Build(IReadOnlyList<WazaSeqCommand> cmds, WazaSeqVersion version,
@@ -168,7 +168,7 @@ namespace DSPRE.Avalonia.Data
             {
                 if (foldAt.TryGetValue(i, out BattleAnimMacros.Folded fold))
                 {
-                    byGroup.Add(("What it loads", FoldLine(fold, 0)));
+                    byGroup.Add(("Loading", FoldLine(fold, 0)));
                     i += fold.Count;
                     continue;
                 }
@@ -188,10 +188,10 @@ namespace DSPRE.Avalonia.Data
 
             string[] order = new[]
             {
-                "What it loads", "Which version plays", "Settings for the next command",
-                "What the attacker does", "What happens", "What hits the target",
-                "What the screen does", "What it sounds like", "How it is timed",
-                "What it puts back", "Where it ends",
+                "Loading", "Branches", "Settings",
+                "Attacker", "Effects", "Target",
+                "Screen", "Sound", "Timing",
+                "Clean-up", "End",
             };
             List<string> groups = byGroup.Select(x => x.group).Distinct()
                                 .OrderBy(g => { int at = Array.IndexOf(order, g); return at < 0 ? order.Length : at; })

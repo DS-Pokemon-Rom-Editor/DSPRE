@@ -10,6 +10,7 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
+using DSPRE.Avalonia.BattleAnim.Particles;
 using DSPRE.Avalonia.Data;
 using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChanges;
 
@@ -105,7 +106,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private readonly bool _orthographic;
         private byte[] _saved;
         private SpaDocument _doc;
-        private SpaParticlePreview _preview;
+        private SplScene _preview;
         private DispatcherTimer _timer;
         private int _restWait;
 
@@ -243,41 +244,32 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         // ── playback ───────────────────────────────────────────────────────────────────────────
 
-        // Where the emitters sit on the 256 by 192 preview.
-        private const double AnchorX = 128, AnchorY = 110;
+        // Where the emitters sit: 14 pixels below the middle of the 256 by 192 preview.
+        private const int AnchorY = -14 * SplScene.FxPerPixel;
 
         public void Replay()
         {
-            _preview = new SpaParticlePreview(256, 192);
+            _preview = new SplScene();
             _restWait = 0;
-            SpaArchive arc;
-            try { arc = _doc.Parse(); }
-            catch (Exception ex) { StatusText = "This file can't be played: " + ex.Message; return; }
-            SplRandom rng = new SplRandom(0x5EED);
-            for (int i = 0; i < arc.Emitters.Count; i++)
+            SplManager mgr = _preview.Add(_doc.ToBytes(), new SplRandom(BattleAnimPlayer.DefaultSeed), _orthographic);
+            if (mgr == null) { StatusText = "This file can't be played."; return; }
+            for (int i = 0; i < mgr.Resources.Count; i++)
             {
                 if (_onlySelected && i != _emitterIndex) continue;
-                SpaEmitter em = arc.Emitters[i];
-                SpaTexture tex = em.TexNo >= 0 && em.TexNo < arc.Textures.Count ? arc.Textures[em.TexNo] : null;
-                double cx = AnchorX + em.PosX, cy = AnchorY - em.PosY;
-                SpaSimulator sim = new SpaSimulator(em, em.AxisX, em.AxisY, rng: rng) { AnchorX = cx, AnchorY = cy };
-                _preview.AddLayer(new SpaParticlePreview.Layer(sim, arc.Textures, tex, cx, cy, em.DrawType,
-                    em.RepeatS, em.RepeatT, em.Aspect, em.DbbScale, em.OffsetX, em.OffsetY,
-                    baseZ: em.PosZ, viewReversed: false, flipS: em.FlipS, flipT: em.FlipT, em: em, orthographic: _orthographic));
+                mgr.CreateEmitter(i, e => e.SetPos(0, AnchorY, 0));
             }
         }
 
         private void Tick()
         {
             if (_preview == null) return;
-            if (!_preview.HasEmitters || _preview.AllFinished)
+            if (!_preview.Active)
             {
                 // A short rest between plays, so the end of an effect can be seen.
                 if (++_restWait >= 20) Replay();
                 return;
             }
-            Frame = _preview.RenderFrame();
-            _preview.Step();
+            Frame = _preview.Step();
         }
 
         public void Stop() => _timer?.Stop();

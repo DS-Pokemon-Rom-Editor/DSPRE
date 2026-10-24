@@ -271,7 +271,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                         PlayerFace = Four(_girl ? s.PlayerFaceGirl : s.PlayerFaceBoy), PlayerColours = ClassColours(_girl ? 1 : 0),
                         Frame = new[] { frame[1], frame[2] }, FrameAnim = frame[3], FramePalette = r.LeagueFrame,
                         ClashFrames = r.LeagueClash, NamePalette = s.NamePalette, Name = _names.Trainer(r.LeagueTrainer),
-                        Particles = RomLocator.VsIntroMotionSites?.LeagueParticles,
+                        Particles = RomLocator.VsIntroMotionSites?.LeagueParticles, ParticleEmitters = _t?.ParticleEmitters,
                     };
                 case Style.GalacticGrunt:
                     return Emblem() is int[] emblem

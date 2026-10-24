@@ -18,8 +18,9 @@ namespace DSPRE.Avalonia.Data
             List<int> list = new List<int>(2);
             if ((flag & SpecificBattler) != 0)
             {
-                if ((flag & Attacker) != 0) list.Add(PlayerSlot);
-                if ((flag & Defender) != 0 && !list.Contains(EnemySlot)) list.Add(EnemySlot);
+                // In a single battle there is no second slot on either side, and the routines fall back to the player's battler.
+                if ((flag & (Attacker | AttackerPartner | DefenderPartner)) != 0) list.Add(PlayerSlot);
+                if ((flag & Defender) != 0) list.Add(EnemySlot);
                 return list;
             }
             if ((flag & AllBattlers) != 0) { list.Add(attacker); if (defender != attacker) list.Add(defender); return list; }

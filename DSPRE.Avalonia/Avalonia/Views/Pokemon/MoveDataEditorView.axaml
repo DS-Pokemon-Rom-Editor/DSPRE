@@ -32,8 +32,8 @@
 		<controls:UndoRedoButtons/>
 		<TextBlock Text="Move" VerticalAlignment="Center"/>
 		<controls:IdNameSelector x:Name="MovePicker" Value="{Binding SelectedMoveIndex}" Maximum="{Binding MaxMoveIndex}" Names="{Binding MoveNames}" Width="380"/>
-		<Button x:Name="EditMoveScriptButton" Content="Edit move script" controls:Icon.Key="pencil" Click="EditMoveScript_Click"
-				ToolTip.Tip="Open this move's battle script. Platinum and HGSS only."/>
+		<Button x:Name="OpenAnimationButton" Content="Open animation" controls:Icon.Key="play" Click="OpenAnimation_Click"/>
+		<Button x:Name="EditMoveScriptButton" Content="Open move script" controls:Icon.Key="pencil" Click="EditMoveScript_Click"/>
 		<Button Content="Export CSV…" controls:Icon.Key="export" Click="Export_Click" Margin="12,0,0,0"/>
 		<Button Content="Import CSV…" controls:Icon.Key="import" Click="Import_Click"/>
 		<Button Content="Add…" controls:Icon.Key="addIcon" Click="AddMove_Click" IsVisible="{Binding ShowHgEngineBanner}"

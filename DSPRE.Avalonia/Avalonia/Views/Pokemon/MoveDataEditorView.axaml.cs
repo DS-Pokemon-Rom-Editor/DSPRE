@@ -12,7 +12,11 @@ namespace DSPRE.Avalonia.Views.Pokemon
         public MoveDataEditorView()
         {
             InitializeComponent();
-            EditMoveScriptButton.IsVisible = BetaEditors.Allows("BattleScriptEditorView");
+            // The battle script editor reads Platinum and HeartGold/SoulSilver only.
+            bool scripts = BetaEditors.Allows("BattleScriptEditorView")
+                && (RomInfo.GameFamily == RomInfo.GameFamilies.Plat || RomInfo.GameFamily == RomInfo.GameFamilies.HGSS);
+            EditMoveScriptButton.IsVisible = scripts;
+            OpenAnimationButton.IsVisible = scripts;
             DataContext = new MoveDataEditorViewModel();
             // VM owns the bound Title (+ "●" marker); chrome adds Ctrl+S + the close guard.
             EditorWindowChrome.Attach(this, ViewModel, title: () => ViewModel.Title);
@@ -69,8 +73,11 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private async void AddMove_Click(object sender, RoutedEventArgs e)
             => await ViewModel.AddNewMoveAsync(this);
 
-        // Opens the battle-script editor at this move's waza_seq entry (archive 0 = Move scripts).
+        // Archive 0 is the move scripts, 3 the move animations; both are numbered by move.
         private void EditMoveScript_Click(object sender, RoutedEventArgs e)
             => DSPRE.Avalonia.AvaloniaEditorLauncher.OpenBattleScriptEditor(0, ViewModel.SelectedMoveIndex);
+
+        private void OpenAnimation_Click(object sender, RoutedEventArgs e)
+            => DSPRE.Avalonia.AvaloniaEditorLauncher.OpenBattleScriptEditor(3, ViewModel.SelectedMoveIndex);
     }
 }

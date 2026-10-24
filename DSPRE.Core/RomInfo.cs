@@ -165,6 +165,9 @@ namespace DSPRE
         /// <summary>The battle message archive; -1 when unknown.</summary>
         public static int BattleStringsTextNumber { get; private set; } = -1;
 
+        /// <summary>"X used Y!" for each move, three lines a move: your Pokémon, a wild one, the foe's. -1 when unknown.</summary>
+        public static int MovesUsedTextNumber { get; private set; } = -1;
+
         /// <summary>The four archives GetStdMsgNaix picks between, in order. Empty when unknown.</summary>
         public static int[] FieldSharedMessageArchives { get; private set; } = System.Array.Empty<int>();
 
@@ -1195,6 +1198,7 @@ namespace DSPRE
             FieldMenuEntriesArchive = -1;
             FieldYesEntry = FieldNoEntry = -1;
             BattleStringsTextNumber = -1;
+            MovesUsedTextNumber = -1;
             FieldSharedMessageArchives = System.Array.Empty<int>();
             SystemFontPaletteEntry = -1;
             FieldTouchMenuTextArchive = -1;
@@ -1202,16 +1206,21 @@ namespace DSPRE
             bool japanese = GameLanguage == GameLanguages.Japanese;
             switch (GameFamily)
             {
+                case GameFamilies.DP:
+                    if (!japanese) MovesUsedTextNumber = 0;
+                    break;
                 case GameFamilies.Plat:
                     FieldMenuEntriesArchive = japanese ? 360 : 361;          // TEXT_BANK_MENU_ENTRIES
                     if (!japanese) { FieldYesEntry = 41; FieldNoEntry = 42; } // MenuEntries_Text_Yes, _No
                     if (!japanese) BattleStringsTextNumber = 368;               // TEXT_BANK_BATTLE_STRINGS
+                    if (!japanese) MovesUsedTextNumber = 0;                     // TEXT_BANK_MOVES_USED_IN_BATTLE
                     SystemFontPaletteEntry = 6;
                     break;
                 case GameFamilies.HGSS:
                     FieldMenuEntriesArchive = japanese ? 189 : 191;
                     if (!japanese) { FieldYesEntry = 42; FieldNoEntry = 43; } // CreateYesNoMenu
                     if (!japanese) BattleStringsTextNumber = 197;
+                    if (!japanese) MovesUsedTextNumber = 3;
                     FieldSharedMessageArchives = japanese ? new[] { 740, 209, 29, 428 } : new[] { 752, 211, 30, 435 };
                     SystemFontPaletteEntry = 7;
                     FieldTouchMenuTextArchive = japanese ? 194 : 196;
@@ -1752,6 +1761,7 @@ namespace DSPRE
             FieldSharedMessageArchives = TextBanks(FieldSharedMessageArchives);
             FieldTouchMenuTextArchive = TextBank(FieldTouchMenuTextArchive);
             BattleStringsTextNumber = TextBank(BattleStringsTextNumber);
+            MovesUsedTextNumber = TextBank(MovesUsedTextNumber);
             AbilityNamesTextNumber = TextBank(AbilityNamesTextNumber);
             PokedexMessagesTextNumber = TextBank(PokedexMessagesTextNumber);
             PokedexEntryTextNumber = TextBank(PokedexEntryTextNumber);

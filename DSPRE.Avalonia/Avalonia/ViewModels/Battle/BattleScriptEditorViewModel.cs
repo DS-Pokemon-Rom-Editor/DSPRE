@@ -6,10 +6,12 @@ using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using DSPRE.Avalonia.BattleAnim;
 using DSPRE.HgEngine;
 using global::Avalonia.Media;
 using global::Avalonia.Media.Imaging;
 using global::Avalonia.Threading;
+using DSPRE.Avalonia.BattleAnim;
 using DSPRE.Avalonia.Data;
 using static DSPRE.RomInfo;
 using Avalonia.Platform;
@@ -73,8 +75,33 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             "Move scripts", "Move effect scripts", "Subroutines", "Move animations", "Animation subroutines",
         };
-        private static readonly string[] ArchiveCodeNames = { "waza_seq", "be_seq", "sub_seq", "we", "we_sub" };
-        public string ArchiveTip => _archiveIndex < 0 ? null : ArchiveCodeNames[_archiveIndex];
+
+        private static readonly string[] AnimationParts = { "Animations", "Subroutines" };
+        private static readonly string[] ScriptParts = { "Move scripts", "Effect scripts", "Subroutines" };
+        private int _lastAnimationArchive = (int)Archive.MoveAnimation, _lastScriptArchive = (int)Archive.MoveScripts;
+
+        /// <summary>0 for move animations, 1 for battle scripts.</summary>
+        public int GroupIndex
+        {
+            get => _archiveIndex < 0 ? 0 : IsAnimation ? 0 : 1;
+            set { if (value != GroupIndex) ArchiveIndex = value == 0 ? _lastAnimationArchive : _lastScriptArchive; }
+        }
+
+        public string[] PartNames => IsAnimation ? AnimationParts : ScriptParts;
+
+        public int PartIndex
+        {
+            get => _archiveIndex < 0 ? 0 : IsAnimation ? _archiveIndex - (int)Archive.MoveAnimation : _archiveIndex;
+            set { if (value >= 0 && value < PartNames.Length) ArchiveIndex = (IsAnimation ? (int)Archive.MoveAnimation : 0) + value; }
+        }
+
+        private void RaiseArchive()
+        {
+            OnPropertyChanged(nameof(ArchiveIndex));
+            OnPropertyChanged(nameof(GroupIndex));
+            OnPropertyChanged(nameof(PartNames));
+            OnPropertyChanged(nameof(PartIndex));
+        }
 
         private int _archiveIndex = -1;
         public int ArchiveIndex
@@ -87,7 +114,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 if (Dirty && _fileIndex >= 0)
                 {
                     int requested = value;
-                    RecordSwitchGuard.SnapBack(() => _archiveIndex, v => _archiveIndex = v, () => OnPropertyChanged(nameof(ArchiveIndex)));
+                    RecordSwitchGuard.SnapBack(() => _archiveIndex, v => _archiveIndex = v, RaiseArchive);
                     _ = SwitchEntryAsync(() => SelectArchive(requested));
                     return;
                 }
@@ -141,47 +168,95 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// if it can't be resolved. Shown next to a "Sound" argument so the ID isn't just a bare number.</summary>
         private string SoundNameOf(int soundId) => LoadSdat()?.SeqNames.TryGetValue(soundId, out string n) == true ? n : null;
 
-        /// <summary>Plays a sound ID and stays silent on failure. Renders off the UI thread so its large
-        /// allocations don't stall the 60 Hz preview.</summary>
         /// <summary>
         /// The cry of whichever Pokemon the preview is showing as the attacker. PlayPokemonCry hands the
         /// games a pan and a volume as well; neither is applied here.
         /// </summary>
         private void PreviewCry()
         {
-            int species = _gaugeSpeciesId;
-            if (species <= 0) return;
-            System.Threading.Tasks.Task.Run(() =>
-            {
-                try
-                {
-                    short[] pcm = SoundArchive.RenderCry(species);
-                    if (pcm != null && pcm.Length > 0) AudioOutput.Current.Play(pcm, 32000);
-                }
-                catch { /* a preview should not put a dialog up because a sound would not play */ }
-            });
+            short[] pcm = AtVolume(CryPcm());
+            if (pcm == null || pcm.Length == 0) return;
+            try { _previewVoices.Add((-1, AudioOutput.Current.Start(pcm, SoundRate))); }
+            catch { /* a preview should not put a dialog up because a sound would not play */ }
         }
 
-        /// <summary>Stops what is playing. The output is one mix, so this stops everything, not just the named
-        /// sound.</summary>
+        // Rendered once per sound, so playback starts on time and the player knows how long each one lasts.
+        private const int SoundRate = AudioOutput.RenderRate;
+        // Each sound renders once, on whichever thread asks first; the others wait for that render.
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<int, Lazy<short[]>> _soundPcm =
+            new System.Collections.Concurrent.ConcurrentDictionary<int, Lazy<short[]>>();
+        private int _cryPcmSpecies = -1;
+        private short[] _cryPcm;
+
+        private short[] SoundPcm(int soundId)
+        {
+            SdatArchive sdat = LoadSdat();
+            if (sdat == null) return null;
+            return _soundPcm.GetOrAdd(soundId, id => new Lazy<short[]>(() =>
+            {
+                try { return SseqPlayer.Render(sdat, id); }
+                catch (Exception ex) { AppLogger.WarnOnce("BattleScriptEditorViewModel.SoundPcm", ex); return null; }
+            })).Value;
+        }
+
+        private short[] CryPcm()
+        {
+            int species = _gaugeSpeciesId;
+            if (species <= 0) return null;
+            if (_cryPcmSpecies == species) return _cryPcm;
+            try { _cryPcm = SoundArchive.RenderCry(species); }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleScriptEditorViewModel.CryPcm", ex); _cryPcm = null; }
+            _cryPcmSpecies = species;
+            return _cryPcm;
+        }
+
+        // A scaled copy, so the rendered sound stays as it is for the next play.
+        private short[] AtVolume(short[] pcm)
+        {
+            if (pcm == null || _volume >= 100) return pcm;
+            short[] scaled = new short[pcm.Length];
+            for (int i = 0; i < pcm.Length; i++) scaled[i] = (short)(pcm[i] * _volume / 100);
+            return scaled;
+        }
+
+        private int PassesOf(short[] pcm) =>
+            pcm == null || pcm.Length == 0 ? 0 : (int)Math.Ceiling(pcm.Length / 2.0 / SoundRate * PreviewFps);
+
+        // Every sound a script can play, so they are all rendered before the clock starts.
+        private static readonly HashSet<string> SoundCommands = new HashSet<string>
+        {
+            "PlaySoundEffect", "PlayPannedSoundEffect", "PlayMovingSoundEffectAtkDef", "PlayMovingSoundEffectAtkDef2",
+            "PlayMovingSoundEffectNoCorrection", "PlayLoopedSoundEffect", "PlayDelayedSoundEffect",
+        };
+
+        private void RenderScriptSounds(List<WazaSeqCommand> cmds)
+        {
+            foreach (WazaSeqCommand c in cmds)
+                if (c.Args.Length >= 1 && SoundCommands.Contains(BattleAnimCommands.Name(_version, c.OpId) ?? "")) SoundPcm(c.Args[0]);
+        }
+
+        // The sounds this preview started, so stopping one sound or the preview leaves other editors' sound alone.
+        private readonly List<(int Sound, object Handle)> _previewVoices = new List<(int Sound, object Handle)>();
+
         private void PreviewStopSound(int soundId)
         {
-            try { AudioOutput.Current.Stop(); } catch { }   // stopping a sound that already ended is harmless
+            foreach ((int sound, object handle) in _previewVoices)
+                if (sound == soundId) try { AudioOutput.Current.Stop(handle); } catch { }   // stopping a sound that already ended is harmless
+            _previewVoices.RemoveAll(v => v.Sound == soundId);
+        }
+
+        private void StopPreviewSounds()
+        {
+            foreach ((int _, object handle) in _previewVoices) try { AudioOutput.Current.Stop(handle); } catch { }   // stopping a sound that already ended is harmless
+            _previewVoices.Clear();
         }
 
         private void PreviewSound(int soundId)
         {
-            SdatArchive sdat = LoadSdat();
-            if (sdat == null) return;
-            System.Threading.Tasks.Task.Run(() =>
-            {
-                try
-                {
-                    short[] pcm = SseqPlayer.Render(sdat, soundId);
-                    if (pcm != null && pcm.Length > 0) AudioOutput.Current.Play(pcm, 32000);
-                }
-                catch { /* best-effort preview; animation playback must never surface an error dialog */ }
-            });
+            short[] pcm = AtVolume(SoundPcm(soundId));
+            if (pcm == null || pcm.Length == 0) return;
+            try { _previewVoices.Add((soundId, AudioOutput.Current.Start(pcm, SoundRate))); }
+            catch { /* best-effort preview; animation playback must never surface an error dialog */ }
         }
 
         /// <summary>Same as <see cref="PreviewSound"/> but returns a human-readable reason on failure (null on
@@ -195,9 +270,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 if (!sdat.SeqNames.ContainsKey(soundId) && (soundId < 0 || soundId >= sdat.Sequences.Count || sdat.Sequences[soundId] == null))
                     return $"Sound {soundId} isn't in this ROM's sound archive.";
                 short[] pcm = SseqPlayer.Render(sdat, soundId);
-                if (pcm == null || pcm.Length == 0) return $"Sound {soundId} plays nothing, probably because it uses an instrument DSPRE can't play.";
-                AudioOutput.Current.Play(pcm, 32000);
-                if (AudioOutput.Current is NullAudioOutput) return "This build has no sound output yet.";
+                if (pcm == null || pcm.Length == 0) return $"Sound {soundId} plays nothing here.";
+                AudioOutput.Current.Play(pcm, SoundRate);
+                if (AudioOutput.Current is NullAudioOutput) return "No sound output.";
                 return null;
             }
             catch (System.Exception ex) { AppLogger.WarnOnce("BattleScriptEditorViewModel.TryPreviewSound", ex); return ex.ToString(); }
@@ -242,17 +317,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 DSPRE.SettingsManager.Settings.MoveAnimationViewMode = v;
                 try { DSPRE.SettingsManager.Save(); } catch (Exception ex) { AppLogger.Warn("Saving the move animation view mode: " + ex.Message); }
                 OnPropertyChanged(nameof(ViewMode));
-                OnPropertyChanged(nameof(ViewNote));
                 RefreshViewLines();
             }
         }
-
-        public string ViewNote => ViewMode switch
-        {
-            0 => "Commands grouped by part of the move, with each shorthand shown as one line.",
-            1 => "One command a line, lined up in columns, with loops and subroutine bodies indented.",
-            _ => "Every word as stored in the ROM: offset, number, name, values and hex, with nothing folded or hidden.",
-        };
 
         /// <summary>Builds the lines for whichever view is showing, from the commands as they stand now.</summary>
         public void RefreshViewLines()
@@ -300,8 +367,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private void SelectArchive(int index)
         {
             _archiveIndex = Math.Clamp(index, 0, ArchiveOptions.Length - 1);
-            OnPropertyChanged(nameof(ArchiveIndex));
-            OnPropertyChanged(nameof(ArchiveTip));
+            if (IsAnimation) _lastAnimationArchive = _archiveIndex; else _lastScriptArchive = _archiveIndex;
+            RaiseArchive();
 
             OpcodeNames.Clear();
             if (IsAnimation)
@@ -326,7 +393,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         public bool ArchiveNotAvailable => IsAvailable && _archiveIndex >= 0 && !CurrentNarc.Available;
         public string ArchiveUnavailableText =>
-            $"This archive isn't available for {GameFamily} yet.";
+            $"Not available for {GameFamily} yet.";
 
         // ── Entry (file) selection ────────────────────────────────────────────────
         public ObservableCollection<string> FileItems { get; } = new ObservableCollection<string>();
@@ -377,7 +444,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         public string SourceNote => CurrentSource == null
             ? ""
-            : $"hg-engine assembles this from {CurrentSource.RelPath}. Editing it here edits that file.";
+            : $"From hg-engine's {CurrentSource.RelPath}. Edits go to that file.";
 
         private string _sourceText = "";
         public string SourceText
@@ -432,6 +499,17 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public bool HasUnsavedChanges => Dirty;
         public string UnsavedChangesDescription => _fileIndex < 0 ? "Battle script" : $"{ArchiveOptions[_archiveIndex]} {_fileIndex}";
         public void SaveChanges() => Save();
+
+        public async System.Threading.Tasks.Task<bool> SaveChangesAsync()
+        {
+            if (!IsHgEngineSource && HasTextErrors)
+            {
+                await DSPRE.Avalonia.DialogHelper.ShowInfoAsync("The script has errors. Fix the underlined lines before saving.", "Fix errors first");
+                return false;
+            }
+            Save();
+            return !HasUnsavedChanges;
+        }
         public void DiscardChanges() { Dirty = false; if (_fileIndex >= 0) LoadEntry(); }
 
         public string EntryHeader =>
@@ -446,7 +524,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public bool Dirty
         {
             get => _dirty;
-            private set { if (Set(ref _dirty, value)) { OnPropertyChanged(nameof(SaveHint)); OnPropertyChanged(nameof(HasUnsavedChanges)); } }
+            private set { if (Set(ref _dirty, value)) OnPropertyChanged(nameof(HasUnsavedChanges)); }
         }
 
         private void LoadEntry()
@@ -584,6 +662,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             RefreshStoryboard();
             SyncTextFromRows();
             Stepped();
+            // A paused preview shows the same frame of the edited move.
+            if (_holding) { int frame = PreviewFrame; _holding = false; SeekTo(frame); }
         }
 
         public void AddCommand()
@@ -633,8 +713,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             byte[] bytes = IsAnimation ? BattleAnimScript.Serialize(cmds) : WazaSeqScript.Serialize(cmds);
             if (!ReadsBackTheSame(cmds, bytes))
             {
-                _ = DSPRE.Avalonia.DialogHelper.ShowErrorAsync("These commands wouldn't read back the same once saved, so nothing was written. " +
-                    "Check that each command has the number of values it takes.", "Not saved");
+                _ = DSPRE.Avalonia.DialogHelper.ShowErrorAsync("A command has the wrong number of values.", "Not saved");
                 return;
             }
             CurrentNarc.Put(_fileIndex, bytes);
@@ -667,7 +746,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             if (HgEngineProject.SuppressManagedFileSaveNotice) return;
             bool never = await DSPRE.Avalonia.DialogHelper.ShowNoticeWithOptOutAsync(
-                $"{source.RelPath} is saved. hg-engine builds this file, so compile the ROM to see the change in game.",
+                $"{source.RelPath} saved. Build the ROM in hg-engine to see it in game.",
                 "Managed by hg-engine");
             if (never) HgEngineProject.SuppressManagedFileSaveNoticeForProject();
         }
@@ -947,7 +1026,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             }
 
             TextErrors = errors;
-            if (errors.Count > 0) return;   // keep the cards at the last good state; the squiggles + guard handle it
+            // Keep the cards at the last good state, but count the typed text as an edit so leaving asks first.
+            if (errors.Count > 0) { Dirty = true; return; }
 
             _rebuildingRows = true;
             Rows.Clear();
@@ -971,6 +1051,233 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public global::Avalonia.Media.TextWrapping StoryboardWrap =>
             IsAnimation ? global::Avalonia.Media.TextWrapping.NoWrap : global::Avalonia.Media.TextWrapping.Wrap;
 
+        private int _previewFrame = -1;
+        /// <summary>The frame the preview shows, or -1 when nothing has played.</summary>
+        public int PreviewFrame { get => _previewFrame; private set { if (_previewFrame != value) { _previewFrame = value; OnPropertyChanged(); OnPropertyChanged(nameof(FrameText)); } } }
+        public string FrameText => _timeline == null ? "" : $"Frame {Math.Max(0, _previewFrame)} of {_timeline.TotalPasses}, {_timeline.TotalPasses / 30.0:0.00} s";
+
+        /// <summary>Shows one frame of the move, paused there. Runs on silently from the current frame, or from the start
+        /// for an earlier frame. The fixed seed gives the same picture either way.</summary>
+        public void SeekTo(int frame)
+        {
+            if (!HasPreview) return;
+            if (IsCellPlaying) Pause();
+            frame = Math.Max(0, frame);
+            if (!_holding || _animPlayer == null || _animPlayer.Pass > frame)
+            {
+                List<WazaSeqCommand> cmds = BuildCommands();
+                LoadCellResourcesForCommands(cmds, _fileIndex);
+                _animPlayer = NewPlayer(cmds, _fileIndex);
+                _cellFrameIdx = 0; _cellTick = 0; _cellLoops = 0; _previewFrames = 0;
+                CellPreview = HasCellAnimation && _cellFrames.Count > 0 ? _cellFrames[0].Bitmap : null;
+                _holding = true;
+            }
+            SetSoundsOn(_animPlayer, false);
+            while (!_animPlayer.Finished && _animPlayer.Pass < frame && _animPlayer.Pass < MaxPreviewFrames) StepPass();
+            ShowPass();
+            RaiseNotes();
+            RaisePreviewProps();
+        }
+
+        public void StepFrame(int delta) => SeekTo(Math.Max(0, PreviewFrame) + delta);
+        public void SeekToEnd() => SeekTo(_timeline?.TotalPasses ?? MaxPreviewFrames);
+
+        /// <summary>Stops on the frame shown, so Play carries on from it.</summary>
+        public void Pause()
+        {
+            if (!IsCellPlaying) return;
+            _previewTimer.Stop();
+            StopPreviewSounds();
+            _holding = true;
+            RaisePreviewProps();
+        }
+
+        private bool _loop;
+        public bool Loop { get => _loop; set => Set(ref _loop, value); }
+
+        private static readonly double[] Speeds = { 1, 0.5, 0.25 };
+        public string[] SpeedNames { get; } = { "Normal speed", "Half speed", "Quarter speed" };
+        private int _speedIndex;
+        /// <summary>Slower playback is silent, since the sounds can't slow down with it.</summary>
+        public int SpeedIndex
+        {
+            get => _speedIndex;
+            set
+            {
+                if (value < 0 || value >= Speeds.Length || !Set(ref _speedIndex, value)) return;
+                if (!IsCellPlaying) return;
+                _passesRun = 0; _clock.Restart();
+                if (Speeds[value] != 1) StopPreviewSounds();
+                SetSoundsOn(_animPlayer, Speeds[value] == 1);
+            }
+        }
+
+        private void SetSoundsOn(BattleAnimPlayer player, bool on)
+        {
+            if (player == null) return;
+            on &= _soundsOn;
+            player.PlaySound = on ? PreviewSound : null;
+            player.PlayCry = on ? PreviewCry : null;
+            player.StopSound = on ? PreviewStopSound : null;
+        }
+
+        /// <summary>Opens the card of the command a timeline bar came from.</summary>
+        public void PickCommand(int command)
+        {
+            if (command < 0 || command >= Rows.Count) return;
+            for (int i = 0; i < Rows.Count; i++) Rows[i].IsExpanded = i == command;
+            PickedCommand = command;
+        }
+
+        private int _pickedCommand = -1;
+        /// <summary>The command last picked on the timeline, for the view to bring into sight.</summary>
+        public int PickedCommand { get => _pickedCommand; private set { _pickedCommand = value; OnPropertyChanged(); } }
+
+        private BattleAnimTrace _timeline;
+        /// <summary>The move's run recorded silently, with its bars labelled, for the timeline; null for other scripts.</summary>
+        public BattleAnimTrace Timeline { get => _timeline; private set { _timeline = value; OnPropertyChanged(); OnPropertyChanged(nameof(HasTimeline)); OnPropertyChanged(nameof(FrameText)); OnPropertyChanged(nameof(ShowStoryboardText)); } }
+        /// <summary>The written storyboard shows for scripts with no timeline.</summary>
+        public bool ShowStoryboardText => ShowStoryboard && _timeline == null;
+        public bool HasTimeline => _timeline != null;
+
+        private short[] RenderedSoundPcm(int soundId) =>
+            _soundPcm.TryGetValue(soundId, out Lazy<short[]> pcm) && pcm.IsValueCreated ? pcm.Value : null;
+
+        private void RecordTimeline(List<WazaSeqCommand> cmds)
+        {
+            if (!IsAnimation || cmds.Count == 0 || _fileIndex < 0) { Timeline = null; return; }
+            BattleAnimTrace trace = RecordTrace(cmds, null);
+            if (trace == null) { Timeline = null; return; }
+            foreach (BattleAnimTrace.Item item in trace.Items) LabelTimelineItem(item, cmds);
+            Timeline = trace;
+        }
+
+        // A silent run of the commands. With stopAfter, it ends once that bar has finished.
+        private BattleAnimTrace RecordTrace(List<WazaSeqCommand> cmds, Func<BattleAnimTrace, bool> stopAfter)
+        {
+            try
+            {
+                BattleAnimPlayer player = NewPlayer(cmds, _fileIndex, live: false);
+                while (!player.Finished && player.Pass < MaxPreviewFrames && (stopAfter == null || !stopAfter(player.Trace))) player.Step();
+                return player.Trace;
+            }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleScriptEditorViewModel.RecordTrace", ex); return null; }
+        }
+
+        /// <summary>Finds the value of a bar's command that moves its end (or the whole bar) in step, by running the
+        /// move again with each value nudged. Null when no single value does.</summary>
+        public BattleAnimTrace.Knob FindKnob(BattleAnimTrace.Item item, bool movesBar)
+        {
+            if (_timeline == null || IsHgEngineSource || item == null || item.Command < 0 || item.Command >= Rows.Count) return null;
+            ScriptCmdRow row = Rows[item.Command];
+            if (row.Raw) return null;
+            List<WazaSeqCommand> cmds = BuildCommands();
+            WazaSeqCommand c = cmds[item.Command];
+            string op = BattleAnimCommands.Name(_version, c.OpId) ?? "";
+            int ordinal = OrdinalOf(_timeline, item);
+            // A routine's first two values pick the routine and count its values.
+            int first = op == "CallFunc" ? 2 : 0;
+            BattleAnimTrace.Knob best = null;
+            // The finest value wins: a fade's hold moves the end a pass at a time, its step length many.
+            for (int a = first; a < c.Args.Length; a++)
+            {
+                ParamVM param = row.ParamAt(a);
+                if (param != null && (param.IsEnum || param.IsSound)) continue;
+                int v = c.Args[a];
+                if (v < 0) continue;
+                int d1 = Nudged(cmds, item, ordinal, a, v + 1, movesBar);
+                if (d1 <= 0 || (best != null && d1 >= best.FramesPerStep)) continue;
+                if (Nudged(cmds, item, ordinal, a, v + 2, movesBar) != 2 * d1) continue;
+                if (Nudged(cmds, item, ordinal, a, v + 3, movesBar) != 3 * d1) continue;
+                bool byteValue = op != "CallFunc";
+                best = new BattleAnimTrace.Knob
+                {
+                    Command = item.Command, Arg = a, Value = v, Min = 0, Max = byteValue ? 255 : Math.Max(v, 999),
+                    FramesPerStep = d1, MovesBar = movesBar,
+                    Name = DSPRE.Avalonia.Data.BattleAnimSchema.ParamLabel(row.OpName, a, row.Args),
+                };
+                if (d1 == 1) break;
+            }
+            return best;
+        }
+
+        // How far the matching bar's end moved, or its start if the whole bar moved, with one value changed. 0 when the
+        // bar changed length some other way or is gone.
+        private int Nudged(List<WazaSeqCommand> cmds, BattleAnimTrace.Item item, int ordinal, int arg, int value, bool movesBar)
+        {
+            WazaSeqCommand c = cmds[item.Command];
+            int[] args = (int[])c.Args.Clone();
+            args[arg] = value;
+            List<WazaSeqCommand> nudged = new List<WazaSeqCommand>(cmds);
+            nudged[item.Command] = new WazaSeqCommand(c.OpId, args) { WordPos = c.WordPos, Raw = c.Raw, Tail = c.Tail };
+            BattleAnimTrace.Item found = null;
+            BattleAnimTrace trace = RecordTrace(nudged, t =>
+            {
+                found ??= Match(t, item, ordinal);
+                return found != null && found.End < t.TotalPasses;
+            });
+            found ??= trace == null ? null : Match(trace, item, ordinal);
+            if (found == null) return 0;
+            int dStart = found.Start - item.Start, dEnd = found.End - item.End;
+            if (movesBar) return dStart == dEnd ? dStart : 0;
+            return dStart == 0 ? dEnd : 0;
+        }
+
+        private static int OrdinalOf(BattleAnimTrace trace, BattleAnimTrace.Item item)
+        {
+            int n = 0;
+            foreach (BattleAnimTrace.Item i in trace.Items)
+            {
+                if (ReferenceEquals(i, item)) return n;
+                if (i.Lane == item.Lane && i.Command == item.Command) n++;
+            }
+            return -1;
+        }
+
+        private static BattleAnimTrace.Item Match(BattleAnimTrace trace, BattleAnimTrace.Item like, int ordinal)
+        {
+            int n = 0;
+            foreach (BattleAnimTrace.Item i in trace.Items)
+                if (i.Lane == like.Lane && i.Command == like.Command && n++ == ordinal) return i;
+            return null;
+        }
+
+        /// <summary>Writes a dragged value into its card, as one undo step.</summary>
+        public void SetKnob(BattleAnimTrace.Knob knob, int value)
+        {
+            if (knob == null || knob.Command < 0 || knob.Command >= Rows.Count) return;
+            value = Math.Clamp(value, knob.Min, knob.Max);
+            if (value == knob.Value) return;
+            _lastStep = default;
+            Rows[knob.Command].SetArg(knob.Arg, value);
+        }
+
+        private void LabelTimelineItem(BattleAnimTrace.Item item, List<WazaSeqCommand> cmds)
+        {
+            WazaSeqCommand c = item.Command >= 0 && item.Command < cmds.Count ? cmds[item.Command] : null;
+            string op = c == null ? "" : BattleAnimCommands.Name(_version, c.OpId) ?? "";
+            string command = item.Command >= 0 && item.Command < Rows.Count ? Rows[item.Command].OpDisplay : op;
+            string routine = op == "CallFunc" && c.Args.Length > 0 ? BattleAnimScriptDisplay.RoutineName(c.Args[0]) : command;
+            item.Label = item.Lane switch
+            {
+                BattleAnimTrace.Lane.Script => op == "Delay" && c.Args.Length > 0 ? $"{command} {c.Args[0]}" : command,
+                BattleAnimTrace.Lane.Particles => $"Slot {item.A}, emitter {item.B}",
+                BattleAnimTrace.Lane.Sound => ShortSoundName(item.A),
+                _ => routine,
+            };
+            int frames = item.End - item.Start;
+            item.Tip = $"{item.Label}\nFrame {item.Start}, {Plural.Of(frames, "frame")}" + (command != item.Label ? $"\n{command}" : "");
+        }
+
+        private string ShortSoundName(int soundId)
+        {
+            string name = SoundNameOf(soundId);
+            if (string.IsNullOrEmpty(name)) return $"Sound {soundId}";
+            foreach (string prefix in new[] { "SEQ_SE_DP_", "SEQ_SE_PL_", "SEQ_SE_", "SEQ_" })
+                if (name.StartsWith(prefix, StringComparison.Ordinal)) return name.Substring(prefix.Length);
+            return name;
+        }
+
         private void RefreshStoryboard()
         {
             OnPropertyChanged(nameof(ShowStoryboard));
@@ -978,6 +1285,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             OnPropertyChanged(nameof(StoryboardWrap));
             if (!HasRows) { Storyboard = ""; StoryboardLines = Array.Empty<BattleAnimStoryboard.Line>(); return; }
             List<WazaSeqCommand> cmds = BuildCommands();
+            RecordTimeline(cmds);
             if (IsAnimation)
             {
                 List<BattleAnimStoryboard.Line> lines = BattleAnimStoryboard.Build(cmds, _version);
@@ -997,7 +1305,15 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private BattleAnimPlayer _animPlayer;
         private DispatcherTimer _previewTimer;
         private int _cellFrameIdx, _cellTick, _cellLoops, _previewFrames;
-        private const int MaxPreviewFrames = 1200;   // safety cap (~20 s)
+        private const int MaxPreviewFrames = 1200;   // safety cap in script passes
+
+        // The UI timer fires irregularly, so passes are counted from a stopwatch, not one per callback.
+        private readonly System.Diagnostics.Stopwatch _clock = new System.Diagnostics.Stopwatch();
+        private long _passesRun;
+
+        // A move's script runs once per pass of the game's main loop, which waits two screen frames per pass.
+        // 60 is kept only to preview a hack that runs it faster; the setting is shared with the Battle display.
+        private static int PreviewFps => DSPRE.SettingsManager.Settings?.BattlePreviewFps == 60 ? 60 : 30;
 
         public bool HasCellAnimation { get; private set; }
         public bool HasParticleAnimation { get; private set; }
@@ -1008,20 +1324,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// What this move does that the preview does not show, gathered from the player while it runs.
         /// </summary>
         public string PreviewNotes => _animPlayer == null || _animPlayer.Notes.Count == 0
-            ? "" : "Not shown here: " + string.Join(" ", _animPlayer.Notes);
+            ? "" : "Not drawn: " + string.Join(", ", _animPlayer.Notes);
 
         public bool HasPreviewNotes => PreviewNotes.Length > 0;
 
         private int _notesShown;
 
-        /// <summary>Why Save is greyed out, so a disabled button is not left unexplained.</summary>
-        public string SaveHint => Dirty
-            ? "Write these commands back into the ROM."
-            : "Nothing has been changed yet, so there is nothing to write back.";
         private Bitmap _cellPreview;
         public Bitmap CellPreview { get => _cellPreview; private set => Set(ref _cellPreview, value); }
-        private Bitmap _particlePreview;
-        public Bitmap ParticlePreview { get => _particlePreview; private set => Set(ref _particlePreview, value); }
         private Bitmap _backgroundFrame;
         public Bitmap BackgroundFrame { get => _backgroundFrame; private set { if (Set(ref _backgroundFrame, value)) { OnPropertyChanged(nameof(BackgroundBehind)); OnPropertyChanged(nameof(BackgroundOver)); } } }
         private bool _bgOverlay;
@@ -1038,8 +1348,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private global::Avalonia.RelativePoint _cellOrigin = global::Avalonia.RelativePoint.Center;
         public global::Avalonia.RelativePoint CellOrigin { get => _cellOrigin; private set => Set(ref _cellOrigin, value); }
         public bool IsCellPlaying => _previewTimer != null && _previewTimer.IsEnabled;
-        public string CellPlayButtonText => IsCellPlaying ? "Stop" : "Play animation";
-        public string CellPlayButtonIcon => IsCellPlaying ? "stop" : "play";
+        // Paused or stepped to a frame: the move's state stays on screen.
+        private bool _holding;
+        private bool ShowsMove => IsCellPlaying || _holding;
+        public bool CanStopPreview => ShowsMove;
+        public string CellPlayButtonText => IsCellPlaying ? "Pause" : "Play";
+        public string CellPlayButtonIcon => IsCellPlaying ? null : "play";
         private double _bgDarken; public double BackgroundDarken { get => _bgDarken; private set => Set(ref _bgDarken, value); }
         private IBrush _fadeBrush = Brushes.Black; public IBrush FadeBrush { get => _fadeBrush; private set => Set(ref _fadeBrush, value); }
         private double _shakeX; public double ShakeX { get => _shakeX; private set => Set(ref _shakeX, value); }
@@ -1081,12 +1395,66 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         // Emitter screen anchors = sprite centres (80×80 cell → +40), derived from the loaded positions.
         private double _atX = 63, _atY = 124, _dfX = 192, _dfY = 64;
+        private int _backYOffset, _frontYOffset;
 
         private bool _attackerIsEnemy;
         public bool AttackerIsEnemy
         {
             get => _attackerIsEnemy;
             set { if (Set(ref _attackerIsEnemy, value)) { bool was = IsCellPlaying; SetupCellPreview(); if (was) ToggleCellPlay(); } }
+        }
+
+        /// <summary>The weather the move's weather check sees, in the game's order.</summary>
+        public List<string> WeatherNames { get; } = new List<string> { "None", "Rain", "Sandstorm", "Sun", "Hail" };
+        private int _weatherIndex;
+        public int WeatherIndex
+        {
+            get => _weatherIndex;
+            set { if (Set(ref _weatherIndex, Math.Max(0, value))) { bool was = IsCellPlaying; SetupCellPreview(); if (was) ToggleCellPlay(); } }
+        }
+
+        /// <summary>Whether the open move checks the weather, so the choice is only offered when it means something.</summary>
+        public bool HasWeatherCheck => UsesCommand("JumpIfWeather");
+
+        /// <summary>Only Diamond, Pearl and Platinum have contests, and only some moves branch for them.</summary>
+        public bool HasContestCheck => GameFamily != GameFamilies.HGSS
+            && (UsesCommand("JumpIfContest") || UsesCommand("JumpIfContestCondition"));
+
+        private bool _contest;
+        /// <summary>Plays the move as a contest appeal: its contest branch and the contestants' positions.</summary>
+        public bool Contest
+        {
+            get => _contest;
+            set { if (Set(ref _contest, value)) { bool was = IsCellPlaying; SetupCellPreview(); if (was) ToggleCellPlay(); } }
+        }
+
+        private bool _soundsOn = true;
+        public bool SoundsOn
+        {
+            get => _soundsOn;
+            set
+            {
+                if (!Set(ref _soundsOn, value)) return;
+                if (!value) StopPreviewSounds();
+                SetSoundsOn(_animPlayer, Speeds[_speedIndex] == 1);
+            }
+        }
+
+        private int _volume = 100;
+        /// <summary>Sound volume in percent, applied as each sound starts.</summary>
+        public int Volume
+        {
+            get => _volume;
+            set => Set(ref _volume, Math.Clamp(value, 0, 100));
+        }
+
+        private bool UsesCommand(string name)
+        {
+            List<WazaSeqCommand> cmds = BuildCommands();
+            if (cmds == null) return false;
+            foreach (WazaSeqCommand c in cmds)
+                if (BattleAnimCommands.Name(_version, c.OpId) == name) return true;
+            return false;
         }
 
         // Some moves have two animations; the game alternates them by turn count.
@@ -1098,17 +1466,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         /// <summary>Whether the open move has a second animation at all, so the choice is only offered when it means something.</summary>
-        public bool HasTurnCheck
-        {
-            get
-            {
-                List<WazaSeqCommand> cmds = BuildCommands();
-                if (cmds == null) return false;
-                foreach (WazaSeqCommand c in cmds)
-                    if (BattleAnimCommands.Name(_version, c.OpId) == "JumpByTurn") return true;
-                return false;
-            }
-        }
+        public bool HasTurnCheck => UsesCommand("JumpByTurn");
 
         private void EnsureScene()
         {
@@ -1138,6 +1496,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 PlayerLeft = bd.PlayerLeft; PlayerTop = bd.PlayerTop;
                 _dfX = EnemyLeft + 40; _dfY = EnemyTop + 40;
                 _atX = PlayerLeft + 40; _atY = PlayerTop + 40;
+                _backYOffset = bd.HasHeights ? bd.BackHeightM : 0;
+                _frontYOffset = bd.HasHeights ? bd.FrontHeightM : 0;
 
                 OnPropertyChanged(nameof(EnemySprite)); OnPropertyChanged(nameof(PlayerSprite));
                 OnPropertyChanged(nameof(EnemyLeft)); OnPropertyChanged(nameof(EnemyTop));
@@ -1243,8 +1603,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         // Move flag 0x40 keeps the gauges up during the animation; 0x80 hides the shadow.
         private bool _hideGaugesThisMove, _hideShadowThisMove;
-        public bool GaugesVisible => !(IsCellPlaying && _hideGaugesThisMove);
-        public bool ShadowHidden => IsCellPlaying && _hideShadowThisMove;
+        public bool GaugesVisible => !(ShowsMove && _hideGaugesThisMove);
+        public bool ShadowHidden => ShowsMove && _hideShadowThisMove;
         public bool RealGaugesVisible => HasRealGauges && GaugesVisible;
         public bool PlaceholderGaugesVisible => !HasRealGauges && GaugesVisible;
         public double PlayerGaugeImageLeft => Data.BattleGaugeComposer.CentreOf(Data.BattleGaugeComposer.Kind.PlayerSingle).X - 128;
@@ -1317,6 +1677,45 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             ? new SolidColorBrush(global::Avalonia.Media.Color.FromRgb(0x28, 0x28, 0x28))
             : new SolidColorBrush(global::Avalonia.Media.Color.FromRgb(0xF8, 0xF8, 0xF8));
 
+        /// <summary>Off, then the twenty frames the player can pick in Options.</summary>
+        public List<string> MessageBoxNames { get; } = MessageBoxNameList();
+        private static List<string> MessageBoxNameList()
+        {
+            List<string> names = new List<string> { "Off" };
+            for (int i = 0; i < ROMFiles.FieldWindowFrame.FrameCount; i++) names.Add($"Frame {i + 1}");
+            return names;
+        }
+
+        private int _messageBoxIndex = 1;
+        public int MessageBoxIndex
+        {
+            get => _messageBoxIndex;
+            set { if (Set(ref _messageBoxIndex, Math.Max(0, value))) RenderMessage(); }
+        }
+
+        private Bitmap _messageImage;
+        /// <summary>The move's "X used Y!" line in the battle's message box; null shows the plain box.</summary>
+        public Bitmap MessageImage
+        {
+            get => _messageImage;
+            private set { if (Set(ref _messageImage, value)) OnPropertyChanged(nameof(PlainMessageBoxVisible)); }
+        }
+        public bool PlainMessageBoxVisible => _messageImage == null && _messageBoxIndex > 0;
+
+        private void RenderMessage()
+        {
+            OnPropertyChanged(nameof(PlainMessageBoxVisible));
+            if (_messageBoxIndex <= 0 || (Archive)_archiveIndex != Archive.MoveAnimation || _fileIndex <= 0) { MessageImage = null; return; }
+            try
+            {
+                string[] names = SpeciesNames;
+                string name = _gaugeSpeciesId >= 0 && _gaugeSpeciesId < names.Length ? names[_gaugeSpeciesId] : "";
+                byte[] rgba = BattleMessageText.MoveUsed(_fileIndex, _attackerIsEnemy, name, _messageBoxIndex - 1);
+                MessageImage = rgba == null ? null : ImageConverter.FromRgba(rgba, 256, 192);
+            }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleScriptEditorViewModel.RenderMessage", ex); MessageImage = null; }
+        }
+
         private void RenderGauges()
         {
             try
@@ -1328,6 +1727,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                                 ?? Gauge(r.BuildGauge(true));
                 GaugeEnemyImage = Data.GaugeTextImages.Bar(false, GaugeNameText, _gaugeLevel)
                                ?? Gauge(r.BuildGauge(false));
+                RenderMessage();
                 OnPropertyChanged(nameof(HasRealGauges));
                 OnPropertyChanged(nameof(ShowPlaceholderGauges));
                 OnPropertyChanged(nameof(RealGaugesVisible));
@@ -1421,23 +1821,27 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private void SetupCellPreview()
         {
             StopCell();
+            PreviewFrame = -1;
             if (IsAnimation) { EnsureScene(); SceneComposite = _compositor.Render(null); }   // static scene (backdrop + mons)
             HasCellAnimation = false; HasParticleAnimation = false;
-            CellPreview = null; ParticlePreview = null; CellAnimNote = "";
+            CellPreview = null; CellAnimNote = "";
+            RenderMessage();
             _animPlayer = null; ShakeX = ShakeY = 0; BackgroundDarken = 0;
             if (IsAnimation && _fileIndex >= 0)
             {
                 List<WazaSeqCommand> cmds = BuildCommands();
                 LoadCellResourcesForCommands(cmds, _fileIndex);
+                // Render the move's sounds as soon as it opens, so Play starts at once.
+                RecordTimeline(cmds);
+                // Once they're rendered, the timeline is recorded again, since their lengths set how long the move waits.
+                if (LoadSdat() != null)
+                    System.Threading.Tasks.Task.Run(() => RenderScriptSounds(cmds))
+                        .ContinueWith(_ => Dispatcher.UIThread.Post(() => RecordTimeline(BuildCommands())));
 
                 int emitters = BattleAnimParticles.Extract(cmds, _version, _attackerIsEnemy).Count;
                 HasParticleAnimation = emitters > 0 && _particleNarc.Available;
 
-                CellAnimNote =
-                    HasCellAnimation && HasParticleAnimation ? "Cell and particle effect. Press Play."
-                  : HasCellAnimation ? $"Cell animation, {_cellFrames.Count} {(_cellFrames.Count == 1 ? "frame" : "frames")}"
-                  : HasParticleAnimation ? $"Particle effect with {Plural.Of(emitters, "emitter")}. Press Play."
-                  : "Moves the Pokémon only. Press Play to see it.";
+                CellAnimNote = "";
             }
             RaisePreviewProps();
         }
@@ -1500,33 +1904,77 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public void ToggleCellPlay()
         {
             if (!HasPreview) return;
-            if (IsCellPlaying) { StopCell(); return; }
+            if (IsCellPlaying) { Pause(); return; }
+            if (_holding && _animPlayer != null && !_animPlayer.Finished) { StartClock(); return; }
+            PlayFromStart();
+        }
+
+        public void StopPreview() { if (IsCellPlaying || _holding) StopCell(); }
+
+        private void StartClock()
+        {
+            SetSoundsOn(_animPlayer, Speeds[_speedIndex] == 1);
+            _holding = false;
+            _previewTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(5) };
+            _previewTimer.Tick -= PreviewTick; _previewTimer.Tick += PreviewTick;
+            _passesRun = 0;
+            _clock.Restart();
+            _previewTimer.Start();
+            RaisePreviewProps();
+        }
+
+        private void PlayFromStart(bool cutSounds = true)
+        {
+            _holding = false;
             _cellFrameIdx = 0; _cellTick = 0; _cellLoops = 0; _previewFrames = 0;
             // A previous play may have chained into Metronome's move and left its sprites loaded.
             List<WazaSeqCommand> cmds = BuildCommands();
             LoadCellResourcesForCommands(cmds, _fileIndex);
             if (HasCellAnimation && _cellFrames.Count > 0) CellPreview = _cellFrames[0].Bitmap;
+            _notesShown = 0;
+            if (cutSounds) StopPreviewSounds();
+            _animPlayer = NewPlayer(cmds, _fileIndex);
+            _metronomeCalledMoveId = IsMetronomePreview ? PickRandomMetronomeTarget() : -1;
+            ShowPass();
+            StartClock();
+        }
+
+        private BattleAnimPlayer NewPlayer(List<WazaSeqCommand> cmds, int moveId) => NewPlayer(cmds, moveId, live: true);
+
+        // A live player plays its sounds and waits for them to render; a recording one stays silent and counts only the
+        // sounds already rendered, and is recorded again when the rest are ready.
+        private BattleAnimPlayer NewPlayer(List<WazaSeqCommand> cmds, int moveId, bool live)
+        {
+            if (live) RenderScriptSounds(cmds);
             double aX = _attackerIsEnemy ? _dfX : _atX, aY = _attackerIsEnemy ? _dfY : _atY;
             double dX = _attackerIsEnemy ? _atX : _dfX, dY = _attackerIsEnemy ? _atY : _dfY;
-            _notesShown = 0;
-            _animPlayer = new BattleAnimPlayer(cmds, _version, _particleNarc, aX, aY, dX, dY,
-                                   attackerIsEnemy: _attackerIsEnemy, selfTarget: IsSelfTargetMove())
-            { SecondTurnVariant = _secondTurnVariant };
-            _animPlayer.Cells = _cellRenderer;
-            _animPlayer.PlaySound = PreviewSound;
-            _animPlayer.PlayCry = PreviewCry;
-            _animPlayer.StopSound = PreviewStopSound;
-            _animPlayer.MovePower = GetMovePower();
-            int moveFlag = GetMoveFlagField();
+            BattleAnimPlayer player = new BattleAnimPlayer(cmds, _version, _particleNarc, aX, aY, dX, dY,
+                                   attackerIsEnemy: _attackerIsEnemy, selfTarget: IsSelfTargetMove(moveId))
+            { SecondTurnVariant = _secondTurnVariant, Weather = _weatherIndex, Contest = _contest && HasContestCheck };
+            player.Cells = _cellRenderer;
+            if (live && _soundsOn)
+            {
+                player.PlaySound = PreviewSound;
+                player.PlayCry = PreviewCry;
+                player.StopSound = PreviewStopSound;
+            }
+            if (live)
+            {
+                player.SoundPasses = id => PassesOf(SoundPcm(id));
+                player.CryPasses = () => PassesOf(CryPcm());
+            }
+            else
+            {
+                player.SoundPasses = id => PassesOf(RenderedSoundPcm(id));
+                player.CryPasses = () => _cryPcmSpecies == _gaugeSpeciesId ? PassesOf(_cryPcm) : 0;
+            }
+            player.MovePower = GetMovePower(moveId);
+            player.SpriteYOffsets[0] = _backYOffset;
+            player.SpriteYOffsets[1] = _frontYOffset;
+            int moveFlag = GetMoveFlagField(moveId);
             _hideGaugesThisMove = moveFlag >= 0 && (moveFlag & 0x40) == 0;
             _hideShadowThisMove = moveFlag >= 0 && (moveFlag & 0x80) != 0;
-            _metronomeCalledMoveId = IsMetronomePreview ? PickRandomMetronomeTarget() : -1;
-
-            ParticlePreview = _animPlayer.RenderFrame();
-            _previewTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1000.0 / 60) };
-            _previewTimer.Tick -= PreviewTick; _previewTimer.Tick += PreviewTick;
-            _previewTimer.Start();
-            RaisePreviewProps();
+            return player;
         }
 
         private void StartChainedAnimation(int moveId)
@@ -1534,20 +1982,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             byte[] bytes = CurrentNarc.Get(moveId);
             List<WazaSeqCommand> cmds = bytes != null ? BattleAnimScript.Parse(bytes, _version) : new List<WazaSeqCommand>();
             LoadCellResourcesForCommands(cmds, moveId);
-
-            double aX = _attackerIsEnemy ? _dfX : _atX, aY = _attackerIsEnemy ? _dfY : _atY;
-            double dX = _attackerIsEnemy ? _atX : _dfX, dY = _attackerIsEnemy ? _atY : _dfY;
-            _animPlayer = new BattleAnimPlayer(cmds, _version, _particleNarc, aX, aY, dX, dY,
-                                   attackerIsEnemy: _attackerIsEnemy, selfTarget: IsSelfTargetMove(moveId))
-            { SecondTurnVariant = _secondTurnVariant };
-            _animPlayer.Cells = _cellRenderer;
-            _animPlayer.PlaySound = PreviewSound;
-            _animPlayer.PlayCry = PreviewCry;
-            _animPlayer.StopSound = PreviewStopSound;
-            _animPlayer.MovePower = GetMovePower(moveId);
-            int moveFlag = GetMoveFlagField(moveId);
-            _hideGaugesThisMove = moveFlag >= 0 && (moveFlag & 0x40) == 0;
-            _hideShadowThisMove = moveFlag >= 0 && (moveFlag & 0x80) != 0;
+            _animPlayer = NewPlayer(cmds, moveId);
             _cellFrameIdx = 0; _cellTick = 0; _cellLoops = 0;
             if (HasCellAnimation && _cellFrames.Count > 0) CellPreview = _cellFrames[0].Bitmap;
 
@@ -1573,14 +2008,27 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if ((Archive)_archiveIndex != Archive.MoveAnimation || moveId < 0) return false;
             try
             {
-                ushort range = new MoveData(moveId).Target;
-                const ushort USER = 1 << 4, USER_SIDE = 1 << 5, USER_OR_ALLY = 1 << 9;
-                return (range & (USER | USER_SIDE | USER_OR_ALLY)) != 0;
+                MoveData move = new MoveData(moveId);
+                return BattleAnimTarget.DefenderIsUser(move.Target, move.Battleeffect);
             }
             catch (Exception ex) { AppLogger.WarnOnce("BattleScriptEditorViewModel.IsSelfTargetMove", ex); return false; }
         }
 
         private void PreviewTick(object sender, EventArgs e)
+        {
+            if (!IsCellPlaying) return;
+            long due = (long)(_clock.Elapsed.TotalSeconds * PreviewFps * Speeds[_speedIndex]);
+            if (due - _passesRun > 4) _passesRun = due - 1;   // after a stall, resume instead of fast-forwarding
+            if (_passesRun >= due) return;
+            while (IsCellPlaying && _passesRun < due)
+            {
+                _passesRun++;
+                if (!RunPass()) return;
+            }
+            if (IsCellPlaying) ShowPass();
+        }
+
+        private void StepPass()
         {
             // Actors are drawn into SceneComposite, so the standalone cell overlay would draw them twice.
             bool cellsViaActors = _animPlayer != null && _animPlayer.SpriteActors.Count > 0;
@@ -1595,15 +2043,56 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 if (cellsViaActors && CellOpacity != 0) CellOpacity = 0;
                 _animPlayer.Step();
-                // Notes appear only when their command runs, so the panel is updated during playback.
-                if (_animPlayer.Notes.Count != _notesShown)
-                {
-                    _notesShown = _animPlayer.Notes.Count;
-                    OnPropertyChanged(nameof(PreviewNotes));
-                    OnPropertyChanged(nameof(HasPreviewNotes));
-                }
-                ParticlePreview = _animPlayer.RenderFrame();
-                SceneComposite = _compositor.Render(_animPlayer);   // backdrop + mons + cell actors + effect-BG, blended exactly
+            }
+        }
+
+        // Notes appear only when their command runs, so the panel is updated as the move goes.
+        private void RaiseNotes()
+        {
+            if (_animPlayer == null || _animPlayer.Notes.Count == _notesShown) return;
+            _notesShown = _animPlayer.Notes.Count;
+            OnPropertyChanged(nameof(PreviewNotes));
+            OnPropertyChanged(nameof(HasPreviewNotes));
+        }
+
+        // One script pass. False when playback stopped or moved on to a chained move.
+        private bool RunPass()
+        {
+            StepPass();
+            RaiseNotes();
+            bool done = _animPlayer != null ? _animPlayer.Finished : (_cellLoops >= 1);
+            if (done && _metronomeCalledMoveId >= 0)
+            {
+                int calledMoveId = _metronomeCalledMoveId;
+                _metronomeCalledMoveId = -1;   // only chain once; the called move doesn't itself call another
+                _previewFrames = 0;
+                StartChainedAnimation(calledMoveId);
+                return false;   // keep the timer running for the chained move instead of stopping
+            }
+            // At the end the move's last sounds play out, as they do in the game.
+            if (done && _loop) { PlayFromStart(cutSounds: false); return false; }
+            if (done || ++_previewFrames >= MaxPreviewFrames) { StopCell(stopSounds: false); return false; }
+            return true;
+        }
+
+        private WriteableBitmap[] _frameBuffers;
+        private int _frameBuffer;
+        private static WriteableBitmap NewFrameBuffer() =>
+            new WriteableBitmap(new global::Avalonia.PixelSize(256, 192), new global::Avalonia.Vector(96, 96),
+                global::Avalonia.Platform.PixelFormat.Bgra8888, global::Avalonia.Platform.AlphaFormat.Premul);
+
+        // Draws the latest pass once, however many passes the clock had to catch up.
+        private void ShowPass()
+        {
+            if (_animPlayer != null)
+            {
+                // One picture a frame: the scene with the particles on top, alternating between two bitmaps so the
+                // image gets a new source each frame without allocating.
+                _frameBuffers ??= new[] { NewFrameBuffer(), NewFrameBuffer() };
+                _frameBuffer ^= 1;
+                _compositor.RenderInto(_frameBuffers[_frameBuffer], _animPlayer, _animPlayer.RenderParticlesBgra());
+                SceneComposite = _frameBuffers[_frameBuffer];
+                PreviewFrame = _animPlayer.Pass;
                 ShakeX = _animPlayer.ShakeX; ShakeY = _animPlayer.ShakeY;
                 BackgroundDarken = _animPlayer.FadeOpacity;
                 if (_animPlayer.FadeOpacity > 0) FadeBrush = new SolidColorBrush(Color.FromRgb(_animPlayer.FadeR, _animPlayer.FadeG, _animPlayer.FadeB));
@@ -1616,24 +2105,16 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 if (_animPlayer.MonTintA[0] > 0 || _animPlayer.MonTintA[1] > 0)
                     TintBrush = new SolidColorBrush(Color.FromRgb(_animPlayer.TintR, _animPlayer.TintG, _animPlayer.TintB));
             }
-            bool done = _animPlayer != null ? _animPlayer.Finished : (_cellLoops >= 1);
-            if (done && _metronomeCalledMoveId >= 0)
-            {
-                int calledMoveId = _metronomeCalledMoveId;
-                _metronomeCalledMoveId = -1;   // only chain once; the called move doesn't itself call another
-                _previewFrames = 0;
-                StartChainedAnimation(calledMoveId);
-                return;   // keep the timer running for the chained move instead of stopping
-            }
-            if (done || ++_previewFrames >= MaxPreviewFrames) StopCell();
         }
 
-        private void StopCell()
+        private void StopCell(bool stopSounds = true)
         {
             _previewTimer?.Stop();
+            _holding = false;
+            if (stopSounds) StopPreviewSounds();
             _metronomeCalledMoveId = -1;   // manually stopped mid-Metronome; don't chain into it on a later, unrelated play
             BackgroundFrame = null;
-            CellPreview = null; ParticlePreview = null;   // don't leave the last wave/particle frame statically on screen
+            CellPreview = null;   // don't leave the last wave frame statically on screen
             // Re-render the static scene: the last played frame may have mons hidden / dragged (Dark Void
             // vanishes the defender mid-effect). Without this the frozen composite keeps them invisible
             // after playback ends.
@@ -1645,6 +2126,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             PlayerTintOpacity = EnemyTintOpacity = 0; PlayerVisible = EnemyVisible = true;
             OnPropertyChanged(nameof(IsCellPlaying));
             OnPropertyChanged(nameof(CellPlayButtonText)); OnPropertyChanged(nameof(CellPlayButtonIcon));
+            OnPropertyChanged(nameof(CanStopPreview));
             OnPropertyChanged(nameof(GaugesVisible));
             OnPropertyChanged(nameof(ShadowHidden));
             OnPropertyChanged(nameof(RealGaugesVisible));
@@ -1657,11 +2139,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             OnPropertyChanged(nameof(HasParticleAnimation));
             OnPropertyChanged(nameof(HasPreview));
             OnPropertyChanged(nameof(HasTurnCheck));
+            OnPropertyChanged(nameof(HasWeatherCheck));
+            OnPropertyChanged(nameof(HasContestCheck));
             OnPropertyChanged(nameof(CellAnimNote));
             OnPropertyChanged(nameof(PreviewNotes));
             OnPropertyChanged(nameof(HasPreviewNotes));
             OnPropertyChanged(nameof(IsCellPlaying));
             OnPropertyChanged(nameof(CellPlayButtonText)); OnPropertyChanged(nameof(CellPlayButtonIcon));
+            OnPropertyChanged(nameof(CanStopPreview));
             OnPropertyChanged(nameof(GaugesVisible));
             OnPropertyChanged(nameof(ShadowHidden));
             OnPropertyChanged(nameof(RealGaugesVisible));
@@ -1695,7 +2180,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public int OpId
         {
             get => _opId;
-            set { if (_opId != value) { _opId = value; Raise(nameof(OpId)); Raise(nameof(OpName)); Raise(nameof(OpDisplay)); PadArgs(); Rebuild(); OnEdited?.Invoke(this); } }
+            set
+            {
+                // A card's command list sends -1 while it has no items yet; it reads the real value again once it has.
+                if (value < 0) { Dispatcher.UIThread.Post(() => Raise(nameof(OpId))); return; }
+                if (_opId == value) return;
+                _opId = value; Raise(nameof(OpId)); Raise(nameof(OpName)); Raise(nameof(OpDisplay)); Raise(nameof(ValuesSummary)); PadArgs(); Rebuild(); OnEdited?.Invoke(this);
+            }
         }
         // Ensure the args list has at least the new opcode's fixed parameter count (pad with 0). Extra args are kept
         // (variable-length opcodes); the user can trim them via the raw-args field.
@@ -1705,7 +2196,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public string OpDoc => DSPRE.Avalonia.Data.BattleAnimSchema.OpcodeDoc(OpName, Script);
         public bool HasDoc => !string.IsNullOrEmpty(OpDoc);
         // Set the opcode during load without rebuilding/raising an edit (the caller rebuilds + keeps the loaded args).
-        internal void _opIdSilent(int id) { _opId = id; Raise(nameof(OpId)); Raise(nameof(OpName)); Raise(nameof(OpDisplay)); Raise(nameof(OpDoc)); Raise(nameof(HasDoc)); }
+        internal void _opIdSilent(int id) { _opId = id; Raise(nameof(OpId)); Raise(nameof(OpName)); Raise(nameof(OpDisplay)); Raise(nameof(ValuesSummary)); Raise(nameof(OpDoc)); Raise(nameof(HasDoc)); }
 
         private bool _expanded;
         public bool IsExpanded { get => _expanded; set { if (_expanded != value) { _expanded = value; Raise(nameof(IsExpanded)); } } }
@@ -1720,11 +2211,27 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 for (int i = 0; i < Args.Count; i++)
                 {
                     if (i > 0) sb.Append("  ");
-                    sb.Append(DSPRE.Avalonia.Data.BattleAnimSchema.ParamName(OpName, i, Script)).Append('=').Append(Args[i]);
+                    sb.Append(DSPRE.Avalonia.Data.BattleAnimSchema.ParamLabel(OpName, i, Args, Script)).Append('=').Append(Args[i]);
                 }
                 return sb.ToString();
             }
         }
+
+        /// <summary>The values alone, for the line under a collapsed card's title.</summary>
+        public string ValuesSummary
+        {
+            get
+            {
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < Args.Count; i++)
+                {
+                    if (i > 0) sb.Append("  ");
+                    sb.Append(DSPRE.Avalonia.Data.BattleAnimSchema.ParamLabel(OpName, i, Args, Script)).Append('=').Append(Args[i]);
+                }
+                return sb.ToString();
+            }
+        }
+        public bool HasValues => Args.Count > 0;
 
         // Raw comma/space-separated args; lets the user add/remove arguments (needed for variable-length opcodes).
         public string RawArgs
@@ -1750,11 +2257,24 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             Params.Clear();
             for (int i = 0; i < Args.Count; i++)
-                Params.Add(new ParamVM(DSPRE.Avalonia.Data.BattleAnimSchema.ParamName(OpName, i, Script), Args[i], i, this,
+                Params.Add(new ParamVM(DSPRE.Avalonia.Data.BattleAnimSchema.ParamLabel(OpName, i, Args, Script), Args[i], i, this,
                                        DSPRE.Avalonia.Data.BattleAnimSchema.EnumFor(OpName, i)));
-            Raise(nameof(Summary)); Raise(nameof(RawArgs)); Raise(nameof(HasParams));
+            Raise(nameof(Summary)); Raise(nameof(ValuesSummary)); Raise(nameof(HasValues)); Raise(nameof(RawArgs)); Raise(nameof(HasParams));
         }
         public bool HasParams => Args.Count > 0;
+
+        internal ParamVM ParamAt(int index)
+        {
+            foreach (ParamVM p in Params) if (p.Index == index) return p;
+            return null;
+        }
+
+        /// <summary>Sets a value as its editor would, so the card shows it.</summary>
+        internal void SetArg(int index, int v)
+        {
+            ParamVM p = ParamAt(index);
+            if (p != null) p.Value = v; else SetParam(index, v);
+        }
 
         internal void SetParam(int index, int v)
         {
@@ -1771,7 +2291,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     Rebuild();
                 }
             }
-            Raise(nameof(Summary)); Raise(nameof(RawArgs));
+            // A new routine number names its values differently.
+            if (!Script && index == 0 && OpName == "CallFunc")
+                foreach (ParamVM p in Params) p.Name = DSPRE.Avalonia.Data.BattleAnimSchema.ParamLabel(OpName, p.Index, Args);
+            Raise(nameof(Summary)); Raise(nameof(ValuesSummary)); Raise(nameof(HasValues)); Raise(nameof(RawArgs));
             OnEdited?.Invoke(this);
         }
     }
@@ -1783,7 +2306,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public event PropertyChangedEventHandler PropertyChanged;
         private readonly ScriptCmdRow _row;
         private readonly int _index;
-        public string Name { get; }
+        internal int Index => _index;
+        private string _name;
+        public string Name { get => _name; set { if (_name != value) { _name = value; Raise(nameof(Name)); } } }
 
         // Enum params (operator target/pos/axis/…) show a dropdown; everything else a numeric entry.
         private readonly System.Collections.Generic.List<int> _enumValues = new();

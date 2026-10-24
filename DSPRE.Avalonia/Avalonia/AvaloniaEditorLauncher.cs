@@ -190,8 +190,8 @@ namespace DSPRE.Avalonia
             new EggMoveEditorView().ShowManaged();
         }
 
-        /// <summary>From the Move editor, archive 0 and the move number jump straight to that move's script.</summary>
-        public static void OpenBattleScriptEditor(int archive = 0, int entryIndex = 0)
+        /// <summary>Opens on move animations by default. The Move editor passes archive 0 (script) or 3 (animation) and the move number.</summary>
+        public static void OpenBattleScriptEditor(int archive = 3, int entryIndex = 1)
         {
             // Refused too while hg-engine builds the particle archive, which has no source view yet.
             if (Refused("BattleScriptEditorView")) return;
@@ -199,7 +199,7 @@ namespace DSPRE.Avalonia
             BattleScriptEditorView view = new BattleScriptEditorView { DataContext = vm };
             if (vm.IsAvailable)
             {
-                vm.ArchiveIndex = System.Math.Clamp(archive, 0, 3);   // setter rebuilds the entry list
+                vm.ArchiveIndex = System.Math.Clamp(archive, 0, 4);
                 if (entryIndex > 0 && vm.FileItems.Count > 0)
                     vm.SelectedFileIndex = System.Math.Min(entryIndex, vm.FileItems.Count - 1);
             }

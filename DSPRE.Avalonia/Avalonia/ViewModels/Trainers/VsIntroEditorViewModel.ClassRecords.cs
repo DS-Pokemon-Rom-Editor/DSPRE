@@ -479,7 +479,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                         PlayerFace = Four(PlayerGirl ? _sites.PlayerFaceGirl : _sites.PlayerFaceBoy),
                         Frame = Get(Field.Group1Rgcn, Field.Group1Recn), FrameAnim = r.GetAsset(Field.Group1Rnan), FramePalette = r.GetAsset(Field.Group1Rlcn),
                         ClashFrames = r.Style2Timing, NamePalette = _sites.NamePalette, Name = name,
-                        Particles = RomLocator.VsIntroMotionSites?.LeagueParticles,
+                        Particles = RomLocator.VsIntroMotionSites?.LeagueParticles, ParticleEmitters = _t?.ParticleEmitters,
                     };
                 case 3:
                     return new VsIntroPreview.Scene

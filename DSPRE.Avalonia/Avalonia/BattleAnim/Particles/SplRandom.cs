@@ -1,12 +1,9 @@
 using System;
 
-namespace DSPRE.Avalonia.Data
+namespace DSPRE.Avalonia.BattleAnim.Particles
 {
-    /// <summary>
-    /// The particle library's random generator and range helpers (pokeplatinum lib/spl/include/spl_random.h,
-    /// lib/spl/src/spl_random.c). Every helper consumes exactly one draw, as the library's macros do, even when
-    /// its range is zero, so per-emitter sequences line up with the game's call order.
-    /// </summary>
+    // Each helper takes exactly one draw, even for a zero range, so sequences follow the game's call order.
+    /// <summary>The particle library's random generator and range helpers (lib/spl/src/spl_random.c).</summary>
     public sealed class SplRandom
     {
         public uint State;
@@ -37,6 +34,11 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>SPLRandom_BetweenFX32: min + (max - min) * U12 / 4096.</summary>
         public double Between(double min, double max) => min + (max - min) * U32(12) / 4096.0;
+
+        // Fixed-point forms of the macros, with the library's integer truncation.
+        public int RangeFx(int num) => unchecked((num * (int)U32(9) - (num << 8)) >> 8);
+        public int DoubleScaledRangeFx(int num, int range) => unchecked(num * (255 + range - ((range * (int)U32(8)) >> 7)) >> 8);
+        public int BetweenFx(int min, int max) => unchecked((int)((uint)(max - min) * U32(12)) + min * 4096);
 
         /// <summary>SPLRandom_VecFx32: three signed 24-bit components, normalised.</summary>
         public (double X, double Y, double Z) Vec()

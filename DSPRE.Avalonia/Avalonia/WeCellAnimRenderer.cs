@@ -91,22 +91,30 @@ namespace DSPRE.Avalonia
 
         private readonly Dictionary<int, CellPixels> _cellRgbaCache = new Dictionary<int, CellPixels>();
 
-        public CellPixels RenderCellRgba(int cellIdx)
+        // paletteShift moves every piece that many 16-colour palettes on (ManagedSprite_SetExplicitPaletteOffset).
+        public CellPixels RenderCellRgba(int cellIdx, int paletteShift = 0)
         {
-            if (_cellRgbaCache.TryGetValue(cellIdx, out CellPixels c)) return c;
+            int key = cellIdx | paletteShift << 24;
+            if (_cellRgbaCache.TryGetValue(key, out CellPixels c)) return c;
             const int S = 256;
             byte[] rgba = null;
             if (Loaded && cellIdx >= 0)
             {
                 try
                 {
-                    RawImage raw = CellRenderer.Draw(_cell, cellIdx, _char, _pltt, S, S);
+                    ushort[] colours = _pltt;
+                    if (paletteShift > 0 && paletteShift * 16 < _pltt.Length)
+                    {
+                        colours = new ushort[_pltt.Length];
+                        Array.Copy(_pltt, paletteShift * 16, colours, 0, _pltt.Length - paletteShift * 16);
+                    }
+                    RawImage raw = CellRenderer.Draw(_cell, cellIdx, _char, colours, S, S);
                     if (raw != null) rgba = ToRgba(raw, S);
                 }
                 catch (Exception ex) { AppLogger.Error("WeCellAnimRenderer.RenderCellRgba failed: " + ex.Message); }
             }
             CellPixels res = new CellPixels(rgba, S);
-            _cellRgbaCache[cellIdx] = res;
+            _cellRgbaCache[key] = res;
             return res;
         }
 

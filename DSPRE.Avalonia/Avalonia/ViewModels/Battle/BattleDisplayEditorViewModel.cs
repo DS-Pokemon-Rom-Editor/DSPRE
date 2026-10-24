@@ -1,6 +1,7 @@
 ﻿using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using DSPRE.Avalonia.BattleAnim.Particles;
 using DSPRE.Avalonia.Data;
 using DSPRE.Avalonia.Gl;
 using DSPRE.HgEngine;
@@ -1237,7 +1238,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // ── Send-out scene: what the sequence moves besides the two Pokémon ──────────────────────────
         private SendOutSequence _sendOut;
         private SendOutGraphics _gfx;
-        private SpaParticlePreview _enemyBurst, _playerBurst;
+        private SplScene _enemyBurst, _playerBurst;
         private BattleAnimPlayer _enemySparkle, _playerSparkle;
         private CellActor _enemyBallActor, _playerBallActor;
         private bool _enemyBallRolling, _playerBallRolling;
@@ -1484,8 +1485,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             };
             _sendOut = new SendOutSequence(options);
             _waitingSeals.Clear();
-            _enemyBurst = new SpaParticlePreview(256, 192);
-            _playerBurst = new SpaParticlePreview(256, 192);
+            _enemyBurst = new SplScene();
+            _playerBurst = new SplScene();
             _enemySparkle = _playerSparkle = null;
             CellSequence[] balls = _gfx.BallSequences(_sendOutBall);
             _enemyBallActor = new CellActor(balls, 1);
@@ -1553,8 +1554,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _progBack?.Step();
             _frontFrames.Tick();
             _backFrames.Tick();
-            bool enemyBursting = (_enemyBurst.HasEmitters && !_enemyBurst.AllFinished) || _waitingSeals.Exists(w => w.Enemy);
-            bool playerBursting = (_playerBurst.HasEmitters && !_playerBurst.AllFinished) || _waitingSeals.Exists(w => !w.Enemy);
+            bool enemyBursting = _enemyBurst.Active || _waitingSeals.Exists(w => w.Enemy);
+            bool playerBursting = _playerBurst.Active || _waitingSeals.Exists(w => !w.Enemy);
             StepSparkle(ref _enemySparkle, img => EnemySparkleImage = img);
             StepSparkle(ref _playerSparkle, img => PlayerSparkleImage = img);
 
@@ -1583,20 +1584,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             PushTransforms();
 
             // Particles are drawn where they are, then moved, once a tick.
-            EnemyBurstImage = StepBurst(_enemyBurst);
-            PlayerBurstImage = StepBurst(_playerBurst);
+            EnemyBurstImage = _enemyBurst.Step();
+            PlayerBurstImage = _playerBurst.Step();
 
             if (s.Done && !SpritesPlaying && _enemySparkle == null && _playerSparkle == null && _waitingSeals.Count == 0
-                && !(_enemyBurst.HasEmitters && !_enemyBurst.AllFinished) && !(_playerBurst.HasEmitters && !_playerBurst.AllFinished))
+                && !_enemyBurst.Active && !_playerBurst.Active)
                 StopPlayback();
-        }
-
-        private static Bitmap StepBurst(SpaParticlePreview burst)
-        {
-            if (!burst.HasEmitters || burst.AllFinished) return null;
-            WriteableBitmap image = burst.RenderFrame();
-            burst.Step();
-            return image;
         }
 
         private BattleAnimPlayer StartSparkle(bool enemySide)

@@ -574,7 +574,16 @@ A game screen is drawn by a renderer that returns its pieces with their source f
 `ScreenPagesView`. PNG export keeps colour numbers, and shared-palette imports refuse a PNG with the wrong colours
 and offer `PngColourPrompt`. `OpenGraphicAt` and `OpenPainter` hand a graphic to the Graphics window or the
 painter, with the colours file and row the screen shows it in. Changing a file other pieces also show asks first
-("This piece is shared"), in the Battle screen editor and in `ScreenPagesView` alike.
+("This piece is shared"), in the Battle screen editor and in `ScreenPagesView` alike. Battle text goes into the
+message box through `BattleMessageText`.
+
+Move animation code lives in `Avalonia/BattleAnim/`. `SplManager` is the game's particle library, in fixed point.
+`BattleParticles` places and moves its emitters the way a battle does, and `SplRenderer` draws them the way the DS
+does. All three are in `Particles/`. Each sprite function that `AddSpriteWithFunc` can call has a file in
+`SpriteEffects/`, listed by number in `SpriteEffectTable`. An effect sees the battle only through
+`IBattleAnimSystem` and builds its moves from `BattleAnimHelpers`.
+Particles shown outside a move go through `SplScene`: the Particle editor, send-out ball bursts and seals, and the
+League VS intro.
 
 ## Scripts
 

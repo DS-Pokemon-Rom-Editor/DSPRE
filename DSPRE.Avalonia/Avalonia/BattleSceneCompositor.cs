@@ -25,13 +25,22 @@ namespace DSPRE.Avalonia
 
         public WriteableBitmap Render(BattleAnimPlayer player)
         {
+            WriteableBitmap wb = new WriteableBitmap(new PixelSize(W, H), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
+            RenderInto(wb, player, null);
+            return wb;
+        }
+
+        /// <summary>Draws the scene, then the particles (premultiplied BGRA, or null) over it, into a bitmap the caller
+        /// keeps, so playback allocates nothing per frame.</summary>
+        public void RenderInto(WriteableBitmap target, BattleAnimPlayer player, byte[] particles)
+        {
             if (_backdrop != null && _backdrop.Length == _scene.Length)
             {
                 if (player != null && player.RasterActive)
                 {
                     for (int y = 0; y < H; y++)
                     {
-                        int off = (int)Math.Round(player.RasterAmp * Math.Sin(player.RasterPhase + y * player.RasterLineAdd));
+                        int off = y >= player.RasterRows ? 0 : (int)Math.Round(player.RasterAmp * Math.Sin(player.RasterPhase + y * player.RasterLineAdd));
                         for (int x = 0; x < W; x++)
                         {
                             int sx = ((x - off) % W + W) % W, si = (y * W + sx) * 3, di = (y * W + x) * 3;
@@ -85,6 +94,7 @@ namespace DSPRE.Avalonia
                     (byte[] rgba, int w, int h, int left, int top) gs = gh.Mon == 0 ? _back : _front;
                     BlitMon(gs, true, gh.Dx, gh.Dy, gh.ScaleX, gh.ScaleY, 0, gh.TintA, gh.TintR, gh.TintG, gh.TintB, gh.Alpha);
                 }
+            if (player != null) BlitCellActors(player, behindMons: true);
             for (int m = 0; m < 2; m++)
             {
                 (byte[] rgba, int w, int h, int left, int top) s = m == 0 ? _back : _front;
@@ -112,42 +122,73 @@ namespace DSPRE.Avalonia
                 }
             }
 
-            if (player != null) BlitCellActors(player);
+            if (player != null && player.ScreenBrightness != 0) ApplyBrightness(player.ScreenBrightness);
+            if (player != null) BlitCellActors(player, behindMons: false);
 
             if (player != null && player.HasBackground && player.BackgroundIsOverlay) OverlayBg(player, player.BgCa, player.BgCb);
 
+            bool withParticles = particles != null && particles.Length >= W * H * 4;
             for (int i = 0, j = 0; i < W * H * 3; i += 3, j += 4)
             {
-                _out[j + 0] = _scene[i + 2]; _out[j + 1] = _scene[i + 1]; _out[j + 2] = _scene[i + 0]; _out[j + 3] = 255;
+                if (withParticles && particles[j + 3] != 0)
+                {
+                    int ia = 255 - particles[j + 3];
+                    _out[j + 0] = (byte)(particles[j + 0] + _scene[i + 2] * ia / 255);
+                    _out[j + 1] = (byte)(particles[j + 1] + _scene[i + 1] * ia / 255);
+                    _out[j + 2] = (byte)(particles[j + 2] + _scene[i + 0] * ia / 255);
+                }
+                else { _out[j + 0] = _scene[i + 2]; _out[j + 1] = _scene[i + 1]; _out[j + 2] = _scene[i + 0]; }
+                _out[j + 3] = 255;
             }
-            WriteableBitmap wb = new WriteableBitmap(new PixelSize(W, H), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
-            using (ILockedFramebuffer fb = wb.Lock())
+            using (ILockedFramebuffer fb = target.Lock())
             {
                 int rb = fb.RowBytes;
                 if (rb == W * 4) Marshal.Copy(_out, 0, fb.Address, _out.Length);
                 else for (int y = 0; y < H; y++) Marshal.Copy(_out, y * W * 4, fb.Address + y * rb, W * 4);
             }
-            return wb;
         }
 
-        private void BlitCellActors(BattleAnimPlayer player)
+        // G2_SetBlendBrightness on what is drawn so far: toward white for a positive level, black for a negative one.
+        private void ApplyBrightness(int level)
+        {
+            int evy = Math.Min(16, Math.Abs(level));
+            for (int i = 0; i < _scene.Length; i++)
+            {
+                int c = _scene[i];
+                _scene[i] = (byte)(level > 0 ? c + (255 - c) * evy / 16 : c - c * evy / 16);
+            }
+        }
+
+        // The Pokemon sit at BG priority 1, so a sprite with a larger priority number is drawn behind them.
+        private void BlitCellActors(BattleAnimPlayer player, bool behindMons)
         {
             WeCellAnimRenderer cells = player.Cells;
             if (cells == null || !cells.Loaded) return;
-            foreach (CellActor a in player.SpriteActors)
+            // The sprite list keeps lower priority numbers first, oldest first among equals, and the first sprite drawn
+            // is on top; so paint from the end.
+            List<CellActor> order = new List<CellActor>(System.Linq.Enumerable.OrderBy(player.SpriteActors, s => s.OamPriority));
+            for (int oi = order.Count - 1; oi >= 0; oi--)
             {
-                if (!a.Visible || a.Alpha <= 0) continue;
-                WeCellAnimRenderer.CellPixels cp = cells.RenderCellRgba(a.CellIndex);
+                CellActor a = order[oi];
+                if (!a.OnScreen || a.Alpha <= 0 || (a.Priority > 1) != behindMons) continue;
+                WeCellAnimRenderer.CellPixels cp = cells.RenderCellRgba(a.CellIndex, a.PalShift);
                 if (cp.Rgba == null) continue;
                 int S = cp.Size; double half = S / 2.0;
                 double sclX = a.ScaleX * a.FrameScaleX, sclY = a.ScaleY * a.FrameScaleY;
+                // A negative affine scale mirrors the sprite.
+                bool mirrorX = sclX < 0, mirrorY = sclY < 0;
+                sclX = Math.Abs(sclX); sclY = Math.Abs(sclY);
                 if (sclX <= 0.0001 || sclY <= 0.0001) continue;
-                double cx = a.X + a.FrameX, cy = a.Y + a.FrameY;
+                // An effect task's sprite turns about its affine centre, a plain one about its cell.
+                double cx = a.TaskDriven ? a.X + a.PivotX : a.X + a.FrameX, cy = a.TaskDriven ? a.Y + a.PivotY : a.Y + a.FrameY;
+                double shiftX = a.TaskDriven ? a.FrameX - a.PivotX : 0, shiftY = a.TaskDriven ? a.FrameY - a.PivotY : 0;
                 double rot = a.FrameRotDeg * Math.PI / 180.0;
                 bool rotated = Math.Abs(a.FrameRotDeg) > 0.01;
                 double cosR = Math.Cos(-rot), sinR = Math.Sin(-rot);
-                double ex = rotated ? half * Math.Max(sclX, sclY) * 1.4143 : half * sclX;
-                double ey = rotated ? half * Math.Max(sclX, sclY) * 1.4143 : half * sclY;
+                double reach = half + Math.Abs(shiftX) + Math.Abs(shiftY);
+                double ex = rotated || shiftX != 0 || shiftY != 0 ? reach * Math.Max(sclX, sclY) * 1.4143 : half * sclX;
+                double ey = rotated || shiftX != 0 || shiftY != 0 ? reach * Math.Max(sclX, sclY) * 1.4143 : half * sclY;
+                int eva = Math.Min(16, player.BlendEva), evb = Math.Min(16, player.BlendEvb);
                 int x0 = Math.Max(0, (int)Math.Floor(cx - ex)), x1 = Math.Min(W, (int)Math.Ceiling(cx + ex));
                 int y0 = Math.Max(0, (int)Math.Floor(cy - ey)), y1 = Math.Min(H, (int)Math.Ceiling(cy + ey));
                 for (int dy = y0; dy < y1; dy++)
@@ -155,19 +196,32 @@ namespace DSPRE.Avalonia
                     {
                         double ox = dx + 0.5 - cx, oy = dy + 0.5 - cy;
                         if (rotated) { double rx = ox * cosR - oy * sinR, ry = ox * sinR + oy * cosR; ox = rx; oy = ry; }
-                        double u = ox / sclX + half, v = oy / sclY + half;
-                        if (a.FlipH) u = S - u;
-                        if (a.FlipV) v = S - v;
+                        double u = ox / sclX - shiftX + half, v = oy / sclY - shiftY + half;
+                        if (a.FlipH != mirrorX) u = S - u;
+                        if (a.FlipV != mirrorY) v = S - v;
                         int sx = (int)u, sy = (int)v;
                         if (sx < 0 || sy < 0 || sx >= S || sy >= S) continue;
                         int si = (sy * S + sx) * 4;
                         byte sa = cp.Rgba[si + 3];
                         if (sa == 0) continue;
-                        double k = sa / 255.0 * a.Alpha;
                         int di = (dy * W + dx) * 3;
-                        _scene[di + 0] = (byte)(_scene[di + 0] * (1 - k) + cp.Rgba[si + 0] * k);
-                        _scene[di + 1] = (byte)(_scene[di + 1] * (1 - k) + cp.Rgba[si + 1] * k);
-                        _scene[di + 2] = (byte)(_scene[di + 2] * (1 - k) + cp.Rgba[si + 2] * k);
+                        int r = cp.Rgba[si + 0], g = cp.Rgba[si + 1], b = cp.Rgba[si + 2];
+                        // A palette fade on the sprite's palette (PaletteData_Blend).
+                        if (a.Tint > 0)
+                        {
+                            r += (a.TintR - r) * a.Tint / 16; g += (a.TintG - g) * a.Tint / 16; b += (a.TintB - b) * a.Tint / 16;
+                        }
+                        if (a.Xlu)
+                        {
+                            _scene[di + 0] = (byte)Math.Min(255, (r * eva + _scene[di + 0] * evb) / 16);
+                            _scene[di + 1] = (byte)Math.Min(255, (g * eva + _scene[di + 1] * evb) / 16);
+                            _scene[di + 2] = (byte)Math.Min(255, (b * eva + _scene[di + 2] * evb) / 16);
+                            continue;
+                        }
+                        double k = sa / 255.0 * a.Alpha;
+                        _scene[di + 0] = (byte)(_scene[di + 0] * (1 - k) + r * k);
+                        _scene[di + 1] = (byte)(_scene[di + 1] * (1 - k) + g * k);
+                        _scene[di + 2] = (byte)(_scene[di + 2] * (1 - k) + b * k);
                     }
             }
         }
