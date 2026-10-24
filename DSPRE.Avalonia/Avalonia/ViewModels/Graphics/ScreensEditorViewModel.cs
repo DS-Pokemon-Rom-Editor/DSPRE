@@ -403,7 +403,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             foreach (int bank in banks) Archives.Add(new ScreenArchiveChoice(bank, banks.Length > 1 ? FirstLineOf(bank) : null));
             States = screen.States ?? Array.Empty<string>();
             if (HasSample) PartySample.Changed += OnSampleChanged;
+            _picturesSaved = AppEvents.WhenSaved(() => { if (_filled) _ = RedrawAsync(); }, dir => _shot?.Pieces.Any(p => p.Dir == dir) == true);
         }
+
+        private readonly IDisposable _picturesSaved;
 
         // ── the sample party, for the party screen ──
 
@@ -434,7 +437,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_filled) _ = RedrawAsync();
         }
 
-        public void Detach() { if (HasSample) PartySample.Changed -= OnSampleChanged; }
+        public void Detach()
+        {
+            if (HasSample) PartySample.Changed -= OnSampleChanged;
+            _picturesSaved.Dispose();
+        }
 
         private List<string> _species;
         /// <summary>Species names by number; 0 leaves the slot empty.</summary>

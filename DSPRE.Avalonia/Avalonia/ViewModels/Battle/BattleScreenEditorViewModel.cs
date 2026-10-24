@@ -72,6 +72,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             _loading = false;
             AppEvents.RomPatchStateChanged += OnPatchStateChanged;
+            _picturesSaved = AppEvents.WhenSaved(Reload, RomInfo.DirNames.BattleObj, RomInfo.DirNames.BattleBg, RomInfo.DirNames.WindowFrames, RomInfo.DirNames.Fonts);
             Refresh();
         }
 
@@ -226,7 +227,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// <summary>Stands in for writing the bar pieces during <see cref="Import"/>.</summary>
         public string StageBarPieces(byte[] sheet) { Pending.Stage(HpBarImport.SheetTarget, sheet); return null; }
 
-        public void Detach() => AppEvents.RomPatchStateChanged -= OnPatchStateChanged;
+        private IDisposable _picturesSaved;
+
+        public void Detach()
+        {
+            AppEvents.RomPatchStateChanged -= OnPatchStateChanged;
+            _picturesSaved?.Dispose();
+        }
 
         public bool CanClearTextBackground => HpBarTextPatchOffer.CanOffer;
         public string ClearTextBackgroundHelp => HpBarTextPatchOffer.Tip;

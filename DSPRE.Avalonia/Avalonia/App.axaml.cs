@@ -122,6 +122,14 @@ namespace DSPRE
 
                 // Archive members saved from Core keep hg-engine's PNGs in step and reach open editors.
                 DSPRE.ArchiveMembers.Written += DSPRE.Avalonia.Data.BuiltPngSources.OnMemberWritten;
+                // Previews cache fonts and number glyphs, so a font save clears them before editors redraw.
+                DSPRE.Avalonia.AppEvents.ArchiveMemberSaved += (_, dir) =>
+                {
+                    if (dir != DSPRE.RomInfo.DirNames.Fonts) return;
+                    DSPRE.Avalonia.Data.GameTextScreens.ForgetFonts();
+                    DSPRE.Avalonia.Data.TextScreenPreviews.ForgetFonts();
+                    DSPRE.Avalonia.Data.BattleGaugeTextRenderer.Reset();
+                };
 
                 DSPRE.Avalonia.CoreDialogs.Install();
 

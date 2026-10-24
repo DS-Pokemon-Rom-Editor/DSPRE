@@ -44,13 +44,13 @@ namespace DSPRE.Avalonia.Data
         /// <summary>FontHeartGold: 11 entries.</summary>
         public const string FontHeartGold =
             "Font.System Font.Message Font.TouchScreen Font.Unown Font.4 Font.SpecialCharacters:Drawing "
-            + "Font.ScreenIndicators:Drawing Font.SpecialCharacters:Colours Font.ScreenIndicators:Colours "
+            + "Font.ScreenIndicators:Drawing Font.Text:Colours Font.ScreenIndicators:Colours "
             + "Font.Extra:Colours Font.5";
 
         /// <summary>FontPlatinum, also Diamond and Pearl: 8 entries.</summary>
         public const string FontPlatinum =
             "Font.System Font.Message Font.TouchScreen Font.Unown Font.SpecialCharacters:Drawing "
-            + "Font.ScreenIndicators:Drawing Font.SpecialCharacters:Colours Font.ScreenIndicators:Colours";
+            + "Font.ScreenIndicators:Drawing Font.Text:Colours Font.ScreenIndicators:Colours";
 
     }
 }

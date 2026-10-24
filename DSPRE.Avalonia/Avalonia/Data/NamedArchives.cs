@@ -97,6 +97,7 @@ namespace DSPRE.Avalonia.Data
             ("Font.TouchScreen", "Touch screen font"),
             ("Font.Unown", "Unown font"),
             ("Font.SpecialCharacters", "Special characters"),
+            ("Font.Text", "Text colours"),
             ("Font.ScreenIndicators", "Screen indicators"),
             ("Font.Extra", "Extra font colours"),
             ("Font.4", "Font 4"),
@@ -167,6 +168,9 @@ namespace DSPRE.Avalonia.Data
             if (fileIndex < 0 || fileIndex >= names.Count) return -1;
             (string thing, string part) = BattleObjects.Split(names[fileIndex]);
             if (thing == null || part == "Colours") return -1;
+            // Special characters have no palette; the game colours them per screen, and the indicator colours give the
+            // unused gendered level tiles their pink and blue (font_special_chars.c).
+            if (dir == DirNames.Fonts && thing == "Font.SpecialCharacters") thing = "Font.ScreenIndicators";
             return IndexOf(names, thing, "Colours");
         }
 

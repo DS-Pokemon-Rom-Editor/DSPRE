@@ -130,17 +130,7 @@ namespace DSPRE.Avalonia.Data
             if (name) options.PokemonName = MenuLabel(text);
             _battle ??= new BattleScreenRenderer();
             byte[] top = BattleScreenRenderer.Flatten(_battle.Build(options), touch: false);
-            if (message)
-            {
-                FieldFont font = Views.Controls.FieldMessageBoxView.Font;
-                string shown = FieldStringVars.Expand(text, GameTextScreens.SampleWord);
-                List<FieldMessageFrame> frames = FieldMessageScript.Frames(shown, Views.Controls.FieldMessageBoxView.Measure);
-                IReadOnlyList<string> lines = frames.Count > 0 ? frames[stop % frames.Count].Lines : Array.Empty<string>();
-                stops = Math.Max(1, frames.Count);
-                for (int i = 0; i < lines.Count; i++)
-                    DsBgScreen.DrawText(top, font, lines[i], FieldMessageWindow.TextLeft,
-                                        FieldMessageWindow.TextTop + i * FieldMessageWindow.LineHeight, TalkLetter, TalkShadow);
-            }
+            if (message) stops = BattleMessageText.Draw(top, text, GameTextScreens.SampleWord, stop);
             shots.Add(new TextScreenShot
             {
                 Name = "Battle screen graphics: top",
@@ -152,9 +142,6 @@ namespace DSPRE.Avalonia.Data
                 EditorName = "Battle screen",
             });
         }
-
-        // The talk font's ink and shadow, in 15-bit colour.
-        private const ushort TalkLetter = 5 | 5 << 5 | 5 << 10, TalkShadow = 18 | 19 << 5 | 21 << 10;
 
         // The text entries the HGSS touch menu prints.
         private static readonly int[] TouchMenuMessages = { 0, 1, 2, 3, 4, 5, 8, 14, 32, 34, 35,
@@ -258,6 +245,9 @@ namespace DSPRE.Avalonia.Data
         // The archives each book, page, state and side prints from.
         private static readonly Dictionary<(int Book, string Page, string Variant, ScreenSide Side), HashSet<int>> Reads = new();
         private static readonly Dictionary<int, FieldFont> Fonts = new();
+
+        /// <summary>Reads everything again on the next preview, after the font archive was saved.</summary>
+        public static void ForgetFonts() { lock (Gate) _rom = null; }
 
         public static List<TextScreenShot> For(int bank, int line, string text, int stop = 0)
         {

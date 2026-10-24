@@ -145,7 +145,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             int start = pageId == null ? 0 : Math.Max(0, _pages.ToList().FindIndex(p => p.Id == pageId));
             if (_pages.Count > 0) PageIndex = start;
             else StatusText = "This game has no pages to show here.";
-            _picturesSaved = AppEvents.WhenSaved(Compose, book.PictureArchives);
+            _picturesSaved = AppEvents.WhenSaved(Reload, book.PictureArchives);
         }
 
         private readonly IDisposable _picturesSaved;

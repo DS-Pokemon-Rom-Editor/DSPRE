@@ -89,10 +89,17 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             foreach (BattleGaugeComposer.Kind kind in Enum.GetValues<BattleGaugeComposer.Kind>()) BarNames.Add(BattleGaugeComposer.NameOf(kind));
             if (global::Avalonia.Controls.Design.IsDesignMode) return;
             AppEvents.RomPatchStateChanged += OnPatchStateChanged;
+            _picturesSaved = AppEvents.WhenSaved(Redraw, RomInfo.DirNames.BattleObj, RomInfo.DirNames.Fonts);
             LoadBar();
         }
 
-        public void Detach() => AppEvents.RomPatchStateChanged -= OnPatchStateChanged;
+        private readonly IDisposable _picturesSaved;
+
+        public void Detach()
+        {
+            AppEvents.RomPatchStateChanged -= OnPatchStateChanged;
+            _picturesSaved?.Dispose();
+        }
 
         public bool CanClearTextBackground => HpBarTextPatchOffer.CanOffer;
         public string ClearTextBackgroundHelp => HpBarTextPatchOffer.Tip;

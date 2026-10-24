@@ -32,19 +32,22 @@ namespace DSPRE.Avalonia
 
         /// <summary>Runs <paramref name="redraw"/> on the UI thread after members of <paramref name="dirs"/> are saved
         /// elsewhere, until disposed. A save that writes many members redraws once.</summary>
-        public static IDisposable WhenSaved(Action redraw, params RomInfo.DirNames[] dirs) => new SavedWatch(redraw, dirs);
+        public static IDisposable WhenSaved(Action redraw, params RomInfo.DirNames[] dirs) => new SavedWatch(redraw, d => Array.IndexOf(dirs, d) >= 0);
+
+        /// <summary>The same, for a preview that reads different archives as you use it.</summary>
+        public static IDisposable WhenSaved(Action redraw, Func<RomInfo.DirNames, bool> reads) => new SavedWatch(redraw, reads);
 
         private sealed class SavedWatch : IDisposable
         {
             private readonly Action _redraw;
-            private readonly RomInfo.DirNames[] _dirs;
+            private readonly Func<RomInfo.DirNames, bool> _reads;
             private int _queued;
 
-            public SavedWatch(Action redraw, RomInfo.DirNames[] dirs) { _redraw = redraw; _dirs = dirs; ArchiveMemberSaved += OnSaved; }
+            public SavedWatch(Action redraw, Func<RomInfo.DirNames, bool> reads) { _redraw = redraw; _reads = reads; ArchiveMemberSaved += OnSaved; }
 
             private void OnSaved(object sender, RomInfo.DirNames dir)
             {
-                if (Array.IndexOf(_dirs, dir) < 0 || System.Threading.Interlocked.Exchange(ref _queued, 1) == 1) return;
+                if (!_reads(dir) || System.Threading.Interlocked.Exchange(ref _queued, 1) == 1) return;
                 global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                 {
                     System.Threading.Interlocked.Exchange(ref _queued, 0);

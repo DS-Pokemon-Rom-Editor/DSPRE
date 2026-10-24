@@ -289,6 +289,9 @@ namespace DSPRE.Avalonia.Data
         private static readonly Dictionary<int, FieldFont> Fonts = new();
         private static string _rom;
 
+        /// <summary>Reads the fonts again on the next draw, after the font archive was saved.</summary>
+        public static void ForgetFonts() => _rom = null;
+
         private static FieldFont Font(int entry)
         {
             if (_rom != WorkDir) { _rom = WorkDir; Fonts.Clear(); }
