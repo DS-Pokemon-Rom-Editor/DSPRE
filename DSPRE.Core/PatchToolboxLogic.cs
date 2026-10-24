@@ -1520,6 +1520,7 @@ namespace DSPRE
             ["trainerClassMetadata"] = "built on the pokeheartgold decompilation and Mixone's Ghidra symbol map, and developed with AI assistance",
             ["punchingMovesExpanded"] = MoveListResearch,
             ["soundMovesExpanded"] = MoveListResearch,
+            ["martsExpanded"] = "built on SpagoAsparago's guide to adding Poké Marts on the DS Pokémon Hacking wiki",
         };
 
         /// <summary>The credit line for a patch, as the credits list writes it, or null.</summary>
