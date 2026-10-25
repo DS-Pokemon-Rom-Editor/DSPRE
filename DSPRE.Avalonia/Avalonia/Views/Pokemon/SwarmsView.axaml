@@ -34,12 +34,12 @@
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="vm:SwarmsViewModel+RowViewModel">
             <Grid ColumnDefinitions="320,Auto,*">
-              <controls:FusionAutoCompleteBox AllowsNone="False" Grid.Column="0" Margin="0,0,8,0"
+              <controls:FusionAutoCompleteBox AllowsNone="False" Grid.Column="0" Margin="0,0,8,0" controls:EditorLink.To="Header"
                   ItemsSource="{Binding $parent[ListBox].((vm:SwarmsViewModel)DataContext).HeaderNames}" SelectedIndex="{Binding Header}"/>
               <ComboBox Grid.Column="1" Margin="0,0,8,0" Width="142"
                   IsVisible="{Binding $parent[ListBox].((vm:SwarmsViewModel)DataContext).HasMethod}"
                   ItemsSource="{Binding $parent[ListBox].((vm:SwarmsViewModel)DataContext).MethodNames}" SelectedIndex="{Binding Method}"/>
-              <DockPanel Grid.Column="2">
+              <DockPanel Grid.Column="2" LastChildFill="False">
                 <ItemsControl DockPanel.Dock="Left" ItemsSource="{Binding SpeciesIds}" Margin="0,0,6,0">
                   <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
@@ -50,7 +50,9 @@
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <TextBlock Text="{Binding Species}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                <TextBlock DockPanel.Dock="Left" Text="{Binding Species}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                <Button DockPanel.Dock="Left" Content="Open in Wild Pokémon editor" controls:Icon.Key="OpenLink" Padding="8,2" Margin="8,0,0,0" VerticalAlignment="Center"
+                        IsEnabled="{Binding HasEncounterFile}" ToolTip.Tip="{Binding OpenEncountersTip}" ToolTip.ShowOnDisabled="True" Click="OpenEncounters_Click"/>
               </DockPanel>
             </Grid>
           </DataTemplate>

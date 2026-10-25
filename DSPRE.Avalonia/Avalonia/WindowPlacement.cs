@@ -72,6 +72,7 @@ namespace DSPRE.Avalonia
                     double room = screen != null ? screen.WorkingArea.Height / scale - 40 : double.PositiveInfinity;
                     double cap = Math.Min(MinimumHeightCap, room);
                     if (w.MinHeight > cap) w.MinHeight = cap;
+                    KeepOnScreen(w, screen);
 
                     double overflow = 0;
                     foreach (Visual sv in global::Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(w))
@@ -95,6 +96,23 @@ namespace DSPRE.Avalonia
                 }
                 catch (Exception ex) { AppLogger.Warn("Window height fit: " + ex.Message); }
             }, global::Avalonia.Threading.DispatcherPriority.Background);
+        }
+
+        // Opening beside the active window can push a wide editor past the screen's right or bottom edge.
+        private static void KeepOnScreen(Window w, Screen screen)
+        {
+            if (screen == null || w.WindowState != WindowState.Normal) return;
+            double scale = screen.Scaling;
+            PixelRect area = screen.WorkingArea;
+            double roomWidth = area.Width / scale - 16;
+            if (w.MinWidth > roomWidth) w.MinWidth = roomWidth;
+            if (w.Width > roomWidth) w.Width = roomWidth;
+            Size frame = w.FrameSize ?? w.ClientSize;
+            int width = (int)Math.Ceiling(Math.Min(frame.Width, roomWidth) * scale);
+            int height = (int)Math.Ceiling(frame.Height * scale);
+            int x = Math.Max(area.X, Math.Min(w.Position.X, area.Right - width));
+            int y = Math.Max(area.Y, Math.Min(w.Position.Y, area.Bottom - height));
+            if (x != w.Position.X || y != w.Position.Y) w.Position = new PixelPoint(x, y);
         }
 
         private static Window ActiveWindow()

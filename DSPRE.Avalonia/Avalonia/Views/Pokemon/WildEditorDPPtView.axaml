@@ -60,13 +60,13 @@
           </StackPanel>
           <DataGrid ItemsSource="{Binding WalkingSlots}" AutoGenerateColumns="False" CanUserResizeColumns="True">
             <DataGrid.Columns>
-              <DataGridTextColumn Header="Chance" Binding="{Binding Label}" Width="80" MinWidth="80" IsReadOnly="True"/>
-              <DataGridTemplateColumn Header="Level" Width="110" MinWidth="110">
+              <DataGridTextColumn Header="Chance" Binding="{Binding Label}" Width="64" MinWidth="64" IsReadOnly="True"/>
+              <DataGridTemplateColumn Header="Level" Width="96" MinWidth="96">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:WildTimeRow"><NumericUpDown Value="{Binding Level}" Minimum="0" Maximum="100"/></DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Width="*" MinWidth="220">
+              <DataGridTemplateColumn Width="*" MinWidth="170">
                 <DataGridTemplateColumn.Header><TextBlock Text="Pokémon" ToolTip.Tip="All day, except where Day or Night has its own Pokémon"/></DataGridTemplateColumn.Header>
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:WildTimeRow">
@@ -74,7 +74,7 @@
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Width="*" MinWidth="220">
+              <DataGridTemplateColumn Width="*" MinWidth="170">
                 <DataGridTemplateColumn.Header><TextBlock Text="Day" ToolTip.Tip="Replaces slots 3 and 4 by day and in the evening"/></DataGridTemplateColumn.Header>
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:WildTimeRow">
@@ -82,7 +82,7 @@
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Width="*" MinWidth="220">
+              <DataGridTemplateColumn Width="*" MinWidth="170">
                 <DataGridTemplateColumn.Header><TextBlock Text="Night" ToolTip.Tip="Replaces slots 3 and 4 at night"/></DataGridTemplateColumn.Header>
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:WildTimeRow">
@@ -90,7 +90,7 @@
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Replaced by" Width="Auto" MinWidth="140">
+              <DataGridTemplateColumn Header="Replaced by" Width="Auto" MinWidth="90">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:WildTimeRow">
                     <StackPanel Orientation="Horizontal" Spacing="2" Margin="6,0" VerticalAlignment="Center">
@@ -103,8 +103,7 @@
                           </DataTemplate>
                         </ItemsControl.ItemTemplate>
                       </ItemsControl>
-                      <TextBlock Text="{Binding Note}" ToolTip.Tip="{Binding NoteTip}" VerticalAlignment="Center"
-                               Foreground="{DynamicResource Editor.Subtle}"/>
+                      <controls:HelpTip Text="{Binding NoteTip}" IsVisible="{Binding NoteTip, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                     </StackPanel>
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>

@@ -235,17 +235,26 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (encToOpen >= count) encToOpen = 0;
             _selectedEncounterIndex = encToOpen;
             LoadFile(encToOpen);
-            SelectedTab = FirstTabWithEncounters();
         }
 
-        /// <summary>The tab shown. Set once on open to the first one with encounters, then left to the user.</summary>
-        public int SelectedTab { get; set; }
+        private int _selectedTab;
+        /// <summary>Kept when switching files, unless the new file has nothing on it.</summary>
+        public int SelectedTab { get => _selectedTab; set => Set(ref _selectedTab, value); }
 
-        private int FirstTabWithEncounters()
+        // Tabs 0 to 2 are Walking, Water and Special; later tabs always count as filled.
+        private bool TabHasEncounters(int tab) => tab switch
         {
-            if (_current == null || _current.WalkingRate > 0) return 0;
-            if (_current.SurfRate > 0 || _current.OldRodRate > 0 || _current.GoodRodRate > 0 || _current.SuperRodRate > 0) return 1;
-            return _current.HasEncounters ? 2 : 0;
+            0 => _current.WalkingRate > 0,
+            1 => _current.SurfRate > 0 || _current.OldRodRate > 0 || _current.GoodRodRate > 0 || _current.SuperRodRate > 0,
+            2 => _current.RockSmashRate > 0,
+            _ => true,
+        };
+
+        private void PickTab()
+        {
+            if (_current == null || TabHasEncounters(SelectedTab)) return;
+            for (int tab = 0; tab < 3; tab++)
+                if (TabHasEncounters(tab)) { SelectedTab = tab; return; }
         }
 
         // Opened without a file in mind: start on the first file with encounters, since file 0 is empty.
@@ -454,6 +463,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _current = LoadRecord(_archive.Read(id), id, out string loadError);
             SourceLoadError = loadError;
             PopulateRows();
+            PickTab();
             SetClean();
 
             _history.Reset(Snapshot());   // loaded state is the clean undo baseline for this file

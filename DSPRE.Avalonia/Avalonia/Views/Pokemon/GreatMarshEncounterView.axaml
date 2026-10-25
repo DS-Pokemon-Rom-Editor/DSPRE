@@ -26,6 +26,10 @@
       <Grid ColumnDefinitions="*,220" Margin="8">
         <DockPanel Grid.Column="0" Margin="0,0,8,0">
           <StackPanel DockPanel.Dock="Top" Spacing="4">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+              <TextBlock Text="Replaces walking slots 7 and 8" VerticalAlignment="Center"/>
+              <controls:HelpTip Text="5% each, only during a Safari Game."/>
+            </StackPanel>
             <TextBlock Text="Encounter list" FontWeight="Bold"/>
             <ComboBox HorizontalAlignment="Stretch"
                       ItemsSource="{Binding GroupNames}"

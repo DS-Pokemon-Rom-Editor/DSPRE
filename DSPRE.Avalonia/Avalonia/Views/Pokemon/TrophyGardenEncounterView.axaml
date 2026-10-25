@@ -42,6 +42,10 @@
             </ListBox>
 
         <StackPanel Grid.Column="1" Margin="16" Spacing="8">
+          <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Replaces walking slots 7 and 8" VerticalAlignment="Center"/>
+            <controls:HelpTip Text="5% each, once you have the National Pokédex."/>
+          </StackPanel>
           <Border Width="64" Height="64" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
                   Background="{DynamicResource Editor.PanelBg}" HorizontalAlignment="Left">
             <Image Source="{Binding PokemonIcon}" Stretch="Uniform"/>

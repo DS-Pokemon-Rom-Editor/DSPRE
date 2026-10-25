@@ -34,6 +34,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         {
             if (await DialogHelper.ConfirmDiscardAsync(this)) VM?.DiscardChanges();
         }
+        private void OpenEncounters_Click(object sender, RoutedEventArgs e) => ((sender as Control)?.DataContext as SwarmsViewModel.RowViewModel)?.OpenEncounters();
         private void Add_Click(object sender, RoutedEventArgs e) => VM?.Add();
         private void Remove_Click(object sender, RoutedEventArgs e) => VM?.Remove();
 

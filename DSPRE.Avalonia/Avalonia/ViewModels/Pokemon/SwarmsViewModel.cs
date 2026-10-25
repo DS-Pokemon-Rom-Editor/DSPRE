@@ -113,10 +113,17 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             public string Species => _o.SpeciesFor(Row).Text;
             public int[] SpeciesIds => _o.SpeciesFor(Row).Ids;
+            public bool HasEncounterFile => EncounterFileOf(Row.Header) != ushort.MaxValue;
+            public string OpenEncountersTip => HasEncounterFile ? $"Encounter file {EncounterFileOf(Row.Header)}" : "This header has no wild encounters";
+            public void OpenEncounters()
+            {
+                ushort file = EncounterFileOf(Row.Header);
+                if (file != ushort.MaxValue) AvaloniaEditorLauncher.OpenWildEditor(file);
+            }
 
             internal void Refresh()
             {
-                foreach (string n in new[] { nameof(Header), nameof(Method), nameof(Species), nameof(SpeciesIds) })
+                foreach (string n in new[] { nameof(Header), nameof(Method), nameof(Species), nameof(SpeciesIds), nameof(HasEncounterFile), nameof(OpenEncountersTip) })
                     PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
             }
         }

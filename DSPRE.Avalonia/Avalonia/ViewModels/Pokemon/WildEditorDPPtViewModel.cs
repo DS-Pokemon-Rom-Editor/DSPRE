@@ -370,17 +370,26 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             _selectedEncounterIndex = encToOpen;
             LoadFile(encToOpen);
-            SelectedTab = FirstTabWithEncounters();
         }
 
-        /// <summary>The tab shown. Set once on open to the first one with encounters, then left to the user.</summary>
-        public int SelectedTab { get; set; }
+        private int _selectedTab;
+        /// <summary>Kept when switching files, unless the new file has nothing on it.</summary>
+        public int SelectedTab { get => _selectedTab; set => Set(ref _selectedTab, value); }
 
-        private int FirstTabWithEncounters()
+        // Special slots replace walking ones, so tab 2 needs a walking rate; tabs past 2 always count.
+        private bool TabHasEncounters(int tab) => tab switch
         {
-            if (_current == null || _current.WalkingRate > 0) return 0;
-            if (_current.SurfRate > 0 || _current.OldRodRate > 0 || _current.GoodRodRate > 0 || _current.SuperRodRate > 0) return 1;
-            return _current.HasEncounters ? 2 : 0;
+            0 => _current.WalkingRate > 0,
+            1 => _current.SurfRate > 0 || _current.OldRodRate > 0 || _current.GoodRodRate > 0 || _current.SuperRodRate > 0,
+            2 => _current.WalkingRate > 0,
+            _ => true,
+        };
+
+        private void PickTab()
+        {
+            if (_current == null || TabHasEncounters(SelectedTab)) return;
+            for (int tab = 0; tab < 3; tab++)
+                if (TabHasEncounters(tab)) { SelectedTab = tab; return; }
         }
 
         // Opened without a file in mind: start on the first file with encounters, since file 0 is empty.
@@ -559,6 +568,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             byte[] bytes = _archive.Read(id) ?? throw new FileNotFoundException($"Encounter file {id} is missing.");
             _current = new EncounterFileDPPt(new MemoryStream(bytes));
             PopulateRows();
+            PickTab();
             SetClean();
 
             _history.Reset(Snapshot());   // loaded state is the clean undo baseline for this file
@@ -622,7 +632,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             HookRowsOnce();   // subscribe row edits → SetDirty (idempotent)
         }
 
-        // Walking slots each method replaces: day/night 2-3, swarm 0-1, Trophy Garden 6-7, Dual Slot 8-9, Radar 4-5 and 10-11.
+        // Walking slots (from 0) each method replaces: day/night 2-3, swarm 0-1, Trophy Garden and Great Marsh 6-7, Dual Slot 8-9, Radar 4-5 and 10-11.
         private void SetNotes()
         {
             for (int i = 0; i < WalkingRows.Count; i++)
@@ -630,7 +640,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 {
                     0 or 1 => ("Swarm", "During a swarm here the swarm Pokémon replaces this slot."),
                     4 or 5 or 10 or 11 => ("Poké Radar", "A shaking patch found with the Poké Radar can give the radar Pokémon here."),
-                    6 or 7 => ("Trophy Garden", "In the Trophy Garden the day's Pokémon replaces this slot."),
+                    6 or 7 => ("Trophy Garden, Great Marsh", "The day's Pokémon replaces this slot in the Trophy Garden, and in the Great Marsh during a Safari Game."),
                     8 or 9 => ("Dual Slot", "A GBA game in the second slot puts its Pokémon here, once the National Pokédex is obtained."),
                     _ => (null, null),
                 };

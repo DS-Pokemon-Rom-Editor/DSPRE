@@ -19,6 +19,8 @@ namespace DSPRE.Avalonia.Views.Pokemon
         {
             DataContext = vm;
             EditorWindowChrome.Attach(this, vm);
+            // Only HeartGold and SoulSilver's Headbutt and Bug Contest tables need the full width.
+            if (!vm.ShowHeadbutt && !vm.ShowBugContest) { Width = 1040; MinWidth = 820; }
         }
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)

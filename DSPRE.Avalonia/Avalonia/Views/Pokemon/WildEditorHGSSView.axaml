@@ -69,34 +69,34 @@
           </StackPanel>
           <DataGrid ItemsSource="{Binding WalkingRows}" AutoGenerateColumns="False" CanUserResizeColumns="True">
             <DataGrid.Columns>
-              <DataGridTextColumn Header="Chance" Binding="{Binding Label}" Width="80" MinWidth="80" IsReadOnly="True"/>
-              <DataGridTemplateColumn Header="Level" Width="110" MinWidth="110">
+              <DataGridTextColumn Header="Chance" Binding="{Binding Label}" Width="64" MinWidth="64" IsReadOnly="True"/>
+              <DataGridTemplateColumn Header="Level" Width="96" MinWidth="96">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:WildTimeRow"><NumericUpDown Value="{Binding Level}" Minimum="0" Maximum="100"/></DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Morning" Width="*" MinWidth="220">
+              <DataGridTemplateColumn Header="Morning" Width="*" MinWidth="170">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:WildTimeRow">
                     <ContentControl Content="{Binding Main}" ContentTemplate="{StaticResource PokemonEncounterCellTemplate}"/>
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Day" Width="*" MinWidth="220">
+              <DataGridTemplateColumn Header="Day" Width="*" MinWidth="170">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:WildTimeRow">
                     <ContentControl Content="{Binding Day}" ContentTemplate="{StaticResource PokemonEncounterCellTemplate}"/>
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Night" Width="*" MinWidth="220">
+              <DataGridTemplateColumn Header="Night" Width="*" MinWidth="170">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:WildTimeRow">
                     <ContentControl Content="{Binding Night}" ContentTemplate="{StaticResource PokemonEncounterCellTemplate}"/>
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Replaced by" Width="Auto" MinWidth="140">
+              <DataGridTemplateColumn Header="Replaced by" Width="Auto" MinWidth="90">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:WildTimeRow">
                     <StackPanel Orientation="Horizontal" Spacing="2" Margin="6,0" VerticalAlignment="Center">
@@ -109,8 +109,7 @@
                           </DataTemplate>
                         </ItemsControl.ItemTemplate>
                       </ItemsControl>
-                      <TextBlock Text="{Binding Note}" ToolTip.Tip="{Binding NoteTip}" VerticalAlignment="Center"
-                               Foreground="{DynamicResource Editor.Subtle}"/>
+                      <controls:HelpTip Text="{Binding NoteTip}" IsVisible="{Binding NoteTip, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                     </StackPanel>
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
@@ -149,7 +148,7 @@
                         </DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTemplateColumn Header="Replaced by" Width="Auto" MinWidth="140">
+                    <DataGridTemplateColumn Header="Replaced by" Width="Auto" MinWidth="90">
                       <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate x:DataType="vm:WildEncounterRow">
                           <StackPanel Orientation="Horizontal" Spacing="2" Margin="6,0" VerticalAlignment="Center">
@@ -162,8 +161,7 @@
                           </DataTemplate>
                         </ItemsControl.ItemTemplate>
                       </ItemsControl>
-                      <TextBlock Text="{Binding Note}" ToolTip.Tip="{Binding NoteTip}" VerticalAlignment="Center"
-                                     Foreground="{DynamicResource Editor.Subtle}"/>
+                      <controls:HelpTip Text="{Binding NoteTip}" IsVisible="{Binding NoteTip, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                     </StackPanel>
                         </DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
@@ -187,7 +185,7 @@
                         </DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTemplateColumn Header="Replaced by" Width="Auto" MinWidth="140">
+                    <DataGridTemplateColumn Header="Replaced by" Width="Auto" MinWidth="90">
                       <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate x:DataType="vm:WildEncounterRow">
                           <StackPanel Orientation="Horizontal" Spacing="2" Margin="6,0" VerticalAlignment="Center">
@@ -200,8 +198,7 @@
                           </DataTemplate>
                         </ItemsControl.ItemTemplate>
                       </ItemsControl>
-                      <TextBlock Text="{Binding Note}" ToolTip.Tip="{Binding NoteTip}" VerticalAlignment="Center"
-                                     Foreground="{DynamicResource Editor.Subtle}"/>
+                      <controls:HelpTip Text="{Binding NoteTip}" IsVisible="{Binding NoteTip, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                     </StackPanel>
                         </DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
@@ -225,7 +222,7 @@
                         </DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTemplateColumn Header="Replaced by" Width="Auto" MinWidth="140">
+                    <DataGridTemplateColumn Header="Replaced by" Width="Auto" MinWidth="90">
                       <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate x:DataType="vm:WildEncounterRow">
                           <StackPanel Orientation="Horizontal" Spacing="2" Margin="6,0" VerticalAlignment="Center">
@@ -238,8 +235,7 @@
                           </DataTemplate>
                         </ItemsControl.ItemTemplate>
                       </ItemsControl>
-                      <TextBlock Text="{Binding Note}" ToolTip.Tip="{Binding NoteTip}" VerticalAlignment="Center"
-                                     Foreground="{DynamicResource Editor.Subtle}"/>
+                      <controls:HelpTip Text="{Binding NoteTip}" IsVisible="{Binding NoteTip, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                     </StackPanel>
                         </DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
@@ -263,7 +259,7 @@
                         </DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTemplateColumn Header="Replaced by" Width="Auto" MinWidth="140">
+                    <DataGridTemplateColumn Header="Replaced by" Width="Auto" MinWidth="90">
                       <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate x:DataType="vm:WildEncounterRow">
                           <StackPanel Orientation="Horizontal" Spacing="2" Margin="6,0" VerticalAlignment="Center">
@@ -276,8 +272,7 @@
                           </DataTemplate>
                         </ItemsControl.ItemTemplate>
                       </ItemsControl>
-                      <TextBlock Text="{Binding Note}" ToolTip.Tip="{Binding NoteTip}" VerticalAlignment="Center"
-                                     Foreground="{DynamicResource Editor.Subtle}"/>
+                      <controls:HelpTip Text="{Binding NoteTip}" IsVisible="{Binding NoteTip, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                     </StackPanel>
                         </DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
