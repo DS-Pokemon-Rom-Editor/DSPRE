@@ -69,7 +69,7 @@ jobs:
     - name: Bundle Databases
       run: |
         mkdir -p publish-linux/databases
-        rsync -a --exclude='.git/objects/pack' databases/ publish-linux/databases/
+        rsync -a --exclude='.git' --exclude='.github' --exclude='.gitmodules' databases/ publish-linux/databases/
 
     - name: Archive Linux build
       run: tar -C publish-linux -czf DSPRE-linux-x64-canary.tar.gz .
@@ -137,7 +137,7 @@ jobs:
     - name: Prepare Release Files
       run: |
         mkdir "${{ github.workspace }}\publish-win\databases"
-        robocopy databases "${{ github.workspace }}\publish-win\databases" /E /XD "databases\.git\objects\pack"
+        robocopy databases "${{ github.workspace }}\publish-win\databases" /E /XD .git .github /XF .gitmodules
         if ($LASTEXITCODE -le 7) { exit 0 } else { exit 1 }
 
     - name: Zip Release Files

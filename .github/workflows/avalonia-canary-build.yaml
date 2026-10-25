@@ -62,7 +62,7 @@ jobs:
       - name: Bundle Databases
         run: |
           mkdir "DSPRE.Avalonia/bin/publish/win-x64/databases"
-          robocopy databases "DSPRE.Avalonia/bin/publish/win-x64/databases" /E /XD "databases\.git\objects\pack"
+          robocopy databases "DSPRE.Avalonia/bin/publish/win-x64/databases" /E /XD .git .github /XF .gitmodules
           if ($LASTEXITCODE -le 7) { exit 0 } else { exit 1 }
 
       - name: Zip Windows build
@@ -129,7 +129,7 @@ jobs:
       - name: Bundle Databases
         run: |
           mkdir -p DSPRE.Avalonia/bin/publish/linux-x64/databases
-          rsync -a --exclude='.git/objects/pack' databases/ DSPRE.Avalonia/bin/publish/linux-x64/databases/
+          rsync -a --exclude='.git' --exclude='.github' --exclude='.gitmodules' databases/ DSPRE.Avalonia/bin/publish/linux-x64/databases/
 
       - name: Make executable
         run: chmod +x DSPRE.Avalonia/bin/publish/linux-x64/DSPRE.Avalonia

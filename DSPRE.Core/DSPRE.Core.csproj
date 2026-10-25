@@ -6,6 +6,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <OutputType>Library</OutputType>
     <AssemblyName>DSPRE.Core</AssemblyName>
+    <Description>DSPRE Reloaded ROM core</Description>
     <RootNamespace>DSPRE</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>disable</Nullable>

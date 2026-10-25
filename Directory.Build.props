@@ -3,6 +3,13 @@
   <PropertyGroup>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
+  <!-- Antivirus heuristics distrust binaries with no publisher in their version resource. -->
+  <PropertyGroup>
+    <Company>DS-Pokemon-Rom-Editor</Company>
+    <Product>DSPRE Reloaded</Product>
+    <Authors>DS-Pokemon-Rom-Editor</Authors>
+    <Copyright>Copyright © DS-Pokemon-Rom-Editor contributors</Copyright>
+  </PropertyGroup>
   <!-- Bans the APIs that skip DSPRE's own paths; BannedSymbols.txt says what to use instead. -->
   <ItemGroup Condition="'$(MSBuildProjectName)' != 'DSPRE.Tests'">
     <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="3.3.4" PrivateAssets="all" />

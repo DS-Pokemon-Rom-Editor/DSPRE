@@ -70,7 +70,7 @@ jobs:
     - name: Prepare Release Files
       run: |
         mkdir "${{ github.workspace }}\publish-win\databases"
-        robocopy databases "${{ github.workspace }}\publish-win\databases" /E /XD "databases\.git\objects\pack"
+        robocopy databases "${{ github.workspace }}\publish-win\databases" /E /XD .git .github /XF .gitmodules
         if ($LASTEXITCODE -le 7) { exit 0 } else { exit 1 }
 
     - name: Zip Release Files

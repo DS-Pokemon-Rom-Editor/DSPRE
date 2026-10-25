@@ -11,6 +11,8 @@
          For distributable output use `dotnet publish` with the profiles in Properties\PublishProfiles. -->
     <Configurations>Debug;Release;Debug-Linux;Release-Linux</Configurations>
     <AssemblyName>DSPRE.Avalonia</AssemblyName>
+    <AssemblyTitle>DSPRE Reloaded</AssemblyTitle>
+    <Description>Editor for Pokémon Diamond, Pearl, Platinum, HeartGold and SoulSilver ROMs</Description>
     <RootNamespace>DSPRE</RootNamespace>
     <ApplicationIcon>../app.ico</ApplicationIcon>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -20,6 +22,7 @@
     <!-- Keep in sync with DS_Map\Properties\AssemblyInfo.cs (AppInfo.GetDSPREVersion shows this). -->
     <AssemblyVersion>3.0.0.0</AssemblyVersion>
     <FileVersion>3.0.0.0</FileVersion>
+    <InformationalVersion>$(FileVersion)</InformationalVersion>
     <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
     <!-- Avalonia views intentionally have no parameterless constructor (require ViewModel) -->
     <NoWarn>$(NoWarn);AVLN3001</NoWarn>
@@ -86,7 +89,8 @@
     <PackageReference Include="Avalonia.Themes.Simple" Version="12.1.0" />
     <PackageReference Include="AvaloniaEdit.TextMate" Version="12.0.0" />
     <PackageReference Include="Avalonia.Labs.Gif" Version="12.0.2" />
-    <PackageReference Include="Velopack" Version="0.0.1298" />
+    <!-- Keep in step with the vpk version installed in update-releases.yaml. -->
+    <PackageReference Include="Velopack" Version="1.2.161" />
     <!-- Real sound-effect playback (NAudioOutput). Its actual output device is Windows-only, guarded at
          runtime via OperatingSystem.IsWindows() so a Linux build/run just stays silent instead of throwing. -->
     <PackageReference Include="NAudio" Version="2.2.1" />
@@ -103,6 +107,19 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+
+  <!-- Windows only runs the .exe tools (DSUtils.ToolPath), so the Linux tool binaries are left out. -->
+  <ItemGroup Condition="$(RuntimeIdentifier.StartsWith('win'))">
+    <Content Remove="../Tools/chatot;../Tools/dsrom;../Tools/rotom;../Tools/rotom-lsp;../Tools/libnitroarc_ffi.so" />
+  </ItemGroup>
+
+  <!-- A release never uses createdump or the debug symbols that NuGet packages ship. -->
+  <Target Name="DropUnusedPublishFiles" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+                             Condition="'%(Filename)' == 'createdump' or ('%(Extension)' == '.pdb' and '%(ResolvedFileToPublish.NuGetPackageId)' != '')" />
+    </ItemGroup>
+  </Target>
 
   <Import Project="NativeTools.targets" />
 </Project>

@@ -120,7 +120,7 @@ jobs:
           # Installed copies update through DSPRE.exe; the launcher still finds DSPRE.Avalonia.dll by name.
           Rename-Item -Path publish/DSPRE.Avalonia.exe -NewName DSPRE.exe
           mkdir -p "publish/databases"
-          robocopy databases "publish/databases" /E /XD "databases\.git\objects\pack"
+          robocopy databases "publish/databases" /E /XD .git .github /XF .gitmodules
           if ($LASTEXITCODE -le 7) { exit 0 } else { exit 1 }
           ls publish/
 
@@ -142,20 +142,31 @@ jobs:
         with:
           output-directory: publish/Tools
 
+      # The same files without Velopack's updater, for antivirus that blocks it. This copy doesn't update itself.
+      - name: Zip without updater
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
+        run: Compress-Archive -Path publish/* -DestinationPath DSPRE-win-x64-NoUpdater.zip
+
       - name: Create Velopack Release
         if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
         run: |
-            dotnet tool install -g vpk
+            dotnet tool install -g vpk --version 1.2.161
             vpk download github --repoUrl https://github.com/${{ github.repository }} --token ${{ secrets.GH_TOKEN }}
 
             # First, check if we need to delete existing Velopack release for same base version
             echo "Checking for existing Velopack releases with same base version..."
 
             # Use the correct syntax for vpk pack
-            vpk pack --packDir publish --mainExe DSPRE.exe -u DSPRE -v ${{ steps.get_version.outputs.semver_version }} --channel win
+            vpk pack --packDir publish --mainExe DSPRE.exe -u DSPRE -v ${{ steps.get_version.outputs.semver_version }} --channel win --packAuthors "DS-Pokemon-Rom-Editor"
 
             # Upload to GitHub releases
             vpk upload github --publish --repoUrl https://github.com/${{ github.repository }} --releaseName "DSPRE ${{ steps.get_version.outputs.display_version }}" --tag ${{ steps.get_version.outputs.release_tag }} --token ${{ secrets.GH_TOKEN }}
+
+      - name: Attach zip without updater
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: gh release upload "${{ steps.get_version.outputs.release_tag }}" DSPRE-win-x64-NoUpdater.zip --repo "${{ github.repository }}" --clobber
 
       - name: Attach changelog to release notes
         if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
@@ -295,12 +306,12 @@ jobs:
         if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
         run: |
           mkdir -p publish-linux/databases
-          rsync -a --exclude='.git/objects/pack' databases/ publish-linux/databases/
+          rsync -a --exclude='.git' --exclude='.github' --exclude='.gitmodules' databases/ publish-linux/databases/
 
       - name: Create Velopack Release (Linux)
         if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
         run: |
-            dotnet tool install -g vpk
+            dotnet tool install -g vpk --version 1.2.161
             # Fetch previous linux-channel packages for delta generation (absent on the first Linux release).
             vpk download github --repoUrl https://github.com/${{ github.repository }} --channel linux --token ${{ secrets.GH_TOKEN }} || true
 
