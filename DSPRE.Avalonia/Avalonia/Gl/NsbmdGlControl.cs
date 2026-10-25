@@ -22,7 +22,7 @@ namespace DSPRE.Avalonia.Gl
         private int _viewLoc, _fogOnLoc, _fogColorLoc, _fogLoc, _fogClipLoc, _fogTableLoc;
         private int _spotOnLoc, _spotCenterLoc, _spotScaleLoc, _spotTrisLoc, _spotTriCountLoc,
                     _spotTexLoc, _spotSizeLoc, _camPosLoc, _camDirLoc, _spotRightLoc, _spotUpLoc;
-        private int _tintLoc, _tileOriginLoc, _tileSizeLoc, _collLoc;
+        private int _tintLoc, _tileOriginLoc, _tileSizeLoc, _collLoc, _gridOnLoc, _gridOriginLoc, _gridSizeLoc;
         private string _error;
 
         // Per-tile permission tint of the map textures (mesh overlay mode).
@@ -72,6 +72,9 @@ namespace DSPRE.Avalonia.Gl
         // Off skips binding textures; every vertex already has its material's colour.
         private bool _showTextures = true;
         public bool ShowTextures { get => _showTextures; set { _showTextures = value; RequestNextFrameRendering(); } }
+
+        private bool _showTileGrid;
+        public bool ShowTileGrid { get => _showTileGrid; set { _showTileGrid = value; RequestNextFrameRendering(); } }
 
         private float _overlayAlpha = 0.5f;
         public float OverlayAlpha { get => _overlayAlpha; set { _overlayAlpha = value; RequestNextFrameRendering(); } }
@@ -759,6 +762,7 @@ namespace DSPRE.Avalonia.Gl
                     // world-tile and mix it into the surface AFTER the alpha discard, so the collision colour follows
                     // the real texture shape (trees/lamps tinted on their pixels; transparent texels stay clear).
                     "uniform float uTint;\nuniform vec2 uTileOrigin;\nuniform vec2 uTileSize;\nuniform sampler2D uColl;\n" +
+                    "uniform int uGridOn;\nuniform vec2 uGridOrigin;\nuniform vec2 uGridSize;\n" +
                     // A material-colour animation (NSBMA) recolours a surface over time. White leaves it alone.
                     "uniform vec3 uMatColor;\n" +
                     // DS fog: the 15-bit depth the Z-buffer holds, 0x3FFF + 0x4000 z/w under the game camera's own clip
@@ -820,11 +824,22 @@ namespace DSPRE.Avalonia.Gl
                     "  if (min(edge.x, edge.y) < 1.0) shaded *= 0.45;\n" +
                     "  return mix(c, shaded, uTint * t.a);\n" +
                     "}\n" +
+                    // Steep faces such as walls stay clear; the line is light on dark ground and dark on light.
+                    "vec3 gridRgb(vec3 c){\n" +
+                    "  if (uGridOn == 0) return c;\n" +
+                    "  vec3 n = normalize(cross(dFdx(vPos), dFdy(vPos)));\n" +
+                    "  if (abs(n.y) < 0.6) return c;\n" +
+                    "  vec2 tc = (vWorld - uGridOrigin) / uGridSize;\n" +
+                    "  vec2 f = fract(tc), edge = min(f, 1.0 - f) / max(fwidth(tc), vec2(1e-5));\n" +
+                    "  float line = 1.0 - clamp(min(edge.x, edge.y) - 0.5, 0.0, 1.0);\n" +
+                    "  vec3 ink = dot(c, vec3(0.299, 0.587, 0.114)) < 0.35 ? vec3(1.0) : vec3(0.0);\n" +
+                    "  return mix(c, ink, 0.55 * line);\n" +
+                    "}\n" +
                     "void main(){\n" +
                     "  if (uHasTex == 1) { vec4 t = texture(uTex, vUv); vec3 rgb = uShade == 1 ? t.rgb * vColor : t.rgb;\n" +
-                    "    if (uTexAlpha == 1) { if (t.a < 0.02) discard; fragColor = vec4(tintRgb(fogged(rgb * uMatColor)), uAlpha * t.a); }\n" +
-                    "    else { if (t.a < 0.5) discard; fragColor = vec4(tintRgb(fogged(rgb * uMatColor)), uAlpha); } }\n" +
-                    "  else { fragColor = vec4(tintRgb(fogged(vColor * uMatColor)), uAlpha); }\n" +
+                    "    if (uTexAlpha == 1) { if (t.a < 0.02) discard; fragColor = vec4(gridRgb(tintRgb(fogged(rgb * uMatColor))), uAlpha * t.a); }\n" +
+                    "    else { if (t.a < 0.5) discard; fragColor = vec4(gridRgb(tintRgb(fogged(rgb * uMatColor))), uAlpha); } }\n" +
+                    "  else { fragColor = vec4(gridRgb(tintRgb(fogged(vColor * uMatColor))), uAlpha); }\n" +
                     "}\n";
 
                 int v = _f.CompileShaderOrThrow(GlFunctions.GL_VERTEX_SHADER, vs);
@@ -842,6 +857,9 @@ namespace DSPRE.Avalonia.Gl
                 _tileOriginLoc = _f.GetUniformLocation(_program, "uTileOrigin");
                 _tileSizeLoc = _f.GetUniformLocation(_program, "uTileSize");
                 _collLoc = _f.GetUniformLocation(_program, "uColl");
+                _gridOnLoc = _f.GetUniformLocation(_program, "uGridOn");
+                _gridOriginLoc = _f.GetUniformLocation(_program, "uGridOrigin");
+                _gridSizeLoc = _f.GetUniformLocation(_program, "uGridSize");
                 _viewLoc = _f.GetUniformLocation(_program, "uView");
                 _fogOnLoc = _f.GetUniformLocation(_program, "uFogOn");
                 _fogColorLoc = _f.GetUniformLocation(_program, "uFogColor");
@@ -1183,6 +1201,7 @@ namespace DSPRE.Avalonia.Gl
                 _f.Uniform2f(_tileSizeLoc, _tileSx, _tileSz);
             }
             else _f.Uniform1f(_tintLoc, 0f);
+            ApplyTileGrid();
 
             _f.ActiveTexture(GlFunctions.GL_TEXTURE0);
             _f.BindVertexArray(_vao);
@@ -1287,6 +1306,7 @@ namespace DSPRE.Avalonia.Gl
             if (_fogOnLoc >= 0) _f.Uniform1i(_fogOnLoc, 0);
             _f.Uniform1f(_alphaLoc, 1f);  // don't affect the overlay/marker/gizmo passes below
             _f.Uniform1f(_tintLoc, 0f);   // don't tint the overlay/marker/gizmo passes
+            if (_gridOnLoc >= 0) _f.Uniform1i(_gridOnLoc, 0);
 
             RenderHighlight(stride);
             RenderOverlay(stride);
@@ -1401,6 +1421,19 @@ namespace DSPRE.Avalonia.Gl
             _f.EnableVertexAttribArray(2); _f.VertexAttribPointer(2, 3, GlFunctions.GL_FLOAT, false, stride, (IntPtr)(5 * sizeof(float)));
             _f.DrawArrays(GlFunctions.GL_TRIANGLES, 0, _gizmoCount);
             _f.Enable(GlFunctions.GL_DEPTH_TEST);
+        }
+
+        private void ApplyTileGrid()
+        {
+            if (_gridOnLoc < 0) return;
+            NsbmdRenderModel.CellPlacement cell = default;
+            if (_showTileGrid && _model?.CellPlacements != null)
+                foreach (NsbmdRenderModel.CellPlacement p in _model.CellPlacements.Values) { cell = p; break; }
+            bool on = cell.Width > 0f && cell.Height > 0f;
+            _f.Uniform1i(_gridOnLoc, on ? 1 : 0);
+            if (!on) return;
+            _f.Uniform2f(_gridOriginLoc, (cell.OriginX - _model.Cx) * _model.Scale, (cell.OriginZ - _model.Cz) * _model.Scale);
+            _f.Uniform2f(_gridSizeLoc, cell.Width / MapFile.MapSize * _model.Scale, cell.Height / MapFile.MapSize * _model.Scale);
         }
 
         private void RenderOverlay(int stride)

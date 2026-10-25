@@ -465,6 +465,18 @@ namespace DSPRE.Avalonia.ViewModels.World
         private bool _showTextures = true;
         public bool ShowTextures { get => _showTextures; set => Set(ref _showTextures, value); }
 
+        private bool _showTileGrid = SettingsManager.Settings?.MapEditorTileGrid ?? false;
+        public bool ShowTileGrid
+        {
+            get => _showTileGrid;
+            set
+            {
+                if (!Set(ref _showTileGrid, value) || SettingsManager.Settings == null) return;
+                SettingsManager.Settings.MapEditorTileGrid = value;
+                SettingsManager.Save();
+            }
+        }
+
         private string _statusText = "Not loaded";
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
 

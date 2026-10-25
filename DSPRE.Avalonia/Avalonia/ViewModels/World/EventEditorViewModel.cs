@@ -1220,6 +1220,18 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool ShowTriggers { get => _showTrig; set { if (Set(ref _showTrig, value)) RefreshMarkers(); } }
         public bool ShowSpawnables { get => _showSpawn; set { if (Set(ref _showSpawn, value)) RefreshMarkers(); } }
         public bool ShowGrid { get => _showGrid; set { if (Set(ref _showGrid, value)) RefreshMarkers(); } }
+
+        private bool _showTileGrid = SettingsManager.Settings?.EventEditorTileGrid ?? false;
+        public bool ShowTileGrid
+        {
+            get => _showTileGrid;
+            set
+            {
+                if (!Set(ref _showTileGrid, value) || SettingsManager.Settings == null) return;
+                SettingsManager.Settings.EventEditorTileGrid = value;
+                SettingsManager.Save();
+            }
+        }
         /// <summary>
         /// The tile grid scans every tile on each refresh, so it only builds for 4 cells or fewer; the box is disabled
         /// past that.

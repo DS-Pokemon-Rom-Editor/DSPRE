@@ -78,8 +78,9 @@
               <CheckBox Content="Warps"      IsChecked="{Binding ShowWarps}" FontSize="12"/>
               <CheckBox Content="Triggers"   IsChecked="{Binding ShowTriggers}" FontSize="12"/>
               <CheckBox Content="Spawnables" IsChecked="{Binding ShowSpawnables}" FontSize="12"/>
-              <CheckBox Content="Grid"       IsChecked="{Binding ShowGrid}" IsEnabled="{Binding GridToggleEnabled}" FontSize="12"
-                        ToolTip.Tip="Show where each map ends, on matrices of 4 cells or fewer."/>
+              <CheckBox Content="Tile grid"  IsChecked="{Binding ShowTileGrid}" FontSize="12"/>
+              <CheckBox Content="Map edges"  IsChecked="{Binding ShowGrid}" IsEnabled="{Binding GridToggleEnabled}" FontSize="12"
+                        ToolTip.Tip="Only on 4 maps or fewer"/>
               <CheckBox Content="Gizmos" IsChecked="False" FontSize="12" IsVisible="{Binding ShowBetaFeatures}"
                         IsCheckedChanged="Gizmos_Toggled"
                         ToolTip.Tip="Cyan marks the 32×32 tile cell, yellow the map model's real extent."/>

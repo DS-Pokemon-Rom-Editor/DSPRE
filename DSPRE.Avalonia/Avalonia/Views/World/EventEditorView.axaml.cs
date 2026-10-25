@@ -115,6 +115,8 @@ namespace DSPRE.Avalonia.Views.World
                 vm.EditModeChanged += (_, _) => RefreshGizmo();
                 vm.ViewModeChanged += (_, _) => ApplyViewMode();
                 vm.GizmoTargetChanged += (_, _) => RefreshGizmo();
+                GlView.ShowTileGrid = vm.ShowTileGrid;
+                vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(EventEditorViewModel.ShowTileGrid)) GlView.ShowTileGrid = VM.ShowTileGrid; };
             }
             await vm.SetupAsync(owner);
             ApplyViewMode();

@@ -76,6 +76,7 @@
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <CheckBox Content="Textured" IsChecked="{Binding ShowTextures}" VerticalAlignment="Center"
                     ToolTip.Tip="Show real textures. Off shows a flat colour per material."/>
+          <CheckBox Content="Tile grid" IsChecked="{Binding ShowTileGrid}" VerticalAlignment="Center"/>
           <CheckBox Content="Gizmos" IsChecked="False" VerticalAlignment="Center" IsVisible="{Binding ShowBetaFeatures}"
                     IsCheckedChanged="Gizmos_Toggled"
                     ToolTip.Tip="Cyan marks the 32×32 tile cell, yellow the map model's real extent."/>

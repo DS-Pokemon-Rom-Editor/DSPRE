@@ -26,6 +26,8 @@ namespace DSPRE
         // Flat 2D event view, off by default so the 3D scene stays the first impression.
         public bool EventEditorFlat2D { get; set; } = false;
         public bool MapEditorFlat2D { get; set; } = false;
+        public bool EventEditorTileGrid { get; set; } = false;
+        public bool MapEditorTileGrid { get; set; } = false;
         public string ExportPath { get; set; } = "";
         public string MapImportStarterPoint { get; set; } = "";
         public string OpenDefaultRom { get; set; } = "";

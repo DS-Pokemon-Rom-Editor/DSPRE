@@ -145,6 +145,7 @@ namespace DSPRE.Avalonia.Views.World
                 vm.PaintedTile += (_, _) => ShowPermissions();
                 vm.PropertyChanged += OnVmPropertyChanged;
                 GlView.ShowTextures = vm.ShowTextures;
+                GlView.ShowTileGrid = vm.ShowTileGrid;
                 vm.EditModeChanged += (_, _) => RefreshGizmo();
                 vm.GizmoTargetChanged += (_, _) => RefreshGizmo();
             }
@@ -237,6 +238,7 @@ namespace DSPRE.Avalonia.Views.World
             if (e.PropertyName is nameof(MapEditorViewModel.CollisionPaintValue) or nameof(MapEditorViewModel.TypePaintValue)
                 or nameof(MapEditorViewModel.PermissionShowsType)) ShowPermissions();
             else if (e.PropertyName == nameof(MapEditorViewModel.ShowTextures)) GlView.ShowTextures = VM.ShowTextures;
+            else if (e.PropertyName == nameof(MapEditorViewModel.ShowTileGrid)) GlView.ShowTileGrid = VM.ShowTileGrid;
         }
 
         private void Gizmos_Toggled(object sender, RoutedEventArgs e)
