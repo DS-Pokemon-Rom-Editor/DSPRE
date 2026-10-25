@@ -12,6 +12,23 @@ namespace DSPRE
     /// </summary>
     public static class ScriptDatabaseSetup
     {
+        // DSPRE writes these into the database folder, so cleaning untracked files leaves them.
+        private static readonly HashSet<string> KeptUntrackedFiles = new HashSet<string> { "labels.global.json" };
+
+        private static bool HasMissingObjects(string path)
+        {
+            using Repository repo = new Repository(path);
+            return repo.Refs.Any(r => r.ResolveToDirectReference() is DirectReference direct && direct.Target == null);
+        }
+
+        // Git makes its object files read-only, and Directory.Delete can't remove read-only files on Windows.
+        private static void DeleteGitDirectory(string gitDir)
+        {
+            foreach (string file in Directory.GetFiles(gitDir, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, FileAttributes.Normal);
+            Directory.Delete(gitDir, true);
+        }
+
         public static void CheckForDatabaseUpdates(bool silent = true)
         {
             AppLogger.Info("Checking for script database updates...");
@@ -19,6 +36,13 @@ namespace DSPRE
 
             try
             {
+                // Releases before 3.0 bundled a .git without its pack files, so its refs point at nothing.
+                if (Repository.IsValid(pathToDbRepo) && HasMissingObjects(pathToDbRepo))
+                {
+                    AppLogger.Warn("The script database repository is incomplete. Setting it up again.");
+                    DeleteGitDirectory(Path.Combine(pathToDbRepo, ".git"));
+                }
+
                 if (!Repository.IsValid(pathToDbRepo))
                 {
                     Repository.Init(pathToDbRepo);
@@ -29,7 +53,8 @@ namespace DSPRE
 
                         Branch main = repo.Branches["main"] ?? repo.CreateBranch("main", repo.Branches["refs/heads/main"].Tip);
                         repo.Branches.Update(main, b => b.TrackedBranch = "refs/remotes/origin/main");
-                        Commands.Checkout(repo, main);
+                        // Forced, because the bundled database files are already there as untracked copies.
+                        Commands.Checkout(repo, main, new CheckoutOptions { CheckoutModifiers = CheckoutModifiers.Force });
                     }
                 }
 
@@ -45,6 +70,7 @@ namespace DSPRE
 
                         foreach (StatusEntry item in repo.RetrieveStatus().Untracked)
                         {
+                            if (KeptUntrackedFiles.Contains(item.FilePath)) continue;
                             string fullPath = Path.Combine(pathToDbRepo, item.FilePath);
                             if (File.Exists(fullPath))
                                 File.Delete(fullPath);
