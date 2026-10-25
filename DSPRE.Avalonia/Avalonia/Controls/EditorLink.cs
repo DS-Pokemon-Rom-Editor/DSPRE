@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.VisualTree;
 
 namespace DSPRE.Avalonia.Controls
 {
@@ -79,6 +82,28 @@ namespace DSPRE.Avalonia.Controls
 
         private static void Go(Control c) => Open(GetTo(c), IdOf(c));
 
+        // False when another control or the window edge is within the arrow's width to the right of the field.
+        private static bool RoomOutside(Control c)
+        {
+            if (TopLevel.GetTopLevel(c) is not TopLevel top) return false;
+            Point? corner = c.TranslatePoint(new Point(c.Bounds.Width, 0), top);
+            if (corner == null) return false;
+            Rect strip = new Rect(corner.Value.X, corner.Value.Y, 22, c.Bounds.Height);
+            if (strip.Right > top.ClientSize.Width) return false;
+            HashSet<Visual> above = new HashSet<Visual>(c.GetVisualAncestors());
+            foreach (Visual v in top.GetVisualDescendants())
+            {
+                if (v is not Control k || ReferenceEquals(k, c) || above.Contains(k) || !k.IsEffectivelyVisible || k.TemplatedParent != null) continue;
+                if (k is not (TextBlock or TemplatedControl) || k is ScrollViewer || k is ContentControl and not (Button or CheckBox or RadioButton)) continue;
+                if (k.GetVisualAncestors().Contains(c) || k.FindAncestorOfType<AdornerLayer>() != null) continue;
+                Point? at = k.TranslatePoint(new Point(0, 0), top);
+                if (at == null) continue;
+                Rect hit = new Rect(at.Value, k.Bounds.Size).Intersect(strip);
+                if (hit.Width * hit.Height > 4) return false;
+            }
+            return true;
+        }
+
         private static void Wire(Control c)
         {
             string name = EditorName(GetTo(c));
@@ -97,12 +122,12 @@ namespace DSPRE.Avalonia.Controls
                 }
             }, global::Avalonia.Interactivity.RoutingStrategies.Tunnel);
 
-            // The link button sits just inside the right edge, left of a drop-down arrow, and only while hovered.
+            // Shown on hover, never over the value; RoomOutside picks the side.
             Button arrow = new Button
             {
-                Content = Icon.Image("OpenLink"), Padding = new Thickness(2, 0), MinWidth = 0, MinHeight = 0, Height = 20,
+                Content = Icon.Image("OpenLink"), Padding = new Thickness(2, 0), MinWidth = 0, MinHeight = 0, Width = 20, Height = 20,
                 HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, c is NumericUpDown ? 30 : 26, 0), IsVisible = false, Focusable = false,
+                Margin = new Thickness(0, 0, -22, 0), IsVisible = false, Focusable = false,
                 Background = new SolidColorBrush(Color.FromArgb(0xC0, 0x30, 0x30, 0x30)),
             };
             ToolTip.SetTip(arrow, $"Open in {name} (or right-click, or Ctrl+click)");
@@ -111,7 +136,12 @@ namespace DSPRE.Avalonia.Controls
             Panel host = new Panel { IsHitTestVisible = true, Background = null, Children = { arrow } };
 
             bool over = false, overArrow = false;
-            void Update() => arrow.IsVisible = (over || overArrow) && IdOf(c) >= 0;
+            void Update()
+            {
+                bool show = (over || overArrow) && IdOf(c) >= 0;
+                if (show && !overArrow) arrow.Margin = RoomOutside(c) ? new Thickness(0, 0, -22, 0) : new Thickness(0, 0, 2, 0);
+                arrow.IsVisible = show;
+            }
             c.PointerEntered += (_, _) => { over = true; Update(); };
             c.PointerExited += (_, _) => { over = false; global::Avalonia.Threading.DispatcherTimer.RunOnce(Update, TimeSpan.FromMilliseconds(150)); };
             arrow.PointerEntered += (_, _) => { overArrow = true; Update(); };
@@ -122,6 +152,7 @@ namespace DSPRE.Avalonia.Controls
                 AdornerLayer layer = AdornerLayer.GetAdornerLayer(c);
                 if (layer == null || layer.Children.Contains(host)) return;
                 AdornerLayer.SetAdornedElement(host, c);
+                AdornerLayer.SetIsClipEnabled(host, false);   // it sits outside the field, so a scroll viewer would clip it
                 layer.Children.Add(host);
             };
             c.DetachedFromVisualTree += (_, _) => (host.Parent as Panel)?.Children.Remove(host);
