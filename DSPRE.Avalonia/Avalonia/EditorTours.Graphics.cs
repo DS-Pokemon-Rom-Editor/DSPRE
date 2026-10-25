@@ -162,7 +162,7 @@ namespace DSPRE.Avalonia
                 S(null, "HP bars", "Where each part of a battle HP bar is drawn."),
                 S("toolbar", "Bar", "The bar to lay out. Import PNG turns a picture into its art."),
                 S("name:Board", "Bar", "Drag a part's box to move it."),
-                S("name:PartList", "Parts", "Where each part starts, and how long the gauges are."),
+                S("name:PartList", "Parts", "Where each part starts, how long the gauges are, and which font the name uses."),
                 S("name:BattlePreview", "In battle", "The bar on the battle screen."),
                 S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 

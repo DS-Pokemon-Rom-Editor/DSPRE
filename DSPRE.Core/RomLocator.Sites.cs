@@ -631,6 +631,118 @@ namespace DSPRE
             new uint[] { 0x0208CE6E, 0x0208CEA0 },
             0x02088386, 0x020885AC);
 
+        // pokeheartgold party_context_menu.c: the nickname and gender prints and the four compatibility line prints; party_menu.c:
+        // the PartyMenu_AddAllWindows call, FontID_Alloc(4) and FontID_Release(4). Measured on every dump listed.
+        private static readonly PartyFontSites HgssPartyFonts = new(
+            new uint[] { 0x0207D310, 0x0207D38A, 0x0207D3BA, 0x0207DC76, 0x0207DCFA, 0x0207DD62, 0x0207DDE2 }, 0x02078EE2, 0x02079002, 0x02079684);
+
+        public static PartyFontSites PartyFontSitesIn(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.HeartGold => language switch
+            {
+                GameLanguages.English when revision == 10 => HgssPartyFonts,   // Europe
+                GameLanguages.English => HgssPartyFonts,   // US, and any English revision not listed
+                GameLanguages.French => HgssPartyFonts,   // needs verifying: measured on a dump that is not a known good dump
+                GameLanguages.German => HgssPartyFonts,
+                GameLanguages.Italian => HgssPartyFonts,
+                GameLanguages.Spanish => null,   // the code sits elsewhere
+                GameLanguages.Japanese => null,   // the code sits elsewhere
+                GameLanguages.Korean => null,   // the code sits elsewhere
+                _ => null,
+            },
+            GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.English when revision == 10 => HgssPartyFonts,   // Europe
+                GameLanguages.English => HgssPartyFonts,   // US, and any English revision not listed
+                GameLanguages.French => HgssPartyFonts,   // needs verifying: measured on a dump that is not a known good dump
+                GameLanguages.German => HgssPartyFonts,
+                GameLanguages.Italian => HgssPartyFonts,
+                GameLanguages.Spanish => HgssPartyFonts,
+                GameLanguages.Japanese => null,   // the code sits elsewhere
+                GameLanguages.Korean => null,   // the code sits elsewhere
+                _ => null,
+            },
+            _ => null,
+        };
+
+        // pokeheartgold font.c and main.c. Measured on every dump listed; Korean lacks the module's last function and the two
+        // fontDataMan sites in it.
+        private static readonly uint[] HgssFontManagers =
+        {
+            0x02002CC2, 0x02002CF8, 0x02002D18, 0x02002D56, 0x02002D6C, 0x02002D90, 0x02002DA6, 0x02002E12, 0x02002E56, 0x02002E6C, 0x02002E86,
+            0x02002ED6, 0x02002EEC, 0x02002F0A, 0x02002F20, 0x02002F3E, 0x02002F5A, 0x02002F76, 0x02002F9E, 0x02003076, 0x02003092, 0x020030C4,
+            0x020030D8,
+        };
+
+        private static readonly ExtraFontsSites HgssExtraFonts = new(0x02002CE0, new uint[] { 0x02002D38, 0x02002E78 }, 0x02002D3C,
+            new uint[] { 0x02002CE8, 0x02003010 }, HgssFontManagers,
+            new uint[] { 0x02002CCC, 0x02002D22, 0x02002D28, 0x02002DC6, 0x02002DD6, 0x02002DE6 },
+            new uint[] { 0x02002CD2, 0x02002D46, 0x02002D80, 0x02002DB8, 0x02002E2C, 0x02002E30 }, 0x02000CE4);
+
+        private static readonly ExtraFontsSites KoreanExtraFonts = HgssExtraFonts with { Managers = HgssFontManagers[..^2] };
+
+        public static ExtraFontsSites ExtraFontsSitesIn(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.HeartGold => language switch
+            {
+                GameLanguages.English when revision == 10 => HgssExtraFonts,   // Europe
+                GameLanguages.English => HgssExtraFonts,   // US, and any English revision not listed
+                GameLanguages.French => HgssExtraFonts,   // needs verifying: measured on a dump that is not a known good dump
+                GameLanguages.German => HgssExtraFonts,
+                GameLanguages.Italian => HgssExtraFonts,
+                GameLanguages.Spanish => HgssExtraFonts,
+                GameLanguages.Japanese => null,   // the code sits elsewhere
+                GameLanguages.Korean => KoreanExtraFonts,
+                _ => null,
+            },
+            GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.English when revision == 10 => HgssExtraFonts,   // Europe
+                GameLanguages.English => HgssExtraFonts,   // US, and any English revision not listed
+                GameLanguages.French => HgssExtraFonts,   // needs verifying: measured on a dump that is not a known good dump
+                GameLanguages.German => HgssExtraFonts,
+                GameLanguages.Italian => HgssExtraFonts,
+                GameLanguages.Spanish => HgssExtraFonts,
+                GameLanguages.Japanese => null,   // the code sits elsewhere
+                GameLanguages.Korean => KoreanExtraFonts,
+                _ => null,
+            },
+            _ => null,
+        };
+
+        // pokeheartgold battle_hp_bar.c: the name print and the two Safari and Park ball prints; battle_022378C0.c: FontID_Alloc(4)
+        // and FontID_Release(4). Overlay 12 has them at the same offsets on every dump listed; only its load address changes.
+        private static readonly HpBarFontSites HgssHpBarFonts = new(12, new[] { 0x2D936, 0x2DD8C, 0x2DEA2 }, new[] { 0x37A, 0x6A2 }, new[] { 0x26A, 0x2F2 });
+
+        public static HpBarFontSites HpBarFontSitesIn(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.HeartGold => language switch
+            {
+                GameLanguages.English when revision == 10 => HgssHpBarFonts,   // Europe
+                GameLanguages.English => HgssHpBarFonts,   // US, and any English revision not listed
+                GameLanguages.French => HgssHpBarFonts,   // needs verifying: measured on a dump that is not a known good dump
+                GameLanguages.German => HgssHpBarFonts,
+                GameLanguages.Italian => HgssHpBarFonts,
+                GameLanguages.Spanish => null,   // the code sits elsewhere
+                GameLanguages.Japanese => null,   // the code sits elsewhere
+                GameLanguages.Korean => null,   // the code sits elsewhere
+                _ => null,
+            },
+            GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.English when revision == 10 => HgssHpBarFonts,   // Europe
+                GameLanguages.English => HgssHpBarFonts,   // US, and any English revision not listed
+                GameLanguages.French => HgssHpBarFonts,   // needs verifying: measured on a dump that is not a known good dump
+                GameLanguages.German => HgssHpBarFonts,
+                GameLanguages.Italian => HgssHpBarFonts,
+                GameLanguages.Spanish => HgssHpBarFonts,
+                GameLanguages.Japanese => null,   // the code sits elsewhere
+                GameLanguages.Korean => null,   // the code sits elsewhere
+                _ => null,
+            },
+            _ => null,
+        };
+
         /// <summary>The summary screen's font calls, measured on the English dumps.</summary>
         public static SummaryFontSites SummaryFontSitesIn(GameVersions game, GameLanguages language, int revision) => game switch
         {

@@ -296,7 +296,7 @@ namespace DSPRE.Avalonia.Data
                 };
                 page.Side(side).Texts.Add(new ScreenText
                 {
-                    Kind = p.Kind, Line = p.Line, Bank = p.Bank, Args = p.Args, Font = w.Font >= 0 ? SummaryFontPatch.Fonts[w.Font].Entry : p.Font,
+                    Kind = p.Kind, Line = p.Line, Bank = p.Bank, Args = p.Args, Font = GameFonts.EntryOf(w.Font) is int entry && entry >= 0 ? entry : p.Font,
                     Bg = bg, X = w.X * 8 + p.X, Y = w.Y * 8 + p.Y, Align = p.At, Span = p.Span, Row = w.Palette, Ink = ink, Shadow = shadow,
                     WinX = w.X, WinY = w.Y, WinW = w.Width, WinH = w.Height, When = box.When,
                 });
@@ -746,7 +746,7 @@ namespace DSPRE.Avalonia.Data
         private (byte[] Bytes, string Error) SetFont(ScreenLayoutItem item, int font)
         {
             if (!_now.HasFonts) return (null, "Apply the summary screen fonts patch first.");
-            if (font < 0 || font >= SummaryFontPatch.Fonts.Length || item.Key is not ValueTuple<string, int> key) return (null, null);
+            if (font < 0 || font >= GameFonts.All.Count || item.Key is not ValueTuple<string, int> key) return (null, null);
             byte[] original = SummaryScreenLayout.ReadBytes();
             SummaryScreenLayout next = SummaryScreenLayout.FromBytes(_now.ToBytes(original));
             next.Tables.First(t => t.Page == key.Item1).Windows[key.Item2].Font = font;
@@ -810,7 +810,7 @@ namespace DSPRE.Avalonia.Data
 
             public override (byte[] Bytes, string Error) SetFont(ScreenLayoutItem item, int font) => _book.SetFont(item, font);
 
-            public override IReadOnlyList<string> FontNames => SummaryFontPatch.Fonts.Select(f => f.Name).ToList();
+            public override IReadOnlyList<string> FontNames => GameFonts.Names;
 
             public override bool OffersFontPatch => _book._now?.HasFonts == false && !IsHGE && SummaryFontPatch.SupportsCurrentRom;
         }

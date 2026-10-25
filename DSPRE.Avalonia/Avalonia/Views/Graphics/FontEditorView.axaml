@@ -32,6 +32,10 @@
         <TextBlock Text="Font" VerticalAlignment="Center"/>
         <ComboBox Width="220" ItemsSource="{Binding FontNames}" SelectedIndex="{Binding SelectedFontIndex}"
                   PlaceholderText="No readable fonts"/>
+        <Button Content="Add font" controls:Icon.Key="addIcon" Click="AddFont_Click" IsEnabled="{Binding CanAddFont}"
+                IsVisible="{Binding !OffersFontPatch}" ToolTip.Tip="Adds a copy of this font"/>
+        <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Click="FontPatch_Click"
+                IsVisible="{Binding OffersFontPatch}" ToolTip.Tip="Lets you add fonts"/>
         <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
         <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
         <Button Content="Export PNG…" controls:Icon.Key="export" Click="ExportPng_Click" IsEnabled="{Binding CanUsePictureCommand}"

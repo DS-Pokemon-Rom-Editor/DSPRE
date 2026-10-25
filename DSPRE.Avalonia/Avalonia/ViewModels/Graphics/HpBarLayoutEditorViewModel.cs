@@ -30,6 +30,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public Action<HpBarPartRow, int> ResizeTo;
 
         public int Length { get => _w; set => ResizeTo?.Invoke(this, value); }
+
+        /// <summary>Set only for the name, once the HP bar fonts patch is in.</summary>
+        public Func<int> GetFont { get; init; }
+        public Action<int> SetFont { get; init; }
+        public IReadOnlyList<string> FontNames { get; init; }
+        public bool CanPickFont => SetFont != null;
+        public int FontIndex { get => GetFont?.Invoke() ?? 0; set => SetFont?.Invoke(value); }
         public string Colour { get; init; }
 
         private int _x, _y;
@@ -88,6 +95,22 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private readonly PendingArchiveWrites _pending = new();
         private readonly Dictionary<BattleGaugePieces.Bar, BattleGaugeLayout> _drafts = new();
 
+        // The font every bar prints its name in, once the HP bar fonts patch is in.
+        private static readonly PendingArchiveWrites.Target NameFontTarget =
+            new("name-font", () => new[] { (byte)Math.Max(0, HpBarFontPatch.ReadFont()) }, b => HpBarFontPatch.WriteFont(b[0]));
+        private bool _hasNameFont;
+        private int NameFont => _hasNameFont && _pending.Read(NameFontTarget) is byte[] b ? b[0] : 0;
+
+        private void SetNameFont(int font)
+        {
+            if (!_hasNameFont || font == NameFont || font < 0 || font >= GameFonts.All.Count) return;
+            _pending.Import(() => { _pending.Stage(NameFontTarget, new[] { (byte)font }); return null; });
+            StatusText = "Font changed.";
+        }
+
+        public bool OffersFontPatch => !_hasNameFont && !RomInfo.IsHGE && HpBarFontPatch.SupportsCurrentRom;
+        public void OpenFontPatch() => AvaloniaEditorLauncher.OpenPatchToolboxAt("hpBarFonts");
+
         public HpBarLayoutEditorViewModel()
         {
             _pending.Changed += () =>
@@ -99,11 +122,19 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             foreach (BattleGaugeComposer.Kind kind in Enum.GetValues<BattleGaugeComposer.Kind>()) BarNames.Add(BattleGaugeComposer.NameOf(kind));
             if (global::Avalonia.Controls.Design.IsDesignMode) return;
             AppEvents.RomPatchStateChanged += OnPatchStateChanged;
-            _picturesSaved = AppEvents.WhenSaved(Redraw, RomInfo.DirNames.BattleObj, RomInfo.DirNames.Fonts);
+            _picturesSaved = AppEvents.WhenSaved(OnPicturesSaved, RomInfo.DirNames.BattleObj, RomInfo.DirNames.Fonts);
+            _hasNameFont = HpBarFontPatch.IsApplied;
             LoadBar();
         }
 
         private readonly IDisposable _picturesSaved;
+
+        // A font added in the Font editor joins the picker.
+        private void OnPicturesSaved()
+        {
+            if (Parts.Any(p => p.CanPickFont && p.FontNames.Count != GameFonts.All.Count)) LoadBar();
+            Redraw();
+        }
 
         public void Detach()
         {
@@ -119,6 +150,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private void OnPatchStateChanged(object sender, EventArgs e)
         {
             Raise(nameof(CanClearTextBackground));
+            if (!_hasNameFont && HpBarFontPatch.IsApplied)
+            {
+                _hasNameFont = true;
+                Raise(nameof(OffersFontPatch));
+                LoadBar();
+                return;
+            }
             Redraw();
         }
 
@@ -170,6 +208,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         Part = part, W = w, H = h, X = at.X, Y = at.Y, Colour = Colours[c++ % Colours.Length], MaxLength = most,
                         MoveTo = (row, x, y) => { Move(row, x, y); Commit(); },
                         ResizeTo = (row, length) => { Resize(row, length); Commit("Resized."); },
+                        FontNames = GameFonts.Names,
+                        GetFont = _hasNameFont && part == BattleGaugeLayout.Part.Name ? () => NameFont : null,
+                        SetFont = _hasNameFont && part == BattleGaugeLayout.Part.Name ? SetNameFont : null,
                     });
                 }
             }
@@ -300,6 +341,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             GraphicAssets.Archive archive = GraphicAssets.All.FirstOrDefault(a => a.Dir == RomInfo.DirNames.BattleObj);
             using (_pending.Reading())
             using (BattleGaugePieces.StagedOverlay(DraftOverlay(overlay)))
+            using (_hasNameFont ? BattleGaugeTextRenderer.UseNameFont(NameFont) : null)
             {
                 try
                 {

@@ -34,7 +34,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             ["sentenceCase"] = "Items and Pokémon", ["itemSentenceCase"] = "Items and Pokémon", ["trainerNames"] = "Trainers",
             ["sameHeldItemOdds"] = "Items and Pokémon", ["itemStandardize"] = "Items and Pokémon",
             ["punchingMovesExpanded"] = "Moves", ["soundMovesExpanded"] = "Moves", ["regionalDexCount"] = "Items and Pokémon", ["evolutionSlots"] = "Items and Pokémon", ["typeChartExpanded"] = "Moves", ["swarmTableExpanded"] = "Items and Pokémon", ["bpShopExpanded"] = "Items and Pokémon", ["martsExpanded"] = "Items and Pokémon", ["pickupSlots"] = "Items and Pokémon",
-            ["bdhcam"] = "Maps and graphics", ["buildingRotation"] = "Maps and graphics", ["disableTextures"] = "Maps and graphics", ["hpBarText"] = "Maps and graphics", ["partyPanelSize"] = "Maps and graphics", ["summaryFonts"] = "Maps and graphics",
+            ["bdhcam"] = "Maps and graphics", ["buildingRotation"] = "Maps and graphics", ["disableTextures"] = "Maps and graphics", ["hpBarText"] = "Maps and graphics", ["partyPanelSize"] = "Maps and graphics", ["summaryFonts"] = "Maps and graphics", ["partyFonts"] = "Maps and graphics", ["hpBarFonts"] = "Maps and graphics", ["extraFonts"] = "Maps and graphics",
             ["platPatches"] = "External", ["g4Patcher"] = "External",
         };
 
@@ -51,6 +51,8 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             ["bdhcam"] = "camera cameras dynamic", ["buildingRotation"] = "building rotation map editor", ["disableTextures"] = "textures dynamic disable", ["hpBarText"] = "hp bar health gauge name level numbers text box background white transparent clear battle",
             ["partyPanelSize"] = "party menu panel size resize width height square layout pokemon slots",
             ["summaryFonts"] = "summary screen font fonts text size small narrow pokewalker names",
+            ["partyFonts"] = "party menu font fonts text size small narrow pokewalker names",
+            ["hpBarFonts"] = "hp bar battle font fonts text size small narrow pokewalker names", ["extraFonts"] = "extra more new add font fonts slots custom letters",
             ["platPatches"] = "external platinum patches link", ["g4Patcher"] = "external asm code injection armips patches link kalaay",
         };
 

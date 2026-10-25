@@ -65,7 +65,45 @@ namespace DSPRE.Avalonia.Data
         public static System.Drawing.Color[] Colours() => Palette();
 
         /// <summary>Forgets the colours, for when a different ROM is opened.</summary>
-        public static void Reset() { _palette = null; _paletteFor = null; BattleGaugeText.Reset(); }
+        public static void Reset() { _palette = null; _paletteFor = null; _nameFontFor = null; BattleGaugeText.Reset(); }
+
+        // An editor's unsaved name font wins over the ROM's on this thread.
+        [ThreadStatic] private static int? _usingNameFont;
+        private static int _nameFont = -1;
+        private static string _nameFontFor;
+
+        /// <summary>Names drawn on this thread use <paramref name="font"/> (a font number) until the result is disposed.</summary>
+        public static IDisposable UseNameFont(int font)
+        {
+            int? before = _usingNameFont;
+            _usingNameFont = font;
+            return new NameFontRestore(before);
+        }
+
+        private sealed class NameFontRestore : IDisposable
+        {
+            private readonly int? _before;
+            public NameFontRestore(int? before) { _before = before; }
+            public void Dispose() => _usingNameFont = _before;
+        }
+
+        /// <summary>Loads the font for HP bar names: the system font, unless the HP bar fonts patch picked another.</summary>
+        internal static FieldFont LoadNameFont()
+        {
+            int entry = GameFonts.EntryOf(NameFont());
+            return entry > 0 ? FieldFont.LoadFromArchive(entry) : FieldFont.LoadSystemFont();
+        }
+
+        private static int NameFont()
+        {
+            if (_usingNameFont is int chosen) return chosen;
+            string rom = RomInfo.WorkDir ?? "";
+            if (_nameFontFor == rom) return _nameFont;
+            _nameFontFor = rom;
+            try { _nameFont = HpBarFontPatch.ReadFont(); }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleGaugeTextRenderer.NameFont", ex); _nameFont = -1; }
+            return _nameFont;
+        }
 
         // ── putting pictures together ─────────────────────────────────────────────────────────────
 
@@ -112,7 +150,7 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>
-        /// A name as its gauge shows it: the system font, in the same three colours the numbers use.
+        /// A name as its gauge shows it: the name font, in the same three colours the numbers use.
         /// Not the talk font, which is a separate file on HeartGold and gives the wrong letters.
         /// </summary>
         public static Drawn Name(string name, int widthInTiles = 8)
@@ -121,7 +159,7 @@ namespace DSPRE.Avalonia.Data
             if (!IsAvailable) return null;
 
             FieldFont font;
-            try { font = FieldFont.LoadSystemFont(); }
+            try { font = LoadNameFont(); }
             catch (Exception ex) { AppLogger.WarnOnce("BattleGaugeTextRenderer.Name", ex); return null; }
             if (font == null) return null;
 

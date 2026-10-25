@@ -36,7 +36,7 @@ namespace DSPRE.Avalonia
 
             Add("FontEditorView", "Font editor",
                 S(null, "Fonts", "The letters the game writes with."),
-                S("toolbar", "Font and pictures", "Pick a font, or export and import letters as PNG."),
+                S("toolbar", "Font and pictures", "Pick or add a font, or export and import letters as PNG."),
                 S("list", "Letters", "Every letter. Search, or show only drawn, empty or unassigned ones."),
                 S("type:GlyphPainter", "Drawing", "Left paints, right rubs out. Width sets the letter's spacing."),
                 S("name:ShadePicker", "Shades", "Nothing, ink, second ink and paper."),

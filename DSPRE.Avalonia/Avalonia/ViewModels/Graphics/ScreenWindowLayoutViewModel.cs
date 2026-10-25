@@ -41,6 +41,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (screen == "party") _panels = PartyPanelLayout.Read();
             _windowTables = new PendingArchiveWrites.Target("windows", _layout.FileBytes, _layout.WriteFile);
             if (_panels != null) _panelTables = new PendingArchiveWrites.Target("panels", _panels.FileBytes, _panels.WriteFile);
+            OpenFontTable();
             _savedSize = _panels?.Size;
             _inPanel = InPanel();
             if (_panels != null) (_iconInPanel, _ballInPanel) = (SpriteInPanel(PartyPanelLayout.Sprite.Icon), SpriteInPanel(PartyPanelLayout.Sprite.Ball));
@@ -51,13 +52,23 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _pending.Changed += OnPendingChanged;
             PartySample.Changed += OnSampleChanged;
             AppEvents.RomPatchStateChanged += OnPatchStateChanged;
+            _fontsSaved = AppEvents.WhenSaved(OnFontsSaved, RomInfo.DirNames.Fonts);
+        }
+
+        private readonly IDisposable _fontsSaved;
+
+        // A font added in the Font editor joins the pickers.
+        private void OnFontsSaved()
+        {
+            if (Windows.Any(w => w.CanPickFont && w.FontNames.Count != GameFonts.All.Count)) Fill();
         }
 
         /// <summary>Raised after every edit, undo and save.</summary>
         public event Action Changed;
 
         /// <summary>Use while drawing on a worker thread, so the preview shows the unsaved edits.</summary>
-        public IDisposable DrawScope() => new Scopes(_pending.Reading(), ScreenWindowLayouts.Use(_screen, _layout, _panels));
+        public IDisposable DrawScope() => new Scopes(_pending.Reading(), ScreenWindowLayouts.Use(_screen, _layout, _panels),
+                                                     ScreenWindowLayouts.UseFonts(_fonts));
 
         private sealed class Scopes : IDisposable
         {
@@ -71,6 +82,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             if (_pending.Read(_windowTables) is byte[] windows) _layout.FromBytes(windows);
             if (_panelTables != null && _pending.Read(_panelTables) is byte[] panels) _panels.FromBytes(panels);
+            if (_fontTable != null && _pending.Read(_fontTable) is byte[] fonts) _fonts = PartyFontPatch.FontsIn(fonts, _layout.Windows);
             RaiseUndo();
             Refresh();
             Changed?.Invoke();
@@ -84,6 +96,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 graphics?.Invoke(new ScriptNarc(PartyGraphics));
                 _pending.Stage(_windowTables, _layout.ToBytes());
                 if (_panelTables != null) _pending.Stage(_panelTables, _panels.ToBytes());
+                // The font table is keyed by where each window is, so it follows every move.
+                if (_fontTable != null) _pending.Stage(_fontTable, PartyFontPatch.Table(_layout.Windows, _fonts));
                 return null;
             });
         }
@@ -261,9 +275,40 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public void OpenSizePatch() => AvaloniaEditorLauncher.OpenPatchToolboxAt("partyPanelSize");
 
+        // ── fonts for the names and the line under them, once the party menu fonts patch is in ──
+
+        private PendingArchiveWrites.Target _fontTable;
+        private Dictionary<string, int> _fonts;
+
+        private void OpenFontTable()
+        {
+            if (_screen != "party" || _fontTable != null || RomInfo.IsHGE || !PartyFontPatch.IsApplied) return;
+            _fontTable = new PendingArchiveWrites.Target("fonts", PartyFontPatch.ReadTable, PartyFontPatch.WriteTable);
+            _fonts = PartyFontPatch.FontsIn(PartyFontPatch.ReadTable(), _layout.Windows);
+        }
+
+        public bool OffersFontPatch => _screen == "party" && _fontTable == null && !RomInfo.IsHGE && PartyFontPatch.SupportsCurrentRom;
+        public void OpenFontPatch() => AvaloniaEditorLauncher.OpenPatchToolboxAt("partyFonts");
+
+        private static IReadOnlyList<string> FontNames => GameFonts.Names;
+
+        // The comment line only shows on screens the Layout doesn't have, so it takes the name font.
+        private void SetFont(int font)
+        {
+            if (_fonts == null || Math.Max(font, 0) == Math.Max(_fonts["name"], 0)) return;
+            foreach (string part in PartyFontPatch.Parts) _fonts[part] = font;
+            Commit();
+        }
+
         // The patch keeps the game's size, so unsaved edits stay as they are.
         private void OnPatchStateChanged(object sender, EventArgs e)
         {
+            if (_fontTable == null && PartyFontPatch.IsApplied)
+            {
+                OpenFontTable();
+                Raise(nameof(OffersFontPatch));
+                Fill();
+            }
             if (_panels == null || _panels.Resizable || !PartyPanelSizePatch.IsApplied) return;
             _panels.ReadPatch();
             Refresh();
@@ -376,6 +421,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     MoveTo = (r, x, y) => { Move(r, x, y); Commit(); },
                     SizeTo = (r, width, height) => { Resize(r, width, height); Commit(); },
                     FixedTop = _text?.FixedTop?.Invoke(_state, w),
+                    FontNames = FontNames,
+                    GetFont = _fonts != null && w.Part == "name" ? () => Math.Max(_fonts["name"], 0) : null,
+                    SetFont = _fonts != null && w.Part == "name" ? SetFont : null,
                 };
                 Windows.Add(row);
                 ((w.Layer < 4) == mainOnTop ? TopWindows : BottomWindows).Add(row);
@@ -684,6 +732,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _pending.Changed -= OnPendingChanged;
             PartySample.Changed -= OnSampleChanged;
             AppEvents.RomPatchStateChanged -= OnPatchStateChanged;
+            _fontsSaved?.Dispose();
         }
     }
 
@@ -736,6 +785,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public int Wide { get => Window.Width; set => SizeTo?.Invoke(this, value, Window.Height); }
         public int Tall { get => Window.Height; set => SizeTo?.Invoke(this, Window.Width, value); }
         public int MaxWide => Math.Max(1, Window.MaxWidth);
+
+        /// <summary>Set only for the name windows, once the party menu fonts patch is in.</summary>
+        public Func<int> GetFont { get; init; }
+        public Action<int> SetFont { get; init; }
+        public IReadOnlyList<string> FontNames { get; init; }
+        public bool CanPickFont => SetFont != null;
+        public int FontIndex { get => GetFont?.Invoke() ?? 0; set => SetFont?.Invoke(value); }
         public int MaxTall => Math.Max(1, Window.MaxHeight);
 
         public double Left => Window.X * ScreenWindowLayoutViewModel.Tile;
@@ -745,7 +801,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public void Refresh()
         {
-            foreach (string n in new[] { nameof(Across), nameof(Down), nameof(Wide), nameof(Tall), nameof(Left), nameof(Top), nameof(Width), nameof(Height) })
+            foreach (string n in new[] { nameof(Across), nameof(Down), nameof(Wide), nameof(Tall), nameof(Left), nameof(Top), nameof(Width), nameof(Height), nameof(FontIndex) })
                 Raise(n);
         }
     }

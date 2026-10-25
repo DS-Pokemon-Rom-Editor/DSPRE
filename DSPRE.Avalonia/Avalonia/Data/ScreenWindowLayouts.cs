@@ -41,7 +41,44 @@ namespace DSPRE.Avalonia.Data
         public static void Forget(string screen)
         {
             Read.TryRemove(screen, out _);
-            if (screen == "party") _panelsRom = null;
+            if (screen == "party") _panelsRom = _fontsRom = null;
+        }
+
+        // A Layout view's unsaved party fonts, used instead of the ROM's on this thread.
+        [ThreadStatic] private static IReadOnlyDictionary<string, int> _usingFonts;
+        private static Dictionary<string, int> _readFonts;
+        private static string _fontsRom;
+
+        /// <summary>Previews drawn on this thread use these party fonts until the result is disposed.</summary>
+        public static IDisposable UseFonts(IReadOnlyDictionary<string, int> fonts)
+        {
+            IReadOnlyDictionary<string, int> before = _usingFonts;
+            _usingFonts = fonts;
+            return new FontsRestore(before);
+        }
+
+        private sealed class FontsRestore : IDisposable
+        {
+            private readonly IReadOnlyDictionary<string, int> _before;
+            public FontsRestore(IReadOnlyDictionary<string, int> before) { _before = before; }
+            public void Dispose() => _usingFonts = _before;
+        }
+
+        /// <summary>The font number a party window part prints in, or 0 (the game's font) when the patch hasn't set one.</summary>
+        public static int PartyFont(string part)
+        {
+            IReadOnlyDictionary<string, int> fonts = _usingFonts;
+            if (fonts == null)
+            {
+                if (_fontsRom != RomInfo.WorkDir)
+                {
+                    _fontsRom = RomInfo.WorkDir;
+                    try { _readFonts = ROMFiles.PartyFontPatch.FontsIn(ROMFiles.PartyFontPatch.ReadTable(), For("party")?.Windows ?? new List<ScreenWindowLayout.Window>()); }
+                    catch (Exception ex) { AppLogger.WarnOnce("ScreenWindowLayouts.PartyFont", ex); _readFonts = null; }
+                }
+                fonts = _readFonts;
+            }
+            return fonts != null && fonts.TryGetValue(part, out int font) && font >= 0 ? font : 0;
         }
 
         private static PartyPanelLayout _readPanels;

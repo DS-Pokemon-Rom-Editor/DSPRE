@@ -90,6 +90,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveChanges();
         private void SizePatch_Click(object sender, RoutedEventArgs e) => VM?.OpenSizePatch();
+        private void FontPatch_Click(object sender, RoutedEventArgs e) => VM?.OpenFontPatch();
         private void RebuildCursor_Click(object sender, RoutedEventArgs e) => VM?.RebuildCursor();
         private void RebuildPanelArt_Click(object sender, RoutedEventArgs e) => VM?.RebuildPanelArt();
         private void RebuildBackground_Click(object sender, RoutedEventArgs e) => VM?.RebuildBackground();

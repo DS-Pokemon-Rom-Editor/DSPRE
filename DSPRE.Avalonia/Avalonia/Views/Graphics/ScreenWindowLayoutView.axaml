@@ -68,11 +68,14 @@
           <TextBlock Grid.Column="4" Text="Width" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
           <TextBlock Grid.Column="5" Text="Height" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
         </Grid>
+        <Button DockPanel.Dock="Top" Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Margin="0,0,0,6" Click="FontPatch_Click"
+                IsVisible="{Binding OffersFontPatch}" ToolTip.Tip="Lets the names use another font"/>
         <ScrollViewer HorizontalScrollBarVisibility="Disabled">
           <ItemsControl ItemsSource="{Binding Windows}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:ScreenWindowRow">
-                <Grid ColumnDefinitions="18,*,64,64,64,64" ColumnSpacing="6" Margin="0,2,16,2">
+                <StackPanel Margin="0,2,16,2" Spacing="2">
+                <Grid ColumnDefinitions="18,*,64,64,64,64" ColumnSpacing="6">
                   <Border Width="12" Height="12" Background="{Binding Colour}" BorderBrush="{Binding Colour}" BorderThickness="2"
                           VerticalAlignment="Center" HorizontalAlignment="Left"/>
                   <Panel Grid.Column="1" VerticalAlignment="Center">
@@ -89,6 +92,9 @@
                   <NumericUpDown Grid.Column="5" Value="{Binding Tall}" Minimum="1" Maximum="{Binding MaxTall}" Increment="1" FormatString="0"
                                  IsVisible="{Binding Sizable}" ToolTip.Tip="Height in tiles. It can't be taller than in the ROM until a patch allows it."/>
                 </Grid>
+                <ComboBox Margin="24,0,0,0" Width="180" ItemsSource="{Binding FontNames}" SelectedIndex="{Binding FontIndex}"
+                          IsVisible="{Binding CanPickFont}" ToolTip.Tip="Font"/>
+                </StackPanel>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>

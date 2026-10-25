@@ -18,6 +18,9 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveChanges();
 
+        private void AddFont_Click(object sender, RoutedEventArgs e) => VM?.AddFont();
+        private void FontPatch_Click(object sender, RoutedEventArgs e) => VM?.OpenFontPatch();
+
         private void Undo_Click(object sender, RoutedEventArgs e) => VM?.Undo();
         private void Redo_Click(object sender, RoutedEventArgs e) => VM?.Redo();
 

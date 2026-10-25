@@ -1081,14 +1081,62 @@ namespace DSPRE
             if (AlreadyApplied(Probe(() => SummaryFontPatch.IsApplied))) return false;
             if (SummaryFontPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
             if (PlacementNote(new[] { SummaryFontPatch.BlockLength }, out int[] offsets) is not string placement) return false;
-            if (!ConfirmYesNo("Each text box on the summary screen can print in any of the game's six fonts, like the narrow Pokéwalker font " +
-                "for long names. Every box keeps its font until you pick another in the Summary screen editor." + placement +
+            if (!ConfirmYesNo("Each text box on the summary screen can use any of the game's fonts. The narrow Pokéwalker font " +
+                "fits long names. Nothing changes until you pick a font in the Screens editor's Summary layout." + placement +
                 BackupNote("the ARM9 and the synthetic overlay") + "\n\nApply this patch?" + CreditNote("summaryFonts"), "Confirm to proceed"))
                 return false;
             PlainFiles.Copy(RomInfo.Arm9Path, RomInfo.Arm9Path + BackupSuffix, overwrite: true);
             PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
             SummaryFontPatch.Apply(offsets[0]);
-            ShowInfo("Pick each text box's font in the Summary screen editor's Text boxes and bars list.", "Patch applied");
+            ShowInfo("Pick each text box's font in the Screens editor's Summary layout.", "Patch applied");
+            return true;
+        }
+
+        public static bool ApplyHpBarFontsPatch()
+        {
+            if (AlreadyApplied(Probe(() => HpBarFontPatch.IsApplied))) return false;
+            if (HpBarFontPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
+            if (PlacementNote(new[] { HpBarFontPatch.BlockLength }, out int[] offsets) is not string placement) return false;
+            if (!ConfirmYesNo("The Pokémon names on the HP bars in battle, and the Safari and Park ball counts, can use any of the game's fonts. " +
+                "The narrow Pokéwalker font fits long names. Nothing changes until you pick a font in the Screens editor's HP bars." + placement +
+                BackupNote("overlay 12 and the synthetic overlay") + "\n\nApply this patch?" + CreditNote("hpBarFonts"), "Confirm to proceed"))
+                return false;
+            PlainFiles.Copy(OverlayUtils.GetPath(12), OverlayUtils.GetPath(12) + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
+            HpBarFontPatch.Apply(offsets[0]);
+            ShowInfo("Pick the name font in the Screens editor's HP bars.", "Patch applied");
+            return true;
+        }
+
+        public static bool ApplyExtraFontsPatch()
+        {
+            if (AlreadyApplied(Probe(() => ExtraFontsPatch.IsApplied))) return false;
+            if (ExtraFontsPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
+            if (PlacementNote(new[] { ExtraFontsPatch.BlockLength }, out int[] offsets) is not string placement) return false;
+            if (!ConfirmYesNo($"The game gets room for {ExtraFontsPatch.FontCount} fonts instead of {ExtraFontsPatch.GameFontCount}. " +
+                "Nothing changes in game until you add a font in the Font editor." + placement +
+                BackupNote("the ARM9 and the synthetic overlay") + "\n\nApply this patch?" + CreditNote("extraFonts"), "Confirm to proceed"))
+                return false;
+            PlainFiles.Copy(RomInfo.Arm9Path, RomInfo.Arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
+            ExtraFontsPatch.Apply(offsets[0]);
+            ShowInfo("Add fonts in the Font editor.", "Patch applied");
+            return true;
+        }
+
+        public static bool ApplyPartyFontsPatch()
+        {
+            if (AlreadyApplied(Probe(() => PartyFontPatch.IsApplied))) return false;
+            if (PartyFontPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
+            if (PlacementNote(new[] { PartyFontPatch.BlockLength }, out int[] offsets) is not string placement) return false;
+            if (!ConfirmYesNo("The Pokémon names and the line under them in the party menu can use any of the game's fonts. The narrow " +
+                "Pokéwalker font fits long names. Nothing changes until you pick a font in the Screens editor's Party layout." + placement +
+                BackupNote("the ARM9 and the synthetic overlay") + "\n\nApply this patch?" + CreditNote("partyFonts"), "Confirm to proceed"))
+                return false;
+            PlainFiles.Copy(RomInfo.Arm9Path, RomInfo.Arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
+            PartyFontPatch.Apply(offsets[0]);
+            ShowInfo("Pick the name font in the Screens editor's Party layout.", "Patch applied");
             return true;
         }
 
@@ -1499,6 +1547,9 @@ namespace DSPRE
             ["classIntros"] = ("Mixone", "trainer class intros"),
             ["hpBarText"] = ("Mixone", "clear battle text background"),
             ["summaryFonts"] = ("Mixone", "summary screen fonts"),
+            ["partyFonts"] = ("Mixone", "party menu fonts"),
+            ["hpBarFonts"] = ("Mixone", "HP bar fonts"),
+            ["extraFonts"] = ("Mixone", "extra fonts"),
             ["punchingMovesExpanded"] = ("Mixone", "punching move list expansion"),
             ["soundMovesExpanded"] = ("Mixone", "sound move list expansion"),
             ["regionalDexCount"] = ("Mixone", "regional Pokédex size"),
@@ -1612,6 +1663,9 @@ namespace DSPRE
             ["classIntros"] = "Trainer class intros",
             ["hpBarText"] = "Clear battle text background",
             ["summaryFonts"] = "Summary screen fonts",
+            ["partyFonts"] = "Party menu fonts",
+            ["hpBarFonts"] = "HP bar fonts",
+            ["extraFonts"] = "Extra fonts",
             ["trainerCustomPokeballs"] = "Trainer custom Poké Balls",
         };
 
@@ -1854,13 +1908,46 @@ namespace DSPRE
                 }));
 
             list.Add(Status("summaryFonts",
-                "Each text box on the summary screen can print in any of the game's six fonts, picked in the Summary screen editor. Requires the ARM9 expansion patch.",
+                "Lets each text box on the summary screen use any of the game's fonts, set in the Screens editor (HeartGold and SoulSilver). Requires the ARM9 expansion patch.",
                 () =>
                 {
                     if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
                     if (RomInfo.GameFamily != RomInfo.GameFamilies.HGSS) return Unsupported("HeartGold and SoulSilver only");
                     if (!SummaryFontPatch.SupportsCurrentRom) return UnsupportedVersion(RomLocator.SummaryFontDumps);
                     if (SummaryFontPatch.IsApplied) return PatchState.Applied;
+                    return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
+                }));
+
+            list.Add(Status("partyFonts",
+                "Lets the Pokémon names and the line under them in the party menu use any of the game's fonts, set in the Screens editor (HeartGold and SoulSilver). Requires the ARM9 expansion patch.",
+                () =>
+                {
+                    if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+                    if (RomInfo.GameFamily != RomInfo.GameFamilies.HGSS) return Unsupported("HeartGold and SoulSilver only");
+                    if (!PartyFontPatch.SupportsCurrentRom) return UnsupportedVersion(RomLocator.PartyFontDumps);
+                    if (PartyFontPatch.IsApplied) return PatchState.Applied;
+                    return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
+                }));
+
+            list.Add(Status("hpBarFonts",
+                "Lets the Pokémon names on the HP bars in battle, and the Safari and Park ball counts, use any of the game's fonts, set in the Screens editor (HeartGold and SoulSilver). Requires the ARM9 expansion patch.",
+                () =>
+                {
+                    if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+                    if (RomInfo.GameFamily != RomInfo.GameFamilies.HGSS) return Unsupported("HeartGold and SoulSilver only");
+                    if (!HpBarFontPatch.SupportsCurrentRom) return UnsupportedVersion(RomLocator.HpBarFontDumps);
+                    if (HpBarFontPatch.IsApplied) return PatchState.Applied;
+                    return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
+                }));
+
+            list.Add(Status("extraFonts",
+                $"Lets you add up to {ExtraFontsPatch.Capacity} fonts in the Font editor (HeartGold and SoulSilver). Requires the ARM9 expansion patch.",
+                () =>
+                {
+                    if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+                    if (RomInfo.GameFamily != RomInfo.GameFamilies.HGSS) return Unsupported("HeartGold and SoulSilver only");
+                    if (!ExtraFontsPatch.SupportsCurrentRom) return UnsupportedVersion(RomLocator.ExtraFontsDumps);
+                    if (ExtraFontsPatch.IsApplied) return PatchState.Applied;
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
                 }));
 
@@ -2310,7 +2397,7 @@ namespace DSPRE
                 or "trainerClassTablesExpanded" or "trainerEncounterBgmRepointed" or "punchingMovesExpanded" or "soundMovesExpanded"
                 or "pickupSlots" or "classIntros" or "hpBarText" or "vsClassTableExpanded" or "trainerShiny" or "trainerClassMetadata"
                 or "martsExpanded" or "bpShopExpanded" or "swarmTableExpanded" or "typeChartExpanded" or "vsIntroTimings" or "partyPanelSize"
-                or "summaryFonts")
+                or "summaryFonts" or "partyFonts" or "hpBarFonts" or "extraFonts")
             {
                 ShowError(hgEngineRefusal, "Not available on hg-engine");
                 return false;
@@ -2340,6 +2427,9 @@ namespace DSPRE
                 case "classIntros": return ApplyClassIntrosPatch();
                 case "hpBarText": return ApplyHpBarTextPatch();
                 case "summaryFonts": return ApplySummaryFontsPatch();
+                case "partyFonts": return ApplyPartyFontsPatch();
+                case "hpBarFonts": return ApplyHpBarFontsPatch();
+                case "extraFonts": return ApplyExtraFontsPatch();
                 case "vsClassTableExpanded": return ApplyVsClassTableExpansion();
                 case "punchingMovesExpanded": return ApplyMoveListExpansion(MoveCategoryTable.Kind.Punching);
                 case "soundMovesExpanded": return ApplyMoveListExpansion(MoveCategoryTable.Kind.Sound);

@@ -161,6 +161,15 @@ namespace DSPRE
         public static HpBarTextSites HpBarTextSites => Here(HpBarTextSitesIn);
         public static List<(string id, int rev)> HpBarTextDumps => WorksOn(HpBarTextSitesIn);
 
+        public static HpBarFontSites HpBarFontSites => Here(HpBarFontSitesIn);
+        public static List<(string id, int rev)> HpBarFontDumps => WorksOn(HpBarFontSitesIn);
+
+        public static ExtraFontsSites ExtraFontsSites => Here(ExtraFontsSitesIn);
+        public static List<(string id, int rev)> ExtraFontsDumps => WorksOn(ExtraFontsSitesIn);
+
+        public static PartyFontSites PartyFontSites => Here(PartyFontSitesIn);
+        public static List<(string id, int rev)> PartyFontDumps => WorksOn(PartyFontSitesIn);
+
         public static GaugeLengthSites GaugeLengthSites => Here(GaugeLengthSitesIn);
         public static List<(string id, int rev)> GaugeLengthDumps => WorksOn(GaugeLengthSitesIn);
 

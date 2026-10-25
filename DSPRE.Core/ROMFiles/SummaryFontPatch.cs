@@ -7,15 +7,15 @@ using System.Text;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// Lets each HGSS summary screen text box print in any of the game's six fonts. The screen's prints and width measurements go
+    /// Lets each HGSS summary screen text box print in any of the game's fonts. The screen's prints and width measurements go
     /// through a routine in the synthetic overlay that looks the box up in a table of fonts.
     /// </summary>
     public static class SummaryFontPatch
     {
         public const string Marker = "SUMFONTSV1\0\0";
 
-        // Assembled from summary_fonts.s.
-        private static readonly byte[] Code =
+        // Assembled from summary_fonts.s. The party menu and HP bar fonts patches reuse it.
+        internal static readonly byte[] Code =
         {
             0xf0, 0xb4, 0x06, 0x1c, 0x75, 0x68, 0xb6, 0x68, 0x76, 0x00, 0x76, 0x08,
             0xb4, 0x46, 0x57, 0x4c, 0x26, 0x68, 0x00, 0x2e, 0x08, 0xd0, 0xae, 0x42,
@@ -49,22 +49,16 @@ namespace DSPRE.ROMFiles
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         };
-        private const int PrintAt = 0x00, WidthR6At = 0x30, WidthR5R7At = 0x5E, WidthR6R7At = 0x8E, CentreNameAt = 0xBE,
+        internal const int PrintAt = 0x00, WidthR6At = 0x30, WidthR5R7At = 0x5E, WidthR6R7At = 0x8E, CentreNameAt = 0xBE,
                           CentreTrainerAt = 0xF4, LoadAt = 0x12A, ReleaseAt = 0x144;
-        private const int PrintTarget = 0x158, WidthTarget = 0x15C, CentreTarget = 0x160, AllocTarget = 0x164, ReleaseTarget = 0x168,
+        internal const int PrintTarget = 0x158, WidthTarget = 0x15C, CentreTarget = 0x160, AllocTarget = 0x164, ReleaseTarget = 0x168,
                           TableAddress = 0x16C, TableAt = 0x170;
-        private const int EntrySize = 12;
+        internal const int EntrySize = 12;
 
         /// <summary>Room for every window the summary screen has.</summary>
         public static int Capacity => RomLocator.SummaryScreenSites?.Windows.Sum(t => t.Count) ?? 0;
         private static int CodeStart => SyntheticOverlaySpace.HeaderSize;
         public static int BlockLength => CodeStart + TableAt + Capacity * EntrySize + 4;
-
-        /// <summary>The game's fonts by number: the archive entry each loads and what DSPRE calls it.</summary>
-        public static readonly (int Entry, string Name)[] Fonts =
-        {
-            (0, "System font"), (1, "Dialogue font"), (2, "Touch screen font"), (3, "Unown font"), (4, "Button font"), (10, "Pokéwalker font"),
-        };
 
         public static bool SupportsCurrentRom => RomLocator.SummaryFontSites != null && RomLocator.SummaryScreenSites != null;
 
@@ -83,7 +77,7 @@ namespace DSPRE.ROMFiles
         private static int At(uint address) => (int)(address - ARM9.Address);
 
         // The target of the BL at address, or null when there is none.
-        private static uint? CallAt(byte[] arm9, uint address)
+        internal static uint? CallAt(byte[] arm9, uint address)
         {
             int at = At(address);
             if (at < 0 || at + 4 > arm9.Length) return null;
@@ -94,7 +88,7 @@ namespace DSPRE.ROMFiles
             return (uint)(address + 4 + off);
         }
 
-        private static byte[] Bl(uint from, uint to)
+        internal static byte[] Bl(uint from, uint to)
         {
             int off = (int)(to - (from + 4));
             if (off < -0x400000 || off >= 0x400000) throw new InvalidOperationException("The synthetic overlay is out of the summary screen's reach.");
@@ -202,9 +196,10 @@ namespace DSPRE.ROMFiles
             if (code == 0) throw new InvalidOperationException("The summary screen fonts patch isn't applied.");
             byte[] table = new byte[Capacity * EntrySize + 4];
             int at = 0;
+            int known = GameFonts.All.Count;
             for (int i = 0; i < windows.Count && i < fonts.Count; i++)
             {
-                if (fonts[i] < 0 || fonts[i] >= Fonts.Length || windows[i].Width == 0) continue;
+                if (fonts[i] < 0 || fonts[i] >= known || windows[i].Width == 0) continue;
                 if (at + EntrySize > table.Length - 4) break;
                 (uint first, uint second) = Key(windows[i]);
                 BitConverter.GetBytes(first).CopyTo(table, at);

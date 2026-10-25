@@ -962,11 +962,12 @@ namespace DSPRE.Avalonia.Data
                 FieldStringVars.Expand(template, (_, _, _) => name), @"\{[^}]*\}", "");
             if (string.IsNullOrEmpty(shown)) shown = name;
             (int nx, int ny, int _, int _) = ScreenWindowLayouts.Window("party", ScreenWindowLayout.PokemonWindow(n + 1, "name"), (px + 6, py + 1, 9, 2));
+            FieldFont nameFont = (GameFonts.EntryOf(ScreenWindowLayouts.PartyFont("name")) is int entry && entry >= 0 ? Font(entry) : null) ?? SystemFont;
             InWindow(rgba, ScreenWindowLayout.PokemonWindow(n + 1, "name"), into =>
             {
-                Print(into, SystemFont, shown, nx * 8, ny * 8, row0[15], row0[14]);
+                Print(into, nameFont, shown, nx * 8, ny * 8, row0[15], row0[14]);
                 if (!who.Egg && who.Gender < 2)
-                    Print(into, SystemFont, Text(bank, 27 + who.Gender), nx * 8 + 64, ny * 8,
+                    Print(into, nameFont, Text(bank, 27 + who.Gender), nx * 8 + 64, ny * 8,
                           row0[who.Gender == 0 ? 3 : 5], row0[who.Gender == 0 ? 4 : 6]);
             });
 

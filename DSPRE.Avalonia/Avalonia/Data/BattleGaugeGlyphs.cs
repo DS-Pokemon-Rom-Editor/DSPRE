@@ -19,7 +19,7 @@ namespace DSPRE.Avalonia.Data
         public static byte[] NameBlock(string name)
         {
             FieldFont font;
-            try { font = FieldFont.LoadSystemFont(); }
+            try { font = BattleGaugeTextRenderer.LoadNameFont(); }
             catch (Exception ex) { AppLogger.WarnOnce("BattleGaugeGlyphs.NameBlock", ex); return null; }
             if (font == null) return null;
 

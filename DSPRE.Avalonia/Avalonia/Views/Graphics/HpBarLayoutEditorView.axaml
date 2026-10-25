@@ -45,10 +45,13 @@
     <Border x:Name="PartList" DockPanel.Dock="Left" Width="370" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,1,0">
       <DockPanel Margin="8">
         <TextBlock DockPanel.Dock="Top" Text="Parts" FontWeight="SemiBold" Margin="0,0,0,6"/>
+        <Button DockPanel.Dock="Top" Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Margin="0,0,0,6" Click="FontPatch_Click"
+                IsVisible="{Binding OffersFontPatch}" ToolTip.Tip="Lets the names use another font"/>
         <ItemsControl ItemsSource="{Binding Parts}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:HpBarPartRow">
-              <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2">
+              <StackPanel Margin="0,2" Spacing="2">
+              <StackPanel Orientation="Horizontal" Spacing="6">
                 <Border Width="12" Height="12" Background="{Binding Colour}" BorderBrush="{Binding Outline}" BorderThickness="2"
                         VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding Name}" Width="84" VerticalAlignment="Center"/>
@@ -61,6 +64,9 @@
                                ToolTip.Tip="Row"/>
                 <NumericUpDown Value="{Binding Length}" Minimum="1" Maximum="{Binding MaxLength}" Increment="1" FormatString="0" Width="64"
                                IsVisible="{Binding HasLength}" ToolTip.Tip="Length in squares"/>
+              </StackPanel>
+              <ComboBox Margin="18,0,0,0" Width="180" ItemsSource="{Binding FontNames}" SelectedIndex="{Binding FontIndex}"
+                        IsVisible="{Binding CanPickFont}" ToolTip.Tip="Font"/>
               </StackPanel>
             </DataTemplate>
           </ItemsControl.ItemTemplate>

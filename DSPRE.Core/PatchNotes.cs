@@ -204,15 +204,47 @@ namespace DSPRE
                 "HeartGold or SoulSilver, any language. No ARM9 expansion or synthetic overlay. Not compatible with hg-engine.",
             ["summaryFonts"] =
                 "What it does\n" +
-                "Each text box on the summary screen can print in any of the game's six fonts: system, dialogue, touch screen, Unown, " +
-                "button or Pokéwalker. The Pokéwalker font is narrower, so long names fit in smaller boxes. Nothing changes in game until " +
-                "you pick a font.\n\n" +
+                "Each text box on the summary screen can use any of the game's fonts. The narrow Pokéwalker font fits long " +
+                "names. Nothing changes in game until you pick a font.\n\n" +
                 "Where to edit\n" +
-                "The Summary screen editor's Text boxes and bars list: one font for each box. The Font editor redraws the letters themselves.\n\n" +
+                "The Screens editor's Summary layout, under each text box. The Font editor changes the letters themselves.\n\n" +
                 "Good to know\n" +
-                "The fonts are shared with the rest of the game, so redrawing the Pokéwalker font also changes the Pokéwalker screens.\n\n" +
+                "The rest of the game uses the same fonts, so changing the Pokéwalker font also changes the Pokéwalker screens.\n\n" +
                 "Requirements\n" +
                 "English HeartGold or SoulSilver, with the ARM9 expansion. Not compatible with hg-engine.",
+            ["hpBarFonts"] =
+                "What it does\n" +
+                "The Pokémon names on the HP bars in battle, and the Safari and Park ball counts, can use any of the game's fonts. " +
+                "The narrow Pokéwalker font fits long names. Nothing changes in game until you pick a font.\n\n" +
+                "Where to edit\n" +
+                "The Screens editor's HP bars, on the Name row. The Font editor changes the letters themselves.\n\n" +
+                "Good to know\n" +
+                "All the bars share one font. Other screens use these fonts too, so changing the Pokéwalker font also " +
+                "changes the Pokéwalker screens.\n\n" +
+                "Requirements\n" +
+                "HeartGold or SoulSilver in English, French, German or Italian, or Spanish SoulSilver, with the ARM9 expansion. " +
+                "Not compatible with hg-engine.",
+            ["extraFonts"] =
+                "What it does\n" +
+                "The game gets room for 15 fonts instead of 6, and added fonts show in every font picker. Nothing changes in game " +
+                "until you add a font.\n\n" +
+                "Where to edit\n" +
+                "The Font editor's Add font copies the open font. Then draw its letters.\n\n" +
+                "Good to know\n" +
+                "Added fonts load when the game starts and stay loaded, so each one uses under 1 KB of memory all game.\n\n" +
+                "Requirements\n" +
+                "HeartGold or SoulSilver in any language but Japanese, with the ARM9 expansion. Not compatible with hg-engine.",
+            ["partyFonts"] =
+                "What it does\n" +
+                "The Pokémon names in the party menu, and the line under them that says whether a TM can be learned, can use any of " +
+                "the game's fonts. The narrow Pokéwalker font fits long names. Nothing changes in game until you pick a font.\n\n" +
+                "Where to edit\n" +
+                "The Screens editor's Party layout, on the name rows. The line under the names uses the same font. The Font editor changes the letters themselves.\n\n" +
+                "Good to know\n" +
+                "The rest of the game uses the same fonts, so changing the Pokéwalker font also changes the Pokéwalker screens.\n\n" +
+                "Requirements\n" +
+                "HeartGold or SoulSilver in English, French, German or Italian, or Spanish SoulSilver, with the ARM9 expansion. " +
+                "Not compatible with hg-engine.",
             ["hpBarText"] =
                 "What it does\n" +
                 "Removes the white box behind the name, level, HP, gender symbol and \"Lv\" in battle, so your HP bar art shows behind them.\n\n" +
@@ -299,8 +331,17 @@ namespace DSPRE
             ["partyPanelSize"] = ("76 instructions in seven of the ARM9's party menu functions hold the panel size instead of the game's 16 by 6, each changed in place.",
                 "No additional space or synthetic overlay.",
                 "the ARM9"),
-            ["summaryFonts"] = ("The summary screen's 29 text prints, eight width measurements and its font loading in the ARM9 go through the patch's routine.",
+            ["summaryFonts"] = ("The ARM9 prints the summary screen's text through the patch's routine.",
                 "About 1.2 KB in the synthetic overlay, with a font table that has room for every summary screen window.",
+                "the ARM9 and the synthetic overlay"),
+            ["hpBarFonts"] = ("Battle loads two more fonts through the patch's routine, and the HP bar prints go through a short stub that picks their font.",
+                "About 400 bytes in the synthetic overlay.",
+                "overlay 12 and the synthetic overlay"),
+            ["extraFonts"] = ("The ARM9's font code uses tables in the patch's block, with room for 15 fonts, and loads the added fonts at boot.",
+                "About 540 bytes in the synthetic overlay.",
+                "the ARM9 and the synthetic overlay"),
+            ["partyFonts"] = ("The party menu prints its names, and the line under them, through the patch's routine.",
+                "About 1.1 KB in the synthetic overlay, with a font table that has room for every party menu window.",
                 "the ARM9 and the synthetic overlay"),
             ["hpBarText"] = ("Six calls and twelve copies in the battle overlay (overlay 12 in HeartGold and SoulSilver, 16 in Platinum; five calls and eleven copies in overlay 11 in Diamond) go through the patch's routine.",
                 "140 bytes in the synthetic overlay.",

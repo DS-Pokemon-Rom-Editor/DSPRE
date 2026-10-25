@@ -457,6 +457,22 @@ namespace DSPRE
                                                 int AbilityDescriptionBank, int ContestEffectBank);
 
         /// <summary>The arm9 addresses of the HGSS summary screen calls the fonts patch reroutes, with the width calls grouped by the registers that hold the window.</summary>
+        /// <summary>
+        /// ARM9 addresses of the HGSS party menu's panel prints, its PartyMenu_AddAllWindows call (where fonts 2 and 5 load),
+        /// FontID_Alloc(4) and FontID_Release(4).
+        /// </summary>
+        public sealed record PartyFontSites(uint[] Prints, uint AddWindows, uint Alloc, uint Release);
+
+        /// <summary>
+        /// The HGSS battle overlay's HP bar prints (the name, then the Safari and Park ball lines) and its FontID_Alloc(4) and
+        /// FontID_Release(4) calls, as offsets in the overlay file.
+        /// </summary>
+        public sealed record HpBarFontSites(int Overlay, int[] Prints, int[] Allocs, int[] Releases);
+
+        /// <summary>ARM9 addresses of the HGSS font module's table literals, field offsets and FONT_NUM checks, and main.c's FontID_Alloc(3, HEAP_ID_3).</summary>
+        public sealed record ExtraFontsSites(uint Work, uint[] Arcs, uint ArcFlags, uint[] Infos, uint[] Managers, uint[] Counts, uint[] Limits,
+                                             uint BootAlloc);
+
         public sealed record SummaryFontSites(uint[] Prints, uint[] WidthR6, uint[] WidthR5R7, uint[] WidthR6R7, uint CentreName,
                                               uint[] CentreTrainer, uint Load, uint Release);
 

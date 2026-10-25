@@ -35,7 +35,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
     /// The letters a ROM writes with: every font it carries, every letter in one, and what a sentence
     /// looks like in it.
     /// </summary>
-    public sealed class FontEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
+    public sealed class FontEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -67,6 +67,56 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
             _loading = false;
             if (FontNames.Count > 0) SelectedFontIndex = 0;
+            AppEvents.RomPatchStateChanged += OnPatchStateChanged;
+        }
+
+        public void Detach() => AppEvents.RomPatchStateChanged -= OnPatchStateChanged;
+
+        private void OnPatchStateChanged(object sender, EventArgs e) => RaiseAdding();
+
+        // ── Adding a font ─────────────────────────────────────────────────────────
+        // An added font stays a draft until Save gives it an archive entry and the next font number.
+
+        private (int Entry, int LikeFont)? _adding;
+
+        private int OpenFontNumber => _selectedFontIndex >= 0 && _selectedFontIndex < _fontEntries.Count
+            ? GameFonts.All.FirstOrDefault(f => f.Entry == _fontEntries[_selectedFontIndex])?.Number ?? -1 : -1;
+
+        public bool OffersFontPatch => !IsHGE && ExtraFontsPatch.SupportsCurrentRom && !ExtraFontsPatch.IsApplied;
+
+        private static bool FontsFull => ExtraFontsPatch.IsApplied && GameFonts.All.Count >= ExtraFontsPatch.FontCount;
+
+        public bool CanAddFont => _font != null && !HasUnsavedChanges && ExtraFontsPatch.IsApplied && OpenFontNumber >= 0 && !FontsFull;
+
+        public void OpenFontPatch() => AvaloniaEditorLauncher.OpenPatchToolboxAt("extraFonts");
+
+        public void AddFont()
+        {
+            if (!CanAddFont) return;
+            int likeFont = OpenFontNumber, entry = FieldFont.UnpackedEntries().Length;
+            FieldFont copy = FieldFont.Read(_font.Write());
+            _adding = (entry, likeFont);
+            _fontEntries.Add(entry);
+            FontNames.Add("Extra font " + (GameFonts.All.Count - ExtraFontsPatch.GameFontCount + 1));
+            _selectedFontIndex = _fontEntries.Count - 1;
+            OnPropertyChanged(nameof(SelectedFontIndex));
+            Show(copy);
+            StatusText = $"Save to add this copy of the {GameFonts.All[likeFont].Name}.";
+        }
+
+
+        private void DropAdding()
+        {
+            if (_adding == null) return;
+            _adding = null;
+            _fontEntries.RemoveAt(_fontEntries.Count - 1);
+            FontNames.RemoveAt(FontNames.Count - 1);
+        }
+
+        private void RaiseAdding()
+        {
+            OnPropertyChanged(nameof(OffersFontPatch));
+            OnPropertyChanged(nameof(CanAddFont));
         }
 
         // ── The fonts this ROM carries ────────────────────────────────────────────
@@ -78,7 +128,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             get => _selectedFontIndex;
             set
             {
-                if (RecordSwitchGuard.IsSnappingBack || value == _selectedFontIndex) return;
+                if (RecordSwitchGuard.IsSnappingBack || value == _selectedFontIndex || value < 0) return;
                 if (HasUnsavedChanges && !_loading)
                 {
                     int requested = value;
@@ -448,21 +498,42 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         // ── Saving ────────────────────────────────────────────────────────────────
         // Compared as bytes, so undoing back to the saved letters counts as clean.
-        public bool HasUnsavedChanges => _font != null && _savedBytes != null && !_font.Write().AsSpan().SequenceEqual(_savedBytes);
+        public bool HasUnsavedChanges => _adding != null || _font != null && _savedBytes != null && !_font.Write().AsSpan().SequenceEqual(_savedBytes);
         private byte[] _savedBytes;
         public string UnsavedChangesDescription => "Font";
-        public void DiscardChanges() { if (_selectedFontIndex >= 0) LoadFont(_selectedFontIndex); }
+        public void DiscardChanges()
+        {
+            if (_adding is (_, int likeFont))
+            {
+                DropAdding();
+                _selectedFontIndex = Math.Max(0, _fontEntries.IndexOf(GameFonts.EntryOf(likeFont)));
+                OnPropertyChanged(nameof(SelectedFontIndex));
+                LoadFont(_selectedFontIndex);
+                return;
+            }
+            if (_selectedFontIndex >= 0) LoadFont(_selectedFontIndex);
+        }
 
         public void SaveChanges()
         {
             if (_font == null || _selectedFontIndex < 0) return;
             try
             {
-                _font.Save(_fontEntries[_selectedFontIndex]);
+                if (_adding is (int entry, int likeFont))
+                {
+                    // The entry goes in before the font number points at it, so the game never loads a missing entry.
+                    ArchiveMembers.Put(DirNames.Fonts, entry, _font.Write());
+                    ExtraFontsPatch.Add(entry, likeFont);
+                    _adding = null;
+                    AppEvents.RaiseArchiveMemberSaved(DirNames.Fonts);
+                }
+                else _font.Save(_fontEntries[_selectedFontIndex]);
                 _savedBytes = _font.Write();
+                RaiseAdding();
                 SaveNotice.Saved(UnsavedChangesDescription);
                 OnPropertyChanged(nameof(HasUnsavedChanges));
-                StatusText = $"Saved {FontNames[_selectedFontIndex]}.";
+                StatusText = FontsFull ? $"All {ExtraFontsPatch.FontCount} fonts are in use."
+                                       : $"Saved {FontNames[_selectedFontIndex]}.";
                 // Anything already drawing with the ROM's font picks the change up.
                 Views.Controls.FieldMessageBoxView.Font = FieldFont.LoadTalkFont();
             }
@@ -479,55 +550,66 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private void MarkDirty()
         {
             OnPropertyChanged(nameof(HasUnsavedChanges));
+            OnPropertyChanged(nameof(CanAddFont));
         }
 
         private void LoadFont(int which)
         {
             if (which < 0 || which >= _fontEntries.Count) return;
+            // Leaving an unsaved added font drops it; the switch guard has already asked.
+            if (_adding != null && which != _fontEntries.Count - 1) DropAdding();
             try
             {
-                _font = FieldFont.LoadFromArchive(_fontEntries[which]);
-                _savedBytes = _font?.Write();
-
-                _all.Clear();
-                if (_font != null)
-                    for (int g = 0; g < _font.GlyphCount; g++)
-                    {
-                        // Only the two inks count: shade 0 is empty and shade 3 is the box's paper.
-                        bool drawn = false;
-                        int wide = Math.Min(_font.WidthOf(g), FieldFont.CellSize);
-                        int tall = Math.Min(_font.Height, FieldFont.CellSize);
-                        for (int y = 0; y < tall && !drawn; y++)
-                            for (int x = 0; x < wide; x++)
-                            {
-                                byte shade = _font.PixelAt(g, x, y);
-                                if (shade == 1 || shade == 2) { drawn = true; break; }
-                            }
-                        _all.Add(new GlyphRow { Index = g, Letter = LetterFor(g), HasPicture = drawn });
-                    }
-                ApplyFilter();
-
-                _selectedGlyphIndex = Glyphs.Count > 0 ? 0 : -1;
-                OnPropertyChanged(nameof(SelectedGlyphIndex));
-                int mapped = Glyphs.Count(r => r.IsMapped);
-                StatusText = _font == null
-                    ? "That entry isn't a font."
-                    : $"{_font.GlyphCount} letters, up to {_font.MaxWidth} by {_font.Height}, "
-                      + $"{1 << _font.BitsPerPixel} shades. {mapped} of them have a character in this ROM's "
-                      + "character map; the rest are kana and symbols it doesn't use.";
+                Show(FieldFont.LoadFromArchive(_fontEntries[which]));
                 if (_font != null && HgEngine.HgEngineSourceAssets.VerbatimSourceFor(
                         HgEngine.HgEngineOwnedFiles.ArchiveOf(DirNames.Fonts), _fontEntries[which]) is HgEngine.HgEngineOwnedFile source)
                     StatusText += $" hg-engine builds this font from {source.RelPath}, so saving writes there too.";
-                RaiseGlyph();
-                // Steps hold pixels of the font that was open; undoing one here would paint them into this one.
-                RestartSteps();
-                OnPropertyChanged(nameof(HasUnsavedChanges));
             }
             catch (Exception ex)
             {
                 StatusText = "That font couldn't be read: " + ex.Message;
                 AppLogger.Error("FontEditor.LoadFont: " + ex);
             }
+        }
+
+        // An added font has no saved bytes, so it counts as unsaved until Save.
+        private void Show(FieldFont font)
+        {
+            _font = font;
+            _savedBytes = _adding == null ? _font?.Write() : null;
+
+            _all.Clear();
+            if (_font != null)
+                for (int g = 0; g < _font.GlyphCount; g++)
+                {
+                    // Only the two inks count: shade 0 is empty and shade 3 is the box's paper.
+                    bool drawn = false;
+                    int wide = Math.Min(_font.WidthOf(g), FieldFont.CellSize);
+                    int tall = Math.Min(_font.Height, FieldFont.CellSize);
+                    for (int y = 0; y < tall && !drawn; y++)
+                        for (int x = 0; x < wide; x++)
+                        {
+                            byte shade = _font.PixelAt(g, x, y);
+                            if (shade == 1 || shade == 2) { drawn = true; break; }
+                        }
+                    _all.Add(new GlyphRow { Index = g, Letter = LetterFor(g), HasPicture = drawn });
+                }
+            ApplyFilter();
+
+            _selectedGlyphIndex = Glyphs.Count > 0 ? 0 : -1;
+            OnPropertyChanged(nameof(SelectedGlyphIndex));
+            int mapped = Glyphs.Count(r => r.IsMapped);
+            StatusText = _font == null
+                ? "That entry isn't a font."
+                : $"{_font.GlyphCount} letters, up to {_font.MaxWidth} by {_font.Height}, "
+                  + $"{1 << _font.BitsPerPixel} shades. {mapped} of them have a character in this ROM's "
+                  + "character map; the rest are kana and symbols it doesn't use."
+                  + (FontsFull ? $" All {ExtraFontsPatch.FontCount} fonts are in use." : "");
+            RaiseGlyph();
+            // Steps hold pixels of the font that was open; undoing one here would paint them into this one.
+            RestartSteps();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            RaiseAdding();
         }
 
         // The character map turns letters into picture numbers; the reverse is a search, so it runs once

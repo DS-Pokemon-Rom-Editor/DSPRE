@@ -100,8 +100,8 @@ namespace DSPRE.Avalonia.Data
             ("Font.Text", "Text colours"),
             ("Font.ScreenIndicators", "Screen indicators"),
             ("Font.Extra", "Extra font colours"),
-            ("Font.4", "Font 4"),
-            ("Font.5", "Font 5"),
+            ("Font.4", "Button font"),
+            ("Font.5", "Pokéwalker font"),
         };
 
         private static string Pretty(string name) =>
@@ -198,6 +198,8 @@ namespace DSPRE.Avalonia.Data
         public static string NameOf(DirNames dir, int fileIndex)
         {
             IReadOnlyList<string> names = Names(dir);
+            if (dir == DirNames.Fonts && fileIndex >= names.Count)
+                return ROMFiles.GameFonts.All.FirstOrDefault(f => f.Entry == fileIndex)?.Name;
             if (fileIndex < 0 || fileIndex >= names.Count) return null;
             (string thing, string part) = BattleObjects.Split(names[fileIndex]);
             if (thing == null) return null;
