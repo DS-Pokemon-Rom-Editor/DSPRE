@@ -32,6 +32,7 @@
         <Button Content="Keep shared only" Click="SyncIntersect_Click" IsEnabled="{Binding IsByPokemonMode}" Margin="0,0,12,4"
                 ToolTip.Tip="Keeps only the machines every family member shares (intersection)"/>
         <Button Content="Copy compatibility to…" controls:Icon.Key="copy" Click="CopyTo_Click" IsEnabled="{Binding IsByPokemonMode}" Margin="0,0,12,4"/>
+        <Button Content="Clear all" Click="ClearAll_Click" Margin="0,0,12,4" ToolTip.Tip="Untick every Pokémon's TMs and HMs"/>
 
         <TextBox x:Name="FilterBox" Text="{Binding FilterText}" Width="180" PlaceholderText="Search Pokémon" Margin="0,0,0,4"/>
     </controls:EditorToolbar>

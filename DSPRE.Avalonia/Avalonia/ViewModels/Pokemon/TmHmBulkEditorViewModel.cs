@@ -561,6 +561,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             AfterBulkFamilyChange($"Copied TM/HM compatibility from {SpeciesLabel(sourceId)} to {targets.Count} Pokémon.");
         }
 
+        public void ClearAll()
+        {
+            foreach (int id in _compat.Keys.ToList()) SetRows(id, Array.Empty<int>());
+            AfterBulkFamilyChange("Cleared every Pokémon's TMs and HMs.");
+        }
+
         // Level-up rows stay ticked whatever is copied over them.
         private void SetRows(int speciesId, IEnumerable<int> rows)
         {

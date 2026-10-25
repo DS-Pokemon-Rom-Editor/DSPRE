@@ -30,6 +30,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private void SyncUnion_Click(object sender, RoutedEventArgs e) => VM?.SyncFamilies(true);
         private void SyncIntersect_Click(object sender, RoutedEventArgs e) => VM?.SyncFamilies(false);
+        private void ClearAll_Click(object sender, RoutedEventArgs e) => VM?.ClearAll();
 
         private void MachineCheckBox_Click(object sender, RoutedEventArgs e)
         {
