@@ -28,7 +28,7 @@
               ToolTip.Tip="{Binding SaveHelp}"/>
       <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
       <controls:UndoRedoButtons/>
-      <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4">
+      <StackPanel controls:EditorToolbar.Slot="Picker" Orientation="Horizontal" Spacing="6" Margin="0,0,16,4">
         <TextBlock Text="Bar" VerticalAlignment="Center"/>
         <ComboBox Width="220" ItemsSource="{Binding BarNames}" SelectedIndex="{Binding BarIndex}"/>
       </StackPanel>

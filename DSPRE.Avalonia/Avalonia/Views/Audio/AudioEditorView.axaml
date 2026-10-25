@@ -29,14 +29,14 @@
 
   <DockPanel>
     <controls:EditorToolbar>
-        <StackPanel x:Name="SaveButtons" Orientation="Horizontal" Spacing="6">
+        <StackPanel x:Name="SaveButtons" controls:EditorToolbar.Slot="Save" Orientation="Horizontal" Spacing="6">
           <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click"
                   IsEnabled="{Binding HasUnsavedChanges}" ToolTip.Tip="Write what was imported."/>
           <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click"
                   IsEnabled="{Binding HasUnsavedChanges}" ToolTip.Tip="Forget what was imported."/>
           <controls:UndoRedoButtons/>
         </StackPanel>
-        <TextBox PlaceholderText="Search all tabs" x:Name="SearchBox"
+        <TextBox PlaceholderText="Search all tabs" x:Name="SearchBox" controls:EditorToolbar.Slot="Picker"
                  Text="{Binding Search}" FontSize="13" Width="280" Margin="12,2,6,2">
           <TextBox.InnerRightContent>
             <Button controls:Icon.Key="Cross" Click="ClearSearch_Click" Padding="8,2" Margin="0,0,2,0"

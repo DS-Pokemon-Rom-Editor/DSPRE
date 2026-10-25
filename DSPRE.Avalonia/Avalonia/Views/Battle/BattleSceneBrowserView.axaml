@@ -16,7 +16,7 @@
   <DockPanel>
 
     <controls:EditorToolbar>
-        <WrapPanel x:Name="SceneChoices" Classes="toolbar" Orientation="Horizontal">
+        <WrapPanel x:Name="SceneChoices" controls:EditorToolbar.Slot="Picker" Classes="toolbar" Orientation="Horizontal">
           <TextBlock Text="Ground" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="12"/>
           <ComboBox ItemsSource="{Binding Terrains}" SelectedIndex="{Binding TerrainIndex, Mode=TwoWay}"
                     FontSize="12" Margin="0,0,12,0"

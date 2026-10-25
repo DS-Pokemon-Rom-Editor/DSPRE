@@ -17,7 +17,7 @@
       <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
       <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
       <controls:UndoRedoButtons/>
-      <StackPanel x:Name="EntryPicker" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2" IsVisible="{Binding IsAvailable}">
+      <StackPanel x:Name="EntryPicker" controls:EditorToolbar.Slot="Picker" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2" IsVisible="{Binding IsAvailable}">
         <TextBlock Text="Entry" VerticalAlignment="Center"/>
         <controls:FusionAutoCompleteBox ItemsSource="{Binding FileItems}" SelectedIndex="{Binding SelectedFileIndex}" Width="320" MaxDropDownHeight="420"/>
       </StackPanel>

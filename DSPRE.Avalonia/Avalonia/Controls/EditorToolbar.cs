@@ -15,8 +15,8 @@ namespace DSPRE.Avalonia.Controls
     public enum ToolbarSlot { Auto = -1, Picker = 0, Save = 1, Discard = 2, Undo = 3, Redo = 4, Add = 5, Remove = 6, Import = 7, Export = 8, Extra = 9 }
 
     /// <summary>
-    /// Every editor's toolbar, in one order: the picker, Save to Redo, Add and Remove, Import and Export, then the editor's
-    /// extras. A control's slot comes from <see cref="SlotProperty"/>, or else from its label.
+    /// Every editor's toolbar. The first row has the picker, Save, Discard, Undo and Redo; the second has Add, Remove,
+    /// Import, Export and the editor's other controls. A control's slot comes from <see cref="SlotProperty"/>, or else from its label.
     /// </summary>
     public class EditorToolbar : Border
     {
@@ -52,7 +52,11 @@ namespace DSPRE.Avalonia.Controls
             }
         }
 
-        private readonly WrapPanel _panel = new() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        // Both rows always show, so every toolbar is the same height.
+        private readonly WrapPanel _row1 = new() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, MinHeight = 30 };
+        private readonly WrapPanel _row2 = new() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, MinHeight = 30 };
+        private WrapPanel[] Rows => new[] { _row1, _row2 };
+        private static int RowOf(int group) => group <= 1 ? 0 : 1;
         private readonly List<(Control Divider, int Group)> _dividers = new();
         private readonly List<(Control Item, int Group)> _placed = new();
 
@@ -64,23 +68,28 @@ namespace DSPRE.Avalonia.Controls
             Bind(BackgroundProperty, this.GetResourceObservable("Editor.ToolbarBg"));
             Bind(BorderBrushProperty, this.GetResourceObservable("Editor.Border"));
             DockPanel.SetDock(this, Dock.Top);
-            Child = _panel;
+            Child = new StackPanel { Orientation = Orientation.Vertical, VerticalAlignment = VerticalAlignment.Center, Children = { _row1, _row2 } };
             Items.CollectionChanged += (_, _) => Arrange();
             Loaded += (_, _) => FitWindowOnce();
-            SizeChanged += (_, _) => global::Avalonia.Threading.Dispatcher.UIThread.Post(UpdateCompact, global::Avalonia.Threading.DispatcherPriority.Background);
-            // The tour's "?" joins the row after the window opens, so a late arrival is fitted too.
-            _panel.Children.CollectionChanged += (_, _) =>
+            SizeChanged += (_, _) =>
             {
-                if (_fitted && DateTime.UtcNow - _fittedAt < TimeSpan.FromSeconds(5))
-                    global::Avalonia.Threading.Dispatcher.UIThread.Post(FitWindow, global::Avalonia.Threading.DispatcherPriority.Background);
+                if (_fitWhenArranged) { _fitWhenArranged = false; global::Avalonia.Threading.Dispatcher.UIThread.Post(FitWindow, global::Avalonia.Threading.DispatcherPriority.Background); }
+                global::Avalonia.Threading.Dispatcher.UIThread.Post(UpdateCompact, global::Avalonia.Threading.DispatcherPriority.Background);
             };
+            // The tour's "?" button arrives after the window opens, so refit when a row changes soon after opening.
+            foreach (WrapPanel row in Rows)
+                row.Children.CollectionChanged += (_, _) =>
+                {
+                    if (_fitted && DateTime.UtcNow - _fittedAt < TimeSpan.FromSeconds(5))
+                        global::Avalonia.Threading.Dispatcher.UIThread.Post(FitWindow, global::Avalonia.Threading.DispatcherPriority.Background);
+                };
         }
 
-        private bool _fitted;
+        private bool _fitted, _fitWhenArranged;
         private DateTime _fittedAt;
 
         /// <summary>
-        /// Widens an editor's own window when it first opens so the toolbar fits on one row, as far as the screen allows.
+        /// Widens the editor's window on first open so each toolbar row fits on one line, up to the screen width.
         /// A toolbar embedded in the main window leaves that window alone.
         /// </summary>
         private void FitWindowOnce()
@@ -94,18 +103,26 @@ namespace DSPRE.Avalonia.Controls
         private void FitWindow()
         {
             if (TopLevel.GetTopLevel(this) is not Window window || window is Views.Shell.MainWindowView) return;
-            double needed = Padding.Left + Padding.Right;
-            foreach (Control child in _panel.Children)
-            {
-                if (!child.IsVisible) continue;
-                child.Measure(Size.Infinity);
-                needed += child.DesiredSize.Width;
-            }
+            // Inside a tab the toolbar can load with no width yet, so it is fitted once it is laid out.
+            if (Bounds.Width <= 0) { _fitWhenArranged = true; return; }
+            double needed = Padding.Left + Padding.Right + Rows.Max(RowWidth);
             double shortBy = Math.Ceiling(needed - Bounds.Width);
             if (shortBy <= 0) return;
             double screen = window.Screens.ScreenFromWindow(window)?.WorkingArea.Width / window.RenderScaling ?? double.MaxValue;
             double width = Math.Min(window.Bounds.Width + shortBy, screen - 32);
             if (width > window.Bounds.Width) window.Width = width;
+        }
+
+        private static double RowWidth(WrapPanel row)
+        {
+            double width = 0;
+            foreach (Control child in row.Children)
+            {
+                if (!child.IsVisible) continue;
+                child.Measure(Size.Infinity);
+                width += child.DesiredSize.Width;
+            }
+            return width;
         }
 
         // ── Narrow windows: buttons with an icon drop their text before the row has to wrap ───────────────────
@@ -142,19 +159,13 @@ namespace DSPRE.Avalonia.Controls
         {
             if (_placed.Count == 0 || Bounds.Width <= 0) return;
             double available = Bounds.Width - Padding.Left - Padding.Right;
-            double full = 0;
-            foreach (Control child in _panel.Children)
-            {
-                if (!child.IsVisible) continue;
-                child.Measure(Size.Infinity);
-                full += child.DesiredSize.Width;
-            }
-            foreach ((Control _, TextBlock label) in IconButtons())
+            double[] full = Rows.Select(RowWidth).ToArray();
+            foreach ((Control button, TextBlock label) in IconButtons())
             {
                 if (label.IsVisible) { label.Measure(Size.Infinity); _labelWidths[label] = label.DesiredSize.Width + 5; }
-                else if (_labelWidths.TryGetValue(label, out double w)) full += w;
+                else if (_labelWidths.TryGetValue(label, out double w)) full[RowOf(GroupOfPlaced(button))] += w;
             }
-            bool compact = full > available + 0.5;
+            bool compact = full.Max() > available + 0.5;
             if (compact == _compact) return;
             _compact = compact;
             foreach ((Control button, TextBlock label) in IconButtons())
@@ -229,7 +240,7 @@ namespace DSPRE.Avalonia.Controls
                 if (_tipsAdded.Remove(button)) ToolTip.SetTip(button, null);
             }
             foreach ((Control item, int _) in _placed) item.PropertyChanged -= ChildChanged;
-            _panel.Children.Clear();
+            foreach (WrapPanel row in Rows) row.Children.Clear();
             foreach (StackPanel g in _groupPanels) g.Children.Clear();
             _groupPanels.Clear();
             foreach (StackPanel pair in _captioned) pair.Children.Clear();
@@ -269,16 +280,17 @@ namespace DSPRE.Avalonia.Controls
                 int group = GroupOf(slot);
                 if (group != lastGroup)
                 {
-                    if (lastGroup >= 0)
+                    WrapPanel row = Rows[RowOf(group)];
+                    if (lastGroup >= 0 && RowOf(lastGroup) == RowOf(group))
                     {
                         Control divider = new global::Avalonia.Controls.Shapes.Rectangle { Width = 1, Margin = new Thickness(3, 4, 9, 4), VerticalAlignment = VerticalAlignment.Stretch };
                         divider.Bind(global::Avalonia.Controls.Shapes.Shape.FillProperty, this.GetResourceObservable("Editor.Separator"));
-                        _panel.Children.Add(divider);
+                        row.Children.Add(divider);
                         _dividers.Add((divider, group));
                     }
                     groupPanel = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
                     _groupPanels.Add(groupPanel);
-                    _panel.Children.Add(groupPanel);
+                    row.Children.Add(groupPanel);
                 }
                 if (item.Margin == default) item.Margin = new Thickness(0, 2, 6, 2);
                 if (item.VerticalAlignment == VerticalAlignment.Stretch) item.VerticalAlignment = VerticalAlignment.Center;
@@ -292,17 +304,24 @@ namespace DSPRE.Avalonia.Controls
             global::Avalonia.Threading.Dispatcher.UIThread.Post(UpdateCompact, global::Avalonia.Threading.DispatcherPriority.Background);
         }
 
+        private int GroupOfPlaced(Control c)
+        {
+            foreach ((Control item, int group) in _placed)
+                if (ReferenceEquals(item, c) || item is UndoRedoButtons pair && pair.Children.Contains(c)) return group;
+            return 4;
+        }
+
         private void ChildChanged(object sender, AvaloniaPropertyChangedEventArgs e)
         {
             if (e.Property == IsVisibleProperty) UpdateDividers();
         }
 
-        /// <summary>A divider shows only between two groups that both have something visible.</summary>
+        /// <summary>A divider shows only between two groups on the same row that both have something visible.</summary>
         private void UpdateDividers()
         {
             foreach ((Control divider, int group) in _dividers)
             {
-                bool before = _placed.Any(p => p.Group < group && p.Item.IsVisible);
+                bool before = _placed.Any(p => p.Group < group && RowOf(p.Group) == RowOf(group) && p.Item.IsVisible);
                 bool here = _placed.Any(p => p.Group == group && p.Item.IsVisible);
                 divider.IsVisible = before && here;
             }

@@ -16,7 +16,7 @@
   <DockPanel>
 
     <controls:EditorToolbar>
-        <TextBox PlaceholderText="Search" x:Name="SearchBox"
+        <TextBox PlaceholderText="Search" x:Name="SearchBox" controls:EditorToolbar.Slot="Picker"
                  Text="{Binding Search}" FontSize="13" Width="340">
           <TextBox.InnerRightContent>
             <Button controls:Icon.Key="Cross" Click="ClearSearch_Click" Padding="8,2" Margin="0,0,2,0"
@@ -25,10 +25,10 @@
                     IsVisible="{Binding Search, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
           </TextBox.InnerRightContent>
         </TextBox>
+        <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
         <StackPanel x:Name="FileButtons" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2">
-          <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-          <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-          <controls:UndoRedoButtons/>
           <Button Content="Import…" controls:Icon.Key="import" Click="PutIn_Click"
                   IsEnabled="{Binding CanPutFileIn}" ToolTip.Tip="{Binding PutFileInHelp}"/>
           <Button Content="Export DAE…" controls:Icon.Key="export" Click="SaveDae_Click"
