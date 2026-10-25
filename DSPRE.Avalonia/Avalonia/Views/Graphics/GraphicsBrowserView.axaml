@@ -6,7 +6,7 @@
         x:Class="DSPRE.Avalonia.Views.Graphics.GraphicsBrowserView"
         x:DataType="vm:GraphicsBrowserViewModel"
         Title="All graphics"
-        Width="980" Height="720" MinWidth="560" MinHeight="420"
+        Width="980" Height="720" MinWidth="760" MinHeight="420"
         WindowStartupLocation="CenterScreen">
   <Design.DataContext>
     <vm:GraphicsBrowserViewModel/>

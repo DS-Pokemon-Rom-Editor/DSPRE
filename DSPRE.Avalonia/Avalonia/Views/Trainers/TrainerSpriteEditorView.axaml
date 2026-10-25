@@ -26,17 +26,15 @@
 
   <DockPanel>
     <controls:EditorToolbar>
-        <StackPanel x:Name="SpriteButtons" Orientation="Horizontal" Spacing="6">
-          <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-          <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-          <controls:UndoRedoButtons/>
-          <Button Content="Import PNG…" controls:Icon.Key="import" Click="Import_Click" ToolTip.Tip="Colours must match the palette. Export first for a template."/>
-          <Button Content="Export PNG…" controls:Icon.Key="export" Click="Export_Click"/>
-          <Button Content="Export sheet…" controls:Icon.Key="export" Click="ExportSheet_Click" IsVisible="{Binding CanUseSheets}"/>
-          <Button Content="Import sheet…" controls:Icon.Key="import" Click="ImportSheet_Click" IsVisible="{Binding CanUseSheets}"/>
-          <Button Content="Open in All graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click" IsVisible="{Binding ShowsAnimationsTab}"/>
-        </StackPanel>
-        <StackPanel x:Name="SpritePicker" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2">
+        <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
+        <Button x:Name="SpriteButtons" Content="Import PNG…" controls:Icon.Key="import" Click="Import_Click" ToolTip.Tip="Colours must match the palette. Export first for a template."/>
+        <Button Content="Export PNG…" controls:Icon.Key="export" Click="Export_Click"/>
+        <Button Content="Export sheet…" controls:Icon.Key="export" Click="ExportSheet_Click" IsVisible="{Binding CanUseSheets}"/>
+        <Button Content="Import sheet…" controls:Icon.Key="import" Click="ImportSheet_Click" IsVisible="{Binding CanUseSheets}"/>
+        <Button Content="Open in All graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click" IsVisible="{Binding ShowsAnimationsTab}"/>
+        <StackPanel x:Name="SpritePicker" controls:EditorToolbar.Slot="Picker" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2">
           <TextBlock Text="{Binding ItemLabel}" VerticalAlignment="Center"/>
           <controls:FusionAutoCompleteBox ItemsSource="{Binding ClassNames}" SelectedIndex="{Binding SelectedClassIndex}" Width="260"/>
         </StackPanel>

@@ -5,8 +5,8 @@
         x:Class="DSPRE.Avalonia.Views.Items.ItemEditorView"
         x:DataType="vm:ItemEditorViewModel"
         Title="Item editor"
-        Width="900" Height="700"
-        MinWidth="800" MinHeight="600">
+        Width="910" Height="700"
+        MinWidth="910" MinHeight="600">
 
     <Design.DataContext>
         <vm:ItemEditorViewModel/>

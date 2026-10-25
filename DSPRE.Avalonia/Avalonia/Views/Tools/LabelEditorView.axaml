@@ -5,7 +5,7 @@
         x:Class="DSPRE.Avalonia.Views.Tools.LabelEditorView"
         x:DataType="vm:LabelEditorViewModel"
         Title="Dropdown labels"
-        Width="760" Height="600" MinWidth="560" MinHeight="420"
+        Width="760" Height="600" MinWidth="640" MinHeight="420"
         WindowStartupLocation="CenterScreen">
 
   <Design.DataContext>

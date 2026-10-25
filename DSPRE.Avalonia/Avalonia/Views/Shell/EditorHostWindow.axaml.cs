@@ -14,9 +14,11 @@ namespace DSPRE.Avalonia.Views.Shell
 
         private static readonly System.Collections.Generic.Dictionary<string, (double, double)> MinimumFor = new()
         {
-            ["Mart editor"] = (860, 500), ["Header editor"] = (1080, 560), ["Matrix editor"] = (720, 500),
+            ["Mart editor"] = (860, 500), ["Header editor"] = (1180, 560), ["Matrix editor"] = (720, 500),
             ["Map editor"] = (1000, 600), ["Event editor"] = (1000, 600), ["Vs. Seeker rematch editor"] = (720, 460),
-            ["Camera editor"] = (820, 480),
+            ["Camera editor"] = (840, 480), ["Battle scripts"] = (1100, 400), ["Screens"] = (980, 400),
+            ["Pokégear phone book"] = (900, 400), ["Pokégear rematch editor"] = (700, 400), ["Text editor"] = (760, 400),
+            ["Trainer flag bulk editor"] = (660, 400), ["Battle Tower editor"] = (640, 400),
         };
 
         public EditorHostWindow() { }

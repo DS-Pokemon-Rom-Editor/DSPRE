@@ -5,8 +5,8 @@
 		x:Class="DSPRE.Avalonia.Views.Tools.AddressHelperView"
 		x:DataType="vm:AddressHelperViewModel"
 		Title="Address helper"
-		Width="360" SizeToContent="Height"
-		MinWidth="360" MinHeight="260"
+		Width="480" SizeToContent="Height"
+		MinWidth="480" MinHeight="260"
 		CanResize="True"
 		WindowStartupLocation="CenterOwner">
   <Design.DataContext>

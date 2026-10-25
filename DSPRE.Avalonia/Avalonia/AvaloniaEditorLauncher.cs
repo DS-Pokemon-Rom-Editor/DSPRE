@@ -440,13 +440,13 @@ namespace DSPRE.Avalonia
             () => new TypeChartEditorView(new TypeChartEditorViewModel(true)), 1080, 780);
 
         public static void OpenMoveTutors() => OpenTableEditor("Move tutors", MoveTutorData.WhyNot,
-            () => new MoveTutorEditorView(new MoveTutorEditorViewModel(true)), 1000, 680, 820, 420);
+            () => new MoveTutorEditorView(new MoveTutorEditorViewModel(true)), 1000, 680, 850, 420);
 
         public static void OpenBpShop() => OpenTableEditor("Battle Point shop", BpShopData.WhyNot,
-            () => new BpShopEditorView(new BpShopEditorViewModel(true)), 1000, 640, 760, 420);
+            () => new BpShopEditorView(new BpShopEditorViewModel(true)), 1000, 640, 810, 420);
 
         public static void OpenUndergroundMining() => OpenTableEditor("Underground mining", MiningTable.WhyNot,
-            () => new UndergroundMiningView(new UndergroundMiningViewModel(true)), 1000, 700, 900, 420);
+            () => new UndergroundMiningView(new UndergroundMiningViewModel(true)), 1000, 700, 1000, 420);
 
         public static void OpenTmHmBulkEditor() => _ = OpenTmHmBulkEditorAsync();
 
@@ -1060,7 +1060,7 @@ namespace DSPRE.Avalonia
             if (Refused("MatrixEditorView")) return;
             if (BringForward<MatrixEditorView, MatrixEditorViewModel>(vm => { vm.SelectedMatrixIndex = initialIndex; vm.FocusHeader = focusHeader; })) return;
             MatrixEditorViewModel model = new MatrixEditorViewModel(true) { InitialIndex = initialIndex, FocusHeader = focusHeader };
-            EditorHostWindow window = new EditorHostWindow("Matrix editor", new MatrixEditorView(model), 860, 640);
+            EditorHostWindow window = new EditorHostWindow("Matrix editor", new MatrixEditorView(model), 1180, 640);
             window.ShowManaged();
         }
 
@@ -1096,7 +1096,7 @@ namespace DSPRE.Avalonia
             if (Refused("AreaDataEditorView")) return;
             if (BringForward<AreaDataEditorView, AreaDataEditorViewModel>(vm => vm.SelectedIndex = initialIndex)) return;
             AreaDataEditorViewModel model = new AreaDataEditorViewModel(true) { InitialIndex = initialIndex };
-            EditorHostWindow window = new EditorHostWindow("Area data editor", new AreaDataEditorView(model), 520, 380);
+            EditorHostWindow window = new EditorHostWindow("Area data editor", new AreaDataEditorView(model), 610, 380);
             window.ShowManaged();
         }
 
