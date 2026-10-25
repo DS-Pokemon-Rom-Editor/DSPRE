@@ -1086,21 +1086,21 @@ namespace DSPRE
         /// <summary>Whether an overworld id takes its picture from a map variable instead of the sprite table.</summary>
         public static bool IsVariableOverworld(uint id) => id >= FirstVariableOverworld && id <= LastVariableOverworld;
 
-        // pokeheartgold include/constants/sprites.h SPRITE_HEROINE. HGSS scripts put the friend's sprite in
-        // 0x4020 (ScrCmd_GetFriendSprite), so id 101 is the friend, shown as her for a male player.
-        private const uint HgssHeroineOverworld = 97;
+        // pokeheartgold SPRITE_HEROINE. 101 takes its sprite from 0x4020, which scripts set to the friend in HGSS
+        // (ScrCmd_GetFriendSprite) or the counterpart in Platinum (pokeplatinum scripts_jubilife_city.s).
+        private const uint HeroineOverworld = 97;
 
         // pokeplatinum scripts_pokemon_center_daily_trainers.s: the Pokémon Centre daily trainers in 111 and 112
         // change with the day; Kinsey and Tevin, the reporter and cameraman, stand in for them.
         private const uint PlatDailyTrainerOne = 111, PlatReporterOverworld = 22, PlatCameramanOverworld = 23;
 
         /// <summary>
-        /// The overworld drawn in an editor for this id: the friend for HGSS's 101, a reporter and cameraman for
-        /// Platinum's 111 and 112, otherwise the id itself.
+        /// The overworld drawn in an editor for this id: the friend or counterpart for 101, a reporter and cameraman
+        /// for Platinum's 111 and 112, otherwise the id itself.
         /// </summary>
         public static uint VariableOverworldStandIn(uint id)
         {
-            if (GameFamily == GameFamilies.HGSS && id == FirstVariableOverworld) return HgssHeroineOverworld;
+            if (id == FirstVariableOverworld) return HeroineOverworld;
             if (GameFamily == GameFamilies.Plat && id == PlatDailyTrainerOne) return PlatReporterOverworld;
             if (GameFamily == GameFamilies.Plat && id == PlatDailyTrainerOne + 1) return PlatCameramanOverworld;
             return id;

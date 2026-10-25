@@ -108,6 +108,8 @@ namespace DSPRE.Avalonia.Views.World
                 vm.WalkTileChanged += (_, _) =>
                     GlView.SetTileTint(VM.WalkTintOn, VM.WalkTintStrength, VM.WalkTintOx, VM.WalkTintOz,
                                        VM.WalkTintSx, VM.WalkTintSz, VM.WalkTintRgba);
+                (byte[] Rgba, int Width, int Height) icons = EventEditorViewModel.MarkerIconSheet;
+                GlView.SetMarkerAtlas(icons.Rgba, icons.Width, icons.Height);
                 vm.MarkersChanged += (_, _) => GlView.SetMarkers(VM.MarkerMesh, VM.MarkerVertexCount);
                 vm.SpritesChanged += (_, _) => GlView.SetSprites(VM.Sprites);
                 vm.EditModeChanged += (_, _) => RefreshGizmo();

@@ -52,6 +52,10 @@ namespace DSPRE.Avalonia.Gl
         private readonly List<(int Vbo, int Count, int MaterialKey, float R, float G, float B)> _highlightGpu = new List<(int, int, int, float, float, float)>();
         private bool _highlightDirty;
         private bool _markerDirty;
+        // Markers pick a cell of this sheet by UV.
+        private byte[] _markerAtlas;
+        private int _markerAtlasW, _markerAtlasH, _markerTex;
+        private bool _markerTexDirty;
 
         // Debug gizmo lines (cell boundaries / geometry extents), 8 floats/vertex. Comes from the model.
         private float[] _gizmoMesh;
@@ -677,6 +681,13 @@ namespace DSPRE.Avalonia.Gl
 
         /// <summary>Sets a marker mesh (8 floats/vertex: pos,uv,col) drawn on top of everything
         /// with the depth test disabled (e.g. event markers), or null to clear.</summary>
+        public void SetMarkerAtlas(byte[] rgba, int width, int height)
+        {
+            _markerAtlas = rgba; _markerAtlasW = width; _markerAtlasH = height;
+            _markerTexDirty = true;
+            RequestNextFrameRendering();
+        }
+
         public void SetMarkers(float[] mesh, int vertexCount)
         {
             _markerMesh = mesh;
@@ -877,6 +888,7 @@ namespace DSPRE.Avalonia.Gl
                 if (_collTex != 0) { _f?.DeleteTextures(1, new[] { _collTex }); _collTex = 0; _collDirty = true; }
                 if (_overlayVbo != 0) _f?.DeleteBuffers(1, new[] { _overlayVbo });
                 if (_markerVbo != 0) _f?.DeleteBuffers(1, new[] { _markerVbo });
+                if (_markerTex != 0) { _f?.DeleteTextures(1, new[] { _markerTex }); _markerTex = 0; _markerTexDirty = true; }
                 FreeHighlight();
                 if (_spriteVbo != 0) _f?.DeleteBuffers(1, new[] { _spriteVbo });
                 if (_gizmoVbo != 0) _f?.DeleteBuffers(1, new[] { _gizmoVbo });
@@ -1498,11 +1510,36 @@ namespace DSPRE.Avalonia.Gl
                 _markerDirty = false;
             }
             if (_markerVbo == 0 || _markerCount == 0) return;
+            if (_markerTexDirty)
+            {
+                if (_markerTex != 0) { _f.DeleteTextures(1, new[] { _markerTex }); _markerTex = 0; }
+                if (_markerAtlas != null && _markerAtlasW > 0 && _markerAtlasH > 0)
+                {
+                    int[] arr = new int[1]; _f.GenTextures(1, arr); _markerTex = arr[0];
+                    _f.BindTexture(GlFunctions.GL_TEXTURE_2D, _markerTex);
+                    _f.TexImage2D(GlFunctions.GL_TEXTURE_2D, 0, GlFunctions.GL_RGBA, _markerAtlasW, _markerAtlasH, 0,
+                        GlFunctions.GL_RGBA, GlFunctions.GL_UNSIGNED_BYTE, _markerAtlas);
+                    _f.TexParameteri(GlFunctions.GL_TEXTURE_2D, GlFunctions.GL_TEXTURE_MIN_FILTER, GlFunctions.GL_NEAREST);
+                    _f.TexParameteri(GlFunctions.GL_TEXTURE_2D, GlFunctions.GL_TEXTURE_MAG_FILTER, GlFunctions.GL_NEAREST);
+                    _f.TexParameteri(GlFunctions.GL_TEXTURE_2D, GlFunctions.GL_TEXTURE_WRAP_S, GlFunctions.GL_CLAMP_TO_EDGE);
+                    _f.TexParameteri(GlFunctions.GL_TEXTURE_2D, GlFunctions.GL_TEXTURE_WRAP_T, GlFunctions.GL_CLAMP_TO_EDGE);
+                }
+                _markerTexDirty = false;
+            }
 
             _f.Enable(GlFunctions.GL_BLEND);
             BlendOver();
             _f.Disable(GlFunctions.GL_DEPTH_TEST);   // markers always visible, even through geometry
-            _f.Uniform1i(_hasTexLoc, 0);
+            if (_markerTex != 0)
+            {
+                _f.ActiveTexture(GlFunctions.GL_TEXTURE0);
+                _f.BindTexture(GlFunctions.GL_TEXTURE_2D, _markerTex);
+                _f.Uniform1i(_texLoc, 0);
+                _f.Uniform1i(_hasTexLoc, 1);
+                if (_shadeLoc >= 0) _f.Uniform1i(_shadeLoc, 1);
+                if (_texAlphaLoc >= 0) _f.Uniform1i(_texAlphaLoc, 1);
+            }
+            else _f.Uniform1i(_hasTexLoc, 0);
             _f.Uniform1f(_alphaLoc, 0.92f);
 
             _f.BindBuffer(GlFunctions.GL_ARRAY_BUFFER, _markerVbo);
@@ -1511,6 +1548,9 @@ namespace DSPRE.Avalonia.Gl
             _f.EnableVertexAttribArray(2); _f.VertexAttribPointer(2, 3, GlFunctions.GL_FLOAT, false, stride, (IntPtr)(5 * sizeof(float)));
             _f.DrawArrays(GlFunctions.GL_TRIANGLES, 0, _markerCount);
 
+            _f.Uniform1i(_hasTexLoc, 0);
+            if (_shadeLoc >= 0) _f.Uniform1i(_shadeLoc, 0);
+            if (_texAlphaLoc >= 0) _f.Uniform1i(_texAlphaLoc, 0);
             _f.Enable(GlFunctions.GL_DEPTH_TEST);
             _f.Disable(GlFunctions.GL_BLEND);
             _f.Uniform1f(_alphaLoc, 1f);

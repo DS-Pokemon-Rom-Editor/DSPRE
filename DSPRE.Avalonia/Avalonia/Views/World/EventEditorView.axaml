@@ -131,7 +131,7 @@
         <TabItem Header="Overworlds">
           <DockPanel Margin="4">
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
-              <Border Width="12" Height="12" Background="#3FF259" CornerRadius="2" VerticalAlignment="Center"/>
+              <controls:IconImage Key="overworld" VerticalAlignment="Center"/>
               <Button Content="Add" controls:Icon.Key="addIcon" Click="AddOw_Click"/>
               <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveOw_Click" IsEnabled="{Binding HasOw}"
                       ToolTip.Tip="Remove the selected overworld (Del while the list is focused)"/>
@@ -186,6 +186,13 @@
                   <ComboBox ItemsSource="{Binding OwMovementNames}" SelectedIndex="{Binding OwMovementIndex}" HorizontalAlignment="Stretch"/>
                   <TextBlock Text="{Binding OwMovementUnknownNote}" FontSize="10" Foreground="{DynamicResource Editor.Warn}"
                              TextWrapping="Wrap" IsVisible="{Binding OwMovementUnknown}"/>
+                  <Grid ColumnDefinitions="72,*,72,*" Margin="0,2,0,0"
+                        ToolTip.Tip="Tiles each way, -1 for none">
+                    <TextBlock Grid.Column="0" Text="X range" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Column="1" Margin="0,0,6,0" Minimum="-1" Maximum="32767" Value="{Binding OwXRange}"/>
+                    <TextBlock Grid.Column="2" Text="Y range" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Column="3" Minimum="-1" Maximum="32767" Value="{Binding OwYRange}"/>
+                  </Grid>
 
                   <TextBlock Text="Orientation" FontWeight="Bold" Margin="0,4,0,0"/>
                   <ComboBox ItemsSource="{Binding OwOrientationNames}" SelectedIndex="{Binding OwOrientationIndex}" HorizontalAlignment="Stretch"/>
@@ -278,14 +285,6 @@
                              ToolTip.Tip="HeartGold reads this for walking Pokémon."/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwParam2}"/>
 
-                  <TextBlock Text="Movement range" FontWeight="Bold" Margin="0,4,0,0"
-                             ToolTip.Tip="Tiles it may stray from its start, each way. -1 for no limit."/>
-                  <Grid ColumnDefinitions="72,*,72,*">
-                    <TextBlock Grid.Column="0" Text="X range" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Column="1" Margin="0,0,6,0" Minimum="-1" Maximum="32767" Value="{Binding OwXRange}"/>
-                    <TextBlock Grid.Column="2" Text="Y range" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Column="3" Minimum="-1" Maximum="32767" Value="{Binding OwYRange}"/>
-                  </Grid>
                 </StackPanel>
               </ScrollViewer>
             </Grid>
@@ -295,7 +294,7 @@
         <TabItem Header="Warps">
           <DockPanel Margin="4">
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
-              <Border Width="12" Height="12" Background="#FF9E1A" CornerRadius="2" VerticalAlignment="Center"/>
+              <controls:IconImage Key="warp" VerticalAlignment="Center"/>
               <Button Content="Add" controls:Icon.Key="addIcon" Click="AddWarp_Click"/>
               <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveWarp_Click" IsEnabled="{Binding HasWarp}"/>
               <Button Content="Duplicate" controls:Icon.Key="copy" Click="DupWarp_Click" IsEnabled="{Binding HasWarp}"/>
@@ -336,7 +335,7 @@
         <TabItem Header="Triggers">
           <DockPanel Margin="4">
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
-              <Border Width="12" Height="12" Background="#F23FE5" CornerRadius="2" VerticalAlignment="Center"/>
+              <controls:IconImage Key="trigger" VerticalAlignment="Center"/>
               <Button Content="Add" controls:Icon.Key="addIcon" Click="AddTrig_Click"/>
               <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveTrig_Click" IsEnabled="{Binding HasTrig}"/>
               <Button Content="Duplicate" controls:Icon.Key="copy" Click="DupTrig_Click" IsEnabled="{Binding HasTrig}"/>
@@ -391,6 +390,11 @@
                     <TextBlock Grid.Column="2" Text="Height" VerticalAlignment="Center"/>
                     <NumericUpDown Grid.Column="3" Minimum="0" Maximum="65535" Value="{Binding TrHeight}"/>
                   </Grid>
+                  <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding TrNeverFires}"
+                              ToolTip.Tip="Width or height is 0">
+                    <controls:IconImage Key="warning" VerticalAlignment="Center"/>
+                    <TextBlock Text="Never fires" Foreground="{DynamicResource Editor.Warn}" VerticalAlignment="Center"/>
+                  </StackPanel>
                   <TextBlock Text="Variable watched / expected value" FontWeight="Bold" Margin="0,4,0,0"/>
                   <Grid ColumnDefinitions="72,*,72,*">
                     <TextBlock Grid.Column="0" Text="Variable" VerticalAlignment="Center"/>
@@ -415,7 +419,7 @@
         <TabItem Header="Spawnables">
           <DockPanel Margin="4">
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
-              <Border Width="12" Height="12" Background="#33D9F2" CornerRadius="2" VerticalAlignment="Center"/>
+              <controls:IconImage Key="sign" VerticalAlignment="Center"/>
               <Button Content="Add" controls:Icon.Key="addIcon" Click="AddSpawn_Click"/>
               <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveSpawn_Click" IsEnabled="{Binding HasSpawn}"/>
               <Button Content="Duplicate" controls:Icon.Key="copy" Click="DupSpawn_Click" IsEnabled="{Binding HasSpawn}"/>

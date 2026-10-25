@@ -1053,8 +1053,9 @@ namespace DSPRE.Avalonia.ViewModels.World
             set { if (value >= 0 && value < _availableScriptIds.Count) TrScript = _availableScriptIds[value]; }
         }
         public bool TrScriptIndexOutOfRange => _trig != null && TrScriptIndex < 0;
-        public decimal TrWidth { get => _trW; set { if (Set(ref _trW, value) && !_suppress && _trig != null) { _trig.WidthX = (ushort)value; Dirty(); } } }
-        public decimal TrHeight { get => _trH; set { if (Set(ref _trH, value) && !_suppress && _trig != null) { _trig.HeightY = (ushort)value; Dirty(); } } }
+        public decimal TrWidth { get => _trW; set { if (Set(ref _trW, value)) { OnPropertyChanged(nameof(TrNeverFires)); if (!_suppress && _trig != null) { _trig.WidthX = (ushort)value; Dirty(); RefreshMarkers(); } } } }
+        public decimal TrHeight { get => _trH; set { if (Set(ref _trH, value)) { OnPropertyChanged(nameof(TrNeverFires)); if (!_suppress && _trig != null) { _trig.HeightY = (ushort)value; Dirty(); RefreshMarkers(); } } } }
+        public bool TrNeverFires => _trW == 0 || _trH == 0;
         public decimal TrVarValue
         {
             get => _trVarVal;
@@ -1773,14 +1774,41 @@ namespace DSPRE.Avalonia.ViewModels.World
             return set;
         }
 
-        // Per-type marker colours (RGB 0..1).
-        private static (float r, float g, float b) MarkerColor(int type) => type switch
+        // Cell 0 is plain white so a quad keeps its colour.
+        private const int IconWhite = 0, IconWarp = 1, IconSpawnable = 2, IconTrigger = 3, IconOverworld = 4;
+        private static readonly string[] IconNames = { null, "warp", "sign", "trigger", "overworld" };
+        private const int IconCell = 32;
+        private static (byte[] Rgba, int Width, int Height, (float u0, float v0, float u1, float v1)[] Uv) _markerIcons;
+
+        /// <summary>The marker icon sheet as RGBA, top row first.</summary>
+        public static (byte[] Rgba, int Width, int Height) MarkerIconSheet
         {
-            0 => (0.25f, 0.95f, 0.35f),   // overworld  → green
-            1 => (1.00f, 0.62f, 0.10f),   // warp       → orange
-            2 => (0.95f, 0.25f, 0.90f),   // trigger    → magenta
-            _ => (0.20f, 0.85f, 0.95f),   // spawnable  → cyan
-        };
+            get { BuildMarkerIcons(); return (_markerIcons.Rgba, _markerIcons.Width, _markerIcons.Height); }
+        }
+
+        private static void BuildMarkerIcons()
+        {
+            if (_markerIcons.Rgba != null) return;
+            int width = IconCell * IconNames.Length;
+            byte[] rgba = new byte[width * IconCell * 4];
+            (float, float, float, float)[] uv = new (float, float, float, float)[IconNames.Length];
+            for (int i = 0; i < IconNames.Length; i++)
+            {
+                RawImage img = IconNames[i] == null ? null : ResourceImages.GetRaw(IconNames[i]);
+                int w = img == null ? 1 : Math.Min(img.Width, IconCell), h = img == null ? 1 : Math.Min(img.Height, IconCell);
+                for (int y = 0; y < h; y++)
+                    for (int x = 0; x < w; x++)
+                    {
+                        int to = (y * width + i * IconCell + x) * 4;
+                        if (img == null) { rgba[to] = rgba[to + 1] = rgba[to + 2] = rgba[to + 3] = 255; continue; }
+                        int from = (y * img.Width + x) * 4;
+                        rgba[to] = img.Bgra[from + 2]; rgba[to + 1] = img.Bgra[from + 1]; rgba[to + 2] = img.Bgra[from]; rgba[to + 3] = img.Bgra[from + 3];
+                    }
+                // Half a texel in from each edge, so a neighbouring cell never bleeds in.
+                uv[i] = ((i * IconCell + 0.5f) / width, 0.5f / IconCell, (i * IconCell + w - 0.5f) / width, (h - 0.5f) / IconCell);
+            }
+            _markerIcons = (rgba, width, IconCell, uv);
+        }
 
         private const int MapTiles = 32;
 
@@ -1806,14 +1834,17 @@ namespace DSPRE.Avalonia.ViewModels.World
                     return m.ToNormalized(rawX, EventY(rawX, rawZ, e), rawZ);
                 }
 
+                BuildMarkerIcons();
                 List<float> v = new List<float>(256);
-                void Quad(Event e, (float r, float g, float b) col)
+                // A selected event sits on a white square a little larger than its icon.
+                void Icon(Event e, int icon, int dx = 0, int dz = 0)
                 {
                     bool sel = ReferenceEquals(e, _current);
-                    (float, float, float) c = sel ? (1f, 1f, 1f) : col;
-                    float half = (sel ? 0.46f : 0.40f);
-                    (float rawX, float rawZ) = Cell(e);
-                    AddMarker(v, m, rawX, EventY(rawX, rawZ, e), rawZ, half * tileX, half * tileZ, c);
+                    (float rawX, float rawZ) = TileRaw(m, e, dx, dz);
+                    float y = EventY(rawX, rawZ, e);
+                    if (sel) AddMarker(v, m, rawX, y, rawZ, 0.5f * tileX, 0.5f * tileZ, (1f, 1f, 1f), _markerIcons.Uv[IconWhite]);
+                    float half = sel ? 0.42f : 0.46f;
+                    AddMarker(v, m, rawX, y, rawZ, half * tileX, half * tileZ, (1f, 1f, 1f), _markerIcons.Uv[icon]);
                 }
 
                 if (_showGrid && _matrix != null && _matrix.Width * _matrix.Height <= 4)
@@ -1847,25 +1878,36 @@ namespace DSPRE.Avalonia.ViewModels.World
                                     float cx = x0 + tileX * 0.5f, cz = z0 + tileZ * 0.5f;
                                     if (!m.TryBdhcSurfaceY(gcx, gcy, cx, cz, 0f, out float yc)) yc = m.SurfaceY(cx, cz);
                                     yc += 0.01f;
-                                    AddFlatQuad(v, m, x0 + inset, z0 + inset, x0 + tileX - inset, z0 + tileZ - inset, yc, (0.20f, 0.55f, 0.95f));
+                                    AddFlatQuad(v, m, x0 + inset, z0 + inset, x0 + tileX - inset, z0 + tileZ - inset, yc, (0.20f, 0.55f, 0.95f), _markerIcons.Uv[IconWhite]);
                                 }
                         }
                 }
 
-                if (_showWarp) foreach (Warp e in _file.Warps) Quad(e, MarkerColor(1));
-                if (_showTrig) foreach (Trigger e in _file.Triggers) Quad(e, MarkerColor(2));
-                if (_showSpawn) foreach (Spawnable e in _file.Spawnables) Quad(e, MarkerColor(3));
+                if (_showWarp) foreach (Warp e in _file.Warps) Icon(e, IconWarp);
+                if (_showTrig)
+                    foreach (Trigger e in _file.Triggers)
+                        foreach ((int dx, int dz) in TriggerTiles(e)) Icon(e, IconTrigger, dx, dz);
+                if (_showSpawn) foreach (Spawnable e in _file.Spawnables) Icon(e, IconSpawnable);
 
-                // Overworlds → real sprite billboards (foot anchored on the surface). Selected
-                // overworlds also get a white ground ring so the selection is obvious.
-                float spriteH = tileX * m.Scale * 1.6f;
+                // Overworlds draw as sprites standing on the ground, 16 pixels to a tile.
+                float unit = tileX * m.Scale / OverworldSprites.PixelsPerTile;
                 bool modelsAsBuilt = ModelObjectsAsBuilt;
                 if (!modelsAsBuilt) RebuildForModelObjectsSoon();
                 if (_showOw)
                     foreach (Overworld ow in _file.Overworlds)
                     {
                         bool sel = ReferenceEquals(ow, _current);
-                        if (sel) Quad(ow, (1f, 1f, 1f));
+                        // Markers draw over sprites, so the selection is a frame that leaves a small sprite showing.
+                        if (sel)
+                        {
+                            (float rawX, float rawZ) = Cell(ow);
+                            float y = EventY(rawX, rawZ, ow), hx = 0.5f * tileX, hz = 0.5f * tileZ, t = 0.08f * tileX;
+                            (float, float, float, float) white = _markerIcons.Uv[IconWhite];
+                            AddFlatQuad(v, m, rawX - hx, rawZ - hz, rawX + hx, rawZ - hz + t, y, (1f, 1f, 1f), white);
+                            AddFlatQuad(v, m, rawX - hx, rawZ + hz - t, rawX + hx, rawZ + hz, y, (1f, 1f, 1f), white);
+                            AddFlatQuad(v, m, rawX - hx, rawZ - hz, rawX - hx + t, rawZ + hz, y, (1f, 1f, 1f), white);
+                            AddFlatQuad(v, m, rawX + hx - t, rawZ - hz, rawX + hx, rawZ + hz, y, (1f, 1f, 1f), white);
+                        }
                         // Already in the scene as its model; a ring marks it when picked.
                         if (Overworld3DObjects.IsModel(ow.OverlayTableEntry) && modelsAsBuilt) continue;
 
@@ -1873,15 +1915,10 @@ namespace DSPRE.Avalonia.ViewModels.World
                         (float x, float y, float z) foot = Foot(ow);
                         if (pix != null && pix.Width > 0 && pix.Height > 0)
                         {
-                            float halfH = spriteH * 0.5f;
                             // A script picks a dynamic overworld's sprite while playing; the outline says the picture is a stand-in.
-                            if (IsVariableOverworld(ow.OverlayTableEntry))
-                            {
-                                int plain = pix.Height;
-                                pix = OverworldSprites.Outlined(pix);
-                                halfH *= pix.Height / (float)plain;
-                            }
-                            float halfW = halfH * (pix.Width / (float)pix.Height);
+                            if (IsVariableOverworld(ow.OverlayTableEntry)) pix = OverworldSprites.Outlined(pix);
+                            float halfH = unit * pix.Height * 0.5f;
+                            float halfW = unit * pix.Width * 0.5f;
                             sprites.Add(new NsbmdGlControl.SpriteInstance
                             {
                                 Cx = foot.x,
@@ -1894,7 +1931,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                                 Height = pix.Height,
                             });
                         }
-                        else Quad(ow, MarkerColor(0));   // fall back to a green quad if no sprite
+                        else Icon(ow, IconOverworld);
                     }
 
                 MarkerMesh = v.ToArray();
@@ -1907,13 +1944,28 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         // ── Event world placement (shared by markers + the move gizmo) ────────────────────
-        private (float x, float z) EventCellRaw(NsbmdRenderModel m, Event e)
+        private (float x, float z) EventCellRaw(NsbmdRenderModel m, Event e) => TileRaw(m, e, 0, 0);
+
+        /// <summary>The centre of the tile <paramref name="dx"/>, <paramref name="dz"/> tiles from the event, crossing into the next map as needed.</summary>
+        private static (float x, float z) TileRaw(NsbmdRenderModel m, Event e, int dx, int dz)
         {
-            if (m.TryCellPlacement(e.XMatrixPosition, e.YMatrixPosition, out NsbmdRenderModel.CellPlacement p))
-                return (p.OriginX + (e.XMapPosition + 0.5f) / MapTiles * p.Width,
-                        p.OriginZ + (e.YMapPosition + 0.5f) / MapTiles * p.Height);
-            return (m.CellBaseX + (e.XMatrixPosition + (e.XMapPosition + 0.5f) / MapTiles) * m.CellStrideX,
-                    m.CellBaseZ + (e.YMatrixPosition + (e.YMapPosition + 0.5f) / MapTiles) * m.CellStrideZ);
+            int tx = e.XMapPosition + dx, tz = e.YMapPosition + dz;
+            int mx = e.XMatrixPosition + FloorDiv(tx, MapTiles), mz = e.YMatrixPosition + FloorDiv(tz, MapTiles);
+            tx -= FloorDiv(tx, MapTiles) * MapTiles; tz -= FloorDiv(tz, MapTiles) * MapTiles;
+            if (mx >= 0 && mz >= 0 && m.TryCellPlacement(mx, mz, out NsbmdRenderModel.CellPlacement p))
+                return (p.OriginX + (tx + 0.5f) / MapTiles * p.Width,
+                        p.OriginZ + (tz + 0.5f) / MapTiles * p.Height);
+            return (m.CellBaseX + (mx + (tx + 0.5f) / MapTiles) * m.CellStrideX,
+                    m.CellBaseZ + (mz + (tz + 0.5f) / MapTiles) * m.CellStrideZ);
+        }
+
+        // A trigger covers width by height tiles. If either is 0 it never fires, but still shows on its start tile.
+        private static IEnumerable<(int dx, int dz)> TriggerTiles(Trigger t)
+        {
+            if (t.WidthX == 0 || t.HeightY == 0) { yield return (0, 0); yield break; }
+            for (int dz = 0; dz < t.HeightY; dz++)
+                for (int dx = 0; dx < t.WidthX; dx++)
+                    yield return (dx, dz);
         }
 
         private float EventSurfaceY(NsbmdRenderModel m, float rawX, float rawZ, Event e)
@@ -2276,12 +2328,14 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool TrySelectedEventAnchorNorm(out float nx, out float ny, out float nz)
             => EventAnchorNorm(_current, out nx, out ny, out nz);
 
-        private bool EventAnchorNorm(Event e, out float nx, out float ny, out float nz)
+        private bool EventAnchorNorm(Event e, out float nx, out float ny, out float nz) => TileAnchorNorm(e, 0, 0, out nx, out ny, out nz);
+
+        private bool TileAnchorNorm(Event e, int dx, int dz, out float nx, out float ny, out float nz)
         {
             nx = ny = nz = 0f;
             NsbmdRenderModel m = Model3D;
             if (m == null || e == null) return false;
-            (float rx, float rz) = EventCellRaw(m, e);
+            (float rx, float rz) = TileRaw(m, e, dx, dz);
             float ry = EventSurfaceY(m, rx, rz, e);
             (float a, float b, float c) = m.ToNormalized(rx, ry, rz);
             nx = a; ny = b; nz = c;
@@ -2295,7 +2349,10 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (_file == null || Model3D == null) yield break;
             if (_showOw) for (int i = 0; i < _file.Overworlds.Count; i++) if (EventAnchorNorm(_file.Overworlds[i], out float x, out float y, out float z)) yield return (0, i, x, y, z);
             if (_showWarp) for (int i = 0; i < _file.Warps.Count; i++) if (EventAnchorNorm(_file.Warps[i], out float x, out float y, out float z)) yield return (1, i, x, y, z);
-            if (_showTrig) for (int i = 0; i < _file.Triggers.Count; i++) if (EventAnchorNorm(_file.Triggers[i], out float x, out float y, out float z)) yield return (2, i, x, y, z);
+            if (_showTrig)
+                for (int i = 0; i < _file.Triggers.Count; i++)
+                    foreach ((int dx, int dz) in TriggerTiles(_file.Triggers[i]))
+                        if (TileAnchorNorm(_file.Triggers[i], dx, dz, out float x, out float y, out float z)) yield return (2, i, x, y, z);
             if (_showSpawn) for (int i = 0; i < _file.Spawnables.Count; i++) if (EventAnchorNorm(_file.Spawnables[i], out float x, out float y, out float z)) yield return (3, i, x, y, z);
         }
 
@@ -2402,30 +2459,23 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         private static void AddMarker(List<float> v, NsbmdRenderModel m, float cx, float cy, float cz,
-            float halfX, float halfZ, (float r, float g, float b) col)
-        {
-            (float x, float y, float z) a = m.ToNormalized(cx - halfX, cy, cz - halfZ);
-            (float x, float y, float z) b = m.ToNormalized(cx + halfX, cy, cz - halfZ);
-            (float x, float y, float z) c = m.ToNormalized(cx + halfX, cy, cz + halfZ);
-            (float x, float y, float z) d = m.ToNormalized(cx - halfX, cy, cz + halfZ);
-            void Vtx((float x, float y, float z) p) { v.Add(p.x); v.Add(p.y); v.Add(p.z); v.Add(0); v.Add(0); v.Add(col.r); v.Add(col.g); v.Add(col.b); }
-            Vtx(a); Vtx(b); Vtx(c);
-            Vtx(a); Vtx(c); Vtx(d);
-        }
+            float halfX, float halfZ, (float r, float g, float b) col, (float u0, float v0, float u1, float v1) uv)
+            => AddFlatQuad(v, m, cx - halfX, cz - halfZ, cx + halfX, cz + halfZ, cy, col, uv);
 
         /// <summary>Whole-number division that keeps going the right way for tiles left of the origin.</summary>
         private static int FloorDiv(int a, int b) => a >= 0 ? a / b : -(((-a) + b - 1) / b);
 
+        // North is the picture's top row, so icons read upright from the default camera.
         private static void AddFlatQuad(List<float> v, NsbmdRenderModel m, float x0, float z0, float x1, float z1, float y,
-            (float r, float g, float b) col)
+            (float r, float g, float b) col, (float u0, float v0, float u1, float v1) uv)
         {
             (float x, float y, float z) a = m.ToNormalized(x0, y, z0);
             (float x, float y, float z) b = m.ToNormalized(x1, y, z0);
             (float x, float y, float z) c = m.ToNormalized(x1, y, z1);
             (float x, float y, float z) d = m.ToNormalized(x0, y, z1);
-            void Vtx((float x, float y, float z) p) { v.Add(p.x); v.Add(p.y); v.Add(p.z); v.Add(0); v.Add(0); v.Add(col.r); v.Add(col.g); v.Add(col.b); }
-            Vtx(a); Vtx(b); Vtx(c);
-            Vtx(a); Vtx(c); Vtx(d);
+            void Vtx((float x, float y, float z) p, float tu, float tv) { v.Add(p.x); v.Add(p.y); v.Add(p.z); v.Add(tu); v.Add(tv); v.Add(col.r); v.Add(col.g); v.Add(col.b); }
+            Vtx(a, uv.u0, uv.v0); Vtx(b, uv.u1, uv.v0); Vtx(c, uv.u1, uv.v1);
+            Vtx(a, uv.u0, uv.v0); Vtx(c, uv.u1, uv.v1); Vtx(d, uv.u0, uv.v1);
         }
 
         // ── Save / import / export ─────────────────────────────────────────────────────
