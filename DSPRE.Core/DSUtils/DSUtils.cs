@@ -321,18 +321,15 @@ namespace DSPRE
         }
 
         /// <summary>
-        /// Resolves a bundled tool. Windows uses the .exe file; other platforms prefer an
-        /// extensionless native binary and fall back to the .exe when no native binary exists.
+        /// Resolves a bundled tool. Windows uses the .exe file and macOS the native binary; Linux prefers
+        /// an extensionless native binary and falls back to the .exe when no native binary exists.
         /// </summary>
         public static string ToolPath(string name)
         {
             string toolsDirectory = Path.Combine(System.AppContext.BaseDirectory, "Tools");
             string nativePath = Path.Combine(toolsDirectory, name);
             if (OperatingSystem.IsWindows()) return nativePath + ".exe";
-
-            // TODO(macOS): distinguish macOS-native tools from the Linux binaries currently bundled
-            // under extensionless names. macOS will likely use the .exe files through Wine instead.
-            if (File.Exists(nativePath)) return nativePath;
+            if (OperatingSystem.IsMacOS() || File.Exists(nativePath)) return nativePath;
 
             string windowsPath = nativePath + ".exe";
             return File.Exists(windowsPath) ? windowsPath : nativePath;
@@ -440,14 +437,28 @@ namespace DSPRE
                 : toolArgument + " " + startInfo.Arguments;
         }
 
-        /// <summary>True on real (non-WSL) Linux/macOS with no Wine on PATH: none of the bundled
-        /// .exe-only tools (ndstool, blz, apicula) can run at all in that case.</summary>
+        /// <summary>True on non-WSL Linux without Wine, where the bundled .exe-only tools (ndstool, blz,
+        /// apicula) can't run. The macOS build bundles a native apicula and has no ndstool or blz.</summary>
         public static bool RequiresWineButUnavailable() =>
-            !OperatingSystem.IsWindows() && !IsWsl() && !IsCommandAvailable("wine");
+            !OperatingSystem.IsWindows() && !OperatingSystem.IsMacOS() && !IsWsl() && !IsCommandAvailable("wine");
+
+        private const string LegacyProjectsUnsupportedOnMac = "Porting older projects isn't supported on macOS yet.";
+
+        /// <summary>
+        /// The macOS build has no ndstool or blz, so it can't open or convert projects older DSPRE versions made in
+        /// the ndstool layout. Returns why, or null when the folder can be opened here.
+        /// </summary>
+        public static string WhyNotOpenable(string folder, int folderType) =>
+            OperatingSystem.IsMacOS() && folderType != 0 && File.Exists(Path.Combine(folder, "header.bin"))
+                ? LegacyProjectsUnsupportedOnMac
+                : null;
 
         /// <summary>Returns a user-facing explanation for a tool that could not be launched.</summary>
         public static string ToolAvailabilityError(string name)
         {
+            if (OperatingSystem.IsMacOS() && (name == "ndstool" || name == "blz"))
+                return LegacyProjectsUnsupportedOnMac;
+
             string toolPath = ToolPath(name);
             if (!File.Exists(toolPath))
                 return $"{name} wasn't found in DSPRE's Tools folder.";

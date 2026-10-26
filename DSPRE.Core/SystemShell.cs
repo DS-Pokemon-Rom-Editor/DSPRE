@@ -6,7 +6,7 @@ namespace DSPRE
 {
     /// <summary>
     /// Opens a file or shows it in the system file manager.
-    /// Windows opens Explorer; Linux falls back to xdg-open on the containing folder.
+    /// Windows opens Explorer, macOS Finder; Linux falls back to xdg-open on the containing folder.
     /// </summary>
     public static class SystemShell
     {
@@ -22,6 +22,10 @@ namespace DSPRE
                 if (OperatingSystem.IsWindows())
                 {
                     Process.Start("explorer.exe", "/select," + "\"" + path + "\"");
+                }
+                else if (OperatingSystem.IsMacOS())
+                {
+                    Process.Start(new ProcessStartInfo("open") { ArgumentList = { "-R", path } });
                 }
                 else
                 {
@@ -47,6 +51,10 @@ namespace DSPRE
                 if (OperatingSystem.IsWindows())
                 {
                     Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+                }
+                else if (OperatingSystem.IsMacOS())
+                {
+                    Process.Start(new ProcessStartInfo("open") { ArgumentList = { path } });
                 }
                 else
                 {

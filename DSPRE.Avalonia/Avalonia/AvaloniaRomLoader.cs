@@ -61,6 +61,7 @@ namespace DSPRE.Avalonia
 
             int type = DSUtils.GetFolderType(folder);
             if (type == -1) { error = "The selected folder isn't a valid extracted ROM folder."; return false; }
+            if (DSUtils.WhyNotOpenable(folder, type) is string why) { error = why; return false; }
 
             string gameCode = ReadGameCode(folder, type);
             if (string.IsNullOrEmpty(gameCode)) { error = "Couldn't read the game code from the ROM header."; return false; }
@@ -116,6 +117,7 @@ namespace DSPRE.Avalonia
                 {
                     int type = DSUtils.GetFolderType(path);
                     if (type == -1) return null;   // the loader says what is wrong with the folder
+                    if (DSUtils.WhyNotOpenable(path, type) is string why) return why;
                     gameCode = ReadGameCode(path, type);
                 }
             }

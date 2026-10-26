@@ -143,9 +143,87 @@ jobs:
           name: dspre-avalonia-linux-x64
           path: DSPRE-Avalonia-linux-x64-canary.tar.gz
 
-  release:
+  # Experimental: a failure here doesn't hold back the Windows and Linux release.
+  build-macos:
     if: github.repository == 'DS-Pokemon-Rom-Editor/DSPRE'
-    needs: [build-windows, build-linux]
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: osx-arm64
+            runner: macos-latest
+          - rid: osx-x64
+            runner: macos-15-intel
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          # Avalonia 12 needs a newer compiler than SDK 8 has; the 8 runtime runs the net8.0 app.
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Clone Database Repository
+        run: git clone https://github.com/DS-Pokemon-Rom-Editor/scrcmd-database.git databases
+
+      - name: Clone ds-rom Repository
+        run: git clone --depth 1 https://github.com/DS-Pokemon-Rom-Editor/ds-rom.git ds-rom
+
+      - name: Publish DSPRE.Avalonia (${{ matrix.rid }})
+        run: dotnet publish DSPRE.Avalonia/DSPRE.Avalonia.csproj -p:PublishProfile=${{ matrix.rid }}
+
+      - name: Build dsrom (macOS)
+        run: |
+          cargo build --release -p ds-rom-cli --manifest-path ds-rom/Cargo.toml
+          mkdir -p DSPRE.Avalonia/bin/publish/${{ matrix.rid }}/Tools
+          cp ds-rom/target/release/dsrom DSPRE.Avalonia/bin/publish/${{ matrix.rid }}/Tools/dsrom
+          chmod +x DSPRE.Avalonia/bin/publish/${{ matrix.rid }}/Tools/dsrom
+
+      - name: Build apicula (macOS)
+        uses: ./.github/actions/build-apicula
+        with:
+          output-directory: DSPRE.Avalonia/bin/publish/${{ matrix.rid }}/Tools
+
+      - name: Build rotom (macOS)
+        uses: ./.github/actions/build-rotom
+        with:
+          output-directory: DSPRE.Avalonia/bin/publish/${{ matrix.rid }}/Tools
+
+      - name: Build chatot
+        uses: ./.github/actions/build-chatot
+        with:
+          output-directory: DSPRE.Avalonia/bin/publish/${{ matrix.rid }}/Tools
+
+      # No ndstool or blz step: DSPRE on macOS refuses projects in the older ndstool layout.
+
+      - name: Bundle Databases
+        run: |
+          mkdir -p DSPRE.Avalonia/bin/publish/${{ matrix.rid }}/databases
+          rsync -a --exclude='.git' --exclude='.github' --exclude='.gitmodules' databases/ DSPRE.Avalonia/bin/publish/${{ matrix.rid }}/databases/
+
+      - name: Make executable
+        run: chmod +x DSPRE.Avalonia/bin/publish/${{ matrix.rid }}/DSPRE.Avalonia
+
+      - name: Archive macOS build
+        run: tar -C DSPRE.Avalonia/bin/publish/${{ matrix.rid }} -czf DSPRE-Avalonia-${{ matrix.rid }}-canary.tar.gz .
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dspre-avalonia-${{ matrix.rid }}
+          path: DSPRE-Avalonia-${{ matrix.rid }}-canary.tar.gz
+
+  release:
+    if: ${{ always() && github.repository == 'DS-Pokemon-Rom-Editor/DSPRE' && needs.build-windows.result == 'success' && needs.build-linux.result == 'success' }}
+    needs: [build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
 
     steps:
@@ -160,6 +238,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: dspre-avalonia-linux-x64
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: dspre-avalonia-osx-*
+          merge-multiple: true
 
       - name: Fetch tags
         run: git fetch --prune --unshallow --tags
@@ -189,6 +274,8 @@ jobs:
           files: |
             DSPRE-Avalonia-win-x64-canary.zip
             DSPRE-Avalonia-linux-x64-canary.tar.gz
+            DSPRE-Avalonia-osx-arm64-canary.tar.gz
+            DSPRE-Avalonia-osx-x64-canary.tar.gz
           token: ${{ secrets.GITHUB_TOKEN }}
           body: |
             ## ⚠️ Avalonia Canary Build Notice ⚠️
@@ -196,6 +283,11 @@ jobs:
             generated from the latest push to `feature/avalonia`. Windows and Linux, both
             self-contained. This is the in-progress cross-platform shell; expect missing features,
             rough edges, and instability.
+
+            ## 🍎 macOS (experimental)
+            `osx-arm64` is for Apple Silicon, `osx-x64` for Intel Macs. These builds are untested. They
+            aren't signed, so after extracting, run `xattr -dr com.apple.quarantine` on the folder, then
+            start `DSPRE.Avalonia`. Porting older projects isn't supported on macOS yet.
 
             ## 🚧 What does this mean?
             This build reflects ongoing development on the Avalonia migration and is not a stable

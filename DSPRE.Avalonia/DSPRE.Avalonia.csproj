@@ -112,6 +112,13 @@
   <ItemGroup Condition="$(RuntimeIdentifier.StartsWith('win'))">
     <Content Remove="../Tools/chatot;../Tools/dsrom;../Tools/rotom;../Tools/rotom-lsp;../Tools/libnitroarc_ffi.so" />
   </ItemGroup>
+  <!-- The bundled binaries are for Windows and Linux; CI builds the macOS ones into the published Tools folder. -->
+  <ItemGroup Condition="$(RuntimeIdentifier.StartsWith('osx'))">
+    <Content Remove="../Tools/*" />
+    <Content Include="../Tools/charmap.json;../Tools/pokefatcs.txt" LinkBase="Tools">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
   <!-- A release never uses createdump or the debug symbols that NuGet packages ship. -->
   <Target Name="DropUnusedPublishFiles" AfterTargets="ComputeResolvedFilesToPublishList">

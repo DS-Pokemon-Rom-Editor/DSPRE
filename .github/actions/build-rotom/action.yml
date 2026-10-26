@@ -1,5 +1,5 @@
 name: Build rotom
-description: Build rotom (CLI, language server and nitroarc library) from the Tools/rotom-src submodule, DSPRE's fork, and copy it into a DSPRE Tools directory.
+description: Build rotom's CLI, language server and nitroarc library from DSPRE's fork in Tools/rotom-src and copy them into a DSPRE Tools directory. macOS gets no nitroarc library.
 
 inputs:
   output-directory:
@@ -39,7 +39,7 @@ runs:
         mkdir -p "$OUTPUT_DIRECTORY"
         cp "$built/rotom.exe" "$built/rotom-lsp.exe" "$built/nitroarc_ffi.dll" "$OUTPUT_DIRECTORY/"
 
-    - name: Build rotom (Linux)
+    - name: Build rotom (Linux and macOS)
       if: runner.os != 'Windows'
       shell: bash
       env:
@@ -52,7 +52,9 @@ runs:
 
         built=Tools/rotom-src/target/release
         mkdir -p "$OUTPUT_DIRECTORY"
-        cp "$built/rotom" "$built/rotom-lsp" "$built/libnitroarc_ffi.so" "$OUTPUT_DIRECTORY/"
+        cp "$built/rotom" "$built/rotom-lsp" "$OUTPUT_DIRECTORY/"
+        # rotom links nitroarc statically, so the macOS build doesn't ship the library.
+        if [ "$RUNNER_OS" = "Linux" ]; then cp "$built/libnitroarc_ffi.so" "$OUTPUT_DIRECTORY/"; fi
         chmod +x "$OUTPUT_DIRECTORY/rotom" "$OUTPUT_DIRECTORY/rotom-lsp"
 
     - name: Check rotom version
