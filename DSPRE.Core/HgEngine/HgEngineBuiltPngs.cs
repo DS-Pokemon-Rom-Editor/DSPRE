@@ -147,7 +147,8 @@ namespace DSPRE.HgEngine
                     if (Directory.Exists(from))
                         foreach (string f in Directory.GetFiles(from)) byName[Path.GetFileName(f)] = new Source(f, Part.Copy);
                 }
-                foreach (Match cp in Regex.Matches(body, @"cp\s+(\S+)\s+" + to + @"/(\S+)"))
+                // Match a file name only, so scr_seq's "cp ... $(SCR_SEQ_DIR)/)" inside $(if ...) doesn't count.
+                foreach (Match cp in Regex.Matches(body, @"cp\s+(\S+)\s+" + to + @"/([\w.\-]+)(?=\s|$)"))
                     if (!cp.Groups[1].Value.StartsWith("$$", StringComparison.Ordinal))
                         byName[cp.Groups[2].Value] = new Source(Full(root, Expand(cp.Groups[1].Value, vars)), Part.Copy);
                 // One file converted straight into a member, as otherpoke's $(GFX) x.pal $(DIR)/4_212.NCLR.
