@@ -74,6 +74,8 @@ namespace DSPRE.ROMFiles
             int members = Directory.Exists(archiveDir) ? Directory.GetFiles(archiveDir).Count(f => int.TryParse(Path.GetFileName(f), out _)) : 0;
             if (members - 1 > id)
                 return $"The script archive has {members} files but the sources stop at {id}; check the project's scripts folder.";
+            if (HgEngine.HgEngineProject.IsActive && HgEngine.HgEngineOwnedFiles.OwnedScriptIds().Contains(id))
+                return $"Script file {id} stays: hg-engine builds it from its own source.";
             List<(ushort Header, string Name)> uses = HeadersUsingScriptFile(id);
             if (uses.Count > 0)
                 return $"Script file {id} stays: these headers still use it." + Environment.NewLine + HeaderLinks.Describe(uses)

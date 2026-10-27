@@ -16,7 +16,8 @@
         <Button Content="Save" controls:Icon.Key="saveButton"    Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
-        <Button Content="Add" controls:Icon.Key="addIcon" Click="AddFile_Click" ToolTip.Tip="Add a level script with no triggers"/>
+        <Button Content="Add" controls:Icon.Key="addIcon" Click="AddFile_Click" IsEnabled="{Binding CanAdd}"
+                ToolTip.Tip="{Binding AddTip}" ToolTip.ShowOnDisabled="True"/>
         <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveFile_Click"
                 ToolTip.Tip="Deletes the last script file, unless a header still uses it"/>
         <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>

@@ -230,11 +230,11 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public bool CanAdd => !IsBusy && RotomTool.IsAvailable;
 
         /// <summary>The last script file can go when the project's own sources hold it.</summary>
-        public bool CanRemoveLast => !IsBusy && RotomTool.IsAvailable && !HgEngineProject.IsActive && NextScriptId() > 0;
+        public bool CanRemoveLast => !IsBusy && RotomTool.IsAvailable && NextScriptId() > 0;
 
         /// <summary>
         /// Removes the highest-numbered script file: its source and its compiled copy in the archive. Refused while
-        /// a header links it, since that header would load garbage, and while the archive holds members past it.
+        /// a header links it, while the archive holds members past it, or when hg-engine builds it.
         /// </summary>
         public async Task RemoveLastScriptFileAsync()
         {

@@ -130,6 +130,10 @@ namespace DSPRE.Avalonia.ViewModels.Text
         private string _statusText = "Not loaded";
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
 
+        private const string NoRotom = "Rotom isn't in DSPRE's Tools folder, so new level scripts can't be made.";
+        public bool CanAdd => RotomTool.IsAvailable;
+        public string AddTip => CanAdd ? "Add a level script with no triggers" : NoRotom;
+
         // ── Dirty tracking ───────────────────────────────────────────────────────────
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty;
@@ -194,9 +198,9 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public async Task AddFileAsync()
         {
             if (_dirty && !await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "level script")) return;
-            if (HgEngine.HgEngineProject.IsActive || !RotomTool.IsAvailable)
+            if (!CanAdd)
             {
-                await DialogHelper.ShowInfoAsync("New level scripts are built with Rotom, which this project can't use.", "Level script editor");
+                await DialogHelper.ShowInfoAsync(NoRotom, "Level script editor");
                 return;
             }
             try
@@ -218,7 +222,6 @@ namespace DSPRE.Avalonia.ViewModels.Text
         /// <summary>Deletes the last script-archive file, unless a header loads it as its scripts or level script.</summary>
         public async Task RemoveLastFileAsync()
         {
-            if (HgEngine.HgEngineProject.IsActive) return;
             int id = NewProjectFiles.NextScriptId() - 1;
             if (id <= 0) return;
             if (NewProjectFiles.WhyKeepLastScriptFile(id) is string keep) { await DialogHelper.ShowInfoAsync(keep, "Level script editor"); return; }
