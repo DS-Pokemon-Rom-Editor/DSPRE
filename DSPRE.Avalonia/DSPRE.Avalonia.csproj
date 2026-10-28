@@ -91,8 +91,7 @@
     <PackageReference Include="Avalonia.Labs.Gif" Version="12.0.2" />
     <!-- Keep in step with the vpk version installed in update-releases.yaml. -->
     <PackageReference Include="Velopack" Version="1.2.161" />
-    <!-- Real sound-effect playback (NAudioOutput). Its actual output device is Windows-only, guarded at
-         runtime via OperatingSystem.IsWindows() so a Linux build/run just stays silent instead of throwing. -->
+    <!-- NAudioOutput mixes on any OS and plays through WaveOut on Windows and libpulse on Linux. -->
     <PackageReference Include="NAudio" Version="2.2.1" />
   </ItemGroup>
 

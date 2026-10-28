@@ -65,13 +65,13 @@ namespace DSPRE.Avalonia.Data
     }
 
     /// <summary>
-    /// Plays <see cref="SseqPlayer"/>'s PCM through NAudio; silent off Windows. Every trigger goes through one mixer, as the
-    /// hardware mixes channels, so a sound played several times on one frame layers.
+    /// Plays <see cref="SseqPlayer"/>'s PCM through WaveOut on Windows and PulseAudio on Linux. Every trigger goes through
+    /// one mixer, as the hardware mixes channels, so a sound played several times on one frame layers.
     /// </summary>
     public sealed class NAudioOutput : IAudioOutput
     {
         private readonly object _gate = new object();
-        private object _output;
+        private IDisposable _output;
         private MixingSampleProvider _mixer;
         private bool _unavailable;
 
@@ -124,11 +124,14 @@ namespace DSPRE.Avalonia.Data
             {
                 ReadFully = true,   // keep producing silence between sounds instead of ending the output stream
             };
-            // TODO: maybe this needs to be refactored to work in Mac
-            _output = OperatingSystem.IsWindows() ? StartWaveOut(mixer) : PulseAudioSink.Open(mixer);
+            string why = null;
+            _output = OperatingSystem.IsWindows() ? StartWaveOut(mixer) : PulseAudioSink.Open(mixer, out why);
             if (_output == null)
             {
+                // Only the first failure shows the notice.
                 _unavailable = true;
+                AppLogger.Warn("Sound is off: " + why?.Replace("\n\n", " "));
+                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = DialogHelper.ShowInfoAsync(why, "Sound is off"));
                 return false;
             }
             _mixer = mixer;

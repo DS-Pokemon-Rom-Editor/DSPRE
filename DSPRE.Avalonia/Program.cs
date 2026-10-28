@@ -27,7 +27,7 @@ namespace DSPRE.AvaloniaShell
             DSPRE.SettingsManager.Load();
             ApplyUiScaleOverride();
 
-            // NAudioOutput does nothing off Windows, so it is wired everywhere.
+            // NAudioOutput stays silent where it has no output, so it is wired everywhere.
             AudioOutput.Current = new NAudioOutput();
 
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
