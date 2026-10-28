@@ -191,6 +191,24 @@ namespace DSPRE
                 "Trainers > VS intro editor.\n\n" +
                 "Requirements\n" +
                 "HeartGold or SoulSilver, with the ARM9 expansion. Not compatible with hg-engine.",
+            ["bannerMotion"] =
+                "What it does\n" +
+                "The place-name banner can slide in from the top or bottom, or appear without sliding. It can move straight, ease, overshoot " +
+                "or bounce, and fade or pixelate as it comes and goes. Nothing changes in game until you pick a style.\n\n" +
+                "Where to edit\n" +
+                "The Screens editor's Place-name banner layout. Press Play to watch it. The slide speeds set how long the slide takes.\n\n" +
+                "Good to know\n" +
+                "While a fading banner moves, a weather effect that also uses blending can flicker.\n\n" +
+                "Requirements\n" +
+                "Platinum, HeartGold or SoulSilver, any language, with the ARM9 expansion. Not compatible with hg-engine.",
+            ["bannerPosition"] =
+                "What it does\n" +
+                "The place-name banner can sit anywhere on the screen instead of the top left corner. Nothing changes in game " +
+                "until you move it.\n\n" +
+                "Where to edit\n" +
+                "The Screens editor's Place-name banner layout. Its size, time on screen and slide speed need no patch.\n\n" +
+                "Requirements\n" +
+                "Platinum, HeartGold or SoulSilver, any language. No ARM9 expansion or synthetic overlay required.",
             ["partyPanelSize"] =
                 "What it does\n" +
                 "The Pokémon panels in the party menu can be any size up to 96 tiles, like 9 by 9 or 12 by 8, with the HP bar " +
@@ -328,6 +346,12 @@ namespace DSPRE
             ["vsClassTableExpanded"] = ("The ARM9's pointer to the class table and the count its search stops at are changed to the new table.",
                 "About 0.5 KB in the synthetic overlay.",
                 "the ARM9 and the synthetic overlay"),
+            ["bannerMotion"] = ("Both slide steps call the patch's routine. It looks up the banner's scroll and its fade or pixelation for each step.",
+                "About 0.9 KB in the synthetic overlay.",
+                "the banner's overlay and the synthetic overlay"),
+            ["bannerPosition"] = ("Rewrites 14 instructions in the banner's window function to use the column and row you set instead of 0.",
+                "No additional space or synthetic overlay.",
+                "the banner's overlay"),
             ["partyPanelSize"] = ("76 instructions in seven of the ARM9's party menu functions hold the panel size instead of the game's 16 by 6, each changed in place.",
                 "No additional space or synthetic overlay.",
                 "the ARM9"),

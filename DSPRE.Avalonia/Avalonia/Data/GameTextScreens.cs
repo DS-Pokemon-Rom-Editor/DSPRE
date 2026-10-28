@@ -662,26 +662,57 @@ namespace DSPRE.Avalonia.Data
             return _bannerStyles.TryGetValue(name, out int found) ? found : 0;
         }
 
+        [ThreadStatic] private static (PlaceNameBanner.Look Saved, PlaceNameBanner.Look Shown)? _usingBanner;
+        [ThreadStatic] private static (int Scroll, int Level, BannerMotionPatch.Effect Effect) _bannerStep;
+
+        /// <summary>Draws the banner with unsaved values at one step of the slide until disposed.</summary>
+        public static IDisposable UseBanner(PlaceNameBanner.Look saved, PlaceNameBanner.Look shown, int scroll = 0, int level = 0,
+                                            BannerMotionPatch.Effect effect = BannerMotionPatch.Effect.None)
+        {
+            (PlaceNameBanner.Look, PlaceNameBanner.Look)? before = _usingBanner;
+            (int, int, BannerMotionPatch.Effect) step = _bannerStep;
+            _usingBanner = (saved, shown);
+            _bannerStep = (scroll, level, effect);
+            return new Restore(() => { _usingBanner = before; _bannerStep = step; });
+        }
+
+        private sealed class Restore : IDisposable
+        {
+            private readonly Action _undo;
+            public Restore(Action undo) => _undo = undo;
+            public void Dispose() => _undo();
+        }
+
+        public static Shot BannerOf(int line) => Banner(line, Hg);
+
         private static Shot Banner(int line, bool hg)
         {
             // So a name no map shows on entry can still be previewed.
             int style = Math.Max(1, BannerStyle(line, hg));
             Func<int, byte[]> m = Members(DirNames.AreaWindowGraphics);
             if (m == null) return null;
-            byte[] tiles = NitroBgCodec.ReadCharacters(m(2 * (style - 1)));
+            // Platinum's banner uses tiles 0 to 84, 17 a row (map_name_popup.c); HGSS uses tiles 1 to 68 (draw_map_name.c).
+            PlaceNameBanner.Look game = new PlaceNameBanner.Look(0, 0, 17, hg ? 4 : 5, 60, 4, 4);
+            PlaceNameBanner.Look onDisk = _usingBanner == null ? PlaceNameBanner.Read()?.Current ?? game : null;
+            (PlaceNameBanner.Look saved, PlaceNameBanner.Look look) = _usingBanner ?? (onDisk, onDisk);
+            int first = hg ? 1 : 0, cols = look.Width, count = look.Width * look.Height;
+            byte[] sheet = m(2 * (style - 1));
+            if (sheet == null) return null;
+            if (saved.Width != look.Width || saved.Height != look.Height)
+                sheet = PlaceNameBanner.Stretch(sheet, first, saved.Width, saved.Height, look.Width, look.Height) ?? sheet;
+            byte[] tiles = NitroBgCodec.ReadCharacters(sheet);
             ushort[] colours = DsBgScreen.Row(NitroBgCodec.ReadColours(m(2 * (style - 1) + 1)), 0);
 
-            byte[] rgba = Blank(FieldBackdrop);
-            // pokeplatinum map_name_popup.c: tiles 0 to 84, 17 a row; pokeheartgold draw_map_name.c: tiles 1 to 68.
-            int first = hg ? 1 : 0, count = hg ? 68 : 85;
+            byte[] rgba = new byte[W * H * 4];
+            int left = look.Across * 8, top = look.Down * 8;
             for (int i = 0; i < count; i++)
             {
-                int tile = first + i, px = (i % 17) * 8, py = (i / 17) * 8;
+                int tile = first + i, px = left + (i % cols) * 8, py = top + (i / cols) * 8;
                 for (int y = 0; y < 8; y++)
                     for (int x = 0; x < 8; x++)
                     {
                         int at = tile * 32 + (y * 8 + x) / 2;
-                        if (at >= tiles.Length) continue;
+                        if (at >= tiles.Length || px + x >= W || py + y >= H || py + y < 0) continue;
                         int index = ((y * 8 + x) & 1) != 0 ? tiles[at] >> 4 : tiles[at] & 0xF;
                         if (index == 0) continue;
                         (byte r, byte g, byte b) = NitroBgCodec.Colour(colours[index]);
@@ -692,15 +723,33 @@ namespace DSPRE.Avalonia.Data
             string name = Line(LocationNamesTextNumber, line);
             int w = DsBgScreen.MeasureText(SystemFont, name);
             int textX;
-            if (hg) textX = (132 - w) / 2 + 4;
+            if (hg) textX = (8 * cols - 4 - w) / 2 + 4;
             else
             {
                 int margin = ((w + 8) / 8) * 8 - w, half = margin / 2;
                 int spare = 4 + half >= 8 ? 0 : ((8 - (4 + half)) * 2 + 7) / 8;
                 textX = 4 + (w <= 0 ? 0 : ((((w + 8) / 8) + spare) * 8 + 8 - w) / 2);
             }
-            Print(rgba, SystemFont, name, textX, hg ? 8 : 16, hg ? colours[1] : colours[3], colours[2]);
-            return new Shot("Place-name banner: top", rgba);
+            Print(rgba, SystemFont, name, left + textX, top + (hg ? 8 : 16), hg ? colours[1] : colours[3], colours[2]);
+            return new Shot("Place-name banner: top", Compose(rgba, _bannerStep.Scroll, _bannerStep.Level, _bannerStep.Effect));
+        }
+
+        // The layer wraps at 256 pixels, so a negative scroll brings it up from below the screen.
+        private static byte[] Compose(byte[] layer, int scroll, int level, BannerMotionPatch.Effect effect)
+        {
+            byte[] rgba = Blank(FieldBackdrop);
+            int block = effect == BannerMotionPatch.Effect.Pixelate ? level + 1 : 1;
+            int fade = effect == BannerMotionPatch.Effect.Fade ? level : 0;
+            for (int y = 0; y < H; y++)
+                for (int x = 0; x < W; x++)
+                {
+                    int sy = ((y - y % block + scroll) % 256 + 256) % 256, sx = x - x % block;
+                    if (sy >= H) continue;
+                    int from = (sy * W + sx) * 4, to = (y * W + x) * 4;
+                    if (layer[from + 3] == 0) continue;
+                    for (int c = 0; c < 3; c++) rgba[to + c] = (byte)((layer[from + c] * (16 - fade) + rgba[to + c] * fade) / 16);
+                }
+            return rgba;
         }
 
         // ── naming screen ────────────────────────────────────────────────────────────

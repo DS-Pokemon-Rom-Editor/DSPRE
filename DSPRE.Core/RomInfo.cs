@@ -494,6 +494,10 @@ namespace DSPRE
         /// <summary>The HGSS trainer card's touch list, its two button sprite spots and its window table.</summary>
         public sealed record HgssTrainerCardSites(int Overlay, uint Touch, uint ButtonSprites, uint Windows);
 
+        /// <summary>The place-name banner's overlay and the instructions DSPRE reads there.</summary>
+        /// <param name="Window">The window function's first instruction.</param>
+        /// <param name="Centre">0 where the name isn't centred on the frame.</param>
+        public sealed record PlaceNameBannerSites(int Overlay, uint Window, uint Mod, uint Count, uint Task, uint Show, uint Centre);
         /// <summary>The HGSS number pad's keys, their cursor grid, its sprite and label window tables, and the 1 to 6 digit touch lists.</summary>
         public sealed record NumberPadSites(int Overlay, uint Keys, uint Flow, uint Sprites, uint Labels, uint[] Digits);
 

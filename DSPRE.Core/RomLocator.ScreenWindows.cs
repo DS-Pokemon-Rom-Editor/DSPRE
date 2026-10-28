@@ -477,5 +477,38 @@ namespace DSPRE
             "box" => Here(BoxWindowSitesIn),
             _ => null,
         };
+
+        // pokeplatinum overlay 5 map_name_popup.c, pokeheartgold overlay 1 draw_map_name.c. Measured on every Platinum and HGSS dump.
+        private static readonly PlaceNameBannerSites BannerHgWest = new PlaceNameBannerSites(1, 0x9EC0, 0x9F7C, 0x9FB8, 0xA046, 0xA154, 0x9F48);
+        private static readonly PlaceNameBannerSites BannerHgJp = new PlaceNameBannerSites(1, 0x9D78, 0x9E34, 0x9E70, 0x9EFE, 0xA00C, 0x9E00);
+
+        public static PlaceNameBannerSites PlaceNameBannerSitesIn(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English => new PlaceNameBannerSites(5, 0xC99C, 0xCAAA, 0xCAE6, 0xCB72, 0xCC80, 0),
+                GameLanguages.German => new PlaceNameBannerSites(5, 0xCA00, 0xCB0E, 0xCB4A, 0xCBD6, 0xCCE4, 0),
+                GameLanguages.French => new PlaceNameBannerSites(5, 0xC9EC, 0xCAFA, 0xCB36, 0xCBC2, 0xCCD0, 0),
+                GameLanguages.Italian => new PlaceNameBannerSites(5, 0xC9EC, 0xCAFA, 0xCB36, 0xCBC2, 0xCCD0, 0),
+                GameLanguages.Spanish => new PlaceNameBannerSites(5, 0xC9EC, 0xCAFA, 0xCB36, 0xCBC2, 0xCCD0, 0),
+                GameLanguages.Japanese => new PlaceNameBannerSites(5, 0xC8E0, 0xC9EE, 0xCA2A, 0xCAB6, 0xCBC4, 0),
+                GameLanguages.Korean => new PlaceNameBannerSites(5, 0xC9E0, 0xCAEE, 0xCB2A, 0xCBB6, 0xCCC4, 0),
+                _ => null,
+            },
+            GameVersions.HeartGold or GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.English => BannerHgWest,
+                GameLanguages.German => BannerHgWest,
+                GameLanguages.French => BannerHgWest,
+                GameLanguages.Italian => BannerHgWest,
+                GameLanguages.Spanish => BannerHgWest,
+                GameLanguages.Japanese => BannerHgJp,
+                GameLanguages.Korean => BannerHgWest,
+                _ => null,
+            },
+            _ => null,
+        };
+
+        public static PlaceNameBannerSites PlaceNameBannerSites => Here(PlaceNameBannerSitesIn);
     }
 }

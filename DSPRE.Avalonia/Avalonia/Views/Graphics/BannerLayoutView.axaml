@@ -1,0 +1,75 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
+        x:Class="DSPRE.Avalonia.Views.Graphics.BannerLayoutView"
+        x:DataType="vm:BannerLayoutViewModel">
+
+  <UserControl.Styles>
+    <Style Selector="TextBlock.hint">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Foreground" Value="{DynamicResource Editor.Subtle}"/>
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel>
+    <controls:EditorToolbar DockPanel.Dock="Top">
+      <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <controls:UndoRedoButtons/>
+      <Button Content="Play" controls:Icon.Key="play" Click="Play_Click" Margin="16,0,0,4" ToolTip.Tip="Plays the slide as in game"/>
+      <StackPanel controls:EditorToolbar.Slot="Picker" Orientation="Horizontal" Spacing="6" Margin="0,0,16,4">
+        <TextBlock Text="Place" VerticalAlignment="Center"/>
+        <controls:FusionAutoCompleteBox Width="220" ItemsSource="{Binding Places}" SelectedIndex="{Binding Place}" MaxDropDownHeight="420"/>
+      </StackPanel>
+    </controls:EditorToolbar>
+
+    <Border DockPanel.Dock="Left" Width="300" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,1,0">
+      <StackPanel Margin="8" Spacing="6">
+        <TextBlock Text="Every place uses this banner layout." Classes="hint" TextWrapping="Wrap"/>
+        <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="6">
+          <TextBlock Grid.Row="0" Text="Width" VerticalAlignment="Center"/>
+          <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding Width}" Minimum="1" Maximum="{Binding MostWidth}" Increment="1" FormatString="0"
+                         ToolTip.Tip="In tiles"/>
+          <TextBlock Grid.Row="1" Text="Height" VerticalAlignment="Center"/>
+          <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding Height}" Minimum="1" Maximum="{Binding MostHeight}" Increment="1" FormatString="0"
+                         ToolTip.Tip="In tiles"/>
+          <TextBlock Grid.Row="2" Text="Column" VerticalAlignment="Center"/>
+          <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding Across}" Minimum="0" Maximum="31" Increment="1" FormatString="0"
+                         IsEnabled="{Binding Patched}" ToolTip.Tip="{Binding ColumnTip}" ToolTip.ShowOnDisabled="True"/>
+          <TextBlock Grid.Row="3" Text="Row" VerticalAlignment="Center"/>
+          <NumericUpDown Grid.Row="3" Grid.Column="1" Value="{Binding Down}" Minimum="0" Maximum="23" Increment="1" FormatString="0"
+                         IsEnabled="{Binding Patched}" ToolTip.Tip="{Binding RowTip}" ToolTip.ShowOnDisabled="True"/>
+          <TextBlock Grid.Row="4" Text="Time on screen" VerticalAlignment="Center"/>
+          <NumericUpDown Grid.Row="4" Grid.Column="1" Value="{Binding Time}" Minimum="0" Maximum="255" Increment="1" FormatString="0"
+                         ToolTip.Tip="In steps, 30 a second"/>
+          <TextBlock Grid.Row="5" Text="Slide in speed" VerticalAlignment="Center"/>
+          <NumericUpDown Grid.Row="5" Grid.Column="1" Value="{Binding Speed}" Minimum="1" Maximum="255" Increment="1" FormatString="0"
+                         ToolTip.Tip="Pixels a step"/>
+          <TextBlock Grid.Row="6" Text="Slide out speed" VerticalAlignment="Center"/>
+          <NumericUpDown Grid.Row="6" Grid.Column="1" Value="{Binding SpeedOut}" Minimum="1" Maximum="255" Increment="1" FormatString="0"
+                         ToolTip.Tip="Pixels a step"/>
+        </Grid>
+        <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Click="Patch_Click"
+                IsVisible="{Binding OffersPatch}" ToolTip.Tip="Lets you move the banner"/>
+        <TextBlock Text="Motion" FontWeight="SemiBold" Margin="0,8,0,0"/>
+        <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="6" IsVisible="{Binding HasMotion}">
+          <TextBlock Grid.Row="0" Text="Direction" VerticalAlignment="Center"/>
+          <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding Directions}" SelectedIndex="{Binding DirectionIndex}" HorizontalAlignment="Stretch"/>
+          <TextBlock Grid.Row="1" Text="Easing" VerticalAlignment="Center"/>
+          <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Motions}" SelectedIndex="{Binding MotionIndex}" HorizontalAlignment="Stretch"/>
+          <TextBlock Grid.Row="2" Text="Effect" VerticalAlignment="Center"/>
+          <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding Effects}" SelectedIndex="{Binding EffectIndex}" HorizontalAlignment="Stretch"/>
+        </Grid>
+        <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Click="MotionPatch_Click"
+                IsVisible="{Binding OffersMotionPatch}" ToolTip.Tip="Lets you change the motion"/>
+        <TextBlock Text="{Binding Problem}" IsVisible="{Binding HasProblem}" Foreground="#FF5050" TextWrapping="Wrap"/>
+      </StackPanel>
+    </Border>
+
+    <Viewbox Stretch="Uniform" StretchDirection="Both" Margin="8" HorizontalAlignment="Left" VerticalAlignment="Top" MaxWidth="768">
+      <Image x:Name="Preview" Source="{Binding Picture}" Width="256" Height="192" RenderOptions.BitmapInterpolationMode="None"
+             PointerPressed="Preview_Pressed" PointerMoved="Preview_Moved" PointerReleased="Preview_Released"/>
+    </Viewbox>
+  </DockPanel>
+</UserControl>

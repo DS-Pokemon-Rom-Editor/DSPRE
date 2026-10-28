@@ -541,7 +541,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             });
             yield return ("Field", new[]
             {
-                new ScreenEntry(o, "banner", "Place-name banner", Text("banner")),
+                new ScreenEntry(o, "banner", "Place-name banner", Text("banner"), PlaceNameBanner.SupportsCurrentRom
+                    ? new ScreenEditorView("Layout", () => new Views.Graphics.BannerLayoutView(new BannerLayoutViewModel())) : null),
                 BottomScreenEntry(o),
                 RomLocator.NumberPadSites == null ? null
                     : new ScreenEntry(o, "numberpad", "Number pad", null, ButtonTabs(HgssTouchLists.NumberPad, "Number pad", (pad, _) =>

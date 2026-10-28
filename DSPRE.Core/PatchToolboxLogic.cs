@@ -932,6 +932,42 @@ namespace DSPRE
             return PartyPanelSizePatch.WhyNotApplicable() is string why ? Unsupported(why) : PatchState.Available;
         }
 
+        public static PatchState BannerPositionState()
+        {
+            if (BannerPositionPatch.IsApplied) return PatchState.Applied;
+            return BannerPositionPatch.WhyNotApplicable() is string why ? Unsupported(why) : PatchState.Available;
+        }
+
+        public static bool ApplyBannerPositionPatch()
+        {
+            if (BannerPositionState() != PatchState.Available) return false;
+            int overlay = RomLocator.PlaceNameBannerSites.Overlay;
+            if (!ConfirmYesNo("The place-name banner can sit anywhere on the screen. Move it in the Screens editor's Place-name banner " +
+                "layout. Nothing changes in game until you do." + BackupNote($"overlay {overlay}") + "\n\nApply this patch?" +
+                CreditNote("bannerPosition"), "Confirm to proceed"))
+                return false;
+            BackUp(OverlayUtils.GetPath(overlay));
+            BannerPositionPatch.Apply();
+            ShowInfo("Move the banner in the Screens editor's Place-name banner layout.", "Patch applied");
+            return true;
+        }
+
+        public static bool ApplyBannerMotionPatch()
+        {
+            if (AlreadyApplied(Probe(() => BannerMotionPatch.IsApplied))) return false;
+            if (BannerMotionPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
+            if (PlacementNote(new[] { BannerMotionPatch.BlockLength }, out int[] offsets) is not string placement) return false;
+            int overlay = RomLocator.PlaceNameBannerSites.Overlay;
+            if (!ConfirmYesNo("The place-name banner can slide in from the bottom or appear without sliding. It can ease, overshoot or bounce, and fade " +
+                "or pixelate as it comes and goes. Pick a style in the Screens editor's Place-name banner layout." + placement +
+                BackupNote($"overlay {overlay} and the synthetic overlay") + "\n\nApply this patch?" + CreditNote("bannerMotion"), "Confirm to proceed"))
+                return false;
+            BackUp(OverlayUtils.GetPath(overlay), Filesystem.ExpArmPath);
+            BannerMotionPatch.Apply(offsets[0]);
+            ShowInfo("Pick the banner's motion in the Screens editor's Place-name banner layout.", "Patch applied");
+            return true;
+        }
+
         public static bool ApplyPartyPanelSizePatch()
         {
             if (PartyPanelSizeState() != PatchState.Available) return false;
@@ -1534,6 +1570,8 @@ namespace DSPRE
             ["trainerNames"] = ("Mixone and AdAstra", "trainer name expansion"),
             ["sameHeldItemOdds"] = ("Mixone", "held item odds"),
             ["partyPanelSize"] = ("Mixone", "party panel size"),
+            ["bannerPosition"] = ("Mixone", "place-name banner position"),
+            ["bannerMotion"] = ("Mixone", "place-name banner motion"),
             ["buildingRotation"] = ("MrHam88", "building rotation"),
             ["trainerShiny"] = ("MrHam88", "shiny trainer Pokémon"),
             ["trainerCustomPokeballs"] = ("MrHam88", "trainer custom Poké Balls"),
@@ -1634,6 +1672,8 @@ namespace DSPRE
         {
             ["sameHeldItemOdds"] = "Same held item odds",
             ["partyPanelSize"] = "Party panel size",
+            ["bannerPosition"] = "Place-name banner position",
+            ["bannerMotion"] = "Place-name banner motion",
             ["sentenceCase"] = "Sentence-case Pokémon names",
             ["itemSentenceCase"] = "Sentence-case item names",
             ["itemStandardize"] = "Item script order",
@@ -1677,6 +1717,20 @@ namespace DSPRE
             list.Add(Status("partyPanelSize",
                 "Lets the Pokémon panels in the party menu be any size up to 96 tiles, set in the Screens editor (HeartGold and SoulSilver). Needs no ARM9 expansion.",
                 PartyPanelSizeState));
+
+            list.Add(Status("bannerPosition",
+                "Lets the place-name banner sit anywhere on the screen. Move it in the Screens editor. Needs no ARM9 expansion.",
+                BannerPositionState));
+
+            list.Add(Status("bannerMotion",
+                "Lets the place-name banner slide in from the bottom or appear without sliding, bounce or ease, and fade or pixelate. Pick it in the Screens editor. Requires the ARM9 expansion patch.",
+                () =>
+                {
+                    if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+                    if (!BannerMotionPatch.SupportsCurrentRom) return Unsupported("Platinum, HeartGold and SoulSilver only");
+                    if (BannerMotionPatch.IsApplied) return PatchState.Applied;
+                    return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
+                }));
 
             list.Add(Status("sameHeldItemOdds",
                 "Wild Pokémon whose two held items are the same normally always hold it. With this patch they hold it only as often as the held item odds say.",
@@ -2397,7 +2451,7 @@ namespace DSPRE
                 or "trainerClassTablesExpanded" or "trainerEncounterBgmRepointed" or "punchingMovesExpanded" or "soundMovesExpanded"
                 or "pickupSlots" or "classIntros" or "hpBarText" or "vsClassTableExpanded" or "trainerShiny" or "trainerClassMetadata"
                 or "martsExpanded" or "bpShopExpanded" or "swarmTableExpanded" or "typeChartExpanded" or "vsIntroTimings" or "partyPanelSize"
-                or "summaryFonts" or "partyFonts" or "hpBarFonts" or "extraFonts")
+                or "summaryFonts" or "partyFonts" or "hpBarFonts" or "extraFonts" or "bannerMotion")
             {
                 ShowError(hgEngineRefusal, "Not available on hg-engine");
                 return false;
@@ -2421,6 +2475,8 @@ namespace DSPRE
                 case "trainerNames": return ApplyExpandTrainerNamesPatch();
                 case "sameHeldItemOdds": return ApplySameHeldItemOddsPatch();
                 case "partyPanelSize": return ApplyPartyPanelSizePatch();
+                case "bannerPosition": return ApplyBannerPositionPatch();
+                case "bannerMotion": return ApplyBannerMotionPatch();
                 case "trainerClassTablesExpanded": return ApplyMoveTrainerClassTables();
                 case "trainerEncounterBgmRepointed": return ApplyMoveEncounterMusicTable();
                 case "pickupSlots": return ApplyPickupSlotsPatch();

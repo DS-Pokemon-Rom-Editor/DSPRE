@@ -64,5 +64,13 @@ namespace DSPRE
                 new PokegearTable(app, a + 0xAC8 + jp, none),
             };
         }
+
+        /// <summary>
+        /// The place-name banner's slide steps, hidden offsets and slide calls from PlaceNameBannerSites.Task, the hidden offset's
+        /// repeat after Show, and the frame loop's second "% width" after Mod.
+        /// </summary>
+        public sealed record BannerTables(int SlideIn, int SlideOut, int[] Hidden, int[] SlideCalls, int ShowRepeat, int SecondMod);
+
+        public static readonly BannerTables BannerDistances = new BannerTables(-0x2E, 0x10, new[] { 0x14, 0x18, 0x2A }, new[] { -0x1C, 0x24 }, 6, 10);
     }
 }
