@@ -1,146 +1,149 @@
-<Window MinWidth="760" MinHeight="640" xmlns="https://github.com/avaloniaui"
+<Window MinWidth="560" MinHeight="380" xmlns="https://github.com/avaloniaui"
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 		xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
 		xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Shell"
 		x:Class="DSPRE.Avalonia.Views.Shell.SettingsWindowView"
 		x:DataType="vm:SettingsWindowViewModel"
 		Title="Settings"
-		Width="880" Height="670"
-		CanResize="False"
+		Width="640" Height="440"
 		WindowStartupLocation="CenterOwner">
   <Design.DataContext>
     <vm:SettingsWindowViewModel/>
   </Design.DataContext>
 
+  <DockPanel Margin="12">
 
-  <StackPanel Margin="12" Spacing="10">
+	<Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto" Margin="0,10,0,0">
+	  <TextBlock Grid.Column="0" Text="{Binding VersionLabel}" VerticalAlignment="Center"
+	             Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+	  <Button Grid.Column="1" Content="Save" controls:Icon.Key="saveButton" Click="Save_Click"/>
+	</Grid>
 
+	<TabControl>
 
-	<TextBlock Text="{Binding VersionLabel}" FontWeight="Bold"/>
+	  <TabItem Header="General">
+		<ScrollViewer>
+		  <StackPanel Margin="4,8" Spacing="10">
+			<TextBlock Text="Startup" FontWeight="SemiBold"/>
+			<CheckBox Content="Show welcome"                 IsChecked="{Binding ShowWelcomeOnStartup}"/>
+			<CheckBox Content="Ask before switching project" IsChecked="{Binding AskBeforeSwitchingProject}"/>
+			<CheckBox Content="Show the guided tours again" IsChecked="{Binding ShowGuidedTourNextLoad}"
+			          ToolTip.Tip="You can replay them from Tools > Guided tour."/>
+			<Button Content="Open welcome &amp; tutorial" controls:Icon.Key="OpenLink" HorizontalAlignment="Left" Click="ShowWelcome_Click"/>
 
+			<TextBlock Text="Updates" FontWeight="SemiBold" Margin="0,8,0,0"/>
+			<CheckBox Content="Check app updates automatically" IsChecked="{Binding AutoCheckUpdates}"/>
+			<CheckBox Content="Update databases automatically"  IsChecked="{Binding AutoUpdateDBs}"/>
+			<StackPanel Orientation="Horizontal" Spacing="8">
+			  <Button Content="Check app updates"      Click="CheckForUpdates_Click"/>
+			  <Button Content="Check database updates" Click="CheckDBUpdates_Click"/>
+			</StackPanel>
+		  </StackPanel>
+		</ScrollViewer>
+	  </TabItem>
 
-	<Border BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="8">
-	  <StackPanel Spacing="4">
-		<TextBlock Text="ROM export path" FontWeight="SemiBold"/>
-		<Grid ColumnDefinitions="*,Auto,Auto">
-		  <TextBox Grid.Column="0" Text="{Binding ExportPath}" IsReadOnly="True"/>
-		  <Button Grid.Column="1" Content="Change path" controls:Icon.Key="folder" Margin="4,0,0,0" Click="ChangeExportPath_Click"/>
-		  <Button Grid.Column="2" Content="Clear" controls:Icon.Key="Cross"        Margin="4,0,0,0" Click="ClearExportPath_Click"/>
-		</Grid>
-	  </StackPanel>
-	</Border>
+	  <TabItem Header="Paths">
+		<ScrollViewer>
+		  <StackPanel Margin="4,8" Spacing="12">
+			<StackPanel Spacing="4">
+			  <TextBlock Text="ROM export path" FontWeight="SemiBold"/>
+			  <Grid ColumnDefinitions="*,Auto,Auto">
+				<TextBox Grid.Column="0" Text="{Binding ExportPath}" IsReadOnly="True"/>
+				<Button Grid.Column="1" Content="Change path" controls:Icon.Key="folder" Margin="4,0,0,0" Click="ChangeExportPath_Click"/>
+				<Button Grid.Column="2" Content="Clear" controls:Icon.Key="Cross"        Margin="4,0,0,0" Click="ClearExportPath_Click"/>
+			  </Grid>
+			</StackPanel>
 
+			<StackPanel Spacing="4">
+			  <TextBlock Text="Initial map import path" FontWeight="SemiBold"/>
+			  <Grid ColumnDefinitions="*,Auto,Auto">
+				<TextBox Grid.Column="0" Text="{Binding MapImportPath}" IsReadOnly="True"/>
+				<Button Grid.Column="1" Content="Change path" controls:Icon.Key="folder" Margin="4,0,0,0" Click="ChangeMapImportPath_Click"/>
+				<Button Grid.Column="2" Content="Clear" controls:Icon.Key="Cross"        Margin="4,0,0,0" Click="ClearMapImportPath_Click"/>
+			  </Grid>
+			</StackPanel>
 
-	<Border BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="8">
-	  <StackPanel Spacing="4">
-		<TextBlock Text="Initial map import path" FontWeight="SemiBold"/>
-		<Grid ColumnDefinitions="*,Auto,Auto">
-		  <TextBox Grid.Column="0" Text="{Binding MapImportPath}" IsReadOnly="True"/>
-		  <Button Grid.Column="1" Content="Change path" controls:Icon.Key="folder" Margin="4,0,0,0" Click="ChangeMapImportPath_Click"/>
-		  <Button Grid.Column="2" Content="Clear" controls:Icon.Key="Cross"        Margin="4,0,0,0" Click="ClearMapImportPath_Click"/>
-		</Grid>
-	  </StackPanel>
-	</Border>
+			<StackPanel Spacing="4">
+			  <TextBlock Text="Default ROM" FontWeight="SemiBold"/>
+			  <Grid ColumnDefinitions="*,Auto,Auto">
+				<TextBox Grid.Column="0" Text="{Binding OpenDefaultRom}" IsReadOnly="True"/>
+				<Button Grid.Column="1" Content="Change path" controls:Icon.Key="folder" Margin="4,0,0,0" Click="ChangeOpenDefaultRom_Click"/>
+				<Button Grid.Column="2" Content="Clear" controls:Icon.Key="Cross"        Margin="4,0,0,0" Click="ClearOpenDefaultRom_Click"/>
+			  </Grid>
+			  <CheckBox Content="Open the default ROM without asking" IsChecked="{Binding NeverAskForOpening}"/>
+			</StackPanel>
+		  </StackPanel>
+		</ScrollViewer>
+	  </TabItem>
 
+	  <TabItem Header="Emulator">
+		<ScrollViewer>
+		  <StackPanel Margin="4,8" Spacing="12">
+			<StackPanel Spacing="4">
+			  <TextBlock Text="Build and run" FontWeight="SemiBold"/>
+			  <ComboBox HorizontalAlignment="Left" Width="160" ItemsSource="{Binding EmulatorChoices}" SelectedIndex="{Binding EmulatorIndex}"/>
+			  <Grid ColumnDefinitions="*,Auto,Auto">
+				<TextBox Grid.Column="0" Text="{Binding EmulatorPath}" IsReadOnly="True" IsEnabled="{Binding HasSelectedEmulator}"/>
+				<Button Grid.Column="1" Content="Change path" controls:Icon.Key="folder" Margin="4,0,0,0" Click="ChangeEmulatorPath_Click"/>
+				<Button Grid.Column="2" Content="Clear" controls:Icon.Key="Cross" Margin="4,0,0,0" Click="ClearEmulatorPath_Click" IsEnabled="{Binding HasSelectedEmulator}"/>
+			  </Grid>
+			</StackPanel>
 
-	<Border BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="8">
-	  <StackPanel Spacing="4">
-		<TextBlock Text="Open default ROM" FontWeight="SemiBold"/>
-		<Grid ColumnDefinitions="*,Auto,Auto">
-		  <TextBox Grid.Column="0" Text="{Binding OpenDefaultRom}" IsReadOnly="True"/>
-		  <Button Grid.Column="1" Content="Change path" controls:Icon.Key="folder" Margin="4,0,0,0" Click="ChangeOpenDefaultRom_Click"/>
-		  <Button Grid.Column="2" Content="Clear" controls:Icon.Key="Cross"        Margin="4,0,0,0" Click="ClearOpenDefaultRom_Click"/>
-		</Grid>
-	  </StackPanel>
-	</Border>
+			<StackPanel Spacing="4" IsEnabled="{Binding HasProject}"
+			            ToolTip.Tip="Build and run offers to start the game from this save. BizHawk and melonDS only.">
+			  <TextBlock Text="Save for this project" FontWeight="SemiBold"/>
+			  <Grid ColumnDefinitions="*,Auto,Auto">
+				<TextBox Grid.Column="0" Text="{Binding TestSavePath}" IsReadOnly="True"/>
+				<Button Grid.Column="1" Content="Choose…" controls:Icon.Key="folder" Margin="4,0,0,0" Click="ChooseTestSave_Click"/>
+				<Button Grid.Column="2" Content="Clear" controls:Icon.Key="Cross" Margin="4,0,0,0" Click="ClearTestSave_Click"/>
+			  </Grid>
+			</StackPanel>
+		  </StackPanel>
+		</ScrollViewer>
+	  </TabItem>
 
+	  <TabItem Header="Appearance">
+		<ScrollViewer>
+		  <Grid Margin="4,8" ColumnDefinitions="Auto,160,*" RowDefinitions="Auto,Auto" RowSpacing="10">
+			<TextBlock Grid.Row="0" Grid.Column="0" Text="Theme" VerticalAlignment="Center" Margin="0,0,8,0"/>
+			<ComboBox  Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding ThemeNames}"
+			           SelectedIndex="{Binding ThemeIndex}"/>
+			<TextBlock Grid.Row="0" Grid.Column="2" Text="Takes effect straight away." VerticalAlignment="Center" Margin="8,0,0,0"
+			           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
 
-	<Border BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="8">
-	  <StackPanel Spacing="4">
-		<TextBlock Text="Emulator for build and run" FontWeight="SemiBold"/>
-		<Grid ColumnDefinitions="160,*,Auto,Auto">
-		  <ComboBox Grid.Column="0" HorizontalAlignment="Stretch" ItemsSource="{Binding EmulatorChoices}" SelectedIndex="{Binding EmulatorIndex}"/>
-		  <TextBox Grid.Column="1" Text="{Binding EmulatorPath}" IsReadOnly="True" Margin="4,0,0,0" IsEnabled="{Binding HasSelectedEmulator}"/>
-		  <Button Grid.Column="2" Content="Change path" controls:Icon.Key="folder" Margin="4,0,0,0" Click="ChangeEmulatorPath_Click"/>
-		  <Button Grid.Column="3" Content="Clear" controls:Icon.Key="Cross" Margin="4,0,0,0" Click="ClearEmulatorPath_Click" IsEnabled="{Binding HasSelectedEmulator}"/>
-		</Grid>
-		<Grid ColumnDefinitions="160,*,Auto,Auto" IsEnabled="{Binding HasProject}"
-		      ToolTip.Tip="Build and run offers to start the game from this save. BizHawk and melonDS only.">
-		  <TextBlock Grid.Column="0" Text="Save for this project" VerticalAlignment="Center"/>
-		  <TextBox Grid.Column="1" Text="{Binding TestSavePath}" IsReadOnly="True" Margin="4,0,0,0"/>
-		  <Button Grid.Column="2" Content="Choose…" controls:Icon.Key="folder" Margin="4,0,0,0" Click="ChooseTestSave_Click"/>
-		  <Button Grid.Column="3" Content="Clear" controls:Icon.Key="Cross" Margin="4,0,0,0" Click="ClearTestSave_Click"/>
-		</Grid>
-	  </StackPanel>
-	</Border>
+			<TextBlock Grid.Row="1" Grid.Column="0" Text="UI scale factor" VerticalAlignment="Center" Margin="0,0,8,0"/>
+			<NumericUpDown Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" Value="{Binding UiScale}" Minimum="0" Maximum="8" Increment="0.05" FormatString="0.00"/>
+			<TextBlock Grid.Row="1" Grid.Column="2" Text="0 is automatic. Needs a restart." VerticalAlignment="Center" Margin="8,0,0,0"
+			           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+		  </Grid>
+		</ScrollViewer>
+	  </TabItem>
 
+	  <TabItem Header="3D view">
+		<ScrollViewer>
+		  <StackPanel Margin="4,8" Spacing="10">
+			<TextBlock Text="Mouse controls" FontWeight="SemiBold"/>
+			<Grid ColumnDefinitions="Auto,110" RowDefinitions="Auto,Auto,Auto" RowSpacing="6" HorizontalAlignment="Left">
+			  <TextBlock Grid.Row="0" Grid.Column="0" Text="Pan speed"    VerticalAlignment="Center" Margin="0,0,8,0"/>
+			  <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding CamPanSpeed}"   Minimum="0.1" Maximum="5" Increment="0.1" FormatString="0.0"/>
+			  <TextBlock Grid.Row="1" Grid.Column="0" Text="Rotate speed" VerticalAlignment="Center" Margin="0,0,8,0"/>
+			  <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding CamOrbitSpeed}" Minimum="0.1" Maximum="5" Increment="0.1" FormatString="0.0"/>
+			  <TextBlock Grid.Row="2" Grid.Column="0" Text="Zoom speed"   VerticalAlignment="Center" Margin="0,0,8,0"/>
+			  <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding CamZoomSpeed}"  Minimum="0.1" Maximum="5" Increment="0.1" FormatString="0.0"/>
+			</Grid>
+			<WrapPanel>
+			  <CheckBox Content="Invert pan X"    IsChecked="{Binding CamInvertPanX}"   Margin="0,0,18,0"/>
+			  <CheckBox Content="Invert pan Y"    IsChecked="{Binding CamInvertPanY}"   Margin="0,0,18,0"/>
+			  <CheckBox Content="Invert rotate X" IsChecked="{Binding CamInvertOrbitX}" Margin="0,0,18,0"/>
+			  <CheckBox Content="Invert rotate Y" IsChecked="{Binding CamInvertOrbitY}" Margin="0,0,18,0"/>
+			  <CheckBox Content="Invert zoom"     IsChecked="{Binding CamInvertZoom}"/>
+			</WrapPanel>
+			<TextBlock Text="Left-drag pans, right-drag rotates, the wheel zooms."
+					   FontSize="12" Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" TextWrapping="Wrap"/>
+		  </StackPanel>
+		</ScrollViewer>
+	  </TabItem>
 
-	<StackPanel Orientation="Horizontal" Spacing="24">
-	  <CheckBox Content="Open the default ROM without asking" IsChecked="{Binding NeverAskForOpening}"/>
-	  <CheckBox Content="Check app updates automatically" IsChecked="{Binding AutoCheckUpdates}"/>
-	  <CheckBox Content="Update databases automatically"  IsChecked="{Binding AutoUpdateDBs}"/>
-	</StackPanel>
-
-
-	<Border BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="8">
-	  <Grid ColumnDefinitions="Auto,160,*">
-		<TextBlock Grid.Column="0" Text="Theme" VerticalAlignment="Center" Margin="0,0,8,0"/>
-		<ComboBox Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding ThemeNames}"
-		          SelectedIndex="{Binding ThemeIndex}"/>
-		<TextBlock Grid.Column="2" Text="Takes effect straight away." VerticalAlignment="Center" Margin="8,0,0,0"
-		           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
-	  </Grid>
-	</Border>
-
-
-	<Border BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="8">
-	  <Grid ColumnDefinitions="Auto,110,*">
-		<TextBlock Grid.Column="0" Text="UI scale factor" VerticalAlignment="Center" Margin="0,0,8,0"/>
-		<NumericUpDown Grid.Column="1" Value="{Binding UiScale}" Minimum="0" Maximum="8" Increment="0.05" FormatString="0.00"/>
-		<TextBlock Grid.Column="2" Text="0 = automatic; restart required" VerticalAlignment="Center" Margin="8,0,0,0"
-		           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
-	  </Grid>
-	</Border>
-
-
-	<StackPanel Orientation="Horizontal" Spacing="24">
-	  <CheckBox Content="Show welcome at startup"       IsChecked="{Binding ShowWelcomeOnStartup}"/>
-	  <CheckBox Content="Ask before switching project"  IsChecked="{Binding AskBeforeSwitchingProject}"/>
-	  <CheckBox Content="Show the guided tours again" IsChecked="{Binding ShowGuidedTourNextLoad}"
-	            ToolTip.Tip="The tour can also be replayed anytime from Tools > Guided tour"/>
-	  <Button Content="Open welcome &amp; tutorial" controls:Icon.Key="OpenLink" Click="ShowWelcome_Click"/>
-	</StackPanel>
-
-
-	<Border BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="8">
-	  <StackPanel Spacing="6">
-		<TextBlock Text="3D view camera (mouse)" FontWeight="SemiBold"/>
-		<Grid ColumnDefinitions="Auto,110,28,Auto,110,28,Auto,110" RowDefinitions="Auto">
-		  <TextBlock Grid.Column="0" Text="Pan speed"    VerticalAlignment="Center" Margin="0,0,6,0"/>
-		  <NumericUpDown Grid.Column="1" Value="{Binding CamPanSpeed}"   Minimum="0.1" Maximum="5" Increment="0.1" FormatString="0.0"/>
-		  <TextBlock Grid.Column="3" Text="Rotate speed" VerticalAlignment="Center" Margin="0,0,6,0"/>
-		  <NumericUpDown Grid.Column="4" Value="{Binding CamOrbitSpeed}" Minimum="0.1" Maximum="5" Increment="0.1" FormatString="0.0"/>
-		  <TextBlock Grid.Column="6" Text="Zoom speed"   VerticalAlignment="Center" Margin="0,0,6,0"/>
-		  <NumericUpDown Grid.Column="7" Value="{Binding CamZoomSpeed}"  Minimum="0.1" Maximum="5" Increment="0.1" FormatString="0.0"/>
-		</Grid>
-		<WrapPanel>
-		  <CheckBox Content="Invert pan X"    IsChecked="{Binding CamInvertPanX}"   Margin="0,0,18,0"/>
-		  <CheckBox Content="Invert pan Y"    IsChecked="{Binding CamInvertPanY}"   Margin="0,0,18,0"/>
-		  <CheckBox Content="Invert rotate X" IsChecked="{Binding CamInvertOrbitX}" Margin="0,0,18,0"/>
-		  <CheckBox Content="Invert rotate Y" IsChecked="{Binding CamInvertOrbitY}" Margin="0,0,18,0"/>
-		  <CheckBox Content="Invert zoom"     IsChecked="{Binding CamInvertZoom}"/>
-		</WrapPanel>
-		<TextBlock Text="Left-drag pans, right-drag rotates, the wheel zooms."
-				   FontSize="12" Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" TextWrapping="Wrap"/>
-	  </StackPanel>
-	</Border>
-
-
-	<StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-	  <Button Content="Check app updates"      Click="CheckForUpdates_Click"/>
-	  <Button Content="Check database updates" Click="CheckDBUpdates_Click"/>
-	  <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click"/>
-	</StackPanel>
-
-  </StackPanel>
+	</TabControl>
+  </DockPanel>
 </Window>
