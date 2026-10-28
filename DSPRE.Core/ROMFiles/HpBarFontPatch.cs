@@ -59,6 +59,7 @@ namespace DSPRE.ROMFiles
 
         private static uint PatchedCode()
         {
+            if (!SupportsCurrentRom) return 0;
             try { return PatchedCode(ReadOverlay()); }
             catch (Exception ex) when (ex is IOException || ex is ArgumentException) { return 0; }
         }

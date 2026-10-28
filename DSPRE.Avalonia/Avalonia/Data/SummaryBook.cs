@@ -48,6 +48,9 @@ namespace DSPRE.Avalonia.Data
         /// <param name="species">The Pokémon the pages are shown with; 0 keeps the usual sample.</param>
         public SummaryBook(int species = 0)
         {
+            // Building the pages already reads the sample's moves and types; MakeComposer unpacks the rest later.
+            try { DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.MoveData, DirNames.PersonalPokeData }); }
+            catch (Exception ex) { AppLogger.WarnOnce("SummaryBook.Unpack", ex); }
             _sample = new DexSample(species);
             _hgss = GameFamily == GameFamilies.HGSS;
             _sites = RomLocator.SummaryScreenSites;
@@ -369,7 +372,7 @@ namespace DSPRE.Avalonia.Data
             List<ScreenSprite> sprites = page.Main.Sprites;
             // Each sprite takes the colour row its template gives it (the cells' own rows are overridden); the shared
             // sprite colours sit at the start of sprite colour memory.
-            string[] tabs = { "Info", "Trainer memo", "Skills", "Battle moves", "Condition", "Contest moves", "Ribbons", "Exit" };
+            string[] tabs = { "Info", "Trainer memo", "Stats", "Battle moves", "Condition", "Contest moves", "Ribbons", "Exit" };
             int[] tabRows = { 1, 1, 1, 2, 1, 2, 2, 2 };
             // Eight tabs centred on 188, the open one 24 wide and the rest 16.
             int left = 188 - (24 + 7 * 16) / 2;
@@ -576,7 +579,7 @@ namespace DSPRE.Avalonia.Data
                     // The memo's first line, the nature (Hardy for the sample).
                     Label("Memo", 0, "Memo", 24, Ink.Black),
                 }),
-                new Spec("skills", "Skills", 5, 15, new[]
+                new Spec("skills", "Stats", 5, 15, new[]
                 {
                     Label("Static", 2, "Title", 109),
                     Label("Static", 15, "HP heading", 110),
@@ -666,7 +669,7 @@ namespace DSPRE.Avalonia.Data
                     // Shiny Leaf: printed only once the Pokémon has a leaf, which the sample doesn't.
                     new Box("Info", 7, "Shiny Leaf", Array.Empty<Print>()),
                 }, Exp: true),
-                new Spec("skills", "Skills and moves", 19, 17, new[]
+                new Spec("skills", "Stats and moves", 19, 17, new[]
                 {
                     Label("Static", 2, "Title", 109),
                     Label("Static", 15, "HP heading", 110),

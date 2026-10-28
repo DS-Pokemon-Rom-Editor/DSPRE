@@ -166,6 +166,21 @@ namespace DSPRE.Avalonia
                 S("name:BattlePreview", "In battle", "The bar on the battle screen."),
                 S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
+            Add("ScreenCursorView", "Cursor",
+                S(null, "Cursor", "Set where the arrow keys move the cursor on this screen."),
+                S("toolbar", "Menu or page", "Pick the menu or page to edit."),
+                S("name:StopList", "Stops", "Pick where Up, Down, Left and Right go from each stop."),
+                S("name:Board", "Arrows", "Hold an arrow key and click a stop to send that arrow there."),
+                S("name:BackList", "Leaving the buttons", "Pick where the cursor goes when it leaves a row of buttons."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
+
+            Add("ScreenButtonsView", "Touch areas",
+                S(null, "Touch areas", "Set where each button can be touched."),
+                S("toolbar", "Page", "Pick the page to edit."),
+                S("name:AreaList", "Touch areas", "Type a position and size, or drag on the screen."),
+                S("name:Board", "Screen", "Dragging a button moves its cursor too."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
+
             Add("MoveBackgroundEditorView", "Move backgrounds",
                 S("name:BackgroundList", "Backgrounds", "The backgrounds some moves show in battle."),
                 S("name:FileNumbers", "Files", "Its drawing, colours and three screens."),

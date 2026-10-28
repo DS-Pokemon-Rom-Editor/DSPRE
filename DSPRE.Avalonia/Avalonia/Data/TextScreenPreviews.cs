@@ -150,6 +150,33 @@ namespace DSPRE.Avalonia.Data
 
         private static HgssTouchScreen _touch;
 
+        /// <summary>Draws the HGSS touch menu with sprites and names at the given spots.</summary>
+        internal static byte[] TouchMenuPicture(IReadOnlyList<(int X, int Y)> sprites, IReadOnlyList<(int X, int Y)> labels)
+        {
+            lock (Gate)
+            {
+                ForThisRom();
+                _touch ??= HgssTouchScreen.Load();
+                if (_touch == null) return null;
+                FieldFont font = Font(HgssTouchScreen.FontEntry) ?? FieldFont.LoadSystemFont();
+                FieldFont iconFont = Font(HgssTouchScreen.IconFontEntry) ?? font;
+                int bank = RomInfo.FieldTouchMenuTextArchive;
+                string Text(int m) => FieldStringVars.Expand(ArchiveLine(bank, m), GameTextScreens.SampleWord);
+                return _touch.RenderMenu(font, iconFont, Text, new HgssTouchScreen.MenuLook { RegisteredItems = true, Sprites = sprites, Labels = labels });
+            }
+        }
+
+        /// <summary>Draws the HGSS Poké Ball screen with a yes/no menu, or a list with its text in the given windows.</summary>
+        internal static byte[] TouchChoicesPicture(IReadOnlyList<string> labels, bool yesNo, IReadOnlyList<(int X, int Y, int Width, int Height)> windows)
+        {
+            lock (Gate)
+            {
+                ForThisRom();
+                _touch ??= HgssTouchScreen.Load();
+                return _touch?.RenderChoices(Font(HgssTouchScreen.FontEntry) ?? FieldFont.LoadSystemFont(), labels, yesNo, 0, false, windows);
+            }
+        }
+
         private static void AddTouchMenu(List<TextScreenShot> shots, int bank, int line, string text)
         {
             if (bank != RomInfo.FieldTouchMenuTextArchive || Array.IndexOf(TouchMenuMessages, line) < 0) return;
@@ -249,13 +276,25 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Reads everything again on the next preview, after the font archive was saved.</summary>
         public static void ForgetFonts() { lock (Gate) _rom = null; }
 
+        // Caches belong to one ROM; called under Gate.
+        private static void ForThisRom()
+        {
+            if (_rom == RomInfo.WorkDir) return;
+            _rom = RomInfo.WorkDir;
+            Reads.Clear();
+            Fonts.Clear();
+            _speciesByAbility = null;
+            _battle = null;
+            _touch = null;
+        }
+
         public static List<TextScreenShot> For(int bank, int line, string text, int stop = 0)
         {
             List<TextScreenShot> shots = new List<TextScreenShot>();
             HashSet<long> footprints = new HashSet<long>();
             lock (Gate)
             {
-                if (_rom != RomInfo.WorkDir) { _rom = RomInfo.WorkDir; Reads.Clear(); Fonts.Clear(); _speciesByAbility = null; _battle = null; _touch = null; }
+                ForThisRom();
                 // Other lines may have been saved since the last check.
                 ArchiveLines.Clear();
                 int species = line >= 1 && line < SpeciesCount() ? line : 0;

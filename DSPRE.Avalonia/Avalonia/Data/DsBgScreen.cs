@@ -15,7 +15,7 @@ namespace DSPRE.Avalonia.Data
 
         private sealed class Layer
         {
-            public int Priority, CharBase;
+            public int Priority, CharBase, ScrollX, ScrollY;
             public bool Visible = true;
             public readonly ushort[] Map = new ushort[MapSide * MapSide];
         }
@@ -27,6 +27,12 @@ namespace DSPRE.Avalonia.Data
 
         public void InitLayer(int bg, int priority, int charBase) =>
             _layers[bg] = new Layer { Priority = priority, CharBase = charBase };
+
+        /// <summary>Scrolls a layer like the BG offset registers, so pixel x, y of the layer lands at the top left.</summary>
+        public void SetScroll(int bg, int x, int y)
+        {
+            if (_layers[bg] != null) (_layers[bg].ScrollX, _layers[bg].ScrollY) = (x, y);
+        }
 
         public void SetVisible(int bg, bool visible)
         {
@@ -53,6 +59,12 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>Puts sixteen colours into palette slot <paramref name="slot"/>, starting at colour <paramref name="from"/>.</summary>
+        /// <summary>Loads one palette row per 16 colours from row <paramref name="first"/>, until the colours or the 16 rows run out.</summary>
+        public void SetPalettes(ushort[] colours, int first = 0, int rows = 16)
+        {
+            for (int r = 0; r < rows && first + r < 16 && colours != null && r * 16 < colours.Length; r++) SetPalette(first + r, colours, r * 16);
+        }
+
         public void SetPalette(int slot, ushort[] colours, int from = 0)
         {
             for (int i = 0; i < 16; i++)
@@ -105,7 +117,8 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>The screen as 256 by 192 straight RGBA.</summary>
-        public byte[] Render()
+        /// <param name="under">A picture that shows where no layer draws, instead of the backdrop colour.</param>
+        public byte[] Render(byte[] under = null)
         {
             byte[] rgba = new byte[Width * Height * 4];
             List<Layer> order = new List<Layer>();
@@ -118,11 +131,13 @@ namespace DSPRE.Avalonia.Data
                 for (int x = 0; x < Width; x++)
                 {
                     ushort c = _colours[0];
+                    bool drawn = false;
                     foreach (Layer layer in sorted)
                     {
-                        ushort e = layer.Map[(y / TileSize) * MapSide + x / TileSize];
+                        int px = (x + layer.ScrollX) & (MapSide * TileSize - 1), py = (y + layer.ScrollY) & (MapSide * TileSize - 1);
+                        ushort e = layer.Map[(py / TileSize) * MapSide + px / TileSize];
                         int tile = e & 0x3FF, palette = e >> 12;
-                        int lx = x % TileSize, ly = y % TileSize;
+                        int lx = px % TileSize, ly = py % TileSize;
                         if ((e & 0x400) != 0) lx = 7 - lx;
                         if ((e & 0x800) != 0) ly = 7 - ly;
                         int at = layer.CharBase + tile * 32 + (ly * 8 + lx) / 2;
@@ -130,9 +145,11 @@ namespace DSPRE.Avalonia.Data
                         int index = ((ly * 8 + lx) & 1) != 0 ? _vram[at] >> 4 : _vram[at] & 0xF;
                         if (index == 0) continue;
                         c = _colours[palette * 16 + index];
+                        drawn = true;
                         break;
                     }
-                    Put(rgba, (y * Width + x) * 4, c);
+                    if (!drawn && under != null) Buffer.BlockCopy(under, (y * Width + x) * 4, rgba, (y * Width + x) * 4, 4);
+                    else Put(rgba, (y * Width + x) * 4, c);
                 }
             return rgba;
         }
@@ -308,8 +325,8 @@ namespace DSPRE.Avalonia.Data
             return font.Measure(text, FieldFontCharacters.GlyphFor);
         }
 
-        /// <summary>Writes a line in the ROM's font with its letter and shadow colours, as 15-bit colours.</summary>
-        public static void DrawText(byte[] rgba, FieldFont font, string text, int x, int y, ushort letter, ushort shadow)
+        /// <summary>Writes a line in a ROM font with 15-bit letter and shadow colours, and an outline colour for fonts that have one.</summary>
+        public static void DrawText(byte[] rgba, FieldFont font, string text, int x, int y, ushort letter, ushort shadow, ushort? outline = null)
         {
             if (rgba == null || string.IsNullOrEmpty(text) || font == null || !FieldFontCharacters.Ready) return;
             int pen = x;
@@ -322,10 +339,10 @@ namespace DSPRE.Avalonia.Data
                         for (int gx = 0; gx < advance; gx++)
                         {
                             byte v = font.PixelAt(g, gx, gy);
-                            if (v == FieldFont.Nothing || v == FieldFont.Paper) continue;
+                            if (v == FieldFont.Nothing || (v == FieldFont.Paper && outline == null)) continue;
                             int X = pen + gx, Y = y + gy;
                             if (X < 0 || Y < 0 || X >= Width || Y >= Height) continue;
-                            Put(rgba, (Y * Width + X) * 4, v == 1 ? letter : shadow);
+                            Put(rgba, (Y * Width + X) * 4, v == 1 ? letter : v == FieldFont.Paper ? outline.Value : shadow);
                         }
                 pen += advance > 0 ? advance : 6;
             }

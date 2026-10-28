@@ -454,6 +454,142 @@ namespace DSPRE.Tests.Core
                     SameAsUs("Pokéathlon members", arm9Here, p, usArm9, RomLocator.PokeathlonMemberTableIn(game, usLanguage, us.Revision).Value, 494 * 2);
                 }
 
+                PartyCursorSites cursor = RomLocator.PartyCursorSitesIn(game, language, rev);
+                if (cursor != null && usDump != null)
+                {
+                    checkedCount++;
+                    PartyCursorSites usCursor = RomLocator.PartyCursorSitesIn(game, usLanguage, us.Revision);
+                    for (int s = 0; s < cursor.Sets.Length; s++)
+                    {
+                        SameAsUs($"party cursor set {s}", arm9Here, (int)cursor.Sets[s], usArm9, (int)usCursor.Sets[s], 64);
+                        // pokeplatinum main.c / pokeheartgold party_menu.c: slot 1's cursor is at 64, 25 in every set.
+                        if (arm9Here[cursor.Sets[s]] != 64 || arm9Here[cursor.Sets[s] + 1] != 25) Fail($"party cursor set {s} doesn't start at slot 1");
+                    }
+                    SameAsUs("party cursor back rows", arm9Here, (int)cursor.Back, usArm9, (int)usCursor.Back, 24);
+                    for (int r = 0; r < 4; r++)
+                        if (!arm9Here.Skip((int)cursor.Back + r * 6).Take(6).OrderBy(b => b).SequenceEqual(new byte[] { 0, 1, 2, 3, 4, 5 }))
+                            Fail($"party cursor back row {r} isn't slots 1 to 6");
+                }
+
+                BagButtonSites bag = RomLocator.BagButtonSitesIn(game, language, rev);
+                if (bag != null && usDump != null)
+                {
+                    checkedCount++;
+                    BagButtonSites usBag = RomLocator.BagButtonSitesIn(game, usLanguage, us.Revision);
+                    byte[] ov = here.File(bag.Overlay), usOv = usDump.File(usBag.Overlay);
+                    // pokeheartgold bag_app_main.c sContextMenuDPadDestinations starts { 2, 2, 1, 1 }.
+                    if (!ov.AsSpan((int)bag.ContextFlow, 4).SequenceEqual(new byte[] { 2, 2, 1, 1 })) Fail("bag context menu arrows aren't at the site");
+                    // Every bag table, by its distance from that one and its length. Japanese sizes the amount pages' Confirm and
+                    // Cancel to their text, so only their arrows are compared and their lists must end where the US ones do.
+                    foreach ((string table, int at, int length) in new[]
+                    {
+                        ("context arrows", 0, 20), ("context touch", 0x28, 21), ("sell arrows", 0x40, 16), ("move arrows", 0x5C, 36),
+                        ("toss arrows", 0x80, 24), ("move touch", 0xC8, 37), ("main arrows", 0x118, 68), ("main touch", 0x15C, 69),
+                        ("move cursor", 0x50C, 36), ("cursor", 0x590, 84),
+                    })
+                        SameAsUs($"bag {table}", ov, (int)bag.ContextFlow + at, usOv, (int)usBag.ContextFlow + at, length);
+                    if (ov[(int)bag.ContextFlow + 0x40 + 24] != 0xFF || ov[(int)bag.ContextFlow + 0x80 + 32] != 0xFF) Fail("bag amount touch lists don't end after Cancel");
+                }
+
+                // The touch and cursor tables of the battle screen, touch menu, PC, Pokédex, Pokégear and summary, by their distance
+                // from each site and their length. Known language differences are left out of the comparison.
+                bool hgss = game is GameVersions.HeartGold or GameVersions.SoulSilver;
+                bool japanese = language == GameLanguages.Japanese;
+                BattleCommandSites command = RomLocator.BattleCommandSitesIn(game, language, rev);
+                if (command != null && usDump != null)
+                {
+                    checkedCount++;
+                    BattleCommandSites usCommand = RomLocator.BattleCommandSitesIn(game, usLanguage, us.Revision);
+                    byte[] ov = here.File(command.Overlay), usOv = usDump.File(usCommand.Overlay);
+                    // pokeplatinum battle_subscreen.c sSelectTargetMenuButtonLayout starts { 3, 1, 0, 2, 4, 4 }.
+                    if (!ov.AsSpan((int)command.TargetGrid, 6).SequenceEqual(new byte[] { 3, 1, 0, 2, 4, 4 })) Fail("battle target grid isn't at the site");
+                    foreach ((string table, int at, int length) in new[]
+                    {
+                        ("grids", 0, 0x16), ("yes/no and Pal Park grids", -0x14, 6), ("command touch", hgss ? 0x14C : 0x174, 17), ("fight touch", 0x1B0, 21), ("target touch", 0x1E0, 21),
+                        ("yes/no touch", hgss ? 0x7C : 0x70, 9), ("first battle touch", hgss ? 0x30 : 0x38, 5), ("Pal Park touch", hgss ? 0x64 : 0x7C, 9),
+                        ("recorded battle touch", hgss ? 0x1E : 0x28, 5),
+                    })
+                        SameAsUs($"battle {table}", ov, (int)command.TargetGrid + at, usOv, (int)usCommand.TargetGrid + at, length);
+                }
+
+                TouchMenuSites touchMenu = RomLocator.TouchMenuSitesIn(game, language, rev);
+                if (touchMenu != null && usDump != null)
+                {
+                    checkedCount++;
+                    TouchMenuSites usMenu = RomLocator.TouchMenuSitesIn(game, usLanguage, us.Revision);
+                    byte[] ov = here.File(touchMenu.Overlay), usOv = usDump.File(usMenu.Overlay);
+                    // Japanese moves only the X mark, the last sprite spot.
+                    foreach ((string table, int at, int length) in new[]
+                    {
+                        ("menu touch", 0, 41), ("side buttons touch", -0x9C, 9), ("sprite spots", 0xD0, 14 * 4), ("name windows", 0x10C, 64), ("arrows", 0x14C, 84),
+                    })
+                        SameAsUs($"touch menu {table}", ov, (int)touchMenu.MenuRects + at, usOv, (int)usMenu.MenuRects + at, length);
+                }
+
+                PcBoxSites pc = RomLocator.PcBoxSitesIn(game, language, rev);
+                if (pc != null && usDump != null)
+                {
+                    checkedCount++;
+                    PcBoxSites usPc = RomLocator.PcBoxSitesIn(game, usLanguage, us.Revision);
+                    byte[] ov = here.File(pc.Overlay), usOv = usDump.File(usPc.Overlay);
+                    uint ram = here.RamOf(pc.Overlay), usRam = usDump.RamOf(usPc.Overlay);
+                    int[] stops = { 12, 10, 39, 42, 46, 14, 38, 10, 8, 12, 8 };
+                    for (int layout = 0; layout < stops.Length; layout++)
+                    {
+                        int entry = (int)pc.Layouts + layout * 12, usEntry = (int)usPc.Layouts + layout * 12;
+                        int touch = (int)(U32(ov, entry) - ram), usTouch = (int)(U32(usOv, usEntry) - usRam);
+                        int flow = (int)(U32(ov, entry + 4) - ram), usFlow = (int)(U32(usOv, usEntry + 4) - usRam);
+                        SameAsUs($"PC layout {layout} cursor", ov, flow, usOv, usFlow, stops[layout] * 8);
+                        // Japanese keeps an older box name area on the item layout.
+                        if (!(japanese && layout == 6)) SameAsUs($"PC layout {layout} touch", ov, touch, usOv, usTouch, stops[layout] * 4 + 1);
+                    }
+                }
+
+                PokedexSearchSites dex = RomLocator.PokedexSearchSitesIn(game, language, rev);
+                if (dex != null && usDump != null)
+                {
+                    checkedCount++;
+                    PokedexSearchSites usDex = RomLocator.PokedexSearchSitesIn(game, usLanguage, us.Revision);
+                    byte[] ov = here.File(dex.Overlay), usOv = usDump.File(usDex.Overlay);
+                    int[] stops = { 10, 8, 29, 20, 4, 4, 6, 17 };
+                    for (int page = 0; page < stops.Length; page++)
+                    {
+                        // Japanese and Korean have a different name page; Japanese also fits the search and type areas to its text.
+                        if (page == 2 && language is GameLanguages.Japanese or GameLanguages.Korean) continue;
+                        SameAsUs($"Pokédex page {page} cursor", ov, (int)dex.Flow[page], usOv, (int)usDex.Flow[page], stops[page] * 8);
+                        if (!(japanese && page is 0 or 3)) SameAsUs($"Pokédex page {page} touch", ov, (int)dex.Touch[page], usOv, (int)usDex.Touch[page], stops[page] * 4 + 1);
+                    }
+                }
+
+                PokegearSites gear = RomLocator.PokegearSitesIn(game, language, rev);
+                if (gear != null && usDump != null)
+                {
+                    checkedCount++;
+                    PokegearSites usGear = RomLocator.PokegearSitesIn(game, usLanguage, us.Revision);
+                    byte[] bar = here.File(gear.BarOverlay), usBar = usDump.File(usGear.BarOverlay);
+                    byte[] app = here.File(gear.AppOverlay), usApp = usDump.File(usGear.AppOverlay);
+                    SameAsUs("Pokégear bar touch", bar, (int)gear.BarRects, usBar, (int)usGear.BarRects, 21);
+                    SameAsUs("Pokégear bar cursor", bar, 0x1BDC, usBar, 0x1BDC, 0x1CC0 + 60 - 0x1BDC);
+                    int shift = japanese ? -8 : 0;
+                    foreach ((string table, int at, int length) in new[] { ("skins touch", 0x540, 25), ("phone touch", 0x790, 33) })
+                        SameAsUs($"Pokégear {table}", app, (int)gear.MapAreas + at + shift, usApp, (int)usGear.MapAreas + at, length);
+                    SameAsUs("Pokégear skins cursor", app, (int)gear.MapAreas + 0x368, usApp, (int)usGear.MapAreas + 0x368, 72);
+                    SameAsUs("Pokégear map touch", app, (int)gear.MapAreas + 8, usApp, (int)usGear.MapAreas + 8, 9);
+                }
+
+                SummaryTouchSites summary = RomLocator.SummaryTouchSitesIn(game, language, rev);
+                if (summary != null && usDump != null)
+                {
+                    checkedCount++;
+                    SummaryTouchSites usSummary = RomLocator.SummaryTouchSitesIn(game, usLanguage, us.Revision);
+                    // Japanese sizes the ribbon detail's close button differently, the last ribbon entry.
+                    foreach ((string table, int at, int length) in new[]
+                    {
+                        ("move buttons", 0, 12), ("box arrows", 0x0C, 9), ("moves", 0x28, 17), ("ribbons", 0x13C, 44), ("tabs", 0x1750, 41), ("party icons", 0xD30, 4),
+                    })
+                        SameAsUs($"summary {table}", arm9Here, (int)summary.Cancel + at, usArm9, (int)usSummary.Cancel + at, length);
+                }
+
                 HpBarTextSites hp = RomLocator.HpBarTextSitesIn(game, language, rev);
                 if (hp != null)
                 {

@@ -178,6 +178,13 @@ namespace DSPRE
             return Path.Combine(WorkDir, "overlay", $"overlay_{overlayNumber:D4}.bin");
         }
 
+        /// <summary>Decompresses the overlay if needed and returns its path.</summary>
+        public static string DecompressedPath(int overlayNumber)
+        {
+            if (IsCompressed(overlayNumber)) Decompress(overlayNumber);
+            return GetPath(overlayNumber);
+        }
+
         /// <summary>Whether the overlay on disk is still compressed. ds-rom projects keep overlays flat until build.</summary>
         public static bool IsStillCompressed(int ovNumber) =>
             !RomInfo.OverlaysStayFlat && OverlayTable.IsDefaultCompressed(ovNumber) && IsCompressed(ovNumber);

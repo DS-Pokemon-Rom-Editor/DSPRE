@@ -29,6 +29,25 @@ namespace DSPRE.Avalonia.Data
             public void Dispose() => _using = _before;
         }
 
+        [ThreadStatic] private static (bool Item, int[] Windows)? _usingMenu;
+
+        /// <summary>Sets the party menu the Cursor tab draws on this thread, and each option's window, until disposed.</summary>
+        public static IDisposable UseMenu((bool Item, int[] Windows)? menu)
+        {
+            (bool, int[])? before = _usingMenu;
+            _usingMenu = menu;
+            return new MenuRestore(before);
+        }
+
+        internal static (bool Item, int[] Windows)? Menu => _usingMenu;
+
+        private sealed class MenuRestore : IDisposable
+        {
+            private readonly (bool, int[])? _before;
+            public MenuRestore((bool, int[])? before) { _before = before; }
+            public void Dispose() => _usingMenu = _before;
+        }
+
         public static ScreenWindowLayout For(string screen)
         {
             if (_using.Layout != null && _using.Screen == screen) return _using.Layout;
@@ -118,8 +137,8 @@ namespace DSPRE.Avalonia.Data
                 return l >= 0 && l < lines.Count ? lines[l] : "";
             }
             int first = Math.Clamp(text.FirstLine, 0, Math.Max(0, lines.Count - 1));
-            // A Layout-only state is drawn as the nearest real one.
-            int drawn = state < 0 || text.States == null ? -1 : text.DrawnAs?.Invoke(state) ?? Math.Min(state, text.States.Length - 1);
+            // A Layout-only state is drawn as the nearest real one; a screen with only Layout states draws them as they are.
+            int drawn = state < 0 ? -1 : text.DrawnAs?.Invoke(state) ?? (text.States == null ? state : Math.Min(state, text.States.Length - 1));
             GameTextScreens.Shot shot = GameTextScreens.Draw(text, bank, first, Line(bank, first), Line, 0, drawn);
             GameTextScreens.Shot other = GameTextScreens.DrawOther(text, Math.Max(0, drawn), Line);
             bool shotOnTop = shot?.Name?.EndsWith("top", StringComparison.Ordinal) == true;

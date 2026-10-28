@@ -13,7 +13,7 @@ using DSPRE.ROMFiles;
 namespace DSPRE.Avalonia.ViewModels.Graphics
 {
     /// <summary>A screen's text windows to drag or type into, next to the screens as the game draws them.</summary>
-    public sealed class ScreenWindowLayoutViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
+    public sealed partial class ScreenWindowLayoutViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges, ISupportsUndo, IDetachable, IScreenPreviewSource
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
@@ -41,6 +41,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (screen == "party") _panels = PartyPanelLayout.Read();
             _windowTables = new PendingArchiveWrites.Target("windows", _layout.FileBytes, _layout.WriteFile);
             if (_panels != null) _panelTables = new PendingArchiveWrites.Target("panels", _panels.FileBytes, _panels.WriteFile);
+            OpenCursor();
             OpenFontTable();
             _savedSize = _panels?.Size;
             _inPanel = InPanel();
@@ -68,7 +69,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         /// <summary>Use while drawing on a worker thread, so the preview shows the unsaved edits.</summary>
         public IDisposable DrawScope() => new Scopes(_pending.Reading(), ScreenWindowLayouts.Use(_screen, _layout, _panels),
-                                                     ScreenWindowLayouts.UseFonts(_fonts));
+                                                     ScreenWindowLayouts.UseFonts(_fonts), ScreenWindowLayouts.UseMenu(ShownMenu));
 
         private sealed class Scopes : IDisposable
         {
@@ -83,6 +84,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_pending.Read(_windowTables) is byte[] windows) _layout.FromBytes(windows);
             if (_panelTables != null && _pending.Read(_panelTables) is byte[] panels) _panels.FromBytes(panels);
             if (_fontTable != null && _pending.Read(_fontTable) is byte[] fonts) _fonts = PartyFontPatch.FontsIn(fonts, _layout.Windows);
+            if (_cursorTable != null && _pending.Read(_cursorTable) is byte[] cursor) _flow.FromBytes(cursor);
+            if (_menuTable != null && _pending.Read(_menuTable) is byte[] menu) _menu.FromBytes(menu);
             RaiseUndo();
             Refresh();
             Changed?.Invoke();
@@ -98,6 +101,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (_panelTables != null) _pending.Stage(_panelTables, _panels.ToBytes());
                 // The font table is keyed by where each window is, so it follows every move.
                 if (_fontTable != null) _pending.Stage(_fontTable, PartyFontPatch.Table(_layout.Windows, _fonts));
+                if (_cursorTable != null) _pending.Stage(_cursorTable, _flow.ToBytes());
+                if (_menuTable != null) _pending.Stage(_menuTable, _menu.ToBytes());
                 return null;
             });
         }
@@ -255,8 +260,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public ObservableCollection<ScreenWindowRow> BottomWindows { get; } = new ObservableCollection<ScreenWindowRow>();
 
         private Bitmap _top, _bottom;
-        public Bitmap TopPicture { get => _top; private set { _top = value; Raise(); } }
-        public Bitmap BottomPicture { get => _bottom; private set { _bottom = value; Raise(); } }
+        public Bitmap TopPicture { get => _top; private set { _top = value; Raise(); Raise(nameof(CursorPicture)); } }
+        public Bitmap BottomPicture { get => _bottom; private set { _bottom = value; Raise(); Raise(nameof(CursorPicture)); } }
 
         public bool ShowTop => _screens != 2 && (TopWindows.Count > 0 || _top != null);
         public bool ShowBottom => _screens != 1 && (BottomWindows.Count > 0 || _bottom != null);
@@ -412,6 +417,20 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         Windows.Add(row);
                         (mainOnTop ? TopWindows : BottomWindows).Add(row);
                     }
+            if (_panels != null && _panels.HasBallButtons && !multi)
+                for (int n = 0; n < PartyPanelLayout.PartySize; n++)
+                {
+                    ScreenWindowRow row = new ScreenWindowRow(new ScreenWindowLayout.Window
+                    {
+                        Group = BallGroup, Name = $"Poké Ball {n + 1}", Pokemon = n + 1, Part = "Poké Ball", Layer = 4,
+                        Width = PartyPanelLayout.BallButtonTiles, Height = PartyPanelLayout.BallButtonTiles,
+                    }, BallColour, 0)
+                    {
+                        MoveTo = (r, x, y) => { Move(r, x, y); Commit(); },
+                    };
+                    Windows.Add(row);
+                    (mainOnTop ? BottomWindows : TopWindows).Add(row);
+                }
             SyncPanels();
             foreach (ScreenWindowLayout.Window w in _layout.Windows.Where(w => !HasStates || _text.Shows(_state, w.Group, w.Name)))
             {
@@ -443,6 +462,24 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private static bool IsPanel(ScreenWindowRow row) => row.Window.Group == PanelGroup;
         private static bool IsSprite(ScreenWindowRow row) => row.Window.Group == SpriteGroup;
+        private static bool IsBall(ScreenWindowRow row) => row.Window.Group == BallGroup;
+
+        // Moving a Platinum Poké Ball button moves its art and touch area.
+        private const string BallGroup = "Poké Balls", BallColour = "#E57373";
+
+        private void MoveBall(ScreenWindowRow row, int x, int y)
+        {
+            int dx = x - row.Window.X, dy = y - row.Window.Y;
+            if (dx == 0 && dy == 0) return;
+            foreach (int n in _moveAll ? Enumerable.Range(0, PartyPanelLayout.PartySize) : new[] { row.Window.Pokemon - 1 })
+            {
+                (int bx, int by) = _panels.BallButton(n);
+                _panels.MoveBallButton(n, bx + dx, by + dy);
+            }
+            SyncPanels();
+            Raise(nameof(HasUnsavedChanges));
+            _ = RedrawAsync();
+        }
 
         // Board box sizes in tiles.
         private const string SpriteGroup = "Sprites", SpriteColour = "#C8C8C8";
@@ -483,6 +520,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 row.Window.Y = (int)Math.Floor((cy - row.Window.Height * 4) / 8.0);
                 row.Refresh();
             }
+            foreach (ScreenWindowRow row in Windows.Where(IsBall))
+            {
+                (row.Window.X, row.Window.Y) = _panels.BallButton(row.Window.Pokemon - 1);
+                row.Refresh();
+            }
+            RefreshCursor();
         }
 
         private List<string> PanelNotes(ScreenWindowRow row, int state)
@@ -518,7 +561,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 ScreenWindowLayout.Window w = row.Window;
                 if (IsPanel(row)) { row.Warning = string.Join("\n", PanelNotes(row, state)); continue; }
-                if (IsSprite(row)) continue;
+                if (IsSprite(row) || IsBall(row)) continue;
                 List<string> notes = now.TryGetValue((w.Group, w.Name), out List<string> n) ? n : new List<string>();
                 if (before.TryGetValue((w.Group, w.Name), out List<string> old)) notes = notes.Except(old).ToList();
                 ScreenWindowLayout.Window was = _savedLayout?.Windows.FirstOrDefault(o => o.Group == w.Group && o.Name == w.Name);
@@ -575,6 +618,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (row == null) return;
             if (IsPanel(row)) { MovePanel(row.Window.Pokemon - 1, x, y); return; }
             if (IsSprite(row)) { MoveSprite(row, x, y); return; }
+            if (IsBall(row)) { MoveBall(row, x, y); return; }
             ScreenWindowLayout.Window w = row.Window;
             x = Math.Clamp(x, 0, ScreenWindowLayout.MapColumns - w.Width);
             y = Math.Clamp(y, 0, ScreenWindowLayout.MapHeight - w.Height);
@@ -584,6 +628,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 moved.X = Math.Clamp(moved.X + dx, 0, ScreenWindowLayout.MapColumns - moved.Width);
                 moved.Y = Math.Clamp(moved.Y + dy, 0, ScreenWindowLayout.MapHeight - moved.Height);
+                FollowLabel(moved);
             }
             foreach (ScreenWindowRow shown in Windows) shown.Refresh();
             Warn();
@@ -594,12 +639,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <summary>Never bigger than in the ROM.</summary>
         public void Resize(ScreenWindowRow row, int width, int height)
         {
-            if (row == null || IsPanel(row) || IsSprite(row)) return;
+            if (row == null || IsPanel(row) || IsSprite(row) || IsBall(row)) return;
             if (width == row.Window.Width && height == row.Window.Height) return;
             foreach (ScreenWindowLayout.Window w in Following(row.Window))
             {
                 w.Width = Math.Clamp(width, 1, Math.Min(w.MaxWidth, ScreenWindowLayout.MapColumns - w.X));
                 w.Height = Math.Clamp(height, 1, Math.Min(w.MaxHeight, ScreenWindowLayout.MapHeight - w.Y));
+                FollowLabel(w);
             }
             foreach (ScreenWindowRow shown in Windows) shown.Refresh();
             Warn();
@@ -687,6 +733,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 }
                 if (_panelTables != null && _panels.WhyNotWrite(_pending.Read(_panelTables)) is string why)
                     throw new InvalidOperationException(why);
+                if (_cursorTable != null && _flow.WhyNotWrite(_pending.Read(_cursorTable)) is string cursorWhy)
+                    throw new InvalidOperationException(cursorWhy);
+                if (_menuTable != null && _menu.WhyNotWrite(_pending.Read(_menuTable)) is string menuWhy)
+                    throw new InvalidOperationException(menuWhy);
                 _pending.Save();
             }
             catch (Exception e)

@@ -43,12 +43,19 @@ namespace DSPRE.ROMFiles
             foreach (uint cursor in sites.Cursors) _regions.Add((cursor, PartySize * 8));
             _regions.Add((sites.SpriteTemplates + 4 * 40, PartySize * 40));
             foreach (uint touch in sites.Touch) _regions.Add((touch, PartySize * 4));
+            if (HasBallButtons)
+            {
+                _regions.Add((sites.BallAreas, PartySize * 4));
+                _regions.Add((sites.BallTiles, PartySize * 2));
+            }
         }
 
         private int Start(int region) => _regions.Take(region).Sum(r => r.Length);
         private int CursorRegion(int k) => 1 + k;
         private int StatusRegion => 1 + _sites.Cursors.Length;
         private int TouchRegion(int k) => 2 + _sites.Cursors.Length + k;
+        private int BallAreaRegion => 2 + _sites.Cursors.Length + _sites.Touch.Length;
+        private int BallTileRegion => BallAreaRegion + 1;
 
         /// <summary>Null when this ROM's tables aren't known or don't look like the game's.</summary>
         public static PartyPanelLayout Read()
@@ -88,6 +95,8 @@ namespace DSPRE.ROMFiles
                     if (_data[at + 2] != 0 || _data[at + 3] != 0) return false;
                 }
             }
+            for (int n = 0; n < PartySize && HasBallButtons; n++)
+                if (BallArea(n) != AreaOf(BallButton(n))) return false;
             byte[] cancel = { 0x98, 0xC0, 0xC8, 0x00, 0xFF }, frontier = { 0xB0, 0xC0, 0xC8, 0x00, 0xA0, 0xB0, 0xC8, 0x00, 0xFF };
             for (int k = 0; k < _sites.Touch.Length; k++)
             {
@@ -218,6 +227,41 @@ namespace DSPRE.ROMFiles
                     _data[at + 3] = (byte)(px * 8 + 8 * Width);
                 }
             }
+        }
+
+        /// <summary>Whether the party menu has Platinum's Poké Ball buttons. They stay put when a panel moves.</summary>
+        public bool HasBallButtons => _sites.BallAreas != 0 && _sites.BallTiles != 0;
+
+        /// <summary>A button is 5 by 5 tiles, drawn from its top left tile.</summary>
+        public const int BallButtonTiles = 5;
+
+        /// <summary>A Poké Ball button's top left, in tiles.</summary>
+        public (int X, int Y) BallButton(int pokemon)
+        {
+            int at = Start(BallTileRegion) + pokemon * 2;
+            return (_data[at], _data[at + 1]);
+        }
+
+        // Top, bottom, left, right in pixels, as the game's table holds them.
+        private (int Top, int Bottom, int Left, int Right) BallArea(int pokemon)
+        {
+            int at = Start(BallAreaRegion) + pokemon * 4;
+            return (_data[at], _data[at + 1], _data[at + 2], _data[at + 3]);
+        }
+
+        private static (int, int, int, int) AreaOf((int X, int Y) tile) =>
+            (tile.Y * 8, tile.Y * 8 + BallButtonTiles * 8 - 1, tile.X * 8, tile.X * 8 + BallButtonTiles * 8 - 1);
+
+        /// <summary>Moves the button's art and touch area together without leaving the screen.</summary>
+        public void MoveBallButton(int pokemon, int x, int y)
+        {
+            if (!HasBallButtons) return;
+            x = Math.Clamp(x, 0, ScreenWindowLayout.MapColumns - BallButtonTiles);
+            y = Math.Clamp(y, 0, VisibleRows - BallButtonTiles);
+            int tile = Start(BallTileRegion) + pokemon * 2, area = Start(BallAreaRegion) + pokemon * 4;
+            (_data[tile], _data[tile + 1]) = ((byte)x, (byte)y);
+            (int top, int bottom, int left, int right) = AreaOf((x, y));
+            (_data[area], _data[area + 1], _data[area + 2], _data[area + 3]) = ((byte)top, (byte)bottom, (byte)left, (byte)right);
         }
 
         // Undo steps cover the tables, the size and the HP bar length.

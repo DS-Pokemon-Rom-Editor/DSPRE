@@ -428,9 +428,82 @@ namespace DSPRE
 
         /// <summary>
         /// Party tables in arm9: panels (12 bytes each), cursor stops (8), sprite templates with the status icons at entries 4 to 9 (40),
-        /// and HGSS touch areas (4).
+        /// HGSS touch areas (4), and Platinum's Poké Ball buttons: touch areas (4) and tile spots (2), or 0.
         /// </summary>
-        public sealed record PartyPanelSites(uint Panels, uint[] Cursors, uint SpriteTemplates, uint[] Touch);
+        public sealed record PartyPanelSites(uint Panels, uint[] Cursors, uint SpriteTemplates, uint[] Touch, uint BallAreas = 0, uint BallTiles = 0);
+
+        /// <summary>
+        /// Party cursor tables in arm9, in <see cref="ROMFiles.PartyCursorFlow.Sets"/> order (8 stops of 8 bytes), and the four
+        /// "Leaving the buttons" rows of six slots.
+        /// </summary>
+        public sealed record PartyCursorSites(uint[] Sets, uint Back);
+
+        /// <summary>The overlay with the battle Pokémon and bag screens, and its pointer table to each party page's cursor table.</summary>
+        public sealed record BattleMenuSites(int Overlay, uint PartyCursors);
+
+        /// <summary>The HGSS bag's tables: the overlay and its context menu arrow table; the others sit at fixed distances from it.</summary>
+        public sealed record BagButtonSites(int Overlay, uint ContextFlow);
+
+        /// <summary>The battle touch screen's menus: the overlay and its target grid; the other tables sit at fixed distances from it.</summary>
+        public sealed record BattleCommandSites(int Overlay, uint TargetGrid);
+
+        /// <summary>The HGSS PC's layout table: per layout, pointers to its touch list, cursor table and callbacks.</summary>
+        public sealed record PcBoxSites(int Overlay, uint Layouts);
+
+        /// <summary>The HGSS party menu buttons' tables: from the party anchor and from the party touch site, in arm9.</summary>
+        public sealed record PartyMenuSites(uint Anchor, uint Touch);
+
+        /// <summary>The HGSS field touch menu's tables, and the yes/no menu and option lists that scripts show on that screen.</summary>
+        public sealed record TouchMenuSites(int Overlay, uint MenuRects, uint YesNo, uint YesNoCursor, uint ListKeys, uint ListCursors);
+
+        /// <summary>The HGSS summary screen's touch lists in arm9, at fixed distances from its Cancel rect.</summary>
+        public sealed record SummaryTouchSites(uint Cancel);
+
+        /// <summary>
+        /// The HGSS Pokégear's tables: the bar's in its overlay, the apps' at fixed distances from the map area rects, and the radio
+        /// buttons' tile spots.
+        /// </summary>
+        public sealed record PokegearSites(int BarOverlay, uint BarRects, int AppOverlay, uint MapAreas, bool Japanese, uint RadioButtonTiles);
+
+        /// <summary>Platinum's bag pocket lists, from 8 pockets down, the dial's button and rings, and each pocket list's tile spots.</summary>
+        public sealed record PtBagTouchSites(int Overlay, uint Pockets8, uint Pockets7, uint Pockets4, uint Pocket1, uint Dial, uint DialTouched,
+                                             uint DialHeld, uint Spots8, uint Spots7, uint Spots4, uint Spot1);
+
+        /// <summary>Platinum's badge case touch lists, with and without badges, and the badge and sparkle spots.</summary>
+        public sealed record PtTrainerCaseSites(int Overlay, uint Badges, uint Closed, uint BadgeSpots, uint SparkleSpots);
+
+        /// <summary>Platinum's summary page buttons in arm9: the three touch lists and their tile spot tables.</summary>
+        public sealed record PtSummaryTouchSites(uint Normal, uint NoContest, uint MovesOnly, uint NormalSpots, uint NoContestSpots, uint MovesOnlySpots);
+
+        /// <summary>Platinum's PC touch circles: the two corner buttons, with compare, and the markings.</summary>
+        public sealed record PtPcTouchSites(int Overlay, uint Corners, uint Compare, uint Markings);
+
+        /// <summary>The Pokétch frame's touch list and each app's, by overlay.</summary>
+        public sealed record PoketchTouchSites(int FrameOverlay, uint Frame, (int Overlay, uint Touch)[] Apps);
+
+        /// <summary>
+        /// HGSS options: the touch list, the choice highlights' x per row, the sprite templates, the choice labels' x (0 in Japanese), and
+        /// the code bytes that hold the Quit and Confirm text windows' tile x and y.
+        /// </summary>
+        public sealed record HgssOptionsSites(int Overlay, uint Touch, uint Highlights, uint Sprites, uint Labels, uint QuitX, uint QuitY, uint ConfirmX,
+                                              uint ConfirmY);
+
+        /// <summary>The HGSS main menu's arrow and new game touch lists, and its message window table.</summary>
+        public sealed record HgssMainMenuSites(int Overlay, uint Arrows, uint NewGame, uint Windows);
+
+        /// <summary>The HGSS trainer card's touch list, its two button sprite spots and its window table.</summary>
+        public sealed record HgssTrainerCardSites(int Overlay, uint Touch, uint ButtonSprites, uint Windows);
+
+        /// <summary>The HGSS number pad's keys, their cursor grid, its sprite and label window tables, and the 1 to 6 digit touch lists.</summary>
+        public sealed record NumberPadSites(int Overlay, uint Keys, uint Flow, uint Sprites, uint Labels, uint[] Digits);
+
+        /// <summary>
+        /// The HGSS Pokédex search pages' touch lists and cursor tables, then the touch-only lists of the other pages, in overlay
+        /// file offsets.
+        /// </summary>
+        /// <param name="Art">The search text window templates, then the order, type and area highlight rects.</param>
+        /// <param name="Flash">The <c>mov</c> that loads Order's x for the search menu's press flash.</param>
+        public sealed record PokedexSearchSites(int Overlay, uint[] Touch, uint[] Flow, uint[] Lists, uint[] Art, uint Flash);
 
         /// <summary>The arm9 addresses of the party menu functions the panel size patch rewrites.</summary>
         public sealed record PartyPanelCodeSites(uint Draw, uint Empty, uint Loader, uint Capture, uint Ticks, uint Step, uint Redraw);
@@ -771,6 +844,7 @@ namespace DSPRE
             SummarySprites,         // HGSS a/0/3/9: the summary screen's ball cells, markings and other sprites, numbered like Platinum's summary archive
             MoveRelearnerGraphics,  // DP/Pt graphic/waza_oshie_gra.narc, HGSS a/1/1/0
             BattlePartyGraphics,    // DP battle/graphic/b_plist_gra.narc, Pt battle/graphic/pl_b_plist_gra.narc, HGSS a/0/7/1
+            BattleBagGraphics,      // DP and Pt battle/graphic/b_bag_gra.narc, HGSS a/0/7/7
             BagGraphics,            // DP graphic/bag_gra.narc, Pt graphic/pl_bag_gra.narc, HGSS a/0/1/5
             FieldTextureAnimations, // Pt data/fldtanime.narc, HGSS a/1/3/9 (HGSS data/fldtanime.narc is unused): member 0 names textures, the rest hold frames
             EncounterEffectGraphics, // DP/Pt graphic/field_encounteffect.narc, HGSS a/1/0/9: special trainer battle intro art
@@ -796,6 +870,8 @@ namespace DSPRE
             PokewalkerSprites,      // HGSS a/2/5/6: the Pokéwalker's Pokemon pictures, 64x96 2bpp (PokewalkerImage)
             PokewalkerIcons,        // HGSS a/2/4/8: the Pokéwalker's small pictures, 32x48 2bpp
             UndergroundParts,       // DP/Pt data/ug_parts.narc: Underground treasure, rock and sphere art
+            NumberPadGraphics,      // HGSS a/2/3/6: the number pad
+            PokegearSkinGraphics,   // HGSS a/1/4/5: the Pokégear skins page
         };
 
         public static Dictionary<DirNames, (string packedDir, string unpackedDir)> GameDirs { get; private set; }
@@ -2123,6 +2199,7 @@ namespace DSPRE
                         [DirNames.SummaryGraphics] = Localized($@"{_dataFolderName}\graphic\pst_gra.narc", "p_status", "pst_gra.narc"),
                         [DirNames.MoveRelearnerGraphics] = $@"{_dataFolderName}\graphic\waza_oshie_gra.narc",
                         [DirNames.BattlePartyGraphics] = Localized($@"{_dataFolderName}\battle\graphic\b_plist_gra.narc", "b_plist", "b_plist_gra.narc"),
+                        [DirNames.BattleBagGraphics] = $@"{_dataFolderName}\battle\graphic\b_bag_gra.narc",
                         [DirNames.BagGraphics] = Localized($@"{_dataFolderName}\graphic\bag_gra.narc", "bag", "bag_gra.narc"),
                         [DirNames.FootprintGraphics] = $@"{_dataFolderName}\poketool\pokefoot\pokefoot.narc",
 
@@ -2294,6 +2371,7 @@ namespace DSPRE
                         [DirNames.SummaryGraphics] = Localized($@"{_dataFolderName}\graphic\pl_pst_gra.narc", "p_status", "pl_pst_gra.narc"),
                         [DirNames.MoveRelearnerGraphics] = $@"{_dataFolderName}\graphic\waza_oshie_gra.narc",
                         [DirNames.BattlePartyGraphics] = Localized($@"{_dataFolderName}\battle\graphic\pl_b_plist_gra.narc", "b_plist", "pl_b_plist_gra.narc"),
+                        [DirNames.BattleBagGraphics] = $@"{_dataFolderName}\battle\graphic\b_bag_gra.narc",
                         [DirNames.BagGraphics] = Localized($@"{_dataFolderName}\graphic\pl_bag_gra.narc", "bag", "pl_bag_gra.narc"),
                         [DirNames.FootprintGraphics] = $@"{_dataFolderName}\poketool\pokefoot\pokefoot.narc",
                         [DirNames.Poketch] = Localized($@"{_dataFolderName}\graphic\poketch.narc", "poketch", "poketch.narc"),
@@ -2406,16 +2484,19 @@ namespace DSPRE
                         [DirNames.FieldTouchMenu] = $@"{_dataFolderName}\a\0\1\4",
                         [DirNames.PokegearGraphics] = $@"{_dataFolderName}\a\1\4\3",
                         [DirNames.PokegearMapGraphics] = $@"{_dataFolderName}\a\1\4\4",
+                        [DirNames.PokegearSkinGraphics] = $@"{_dataFolderName}\a\1\4\5",
                         [DirNames.PokegearPhoneGraphics] = $@"{_dataFolderName}\a\1\4\6",
                         [DirNames.PokegearRadioGraphics] = $@"{_dataFolderName}\a\1\4\7",
                         [DirNames.PartyMenuGraphics] = $@"{_dataFolderName}\a\0\2\1",
                         [DirNames.BoxGraphics] = $@"{_dataFolderName}\a\0\1\9",
                         [DirNames.OptionsGraphics] = $@"{_dataFolderName}\a\0\7\2",
                         [DirNames.FieldTouchChoices] = $@"{_dataFolderName}\a\2\3\7",
+                        [DirNames.NumberPadGraphics] = $@"{_dataFolderName}\a\2\3\6",
                         [DirNames.SummaryGraphics] = $@"{_dataFolderName}\a\1\6\2",
                         [DirNames.SummarySprites] = $@"{_dataFolderName}\a\0\3\9",
                         [DirNames.MoveRelearnerGraphics] = $@"{_dataFolderName}\a\1\1\0",
                         [DirNames.BattlePartyGraphics] = $@"{_dataFolderName}\a\0\7\1",
+                        [DirNames.BattleBagGraphics] = $@"{_dataFolderName}\a\0\7\7",
                         [DirNames.BagGraphics] = $@"{_dataFolderName}\a\0\1\5",
                         [DirNames.FootprintGraphics] = $@"{_dataFolderName}\a\0\6\9",
                         [DirNames.PokedexGraphics] = $@"{_dataFolderName}\a\0\6\8",

@@ -73,6 +73,10 @@ namespace DSPRE.Avalonia.Data
             public bool RegisteredItems;
             public bool BugContest;
             public int ALabel = CheckMessage;
+            /// The 15 sprite positions as edited, or null for the game's.
+            public IReadOnlyList<(int X, int Y)> Sprites;
+            /// Icon name window positions in tiles as edited, or null for the game's.
+            public IReadOnlyList<(int X, int Y)> Labels;
         }
 
         // a/2/3/7
@@ -132,6 +136,8 @@ namespace DSPRE.Avalonia.Data
         public byte[] RenderMenu(FieldFont font, FieldFont iconFont, Func<int, string> text, MenuLook look)
         {
             look ??= new MenuLook();
+            (int X, int Y) Spot(int i, (int X, int Y) game) => look.Sprites != null && i < look.Sprites.Count ? look.Sprites[i] : game;
+            (int X, int Y) Label(int i) => look.Labels != null && i < look.Labels.Count ? (look.Labels[i].X * 8, look.Labels[i].Y * 8) : IconLabels[i];
             ushort[] palettes = NitroBgCodec.ReadColours(_menu(MenuPalettes));
             DsBgScreen s = new DsBgScreen();
             s.InitLayer(0, 2, 0);
@@ -160,7 +166,7 @@ namespace DSPRE.Avalonia.Data
                 {
                     int kind = kinds[i];
                     if (kind == NoIcon) continue;
-                    Line(iconFont ?? font, text?.Invoke(IconKinds[kind].Message), IconLabels[i].X, IconLabels[i].Y,
+                    Line(iconFont ?? font, text?.Invoke(IconKinds[kind].Message), Label(i).X, Label(i).Y,
                          72, true, words[14], words[2]);
                 }
                 Line(font, text?.Invoke(look.ALabel), 192, 160, 64, false, words[15], words[1]);
@@ -178,16 +184,16 @@ namespace DSPRE.Avalonia.Data
             }
             if (look.RegisteredItems)
             {
-                Button(0, 200, 8, look.Busy);
-                Button(2, 200, 48, look.Busy);
+                Button(0, Spot(9, (200, 8)).X, Spot(9, (200, 8)).Y, look.Busy);
+                Button(2, Spot(10, (200, 48)).X, Spot(10, (200, 48)).Y, look.Busy);
             }
             if (look.Shoes)
             {
-                Button(look.ShoesOn ? 5 : 4, 184, 86, look.Busy);
-                Button(look.ShoesOn ? 8 : 12, 210, 94, look.Busy);
+                Button(look.ShoesOn ? 5 : 4, Spot(11, (184, 86)).X, Spot(11, (184, 86)).Y, look.Busy);
+                Button(look.ShoesOn ? 8 : 12, Spot(13, (210, 94)).X, Spot(13, (210, 94)).Y, look.Busy);
             }
-            Button(look.AHeld ? 7 : 6, 168, 144, false);
-            Button(13, 54, 0, false);
+            Button(look.AHeld ? 7 : 6, Spot(12, (168, 144)).X, Spot(12, (168, 144)).Y, false);
+            Button(13, Spot(14, (54, 0)).X, Spot(14, (54, 0)).Y, false);
 
             Words(rgba);
 
@@ -200,7 +206,7 @@ namespace DSPRE.Avalonia.Data
                     if (kinds[i] == NoIcon || drawing < 0) continue;
                     ushort[] colours = DsBgScreen.Row(iconColours, i == look.Highlighted ? 1 : 0);
                     DsBgScreen.DrawCell(rgba, iconCells[0], NitroBgCodec.ReadCharacters(_menu(drawing)),
-                                        _ => colours, IconSlots[i].X, IconSlots[i].Y,
+                                        _ => colours, Spot(i, IconSlots[i]).X, Spot(i, IconSlots[i]).Y,
                                         look.Busy && i != look.Cursor, under);
                 }
 
@@ -210,7 +216,7 @@ namespace DSPRE.Avalonia.Data
                 int[] items = { ShownItemOne, ShownItemTwo };
                 for (int i = 0; i < items.Length; i++)
                     if (itemCells.Count > 0 && ItemIcon(items[i]) is (byte[] c, ushort[] p) && c != null)
-                        DsBgScreen.DrawCell(rgba, itemCells[0], c, _ => p, ItemIconSlots[i].X, ItemIconSlots[i].Y,
+                        DsBgScreen.DrawCell(rgba, itemCells[0], c, _ => p, Spot(7 + i, ItemIconSlots[i]).X, Spot(7 + i, ItemIconSlots[i]).Y,
                                             look.Busy && 7 + i != look.Cursor, under);
             }
 
@@ -301,7 +307,9 @@ namespace DSPRE.Avalonia.Data
         /// The Poké Ball screen, with a yes/no or a list of 2 to 8 entries on it when <paramref name="labels"/>
         /// has any, and the red frame round the entry under the cursor while it is showing.
         /// </summary>
-        public byte[] RenderChoices(FieldFont font, IReadOnlyList<string> labels, bool yesNo, int cursor, bool cursorShown)
+        /// Each list option's text window in tiles, or null for the built-in layout.
+        public byte[] RenderChoices(FieldFont font, IReadOnlyList<string> labels, bool yesNo, int cursor, bool cursorShown,
+                                    IReadOnlyList<(int X, int Y, int Width, int Height)> windows = null)
         {
             ushort[] palettes = NitroBgCodec.ReadColours(_choices(ChoicePalettes));
             DsBgScreen s = new DsBgScreen();
@@ -327,7 +335,8 @@ namespace DSPRE.Avalonia.Data
             for (int i = 0; i < count; i++)
             {
                 string line = labels[i]?.Trim() ?? "";
-                (int wx, int wy, int ww, int wh) = WindowFor(count, yesNo, i);
+                (int wx, int wy, int ww, int wh) = windows != null && !yesNo && i < windows.Count
+                    ? (windows[i].X * 8, windows[i].Y * 8, windows[i].Width * 8, windows[i].Height * 8) : WindowFor(count, yesNo, i);
                 int x = yesNo ? wx + (ww - DsBgScreen.MeasureText(font, line)) / 2 : wx;
                 int y = wy + (wh - 16) / 2;
                 DsBgScreen.DrawText(rgba, font, line, x, y, words[2], words[1]);

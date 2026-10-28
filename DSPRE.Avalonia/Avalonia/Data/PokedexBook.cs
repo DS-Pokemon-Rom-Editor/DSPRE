@@ -63,7 +63,7 @@ namespace DSPRE.Avalonia.Data
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.PokedexGraphics, DirNames.FootprintGraphics,
                                                             DirNames.PokemonBattleSprites, DirNames.MonIcons,
-                                                            DirNames.PokedexAreas, DirNames.PokedexSearchSteps });
+                                                            DirNames.PokedexAreas, DirNames.PokedexSearchSteps, DirNames.PersonalPokeData });
                 dex = new ScriptNarc(DirNames.PokedexGraphics);
             }
             catch (Exception ex) { AppLogger.Error("Pokédex graphics: " + ex.Message); }

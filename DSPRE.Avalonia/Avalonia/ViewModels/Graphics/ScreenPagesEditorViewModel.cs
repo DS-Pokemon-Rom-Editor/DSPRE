@@ -577,6 +577,25 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <summary>Whether the book places text boxes and bars that can be moved.</summary>
         public bool HasLayout => _book.Layout != null;
 
+        public string[] ScreenChoices { get; } = { "Both screens", "Top screen", "Bottom screen" };
+
+        private int _screens;
+        public int ScreensIndex
+        {
+            get => _screens;
+            set
+            {
+                if (value < 0 || value == _screens) return;
+                _screens = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(ShowTop));
+                OnPropertyChanged(nameof(ShowBottom));
+            }
+        }
+
+        public bool ShowTop => _screens != 2;
+        public bool ShowBottom => _screens != 1;
+
         public ObservableCollection<ScreenLayoutItem> Boxes { get; } = new();
 
         private void FillBoxes()

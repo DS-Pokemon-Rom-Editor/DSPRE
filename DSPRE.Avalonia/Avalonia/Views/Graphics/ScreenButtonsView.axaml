@@ -1,0 +1,100 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
+             x:Class="DSPRE.Avalonia.Views.Graphics.ScreenButtonsView"
+             x:DataType="vm:ScreenButtonsViewModel">
+  <Design.DataContext>
+    <vm:ScreenButtonsViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding CursorStatus}" FontSize="12" Foreground="{DynamicResource Editor.Bad}" VerticalAlignment="Center"/>
+    </Border>
+
+    <controls:EditorToolbar>
+      <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <controls:UndoRedoButtons/>
+      <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4">
+        <TextBlock Text="{Binding CursorSetLabel}" VerticalAlignment="Center"/>
+        <ComboBox Width="180" ItemsSource="{Binding CursorSets}" SelectedIndex="{Binding CursorSetIndex}"/>
+      </StackPanel>
+      <ToggleButton Content="Fix tiles" IsVisible="{Binding HasArt}" IsChecked="{Binding FixTiles}"
+                    ToolTip.Tip="Right-click picks, left-click places"/>
+    </controls:EditorToolbar>
+
+    <Border x:Name="AreaList" DockPanel.Dock="Left" Width="520" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,1,0">
+      <DockPanel Margin="8">
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="18,*,64,64,64,64" ColumnSpacing="6" Margin="0,0,16,6">
+          <TextBlock Grid.Column="0" Grid.ColumnSpan="2" Text="Touch areas" FontWeight="SemiBold"/>
+          <TextBlock Grid.Column="2" Text="Across" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
+          <TextBlock Grid.Column="3" Text="Down" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
+          <TextBlock Grid.Column="4" Text="Width" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
+          <TextBlock Grid.Column="5" Text="Height" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
+        </Grid>
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding Areas}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:TouchAreaRow">
+                <Grid ColumnDefinitions="18,*,64,64,64,64" ColumnSpacing="6" Margin="0,2,16,2">
+                  <Border Width="12" Height="12" Background="{Binding Colour}" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                  <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Locked}"/>
+                  <NumericUpDown Grid.Column="2" IsEnabled="{Binding Open}" Value="{Binding Across}" Minimum="0" Maximum="255" Increment="{Binding Step}" FormatString="0" ToolTip.Tip="Across in pixels"/>
+                  <NumericUpDown Grid.Column="3" IsEnabled="{Binding Open}" Value="{Binding Down}" Minimum="0" Maximum="191" Increment="{Binding Step}" FormatString="0" ToolTip.Tip="Down in pixels"/>
+                  <NumericUpDown Grid.Column="4" IsEnabled="{Binding Open}" Value="{Binding Wide}" Minimum="1" Maximum="256" Increment="1" FormatString="0" ToolTip.Tip="Width in pixels"/>
+                  <NumericUpDown Grid.Column="5" IsEnabled="{Binding Open}" Value="{Binding Tall}" Minimum="1" Maximum="192" Increment="1" FormatString="0" ToolTip.Tip="Height in pixels"/>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+    <Grid ColumnDefinitions="*,*" ColumnSpacing="16" Margin="16">
+      <Viewbox Stretch="Uniform" VerticalAlignment="Top">
+        <StackPanel Spacing="6">
+        <TextBlock Text="Bottom screen" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+        <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="Black">
+          <Panel x:Name="Board" Width="512" Height="384" ClipToBounds="True" Background="Black"
+                 PointerPressed="Board_Pressed" PointerMoved="Board_Moved" PointerReleased="Board_Released">
+            <Canvas x:Name="Grid" IsHitTestVisible="False"/>
+            <ItemsControl ItemsSource="{Binding Areas}" IsHitTestVisible="False">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.Styles>
+                <Style Selector="ContentPresenter" x:DataType="vm:TouchAreaRow">
+                  <Setter Property="Canvas.Left" Value="{Binding Left}"/>
+                  <Setter Property="Canvas.Top" Value="{Binding Top}"/>
+                </Style>
+              </ItemsControl.Styles>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:TouchAreaRow">
+                  <Border Width="{Binding Width}" Height="{Binding Height}" BorderBrush="{Binding Colour}" BorderThickness="2" Background="#33FFFFFF">
+                    <TextBlock Text="{Binding Name}" FontSize="11" Margin="3,1" Foreground="{Binding Colour}" FontWeight="SemiBold"/>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Panel>
+        </Border>
+        </StackPanel>
+      </Viewbox>
+      <Viewbox Grid.Column="1" Stretch="Uniform" VerticalAlignment="Top">
+        <StackPanel Spacing="6">
+          <TextBlock Text="Bottom screen" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+          <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="{DynamicResource Editor.PanelBg}">
+            <Image Source="{Binding CursorPicture}" Width="512" Height="384" Stretch="Fill" RenderOptions.BitmapInterpolationMode="None"
+                   PointerPressed="Preview_Pressed"/>
+          </Border>
+        </StackPanel>
+      </Viewbox>
+    </Grid>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

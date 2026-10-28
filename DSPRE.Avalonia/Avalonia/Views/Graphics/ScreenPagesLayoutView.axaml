@@ -1,0 +1,135 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
+             x:Class="DSPRE.Avalonia.Views.Graphics.ScreenPagesLayoutView"
+             x:DataType="vm:ScreenPagesEditorViewModel">
+
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+    </Border>
+
+    <controls:EditorToolbar>
+      <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <controls:UndoRedoButtons/>
+      <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4">
+        <TextBlock Text="Page" VerticalAlignment="Center"/>
+        <ComboBox Width="190" ItemsSource="{Binding PageNames}" SelectedIndex="{Binding PageIndex}"/>
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4" IsVisible="{Binding HasVariants}">
+        <TextBlock Text="State" VerticalAlignment="Center"/>
+        <ComboBox Width="170" ItemsSource="{Binding VariantNames}" SelectedIndex="{Binding VariantIndex}"/>
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4">
+        <TextBlock Text="Screens" VerticalAlignment="Center"/>
+        <ComboBox Width="150" ItemsSource="{Binding ScreenChoices}" SelectedIndex="{Binding ScreensIndex}"/>
+      </StackPanel>
+    </controls:EditorToolbar>
+
+    <Border DockPanel.Dock="Left" Width="520" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,1,0">
+      <DockPanel Margin="8">
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="18,*,64,64" ColumnSpacing="6" Margin="0,0,16,6">
+          <TextBlock Grid.Column="0" Grid.ColumnSpan="2" Text="Text boxes and bars" FontWeight="SemiBold"/>
+          <TextBlock Grid.Column="2" Text="Across" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
+          <TextBlock Grid.Column="3" Text="Down" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
+        </Grid>
+        <Button DockPanel.Dock="Top" Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Margin="0,0,0,6" Click="FontPatch_Click"
+                IsVisible="{Binding OffersFontPatch}" ToolTip.Tip="Lets text boxes use other fonts"/>
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding BoxRows}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:ScreenBoxRow">
+                <StackPanel Margin="0,2,16,2" Spacing="2">
+                  <Grid ColumnDefinitions="18,*,64,64" ColumnSpacing="6">
+                    <Border Width="12" Height="12" Background="{Binding Colour}" BorderBrush="{Binding Colour}" BorderThickness="2"
+                            VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}"/>
+                    <NumericUpDown Grid.Column="2" Value="{Binding Across}" Minimum="0" Maximum="31" Increment="1" FormatString="0" ToolTip.Tip="Tiles from the left"/>
+                    <NumericUpDown Grid.Column="3" Value="{Binding Down}" Minimum="0" Maximum="23" Increment="1" FormatString="0" ToolTip.Tip="Tiles from the top"/>
+                  </Grid>
+                  <ComboBox Margin="24,0,0,0" Width="180" ItemsSource="{Binding FontNames}" SelectedIndex="{Binding FontIndex}"
+                            IsVisible="{Binding CanPickFont}" ToolTip.Tip="Font"/>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+    <Grid x:Name="Panes" ColumnDefinitions="*,*" RowDefinitions="Auto" ColumnSpacing="16" RowSpacing="16" Margin="16">
+      <Viewbox x:Name="Boards" Grid.Column="0" Stretch="Uniform" VerticalAlignment="Top">
+        <StackPanel Spacing="6">
+          <TextBlock Text="Top screen" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding ShowTop}"/>
+          <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="Black" IsVisible="{Binding ShowTop}">
+            <Panel x:Name="TopBoard" Width="512" Height="384" ClipToBounds="True" Background="Black"
+                   PointerPressed="Board_Pressed" PointerMoved="Board_Moved" PointerReleased="Board_Released">
+              <Canvas x:Name="TopGrid" IsHitTestVisible="False"/>
+              <ItemsControl ItemsSource="{Binding TopBoxes}" IsHitTestVisible="False">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.Styles>
+                  <Style Selector="ContentPresenter" x:DataType="vm:ScreenBoxRow">
+                    <Setter Property="Canvas.Left" Value="{Binding Left}"/>
+                    <Setter Property="Canvas.Top" Value="{Binding Top}"/>
+                  </Style>
+                </ItemsControl.Styles>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ScreenBoxRow">
+                    <Border Width="{Binding Width}" Height="{Binding Height}" BorderBrush="{Binding Colour}" BorderThickness="2" Background="#33FFFFFF">
+                      <TextBlock Text="{Binding Name}" FontSize="11" Margin="3,1" Foreground="{Binding Colour}" FontWeight="SemiBold"/>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Panel>
+          </Border>
+          <TextBlock Text="Bottom screen" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding ShowBottom}" Margin="0,6,0,0"/>
+          <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="Black" IsVisible="{Binding ShowBottom}">
+            <Panel x:Name="BottomBoard" Width="512" Height="384" ClipToBounds="True" Background="Black"
+                   PointerPressed="Board_Pressed" PointerMoved="Board_Moved" PointerReleased="Board_Released">
+              <Canvas x:Name="BottomGrid" IsHitTestVisible="False"/>
+              <ItemsControl ItemsSource="{Binding BottomBoxes}" IsHitTestVisible="False">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.Styles>
+                  <Style Selector="ContentPresenter" x:DataType="vm:ScreenBoxRow">
+                    <Setter Property="Canvas.Left" Value="{Binding Left}"/>
+                    <Setter Property="Canvas.Top" Value="{Binding Top}"/>
+                  </Style>
+                </ItemsControl.Styles>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ScreenBoxRow">
+                    <Border Width="{Binding Width}" Height="{Binding Height}" BorderBrush="{Binding Colour}" BorderThickness="2" Background="#33FFFFFF">
+                      <TextBlock Text="{Binding Name}" FontSize="11" Margin="3,1" Foreground="{Binding Colour}" FontWeight="SemiBold"/>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Panel>
+          </Border>
+        </StackPanel>
+      </Viewbox>
+
+      <Viewbox x:Name="Previews" Grid.Column="1" Stretch="Uniform" VerticalAlignment="Top">
+        <StackPanel Spacing="6">
+          <TextBlock Text="Top screen" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding ShowTop}"/>
+          <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="{DynamicResource Editor.PanelBg}" IsVisible="{Binding ShowTop}">
+            <Image Source="{Binding TopImage}" Width="512" Height="384" Stretch="Fill" RenderOptions.BitmapInterpolationMode="None"/>
+          </Border>
+          <TextBlock Text="Bottom screen" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding ShowBottom}" Margin="0,6,0,0"/>
+          <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="{DynamicResource Editor.PanelBg}" IsVisible="{Binding ShowBottom}">
+            <Image Source="{Binding BottomImage}" Width="512" Height="384" Stretch="Fill" RenderOptions.BitmapInterpolationMode="None"/>
+          </Border>
+        </StackPanel>
+      </Viewbox>
+    </Grid>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

@@ -432,6 +432,31 @@ byte[] shown = _pending.Read(DirNames.DungeonCutinGraphics, p);                 
 _pending.Save();                                                                   // or Discard()
 ```
 
+### Touch buttons and cursors
+
+A screen's touch areas and arrow-key tables are read in Core behind `IScreenButtons`, and `ScreenCatalog.ButtonTabs` turns a
+reader into the Layout and Cursor tabs in the Screens editor. Each reader gathers its tables into a `ScreenTables`, which writes
+every file back whole and reports only problems the files didn't already have. Table offsets live in RomLocator: the located
+anchors per game and language, and the distances from them in `RomLocator.ScreenTables.cs`. `TouchRects` moves and sizes the
+games' touch rectangles; a touch on the right or bottom edge misses.
+
+`GridMenuButtons` reads screens on the shared grid input handler, and `HgssMenuButtons` builds the PC and Pokédex pages on it.
+`TouchListButtons` reads touch lists with no cursor table, and `PlatinumTouchLists` and `HgssTouchLists` build on it with
+`ButtonNames`. The battle, bag, touch menu, Pokégear, summary and party menu screens each have a separate reader. Picture spots that
+move with a button are `TouchListButtons.Spots` entries. Background art that moves is a page's `ScreenTiles`, which
+`ScreenTileArt` reads and writes. Spots the code loads with Thumb instructions are `GridMenuButtons.CodeSpot`s. A button whose
+art the game places itself is locked with `TouchRects.FixedArt`.
+
+The picture function runs on the UI thread and reads what the page needs; the function it returns draws off the UI thread.
+
+```csharp
+ButtonTabs(PlatinumTouchLists.Bag, "Bag", (bag, page) =>
+{
+    IReadOnlyList<(int X, int Y)> spots = bag.SpotsOf(page);   // read now
+    return () => GameTextScreens.BagBottomPt(spots);            // drawn off the UI thread
+}, cursor: false);
+```
+
 ### Events
 
 View models subscribe to events themselves and implement `IDetachable`, and `ShowManaged` detaches them when the

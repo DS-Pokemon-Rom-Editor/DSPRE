@@ -73,6 +73,9 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>A sprite's picture from another archive, for a sprite that names one.</summary>
         public Func<ScreenSprite, ScreenPicture> Picture { get; set; }
+
+        /// <summary>An unsaved file to draw in place of the archive's, or null to read the archive.</summary>
+        public Func<int, byte[]> Replace { get; set; }
         /// <summary>A digit sprite's animation and its offset from the sprite's position, or null when it is hidden.</summary>
         public Func<DexReadout, int, int, (int Seq, int Dx)?> Digit { get; set; }
         private readonly Dictionary<int, byte[]> _files = new();
@@ -103,7 +106,7 @@ namespace DSPRE.Avalonia.Data
             if (index < 0) return null;
             if (_files.TryGetValue(index, out byte[] known)) return known;
             byte[] raw = null;
-            try { raw = _member(index); } catch { }   // a member that can't be read is drawn as missing
+            try { raw = Replace?.Invoke(index) ?? _member(index); } catch { }   // a member that can't be read is drawn as missing
             byte[] data = NitroBgCodec.Inflate(raw);
             // A read that failed (a file another window is still writing) is tried again next time.
             if (data != null) _files[index] = data;

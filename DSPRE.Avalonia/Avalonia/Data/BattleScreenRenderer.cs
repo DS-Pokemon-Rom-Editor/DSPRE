@@ -86,6 +86,10 @@ namespace DSPRE.Avalonia.Data
             public bool Doubles;             // two bars a side instead of one
             public bool NumbersInsteadOfBar; // in a double battle the games swap the two over
             public double HealthLeft = 1.0;
+            /// <summary>Command button tiles the menu clears, x, y, width and height: the first battle's and Pal Park's.</summary>
+            public (int X, int Y, int W, int H)[] BlankedCommandTiles;
+            /// <summary>Pal Park hides the shape behind the command buttons.</summary>
+            public bool NoSilhouette;
         }
 
         private readonly ScriptNarc _bg = new ScriptNarc(DirNames.BattleBg);
@@ -421,9 +425,22 @@ namespace DSPRE.Avalonia.Data
             (int own, int below) blend = RomInfo.GameFamily == GameFamilies.DP ? (16, 4) : (8, 12);
             foreach (PanelLayer layer in LayersOf(o.Menu).OrderByDescending(l => l.Priority).ThenByDescending(l => l.BgNumber))
             {
+                if (o.NoSilhouette && o.Menu == TouchMenu.Command && layer.Blended) continue;
                 Piece piece = AddPanelLayer(pieces, layer.Name, layer.Screen, layer.What, colours, opaque: layer == Background);
                 if (layer.Blended) { piece.BlendOwn = blend.own; piece.BlendBelow = blend.below; }
+                if (layer.BgNumber == 0 && o.Menu == TouchMenu.Command) Clear(piece, o.BlankedCommandTiles);
             }
+        }
+
+        // pokeplatinum battle_subscreen.c fills these with an empty tile.
+        private static void Clear(Piece piece, (int X, int Y, int W, int H)[] tiles)
+        {
+            if (piece.Rgba == null || tiles == null) return;
+            const int Tile = FieldWindowFrame.TileSize;
+            foreach ((int x, int y, int w, int h) in tiles)
+                for (int py = y * Tile; py < Math.Min(piece.Height, (y + h) * Tile); py++)
+                    for (int px = x * Tile; px < Math.Min(piece.Width, (x + w) * Tile); px++)
+                        piece.Rgba[(py * piece.Width + px) * 4 + 3] = 0;
         }
 
         /// <summary>

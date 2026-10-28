@@ -26,16 +26,28 @@ namespace DSPRE.Avalonia.Data
 
         private static Bitmap Render(string thing)
         {
+            GraphicAssets.Preview p = Pixels(thing);
+            return p?.Rgba != null ? ImageConverter.FromRgba(p.Rgba, p.Width, p.Height) : null;
+        }
+
+        private static GraphicAssets.Preview Pixels(string thing)
+        {
             try
             {
                 int index = BattleObjects.Find(thing, "Drawing");
                 GraphicAssets.Archive archive = GraphicAssets.All.FirstOrDefault(a => a.Dir == DirNames.BattleObj);
-                if (index < 0 || archive == null) return null;
-                GraphicAssets.Preview p = GraphicAssets.Render(archive, index);
-                return p.Rgba != null ? ImageConverter.FromRgba(p.Rgba, p.Width, p.Height) : null;
+                return index < 0 || archive == null ? null : GraphicAssets.Render(archive, index);
             }
             catch (System.Exception ex) { AppLogger.WarnOnce("TypeIcons.Render", ex); return null; }
         }
+
+        /// <summary>A type's icon as raw pixels for composed pictures, or null if there's none.</summary>
+        public static GraphicAssets.Preview PixelsFor(int type) =>
+            type >= 0 && type < BattleObjects.IconOrder.Length ? Pixels(BattleObjects.IconOrder[type]) : null;
+
+        /// <summary>A move category's icon as pixels.</summary>
+        public static GraphicAssets.Preview CategoryPixels(int category) =>
+            category >= 0 && category < BattleObjects.KindOrder.Length ? Pixels(BattleObjects.KindOrder[category]) : null;
 
         /// <summary>
         /// The icon for a type, or null when this ROM has none for it. The game's icon tables run on past the
