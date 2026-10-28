@@ -71,8 +71,11 @@ namespace DSPRE.Avalonia.Data
     public sealed class NAudioOutput : IAudioOutput
     {
         private readonly object _gate = new object();
-        private WaveOutEvent _output;
+        private object _output;
         private MixingSampleProvider _mixer;
+        private bool _unavailable;
+
+        private static bool Supported => OperatingSystem.IsWindows() || OperatingSystem.IsLinux();
 
         public void Play(short[] interleavedStereoPcm, int sampleRate) => Start(interleavedStereoPcm, sampleRate);
 
@@ -82,12 +85,12 @@ namespace DSPRE.Avalonia.Data
 
         private object Begin(short[] interleavedStereoPcm, int sampleRate, bool loop)
         {
-            if (!OperatingSystem.IsWindows()) return null;
+            if (!Supported) return null;
             if (interleavedStereoPcm == null || interleavedStereoPcm.Length == 0) return null;
 
             lock (_gate)
             {
-                EnsureStarted();
+                if (!EnsureStarted()) return null;
                 PcmVoice voice = new PcmVoice(interleavedStereoPcm, sampleRate, loop);
                 // Raw samples at their own rate join the mix through a resampler; rendered sounds are already at the mix rate.
                 _mixer.AddMixerInput(sampleRate == AudioOutput.RenderRate ? voice : new WdlResamplingSampleProvider(voice, AudioOutput.RenderRate));
@@ -102,28 +105,43 @@ namespace DSPRE.Avalonia.Data
 
         public void Stop()
         {
-            if (!OperatingSystem.IsWindows()) return;
+            if (!Supported) return;
             lock (_gate) { _mixer?.RemoveAllMixerInputs(); }
         }
 
         public void Stop(object handle)
         {
-            if (!OperatingSystem.IsWindows() || handle is not PcmVoice voice) return;
+            if (!Supported || handle is not PcmVoice voice) return;
             // A quarter-second fade; the mixer drops the voice once it runs dry.
             lock (_gate) { voice.FadeOut(voice.WaveFormat.SampleRate / 4 * 2); }
         }
 
-        private void EnsureStarted()
+        private bool EnsureStarted()
         {
-            if (_mixer != null) return;
-            _mixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(AudioOutput.RenderRate, 2))
+            if (_mixer != null) return true;
+            if (_unavailable) return false;
+            MixingSampleProvider mixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(AudioOutput.RenderRate, 2))
             {
                 ReadFully = true,   // keep producing silence between sounds instead of ending the output stream
             };
+            // TODO: maybe this needs to be refactored to work in Mac
+            _output = OperatingSystem.IsWindows() ? StartWaveOut(mixer) : PulseAudioSink.Open(mixer);
+            if (_output == null)
+            {
+                _unavailable = true;
+                return false;
+            }
+            _mixer = mixer;
+            return true;
+        }
+
+        private static WaveOutEvent StartWaveOut(ISampleProvider mixer)
+        {
             // NAudio's default is 300 ms in 2 buffers, 9 game frames behind the picture; 60 ms in 3 keeps sounds on their frame.
-            _output = new WaveOutEvent { DesiredLatency = 60, NumberOfBuffers = 3 };
-            _output.Init(_mixer);
-            _output.Play();
+            WaveOutEvent output = new WaveOutEvent { DesiredLatency = 60, NumberOfBuffers = 3 };
+            output.Init(mixer);
+            output.Play();
+            return output;
         }
     }
 }
