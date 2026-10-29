@@ -76,6 +76,18 @@ namespace DSPRE.Avalonia.Views.Controls
             Frame();
         }
 
+        /// <summary>A sprite near the focus tile, in DS pixels from it; Lift raises it off the ground.</summary>
+        public sealed record Actor(OverworldSprites.SpritePixels Pixels, float X, float Z, float Lift);
+
+        private IReadOnlyList<Actor> _actors;
+
+        /// <summary>Draws these sprites at the focus instead of the player alone; null goes back to the player.</summary>
+        public void ShowActors(IReadOnlyList<Actor> actors)
+        {
+            _actors = actors;
+            Frame();
+        }
+
         /// <summary>Forgets the built maps, so the next <see cref="Show"/> reads them again.</summary>
         public void Reload() => _sceneHeader = -1;
 
@@ -213,6 +225,23 @@ namespace DSPRE.Avalonia.Views.Controls
             return _spotShape;
         }
 
+        private void ShowActorSprites((float x, float y, float z) foot, float unit)
+        {
+            List<NsbmdGlControl.SpriteInstance> sprites = new List<NsbmdGlControl.SpriteInstance>();
+            float perPixel = unit / OverworldSprites.PixelsPerTile;
+            foreach (Actor a in _actors)
+            {
+                if (a?.Pixels == null || a.Pixels.Width <= 0) continue;
+                float halfW = perPixel * a.Pixels.Width / 2f, halfH = perPixel * a.Pixels.Height / 2f;
+                sprites.Add(new NsbmdGlControl.SpriteInstance
+                {
+                    Cx = foot.x + a.X * perPixel, Cy = foot.y + a.Lift * perPixel + halfH, Cz = foot.z + a.Z * perPixel,
+                    HalfW = halfW, HalfH = halfH, Rgba = a.Pixels.Rgba, Width = a.Pixels.Width, Height = a.Pixels.Height,
+                });
+            }
+            _gl.SetSprites(sprites);
+        }
+
         // The hero where Fly sets you down, facing the camera, at the size an overworld sprite stands.
         private void ShowPlayer((float x, float y, float z)? foot, float unit)
         {
@@ -250,7 +279,8 @@ namespace DSPRE.Avalonia.Views.Controls
             (float x, float y, float z) = Target(scene, _focus);
 
             _gl.LookAt(x + cam.ShiftXInTiles * unit, y + cam.ShiftYInTiles * unit, z + cam.ShiftZInTiles * unit);
-            ShowPlayer(_focus != null ? (x, y, z) : null, unit);
+            if (_actors != null && _focus != null) ShowActorSprites((x, y, z), unit);
+            else ShowPlayer(_focus != null ? (x, y, z) : null, unit);
             _gl.Distance = cam.DistanceForScene(tile) * scene.Scale;
             _gl.Orthographic = cam.Orthographic;
             _gl.VerticalFieldOfViewDegrees = cam.FieldOfViewDegrees;

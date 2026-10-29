@@ -39,6 +39,7 @@ namespace DSPRE
             ["DistortionWorldView"] = new("Distortion World", "World"),
             ["DungeonCutinEditorView"] = new("Dungeon cut-in editor", "Graphics"),
             ["EncounterSlotOddsView"] = new("Encounter slot odds", "Pokémon"),
+            ["FollowerTalkEditorView"] = new("Follower talk", "Pokémon"),
             ["FontEditorView"] = new("Font editor", "Text"),
             ["FriendshipChangesView"] = new("Friendship changes", "Pokémon"),
             ["GrowthCurveEditorView"] = new("Growth curves", "Pokémon"),

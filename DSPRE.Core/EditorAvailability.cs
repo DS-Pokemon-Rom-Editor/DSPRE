@@ -135,6 +135,11 @@ namespace DSPRE
                 Title = "The Pokégear rematch editor", Hge = HgEngine.NeedsLink,
                 Unsupported = Unless(() => PokegearRematchTable.IsSupported, "The Pokégear rematch editor only supports HeartGold and SoulSilver."),
             },
+            ["FollowerTalkEditorView"] = new Rule
+            {
+                Title = "Follower talk", Hge = HgEngine.NeedsLink,
+                Unsupported = () => FollowerTalk.WhyNot(),
+            },
             ["PokegearPhoneBookView"] = new Rule
             {
                 Title = "The Pokégear phone book", Hge = HgEngine.NeedsLink,

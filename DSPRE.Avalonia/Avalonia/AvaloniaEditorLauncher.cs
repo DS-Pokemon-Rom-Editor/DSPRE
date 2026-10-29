@@ -704,6 +704,24 @@ namespace DSPRE.Avalonia
                 () => vm == null ? null : new EditorHostWindow("Pokégear rematch editor", new PokegearRematchView(vm), 950, 640));
         }
 
+        public static void OpenFollowerTalk() => _ = OpenFollowerTalkAsync();
+
+        public static async System.Threading.Tasks.Task OpenFollowerTalkAsync()
+        {
+            if (Refused("FollowerTalkEditorView")) return;
+            try
+            {
+                FollowerTalkEditorViewModel vm = null;
+                await OpenBehindCardAsync("Opening Follower talk…", "Reading the slots, reactions, movements and lines.",
+                    () => vm = new FollowerTalkEditorViewModel(true),
+                    () => vm == null ? null : new EditorHostWindow("Follower talk", new FollowerTalkEditorView(vm), 1280, 760));
+            }
+            catch (System.Exception ex)
+            {
+                await DialogHelper.ShowErrorAsync("Couldn't open Follower talk: " + ex.Message, "Follower talk");
+            }
+        }
+
         public static void OpenPokegearPhoneBook(int initialEntry = -1) => _ = OpenPokegearPhoneBookAsync(initialEntry);
 
         public static async System.Threading.Tasks.Task OpenPokegearPhoneBookAsync(int initialEntry = -1)
@@ -1677,6 +1695,7 @@ namespace DSPRE.Avalonia
             new() { Beta = "TrainerSpriteEditorView", Name = "Trainer back sprite editor", Keywords = "player back sprite throw palette animation", Run = () => OpenTrainerBackSpriteEditor() },
             new() { Name = "Vs. Seeker rematch editor", Keywords = "rematch trainer encounter chain", Shown = () => RomInfo.GameFamily == RomInfo.GameFamilies.DP || RomInfo.GameFamily == RomInfo.GameFamilies.Plat, Run = () => OpenVsSeekerRematchEditor() },
             new() { Name = "Pokégear rematch editor", Keywords = "rematch trainer phone pokegear call hgss", Shown = () => RomInfo.GameFamily == RomInfo.GameFamilies.HGSS, Run = () => OpenPokegearRematchEditor() },
+            new() { Beta = "FollowerTalkEditorView", Name = "Follower talk", Keywords = "follower walking pokemon talk reaction bubble hgss", Run = () => OpenFollowerTalk() },
             new() { Beta = "PokegearPhoneBookView", Name = "Pokégear phone book", Keywords = "phone contact number call gift greeting pokegear hgss", Run = () => OpenPokegearPhoneBook() },
             new() { Name = "hg-engine patches", Keywords = "hook bytereplacement repoint arm9 overlay patch asm", Run = OpenHgEnginePatches },
             new() { Shown = () => DSPRE.HgEngine.HgEngineDev.Enabled, Name = "Battle tests", Keywords = "hg-engine test scenario auto_test battle_tests", Run = OpenBattleTests },

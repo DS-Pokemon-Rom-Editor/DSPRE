@@ -1,0 +1,294 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+             xmlns:pv="clr-namespace:DSPRE.Avalonia.Views.Pokemon"
+             x:Class="DSPRE.Avalonia.Views.Pokemon.FollowerTalkEditorView"
+             x:DataType="vm:FollowerTalkEditorViewModel">
+  <Design.DataContext>
+    <vm:FollowerTalkEditorViewModel/>
+  </Design.DataContext>
+
+  <UserControl.Styles>
+    <Style Selector="TextBlock.label">
+      <Setter Property="Foreground" Value="{DynamicResource Editor.Subtle}"/>
+      <Setter Property="FontSize" Value="12"/>
+    </Style>
+    <Style Selector="TextBlock.warn">
+      <Setter Property="Foreground" Value="{DynamicResource Editor.Warn}"/>
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style Selector="TextBlock.title">
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="FontSize" Value="15"/>
+    </Style>
+    <Style Selector="NumericUpDown">
+      <Setter Property="FormatString" Value="0"/>
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    </Style>
+    <Style Selector="ListBox">
+      <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel>
+    <controls:EditorToolbar>
+      <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <controls:UndoRedoButtons/>
+      <Button Content="Move up" Click="SlotUp_Click" IsVisible="{Binding OnPlaces}" controls:EditorToolbar.Slot="Extra"/>
+      <Button Content="Move down" Click="SlotDown_Click" IsVisible="{Binding OnPlaces}" controls:EditorToolbar.Slot="Extra"/>
+      <Button Content="Copy" Click="SlotCopy_Click" IsVisible="{Binding SlotHasData}" controls:EditorToolbar.Slot="Extra"/>
+      <Button Content="Paste" Click="SlotPaste_Click" IsVisible="{Binding OnPlaces}" IsEnabled="{Binding CanPaste}" controls:EditorToolbar.Slot="Extra"
+              ToolTip.Tip="Copy a slot first" ToolTip.ShowOnDisabled="True"/>
+      <Button Content="Clear" Click="SlotClear_Click" IsVisible="{Binding SlotHasData}" controls:EditorToolbar.Slot="Remove"/>
+      <Button Content="Fill" Click="SlotFill_Click" IsVisible="{Binding SlotIsEmpty}" controls:EditorToolbar.Slot="Add"/>
+      <Button Content="New movement" Click="NewMove_Click" IsVisible="{Binding OnMoves}"/>
+    </controls:EditorToolbar>
+
+    <Border DockPanel.Dock="Right" Width="380" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1,0,0,0" IsVisible="{Binding !OnGroups}">
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <pv:FollowerTalkPreviewView x:Name="PreviewPane"/>
+      </ScrollViewer>
+    </Border>
+
+    <TabControl SelectedIndex="{Binding SelectedTab}" Margin="4,0">
+
+      <TabItem Header="Places">
+        <Grid ColumnDefinitions="260,*" Margin="0,6,0,0">
+          <DockPanel Grid.Column="0" Margin="0,0,8,0">
+            <ComboBox DockPanel.Dock="Top" ItemsSource="{Binding Places}" SelectedItem="{Binding SelectedPlace}" HorizontalAlignment="Stretch" Margin="0,0,0,6"/>
+            <ListBox ItemsSource="{Binding Slots}" SelectedItem="{Binding SelectedSlot}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:FollowerTalkEditorViewModel+SlotRow">
+                  <StackPanel Spacing="1">
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Right" Text="{Binding Chance}" Foreground="{DynamicResource Editor.Subtle}"/>
+                      <TextBlock Text="{Binding Label}" FontWeight="SemiBold" FontSize="12"/>
+                    </DockPanel>
+                    <TextBlock Text="{Binding Line}" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding Summary}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
+
+          <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="8" Margin="4,0,8,8" DataContext="{Binding SlotEditor}" x:DataType="vm:FollowerTalkEditorViewModel+SlotEditorVM">
+              <TextBlock Classes="title" Text="{Binding Title}"/>
+              <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding IsEmpty}">
+                <TextBlock Text="Empty" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+                <controls:HelpTip Text="The game skips a slot with no reaction. Fill it to use it."/>
+              </StackPanel>
+              <StackPanel Spacing="8" IsVisible="{Binding HasData}">
+                <WrapPanel>
+                  <StackPanel Spacing="2" Margin="0,0,12,0">
+                    <StackPanel Orientation="Horizontal"><TextBlock Classes="label" Text="Chance %" VerticalAlignment="Center"/><controls:HelpTip Text="{x:Static vm:FollowerTalkHelp.Chance}"/></StackPanel>
+                    <NumericUpDown Value="{Binding Chance}" Minimum="0" Maximum="100" Width="130"/>
+                  </StackPanel>
+                  <StackPanel Spacing="2" Margin="0,0,12,0">
+                    <StackPanel Orientation="Horizontal"><TextBlock Classes="label" Text="Reaction" VerticalAlignment="Center"/><controls:HelpTip Text="{x:Static vm:FollowerTalkHelp.Reaction}"/></StackPanel>
+                    <NumericUpDown Value="{Binding Reaction}" Minimum="1" Maximum="{Binding MaxReaction}" Width="130"/>
+                  </StackPanel>
+                  <Button Content="Edit reaction" Click="OpenReaction_Click" VerticalAlignment="Bottom"/>
+                </WrapPanel>
+                <TextBlock Text="{Binding ReactionLine}" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
+                <TextBlock Classes="title" Text="Conditions" Margin="0,6,0,0"/>
+                <ItemsControl ItemsSource="{Binding Fields}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:FollowerTalkEditorViewModel+ConditionVM">
+                      <StackPanel Width="210" Margin="0,0,10,8" Spacing="2">
+                        <StackPanel Orientation="Horizontal"><TextBlock Classes="label" Text="{Binding Label}" VerticalAlignment="Center"/><controls:HelpTip Text="{Binding Help}"/></StackPanel>
+                        <DockPanel>
+                          <NumericUpDown DockPanel.Dock="Right" Value="{Binding Raw}" Minimum="0" Maximum="{Binding Max}" Width="78" Margin="4,0,0,0" ShowButtonSpinner="False"/>
+                          <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding Selected}" HorizontalAlignment="Stretch" IsVisible="{Binding HasNames}"/>
+                        </DockPanel>
+                        <TextBlock Classes="warn" Text="{Binding Warning}" IsVisible="{Binding HasWarning}"/>
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </StackPanel>
+          </ScrollViewer>
+        </Grid>
+      </TabItem>
+
+      <TabItem Header="Reactions">
+        <Grid ColumnDefinitions="260,*" Margin="0,6,0,0">
+          <DockPanel Grid.Column="0" Margin="0,0,8,0">
+            <TextBox DockPanel.Dock="Top" Text="{Binding ReactionFilter}" PlaceholderText="Search" Margin="0,0,0,6"/>
+            <ListBox ItemsSource="{Binding ReactionRows}" SelectedItem="{Binding SelectedReactionRow}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:FollowerTalkEditorViewModel+ReactionRow">
+                  <DockPanel>
+                    <TextBlock DockPanel.Dock="Left" Text="{Binding Number}" Width="44" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding Line}" TextTrimming="CharacterEllipsis"/>
+                  </DockPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
+
+          <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding HasReaction}">
+            <StackPanel Spacing="8" Margin="4,0,8,8" DataContext="{Binding ReactionEditor}" x:DataType="vm:FollowerTalkEditorViewModel+ReactionEditorVM">
+              <TextBlock Classes="title" Text="{Binding Title}"/>
+              <TextBlock Text="{Binding Users}" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
+              <ItemsControl ItemsSource="{Binding Steps}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:FollowerTalkEditorViewModel+StepVM">
+                    <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                      <StackPanel Spacing="6">
+                        <DockPanel>
+                          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+                            <Button Content="Move up" Click="StepUp_Click" IsEnabled="{Binding CanMoveUp}" ToolTip.Tip="Already the first step" ToolTip.ShowOnDisabled="True"/>
+                            <Button Content="Move down" Click="StepDown_Click" IsEnabled="{Binding CanMoveDown}" ToolTip.Tip="Already the last step" ToolTip.ShowOnDisabled="True"/>
+                            <Button Content="Remove" Click="StepRemove_Click"/>
+                          </StackPanel>
+                          <TextBlock Classes="title" Text="{Binding Title}" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <WrapPanel>
+                          <StackPanel Spacing="2" Margin="0,0,10,6" Width="150">
+                            <StackPanel Orientation="Horizontal"><TextBlock Classes="label" Text="Movement" VerticalAlignment="Center"/><controls:HelpTip Text="{x:Static vm:FollowerTalkHelp.Movement}"/></StackPanel>
+                            <ComboBox ItemsSource="{Binding MoveChoices}" SelectedItem="{Binding Movement}" HorizontalAlignment="Stretch"/>
+                          </StackPanel>
+                          <StackPanel Spacing="2" Margin="0,0,10,6" Width="150">
+                            <StackPanel Orientation="Horizontal"><TextBlock Classes="label" Text="Bubble" VerticalAlignment="Center"/><controls:HelpTip Text="{x:Static vm:FollowerTalkHelp.Bubble}"/></StackPanel>
+                            <ComboBox ItemsSource="{Binding Bubbles}" SelectedItem="{Binding Bubble}" HorizontalAlignment="Stretch"/>
+                          </StackPanel>
+                          <StackPanel Spacing="2" Margin="0,0,10,6" Width="150">
+                            <StackPanel Orientation="Horizontal"><TextBlock Classes="label" Text="Sound" VerticalAlignment="Center"/><controls:HelpTip Text="{x:Static vm:FollowerTalkHelp.Sound}"/></StackPanel>
+                            <ComboBox ItemsSource="{Binding Sounds}" SelectedItem="{Binding SoundKind}" HorizontalAlignment="Stretch"/>
+                          </StackPanel>
+                          <StackPanel Spacing="2" Margin="0,0,10,6" Width="130" IsVisible="{Binding IsEffect}">
+                            <StackPanel Orientation="Horizontal"><TextBlock Classes="label" Text="Sound effect" VerticalAlignment="Center"/><controls:HelpTip Text="{x:Static vm:FollowerTalkHelp.Sound}"/></StackPanel>
+                            <NumericUpDown Value="{Binding Effect}" Minimum="1" Maximum="2378"/>
+                          </StackPanel>
+                          <StackPanel Spacing="2" Margin="0,0,10,6" Width="130">
+                            <StackPanel Orientation="Horizontal"><TextBlock Classes="label" Text="Wait (frames)" VerticalAlignment="Center"/><controls:HelpTip Text="{x:Static vm:FollowerTalkHelp.Wait}"/></StackPanel>
+                            <NumericUpDown Value="{Binding Wait}" Minimum="0" Maximum="255"/>
+                          </StackPanel>
+                          <StackPanel Spacing="2" Margin="0,0,10,6" Width="130">
+                            <StackPanel Orientation="Horizontal"><TextBlock Classes="label" Text="Line" VerticalAlignment="Center"/><controls:HelpTip Text="{x:Static vm:FollowerTalkHelp.Line}"/></StackPanel>
+                            <NumericUpDown Value="{Binding Line}" Minimum="0" Maximum="{Binding MaxLine}"/>
+                          </StackPanel>
+                          <Button Content="New line" Click="StepNewLine_Click" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
+                        </WrapPanel>
+                        <TextBox Text="{Binding Text, UpdateSourceTrigger=LostFocus}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="54"
+                                 IsVisible="{Binding HasLine}"/>
+                        <TextBlock Text="{Binding Note}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <Button Content="Add step" Click="StepAdd_Click" IsEnabled="{Binding CanAddStep}" ToolTip.Tip="Up to five steps" ToolTip.ShowOnDisabled="True" HorizontalAlignment="Left"/>
+
+              <TextBlock Classes="title" Text="After the steps" Margin="0,8,0,0"/>
+              <StackPanel Orientation="Horizontal"><CheckBox Content="Yes/No question" IsChecked="{Binding Question}"/><controls:HelpTip Text="{x:Static vm:FollowerTalkHelp.Question}"/></StackPanel>
+              <WrapPanel IsVisible="{Binding Question}">
+                <StackPanel Spacing="2" Margin="0,0,10,6" Width="140">
+                  <StackPanel Orientation="Horizontal"><TextBlock Classes="label" Text="Reaction on Yes" VerticalAlignment="Center"/><controls:HelpTip Text="{x:Static vm:FollowerTalkHelp.YesNo}"/></StackPanel>
+                  <NumericUpDown Value="{Binding Yes}" Minimum="0" Maximum="1023"/>
+                </StackPanel>
+                <StackPanel Spacing="2" Margin="0,0,10,6" Width="140">
+                  <StackPanel Orientation="Horizontal"><TextBlock Classes="label" Text="Reaction on No" VerticalAlignment="Center"/><controls:HelpTip Text="{x:Static vm:FollowerTalkHelp.YesNo}"/></StackPanel>
+                  <NumericUpDown Value="{Binding No}" Minimum="0" Maximum="1023"/>
+                </StackPanel>
+                <Button Content="Open Yes reaction" Click="OpenYes_Click" VerticalAlignment="Bottom" Margin="0,0,6,6"/>
+                <Button Content="Open No reaction" Click="OpenNo_Click" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
+              </WrapPanel>
+              <WrapPanel>
+                <StackPanel Spacing="2" Margin="0,0,10,6" Width="140">
+                  <StackPanel Orientation="Horizontal"><TextBlock Classes="label" Text="Friendship change" VerticalAlignment="Center"/><controls:HelpTip Text="{x:Static vm:FollowerTalkHelp.Friendship}"/></StackPanel>
+                  <NumericUpDown Value="{Binding Friendship}" Minimum="-128" Maximum="127" FormatString="+0;-0;0"/>
+                </StackPanel>
+                <StackPanel Spacing="2" Margin="0,0,10,6" Width="140">
+                  <StackPanel Orientation="Horizontal"><TextBlock Classes="label" Text="Mood change" VerticalAlignment="Center"/><controls:HelpTip Text="{x:Static vm:FollowerTalkHelp.Mood}"/></StackPanel>
+                  <NumericUpDown Value="{Binding Mood}" Minimum="-128" Maximum="127" FormatString="+0;-0;0"/>
+                </StackPanel>
+                <StackPanel Spacing="2" Margin="0,0,10,6" Width="180">
+                  <StackPanel Orientation="Horizontal"><TextBlock Classes="label" Text="Gift" VerticalAlignment="Center"/><controls:HelpTip Text="{x:Static vm:FollowerTalkHelp.Gift}"/></StackPanel>
+                  <ComboBox ItemsSource="{Binding Gifts}" SelectedItem="{Binding Gift}" HorizontalAlignment="Stretch"/>
+                </StackPanel>
+              </WrapPanel>
+            </StackPanel>
+          </ScrollViewer>
+        </Grid>
+      </TabItem>
+
+      <TabItem Header="Movements">
+        <Grid ColumnDefinitions="260,*" Margin="0,6,0,0">
+          <ListBox Grid.Column="0" Margin="0,0,8,0" ItemsSource="{Binding MoveRows}" SelectedItem="{Binding SelectedMoveRow}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:FollowerTalkEditorViewModel+MoveRow">
+                <StackPanel>
+                  <TextBlock Text="{Binding Label}" FontWeight="SemiBold"/>
+                  <TextBlock Text="{Binding Detail}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+          <ScrollViewer Grid.Column="1">
+            <StackPanel Spacing="8" Margin="4,0,8,8" DataContext="{Binding MoveEditor}" x:DataType="vm:FollowerTalkEditorViewModel+MoveEditorVM">
+              <StackPanel Orientation="Horizontal" Spacing="4">
+                <TextBlock Classes="title" Text="{Binding Title}"/>
+                <controls:HelpTip Text="The follower goes back to where it stood, facing the same way, when the movement ends."/>
+              </StackPanel>
+              <Grid ColumnDefinitions="40,130,100,100,100,100,80,*">
+                <TextBlock Grid.Column="0" Classes="label" Text="#"/>
+                <StackPanel Orientation="Horizontal" Grid.Column="1"><TextBlock Classes="label" Text="Facing" VerticalAlignment="Center"/><controls:HelpTip Text="{x:Static vm:FollowerTalkHelp.Facing}"/></StackPanel>
+                <StackPanel Orientation="Horizontal" Grid.Column="2"><TextBlock Classes="label" Text="Length" VerticalAlignment="Center"/><controls:HelpTip Text="{x:Static vm:FollowerTalkHelp.Length}"/></StackPanel>
+                <StackPanel Orientation="Horizontal" Grid.Column="3"><TextBlock Classes="label" Text="X" VerticalAlignment="Center"/><controls:HelpTip Text="{x:Static vm:FollowerTalkHelp.X}"/></StackPanel>
+                <StackPanel Orientation="Horizontal" Grid.Column="4"><TextBlock Classes="label" Text="Hop" VerticalAlignment="Center"/><controls:HelpTip Text="{x:Static vm:FollowerTalkHelp.Hop}"/></StackPanel>
+                <StackPanel Orientation="Horizontal" Grid.Column="5"><TextBlock Classes="label" Text="Z" VerticalAlignment="Center"/><controls:HelpTip Text="{x:Static vm:FollowerTalkHelp.Z}"/></StackPanel>
+                <StackPanel Orientation="Horizontal" Grid.Column="6"><TextBlock Classes="label" Text="Sound" VerticalAlignment="Center"/><controls:HelpTip Text="{x:Static vm:FollowerTalkHelp.FrameSound}"/></StackPanel>
+              </Grid>
+              <ItemsControl ItemsSource="{Binding Frames}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:FollowerTalkEditorViewModel+FrameVM">
+                    <Grid ColumnDefinitions="40,130,100,100,100,100,80,*" Margin="0,0,0,4">
+                      <TextBlock Grid.Column="0" Text="{Binding Title}" VerticalAlignment="Center"/>
+                      <ComboBox Grid.Column="1" ItemsSource="{Binding Facings}" SelectedItem="{Binding Facing}" Margin="0,0,6,0" HorizontalAlignment="Stretch"/>
+                      <NumericUpDown Grid.Column="2" Value="{Binding Length}" Minimum="0" Maximum="254" Margin="0,0,6,0"/>
+                      <NumericUpDown Grid.Column="3" Value="{Binding X}" Minimum="-128" Maximum="127" Margin="0,0,6,0"/>
+                      <NumericUpDown Grid.Column="4" Value="{Binding Hop}" Minimum="-128" Maximum="127" Margin="0,0,6,0"/>
+                      <NumericUpDown Grid.Column="5" Value="{Binding Z}" Minimum="-128" Maximum="127" Margin="0,0,6,0"/>
+                      <CheckBox Grid.Column="6" IsChecked="{Binding Sound}"/>
+                      <Button Grid.Column="7" Content="Remove" Click="FrameRemove_Click" HorizontalAlignment="Left"/>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <Button Content="Add frame" Click="FrameAdd_Click" IsEnabled="{Binding CanAddFrame}" ToolTip.Tip="Up to ten frames" ToolTip.ShowOnDisabled="True" HorizontalAlignment="Left"/>
+            </StackPanel>
+          </ScrollViewer>
+        </Grid>
+      </TabItem>
+
+      <TabItem Header="Species groups">
+        <DockPanel Margin="0,6,0,0">
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="0,0,0,6">
+            <TextBlock Classes="label" Text="Group per species" VerticalAlignment="Center"/>
+            <controls:HelpTip Text="{x:Static vm:FollowerTalkHelp.Group}"/>
+          </StackPanel>
+          <ListBox ItemsSource="{Binding SpeciesRows}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:FollowerTalkEditorViewModel+SpeciesRow">
+                <DockPanel>
+                  <NumericUpDown DockPanel.Dock="Right" Value="{Binding Group}" Minimum="0" Maximum="255" Width="130"/>
+                  <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                </DockPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
+      </TabItem>
+    </TabControl>
+  </DockPanel>
+</UserControl>

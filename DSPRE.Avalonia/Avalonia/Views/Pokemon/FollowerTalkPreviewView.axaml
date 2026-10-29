@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+             xmlns:views="clr-namespace:DSPRE.Avalonia.Views.Controls"
+             x:Class="DSPRE.Avalonia.Views.Pokemon.FollowerTalkPreviewView"
+             x:DataType="vm:FollowerTalkPreviewViewModel">
+  <Design.DataContext>
+    <vm:FollowerTalkPreviewViewModel/>
+  </Design.DataContext>
+
+  <StackPanel Spacing="6" Margin="8,6,8,8">
+    <Grid ColumnDefinitions="*,6,*" RowDefinitions="Auto,6,Auto">
+      <ComboBox Grid.Row="0" Grid.Column="0" ItemsSource="{Binding Species}" SelectedItem="{Binding SelectedSpecies}" HorizontalAlignment="Stretch" ToolTip.Tip="Follower"/>
+      <TextBox Grid.Row="0" Grid.Column="2" Text="{Binding Nickname}" MaxLength="10" PlaceholderText="Nickname"/>
+      <TextBox Grid.Row="2" Grid.Column="0" Text="{Binding PlayerName}" MaxLength="7" PlaceholderText="Player"/>
+      <TextBox Grid.Row="2" Grid.Column="2" Text="{Binding HeldItem}" MaxLength="16" PlaceholderText="Held item"/>
+    </Grid>
+
+    <Grid Height="230" Background="Black" PointerPressed="Field_PointerPressed">
+      <views:CameraPreview x:Name="Field"/>
+      <Border VerticalAlignment="Top" HorizontalAlignment="Left" Margin="6" Padding="6,2" CornerRadius="4" Background="#C0101010"
+              IsVisible="{Binding SoundNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+        <TextBlock Text="{Binding SoundNote}" Foreground="White" FontSize="12"/>
+      </Border>
+      <views:FieldMessageBoxView VerticalAlignment="Bottom" Height="66" Margin="4" FitToFrame="True"
+                                 Text="{Binding Text}" HasMore="{Binding HasMore}" IsOpen="{Binding BoxOpen}" IsVisible="{Binding BoxOpen}"/>
+    </Grid>
+
+    <WrapPanel>
+      <Button Content="Play" Click="Play_Click" Margin="0,0,6,6"/>
+      <Button Content="Next" Click="Next_Click" IsEnabled="{Binding WaitingForA}" ToolTip.Tip="No line is waiting" ToolTip.ShowOnDisabled="True" Margin="0,0,6,6"/>
+      <Button Content="Yes" Click="Yes_Click" IsVisible="{Binding Asking}" Margin="0,0,6,6"/>
+      <Button Content="No" Click="No_Click" IsVisible="{Binding Asking}" Margin="0,0,6,6"/>
+      <Button Content="Stop" Click="Stop_Click" Margin="0,0,12,6"/>
+      <CheckBox Content="Sound" IsChecked="{Binding Sound}" Margin="0,0,0,6"/>
+    </WrapPanel>
+    <TextBlock Text="{Binding Status}" FontWeight="SemiBold"/>
+    <TextBlock Text="{Binding After}" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
+  </StackPanel>
+</UserControl>

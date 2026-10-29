@@ -146,6 +146,13 @@ namespace DSPRE.Avalonia
                 S(null, "One row per baby", "The game only uses each baby's first row."),
                 S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
+            Add("FollowerTalkEditorView", "Follower talk",
+                S("tab:Places", "Places", "Each place has 30 slots, plus 70 general ones shared by all."),
+                S("tab:Places", "Which slot plays", "The game plays the first slot down the list whose chance and conditions pass."),
+                S("tab:Reactions", "Reactions", "A reaction runs up to five steps, then can ask or give something."),
+                S("tab:Movements", "Movements", "A movement turns, shuffles or hops the follower frame by frame."),
+                S("tab:Species groups", "Species groups", "Slots can ask for a group of species."),
+                S("toolbar", "Saving", "Ctrl+S saves slots, reactions, movements and lines together."));
             Add("FriendshipChangesView", "Friendship changes",
                 S("name:FriendshipRows", "Friendship changes", "Each event's change at low, middle and high friendship."),
                 S("name:FriendshipRows", "Unused events", "Greyed rows are never triggered."),

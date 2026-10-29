@@ -154,6 +154,8 @@ namespace DSPRE
         public static uint PokegearRematchFallbackTableOffset { get; private set; }
         /// <summary>Pokégear phone strings, whose messages from 38 on are the special contact titles. -1 when unknown.</summary>
         public static int PokegearPhoneMessageArchive { get; private set; } = -1;
+        /// <summary>Text archive with the follower lines (HGSS); -1 elsewhere.</summary>
+        public static int FollowerTalkTextArchive { get; private set; } = -1;
 
         /// <summary>The shared menu entries a script's standard-text menus read from. -1 when unknown.</summary>
         public static int FieldMenuEntriesArchive { get; private set; } = -1;
@@ -813,6 +815,10 @@ namespace DSPRE
             Headbutt,
             RockSmash,
             FollowerParams, // HGSS only
+            FollowerTalkTriggers, // HGSS only
+            FollowerTalkReactions, // HGSS only
+            FollowerTalkMoves, // HGSS only
+            FollowerSpeciesGroups, // HGSS only
             PokeathlonPerformance, // HGSS only
             SafariZone,
             BattleTowerTrainers,
@@ -1282,6 +1288,7 @@ namespace DSPRE
             PokegearRematchOverlayNumber = pokegear?.Overlay ?? -1;
             PokegearRematchFallbackTableOffset = (uint)(pokegear?.Offset ?? 0);
             PokegearPhoneMessageArchive = GameFamily == GameFamilies.HGSS ? (GameLanguage == GameLanguages.Japanese ? 264 : 271) : -1;
+            FollowerTalkTextArchive = GameFamily == GameFamilies.HGSS ? (GameLanguage == GameLanguages.Japanese ? 258 : 265) : -1;
             // Literal-pool words in the lookup code that hold the table address, and the row-count compare bounding its
             // loop (pokeplatinum overlay005/vs_seeker.c).
             RomLocator.Spot rematches = RomLocator.Where(RomLocator.Thing.VsSeekerRematches);
@@ -1840,7 +1847,7 @@ namespace DSPRE
         {
             [GameFamilies.DP] = new() { [10] = 10, [16] = 15, [320] = 319, [326] = 325, [343] = 341, [344] = 342, [362] = 357, [382] = 376, [552] = 546, [555] = 548, [558] = 551, [559] = 552, [560] = 553, [565] = 557, [587] = 576, [588] = 577, [614] = 602, [615] = 603, [616] = 604, [617] = 605, [619] = 607, [620] = 608, [621] = 609, [622] = 610, [623] = 611 },
             [GameFamilies.Plat] = new() { [12] = 12, [21] = 20, [360] = 359, [361] = 360, [370] = 369, [391] = 389, [392] = 390, [412] = 408, [433] = 428, [610] = 605, [614] = 608, [617] = 611, [618] = 612, [619] = 613, [624] = 617, [646] = 636, [647] = 637, [697] = 687, [701] = 691, [702] = 692, [703] = 693, [704] = 694, [705] = 695, [706] = 696, [707] = 697, [709] = 699, [711] = 701, [712] = 702, [713] = 703, [714] = 704, [715] = 705, [716] = 706, [717] = 707, [719] = 709, [720] = 710, [721] = 711, [722] = 712, [723] = 713 },
-            [GameFamilies.HGSS] = new() { [15] = 15, [27] = 26, [30] = 29, [190] = 189, [191] = 190, [196] = 195, [200] = 199, [211] = 210, [221] = 219, [222] = 220, [237] = 233, [246] = 241, [271] = 266, [279] = 274, [435] = 430, [445] = 440, [720] = 715, [724] = 718, [728] = 722, [729] = 723, [730] = 724, [735] = 728, [749] = 742, [750] = 743, [752] = 744, [802] = 795, [803] = 796, [804] = 797, [806] = 799, [807] = 800, [808] = 801, [809] = 802, [810] = 803, [812] = 805, [814] = 807, [816] = 809, [817] = 810, [818] = 811, [819] = 812, [820] = 813, [821] = 814, [822] = 815, [824] = 817, [825] = 818, [826] = 819, [827] = 820, [828] = 821 },
+            [GameFamilies.HGSS] = new() { [15] = 15, [27] = 26, [30] = 29, [190] = 189, [191] = 190, [196] = 195, [200] = 199, [211] = 210, [221] = 219, [222] = 220, [237] = 233, [246] = 241, [265] = 260, [271] = 266, [279] = 274, [435] = 430, [445] = 440, [720] = 715, [724] = 718, [728] = 722, [729] = 723, [730] = 724, [735] = 728, [749] = 742, [750] = 743, [752] = 744, [802] = 795, [803] = 796, [804] = 797, [806] = 799, [807] = 800, [808] = 801, [809] = 802, [810] = 803, [812] = 805, [814] = 807, [816] = 809, [817] = 810, [818] = 811, [819] = 812, [820] = 813, [821] = 814, [822] = 815, [824] = 817, [825] = 818, [826] = 819, [827] = 820, [828] = 821 },
         };
 
         public static int TextBank(int usBank) =>
@@ -1856,6 +1863,7 @@ namespace DSPRE
             StarterScreenTextNumber = TextBank(StarterScreenTextNumber);
             StarterPokedexSpeciesTextNumber = TextBank(StarterPokedexSpeciesTextNumber);
             PokegearPhoneMessageArchive = TextBank(PokegearPhoneMessageArchive);
+            FollowerTalkTextArchive = TextBank(FollowerTalkTextArchive);
             FieldMenuEntriesArchive = TextBank(FieldMenuEntriesArchive);
             FieldSharedMessageArchives = TextBanks(FieldSharedMessageArchives);
             FieldTouchMenuTextArchive = TextBank(FieldTouchMenuTextArchive);
@@ -2548,6 +2556,10 @@ namespace DSPRE
                         [DirNames.Headbutt] = $@"{_dataFolderName}\a\2\5\2", //both versions use the same folder with different data
                         [DirNames.RockSmash] = $@"{_dataFolderName}\a\2\5\3", //odds+table-type per header; both versions use the same folder with different data
                         [DirNames.FollowerParams] = $@"{_dataFolderName}\a\1\4\1", // fielddata/tsurepoke/tp_param, 4 bytes per follower model
+                        [DirNames.FollowerTalkTriggers] = $@"{_dataFolderName}\a\2\2\0",
+                        [DirNames.FollowerTalkReactions] = $@"{_dataFolderName}\a\2\2\1",
+                        [DirNames.FollowerTalkMoves] = $@"{_dataFolderName}\a\2\2\2",
+                        [DirNames.FollowerSpeciesGroups] = $@"{_dataFolderName}\a\2\3\1", // one byte per species
                         [DirNames.PokeathlonPerformance] = $@"{_dataFolderName}\a\1\6\9", // poketool/personal/performance, 20 bytes per species form
 
                         [DirNames.TrainerTextOffset] = $@"{_dataFolderName}\a\1\3\1",

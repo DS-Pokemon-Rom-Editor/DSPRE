@@ -67,6 +67,8 @@
                   ToolTip.Tip="{Binding BlockedNote[PokedexListsView], TargetNullValue='The regional Pokédex order and the Pokédex sort lists'}"/>
         <MenuItem Header="Breeding items" Click="BreedingItems_Click" IsVisible="{Binding Shown[BreedingItemsView]}" IsEnabled="{Binding CanUseBreedingItems}"
                   ToolTip.Tip="{Binding BlockedNote[BreedingItemsView], TargetNullValue='Babies that only hatch while a parent holds an incense'}"/>
+        <MenuItem Header="Follower talk" Click="FollowerTalk_Click" IsVisible="{Binding Shown[FollowerTalkEditorView]}" IsEnabled="{Binding Usable[FollowerTalkEditorView]}"
+                  ToolTip.Tip="{Binding BlockedNote[FollowerTalkEditorView], TargetNullValue='What followers say when talked to'}"/>
         <MenuItem Header="Friendship changes" Click="FriendshipChanges_Click" IsVisible="{Binding Shown[FriendshipChangesView]}" IsEnabled="{Binding CanUseFriendship}"
                   ToolTip.Tip="{Binding BlockedNote[FriendshipChangesView], TargetNullValue='How much friendship each event adds or takes'}"/>
         <Separator/>
