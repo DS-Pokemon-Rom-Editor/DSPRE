@@ -385,9 +385,20 @@ Dialogs go through `DialogHelper` with the editor as owner, and Discard asks thr
 
 ### Toolbar and controls
 
-`EditorToolbar` keeps the controls in the same order in every editor. Name pickers are `FusionAutoCompleteBox`,
-number-and-name pickers `IdNameSelector`. `controls:EditorLink.To` links a value to its editor, and `HelpTip` adds a
-one-line hint.
+`EditorToolbar` keeps the controls in the same order in every editor: the first row holds the picker, Save,
+Discard, Undo and Redo. The second holds Add, Remove, Import, Export and the editor's own buttons. A control's place comes
+from its label, or from `controls:EditorToolbar.Slot` when the label doesn't say.
+
+```xml
+<controls:EditorToolbar>
+  <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click"/>
+  <controls:UndoRedoButtons/>
+  <Button Content="Copy" Click="Copy_Click" controls:EditorToolbar.Slot="Extra"/>
+</controls:EditorToolbar>
+```
+
+Name pickers are `FusionAutoCompleteBox`, number-and-name pickers `IdNameSelector`. `controls:EditorLink.To` links a
+value to its editor, and `HelpTip` adds a one-line hint.
 
 ### Tours
 
