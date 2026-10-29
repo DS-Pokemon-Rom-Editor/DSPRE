@@ -52,14 +52,22 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>
-        /// The top screen of a battle as it would look after the import, in each way the bar can show, or null.
+        /// Draws the battle with the current bar and with the imported one, or returns null.
         /// A double battle bar of yours is drawn twice: with its gauge, and with the numbers Start swaps in.
         /// </summary>
-        public static List<(string Label, byte[] Rgba)> Preview(GraphicAssets.Archive archive, int index, string path, HpBarFit.Plan plan, out string trouble)
+        public static List<(string Label, byte[] Now, byte[] After)> Preview(GraphicAssets.Archive archive, int index, string path, HpBarFit.Plan plan, out string trouble)
         {
             trouble = null;
             bool doubles = plan.Kind is not (BattleGaugeComposer.Kind.PlayerSingle or BattleGaugeComposer.Kind.OpponentSingle);
             bool numbers = plan.Kind is BattleGaugeComposer.Kind.PlayerNear or BattleGaugeComposer.Kind.PlayerFar;
+            // The current bar has to be drawn before the import is staged.
+            List<byte[]> now = new List<byte[]>();
+            try
+            {
+                BattleGaugeTextRenderer.Reset();
+                foreach (bool asNumbers in numbers ? new[] { false, true } : new[] { false }) now.Add(Draw(doubles, asNumbers));
+            }
+            catch (Exception ex) { trouble = "The preview couldn't be drawn: " + ex.Message; return null; }
             PendingArchiveWrites dry = new PendingArchiveWrites();
             byte[] sheet = null;
             string said = null;
@@ -71,21 +79,20 @@ namespace DSPRE.Avalonia.Data
                 using (BattleGaugePieces.Staged(sheet))
                 {
                     BattleGaugeTextRenderer.Reset();
-                    List<(string, byte[])> shown = new List<(string, byte[])>();
+                    List<(string, byte[], byte[])> shown = new List<(string, byte[], byte[])>();
                     foreach (bool asNumbers in numbers ? new[] { false, true } : new[] { false })
-                    {
-                        List<BattleScreenRenderer.Piece> pieces = new BattleScreenRenderer().Build(new BattleScreenRenderer.Options
-                        {
-                            TerrainId = 2, PokemonName = "PIDGEY", Level = 42, Gender = BattleGaugeText.Gender.Male, HealthLeft = 0.45,
-                            Doubles = doubles, NumbersInsteadOfBar = asNumbers,
-                        });
-                        shown.Add((asNumbers ? "After Start" : "In battle", BattleScreenRenderer.Flatten(pieces, touch: false)));
-                    }
+                        shown.Add((asNumbers ? "After Start" : "In battle", now[shown.Count], Draw(doubles, asNumbers)));
                     return shown;
                 }
             }
             catch (Exception ex) { trouble = "The preview couldn't be drawn: " + ex.Message; return null; }
             finally { BattleGaugeTextRenderer.Reset(); }
         }
+
+        private static byte[] Draw(bool doubles, bool asNumbers) => BattleScreenRenderer.Flatten(new BattleScreenRenderer().Build(new BattleScreenRenderer.Options
+        {
+            TerrainId = 2, PokemonName = "PIDGEY", Level = 42, Gender = BattleGaugeText.Gender.Male, HealthLeft = 0.45,
+            Doubles = doubles, NumbersInsteadOfBar = asNumbers,
+        }), touch: false);
     }
 }

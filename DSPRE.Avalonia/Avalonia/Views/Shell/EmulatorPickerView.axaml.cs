@@ -16,6 +16,7 @@ namespace DSPRE.Avalonia.Views.Shell
         {
             AvaloniaXamlLoader.Load(this);
             DataContext = new EmulatorPickerViewModel();
+            DialogSizing.Grow(this);
         }
 
         /// <summary>Asks for an emulator. The chosen kind and path, or null when cancelled.</summary>

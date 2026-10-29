@@ -5,8 +5,7 @@
         x:Class="DSPRE.Avalonia.Views.Tools.HgEngineLinkView"
         x:DataType="vm:HgEngineLinkViewModel"
         Title="Link hg-engine checkout"
-        Width="560" Height="250"
-        CanResize="False"
+        Width="560" SizeToContent="Height"
         WindowStartupLocation="CenterOwner">
   <Design.DataContext>
     <vm:HgEngineLinkViewModel/>

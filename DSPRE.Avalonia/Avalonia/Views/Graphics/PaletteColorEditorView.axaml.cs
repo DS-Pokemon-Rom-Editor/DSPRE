@@ -8,7 +8,11 @@ namespace DSPRE.Avalonia.Views.Graphics
     {
         private PaletteColorEditorViewModel VM => (PaletteColorEditorViewModel)DataContext;
 
-        public PaletteColorEditorView() => InitializeComponent();
+        public PaletteColorEditorView()
+        {
+            InitializeComponent();
+            DialogSizing.Grow(this);
+        }
 
         public PaletteColorEditorView(PaletteColorEditorViewModel vm) : this()
         {

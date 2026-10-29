@@ -1008,7 +1008,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             string suffix = shiny ? "Shiny" : "";
             string path = await DialogHelper.SaveFileAsync(owner,
-                $"Export {SpriteLabels[slot]}{(shiny ? " (Shiny)" : "")} as PNG",
+                $"Export {SpriteLabels[slot]}{(shiny ? " (shiny)" : "")} as PNG",
                 new[] { DialogHelper.PngFilter, DialogHelper.AllFilter },
                 $"mon{_currentId:D3}_{SpriteLabels[slot].Replace(" ", "")}{suffix}.png");
             if (string.IsNullOrEmpty(path)) return;

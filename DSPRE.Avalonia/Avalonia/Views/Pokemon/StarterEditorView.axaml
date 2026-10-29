@@ -1,12 +1,11 @@
-<Window MinWidth="480" MinHeight="440" xmlns="https://github.com/avaloniaui"
+<Window MinWidth="480" MinHeight="260" xmlns="https://github.com/avaloniaui"
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
 		xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
 		x:Class="DSPRE.Avalonia.Views.Pokemon.StarterEditorView"
 		x:DataType="vm:StarterEditorViewModel"
-		Width="480" Height="420"
-		WindowStartupLocation="CenterOwner"
-		CanResize="False">
+		Width="480" SizeToContent="Height"
+		WindowStartupLocation="CenterOwner">
   <Design.DataContext>
     <vm:StarterEditorViewModel/>
   </Design.DataContext>

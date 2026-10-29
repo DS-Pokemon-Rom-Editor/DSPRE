@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace DSPRE.Avalonia
 {
     /// <summary>
-    /// Hooks the app installs into the UI layer at startup; today only the update check.
+    /// Hooks the app installs into the UI layer at startup. The update check is the only one.
     /// </summary>
     public static class ShellIntegration
     {

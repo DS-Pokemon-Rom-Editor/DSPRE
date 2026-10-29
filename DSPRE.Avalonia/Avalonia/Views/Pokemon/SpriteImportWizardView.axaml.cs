@@ -8,7 +8,11 @@ namespace DSPRE.Avalonia.Views.Pokemon
     {
         private SpriteImportWizardViewModel VM => (SpriteImportWizardViewModel)DataContext;
 
-        public SpriteImportWizardView() => InitializeComponent();
+        public SpriteImportWizardView()
+        {
+            InitializeComponent();
+            DialogSizing.Grow(this);
+        }
 
         public SpriteImportWizardView(SpriteImportWizardViewModel vm) : this()
         {

@@ -5,10 +5,9 @@
         x:Class="DSPRE.Avalonia.Views.World.AddOverworldEntryView"
         x:DataType="vm:AddOverworldEntryViewModel"
         Title="Add custom overworld entry"
-        Width="380" Height="520"
-        MinWidth="340" MinHeight="480"
-        WindowStartupLocation="CenterOwner"
-        CanResize="False">
+        Width="720" Height="400"
+        MinWidth="640" MinHeight="360"
+        WindowStartupLocation="CenterOwner">
   <Design.DataContext>
     <vm:AddOverworldEntryViewModel/>
   </Design.DataContext>
@@ -22,7 +21,8 @@
       </StackPanel>
     </StackPanel>
 
-    <StackPanel Spacing="4">
+    <Grid ColumnDefinitions="400,14,*">
+    <StackPanel Grid.Column="0" Spacing="4">
       <controls:HelpTip Text="Needs the overworld sprites expansion patch and a free slot" HorizontalAlignment="Left"
                         IsVisible="{Binding !IsHgEngine}"/>
       <controls:HelpTip Text="The new overworld gets the next free number" HorizontalAlignment="Left"
@@ -39,11 +39,6 @@
                 ToolTip.Tip="A texture already in the game's format, copied as it is."/>
         <Button Grid.Column="4" Content="Clear" controls:Icon.Key="Cross" Click="ClearImage_Click" IsEnabled="{Binding HasImage}"/>
       </Grid>
-      <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="{DynamicResource Editor.PanelBg}" Height="120">
-        <Image Source="{Binding ImagePreview}" Stretch="Uniform" Margin="4"/>
-      </Border>
-      <TextBlock Text="{Binding ImageInfoText}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap"
-                 IsVisible="{Binding HasImage}"/>
 
       <TextBlock Text="{Binding SlotSectionLabel}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,6,0,0"/>
       <ComboBox ItemsSource="{Binding SlotOptions}" SelectedItem="{Binding SelectedSlot}" HorizontalAlignment="Stretch"
@@ -53,5 +48,13 @@
       <ComboBox ItemsSource="{Binding CloneOptions}" SelectedItem="{Binding SelectedCloneSource}" HorizontalAlignment="Stretch"
                 ToolTip.Tip="The overworld whose settings the new one copies."/>
     </StackPanel>
+    <DockPanel Grid.Column="2">
+      <TextBlock DockPanel.Dock="Bottom" Text="{Binding ImageInfoText}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap"
+                 IsVisible="{Binding HasImage}" Margin="0,4,0,0"/>
+      <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="{DynamicResource Editor.PanelBg}">
+        <Image Source="{Binding ImagePreview}" Stretch="Uniform" Margin="4" RenderOptions.BitmapInterpolationMode="None"/>
+      </Border>
+    </DockPanel>
+    </Grid>
   </DockPanel>
 </Window>

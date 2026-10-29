@@ -31,7 +31,6 @@ namespace DSPRE.Avalonia
             {
                 Title = "Colours not in the palette",
                 Width = 540,
-                CanResize = false,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 SizeToContent = SizeToContent.Height,
             };
@@ -52,6 +51,12 @@ namespace DSPRE.Avalonia
             for (int i = 0; i < check.Missing.Count; i++)
             {
                 StackPanel row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+                // A flat drawing keeps its colour numbers, so the old colour goes first.
+                if (check.KeepsNumbers && i < check.Replaced.Count)
+                {
+                    row.Children.Add(Swatch(check.Replaced[i]));
+                    row.Children.Add(new Image { Source = Controls.Icon.Get("arrowright"), Width = 16, Height = 16, VerticalAlignment = VerticalAlignment.Center });
+                }
                 row.Children.Add(Swatch(check.Missing[i]));
                 if (choosing)
                 {
@@ -101,7 +106,8 @@ namespace DSPRE.Avalonia
                 }
                 rows.Children.Add(row);
             }
-            root.Children.Add(new ScrollViewer { Content = rows, MaxHeight = 320 });
+            ScrollViewer list = new ScrollViewer { Content = rows, MaxHeight = 320 };
+            root.Children.Add(list);
             if (check.CannotAddBecause != null)
                 root.Children.Add(new TextBlock { Text = check.CannotAddBecause, TextWrapping = TextWrapping.Wrap });
 
@@ -133,7 +139,18 @@ namespace DSPRE.Avalonia
             cancel.Click += (_, _) => win.Close();
             buttons.Children.Add(cancel);
             root.Children.Add(buttons);
-            win.Content = root;
+            // The list of colours takes whatever room the window is given.
+            List<Control> above = root.Children.TakeWhile(c => !ReferenceEquals(c, list)).ToList();
+            List<Control> below = root.Children.SkipWhile(c => !ReferenceEquals(c, list)).Skip(1).ToList();
+            root.Children.Clear();
+            StackPanel top = new StackPanel { Spacing = 8, Margin = new global::Avalonia.Thickness(0, 0, 0, 8) };
+            StackPanel bottom = new StackPanel { Spacing = 8, Margin = new global::Avalonia.Thickness(0, 8, 0, 0) };
+            foreach (Control c in above) top.Children.Add(c);
+            foreach (Control c in below) bottom.Children.Add(c);
+            DockPanel body = DialogSizing.Body(list, bottom, top);
+            body.Margin = new global::Avalonia.Thickness(16);
+            win.Content = body;
+            DialogSizing.Grow(win, list);
 
             if (owner == null) return (Choice.Cancel, check);
             await win.ShowDialog(owner);

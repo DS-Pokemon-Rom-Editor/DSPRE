@@ -47,7 +47,6 @@ namespace DSPRE.Avalonia
             {
                 Title = title,
                 Width = 340, SizeToContent = SizeToContent.Height,
-                CanResize = false,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 Content = new StackPanel
                 {
@@ -75,6 +74,7 @@ namespace DSPRE.Avalonia
                 },
             };
 
+            DialogSizing.Grow(win);
             ok.Click += (_, __) => { answer = (r, g, b); win.Close(); };
             cancel.Click += (_, __) => win.Close();
 
@@ -175,7 +175,6 @@ namespace DSPRE.Avalonia
             {
                 Title = title,
                 Width = 460,
-                CanResize = false,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 SizeToContent = SizeToContent.Height,
             };
@@ -202,15 +201,13 @@ namespace DSPRE.Avalonia
             btnRow.Children.Add(yesBtn);
             btnRow.Children.Add(noBtn);
 
-            StackPanel root = new StackPanel();
-            root.Children.Add(msgText);
-            // A long list scrolls instead of growing the window past the screen.
             StackPanel boxList = new StackPanel();
             foreach (CheckBox box in boxes) boxList.Children.Add(box);
-            root.Children.Add(new ScrollViewer { Content = boxList, MaxHeight = 420 });
+            // A long list scrolls instead of growing the window past the screen.
+            ScrollViewer list = new ScrollViewer { Content = boxList, MaxHeight = 420 };
             btnRow.Margin = new global::Avalonia.Thickness(8, 8, 8, 12);
-            root.Children.Add(btnRow);
-            win.Content = root;
+            win.Content = DialogSizing.Body(list, btnRow, msgText);
+            DialogSizing.Grow(win, list);
 
             owner ??= ActiveOwner();
             if (owner != null)
@@ -232,7 +229,6 @@ namespace DSPRE.Avalonia
             {
                 Title = title,
                 Width = 520,
-                CanResize = false,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 SizeToContent = SizeToContent.Height,
             };
@@ -269,10 +265,8 @@ namespace DSPRE.Avalonia
             btnRow.Children.Add(copyBtn);
             btnRow.Children.Add(closeBtn);
 
-            StackPanel root = new StackPanel();
-            root.Children.Add(box);
-            root.Children.Add(btnRow);
-            win.Content = root;
+            win.Content = DialogSizing.Body(box, btnRow);
+            DialogSizing.Grow(win, box);
 
             owner ??= ActiveOwner();
             if (owner != null)
@@ -291,7 +285,6 @@ namespace DSPRE.Avalonia
             {
                 Title = title,
                 Width = 420,
-                CanResize = false,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 SizeToContent = SizeToContent.Height,
             };
@@ -331,6 +324,7 @@ namespace DSPRE.Avalonia
             root.Children.Add(input);
             root.Children.Add(btnRow);
             win.Content = root;
+            DialogSizing.Grow(win);
 
             owner ??= ActiveOwner();
 
@@ -432,7 +426,6 @@ namespace DSPRE.Avalonia
                 Title = title,
                 Width = labels == null ? 420 : 560,   // named buttons are wider than Yes and No
                 MinHeight = 140,
-                CanResize = false,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 SizeToContent = SizeToContent.Height,
             };
@@ -478,8 +471,8 @@ namespace DSPRE.Avalonia
 
             win.Closed += (_, _) => tcs.TrySetResult(MsgResult.Cancel);
 
-            StackPanel root = new StackPanel();
-            root.Children.Add(new ScrollViewer { Content = msgText, MaxHeight = 380 });
+            ScrollViewer text = new ScrollViewer { Content = msgText, MaxHeight = 380 };
+            StackPanel bottom = new StackPanel();
             if (!string.IsNullOrEmpty(details))
             {
                 Button copyBtn = new Button
@@ -497,10 +490,11 @@ namespace DSPRE.Avalonia
                         copyBtn.Content = "Copied";
                     }
                 };
-                root.Children.Add(copyBtn);
+                bottom.Children.Add(copyBtn);
             }
-            root.Children.Add(btnRow);
-            win.Content = root;
+            bottom.Children.Add(btnRow);
+            win.Content = DialogSizing.Body(text, bottom);
+            DialogSizing.Grow(win, text);
 
             // ShowDialog requires a parent; fall back to Show if none available. Callers may pass an
             // explicit owner (e.g. a modal batch dialog) so nested prompts stack on top of it instead

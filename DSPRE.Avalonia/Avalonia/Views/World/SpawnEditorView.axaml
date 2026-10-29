@@ -7,7 +7,6 @@
         Title="Spawn point editor"
         Width="420" Height="290"
         MinWidth="420" MinHeight="290"
-        CanResize="False"
         WindowStartupLocation="CenterOwner">
   <Design.DataContext>
     <vm:SpawnEditorViewModel/>

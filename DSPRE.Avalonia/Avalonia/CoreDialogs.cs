@@ -126,7 +126,6 @@ namespace DSPRE.Avalonia
                 Title = string.IsNullOrEmpty(title) ? "Confirm" : title,
                 Width = 460,
                 MinHeight = 150,
-                CanResize = false,
                 SizeToContent = SizeToContent.Height,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 ShowInTaskbar = false,
@@ -160,6 +159,7 @@ namespace DSPRE.Avalonia
             root.Children.Add(msgText);
             root.Children.Add(btnRow);
             win.Content = root;
+            DialogSizing.Grow(win);
 
             Window owner = ActiveOwner();
             if (owner != null) _ = win.ShowDialog(owner);
@@ -197,7 +197,6 @@ namespace DSPRE.Avalonia
                 Width = 620,
                 MinHeight = 200,
                 MaxHeight = 640,
-                CanResize = false,
                 SizeToContent = SizeToContent.Height,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 ShowInTaskbar = false,
@@ -256,23 +255,23 @@ namespace DSPRE.Avalonia
             btnRow.Children.Add(apply);
             btnRow.Children.Add(later);
 
-            StackPanel root = new StackPanel();
-            root.Children.Add(new TextBlock
-            {
-                Text = intro,
-                TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
-                Margin = new global::Avalonia.Thickness(16, 16, 16, 10),
-            });
-            root.Children.Add(new ScrollViewer { Content = rows, MaxHeight = 360 });
-            root.Children.Add(new TextBlock
+            ScrollViewer list = new ScrollViewer { Content = rows, MaxHeight = 360 };
+            StackPanel bottom = new StackPanel();
+            bottom.Children.Add(new TextBlock
             {
                 Text = "The side that is replaced is kept in the project's backups/archives folder.",
                 TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
                 Opacity = 0.7,
                 Margin = new global::Avalonia.Thickness(16, 4, 16, 0),
             });
-            root.Children.Add(btnRow);
-            win.Content = root;
+            bottom.Children.Add(btnRow);
+            win.Content = DialogSizing.Body(list, bottom, new TextBlock
+            {
+                Text = intro,
+                TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
+                Margin = new global::Avalonia.Thickness(16, 16, 16, 10),
+            });
+            DialogSizing.Grow(win, list);
             win.Closed += (_, _) => closed = true;
 
             Window owner = ActiveOwner();
@@ -293,7 +292,6 @@ namespace DSPRE.Avalonia
                 Title = string.IsNullOrEmpty(title) ? "Confirm" : title,
                 Width = 480,
                 MinHeight = 160,
-                CanResize = false,
                 SizeToContent = SizeToContent.Height,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 ShowInTaskbar = false,
@@ -328,6 +326,7 @@ namespace DSPRE.Avalonia
             root.Children.Add(msgText);
             root.Children.Add(btnRow);
             win.Content = root;
+            DialogSizing.Grow(win);
 
             Window owner = ActiveOwner();
             if (owner != null) _ = win.ShowDialog(owner);

@@ -6,7 +6,7 @@
         x:Class="DSPRE.Avalonia.Views.Shell.WelcomeView"
         x:DataType="vm:WelcomeViewModel"
         Title="{Binding WindowTitle}"
-        Width="720" Height="480" CanResize="False"
+        Width="720" Height="480" MinWidth="720" MinHeight="480"
         WindowStartupLocation="CenterOwner">
 
   <Design.DataContext>
@@ -21,7 +21,7 @@
       <CheckBox Content="Show this window at startup" IsChecked="{Binding ShowAtStartup}"/>
     </DockPanel>
 
-    <Grid ColumnDefinitions="290,14,*">
+    <Grid ColumnDefinitions="*,14,384">
 
       <!-- Left: quick actions + recents -->
       <DockPanel Grid.Column="0">

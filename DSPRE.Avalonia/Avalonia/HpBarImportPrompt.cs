@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -9,8 +10,8 @@ using DSPRE.ROMFiles;
 namespace DSPRE.Avalonia
 {
     /// <summary>
-    /// Shows how a battle will draw an imported HP bar, with the colours and pieces fitted to it, and asks
-    /// whether to import it that way.
+    /// Shows the battle with the current HP bar and the imported one, with the colours and pieces fitted to it,
+    /// and asks whether to import it that way.
     /// </summary>
     public static class HpBarImportPrompt
     {
@@ -19,7 +20,7 @@ namespace DSPRE.Avalonia
         private sealed class Shown
         {
             public HpBarFit.Plan Plan;
-            public List<(string Label, byte[] Rgba)> Preview;
+            public List<(string Label, byte[] Now, byte[] After)> Preview;
             public string WhyNot;
         }
 
@@ -41,16 +42,8 @@ namespace DSPRE.Avalonia
             Window win = new Window
             {
                 Title = "Import HP bar",
-                Width = 600,
-                CanResize = false,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                SizeToContent = SizeToContent.Height,
             };
-            StackPanel root = new StackPanel { Margin = new global::Avalonia.Thickness(16), Spacing = 10 };
-            StackPanel body = new StackPanel { Spacing = 10 };
-            root.Children.Add(body);
-
-            Show(body, plain);
 
             StackPanel buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 6 };
             if (plain.Preview != null)
@@ -70,40 +63,82 @@ namespace DSPRE.Avalonia
             Button cancel = new Button { Content = "Cancel", IsCancel = true };
             cancel.Click += (_, _) => win.Close();
             buttons.Children.Add(cancel);
-            root.Children.Add(buttons);
-            win.Content = root;
+
+            if (plain.Preview == null)
+            {
+                win.Width = 460;
+                win.SizeToContent = SizeToContent.Height;
+                StackPanel root = new StackPanel { Margin = new global::Avalonia.Thickness(16), Spacing = 10 };
+                root.Children.Add(new TextBlock { Text = plain.WhyNot ?? "This bar can't be fitted.", TextWrapping = TextWrapping.Wrap });
+                root.Children.Add(buttons);
+                win.Content = root;
+            }
+            else
+            {
+                StackPanel bottom = Details(plain.Plan);
+                bottom.Children.Add(buttons);
+                DockPanel body = DialogSizing.Body(Comparison(plain.Preview), bottom);
+                body.Margin = new global::Avalonia.Thickness(16);
+                win.Content = body;
+                // Each preview opens at about twice the DS size, smaller when the screen is short.
+                int rows = plain.Preview.Count;
+                win.Width = 1100;
+                win.Height = rows == 1 ? 560 : 900;
+                if (owner?.Screens?.ScreenFromWindow(owner) is { } screen)
+                    win.Height = Math.Min(win.Height, screen.WorkingArea.Height / screen.Scaling * 0.9);
+                win.MinWidth = 640;
+                win.MinHeight = rows == 1 ? 360 : 480;
+            }
 
             if (owner == null) return (Choice.Cancel, plain.Plan);
             await win.ShowDialog(owner);
             return (picked, plain.Plan);
         }
 
-        private static void Show(StackPanel body, Shown shown)
+        private static Grid Comparison(List<(string Label, byte[] Now, byte[] After)> pages)
         {
-            body.Children.Clear();
-            if (shown.Preview == null)
+            Grid grid = new Grid { ColumnSpacing = 12, RowSpacing = 8 };
+            grid.ColumnDefinitions = new ColumnDefinitions("Auto,*,*");
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            Add(grid, Heading("Current bar"), 0, 1);
+            Add(grid, Heading("Imported bar"), 0, 2);
+            for (int i = 0; i < pages.Count; i++)
             {
-                body.Children.Add(new TextBlock { Text = shown.WhyNot ?? "This bar can't be fitted.", TextWrapping = TextWrapping.Wrap });
-                return;
+                grid.RowDefinitions.Add(new RowDefinition(1, GridUnitType.Star));
+                Add(grid, new TextBlock { Text = pages[i].Label, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center }, i + 1, 0);
+                Add(grid, Screen(pages[i].Now), i + 1, 1);
+                Add(grid, Screen(pages[i].After), i + 1, 2);
             }
-            HpBarFit.Plan plan = shown.Plan;
-            StackPanel shots = new StackPanel { Spacing = 8 };
-            foreach ((string label, byte[] rgba) in shown.Preview)
-            {
-                shots.Children.Add(new TextBlock { Text = label, FontWeight = FontWeight.SemiBold });
-                shots.Children.Add(new Border
-                {
-                    BorderBrush = Brushes.Gray, BorderThickness = new global::Avalonia.Thickness(1), HorizontalAlignment = HorizontalAlignment.Left,
-                    Child = new Image
-                    {
-                        Source = ImageConverter.FromRgba(rgba, BattleScreenRenderer.ScreenWidth, BattleScreenRenderer.ScreenHeight),
-                        Width = BattleScreenRenderer.ScreenWidth * 2, Height = BattleScreenRenderer.ScreenHeight * 2,
-                        Stretch = Stretch.Fill,
-                    }.Also(i => RenderOptions.SetBitmapInterpolationMode(i, global::Avalonia.Media.Imaging.BitmapInterpolationMode.None)),
-                });
-            }
-            body.Children.Add(new ScrollViewer { Content = shots, MaxHeight = 820 });
+            return grid;
+        }
 
+        private static TextBlock Heading(string text) => new TextBlock { Text = text, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center };
+
+        private static void Add(Grid grid, Control c, int row, int column)
+        {
+            Grid.SetRow(c, row);
+            Grid.SetColumn(c, column);
+            grid.Children.Add(c);
+        }
+
+        private static Viewbox Screen(byte[] rgba)
+        {
+            Image image = new Image
+            {
+                Source = ImageConverter.FromRgba(rgba, BattleScreenRenderer.ScreenWidth, BattleScreenRenderer.ScreenHeight),
+                Width = BattleScreenRenderer.ScreenWidth, Height = BattleScreenRenderer.ScreenHeight,
+            };
+            RenderOptions.SetBitmapInterpolationMode(image, global::Avalonia.Media.Imaging.BitmapInterpolationMode.None);
+            return new Viewbox
+            {
+                Stretch = Stretch.Uniform,
+                Child = new Border { BorderBrush = Brushes.Gray, BorderThickness = new global::Avalonia.Thickness(1), Child = image },
+            };
+        }
+
+        private static StackPanel Details(HpBarFit.Plan plan)
+        {
+            StackPanel details = new StackPanel { Spacing = 8, Margin = new global::Avalonia.Thickness(0, 10, 0, 0) };
             // With the patch nothing is painted behind the text, so its background colour isn't shown.
             StackPanel text = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 14 };
             List<(string, uint)> swatches = new List<(string, uint)>();
@@ -117,12 +152,11 @@ namespace DSPRE.Avalonia
                 one.Children.Add(new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center });
                 text.Children.Add(one);
             }
-            body.Children.Add(text);
+            details.Children.Add(text);
             foreach (string note in plan.Notes)
-                body.Children.Add(new TextBlock { Text = note, TextWrapping = TextWrapping.Wrap, FontSize = 12 });
+                details.Children.Add(new TextBlock { Text = note, TextWrapping = TextWrapping.Wrap, FontSize = 12 });
+            return details;
         }
-
-        private static T Also<T>(this T value, System.Action<T> act) { act(value); return value; }
 
         private static Border Swatch(uint c) => new Border
         {

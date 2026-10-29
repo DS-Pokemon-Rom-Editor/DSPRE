@@ -64,7 +64,6 @@ namespace DSPRE.Avalonia
                 Title = title,
                 Width = 460,
                 MinHeight = 150,
-                CanResize = false,
                 SizeToContent = SizeToContent.Height,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 ShowInTaskbar = false,
@@ -103,6 +102,7 @@ namespace DSPRE.Avalonia
             root.Children.Add(msgText);
             root.Children.Add(btnRow);
             win.Content = root;
+            DialogSizing.Grow(win);
 
             Window owner = ActiveOwner(win);
             if (owner != null)

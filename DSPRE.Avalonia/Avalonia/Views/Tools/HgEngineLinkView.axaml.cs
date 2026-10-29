@@ -13,6 +13,7 @@ namespace DSPRE.Avalonia.Views.Tools
         {
             AvaloniaXamlLoader.Load(this);
             DataContext = new HgEngineLinkViewModel();
+            DialogSizing.Grow(this);
         }
 
         private async void Browse_Click(object sender, RoutedEventArgs e) => await VM.BrowseAsync(this);

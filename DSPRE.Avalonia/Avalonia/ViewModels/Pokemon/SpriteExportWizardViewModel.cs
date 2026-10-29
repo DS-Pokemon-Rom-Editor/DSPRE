@@ -79,7 +79,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private ExportPickItem MakeSpriteItem(string pose, int slot, bool shiny) => new ExportPickItem
         {
-            Label = pose + (shiny ? " (Shiny)" : ""),
+            Label = pose + (shiny ? " (shiny)" : ""),
             FileName = $"mon{_sprite.CurrentId:D3}_{pose.Replace(" ", "")}{(shiny ? "Shiny" : "")}.png",
             Width = _sprite.SpritePixelWidth,
             Height = _sprite.SpritePixelHeight,

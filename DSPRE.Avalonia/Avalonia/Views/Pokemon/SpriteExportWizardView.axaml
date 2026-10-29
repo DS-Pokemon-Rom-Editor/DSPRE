@@ -5,7 +5,7 @@
         x:Class="DSPRE.Avalonia.Views.Pokemon.SpriteExportWizardView"
         x:DataType="vm:SpriteExportWizardViewModel"
         Title="Export wizard"
-        Width="420" SizeToContent="Height" CanResize="False"
+        Width="420" SizeToContent="Height"
         WindowStartupLocation="CenterScreen">
   <StackPanel Margin="18" Spacing="14">
 

@@ -5,7 +5,7 @@
         x:Class="DSPRE.Avalonia.Views.Shell.EmulatorPickerView"
         x:DataType="vm:EmulatorPickerViewModel"
         Title="Choose an emulator"
-        Width="520" SizeToContent="Height" CanResize="False"
+        Width="520" SizeToContent="Height"
         WindowStartupLocation="CenterOwner">
 
   <Design.DataContext>

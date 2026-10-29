@@ -15,6 +15,7 @@ namespace DSPRE.Avalonia.Data
         public sealed class PngColourCheck
         {
             public List<uint> Missing = new();          // 0xRRGGBB, as the DS would keep them
+            public List<uint> Replaced = new();         // colour the palette has at that number, for a flat drawing
             public List<int> Slots = new();             // colour number each missing colour would take, in order
             public List<IReadOnlyList<string>> SlotUsers = new();   // what else draws with that number, or null
             public int PaletteEntry = -1;
@@ -126,6 +127,7 @@ namespace DSPRE.Avalonia.Data
                 uint want = Ds(pal[i] & 0xFFFFFF), have = Ds(ix.Palette[i] & 0xFFFFFF);
                 if (want == have) continue;
                 check.Missing.Add(want);
+                check.Replaced.Add(have);
                 check.Slots.Add(i);
                 check.SlotUsers.Add(users.TryGetValue(i, out List<string> u) && u.Count > 0 ? u : null);
             }

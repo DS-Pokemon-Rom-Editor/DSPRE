@@ -5,39 +5,44 @@
         x:Class="DSPRE.Avalonia.Views.Pokemon.SpriteImportWizardView"
         x:DataType="vm:SpriteImportWizardViewModel"
         Title="Import wizard"
-        Width="460" SizeToContent="Height" CanResize="False"
+        Width="640" SizeToContent="Height"
         WindowStartupLocation="CenterScreen">
-  <StackPanel Margin="18" Spacing="16">
-
-    <StackPanel Spacing="6">
+  <DockPanel Margin="18">
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,16,0,0">
+      <Button Content="Cancel" Click="Cancel_Click"/>
+      <Button Content="{Binding RunButtonText}" Click="Run_Click" IsDefault="True" FontWeight="SemiBold"/>
+    </StackPanel>
+    <Grid ColumnDefinitions="Auto,24,*">
+    <StackPanel Grid.Column="0" Spacing="6">
       <TextBlock Text="What do you want to change?" FontWeight="SemiBold"/>
       <RadioButton GroupName="mode" Content="Replace the image only" IsChecked="True" Click="ModeImage_Click"/>
       <RadioButton GroupName="mode" Content="Replace the palette only" Click="ModePalette_Click"/>
       <RadioButton GroupName="mode" Content="Image and palette" Click="ModeFull_Click"/>
       <RadioButton GroupName="mode" Content="Sprite sheet" Click="ModeSheet_Click"/>
     </StackPanel>
+    <Border Grid.Column="1" Width="1" Background="{DynamicResource Editor.Border}" HorizontalAlignment="Center"/>
+    <ScrollViewer Grid.Column="2">
+    <Panel>
 
     <StackPanel Spacing="8" IsVisible="{Binding ShowArtworkScope}">
-      <Border Height="1" Background="{DynamicResource Editor.Border}"/>
       <TextBlock Text="Which poses?" FontWeight="SemiBold"/>
       <TextBlock Text="{Binding ExistingGender, StringFormat='Only {0} sprites exist for this species right now.'}"
                  IsVisible="{Binding GenderGapActive}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
       <TextBlock Text="Facing" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
-      <StackPanel Orientation="Horizontal" Spacing="12">
+      <WrapPanel ItemSpacing="12" LineSpacing="4">
         <RadioButton GroupName="face" Content="Back" Click="FaceBack_Click"/>
         <RadioButton GroupName="face" Content="Front" IsChecked="True" Click="FaceFront_Click"/>
         <RadioButton GroupName="face" Content="Both" Click="FaceBoth_Click"/>
-      </StackPanel>
+      </WrapPanel>
       <TextBlock Text="Gender" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding !GenderGapActive}"/>
-      <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding !GenderGapActive}">
+      <WrapPanel ItemSpacing="12" LineSpacing="4" IsVisible="{Binding !GenderGapActive}">
         <RadioButton GroupName="gender" Content="Female" Click="GenderFemale_Click"/>
         <RadioButton GroupName="gender" Content="Male" Click="GenderMale_Click"/>
         <RadioButton GroupName="gender" Content="Both" IsChecked="True" Click="GenderBoth_Click"/>
-      </StackPanel>
+      </WrapPanel>
     </StackPanel>
 
     <StackPanel Spacing="8" IsVisible="{Binding ShowPaletteScope}">
-      <Border Height="1" Background="{DynamicResource Editor.Border}"/>
       <TextBlock Text="Which palettes?" FontWeight="SemiBold"/>
       <CheckBox Content="Normal" IsChecked="{Binding IncludeNormalPalette}"/>
       <CheckBox Content="Shiny" IsChecked="{Binding IncludeShinyPalette}" IsVisible="{Binding ShowShinyPaletteOption}"/>
@@ -46,29 +51,27 @@
     </StackPanel>
 
     <StackPanel Spacing="8" IsVisible="{Binding ShowSheetScope}">
-      <Border Height="1" Background="{DynamicResource Editor.Border}"/>
       <StackPanel Orientation="Horizontal" Spacing="4">
         <TextBlock Text="Colours" FontWeight="SemiBold"/>
         <controls:HelpTip Text="One image with the back and front, both frames of each, side by side"/>
       </StackPanel>
-      <StackPanel Orientation="Horizontal" Spacing="12">
+      <WrapPanel ItemSpacing="12" LineSpacing="4">
         <RadioButton GroupName="sheetcolor" Content="Normal" IsChecked="True" Click="SheetColorNormal_Click"/>
         <RadioButton GroupName="sheetcolor" Content="Shiny colours" Click="SheetColorShiny_Click" IsVisible="{Binding !IsHgEngineActive}"/>
-      </StackPanel>
+      </WrapPanel>
       <TextBlock Text="{Binding ExistingGender, StringFormat='Only {0} sprites exist for this species right now.'}"
                  IsVisible="{Binding GenderGapActive}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
       <TextBlock Text="Gender" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding !GenderGapActive}"/>
-      <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding !GenderGapActive}">
+      <WrapPanel ItemSpacing="12" LineSpacing="4" IsVisible="{Binding !GenderGapActive}">
         <RadioButton GroupName="sheetgender" Content="Female" Click="SheetGenderFemale_Click"/>
         <RadioButton GroupName="sheetgender" Content="Male" Click="SheetGenderMale_Click"/>
         <RadioButton GroupName="sheetgender" Content="Both (2 separate sheets)" IsChecked="True" Click="SheetGenderBoth_Click"/>
         <RadioButton GroupName="sheetgender" Content="Both (1 combined sheet)" Click="SheetGenderCombined_Click" IsVisible="{Binding CanUseFullSheet}"/>
-      </StackPanel>
+      </WrapPanel>
     </StackPanel>
 
-    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-      <Button Content="Cancel" Click="Cancel_Click"/>
-      <Button Content="{Binding RunButtonText}" Click="Run_Click" IsDefault="True" FontWeight="SemiBold"/>
-    </StackPanel>
-  </StackPanel>
+    </Panel>
+    </ScrollViewer>
+    </Grid>
+  </DockPanel>
 </Window>
