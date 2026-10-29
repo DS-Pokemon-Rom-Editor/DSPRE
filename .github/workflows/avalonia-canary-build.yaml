@@ -144,8 +144,9 @@ jobs:
           path: DSPRE-Avalonia-linux-x64-canary.tar.gz
 
   # Experimental: a failure here doesn't hold back the Windows and Linux release.
+  # Off until uxie is fixed.
   build-macos:
-    if: github.repository == 'DS-Pokemon-Rom-Editor/DSPRE'
+    if: false && github.repository == 'DS-Pokemon-Rom-Editor/DSPRE'
     continue-on-error: true
     strategy:
       fail-fast: false
@@ -283,11 +284,6 @@ jobs:
             generated from the latest push to `feature/avalonia`. Windows and Linux, both
             self-contained. This is the in-progress cross-platform shell; expect missing features,
             rough edges, and instability.
-
-            ## 🍎 macOS (experimental)
-            `osx-arm64` is for Apple Silicon, `osx-x64` for Intel Macs. These builds are untested. They
-            aren't signed, so after extracting, run `xattr -dr com.apple.quarantine` on the folder, then
-            start `DSPRE.Avalonia`. Porting older projects isn't supported on macOS yet.
 
             ## 🚧 What does this mean?
             This build reflects ongoing development on the Avalonia migration and is not a stable
