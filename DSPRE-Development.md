@@ -364,6 +364,7 @@ In `MainWindowView.axaml` the menu item binds `IsVisible` to `Shown[MyEditorView
 | For | Use |
 |---|---|
 | Dialogs | `DialogHelper` |
+| Popup sizing | `DialogSizing.Grow`, `DialogSizing.Body` |
 | Good, warning, bad colours | `StatusBrushes`; `Editor.Good`, `Editor.Warn`, `Editor.Bad` in XAML |
 | Telling other editors | `AppEvents` |
 | Renamable names | `LabelStore` |
@@ -381,7 +382,13 @@ An editor that only draws archive members redraws with `AppEvents.WhenSaved(redr
 
 Dialogs go through `DialogHelper` with the editor as owner, and Discard asks through
 `DialogHelper.ConfirmDiscardAsync(this)`. A choice that needs a preview is a small class with `AskAsync`, like
-`PngColourPrompt`.
+`PngColourPrompt`. Popups should allow resizing. `DialogSizing.Grow` stops one shrinking below the size it opens
+at, and `DialogSizing.Body` puts a list or preview between the text and the buttons so it grows with the window.
+
+```csharp
+win.Content = DialogSizing.Body(list, buttons, intro);
+DialogSizing.Grow(win, list);
+```
 
 ### Toolbar and controls
 
