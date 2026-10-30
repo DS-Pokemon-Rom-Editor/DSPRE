@@ -18,6 +18,7 @@ namespace DSPRE
         {
             Refuse(path);
             File.WriteAllBytes(path, data);
+            ProjectWrites.Raise(path);
         }
 
         public static void WriteText(string path, string text, Encoding encoding = null)
@@ -25,18 +26,21 @@ namespace DSPRE
             Refuse(path);
             if (encoding == null) File.WriteAllText(path, text);
             else File.WriteAllText(path, text, encoding);
+            ProjectWrites.Raise(path);
         }
 
         public static void WriteLines(string path, IEnumerable<string> lines)
         {
             Refuse(path);
             File.WriteAllLines(path, lines);
+            ProjectWrites.Raise(path);
         }
 
         public static void Copy(string from, string to, bool overwrite = false)
         {
             Refuse(to);
             File.Copy(from, to, overwrite);
+            ProjectWrites.Raise(to);
         }
 
         public static void Move(string from, string to, bool overwrite = false)
@@ -44,6 +48,8 @@ namespace DSPRE
             Refuse(from);
             Refuse(to);
             File.Move(from, to, overwrite);
+            ProjectWrites.Raise(from);
+            ProjectWrites.Raise(to);
         }
 
         private static void Refuse(string path)

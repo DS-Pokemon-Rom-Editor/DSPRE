@@ -26,6 +26,7 @@ namespace DSPRE
             byte[] before = File.Exists(path) ? File.ReadAllBytes(path) : null;
             File.WriteAllBytes(path, data);
             Written?.Invoke(dir, id, before, data);
+            ProjectWrites.Raise(path);
         }
 
         public static void Delete(DirNames dir, int id)
@@ -35,6 +36,7 @@ namespace DSPRE
             byte[] before = File.ReadAllBytes(path);
             File.Delete(path);
             Written?.Invoke(dir, id, before, null);
+            ProjectWrites.Raise(path);
         }
 
         /// <summary>
@@ -46,6 +48,7 @@ namespace DSPRE
             string folder = GameDirs[dir].unpackedDir;
             int last = Directory.GetFiles(folder).Select(Path.GetFileName).Select(n => int.TryParse(n, out int i) ? i : -1).Max();
             for (int i = last; i >= from; i--) File.Move(PathOf(dir, i), PathOf(dir, i + 1));
+            ProjectWrites.Raise(folder);
         }
 
         /// <summary>
@@ -72,6 +75,7 @@ namespace DSPRE
                     throw;
                 }
                 if (Directory.Exists(previous)) Directory.Delete(previous, true);
+                ProjectWrites.Raise(dir);
             }
             finally
             {
@@ -103,14 +107,22 @@ namespace DSPRE
         public static void Write(string path, byte[] data)
         {
             if (TryMemberAt(path, out DirNames dir, out int id)) Put(dir, id, data);
-            else File.WriteAllBytes(path, data);
+            else
+            {
+                File.WriteAllBytes(path, data);
+                ProjectWrites.Raise(path);
+            }
         }
 
         /// <summary>Deletes a file by its path; an archive member goes through <see cref="Delete(DirNames, int)"/>.</summary>
         public static void Delete(string path)
         {
             if (TryMemberAt(path, out DirNames dir, out int id)) Delete(dir, id);
-            else if (File.Exists(path)) File.Delete(path);
+            else if (File.Exists(path))
+            {
+                File.Delete(path);
+                ProjectWrites.Raise(path);
+            }
         }
 
         /// <summary>
@@ -235,6 +247,7 @@ namespace DSPRE
                     if (c.Bytes != null) HgEngineSourceAssets.WriteVerbatim(HgEngineOwnedFiles.ArchiveOf(dir), c.Id, c.Bytes);
                     Written?.Invoke(dir, c.Id, original, c.Bytes);
                 }
+                foreach (Change c in _changes) ProjectWrites.Raise(System.IO.Path.GetFullPath(c.Path));
                 return true;
             }
         }

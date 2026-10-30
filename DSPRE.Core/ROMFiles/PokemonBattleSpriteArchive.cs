@@ -68,14 +68,13 @@ namespace DSPRE.ROMFiles
                 ArchiveMembers.Put(_dir, idx, data);
                 written = true;
             }
-            if (_packed != null)
+            // The packed archive is rebuilt from the unpacked copy, so it's written only when there is none.
+            else if (_packed != null)
             {
                 NarcReader narc = new NarcReader(_packed);
                 if (idx < narc.Fe.Length && narc.Fe[idx].Size == data.Length)
                 {
-                    narc.OpenEntry(idx);
-                    try { narc.Fs.Write(data, 0, data.Length); }
-                    finally { narc.Close(); }
+                    DSUtils.WriteToFile(_packed, data, (uint)narc.Fe[idx].Ofs, fmode: FileMode.Open);
                     written = true;
                 }
             }

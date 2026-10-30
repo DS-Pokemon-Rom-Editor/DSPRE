@@ -177,6 +177,7 @@ namespace DSPRE
             {
                 writer.Write(toOutput, firstByte, length);
             }
+            ProjectWrites.RaiseCode(filepath, writeAt, length);
         }
         /// <summary>
         /// Replaces a whole arm9, overlay or synthetic overlay file. The hg-engine write guard is asked about the span
@@ -204,6 +205,7 @@ namespace DSPRE
             {
                 if (File.Exists(temp)) File.Delete(temp);
             }
+            ProjectWrites.RaiseCode(filepath, first, Math.Max(1, last - first + 1));
         }
 
         // ── Mon party-icon palette table (1 byte per species: 0/1/2) ──────────────────────────────

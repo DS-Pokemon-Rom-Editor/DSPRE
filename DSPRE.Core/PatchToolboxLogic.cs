@@ -2457,6 +2457,7 @@ namespace DSPRE
                 return false;
             }
 
+            using IDisposable by = ProjectWrites.By("Patch toolbox: " + (PatchTitles.TryGetValue(key, out string title) ? title : key));
             switch (key)
             {
                 case "sentenceCase": return ApplySentenceCasePatch();

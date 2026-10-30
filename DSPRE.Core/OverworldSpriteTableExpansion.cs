@@ -306,6 +306,10 @@ namespace DSPRE
             return new SimpleTable { Path = path, Start = start, EntrySize = 8, RowCount = rows };
         }
 
+        /// <summary>The unpatched render-properties table's first row and row count; null where it wasn't found.</summary>
+        public static (long Start, int Rows)? VanillaRenderTable() =>
+            FindVanillaRenderTable() is { Path: not null } t ? (t.Start, t.RowCount) : null;
+
         /// <summary>Whether this ROM's render-properties table was found, patched or not.</summary>
         public static bool IsRenderTableAvailable => GetRenderStateTable().Path != null;
 
