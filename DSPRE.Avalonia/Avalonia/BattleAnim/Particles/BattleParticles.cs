@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using DSPRE.Avalonia.BattleAnim;
 using DSPRE.Avalonia.Data;
+using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.BattleAnim.Particles
 {

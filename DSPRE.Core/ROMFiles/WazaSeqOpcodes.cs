@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using DSPRE.HgEngine;
 
-namespace DSPRE.Avalonia.Data
+namespace DSPRE.ROMFiles
 {
     public enum WazaSeqVersion { DP, Plat, HGSS }
 
@@ -731,12 +731,9 @@ namespace DSPRE.Avalonia.Data
             return (id >= 0 && id < t.Length) ? t[id].ArgCount : -1;
         }
 
-        /// <summary>
-        /// Argument count of the command whose arguments begin at <paramref name="args"/>[0]; null words read as 0.
-        /// The message commands carry one more word past TAG_NONE, TAG_TRNAME (8), TAG_TRCLASS_TRNAME (30) and
-        /// TAG_TRCLASS_TRNAME_ITEM (51), and two more past TAG_TRCLASS_TRNAME_TRCLASS_TRNAME (59), as btlcmd.inc
-        /// in pokeplatinum and pokeheartgold builds them and BattleMessageParams_Make reads them.
-        /// </summary>
+        /// <summary>Argument count of the command whose arguments <paramref name="arg"/> reads; past the end they read as 0.</summary>
+        // Message commands carry one more word past TAG_NONE, TAG_TRNAME (8), TAG_TRCLASS_TRNAME (30) and
+        // TAG_TRCLASS_TRNAME_ITEM (51), and two more past TAG_TRCLASS_TRNAME_TRCLASS_TRNAME (59), as btlcmd.inc builds them.
         public static int ArgCount(WazaSeqVersion v, int id, System.Func<int, int> arg)
         {
             int n = ArgCount(v, id);

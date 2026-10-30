@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using DSPRE.HgEngine;
 
-namespace DSPRE.Avalonia.Data
+namespace DSPRE.ROMFiles
 {
     public readonly struct BattleAnimCommand
     {

@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using DSPRE.Avalonia.BattleAnim;
 using DSPRE.HgEngine;
+using DSPRE.ROMFiles;
 using global::Avalonia.Media;
 using global::Avalonia.Media.Imaging;
 using global::Avalonia.Threading;

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace DSPRE.Avalonia.Data
+namespace DSPRE.ROMFiles
 {
     public static class BattleAnimScript
     {

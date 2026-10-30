@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace DSPRE.Avalonia.Data
+namespace DSPRE.ROMFiles
 {
     public sealed class WazaSeqCommand
     {

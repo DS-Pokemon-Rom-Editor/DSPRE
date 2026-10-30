@@ -3,14 +3,14 @@ using System.IO;
 using System.IO.Compression;
 using System.Text;
 
-namespace DSPRE.Avalonia
+namespace DSPRE
 {
     // Reads and writes indexed PNGs in their palette order, without re-quantizing.
     public static class IndexedPng
     {
         internal static readonly byte[] Signature = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
 
-        /// <summary>An interlaced PNG, which <see cref="TryRead"/> refuses. IHDR is always the first chunk.</summary>
+        /// <summary>True for an interlaced PNG, which <see cref="TryRead"/> can't read. IHDR is always the first chunk.</summary>
         public static bool IsInterlaced(byte[] fileBytes) =>
             fileBytes.Length > 28 && fileBytes.AsSpan(0, 8).SequenceEqual(Signature)
             && fileBytes.AsSpan(12, 4).SequenceEqual("IHDR"u8) && fileBytes[28] != 0;

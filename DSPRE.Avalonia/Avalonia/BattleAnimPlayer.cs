@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using DSPRE.ROMFiles;
 using global::Avalonia.Media.Imaging;
 using DSPRE.Avalonia.BattleAnim;
 using DSPRE.Avalonia.BattleAnim.Particles;
