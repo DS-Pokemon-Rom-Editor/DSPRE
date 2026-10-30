@@ -39,7 +39,7 @@ namespace DSPRE.Avalonia.Gl
                             int index = m.Texdata[j] & 0x1f;
                             int a = m.Texdata[j] >> 5;
                             a = ((a * 4) + (a / 2)) * 8;
-                            img[j] = pal[index]; img[j].A = (byte)a;
+                            img[j] = Pal(pal, index); img[j].A = (byte)a;
                         }
                         break;
                     case 2: // 4-colour palette
@@ -74,7 +74,7 @@ namespace DSPRE.Avalonia.Gl
                         {
                             int index = m.Texdata[j] & 0x7;
                             int a = (m.Texdata[j] >> 3) * 8;
-                            img[j] = pal[index]; img[j].A = (byte)a;
+                            img[j] = Pal(pal, index); img[j].A = (byte)a;
                         }
                         break;
                     case 7: // direct BGR555
