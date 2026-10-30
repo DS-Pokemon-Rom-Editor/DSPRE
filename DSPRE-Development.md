@@ -437,6 +437,12 @@ DSUtils.WriteToFile(OverlayUtils.GetPath(overlay), patch, writeAt: (uint)offset)
 PlainFiles.WriteBytes(exportPath, bytes);
 ```
 
+### Tracked editors
+
+Editors save through the writers above, so every change shows up in Track changes. Only the tracker writes to the
+changes folder. A new format also gets a `ChangeKind` and a case in `ChangelogSubjects`, as shown in Record format
+and Tracking a new editor.
+
 ### Unsaved archive edits
 
 Editors keep archive changes in `PendingArchiveWrites` until Save. Editors that work on one member at a time use
@@ -596,6 +602,130 @@ it before anything is written.
 
 Rotom owns the project's command database in `.rotom/command_database/`. DSPRE reads it through
 `RotomTool.ProjectDatabaseFile()` and leaves changing it, and regenerating script sources, to Rotom.
+
+### Track changes
+
+Track changes keeps a changes folder next to the project, with one JSON file for each record that differs from the
+original ROM. The folder is a git repo, so a hack is shared through git instead of as whole ROMs. `ChangeTracker`
+owns the folder. `ChangesViewModel`, `ChangesPanel` and `TrackingBar` show it, and `ChangesPanelWindow` holds the
+panel beside the main window.
+
+`ArchiveMembers`, `DSUtils.WriteToFile`/`WriteWholeFile` and `PlainFiles` raise `ProjectWrites.Written` after every
+write, and code writes raise `ProjectWrites.CodeWritten`. The tracker finds the record each written file belongs to
+and writes that record again. Code written to arm9 or an overlay is recorded with the name of the tool that wrote it:
+
+```csharp
+using (ProjectWrites.By("Patch toolbox: Expand trainer classes"))
+    DSUtils.WriteToFile(Arm9Path, patch, writeAt: offset);
+```
+
+Each kind of record is a `ChangeKind`, listed in `KindCatalog`. A kind reads files through `RomTree`, where
+`RomTree.Base` is the extracted original ROM and `RomTree.Project()` is the open project. A record is written as
+fields only when its JSON rebuilds the exact bytes. Otherwise it is kept as whole files, so nothing is lost. Pictures
+are indexed PNGs (`IndexedPng`). After an update, DSPRE rewrites its records once, so format changes reach old folders.
+
+`dspre.json` holds the project id and the original ROM's SHA-1. A ROM built by Save ROM is remembered by its SHA-1
+(`TrackingSetup.RecordBuild`), so opening that build links it to its changes folder.
+
+### Record format
+
+A record is measured against the original ROM, never against the last save. A record whose files match the original
+again is deleted. Each kind has a folder (`Folder`) and a kebab-case name (`Name`), and each record is one file named
+by its number and a slug (`Stem`):
+
+```json
+{
+  "$schema": "../../.schema/personal.json",
+  "kind": "personal",
+  "id": 25,
+  "name": "Pokémon 25 PIKACHU",
+  "members": ["PersonalPokeData/0025"],
+  "op": "edit",
+  "changes": {
+    "base_hp": { "was": 35, "now": 40 }
+  }
+}
+```
+
+`Envelope` writes everything above `changes`. `op` is `edit`, `add` or `delete`. In `changes`, only changed values
+appear, each as `was` and `now`. Keys are snake_case. Rows and list items are keyed by their index. References use
+`Fields.Ref`, which writes them as "33 Tackle", and fixed lists use `Fields.Named`. A whole file is written as its SHA-1s,
+with the file beside the record. Text archives are written by line. `ChangeSchemas` writes `.schema/<kind>.json`
+from `IDescribedKind`, so a JSON editor can check and complete a record. `ChangesJson` writes every record, so
+the same content always gives the same bytes. Its `Ref`, `Colour` and `Slug` give the written form of references,
+colours and file names.
+
+Editors never write the changes folder. They write the project through the agreed writers, and the tracker exports
+the record again. A kind's `Export` returns null when the record has no change.
+
+### Tracking a new editor
+
+An editor that writes through the agreed writers is tracked already, as whole files. Archive members without a kind
+go through `GraphicKind`. Files outside the archives go through `TreeFileKind`, which records text files line by line.
+To show its changes field by field, give its format a kind:
+
+- A format class whose public fields describe it: a `RecordKind<T>`.
+- Members that are rows of a fixed size: an `ArrayKind` in `DataArrays`.
+- A table inside arm9 or an overlay: a row in `CodeTables.Located`.
+- Anything else: a `FieldKind` whose `Decode` and `Encode` bind the fields through `Fields`.
+
+```csharp
+yield return new RecordKind<MoveData>("move", "moves", DirNames.MoveData, "Move",
+    (b, _) => new MoveData(new MemoryStream(b)), r => r.ToByteArray(), (id, n) => n.Move(id));
+
+yield return new ArrayKind("growth-curves", "pokemon/growth-curves", DirNames.Growth, "Growth curve",
+    _ => new ArrayShape("experience", 4));
+
+yield return (overlay, offset, "overworld-drawing", "Overworld drawing", 8, rows, new[]
+{
+    new ArrayField("id", 0, 4), new ArrayField("shadow", 4, 4, Values: Named("none", "on"), Shift: 4, Bits: 2),
+}, i => "id " + ids[i]);
+
+protected override JsonObject Decode(string id, Func<TrackedFile, byte[]> read, ChangeContext ctx) =>
+    Fields.Write(f => Bind(f, Load(read(File(id))), ctx));
+
+private static void Bind(Fields f, PartyPokemon mon, ChangeContext ctx)
+{
+    f.Ref("species", () => mon.PokeID ?? 0, v => mon.PokeID = (ushort)v, ctx.Names.Species);
+    f.Int("level", () => mon.Level, v => mon.Level = (ushort)v);
+}
+```
+
+`Encode` runs the same `Bind` through `Fields.Read`, so one list of fields reads and writes the record. Reference
+names come from `TrackingNames`. Finally, give the kind a case in `ChangelogSubjects.Add`. The case names the
+subject a change belongs to, such as a Pokémon, a trainer or a map. It also names the area and the field labels. A
+kind without one counts as a Technical file in changelogs.
+
+### Sharing changes with git
+
+`GitCli` and `GitHubCli` run git and the GitHub CLI. `GitMessages` turns their errors into advice on what to do next.
+Pull is `GitSync`: git fetches and merges, then `RecordMerge` merges each record both sides changed, field by
+field. Fields both sides changed differently go to `MergeWindow`, where the user picks local or remote:
+
+```csharp
+JsonObject merged = RecordMerge.MergeRecord(common, local, remote, c => choices[c.Path]);
+```
+
+Nothing reaches the project until the user presses Apply. Every write goes through `ChangeTracker.WriteProject`, which
+only writes inside the project. `ChangeTracker.UndoLastApply` puts back what the last apply replaced.
+`RecordFolder` reads any folder of records: the changes folder, or an unpacked `DsPatch`.
+
+### Patches and releases
+
+A `DsPatch` is the changes folder packed into one file. It applies to any project of the same game. `PatchWindow`
+shows what it would change, field by field. Where the project changed the same field, the user picks which value to
+keep:
+
+```csharp
+DsPatch.Plan plan = DsPatch.PlanApply(path, _ => false);   // a dry run: Records, each with its Changes and Conflicts
+DsPatch.Apply(plan, out string error);
+```
+
+Make a release (`ReleaseWindow`) writes a folder with the files the user ticks: the DSPRE patch, an xdelta for
+players and a changelog with its pictures. It can also publish the folder on GitHub. It tags the commit, so a later
+changelog can start there. The xdelta is `Vcdiff.Encode` from a vanilla ROM to a build of the project, and
+`VanillaDumps` lists the known clean dumps. `Changelog` gathers records by subject through `ChangelogSubjects`, and
+`ChangelogWriter` writes them as Markdown.
 
 ## Graphics
 
