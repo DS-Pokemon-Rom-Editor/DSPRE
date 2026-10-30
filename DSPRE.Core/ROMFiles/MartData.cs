@@ -61,6 +61,9 @@ namespace DSPRE.ROMFiles
 
         public List<CommonEntry> CommonItems { get; } = new();
         public List<SpecialtyShop> SpecialtyShops { get; } = new();
+
+        /// <summary>Where a town mart's list starts in arm9, or -1 when it lives elsewhere.</summary>
+        public int SpecialtyOffsetInArm9(int shop) => _specialtyDataOffsets != null && shop >= 0 && shop < _specialtyDataOffsets.Length ? _specialtyDataOffsets[shop] : -1;
         public bool ExpansionAvailable { get; }
         /// <summary>hg-engine with MART_EXPANSION: the marts are src/field/mart.c, lists of any length in fixed slots.</summary>
         public bool FromSource { get; }

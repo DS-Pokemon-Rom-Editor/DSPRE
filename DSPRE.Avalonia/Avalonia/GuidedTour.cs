@@ -209,6 +209,14 @@ namespace DSPRE.Avalonia
                 },
                 new Step
                 {
+                    // The bar is empty after the prompt is declined, so the card sits centred instead.
+                    Target = () => main.FindControl<Control>("TrackingBar") is { Bounds.Height: > 0 } bar ? bar : null,
+                    Title = "Track changes",
+                    Body = "This bar shows whether your edits are being written down. " +
+                           "Tools > Welcome & tutorial has a page that explains how it works."
+                },
+                new Step
+                {
                     OnEnter = () =>
                     {
                         TabControl tabs = maps?.FindControl<TabControl>("MapTabs");
@@ -481,10 +489,11 @@ namespace DSPRE.Avalonia
                     x = Math.Max(8, Math.Min(hv.X, full.Width - calloutWidth - 8));
                     y = hv.Bottom + 10;
                 }
-                else if (hv.Y - h - 10 >= 8)
+                else if (hv.Y - h - 34 >= 8)
                 {
+                    // Keeps the 24 px margin of the clamp below, since the height measures short before the card shows.
                     x = Math.Max(8, Math.Min(hv.X, full.Width - calloutWidth - 8));
-                    y = hv.Y - h - 10;
+                    y = hv.Y - h - 34;
                 }
                 else
                 {

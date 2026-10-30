@@ -24,10 +24,16 @@ namespace DSPRE.Avalonia.Views.Shell
         private static WelcomeView _open;
 
         /// <summary>Opens the Welcome window over the shell without blocking it; asking again brings the open one forward.</summary>
-        public static void ShowWelcome(MainWindowView main)
+        public static void ShowWelcome(MainWindowView main, string page = null)
         {
-            if (_open != null) { _open.Activate(); return; }
+            if (_open != null)
+            {
+                if (page != null) _open.VM?.ShowPage(page);
+                _open.Activate();
+                return;
+            }
             WelcomeView w = new WelcomeView(main);
+            if (page != null) w.VM?.ShowPage(page);
             _open = w;
             w.Closed += (_, _) => _open = null;
             if (main != null) w.Show(main);

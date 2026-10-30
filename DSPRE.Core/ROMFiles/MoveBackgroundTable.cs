@@ -23,6 +23,10 @@ namespace DSPRE.ROMFiles
 
         private int _overlay = -1, _offset;
 
+        /// <summary>Where the game's table was read from; -1 for hg-engine's source.</summary>
+        public int Overlay => _overlay;
+        public int Offset => _offset;
+
         // movs r2,#0x14; muls r2,r0; ldr r0,=table; lsls r1,r1,#2; adds r0,r0,r2; ldr r0,[r1,r0]; bx lr
         private static int FindGetter(byte[] code)
         {

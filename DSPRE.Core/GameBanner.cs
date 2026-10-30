@@ -120,8 +120,23 @@ namespace DSPRE
 
         public static void WriteDsRomYaml(BannerYaml banner)
         {
-            ISerializer serializer = new SerializerBuilder().Build();
-            PlainFiles.WriteText(DsRomYamlPath, serializer.Serialize(banner));
+            ISerializer serializer = new SerializerBuilder().WithEventEmitter(next => new LiteralTitles(next)).Build();
+            string yaml = serializer.Serialize(banner);
+            // Keep the file's own line endings, so a title edit changes only that title's lines.
+            if (File.Exists(DsRomYamlPath) && File.ReadAllText(DsRomYamlPath).Contains("\r\n")) yaml = yaml.Replace("\r\n", "\n").Replace("\n", "\r\n");
+            PlainFiles.WriteText(DsRomYamlPath, yaml);
+        }
+
+        /// <summary>Writes multi-line titles as literal blocks (<c>|-</c>), the way ds-rom does.</summary>
+        private sealed class LiteralTitles : YamlDotNet.Serialization.EventEmitters.ChainedEventEmitter
+        {
+            public LiteralTitles(IEventEmitter next) : base(next) { }
+
+            public override void Emit(YamlDotNet.Serialization.ScalarEventInfo eventInfo, YamlDotNet.Core.IEmitter emitter)
+            {
+                if (eventInfo.Source.Value is string s && s.Contains('\n')) eventInfo.Style = YamlDotNet.Core.ScalarStyle.Literal;
+                base.Emit(eventInfo, emitter);
+            }
         }
 
         /// <summary>Why an image can't be the game icon, or null.</summary>
@@ -183,7 +198,9 @@ namespace DSPRE
         // Kept dependency-free so headless code (tests, future CLI) can write banner images
         // without a UI toolkit's encoder.
 
-        public static void WritePng(string path, RawImage img)
+        public static void WritePng(string path, RawImage img) => PlainFiles.WriteBytes(path, EncodePng(img));
+
+        public static byte[] EncodePng(RawImage img)
         {
             using MemoryStream ms = new MemoryStream();
 
@@ -221,8 +238,7 @@ namespace DSPRE
             WriteChunk(ms, "IHDR", ihdr);
             WriteChunk(ms, "IDAT", compressed);
             WriteChunk(ms, "IEND", Array.Empty<byte>());
-
-            PlainFiles.WriteBytes(path, ms.ToArray());
+            return ms.ToArray();
         }
 
         private static void WriteBE(byte[] buf, int off, int value)

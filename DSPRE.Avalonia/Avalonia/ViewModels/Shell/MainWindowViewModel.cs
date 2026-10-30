@@ -24,6 +24,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         // ── ROM state ──────────────────────────────────────────────────────────
         public bool IsRomLoaded => AvaloniaEditorLauncher.IsRomLoaded;
 
+        /// <summary>Track changes: the summary bar and the changes panel.</summary>
+        public ChangesViewModel Changes { get; } = new ChangesViewModel();
+
         // ── Per-editor availability: hg-engine ROMs disable editors for data hg-engine owns, unless a
         //    checkout is linked.
         // ── editors still being tried out ─────────────────────────────────────────────────────────

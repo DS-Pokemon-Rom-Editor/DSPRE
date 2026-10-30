@@ -57,7 +57,11 @@ namespace DSPRE.Avalonia.Data
             lock (Live)
                 foreach (WeakReference<PendingArchiveWrites> w in Live)
                     if (w.TryGetTarget(out PendingArchiveWrites store)) stores.Add(store);
-            foreach (PendingArchiveWrites store in stores) store.WrittenElsewhere((dir, id));
+            // A patch is applied from a worker thread, and editors read these stores on the UI thread.
+            if (global::Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
+                foreach (PendingArchiveWrites store in stores) store.WrittenElsewhere((dir, id));
+            else
+                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { foreach (PendingArchiveWrites store in stores) store.WrittenElsewhere((dir, id)); });
         }
 
         // A painter or another editor saved a member this store holds. Without an unsaved change to it the store lets

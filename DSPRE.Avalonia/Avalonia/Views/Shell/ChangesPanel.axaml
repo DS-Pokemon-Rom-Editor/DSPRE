@@ -1,0 +1,159 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+             xmlns:vm="using:DSPRE.Avalonia.ViewModels.Shell"
+             x:Class="DSPRE.Avalonia.Views.Shell.ChangesPanel"
+             x:DataType="vm:ChangesViewModel">
+
+  <Design.DataContext>
+    <vm:ChangesViewModel/>
+  </Design.DataContext>
+
+  <UserControl.Resources>
+    <DataTemplate x:Key="ChangeRow" x:DataType="vm:ChangesViewModel+ChangeRow">
+      <Grid ColumnDefinitions="Auto,Auto,*" Margin="0,2" Background="Transparent" DoubleTapped="Row_DoubleTapped" ToolTip.Tip="{Binding Where}">
+        <CheckBox Grid.Column="0" IsChecked="{Binding Include}" IsVisible="{Binding CanInclude}" MinWidth="0" Margin="0,0,4,0"
+                  VerticalAlignment="Center"/>
+        <Border Grid.Column="1" CornerRadius="3" Padding="4,1" Margin="0,0,6,0" VerticalAlignment="Center" MinWidth="40"
+                Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+          <TextBlock Text="{Binding Pill}" FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+        </Border>
+        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+          <TextBlock Text="{Binding Title}" FontSize="12" TextTrimming="CharacterEllipsis"/>
+          <TextBlock Text="{Binding Where}" FontSize="10" Foreground="{DynamicResource Editor.Subtle}" TextTrimming="PrefixCharacterEllipsis"/>
+        </StackPanel>
+      </Grid>
+    </DataTemplate>
+    <DataTemplate x:Key="CommitRow" x:DataType="vm:ChangesViewModel+CommitRow">
+      <StackPanel Margin="0,2" ToolTip.Tip="{Binding Sha}">
+        <TextBlock Text="{Binding Subject}" FontSize="12" TextTrimming="CharacterEllipsis"/>
+        <TextBlock Text="{Binding Detail}" FontSize="10" Foreground="{DynamicResource Editor.Subtle}"/>
+      </StackPanel>
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1,0,0,0" Background="{DynamicResource Editor.PanelBg}">
+    <Panel>
+      <!-- Folded: a strip with the count. -->
+      <StackPanel x:Name="StripPart" Width="34" Spacing="8" Margin="0,8">
+        <Button HorizontalAlignment="Center" Padding="4" controls:Icon.Key="arrowleft" ToolTip.Tip="Show the changes panel" Click="Fold_Click"
+                IsVisible="{Binding !PanelOpen}"/>
+        <Button HorizontalAlignment="Center" Padding="4" controls:Icon.Key="arrowright" ToolTip.Tip="Hide the changes panel" Click="Fold_Click"
+                IsVisible="{Binding PanelOpen}"/>
+        <Border HorizontalAlignment="Center" CornerRadius="8" Padding="5,1" Background="{DynamicResource Editor.StatusBg}"
+                IsVisible="{Binding !HasNothing}">
+          <TextBlock Text="{Binding Total}" FontSize="11" FontWeight="SemiBold"/>
+        </Border>
+      </StackPanel>
+
+      <DockPanel x:Name="OpenPart" Width="320">
+        <DockPanel DockPanel.Dock="Top" Margin="8,8,8,4">
+          <Button DockPanel.Dock="Left" Padding="4" controls:Icon.Key="arrowright" ToolTip.Tip="Hide the changes panel" Click="Fold_Click"/>
+          <Button DockPanel.Dock="Right" Padding="4" controls:Icon.Key="resetIcon" ToolTip.Tip="Check for changes" Click="Refresh_Click"
+                  IsEnabled="{Binding !IsWorking}"/>
+          <Button DockPanel.Dock="Right" Content="?" Padding="8,4" Margin="0,0,4,0" ToolTip.Tip="Tour (F1)" Click="Tour_Click"/>
+          <StackPanel Margin="8,0" VerticalAlignment="Center">
+            <TextBlock Text="Changes" FontWeight="SemiBold"/>
+            <ProgressBar IsIndeterminate="True" Height="3" MinWidth="0" IsVisible="{Binding IsUpdating}" Margin="0,2"/>
+            <TextBlock Text="{Binding Branch}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding HasBranch}"/>
+          </StackPanel>
+        </DockPanel>
+
+        <StackPanel DockPanel.Dock="Bottom" Margin="8" Spacing="6">
+          <TextBlock Text="{Binding KeptWholeNote}" IsVisible="{Binding HasKeptWhole}" FontSize="11" TextWrapping="Wrap"
+                     Foreground="{DynamicResource Editor.Warn}"/>
+          <Grid x:Name="GitButtons" ColumnDefinitions="*,6,*,6,*">
+            <Button Grid.Column="0" Content="Commit…" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    controls:Icon.Key="checkmark" IsEnabled="{Binding CanCommit}" Click="Commit_Click"
+                    ToolTip.Tip="{Binding CommitTip}" ToolTip.ShowOnDisabled="True"/>
+            <Button Grid.Column="2" Content="{Binding PullLabel}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    controls:Icon.Key="importArrow" IsEnabled="{Binding CanPullPush}" Click="Pull_Click"
+                    ToolTip.Tip="{Binding GitTip}" ToolTip.ShowOnDisabled="True"/>
+            <Button Grid.Column="4" Content="{Binding PushLabel}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    controls:Icon.Key="exportArrow" IsEnabled="{Binding CanPush}" Click="Push_Click"
+                    ToolTip.Tip="{Binding GitTip}" ToolTip.ShowOnDisabled="True"/>
+          </Grid>
+          <Grid x:Name="FolderButtons" ColumnDefinitions="*,6,*">
+            <Button Grid.Column="0" Content="Folder" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    controls:Icon.Key="folder">
+              <Button.Flyout>
+                <MenuFlyout Placement="TopEdgeAlignedLeft">
+                  <MenuItem Header="Open folder" Click="OpenFolder_Click"/>
+                  <MenuItem Header="Change folder…" Click="ChangeFolder_Click" IsEnabled="{Binding !IsWorking}"/>
+                  <MenuItem Header="Stop tracking" Click="StopTracking_Click" IsEnabled="{Binding !IsWorking}"/>
+                </MenuFlyout>
+              </Button.Flyout>
+            </Button>
+            <Button Grid.Column="2" Content="Help me set it up" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    controls:Icon.Key="wrenchIcon" Click="Setup_Click"/>
+          </Grid>
+          <Button x:Name="ChangelogButton" Content="Changelog…" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                  controls:Icon.Key="pencil" Click="Changelog_Click" IsEnabled="{Binding !IsWorking}"
+                  ToolTip.Tip="Write what changed"/>
+        </StackPanel>
+
+        <ScrollViewer x:Name="ChangesList" HorizontalScrollBarVisibility="Disabled" Margin="8,0">
+          <StackPanel Spacing="10">
+            <Border IsVisible="{Binding IsMerging}" BorderBrush="{DynamicResource Editor.Warn}" BorderThickness="1" CornerRadius="4" Padding="8">
+              <StackPanel Spacing="6">
+                <TextBlock Text="A merge is open" FontWeight="SemiBold" Foreground="{DynamicResource Editor.Warn}"
+                           ToolTip.Tip="Pick a side for each conflict"/>
+                <WrapPanel>
+                  <Button Content="Resolve…" FontSize="11" Margin="0,0,6,0" Click="ResolveMerge_Click" IsEnabled="{Binding !IsWorking}"/>
+                  <Button Content="Abort merge" FontSize="11" Click="AbortMerge_Click" IsEnabled="{Binding !IsWorking}"
+                          ToolTip.Tip="Undo the pull"/>
+                </WrapPanel>
+              </StackPanel>
+            </Border>
+            <StackPanel Spacing="10" IsVisible="{Binding !IsMerging}">
+            <StackPanel IsVisible="{Binding HasConflicts}">
+              <TextBlock Text="{Binding ConflictCount, StringFormat='Conflicts ({0})'}" FontSize="11" FontWeight="SemiBold"
+                         Foreground="{DynamicResource Editor.Bad}"/>
+              <ItemsControl ItemsSource="{Binding Conflicts}" ItemTemplate="{StaticResource ChangeRow}"/>
+              <WrapPanel Margin="0,2,0,0">
+                <Button Content="Use incoming" FontSize="11" Margin="0,0,6,0" Click="TakeRepo_Click" IsEnabled="{Binding !IsWorking}"/>
+                <Button Content="Keep local" FontSize="11" Click="KeepProject_Click" IsEnabled="{Binding !IsWorking}"/>
+              </WrapPanel>
+            </StackPanel>
+            <StackPanel IsVisible="{Binding HasChanged}">
+              <TextBlock Text="{Binding ChangedCount, StringFormat='Changed ({0})'}" FontSize="11" FontWeight="SemiBold"
+                         Foreground="{DynamicResource Editor.Subtle}"/>
+              <ItemsControl ItemsSource="{Binding Changed}" ItemTemplate="{StaticResource ChangeRow}"/>
+            </StackPanel>
+            <StackPanel IsVisible="{Binding HasUntracked}">
+              <TextBlock Text="{Binding UntrackedCount, StringFormat='Untracked ({0})'}" FontSize="11" FontWeight="SemiBold"
+                         Foreground="{DynamicResource Editor.Subtle}"/>
+              <ItemsControl ItemsSource="{Binding Untracked}" ItemTemplate="{StaticResource ChangeRow}"/>
+            </StackPanel>
+            <StackPanel IsVisible="{Binding HasIncoming}">
+              <TextBlock Text="{Binding IncomingCount, StringFormat='Incoming ({0})'}" FontSize="11" FontWeight="SemiBold"
+                         Foreground="{DynamicResource Editor.Warn}"/>
+              <ItemsControl ItemsSource="{Binding Incoming}" ItemTemplate="{StaticResource ChangeRow}"/>
+              <Button Content="Apply" FontSize="11" Margin="0,2,0,0" Click="Apply_Click" IsEnabled="{Binding !IsWorking}"/>
+            </StackPanel>
+            <Expander IsVisible="{Binding HasFolderFiles}" HorizontalAlignment="Stretch" Padding="0">
+              <Expander.Header>
+                <TextBlock Text="{Binding FolderFiles.Count, StringFormat='Folder files ({0})'}" FontSize="11" FontWeight="SemiBold"
+                           Foreground="{DynamicResource Editor.Subtle}"/>
+              </Expander.Header>
+              <ItemsControl ItemsSource="{Binding FolderFiles}" ItemTemplate="{StaticResource ChangeRow}"/>
+            </Expander>
+            <StackPanel IsVisible="{Binding HasOutgoing}">
+              <TextBlock Text="{Binding AheadCount, StringFormat='Ready to push ({0})'}" FontSize="11" FontWeight="SemiBold"
+                         Foreground="{DynamicResource ABrush.ColourfulGlyph.Selected}"/>
+              <ItemsControl ItemsSource="{Binding Outgoing}" ItemTemplate="{StaticResource CommitRow}"/>
+            </StackPanel>
+            <StackPanel IsVisible="{Binding HasBehind}">
+              <TextBlock Text="{Binding BehindCount, StringFormat='To pull ({0})'}" FontSize="11" FontWeight="SemiBold"
+                         Foreground="{DynamicResource Editor.Warn}"/>
+              <ItemsControl ItemsSource="{Binding Behind}" ItemTemplate="{StaticResource CommitRow}"/>
+            </StackPanel>
+            <TextBlock Text="No changes since the last commit." IsVisible="{Binding HasNothing}" FontSize="12"
+                       Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+      </DockPanel>
+    </Panel>
+  </Border>
+</UserControl>

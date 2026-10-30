@@ -16,7 +16,8 @@ namespace DSPRE
         /// </summary>
         public static IReadOnlyList<string> Friendly()
         {
-            string rom = RomInfo.WorkDir ?? "";
+            string rom = RomInfo.WorkDir;
+            if (rom == null || RomInfo.InternalNamesPath == null) return Array.Empty<string>();
             if (_friendly != null && _forRom == rom) return _friendly;
 
             List<string> built = new List<string>();

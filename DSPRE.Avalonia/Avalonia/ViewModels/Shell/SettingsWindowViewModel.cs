@@ -151,6 +151,20 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             RaiseEmulator();
         }
 
+        // ── Track changes: git and gh, empty to use the ones on PATH ──
+        private string _gitPath = "", _ghPath = "";
+        public string GitPath { get => _gitPath; set => Set(ref _gitPath, value ?? ""); }
+        public string GitHubCliPath { get => _ghPath; set => Set(ref _ghPath, value ?? ""); }
+
+        public async Task ChooseToolPathAsync(Window owner, string name, Action<string> set)
+        {
+            List<FilePickerFileType> filters = OperatingSystem.IsWindows()
+                ? new List<FilePickerFileType> { new(name) { Patterns = new[] { name + ".exe" } } }
+                : null;
+            string path = await DialogHelper.OpenFileAsync(owner, "Where is " + name + "?", filters);
+            if (path != null) set(path);
+        }
+
         // ── The save Build and Run offers to start the open project from ──
         public bool HasProject => AvaloniaEditorLauncher.IsRomLoaded && !string.IsNullOrEmpty(RomInfo.WorkDir);
 
@@ -240,6 +254,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             CamInvertOrbitY  = SettingsManager.Settings.CamInvertOrbitY;
             CamInvertZoom    = SettingsManager.Settings.CamInvertZoom;
 
+            _gitPath = SettingsManager.Settings.GitPath ?? "";
+            _ghPath = SettingsManager.Settings.GitHubCliPath ?? "";
             foreach (KeyValuePair<string, string> kv in SettingsManager.Settings.EmulatorPaths ?? new System.Collections.Generic.Dictionary<string, string>())
                 _emulatorPaths[kv.Key] = kv.Value;
             _emulatorIndex = Enum.TryParse(SettingsManager.Settings.PreferredEmulator, out EmulatorKind preferred)
@@ -281,6 +297,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             SettingsManager.Settings.CamInvertOrbitY = CamInvertOrbitY;
             SettingsManager.Settings.CamInvertZoom   = CamInvertZoom;
 
+            SettingsManager.Settings.GitPath = GitPath;
+            SettingsManager.Settings.GitHubCliPath = GitHubCliPath;
             SettingsManager.Settings.EmulatorPaths = new System.Collections.Generic.Dictionary<string, string>(_emulatorPaths);
             SettingsManager.Settings.PreferredEmulator = SelectedEmulator?.ToString() ?? "";
             if (_testSaveProject != null) TestSaves.Remember(_testSaveProject, TestSavePath);

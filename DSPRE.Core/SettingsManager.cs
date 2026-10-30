@@ -108,6 +108,18 @@ namespace DSPRE
         /// <summary>Menu items pinned beside the menus, by their place in the menus ("Trainers > Trainer editor").</summary>
         public List<string> FavouriteMenuItems { get; set; } = new List<string>();
 
+        /// <summary>Track changes: git and gh, empty to find them on PATH.</summary>
+        public string GitPath { get; set; } = "";
+        public string GitHubCliPath { get; set; } = "";
+        /// <summary>Track changes: each project folder's changes folder.</summary>
+        public Dictionary<string, string> ChangesFolders { get; set; } = new Dictionary<string, string>();
+        /// <summary>Track changes: project folders whose "not tracking" bar was dismissed.</summary>
+        public List<string> TrackingDeclined { get; set; } = new List<string>();
+        /// <summary>Track changes: where each base ROM is on this machine, by SHA-1.</summary>
+        public Dictionary<string, string> BaseRoms { get; set; } = new Dictionary<string, string>();
+        /// <summary>Track changes: SHA-1 of each ROM built here while tracking, to the project id it was built from.</summary>
+        public Dictionary<string, string> BuiltRoms { get; set; } = new Dictionary<string, string>();
+
         /// <summary>Set once the default pins have been offered, so pins removed later stay removed.</summary>
         public bool FavouritesSeeded { get; set; }
     }

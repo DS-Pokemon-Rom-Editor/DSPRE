@@ -82,6 +82,21 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             },
             new()
             {
+                Title = TrackChangesPage,
+                Body =
+                    "Track changes writes down every edit you make. Each Pokémon, trainer or map you edit gets " +
+                    "a small text file in a folder next to your project.\n\n" +
+                    "That folder works with git. You can go back to an older version of your hack, " +
+                    "or share your edits with someone else.\n\n" +
+                    "• To start, use the bar under the menus or File > Track changes.\n" +
+                    "• The Changes panel lists your edits. Double-click one to open it.\n" +
+                    "• File > Make a release builds a patch, an xdelta for players and a changelog.\n" +
+                    "• File > Apply a DSPRE patch adds someone else's edits to your project. Undo last apply " +
+                    "takes them out again.\n\n" +
+                    "New to git? Help me set it up walks you through it."
+            },
+            new()
+            {
                 Title = "Power tools",
                 Body =
                     "• The ROM patch toolbox adds features such as ARM9 expansion and dynamic headers. " +
@@ -133,6 +148,15 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         }
 
         private readonly TutorialPage[] _pages = BuildPages();
+
+        public const string TrackChangesPage = "Track changes";
+
+        /// <summary>Turns to the page with this title, if there is one.</summary>
+        public void ShowPage(string title)
+        {
+            int at = System.Array.FindIndex(_pages, p => p.Title == title);
+            if (at >= 0) PageIndex = at;
+        }
 
         /// <summary>The recent projects shown under the open buttons.</summary>
         public RecentProjectsViewModel Recents { get; } = new();

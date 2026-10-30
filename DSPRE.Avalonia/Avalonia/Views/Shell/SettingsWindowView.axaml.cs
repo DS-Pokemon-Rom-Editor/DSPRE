@@ -52,6 +52,16 @@ namespace DSPRE.Avalonia.Views.Shell
         private void ClearEmulatorPath_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
             => VM.ClearEmulatorPath();
 
+        private async void ChangeGitPath_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+            => await VM.ChooseToolPathAsync(this, "git", p => VM.GitPath = p);
+
+        private void ClearGitPath_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e) => VM.GitPath = "";
+
+        private async void ChangeGhPath_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+            => await VM.ChooseToolPathAsync(this, "gh", p => VM.GitHubCliPath = p);
+
+        private void ClearGhPath_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e) => VM.GitHubCliPath = "";
+
         private async void ChooseTestSave_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
             => await VM.ChooseTestSaveCommandAsync(this);
 

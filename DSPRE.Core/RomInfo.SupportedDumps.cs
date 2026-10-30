@@ -48,6 +48,17 @@ namespace DSPRE
         private static readonly (char Region, string Name)[] DumpLanguages =
             { ('E', "US"), ('P', "European English"), ('D', "German"), ('F', "French"), ('I', "Italian"), ('S', "Spanish"), ('J', "Japanese"), ('K', "Korean") };
 
+        /// <summary>"Pokémon HeartGold - US - IPKE": one dump by game, language and code, with its revision where the code doesn't tell it apart.</summary>
+        public static string DumpName(string id, int rev)
+        {
+            if (id == null || id.Length != 4) return id;
+            string game = DumpGames.FirstOrDefault(g => id.StartsWith(g.Prefix)).Name ?? id;
+            char region = id[3] == 'E' && CodeTwins.ContainsKey((id, rev)) ? 'P' : id[3];
+            string language = DumpLanguages.FirstOrDefault(l => l.Region == region).Name ?? id.Substring(3);
+            bool revisions = KnownDumps.Count(d => d.id == id && !CodeTwins.ContainsKey(d)) > 1;
+            return "Pokémon " + game + " - " + language + " - " + id + (revisions ? " rev " + rev : "");
+        }
+
         /// <summary>
         /// Names dumps by game and language, games with the same languages together:
         /// "Diamond and Pearl (US, European English); Platinum (US)". European English shares the US game code and is

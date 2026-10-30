@@ -91,6 +91,12 @@ namespace DSPRE.Avalonia
                 S("tab:Pokémon graphics", "Pokémon graphics", "Icon, follower and battle sprites. Problems show in orange."),
                 S("tab:Archive check", "Archive check", "Finds leftover pieces from earlier builds, and repairs them."),
                 S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
+
+            Add("ChangesPanel", "Changes panel",
+                S("name:ChangesList", "Your changes", "Everything you've edited. Double-click a row to open it."),
+                S("name:GitButtons", "Commit, pull and push", "Commit saves a version. Push uploads your versions. Pull downloads new ones."),
+                S("name:FolderButtons", "The changes folder", "Where your edits are kept. Help me set it up walks you through git."),
+                S("name:ChangelogButton", "Changelog", "Changelog writes a list of your changes for players."));
         }
     }
 }

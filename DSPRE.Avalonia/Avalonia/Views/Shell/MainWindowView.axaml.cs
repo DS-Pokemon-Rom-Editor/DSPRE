@@ -22,6 +22,9 @@ namespace DSPRE.Avalonia.Views.Shell
         public MainWindowView()
         {
             InitializeComponent();
+            // Coming back to DSPRE is when a teammate's push is most likely waiting.
+            Activated += async (_, _) => { if (DataContext is MainWindowViewModel m) await m.Changes.FetchQuietlyAsync(); };
+            Opened += (_, _) => { if (DataContext is MainWindowViewModel m) Shell.ChangesPanelWindow.Attach(this, m.Changes, ChangesOverlay); };
             ScreensMenu.AddHandler(PointerReleasedEvent, ScreensMenu_Released, global::Avalonia.Interactivity.RoutingStrategies.Bubble, handledEventsToo: true);
 #if DEBUG
             AddChangelogPreviewMenuItem();
@@ -275,6 +278,26 @@ namespace DSPRE.Avalonia.Views.Shell
                 ?? System.Linq.Enumerable.Empty<(string, IEditorWithUnsavedChanges)>();
 
         private void Close_Click(object sender, RoutedEventArgs e) => Close();
+
+        private void TrackChanges_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainWindowViewModel vm) TrackingActions.ShowSetup(this, vm.Changes);
+        }
+
+        private async void ApplyPatch_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainWindowViewModel vm) await TrackingActions.ApplyPatchAsync(this, vm.Changes);
+        }
+
+        private async void UndoApply_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainWindowViewModel vm) await TrackingActions.UndoApplyAsync(this, vm.Changes);
+        }
+
+        private async void ExportPatch_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainWindowViewModel vm) await TrackingActions.ExportPatchAsync(this, vm.Changes);
+        }
 
         private async void OpenRom_Click(object sender, RoutedEventArgs e) => await OpenRomInteractiveAsync();
 
@@ -584,6 +607,7 @@ namespace DSPRE.Avalonia.Views.Shell
                     : "";
                 vm.IsBusy = true;
             }
+            DSPRE.Tracking.ChangeTracker.Stop();
             string error = null;
             bool ok;
             try
@@ -602,6 +626,7 @@ namespace DSPRE.Avalonia.Views.Shell
                 if (claimedBefore != null && openBefore != null && RomInfo.WorkDir == openBefore) ProjectWindows.TryClaim(claimedBefore);
                 if (vm != null) vm.StatusText = "ROM load failed.";
                 await DialogHelper.ShowErrorAsync(error ?? "Couldn't load the ROM.", "Open ROM");
+                if (vm != null) await vm.Changes.OnProjectLoadedAsync();
                 return;
             }
             if (vm != null) vm.StatusText = $"Loaded {RomInfo.ProjectName ?? "project"}";
@@ -633,6 +658,7 @@ namespace DSPRE.Avalonia.Views.Shell
             }
             // The Maps workspace skipped its setup at boot (no ROM yet); run it now.
             await Maps.EnsureSetupAsync();
+            if (vm != null) await vm.Changes.OnProjectLoadedAsync();
             // First successful ROM load ever: ask once everything is loaded, so the tour starts straight away.
             if (SettingsManager.Settings?.GuidedTourShown == false)
             {
@@ -760,7 +786,7 @@ namespace DSPRE.Avalonia.Views.Shell
         }
 
         /// <summary>Repacks the project into <paramref name="path"/>, reporting failure itself. True when built.</summary>
-        private async System.Threading.Tasks.Task<bool> BuildRomAsync(string path)
+        public async System.Threading.Tasks.Task<bool> BuildRomAsync(string path)
         {
             await OfferToClearArm9CompressionMarkAsync();
             string error = null;
@@ -771,6 +797,8 @@ namespace DSPRE.Avalonia.Views.Shell
             {
                 if (vm != null) vm.StatusText = "ROM built: " + path;
                 AppLogger.Info("ROM built successfully: " + path);
+                try { await System.Threading.Tasks.Task.Run(() => DSPRE.Tracking.TrackingSetup.RecordBuild(path)); }
+                catch (System.Exception ex) when (ex is System.IO.IOException || ex is System.UnauthorizedAccessException) { AppLogger.Warn("Track changes: the build couldn't be recorded: " + ex.Message); }
                 return true;
             }
             if (vm != null) vm.StatusText = "ROM build failed.";

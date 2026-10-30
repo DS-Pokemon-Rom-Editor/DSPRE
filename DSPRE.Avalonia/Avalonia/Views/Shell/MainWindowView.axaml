@@ -38,6 +38,11 @@
         <MenuItem Header="Build and run" Click="BuildAndRun_Click" IsEnabled="{Binding IsRomLoaded}" InputGesture="F5"
                   ToolTip.Tip="Builds the ROM and opens it in your emulator."/>
         <MenuItem Header="Convert to ds-rom format" Click="ConvertDsRom_Click" IsEnabled="{Binding IsRomLoaded}"/>
+        <MenuItem Header="Track changes…" Click="TrackChanges_Click" IsEnabled="{Binding Changes.CanTrack}"/>
+        <MenuItem Header="Apply a DSPRE patch…" Click="ApplyPatch_Click" IsEnabled="{Binding Changes.IsRomLoaded}"/>
+        <MenuItem Header="Undo last apply" Click="UndoApply_Click" IsEnabled="{Binding Changes.CanUndoApply}"
+                  ToolTip.Tip="The last patch or pull"/>
+        <MenuItem Header="Make a release…" Click="ExportPatch_Click" IsEnabled="{Binding Changes.IsTracking}"/>
         <Separator/>
         <MenuItem Header="hg-engine" x:Name="HgEngineMenu" IsEnabled="{Binding IsRomLoaded}">
           <MenuItem Header="Compile ROM" Click="CompileRom_Click" IsEnabled="{Binding CanCompileRom}"
@@ -295,6 +300,8 @@
       </DockPanel>
     </DockPanel>
 
+    <shell:TrackingBar x:Name="TrackingBar" DockPanel.Dock="Top" DataContext="{Binding Changes}"/>
+
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8,3">
       <Grid ColumnDefinitions="*,12,Auto">
@@ -307,10 +314,16 @@
       </Grid>
     </Border>
 
+    <shell:ChangesPanel DockPanel.Dock="Right" DataContext="{Binding Changes}" IsVisible="{Binding IsTracking}"/>
+
     <!-- ── Main editing surface: the Maps workspace (other editors open from the menu),
          with a busy overlay while a ROM is being opened/unpacked. ── -->
     <Panel>
       <views:MapsWorkspaceView x:Name="Maps" DataContext="{Binding HeaderVM}"/>
+
+      <!-- Changes panel over the editors, when there's no room for it beside the window. -->
+      <shell:ChangesPanel x:Name="ChangesOverlay" Open="True" DataContext="{Binding Changes}" IsVisible="False"
+                          HorizontalAlignment="Right" ZIndex="50"/>
 
       <!-- Pre-ROM empty state: quick actions instead of a dead grey workspace
            (matters when the Welcome window is disabled). -->

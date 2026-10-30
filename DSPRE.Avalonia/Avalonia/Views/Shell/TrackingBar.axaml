@@ -1,0 +1,68 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DSPRE.Avalonia.ViewModels.Shell"
+             x:Class="DSPRE.Avalonia.Views.Shell.TrackingBar"
+             x:DataType="vm:ChangesViewModel">
+
+  <Design.DataContext>
+    <vm:ChangesViewModel/>
+  </Design.DataContext>
+
+  <StackPanel>
+    <Border IsVisible="{Binding ShowPrompt}" Background="{DynamicResource Editor.StatusBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="10,4">
+      <DockPanel>
+        <WrapPanel DockPanel.Dock="Right" Orientation="Horizontal">
+          <Button Content="Start tracking" Margin="3,0" Click="Start_Click" IsEnabled="{Binding !IsWorking}"/>
+          <Button Content="Open a changes folder…" Margin="3,0" Click="Open_Click" IsEnabled="{Binding !IsWorking}"/>
+          <Button Content="Clone from git…" Margin="3,0" Click="Clone_Click" IsEnabled="{Binding GitAvailable}"
+                  ToolTip.Tip="{Binding CloneTip}" ToolTip.ShowOnDisabled="True"/>
+          <Button Content="Help me set it up" Margin="3,0" Click="Setup_Click"/>
+          <Button Content="What's this?" Margin="3,0" Click="About_Click"/>
+          <Button Content="Not for this ROM" Margin="3,0" Click="Decline_Click" Background="Transparent"/>
+        </WrapPanel>
+        <TextBlock Text="This ROM isn't tracking changes." VerticalAlignment="Center"/>
+      </DockPanel>
+    </Border>
+
+    <Border IsVisible="{Binding IsTracking}" Background="{DynamicResource Editor.StatusBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="10,3"
+            Cursor="Hand" PointerPressed="Summary_PointerPressed" ToolTip.Tip="Show or hide the changes panel">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsUpdating}" VerticalAlignment="Center">
+            <ProgressBar IsIndeterminate="True" Width="60" MinWidth="60" Height="4" VerticalAlignment="Center"/>
+            <TextBlock FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Text="Updating changes" VerticalAlignment="Center"/>
+          </StackPanel>
+          <TextBlock FontSize="12" Text="{Binding ChangedCount, StringFormat='{}{0} changed'}" VerticalAlignment="Center"/>
+          <TextBlock FontSize="12" Text="{Binding UntrackedCount, StringFormat='{}{0} untracked'}" VerticalAlignment="Center"/>
+          <TextBlock FontSize="12" Text="{Binding ConflictLine}" VerticalAlignment="Center"
+                     Foreground="{DynamicResource Editor.Bad}" IsVisible="{Binding HasConflicts}"/>
+          <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasIncoming}">
+            <TextBlock FontSize="12" Text="{Binding IncomingLine}" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Warn}"/>
+            <Button Content="Apply" FontSize="12" Padding="8,1" Click="Apply_Click" IsEnabled="{Binding !IsWorking}"/>
+          </StackPanel>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <TextBlock FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Text="Tracking" VerticalAlignment="Center"/>
+          <TextBlock FontSize="12" FontWeight="SemiBold" Text="{Binding FolderName}" VerticalAlignment="Center" ToolTip.Tip="{Binding FolderPath}"/>
+          <TextBlock FontSize="12" Text="{Binding Branch, StringFormat='on {0}'}" IsVisible="{Binding HasBranch}" VerticalAlignment="Center"/>
+          <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource ABrush.ColourfulGlyph.Selected}" Text="{Binding AheadCount, StringFormat='{}{0} to push'}"
+                     IsVisible="{Binding HasAhead}" VerticalAlignment="Center"/>
+          <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource Editor.Warn}" Text="{Binding BehindCount, StringFormat='{}{0} to pull'}"
+                     IsVisible="{Binding HasBehindCount}" VerticalAlignment="Center"/>
+          <TextBlock FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Text="Up to date" IsVisible="{Binding UpToDate}" VerticalAlignment="Center"/>
+          <TextBlock FontSize="11" Foreground="{DynamicResource Editor.Subtle}" Text="{Binding LastFetchText}" VerticalAlignment="Center"/>
+        </StackPanel>
+      </DockPanel>
+    </Border>
+
+    <Border IsVisible="{Binding HasMessage}" Background="{DynamicResource Editor.StatusBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="10,3">
+      <DockPanel>
+        <Button DockPanel.Dock="Right" Content="Dismiss" FontSize="12" Padding="8,1" Click="Dismiss_Click"/>
+        <TextBlock FontSize="12" Foreground="{DynamicResource Editor.Warn}" Text="{Binding Message}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+      </DockPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

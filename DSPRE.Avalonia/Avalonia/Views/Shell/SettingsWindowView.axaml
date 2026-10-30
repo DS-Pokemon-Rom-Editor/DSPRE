@@ -102,6 +102,29 @@
 		</ScrollViewer>
 	  </TabItem>
 
+	  <TabItem Header="git">
+		<ScrollViewer>
+		  <StackPanel Margin="4,8" Spacing="12">
+			<StackPanel Spacing="4">
+			  <TextBlock Text="git" FontWeight="SemiBold"/>
+			  <Grid ColumnDefinitions="*,Auto,Auto">
+				<TextBox Grid.Column="0" Text="{Binding GitPath}" IsReadOnly="True" PlaceholderText="Found on PATH"/>
+				<Button Grid.Column="1" Content="Change path" controls:Icon.Key="folder" Margin="4,0,0,0" Click="ChangeGitPath_Click"/>
+				<Button Grid.Column="2" Content="Clear" controls:Icon.Key="Cross" Margin="4,0,0,0" Click="ClearGitPath_Click"/>
+			  </Grid>
+			</StackPanel>
+			<StackPanel Spacing="4">
+			  <TextBlock Text="GitHub CLI (gh)" FontWeight="SemiBold"/>
+			  <Grid ColumnDefinitions="*,Auto,Auto">
+				<TextBox Grid.Column="0" Text="{Binding GitHubCliPath}" IsReadOnly="True" PlaceholderText="Found on PATH"/>
+				<Button Grid.Column="1" Content="Change path" controls:Icon.Key="folder" Margin="4,0,0,0" Click="ChangeGhPath_Click"/>
+				<Button Grid.Column="2" Content="Clear" controls:Icon.Key="Cross" Margin="4,0,0,0" Click="ClearGhPath_Click"/>
+			  </Grid>
+			</StackPanel>
+		  </StackPanel>
+		</ScrollViewer>
+	  </TabItem>
+
 	  <TabItem Header="Appearance">
 		<ScrollViewer>
 		  <Grid Margin="4,8" ColumnDefinitions="Auto,160,*" RowDefinitions="Auto,Auto" RowSpacing="10">
