@@ -1268,8 +1268,19 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (ReferenceEquals(sender, this) || id != _selectedIndex) return;
             if (_dirty) { _ = OfferReloadAsync(id); return; }
-            LoadFile(id);
+            ReloadKeepingSelection(id);
             StatusText = "";
+        }
+
+        // A reload from another window keeps the user on the event they were looking at, where it still exists.
+        private void ReloadKeepingSelection(int id)
+        {
+            int ow = _selOw, warp = _selWarp, trig = _selTrig, spawn = _selSpawn;
+            LoadFile(id);
+            if (ow >= 0) SelectedOverworldIndex = ow < Overworlds.Count ? ow : -1;
+            if (warp >= 0) SelectedWarpIndex = warp < Warps.Count ? warp : -1;
+            if (trig >= 0) SelectedTriggerIndex = trig < Triggers.Count ? trig : -1;
+            if (spawn >= 0) SelectedSpawnableIndex = spawn < Spawnables.Count ? spawn : -1;
         }
 
         // Keeping these edits means saving them over what the other window wrote, so ask.
