@@ -82,13 +82,28 @@ namespace DSPRE.Avalonia.Controls
 
         private static void Go(Control c) => Open(GetTo(c), IdOf(c));
 
-        // False when another control or the window edge is within the arrow's width to the right of the field.
+        // The arrow is 20 wide, so this leaves a 4 pixel gap past the field.
+        private const double OutsideReach = 24;
+
+        // Keeps the arrow left of the field's drop-down or spinner buttons, so they stay clickable.
+        private static Thickness InsideMargin(Control c)
+        {
+            double left = c.Bounds.Width;
+            foreach (Button b in c.GetVisualDescendants().OfType<Button>())
+            {
+                if (!b.IsEffectivelyVisible || b.TranslatePoint(new Point(0, 0), c) is not Point at) continue;
+                left = Math.Min(left, at.X);
+            }
+            return new Thickness(0, 0, c.Bounds.Width - left + 2, 0);
+        }
+
+        // False when the arrow would land on another control or past the window edge.
         private static bool RoomOutside(Control c)
         {
             if (TopLevel.GetTopLevel(c) is not TopLevel top) return false;
             Point? corner = c.TranslatePoint(new Point(c.Bounds.Width, 0), top);
             if (corner == null) return false;
-            Rect strip = new Rect(corner.Value.X, corner.Value.Y, 22, c.Bounds.Height);
+            Rect strip = new Rect(corner.Value.X, corner.Value.Y, OutsideReach, c.Bounds.Height);
             if (strip.Right > top.ClientSize.Width) return false;
             HashSet<Visual> above = new HashSet<Visual>(c.GetVisualAncestors());
             foreach (Visual v in top.GetVisualDescendants())
@@ -122,12 +137,12 @@ namespace DSPRE.Avalonia.Controls
                 }
             }, global::Avalonia.Interactivity.RoutingStrategies.Tunnel);
 
-            // Shown on hover, never over the value; RoomOutside picks the side.
+            // Shows on hover and stays off the field's buttons.
             Button arrow = new Button
             {
                 Content = Icon.Image("OpenLink"), Padding = new Thickness(2, 0), MinWidth = 0, MinHeight = 0, Width = 20, Height = 20,
                 HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, -22, 0), IsVisible = false, Focusable = false,
+                Margin = new Thickness(0, 0, -OutsideReach, 0), IsVisible = false, Focusable = false,
                 Background = new SolidColorBrush(Color.FromArgb(0xC0, 0x30, 0x30, 0x30)),
             };
             ToolTip.SetTip(arrow, $"Open in {name} (or right-click, or Ctrl+click)");
@@ -139,7 +154,7 @@ namespace DSPRE.Avalonia.Controls
             void Update()
             {
                 bool show = (over || overArrow) && IdOf(c) >= 0;
-                if (show && !overArrow) arrow.Margin = RoomOutside(c) ? new Thickness(0, 0, -22, 0) : new Thickness(0, 0, 2, 0);
+                if (show && !overArrow) arrow.Margin = RoomOutside(c) ? new Thickness(0, 0, -OutsideReach, 0) : InsideMargin(c);
                 arrow.IsVisible = show;
             }
             c.PointerEntered += (_, _) => { over = true; Update(); };
