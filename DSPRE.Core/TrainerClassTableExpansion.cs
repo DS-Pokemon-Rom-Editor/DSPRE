@@ -605,7 +605,8 @@ namespace DSPRE
                         error = "More eye-contact music needs the \"Trainer encounter music table\" patch from the ROM patch toolbox.";
                         return false;
                     }
-                    if (entryCount >= MaxClasses) { error = "Every trainer class already has eye-contact music."; return false; }
+                    // The count is one byte.
+                    if (entryCount == byte.MaxValue) { error = "The eye-contact music table is full."; return false; }
                     DSUtils.WriteToFile(Filesystem.ExpArmPath, newEntry, (uint)(roomy + entryCount * entrySize));
                     DSUtils.WriteToFile(RomInfo.Arm9Path, new[] { (byte)(entryCount + 1) }, lengthFieldOffset);
                     return true;
