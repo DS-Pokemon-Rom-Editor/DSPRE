@@ -94,7 +94,6 @@
               </Grid>
 
               <WrapPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" ItemSpacing="12" LineSpacing="4" Margin="0,4,8,0">
-                <CheckBox Content="Double battle" IsChecked="{Binding DoubleBattle}" IsVisible="{Binding !IsHgeActive}"/>
                 <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding !IsHgeActive}">
                   <TextBlock Text="Battle type" VerticalAlignment="Center"/>
                   <controls:IdNameSelector Value="{Binding BattleTypeValue}" Width="200" Maximum="4294967295"

@@ -245,10 +245,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         // Held items (4 combos)
         public ObservableCollection<TrainerItemSlotViewModel> TrainerItems { get; } = new ObservableCollection<TrainerItemSlotViewModel>();
 
-        // ── hg-engine-only: real trainer-data-type flags + battle type, dynamically resolved from the
-        // linked checkout's include/trainer_data.h (never a hardcoded vanilla-derived list). Empty/unused
-        // for vanilla ROMs, where the existing ChooseMoves/ChooseItems/DoubleBattle checkboxes below
-        // still apply.
+        // hg-engine only: these flags and battle types come from the linked checkout's include/trainer_data.h, never a hardcoded list.
+        // Vanilla ROMs leave them empty and use ChooseMoves, ChooseItems and BattleTypeValue below.
         public bool IsHgeActive => HgEngineProject.IsActive;
         public ObservableCollection<AiFlagViewModel> TrainerDataTypeFlags { get; } = new ObservableCollection<AiFlagViewModel>();
         public ObservableCollection<string> BattleTypeOptions { get; } = new ObservableCollection<string>();
