@@ -1663,6 +1663,7 @@ namespace DSPRE
             };
             lines.AddRange(applied);
             lines.AddRange(detected);
+            if (RomInfo.IsHGE) lines.Add("BluRosie and the hg-engine contributors");
             lines.Add("The DSPRE developers and its many contributors and research gurus");
             return string.Join("\n", lines);
         }

@@ -974,14 +974,14 @@ namespace DSPRE
             LoadGameFamily();
             LoadGameLanguage();
 
-            // The marker hg-engine writes is the only identifier, since a hack may have changed the
-            // title, code or anything else DSPRE could otherwise have keyed on.
+            // A hack can change the title and code, so the marker is how to spot a built ROM.
+            // Forks may not write it, so an opened checkout only needs overlay 129, which the original game doesn't have.
             string ov129path = OverlayUtils.GetPath(129);
             if (File.Exists(ov129path))
             {
                 using (DSUtils.EasyReader br = new DSUtils.EasyReader(ov129path))
                 {
-                    IsHGE = Encoding.UTF8.GetString(br.ReadBytes(16)) == "hg-engine rocks!";
+                    IsHGE = IsHgEngineBaseProject || Encoding.UTF8.GetString(br.ReadBytes(16)) == "hg-engine rocks!";
                 }
             }
 

@@ -783,10 +783,11 @@ Overworld sprites 101 to 116 are picked by a script while playing, from variable
 
 ## hg-engine projects
 
-An hg-engine ROM has "hg-engine rocks!" at the start of overlay 129 (`RomInfo.IsHGE`).
-`HgEngineProject.IsActive` means a checkout is linked. Each `EditorAvailability` rule says `Open`, `NeedsLink`,
-`Source`, `Closed` or `LinkedOnly`. With a checkout linked, data is read from its source text rather than by
-offset, and written through `HgEngineVerifiedWrite`. Synthetic-overlay patches are refused.
+An hg-engine ROM has "hg-engine rocks!" at the start of overlay 129 (`RomInfo.IsHGE`). An opened hg-engine folder
+doesn't need that text, only overlay 129. `HgEngineProject.IsActive` means a checkout is linked. Each
+`EditorAvailability` rule says `Open`, `NeedsLink`, `Source`, `Closed` or `LinkedOnly`. With a checkout linked, data
+is read from its source text rather than by offset, and written through `HgEngineVerifiedWrite`. Synthetic-overlay
+patches are refused.
 
 ## Reference
 
