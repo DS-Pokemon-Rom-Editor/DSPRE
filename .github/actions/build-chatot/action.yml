@@ -38,14 +38,14 @@ runs:
     - name: Check chatot version
       shell: bash
       env:
-        CHATOT_VERSION: chatot 0.8.1
         OUTPUT_DIRECTORY: ${{ inputs.output-directory }}
       run: |
         set -euo pipefail
         if [ "$RUNNER_OS" = "Windows" ]; then exe="$OUTPUT_DIRECTORY/chatot.exe"; else exe="$OUTPUT_DIRECTORY/chatot"; fi
+        expected_version="chatot $(sed -n 's/^version = "\(.*\)"/\1/p' Tools/chatot-src/Cargo.toml | head -n 1)"
         actual_version="$("$exe" --version)"
-        if [ "$actual_version" != "$CHATOT_VERSION" ]; then
-          echo "Expected '$CHATOT_VERSION', got '$actual_version'" >&2
+        if [ "$actual_version" != "$expected_version" ]; then
+          echo "Expected '$expected_version', got '$actual_version'" >&2
           exit 1
         fi
         echo "Built $actual_version"

@@ -60,14 +60,14 @@ runs:
     - name: Check rotom version
       shell: bash
       env:
-        ROTOM_VERSION: rotom 0.8.0
         OUTPUT_DIRECTORY: ${{ inputs.output-directory }}
       run: |
         set -euo pipefail
         if [ "$RUNNER_OS" = "Windows" ]; then exe="$OUTPUT_DIRECTORY/rotom.exe"; else exe="$OUTPUT_DIRECTORY/rotom"; fi
+        expected_version="rotom $(sed -n 's/^version = "\(.*\)"/\1/p' Tools/rotom-src/Cargo.toml | head -n 1)"
         actual_version="$("$exe" --version)"
-        if [ "$actual_version" != "$ROTOM_VERSION" ]; then
-          echo "Expected '$ROTOM_VERSION', got '$actual_version'" >&2
+        if [ "$actual_version" != "$expected_version" ]; then
+          echo "Expected '$expected_version', got '$actual_version'" >&2
           exit 1
         fi
         echo "Built $actual_version"
