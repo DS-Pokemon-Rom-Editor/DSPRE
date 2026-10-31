@@ -165,12 +165,14 @@ namespace DSPRE.Tracking
             if (choice == null)
             {
                 ChangeTracker.Stop();
+                await ResumeAsync().ConfigureAwait(false);
                 return (conflicts, problems, "Nothing was changed.");
             }
             Dictionary<TrackedFile, byte[]> writes = await Task.Run(() => tracker.PlanApplyAll(choice, out problems)).ConfigureAwait(false);
             if (!tracker.TryWrite(writes, out string writeError))
             {
                 ChangeTracker.Stop();
+                await ResumeAsync().ConfigureAwait(false);
                 return (conflicts, problems, writeError);
             }
             moved.Write(folder);
@@ -221,18 +223,8 @@ namespace DSPRE.Tracking
 
         public static void Unlink()
         {
-            ChangeTracker.Stop();
             // The project remembers its folder too, and would link again at the next load.
-            string projectDir = RomInfo.DspreDir?.TrimEnd('\\', '/');
-            if (!string.IsNullOrEmpty(projectDir))
-            {
-                SyncState state = SyncState.Load(projectDir);
-                if (state.Repo != null)
-                {
-                    state.Repo = null;
-                    state.Save(projectDir);
-                }
-            }
+            ChangeTracker.Unlink(RomInfo.DspreDir?.TrimEnd('\\', '/'));
             if (SettingsManager.Settings == null) return;
             SettingsManager.Settings.ChangesFolders.Remove(ProjectKey);
             SettingsManager.Save();

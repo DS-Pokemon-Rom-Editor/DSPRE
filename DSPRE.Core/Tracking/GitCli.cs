@@ -12,7 +12,7 @@ namespace DSPRE.Tracking
     {
         public sealed record Entry(string Path, bool Untracked, bool Conflicted);
 
-        public sealed record Status(string Branch, string Upstream, int Ahead, int Behind, bool HasRemote, IReadOnlyList<Entry> Entries)
+        public sealed record Status(string Branch, string Upstream, int Ahead, int Behind, bool UpstreamExists, bool HasRemote, IReadOnlyList<Entry> Entries)
         {
             public int Changed => Entries.Count(e => !e.Untracked && !e.Conflicted);
             public int Untracked => Entries.Count(e => e.Untracked);
@@ -43,6 +43,7 @@ namespace DSPRE.Tracking
             if (!r.Success) return null;
             string branch = null, upstream = null;
             int ahead = 0, behind = 0;
+            bool upstreamExists = false;
             List<Entry> entries = new List<Entry>();
             foreach (string line in r.Stdout.Split('\n').Select(l => l.TrimEnd('\r')))
             {
@@ -50,6 +51,7 @@ namespace DSPRE.Tracking
                 else if (line.StartsWith("# branch.upstream ", StringComparison.Ordinal)) upstream = line.Substring(18);
                 else if (line.StartsWith("# branch.ab ", StringComparison.Ordinal))
                 {
+                    upstreamExists = true;
                     string[] parts = line.Substring(12).Split(' ');
                     ahead = int.Parse(parts[0].TrimStart('+'), CultureInfo.InvariantCulture);
                     behind = int.Parse(parts[1].TrimStart('-'), CultureInfo.InvariantCulture);
@@ -59,9 +61,8 @@ namespace DSPRE.Tracking
                 else if (line.StartsWith("1 ", StringComparison.Ordinal)) entries.Add(new Entry(LastField(line, 8), false, false));
                 else if (line.StartsWith("2 ", StringComparison.Ordinal)) entries.Add(new Entry(LastField(line, 9).Split('\t')[0], false, false));
             }
-            CliRunner.Result remotes = await RunAsync(folder, "remote").ConfigureAwait(false);
-            bool hasRemote = remotes.Success && !string.IsNullOrWhiteSpace(remotes.Stdout);
-            return new Status(branch == "(detached)" ? null : branch, upstream, ahead, behind, hasRemote, entries);
+            bool hasRemote = await RemoteUrlAsync(folder).ConfigureAwait(false) != null;
+            return new Status(branch == "(detached)" ? null : branch, upstream, ahead, behind, upstreamExists, hasRemote, entries);
         }
 
         private static string LastField(string line, int fieldsBefore)
@@ -186,6 +187,10 @@ namespace DSPRE.Tracking
                 ? await RunAsync(folder, "remote", "add", "origin", url).ConfigureAwait(false)
                 : await RunAsync(folder, "remote", "set-url", "origin", url).ConfigureAwait(false);
         }
+
+        public static Task<CliRunner.Result> RemoveRemoteAsync(string folder, string name = "origin") => RunAsync(folder, "remote", "remove", name);
+
+        public static Task<CliRunner.Result> RenameRemoteAsync(string folder, string from, string to) => RunAsync(folder, "remote", "rename", from, to);
 
         /// <summary>The name and email commits are made with, or null when git has none.</summary>
         public static async Task<(string Name, string Email)?> IdentityAsync(string folder)

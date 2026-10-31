@@ -32,9 +32,14 @@ namespace DSPRE.Avalonia.Views.Shell
             {
                 if (File.Exists(ChangesManifest.PathIn(folder)))
                 {
-                    if (await DialogHelper.AskTwoWayAsync($"{Path.GetFileName(folder)} already holds changes. Open it instead?", "Start tracking", "Open it", "Cancel", owner))
+                    DialogHelper.MsgResult open = await DialogHelper.AskThreeWayAsync(
+                        $"{Path.GetFileName(folder)} already holds changes. Open it, or start again in another folder?", "Start tracking", "Open it", "Choose another…");
+                    if (open == DialogHelper.MsgResult.Cancel) return;
+                    if (open == DialogHelper.MsgResult.Yes)
+                    {
                         await OpenAsync(owner, vm, folder);
-                    return;
+                        return;
+                    }
                 }
                 folder = await DialogHelper.OpenFolderAsync(owner, "Choose an empty folder for the changes");
                 if (folder == null) return;
@@ -83,6 +88,25 @@ namespace DSPRE.Avalonia.Views.Shell
             if (owner == null || vm == null) return;
             string folder = await DialogHelper.OpenFolderAsync(owner, "Choose a changes folder");
             if (folder != null) await OpenAsync(owner, vm, folder);
+        }
+
+        /// <summary>Keeps tracking until the new folder opens.</summary>
+        public static async Task ChangeFolderAsync(Window owner, ChangesViewModel vm)
+        {
+            if (owner == null || vm == null) return;
+            if (await DialogHelper.AskTwoWayAsync("Stop using " + vm.FolderName + " and choose another changes folder?", "Change folder", "Choose…", "Cancel", owner))
+                await OpenFolderAsync(owner, vm);
+        }
+
+        public static async Task StopAsync(Window owner, ChangesViewModel vm)
+        {
+            if (vm == null) return;
+            if (!await DialogHelper.AskTwoWayAsync("Stop tracking this project? " + vm.FolderName + " and its history stay as they are.", "Stop tracking", "Stop tracking", "Cancel", owner)) return;
+            await RunAsync(vm, () =>
+            {
+                vm.StopTracking();
+                return Task.CompletedTask;
+            });
         }
 
         /// <summary>Links a changes folder, asking for its ROM or moving it to this project's ROM when needed.</summary>

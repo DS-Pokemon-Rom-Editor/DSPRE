@@ -703,6 +703,7 @@ kind without one counts as a Technical file in changelogs.
 ### Sharing changes with git
 
 `GitCli` and `GitHubCli` run git and the GitHub CLI. `GitMessages` turns their errors into advice on what to do next.
+`TrackingSetupWindow` changes or removes the remote. A fetch that finds no repo sets `ChangesViewModel.RemoteGone`.
 Pull is `GitSync`: git fetches and merges, then `RecordMerge` merges each record both sides changed, field by
 field. Fields both sides changed differently go to `MergeWindow`, where the user picks local or remote:
 

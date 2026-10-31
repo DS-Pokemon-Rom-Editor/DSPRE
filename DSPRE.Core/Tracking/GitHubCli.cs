@@ -84,8 +84,18 @@ namespace DSPRE.Tracking
             catch (Exception ex) when (ex is JsonException || ex is System.IO.InvalidDataException) { return null; }
         }
 
-        public static Task<CliRunner.Result> CreateAsync(string name, bool isPrivate, string folder) =>
-            RunAsync(folder, new[] { "repo", "create", name, isPrivate ? "--private" : "--public", "--source", folder, "--remote", "origin", "--push" });
+        private const string OldOrigin = "dspre-old-origin";
+
+        public static async Task<CliRunner.Result> CreateAsync(string name, bool isPrivate, string folder)
+        {
+            // gh refuses if origin exists. Renaming keeps the branch's upstream if creating fails.
+            bool hadOrigin = await GitCli.RemoteUrlAsync(folder).ConfigureAwait(false) != null;
+            if (hadOrigin) await GitCli.RenameRemoteAsync(folder, "origin", OldOrigin).ConfigureAwait(false);
+            CliRunner.Result r = await RunAsync(folder, new[] { "repo", "create", name, isPrivate ? "--private" : "--public", "--source", folder, "--remote", "origin", "--push" }).ConfigureAwait(false);
+            if (!hadOrigin) return r;
+            await (r.Success ? GitCli.RemoveRemoteAsync(folder, OldOrigin) : GitCli.RenameRemoteAsync(folder, OldOrigin, "origin")).ConfigureAwait(false);
+            return r;
+        }
 
         /// <summary>A release of the folder's repo at its pushed commit, tagged <paramref name="tag"/>, with the files attached.</summary>
         public static Task<CliRunner.Result> ReleaseAsync(string folder, string tag, string notes, IEnumerable<string> files)

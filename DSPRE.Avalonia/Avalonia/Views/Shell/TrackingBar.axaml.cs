@@ -23,7 +23,7 @@ namespace DSPRE.Avalonia.Views.Shell
         private void About_Click(object sender, RoutedEventArgs e) =>
             WelcomeView.ShowWelcome(Owner as MainWindowView, WelcomeViewModel.TrackChangesPage);
         private async void Apply_Click(object sender, RoutedEventArgs e) => await TrackingActions.ApplyIncomingAsync(Owner, Vm);
-        private void Dismiss_Click(object sender, RoutedEventArgs e) { if (Vm != null) Vm.Message = null; }
+        private void Dismiss_Click(object sender, RoutedEventArgs e) => Vm?.DismissMessage();
 
         private void Summary_PointerPressed(object sender, PointerPressedEventArgs e)
         {

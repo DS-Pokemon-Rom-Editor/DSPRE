@@ -55,8 +55,23 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public ObservableCollection<CommitRow> Behind { get; } = new();
 
         private readonly DispatcherTimer _fetchTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(5) };
-        private DateTime _lastFetch = DateTime.MinValue;
-        private bool _fetching;
+        private DateTime _lastFetch = DateTime.MinValue, _lastTry = DateTime.MinValue;
+        private bool _fetching, _fetchAgain, _goneDismissed;
+        private string _remoteFolder;
+
+        private bool _remoteGone;
+        /// <summary>The remote repo wasn't found, or can't be accessed.</summary>
+        public bool RemoteGone
+        {
+            get => _remoteGone;
+            private set
+            {
+                if (_remoteGone == value) return;
+                _remoteGone = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(UpToDate));
+            }
+        }
 
         /// <summary>A background fetch is running.</summary>
         public bool IsFetching => _fetching;
@@ -77,16 +92,59 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         /// </summary>
         public async Task FetchQuietlyAsync(bool force = false)
         {
-            if (_fetching || IsWorking || IsMerging || !CanPullPush || FolderPath == null) return;
-            if (!force && DateTime.UtcNow - _lastFetch < TimeSpan.FromMinutes(1)) return;
+            if (_fetching)
+            {
+                _fetchAgain |= force;
+                return;
+            }
+            if (IsWorking || IsMerging || !CanPullPush || FolderPath == null) return;
+            if (!force && DateTime.UtcNow - _lastTry < TimeSpan.FromMinutes(1)) return;
             _fetching = true;
+            _lastTry = DateTime.UtcNow;
+            string folder = FolderPath;
             try
             {
-                CliRunner.Result r = await GitCli.FetchAsync(FolderPath);
-                if (r.Success) _lastFetch = DateTime.UtcNow;
+                CliRunner.Result r = await GitCli.FetchAsync(folder);
+                if (folder == FolderPath) NoteFetch(r);
             }
             finally { _fetching = false; }
             await RefreshViewAsync();
+            if (!_fetchAgain) return;
+            _fetchAgain = false;
+            await FetchQuietlyAsync(force: true);
+        }
+
+        private void NoteFetch(CliRunner.Result r)
+        {
+            if (r.Success)
+            {
+                _lastFetch = DateTime.UtcNow;
+                ClearRepoGone();
+            }
+            else if (GitMessages.IsRepoGone(r))
+            {
+                RemoteGone = true;
+                if (!_goneDismissed) Message = GitMessages.RepoGone;
+            }
+        }
+
+        private void ClearRepoGone()
+        {
+            RemoteGone = false;
+            _goneDismissed = false;
+            if (Message == GitMessages.RepoGone) Message = null;
+        }
+
+        public void RemoteChanged()
+        {
+            ClearRepoGone();
+            _ = FetchQuietlyAsync(force: true);
+        }
+
+        public void DismissMessage()
+        {
+            if (Message == GitMessages.RepoGone) _goneDismissed = true;
+            Message = null;
         }
 
         public string LastFetchText
@@ -104,7 +162,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public bool HasOutgoing => Outgoing.Count > 0;
         public bool HasAhead => AheadCount > 0;
         public bool HasBehindCount => BehindCount > 0;
-        public bool UpToDate => _status?.Upstream != null && AheadCount == 0 && BehindCount == 0;
+        public bool UpToDate => _status?.Upstream != null && !RemoteGone && AheadCount == 0 && BehindCount == 0;
         public string PullLabel => BehindCount > 0 ? "Pull " + BehindCount : "Pull";
         public string PushLabel => AheadCount > 0 ? "Push " + AheadCount : "Push";
         public bool HasBehind => Behind.Count > 0;
@@ -178,7 +236,10 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public bool IsRepository => GitAvailable && FolderPath != null && GitCli.IsRepository(FolderPath);
         public bool CanUseGit => IsRepository && !IsWorking;
         public bool CanPullPush => CanUseGit && _status?.HasRemote == true;
-        public bool CanPush => CanPullPush && !IsMerging;
+        public bool CanPush => CanPullPush && !IsMerging && HasSomethingToPush;
+        // git gives no count for a branch the remote doesn't have.
+        private bool HasSomethingToPush => AheadCount > 0 || _status?.UpstreamExists != true;
+        public string PushTip => GitTip ?? (IsMerging ? "Finish the merge first" : !HasSomethingToPush ? "Nothing to push" : null);
         public string CloneTip => GitAvailable ? null : "Install git, or set where it is in Settings > git";
         public string GitTip => !GitAvailable ? "Install git, or set where it is in Settings > git"
             : !IsRepository ? "Not a git repo yet. Use Help me set it up to start."
@@ -242,7 +303,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                 nameof(GitAvailable), nameof(IsRepository), nameof(CanUseGit), nameof(CanPullPush), nameof(GitTip), nameof(CloneTip), nameof(Branch),
                 nameof(HasBranch), nameof(PushPull), nameof(HasPushPull), nameof(ChangedCount), nameof(UntrackedCount), nameof(IncomingCount),
                 nameof(ConflictCount), nameof(ConflictLine), nameof(Total), nameof(HasIncoming), nameof(HasConflicts), nameof(HasChanged), nameof(HasUntracked),
-                nameof(HasNothing), nameof(CanCommit), nameof(IncomingLine), nameof(KeptWholeNote), nameof(HasKeptWhole), nameof(IsMerging), nameof(CanPush), nameof(LastFetchText), nameof(AheadCount), nameof(BehindCount), nameof(HasOutgoing), nameof(HasBehind), nameof(PullLabel), nameof(PushLabel), nameof(CommitTip), nameof(HasFolderFiles), nameof(HasAhead), nameof(HasBehindCount), nameof(UpToDate),
+                nameof(HasNothing), nameof(CanCommit), nameof(IncomingLine), nameof(KeptWholeNote), nameof(HasKeptWhole), nameof(IsMerging), nameof(CanPush), nameof(PushTip), nameof(LastFetchText), nameof(AheadCount), nameof(BehindCount), nameof(HasOutgoing), nameof(HasBehind), nameof(PullLabel), nameof(PushLabel), nameof(CommitTip), nameof(HasFolderFiles), nameof(HasAhead), nameof(HasBehindCount), nameof(UpToDate),
             })
                 if (p != n) OnPropertyChanged(p);
         }
@@ -254,6 +315,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             IsRomLoaded = !string.IsNullOrEmpty(RomInfo.WorkDir);
             OnPropertyChanged(nameof(CanUndoApply));
             Message = null;
+            _remoteFolder = null;
             if (CanTrack)
             {
                 try
@@ -395,7 +457,17 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             foreach (CommitRow c in outgoing) Outgoing.Add(c);
             Behind.Clear();
             foreach (CommitRow c in behind) Behind.Add(c);
+            bool newFolder = tracker?.Folder != _remoteFolder;
+            if (newFolder)
+            {
+                _remoteFolder = tracker?.Folder;
+                _lastFetch = DateTime.MinValue;
+                ClearRepoGone();
+            }
+            else if (_status != null && !_status.HasRemote) ClearRepoGone();
             Raise();
+            // A linked folder resumes without asking, so check here that its repo still exists.
+            if (newFolder) _ = FetchQuietlyAsync(force: true);
         }
 
         private static string Ago(DateTimeOffset when)

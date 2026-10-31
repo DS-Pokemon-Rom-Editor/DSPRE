@@ -67,6 +67,7 @@ namespace DSPRE.Tracking
         private SyncState _state;
         private readonly string _projectDir;
         private readonly object _gate = new object();
+        private static readonly object StateFile = new object();
         private Timer _debounce;
         private int _applying;
 
@@ -114,6 +115,26 @@ namespace DSPRE.Tracking
             tracker._debounce?.Dispose();
             Current = null;
             StateChanged?.Invoke();
+        }
+
+        /// <summary>Stops tracking and clears the project's changes folder, so a running scan can't put it back.</summary>
+        public static void Unlink(string projectDir)
+        {
+            lock (StateFile)
+            {
+                Stop();
+                if (string.IsNullOrEmpty(projectDir)) return;
+                SyncState state = SyncState.Load(projectDir);
+                if (state.Repo == null) return;
+                state.Repo = null;
+                state.Save(projectDir);
+            }
+        }
+
+        private void SaveState()
+        {
+            lock (StateFile)
+                if (ReferenceEquals(Current, this)) _state.Save(_projectDir);
         }
 
         private void OnWritten(string path)
@@ -200,7 +221,7 @@ namespace DSPRE.Tracking
                     if (!held.Contains(file.Key)) _state.Files[file.Key] = new SyncState.FileMark { Size = size, Ticks = ticks, Sha1 = sha };
                 Incoming = waiting.OrderBy(w => w.Title, StringComparer.Ordinal).ToList();
                 KeptWhole = keptWhole.Distinct().OrderBy(t => t, StringComparer.Ordinal).ToList();
-                _state.Save(_projectDir);
+                SaveState();
             }
             StateChanged?.Invoke();
         }
@@ -463,7 +484,7 @@ namespace DSPRE.Tracking
                 }
                 foreach (string key in _state.RepoFiles.Keys.ToList())
                     if (!File.Exists(Path.Combine(Folder, key))) _state.RepoFiles.Remove(key);
-                _state.Save(_projectDir);
+                SaveState();
             }
             Refresh();
             return true;
@@ -480,7 +501,7 @@ namespace DSPRE.Tracking
                     foreach (TrackedFile f in r.Kind.Files(r.Id, ctx)) _state.Files.Remove(f.Key);
                     Export(r.Kind, r.Id, ctx);
                 }
-                _state.Save(_projectDir);
+                SaveState();
             }
             Refresh();
         }
@@ -526,7 +547,7 @@ namespace DSPRE.Tracking
                     File.Delete(Path.Combine(Folder, key));
                 }
                 _state.RepoFiles.Clear();
-                _state.Save(_projectDir);
+                SaveState();
             }
             Refresh();
         }

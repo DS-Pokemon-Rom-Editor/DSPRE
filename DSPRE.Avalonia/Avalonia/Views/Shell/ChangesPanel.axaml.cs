@@ -48,18 +48,8 @@ namespace DSPRE.Avalonia.Views.Shell
         private void Tour_Click(object sender, RoutedEventArgs e) => EditorTours.Start(this, nameof(ChangesPanel));
         private async void Changelog_Click(object sender, RoutedEventArgs e) { if (DSPRE.Tracking.ChangeTracker.Current is DSPRE.Tracking.ChangeTracker t) await ChangelogWindow.ShowAsync(Owner, t); }
         private async void Apply_Click(object sender, RoutedEventArgs e) => await TrackingActions.ApplyIncomingAsync(Owner, Vm);
-        private async void ChangeFolder_Click(object sender, RoutedEventArgs e)
-        {
-            if (Vm == null || !await DialogHelper.AskTwoWayAsync("Stop tracking into " + Vm.FolderName + " and open another changes folder?", "Change folder", "Choose…", "Cancel", Owner)) return;
-            Vm.StopTracking();
-            await TrackingActions.OpenFolderAsync(Owner, Vm);
-        }
-
-        private async void StopTracking_Click(object sender, RoutedEventArgs e)
-        {
-            if (Vm == null || !await DialogHelper.AskTwoWayAsync("Stop tracking this project? " + Vm.FolderName + " and its history stay as they are.", "Stop tracking", "Stop tracking", "Cancel", Owner)) return;
-            Vm.StopTracking();
-        }
+        private async void ChangeFolder_Click(object sender, RoutedEventArgs e) => await TrackingActions.ChangeFolderAsync(Owner, Vm);
+        private async void StopTracking_Click(object sender, RoutedEventArgs e) => await TrackingActions.StopAsync(Owner, Vm);
 
         private async void ResolveMerge_Click(object sender, RoutedEventArgs e) => await TrackingActions.ResumeMergeAsync(Owner, Vm);
 

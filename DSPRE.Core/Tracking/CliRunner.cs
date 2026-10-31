@@ -59,6 +59,8 @@ namespace DSPRE.Tracking
             process.StartInfo.Environment["GIT_TERMINAL_PROMPT"] = "0";
             process.StartInfo.Environment["GH_PROMPT_DISABLED"] = "1";
             process.StartInfo.Environment["NO_COLOR"] = "1";
+            // GitMessages matches git's English text.
+            process.StartInfo.Environment["LC_ALL"] = "C.UTF-8";
 
             StringBuilder stdout = new StringBuilder(), stderr = new StringBuilder();
             void Seen(StringBuilder into, string line)

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input.Platform;
@@ -16,6 +17,8 @@ namespace DSPRE.Avalonia.Views.Shell
     /// <summary>Help me set it up: git, then GitHub sign-in, then a repo. Steps already done show as done.</summary>
     public sealed class TrackingSetupWindow : Window
     {
+        private const string RepoNotFound = "That repo wasn't found, or you don't have access to it.";
+
         private static TrackingSetupWindow _open;
 
         private readonly ChangesViewModel _vm;
@@ -58,7 +61,18 @@ namespace DSPRE.Avalonia.Views.Shell
             ScrollViewer scroll = new ScrollViewer { Content = _steps, HorizontalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled };
             Content = DialogSizing.Body(scroll, buttons);
             DialogSizing.Grow(this, scroll);
-            Opened += async (_, _) => await RebuildAsync();
+            _vm.PropertyChanged += OnVmChanged;
+            Closed += (_, _) => _vm.PropertyChanged -= OnVmChanged;
+            Opened += async (_, _) =>
+            {
+                await RebuildAsync();
+                await _vm.FetchQuietlyAsync(force: true);
+            };
+        }
+
+        private async void OnVmChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ChangesViewModel.RemoteGone)) await RebuildAsync();
         }
 
         private async Task RebuildAsync()
@@ -67,7 +81,10 @@ namespace DSPRE.Avalonia.Views.Shell
             string gh = GitHubCli.IsAvailable ? await GitHubCli.VersionAsync() : null;
             if (gh != null) _account = await GitHubCli.AccountAsync();
             (string Name, string Email)? identity = git != null ? await GitCli.IdentityAsync(_vm.FolderPath) : null;
-            _remote = git != null && _vm.IsRepository ? await GitCli.RemoteUrlAsync(_vm.FolderPath) : null;
+            string remote = git != null && _vm.IsRepository ? await GitCli.RemoteUrlAsync(_vm.FolderPath) : null;
+            bool changed = _remote != null && remote != _remote;
+            _remote = remote;
+            if (changed) _vm.RemoteChanged();
 
             _steps.Children.Clear();
             _steps.Children.Add(Step(git != null && identity != null, "git",
@@ -99,15 +116,20 @@ namespace DSPRE.Avalonia.Views.Shell
 
             _steps.Children.Add(Step(_vm.IsTracking, "Track this ROM",
                 _vm.IsTracking ? "Tracking into " + _vm.FolderName + "." : "Make a changes folder for this ROM, or clone one in the next step.",
-                _vm.IsTracking ? Array.Empty<Control>() : new Control[] { Action("Start tracking", async () => await TrackingActions.StartAsync(this, _vm)) }));
+                _vm.IsTracking
+                    ? new Control[] { Action("Change folder…", () => TrackingActions.ChangeFolderAsync(this, _vm)), Action("Stop tracking", () => TrackingActions.StopAsync(this, _vm)) }
+                    : new Control[] { Action("Start tracking", async () => await TrackingActions.StartAsync(this, _vm)) }));
 
             string repoText;
             List<Control> repoButtons = new List<Control>();
             bool repoDone = false;
             if (_remote != null)
             {
-                repoText = _remote;
-                repoDone = true;
+                repoText = _vm.RemoteGone ? _remote + "\n" + RepoNotFound : _remote;
+                repoDone = !_vm.RemoteGone;
+                if (_account != null) repoButtons.Add(Action("Choose another…", ChooseRepoAsync));
+                repoButtons.Add(Action("Change address…", AddRemoteAsync));
+                repoButtons.Add(Action("Remove remote", RemoveRemoteAsync));
             }
             else if (_vm.IsTracking && !_vm.IsRepository)
             {
@@ -145,26 +167,44 @@ namespace DSPRE.Avalonia.Views.Shell
                 await TrackingActions.CloneAsync(this, _vm, picked.Url);
                 return;
             }
-            await ConnectAsync(picked.Url + ".git", picked.IsEmpty);
+            string url = picked.Url + ".git";
+            if (picked.IsEmpty)
+            {
+                await ConnectAsync(url);
+                return;
+            }
+            // The repo may be ahead, so it's pulled before anything is pushed.
+            JsonObject theirs = await GitHubCli.ManifestOfAsync(picked.NameWithOwner);
+            if (theirs?["project"]?["id"]?.GetValue<string>() != ChangeTracker.Current?.Manifest.ProjectId)
+            {
+                await DialogHelper.ShowErrorAsync("That repo isn't for this project. Pick an empty one.", "Choose a repo", this);
+                return;
+            }
+            CliRunner.Result r = await GitCli.SetRemoteAsync(_vm.FolderPath, url);
+            if (!r.Success) await DialogHelper.ShowErrorAsync(Problem(r), "Choose a repo", this);
         }
 
         private async Task AddRemoteAsync()
         {
-            string url = await DialogHelper.PromptTextAsync("Repo address", "Add a remote", "", this);
-            if (!string.IsNullOrWhiteSpace(url)) await ConnectAsync(url.Trim(), true);
+            string url = await DialogHelper.PromptTextAsync("Repo address", _remote == null ? "Add a remote" : "Change address", _remote ?? "", this);
+            if (!string.IsNullOrWhiteSpace(url) && url.Trim() != _remote) await ConnectAsync(url.Trim());
         }
 
-        private async Task ConnectAsync(string url, bool empty)
+        private async Task RemoveRemoteAsync()
         {
-            if (!empty)
-            {
-                await DialogHelper.ShowErrorAsync("That repo already has files. Pick an empty one.", "Choose a repo", this);
-                return;
-            }
+            if (!await DialogHelper.AskTwoWayAsync($"Stop using {_remote}? The changes folder and its history stay as they are.", "Remove remote", "Remove", "Cancel", this)) return;
+            CliRunner.Result r = await GitCli.RemoveRemoteAsync(_vm.FolderPath);
+            if (!r.Success) await DialogHelper.ShowErrorAsync(r.Message, "Remove remote", this);
+        }
+
+        private static string Problem(CliRunner.Result r) => GitMessages.IsRepoGone(r) ? RepoNotFound : GitMessages.Explain(r);
+
+        private async Task ConnectAsync(string url)
+        {
             CliRunner.Result r = await GitCli.SetRemoteAsync(_vm.FolderPath, url);
             if (r.Success && _vm.CanCommit) await TrackingActions.CommitAsync(this, _vm);
             if (r.Success) r = await GitCli.PushAsync(_vm.FolderPath);
-            if (!r.Success) await DialogHelper.ShowErrorAsync(r.Message, "Choose a repo", this);
+            if (!r.Success) await DialogHelper.ShowErrorAsync(Problem(r), "Choose a repo", this);
         }
 
         private Control Step(bool done, string title, string text, Control[] buttons)

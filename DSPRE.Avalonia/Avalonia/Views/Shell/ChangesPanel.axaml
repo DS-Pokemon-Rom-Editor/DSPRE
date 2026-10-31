@@ -71,7 +71,7 @@
                     ToolTip.Tip="{Binding GitTip}" ToolTip.ShowOnDisabled="True"/>
             <Button Grid.Column="4" Content="{Binding PushLabel}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                     controls:Icon.Key="exportArrow" IsEnabled="{Binding CanPush}" Click="Push_Click"
-                    ToolTip.Tip="{Binding GitTip}" ToolTip.ShowOnDisabled="True"/>
+                    ToolTip.Tip="{Binding PushTip}" ToolTip.ShowOnDisabled="True"/>
           </Grid>
           <Grid x:Name="FolderButtons" ColumnDefinitions="*,6,*">
             <Button Grid.Column="0" Content="Folder" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
