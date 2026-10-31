@@ -53,7 +53,10 @@
                     IsVisible="{Binding IsMenuTab}" Margin="0,0,16,0"/>
           <CheckBox Content="Shoes on" IsChecked="{Binding ShoesOn}"
                     IsVisible="{Binding IsMenuTab}" IsEnabled="{Binding ShoesShown}" Margin="0,0,16,0"/>
-          <CheckBox Content="Bug Contest" IsChecked="{Binding BugContest}"
+          <ComboBox Width="170" Margin="0,0,16,0" IsVisible="{Binding IsMenuTab}"
+                    ItemsSource="{Binding ModeNames}" SelectedIndex="{Binding ModeIndex}"
+                    ToolTip.Tip="Which icons the menu shows"/>
+          <CheckBox Content="Girl's BAG" IsChecked="{Binding Female}"
                     IsVisible="{Binding IsMenuTab}" Margin="0,0,16,0"/>
           <CheckBox Content="A button held" IsChecked="{Binding AHeld}"
                     IsVisible="{Binding IsMenuTab}" Margin="0,0,16,0"/>

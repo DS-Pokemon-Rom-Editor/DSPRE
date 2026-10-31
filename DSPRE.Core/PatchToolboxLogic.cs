@@ -1127,6 +1127,20 @@ namespace DSPRE
             return true;
         }
 
+        public static bool ApplyFieldMenuColoursPatch()
+        {
+            if (AlreadyApplied(Probe(() => FieldMenuColoursPatch.IsApplied))) return false;
+            if (FieldMenuColoursPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
+            if (!ConfirmYesNo("Gives each button on the field menu its own colours. Nothing changes until you recolour an icon." +
+                BackupNote("overlay 27") + "\n\nApply this patch?" + CreditNote("fieldMenuColours"), "Confirm to proceed"))
+                return false;
+            string overlayPath = OverlayUtils.GetPath(27);
+            PlainFiles.Copy(overlayPath, overlayPath + BackupSuffix, overwrite: true);
+            FieldMenuColoursPatch.Apply();
+            ShowInfo("Recolour each icon in the Screens editor's Bottom screen, on the Menu tab.", "Patch applied");
+            return true;
+        }
+
         public static bool ApplySummaryFontsPatch()
         {
             if (AlreadyApplied(Probe(() => SummaryFontPatch.IsApplied))) return false;
@@ -1600,6 +1614,7 @@ namespace DSPRE
             ["classIntros"] = ("Mixone", "trainer class intros"),
             ["hpBarText"] = ("Mixone", "clear battle text background"),
             ["buttonFrames"] = ("Mixone", "battle button frames"),
+            ["fieldMenuColours"] = ("Mixone", "field menu button colours"),
             ["summaryFonts"] = ("Mixone", "summary screen fonts"),
             ["partyFonts"] = ("Mixone", "party menu fonts"),
             ["hpBarFonts"] = ("Mixone", "HP bar fonts"),
@@ -1720,6 +1735,7 @@ namespace DSPRE
             ["classIntros"] = "Trainer class intros",
             ["hpBarText"] = "Clear battle text background",
             ["buttonFrames"] = "Battle button frames",
+            ["fieldMenuColours"] = "Field menu button colours",
             ["summaryFonts"] = "Summary screen fonts",
             ["partyFonts"] = "Party menu fonts",
             ["hpBarFonts"] = "HP bar fonts",
@@ -2040,6 +2056,15 @@ namespace DSPRE
                     if (RomInfo.IsHGE) return Unsupported("Not compatible with hg-engine");
                     if (!BattlePressFrames.SupportsCurrentRom) return Unsupported("Platinum, HeartGold and SoulSilver, except Japanese");
                     return BattlePressFrames.IsApplied ? PatchState.Applied : PatchState.Available;
+                }));
+
+            list.Add(Status("fieldMenuColours",
+                "Gives each button on the field menu its own colours.",
+                () =>
+                {
+                    if (RomInfo.IsHGE) return Unsupported("Not compatible with hg-engine");
+                    if (!FieldMenuColoursPatch.SupportsCurrentRom) return Unsupported("HeartGold and SoulSilver, except Japanese");
+                    return FieldMenuColoursPatch.IsApplied ? PatchState.Applied : PatchState.Available;
                 }));
 
             list.Add(Status("trainerCustomPokeballs",
@@ -2511,6 +2536,7 @@ namespace DSPRE
                 case "classIntros": return ApplyClassIntrosPatch();
                 case "hpBarText": return ApplyHpBarTextPatch();
                 case "buttonFrames": return ApplyButtonFramesPatch();
+                case "fieldMenuColours": return ApplyFieldMenuColoursPatch();
                 case "summaryFonts": return ApplySummaryFontsPatch();
                 case "partyFonts": return ApplyPartyFontsPatch();
                 case "hpBarFonts": return ApplyHpBarFontsPatch();

@@ -20,6 +20,22 @@ namespace DSPRE
         /// <summary>The HGSS touch menu's other tables, from TouchMenuSites.MenuRects (pokeheartgold asm/overlay_27.s).</summary>
         public sealed record TouchMenuTables(int ExtraRects, int Sprites, int Names, int Flow);
 
+        /// <summary>
+        /// Overlay 27 keeps these positions as Thumb immediates, at these offsets from TouchMenuSites.MenuRects on every dump but the Japanese ones. The last
+        /// two copy the x register, so they start as adds and become movs when y differs.
+        /// </summary>
+        public static readonly int[] TouchMenuImmediates =
+        {
+            -0x22EE, -0x2308, -0x22C6, -0x22E0, -0x1D60, -0x1D78, -0x1D6C, -0x1CC0, -0x1CBE, -0xF0E, -0xF0C, -0xEC6, -0xEF0, -0xF60, -0xF5E, -0xF30, -0xF2E,
+            -0xEC0, -0xEEA,
+        };
+        public const int TouchMenuCodedSite = 0x2FE8;
+
+        /// <summary>Overlay 27's field menu colour code, the same on every dump but the Japanese ones.</summary>
+        public sealed record TouchMenuColourCode(int InitCall, int ExitCheck, int Cave, int KeepPalette, int FlushCall, int ApplyColours, int LoadCall, int LoadCallNew, int MenuOffset);
+
+        public static readonly TouchMenuColourCode TouchMenuColours = new TouchMenuColourCode(0x160, 0x2A4, 0x2A6, 0xEE0, 0xEE8, 0x1418, 0x1460, 0x1462, 0x1470);
+
         public static readonly TouchMenuTables TouchMenuDistances = new TouchMenuTables(-0x9C, 0xD0, 0x10C, 0x14C);
 
         /// <summary>

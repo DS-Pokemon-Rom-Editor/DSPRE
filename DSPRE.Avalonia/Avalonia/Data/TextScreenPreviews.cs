@@ -151,7 +151,7 @@ namespace DSPRE.Avalonia.Data
         private static HgssTouchScreen _touch;
 
         /// <summary>Draws the HGSS touch menu with sprites and names at the given spots.</summary>
-        internal static byte[] TouchMenuPicture(IReadOnlyList<(int X, int Y)> sprites, IReadOnlyList<(int X, int Y)> labels)
+        internal static byte[] TouchMenuPicture(IReadOnlyList<(int X, int Y)> sprites, IReadOnlyList<(int X, int Y)> labels, int mode = 0, FieldTouchMenuButtons.MenuExtras extras = null)
         {
             lock (Gate)
             {
@@ -162,7 +162,7 @@ namespace DSPRE.Avalonia.Data
                 FieldFont iconFont = Font(HgssTouchScreen.IconFontEntry) ?? font;
                 int bank = RomInfo.FieldTouchMenuTextArchive;
                 string Text(int m) => FieldStringVars.Expand(ArchiveLine(bank, m), GameTextScreens.SampleWord);
-                return _touch.RenderMenu(font, iconFont, Text, new HgssTouchScreen.MenuLook { RegisteredItems = true, Sprites = sprites, Labels = labels });
+                return _touch.RenderMenu(font, iconFont, Text, new HgssTouchScreen.MenuLook { RegisteredItems = mode == 0, Sprites = sprites, Labels = labels, Mode = mode, Extras = extras });
             }
         }
 

@@ -23,6 +23,8 @@ namespace DSPRE.ROMFiles
         /// <summary>Moves the touch area and its cursor without leaving the screen.</summary>
         void Move(int page, int button, int dx, int dy);
 
+        bool CanResize(int page, int button) => true;
+
         /// <summary>Sets the touch area's size from its top left corner.</summary>
         void Resize(int page, int button, int width, int height);
 

@@ -130,10 +130,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public void SizeTo(TouchAreaRow row, int width, int height)
         {
-            if (!row.Open) return;
+            if (!row.Sizable) return;
             _buttons.Resize(_page, row.Button, width, height);
             Refresh();
         }
+
+        public bool CanResize(int button) => _buttons.CanResize(_page, button);
 
         public void Commit() => _pending.Import(() => { _pending.Stage(_tables, _buttons.ToBytes()); return null; });
 
@@ -355,6 +357,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string Locked => _owner.LockedWhy(Button);
         public int Step => _owner.StepOf(Button);
         public bool Open => Locked == null;
+        public bool Sizable => Open && _owner.CanResize(Button);
+        public string WideTip => Sizable ? "Width in pixels" : Locked ?? FixedSize;
+        public string TallTip => Sizable ? "Height in pixels" : Locked ?? FixedSize;
+
+        private const string FixedSize = "The game sets this size";
 
         private (int Top, int Bottom, int Left, int Right) Area => _owner.AreaOf(Button);
 

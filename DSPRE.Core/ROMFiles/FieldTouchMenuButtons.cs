@@ -29,6 +29,18 @@ namespace DSPRE.ROMFiles
 
         private enum Run { Menu, Extra, Sprites, Names, Flow, YesNo, YesNoCursor }
         private enum ListPart { Keys, Rects, Windows, Cursors }
+        private enum Coded { TalkX, TalkY, TitleX, TitleY, BallX, SafariBallY, BallY, CaughtX, CaughtY, SafariCountX, SafariCountY, ContestCountX,
+                             ParkCountX, LevelX, LevelY, SafariLabelX, SafariLabelY, ContestCountY, ParkCountY }
+
+        private const int FirstCodedPage = ListPage + Lists, CopiedY = (int)Coded.ContestCountY;
+        private const int BallSize = 24, CaughtSize = 32, CountWidth = 6, LabelWidth = 9, WindowHeight = 2, BallStep = 4;
+        // How far each text sits from its button, in pixels.
+        private const int TalkFromSpriteX = 24, TalkFromSpriteY = 16, TitleFromAreaX = 64;
+        private const ushort MovsLow = 0x2000, MovsHigh = 0x2700, MovsR2 = 0x2200, CopyXToY = 0x1C0A;
+
+        /// <summary>The positions overlay 27 keeps in its code, in pixels for sprites and tiles for text.</summary>
+        public sealed record MenuExtras(int BallX, int SafariBallY, int BallY, int CaughtX, int CaughtY, (int X, int Y) SafariCount, (int X, int Y) ContestCount,
+                                        (int X, int Y) ParkCount, (int X, int Y) Level, (int X, int Y) SafariLabel, (int X, int Y) Talk, (int X, int Y) Title);
 
         private readonly ScreenTables _tables;
         private readonly int[] _starts;
@@ -45,6 +57,33 @@ namespace DSPRE.ROMFiles
 
         private int Start(Run run) => _starts[(int)run];
         private int Start(int count, ListPart part) => _starts[ListRun(count, part)];
+
+        private bool HasCode => _starts.Length > ListRun(FirstList + Lists, 0);
+        private int Site(Coded c) => _starts[ListRun(FirstList + Lists, 0) + (int)c];
+
+        private int Value(Coded c)
+        {
+            int at = Site(c);
+            if ((int)c < CopiedY || BitConverter.ToUInt16(_data, at) != CopyXToY) return _data[at];
+            return Value(c == Coded.ContestCountY ? Coded.ContestCountX : Coded.ParkCountX);
+        }
+
+        private void SetValue(Coded c, int value)
+        {
+            int at = Site(c);
+            if ((int)c >= CopiedY) BitConverter.TryWriteBytes(_data.AsSpan(at), MovsR2);
+            _data[at] = (byte)value;
+        }
+
+        private void Shift(Coded c, int by, int max) => SetValue(c, Math.Clamp(Value(c) + by, 0, max));
+
+        private static bool IsList(int page) => page >= ListPage && page < FirstCodedPage;
+        private static bool IsCoded(int page) => page >= FirstCodedPage;
+
+        public MenuExtras Extras => !HasCode ? null : new MenuExtras(Value(Coded.BallX) * BallStep, Value(Coded.SafariBallY), Value(Coded.BallY), Value(Coded.CaughtX), Value(Coded.CaughtY),
+            (Value(Coded.SafariCountX), Value(Coded.SafariCountY)), (Value(Coded.ContestCountX), Value(Coded.ContestCountY)),
+            (Value(Coded.ParkCountX), Value(Coded.ParkCountY)), (Value(Coded.LevelX), Value(Coded.LevelY)),
+            (Value(Coded.SafariLabelX), Value(Coded.SafariLabelY)), (Value(Coded.TalkX), Value(Coded.TalkY)), (Value(Coded.TitleX), Value(Coded.TitleY)));
 
         /// <summary>Null when this ROM's tables aren't known or don't look like the game's.</summary>
         public static FieldTouchMenuButtons Read()
@@ -88,6 +127,12 @@ namespace DSPRE.ROMFiles
                 runs.Add((windows, count * Window));
                 runs.Add(((int)sites.ListCursors + list * ListCursorRow, count * Spot));
             }
+            bool coded = a == RomLocator.TouchMenuCodedSite && RomLocator.TouchMenuImmediates.All(d => In(a + d, 2)) && RomLocator.TouchMenuImmediates.Select((d, i) =>
+            {
+                ushort code = BitConverter.ToUInt16(file, a + d);
+                return i >= CopiedY ? code == CopyXToY || (code & 0xFF00) == MovsR2 : code >= MovsLow && code <= MovsHigh + 0xFF;
+            }).All(ok => ok);
+            if (coded) runs.AddRange(RomLocator.TouchMenuImmediates.Select(d => (a + d, 2)));
             FieldTouchMenuButtons buttons = new FieldTouchMenuButtons(sites.Overlay, runs, tables);
             return tables.Missing ? null : buttons;
         }
@@ -95,18 +140,22 @@ namespace DSPRE.ROMFiles
         private static int ListCount(int page) => page - ListPage + FirstList;
 
         public IReadOnlyList<string> PageNames =>
-            new[] { "Menu", "Side buttons", "Yes or no" }.Concat(Enumerable.Range(FirstList, Lists).Select(n => $"List with {n} options")).ToList();
+            new[] { "Menu", "Side buttons", "Yes or no" }.Concat(Enumerable.Range(FirstList, Lists).Select(n => $"List with {n} options"))
+                .Concat(HasCode ? new[] { "Safari Zone", "Bug Contest", "Pal Park" } : Array.Empty<string>()).ToList();
 
         public string[] ButtonsOf(int page) => page switch
         {
             0 => MenuButtons,
             1 => ExtraButtons,
             2 => YesNoButtons,
+            FirstCodedPage => new[] { "Ball", "Ball count", "BALL text" },
+            FirstCodedPage + 1 => new[] { "Ball", "Ball count", "Caught Pokémon", "Level" },
+            FirstCodedPage + 2 => new[] { "Ball", "Ball count" },
             _ => Enumerable.Range(1, ListCount(page)).Select(i => $"Option {i}").ToArray(),
         };
 
         // The yes/no menu's arrows are in code: Up picks Yes and Down picks No.
-        public int StopsOf(int page) => page switch { 0 => Slots, 1 or 2 => 0, _ => ListCount(page) };
+        public int StopsOf(int page) => page switch { 0 => Slots, 1 or 2 => 0, _ => IsCoded(page) ? 0 : ListCount(page) };
 
         private int RectAt(int page, int button) => page switch
         {
@@ -116,7 +165,27 @@ namespace DSPRE.ROMFiles
             _ => Start(ListCount(page), ListPart.Rects) + button * TouchRects.Size,
         };
 
-        public (int Top, int Bottom, int Left, int Right) AreaOf(int page, int button) => TouchRects.Read(_data, RectAt(page, button));
+        public (int Top, int Bottom, int Left, int Right) AreaOf(int page, int button) =>
+            IsCoded(page) ? CodedArea(page, button) : TouchRects.Read(_data, RectAt(page, button));
+
+        private (Coded X, Coded Y, int Width, int Height, int Scale) CodedPiece(int page, int button) => (page - FirstCodedPage, button) switch
+        {
+            (0, 0) => (Coded.BallX, Coded.SafariBallY, BallSize, BallSize, 1),
+            (0, 1) => (Coded.SafariCountX, Coded.SafariCountY, CountWidth, WindowHeight, Tile),
+            (0, 2) => (Coded.SafariLabelX, Coded.SafariLabelY, LabelWidth, WindowHeight, Tile),
+            (1, 0) or (2, 0) => (Coded.BallX, Coded.BallY, BallSize, BallSize, 1),
+            (1, 1) => (Coded.ContestCountX, Coded.ContestCountY, CountWidth, WindowHeight, Tile),
+            (1, 2) => (Coded.CaughtX, Coded.CaughtY, CaughtSize, CaughtSize, 1),
+            (1, 3) => (Coded.LevelX, Coded.LevelY, CountWidth, WindowHeight, Tile),
+            _ => (Coded.ParkCountX, Coded.ParkCountY, CountWidth, WindowHeight, Tile),
+        };
+
+        private (int Top, int Bottom, int Left, int Right) CodedArea(int page, int button)
+        {
+            (Coded xAt, Coded yAt, int width, int height, int scale) = CodedPiece(page, button);
+            int x = Value(xAt) * (xAt == Coded.BallX ? BallStep : scale), y = Value(yAt) * scale;
+            return (y, y + height * scale, x, x + width * scale);
+        }
 
         /// <summary>The fifteen sprite spots, in the game's order.</summary>
         public IReadOnlyList<(int X, int Y)> SpriteSpots =>
@@ -131,19 +200,32 @@ namespace DSPRE.ROMFiles
         /// <summary>A list's option text windows in tiles, or null for the other pages.</summary>
         public IReadOnlyList<(int X, int Y, int Width, int Height)> OptionWindows(int page)
         {
-            if (page < ListPage) return null;
+            if (!IsList(page)) return null;
             int count = ListCount(page), at = Start(count, ListPart.Windows);
             return Enumerable.Range(0, count).Select(i => ((int)_data[at + i * Window + 1], (int)_data[at + i * Window + 2],
                                                            (int)_data[at + i * Window + 3], (int)_data[at + i * Window + 4])).ToList();
         }
 
-        public int MoveStep(int page, int button) => page >= ListPage || (page == 0 && button < Slots) ? Tile : 1;
+        public int MoveStep(int page, int button)
+        {
+            if (!IsCoded(page)) return IsList(page) || (page == 0 && button < Slots) ? Tile : 1;
+            (Coded xAt, _, _, _, int scale) = CodedPiece(page, button);
+            return xAt == Coded.BallX ? BallStep : scale;
+        }
 
         // The icon, its name and any bases move with the area; names move in whole tiles. On the yes/no menu and the lists the
         // cursor spot and the option's text window move too.
         public void Move(int page, int button, int dx, int dy)
         {
             int step = MoveStep(page, button);
+            if (IsCoded(page))
+            {
+                (Coded xAt, Coded yAt, int width, int height, int scale) = CodedPiece(page, button);
+                int across = xAt == Coded.BallX ? BallStep : scale;
+                Shift(xAt, (int)Math.Round(dx / (double)across), xAt == Coded.BallX || scale == 1 ? 255 / across : 32 - width);
+                Shift(yAt, (int)Math.Round(dy / (double)scale), scale == 1 ? 191 : 24 - height);
+                return;
+            }
             (dx, dy) = TouchRects.Move(_data, RectAt(page, button), (int)Math.Round(dx / (double)step) * step, (int)Math.Round(dy / (double)step) * step);
             if (page == 2)
             {
@@ -152,7 +234,7 @@ namespace DSPRE.ROMFiles
                 ScreenSpots.Shift(_data, at + 2, 2, dy, 191);
                 return;
             }
-            if (page >= ListPage)
+            if (IsList(page))
             {
                 int count = ListCount(page), spot = Start(count, ListPart.Cursors) + button * Spot;
                 ScreenSpots.Shift(_data, spot, 1, dx, 255);
@@ -168,6 +250,7 @@ namespace DSPRE.ROMFiles
                 ScreenSpots.Shift(_data, at, 2, dx, 255);
                 ScreenSpots.Shift(_data, at + 2, 2, dy, 191);
             }
+            FollowText(page, button);
             if (page != 0 || button >= Slots) return;
             (int nx, int ny) = NameSpots[button];
             (int x, int y) = (Math.Clamp(nx + (int)Math.Round(dx / (double)Tile), 0, 23), Math.Clamp(ny + (int)Math.Round(dy / (double)Tile), 0, 22));
@@ -177,6 +260,24 @@ namespace DSPRE.ROMFiles
             SetName(button, x, y);
         }
 
+        // The code holds MENU and the A button's label at fixed positions, so they have to move with their button.
+        private void FollowText(int page, int button)
+        {
+            if (!HasCode) return;
+            if (page == 0 && button == MenuButtons.Length - 3)
+            {
+                (int top, _, int left, _) = AreaOf(page, button);
+                SetValue(Coded.TitleX, Math.Clamp((int)Math.Round((left + TitleFromAreaX) / (double)Tile), 0, 22));
+                SetValue(Coded.TitleY, Math.Clamp((int)Math.Round(top / (double)Tile), 0, 22));
+            }
+            if (page == 1 && button == 1)
+            {
+                (int x, int y) = SpriteSpots[ExtraSprites[1][0]];
+                SetValue(Coded.TalkX, Math.Clamp((int)Math.Round((x + TalkFromSpriteX) / (double)Tile), 0, 24));
+                SetValue(Coded.TalkY, Math.Clamp((int)Math.Round((y + TalkFromSpriteY) / (double)Tile), 0, 22));
+            }
+        }
+
         private void SetName(int window, int x, int y)
         {
             int at = Start(Run.Names) + window * 8;
@@ -184,11 +285,16 @@ namespace DSPRE.ROMFiles
             BitConverter.TryWriteBytes(_data.AsSpan(at + 4), (uint)y);
         }
 
-        public void Resize(int page, int button, int width, int height) => TouchRects.Resize(_data, RectAt(page, button), width, height);
+        public bool CanResize(int page, int button) => !IsCoded(page);
+
+        public void Resize(int page, int button, int width, int height)
+        {
+            if (!IsCoded(page)) TouchRects.Resize(_data, RectAt(page, button), width, height);
+        }
 
         public (double X, double Y) CursorCentre(int page, int stop)
         {
-            if (page >= ListPage)
+            if (IsList(page))
             {
                 int spot = Start(ListCount(page), ListPart.Cursors) + stop * Spot;
                 return (_data[spot], _data[spot + 1]);
@@ -204,20 +310,20 @@ namespace DSPRE.ROMFiles
         // On a list the game skips an arrow holding -1 or the option itself, so the editor shows both as Stay.
         public int Target(int page, int stop, CursorDirection d)
         {
-            if (page < ListPage) return _data[TryAt(stop, d, 0)];
+            if (!IsList(page)) return _data[TryAt(stop, d, 0)];
             int to = _data[KeyAt(page, stop, d)];
             return to == NoMove ? stop : to;
         }
 
         public void SetTarget(int page, int stop, CursorDirection d, int target)
         {
-            if (page < ListPage) _data[TryAt(stop, d, 0)] = (byte)target;
+            if (!IsList(page)) _data[TryAt(stop, d, 0)] = (byte)target;
             else if (target != Target(page, stop, d)) _data[KeyAt(page, stop, d)] = target == stop ? (byte)NoMove : (byte)target;
         }
 
         /// <summary>A slot or option; the stop itself means stay.</summary>
         public IReadOnlyList<(int Value, string Name)> Choices(int page) =>
-            (page < ListPage ? MenuButtons.Take(Slots) : ButtonsOf(page)).Select((n, i) => (i, n)).ToList();
+            (!IsList(page) ? MenuButtons.Take(Slots) : ButtonsOf(page)).Select((n, i) => (i, n)).ToList();
 
         public int ValueOf(int page, int stop) => stop;
         public int StopOf(int page, int value) => value;

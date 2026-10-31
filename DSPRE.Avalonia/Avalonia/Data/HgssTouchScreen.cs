@@ -29,7 +29,16 @@ namespace DSPRE.Avalonia.Data
         private const int NoIcon = 13;
         // Which kind of icon goes in each slot, for a normal walk and for the Bug Contest.
         private static readonly int[] NormalIcons = { 0, 1, 2, 3, 4, 5, 6 };
-        private static readonly int[] BugContestIcons = { 7, 0, 1, 3, 4, 6, 10 };
+        private static readonly int[][] ModeIcons =
+        {
+            NormalIcons, new[] { 7, 0, 1, 2, 3, 4, 6 }, new[] { 7, 0, 1, 3, 4, 6, 10 }, new[] { 7, 0, 1, 3, 4, 6, 9 },
+            new[] { 11, 0, 1, 2, 12, 4, 6 }, new[] { 1, 2, 4, 6, NoIcon, NoIcon, NoIcon }, new[] { 1, 4, 6, NoIcon, NoIcon, NoIcon, NoIcon },
+        };
+
+        /// <summary>Overlay 27 picks between these icon sets, in this order.</summary>
+        public static readonly string[] ModeNames = { "Normal", "Safari Zone", "Bug Contest", "Pal Park", "CHAT and LOG", "Four buttons", "Tower partner room" };
+        public const int SafariMode = 1, BugContestMode = 2, PalParkMode = 3;
+        private const int HiddenBallOne = 8, HiddenBallTwo = 9, GirlBag = 27, BagKind = 2;
 
         // Sprite positions from overlay 27: the seven icons, then the two registered item icons.
         private static readonly (int X, int Y)[] IconSlots =
@@ -38,9 +47,12 @@ namespace DSPRE.Avalonia.Data
         // Label windows of 9 by 2 tiles under each icon.
         private static readonly (int X, int Y)[] IconLabels =
             { (8, 48), (8, 88), (8, 128), (8, 168), (88, 48), (88, 88), (88, 128) };
-        // The Bug Contest's ball and the Pokémon caught in it.
-        private static readonly (int X, int Y) BallSlot = (100, 104), CaughtSlot = (104, 136);
-        private const int BallSequence = 6;
+        // Where the code puts the ball, the catch and their text, for a ROM that doesn't let them move.
+        private static readonly FieldTouchMenuButtons.MenuExtras GameExtras =
+            new(100, 144, 104, 104, 136, (14, 19), (14, 14), (14, 14), (12, 21), (11, 21), (24, 20), (9, 0));
+        private const int BallSequence = 6, BallMessage = 32, CountMessage = 31, LevelMessage = 33;
+        // The ball count and level start with a centring code. The box centres them here, so the code is removed.
+        private static readonly System.Text.RegularExpressions.Regex AlignCode = new(@"\{?ALN_CENTER,\s*\d+\}?");
 
         /// <summary>Text bank 196 entries the panel prints outside the icon table.</summary>
         public const int MenuMessage = 12, TalkMessage = 17, CheckMessage = 18, FishingMessage = 22, NextMessage = 23;
@@ -54,7 +66,7 @@ namespace DSPRE.Avalonia.Data
         public const int IconFontEntry = 0;
 
         // Items the preview shows for the registered items and the Bug Contest.
-        private const int ShownItemOne = 450, ShownItemTwo = 447, SportBall = 499, ShownCatch = 123;
+        private const int ShownItemOne = 450, ShownItemTwo = 447, SafariBall = 5, SportBall = 499, ParkBall = 500, ShownCatch = 123;
 
         /// <summary>How the panel looks, for the parts the game changes as it runs.</summary>
         public sealed class MenuLook
@@ -71,8 +83,12 @@ namespace DSPRE.Avalonia.Data
             public bool ShoesOn;
             /// <summary>Both item slots have an item registered.</summary>
             public bool RegisteredItems;
-            public bool BugContest;
+            public int Mode;
+            /// <summary>The player is a girl, which changes the BAG icon.</summary>
+            public bool Girl;
             public int ALabel = CheckMessage;
+            /// Positions held in the code, as edited, or null to use the game's.
+            public FieldTouchMenuButtons.MenuExtras Extras;
             /// The 15 sprite positions as edited, or null for the game's.
             public IReadOnlyList<(int X, int Y)> Sprites;
             /// Icon name window positions in tiles as edited, or null for the game's.
@@ -150,18 +166,19 @@ namespace DSPRE.Avalonia.Data
             // Dimmed sprites blend with the backgrounds under them: the panel and the words, not each other.
             byte[] under = (byte[])rgba.Clone();
             ushort[] words = DsBgScreen.Row(palettes, 4);
-            int[] kinds = look.BugContest ? BugContestIcons : NormalIcons;
+            int[] kinds = ModeIcons[Math.Clamp(look.Mode, 0, ModeIcons.Length - 1)];
+            FieldTouchMenuButtons.MenuExtras extras = look.Extras ?? GameExtras;
 
             void Words(byte[] into)
             {
                 void Line(FieldFont f, string line, int x, int y, int width, bool centre, ushort letter, ushort shadow)
                 {
                     if (string.IsNullOrWhiteSpace(line)) return;
-                    line = line.Trim();
+                    line = AlignCode.Replace(line, "").Trim();
                     int at = centre ? x + (width - DsBgScreen.MeasureText(f, line)) / 2 : x;
                     DsBgScreen.DrawText(into, f, line, at, y, letter, shadow);
                 }
-                Line(font, text?.Invoke(MenuMessage), 72, 0, 80, false, words[15], words[1]);
+                Line(font, text?.Invoke(MenuMessage), extras.Title.X * 8, extras.Title.Y * 8, 80, false, words[15], words[1]);
                 for (int i = 0; i < IconLabels.Length; i++)
                 {
                     int kind = kinds[i];
@@ -169,7 +186,19 @@ namespace DSPRE.Avalonia.Data
                     Line(iconFont ?? font, text?.Invoke(IconKinds[kind].Message), Label(i).X, Label(i).Y,
                          72, true, words[14], words[2]);
                 }
-                Line(font, text?.Invoke(look.ALabel), 192, 160, 64, false, words[15], words[1]);
+                Line(font, text?.Invoke(look.ALabel), extras.Talk.X * 8, extras.Talk.Y * 8, 64, false, words[15], words[1]);
+                void Count((int X, int Y) window) => Line(iconFont ?? font, text?.Invoke(CountMessage), window.X * 8, window.Y * 8, 48, true, words[14], words[2]);
+                if (look.Mode == SafariMode)
+                {
+                    Count(extras.SafariCount);
+                    Line(iconFont ?? font, text?.Invoke(BallMessage), extras.SafariLabel.X * 8, extras.SafariLabel.Y * 8, 72, true, words[14], words[2]);
+                }
+                if (look.Mode == BugContestMode)
+                {
+                    Count(extras.ContestCount);
+                    Line(iconFont ?? font, text?.Invoke(LevelMessage), extras.Level.X * 8 + 4, extras.Level.Y * 8, 48, false, words[14], words[2]);
+                }
+                if (look.Mode == PalParkMode) Count(extras.ParkCount);
             }
             Words(under);
 
@@ -202,9 +231,11 @@ namespace DSPRE.Avalonia.Data
             if (iconCells.Count > 0)
                 for (int i = 0; i < IconSlots.Length; i++)
                 {
-                    int drawing = IconKinds[kinds[i]].Characters;
-                    if (kinds[i] == NoIcon || drawing < 0) continue;
-                    ushort[] colours = DsBgScreen.Row(iconColours, i == look.Highlighted ? 1 : 0);
+                    if (kinds[i] == NoIcon || kinds[i] == HiddenBallOne || kinds[i] == HiddenBallTwo) continue;
+                    int drawing = kinds[i] == BagKind && look.Girl ? GirlBag : IconKinds[kinds[i]].Characters;
+                    if (drawing < 0) continue;
+                    int pair = iconColours.Length >= FieldMenuColoursPatch.ItemColours ? kinds[i] * FieldMenuColoursPatch.RowsPerItem : 0;
+                    ushort[] colours = DsBgScreen.Row(iconColours, pair + (i == look.Highlighted ? 1 : 0));
                     DsBgScreen.DrawCell(rgba, iconCells[0], NitroBgCodec.ReadCharacters(_menu(drawing)),
                                         _ => colours, Spot(i, IconSlots[i]).X, Spot(i, IconSlots[i]).Y,
                                         look.Busy && i != look.Cursor, under);
@@ -220,19 +251,20 @@ namespace DSPRE.Avalonia.Data
                                             look.Busy && 7 + i != look.Cursor, under);
             }
 
-            if (look.BugContest)
+            if (look.Mode is SafariMode or BugContestMode or PalParkMode)
             {
+                int ball = look.Mode == SafariMode ? SafariBall : look.Mode == PalParkMode ? ParkBall : SportBall;
                 int cell = CellOf(_menu(IconAnimations), BallSequence);
-                if (cell >= 0 && cell < iconCells.Count && ItemIcon(SportBall) is (byte[] c, ushort[] p) && c != null)
-                    DsBgScreen.DrawCell(rgba, iconCells[cell], c, _ => p, BallSlot.X, BallSlot.Y);
-                DsBgScreen.DrawImage(rgba, CaughtIcon(), CaughtSlot.X, CaughtSlot.Y);
+                if (cell >= 0 && cell < iconCells.Count && ItemIcon(ball) is (byte[] c, ushort[] p) && c != null)
+                    DsBgScreen.DrawCell(rgba, iconCells[cell], c, _ => p, extras.BallX, look.Mode == SafariMode ? extras.SafariBallY : extras.BallY);
+                if (look.Mode == BugContestMode) DsBgScreen.DrawImage(rgba, CaughtIcon(), extras.CaughtX, extras.CaughtY);
             }
             return rgba;
         }
 
         /// <summary>Which slot a kind of icon sits in, 0 for POKéDEX up to 7 for RETIRE, or -1 when not shown.</summary>
-        public static int SlotOf(int kind, bool bugContest) =>
-            Array.IndexOf(bugContest ? BugContestIcons : NormalIcons, kind);
+        public static int SlotOf(int kind, int mode) =>
+            Array.IndexOf(ModeIcons[Math.Clamp(mode, 0, ModeIcons.Length - 1)], kind);
 
         /// <summary>The first cell a sequence of an animation file shows, or -1.</summary>
         private static int CellOf(byte[] nanr, int sequence)

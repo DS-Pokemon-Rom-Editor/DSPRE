@@ -100,12 +100,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             f = v; OnPropertyChanged(n); return true;
         }
 
-        // The HGSS touch menu's icons, in overlay 27's order: the seven the panel normally shows, then the
-        // one the Bug Contest puts first.
+        // The HGSS touch menu's icons in overlay 27's order, then CHAT, LOG and the girl's BAG.
         private static readonly string[] IconNames =
             { "POKéDEX icon", "POKéMON icon", "BAG icon", "POKéGEAR icon", "Player icon", "SAVE icon", "OPTIONS icon",
-              "RETIRE icon" };
-        private static readonly int[] IconDrawings = { 18, 21, 24, 30, 33, 36, 39, 42 };
+              "RETIRE icon", "CHAT icon", "LOG icon", "Girl's BAG icon" };
+        private static readonly int[] IconDrawings = { 18, 21, 24, 30, 33, 36, 39, 42, 45, 48, 27 };
+        private static readonly int[] IconKinds = { 0, 1, 2, 3, 4, 5, 6, 7, 11, 12, 2 };
+        // The panel's tiles stop where the text windows start. The icons and side buttons share the sub screen's 512 sprite tiles.
+        private const int PanelTileRoom = 192, IconTileRoom = 20, SideButtonTileRoom = 324;
         private const int MenuPalettes = 7, MenuTiles = 8, MenuMap = 9, IconPalettes = 14, IconCells = 16,
                           ButtonCells = 68, ButtonDrawing = 70;
         private const int ChoicePalettes = 0, ChoiceTiles = 1, PokeBallMap = 9, YesNoMap = 10,
@@ -256,8 +258,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <summary>The item frames and icons only show with an item registered to them.</summary>
         public bool RegisteredItems { get => _registeredItems; set { if (Set(ref _registeredItems, value)) Draw(); } }
 
-        private bool _bugContest;
-        public bool BugContest { get => _bugContest; set { if (Set(ref _bugContest, value)) Draw(); } }
+        public string[] ModeNames => HgssTouchScreen.ModeNames;
+
+        private FieldTouchMenuButtons.MenuExtras _menuExtras;
+        private int _modeIndex;
+        public int ModeIndex { get => _modeIndex; set { if (Set(ref _modeIndex, value)) { _menuExtras = null; Draw(); } } }
 
         private bool _aHeld;
         public bool AHeld { get => _aHeld; set { if (Set(ref _aHeld, value)) Draw(); } }
@@ -380,6 +385,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_loading) return;
             string keep = Selected?.Name;
 
+            _menuExtras = null;
             _pieces = BuildPieces();
             NoteSharing(_pieces);
 
@@ -435,21 +441,25 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 {
                     Name = "Panel",
                     Archive = DirNames.FieldTouchMenu, Drawing = MenuTiles, Arrangement = MenuMap,
-                    PaletteMember = MenuPalettes, PaletteRow = 0, PaletteRows = 16,
+                    PaletteMember = MenuPalettes, PaletteRow = 0, PaletteRows = 16, TileRoom = PanelTileRoom,
+                    Warning = "The phone bubble draws with some of these tiles and colour row 2. Row 4 colours the text.",
                 });
+                int rowsPerIcon = FieldMenuColoursPatch.IsApplied ? FieldMenuColoursPatch.RowsPerItem : 0;
                 for (int i = 0; i < IconNames.Length; i++)
                     list.Add(new BottomScreenPiece
                     {
                         Name = IconNames[i],
                         Archive = DirNames.FieldTouchMenu, Drawing = IconDrawings[i], Cells = IconCells,
-                        PaletteMember = IconPalettes, PaletteRow = 0, IconKind = i,
+                        PaletteMember = IconPalettes, PaletteRow = IconKinds[i] * rowsPerIcon,
+                        IconKind = IconKinds[i], TileRoom = IconTileRoom,
                     });
                 list.Add(new BottomScreenPiece
                 {
                     Name = "Side buttons",
                     What = "Registered item frames, running shoes, the A button and the mark beside MENU.",
                     Archive = DirNames.FieldTouchMenu, Drawing = ButtonDrawing, Cells = ButtonCells,
-                    PaletteMember = MenuPalettes, PaletteRow = 0, PaletteRows = 16,
+                    PaletteMember = MenuPalettes, PaletteRow = 0, PaletteRows = 16, TileRoom = SideButtonTileRoom,
+                    Warning = "The panel also uses colour rows 0 to 3.",
                 });
             }
             else if (tab == Tab.Choices)
@@ -638,14 +648,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             // With the menu open, the icon picked in the list is the one the cursor is on.
             int kind = Selected?.IconKind ?? -1;
-            int cursor = MenuOpen ? HgssTouchScreen.SlotOf(kind < 0 ? 0 : kind, BugContest) : -1;
+            int cursor = MenuOpen ? HgssTouchScreen.SlotOf(kind < 0 ? 0 : kind, ModeIndex) : -1;
             int label = ALabelIndex >= 0 && ALabelIndex < HgssTouchScreen.ALabelMessages.Length
                 ? HgssTouchScreen.ALabelMessages[ALabelIndex] : HgssTouchScreen.CheckMessage;
             return new HgssTouchScreen.MenuLook
             {
                 Busy = ScriptRunning || MenuOpen, Cursor = cursor, AHeld = AHeld,
                 Shoes = ShoesShown, ShoesOn = ShoesOn, RegisteredItems = RegisteredItems,
-                BugContest = BugContest, ALabel = label,
+                Mode = ModeIndex, Girl = Female, ALabel = label, Extras = _menuExtras ??= FieldTouchMenuButtons.Read()?.Extras,
             };
         }
 

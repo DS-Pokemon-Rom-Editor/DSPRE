@@ -271,6 +271,14 @@ namespace DSPRE
                 "The Screens editor's Battle screen, on Command buttons.\n\n" +
                 "Requirements\n" +
                 "Platinum, HeartGold or SoulSilver, except Japanese. Not compatible with hg-engine.",
+            ["fieldMenuColours"] =
+                "What it does\n" +
+                "Gives each button on the field menu its own normal and selected colours. " +
+                "Nothing changes until you recolour an icon. The girl's BAG shares its colours with the BAG.\n\n" +
+                "Where to edit\n" +
+                "The Screens editor's Bottom screen, on the Menu tab.\n\n" +
+                "Requirements\n" +
+                "HeartGold or SoulSilver, except Japanese. Not compatible with hg-engine.",
             ["hpBarText"] =
                 "What it does\n" +
                 "Removes the white box behind the name, level, HP, gender symbol and \"Lv\" in battle, so your HP bar art shows behind them.\n\n" +
@@ -378,6 +386,9 @@ namespace DSPRE
             ["hpBarText"] = ("Six calls and twelve copies in the battle overlay (overlay 12 in HeartGold and SoulSilver, 16 in Platinum; five calls and eleven copies in overlay 11 in Diamond) go through the patch's routine.",
                 "140 bytes in the synthetic overlay.",
                 "the battle overlay and the synthetic overlay"),
+            ["fieldMenuColours"] = ("Overlay 27's colour routines and the menu's exit check change, and the button palette file grows.",
+                "No additional space or synthetic overlay.",
+                "overlay 27"),
             ["buttonFrames"] = ("The battle overlay's press loop, buffer sizes and press tables change, and the touch screen files grow.",
                 "No additional space or synthetic overlay.",
                 "the battle overlay"),

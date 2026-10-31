@@ -44,7 +44,7 @@ namespace DSPRE.Avalonia
 
             Add("BottomScreenEditorView", "Bottom screen",
                 S("name:ScreenTabs", "Screens", "The touch screen outside battle."),
-                S("name:ScreenOptions", "Screen options", "App, casing, backlight, clock or busy menu. Play runs an app."),
+                S("name:ScreenOptions", "Screen options", "App, casing, backlight, clock, busy menu or menu mode. Play runs an app."),
                 S("name:PieceList", "Pieces", "Every piece the screen is built from."),
                 S("name:ScreenPreview", "Preview", "The screen as the game draws it."),
                 S("name:PieceDetails", "Piece", "Paint, export or import it, or edit its animation."),

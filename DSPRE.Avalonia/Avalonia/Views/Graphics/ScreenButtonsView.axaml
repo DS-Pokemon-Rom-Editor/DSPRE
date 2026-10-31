@@ -44,8 +44,8 @@
                   <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Locked}"/>
                   <NumericUpDown Grid.Column="2" IsEnabled="{Binding Open}" Value="{Binding Across}" Minimum="0" Maximum="255" Increment="{Binding Step}" FormatString="0" ToolTip.Tip="Across in pixels"/>
                   <NumericUpDown Grid.Column="3" IsEnabled="{Binding Open}" Value="{Binding Down}" Minimum="0" Maximum="191" Increment="{Binding Step}" FormatString="0" ToolTip.Tip="Down in pixels"/>
-                  <NumericUpDown Grid.Column="4" IsEnabled="{Binding Open}" Value="{Binding Wide}" Minimum="1" Maximum="256" Increment="1" FormatString="0" ToolTip.Tip="Width in pixels"/>
-                  <NumericUpDown Grid.Column="5" IsEnabled="{Binding Open}" Value="{Binding Tall}" Minimum="1" Maximum="192" Increment="1" FormatString="0" ToolTip.Tip="Height in pixels"/>
+                  <NumericUpDown Grid.Column="4" IsEnabled="{Binding Sizable}" Value="{Binding Wide}" Minimum="1" Maximum="256" Increment="1" FormatString="0" ToolTip.Tip="{Binding WideTip}"/>
+                  <NumericUpDown Grid.Column="5" IsEnabled="{Binding Sizable}" Value="{Binding Tall}" Minimum="1" Maximum="192" Increment="1" FormatString="0" ToolTip.Tip="{Binding TallTip}"/>
                 </Grid>
               </DataTemplate>
             </ItemsControl.ItemTemplate>

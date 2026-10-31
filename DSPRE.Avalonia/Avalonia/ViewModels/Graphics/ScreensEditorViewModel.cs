@@ -430,14 +430,17 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             return new ScreenEntry(o, "bottomscreen", "Bottom screen", null, new[] { edit }.Concat(ButtonTabs(FieldTouchMenuButtons.Read, "Bottom screen",
                 (menu, page) =>
                 {
-                    if (page >= 2)
+                    const int FirstModePage = 10;
+                    if (page >= 2 && page < FirstModePage)
                     {
                         string[] labels = menu.ButtonsOf(page);
                         IReadOnlyList<(int X, int Y, int Width, int Height)> windows = menu.OptionWindows(page);
                         return () => TextScreenPreviews.TouchChoicesPicture(labels, page == 2, windows);
                     }
                     IReadOnlyList<(int X, int Y)> sprites = menu.SpriteSpots, names = menu.NameSpots;
-                    return () => TextScreenPreviews.TouchMenuPicture(sprites, names);
+                    FieldTouchMenuButtons.MenuExtras extras = menu.Extras;
+                    int mode = page >= FirstModePage ? page - FirstModePage + HgssTouchScreen.SafariMode : 0;
+                    return () => TextScreenPreviews.TouchMenuPicture(sprites, names, mode, extras);
                 })).ToArray());
         }
 
