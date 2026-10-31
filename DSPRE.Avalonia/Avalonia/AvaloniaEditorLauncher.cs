@@ -1004,7 +1004,7 @@ namespace DSPRE.Avalonia
         public static async System.Threading.Tasks.Task OpenBannerEditorAsync()
         {
             if (Refused("BannerEditorView")) return;
-            if (!RomInfo.IsDsRomProject)
+            if (!RomInfo.IsDsRomProject && RomInfo.HgEngineDsRomMetaDir == null)
             {
                 await DialogHelper.ShowInfoAsync(
                     "The game icon and banner titles need a ds-rom project.\n" +
