@@ -39,11 +39,13 @@ namespace DSPRE.Avalonia
             foreach (RotomLanguageServerClient client in all) client.Dispose();
         }
 
+        /// <summary>Prepares the current project metadata, starts rotom-lsp, and opens its language server session.</summary>
         public async Task StartAsync()
         {
             if (!RotomTool.IsLspAvailable)
                 throw new FileNotFoundException("rotom-lsp wasn't found in DSPRE's Tools folder.", RotomTool.LspPath);
 
+            RotomTool.EnsureProjectMetadata();
             _process = new Process
             {
                 StartInfo =

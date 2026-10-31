@@ -109,34 +109,13 @@ namespace DSPRE
         }
 
         /// <summary>
-        /// Runs `rotom init`, which reads the game family from a ROM tree in the project root. An hg-engine folder
-        /// project keeps its Rotom project in .dspre/, apart from base/, so the files rotom looks for are copied in
-        /// for the run and removed afterwards; later commands only need the rotom.toml it writes.
+        /// Runs `rotom init` in the current project and returns its result. Adds the hg-engine flags on success.
         /// </summary>
         public static async Task<Result> InitProjectAsync()
         {
-            List<string> staged = new System.Collections.Generic.List<string>();
-            try
-            {
-                if (RomInfo.HgEngineDsRomMetaDir != null)
-                {
-                    Stage(RomInfo.Arm9Path, Path.Combine(ProjectRoot, "arm9.bin"), staged);
-                    Stage(Path.Combine(RomInfo.HgEngineDsRomMetaDir, "config.yaml"), Path.Combine(ProjectRoot, "config.yaml"), staged);
-                    // rotom reads the game from header.yaml, which config.yaml points at.
-                    Stage(Path.Combine(RomInfo.HgEngineDsRomMetaDir, "header.yaml"), Path.Combine(ProjectRoot, "header.yaml"), staged);
-                }
-                Result result = await RunAsync("init", "--non-interactive").ConfigureAwait(false);
-                if (result.Success) DSPRE.ROMFiles.RotomDatabaseUpdate.OverlayHgEngineFlags();
-                return result;
-            }
-            finally
-            {
-                foreach (string file in staged)
-                {
-                    try { File.Delete(file); }
-                    catch (IOException ex) { AppLogger.Error("RotomTool.InitProjectAsync: " + ex.Message); }
-                }
-            }
+            Result result = await RunAsync("init", "--non-interactive").ConfigureAwait(false);
+            if (result.Success) DSPRE.ROMFiles.RotomDatabaseUpdate.OverlayHgEngineFlags();
+            return result;
         }
 
         /// <summary>
@@ -165,11 +144,33 @@ namespace DSPRE
             }
         }
 
-        private static void Stage(string from, string to, System.Collections.Generic.List<string> staged)
+        /// <summary>
+        /// Links the current hg-engine project's ARM9 and header metadata into its Rotom folder.
+        /// Keeps the links for later commands. Refreshes copies when the system cannot create links.
+        /// </summary>
+        public static void EnsureProjectMetadata()
         {
-            if (File.Exists(to) || !File.Exists(from)) return;
-            PlainFiles.Copy(from, to);
-            staged.Add(to);
+            if (!RomInfo.IsHgEngineBaseProject || string.IsNullOrEmpty(ProjectRoot)) return;
+            string meta = RomInfo.HgEngineDsRomMetaDir;
+            string[] sources = meta != null
+                ? new[] { RomInfo.Arm9Path, Path.Combine(meta, "config.yaml"), Path.Combine(meta, "header.yaml") }
+                : new[] { RomInfo.Arm9Path, RomInfo.HeaderPath };
+            foreach (string source in sources)
+            {
+                if (!File.Exists(source)) continue;
+                string destination = Path.Combine(ProjectRoot, Path.GetFileName(source));
+                if (string.Equals(Path.GetFullPath(source), Path.GetFullPath(destination), StringComparison.OrdinalIgnoreCase)) continue;
+                string target = Path.GetRelativePath(ProjectRoot, source);
+                FileInfo file = new FileInfo(destination);
+                if (file.LinkTarget == target) continue;
+                if (file.Exists || file.LinkTarget != null) File.Delete(destination);
+                try { File.CreateSymbolicLink(destination, target); }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is PlatformNotSupportedException)
+                {
+                    // Windows can require permission to create a link. Refresh the copy before each command.
+                    PlainFiles.Copy(source, destination, overwrite: true);
+                }
+            }
         }
 
         /// <summary>
@@ -234,7 +235,8 @@ namespace DSPRE
             catch (JsonException) { return result.Success ? null : FormatResult(result); }
         }
 
-        /// <summary>Runs rotom with <paramref name="workingDirectory"/> as its project root.</summary>
+        /// <summary>Runs rotom with <paramref name="args"/> in <paramref name="workingDirectory"/> and returns its result.
+        /// Prepares ROM metadata when this is the current project.</summary>
         public static async Task<Result> RunInAsync(string workingDirectory, params string[] args)
         {
             if (!IsAvailable)
@@ -242,7 +244,12 @@ namespace DSPRE
 
             await OneAtATime.WaitAsync().ConfigureAwait(false);
             using IDisposable quiet = DSPRE.ROMFiles.ProjectSourceWatcher.Hold();
-            try { return await RunLockedAsync(workingDirectory, args).ConfigureAwait(false); }
+            try
+            {
+                if (string.Equals(Path.GetFullPath(workingDirectory).TrimEnd('\\', '/'), ProjectRoot, StringComparison.OrdinalIgnoreCase))
+                    EnsureProjectMetadata();
+                return await RunLockedAsync(workingDirectory, args).ConfigureAwait(false);
+            }
             finally { OneAtATime.Release(); }
         }
 
