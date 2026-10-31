@@ -7,7 +7,7 @@ namespace DSPRE
     public static partial class RomLocator
     {
         // s8[10][3]: friendship change per event and friendship band.
-        private static Spot? FriendshipChanges(GameVersions game, GameLanguages language, int revision) => game switch
+        private static Spot FriendshipChanges(GameVersions game, GameLanguages language, int revision) => game switch
         {
             GameVersions.Diamond => language switch
             {
@@ -75,7 +75,7 @@ namespace DSPRE
         };
 
         // The battle overlay's type chart: three bytes per matchup, ending at the Foresight marker.
-        private static Spot? TypeChart(GameVersions game, GameLanguages language, int revision) => game switch
+        private static Spot TypeChart(GameVersions game, GameLanguages language, int revision) => game switch
         {
             GameVersions.Diamond => language switch
             {
@@ -143,7 +143,7 @@ namespace DSPRE
         };
 
         // Literals holding the chart's address, the address + 1 and the address + 2.
-        private static Spot? TypeChartPointers(GameVersions game, GameLanguages language, int revision) => game switch
+        private static Spot TypeChartPointers(GameVersions game, GameLanguages language, int revision) => game switch
         {
             GameVersions.Diamond => language switch
             {
@@ -210,7 +210,7 @@ namespace DSPRE
             _ => null,
         };
 
-        private static Spot? TypeChartPointersPlus1(GameVersions game, GameLanguages language, int revision) => game switch
+        private static Spot TypeChartPointersPlus1(GameVersions game, GameLanguages language, int revision) => game switch
         {
             GameVersions.Diamond => language switch
             {
@@ -277,7 +277,7 @@ namespace DSPRE
             _ => null,
         };
 
-        private static Spot? TypeChartPointersPlus2(GameVersions game, GameLanguages language, int revision) => game switch
+        private static Spot TypeChartPointersPlus2(GameVersions game, GameLanguages language, int revision) => game switch
         {
             GameVersions.Diamond => language switch
             {
@@ -345,7 +345,7 @@ namespace DSPRE
         };
 
         // Conversion 2's `cmp rN, #count` over the chart, and the `movs r1, #count` its random pick is taken modulo.
-        private static Spot? TypeChartCount(GameVersions game, GameLanguages language, int revision) => game switch
+        private static Spot TypeChartCount(GameVersions game, GameLanguages language, int revision) => game switch
         {
             GameVersions.Diamond => language switch
             {
@@ -412,7 +412,7 @@ namespace DSPRE
             _ => null,
         };
 
-        private static Spot? TypeChartModulus(GameVersions game, GameLanguages language, int revision) => game switch
+        private static Spot TypeChartModulus(GameVersions game, GameLanguages language, int revision) => game switch
         {
             GameVersions.Diamond => language switch
             {

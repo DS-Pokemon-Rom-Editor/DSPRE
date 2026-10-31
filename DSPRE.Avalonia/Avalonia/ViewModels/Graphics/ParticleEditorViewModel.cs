@@ -304,7 +304,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 using Bitmap bmp = ImageConverter.FromRgba(row.Rgba, row.Width, row.Height);
-                bmp.Save(path);
+                bmp.Save(path, global::Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
                 return null;
             }
             catch (Exception ex) { return StatusText = "Couldn't save: " + ex.Message; }

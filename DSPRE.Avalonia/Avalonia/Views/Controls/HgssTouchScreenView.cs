@@ -30,8 +30,8 @@ namespace DSPRE.Avalonia.Views.Controls
             AvaloniaProperty.Register<HgssTouchScreenView, IReadOnlyList<string>>(nameof(Choices));
         public static readonly StyledProperty<bool> YesNoProperty =
             AvaloniaProperty.Register<HgssTouchScreenView, bool>(nameof(YesNo));
-        public static readonly StyledProperty<int> CursorProperty =
-            AvaloniaProperty.Register<HgssTouchScreenView, int>(nameof(Cursor));
+        public static readonly StyledProperty<int> CursorRowProperty =
+            AvaloniaProperty.Register<HgssTouchScreenView, int>(nameof(CursorRow));
         public static readonly StyledProperty<bool> CursorShownProperty =
             AvaloniaProperty.Register<HgssTouchScreenView, bool>(nameof(CursorShown), true);
 
@@ -46,7 +46,7 @@ namespace DSPRE.Avalonia.Views.Controls
         /// <summary>The entries of the touch question on show, or none.</summary>
         public IReadOnlyList<string> Choices { get => GetValue(ChoicesProperty); set => SetValue(ChoicesProperty, value); }
         public bool YesNo { get => GetValue(YesNoProperty); set => SetValue(YesNoProperty, value); }
-        public int Cursor { get => GetValue(CursorProperty); set => SetValue(CursorProperty, value); }
+        public int CursorRow { get => GetValue(CursorRowProperty); set => SetValue(CursorRowProperty, value); }
         public bool CursorShown { get => GetValue(CursorShownProperty); set => SetValue(CursorShownProperty, value); }
 
         /// <summary>The ROM's touch screen graphics.</summary>
@@ -71,7 +71,7 @@ namespace DSPRE.Avalonia.Views.Controls
         static HgssTouchScreenView()
         {
             AffectsRender<HgssTouchScreenView>(ShowsChoicesProperty, BrightnessProperty, DimmedProperty, ALabelProperty,
-                                               ChoicesProperty, YesNoProperty, CursorProperty, CursorShownProperty);
+                                               ChoicesProperty, YesNoProperty, CursorRowProperty, CursorShownProperty);
         }
 
         public HgssTouchScreenView()
@@ -160,12 +160,12 @@ namespace DSPRE.Avalonia.Views.Controls
 
             IReadOnlyList<string> choices = Choices;
             string key = ShowsChoices
-                ? $"c|{(choices == null ? "" : string.Join("\u0001", choices))}|{YesNo}|{Cursor}|{CursorShown}|{Brightness:0.00}"
+                ? $"c|{(choices == null ? "" : string.Join("\u0001", choices))}|{YesNo}|{CursorRow}|{CursorShown}|{Brightness:0.00}"
                 : $"m|{Dimmed}|{_aHeld}|{_shoesOn}|{_highlight}|{ALabel}|{Brightness:0.00}";
             if (_picture == null || _key != key)
             {
                 byte[] rgba = ShowsChoices
-                    ? screen.RenderChoices(Font, choices, YesNo, Cursor, CursorShown)
+                    ? screen.RenderChoices(Font, choices, YesNo, CursorRow, CursorShown)
                     : screen.RenderMenu(Font, IconFont ?? Font, Text, new HgssTouchScreen.MenuLook
                     {
                         Busy = Dimmed, AHeld = _aHeld, ShoesOn = _shoesOn, Highlighted = _highlight,

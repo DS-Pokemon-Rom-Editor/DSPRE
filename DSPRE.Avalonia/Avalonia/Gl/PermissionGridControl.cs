@@ -39,7 +39,7 @@ namespace DSPRE.Avalonia.Gl
         {
             ClipToBounds = true;
             Focusable = false;
-            RenderOptions.SetTextRenderingMode(this, TextRenderingMode.Antialias);
+            TextOptions.SetTextRenderingMode(this, TextRenderingMode.Antialias);
         }
 
         public void SetData(byte[,] data)

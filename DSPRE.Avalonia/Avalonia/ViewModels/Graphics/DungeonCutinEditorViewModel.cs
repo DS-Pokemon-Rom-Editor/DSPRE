@@ -247,7 +247,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             (int pal, int tiles, int scr) = GetIds(SelectedRow, tz);
             RawImage raw = _graphics.Composite(pal, tiles, scr);
             if (raw == null) return "Couldn't decode this slot's graphics.";
-            try { ImageConverter.ToAvaloniaBitmap(raw).Save(pngPath); return null; }
+            try { ImageConverter.ToAvaloniaBitmap(raw).Save(pngPath, global::Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default); return null; }
             catch (Exception ex) { return ex.Message; }
         }
 

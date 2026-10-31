@@ -41,7 +41,7 @@ namespace DSPRE.Avalonia.Views.Controls
         {
             FieldFont font = Font;
             if (font == null) return new Size(240, 40);
-            int w = Math.Max(1, Width(font, Text));
+            int w = Math.Max(1, PixelWidth(font, Text));
             return new Size(w * Big, font.Height * (1 + Big) + 8);
         }
 
@@ -64,7 +64,7 @@ namespace DSPRE.Avalonia.Views.Controls
             Draw(ctx, font, Text, 0, font.Height + 8, Big, ink, pale);
         }
 
-        private static int Width(FieldFont font, string text)
+        private static int PixelWidth(FieldFont font, string text)
         {
             if (string.IsNullOrEmpty(text)) return 1;
             int w = 0;

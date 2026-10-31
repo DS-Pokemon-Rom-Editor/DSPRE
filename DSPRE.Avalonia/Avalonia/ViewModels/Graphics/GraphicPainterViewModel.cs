@@ -350,7 +350,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             if (_art == null || number < 0 || number >= _colours.Length) return;
             Remember();
-            _colours[number] = (uint)(0xFF000000 | (r << 16) | (g << 8) | b);
+            _colours[number] = 0xFF000000u | (uint)(r << 16) | (uint)(g << 8) | (uint)b;
             BuildSwatches();
             Redraw();
             int using_ = _pixels.Count(v => v == number);

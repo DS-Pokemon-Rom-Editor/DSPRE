@@ -219,7 +219,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private static string SavePng(DSPRE.RawImage raw, string path)
         {
             if (raw == null) return "Couldn't decode this image.";
-            try { ImageConverter.ToAvaloniaBitmap(raw).Save(path); return null; }
+            try { ImageConverter.ToAvaloniaBitmap(raw).Save(path, global::Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default); return null; }
             catch (Exception ex) { return ex.Message; }
         }
     }

@@ -15,9 +15,9 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         // The designer's path, and anything that has not been given a view model. It still reads on
         // the spot; only the launcher's path does the reading away from the UI thread.
-        public ModelBrowserView() : this(Loaded()) { }
+        public ModelBrowserView() : this(LoadedViewModel()) { }
 
-        private static ModelBrowserViewModel Loaded()
+        private static ModelBrowserViewModel LoadedViewModel()
         {
             ModelBrowserViewModel vm = new ModelBrowserViewModel();
             vm.Reload();

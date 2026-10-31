@@ -75,7 +75,7 @@
                                      ScrollPixels="{Binding MessageScrollPixels}"/>
           <views:FieldMenuWindowView IsVisible="{Binding HasChoiceWindow}"
                                      Items="{Binding ChoiceItems}" WidthItems="{Binding ChoiceAllItems}"
-                                     Cursor="{Binding ChoiceCursorRow}"
+                                     CursorRow="{Binding ChoiceCursorRow}"
                                      TileLeft="{Binding ChoiceLeft}" TileTop="{Binding ChoiceTop}"
                                      TilesWide="{Binding ChoiceWidthTiles}" TilesHigh="{Binding ChoiceHeightTiles}"
                                      Indent="{Binding ChoiceIndent}" CursorX="{Binding ChoiceCursorX}"
@@ -118,7 +118,7 @@
                                      ShowsChoices="{Binding TouchScreenShowsChoices}" Brightness="{Binding TouchScreenBrightness}"
                                      Dimmed="{Binding ScriptRunning}" ALabel="{Binding TouchALabel}"
                                      Choices="{Binding TouchChoiceItems}" YesNo="{Binding TouchChoiceIsYesNo}"
-                                     Cursor="{Binding ChoiceCursor}" CursorShown="{Binding TouchCursorShown}"/>
+                                     CursorRow="{Binding ChoiceCursor}" CursorShown="{Binding TouchCursorShown}"/>
         </Panel>
       </views:DsScreenPanel>
 

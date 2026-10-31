@@ -12,7 +12,6 @@ using DSPRE.ROMFiles;
 using global::Avalonia.Media;
 using global::Avalonia.Media.Imaging;
 using global::Avalonia.Threading;
-using DSPRE.Avalonia.BattleAnim;
 using DSPRE.Avalonia.Data;
 using static DSPRE.RomInfo;
 using Avalonia.Platform;

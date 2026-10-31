@@ -20,8 +20,8 @@ namespace DSPRE.Avalonia.Views.Controls
             AvaloniaProperty.Register<FieldMenuWindowView, IReadOnlyList<string>>(nameof(Items));
         public static readonly StyledProperty<IReadOnlyList<string>> WidthItemsProperty =
             AvaloniaProperty.Register<FieldMenuWindowView, IReadOnlyList<string>>(nameof(WidthItems));
-        public static readonly StyledProperty<int> CursorProperty =
-            AvaloniaProperty.Register<FieldMenuWindowView, int>(nameof(Cursor));
+        public static readonly StyledProperty<int> CursorRowProperty =
+            AvaloniaProperty.Register<FieldMenuWindowView, int>(nameof(CursorRow));
         public static readonly StyledProperty<int> TileLeftProperty =
             AvaloniaProperty.Register<FieldMenuWindowView, int>(nameof(TileLeft));
         public static readonly StyledProperty<int> TileTopProperty =
@@ -46,7 +46,7 @@ namespace DSPRE.Avalonia.Views.Controls
         /// <summary>Every entry, off-screen rows included; a list's width is measured from these.</summary>
         public IReadOnlyList<string> WidthItems { get => GetValue(WidthItemsProperty); set => SetValue(WidthItemsProperty, value); }
         /// <summary>The row the cursor is on, counted from the first row on show.</summary>
-        public int Cursor { get => GetValue(CursorProperty); set => SetValue(CursorProperty, value); }
+        public int CursorRow { get => GetValue(CursorRowProperty); set => SetValue(CursorRowProperty, value); }
         /// <summary>The writing area's top-left corner, in tiles.</summary>
         public int TileLeft { get => GetValue(TileLeftProperty); set => SetValue(TileLeftProperty, value); }
         public int TileTop { get => GetValue(TileTopProperty); set => SetValue(TileTopProperty, value); }
@@ -78,7 +78,7 @@ namespace DSPRE.Avalonia.Views.Controls
 
         static FieldMenuWindowView()
         {
-            AffectsRender<FieldMenuWindowView>(ItemsProperty, WidthItemsProperty, CursorProperty, TileLeftProperty, TileTopProperty,
+            AffectsRender<FieldMenuWindowView>(ItemsProperty, WidthItemsProperty, CursorRowProperty, TileLeftProperty, TileTopProperty,
                                                TilesWideProperty, TilesHighProperty, IndentProperty, CursorXProperty, RowOffsetProperty,
                                                ShowCursorProperty, FitToWindowProperty);
         }
@@ -132,7 +132,7 @@ namespace DSPRE.Avalonia.Views.Controls
             int tilesWide = TilesWide > 0 ? TilesWide : WidthInTiles(WidthItems ?? items);
             int tilesHigh = TilesHigh > 0 ? TilesHigh : items.Count * 2;
 
-            string key = $"{string.Join("\u0001", items)}|{Cursor}|{ShowCursor}|{tilesWide}x{tilesHigh}|{Indent}|{CursorX}|{RowOffset}"
+            string key = $"{string.Join("\u0001", items)}|{CursorRow}|{ShowCursor}|{tilesWide}x{tilesHigh}|{Indent}|{CursorX}|{RowOffset}"
                        + $"|{Font?.GetHashCode()}|{Frame?.GetHashCode()}|{Colours?.GetHashCode()}";
             if (_picture == null || _pictureKey != key)
             {
@@ -161,7 +161,7 @@ namespace DSPRE.Avalonia.Views.Controls
 
         private WriteableBitmap Paint(IReadOnlyList<string> items, int tilesWide, int tilesHigh)
         {
-            byte[] rgba = PaintRgba(items, tilesWide, tilesHigh, Indent, RowOffset, CursorX, ShowCursor ? Cursor : -1, out int width, out int height);
+            byte[] rgba = PaintRgba(items, tilesWide, tilesHigh, Indent, RowOffset, CursorX, ShowCursor ? CursorRow : -1, out int width, out int height);
             return ToBitmap(rgba, width, height);
         }
 

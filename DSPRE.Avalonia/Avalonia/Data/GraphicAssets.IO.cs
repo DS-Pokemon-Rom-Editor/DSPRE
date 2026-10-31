@@ -114,7 +114,7 @@ namespace DSPRE.Avalonia.Data
             for (int i = 0; i < have; i++)
             {
                 (byte r, byte g, byte b) c = colours[from + i];
-                palette[i] = (uint)((i == 0 ? 0x00000000 : 0xFF000000) | (c.r << 16) | (c.g << 8) | c.b);
+                palette[i] = (i == 0 ? 0u : 0xFF000000u) | (uint)(c.r << 16) | (uint)(c.g << 8) | c.b;
             }
 
             return new Indexed
