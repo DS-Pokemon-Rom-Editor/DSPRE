@@ -549,6 +549,9 @@ public static bool ApplyClassIntrosPatch()
 }
 ```
 
+`ROMFiles/BattlePressFrames.cs` gives every battle button press its own pages in the screen files. `TouchButtonFit` builds each frame
+from the art and the pixels the game changes in that frame.
+
 Each patch applies only itself. One that needs the ARM9 expansion returns `Unsupported("Requires ARM9
 expansion")`. Editors hand patches over to the Patch Toolbox with an "Open in Patch Toolbox" button
 (`AvaloniaEditorLauncher.OpenPatchToolboxAt(key)`) and refresh on `AppEvents.RomPatchStateChanged`.

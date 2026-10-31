@@ -1112,6 +1112,21 @@ namespace DSPRE
             return true;
         }
 
+        public static bool ApplyButtonFramesPatch()
+        {
+            if (AlreadyApplied(Probe(() => BattlePressFrames.IsApplied))) return false;
+            if (BattlePressFrames.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
+            int overlay = RomLocator.ButtonPressSites.Overlay;
+            if (!ConfirmYesNo("Frees tiles so you can import art onto the battle buttons. " +
+                "Nothing changes in battle until you import art." + BackupNote($"overlay {overlay}") + "\n\nApply this patch?" + CreditNote("buttonFrames"), "Confirm to proceed"))
+                return false;
+            string overlayPath = OverlayUtils.GetPath(overlay);
+            PlainFiles.Copy(overlayPath, overlayPath + BackupSuffix, overwrite: true);
+            BattlePressFrames.Apply();
+            ShowInfo("Import button art in the Screens editor's Battle screen.", "Patch applied");
+            return true;
+        }
+
         public static bool ApplySummaryFontsPatch()
         {
             if (AlreadyApplied(Probe(() => SummaryFontPatch.IsApplied))) return false;
@@ -1584,6 +1599,7 @@ namespace DSPRE
             ["pickupSlots"] = ("Mixone", "independent pickup slots"),
             ["classIntros"] = ("Mixone", "trainer class intros"),
             ["hpBarText"] = ("Mixone", "clear battle text background"),
+            ["buttonFrames"] = ("Mixone", "battle button frames"),
             ["summaryFonts"] = ("Mixone", "summary screen fonts"),
             ["partyFonts"] = ("Mixone", "party menu fonts"),
             ["hpBarFonts"] = ("Mixone", "HP bar fonts"),
@@ -1703,6 +1719,7 @@ namespace DSPRE
             ["pickupSlots"] = "Independent pickup slots",
             ["classIntros"] = "Trainer class intros",
             ["hpBarText"] = "Clear battle text background",
+            ["buttonFrames"] = "Battle button frames",
             ["summaryFonts"] = "Summary screen fonts",
             ["partyFonts"] = "Party menu fonts",
             ["hpBarFonts"] = "HP bar fonts",
@@ -2014,6 +2031,15 @@ namespace DSPRE
                     if (!BattleGaugeTextPatch.SupportsCurrentRom) return UnsupportedVersion(RomLocator.HpBarTextDumps);
                     if (BattleGaugeTextPatch.IsApplied) return PatchState.Applied;
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
+                }));
+
+            list.Add(Status("buttonFrames",
+                "Frees tiles so you can import art onto the battle buttons.",
+                () =>
+                {
+                    if (RomInfo.IsHGE) return Unsupported("Not compatible with hg-engine");
+                    if (!BattlePressFrames.SupportsCurrentRom) return Unsupported("Platinum, HeartGold and SoulSilver, except Japanese");
+                    return BattlePressFrames.IsApplied ? PatchState.Applied : PatchState.Available;
                 }));
 
             list.Add(Status("trainerCustomPokeballs",
@@ -2484,6 +2510,7 @@ namespace DSPRE
                 case "pickupSlots": return ApplyPickupSlotsPatch();
                 case "classIntros": return ApplyClassIntrosPatch();
                 case "hpBarText": return ApplyHpBarTextPatch();
+                case "buttonFrames": return ApplyButtonFramesPatch();
                 case "summaryFonts": return ApplySummaryFontsPatch();
                 case "partyFonts": return ApplyPartyFontsPatch();
                 case "hpBarFonts": return ApplyHpBarFontsPatch();

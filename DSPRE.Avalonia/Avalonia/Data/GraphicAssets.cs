@@ -680,6 +680,7 @@ namespace DSPRE.Avalonia.Data
             new Archive { Dir = DirNames.BattleBg, Title = "Battle backgrounds", In = Group.BattleScenery,
                 What = "The scenery behind a battle, and the sweeping backgrounds some moves put up.",
                 ColourEntry = GraphicUnits.BackdropColours,
+                ColourBank = GraphicUnits.PanelBank,
                 DrawingEntry = GraphicUnits.PanelDrawing,
                 ArrangementEntry = GraphicUnits.BackdropArrangement,
                 NameOf = GraphicUnits.BackdropName,

@@ -92,6 +92,9 @@ namespace DSPRE.Avalonia.Data
         private static int PanelColours(int fileIndex) =>
             IsPanelFile(fileIndex) ? BattleBgNames.Find("TouchScreen.Panel:Colours") : -1;
 
+        /// <summary>Row 0 of the touch panel is tinted at run time, so its sheet is shown in the first button's colours.</summary>
+        public static int PanelBank(int fileIndex) => fileIndex == BattleBgNames.Find("TouchScreen.Panel:Drawing") ? 1 : 0;
+
         /// <summary>The tiles a touch screen panel layer is arranged from.</summary>
         public static int PanelDrawing(int fileIndex)
         {

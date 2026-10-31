@@ -547,8 +547,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 ? "Export a PNG that keeps its numbered colours, so it can be imported back unchanged."
                 : "No picture here to export. The file itself can still be exported.";
 
-        public bool CanReplace => _selected != null && ShowingArchive?.CannotImportBecause == null
-                                  && _picture != null;
+        private bool HasPixels => _shownKind != GraphicAssets.Kind.TileMap && _shownKind != GraphicAssets.Kind.Palette;
+
+        public bool CanReplace => ImportableEntry && HasPixels;
+
+        private bool ImportableEntry => _selected != null && ShowingArchive?.CannotImportBecause == null && _picture != null;
 
         private GraphicAssets.Kind _shownKind;
 
@@ -564,22 +567,22 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         ("Summary screen", AvaloniaEditorLauncher.OpenSummaryScreen),
                     RomInfo.DirNames.PokedexGraphics when EditorAvailability.Allows("PokedexGraphicsEditorView") =>
                         ("Pokédex graphics", AvaloniaEditorLauncher.OpenPokedexGraphics),
+                    RomInfo.DirNames.BattleBg when GraphicUnits.PanelDrawing(ShowingIndex) >= 0 && EditorAvailability.Allows("BattleScreenEditorView") =>
+                        ("Battle screen", AvaloniaEditorLauncher.OpenBattleScreenEditor),
                     _ => null,
                 };
             }
         }
 
-        public bool CanPaint => CanReplace && (_shownKind != GraphicAssets.Kind.TileMap || ScreenEditor != null);
+        public bool CanPaint => CanReplace || (ImportableEntry && ScreenEditor != null);
 
         public string PaintHelp
         {
             get
             {
+                if (ScreenEditor is (string name, _)) return $"Opens the {name} editor.";
                 if (!CanReplace) return ReplaceHelp;
-                if (_shownKind != GraphicAssets.Kind.TileMap) return "Paint this picture's pixels.";
-                return ScreenEditor is (string name, _)
-                    ? $"Opens the {name} editor, where this screen's pictures are painted in place."
-                    : "A tile map only says where squares go. Pick its picture to paint it.";
+                return "Paint this picture's pixels.";
             }
         }
 
@@ -589,6 +592,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 if (_selected == null) return "Pick something first.";
                 if (ShowingArchive?.CannotImportBecause != null) return ShowingArchive.CannotImportBecause;
+                if (_shownKind == GraphicAssets.Kind.TileMap)
+                    return ScreenEditor is (string name, _) ? $"A tile map holds no pixels. Import in the {name} editor." : "A tile map holds no pixels. Pick its picture.";
+                if (_shownKind == GraphicAssets.Kind.Palette) return "This is a set of colours, not a picture.";
                 if (_picture == null)
                     return "This entry has no picture in it, so a PNG can't take its place. "
                          + (Whynot ?? "");
@@ -655,6 +661,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             string said = null;
             string err = _pending.Import(() => PngColourPrompt.Import(archive, index, path, choice, check, out said, colours));
             note = said;
+            if (err == null && archive.Dir == DSPRE.RomInfo.DirNames.BattleBg && DSPRE.ROMFiles.BattlePressFrames.HoldsFrames(index))
+                note = (note == null ? "" : note + " ") + "Pressed buttons keep their old frames.";
             return err;
         }
 

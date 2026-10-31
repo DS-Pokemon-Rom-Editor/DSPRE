@@ -142,22 +142,23 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         /// <summary>Whether the picked piece is one this editor can hand to the painter.</summary>
         public bool CanPaint => CannotPaintBecause == null;
+        public bool TakesButtonArt => Selected?.Piece?.TakesButtonArt == true;
+        public bool CanImport => CanPaint || TakesButtonArt;
         public string CannotPaintBecause =>
             Selected == null ? ""
             : Selected.IsMissing ? "This piece couldn't be drawn, so there is nothing to paint."
             : Selected.Piece.CannotEditBecause
               ?? (Selected.Piece.Drawing < 0 ? "This piece isn't a single drawing in an archive." : null);
 
-        /// <summary>
-        /// Whether the sheet this piece is drawn from can be opened in All graphics. That works
-        /// even for the pieces the painter has to refuse: the touch screen layers share one sheet, so a
-        /// painted picture cannot go back into a single layer, but the sheet itself is still editable.
-        /// </summary>
-        public bool CanHandOver => Selected?.Piece != null && Selected.Piece.Drawing >= 0;
+        /// <summary>The file All graphics opens: a touch layer's screen, or the drawing.</summary>
+        public int HandOverFile => Selected?.Piece == null ? -1
+            : Selected.Piece.Touch && Selected.Piece.Arrangement >= 0 ? Selected.Piece.Arrangement : Selected.Piece.Drawing;
+
+        public bool CanHandOver => HandOverFile >= 0;
 
         /// <summary>Which file the hand-over opens, so the button can say so.</summary>
         public string HandOverWhat => !CanHandOver ? null
-            : $"Opens file {Selected.Piece.Drawing} of the {Selected.Piece.Archive} archive.";
+            : $"Opens file {HandOverFile} of the {Selected.Piece.Archive} archive.";
 
         /// <summary>
         /// The painter edits the NCGR drawing. The optional layout is an NCER/NSCR that places those
@@ -320,7 +321,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             foreach (string n in new[]
             {
                 nameof(Selected), nameof(HasSelection), nameof(SelectedName), nameof(SelectedWhat),
-                nameof(SelectedShared), nameof(SelectedIsShared), nameof(CanPaint), nameof(CannotPaintBecause),
+                nameof(SelectedShared), nameof(SelectedIsShared), nameof(CanPaint), nameof(CannotPaintBecause), nameof(CanImport),
                 nameof(CanHandOver), nameof(HandOverWhat), nameof(ShowsBarPieces),
                 nameof(HighlightLeft), nameof(HighlightTop), nameof(HighlightWidth), nameof(HighlightHeight),
                 nameof(HighlightOnTop), nameof(HighlightOnTouch),

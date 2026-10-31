@@ -9,6 +9,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using DSPRE.Avalonia.Data;
 using DSPRE.Avalonia.ViewModels;
+using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Views.Battle
 {
@@ -71,20 +72,16 @@ namespace DSPRE.Avalonia.Views.Battle
             AvaloniaEditorLauncher.OpenPainter(archive, at, () => VM?.Reload());
         }
 
-        /// <summary>
-        /// Hands the sheet this piece is drawn from to All graphics. This is the way in for the
-        /// touch screen layers, which share one sheet and so cannot take a painted picture back.
-        /// </summary>
         private async void HandOver_Click(object sender, RoutedEventArgs e)
         {
             BattleScreenRenderer.Piece piece = VM?.Selected?.Piece;
-            if (piece == null || piece.Drawing < 0)
+            if (piece == null || VM.HandOverFile < 0)
             {
                 await DialogHelper.ShowInfoAsync("This piece isn't drawn from a single file in an archive.",
                                             "Battle screen");
                 return;
             }
-            AvaloniaEditorLauncher.OpenGraphicAt(piece.Archive, piece.Drawing);
+            AvaloniaEditorLauncher.OpenGraphicAt(piece.Archive, VM.HandOverFile);
         }
 
         private async Task ExportAsync()
@@ -99,7 +96,7 @@ namespace DSPRE.Avalonia.Views.Battle
                 Safe(piece.Name) + ".png");
             if (path == null) return;
 
-            int at = BattleScreenEditorViewModel.PaintableEntry(piece);
+            int at = piece.TakesButtonArt ? piece.Arrangement : BattleScreenEditorViewModel.PaintableEntry(piece);
             string trouble;
             using (VM.Reading()) trouble = GraphicAssets.ExportPng(archive, at, path);
             if (trouble != null) await DialogHelper.ShowErrorAsync(trouble, ErrorTitle);
@@ -112,6 +109,7 @@ namespace DSPRE.Avalonia.Views.Battle
             if (piece == null) return;
             GraphicAssets.Archive archive = ArchiveOf(piece);
             if (archive == null) return;
+            if (piece.TakesButtonArt) { await ImportButtonsAsync(archive, piece); return; }
             if (!await WarnIfSharedAsync(piece)) return;
 
             string path = await DialogHelper.OpenFileAsync(Owner, "Import PNG",
@@ -139,6 +137,29 @@ namespace DSPRE.Avalonia.Views.Battle
             string trouble = VM.Import(() => PngColourPrompt.Import(archive, at, path, choice, check, out note));
             if (trouble != null) { await DialogHelper.ShowErrorAsync(trouble, ErrorTitle); return; }
             if (!string.IsNullOrEmpty(note)) await DialogHelper.ShowInfoAsync(note, "Battle screen");
+            SaveNotice.Imported(piece.Name, path);
+        }
+
+        private async Task ImportButtonsAsync(GraphicAssets.Archive archive, BattleScreenRenderer.Piece piece)
+        {
+            string refused = GraphicAssets.CannotWriteBecause(archive, piece.Drawing);
+            if (refused == null && !BattlePressFrames.SupportsCurrentRom) refused = "This ROM isn't supported.";
+            if (refused != null) { await DialogHelper.ShowErrorAsync(refused, ErrorTitle); return; }
+            if (!BattlePressFrames.IsApplied)
+            {
+                await PatchHandover.OfferAsync("buttonFrames", "Importing art onto the battle buttons", ErrorTitle);
+                return;
+            }
+            string path = await DialogHelper.OpenFileAsync(Owner, "Import PNG",
+                new[] { new FilePickerFileType("PNG image") { Patterns = new[] { "*.png" } } });
+            if (path == null) return;
+
+            TouchButtonFit fit;
+            using (VM.Reading()) fit = new TouchButtonFit();
+            ButtonImportPrompt.Result picked = await ButtonImportPrompt.AskAsync(Owner, fit, path);
+            if (picked == null) return;
+            string trouble = VM.Import(() => picked.Fit.Apply(picked.Plan, compress: true));
+            if (trouble != null) { await DialogHelper.ShowErrorAsync(trouble, ErrorTitle); return; }
             SaveNotice.Imported(piece.Name, path);
         }
 

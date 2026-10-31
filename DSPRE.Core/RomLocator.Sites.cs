@@ -281,6 +281,79 @@ namespace DSPRE
             _ => null,
         };
 
+        /// <summary>Press code and the smaller tables, by their distance from the Command table.</summary>
+        public sealed record ButtonPressCode(int Empty, int Clear, int YesNo, int Stop, int Loop, int Alloc, int Copy, int StopCopy);
+
+        // Measured on every Platinum, HeartGold and SoulSilver dump.
+        public static ButtonPressCode ButtonPressDistances(int command) => GameFamily switch
+        {
+            GameFamilies.HGSS => new ButtonPressCode(command - 0x180, command - 0x1A0, command - 0x158, command - 0x1B0,
+                                                     command - 0x54A8, command - 0x82A4, command - 0x8262, command - 0x6A16),
+            GameFamilies.Plat => new ButtonPressCode(command - 0x178, command - 0x1A8, command - 0x164, command - 0x1B0,
+                                                     command - 0x503C, command - 0x7B78, command - 0x7B34, command - 0x64D2),
+            _ => null,
+        };
+
+        public static ButtonPressSites ButtonPressSitesIn(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Diamond => language switch
+            {
+                GameLanguages.English => new ButtonPressSites(11, 0x32294, 0x322CC, 0x322AC),
+                GameLanguages.German => new ButtonPressSites(11, 0x32310, 0x32348, 0x32328),
+                GameLanguages.Italian => new ButtonPressSites(11, 0x32310, 0x32348, 0x32328),
+                GameLanguages.French => new ButtonPressSites(11, 0x323FC, 0x32434, 0x32414),
+                GameLanguages.Spanish => new ButtonPressSites(11, 0x323FC, 0x32434, 0x32414),
+                GameLanguages.Japanese => new ButtonPressSites(11, 0x34994, 0x349AC, 0x349CC),
+                GameLanguages.Korean => new ButtonPressSites(11, 0x399C8, 0x39A00, 0x399E0),
+                _ => null,
+            },
+            GameVersions.Pearl => language switch
+            {
+                GameLanguages.English => new ButtonPressSites(11, 0x32294, 0x322CC, 0x322AC),
+                GameLanguages.German => new ButtonPressSites(11, 0x32310, 0x32348, 0x32328),
+                GameLanguages.Italian => new ButtonPressSites(11, 0x32310, 0x32348, 0x32328),
+                GameLanguages.French => new ButtonPressSites(11, 0x323FC, 0x32434, 0x32414),
+                GameLanguages.Spanish => new ButtonPressSites(11, 0x323FC, 0x32434, 0x32414),
+                GameLanguages.Japanese => new ButtonPressSites(11, 0x34994, 0x349AC, 0x349CC),
+                GameLanguages.Korean => new ButtonPressSites(11, 0x399C8, 0x39A00, 0x399E0),
+                _ => null,
+            },
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English => new ButtonPressSites(16, 0x35264, 0x35294, 0x352B4),
+                GameLanguages.German => new ButtonPressSites(16, 0x35280, 0x352B0, 0x352D0),
+                GameLanguages.Italian => new ButtonPressSites(16, 0x35280, 0x352B0, 0x352D0),
+                GameLanguages.French => new ButtonPressSites(16, 0x3536C, 0x3539C, 0x353BC),
+                GameLanguages.Spanish => new ButtonPressSites(16, 0x3536C, 0x3539C, 0x353BC),
+                GameLanguages.Japanese => new ButtonPressSites(16, 0x35258, 0x35288, 0x352A8),
+                GameLanguages.Korean => new ButtonPressSites(16, 0x3527C, 0x352AC, 0x352CC),
+                _ => null,
+            },
+            GameVersions.HeartGold => language switch
+            {
+                GameLanguages.English => new ButtonPressSites(12, 0x36B18, 0x36B48, 0x36B68),
+                GameLanguages.German => new ButtonPressSites(12, 0x36B18, 0x36B48, 0x36B68),
+                GameLanguages.Italian => new ButtonPressSites(12, 0x36B18, 0x36B48, 0x36B68),
+                GameLanguages.French => new ButtonPressSites(12, 0x36B18, 0x36B48, 0x36B68),
+                GameLanguages.Spanish => new ButtonPressSites(12, 0x36B18, 0x36B48, 0x36B68),
+                GameLanguages.Japanese => new ButtonPressSites(12, 0x36AD4, 0x36B04, 0x36B24),
+                GameLanguages.Korean => new ButtonPressSites(12, 0x36B1C, 0x36B4C, 0x36B6C),
+                _ => null,
+            },
+            GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.English => new ButtonPressSites(12, 0x36B18, 0x36B48, 0x36B68),
+                GameLanguages.German => new ButtonPressSites(12, 0x36B18, 0x36B48, 0x36B68),
+                GameLanguages.Italian => new ButtonPressSites(12, 0x36B18, 0x36B48, 0x36B68),
+                GameLanguages.French => new ButtonPressSites(12, 0x36B18, 0x36B48, 0x36B68),
+                GameLanguages.Spanish => new ButtonPressSites(12, 0x36B18, 0x36B48, 0x36B68),
+                GameLanguages.Japanese => new ButtonPressSites(12, 0x36AD4, 0x36B04, 0x36B24),
+                GameLanguages.Korean => new ButtonPressSites(12, 0x36B1C, 0x36B4C, 0x36B6C),
+                _ => null,
+            },
+            _ => null,
+        };
+
         public static GaugeLengthSites GaugeLengthSitesIn(GameVersions game, GameLanguages language, int revision) => game switch
         {
             GameVersions.Diamond => language switch

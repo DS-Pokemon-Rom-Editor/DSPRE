@@ -179,6 +179,7 @@ namespace DSPRE.Avalonia.Data
             Ensure();
             if (_fromPacked) return;   // read-only view of the ROM's own bytes
             if (_path == null) return;
+            if (_dir == DirNames.BattleBg) data = DSPRE.ROMFiles.BattlePressFrames.KeepingFrames(id, data, Get(id));
             if (_staging != null) { _staging.Write(_dir, id, (byte[])data.Clone()); return; }
             ArchiveMembers.Put(_dir, id, data);
         }

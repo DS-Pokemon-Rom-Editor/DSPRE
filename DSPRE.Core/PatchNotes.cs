@@ -263,6 +263,14 @@ namespace DSPRE
                 "Requirements\n" +
                 "HeartGold or SoulSilver in English, French, German or Italian, or Spanish SoulSilver, with the ARM9 expansion. " +
                 "Not compatible with hg-engine.",
+            ["buttonFrames"] =
+                "What it does\n" +
+                "Lets you import art onto the battle Command buttons. Each button press gets its own frames, so the tiles the game kept for pressed buttons are free for the art. " +
+                "Nothing changes in battle until you import art. After that, a pressed button shows your art plus what the game draws for the press.\n\n" +
+                "Where to edit\n" +
+                "The Screens editor's Battle screen, on Command buttons.\n\n" +
+                "Requirements\n" +
+                "Platinum, HeartGold or SoulSilver, except Japanese. Not compatible with hg-engine.",
             ["hpBarText"] =
                 "What it does\n" +
                 "Removes the white box behind the name, level, HP, gender symbol and \"Lv\" in battle, so your HP bar art shows behind them.\n\n" +
@@ -370,6 +378,9 @@ namespace DSPRE
             ["hpBarText"] = ("Six calls and twelve copies in the battle overlay (overlay 12 in HeartGold and SoulSilver, 16 in Platinum; five calls and eleven copies in overlay 11 in Diamond) go through the patch's routine.",
                 "140 bytes in the synthetic overlay.",
                 "the battle overlay and the synthetic overlay"),
+            ["buttonFrames"] = ("The battle overlay's press loop, buffer sizes and press tables change, and the touch screen files grow.",
+                "No additional space or synthetic overlay.",
+                "the battle overlay"),
             ["martsExpanded"] = ("The ARM9's common mart pointer and specialty mart pointer table are moved to the new layout; saving changes the common mart's count byte.",
                 "About 8.7 KB in the synthetic overlay, room for 64 marts of 64 items.",
                 "the ARM9 and the synthetic overlay"),

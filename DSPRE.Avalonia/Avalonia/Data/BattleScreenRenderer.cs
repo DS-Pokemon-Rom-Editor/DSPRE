@@ -32,6 +32,7 @@ namespace DSPRE.Avalonia.Data
             public int Drawing = -1, Layout = -1, Colours = -1, Arrangement = -1;
             public string SharedNote;        // what else changes when this one does
             public string CannotEditBecause; // set when the painter cannot be handed this one
+            public bool TakesButtonArt;      // the Command buttons use the Import buttons window
             public string Whynot;            // set when Rgba is null
             public bool UsesBarPieces;       // the battle copies its fill and status in from the bar pieces
 
@@ -90,6 +91,10 @@ namespace DSPRE.Avalonia.Data
             public (int X, int Y, int W, int H)[] BlankedCommandTiles;
             /// <summary>Pal Park hides the shape behind the command buttons.</summary>
             public bool NoSilhouette;
+            /// <summary>Battle Frontier loads other tiles, colours and background under the same buttons.</summary>
+            public bool Frontier;
+            /// <summary>Draws these squares from this page to show a pressed button.</summary>
+            public (BattlePressFrames.Rect Rect, int Page)? Pressed;
         }
 
         private readonly ScriptNarc _bg = new ScriptNarc(DirNames.BattleBg);
@@ -110,6 +115,13 @@ namespace DSPRE.Avalonia.Data
             AddMessageBox(pieces, o);
             AddTouchPanel(pieces, o);
             foreach (Piece p in pieces) p.MeasurePaint();
+            return pieces;
+        }
+
+        public List<Piece> BuildTouch(Options o)
+        {
+            List<Piece> pieces = new List<Piece>();
+            AddTouchPanel(pieces, o);
             return pieces;
         }
 
@@ -355,6 +367,8 @@ namespace DSPRE.Avalonia.Data
         /// <summary>One of the touch screen's layers: which arrangement it shows and how the hardware stacks it.</summary>
         private sealed record PanelLayer(string Screen, string Name, string What, int Priority, int BgNumber, bool Blended);
 
+        private const string CommandButtonsScreen = "TouchScreen.Layer.CommandButtons:Screen";
+
         private static readonly PanelLayer Background = new("TouchScreen.Layer.Background:Screen", "Touch screen background",
             "The panel every menu sits on.", 3, 2, false);
 
@@ -372,7 +386,7 @@ namespace DSPRE.Avalonia.Data
                 case TouchMenu.Command:
                     yield return new("TouchScreen.Layer.CommandSilhouette:Screen", "Command silhouette",
                         "The shape behind the command buttons, see-through over the background.", 3, 1, true);
-                    yield return new("TouchScreen.Layer.CommandButtons:Screen", "Command buttons", "Fight, Bag, Pokémon and Run.", 2, 0, false);
+                    yield return new(CommandButtonsScreen, "Command buttons", "Fight, Bag, Pokémon and Run.", 2, 0, false);
                     break;
                 case TouchMenu.Fight:
                     yield return new("TouchScreen.Layer.MoveButtons:Screen", "Move buttons",
@@ -419,14 +433,16 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         private void AddTouchPanel(List<Piece> pieces, Options o)
         {
-            (byte r, byte g, byte b)[] colours = PanelColours(ResolveBackdrop(o), o.Menu);
+            (byte r, byte g, byte b)[] colours = PanelColours(ResolveBackdrop(o), o.Menu, o.Frontier);
             // Layer 1 is blended over every layer under it. Platinum and HeartGold weigh it 8/16 over 12/16;
             // Diamond and Pearl ask for 27 and 4, and the hardware caps a weight at 16.
             (int own, int below) blend = RomInfo.GameFamily == GameFamilies.DP ? (16, 4) : (8, 12);
             foreach (PanelLayer layer in LayersOf(o.Menu).OrderByDescending(l => l.Priority).ThenByDescending(l => l.BgNumber))
             {
                 if (o.NoSilhouette && o.Menu == TouchMenu.Command && layer.Blended) continue;
-                Piece piece = AddPanelLayer(pieces, layer.Name, layer.Screen, layer.What, colours, opaque: layer == Background);
+                Piece piece = AddPanelLayer(pieces, layer.Name, layer.Screen, layer.What, colours, opaque: layer == Background,
+                                            o.Frontier, layer.BgNumber == 0 ? o.Pressed : null);
+                if (layer.Screen == CommandButtonsScreen) { piece.TakesButtonArt = true; piece.CannotEditBecause = "These buttons share their tiles, so import a PNG to change them."; }
                 if (layer.Blended) { piece.BlendOwn = blend.own; piece.BlendBelow = blend.below; }
                 if (layer.BgNumber == 0 && o.Menu == TouchMenu.Command) Clear(piece, o.BlankedCommandTiles);
             }
@@ -452,14 +468,14 @@ namespace DSPRE.Avalonia.Data
         /// Rows 8 to 11 are placeholders in the file; the Fight menu fills them from the type palettes in
         /// its overlay, one row per move button.
         /// </summary>
-        private (byte r, byte g, byte b)[] PanelColours(int backdrop, TouchMenu menu)
+        private (byte r, byte g, byte b)[] PanelColours(int backdrop, TouchMenu menu, bool frontier)
         {
-            (byte r, byte g, byte b)[] wide = NitroBgCodec.ReadPalette(GraphicAssets.Unsqueeze(_bg.Get(BattleBgNames.Find("TouchScreen.Panel:Colours"))),
-                                               out int count);
+            int panel = frontier ? BattlePressFrames.Panel.FrontierPalette : BattleBgNames.Find("TouchScreen.Panel:Colours");
+            (byte r, byte g, byte b)[] wide = NitroBgCodec.ReadPalette(GraphicAssets.Unsqueeze(_bg.Get(panel)), out int count);
             (byte r, byte g, byte b)[] all = new (byte r, byte g, byte b)[256];
             for (int i = 0; i < all.Length && i < count; i++) all[i] = wide[i];
 
-            if (RomInfo.GameFamily != GameFamilies.DP)
+            if (RomInfo.GameFamily != GameFamilies.DP && !frontier)
             {
                 string tint = backdrop >= 0 && backdrop <= 17 ? $"TouchScreen.Tint.{backdrop}:Colours" : null;
                 int sceneAt = tint == null ? -1 : BattleBgNames.Find(tint);
@@ -488,19 +504,22 @@ namespace DSPRE.Avalonia.Data
         }
 
         private Piece AddPanelLayer(List<Piece> pieces, string name, string screenEntry, string what,
-                                    (byte r, byte g, byte b)[] colours, bool opaque)
+                                    (byte r, byte g, byte b)[] colours, bool opaque, bool frontier, (BattlePressFrames.Rect Rect, int Page)? pressed)
         {
             Piece piece = new Piece
             {
                 Name = name, What = what, Touch = true, Archive = DirNames.BattleBg,
-                CannotEditBecause = "All the touch screen layers share one sheet of tiles, so a "
-                                  + "picture painted here can't go back into just this layer. "
-                                  + "Open the sheet in All graphics to change it.",
+                CannotEditBecause = "All the touch screen layers share one sheet of tiles, so this layer can't be painted on its own.",
             };
             try
             {
                 int scr = BattleBgNames.Find(screenEntry);
                 int chr = BattleBgNames.Find("TouchScreen.Panel:Drawing");
+                if (frontier)
+                {
+                    chr = BattlePressFrames.Panel.FrontierSheet;
+                    if (screenEntry == Background.Screen) scr = BattlePressFrames.Panel.FrontierBackground;
+                }
                 int pal = BattleBgNames.Find("TouchScreen.Panel:Colours");
                 piece.Arrangement = scr; piece.Drawing = chr; piece.Colours = pal;
                 if (scr < 0 || chr < 0 || pal < 0)
@@ -511,10 +530,10 @@ namespace DSPRE.Avalonia.Data
                 {
                     // Colour zero is a real colour on the bottom layer, not a hole: the panel's own green
                     // is index 0. On the layers above it, colour zero is what lets the one below show.
+                    byte[] screen = GraphicAssets.Unsqueeze(_bg.Get(scr));
+                    if (pressed != null) screen = Press(screen, pressed.Value.Rect, pressed.Value.Page);
                     NitroBgCodec.BgImage bg = NitroBgCodec.Composite(GraphicAssets.Unsqueeze(_bg.Get(chr)),
-                                                    colours, 256,
-                                                    GraphicAssets.Unsqueeze(_bg.Get(scr)),
-                                                    transparentZero: !opaque);
+                                                    colours, 256, screen, transparentZero: !opaque);
                     if (bg?.Rgba == null) piece.Whynot = "This panel couldn't be put together.";
                     else { piece.Rgba = bg.Rgba; piece.Width = bg.Width; piece.Height = bg.Height; }
                 }
@@ -522,6 +541,19 @@ namespace DSPRE.Avalonia.Data
             catch (Exception ex) { piece.Whynot = "This panel couldn't be drawn: " + ex.Message; }
             pieces.Add(piece);
             return piece;
+        }
+
+        private static byte[] Press(byte[] screen, BattlePressFrames.Rect rect, int page)
+        {
+            byte[] outp = (byte[])screen.Clone();
+            ushort[][] pages = BattlePressFrames.ReadPages(outp);
+            if (page >= pages.Length) return outp;
+            (int width, _, int mapAt) = NitroBgCodec.ReadScreenHeader(outp);
+            int entryBytes = NitroBgCodec.EntryBytes(outp), cols = width / 8;
+            for (int y = rect.Top; y <= rect.Bottom; y++)
+                for (int x = rect.Left; x <= rect.Right; x++)
+                    NitroBgCodec.PutEntry(outp, mapAt, NitroBgCodec.SquareIndex(cols, x, y), entryBytes, pages[page][y * BattlePressFrames.Columns + x]);
+            return outp;
         }
     }
 

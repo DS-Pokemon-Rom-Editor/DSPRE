@@ -271,6 +271,7 @@ namespace DSPRE
         /// HeartGold), which are copied as whole tiles.
         /// </summary>
         public sealed record HpBarTextSites(int Overlay, int[] Hooks, int[] Copies, int[] TileHooks, int[] TileCopies);
+        public sealed record ButtonPressSites(int Overlay, int Command, int Target, int Fight);
 
         /// <summary>Where the battle overlay sets the HP and experience gauge lengths (healthbox.c HEALTHBOX_HP_CELL_COUNT, HEALTHBOX_EXP_CELL_COUNT).</summary>
         public sealed record GaugeLengthSites(int Overlay, int[] Health, int[] Experience);
