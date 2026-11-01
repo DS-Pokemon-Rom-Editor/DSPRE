@@ -550,7 +550,7 @@ public static bool ApplyClassIntrosPatch()
 ```
 
 `ROMFiles/BattlePressFrames.cs` gives every battle button press its own pages in the screen files. `TouchButtonFit` builds each frame
-from the art and the pixels the game changes in that frame.
+from the art and the pixels the game changes in that frame, and the Battle screen's Press tab (`BattlePressViewModel`) edits the frames.
 `ROMFiles/FieldMenuColoursPatch.cs` gives each HGSS field menu button its own pair of colours from the button palette file.
 
 Each patch applies only itself. One that needs the ARM9 expansion returns `Unsupported("Requires ARM9

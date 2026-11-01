@@ -181,6 +181,12 @@ namespace DSPRE.Avalonia
                 S("name:Board", "Screen", "Dragging a button moves its cursor too."),
                 S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
+            Add("BattlePressView", "Press frames",
+                S(null, "Press frames", "See what each button draws when it is pressed."),
+                S("toolbar", "Button", "Pick the page and the button."),
+                S("name:FrameList", "Frames", "Right-click a tile to copy it, then left-click to place it."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
+
             Add("MoveBackgroundEditorView", "Move backgrounds",
                 S("name:BackgroundList", "Backgrounds", "The backgrounds some moves show in battle."),
                 S("name:FileNumbers", "Files", "Its drawing, colours and three screens."),

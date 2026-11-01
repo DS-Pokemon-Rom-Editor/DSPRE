@@ -1123,7 +1123,7 @@ namespace DSPRE
             string overlayPath = OverlayUtils.GetPath(overlay);
             PlainFiles.Copy(overlayPath, overlayPath + BackupSuffix, overwrite: true);
             BattlePressFrames.Apply();
-            ShowInfo("Import button art in the Screens editor's Battle screen.", "Patch applied");
+            ShowInfo("Import button art in the Screens editor's Battle screen. Its Press tab edits each press frame.", "Patch applied");
             return true;
         }
 

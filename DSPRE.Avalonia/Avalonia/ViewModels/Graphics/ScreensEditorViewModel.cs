@@ -389,7 +389,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     .Select(p => Enumerable.Range(0, buttons.ButtonsOf(p).Length).Select(b => buttons.TextOf(p, b)).ToArray()).ToArray();
                 return () => TouchTabPictures.Battle(page, (p, b) => text[p][b]);
             }, archives: BattleArchives);
-            return new ScreenEntry(o, "battle", "Battle screen", null, new[] { edit }.Concat(tabs).ToArray());
+            ScreenEditorView[] press = BattlePressFrames.SupportsCurrentRom && !RomInfo.IsHGE
+                ? new[] { new ScreenEditorView("Press", () => new Views.Graphics.BattlePressView(new BattlePressViewModel(BattlePressFrames.Panel)), null, Unpack(BattleArchives), "Opening Battle screen…") }
+                : Array.Empty<ScreenEditorView>();
+            return new ScreenEntry(o, "battle", "Battle screen", null, new[] { edit }.Concat(tabs).Concat(press).ToArray());
         }
 
         private static ScreenEditorView[] ButtonTabs(Func<IScreenButtons> read, string title, Func<int, byte[]> draw, string touchTab = "Layout") =>

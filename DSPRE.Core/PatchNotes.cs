@@ -268,7 +268,7 @@ namespace DSPRE
                 "Lets you import art onto the battle Command buttons. Each button press gets its own frames, so the tiles the game kept for pressed buttons are free for the art. " +
                 "Nothing changes in battle until you import art. After that, a pressed button shows your art plus what the game draws for the press.\n\n" +
                 "Where to edit\n" +
-                "The Screens editor's Battle screen, on Command buttons.\n\n" +
+                "The Screens editor's Battle screen: Command buttons for the art and the Press tab for each press frame.\n\n" +
                 "Requirements\n" +
                 "Platinum, HeartGold or SoulSilver, except Japanese. Not compatible with hg-engine.",
             ["fieldMenuColours"] =

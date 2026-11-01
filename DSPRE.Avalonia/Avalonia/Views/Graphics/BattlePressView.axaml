@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
+             x:Class="DSPRE.Avalonia.Views.Graphics.BattlePressView"
+             x:DataType="vm:BattlePressViewModel">
+  <Design.DataContext>
+    <vm:BattlePressViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding Status}" FontSize="12" VerticalAlignment="Center"/>
+    </Border>
+
+    <controls:EditorToolbar>
+      <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <controls:UndoRedoButtons/>
+      <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4">
+        <TextBlock Text="Page" VerticalAlignment="Center"/>
+        <ComboBox Width="160" ItemsSource="{Binding MenuNames}" SelectedIndex="{Binding MenuIndex}"/>
+        <TextBlock Text="Button" VerticalAlignment="Center" Margin="8,0,0,0"/>
+        <ComboBox Width="160" ItemsSource="{Binding Buttons}" SelectedIndex="{Binding ButtonIndex}"/>
+      </StackPanel>
+    </controls:EditorToolbar>
+
+    <Grid>
+      <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" IsVisible="{Binding NeedsPatch}" Click="Patch_Click" Margin="16" VerticalAlignment="Top" HorizontalAlignment="Left"
+              ToolTip.Tip="Needs Battle button frames"/>
+      <ScrollViewer IsVisible="{Binding Ready}">
+        <ItemsControl x:Name="FrameList" ItemsSource="{Binding Frames}" Margin="16">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:PressFrameRow">
+              <StackPanel Spacing="4" Margin="0,0,0,14">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                  <Button Content="Same as not pressed" IsVisible="{Binding IsPress}" Click="MatchRest_Click"/>
+                  <Button Content="Use the game's look" IsVisible="{Binding IsPress}" Click="GameLook_Click"/>
+                </StackPanel>
+                <Image Source="{Binding Picture}" Stretch="None" HorizontalAlignment="Left" ToolTip.Tip="Right-click copies, left-click places"
+                       RenderOptions.BitmapInterpolationMode="None" PointerPressed="Frame_Pressed"/>
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Grid>
+  </DockPanel>
+</UserControl>
