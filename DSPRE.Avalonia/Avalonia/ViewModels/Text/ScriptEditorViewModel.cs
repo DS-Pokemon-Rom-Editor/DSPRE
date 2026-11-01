@@ -68,7 +68,6 @@ namespace DSPRE.Avalonia.ViewModels.Text
         private RotomLanguageServerClient _lsp;
         private string _lspOpenPath;
         private int _documentVersion;
-        private bool _diagnosticsAreLive;
         private CancellationTokenSource _lspChangeDelay;
 
         private const int LanguageServerChangeDelayMs = 300;
@@ -698,11 +697,11 @@ namespace DSPRE.Avalonia.ViewModels.Text
             return true;
         }
 
+        /// <summary>Removes compile and live diagnostics and clears the selected row.</summary>
         public void ClearDiagnostics()
         {
             Diagnostics.Clear();
             SelectedDiagnostic = null;
-            _diagnosticsAreLive = false;
             DiagnosticsStatusText = "No diagnostics.";
             OnPropertyChanged(nameof(HasDiagnostics));
         }
@@ -899,11 +898,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
         }
 
+        /// <summary>Replaces compile diagnostics with <paramref name="result"/> and returns their count.
+        /// Keeps live diagnostic rows and their selection.</summary>
         private int UpdateCompileDiagnostics(RotomTool.Result result)
         {
-            Diagnostics.Clear();
-            SelectedDiagnostic = null;
-            _diagnosticsAreLive = false;
+            foreach (ScriptDiagnostic diagnostic in Diagnostics.Where(d => !d.IsLive).ToList())
+                Diagnostics.Remove(diagnostic);
+            if (SelectedDiagnostic?.IsLive != true) SelectedDiagnostic = null;
 
             if (result == null || string.IsNullOrWhiteSpace(result.Stdout))
             {
@@ -960,11 +961,11 @@ namespace DSPRE.Avalonia.ViewModels.Text
             int errors = Diagnostics.Count(d => d.Severity == "Error");
             int warningsCount = Diagnostics.Count(d => d.Severity == "Warning");
             DiagnosticsStatusText = errors == 0 && warningsCount == 0
-                ? "No compile diagnostics."
+                ? "No diagnostics."
                 : Plural.Of(errors, "error") + ", " + Plural.Of(warningsCount, "warning") + ".";
             if (Diagnostics.Count > 0) SelectedSidebarTabIndex = 1;
             OnPropertyChanged(nameof(HasDiagnostics));
-            return Diagnostics.Count;
+            return Diagnostics.Count(d => !d.IsLive);
         }
 
         private void AddDiagnostic(string severity, string kind, string path, int byteStart, int byteEnd, string message)
@@ -1022,15 +1023,17 @@ namespace DSPRE.Avalonia.ViewModels.Text
         private void OnLspDiagnosticsPublished(object sender, RotomLspDiagnosticsEventArgs e)
             => Dispatcher.UIThread.Post(() => ApplyLspDiagnostics(e));
 
+        /// <summary>Replaces live diagnostics for the current file with <paramref name="e"/>.
+        /// Keeps compile diagnostic rows and their selection.</summary>
         private void ApplyLspDiagnostics(RotomLspDiagnosticsEventArgs e)
         {
             if (e == null || string.IsNullOrWhiteSpace(e.Path) || string.IsNullOrWhiteSpace(_currentPath))
                 return;
             if (!SamePath(e.Path, _currentPath)) return;
 
-            Diagnostics.Clear();
-            SelectedDiagnostic = null;
-            _diagnosticsAreLive = true;
+            foreach (ScriptDiagnostic diagnostic in Diagnostics.Where(d => d.IsLive).ToList())
+                Diagnostics.Remove(diagnostic);
+            if (SelectedDiagnostic?.IsLive == true) SelectedDiagnostic = null;
 
             string source = ReadSourceForPath(e.Path);
             foreach (RotomLspDiagnostic diagnostic in e.Diagnostics)
@@ -1047,14 +1050,15 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     diagnostic.SelectionLength,
                     diagnostic.Message,
                     DisplayPath(e.Path) + ":" + diagnostic.Line + ":" + diagnostic.Column,
-                    preview.Trim()));
+                    preview.Trim(),
+                    isLive: true));
             }
 
             int errors = Diagnostics.Count(d => d.Severity == "Error");
             int warnings = Diagnostics.Count(d => d.Severity == "Warning");
             DiagnosticsStatusText = Diagnostics.Count == 0
-                ? "No live diagnostics."
-                : "Live diagnostics: " + Plural.Of(errors, "error") + ", " + Plural.Of(warnings, "warning") + ".";
+                ? "No diagnostics."
+                : Plural.Of(errors, "error") + ", " + Plural.Of(warnings, "warning") + ".";
             if (Diagnostics.Count > 0) SelectedSidebarTabIndex = 1;
             OnPropertyChanged(nameof(HasDiagnostics));
         }
@@ -1308,6 +1312,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             return max + 1;
         }
 
+        /// <summary>Loads the selected file into the editor and removes live diagnostics for the previous file.</summary>
         private void LoadSelectedFile()
         {
             if (_selectedIndex < 0 || _selectedIndex >= _sourceFiles.Count) return;
@@ -1319,11 +1324,16 @@ namespace DSPRE.Avalonia.ViewModels.Text
             ScriptText = System.IO.File.ReadAllText(_currentPath);
             _suppress = false;
             SetClean();
-            if (_diagnosticsAreLive && (string.IsNullOrWhiteSpace(oldPath) || !SamePath(oldPath, _currentPath)))
+            if (string.IsNullOrWhiteSpace(oldPath) || !SamePath(oldPath, _currentPath))
             {
-                Diagnostics.Clear();
-                SelectedDiagnostic = null;
-                DiagnosticsStatusText = "Waiting for live diagnostics.";
+                foreach (ScriptDiagnostic diagnostic in Diagnostics.Where(d => d.IsLive).ToList())
+                    Diagnostics.Remove(diagnostic);
+                if (SelectedDiagnostic?.IsLive == true) SelectedDiagnostic = null;
+                int errors = Diagnostics.Count(d => d.Severity == "Error");
+                int warnings = Diagnostics.Count(d => d.Severity == "Warning");
+                DiagnosticsStatusText = Diagnostics.Count == 0
+                    ? "Waiting for live diagnostics."
+                    : Plural.Of(errors, "error") + ", " + Plural.Of(warnings, "warning") + ".";
                 OnPropertyChanged(nameof(HasDiagnostics));
             }
             IsReadOnly = false;
@@ -1336,9 +1346,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             OnPropertyChanged(nameof(ManagedNote));
             if (ManagedSource != null)
             {
-                Diagnostics.Clear();
-                SelectedDiagnostic = null;
-                DiagnosticsStatusText = "hg-engine source, not checked by Rotom.";
+                if (Diagnostics.Count == 0) DiagnosticsStatusText = "hg-engine source, not checked by Rotom.";
                 OnPropertyChanged(nameof(HasDiagnostics));
                 return;
             }
@@ -1774,7 +1782,9 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
     public class ScriptDiagnostic
     {
-        public ScriptDiagnostic(string severity, string kind, string path, int line, int column, int selectionLength, string message, string display, string preview)
+        /// <summary>Creates a diagnostic row from its severity, kind, source position, message, and display text.
+        /// <paramref name="isLive"/> identifies language server results.</summary>
+        public ScriptDiagnostic(string severity, string kind, string path, int line, int column, int selectionLength, string message, string display, string preview, bool isLive = false)
         {
             Severity = severity;
             Kind = kind;
@@ -1785,6 +1795,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             Message = message;
             Display = display;
             Preview = preview;
+            IsLive = isLive;
         }
 
         public string Severity { get; }
@@ -1796,6 +1807,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public string Message { get; }
         public string Display { get; }
         public string Preview { get; }
+        public bool IsLive { get; }
+        public string Source => IsLive ? "Live" : "Compile";
 
         public override string ToString() => Severity + " " + Display + " " + Message;
     }

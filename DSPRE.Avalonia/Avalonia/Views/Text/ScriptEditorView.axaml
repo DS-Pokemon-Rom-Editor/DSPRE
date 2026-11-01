@@ -95,6 +95,7 @@
                   <StackPanel Margin="0,3">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                       <TextBlock Text="{Binding Severity}" FontWeight="Bold" FontSize="12"/>
+                      <TextBlock Text="{Binding Source}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
                       <TextBlock Text="{Binding Kind}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
                     </StackPanel>
                     <TextBlock Text="{Binding Display}" FontWeight="SemiBold" FontSize="12"/>
