@@ -1,10 +1,10 @@
-<Window MinWidth="700" MinHeight="560" xmlns="https://github.com/avaloniaui"
+<Window MinWidth="700" MinHeight="460" xmlns="https://github.com/avaloniaui"
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
 		xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
 		x:Class="DSPRE.Avalonia.Views.Pokemon.TradeEditorView"
 		x:DataType="vm:TradeEditorViewModel"
-		Width="820" Height="620"
+		Width="820" Height="520"
 		WindowStartupLocation="CenterOwner">
   <Design.DataContext>
     <vm:TradeEditorViewModel/>
@@ -26,109 +26,117 @@
 
 	<DockPanel Margin="10" LastChildFill="True">
 
-	<!-- Two columns: Trade Data | Text Data -->
 	<controls:CappedWidth Cap="1100"><Grid ColumnDefinitions="*,*" ColumnSpacing="10">
 
-	  <!-- LEFT: Trade Data -->
 	  <Border x:Name="TradeDataPanel" Grid.Column="0" BorderThickness="1"
 			  BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="8">
 		<ScrollViewer>
 		  <StackPanel Spacing="6">
-			<TextBlock Text="Trade data" FontWeight="Bold"/>
+			<TextBlock Text="Pokémon" FontWeight="Bold"/>
 
-			<Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="6" RowSpacing="4">
+			<Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="6" RowSpacing="4">
 
-			  <TextBlock Grid.Row="0"  Grid.Column="0" Text="Species"          VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="0" Grid.Column="0" Text="Species" VerticalAlignment="Center"/>
 			  <DockPanel Grid.Row="0" Grid.Column="1">
 			    <Image DockPanel.Dock="Right" Width="32" Height="32" Margin="4,0,0,0" Source="{Binding SelectedSpecies, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
 			    <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding SelectedSpecies}" AllowsNone="False"/>
 			  </DockPanel>
 
-			  <TextBlock Grid.Row="1"  Grid.Column="0" Text="Requested"        VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="1" Grid.Column="0" Text="Requested" VerticalAlignment="Center"/>
 			  <DockPanel Grid.Row="1" Grid.Column="1">
 			    <Image DockPanel.Dock="Right" Width="32" Height="32" Margin="4,0,0,0" Source="{Binding SelectedRequested, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
 			    <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding SelectedRequested}" AllowsNone="False"/>
 			  </DockPanel>
 
-			  <TextBlock Grid.Row="2"  Grid.Column="0" Text="Ability"          VerticalAlignment="Center"/>
-			  <controls:FusionAutoCompleteBox  Grid.Row="2"  Grid.Column="1" ItemsSource="{Binding AbilityNames}"  SelectedIndex="{Binding SelectedAbility}" AllowsNone="False"/>
+			  <TextBlock Grid.Row="2" Grid.Column="0" Text="Nickname" VerticalAlignment="Center"/>
+			  <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Nickname}" MaxLength="10" ToolTip.Tip="Up to 10 characters"/>
 
-			  <TextBlock Grid.Row="3"  Grid.Column="0" Text="Held item"        VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="3" Grid.Column="0" Text="Held item" VerticalAlignment="Center"/>
 			  <DockPanel Grid.Row="3" Grid.Column="1">
 			    <Image DockPanel.Dock="Right" Width="32" Height="32" Margin="4,0,0,0" Source="{Binding SelectedHeldItem, Converter={x:Static controls:GameIconConverter.Item}}"/>
 			    <controls:FusionAutoCompleteBox controls:EditorLink.To="Item" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding SelectedHeldItem}" AllowsNone="False"/>
 			  </DockPanel>
 
-			  <TextBlock Grid.Row="4"  Grid.Column="0" Text="OT gender"        VerticalAlignment="Center"/>
-			  <ComboBox  Grid.Row="4"  Grid.Column="1" ItemsSource="{Binding OTGenderNames}" SelectedIndex="{Binding SelectedOTGender}"/>
+			  <TextBlock Grid.Row="4" Grid.Column="0" Text="PID" VerticalAlignment="Center"/>
+			  <NumericUpDown Grid.Row="4" Grid.Column="1" Value="{Binding Pid}" Minimum="0" Maximum="2147483647"/>
 
-			  <TextBlock Grid.Row="5"  Grid.Column="0" Text="Language"         VerticalAlignment="Center"/>
-			  <ComboBox  Grid.Row="5"  Grid.Column="1" ItemsSource="{Binding LanguageNames}" SelectedIndex="{Binding SelectedLanguage}"/>
+			  <TextBlock Grid.Row="5" Grid.Column="0" Text="Nature" VerticalAlignment="Center"/>
+			  <ComboBox Grid.Row="5" Grid.Column="1" ItemsSource="{Binding Natures}" SelectedIndex="{Binding NatureIndex}" HorizontalAlignment="Stretch" ToolTip.Tip="Changes the PID"/>
 
-			  <TextBlock Grid.Row="6"  Grid.Column="0" Text="OT ID"            VerticalAlignment="Center"/>
-			  <NumericUpDown Grid.Row="6"  Grid.Column="1" Value="{Binding OtID}"  Minimum="0" Maximum="2147483647"/>
+			  <TextBlock Grid.Row="6" Grid.Column="0" Text="Ability" VerticalAlignment="Center"/>
+			  <ComboBox Grid.Row="6" Grid.Column="1" ItemsSource="{Binding AbilityChoices}" SelectedIndex="{Binding AbilityIndex}" HorizontalAlignment="Stretch"
+						 IsEnabled="{Binding CanChooseAbility}" ToolTip.Tip="{Binding AbilityTip}" ToolTip.ShowOnDisabled="True"/>
 
-			  <TextBlock Grid.Row="7"  Grid.Column="0" Text="PID"              VerticalAlignment="Center"/>
-			  <NumericUpDown Grid.Row="7"  Grid.Column="1" Value="{Binding Pid}"   Minimum="0" Maximum="2147483647"/>
+			  <TextBlock Grid.Row="7" Grid.Column="0" Text="Gender" VerticalAlignment="Center"/>
+			  <ComboBox Grid.Row="7" Grid.Column="1" ItemsSource="{Binding GenderChoices}" SelectedIndex="{Binding GenderIndex}" HorizontalAlignment="Stretch"
+						 IsEnabled="{Binding CanChooseGender}" ToolTip.Tip="{Binding GenderTip}" ToolTip.ShowOnDisabled="True"/>
 
-			  <TextBlock Grid.Row="8"  Grid.Column="0" Text="HP IV"            VerticalAlignment="Center"/>
-			  <NumericUpDown Grid.Row="8"  Grid.Column="1" Value="{Binding HpIV}"  Minimum="0" Maximum="31"/>
-
-			  <TextBlock Grid.Row="9"  Grid.Column="0" Text="Attack IV"        VerticalAlignment="Center"/>
-			  <NumericUpDown Grid.Row="9"  Grid.Column="1" Value="{Binding AtkIV}" Minimum="0" Maximum="31"/>
-
-			  <TextBlock Grid.Row="10" Grid.Column="0" Text="Defense IV"        VerticalAlignment="Center"/>
-			  <NumericUpDown Grid.Row="10" Grid.Column="1" Value="{Binding DefIV}" Minimum="0" Maximum="31"/>
-
-			  <TextBlock Grid.Row="11" Grid.Column="0" Text="Speed IV"        VerticalAlignment="Center"/>
-			  <NumericUpDown Grid.Row="11" Grid.Column="1" Value="{Binding SpeIV}" Minimum="0" Maximum="31"/>
-
-			  <TextBlock Grid.Row="12" Grid.Column="0" Text="Sp. Atk IV"        VerticalAlignment="Center"/>
-			  <NumericUpDown Grid.Row="12" Grid.Column="1" Value="{Binding SpaIV}" Minimum="0" Maximum="31"/>
-
-			  <TextBlock Grid.Row="13" Grid.Column="0" Text="Sp. Def IV"        VerticalAlignment="Center"/>
-			  <NumericUpDown Grid.Row="13" Grid.Column="1" Value="{Binding SpdIV}" Minimum="0" Maximum="31"/>
-
-			  <TextBlock Grid.Row="14" Grid.Column="0" Text="Cool"             VerticalAlignment="Center"/>
-			  <NumericUpDown Grid.Row="14" Grid.Column="1" Value="{Binding Cool}"  Minimum="0" Maximum="255"/>
-
-			  <TextBlock Grid.Row="15" Grid.Column="0" Text="Beauty"           VerticalAlignment="Center"/>
-			  <NumericUpDown Grid.Row="15" Grid.Column="1" Value="{Binding Beauty}" Minimum="0" Maximum="255"/>
-
-			  <TextBlock Grid.Row="16" Grid.Column="0" Text="Cute"             VerticalAlignment="Center"/>
-			  <NumericUpDown Grid.Row="16" Grid.Column="1" Value="{Binding Cute}"  Minimum="0" Maximum="255"/>
-
-			  <TextBlock Grid.Row="17" Grid.Column="0" Text="Smart"            VerticalAlignment="Center"/>
-			  <NumericUpDown Grid.Row="17" Grid.Column="1" Value="{Binding Smart}" Minimum="0" Maximum="255"/>
-
-			  <TextBlock Grid.Row="18" Grid.Column="0" Text="Tough"            VerticalAlignment="Center"/>
-			  <NumericUpDown Grid.Row="18" Grid.Column="1" Value="{Binding Tough}" Minimum="0" Maximum="255"/>
-
-			  <TextBlock Grid.Row="19" Grid.Column="0" Text="Sheen"            VerticalAlignment="Center"/>
-			  <NumericUpDown Grid.Row="19" Grid.Column="1" Value="{Binding Sheen}" Minimum="0" Maximum="255"/>
+			  <TextBlock Grid.Row="8" Grid.Column="0" Text="Shiny" VerticalAlignment="Center"/>
+			  <CheckBox Grid.Row="8" Grid.Column="1" IsChecked="{Binding IsShiny}" ToolTip.Tip="Changes the PID"/>
 			</Grid>
-
-			<!-- HGSS-only unknown field -->
-			<StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsHGSS}">
-			  <TextBlock Text="Unknown" VerticalAlignment="Center"/>
-			  <NumericUpDown Value="{Binding Unknown}" Minimum="0" Maximum="2147483647"/>
-			</StackPanel>
 		  </StackPanel>
 		</ScrollViewer>
 	  </Border>
 
-	  <!-- RIGHT: Text Data -->
-	  <Border x:Name="TextDataPanel" Grid.Column="1" BorderThickness="1"
+	  <Border x:Name="TrainerPanel" Grid.Column="1" BorderThickness="1"
 			  BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="8">
-		<StackPanel Spacing="8">
-		  <TextBlock Text="Text data" FontWeight="Bold"/>
+		<ScrollViewer>
+		  <StackPanel Spacing="6">
+			<TextBlock Text="Original trainer" FontWeight="Bold"/>
 
-		  <TextBlock Text="Nickname"/>
-		  <TextBox Text="{Binding Nickname}" MaxLength="10" ToolTip.Tip="Up to 10 characters"/>
+			<Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="6" RowSpacing="4">
+			  <TextBlock Grid.Row="0" Grid.Column="0" Text="Name" VerticalAlignment="Center"/>
+			  <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding OtName}" MaxLength="7" ToolTip.Tip="Up to 7 characters"/>
+			  <TextBlock Grid.Row="0" Grid.Column="2" Text="Gender" VerticalAlignment="Center"/>
+			  <ComboBox Grid.Row="0" Grid.Column="3" ItemsSource="{Binding OTGenderNames}" SelectedIndex="{Binding SelectedOTGender}" HorizontalAlignment="Stretch"/>
+			  <TextBlock Grid.Row="1" Grid.Column="0" Text="ID" VerticalAlignment="Center"/>
+			  <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding OtID}" Minimum="0" Maximum="2147483647"/>
+			  <TextBlock Grid.Row="1" Grid.Column="2" Text="Language" VerticalAlignment="Center"/>
+			  <ComboBox Grid.Row="1" Grid.Column="3" ItemsSource="{Binding LanguageNames}" SelectedIndex="{Binding SelectedLanguage}" HorizontalAlignment="Stretch"/>
+			</Grid>
 
-		  <TextBlock Text="OT name"/>
-		  <TextBox Text="{Binding OtName}" MaxLength="7" ToolTip.Tip="Up to 7 characters"/>
-		</StackPanel>
+			<TextBlock Text="IVs" FontWeight="Bold" Margin="0,6,0,0"/>
+			<Grid ColumnDefinitions="Auto,*,Auto,*,Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="6" RowSpacing="4">
+				<TextBlock Grid.Row="0" Grid.Column="0" Text="HP" VerticalAlignment="Center"/>
+				<NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding HpIV}" Minimum="0" Maximum="31"/>
+				<TextBlock Grid.Row="0" Grid.Column="2" Text="Attack" VerticalAlignment="Center"/>
+				<NumericUpDown Grid.Row="0" Grid.Column="3" Value="{Binding AtkIV}" Minimum="0" Maximum="31"/>
+				<TextBlock Grid.Row="0" Grid.Column="4" Text="Defense" VerticalAlignment="Center"/>
+				<NumericUpDown Grid.Row="0" Grid.Column="5" Value="{Binding DefIV}" Minimum="0" Maximum="31"/>
+				<TextBlock Grid.Row="1" Grid.Column="0" Text="Sp. Atk" VerticalAlignment="Center"/>
+				<NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding SpaIV}" Minimum="0" Maximum="31"/>
+				<TextBlock Grid.Row="1" Grid.Column="2" Text="Sp. Def" VerticalAlignment="Center"/>
+				<NumericUpDown Grid.Row="1" Grid.Column="3" Value="{Binding SpdIV}" Minimum="0" Maximum="31"/>
+				<TextBlock Grid.Row="1" Grid.Column="4" Text="Speed" VerticalAlignment="Center"/>
+				<NumericUpDown Grid.Row="1" Grid.Column="5" Value="{Binding SpeIV}" Minimum="0" Maximum="31"/>
+			</Grid>
+
+			<TextBlock Text="Contest stats" FontWeight="Bold" Margin="0,6,0,0"/>
+			<Grid ColumnDefinitions="Auto,*,Auto,*,Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="6" RowSpacing="4">
+				<TextBlock Grid.Row="0" Grid.Column="0" Text="Cool" VerticalAlignment="Center"/>
+				<NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding Cool}" Minimum="0" Maximum="255"/>
+				<TextBlock Grid.Row="0" Grid.Column="2" Text="Beauty" VerticalAlignment="Center"/>
+				<NumericUpDown Grid.Row="0" Grid.Column="3" Value="{Binding Beauty}" Minimum="0" Maximum="255"/>
+				<TextBlock Grid.Row="0" Grid.Column="4" Text="Cute" VerticalAlignment="Center"/>
+				<NumericUpDown Grid.Row="0" Grid.Column="5" Value="{Binding Cute}" Minimum="0" Maximum="255"/>
+				<TextBlock Grid.Row="1" Grid.Column="0" Text="Smart" VerticalAlignment="Center"/>
+				<NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding Smart}" Minimum="0" Maximum="255"/>
+				<TextBlock Grid.Row="1" Grid.Column="2" Text="Tough" VerticalAlignment="Center"/>
+				<NumericUpDown Grid.Row="1" Grid.Column="3" Value="{Binding Tough}" Minimum="0" Maximum="255"/>
+			</Grid>
+
+			<Expander Header="Advanced" HorizontalAlignment="Stretch">
+			  <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="6" RowSpacing="4">
+				<TextBlock Grid.Row="0" Grid.Column="0" Text="Unused ability" VerticalAlignment="Center" ToolTip.Tip="The game never reads this"/>
+				<controls:FusionAutoCompleteBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding AbilityNames}" SelectedIndex="{Binding SelectedAbility}" AllowsNone="False" ToolTip.Tip="The game never reads this"/>
+				<TextBlock Grid.Row="1" Grid.Column="0" Text="Unused sheen" VerticalAlignment="Center" ToolTip.Tip="The game never reads this"/>
+				<NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding Sheen}" Minimum="0" Maximum="255" ToolTip.Tip="The game never reads this"/>
+				<TextBlock Grid.Row="2" Grid.Column="0" Text="Unknown" VerticalAlignment="Center" IsVisible="{Binding IsHGSS}"/>
+				<NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding Unknown}" Minimum="0" Maximum="2147483647" IsVisible="{Binding IsHGSS}"/>
+			  </Grid>
+			</Expander>
+		  </StackPanel>
+		</ScrollViewer>
 	  </Border>
 
 	</Grid></controls:CappedWidth>

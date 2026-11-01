@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -80,6 +81,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             OtName = snap.OtName;
             Nickname = snap.Nickname;
             _loading = false;
+            RefreshPersonality();
 
             _tradeDirty = _textDirty = _history.IsDirty;
             OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -193,7 +195,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public int SelectedSpecies
         {
             get => _selectedSpecies;
-            set { if (Set(ref _selectedSpecies, value)) MarkTradeDirty(); }
+            set { if (Set(ref _selectedSpecies, value)) { RefreshPersonality(); MarkTradeDirty(); } }
         }
         private int _selectedRequested;
         public int SelectedRequested
@@ -248,9 +250,43 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         // ---- Numerics ----
         private int _otID, _pid, _unknown;
-        public int OtID   { get => _otID;    set { if (Set(ref _otID,    value)) MarkTradeDirty(); } }
-        public int Pid    { get => _pid;     set { if (Set(ref _pid,     value)) MarkTradeDirty(); } }
+        public int OtID   { get => _otID;    set { if (Set(ref _otID,    value)) { RefreshPersonality(); MarkTradeDirty(); } } }
+        public int Pid    { get => _pid;     set { if (Set(ref _pid,     value)) { RefreshPersonality(); MarkTradeDirty(); } } }
         public int Unknown { get => _unknown; set { if (Set(ref _unknown, value)) MarkTradeDirty(); } }
+
+        // ---- Nature / ability / gender / shiny ----
+        public IReadOnlyList<string> Natures => DVCalculator.Natures;
+        public ObservableCollection<string> AbilityChoices { get; } = new();
+        public ObservableCollection<string> GenderChoices  { get; } = new();
+
+        private int _natureIndex, _abilityIndex, _genderIndex;
+        public int NatureIndex
+        {
+            get => _natureIndex;
+            set => ChoosePersonality(value, _abilityIndex, _genderIndex, _isShiny);
+        }
+        public int AbilityIndex
+        {
+            get => _abilityIndex;
+            set => ChoosePersonality(_natureIndex, value, _genderIndex, _isShiny);
+        }
+        public int GenderIndex
+        {
+            get => _genderIndex;
+            set => ChoosePersonality(_natureIndex, _abilityIndex, value, _isShiny);
+        }
+
+        public bool CanChooseAbility => AbilityChoices.Count > 1;
+        public bool CanChooseGender  => GenderChoices.Count > 1;
+        public string AbilityTip => CanChooseAbility ? "Changes the PID" : "This Pokémon has one ability";
+        public string GenderTip  => CanChooseGender ? "Changes the PID" : "This Pokémon's gender is fixed";
+
+        private bool _isShiny;
+        public bool IsShiny
+        {
+            get => _isShiny;
+            set => ChoosePersonality(_natureIndex, _abilityIndex, _genderIndex, value);
+        }
 
         // ---- Text fields ----
         private string _otName = string.Empty;
@@ -274,6 +310,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ----------------------------------------------------------------
 
         private bool _loading;
+        private bool _refreshingPersonality;
 
         // ----------------------------------------------------------------
         // Constructor
@@ -319,6 +356,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             DSPRE.Avalonia.Data.LabelStore.Sync(LanguageNames, "trade_languages");
             AppEvents.LabelsChanged -= OnLabelsChanged; AppEvents.LabelsChanged += OnLabelsChanged;
             AppEvents.NamesChanged  -= OnNamesChanged;  AppEvents.NamesChanged  += OnNamesChanged;
+            AppEvents.PersonalDataSaved    -= OnPersonalDataSaved;    AppEvents.PersonalDataSaved    += OnPersonalDataSaved;
         }
         private void OnLabelsChanged(object sender, System.EventArgs e)
         {
@@ -336,6 +374,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             Repoke(_selectedRequested, nameof(SelectedRequested), v => _selectedRequested = v);
             Repoke(_selectedAbility,   nameof(SelectedAbility),   v => _selectedAbility = v);
             Repoke(_selectedHeldItem,  nameof(SelectedHeldItem),  v => _selectedHeldItem = v);
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(ReloadSpeciesPersonality, global::Avalonia.Threading.DispatcherPriority.Background);
+        }
+        private void OnPersonalDataSaved(object sender, int species)
+        {
+            if (species == _selectedSpecies) ReloadSpeciesPersonality();
         }
         private void Repoke(int current, string name, System.Action<int> set)
         {
@@ -346,7 +389,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 global::Avalonia.Threading.DispatcherPriority.Background);
         }
         /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>
-        public void Detach() { AppEvents.LabelsChanged -= OnLabelsChanged; AppEvents.NamesChanged -= OnNamesChanged; }
+        public void Detach()
+        {
+            AppEvents.LabelsChanged -= OnLabelsChanged;
+            AppEvents.NamesChanged -= OnNamesChanged;
+            AppEvents.PersonalDataSaved -= OnPersonalDataSaved;
+        }
 
         // ----------------------------------------------------------------
         // Commands
@@ -384,6 +432,99 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Private helpers
         // ----------------------------------------------------------------
 
+        private int _personalSpecies = -1;
+        private byte _genderRatio;
+        private ushort _secondAbility;
+        private readonly List<int> _genderValues = new();
+
+        private void ReloadSpeciesPersonality()
+        {
+            _personalSpecies = -1;
+            RefreshPersonality();
+        }
+
+        private void RefreshPersonality()
+        {
+            if (Design.IsDesignMode || _loading) return;
+            _refreshingPersonality = true;
+            try
+            {
+                if (_personalSpecies != _selectedSpecies)
+                {
+                    LoadSpeciesChoices();
+                    // Refilling a list clears its selection, and the binding skips a value that didn't change.
+                    _abilityIndex = _genderIndex = -1;
+                    OnPropertyChanged(nameof(AbilityIndex));
+                    OnPropertyChanged(nameof(GenderIndex));
+                }
+
+                uint pid = (uint)_pid;
+                _natureIndex = DVCalculator.GetNatureFromPID(pid);
+                _abilityIndex = TradePersonality.AbilitySlot(pid, _secondAbility);
+                _genderIndex = _genderValues.IndexOf(TradePersonality.Gender(pid, _genderRatio));
+                _isShiny = TradePersonality.IsShiny((uint)_otID, pid);
+
+                OnPropertyChanged(nameof(NatureIndex));
+                OnPropertyChanged(nameof(AbilityIndex));
+                OnPropertyChanged(nameof(GenderIndex));
+                OnPropertyChanged(nameof(IsShiny));
+            }
+            finally { _refreshingPersonality = false; }
+        }
+
+        private void LoadSpeciesChoices()
+        {
+            PokemonPersonalData personal = null;
+            try
+            {
+                if (_selectedSpecies >= 0 && _selectedSpecies < RomInfo.GetPersonalFilesCount()) personal = new PokemonPersonalData(_selectedSpecies);
+            }
+            catch (System.Exception ex) when (ex is IOException or System.UnauthorizedAccessException)
+            {
+                AppLogger.Warn($"TradeEditor: Couldn't read species {_selectedSpecies}: {ex.Message}");
+                return;
+            }
+            _personalSpecies = _selectedSpecies;
+            _genderRatio = personal?.GenderVec ?? 0;
+            _secondAbility = personal?.SecondAbility ?? 0;
+
+            AbilityChoices.Clear();
+            AbilityChoices.Add(AbilityName(personal?.FirstAbility ?? 0));
+            if (_secondAbility != 0) AbilityChoices.Add(AbilityName(_secondAbility));
+
+            _genderValues.Clear();
+            _genderValues.AddRange(TradePersonality.Genders(_genderRatio));
+            GenderChoices.Clear();
+            foreach (int gender in _genderValues) GenderChoices.Add(TradePersonality.GenderNames[gender]);
+
+            OnPropertyChanged(nameof(CanChooseAbility));
+            OnPropertyChanged(nameof(CanChooseGender));
+            OnPropertyChanged(nameof(AbilityTip));
+            OnPropertyChanged(nameof(GenderTip));
+        }
+
+        private string AbilityName(int ability) => ability < AbilityNames.Count ? AbilityNames[ability] : ability.ToString();
+
+        private void ChoosePersonality(int nature, int abilitySlot, int genderIndex, bool shiny)
+        {
+            // Refilling a list for a new species briefly selects nothing.
+            if (_refreshingPersonality || _loading || _cur == null || nature < 0 || abilitySlot < 0 || genderIndex < 0) return;
+            if (_personalSpecies != _selectedSpecies) return;
+            uint pid = TradePersonality.Find((uint)_pid, (uint)_otID, nature, abilitySlot, _genderValues[genderIndex], shiny, _genderRatio, _secondAbility);
+            if (pid != (uint)_pid) { Pid = (int)pid; return; }
+
+            // No PID gives that mix. The controls hold the rejected pick, and the binding skips a value it already has.
+            _refreshingPersonality = true;
+            _natureIndex = _abilityIndex = _genderIndex = -1;
+            _isShiny = shiny;
+            OnPropertyChanged(nameof(NatureIndex));
+            OnPropertyChanged(nameof(AbilityIndex));
+            OnPropertyChanged(nameof(GenderIndex));
+            OnPropertyChanged(nameof(IsShiny));
+            _refreshingPersonality = false;
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(RefreshPersonality, global::Avalonia.Threading.DispatcherPriority.Background);
+        }
+
         private void LoadFromFile(int tradeID)
         {
             _loading = true;
@@ -401,6 +542,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             OnPropertyChanged(nameof(HasUnsavedChanges));
 
             _loading = false;
+            RefreshPersonality();
 
             _history.Reset(Snapshot());   // loaded state is the clean undo baseline for this trade
             _lastCaptureUtc = System.DateTime.MinValue;

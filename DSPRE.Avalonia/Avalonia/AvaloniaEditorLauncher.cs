@@ -280,7 +280,7 @@ namespace DSPRE.Avalonia
             try
             {
                 await OpenBehindCardAsync("Opening Trade editor…", "Reading the in-game trades.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TradeData }),
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TradeData, DirNames.PersonalPokeData }),
                     () =>
                     {
                         TradeEditorView view = new TradeEditorView();

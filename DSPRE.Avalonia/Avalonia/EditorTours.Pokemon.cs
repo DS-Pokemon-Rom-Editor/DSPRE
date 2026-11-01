@@ -80,10 +80,10 @@ namespace DSPRE.Avalonia
 
             Add("TradeEditorView", "Trade editor",
                 S("name:TradePicker", "Trade", "Each in-game trade by number."),
-                S("name:TradeDataPanel", "Pokémon", "What you get, what they ask for, its ability and item."),
-                S("name:TradeDataPanel", "Details", "Original trainer, personality, IVs and contest stats."),
+                S("name:TradeDataPanel", "Pokémon", "What you get, its nickname and item, and what they ask for."),
+                S("name:TradeDataPanel", "PID", "Pick a nature, ability, gender or shiny and the PID changes to match."),
                 S("name:TradeDataPanel", "Linked editors", "Ctrl+click a Pokémon or item to edit it in its editor."),
-                S("name:TextDataPanel", "Names", "Nickname, up to 10 letters, and trainer name, up to 7."),
+                S("name:TrainerPanel", "Details", "Original trainer, IVs and contest stats."),
                 S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("StarterEditorView", "Starter Pokémon editor",
