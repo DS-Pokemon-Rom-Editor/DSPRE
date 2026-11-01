@@ -267,8 +267,10 @@ namespace DSPRE.HgEngine
                 string path = System.IO.Path.Combine(HgEngineProject.RepoPathUnc, info.SourceFileRelPath.Replace('/', Path.DirectorySeparatorChar));
                 if (File.Exists(path))
                 {
+                    // Use the entry the editor loaded, so a value the user didn't change keeps its text.
+                    entry = HgEngineLoadedEntries.Get(path, designator);
                     string text = HgEngineFileCache.GetText(path);
-                    if (HgEngineSourcePatcher.TryFindEntry(text, designator, out int open, out int close))
+                    if (entry == null && HgEngineSourcePatcher.TryFindEntry(text, designator, out int open, out int close))
                         entry = new HgEngineSourceBlock(text.Substring(open, close - open + 1));
                 }
             }

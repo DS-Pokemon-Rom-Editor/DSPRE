@@ -794,6 +794,9 @@ doesn't need that text, only overlay 129. `HgEngineProject.IsActive` means a che
 is read from its source text rather than by offset, and written through `HgEngineVerifiedWrite`. Synthetic-overlay
 patches are refused.
 
+An editor loads an entry with `TryLoadForEditing`. `HgEngineLoadedEntries` keeps that copy, so a save writes only the
+fields the user changed, keeps changes made outside DSPRE and refuses a field changed on both sides.
+
 ## Reference
 
 `Research/` holds documented game knowledge, maintained by human contributors. Bundled tools are in `Tools/` and

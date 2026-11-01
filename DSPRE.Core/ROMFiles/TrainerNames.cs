@@ -47,6 +47,7 @@ namespace DSPRE
         /// <summary>One list row for a Trainers.c entry.</summary>
         public static string HgEngineEntry(int id, HgEngineSourceBlock block, string[] classNames)
         {
+            if (block.Raw.Length == 0) return "[" + id.ToString("D2") + "] No entry";
             string name = block.TryGetString(new[] { FieldPathSegment.Field("name") }, out string n) ? n : "";
             string className = block.TryGetSymbol(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("trainerClass") }, TrainerClassHeader, out int c)
                 ? (c >= 0 && c < classNames.Length ? classNames[c] : $"Class {c}") : "";

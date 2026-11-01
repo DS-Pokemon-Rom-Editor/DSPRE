@@ -19,7 +19,7 @@ namespace DSPRE.HgEngine
         internal static Dictionary<string, (int Open, int Close)> Build(string text)
         {
             Dictionary<string, (int Open, int Close)> spans = new Dictionary<string, (int Open, int Close)>(StringComparer.Ordinal);
-            foreach (Match m in EntryStart.Matches(text))
+            foreach (Match m in BraceScanner.InCode(EntryStart.Match(text), text))
             {
                 string name = m.Groups[1].Value;
                 if (spans.ContainsKey(name)) continue;
@@ -40,12 +40,22 @@ namespace DSPRE.HgEngine
         /// <summary>Applies a field map to one isolated "{ ... }" entry, keeping unchanged spellings. The patched
         /// block comes back even when some fields are missing; the result says whether all were placed.</summary>
         internal static bool TryPatch<T>(string block, IReadOnlyList<HgEngineSourceField<T>> fields, T model, string[] headers,
-            Func<HgEngineValueSpelling.Write, Func<string, int?>> lookupFor, out string patched, out List<string> unresolved)
+            Func<HgEngineValueSpelling.Write, Func<string, int?>> lookupFor, out string patched, out List<string> unresolved) =>
+            TryPatch(block, fields, model, headers, lookupFor, null, out patched, out unresolved, out _, out _);
+
+        /// <summary>Same as the other overload, but it also compares with the entry the editor loaded. Fields changed on
+        /// both sides come back in <paramref name="conflicts"/>, and <paramref name="merged"/> is the entry to remember.</summary>
+        internal static bool TryPatch<T>(string block, IReadOnlyList<HgEngineSourceField<T>> fields, T model, string[] headers,
+            Func<HgEngineValueSpelling.Write, Func<string, int?>> lookupFor, HgEngineSourceBlock? loaded,
+            out string patched, out List<string> unresolved, out List<string> conflicts, out string merged)
         {
             const string key = "[X] = ";
             string text = key + block;
             unresolved = new List<string>();
-            List<HgEngineFieldWrite> writes = HgEngineValueSpelling.Preserve(new HgEngineSourceBlock(block), HgEngineSourceFields.Writes(fields, model, headers), lookupFor);
+            HgEngineSourceBlock disk = new HgEngineSourceBlock(block);
+            List<HgEngineFieldWrite> writes = HgEngineLoadedEntries.Reconcile(loaded, disk,
+                HgEngineValueSpelling.Preserve(loaded ?? disk, HgEngineSourceFields.Writes(fields, model, headers), lookupFor), out conflicts);
+            merged = loaded == null ? null : HgEngineLoadedEntries.Merge(loaded.Value, writes);
             foreach (HgEngineFieldWrite write in writes)
             {
                 if (write.ValueLiteral == null || !HgEngineSourcePatcher.TryReplaceField(ref text, "X", write.Path, write.ValueLiteral))
@@ -92,7 +102,7 @@ namespace DSPRE.HgEngine
 
         /// <summary>Fills <paramref name="move"/> from the move's Moves.c entry.</summary>
         public static bool TryLoad(int id, MoveData move, out string error) =>
-            HgEngineEntrySource.TryLoad(HgEngineDomain.Moves, id, out HgEngineSourceBlock entry, out error)
+            HgEngineEntrySource.TryLoadForEditing(HgEngineDomain.Moves, id, out HgEngineSourceBlock entry, out error)
             && HgEngineSourceFields.TryRead(entry, Fields, move, HgEngineSourceFields.NameLookup(Headers), out error);
 
         public static bool TryWrite(int id, MoveData move, out string error)
@@ -133,7 +143,8 @@ namespace DSPRE.HgEngine
 
             string text = HgEngineFileCache.GetText(path);
             string updated = text;
-            if (!TryApply(ref updated, targets, w => HgEngineSourceFields.NameLookup(w.Headers), out error)) return false;
+            Dictionary<string, string> merged = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (!TryApply(ref updated, targets, w => HgEngineSourceFields.NameLookup(w.Headers), out error, d => HgEngineLoadedEntries.Get(path, d), merged)) return false;
             if (updated == text) return true;
             try { HgEngineFileCache.WriteText(path, updated); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
@@ -141,13 +152,15 @@ namespace DSPRE.HgEngine
                 error = $"{Path.GetFileName(path)} couldn't be written: {ex.Message}";
                 return false;
             }
+            foreach ((string designator, string entry) in merged) HgEngineLoadedEntries.Remember(path, designator, entry);
             return true;
         }
 
         /// <summary>Pure half of <see cref="TryWriteMany"/>. One scan finds every entry and the file is rebuilt
         /// once, so a large import doesn't rescan Moves.c per field.</summary>
         internal static bool TryApply(ref string text, IReadOnlyList<(string Designator, MoveData Move)> moves,
-            Func<HgEngineValueSpelling.Write, Func<string, int?>> lookupFor, out string error)
+            Func<HgEngineValueSpelling.Write, Func<string, int?>> lookupFor, out string error,
+            Func<string, HgEngineSourceBlock?> loadedFor = null, IDictionary<string, string> merged = null)
         {
             error = null;
             Dictionary<string, (int Open, int Close)> index = HgEngineEntryIndex.Build(text);
@@ -156,8 +169,11 @@ namespace DSPRE.HgEngine
             {
                 if (!index.TryGetValue(designator, out (int Open, int Close) span) || span.Open < 0)
                 { error = $"{designator} isn't in Moves.c, so nothing was written."; return false; }
-                if (!HgEngineEntryIndex.TryPatch(text.Substring(span.Open, span.Close - span.Open + 1), Fields, move, Headers, lookupFor, out string block, out List<string> unresolved))
-                { error = $"Moves.c has no {string.Join(", ", unresolved)} for {designator}, so nothing was written."; return false; }
+                bool placed = HgEngineEntryIndex.TryPatch(text.Substring(span.Open, span.Close - span.Open + 1), Fields, move, Headers, lookupFor, loadedFor?.Invoke(designator),
+                    out string block, out List<string> unresolved, out List<string> conflicts, out string entry);
+                if (conflicts.Count > 0) { error = HgEngineLoadedEntries.ConflictMessage("Moves.c", conflicts.Select(c => $"{designator} {c.TrimStart('.')}")); return false; }
+                if (!placed) { error = $"Moves.c has no {string.Join(", ", unresolved)} for {designator}, so nothing was written."; return false; }
+                if (entry != null && merged != null) merged[designator] = entry;
                 patched.Add((span.Open, span.Close, block));
             }
 
@@ -309,7 +325,7 @@ namespace DSPRE.HgEngine
         /// <summary>Fills <paramref name="item"/> from the item's itemdata.c entry, the full 20-bit price included.</summary>
         public static bool TryLoad(int id, ItemData item, out string error)
         {
-            if (!HgEngineEntrySource.TryLoad(HgEngineDomain.Items, id, out HgEngineSourceBlock entry, out error)) return false;
+            if (!HgEngineEntrySource.TryLoadForEditing(HgEngineDomain.Items, id, out HgEngineSourceBlock entry, out error)) return false;
             return TryRead(entry, item, HgEngineSourceFields.NameLookup(Headers), out error);
         }
 
@@ -401,7 +417,7 @@ namespace DSPRE.HgEngine
         }
 
         public static bool TryLoad(int id, EncounterFileHGSS encounters, out string error) =>
-            HgEngineEntrySource.TryLoad(HgEngineDomain.Encounters, id, out HgEngineSourceBlock entry, out error)
+            HgEngineEntrySource.TryLoadForEditing(HgEngineDomain.Encounters, id, out HgEngineSourceBlock entry, out error)
             && HgEngineSourceFields.TryRead(entry, Fields, encounters, HgEngineSourceFields.NameLookup(Headers), out error);
 
         public static bool TryWrite(int id, EncounterFileHGSS encounters, out string error)

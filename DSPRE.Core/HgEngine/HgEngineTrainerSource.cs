@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -151,7 +152,13 @@ namespace DSPRE.HgEngine
     {
         private const string SourceRelPath = "data/Trainers.c";
 
-        public static bool TryLoad(int trainerId, out HgEngineSourceBlock block, out string error)
+        public static bool TryLoad(int trainerId, out HgEngineSourceBlock block, out string error) => TryLoad(trainerId, false, out block, out error);
+
+        /// <summary>Same as <see cref="TryLoad(int, out HgEngineSourceBlock, out string)"/>, for an editor that will save
+        /// this trainer. The save compares against what this loads.</summary>
+        public static bool TryLoadForEditing(int trainerId, out HgEngineSourceBlock block, out string error) => TryLoad(trainerId, true, out block, out error);
+
+        private static bool TryLoad(int trainerId, bool forEditing, out HgEngineSourceBlock block, out string error)
         {
             block = default;
             error = null;
@@ -161,11 +168,42 @@ namespace DSPRE.HgEngine
             if (!File.Exists(path)) { error = $"{path} is missing from the checkout."; return false; }
 
             string text = HgEngineFileCache.GetText(path);
-            if (!HgEngineSourcePatcher.TryFindEntry(text, trainerId.ToString(), out int open, out int close))
+            if (!Entries(text).TryGetValue(trainerId, out TrainerEntry entry))
             { error = $"Trainers.c has no trainer {trainerId}."; return false; }
 
-            block = new HgEngineSourceBlock(text.Substring(open, close - open + 1));
+            block = new HgEngineSourceBlock(text.Substring(entry.Open, entry.Close - entry.Open + 1));
+            if (forEditing) HgEngineLoadedEntries.Store(path, entry.Token, block.Raw);
             return true;
+        }
+
+        private readonly record struct TrainerEntry(string Token, int Open, int Close);
+
+        private static string _indexedText;
+        private static Dictionary<int, TrainerEntry> _indexed;
+
+        /// <summary>Every trainer entry by id, however the file numbers or orders them.</summary>
+        private static Dictionary<int, TrainerEntry> Entries(string text)
+        {
+            if (ReferenceEquals(text, _indexedText)) return _indexed;
+
+            Dictionary<int, TrainerEntry> entries = new Dictionary<int, TrainerEntry>();
+            string[] headers = Regex.Matches(text, @"#include\s+""(?:\.\./)*(include/[^""]+)""").Select(m => m.Groups[1].Value).ToArray();
+            Func<string, int?> lookup = HgEngineSourceFields.NameLookup(headers);
+            foreach ((string token, (int open, int close)) in HgEngineEntryIndex.Build(text))
+                if (open >= 0 && HgEngineSourceExpression.TryEvaluate(token, lookup, out int id) && id >= 0) entries.TryAdd(id, new TrainerEntry(token, open, close));
+
+            _indexedText = text;
+            _indexed = entries;
+            return entries;
+        }
+
+        /// <summary>The text between a trainer's brackets in Trainers.c: its number, or the constant the file uses.</summary>
+        internal static string TokenFor(int trainerId)
+        {
+            if (!HgEngineProject.IsActive) return trainerId.ToString();
+            string path = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', Path.DirectorySeparatorChar));
+            if (!File.Exists(path)) return trainerId.ToString();
+            return Entries(HgEngineFileCache.GetText(path)).TryGetValue(trainerId, out TrainerEntry entry) ? entry.Token : trainerId.ToString();
         }
 
         private static readonly System.Text.RegularExpressions.Regex TextOrderStart =
@@ -224,7 +262,8 @@ namespace DSPRE.HgEngine
             return true;
         }
 
-        /// <summary>Every trainer entry from 0 up to the first missing id, in one pass over the file.</summary>
+        /// <summary>Every trainer by id, in one pass over the file. A number the file skips is an empty block, because
+        /// the list position is the trainer id and C fills the gap with an empty trainer.</summary>
         public static List<HgEngineSourceBlock> LoadAll()
         {
             List<HgEngineSourceBlock> blocks = new List<HgEngineSourceBlock>();
@@ -233,16 +272,10 @@ namespace DSPRE.HgEngine
             if (!File.Exists(path)) return blocks;
 
             string text = HgEngineFileCache.GetText(path);
-            int pos = 0;
-            for (int id = 0; ; id++)
-            {
-                Match m = new System.Text.RegularExpressions.Regex(@"\[\s*" + id + @"\s*\]\s*=\s*\{").Match(text, pos);
-                if (!m.Success) break;
-                int open = m.Index + m.Length - 1;
-                if (!BraceScanner.TryFindMatchingBrace(text, open, out int close)) break;
-                blocks.Add(new HgEngineSourceBlock(text.Substring(open, close - open + 1)));
-                pos = close + 1;
-            }
+            Dictionary<int, TrainerEntry> entries = Entries(text);
+            if (entries.Count == 0) return blocks;
+            for (int id = 0; id <= entries.Keys.Max(); id++)
+                blocks.Add(new HgEngineSourceBlock(entries.TryGetValue(id, out TrainerEntry entry) ? text.Substring(entry.Open, entry.Close - entry.Open + 1) : ""));
             return blocks;
         }
 

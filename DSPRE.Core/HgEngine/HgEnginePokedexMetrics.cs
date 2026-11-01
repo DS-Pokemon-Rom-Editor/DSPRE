@@ -57,7 +57,7 @@ namespace DSPRE.HgEngine
         public static bool TryLoad(int speciesId, out PokedexMetrics metrics, out string error)
         {
             metrics = new PokedexMetrics();
-            if (!HgEngineEntrySource.TryLoad(HgEngineDomain.Species, speciesId, out HgEngineSourceBlock entry, out error)) return false;
+            if (!HgEngineEntrySource.TryLoadForEditing(HgEngineDomain.Species, speciesId, out HgEngineSourceBlock entry, out error)) return false;
             return HgEngineSourceFields.TryRead(entry, Fields, metrics, HgEngineSymbolTable.Load, out error);
         }
 
@@ -66,14 +66,15 @@ namespace DSPRE.HgEngine
         public static bool TryWrite(int speciesId, PokedexMetrics metrics, out string error)
         {
             if (!HgEngineEntrySource.TryLoad(HgEngineDomain.Species, speciesId, out HgEngineSourceBlock entry, out error)) return false;
+            HgEngineSourceBlock basis = HgEngineEntrySource.Basis(HgEngineDomain.Species, speciesId, entry);
             PokedexMetrics before = new PokedexMetrics();
-            if (!HgEngineSourceFields.TryRead(entry, Fields, before, HgEngineSymbolTable.Load, out error)) return false;
+            if (!HgEngineSourceFields.TryRead(basis, Fields, before, HgEngineSymbolTable.Load, out error)) return false;
             if (before.SameAs(metrics)) return true;
 
             List<HgEngineFieldWrite> writes;
             if (entry.TryGetRaw(new[] { FieldPathSegment.Field("metricsData") }, out _))
             {
-                writes = HgEngineValueSpelling.Preserve(entry, HgEngineSourceFields.Writes(Fields, metrics, HgEngineSymbolTable.Load),
+                writes = HgEngineValueSpelling.Preserve(basis, HgEngineSourceFields.Writes(Fields, metrics, HgEngineSymbolTable.Load),
                     w => HgEngineSourceFields.NameLookup(w.Headers, HgEngineSymbolTable.Load));
             }
             else

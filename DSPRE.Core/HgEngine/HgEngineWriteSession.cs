@@ -37,6 +37,7 @@ namespace DSPRE.HgEngine
         }
 
         private readonly Dictionary<string, Pending> _pending = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<(string Path, string Designator), string> _loaded = new();
         private bool _ended;
 
         public static HgEngineWriteSession Begin()
@@ -73,21 +74,28 @@ namespace DSPRE.HgEngine
             return lost;
         }
 
-        /// <summary>Writes every held file. Deleted comments are appended to their file when kept.</summary>
+        internal void RememberEntry(string path, string designator, string entry) => _loaded[(path, designator)] = entry;
+
+        internal bool TryGetEntry(string path, string designator, out string entry) => _loaded.TryGetValue((path, designator), out entry);
+
+        /// <summary>Writes every held file, or none of them. Deleted comments are appended to their file when kept.</summary>
         public bool Commit(bool keepLostComments, out string error)
         {
             error = null;
             End();
+            List<(string Path, string Text, Encoding Encoding, bool Crlf)> files = new();
             foreach ((string path, Pending p) in _pending)
             {
                 string text = keepLostComments ? HgEngineSourceComments.AppendKept(p.Text, HgEngineSourceComments.Lost(path, p.Original, p.Text)) : p.Text;
-                try { HgEngineFileCache.WriteText(path, text, p.Encoding, p.Crlf, keepLostComments: false); }
-                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
-                {
-                    error = $"Couldn't write {Path.GetFileName(path)}: {ex.Message}";
-                    return false;
-                }
+                files.Add((path, text, p.Encoding, p.Crlf));
             }
+            try { HgEngineFileCache.WriteAll(files); }
+            catch (IOException ex)
+            {
+                error = ex.Message;
+                return false;
+            }
+            foreach (((string path, string designator), string entry) in _loaded) HgEngineLoadedEntries.Store(path, designator, entry);
             _pending.Clear();
             return true;
         }

@@ -233,7 +233,7 @@ namespace DSPRE.HgEngine
             string text = HgEngineFileCache.GetText(sourcePath);
             string updated = text;
             if (!TrySpliceItem(ref updated, designator, item, w => HgEngineSourceFields.NameLookup(w.Headers),
-                    HgEngineSourceFields.NameLookup(HgEngineItemSource.Headers), out error))
+                    HgEngineSourceFields.NameLookup(HgEngineItemSource.Headers), out error, HgEngineLoadedEntries.Get(sourcePath, designator), out string merged))
                 return false;
             if (updated == text) return true;
             try { HgEngineFileCache.WriteText(sourcePath, updated); }
@@ -242,25 +242,55 @@ namespace DSPRE.HgEngine
                 error = $"{Path.GetFileName(sourcePath)} couldn't be written: {ex.Message}";
                 return false;
             }
+            if (merged != null) HgEngineLoadedEntries.Remember(sourcePath, designator, merged);
             return true;
         }
 
         /// <summary>Patches one entry of itemdata.c text with the editor's fields and price; the text is left
         /// alone unless all of them are placed.</summary>
         internal static bool TrySpliceItem(ref string text, string designator, ItemData item,
-            Func<HgEngineValueSpelling.Write, Func<string, int?>> lookupFor, Func<string, int?> priceLookup, out string error)
+            Func<HgEngineValueSpelling.Write, Func<string, int?>> lookupFor, Func<string, int?> priceLookup, out string error) =>
+            TrySpliceItem(ref text, designator, item, lookupFor, priceLookup, out error, null, out _);
+
+        /// <summary>Same as the other overload, but it also compares with the entry the editor loaded.
+        /// <paramref name="merged"/> is the entry to remember.</summary>
+        internal static bool TrySpliceItem(ref string text, string designator, ItemData item,
+            Func<HgEngineValueSpelling.Write, Func<string, int?>> lookupFor, Func<string, int?> priceLookup, out string error,
+            HgEngineSourceBlock? loaded, out string merged)
         {
             error = null;
+            merged = null;
             if (item.FullPrice > ItemData.MaxHgEnginePrice)
             { error = $"A price of {item.FullPrice} is more than hg-engine can hold ({ItemData.MaxHgEnginePrice})."; return false; }
             if (!HgEngineSourcePatcher.TryFindEntry(text, designator, out int open, out int close))
             { error = $"{designator} isn't in {SourceRelPath}, so nothing was written."; return false; }
 
-            HgEngineEntryIndex.TryPatch(text.Substring(open, close - open + 1), HgEngineItemSource.Fields, item, HgEngineItemSource.Headers,
-                lookupFor, out string block, out List<string> unresolved);
+            string original = text.Substring(open, close - open + 1);
+            HgEngineEntryIndex.TryPatch(original, HgEngineItemSource.Fields, item, HgEngineItemSource.Headers,
+                lookupFor, loaded, out string block, out List<string> unresolved, out List<string> conflicts, out merged);
+
+            // A price can be written several ways, so compare the values.
+            bool writePrice = true;
+            if (loaded != null && TryGetPrice(loaded.Value, priceLookup, out int atLoad, out _)
+                && TryGetPrice(new HgEngineSourceBlock(original), priceLookup, out int onDisk, out _) && onDisk != atLoad)
+            {
+                writePrice = false;
+                if (item.FullPrice != atLoad && item.FullPrice != onDisk) conflicts.Add(".price");
+            }
+            if (conflicts.Count > 0)
+            {
+                error = HgEngineLoadedEntries.ConflictMessage(SourceRelPath, conflicts);
+                return false;
+            }
+
             const string key = "[X] = ";
             string keyed = key + block;
-            if (!TryReplacePrice(ref keyed, "X", item.FullPrice, priceLookup)) unresolved.Add("price");
+            if (writePrice && !TryReplacePrice(ref keyed, "X", item.FullPrice, priceLookup)) unresolved.Add("price");
+            if (writePrice && merged != null)
+            {
+                string keyedMerged = key + merged;
+                if (TryReplacePrice(ref keyedMerged, "X", item.FullPrice, priceLookup)) merged = keyedMerged.Substring(key.Length);
+            }
             if (unresolved.Count > 0)
             {
                 error = $"{designator} in {SourceRelPath} has no {string.Join(", ", unresolved)}, so nothing was written.";

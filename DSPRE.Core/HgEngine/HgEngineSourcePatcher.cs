@@ -29,12 +29,14 @@ namespace DSPRE.HgEngine
         public static bool TryFindEntry(string text, string designatorToken, out int openBrace, out int closeBrace)
         {
             openBrace = closeBrace = -1;
-            Match m = Regex.Match(text, @"\[\s*" + Regex.Escape(designatorToken) + @"\s*\]\s*=\s*\{");
-            if (!m.Success) return false;
-            int brace = m.Index + m.Length - 1;
-            if (!BraceScanner.TryFindMatchingBrace(text, brace, out int close)) return false;
-            openBrace = brace; closeBrace = close;
-            return true;
+            foreach (Match m in BraceScanner.InCode(Regex.Match(text, @"\[\s*" + Regex.Escape(designatorToken) + @"\s*\]\s*=\s*\{"), text))
+            {
+                int brace = m.Index + m.Length - 1;
+                if (!BraceScanner.TryFindMatchingBrace(text, brace, out int close)) return false;
+                openBrace = brace; closeBrace = close;
+                return true;
+            }
+            return false;
         }
 
         /// <summary>Reads a field's current raw source text (trimmed), without modifying anything.</summary>
@@ -294,6 +296,19 @@ namespace DSPRE.HgEngine
                 int end = (int)Math.Min(text.Length, openIndex + window);
                 closeIndex = new CSourceFile(text, openIndex, end).MatchingBrace(openIndex);
                 if (closeIndex >= 0 || end == text.Length) return closeIndex >= 0;
+            }
+        }
+
+        /// <summary>Returns the matches from <paramref name="first"/> onward that start in code, because an old entry
+        /// kept in a comment doesn't count. It scans the text once, however many matches there are.</summary>
+        internal static IEnumerable<Match> InCode(Match first, string text)
+        {
+            int scan = 0;
+            for (Match m = first; m.Success; m = m.NextMatch())
+            {
+                while (scan < m.Index)
+                    if (!SkipNonCode(text, ref scan)) scan++;
+                if (scan == m.Index) yield return m;
             }
         }
 

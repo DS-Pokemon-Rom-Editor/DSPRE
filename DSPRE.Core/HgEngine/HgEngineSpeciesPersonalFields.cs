@@ -74,7 +74,7 @@ namespace DSPRE.HgEngine
         /// fields the entry doesn't declare.</summary>
         public static bool TryLoadInto(int speciesId, PokemonPersonalData data, out string error)
         {
-            if (!HgEngineEntrySource.TryLoad(HgEngineDomain.Species, speciesId, out HgEngineSourceBlock entry, out error)) return false;
+            if (!HgEngineEntrySource.TryLoadForEditing(HgEngineDomain.Species, speciesId, out HgEngineSourceBlock entry, out error)) return false;
             return TryRead(entry, data, HgEngineSymbolTable.Load, out error);
         }
 
@@ -83,12 +83,13 @@ namespace DSPRE.HgEngine
         public static bool TryWriteSource(int speciesId, PokemonPersonalData data, out string error)
         {
             if (!HgEngineEntrySource.TryLoad(HgEngineDomain.Species, speciesId, out HgEngineSourceBlock entry, out error)) return false;
-            List<HgEngineFieldWrite> writes = CollapseAbsentParents(BuildWrites(data, entry, HgEngineSymbolTable.Load), p => entry.TryGetRaw(p, out _));
+            HgEngineSourceBlock basis = HgEngineEntrySource.Basis(HgEngineDomain.Species, speciesId, entry);
+            List<HgEngineFieldWrite> writes = CollapseAbsentParents(BuildWrites(data, basis, HgEngineSymbolTable.Load), p => entry.TryGetRaw(p, out _));
             // Rewriting an unchanged entry would still touch the file and make the next build redo it.
             if (writes.All(w => entry.TryGetRaw(w.Path, out string raw) && raw == w.ValueLiteral)) return true;
 
             HgEngineSourceField<PokemonPersonalData>[] typeFields = All.Where(f => f.Path[1].Name == "types").ToArray();
-            int[] oldTypes = typeFields.Select(f => entry.TryGetRaw(f.Path, out string raw)
+            int[] oldTypes = typeFields.Select(f => basis.TryGetRaw(f.Path, out string raw)
                 && HgEngineSourceExpression.TryEvaluate(raw, HgEngineSourceFields.NameLookup(f.Headers, HgEngineSymbolTable.Load), out int v) ? v : -1).ToArray();
 
             if (!HgEngineWriter.TryWriteFields(HgEngineDomain.Species, speciesId, writes, out _, out error, allowInsert: true, allOrNothing: true))

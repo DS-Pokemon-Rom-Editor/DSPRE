@@ -338,6 +338,7 @@ namespace DSPRE.HgEngine
             BuildRomName = null;
             HgEngineSymbolTable.ClearCache();
             HgEngineFileCache.ClearCache();
+            HgEngineLoadedEntries.Clear();
             HgEngineOwnedFiles.ClearCache();
             HgEngineSync.ClearSyncState();
         }

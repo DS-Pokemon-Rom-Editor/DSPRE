@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace DSPRE.HgEngine
 {
@@ -51,18 +52,82 @@ namespace DSPRE.HgEngine
                 }
             }
 
-            string temp = path + ".dspre-tmp";
-            try
-            {
-                PlainFiles.WriteText(temp, output, encoding ?? new System.Text.UTF8Encoding(false));
-                PlainFiles.Move(temp, path, overwrite: true);
-            }
+            string temp = WriteTemp(path, output, encoding);
+            try { Install(path, temp, output); }
             catch
             {
-                try { if (File.Exists(temp)) File.Delete(temp); } catch (IOException) { }   // the temp file is only cleanup; the original failure is rethrown below
+                DeleteTemp(temp);
                 throw;
             }
+        }
+
+        /// <summary>Writes all the files or none. Each goes to a temporary file first, and if moving one into place fails,
+        /// the files already moved are restored. Throws an <see cref="IOException"/> naming the file.</summary>
+        internal static void WriteAll(IReadOnlyList<(string Path, string Text, System.Text.Encoding Encoding, bool Crlf)> files)
+        {
+            List<(string Path, string Temp, string Output, byte[] Before)> staged = new();
+            string current = null;
+            int moved = 0;
+            try
+            {
+                foreach ((string path, string text, System.Text.Encoding encoding, bool crlf) in files)
+                {
+                    current = path;
+                    string lf = text.Replace("\r\n", "\n");
+                    string output = crlf ? lf.Replace("\n", "\r\n") : lf;
+                    byte[] before = File.Exists(path) ? File.ReadAllBytes(path) : null;
+                    staged.Add((path, WriteTemp(path, output, encoding), output, before));
+                }
+                foreach ((string path, string temp, string output, byte[] _) in staged)
+                {
+                    current = path;
+                    Install(path, temp, output);
+                    moved++;
+                }
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                foreach ((string path, string _, string _, byte[] before) in staged.Take(moved)) Restore(path, before);
+                foreach ((string _, string temp, string _, byte[] _) in staged.Skip(moved)) DeleteTemp(temp);
+                throw new IOException($"Couldn't write {Path.GetFileName(current)}: {ex.Message}", ex);
+            }
+        }
+
+        private static string WriteTemp(string path, string output, System.Text.Encoding encoding)
+        {
+            string temp = path + ".dspre-tmp";
+            try { PlainFiles.WriteText(temp, output, encoding ?? new System.Text.UTF8Encoding(false)); }
+            catch
+            {
+                DeleteTemp(temp);
+                throw;
+            }
+            return temp;
+        }
+
+        private static void Install(string path, string temp, string output)
+        {
+            PlainFiles.Move(temp, path, overwrite: true);
             Cache[path] = new Entry(File.GetLastWriteTimeUtc(path), output);
+        }
+
+        private static void Restore(string path, byte[] before)
+        {
+            Cache.Remove(path);
+            try
+            {
+                if (before != null) PlainFiles.WriteBytes(path, before);
+                else File.Delete(path);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                AppLogger.Error($"hg-engine save: couldn't put {path} back: {ex.Message}");
+            }
+        }
+
+        private static void DeleteTemp(string temp)
+        {
+            try { if (File.Exists(temp)) File.Delete(temp); } catch (IOException) { }   // Cleanup only. The original failure is still reported.
         }
 
         public static string GetText(string path)

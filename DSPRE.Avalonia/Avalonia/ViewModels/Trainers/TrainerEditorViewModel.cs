@@ -893,7 +893,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void LoadTrainerFromSource(int index)
         {
-            if (!HgEngineTrainerSource.TryLoad(index, out HgEngineSourceBlock block, out string error))
+            if (!HgEngineTrainerSource.TryLoadForEditing(index, out HgEngineSourceBlock block, out string error))
             {
                 _ = DialogHelper.ShowErrorAsync($"Couldn't load trainer {index} from hg-engine source:\n{error}", "Trainer editor");
                 return;

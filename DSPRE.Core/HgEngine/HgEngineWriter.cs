@@ -64,8 +64,28 @@ namespace DSPRE.HgEngine
             }
 
             string text = HgEngineFileCache.GetText(sourcePath);
+            HgEngineSourceBlock? loaded = HgEngineLoadedEntries.Get(sourcePath, designator);
+            List<HgEngineArrayCount> resizes = (arrayCounts ?? Enumerable.Empty<HgEngineArrayCount>()).ToList();
+            if (HgEngineSourcePatcher.TryFindEntry(text, designator, out int entryOpen, out int entryClose))
+            {
+                HgEngineSourceBlock disk = new HgEngineSourceBlock(text.Substring(entryOpen, entryClose - entryOpen + 1));
+                fields = HgEngineLoadedEntries.Reconcile(loaded, disk, fields, out List<string> conflicts);
+                if (loaded != null)
+                    foreach (HgEngineArrayCount resize in resizes.ToList())
+                    {
+                        int onDisk = disk.GetArrayElements(resize.Path).Count, atLoad = loaded.Value.GetArrayElements(resize.Path).Count;
+                        if (onDisk == atLoad) continue;
+                        resizes.Remove(resize);
+                        if (resize.Count != atLoad && resize.Count != onDisk) conflicts.Add(string.Concat(resize.Path.Select(p => p.ToString())));
+                    }
+                if (conflicts.Count > 0)
+                {
+                    error = HgEngineLoadedEntries.ConflictMessage(Path.GetFileName(sourcePath), conflicts);
+                    return false;
+                }
+            }
             bool anyWritten = false;
-            foreach (HgEngineArrayCount resize in arrayCounts ?? Enumerable.Empty<HgEngineArrayCount>())
+            foreach (HgEngineArrayCount resize in resizes)
             {
                 string before = text;
                 if (!HgEngineSourcePatcher.TrySetArrayCount(ref text, designator, resize.Path, resize.Count, resize.NewElement))
@@ -105,6 +125,7 @@ namespace DSPRE.HgEngine
                     error = $"{Path.GetFileName(sourcePath)} couldn't be written: {ex.Message}";
                     return false;
                 }
+                if (loaded != null) HgEngineLoadedEntries.Remember(sourcePath, designator, HgEngineLoadedEntries.Merge(loaded.Value, fields, resizes));
             }
             return anyWritten || unresolvedFields.Count == 0;
         }

@@ -430,13 +430,6 @@ namespace DSPRE.Avalonia.Views.Shell
                 await DialogHelper.ShowErrorAsync("This hg-engine checkout is older than its ds-rom build. Update it to the current hg-engine, then open it again.", title, this);
                 return;
             }
-            List<string> problems = HgEngineFolder.Problems(checkout);
-            if (problems.Count > 0)
-            {
-                await DialogHelper.ShowErrorAsync("This hg-engine folder can't be built yet:\n\n" + string.Join("\n\n", problems), title, this);
-                return;
-            }
-
             HgEngineShell? stored = HgEngineProject.StoredShellFor(checkout);
             if (stored == null && HgEngineProject.IsWslPath(checkout) && !HgEngineProject.HostIsPosix
                 && !await DialogHelper.AskYesNoAsync(WslLinuxBuildAdvice, "This checkout is inside WSL"))
@@ -447,29 +440,9 @@ namespace DSPRE.Avalonia.Views.Shell
             HgEngineProject.OpenFolder(checkout, shell.Value);
             try
             {
-                List<string> missing = HgEngineFolder.MissingTools(checkout);
-                if (missing == null)
-                {
-                    await DialogHelper.ShowErrorAsync("DSPRE couldn't start the build shell for this folder.", title, this);
-                    return;
-                }
-                if (missing.Count > 0)
-                {
-                    await DialogHelper.ShowErrorAsync("hg-engine's build needs these, and the build shell can't find them:\n\n"
-                        + string.Join(", ", missing) + "\n\nInstall them as hg-engine's README describes, then open the folder again.", title, this);
-                    return;
-                }
-
-                if (!System.IO.File.Exists(HgEngineFolder.RomPath(checkout)) && !await ProvideRomAsync(checkout)) return;
-                string code = HgEngineFolder.ReadGameCode(HgEngineFolder.RomPath(checkout));
-                if (code != HgEngineFolder.GameCode)
-                {
-                    await DialogHelper.ShowErrorAsync($"This checkout's rom.nds is {code ?? "unreadable"}, but hg-engine builds from a HeartGold (USA) ROM ({HgEngineFolder.GameCode}).", title, this);
-                    return;
-                }
-
                 if (!HgEngineFolder.HasBase(checkout))
                 {
+                    if (!await EnsureBuildableAsync(checkout)) return;
                     if (!await DialogHelper.AskYesNoAsync("This hg-engine folder hasn't been built yet. Build it now? DSPRE opens what the build extracts.", title)) return;
                     if (!await new CompileRomView().BuildAsync(this)) return;
                     if (!HgEngineFolder.HasBase(checkout))
@@ -495,6 +468,38 @@ namespace DSPRE.Avalonia.Views.Shell
             }
             // Every way out, including a cancel, leaves the link matching the project that is open.
             finally { HgEngineProject.Refresh(); }
+        }
+
+        /// <summary>
+        /// Checks what hg-engine's make needs just before DSPRE runs it, so a folder built elsewhere still opens.
+        /// Returns false after telling the user what's missing.
+        /// </summary>
+        private async System.Threading.Tasks.Task<bool> EnsureBuildableAsync(string checkout)
+        {
+            const string title = "Build with hg-engine";
+            List<string> problems = HgEngineFolder.Problems(checkout);
+            if (problems.Count > 0)
+            {
+                await DialogHelper.ShowErrorAsync("This hg-engine folder can't be built yet:\n\n" + string.Join("\n\n", problems), title, this);
+                return false;
+            }
+            List<string> missing = HgEngineFolder.MissingTools(checkout);
+            if (missing == null)
+            {
+                await DialogHelper.ShowErrorAsync("DSPRE couldn't start the build shell for this folder.", title, this);
+                return false;
+            }
+            if (missing.Count > 0)
+            {
+                await DialogHelper.ShowErrorAsync("hg-engine's build needs these, and the build shell can't find them:\n\n"
+                    + string.Join(", ", missing) + "\n\nInstall them as hg-engine's README describes, then try again.", title, this);
+                return false;
+            }
+            if (!System.IO.File.Exists(HgEngineFolder.RomPath(checkout)) && !await ProvideRomAsync(checkout)) return false;
+            string code = HgEngineFolder.ReadGameCode(HgEngineFolder.RomPath(checkout));
+            if (code == HgEngineFolder.GameCode) return true;
+            await DialogHelper.ShowErrorAsync($"This checkout's rom.nds is {code ?? "unreadable"}, but hg-engine builds from a HeartGold (USA) ROM ({HgEngineFolder.GameCode}).", title, this);
+            return false;
         }
 
         private const string WslLinuxBuildAdvice =
@@ -814,6 +819,7 @@ namespace DSPRE.Avalonia.Views.Shell
         {
             string error = null;
             string checkout = HgEngineProject.RepoRootWindows;
+            if (!await EnsureBuildableAsync(checkout)) return false;
             bool ok = await WriteProjectFilesAsync("Building with hg-engine…", "Writing the project's files into base/ for make.",
                 () => { HgEngineBuildCache.Invalidate(checkout); return true; }, e => error = e);
             if (!ok)

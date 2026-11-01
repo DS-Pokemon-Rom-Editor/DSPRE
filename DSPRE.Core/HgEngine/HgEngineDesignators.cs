@@ -34,7 +34,7 @@ namespace DSPRE.HgEngine
             designator = null;
             if (domain == HgEngineDomain.Trainers)
             {
-                designator = id.ToString();
+                designator = HgEngineTrainerSource.TokenFor(id);
                 return true;
             }
 

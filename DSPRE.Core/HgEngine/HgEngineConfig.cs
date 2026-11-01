@@ -137,8 +137,9 @@ namespace DSPRE.HgEngine
             foreach (Setting s in changed)
             {
                 string[] lines = LinesOf(s.File);
-                if (s.Line >= lines.Length) { error = $"{s.File} changed since it was read. Reopen the settings."; return false; }
-                lines[s.Line] = Rewrite(lines[s.Line], s.File, s.Enabled, s.Value);
+                int line = FindLine(lines, s);
+                if (line < 0) { error = $"{s.Name} changed in {s.File} since it was read. Reopen the settings."; return false; }
+                lines[line] = Rewrite(lines[line], s.File, s.Enabled, s.Value);
                 if (s.File != HeaderRelPath) continue;
                 // The assembler's copy of the same setting.
                 string[] asm = LinesOf(AsmRelPath);
@@ -159,10 +160,30 @@ namespace DSPRE.HgEngine
             return true;
         }
 
+        /// <summary>Returns the setting's current line, or -1 if it's gone, appears twice or has a new value. Lines move
+        /// when the file is edited elsewhere, so the line read earlier is only a starting point.</summary>
+        private static int FindLine(string[] lines, Setting s)
+        {
+            bool Holds(int i) => i >= 0 && i < lines.Length && Definition(lines[i], s.File) is { Success: true } d && d.Groups[3].Value == s.Name;
+            int line = Holds(s.Line) ? s.Line : -1;
+            if (line < 0)
+            {
+                int[] found = Enumerable.Range(0, lines.Length).Where(Holds).ToArray();
+                if (found.Length != 1) return -1;
+                line = found[0];
+            }
+            Match m = Definition(lines[line], s.File);
+            string value = s.WasValue != null && m.Groups[4].Success ? m.Groups[4].Value.Trim() : null;
+            return !m.Groups[2].Success == s.WasEnabled && value == s.WasValue ? line : -1;
+        }
+
+        private static Match Definition(string line, string file) =>
+            file == HeaderRelPath ? HeaderDefine.Match(line) : AsmEqu.Match(line) is { Success: true } e ? e : AsmLabel.Match(line);
+
         // Turns a line on or off by its leading "//" and swaps in a new value, leaving the rest of the line as it was.
         private static string Rewrite(string line, string file, bool enabled, string value)
         {
-            Match m = file == HeaderRelPath ? HeaderDefine.Match(line) : AsmEqu.Match(line) is { Success: true } e ? e : AsmLabel.Match(line);
+            Match m = Definition(line, file);
             if (!m.Success) return line;
             if (value != null && m.Groups[4].Success)
                 line = line.Substring(0, m.Groups[4].Index) + value.Trim() + line.Substring(m.Groups[4].Index + m.Groups[4].Length);

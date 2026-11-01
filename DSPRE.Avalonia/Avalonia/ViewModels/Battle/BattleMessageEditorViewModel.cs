@@ -410,7 +410,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             _hgeCurrent = new List<HgeMessage>();
             _hgeLoadError = null;
-            if (!HgEngineTrainerSource.TryLoad(trainerId, out HgEngineSourceBlock block, out string error)) { _hgeLoadError = error; return; }
+            if (!HgEngineTrainerSource.TryLoadForEditing(trainerId, out HgEngineSourceBlock block, out string error)) { _hgeLoadError = error; return; }
 
             FieldPathSegment data = FieldPathSegment.Field("data");
             ShowSprite(block.TryGetSymbol(new[] { data, FieldPathSegment.Field("trainerClass") }, TrainerClassHeader, out int trainerClass) ? trainerClass : 0);
