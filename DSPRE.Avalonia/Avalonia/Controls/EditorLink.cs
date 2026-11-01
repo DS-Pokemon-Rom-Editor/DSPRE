@@ -109,7 +109,7 @@ namespace DSPRE.Avalonia.Controls
             foreach (Visual v in top.GetVisualDescendants())
             {
                 if (v is not Control k || ReferenceEquals(k, c) || above.Contains(k) || !k.IsEffectivelyVisible || k.TemplatedParent != null) continue;
-                if (k is not (TextBlock or TemplatedControl) || k is ScrollViewer || k is ContentControl and not (Button or CheckBox or RadioButton)) continue;
+                if (k is not (TextBlock or Image or TemplatedControl) || k is ScrollViewer || k is ContentControl and not (Button or CheckBox or RadioButton)) continue;
                 if (k.GetVisualAncestors().Contains(c) || k.FindAncestorOfType<AdornerLayer>() != null) continue;
                 Point? at = k.TranslatePoint(new Point(0, 0), top);
                 if (at == null) continue;
