@@ -178,7 +178,7 @@ namespace DSPRE.Avalonia
                 S(null, "Touch areas", "Set where each button can be touched."),
                 S("toolbar", "Page", "Pick the page to edit."),
                 S("name:AreaList", "Touch areas", "Type a position and size, or drag on the screen."),
-                S("name:Board", "Screen", "Dragging a button moves its cursor too."),
+                S("name:Board", "Screen", "Dragging a button moves its cursor too. Dragging a dot moves text or an icon."),
                 S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("BattlePressView", "Press frames",

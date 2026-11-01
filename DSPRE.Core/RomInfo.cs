@@ -167,6 +167,16 @@ namespace DSPRE
         /// <summary>The battle message archive; -1 when unknown.</summary>
         public static int BattleStringsTextNumber { get; private set; } = -1;
 
+        /// <summary>The FIGHT label in <see cref="BattleStringsTextNumber"/>.</summary>
+        public const int BattleFightLine = 924;
+
+        /// <summary>The font of the battle touch screen's labels.</summary>
+        public static int BattleTouchFontEntry => GameFamily switch
+        {
+            GameFamilies.HGSS => 4,
+            _ => 2,
+        };
+
         /// <summary>"X used Y!" for each move, three lines a move: your Pokémon, a wild one, the foe's. -1 when unknown.</summary>
         public static int MovesUsedTextNumber { get; private set; } = -1;
 

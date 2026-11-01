@@ -36,6 +36,7 @@
           <TextBlock Grid.Column="5" Text="Height" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
         </Grid>
         <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+          <StackPanel>
           <ItemsControl ItemsSource="{Binding Areas}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:TouchAreaRow">
@@ -50,6 +51,42 @@
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
+          <StackPanel IsVisible="{Binding HasParts}" Margin="0,12,16,0">
+            <CheckBox Content="Text and icons move with their button" IsChecked="{Binding TextFollows}" Margin="0,0,0,6"/>
+            <Grid ColumnDefinitions="18,*,64,64" ColumnSpacing="6" Margin="0,0,0,6">
+              <TextBlock Grid.Column="0" Grid.ColumnSpan="2" Text="Text and icons" FontWeight="SemiBold"/>
+              <TextBlock Grid.Column="2" Text="Across" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
+              <TextBlock Grid.Column="3" Text="Down" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
+            </Grid>
+            <ItemsControl ItemsSource="{Binding Parts}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ButtonPartRow">
+                  <Grid ColumnDefinitions="18,*,64,64" ColumnSpacing="6" Margin="0,2">
+                    <Ellipse Width="10" Height="10" Fill="{Binding Colour}" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                    <NumericUpDown Grid.Column="2" Value="{Binding Across}" Minimum="0" Maximum="255" Increment="1" FormatString="0" ToolTip.Tip="Across in pixels"/>
+                    <NumericUpDown Grid.Column="3" Value="{Binding Down}" Minimum="0" Maximum="191" Increment="1" FormatString="0" ToolTip.Tip="Down in pixels"/>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+          <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" IsVisible="{Binding IconNeedsPatch}" Click="IconPatch_Click" Margin="0,12,0,0"
+                  ToolTip.Tip="Needs FIGHT icon"/>
+          <StackPanel IsVisible="{Binding IconEditable}" Spacing="6" Margin="0,12,16,0">
+            <TextBlock Text="Pokémon icon" FontWeight="SemiBold"/>
+            <Grid ColumnDefinitions="Auto,90,Auto,90" ColumnSpacing="8">
+              <TextBlock Text="Size" VerticalAlignment="Center"/>
+              <NumericUpDown Grid.Column="1" Value="{Binding IconSize}" Minimum="{Binding MinIconSize}" Maximum="{Binding MaxIconSize}" Increment="25" FormatString="0" ToolTip.Tip="Percent of the normal size"/>
+              <TextBlock Grid.Column="2" Text="Rotation" VerticalAlignment="Center"/>
+              <NumericUpDown Grid.Column="3" Value="{Binding IconAngle}" Minimum="0" Maximum="359" Increment="45" FormatString="0" ToolTip.Tip="Degrees"/>
+            </Grid>
+            <StackPanel Orientation="Horizontal" Spacing="16">
+              <CheckBox Content="Flip horizontal" IsChecked="{Binding IconFlipAcross}"/>
+              <CheckBox Content="Flip vertical" IsChecked="{Binding IconFlipDown}"/>
+            </StackPanel>
+          </StackPanel>
+          </StackPanel>
         </ScrollViewer>
       </DockPanel>
     </Border>
@@ -78,6 +115,22 @@
                   <Border Width="{Binding Width}" Height="{Binding Height}" BorderBrush="{Binding Colour}" BorderThickness="2" Background="#33FFFFFF">
                     <TextBlock Text="{Binding Name}" FontSize="11" Margin="3,1" Foreground="{Binding Colour}" FontWeight="SemiBold"/>
                   </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <ItemsControl ItemsSource="{Binding Parts}" IsHitTestVisible="False">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.Styles>
+                <Style Selector="ContentPresenter" x:DataType="vm:ButtonPartRow">
+                  <Setter Property="Canvas.Left" Value="{Binding Left}"/>
+                  <Setter Property="Canvas.Top" Value="{Binding Top}"/>
+                </Style>
+              </ItemsControl.Styles>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ButtonPartRow">
+                  <Ellipse Width="8" Height="8" Fill="{Binding Colour}" Stroke="White" StrokeThickness="1"/>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>

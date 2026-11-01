@@ -9,13 +9,22 @@ namespace DSPRE
     public static partial class RomLocator
     {
         /// <summary>One label or icon spot: x and y as movs immediates (one byte each), or a u16 x, y table entry.</summary>
-        public sealed record BattleTextSpot(int Page, int Button, int X, int Y, bool Table);
+        public sealed record BattleTextSpot(int Page, int Button, int X, int Y, bool Table, string Name);
 
-        private static IEnumerable<BattleTextSpot> Code(int anchor, int page, int button, params (int X, int Y)[] at) =>
-            at.Select(a => new BattleTextSpot(page, button, a.X - anchor, a.Y - anchor, false));
+        private static IEnumerable<BattleTextSpot> Code(int anchor, int page, int button, string[] names, params (int X, int Y)[] at) =>
+            at.Select((a, i) => new BattleTextSpot(page, button, a.X - anchor, a.Y - anchor, false, names[i]));
 
-        private static IEnumerable<BattleTextSpot> Rows(int anchor, int page, int firstButton, int table, int count) =>
-            Enumerable.Range(0, count).Select(i => new BattleTextSpot(page, firstButton + i, table - anchor + i * 4, table - anchor + i * 4 + 2, true));
+        private static IEnumerable<BattleTextSpot> Rows(int anchor, int page, int firstButton, int table, string[] names) =>
+            Enumerable.Range(0, names.Length).Select(i => new BattleTextSpot(page, firstButton + i, table - anchor + i * 4, table - anchor + i * 4 + 2, true, names[i]));
+
+        private static string[] One(string name) => new[] { name };
+
+        private static string[] Moves(string what) => Enumerable.Range(1, 4).Select(i => $"Move {i} {what}").ToArray();
+
+        private static readonly string[] Targets = { "Bottom left name", "Top right name", "Bottom right name", "Top left name", "Cancel" };
+        private static readonly string[] TargetIcons = { "Bottom left icon", "Top right icon", "Bottom right icon", "Top left icon" };
+        private static readonly string[] Agree = { "Yes", "Forget a move", "Give up on a move", "Next Pokémon", "Switch Pokémon" };
+        private static readonly string[] Decline = { "No", "Keep the moves", "Keep the move", "Run away", "Keep battling" };
 
         /// <summary>
         /// Each battle touch screen button's text and icon spots, in BattleCommandButtons page and button order: on Fight's moves the
@@ -28,43 +37,53 @@ namespace DSPRE
             List<BattleTextSpot> spots = new List<BattleTextSpot>();
             if (!hgss)
             {
-                spots.AddRange(Code(a, 0, 0, (0x2E5FA, 0x2E5FE)));
-                spots.AddRange(Code(a, 0, 1, (0x2E624, 0x2E628)));
-                spots.AddRange(Code(a, 0, 2, (0x2E64C, 0x2E650)));
-                spots.AddRange(Code(a, 0, 3, (0x2E674, 0x2E678)));
-                spots.AddRange(Code(a, 1, 0, (0x2EA0C, 0x2EA10)));
+                spots.AddRange(Code(a, 0, 0, One("Fight"), (0x2E5FA, 0x2E5FE)));
+                spots.AddRange(Code(a, 0, 1, One("Bag"), (0x2E624, 0x2E628)));
+                spots.AddRange(Code(a, 0, 2, One("Pokémon"), (0x2E64C, 0x2E650)));
+                spots.AddRange(Code(a, 0, 3, One("Run"), (0x2E674, 0x2E678)));
+                spots.AddRange(Code(a, 1, 0, One("Cancel"), (0x2EA0C, 0x2EA10)));
                 int[] names = { 0x2E8AA, 0x2E8D8, 0x2E904, 0x2E930 };
-                for (int i = 0; i < 4; i++) spots.AddRange(Code(a, 1, i + 1, (names[i], names[i] + 4)));
-                spots.AddRange(Rows(a, 1, 1, 0x35144, 4));
-                spots.AddRange(Rows(a, 1, 1, 0x35194, 4));
-                spots.AddRange(Rows(a, 1, 1, 0x35174, 4));
-                spots.AddRange(Rows(a, 2, 0, 0x351E8, 5));
-                spots.AddRange(Rows(a, 2, 0, 0x351C4, 4));
+                for (int i = 0; i < 4; i++) spots.AddRange(Code(a, 1, i + 1, One($"Move {i + 1} name"), (names[i], names[i] + 4)));
+                spots.AddRange(Rows(a, 1, 1, 0x35144, Moves("PP label")));
+                spots.AddRange(Rows(a, 1, 1, 0x35194, Moves("PP count")));
+                spots.AddRange(Rows(a, 1, 1, 0x35174, Moves("type")));
+                spots.AddRange(Rows(a, 2, 0, 0x351E8, Targets));
+                spots.AddRange(Rows(a, 2, 0, 0x351C4, TargetIcons));
                 // Yes or no, forget a move, give up, next Pokémon and switch Pokémon each place a separate pair.
-                spots.AddRange(Code(a, 3, 0, (0x2EB6E, 0x2EB72), (0x2EC04, 0x2EC08), (0x2ECDC, 0x2ECE0), (0x2EE94, 0x2EE98), (0x2EF7A, 0x2EF7E)));
-                spots.AddRange(Code(a, 3, 1, (0x2EB96, 0x2EB9A), (0x2EC2C, 0x2EC30), (0x2ED04, 0x2ED08), (0x2EEBC, 0x2EEC0), (0x2EFA2, 0x2EFA6)));
-                spots.AddRange(Code(a, 6, 0, (0x2EDF2, 0x2EDF6)));
+                spots.AddRange(Code(a, 3, 0, Agree, (0x2EB6E, 0x2EB72), (0x2EC04, 0x2EC08), (0x2ECDC, 0x2ECE0), (0x2EE94, 0x2EE98), (0x2EF7A, 0x2EF7E)));
+                spots.AddRange(Code(a, 3, 1, Decline, (0x2EB96, 0x2EB9A), (0x2EC2C, 0x2EC30), (0x2ED04, 0x2ED08), (0x2EEBC, 0x2EEC0), (0x2EFA2, 0x2EFA6)));
+                spots.AddRange(Code(a, 6, 0, One("Stop"), (0x2EDF2, 0x2EDF6)));
             }
             else
             {
-                spots.AddRange(Code(a, 0, 0, (0x2F7CA, 0x2F7CE)));
-                spots.AddRange(Code(a, 0, 1, (0x2F7F4, 0x2F7F8)));
-                spots.AddRange(Code(a, 0, 2, (0x2F81E, 0x2F822)));
-                spots.AddRange(Code(a, 0, 3, (0x2F848, 0x2F84C)));
-                spots.AddRange(Code(a, 1, 0, (0x2FD6C, 0x2FD70)));
+                spots.AddRange(Code(a, 0, 0, One("Fight"), (0x2F7CA, 0x2F7CE)));
+                spots.AddRange(Code(a, 0, 1, One("Bag"), (0x2F7F4, 0x2F7F8)));
+                spots.AddRange(Code(a, 0, 2, One("Pokémon"), (0x2F81E, 0x2F822)));
+                spots.AddRange(Code(a, 0, 3, One("Run"), (0x2F848, 0x2F84C)));
+                spots.AddRange(Code(a, 1, 0, One("Cancel"), (0x2FD6C, 0x2FD70)));
                 int[] names = { 0x2FC0A, 0x2FC38, 0x2FC64, 0x2FC90 };
-                for (int i = 0; i < 4; i++) spots.AddRange(Code(a, 1, i + 1, (names[i], names[i] + 4)));
-                spots.AddRange(Rows(a, 1, 1, 0x36A08, 4));
-                spots.AddRange(Rows(a, 1, 1, 0x36A48, 4));
-                spots.AddRange(Rows(a, 1, 1, 0x369F8, 4));
-                spots.AddRange(Rows(a, 2, 0, 0x36AB0, 5));
-                spots.AddRange(Rows(a, 2, 0, 0x36A68, 4));
-                spots.AddRange(Code(a, 3, 0, (0x2FED2, 0x2FED6), (0x2FF6C, 0x2FF70), (0x30048, 0x3004C), (0x30204, 0x30208), (0x302EE, 0x302F2)));
-                spots.AddRange(Code(a, 3, 1, (0x2FEFE, 0x2FF02), (0x2FF98, 0x2FF9C), (0x30074, 0x30078), (0x30230, 0x30234), (0x3031A, 0x3031E)));
-                spots.AddRange(Code(a, 6, 0, (0x30162, 0x30166)));
+                for (int i = 0; i < 4; i++) spots.AddRange(Code(a, 1, i + 1, One($"Move {i + 1} name"), (names[i], names[i] + 4)));
+                spots.AddRange(Rows(a, 1, 1, 0x36A08, Moves("PP label")));
+                spots.AddRange(Rows(a, 1, 1, 0x36A48, Moves("PP count")));
+                spots.AddRange(Rows(a, 1, 1, 0x369F8, Moves("type")));
+                spots.AddRange(Rows(a, 2, 0, 0x36AB0, Targets));
+                spots.AddRange(Rows(a, 2, 0, 0x36A68, TargetIcons));
+                spots.AddRange(Code(a, 3, 0, Agree, (0x2FED2, 0x2FED6), (0x2FF6C, 0x2FF70), (0x30048, 0x3004C), (0x30204, 0x30208), (0x302EE, 0x302F2)));
+                spots.AddRange(Code(a, 3, 1, Decline, (0x2FEFE, 0x2FF02), (0x2FF98, 0x2FF9C), (0x30074, 0x30078), (0x30230, 0x30234), (0x3031A, 0x3031E)));
+                spots.AddRange(Code(a, 6, 0, One("Stop"), (0x30162, 0x30166)));
             }
             return spots;
         }
+
+        /// <summary>
+        /// Block is the code's distance from BattleCommandSites.TargetGrid and Sprite is the register holding the sprite. The code ends by
+        /// calling ManagedSprite_SetPositionXYWithSubscreenOffset, and the other calls are distances from that.
+        /// </summary>
+        public sealed record FightIconCode(int Block, int Sprite, int OverwriteMode, int Scale, int Rotation);
+
+        // pokeplatinum BattleSubscreen_DrawActionMenu and the matching pokeheartgold battle_input.c function. Measured on every dump.
+        public static FightIconCode FightIconDistances(bool hgss) =>
+            hgss ? new FightIconCode(-0x709E, 6, 0x1A4, 0x230, 0x280) : new FightIconCode(-0x69BE, 4, 0x1A4, 0x1E8, 0x29C);
 
         /// <summary>A battle touch screen page's touch list and cursor grid, from BattleCommandSites.TargetGrid.</summary>
         public sealed record BattleCommandTable(int Touch, int? Grid = null, int Width = 0, int Height = 0);

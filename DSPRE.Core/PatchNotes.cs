@@ -263,6 +263,15 @@ namespace DSPRE
                 "Requirements\n" +
                 "HeartGold or SoulSilver in English, French, German or Italian, or Spanish SoulSilver, with the ARM9 expansion. " +
                 "Not compatible with hg-engine.",
+            ["fightIcon"] =
+                "What it does\n" +
+                "Lets you move, resize, rotate and flip the Pokémon icon beside FIGHT. The icon no longer follows the FIGHT text, and the second Pokémon's icon in a double battle has a separate spot.\n\n" +
+                "Where to edit\n" +
+                "The Screens editor's Battle screen, on the Command page of the Layout tab.\n\n" +
+                "Good to know\n" +
+                "Size goes up to 200%. A rotated icon can lose its corners past 140%.\n\n" +
+                "Requirements\n" +
+                "Platinum, HeartGold or SoulSilver, except Japanese. Not compatible with hg-engine.",
             ["buttonFrames"] =
                 "What it does\n" +
                 "Lets you import art onto the battle Command buttons. Each button press gets its own frames, so the tiles the game kept for pressed buttons are free for the art. " +
@@ -389,6 +398,9 @@ namespace DSPRE
             ["fieldMenuColours"] = ("Overlay 27's colour routines and the menu's exit check change, and the button palette file grows.",
                 "No additional space or synthetic overlay.",
                 "overlay 27"),
+            ["fightIcon"] = ("Changes the code in the battle overlay that places the icon beside FIGHT.",
+                "No additional space or synthetic overlay.",
+                "the battle overlay"),
             ["buttonFrames"] = ("The battle overlay's press loop, buffer sizes and press tables change, and the touch screen files grow.",
                 "No additional space or synthetic overlay.",
                 "the battle overlay"),

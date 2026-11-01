@@ -387,7 +387,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 IReadOnlyList<(int X, int Y)>[][] text = Enumerable.Range(0, buttons.PageNames.Count)
                     .Select(p => Enumerable.Range(0, buttons.ButtonsOf(p).Length).Select(b => buttons.TextOf(p, b)).ToArray()).ToArray();
-                return () => TouchTabPictures.Battle(page, (p, b) => text[p][b]);
+                FightIconView icon = buttons.IconView;
+                return () => TouchTabPictures.Battle(page, (p, b) => text[p][b], icon: icon);
             }, archives: BattleArchives);
             ScreenEditorView[] press = BattlePressFrames.SupportsCurrentRom && !RomInfo.IsHGE
                 ? new[] { new ScreenEditorView("Press", () => new Views.Graphics.BattlePressView(new BattlePressViewModel(BattlePressFrames.Panel)), null, Unpack(BattleArchives), "Opening Battle screen…") }

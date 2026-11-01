@@ -9,7 +9,7 @@ namespace DSPRE.ROMFiles
     /// The battle touch screen's menus: each button's touch area, and for Command, Fight and Target the grid of cells the
     /// cursor walks. The cursor and the button's text and icons follow a moved area; the button art is a picture and doesn't.
     /// </summary>
-    public sealed class BattleCommandButtons : IScreenButtons, IScreenButtonGrid
+    public sealed class BattleCommandButtons : IScreenButtons, IScreenButtonGrid, IScreenParts, IScreenIconLook
     {
         private sealed record Page(string Name, string[] Buttons, Table At);
 
@@ -35,6 +35,7 @@ namespace DSPRE.ROMFiles
         private readonly (int Touch, int Grid)[] _starts;
         // Where each label and icon spot's x and y sit in _data.
         private readonly List<(RomLocator.BattleTextSpot Spot, int X, int Y)> _text = new List<(RomLocator.BattleTextSpot, int, int)>();
+        private readonly int _iconCode;
         private readonly byte[] _data;
 
         private BattleCommandButtons(Page[] pages, int overlay, int anchor, ScreenTables tables, IReadOnlyList<RomLocator.BattleTextSpot> text)
@@ -48,6 +49,8 @@ namespace DSPRE.ROMFiles
                 int size = spot.Table ? 2 : 1;
                 _text.Add((spot, tables.Take(overlay, anchor + spot.X, size), tables.Take(overlay, anchor + spot.Y, size)));
             }
+            // The code is always in the buffer, so the buffer keeps its size when the patch goes on.
+            _iconCode = BattleFightIcon.SupportsCurrentRom ? tables.Take(overlay, BattleFightIcon.Block, BattleFightIcon.BlockBytes) : -1;
             _data = tables.Finish();
         }
 
@@ -61,9 +64,20 @@ namespace DSPRE.ROMFiles
 
         /// <summary>A button's text and icon spots in pixels, in RomLocator.BattleTextSpots order.</summary>
         public IReadOnlyList<(int X, int Y)> TextOf(int page, int button) =>
-            _text.Where(t => t.Spot.Page == page && t.Spot.Button == button)
-                 .Select(t => t.Spot.Table ? ((int)BitConverter.ToUInt16(_data, t.X), (int)BitConverter.ToUInt16(_data, t.Y)) : (_data[t.X], _data[t.Y]))
-                 .ToList();
+            _text.Where(t => t.Spot.Page == page && t.Spot.Button == button).Select(SpotOf).ToList();
+
+        private (int X, int Y) SpotOf((RomLocator.BattleTextSpot Spot, int X, int Y) t)
+        {
+            int size = t.Spot.Table ? 2 : 1;
+            return (ScreenSpots.Value(_data, t.X, size), ScreenSpots.Value(_data, t.Y, size));
+        }
+
+        private void ShiftText((RomLocator.BattleTextSpot Spot, int X, int Y) t, int dx, int dy)
+        {
+            int size = t.Spot.Table ? 2 : 1;
+            ScreenSpots.Shift(_data, t.X, size, dx, 255);
+            ScreenSpots.Shift(_data, t.Y, size, dy, 191);
+        }
 
         /// <summary>Null when this ROM's tables aren't known or don't look like the game's.</summary>
         public static BattleCommandButtons Read()
@@ -106,11 +120,92 @@ namespace DSPRE.ROMFiles
         public void Move(int page, int button, int dx, int dy)
         {
             (dx, dy) = TouchRects.Move(_data, TouchAt(page, button), dx, dy);
-            foreach ((RomLocator.BattleTextSpot spot, int x, int y) in _text.Where(t => t.Spot.Page == page && t.Spot.Button == button))
+            foreach ((RomLocator.BattleTextSpot Spot, int X, int Y) t in _text.Where(t => t.Spot.Page == page && t.Spot.Button == button)) ShiftText(t, dx, dy);
+            if (page == Command && button == Fight) foreach ((int x, int y) in IconSpots()) ShiftIcon(x, y, dx, dy);
+        }
+
+        public void MoveArea(int page, int button, int dx, int dy) => TouchRects.Move(_data, TouchAt(page, button), dx, dy);
+
+        private void ShiftIcon(int x, int y, int dx, int dy)
+        {
+            ScreenSpots.Shift(_data, x, 1, dx, 255);
+            ScreenSpots.Shift(_data, y, 1, dy, 191);
+        }
+
+        // ── text and icons ──
+
+        public bool IconReady => BattleFightIcon.Holds(_data, _iconCode);
+
+        private IEnumerable<(int X, int Y)> IconSpots() => IconReady
+            ? new[] { (_iconCode + BattleFightIcon.FirstX, _iconCode + BattleFightIcon.FirstY), (_iconCode + BattleFightIcon.SecondX, _iconCode + BattleFightIcon.SecondY) }
+            : Array.Empty<(int, int)>();
+
+        private List<(RomLocator.BattleTextSpot Spot, int X, int Y)> TextOn(int page) => _text.Where(t => t.Spot.Page == page).ToList();
+
+        public IReadOnlyList<ScreenPart> PartsOf(int page)
+        {
+            List<ScreenPart> parts = TextOn(page).Select(t => new ScreenPart(t.Spot.Name, t.Spot.Button)).ToList();
+            if (page == Command && IconReady) parts.AddRange(new[] { new ScreenPart("Pokémon icon", Fight), new ScreenPart("Second Pokémon's icon in doubles", Fight) });
+            return parts;
+        }
+
+        public (int X, int Y) PartAt(int page, int part)
+        {
+            List<(RomLocator.BattleTextSpot Spot, int X, int Y)> text = TextOn(page);
+            if (part >= text.Count)
             {
-                int size = spot.Table ? 2 : 1;
-                ScreenSpots.Shift(_data, x, size, dx, 255);
-                ScreenSpots.Shift(_data, y, size, dy, 191);
+                (int ix, int iy) = IconSpots().ElementAt(part - text.Count);
+                return (_data[ix], _data[iy]);
+            }
+            return SpotOf(text[part]);
+        }
+
+        public void MovePart(int page, int part, int dx, int dy)
+        {
+            List<(RomLocator.BattleTextSpot Spot, int X, int Y)> text = TextOn(page);
+            if (part >= text.Count)
+            {
+                (int ix, int iy) = IconSpots().ElementAt(part - text.Count);
+                ShiftIcon(ix, iy, dx, dy);
+                return;
+            }
+            ShiftText(text[part], dx, dy);
+        }
+
+        public string IconPatch => "fightIcon";
+        public bool OffersIcon(int page) => page == Command && _iconCode >= 0;
+
+        public IconLook Look
+        {
+            get => IconReady ? BattleFightIcon.LookOf(_data, _iconCode) : new IconLook(100, 0, false, false);
+            set { if (IconReady) BattleFightIcon.SetLook(_data, _iconCode, value); }
+        }
+
+        /// <summary>The icon on the first battler's Command page, or null before the patch.</summary>
+        public FightIconView IconView
+        {
+            get
+            {
+                if (!IconReady) return null;
+                (int x, int y) = IconSpots().First();
+                return new FightIconView(_data[x], _data[y], Look);
+            }
+        }
+
+        public bool ReloadCode()
+        {
+            if (_iconCode < 0) return false;
+            try
+            {
+                byte[] file = _tables.FileBytes();
+                if (BattleFightIcon.Holds(file, _iconCode) == IconReady) return false;
+                Array.Copy(file, _iconCode, _data, _iconCode, BattleFightIcon.BlockBytes);
+                return true;
+            }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
+            {
+                AppLogger.WarnOnce("BattleCommandButtons.ReloadCode", ex);
+                return false;
             }
         }
 
@@ -157,7 +252,18 @@ namespace DSPRE.ROMFiles
         public string Fixed(int page, int stop, CursorDirection d) => "Set by the grid";
 
         public byte[] ToBytes() => _tables.Copy();
-        public void FromBytes(byte[] bytes) => _tables.Load(bytes);
+
+        // Undo can reach states from before the patch, and those must not remove its code.
+        private byte[] KeepingCode(byte[] bytes)
+        {
+            if (!IconReady || bytes == null || bytes.Length != _data.Length || BattleFightIcon.Holds(bytes, _iconCode)) return bytes;
+            byte[] kept = (byte[])bytes.Clone();
+            Array.Copy(_data, _iconCode, kept, _iconCode, BattleFightIcon.BlockBytes);
+            return kept;
+        }
+
+        public void FromBytes(byte[] bytes) => _tables.Load(KeepingCode(bytes));
+
         public byte[] FileBytes() => _tables.FileBytes();
 
         public string WhyNot() => _tables.NewProblem(Problems, _data);
@@ -180,7 +286,7 @@ namespace DSPRE.ROMFiles
         public void WriteFile(byte[] bytes)
         {
             if (WhyNotWrite(bytes) is string why) throw new InvalidOperationException(why);
-            _tables.Write(bytes);
+            _tables.Write(KeepingCode(bytes));
         }
     }
 }

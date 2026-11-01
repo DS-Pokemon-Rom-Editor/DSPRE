@@ -11,7 +11,7 @@ namespace DSPRE.Avalonia.Data
         // A label: its battle string, where the game centres it in Platinum and in HGSS, and its colours in label palette row 2.
         private sealed record BattleLabel(int Message, int X, int PtY, int HgY, int Ink, bool Centred = true);
 
-        private const int Fight = 924, Bag = 925, PokemonLabel = 926, Run = 927, Cancel = 929, TargetCancel = 930, Yes = 940, No = 941;
+        private const int Fight = BattleFightLine, Bag = 925, PokemonLabel = 926, Run = 927, Cancel = 929, TargetCancel = 930, Yes = 940, No = 941;
         private const int ParkBall = 1223, Stop = 1260, PpLabel = 938;
         private const int LabelRow = 2, MoveRow = 3, PpRow = 4, TargetRow = 6;
 
@@ -54,17 +54,17 @@ namespace DSPRE.Avalonia.Data
         /// Draws a battle touch screen page's labels (BattleCommandButtons order) at the text spots <paramref name="textOf"/> gives for each
         /// page and button.
         /// </summary>
-        internal static void BattleTouchLabels(byte[] rgba, int page, Func<int, int, IReadOnlyList<(int X, int Y)>> textOf)
+        internal static void BattleTouchLabels(byte[] rgba, int page, Func<int, int, IReadOnlyList<(int X, int Y)>> textOf, FightIconView icon = null)
         {
             if (rgba == null || page < 0 || page >= BattlePageLabels.Length || BattleStringsTextNumber < 0) return;
-            WithArchive(() => { DrawBattleLabels(rgba, page, textOf); return 0; });
+            WithArchive(() => { DrawBattleLabels(rgba, page, textOf, icon); return 0; });
         }
 
-        private static void DrawBattleLabels(byte[] rgba, int page, Func<int, int, IReadOnlyList<(int X, int Y)>> textOf)
+        private static void DrawBattleLabels(byte[] rgba, int page, Func<int, int, IReadOnlyList<(int X, int Y)>> textOf, FightIconView icon)
         {
             (int X, int Y)? Spot(int p, int b, int k) => textOf?.Invoke(p, b) is { } list && list.Count > k ? list[k] : null;
             bool hg = GameFamily == GameFamilies.HGSS;
-            FieldFont font = Font(hg ? 4 : 2) ?? SystemFont;
+            FieldFont font = Font(BattleTouchFontEntry) ?? SystemFont;
             ushort[] colours = LabelColours();
             ushort[] Row(int row) => DsBgScreen.Row(colours, row);
             int Y(int pt, int hgY) => hg ? hgY : pt;
@@ -80,7 +80,11 @@ namespace DSPRE.Avalonia.Data
                 int left = x - DsBgScreen.MeasureText(font, text) / 2;
                 DsBgScreen.DrawText(rgba, font, text, left, top, row[label.Ink], row[label.Ink + 1], row[label.Ink + 2]);
                 // ov16 places the active Pokémon's icon left of FIGHT; Pal Park shows none.
-                if (label.Message == Fight && page != 5 && !PartySample.Party[0].Empty) PartyIcon(rgba, PartySample.Party[0].Species, left - 16, top);
+                if (label.Message == Fight && page != 5 && !PartySample.Party[0].Empty)
+                {
+                    if (icon == null) PartyIcon(rgba, PartySample.Party[0].Species, left - 16, top);
+                    else TurnedPartyIcon(rgba, PartySample.Party[0].Species, icon);
+                }
             }
 
             if (page == 1) FightPage(rgba, font, Row, Y, Spot);

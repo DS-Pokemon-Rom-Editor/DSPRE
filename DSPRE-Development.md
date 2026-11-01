@@ -469,7 +469,8 @@ games' touch rectangles; a touch on the right or bottom edge misses.
 `ButtonNames`. The battle, bag, touch menu, Pokégear, summary and party menu screens each have a separate reader. Picture spots that
 move with a button are `TouchListButtons.Spots` entries. Background art that moves is a page's `ScreenTiles`, which
 `ScreenTileArt` reads and writes. Spots the code loads with Thumb instructions are `GridMenuButtons.CodeSpot`s. A button whose
-art the game places itself is locked with `TouchRects.FixedArt`.
+art the game places itself is locked with `TouchRects.FixedArt`. `IScreenParts` gives a reader rows for text and icons that move
+apart from their buttons, and `IScreenIconLook` adds an icon's size, rotation and flip.
 
 The picture function runs on the UI thread and reads what the page needs; the function it returns draws off the UI thread.
 
@@ -551,6 +552,7 @@ public static bool ApplyClassIntrosPatch()
 
 `ROMFiles/BattlePressFrames.cs` gives every battle button press its own pages in the screen files. `TouchButtonFit` builds each frame
 from the art and the pixels the game changes in that frame, and the Battle screen's Press tab (`BattlePressViewModel`) edits the frames.
+`ROMFiles/BattleFightIcon.cs` rewrites the code that places the Pokémon icon beside FIGHT. The new code fits in the same space.
 `ROMFiles/FieldMenuColoursPatch.cs` gives each HGSS field menu button its own pair of colours from the button palette file.
 
 Each patch applies only itself. One that needs the ARM9 expansion returns `Unsupported("Requires ARM9

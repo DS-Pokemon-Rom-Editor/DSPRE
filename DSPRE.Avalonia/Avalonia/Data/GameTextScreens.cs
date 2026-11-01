@@ -1257,16 +1257,53 @@ namespace DSPRE.Avalonia.Data
             return 0;
         });
 
+        // A scaled or turned sprite gets twice the room, so anything past 64 pixels across is cut off, as on the DS.
+        private static void TurnedPartyIcon(byte[] rgba, int species, FightIconView icon)
+        {
+            try
+            {
+                if (IconPicture(species) is { } p) PasteTurned(rgba, p, icon);
+            }
+            catch (Exception ex) { AppLogger.WarnOnce("GameTextScreens.TurnedPartyIcon", ex); }
+        }
+
+        private static GraphicAssets.Preview IconPicture(int species)
+        {
+            if (Without(DirNames.MonIcons, species + 7)) return null;
+            GraphicAssets.Archive icons = GraphicAssets.All.FirstOrDefault(a => a.Dir == DirNames.MonIcons);
+            GraphicAssets.Preview p = icons == null ? null : GraphicAssets.Render(icons, species + 7);
+            if (p?.Rgba == null || p.Width < 32) return null;
+            _pieces.Add((DirNames.MonIcons, species + 7, "Drawing"));
+            Credit(DirNames.MonIcons, species + 7);
+            return p;
+        }
+
+        private static void PasteTurned(byte[] rgba, GraphicAssets.Preview p, FightIconView icon)
+        {
+            double scale = icon.Look.Percent / 100.0, angle = icon.Look.Degrees * Math.PI / 180;
+            double cos = Math.Cos(angle), sin = Math.Sin(angle);
+            for (int yy = -32; yy < 32; yy++)
+                for (int xx = -32; xx < 32; xx++)
+                {
+                    int sx = icon.X + xx, sy = icon.Y + yy;
+                    if (sx < 0 || sy < 0 || sx >= W || sy >= H) continue;
+                    // The game rotates and then flips, so this reverse lookup undoes the flip first.
+                    double dx = (icon.Look.FlipAcross ? -1 : 1) * (xx + 0.5), dy = (icon.Look.FlipDown ? -1 : 1) * (yy + 0.5);
+                    double u = (dx * cos + dy * sin) / scale, v = (-dx * sin + dy * cos) / scale;
+                    int fromX = (int)Math.Floor(u) + 16, fromY = (int)Math.Floor(v) + 16;
+                    if (fromX < 0 || fromY < 0 || fromX >= 32 || fromY >= 32 || fromY >= p.Height) continue;
+                    int from = (fromY * p.Width + fromX) * 4;
+                    if (p.Rgba[from + 3] == 0) continue;
+                    Array.Copy(p.Rgba, from, rgba, (sy * W + sx) * 4, 4);
+                }
+        }
+
         private static void PartyIcon(byte[] rgba, int species, int x, int y)
         {
             try
             {
-                if (Without(DirNames.MonIcons, species + 7)) return;
-                GraphicAssets.Archive icons = GraphicAssets.All.FirstOrDefault(a => a.Dir == DirNames.MonIcons);
-                GraphicAssets.Preview p = icons == null ? null : GraphicAssets.Render(icons, species + 7);
-                if (p?.Rgba == null || p.Width < 32) return;
-                _pieces.Add((DirNames.MonIcons, species + 7, "Drawing"));
-                Credit(DirNames.MonIcons, species + 7);
+                GraphicAssets.Preview p = IconPicture(species);
+                if (p == null) return;
                 for (int yy = 0; yy < 32 && yy < p.Height; yy++)
                     for (int xx = 0; xx < 32; xx++)
                     {

@@ -1127,6 +1127,20 @@ namespace DSPRE
             return true;
         }
 
+        public static bool ApplyFightIconPatch()
+        {
+            if (AlreadyApplied(Probe(() => BattleFightIcon.IsApplied))) return false;
+            if (BattleFightIcon.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
+            int overlay = RomLocator.BattleCommandSites.Overlay;
+            if (!ConfirmYesNo("Lets you move, resize, rotate and flip the Pokémon icon beside FIGHT." + BackupNote($"overlay {overlay}") + "\n\nApply this patch?" + CreditNote("fightIcon"), "Confirm to proceed"))
+                return false;
+            string overlayPath = OverlayUtils.GetPath(overlay);
+            PlainFiles.Copy(overlayPath, overlayPath + BackupSuffix, overwrite: true);
+            BattleFightIcon.Apply();
+            ShowInfo("You can now change the FIGHT icon. It's in the Screens editor, on the Battle screen's Layout tab.", "Patch applied");
+            return true;
+        }
+
         public static bool ApplyFieldMenuColoursPatch()
         {
             if (AlreadyApplied(Probe(() => FieldMenuColoursPatch.IsApplied))) return false;
@@ -1614,6 +1628,7 @@ namespace DSPRE
             ["classIntros"] = ("Mixone", "trainer class intros"),
             ["hpBarText"] = ("Mixone", "clear battle text background"),
             ["buttonFrames"] = ("Mixone", "battle button frames"),
+            ["fightIcon"] = ("Mixone", "the FIGHT icon"),
             ["fieldMenuColours"] = ("Mixone", "field menu button colours"),
             ["summaryFonts"] = ("Mixone", "summary screen fonts"),
             ["partyFonts"] = ("Mixone", "party menu fonts"),
@@ -1735,6 +1750,7 @@ namespace DSPRE
             ["classIntros"] = "Trainer class intros",
             ["hpBarText"] = "Clear battle text background",
             ["buttonFrames"] = "Battle button frames",
+            ["fightIcon"] = "FIGHT icon",
             ["fieldMenuColours"] = "Field menu button colours",
             ["summaryFonts"] = "Summary screen fonts",
             ["partyFonts"] = "Party menu fonts",
@@ -2056,6 +2072,15 @@ namespace DSPRE
                     if (RomInfo.IsHGE) return Unsupported("Not compatible with hg-engine");
                     if (!BattlePressFrames.SupportsCurrentRom) return Unsupported("Platinum, HeartGold and SoulSilver, except Japanese");
                     return BattlePressFrames.IsApplied ? PatchState.Applied : PatchState.Available;
+                }));
+
+            list.Add(Status("fightIcon",
+                "Lets you move, resize, rotate and flip the Pokémon icon beside FIGHT.",
+                () =>
+                {
+                    if (RomInfo.IsHGE) return Unsupported("Not compatible with hg-engine");
+                    if (!BattleFightIcon.SupportsCurrentRom) return Unsupported("Platinum, HeartGold and SoulSilver, except Japanese");
+                    return BattleFightIcon.IsApplied ? PatchState.Applied : PatchState.Available;
                 }));
 
             list.Add(Status("fieldMenuColours",
@@ -2536,6 +2561,7 @@ namespace DSPRE
                 case "classIntros": return ApplyClassIntrosPatch();
                 case "hpBarText": return ApplyHpBarTextPatch();
                 case "buttonFrames": return ApplyButtonFramesPatch();
+                case "fightIcon": return ApplyFightIconPatch();
                 case "fieldMenuColours": return ApplyFieldMenuColoursPatch();
                 case "summaryFonts": return ApplySummaryFontsPatch();
                 case "partyFonts": return ApplyPartyFontsPatch();

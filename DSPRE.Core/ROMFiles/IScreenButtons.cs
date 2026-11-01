@@ -67,6 +67,34 @@ namespace DSPRE.ROMFiles
         string WhyNotWrite(byte[] bytes);
     }
 
+    /// <summary>A piece of text or an icon on a button.</summary>
+    public sealed record ScreenPart(string Name, int Button);
+
+    /// <summary>Screens whose text and icons can move apart from their buttons.</summary>
+    public interface IScreenParts
+    {
+        IReadOnlyList<ScreenPart> PartsOf(int page);
+        (int X, int Y) PartAt(int page, int part);
+        void MovePart(int page, int part, int dx, int dy);
+
+        /// <summary>Moves the touch area and its cursor, and leaves the text and icons where they are.</summary>
+        void MoveArea(int page, int button, int dx, int dy);
+    }
+
+    /// <summary>Screens with an icon whose size, angle and flip can change once its patch is applied.</summary>
+    public interface IScreenIconLook
+    {
+        /// <summary>The patch's toolbox key.</summary>
+        string IconPatch { get; }
+
+        bool OffersIcon(int page);
+        bool IconReady { get; }
+        IconLook Look { get; set; }
+
+        /// <summary>Picks up the code the patch wrote. False when it didn't change.</summary>
+        bool ReloadCode();
+    }
+
     /// <summary>Screens whose cursor walks a grid of cells, each holding a button; the arrows follow from the grid.</summary>
     public interface IScreenButtonGrid
     {

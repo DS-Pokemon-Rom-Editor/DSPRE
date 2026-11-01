@@ -35,6 +35,7 @@ namespace DSPRE.Avalonia
         private readonly bool[] _on = { true, true, true, true };
         private readonly List<Card> _cards = new List<Card>();
         private readonly Func<int, int, IReadOnlyList<(int X, int Y)>> _textOf;
+        private FightIconView _icon;
         private readonly TextBlock[] _tiles = new TextBlock[TouchButtonFit.ButtonCount], _notes = new TextBlock[TouchButtonFit.ButtonCount];
         private readonly Image _main = NewImage();
         private readonly TextBlock _count = new TextBlock(), _why = new TextBlock { TextWrapping = TextWrapping.Wrap }, _freed = new TextBlock { FontSize = 12, TextWrapping = TextWrapping.Wrap };
@@ -64,12 +65,13 @@ namespace DSPRE.Avalonia
             }
         }
 
-        private static Func<int, int, IReadOnlyList<(int X, int Y)>> LabelSpots()
+        private Func<int, int, IReadOnlyList<(int X, int Y)>> LabelSpots()
         {
             if (RomLocator.BattleCommandSites == null) return null;
             BattleCommandButtons buttons = BattleCommandButtons.Read();
             IReadOnlyList<(int X, int Y)>[][] text = Enumerable.Range(0, buttons.PageNames.Count)
                 .Select(p => Enumerable.Range(0, buttons.ButtonsOf(p).Length).Select(b => buttons.TextOf(p, b)).ToArray()).ToArray();
+            _icon = buttons.IconView;
             return (p, b) => text[p][b];
         }
 
@@ -358,7 +360,7 @@ namespace DSPRE.Avalonia
         }
 
         private byte[] Draw(Card c) =>
-            TouchTabPictures.Battle(c.Page, _textOf, c.Press == null ? null : (c.Press, c.Frame), c.Frontier);
+            TouchTabPictures.Battle(c.Page, _textOf, c.Press == null ? null : (c.Press, c.Frame), c.Frontier, _icon);
 
         private void DrawCards()
         {

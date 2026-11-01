@@ -19,7 +19,8 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>The battle touch screen page with its labels at the spots <paramref name="textOf"/> gives.</summary>
         public static byte[] Battle(int page, Func<int, int, IReadOnlyList<(int X, int Y)>> textOf,
-                                    (ROMFiles.BattlePressFrames.Rect Rect, int Page)? pressed = null, bool frontier = false)
+                                    (ROMFiles.BattlePressFrames.Rect Rect, int Page)? pressed = null, bool frontier = false,
+                                    ROMFiles.FightIconView icon = null)
         {
             if (page < 0 || page >= Panels.Length) return null;
             BattleScreenRenderer.Options look = new BattleScreenRenderer.Options
@@ -28,7 +29,7 @@ namespace DSPRE.Avalonia.Data
                 Pressed = pressed, Frontier = frontier,
             };
             byte[] rgba = BattleScreenRenderer.Flatten(new BattleScreenRenderer().BuildTouch(look), touch: true);
-            if (textOf != null) GameTextScreens.BattleTouchLabels(rgba, page, textOf);
+            if (textOf != null) GameTextScreens.BattleTouchLabels(rgba, page, textOf, icon);
             return rgba;
         }
 

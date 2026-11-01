@@ -39,6 +39,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             foreach (string p in _buttons.PageNames) CursorSets.Add(p);
             Fill();
             _pending.Changed += OnPendingChanged;
+            AppEvents.RomPatchStateChanged += OnPatchStateChanged;
         }
 
         public string Title { get; }
@@ -60,6 +61,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 Raise();
                 Raise(nameof(HasArt));
                 Fill();
+                RaiseIcon();
             }
         }
 
@@ -85,7 +87,69 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _selectedStop = CursorStops.FirstOrDefault(r => r.Stop == selected) ?? CursorStops.FirstOrDefault();
             Raise(nameof(SelectedStop));
             FillGrid();
+            Parts.Clear();
+            if (_buttons is IScreenParts parts)
+            {
+                IReadOnlyList<ScreenPart> list = parts.PartsOf(_page);
+                for (int p = 0; p < list.Count; p++) Parts.Add(new ButtonPartRow(this, p, list[p].Name, ColourOf(list[p].Button)));
+            }
+            Raise(nameof(HasParts));
             Refresh();
+        }
+
+        // ── text and icons ──
+
+        public ObservableCollection<ButtonPartRow> Parts { get; } = new ObservableCollection<ButtonPartRow>();
+        public bool HasParts => Parts.Count > 0;
+
+        private bool _textFollows = true;
+        public bool TextFollows { get => _textFollows; set { _textFollows = value; Raise(); } }
+
+        internal (int X, int Y) PartAt(int part) => (_buttons as IScreenParts)?.PartAt(_page, part) ?? (0, 0);
+
+        public void MovePartTo(ButtonPartRow row, int x, int y)
+        {
+            if (_buttons is not IScreenParts parts) return;
+            (int ox, int oy) = parts.PartAt(_page, row.Part);
+            if (x == ox && y == oy) return;
+            parts.MovePart(_page, row.Part, x - ox, y - oy);
+            Refresh();
+        }
+
+        private IScreenIconLook Icon => _buttons as IScreenIconLook;
+
+        public bool IconEditable => Icon?.OffersIcon(_page) == true && Icon.IconReady;
+        public bool IconNeedsPatch => Icon?.OffersIcon(_page) == true && !Icon.IconReady;
+
+        private void RaiseIcon()
+        {
+            foreach (string n in new[] { nameof(IconEditable), nameof(IconNeedsPatch), nameof(IconSize), nameof(IconAngle), nameof(IconFlipAcross), nameof(IconFlipDown) })
+                Raise(n);
+        }
+
+        private void SetLook(Func<IconLook, IconLook> change)
+        {
+            if (!IconEditable) return;
+            Icon.Look = change(Icon.Look);
+            Refresh();
+            Commit();
+        }
+
+        public int MinIconSize => IconLook.MinPercent;
+        public int MaxIconSize => IconLook.MaxPercent;
+        public int IconSize { get => Icon?.Look.Percent ?? 100; set => SetLook(l => l with { Percent = value }); }
+        public int IconAngle { get => Icon?.Look.Degrees ?? 0; set => SetLook(l => l with { Degrees = value }); }
+        public bool IconFlipAcross { get => Icon?.Look.FlipAcross == true; set => SetLook(l => l with { FlipAcross = value }); }
+        public bool IconFlipDown { get => Icon?.Look.FlipDown == true; set => SetLook(l => l with { FlipDown = value }); }
+
+        public void OpenIconPatch() { if (Icon != null) AvaloniaEditorLauncher.OpenPatchToolboxAt(Icon.IconPatch); }
+
+        private void OnPatchStateChanged(object sender, EventArgs e)
+        {
+            if (Icon?.ReloadCode() != true) return;
+            if (HasUnsavedChanges) Commit();
+            Fill();
+            RaiseIcon();
         }
 
         private bool _drawing, _again;
@@ -124,7 +188,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             (int t, int _, int l, int _) = AreaOf(row.Button);
             if ((left == l && top == t) || !row.Open) return;
-            _buttons.Move(_page, row.Button, left - l, top - t);
+            if (!TextFollows && _buttons is IScreenParts parts) parts.MoveArea(_page, row.Button, left - l, top - t);
+            else _buttons.Move(_page, row.Button, left - l, top - t);
             Refresh();
         }
 
@@ -163,6 +228,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private void Refresh()
         {
             foreach (TouchAreaRow row in Areas) row.Refresh();
+            foreach (ButtonPartRow row in Parts) row.Refresh();
             foreach (CursorStopRow row in CursorStops) row.Refresh();
             foreach (CursorBackRow row in BackRows) row.Refresh();
             CursorStatus = _buttons?.WhyNot() ?? "";
@@ -180,6 +246,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 _buttons.FromBytes(bytes);
                 Refresh();
+                RaiseIcon();
             }
             else Raise(nameof(HasUnsavedChanges));
         }
@@ -332,7 +399,45 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public void Undo() => _pending.Undo();
         public void Redo() => _pending.Redo();
 
-        public void Detach() => _pending.Changed -= OnPendingChanged;
+        public void Detach()
+        {
+            _pending.Changed -= OnPendingChanged;
+            AppEvents.RomPatchStateChanged -= OnPatchStateChanged;
+        }
+    }
+
+    /// <summary>One piece of a button's text or icons, at its spot in screen pixels.</summary>
+    public sealed class ButtonPartRow : INotifyPropertyChanged
+    {
+        public event PropertyChangedEventHandler PropertyChanged;
+        private void Raise(string n) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+
+        private const double Mark = 8;
+
+        private readonly ScreenButtonsViewModel _owner;
+
+        public ButtonPartRow(ScreenButtonsViewModel owner, int part, string name, string colour)
+        {
+            _owner = owner;
+            Part = part;
+            Name = name;
+            Colour = colour;
+        }
+
+        public int Part { get; }
+        public string Name { get; }
+        public string Colour { get; }
+
+        public int Across { get => _owner.PartAt(Part).X; set { _owner.MovePartTo(this, value, Down); _owner.Commit(); } }
+        public int Down { get => _owner.PartAt(Part).Y; set { _owner.MovePartTo(this, Across, value); _owner.Commit(); } }
+
+        public double Left => Across * ScreenButtonsViewModel.Scale - Mark / 2;
+        public double Top => Down * ScreenButtonsViewModel.Scale - Mark / 2;
+
+        public void Refresh()
+        {
+            foreach (string n in new[] { nameof(Across), nameof(Down), nameof(Left), nameof(Top) }) Raise(n);
+        }
     }
 
     /// <summary>One button's touch area, in screen pixels.</summary>
