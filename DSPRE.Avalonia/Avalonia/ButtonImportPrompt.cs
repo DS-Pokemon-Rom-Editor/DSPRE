@@ -63,6 +63,8 @@ namespace DSPRE.Avalonia
                 _whole[b] = TouchButtonFit.CutButton(rgba, width, b);
                 _settings.Pictures[b] = _whole[b];
             }
+            _settings.Whole = rgba;
+            _settings.WholeWidth = width;
         }
 
         private Func<int, int, IReadOnlyList<(int X, int Y)>> LabelSpots()

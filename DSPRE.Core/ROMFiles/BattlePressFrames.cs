@@ -34,6 +34,8 @@ namespace DSPRE.ROMFiles
         public static readonly int[] Rows = { 1, 2, 3, 4 };
 
         public static readonly Rect[] CommandRects = { new(4, 15, 2, 29), new(17, 23, 0, 9), new(17, 23, 22, 31), new(18, 23, 11, 20) };
+        /// <summary>The squares a Fight press copies once widened. Every page has the same rows above and below Fight.</summary>
+        public static readonly Rect FightReach = new(2, 16, 2, 29);
         public static readonly Rect[] MoveRects = { new(2, 9, 0, 15), new(2, 9, 16, 31), new(10, 17, 0, 15), new(10, 17, 16, 31), new(18, 23, 1, 30) };
         public static readonly Rect[] TargetRects = { new(10, 17, 0, 14), new(0, 9, 17, 31), new(10, 17, 17, 31), new(0, 9, 0, 14), new(18, 23, 1, 30) };
         public static readonly Rect YesRect = new(4, 11, 0, 31), NoRect = new(13, 20, 0, 31), StopRect = new(18, 23, 0, 31);
@@ -85,6 +87,7 @@ namespace DSPRE.ROMFiles
             byte[] overlay = ReadOverlay();
             bool vanilla = At(overlay, code.Loop) == LoadEntry && At(overlay, code.Loop + 6) == AddValue && At(overlay, code.Alloc) == AllocShift
                 && At(overlay, code.Copy) == CopyShift && At(overlay, code.StopCopy) == CopyShift;
+            vanilla = vanilla && overlay[FightRect] == OriginalFightTop && overlay[FightRect + 1] == OriginalFightBottom;
             return vanilla ? null : "Something else has already changed the battle button code, so DSPRE leaves it alone.";
         }
 
@@ -290,7 +293,36 @@ namespace DSPRE.ROMFiles
             Put(code.Alloc, LargeAllocShift);
             Put(code.Copy, LargeCopyShift);
             Put(code.StopCopy, LargeCopyShift);
+            WidenFight(overlay);
             DSUtils.WriteWholeFile(OverlayUtils.GetPath(sites.Overlay), overlay);
+        }
+
+        private const int OriginalFightTop = 4, OriginalFightBottom = 15;
+
+        private static int FightRect => (int)RomLocator.BattleCommandSites.TargetGrid + RomLocator.CommandPressRects(GameFamily == GameFamilies.HGSS);
+
+        private static void WidenFight(byte[] overlay)
+        {
+            overlay[FightRect] = (byte)FightReach.Top;
+            overlay[FightRect + 1] = (byte)FightReach.Bottom;
+        }
+
+        /// <summary>True on projects that got the patch before it widened Fight's press.</summary>
+        public static bool NeedsFightUpdate
+        {
+            get
+            {
+                if (!IsApplied) return false;
+                byte[] overlay = ReadOverlay();
+                return overlay[FightRect] == OriginalFightTop && overlay[FightRect + 1] == OriginalFightBottom;
+            }
+        }
+
+        public static void WidenFightPress()
+        {
+            byte[] overlay = ReadOverlay();
+            WidenFight(overlay);
+            DSUtils.WriteWholeFile(OverlayUtils.GetPath(RomLocator.ButtonPressSites.Overlay), overlay);
         }
 
         private const int OriginalUp = 192, OriginalDown = 384;

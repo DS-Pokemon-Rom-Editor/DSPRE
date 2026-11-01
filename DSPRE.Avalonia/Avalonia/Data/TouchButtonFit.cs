@@ -15,7 +15,7 @@ namespace DSPRE.Avalonia.Data
         public enum FlashKind { Automatic, Game, Lighter, Colour }
 
         public const int ButtonCount = 4;
-        private const int Tile = 8, TileBytes = BattlePressFrames.TileBytes, Columns = BattlePressFrames.Columns, RowColours = 16;
+        private const int Tile = 8, TileBytes = BattlePressFrames.TileBytes, Columns = BattlePressFrames.Columns, ScreenRows = 24, RowColours = 16;
         // Past this share of the button, a frame would hide the art.
         private const double CoversArt = 0.5;
 
@@ -28,6 +28,8 @@ namespace DSPRE.Avalonia.Data
             public int Merge;
             public FlashKind[] Kind = new FlashKind[ButtonCount];
             public ushort[][] Flash = new ushort[ButtonCount][];     // 16 colours for FlashKind.Colour
+            public byte[] Whole;                                     // the imported picture, for art past the buttons
+            public int WholeWidth;
         }
 
         public sealed class Plan
@@ -252,8 +254,12 @@ namespace DSPRE.Avalonia.Data
                 for (int y = r.Top; y <= r.Bottom; y++)
                     for (int x = r.Left; x <= r.Right; x++) replaced.Add(y * Columns + x);
             }
+            List<int>[] around = Around(s);
             for (int b = 0; b < ButtonCount; b++)
-                if (s.Pictures[b] != null) FitButton(s, plan, b, replaced, wanted);
+            {
+                replaced.UnionWith(around[b]);
+                if (s.Pictures[b] != null) FitButton(s, plan, b, replaced, wanted, around[b]);
+            }
 
             Allocate(s, plan, wanted, KeptTiles(replaced));
             return plan;
@@ -276,7 +282,38 @@ namespace DSPRE.Avalonia.Data
             return pixels;
         }
 
-        private void FitButton(Settings s, Plan plan, int b, HashSet<int> replaced, List<Wanted> wanted)
+        private static int Distance(BattlePressFrames.Rect r, int x, int y) =>
+            Math.Max(Math.Max(r.Left - x, x - r.Right), 0) + Math.Max(Math.Max(r.Top - y, y - r.Bottom), 0);
+
+        // Gives each picture square outside the buttons to the nearest button, so it can use that button's colour row.
+        private List<int>[] Around(Settings s)
+        {
+            List<int>[] squares = Enumerable.Range(0, ButtonCount).Select(_ => new List<int>()).ToArray();
+            if (s.Whole == null) return squares;
+            BattlePressFrames.Rect[] rects = BattlePressFrames.CommandRects;
+            for (int y = 0; y < ScreenRows; y++)
+                for (int x = 0; x < Columns; x++)
+                {
+                    if (rects.Any(r => Distance(r, x, y) == 0) || WholeSquare(s, x, y).All(c => c < 0)) continue;
+                    int owner = Enumerable.Range(0, ButtonCount).OrderBy(b => Distance(rects[b], x, y)).First();
+                    if (s.Pictures[owner] != null) squares[owner].Add(y * Columns + x);
+                }
+            return squares;
+        }
+
+        private static int[] WholeSquare(Settings s, int x, int y)
+        {
+            int[] pixels = new int[Tile * Tile];
+            int height = s.Whole.Length / 4 / s.WholeWidth;
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                int px = x * Tile + i % Tile, py = y * Tile + i / Tile, at = (py * s.WholeWidth + px) * 4;
+                pixels[i] = px >= s.WholeWidth || py >= height || s.Whole[at + 3] < 128 ? -1 : NitroBgCodec.ToBgr555(s.Whole[at], s.Whole[at + 1], s.Whole[at + 2]) & 0x7FFF;
+            }
+            return pixels;
+        }
+
+        private void FitButton(Settings s, Plan plan, int b, HashSet<int> replaced, List<Wanted> wanted, List<int> around)
         {
             BattlePressFrames.Rect r = BattlePressFrames.CommandRects[b];
             int row = BattlePressFrames.Rows[b], width = (r.Right - r.Left + 1) * Tile, height = (r.Bottom - r.Top + 1) * Tile, count = width * height;
@@ -296,9 +333,10 @@ namespace DSPRE.Avalonia.Data
                 for (int p = 0; p < count; p++) outp[p] = frame[p] != first[p] && (covers || !drawnOn[SquareOf(p)]) ? frame[p] : picture[p];
                 return outp;
             }
-            // Frontier draws Fight a pixel larger, so art goes over Frontier's own pixels.
+            // Frontier draws Fight a pixel larger, so art goes over Frontier's own pixels, unless the art gives the button another shape.
+            bool reshaped = Enumerable.Range(0, count).Any(p => art[p] < 0 && normal[p] >= 0);
             int[] frontierArt = new int[count];
-            for (int p = 0; p < count; p++) frontierArt[p] = art[p] != normal[p] ? art[p] : frontierNormal[p];
+            for (int p = 0; p < count; p++) frontierArt[p] = reshaped || art[p] != normal[p] ? art[p] : frontierNormal[p];
 
             RowColourSet colours = new RowColourSet(_colours, _original, row, FixedNumbers(row, replaced));
             List<(int Page, int[] Normal, int[] Frontier, bool Flash)> frames = new() { (BattlePressFrames.NormalPage, art, frontierArt, false) };
@@ -310,20 +348,21 @@ namespace DSPRE.Avalonia.Data
                 int changed = 0;
                 for (int p = 0; p < count; p++) if (frame[p] != normal[p]) changed++;
                 bool covers = changed > count * CoversArt;
-                bool flash = kind != FlashKind.Game && (page == BattlePressFrames.PalePage ? covers || kind != FlashKind.Automatic : !covers && kind != FlashKind.Automatic);
+                bool flash = kind != FlashKind.Game && (covers || kind != FlashKind.Automatic);
                 if (!flash)
                 {
                     frames.Add((page, FrameOver(art, normal, frame, covers), FrameOver(frontierArt, frontierNormal, frontierFrame, covers), false));
                     continue;
                 }
                 usesFlash = true;
-                // The flash shows the art and keeps the frame's edge. The colour the frame paints most is its body, so that one goes.
+                // The flash shows the art. It keeps the frame's edge only where the art left the button alone, and reshaped art gets no edge.
+                // The colour the frame paints most is its body, so that one goes.
                 int body = frame.Where((c, p) => c != normal[p] && c >= 0).GroupBy(c => c).OrderByDescending(g => g.Count()).Select(g => g.Key).FirstOrDefault(-1);
                 int[] Edge(int[] picture, int[] first, int[] drawn)
                 {
                     int[] outp = (int[])picture.Clone();
                     for (int p = 0; p < count; p++)
-                        if (drawn[p] != first[p] && drawn[p] != body) outp[p] = drawn[p] | EdgeMark;
+                        if (!reshaped && drawn[p] != first[p] && drawn[p] != body && picture[p] == first[p]) outp[p] = drawn[p] | EdgeMark;
                     return outp;
                 }
                 frames.Add((page, Edge(art, normal, frame), Edge(frontierArt, frontierNormal, frontierFrame), true));
@@ -335,6 +374,8 @@ namespace DSPRE.Avalonia.Data
                     colours.Want(pictureN[p]);
                     colours.Want(pictureF[p]);
                 }
+            foreach (int square in around)
+                foreach (int colour in WholeSquare(s, square % Columns, square / Columns)) colours.Want(colour);
             colours.Settle();
             plan.TooManyColours[b] = colours.Refused;
             plan.NewColours[b] = colours.Added.Count(a => a.Colour != Original(row, a.Number));
@@ -391,6 +432,17 @@ namespace DSPRE.Avalonia.Data
                         if (page == BattlePressFrames.NormalPage) plan.Squares[b]++;
                         wanted.Add(new Wanted { Button = b, Page = page, Square = square, Row = flashes ? flashRow : row, Numbers = n, Frontier = f });
                     }
+            }
+
+            // A press copies only its own squares, so art past them looks the same in every frame. Fight's reach is wider.
+            BattlePressFrames.Rect reach = BattlePressFrames.FightReach;
+            foreach (int square in around)
+            {
+                byte[] n = WholeSquare(s, square % Columns, square / Columns).Select(c => (byte)Num(c)).ToArray();
+                int x = square % Columns, y = square / Columns;
+                bool pressed = b == 0 && x >= reach.Left && x <= reach.Right && y >= reach.Top && y <= reach.Bottom;
+                foreach ((int page, _, _, bool flashes) in frames)
+                    wanted.Add(new Wanted { Button = b, Page = page, Square = square, Row = flashes && pressed ? flashRow : row, Numbers = n, Frontier = n });
             }
         }
 

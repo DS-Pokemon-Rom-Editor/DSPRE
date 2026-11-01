@@ -32,7 +32,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private static readonly Menu[] Menus =
         {
-            new("Command", 0, m => m.Command, TouchButtonFit.Names, BattlePressFrames.CommandRects),
+            new("Command", 0, m => m.Command, TouchButtonFit.Names, BattlePressFrames.CommandRects.Select((r, i) => i == 0 ? BattlePressFrames.FightReach : r).ToArray()),
             new("Fight", 1, m => m.Moves, new[] { "Move 1", "Move 2", "Move 3", "Move 4", "Cancel" }, BattlePressFrames.MoveRects),
             new("Target", 2, m => m.Target, new[] { "Bottom left", "Top right", "Bottom right", "Top left", "Cancel" }, BattlePressFrames.TargetRects),
             new("Yes or no", 3, m => m.YesNo, new[] { "Yes", "No" }, new[] { BattlePressFrames.YesRect, BattlePressFrames.NoRect }),

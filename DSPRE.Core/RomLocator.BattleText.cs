@@ -85,6 +85,9 @@ namespace DSPRE
         public static FightIconCode FightIconDistances(bool hgss) =>
             hgss ? new FightIconCode(-0x709E, 6, 0x1A4, 0x230, 0x280) : new FightIconCode(-0x69BE, 4, 0x1A4, 0x1E8, 0x29C);
 
+        /// <summary>The Command buttons' press squares (top, bottom, left, right bytes), from BattleCommandSites.TargetGrid. Measured on every dump.</summary>
+        public static int CommandPressRects(bool hgss) => hgss ? 0x108 : 0x118;
+
         /// <summary>A battle touch screen page's touch list and cursor grid, from BattleCommandSites.TargetGrid.</summary>
         public sealed record BattleCommandTable(int Touch, int? Grid = null, int Width = 0, int Height = 0);
 

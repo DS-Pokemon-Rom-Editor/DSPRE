@@ -943,7 +943,7 @@ namespace DSPRE
             if (BannerPositionState() != PatchState.Available) return false;
             int overlay = RomLocator.PlaceNameBannerSites.Overlay;
             if (!ConfirmYesNo("The place-name banner can sit anywhere on the screen. Move it in the Screens editor's Place-name banner " +
-                "layout. Nothing changes in game until you do." + BackupNote($"overlay {overlay}") + "\n\nApply this patch?" +
+                "layout." + BackupNote($"overlay {overlay}") + "\n\nApply this patch?" +
                 CreditNote("bannerPosition"), "Confirm to proceed"))
                 return false;
             BackUp(OverlayUtils.GetPath(overlay));
@@ -972,7 +972,7 @@ namespace DSPRE
         {
             if (PartyPanelSizeState() != PatchState.Available) return false;
             if (!ConfirmYesNo("The Pokémon panels in the party menu can be any size up to 96 tiles, set in the Screens editor's Party " +
-                "layout. Nothing changes in game until you set a size." + BackupNote("the ARM9") + "\n\nApply this patch?" +
+                "layout." + BackupNote("the ARM9") + "\n\nApply this patch?" +
                 CreditNote("partyPanelSize"), "Confirm to proceed"))
                 return false;
             BackUp(RomInfo.Arm9Path);
@@ -1049,8 +1049,7 @@ namespace DSPRE
             if (PickupSlotsPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
             if (PlacementNote(new[] { PickupSlotsPatch.BlockLength }, out int[] offsets) is not string placement) return false;
             int overlay = RomInfo.PickupTableOverlayNumber;
-            if (!ConfirmYesNo("Each Pickup level range gets its own nine items and two rare items. Pickup gives the same items as before " +
-                "until you change them in Item tables." + placement + BackupNote($"overlay {overlay} and the synthetic overlay") +
+            if (!ConfirmYesNo("Each Pickup level range gets its own nine items and two rare items. Change them in Item tables." + placement + BackupNote($"overlay {overlay} and the synthetic overlay") +
                 "\n\nApply this patch?" + CreditNote("pickupSlots"), "Confirm to proceed"))
                 return false;
             string overlayPath = OverlayUtils.GetPath(overlay);
@@ -1069,8 +1068,7 @@ namespace DSPRE
             int overlay = RomLocator.VsIntroSites.RecordOverlay;
             string look = RomInfo.GameFamily == RomInfo.GameFamilies.DP ? "its own face, cut from any class's battle sprite" : "its own portrait, name and colours";
             if (!ConfirmYesNo("Each trainer class gets its own VS intro: a style, the battle music, and for gym leader and Elite Four " +
-                $"styles {look}, edited in the VS intro editor. Every class keeps the intro it has now until you " +
-                "change it." + placement + BackupNote($"the ARM9, overlay {overlay} and the synthetic overlay") +
+                $"styles {look}, edited in the VS intro editor." + placement + BackupNote($"the ARM9, overlay {overlay} and the synthetic overlay") +
                 "\n\nApply this patch?" + CreditNote("classIntros"), "Confirm to proceed"))
                 return false;
             string overlayPath = OverlayUtils.GetPath(overlay);
@@ -1114,11 +1112,22 @@ namespace DSPRE
 
         public static bool ApplyButtonFramesPatch()
         {
+            if (Probe(() => BattlePressFrames.NeedsFightUpdate))
+            {
+                int patched = RomLocator.ButtonPressSites.Overlay;
+                if (!ConfirmYesNo("This ROM has an older version of this patch. The update lets art above and below the Fight button flash with it." +
+                    BackupNote($"overlay {patched}") + "\n\nUpdate the patch?" + CreditNote("buttonFrames"), "Confirm to proceed"))
+                    return false;
+                string patchedPath = OverlayUtils.GetPath(patched);
+                PlainFiles.Copy(patchedPath, patchedPath + BackupSuffix, overwrite: true);
+                BattlePressFrames.WidenFightPress();
+                ShowInfo("Import the art again and the parts above and below Fight will flash with the button.", "Patch updated");
+                return true;
+            }
             if (AlreadyApplied(Probe(() => BattlePressFrames.IsApplied))) return false;
             if (BattlePressFrames.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
             int overlay = RomLocator.ButtonPressSites.Overlay;
-            if (!ConfirmYesNo("Frees tiles so you can import art onto the battle buttons. " +
-                "Nothing changes in battle until you import art." + BackupNote($"overlay {overlay}") + "\n\nApply this patch?" + CreditNote("buttonFrames"), "Confirm to proceed"))
+            if (!ConfirmYesNo("Frees tiles so you can import art onto the battle buttons." + BackupNote($"overlay {overlay}") + "\n\nApply this patch?" + CreditNote("buttonFrames"), "Confirm to proceed"))
                 return false;
             string overlayPath = OverlayUtils.GetPath(overlay);
             PlainFiles.Copy(overlayPath, overlayPath + BackupSuffix, overwrite: true);
@@ -1145,7 +1154,7 @@ namespace DSPRE
         {
             if (AlreadyApplied(Probe(() => FieldMenuColoursPatch.IsApplied))) return false;
             if (FieldMenuColoursPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
-            if (!ConfirmYesNo("Gives each button on the field menu its own colours. Nothing changes until you recolour an icon." +
+            if (!ConfirmYesNo("Gives each button on the field menu its own colours." +
                 BackupNote("overlay 27") + "\n\nApply this patch?" + CreditNote("fieldMenuColours"), "Confirm to proceed"))
                 return false;
             string overlayPath = OverlayUtils.GetPath(27);
@@ -1161,7 +1170,7 @@ namespace DSPRE
             if (SummaryFontPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
             if (PlacementNote(new[] { SummaryFontPatch.BlockLength }, out int[] offsets) is not string placement) return false;
             if (!ConfirmYesNo("Each text box on the summary screen can use any of the game's fonts. The narrow Pokéwalker font " +
-                "fits long names. Nothing changes until you pick a font in the Screens editor's Summary layout." + placement +
+                "fits long names. Pick a font in the Screens editor's Summary layout." + placement +
                 BackupNote("the ARM9 and the synthetic overlay") + "\n\nApply this patch?" + CreditNote("summaryFonts"), "Confirm to proceed"))
                 return false;
             PlainFiles.Copy(RomInfo.Arm9Path, RomInfo.Arm9Path + BackupSuffix, overwrite: true);
@@ -1177,7 +1186,7 @@ namespace DSPRE
             if (HpBarFontPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
             if (PlacementNote(new[] { HpBarFontPatch.BlockLength }, out int[] offsets) is not string placement) return false;
             if (!ConfirmYesNo("The Pokémon names on the HP bars in battle, and the Safari and Park ball counts, can use any of the game's fonts. " +
-                "The narrow Pokéwalker font fits long names. Nothing changes until you pick a font in the Screens editor's HP bars." + placement +
+                "The narrow Pokéwalker font fits long names. Pick a font in the Screens editor's HP bars." + placement +
                 BackupNote("overlay 12 and the synthetic overlay") + "\n\nApply this patch?" + CreditNote("hpBarFonts"), "Confirm to proceed"))
                 return false;
             PlainFiles.Copy(OverlayUtils.GetPath(12), OverlayUtils.GetPath(12) + BackupSuffix, overwrite: true);
@@ -1193,7 +1202,7 @@ namespace DSPRE
             if (ExtraFontsPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
             if (PlacementNote(new[] { ExtraFontsPatch.BlockLength }, out int[] offsets) is not string placement) return false;
             if (!ConfirmYesNo($"The game gets room for {ExtraFontsPatch.FontCount} fonts instead of {ExtraFontsPatch.GameFontCount}. " +
-                "Nothing changes in game until you add a font in the Font editor." + placement +
+                "Add fonts in the Font editor." + placement +
                 BackupNote("the ARM9 and the synthetic overlay") + "\n\nApply this patch?" + CreditNote("extraFonts"), "Confirm to proceed"))
                 return false;
             PlainFiles.Copy(RomInfo.Arm9Path, RomInfo.Arm9Path + BackupSuffix, overwrite: true);
@@ -1209,7 +1218,7 @@ namespace DSPRE
             if (PartyFontPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
             if (PlacementNote(new[] { PartyFontPatch.BlockLength }, out int[] offsets) is not string placement) return false;
             if (!ConfirmYesNo("The Pokémon names and the line under them in the party menu can use any of the game's fonts. The narrow " +
-                "Pokéwalker font fits long names. Nothing changes until you pick a font in the Screens editor's Party layout." + placement +
+                "Pokéwalker font fits long names. Pick a font in the Screens editor's Party layout." + placement +
                 BackupNote("the ARM9 and the synthetic overlay") + "\n\nApply this patch?" + CreditNote("partyFonts"), "Confirm to proceed"))
                 return false;
             PlainFiles.Copy(RomInfo.Arm9Path, RomInfo.Arm9Path + BackupSuffix, overwrite: true);
@@ -2071,7 +2080,7 @@ namespace DSPRE
                 {
                     if (RomInfo.IsHGE) return Unsupported("Not compatible with hg-engine");
                     if (!BattlePressFrames.SupportsCurrentRom) return Unsupported("Platinum, HeartGold and SoulSilver, except Japanese");
-                    return BattlePressFrames.IsApplied ? PatchState.Applied : PatchState.Available;
+                    return BattlePressFrames.IsApplied && !BattlePressFrames.NeedsFightUpdate ? PatchState.Applied : PatchState.Available;
                 }));
 
             list.Add(Status("fightIcon",

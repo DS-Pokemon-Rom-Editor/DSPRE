@@ -27,8 +27,7 @@ namespace DSPRE
                 "What it does\n" +
                 "Each trainer class gets its own VS intro and battle music. Without it only gym leaders, the Elite Four, Team Galactic " +
                 "and the Frontier Brains (the Tower Tycoon in Diamond and Pearl) have one. Gym leader and Elite Four intros take their " +
-                "own portrait, name and colours in Platinum, or a face cut from any class's battle sprite in Diamond and Pearl.\n" +
-                "Nothing changes in game until you edit a class.\n\n" +
+                "own portrait, name and colours in Platinum, or a face cut from any class's battle sprite in Diamond and Pearl.\n\n" +
                 "Where to edit\n" +
                 "The VS intro editor's Class intros tab.\n\n" +
                 "Good to know\n" +
@@ -129,7 +128,7 @@ namespace DSPRE
                 "The list, its count check and its pointer were documented by MrHam88 and the DS Pokémon Hacking wiki's move editing guide.",
             ["pickupSlots"] =
                 "What it does\n" +
-                "In the game, each Pickup level range reads its nine items and two rare items from one shared sliding list. This gives every range its own items. Pickup gives the same items as before until you change them.\n\n" +
+                "In the game, each Pickup level range reads its nine items and two rare items from one shared sliding list. This gives every range its own items.\n\n" +
                 "Where to edit\n" +
                 "Items > Item tables (pickup, hidden, Rock Smash).\n\n" +
                 "Requirements\n" +
@@ -194,7 +193,7 @@ namespace DSPRE
             ["bannerMotion"] =
                 "What it does\n" +
                 "The place-name banner can slide in from the top or bottom, or appear without sliding. It can move straight, ease, overshoot " +
-                "or bounce, and fade or pixelate as it comes and goes. Nothing changes in game until you pick a style.\n\n" +
+                "or bounce, and fade or pixelate as it comes and goes.\n\n" +
                 "Where to edit\n" +
                 "The Screens editor's Place-name banner layout. Press Play to watch it. The slide speeds set how long the slide takes.\n\n" +
                 "Good to know\n" +
@@ -203,8 +202,7 @@ namespace DSPRE
                 "Platinum, HeartGold or SoulSilver, any language, with the ARM9 expansion. Not compatible with hg-engine.",
             ["bannerPosition"] =
                 "What it does\n" +
-                "The place-name banner can sit anywhere on the screen instead of the top left corner. Nothing changes in game " +
-                "until you move it.\n\n" +
+                "The place-name banner can sit anywhere on the screen instead of the top left corner.\n\n" +
                 "Where to edit\n" +
                 "The Screens editor's Place-name banner layout. Its size, time on screen and slide speed need no patch.\n\n" +
                 "Requirements\n" +
@@ -212,18 +210,18 @@ namespace DSPRE
             ["partyPanelSize"] =
                 "What it does\n" +
                 "The Pokémon panels in the party menu can be any size up to 96 tiles, like 9 by 9 or 12 by 8, with the HP bar " +
-                "anywhere inside them. Nothing changes in game until you set a size.\n\n" +
+                "anywhere inside them.\n\n" +
                 "Where to edit\n" +
                 "The Screens editor's Party layout: the panel size, the HP bar strip and where each panel sits. Rebuild panel art, " +
                 "Clear background and Rebuild cursor frame redraw the art for the new size.\n\n" +
                 "Good to know\n" +
-                "The panel art keeps its old shape until you rebuild it or draw your own.\n\n" +
+                "The old panel art doesn't fit a new size, so rebuild it or draw your own.\n\n" +
                 "Requirements\n" +
                 "HeartGold or SoulSilver, any language. No ARM9 expansion or synthetic overlay. Not compatible with hg-engine.",
             ["summaryFonts"] =
                 "What it does\n" +
                 "Each text box on the summary screen can use any of the game's fonts. The narrow Pokéwalker font fits long " +
-                "names. Nothing changes in game until you pick a font.\n\n" +
+                "names.\n\n" +
                 "Where to edit\n" +
                 "The Screens editor's Summary layout, under each text box. The Font editor changes the letters themselves.\n\n" +
                 "Good to know\n" +
@@ -233,7 +231,7 @@ namespace DSPRE
             ["hpBarFonts"] =
                 "What it does\n" +
                 "The Pokémon names on the HP bars in battle, and the Safari and Park ball counts, can use any of the game's fonts. " +
-                "The narrow Pokéwalker font fits long names. Nothing changes in game until you pick a font.\n\n" +
+                "The narrow Pokéwalker font fits long names.\n\n" +
                 "Where to edit\n" +
                 "The Screens editor's HP bars, on the Name row. The Font editor changes the letters themselves.\n\n" +
                 "Good to know\n" +
@@ -244,8 +242,7 @@ namespace DSPRE
                 "Not compatible with hg-engine.",
             ["extraFonts"] =
                 "What it does\n" +
-                "The game gets room for 15 fonts instead of 6, and added fonts show in every font picker. Nothing changes in game " +
-                "until you add a font.\n\n" +
+                "The game gets room for 15 fonts instead of 6, and added fonts show in every font picker.\n\n" +
                 "Where to edit\n" +
                 "The Font editor's Add font copies the open font. Then draw its letters.\n\n" +
                 "Good to know\n" +
@@ -255,7 +252,7 @@ namespace DSPRE
             ["partyFonts"] =
                 "What it does\n" +
                 "The Pokémon names in the party menu, and the line under them that says whether a TM can be learned, can use any of " +
-                "the game's fonts. The narrow Pokéwalker font fits long names. Nothing changes in game until you pick a font.\n\n" +
+                "the game's fonts. The narrow Pokéwalker font fits long names.\n\n" +
                 "Where to edit\n" +
                 "The Screens editor's Party layout, on the name rows. The line under the names uses the same font. The Font editor changes the letters themselves.\n\n" +
                 "Good to know\n" +
@@ -275,7 +272,7 @@ namespace DSPRE
             ["buttonFrames"] =
                 "What it does\n" +
                 "Lets you import art onto the battle Command buttons. Each button press gets its own frames, so the tiles the game kept for pressed buttons are free for the art. " +
-                "Nothing changes in battle until you import art. After that, a pressed button shows your art plus what the game draws for the press.\n\n" +
+                "A pressed button shows your art plus what the game draws for the press.\n\n" +
                 "Where to edit\n" +
                 "The Screens editor's Battle screen: Command buttons for the art and the Press tab for each press frame.\n\n" +
                 "Requirements\n" +
@@ -283,7 +280,7 @@ namespace DSPRE
             ["fieldMenuColours"] =
                 "What it does\n" +
                 "Gives each button on the field menu its own normal and selected colours. " +
-                "Nothing changes until you recolour an icon. The girl's BAG shares its colours with the BAG.\n\n" +
+                "The girl's BAG shares its colours with the BAG.\n\n" +
                 "Where to edit\n" +
                 "The Screens editor's Bottom screen, on the Menu tab.\n\n" +
                 "Requirements\n" +
