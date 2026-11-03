@@ -56,6 +56,8 @@ namespace DSPRE.Avalonia.Data
             public Func<int, ScreenWindowLayout.Window, int?> FixedTop { get; init; }
             /// <summary>Windows that take turns share this name; null for the rest.</summary>
             public Func<ScreenWindowLayout.Window, string> TakesTurns { get; init; }
+            /// <summary>Whether the main engine draws the top screen; null when the game's usual layout holds.</summary>
+            public bool? MainOnTop { get; init; }
             /// <summary>Tiles a window's frame adds (left, top, right, bottom); null for none.</summary>
             public Func<ScreenWindowLayout.Window, (int L, int T, int R, int B)?> Frame { get; init; }
             public bool Available => Banks().Length > 0;
@@ -77,7 +79,7 @@ namespace DSPRE.Avalonia.Data
                     Banks = () => (Pt || Hg) && LocationNamesTextNumber >= 0 ? new[] { LocationNamesTextNumber } : Array.Empty<int>(),
                     Draw = (bank, line) => Banner(line, Hg), FirstLine = 1 },
             new() { Key = "naming", Title = "Naming screen", Banks = () => Pt ? Us(422) : Hg ? Us(249) : Array.Empty<int>(),
-                    Draw = (bank, line) => NamingPrompt(line, Hg) },
+                    Draw = (bank, line) => NamingPrompt(line, Hg), MainOnTop = false },
             new() { Key = "trainercard", Title = "Trainer card", Banks = () => Pt ? Us(616) : Hg ? Us(727) : Array.Empty<int>(),
                     Draw = (bank, line) => TrainerCard(line, Hg) },
             new() { Key = "box", Title = "PC boxes", Banks = () => Pt ? Us(19, 18) : Hg ? Us(25, 24) : Array.Empty<int>(),
@@ -96,11 +98,12 @@ namespace DSPRE.Avalonia.Data
                     PutOrder = PartyPutOrder, Block = PartyBlock, FixedTop = PartyFixedTop,
                     TakesTurns = w => w.Name.EndsWith(" message", StringComparison.Ordinal) ? "message" : null, Frame = PartyFrame, StateOf = (bank, line) => PartyStateOf(line, Hg), Shows = (state, group, name) => PartyShows(state, group, name, Hg) },
             new() { Key = "bag", Title = "Bag", Banks = () => Pt ? Us(392, 7, 395) : Hg ? Us(222, 10) : Array.Empty<int>(),
-                    Draw = (bank, line) => Pt ? BagPt(bank, line) : BagHg(bank, line), FirstLine = 1 },
+                    Draw = (bank, line) => Pt ? BagPt(bank, line) : BagHg(bank, line), FirstLine = 1,
+                    MainOnTop = true, LayoutStates = BagStates, HasLayoutState = state => state == 0 || Hg, OtherScreen = BagOtherScreen, Shows = BagShows },
             new() { Key = "pokegear", Title = "Pokégear",
                     Banks = () => Hg ? Us(new[] { 640 }.Concat(Enumerable.Range(641, 76).Where(b => b != 668))
                                            .Concat(Enumerable.Range(409, 12)).Concat(new[] { 273, 271 }).ToArray()) : Array.Empty<int>(),
-                    Draw = Pokegear, FirstLine = 1 },
+                    Draw = Pokegear, FirstLine = 1, LayoutStates = PokegearApps, Shows = (state, group, name) => group == PokegearApps[Math.Clamp(state, 0, PokegearApps.Length - 1)] },
         };
 
         /// <summary>"Top screen" or "Bottom screen", for the screen a shot shows.</summary>
@@ -760,8 +763,9 @@ namespace DSPRE.Avalonia.Data
             if (!prompts.Contains(line)) return null;
             byte[] rgba = Blank(0);
             ushort[] talk = TalkColours;
-            MessageWindow(rgba, 2, 19, 27, 4, talk[15]);
-            Print(rgba, TalkFont, BoxText(hg ? 249 : 422, line, TalkFont), 16, 152, talk[1], talk[2]);
+            (int x, int y, int w, int h) = ScreenWindowLayouts.Window("naming", "Prompt", (2, 19, 27, 4));
+            MessageWindow(rgba, x, y, w, h, talk[15]);
+            Print(rgba, TalkFont, BoxText(hg ? 249 : 422, line, TalkFont), x * 8, y * 8, talk[1], talk[2]);
             return new Shot("Naming screen graphics: top", rgba, () => AvaloniaEditorLauncher.OpenNamingScreenEditor());
         }
 
@@ -1457,14 +1461,14 @@ namespace DSPRE.Avalonia.Data
             _shownTiles = ShownTiles(party, ScreenWindowLayouts.For("party"), state);
 
             ushort[] row0 = DsBgScreen.Row(colours, 0);
-            byte[] glyphs = NitroBgCodec.ReadCharacters(NitroBgCodec.Inflate(Members(DirNames.Fonts)?.Invoke(hg ? 5 : 4)));
+            byte[] glyphs = NitroBgCodec.ReadCharacters(NitroBgCodec.Inflate(Members(DirNames.Fonts)?.Invoke(RomInfo.SpecialGlyphsFontEntry(hg))));
             for (int n = 0; n < 6; n++)
             {
                 PartySample.Pokemon who = PartySample.Party[n];
                 if (who.Empty) continue;
                 _drawing = n;
                 Credit(DirNames.PartyMenuGraphics, 22);
-                Credit(DirNames.Fonts, hg ? 5 : 4);
+                Credit(DirNames.Fonts, RomInfo.SpecialGlyphsFontEntry(hg));
                 PartyPokemon(rgba, m, n, who, bank, row0, colours, glyphs, hg);
                 _drawing = -1;
             }
@@ -1745,20 +1749,22 @@ namespace DSPRE.Avalonia.Data
             s.LoadMap(3, NitroBgCodec.ReadMap(m(13)).Entries, DsBgScreen.MapSide);
             byte[] rgba = s.Render();
             ushort[] row3 = DsBgScreen.Row(colours, 3);
+            (int listX, int listY, int _, int _) = ScreenWindowLayouts.Window("bag", "Item list", (14, 0, 17, 18));
 
             bool itemLine = bank == TextBank(392);
             int pocket = bank == TextBank(395) ? line : 0;
-            Print(rgba, SystemFont, Text(395, Math.Clamp(pocket, 0, 7)), 50, 13 * 8 + 2, row3[1], row3[2], Align.Centre);
+            (int _, int pocketY, int _, int _) = ScreenWindowLayouts.Window("bag", "Pocket names", (0, 13, 12, 3));
+            Print(rgba, SystemFont, Text(395, Math.Clamp(pocket, 0, 7)), 50, pocketY * 8 + 2, row3[1], row3[2], Align.Centre);
 
             int first = itemLine ? Math.Max(1, line) : 1;
             for (int k = 1; k < 9; k++)
             {
-                int y = 16 * k;
+                int x = listX * 8, y = listY * 8 + 16 * k;
                 bool close = k == 8 || (!itemLine && bank == TextBank(7) && line == 41 && k == 2);
-                if (close) { Print(rgba, SystemFont, Text(7, 41), 112, y, row3[1], row3[2]); break; }
-                Print(rgba, SystemFont, Text(392, first + k - 1), 112, y, row3[1], row3[2]);
-                Print(rgba, SystemFont, Text(7, 38), 112 + 109, y, row3[1], row3[2]);
-                Print(rgba, SystemFont, "1", 112 + 134, y, row3[1], row3[2], Align.Right);
+                if (close) { Print(rgba, SystemFont, Text(7, 41), x, y, row3[1], row3[2]); break; }
+                Print(rgba, SystemFont, Text(392, first + k - 1), x, y, row3[1], row3[2]);
+                Print(rgba, SystemFont, Text(7, 38), x + 109, y, row3[1], row3[2]);
+                Print(rgba, SystemFont, "1", x + 134, y, row3[1], row3[2], Align.Right);
             }
 
             if (bank == TextBank(7) && line != 41 && line != 38 && line != 37)
@@ -1795,7 +1801,30 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Draws the HGSS bag's bottom screen for a FieldBagButtons page with the first items listed.</summary>
         internal static byte[] BagBottomHg(int page) => BagHg(TextBank(222), 1, BagLayouts[page])?.Rgba;
 
-        private static Shot BagHg(int bank, int line) => BagHg(bank, line, BagLayouts[0]);
+        private static string[] PokegearApps => new[] { "Phone", "Radio", "Map", "Fly map" };
+
+        private static string[] BagStates => new[] { "Items", "Item menu", "Amount" };
+        private static readonly int[] BagStatePages = { 0, 1, 3 };
+
+        private static Shot BagOtherScreen(int state)
+        {
+            if (Pt) return BagBottomPt(null) is byte[] bottom ? new Shot("Bag graphics: bottom", bottom) : null;
+            byte[] top = new MoveTextScreens().Render(MoveTextScreens.Screen.Bag, Text(10, 120), Font(0));
+            return top == null ? null : new Shot("Bag graphics: top", top);
+        }
+
+        private static bool BagShows(int state, string group, string name)
+        {
+            if (Pt || group != "Bottom screen" || name == "Cancel") return true;
+            return state switch
+            {
+                0 => name.StartsWith("Item ", StringComparison.Ordinal) || name == "Page",
+                1 => name.StartsWith("Option ", StringComparison.Ordinal) || name == "Selected item",
+                _ => name.StartsWith("Digit ", StringComparison.Ordinal) || name is "Price" or "Sell or toss" or "Prompt",
+            };
+        }
+
+        private static Shot BagHg(int bank, int line) => BagHg(bank, line, BagLayouts[BagStatePages[Math.Clamp(_state, 0, BagStatePages.Length - 1)]]);
 
         private static Shot BagHg(int bank, int line, (int Buttons, int Back) layout)
         {
@@ -1827,12 +1856,15 @@ namespace DSPRE.Avalonia.Data
             (int X, int Y)[] buttons = { (4, 5), (20, 5), (4, 10), (20, 10), (4, 15), (20, 15) };
             for (int i = 0; i < buttons.Length && layout.Buttons >= 0; i++)
             {
-                int x = buttons[i].X * 8, y = buttons[i].Y * 8;
+                (int wx, int wy, int _, int _) = ScreenWindowLayouts.Window("bag", $"Item {i + 1}", (buttons[i].X, buttons[i].Y, 11, 4));
+                int x = wx * 8, y = wy * 8;
                 Print(rgba, SystemFont, Text(222, first + i), x, y, row11[1], row11[2]);
                 Print(rgba, SystemFont, Text(10, 87), x + 48, y + 16, row11[1], row11[2]);
             }
-            if (layout.Buttons >= 0) Print(rgba, SystemFont, Text(10, 22), 10 * 8, 21 * 8, row11[15], row11[1]);
-            Print(rgba, SystemFont, Text(10, 8), 24 * 8 + 32, 21 * 8, row11[15], row11[14], Align.Centre);
+            (int pageX, int pageY, int _, int _) = ScreenWindowLayouts.Window("bag", "Page", (10, 21, 7, 2));
+            if (layout.Buttons >= 0) Print(rgba, SystemFont, Text(10, 22), pageX * 8, pageY * 8, row11[15], row11[1]);
+            (int cancelX, int cancelY, int _, int _) = ScreenWindowLayouts.Window("bag", "Cancel", (24, 21, 7, 2));
+            Print(rgba, SystemFont, Text(10, 8), cancelX * 8 + 32, cancelY * 8, row11[15], row11[14], Align.Centre);
 
             if (bank == TextBank(10) && line != 87 && line != 22 && line != 8)
             {

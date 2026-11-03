@@ -137,8 +137,10 @@
             </StackPanel>
             <Button Content="Layout" controls:Icon.Key="OpenLink" Click="BarLayout_Click" HorizontalAlignment="Stretch"
                     ToolTip.Tip="Where the name, level, HP and gauges sit on each bar"/>
-            <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Click="TextBackgroundPatch_Click" HorizontalAlignment="Stretch"
-                    IsVisible="{Binding CanClearTextBackground}" ToolTip.Tip="{Binding ClearTextBackgroundHelp}"/>
+            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding CanClearTextBackground}">
+              <CheckBox Content="Clear text background" IsEnabled="False" ToolTip.Tip="{Binding ClearTextBackgroundHelp}" ToolTip.ShowOnDisabled="True"/>
+              <controls:EnableInToolbox Patch="hpBarText" Need="Clearing the text background"/>
+            </StackPanel>
             <TextBlock Text="{Binding BarPiecesNote}" Classes="hint"
                        IsVisible="{Binding BarPiecesNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
           </StackPanel>

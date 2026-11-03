@@ -478,6 +478,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     break;
                 case ScreenLayerKind.Sprite when layer.Index >= 0 && layer.Index < screen.Sprites.Count:
                     ScreenSprite s = screen.Sprites[layer.Index];
+                    if (s.Picture != null)
+                    {
+                        (DirNames pictureDir, int pictureFile) = _book.PictureFile(s);
+                        Add(Dex("Drawing", pictureFile, pictureDir));
+                        break;
+                    }
                     // The painter reads its colours from the drawing's own archive, so it is told only when they share one.
                     ScreenPartRow drawing = Dex("Drawing", _book.SpriteDrawing(s), s.DrawingArchive);
                     bool sameArchive = (s.DrawingArchive ?? dex) == (s.ColoursArchive ?? dex);
@@ -689,7 +695,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         public bool OffersFontPatch => _book.Layout?.OffersFontPatch == true;
-        public void OpenFontPatch() => AvaloniaEditorLauncher.OpenPatchToolboxAt("summaryFonts");
 
         // ── changes ────────────────────────────────────────────────────────────────────────────────
 

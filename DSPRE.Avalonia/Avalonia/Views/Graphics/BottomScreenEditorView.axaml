@@ -167,6 +167,7 @@
                     BorderBrush="{DynamicResource Editor.Warn}" BorderThickness="1">
               <TextBlock Text="{Binding SharedNote}" Classes="hint"/>
             </Border>
+            <controls:EnableInToolbox Patch="fieldMenuColours" Need="Giving each button its own colours" IsVisible="{Binding OffersColoursPatch}"/>
 
             <ItemsControl x:Name="ColourSwatches" ItemsSource="{Binding Swatches}">
               <ItemsControl.ItemsPanel>

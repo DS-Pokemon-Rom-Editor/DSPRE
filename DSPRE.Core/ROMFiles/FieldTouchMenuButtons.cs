@@ -8,7 +8,7 @@ namespace DSPRE.ROMFiles
     /// The HGSS field touch menu (overlay 27), with the yes/no menu and the 2 to 8 option lists that scripts show there. Each menu arrow
     /// tries three slots in order and takes the first one shown.
     /// </summary>
-    public sealed class FieldTouchMenuButtons : IScreenButtons, IScreenButtonRows
+    public sealed class FieldTouchMenuButtons : IScreenButtons, IScreenButtonRows, IScreenParts
     {
         private const int Slots = 7, Tries = 3, Tile = 8;
         private const int SpriteCount = 15, NameCount = 8;
@@ -36,7 +36,7 @@ namespace DSPRE.ROMFiles
         private const int BallSize = 24, CaughtSize = 32, CountWidth = 6, LabelWidth = 9, WindowHeight = 2, BallStep = 4;
         // How far each text sits from its button, in pixels.
         private const int TalkFromSpriteX = 24, TalkFromSpriteY = 16, TitleFromAreaX = 64;
-        private const ushort MovsLow = 0x2000, MovsHigh = 0x2700, MovsR2 = 0x2200, CopyXToY = 0x1C0A;
+        private const ushort CopyXToY = 0x1C0A;
 
         /// <summary>The positions overlay 27 keeps in its code, in pixels for sprites and tiles for text.</summary>
         public sealed record MenuExtras(int BallX, int SafariBallY, int BallY, int CaughtX, int CaughtY, (int X, int Y) SafariCount, (int X, int Y) ContestCount,
@@ -71,8 +71,9 @@ namespace DSPRE.ROMFiles
         private void SetValue(Coded c, int value)
         {
             int at = Site(c);
-            if ((int)c >= CopiedY) BitConverter.TryWriteBytes(_data.AsSpan(at), MovsR2);
-            _data[at] = (byte)value;
+            // A copied y becomes its own movs r2 once it moves apart from x.
+            if ((int)c >= CopiedY) BitConverter.TryWriteBytes(_data.AsSpan(at), ThumbImm8.Make(ThumbImm8.Op.Movs, 2, value));
+            else _data[at] = (byte)value;
         }
 
         private void Shift(Coded c, int by, int max) => SetValue(c, Math.Clamp(Value(c) + by, 0, max));
@@ -130,7 +131,8 @@ namespace DSPRE.ROMFiles
             bool coded = a == RomLocator.TouchMenuCodedSite && RomLocator.TouchMenuImmediates.All(d => In(a + d, 2)) && RomLocator.TouchMenuImmediates.Select((d, i) =>
             {
                 ushort code = BitConverter.ToUInt16(file, a + d);
-                return i >= CopiedY ? code == CopyXToY || (code & 0xFF00) == MovsR2 : code >= MovsLow && code <= MovsHigh + 0xFF;
+                bool movs = ThumbImm8.Is(code, ThumbImm8.Op.Movs);
+                return i >= CopiedY ? code == CopyXToY || movs && ThumbImm8.Register(code) == 2 : movs;
             }).All(ok => ok);
             if (coded) runs.AddRange(RomLocator.TouchMenuImmediates.Select(d => (a + d, 2)));
             FieldTouchMenuButtons buttons = new FieldTouchMenuButtons(sites.Overlay, runs, tables);
@@ -213,9 +215,59 @@ namespace DSPRE.ROMFiles
             return xAt == Coded.BallX ? BallStep : scale;
         }
 
+        private static readonly int MenuTitle = Array.IndexOf(MenuButtons, "MENU");
+
+        public IReadOnlyList<ScreenPart> PartsOf(int page)
+        {
+            if (page == 0)
+                return Enumerable.Range(0, Slots).Select(b => new ScreenPart(MenuButtons[b], b, Tile))
+                    .Concat(HasCode ? new[] { new ScreenPart(MenuButtons[MenuTitle], MenuTitle, Tile) } : Array.Empty<ScreenPart>()).ToList();
+            if (page == 1 && HasCode) return new[] { new ScreenPart(ExtraButtons[1], 1, Tile) };
+            return IsList(page) ? ButtonsOf(page).Select((name, b) => new ScreenPart(name, b, Tile)).ToList() : Array.Empty<ScreenPart>();
+        }
+
+        /// <summary>In pixels.</summary>
+        public (int X, int Y) PartAt(int page, int part)
+        {
+            if (page == 0 && part < Slots) return (NameSpots[part].X * Tile, NameSpots[part].Y * Tile);
+            if (page == 0) return (Value(Coded.TitleX) * Tile, Value(Coded.TitleY) * Tile);
+            if (page == 1) return (Value(Coded.TalkX) * Tile, Value(Coded.TalkY) * Tile);
+            (int x, int y, int _, int _) = OptionWindows(page)[part];
+            return (x * Tile, y * Tile);
+        }
+
+        public void MovePart(int page, int part, int dx, int dy)
+        {
+            (int tx, int ty) = ((int)Math.Round(dx / (double)Tile), (int)Math.Round(dy / (double)Tile));
+            if (page == 0 && part < Slots)
+            {
+                (int nx, int ny) = NameSpots[part];
+                SetName(part, Math.Clamp(nx + tx, 0, 23), Math.Clamp(ny + ty, 0, 22));
+            }
+            else if (page == 0)
+            {
+                Shift(Coded.TitleX, tx, 22);
+                Shift(Coded.TitleY, ty, 22);
+            }
+            else if (page == 1)
+            {
+                Shift(Coded.TalkX, tx, 24);
+                Shift(Coded.TalkY, ty, 22);
+            }
+            else
+            {
+                int window = Start(ListCount(page), ListPart.Windows) + part * Window;
+                ScreenSpots.Shift(_data, window + 1, 1, tx, 32 - _data[window + 3]);
+                ScreenSpots.Shift(_data, window + 2, 1, ty, 24 - _data[window + 4]);
+            }
+        }
+
+        public void Move(int page, int button, int dx, int dy) => MoveButton(page, button, dx, dy, true);
+        public void MoveArea(int page, int button, int dx, int dy) => MoveButton(page, button, dx, dy, false);
+
         // The icon, its name and any bases move with the area; names move in whole tiles. On the yes/no menu and the lists the
         // cursor spot and the option's text window move too.
-        public void Move(int page, int button, int dx, int dy)
+        private void MoveButton(int page, int button, int dx, int dy, bool text)
         {
             int step = MoveStep(page, button);
             if (IsCoded(page))
@@ -239,6 +291,7 @@ namespace DSPRE.ROMFiles
                 int count = ListCount(page), spot = Start(count, ListPart.Cursors) + button * Spot;
                 ScreenSpots.Shift(_data, spot, 1, dx, 255);
                 ScreenSpots.Shift(_data, spot + 1, 1, dy, 191);
+                if (!text) return;
                 int window = Start(count, ListPart.Windows) + button * Window;
                 ScreenSpots.Shift(_data, window + 1, 1, (int)Math.Round(dx / (double)Tile), 32 - _data[window + 3]);
                 ScreenSpots.Shift(_data, window + 2, 1, (int)Math.Round(dy / (double)Tile), 24 - _data[window + 4]);
@@ -250,6 +303,7 @@ namespace DSPRE.ROMFiles
                 ScreenSpots.Shift(_data, at, 2, dx, 255);
                 ScreenSpots.Shift(_data, at + 2, 2, dy, 191);
             }
+            if (!text) return;
             FollowText(page, button);
             if (page != 0 || button >= Slots) return;
             (int nx, int ny) = NameSpots[button];

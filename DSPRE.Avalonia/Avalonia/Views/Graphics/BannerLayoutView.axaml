@@ -50,8 +50,7 @@
           <NumericUpDown Grid.Row="6" Grid.Column="1" Value="{Binding SpeedOut}" Minimum="1" Maximum="255" Increment="1" FormatString="0"
                          ToolTip.Tip="Pixels a step"/>
         </Grid>
-        <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Click="Patch_Click"
-                IsVisible="{Binding OffersPatch}" ToolTip.Tip="Lets you move the banner"/>
+        <controls:EnableInToolbox Patch="bannerPosition" Need="Moving the banner" IsVisible="{Binding OffersPatch}"/>
         <TextBlock Text="Motion" FontWeight="SemiBold" Margin="0,8,0,0"/>
         <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="6" IsVisible="{Binding HasMotion}">
           <TextBlock Grid.Row="0" Text="Direction" VerticalAlignment="Center"/>
@@ -61,8 +60,7 @@
           <TextBlock Grid.Row="2" Text="Effect" VerticalAlignment="Center"/>
           <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding Effects}" SelectedIndex="{Binding EffectIndex}" HorizontalAlignment="Stretch"/>
         </Grid>
-        <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Click="MotionPatch_Click"
-                IsVisible="{Binding OffersMotionPatch}" ToolTip.Tip="Lets you change the motion"/>
+        <controls:EnableInToolbox Patch="bannerMotion" Need="Changing the motion" IsVisible="{Binding OffersMotionPatch}"/>
         <TextBlock Text="{Binding Problem}" IsVisible="{Binding HasProblem}" Foreground="#FF5050" TextWrapping="Wrap"/>
       </StackPanel>
     </Border>

@@ -32,7 +32,6 @@ namespace DSPRE.Avalonia.Views.Items
         private void AddItem_Click(object sender, RoutedEventArgs e) => ViewModel?.AddItem();
         private void RemoveItem_Click(object sender, RoutedEventArgs e) => ViewModel?.RemoveLastItem();
         private void AddShop_Click(object sender, RoutedEventArgs e) => ViewModel?.AddShop();
-        private void Expand_Click(object sender, RoutedEventArgs e) => ViewModel?.OfferExpansion();
         private async void RemoveShop_Click(object sender, RoutedEventArgs e)
         {
             if (!await DialogHelper.AskYesNoAsync(

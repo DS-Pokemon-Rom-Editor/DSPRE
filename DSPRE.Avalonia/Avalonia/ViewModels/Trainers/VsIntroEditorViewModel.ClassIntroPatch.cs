@@ -22,6 +22,22 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public bool IsClassIntroPatch { get; private set; }
 
+        /// <summary>The toolbox patch that gives each class its own intro on this game.</summary>
+        public string ClassIntroPatchKey => GameFamily == GameFamilies.HGSS ? "trainerClassMetadata" : "classIntros";
+        public bool OffersClassIntroPatch { get; private set; }
+
+        // Applying the patch in the toolbox hides the offer. The editor shows the new tab when it opens again.
+        private void CheckClassIntroOffer()
+        {
+            bool offer = false;
+            if (!HgEngine.HgEngineProject.IsActive && !IsClassRecords && !IsClassIntroPatch)
+                offer = GameFamily == GameFamilies.HGSS
+                    ? TrainerClassMetadataPatch.SupportsCurrentRom && TrainerClassMetadataStore.DetectCurrentRom(out _) == TrainerClassMetadataDetectionState.Stock
+                    : ClassIntroPatch.SupportsCurrentRom && !ClassIntroPatch.IsApplied;
+            OffersClassIntroPatch = offer;
+            Raise(nameof(OffersClassIntroPatch));
+        }
+
         private readonly List<Row> _ciRows = new();
         private readonly List<byte[]> _ciSaved = new();
         private string[] _ciClassNames = Array.Empty<string>();

@@ -109,7 +109,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         public bool OffersFontPatch => !_hasNameFont && !RomInfo.IsHGE && HpBarFontPatch.SupportsCurrentRom;
-        public void OpenFontPatch() => AvaloniaEditorLauncher.OpenPatchToolboxAt("hpBarFonts");
 
         public HpBarLayoutEditorViewModel()
         {
@@ -144,8 +143,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public bool CanClearTextBackground => HpBarTextPatchOffer.CanOffer;
         public string ClearTextBackgroundHelp => HpBarTextPatchOffer.Tip;
-
-        public void OpenTextBackgroundPatch() => HpBarTextPatchOffer.Open();
 
         private void OnPatchStateChanged(object sender, EventArgs e)
         {

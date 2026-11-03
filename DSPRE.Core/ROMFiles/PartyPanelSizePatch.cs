@@ -29,9 +29,9 @@ namespace DSPRE.ROMFiles
 
         private sealed record Site(Fn Function, int Offset, ushort Old, Func<Size, ushort> New);
 
-        private static ushort Movs(int rd, int imm) => (ushort)(0x2000 | rd << 8 | imm);
-        private static ushort Cmp(int rn, int imm) => (ushort)(0x2800 | rn << 8 | imm);
-        private static ushort Adds(int rd, int imm) => (ushort)(0x3000 | rd << 8 | imm);
+        private static ushort Movs(int rd, int imm) => ThumbImm8.Make(ThumbImm8.Op.Movs, rd, imm);
+        private static ushort Cmp(int rn, int imm) => ThumbImm8.Make(ThumbImm8.Op.Cmp, rn, imm);
+        private static ushort Adds(int rd, int imm) => ThumbImm8.Make(ThumbImm8.Op.Adds, rd, imm);
         private static ushort Adds3(int rd, int rn, int imm) => (ushort)(0x1C00 | imm << 6 | rn << 3 | rd);
         private static ushort Lsls(int rd, int rm, int shift) => (ushort)(shift << 6 | rm << 3 | rd);
         private static Func<Size, ushort> Fixed(ushort value) => _ => value;

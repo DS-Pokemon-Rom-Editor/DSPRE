@@ -88,8 +88,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public bool CanAddFont => _font != null && !HasUnsavedChanges && ExtraFontsPatch.IsApplied && OpenFontNumber >= 0 && !FontsFull;
 
-        public void OpenFontPatch() => AvaloniaEditorLauncher.OpenPatchToolboxAt("extraFonts");
-
         public void AddFont()
         {
             if (!CanAddFont) return;
@@ -248,6 +246,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         public bool HasGlyph => _font != null && _selectedGlyphIndex >= 0;
+        public bool CanSetWidth => _font != null && _font.HasStoredWidth(_selectedGlyphIndex);
+        public string WidthTip => HasGlyph && !CanSetWidth ? "The game gives this letter a fixed width." : "Width";
         public int CellSize => FieldFont.CellSize;
 
         private int _glyphWidth;
@@ -256,7 +256,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             get => _glyphWidth;
             set
             {
-                if (!Set(ref _glyphWidth, value) || _font == null || _selectedGlyphIndex < 0) return;
+                if (_font == null || !_font.HasStoredWidth(_selectedGlyphIndex) || !Set(ref _glyphWidth, value)) return;
                 _font.SetWidth(_selectedGlyphIndex, value);
                 RecordStep();
                 MarkDirty();
@@ -625,7 +625,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 try
                 {
                     if (FieldFontCharacters.Ready)
-                        for (char c = ' '; c < (char)0x2100; c++)
+                        for (char c = ' '; c < char.MaxValue; c++)
                         {
                             int g = FieldFontCharacters.GlyphFor(c);
                             if (g >= 0 && !built.ContainsKey(g)) built[g] = c.ToString();
@@ -646,7 +646,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             foreach (string n in new[]
             {
                 nameof(HasGlyph), nameof(GlyphTitle), nameof(GlyphChanged),
-                nameof(CanUsePictureCommand),
+                nameof(CanUsePictureCommand), nameof(CanSetWidth), nameof(WidthTip),
             })
                 OnPropertyChanged(n);
             if (_font != null && _selectedGlyphIndex >= 0)

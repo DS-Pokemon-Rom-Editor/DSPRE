@@ -96,7 +96,7 @@ namespace DSPRE.Avalonia.Views.Battle
                 Safe(piece.Name) + ".png");
             if (path == null) return;
 
-            int at = piece.TakesButtonArt ? piece.Arrangement : BattleScreenEditorViewModel.PaintableEntry(piece);
+            int at = piece.TakesButtonArt ? piece.Arrangement : PictureEntry(piece);
             string trouble;
             using (VM.Reading()) trouble = GraphicAssets.ExportPng(archive, at, path);
             if (trouble != null) await DialogHelper.ShowErrorAsync(trouble, ErrorTitle);
@@ -116,7 +116,7 @@ namespace DSPRE.Avalonia.Views.Battle
                 new[] { new FilePickerFileType("PNG image") { Patterns = new[] { "*.png" } } });
             if (path == null) return;
 
-            int at = BattleScreenEditorViewModel.PaintableEntry(piece);
+            int at = PictureEntry(piece);
             BattleGaugeComposer.Kind? bar = piece.UsesBarPieces ? HpBarFit.KindOf(piece.Layout) : null;
             if (bar != null)
             {
@@ -139,6 +139,10 @@ namespace DSPRE.Avalonia.Views.Battle
             if (!string.IsNullOrEmpty(note)) await DialogHelper.ShowInfoAsync(note, "Battle screen");
             SaveNotice.Imported(piece.Name, path);
         }
+
+        // Exports and reimports the HP bar at its on-screen size, which the fitted import expects.
+        private static int PictureEntry(BattleScreenRenderer.Piece piece) =>
+            piece.UsesBarPieces ? piece.Layout : BattleScreenEditorViewModel.PaintableEntry(piece);
 
         private async Task ImportButtonsAsync(GraphicAssets.Archive archive, BattleScreenRenderer.Piece piece)
         {
@@ -164,7 +168,6 @@ namespace DSPRE.Avalonia.Views.Battle
         }
 
         private void BarLayout_Click(object sender, RoutedEventArgs e) => AvaloniaEditorLauncher.OpenHpBarLayoutEditor();
-        private void TextBackgroundPatch_Click(object sender, RoutedEventArgs e) => VM?.OpenTextBackgroundPatch();
 
         private async Task ExportBarPiecesAsync()
         {

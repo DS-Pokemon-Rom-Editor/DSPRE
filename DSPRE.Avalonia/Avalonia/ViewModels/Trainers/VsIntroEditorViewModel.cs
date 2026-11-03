@@ -95,6 +95,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public void Ready()
         {
             ReadyMotion();
+            CheckClassIntroOffer();
             if (IsClassRecords) { ReadyClassRecords(); return; }
             BuildChoices();
             if (IsClassIntroPatch) { ReadyCiRows(); return; }
@@ -588,6 +589,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void OnRomPatchStateChanged(object sender, EventArgs e)
         {
             OnPatchStateChanged();
+            CheckClassIntroOffer();
             // The class table may have moved; with nothing unsaved, reading it again is the same as discarding.
             if (_t != null && !IsClassRecords && !IsClassIntroPatch && !HasUnsavedChanges) DiscardChanges();
         }

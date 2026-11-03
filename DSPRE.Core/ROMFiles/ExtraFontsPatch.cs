@@ -81,8 +81,8 @@ namespace DSPRE.ROMFiles
         private static (uint Arcs, uint Infos, uint Alloc)? Vanilla(byte[] arm9)
         {
             RomInfo.ExtraFontsSites s = Sites;
-            bool Immediate(uint site, int op, int value) => Half(arm9, site) >> 11 == op && (Half(arm9, site) & 0xFF) == value;
-            const int Adds = 6, Movs = 4, Cmp = 5;
+            bool Immediate(uint site, ThumbImm8.Op op, int value) => ThumbImm8.Is(Half(arm9, site), op) && ThumbImm8.Value(Half(arm9, site)) == value;
+            const ThumbImm8.Op Adds = ThumbImm8.Op.Adds, Movs = ThumbImm8.Op.Movs, Cmp = ThumbImm8.Op.Cmp;
             if (!s.Managers.All(a => Immediate(a, Adds, GameManagers) || Immediate(a, Movs, GameManagers))) return null;
             if (!s.Counts.All(a => Immediate(a, Adds, GameCounts) || Immediate(a, Movs, GameCounts))) return null;
             if (!s.Limits.All(a => Immediate(a, Cmp, GameFontCount))) return null;

@@ -281,7 +281,7 @@ namespace DSPRE
         {
             if (data == null || offset < 0 || offset + 2 > data.Length) return -1;
             ushort op = BitConverter.ToUInt16(data, offset);
-            return (op & 0xF800) == 0x2800 ? op & 0xFF : -1;
+            return DSPRE.ROMFiles.ThumbImm8.Is(op, DSPRE.ROMFiles.ThumbImm8.Op.Cmp) ? DSPRE.ROMFiles.ThumbImm8.Value(op) : -1;
         }
 
         /// <summary>Every row has a lookup trainer and holds only trainer ids, skips and ends.</summary>

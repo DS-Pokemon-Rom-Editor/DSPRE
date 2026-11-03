@@ -82,29 +82,32 @@ namespace DSPRE.ROMFiles
                 if (table < 0x14 || count <= 0 || table + 2 * count > arm9.Length) return null;
                 ushort subs = At(table - 0x14), movs = At(table - 0x12), cmp = At(table - 0x10);
                 // Japanese DP sets the default before the subtraction.
-                if ((subs & 0xFF00) == 0x2100 && (movs & 0xFF00) == 0x3800) (subs, movs) = (movs, subs);
-                if ((subs & 0xFF00) != 0x3800 || (movs & 0xFF00) != 0x2100 || cmp != (0x2800 | (count - 1))
+                if (MovsR1(subs) && SubsR0(movs)) (subs, movs) = (movs, subs);
+                if (!SubsR0(subs) || !MovsR1(movs) || cmp != ThumbImm8.Make(ThumbImm8.Op.Cmp, 0, count - 1)
                     || At(table - 2) != AddPcR0) return null;
 
-                ClassJumpTable t = new ClassJumpTable { FirstClass = subs & 0xFF, DefaultCombo = movs & 0xFF, Start = table };
+                ClassJumpTable t = new ClassJumpTable { FirstClass = ThumbImm8.Value(subs), DefaultCombo = ThumbImm8.Value(movs), Start = table };
                 t.Entries = new short[count];
                 for (int i = 0; i < count; i++) t.Entries[i] = (short)At(table + 2 * i);
 
                 // Stubs follow the table four bytes apart; the last falls through into the return.
                 int p = table + 2 * count;
-                while ((At(p) & 0xFF00) == 0x2100)
+                while (MovsR1(At(p)))
                 {
-                    t.ComboAt[p] = At(p) & 0xFF;
+                    t.ComboAt[p] = ThumbImm8.Value(At(p));
                     if ((At(p + 2) & 0xF800) == 0xE000) p += 4; else { p += 2; break; }
                 }
                 if (At(p) == ReturnR1) t.ComboAt[p] = t.DefaultCombo;
                 foreach (short e in t.Entries)
                 {
                     int target = t.TargetOf(e);
-                    if (!t.ComboAt.ContainsKey(target) && (At(target) & 0xFF00) == 0x2100) t.ComboAt[target] = At(target) & 0xFF;
+                    if (!t.ComboAt.ContainsKey(target) && MovsR1(At(target))) t.ComboAt[target] = ThumbImm8.Value(At(target));
                 }
                 return t;
             }
+
+            private static bool MovsR1(ushort op) => ThumbImm8.Is(op, ThumbImm8.Op.Movs) && ThumbImm8.Register(op) == 1;
+            private static bool SubsR0(ushort op) => ThumbImm8.Is(op, ThumbImm8.Op.Subs) && ThumbImm8.Register(op) == 0;
         }
 
         /// <summary>True when the rows came from hg-engine's source, not the ROM.</summary>

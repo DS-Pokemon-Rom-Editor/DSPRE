@@ -31,6 +31,9 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The drawing a sprite shows, which can follow the sample (a type icon picks its type's drawing).</summary>
         public virtual int SpriteDrawing(ScreenSprite sprite) => sprite.Drawing;
 
+        /// <summary>The file a sprite's borrowed picture is read from, or member -1 when it has none.</summary>
+        public virtual (DirNames Dir, int Member) PictureFile(ScreenSprite sprite) => (Archive, -1);
+
         /// <summary>The files a sample picture is drawn from, which live in other archives.</summary>
         public virtual IEnumerable<(string Name, string Where, DirNames Dir, int Member)> MonParts(ScreenMon mon)
             => Array.Empty<(string, string, DirNames, int)>();

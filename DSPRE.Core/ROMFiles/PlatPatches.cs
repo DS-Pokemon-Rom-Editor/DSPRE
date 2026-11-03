@@ -337,7 +337,7 @@ namespace DSPRE.ROMFiles
                 if (parts[i] != "??" && arm9[site + i] != Convert.ToByte(parts[i], 16)) return -1;
 
             ushort load = BitConverter.ToUInt16(arm9, (int)site + 4);
-            if ((load & 0xFF00) == 0x2000)
+            if (ThumbImm8.Is(load, ThumbImm8.Op.Movs) && ThumbImm8.Register(load) == 0)
             {
                 // mov r0, #imm8; lsl r0, r0, #n
                 ushort shift = BitConverter.ToUInt16(arm9, (int)site + 6);

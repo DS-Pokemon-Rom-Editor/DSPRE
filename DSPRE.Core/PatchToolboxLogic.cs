@@ -1723,6 +1723,12 @@ namespace DSPRE
             return string.Join("\n", lines);
         }
 
+        /// <summary>Whether RomLocator has a spot for this dump's header loader.</summary>
+        public static bool DynamicHeadersSupported => RomLocator.Where(RomLocator.Thing.DynamicHeadersInit) != null;
+
+        /// <summary>Whether RomLocator has a spot for this dump's matrix 0 limits.</summary>
+        public static bool MatrixExpansionSupported => RomLocator.Where(RomLocator.Thing.MatrixExpansionCode) != null;
+
         /// <summary>Each toolbox patch's name, as the toolbox lists it and as editors that hand over to it say it.</summary>
         public static readonly IReadOnlyDictionary<string, string> PatchTitles = new Dictionary<string, string>
         {
@@ -1922,8 +1928,7 @@ namespace DSPRE
                 "Loads map headers from their own files instead of a fixed table, so headers can be added (Platinum, HeartGold and SoulSilver).",
                 () =>
                 {
-                    // Its offsets are known for the US, European and Japanese ARM9s only.
-                    if (RomInfo.GameFamily == GameFamilies.DP || RomInfo.GameLanguage == GameLanguages.Korean)
+                    if (!DynamicHeadersSupported)
                         return UnsupportedVersion(RomInfo.KnownDumps.Where(d => (d.id.StartsWith("CPU") || d.id.StartsWith("IP")) && d.id[3] != 'K'));
                     bool applied = RomPatchState.FlagDynamicHeadersPatchApplied || CheckFilesDynamicHeadersPatchApplied();
                     return applied ? PatchState.Applied : PatchState.Available;
@@ -1934,7 +1939,7 @@ namespace DSPRE
                 () =>
                 {
                     if (RomInfo.GameFamily != GameFamilies.HGSS) return Unsupported("HeartGold and SoulSilver only");
-                    if (RomInfo.GameLanguage != GameLanguages.English && RomInfo.GameLanguage != GameLanguages.Spanish)
+                    if (!MatrixExpansionSupported)
                         return UnsupportedVersion(RomInfo.KnownDumps.Where(d => d.id.StartsWith("IP") && (d.id[3] == 'E' || d.id[3] == 'S')));
                     bool applied = RomPatchState.FlagMatrixExpansionApplied || CheckFilesMatrixExpansionApplied();
                     return applied ? PatchState.Applied : PatchState.Available;

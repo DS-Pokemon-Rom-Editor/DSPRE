@@ -121,8 +121,6 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             return v > 0 ? v : VsIntroTimingAddon.GameValue(field, Record?.VsStyle ?? 0);
         }
 
-        public void OpenTimingPatch() => AvaloniaEditorLauncher.OpenPatchToolboxAt("vsIntroTimings");
-
         /// <summary>Picks the table up once its toolbox patch is applied.</summary>
         internal void OnPatchStateChanged()
         {

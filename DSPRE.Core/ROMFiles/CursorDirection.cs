@@ -33,5 +33,18 @@ namespace DSPRE.ROMFiles
         /// <summary>A u8, s16 or s32 spot.</summary>
         public static int Value(byte[] data, int at, int size) =>
             size switch { 4 => BitConverter.ToInt32(data, at), 2 => BitConverter.ToInt16(data, at), _ => data[at] };
+
+        /// <summary>One spot table entry's x and y, in the table's units. <paramref name="at"/> is the entry's x.</summary>
+        public static (int X, int Y) Entry(byte[] data, TouchListButtons.Spots s, int at) =>
+            (s.YOnly ? 0 : Value(data, at, s.Size), s.XOnly ? 0 : Value(data, s.YOnly ? at : at + s.Size, s.Size));
+
+        /// <summary>Moves one spot table entry by pixels, in its own units, without leaving the screen.</summary>
+        public static void ShiftEntry(byte[] data, TouchListButtons.Spots s, int at, int dx, int dy)
+        {
+            int ux = (int)Math.Round(dx / (double)s.Unit), uy = (int)Math.Round(dy / (double)s.Unit);
+            // An axis that doesn't move isn't clamped, so a spot the game keeps off screen stays where it is.
+            if (!s.YOnly && ux != 0) Shift(data, at, s.Size, ux, 255 / s.Unit);
+            if (!s.XOnly && uy != 0) Shift(data, s.YOnly ? at : at + s.Size, s.Size, uy, 191 / s.Unit);
+        }
     }
 }

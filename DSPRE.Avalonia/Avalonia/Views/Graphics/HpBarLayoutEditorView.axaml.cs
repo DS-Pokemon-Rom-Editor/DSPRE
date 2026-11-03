@@ -81,8 +81,6 @@ namespace DSPRE.Avalonia.Views.Graphics
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveChanges();
-        private void TextBackgroundPatch_Click(object sender, RoutedEventArgs e) => VM?.OpenTextBackgroundPatch();
-        private void FontPatch_Click(object sender, RoutedEventArgs e) => VM?.OpenFontPatch();
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {
             if (await DialogHelper.ConfirmDiscardAsync(this)) VM?.DiscardChanges();

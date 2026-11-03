@@ -184,6 +184,5 @@ namespace DSPRE.Avalonia.Views.Graphics
         }
         private void Undo_Click(object sender, RoutedEventArgs e) => VM?.Undo();
         private void Redo_Click(object sender, RoutedEventArgs e) => VM?.Redo();
-        private void FontPatch_Click(object sender, RoutedEventArgs e) => VM?.OpenFontPatch();
     }
 }

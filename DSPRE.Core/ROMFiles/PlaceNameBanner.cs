@@ -49,8 +49,9 @@ namespace DSPRE.ROMFiles
         private ushort Op(uint site) => BitConverter.ToUInt16(_data, _at[site]);
         private void Put(uint site, int op) => BitConverter.TryWriteBytes(_data.AsSpan(_at[site]), (ushort)op);
 
-        private static bool Mov(ushort op, int reg) => op >> 8 == (0x20 | reg);
-        private static bool Cmp(ushort op, int reg) => op >> 8 == (0x28 | reg);
+        private static bool Mov(ushort op, int reg) => ThumbImm8.Is(op, ThumbImm8.Op.Movs) && ThumbImm8.Register(op) == reg;
+        private static bool Cmp(ushort op, int reg) => ThumbImm8.Is(op, ThumbImm8.Op.Cmp) && ThumbImm8.Register(op) == reg;
+        private static int Imm(ThumbImm8.Op kind, int reg, int value) => ThumbImm8.Make(kind, reg, value);
 
         private static RomLocator.BannerTables D => RomLocator.BannerDistances;
         private uint At(int distance) => (uint)(_s.Task + distance);
@@ -66,7 +67,9 @@ namespace DSPRE.ROMFiles
             && Hidden.All(h => (Op(h) & 0xFF) == (Op(_s.Show) & 0xFF)) && Speed(Op(SlideIn)) > 0 && Speed(Op(SlideOut)) > 0
             && (Patched || Op(_s.Window) == 0x2300);
 
-        private static int Speed(ushort op) => op >> 9 == 0b0001111 || op >> 9 == 0b0001110 ? op >> 6 & 7 : op >> 11 is 0b00111 or 0b00110 ? op & 0xFF : 0;
+        // "subs/adds rd, rn, #n" keeps n in bits 6-8. "subs/adds rd, #n" is the one-byte form.
+        private static int Speed(ushort op) => op >> 9 == 0b0001111 || op >> 9 == 0b0001110 ? op >> 6 & 7
+            : ThumbImm8.Is(op, ThumbImm8.Op.Subs) || ThumbImm8.Is(op, ThumbImm8.Op.Adds) ? ThumbImm8.Value(op) : 0;
 
         // ── the position patch ──
 
@@ -128,19 +131,19 @@ namespace DSPRE.ROMFiles
         {
             if (WhyNot(l) is string why) throw new InvalidOperationException(why);
             int extra = ExtraRows;
-            Put(_s.Mod, 0x2100 | l.Width);
-            Put(SecondMod, 0x2100 | l.Width);
-            Put(_s.Count, 0x2C00 | l.Width * l.Height);
-            Put(WindowHeight, (Patched ? 0x2200 : 0x2000) | l.Height + extra);
+            Put(_s.Mod, Imm(ThumbImm8.Op.Movs, 1, l.Width));
+            Put(SecondMod, Imm(ThumbImm8.Op.Movs, 1, l.Width));
+            Put(_s.Count, Imm(ThumbImm8.Op.Cmp, 4, l.Width * l.Height));
+            Put(WindowHeight, Imm(ThumbImm8.Op.Movs, Patched ? 2 : 0, l.Height + extra));
             foreach (uint h in Hidden) Put(h, Op(h) & 0xFF00 | HiddenScroll(l));
-            Put(_s.Task, 0x2800 | l.Time);
-            Put(SlideIn, 0x3800 | l.Speed);
-            Put(SlideOut, 0x3000 | l.SpeedOut);
-            if (_s.Centre != 0) Put(_s.Centre, 0x2200 | 8 * l.Width - 4);
+            Put(_s.Task, Imm(ThumbImm8.Op.Cmp, 0, l.Time));
+            Put(SlideIn, Imm(ThumbImm8.Op.Subs, 0, l.Speed));
+            Put(SlideOut, Imm(ThumbImm8.Op.Adds, 0, l.SpeedOut));
+            if (_s.Centre != 0) Put(_s.Centre, Imm(ThumbImm8.Op.Movs, 2, 8 * l.Width - 4));
             if (!Patched) return;
-            Put(_s.Window, 0x2200 | l.Down);
-            Put(_s.Window + 2, 0x2300 | ScreenColumns - l.Across);
-            Put(_s.Window + 18, 0x2300 | l.Across);
+            Put(_s.Window, Imm(ThumbImm8.Op.Movs, 2, l.Down));
+            Put(_s.Window + 2, Imm(ThumbImm8.Op.Movs, 3, ScreenColumns - l.Across));
+            Put(_s.Window + 18, Imm(ThumbImm8.Op.Movs, 3, l.Across));
         }
 
         public byte[] ToBytes() => _tables.Copy();

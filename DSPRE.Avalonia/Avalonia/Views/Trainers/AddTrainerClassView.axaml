@@ -50,8 +50,7 @@
       <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
         <CheckBox Content="Eye-contact music" IsChecked="{Binding AddMusic}" IsEnabled="{Binding CanAddMusic}"
                   ToolTip.Tip="{Binding MusicHelp}" ToolTip.ShowOnDisabled="True"/>
-        <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Click="OpenMusicPatch_Click"
-                IsVisible="{Binding MusicNeedsPatch}"/>
+        <controls:EnableInToolbox Patch="trainerEncounterBgmRepointed" Need="Eye-contact music for a new class" IsVisible="{Binding MusicNeedsPatch}"/>
       </StackPanel>
       <StackPanel Spacing="2" IsEnabled="{Binding AddMusic}">
         <TextBlock Text="Eye-contact music" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"

@@ -475,14 +475,15 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         // Platinum's bag has no Cursor tab because the code places its cursor.
         private static ScreenEntry BagEntry(ScreensEditorViewModel o)
         {
+            ScreenEditorView[] text = LayoutOf("bag", "Bag") is ScreenEditorView layout ? new[] { layout } : Array.Empty<ScreenEditorView>();
             if (RomLocator.PtBagTouchSites != null)
-                return new ScreenEntry(o, "bag", "Bag", Text("bag"), ButtonTabs(PlatinumTouchLists.Bag, "Bag", (bag, page) =>
+                return new ScreenEntry(o, "bag", "Bag", Text("bag"), text.Concat(ButtonTabs(PlatinumTouchLists.Bag, "Bag", (bag, page) =>
                 {
                     IReadOnlyList<(int X, int Y)> spots = page <= 3 ? bag.SpotsOf(page) : null;
                     return () => GameTextScreens.BagBottomPt(spots);
-                }, cursor: false));
-            if (RomLocator.BagButtonSites == null) return new ScreenEntry(o, "bag", "Bag", Text("bag"));
-            return new ScreenEntry(o, "bag", "Bag", Text("bag"), ButtonTabs(FieldBagButtons.Read, "Bag", (_, page) => () => GameTextScreens.BagBottomHg(page)));
+                }, "Buttons", cursor: false)).ToArray());
+            if (RomLocator.BagButtonSites == null) return new ScreenEntry(o, "bag", "Bag", Text("bag"), text);
+            return new ScreenEntry(o, "bag", "Bag", Text("bag"), text.Concat(ButtonTabs(FieldBagButtons.Read, "Bag", (_, page) => () => GameTextScreens.BagBottomHg(page), "Buttons")).ToArray());
         }
 
         private static ScreenEntry OptionsEntry(ScreensEditorViewModel o) =>
@@ -536,10 +537,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                                 (int X, int Y) cancel = card.SpotsOf(0, 1)[0], hint = card.SpotsOf(0, 2)[0];
                                 return () => GameTextScreens.TrainerCardBottomHg(cancel, hint);
                             }, cursor: false)).ToArray()),
-                new ScreenEntry(o, "naming", "Naming screen", Text("naming"),
+                new ScreenEntry(o, "naming", "Naming screen", Text("naming"), new[]
+                {
                     Editor("NamingScreenEditor", "Edit", () => new Views.Trainers.TrainerSpriteEditorView(
                             new ViewModels.Trainers.TrainerSpriteEditorViewModel(48, TrainerSpriteSet.NamingIcons)), null,
-                           Unpack(DirNames.NameInputGraphics), "Opening Naming screen…")),
+                           Unpack(DirNames.NameInputGraphics), "Opening Naming screen…"),
+                    LayoutOf("naming", "Naming screen"),
+                }.Where(v => v != null).ToArray()),
             });
             yield return ("Pokédex and summary", new[]
             {
@@ -558,11 +562,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         return () => GameTextScreens.NumberPadHg(keys, labels);
                     })),
                 RomLocator.PokegearSites == null ? new ScreenEntry(o, "pokegear", "Pokégear", Text("pokegear"))
-                    : new ScreenEntry(o, "pokegear", "Pokégear", Text("pokegear"), ButtonTabs(PokegearButtons.Read, "Pokégear", (gear, page) =>
-                    {
-                        IReadOnlyList<(int X, int Y)> spots = gear?.TileSpots(gear.RadioButtonsPage);
-                        return () => PokegearPictures.Draw(page, spots);
-                    })),
+                    : new ScreenEntry(o, "pokegear", "Pokégear", Text("pokegear"), new[] { LayoutOf("pokegear", "Pokégear") }.Where(v => v != null)
+                        .Concat(ButtonTabs(PokegearButtons.Read, "Pokégear", (gear, page) =>
+                        {
+                            IReadOnlyList<(int X, int Y)> spots = gear?.TileSpots(gear.RadioButtonsPage);
+                            return () => PokegearPictures.Draw(page, spots);
+                        }, "Buttons")).ToArray()),
             }.Where(e => e != null));
             yield return ("Title", new[]
             {
@@ -855,7 +860,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             bool[][] areas = null;
             try
             {
-                areas = await Task.Run(() =>
+                areas = await PreviewFileGate.RunAsync(() =>
                 {
                     using (DrawScope()) return GameTextScreens.Areas(_screen, bank, line, text, ArchiveLine, stop, state, shot, () => asked != _asked);
                 });
@@ -955,7 +960,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             GameTextScreens.Shot shot = null;
             try
             {
-                shot = await Task.Run(() =>
+                shot = await PreviewFileGate.RunAsync(() =>
                 {
                     using (DrawScope()) return GameTextScreens.Draw(_screen, archive.Bank, row.Index, row.Text, ArchiveLine, stop, state);
                 });

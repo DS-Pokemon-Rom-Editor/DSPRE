@@ -40,7 +40,7 @@ namespace DSPRE.Avalonia.Data
             // battle_party.c builds row 13 from the system font's colours, with blue and red taken from row 9.
             ushort[] labels = (ushort[])SystemColours.Clone();
             (labels[7], labels[8], labels[3], labels[4]) = (list[10], list[11], list[12], list[13]);
-            byte[] glyphs = NitroBgCodec.ReadCharacters(NitroBgCodec.Inflate(Members(DirNames.Fonts)?.Invoke(hg ? 5 : 4)));
+            byte[] glyphs = NitroBgCodec.ReadCharacters(NitroBgCodec.Inflate(Members(DirNames.Fonts)?.Invoke(RomInfo.SpecialGlyphsFontEntry(hg))));
             PartySample.Pokemon first = PartySample.Party[0];
 
             void Button(int message, int button, int x, int y, int w)

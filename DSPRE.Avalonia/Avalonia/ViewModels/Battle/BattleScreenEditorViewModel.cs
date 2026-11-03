@@ -239,8 +239,6 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public bool CanClearTextBackground => HpBarTextPatchOffer.CanOffer;
         public string ClearTextBackgroundHelp => HpBarTextPatchOffer.Tip;
 
-        public void OpenTextBackgroundPatch() => HpBarTextPatchOffer.Open();
-
         private void OnPatchStateChanged(object sender, EventArgs e)
         {
             OnPropertyChanged(nameof(CanClearTextBackground));

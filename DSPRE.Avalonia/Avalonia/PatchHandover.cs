@@ -15,12 +15,16 @@ namespace DSPRE.Avalonia
         /// <param name="title">The editor's title, for the question's window.</param>
         public static async Task OfferAsync(string key, string need, string title)
         {
-            string patchTitle = PatchToolboxLogic.PatchTitles.TryGetValue(key, out string named) ? named : key;
             bool open = await DialogHelper.AskTwoWayAsync(
-                $"{need} needs the \"{patchTitle}\" patch. It changes the game's code, so it is applied from the ROM patch toolbox, "
-                + "where its notes say what it changes and what it backs up. Come back here once it is applied.",
-                title, "Open in ROM patch toolbox", "Cancel");
+                $"{need ?? "This"} needs the \"{TitleOf(key)}\" patch, which changes the game's code. " +
+                "Read its notes in the ROM patch toolbox and come back once it's applied.",
+                title, "Enable in toolbox", "Cancel");
             if (open) AvaloniaEditorLauncher.OpenPatchToolboxAt(key);
         }
+
+        /// <summary>The Enable in toolbox tooltip.</summary>
+        public static string Needs(string key, string need) => $"{need ?? "This"} needs the \"{TitleOf(key)}\" patch.";
+
+        private static string TitleOf(string key) => PatchToolboxLogic.PatchTitles.TryGetValue(key, out string named) ? named : key;
     }
 }

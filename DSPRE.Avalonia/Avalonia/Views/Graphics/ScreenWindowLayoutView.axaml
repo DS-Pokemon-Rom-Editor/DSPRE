@@ -54,8 +54,10 @@
               ToolTip.Tip="Removes the old panel outlines from the background"/>
       <Button Content="Rebuild cursor frame" Margin="0,0,16,4" Click="RebuildCursor_Click" IsVisible="{Binding CanRebuildGraphics}"
               ToolTip.Tip="Stretches the cursor frame to the panel size, keeping its corners"/>
-      <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Margin="0,0,16,4" Click="SizePatch_Click"
-              IsVisible="{Binding CanOfferSizePatch}" ToolTip.Tip="The &quot;Party panel size&quot; patch lets the panels change size."/>
+      <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,16,4" IsVisible="{Binding CanOfferSizePatch}">
+        <TextBlock Text="Panel size" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+        <controls:EnableInToolbox Patch="partyPanelSize" Need="Changing the panel size"/>
+      </StackPanel>
     </controls:EditorToolbar>
 
     <!-- The windows, by name -->
@@ -68,8 +70,10 @@
           <TextBlock Grid.Column="4" Text="Width" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
           <TextBlock Grid.Column="5" Text="Height" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
         </Grid>
-        <Button DockPanel.Dock="Top" Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Margin="0,0,0,6" Click="FontPatch_Click"
-                IsVisible="{Binding OffersFontPatch}" ToolTip.Tip="Lets the names use another font"/>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,6" IsVisible="{Binding OffersFontPatch}">
+          <ComboBox Width="180" IsEnabled="False" PlaceholderText="Font" ToolTip.Tip="Font" ToolTip.ShowOnDisabled="True"/>
+          <controls:EnableInToolbox Patch="partyFonts" Need="Choosing the font for names"/>
+        </StackPanel>
         <ScrollViewer HorizontalScrollBarVisibility="Disabled">
           <ItemsControl ItemsSource="{Binding Windows}">
             <ItemsControl.ItemTemplate>
@@ -83,14 +87,14 @@
                     <ContentControl controls:Icon.Key="warning" HorizontalAlignment="Right" IsVisible="{Binding HasWarning}"
                                     ToolTip.Tip="{Binding Warning}" Background="Transparent"/>
                   </Panel>
-                  <NumericUpDown Grid.Column="2" Value="{Binding Across}" Minimum="0" Maximum="31" Increment="1" FormatString="0"
-                                 ToolTip.Tip="Across"/>
-                  <NumericUpDown Grid.Column="3" Value="{Binding Down}" Minimum="0" Maximum="31" Increment="1" FormatString="0"
-                                 ToolTip.Tip="Down"/>
+                  <NumericUpDown Grid.Column="2" IsEnabled="{Binding CanAcross}" Value="{Binding Across}" Minimum="{Binding MinAcross}" Maximum="{Binding MaxAcross}" Increment="1" FormatString="0"
+                                 ToolTip.Tip="{Binding AcrossTip}" ToolTip.ShowOnDisabled="True"/>
+                  <NumericUpDown Grid.Column="3" IsEnabled="{Binding CanDown}" Value="{Binding Down}" Minimum="{Binding MinDown}" Maximum="{Binding MaxDown}" Increment="1" FormatString="0"
+                                 ToolTip.Tip="{Binding DownTip}" ToolTip.ShowOnDisabled="True"/>
                   <NumericUpDown Grid.Column="4" Value="{Binding Wide}" Minimum="1" Maximum="{Binding MaxWide}" Increment="1" FormatString="0"
-                                 IsVisible="{Binding Sizable}" ToolTip.Tip="Width in tiles. It can't be wider than in the ROM until a patch allows it."/>
+                                 IsEnabled="{Binding Sizable}" ToolTip.Tip="{Binding WideTip}" ToolTip.ShowOnDisabled="True"/>
                   <NumericUpDown Grid.Column="5" Value="{Binding Tall}" Minimum="1" Maximum="{Binding MaxTall}" Increment="1" FormatString="0"
-                                 IsVisible="{Binding Sizable}" ToolTip.Tip="Height in tiles. It can't be taller than in the ROM until a patch allows it."/>
+                                 IsEnabled="{Binding Sizable}" ToolTip.Tip="{Binding TallTip}" ToolTip.ShowOnDisabled="True"/>
                 </Grid>
                 <ComboBox Margin="24,0,0,0" Width="180" ItemsSource="{Binding FontNames}" SelectedIndex="{Binding FontIndex}"
                           IsVisible="{Binding CanPickFont}" ToolTip.Tip="Font"/>

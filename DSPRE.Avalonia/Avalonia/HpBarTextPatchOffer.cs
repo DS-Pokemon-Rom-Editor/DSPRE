@@ -13,6 +13,5 @@ namespace DSPRE.Avalonia
 
         public static bool CanOffer => !RomInfo.IsHGE && BattleGaugeTextPatch.SupportsCurrentRom && !BattleGaugeTextPatch.IsApplied;
 
-        public static void Open() => AvaloniaEditorLauncher.OpenPatchToolboxAt("hpBarText");
     }
 }

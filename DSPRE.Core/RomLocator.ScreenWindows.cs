@@ -446,37 +446,215 @@ namespace DSPRE
         public static int PartyStripTile => RomID == null ? 0 : PartyStripTileIn(GameVersion, GameLanguage, RomRevision);
 
         // pokeplatinum src/applications/pc_boxes/ov19_021DA92C.c and ov19_021DB2FC.c, in overlay 19.
-        private static readonly ScreenWindowTableSite[] PlatinumBox =
+        private static ScreenWindowTableSite[] PlatinumBox(uint at) => new ScreenWindowTableSite[]
         {
-            new("Box", 19, 0xF458, Named(new[] { "Species", "Dex number", "Nickname", "Held item and more", "Message", "Menu" }), 2, 0x120),
+            new("Box", 19, at, Named(new[] { "Species", "Dex number", "Nickname", "Held item and more", "Message", "Menu" }), 2, 0x120),
         };
 
         // pokeheartgold overlay 14. One table: the top screen details, then (not listed yet) moves, item text and menus, then the messages.
-        private static readonly ScreenWindowTableSite[] HgssBox =
+        private static ScreenWindowTableSite[] HgssBox(uint top, uint messages) => new ScreenWindowTableSite[]
         {
-            new("Top screen", 14, 0x12BB4, Named(new[]
+            new("Top screen", 14, top, Named(new[]
             {
                 "Species", "Nickname", "Level", "Title", "Gender", "Dex number", "Nature", "Ability", "Held item",
+                "Move 1", "Move 2", "Move 3", "Move 4", "Copy of move 1", "Copy of move 2", "Copy of move 3", "Copy of move 4",
+                "Nature label", "Ability label", "Held item label", "Item name", "Item description", "Copy of item name", "Copy of item description",
             }), 4, 0x69),
-            new("Messages", 14, 0x12CDC, Named(new[] { "Message", "Message at the top", "Short message", "Second message", "Yes/no" }), 0, 0x2B3),
+            new("Messages", 14, messages, Named(new[] { "Message", "Message at the top", "Short message", "Second message", "Yes/no" }), 0, 0x2B3),
         };
 
-        // Measured on the US dumps only.
-        public static ScreenWindowTableSite[] BoxWindowSitesIn(GameVersions game, GameLanguages language, int revision) =>
-            language != GameLanguages.English ? null : game switch
+        // Measured on every dump.
+        public static ScreenWindowTableSite[] BoxWindowSitesIn(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
             {
-                GameVersions.Platinum => PlatinumBox,
-                GameVersions.HeartGold or GameVersions.SoulSilver => HgssBox,
+                GameLanguages.English => PlatinumBox(0xF458),
+                GameLanguages.Japanese => PlatinumBox(0xF3FC),
+                GameLanguages.French => PlatinumBox(0xF464),
+                GameLanguages.German => PlatinumBox(0xF464),
+                GameLanguages.Italian => PlatinumBox(0xF464),
+                GameLanguages.Spanish => PlatinumBox(0xF464),
+                GameLanguages.Korean => PlatinumBox(0xF464),
                 _ => null,
-            };
+            },
+            GameVersions.HeartGold or GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.Japanese => HgssBox(0x12A78, 0x12BA0),
+                GameLanguages.English => HgssBox(0x12BB4, 0x12CDC),
+                GameLanguages.French => HgssBox(0x12BB4, 0x12CDC),
+                GameLanguages.German => HgssBox(0x12BB4, 0x12CDC),
+                GameLanguages.Italian => HgssBox(0x12BB4, 0x12CDC),
+                GameLanguages.Spanish => HgssBox(0x12BB4, 0x12CDC),
+                GameLanguages.Korean => HgssBox(0x12BB4, 0x12CDC),
+                _ => null,
+            },
+            _ => null,
+        };
 
         /// <summary>Null where they aren't known for this ROM.</summary>
         public static ScreenWindowTableSite[] ScreenWindowSites(string screen) => screen switch
         {
             "party" => Here(PartyWindowSitesIn),
             "box" => Here(BoxWindowSitesIn),
+            "pokegear" => Here(PokegearWindowSitesIn),
             _ => null,
         };
+
+        // pokeheartgold application/pokegear: each app's sWindowTemplates, overlay 101. Measured on every dump.
+        public static ScreenWindowTableSite[] PokegearWindowSitesIn(GameVersions game, GameLanguages language, int revision)
+        {
+            if (game != GameVersions.HeartGold && game != GameVersions.SoulSilver) return null;
+            int? known = language switch
+            {
+                GameLanguages.English => 0,
+                GameLanguages.German or GameLanguages.French or GameLanguages.Spanish => 0xC,
+                GameLanguages.Italian => 8,
+                GameLanguages.Korean => 0x10,
+                GameLanguages.Japanese => -0x70,
+                _ => null,
+            };
+            if (known is not int shift) return null;
+            int map = language == GameLanguages.Japanese ? -0x68 : shift;
+            string[] places = { "Region", "Place", "Description", "Landmark 1", "Landmark 2", "Landmark 3", "Landmark 4" };
+            return new ScreenWindowTableSite[]
+            {
+                new("Phone", 101, (uint)(0x10CE0 + shift), Named(new[] { "Call", "Caller", "Contacts", "Hint" }), 6, 0x375),
+                new("Radio", 101, (uint)(0x1109C + shift), Named(new[] { "Broadcast", "Station", "Heading" }), 6, 0x38F),
+                new("Map", 101, (uint)(0x10424 + map), Named(places.Append("Map heading")), 5, 0x3F0),
+                new("Fly map", 101, (uint)(0x10814 + map), Named(places.Append("Fly heading").Append("Fly close")), 5, 0x3F0),
+            };
+        }
+
+        /// <summary>Null where they aren't known for this ROM.</summary>
+        public static ScreenCodeWindowSites ScreenCodeWindows(string screen) => screen switch
+        {
+            "bag" => Here(BagWindowSitesIn),
+            "naming" => Here(NamingWindowSitesIn),
+            _ => null,
+        };
+
+        // The prompt window's y, in pokeplatinum and pokeheartgold naming_screen.c, which build their windows alike in arm9.
+        private static uint? NamingAnchor(GameVersions game, GameLanguages language) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English => 0x88146,
+                GameLanguages.Japanese => 0x87A60,
+                GameLanguages.Korean => 0x8867A,
+                GameLanguages.French => 0x881E6,
+                GameLanguages.German => 0x881E6,
+                GameLanguages.Italian => 0x881E6,
+                GameLanguages.Spanish => 0x881E6,
+                _ => null,
+            },
+            GameVersions.HeartGold => language switch
+            {
+                GameLanguages.English => 0x84122,
+                GameLanguages.Spanish => 0x8411A,   // Spanish HeartGold's arm9 sits 8 bytes earlier here. SoulSilver's doesn't.
+                GameLanguages.Japanese => 0x83BC0,
+                GameLanguages.Korean => 0x8426E,
+                GameLanguages.French => 0x84122,
+                GameLanguages.German => 0x84122,
+                GameLanguages.Italian => 0x84122,
+                _ => null,
+            },
+            GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.English => 0x84122,
+                GameLanguages.Spanish => 0x84122,
+                GameLanguages.Japanese => 0x83BC0,
+                GameLanguages.Korean => 0x84266,
+                GameLanguages.French => 0x84122,
+                GameLanguages.German => 0x84122,
+                GameLanguages.Italian => 0x84122,
+                _ => null,
+            },
+            _ => null,
+        };
+
+        // Measured on every dump. The keys and the title only slide across: one register holds their y and their palette or height.
+        // Japanese keys are placed elsewhere, so they stay out.
+        public static ScreenCodeWindowSites NamingWindowSitesIn(GameVersions game, GameLanguages language, int revision)
+        {
+            if (NamingAnchor(game, language) is not uint m) return null;
+            const string bottom = "Keyboard", top = "Top screen";
+            ScreenWindowSpot[] none = System.Array.Empty<ScreenWindowSpot>();
+            List<ScreenCodeWindow> windows = new List<ScreenCodeWindow>
+            {
+                new ScreenCodeWindow(bottom, "Title", 2, 22, 2, Movs(m - 0x9C), none, FixedY: 2),
+                // The name's side window sits just right of it, so its position moves along.
+                new ScreenCodeWindow(bottom, "Name", 2, 13, 2, new[] { new ScreenWindowSpot(m - 0x62), new ScreenWindowSpot(m - 0x44, Add: 1) },
+                                     new[] { new ScreenWindowSpot(m - 0x84), new ScreenWindowSpot(m - 0x50) }),
+                new ScreenCodeWindow(top, "Prompt", 4, 27, 4, Movs(m + 0x1C), Movs(m)),
+            };
+            if (language != GameLanguages.Japanese)
+                windows.Insert(0, new ScreenCodeWindow(bottom, "Keys", 0, 26, 12, new[] { new ScreenWindowSpot(m - 0x15C), new ScreenWindowSpot(m - 0x138) }, none, FixedY: 1));
+            return new ScreenCodeWindowSites(-1, windows.ToArray());
+        }
+
+        private static ScreenWindowSpot[] Movs(uint at) => new[] { new ScreenWindowSpot(at) };
+
+        // Where the code copies x from a register that places something else too, x stays at copiedX.
+        private static ScreenCodeWindow Coded(string group, string name, int layer, int width, int height, uint xAt, uint yAt, int copiedX = -1) =>
+            copiedX >= 0
+                ? new ScreenCodeWindow(group, name, layer, width, height, System.Array.Empty<ScreenWindowSpot>(), Movs(yAt), FixedX: copiedX)
+                : new ScreenCodeWindow(group, name, layer, width, height, Movs(xAt), Movs(yAt));
+
+        private static ScreenCodeWindow Tabled(string group, string name, int layer, int width, int height, params uint[] at) =>
+            new ScreenCodeWindow(group, name, layer, width, height, at.Select(a => new ScreenWindowSpot(a, true)).ToArray(),
+                                 at.Select(a => new ScreenWindowSpot(a + 4, true)).ToArray());
+
+        // pokeplatinum applications/bag/windows.c and pokeheartgold application/bag/bag_app_window.c. Measured on every dump.
+        // The money windows are left out because one register holds their x and y.
+        public static ScreenCodeWindowSites BagWindowSitesIn(GameVersions game, GameLanguages language, int revision)
+        {
+            bool japanese = language == GameLanguages.Japanese;
+            const string top = "Top screen", bottom = "Bottom screen";
+            if (game == GameVersions.Platinum)
+            {
+                uint c = japanese ? 0x4Cu : 0;
+                ScreenCodeWindow Pt(string name, int layer, int width, int height, uint xAt, uint yAt, int copiedX = -1) =>
+                    Coded(top, name, layer, width, height, xAt - c, yAt - c, copiedX);
+                return new ScreenCodeWindowSites(84, new[]
+                {
+                    Pt("Item list", 2, 17, 18, 0x3AC0, 0x3AA6),
+                    Pt("Description", 0, 32, 6, 0x3AE2, 0x3AC6, 0),
+                    Pt("Message", 0, 14, 4, 0x3B24, 0x3B08),
+                    Pt("Short message", 0, 13, 4, 0x3B46, 0x3B2A),
+                    Pt("Long message", 0, 27, 4, 0x3B8A, 0x3B6E),
+                    Pt("Sell amount", 0, 12, 4, 0x3BAC, 0x3B90),
+                    Pt("Toss amount", 0, 7, 4, 0x3BEE, 0x3BD2),
+                    Pt("Poffin count", 0, 11, 4, 0x3C10, 0x3BF4),
+                    // Code clears this box at the same rows, so those move too. Its columns come from a loop.
+                    new ScreenCodeWindow(top, "Pocket names", 2, 12, 3, System.Array.Empty<ScreenWindowSpot>(),
+                                         new[] { new ScreenWindowSpot(0x3AE8 - c), new ScreenWindowSpot(0x3CC4 - c), new ScreenWindowSpot(0x3CE6 - c, Add: -1) }),
+                });
+            }
+            if (game != GameVersions.HeartGold && game != GameVersions.SoulSilver) return null;
+            uint code = japanese ? 0x44u : 0, data = japanese ? 0x78u : 0;
+            ScreenCodeWindow Code(string group, string name, int layer, int width, int height, uint xAt, uint yAt, int copiedX = -1) =>
+                Coded(group, name, layer, width, height, xAt - code, yAt - code, copiedX);
+            uint digits = 0x7550 - data, options = 0x7568 - data, items = 0x7588 - data;
+            List<ScreenCodeWindow> windows = new List<ScreenCodeWindow>
+            {
+                Code(top, "Description", 1, 32, 6, 0x4CBE, 0x4CA6),
+                Code(top, "TM details", 1, 32, 4, 0x4CDE, 0x4CC4),
+                Code(top, "Amount", 1, 12, 4, 0x4D3C, 0x4D22),
+                Code(top, "Poffin count", 1, 11, 4, 0x4D5C, 0x4D42, 1),
+                Code(bottom, "Page", 4, 7, 2, 0x4D7E, 0x4D62),
+                Code(bottom, "Cancel", 4, japanese ? 6 : 7, 2, 0x4DAA, 0x4D8E),
+                Code(bottom, "Selected item", 4, 11, 4, 0x4EB0, 0x4E96),
+                Code(bottom, "Sell or toss", 4, japanese ? 5 : 7, 2, 0x4F92, 0x4F70),
+                Code(bottom, "Prompt", 4, 18, 4, 0x4FB4, 0x4FA6),
+                Code(bottom, "Long message", 4, 27, 4, 0x4D1C, 0x4D02),
+                Code(bottom, "Price", 4, 8, 3, 0x5028, 0x5006),
+            };
+            // Each item has two windows at one spot, which the game swaps between when the page turns.
+            windows.AddRange(Enumerable.Range(0, 6).Select(i => Tabled(bottom, $"Item {i + 1}", 4, 11, 4, items + (uint)i * 12, items + (uint)(i + 6) * 12)));
+            windows.AddRange(Enumerable.Range(0, 4).Select(i => Tabled(bottom, $"Option {i + 1}", 4, 10, 2, options + (uint)i * 8)));
+            windows.AddRange(Enumerable.Range(0, 3).Select(i => Tabled(bottom, $"Digit {i + 1}", 4, 2, 3, digits + (uint)i * 8)));
+            return new ScreenCodeWindowSites(15, windows.ToArray());
+        }
 
         // pokeplatinum overlay 5 map_name_popup.c, pokeheartgold overlay 1 draw_map_name.c. Measured on every Platinum and HGSS dump.
         private static readonly PlaceNameBannerSites BannerHgWest = new PlaceNameBannerSites(1, 0x9EC0, 0x9F7C, 0x9FB8, 0xA046, 0xA154, 0x9F48);

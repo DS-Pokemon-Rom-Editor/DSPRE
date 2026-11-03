@@ -98,14 +98,16 @@ namespace DSPRE.ROMFiles
             void Put(params ushort[] w) { foreach (ushort word in w) words[pen++] = word; }
             void Bl(int target) { (ushort high, ushort low) = Call(pen * 2, position + target); Put(high, low); }
 
-            Put(sprite, (ushort)(0x2100 | DoubleSize));             // movs r1, #2
+            ushort R1(int value) => ThumbImm8.Make(ThumbImm8.Op.Movs, 1, value);
+            ushort R2(int value) => ThumbImm8.Make(ThumbImm8.Op.Movs, 2, value);
+            Put(sprite, R1(DoubleSize));
             Bl(code.OverwriteMode);
             Put(sprite, 0x4909, 0x4A0A);                            // ldr r1, ldr r2: the scales below
             Bl(code.Scale);
-            Put(sprite, 0x2100, 0x0209);                            // movs r1, #angle; lsls r1, r1, #8
+            Put(sprite, R1(0), 0x0209);                             // movs r1, #angle; lsls r1, r1, #8
             Bl(code.Rotation);
-            Put((ushort)(0x2100 | first.X), (ushort)(0x2200 | first.Y), TypeCheck, 0xD101);
-            Put((ushort)(0x2100 | second.X), (ushort)(0x2200 | second.Y));
+            Put(R1(first.X), R2(first.Y), TypeCheck, 0xD101);
+            Put(R1(second.X), R2(second.Y));
             Put(0x2311, 0x041B, sprite, OverLiterals, Nop);         // movs r3, #17; lsls r3, r3, #16: the subscreen offset
             byte[] bytes = new byte[BlockBytes];
             Buffer.BlockCopy(words, 0, bytes, 0, pen * 2);

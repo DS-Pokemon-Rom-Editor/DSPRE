@@ -200,12 +200,10 @@ namespace DSPRE.Avalonia.Data
             try
             {
                 string[] parts = sprite.Picture.Split(':');
-                int n = int.Parse(parts[1]);
-                if (parts[0] == "level") picture = LevelGlyph(n);
+                if (parts[0] == "level") picture = LevelGlyph(int.Parse(parts[1]));
                 else
                 {
-                    string[] names = parts[0] == "type" ? BattleObjects.IconOrder : BattleObjects.KindOrder;
-                    int index = n >= 0 && n < names.Length ? BattleObjects.Find(names[n], "Drawing") : -1;
+                    int index = PictureFile(sprite).Member;
                     GraphicAssets.Archive battle = GraphicAssets.All.FirstOrDefault(a => a.Dir == DirNames.BattleObj);
                     GraphicAssets.Preview p = index >= 0 && battle != null ? GraphicAssets.Render(battle, index) : null;
                     if (p?.Rgba != null) picture = new ScreenPicture { Rgba = p.Rgba, Width = p.Width, Height = p.Height };
@@ -216,11 +214,20 @@ namespace DSPRE.Avalonia.Data
             return picture;
         }
 
+        public override (DirNames Dir, int Member) PictureFile(ScreenSprite sprite)
+        {
+            string[] parts = sprite.Picture.Split(':');
+            if (parts[0] == "level") return (DirNames.Fonts, RomInfo.SpecialGlyphsFontEntry(_hgss));
+            int n = int.Parse(parts[1]);
+            string[] names = parts[0] == "type" ? BattleObjects.IconOrder : BattleObjects.KindOrder;
+            return (DirNames.BattleObj, n >= 0 && n < names.Length ? BattleObjects.Find(names[n], "Drawing") : -1);
+        }
+
         // The "Lv" glyph: two tiles from tile 11 of the font archive's special characters (Platinum file 4, HGSS file 5). The
         // game draws its pixel values 1 and 2 as the ink and shadow of the box's colour row.
         private ScreenPicture LevelGlyph(int row)
         {
-            byte[] chr = NitroBgCodec.Inflate(new ScriptNarc(DirNames.Fonts).Get(_hgss ? 5 : 4));
+            byte[] chr = NitroBgCodec.Inflate(new ScriptNarc(DirNames.Fonts).Get(RomInfo.SpecialGlyphsFontEntry(_hgss)));
             byte[] tiles = NitroBgCodec.ReadCharacters(chr);
             ushort[] colours = NitroBgCodec.ReadColours(new ScriptNarc(DirNames.SummaryGraphics).Get(_hgss ? 0 : 1));
             if (tiles == null || colours == null) return null;

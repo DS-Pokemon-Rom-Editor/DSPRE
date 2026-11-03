@@ -18,6 +18,7 @@
               IsEnabled="{Binding CanAddRemove}" ToolTip.Tip="What a new header starts as"/>
     <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveHeader_Click" IsEnabled="{Binding CanAddRemove}"
             ToolTip.Tip="{Binding RemoveTip}" ToolTip.ShowOnDisabled="True"/>
+    <controls:EnableInToolbox controls:EditorToolbar.Slot="Remove" Patch="dynamicHeaders" Need="Adding and removing headers" IsVisible="{Binding OffersHeadersPatch}"/>
     <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
     <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
     <Button Content="Copy" controls:Icon.Key="copy" Click="Copy_Click" ToolTip.Tip="Copy this header's fields"/>

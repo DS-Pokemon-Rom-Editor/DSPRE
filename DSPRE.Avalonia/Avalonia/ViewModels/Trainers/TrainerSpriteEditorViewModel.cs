@@ -2058,8 +2058,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 {
                     try
                     {
-                        TrainerSpriteFrames frames = OpenFrames(p);
-                        List<int[]> crops = Enumerable.Range(0, frames.FrameCount).Select(f => ScanCrop(frames.Draw(f))).ToList();
+                        Func<int, int[]> draw = FrameDrawer(p, out int count);
+                        List<int[]> crops = Enumerable.Range(0, count).Select(f => ScanCrop(draw(f))).ToList();
                         for (int half = 0; half < 2; half++)
                         {
                             int inked = 0, best = int.MaxValue, bestFrame = -1;
@@ -2092,14 +2092,14 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             ScanHalf[] halves = _parts.Count > 0 ? _parts[_activePart].Scan : null;
             if (halves == null) return null;
 
-            TrainerSpriteFrames frames = OpenFrames(_activePart);
+            Func<int, int[]> draw = FrameDrawer(_activePart, out int count);
             byte[] pixels = (byte[])scan.Pixels.Clone();
             int[][] now = new int[2][];
             for (int half = 0; half < 2; half++)
             {
                 ScanHalf h = halves[half];
-                if (h == null || h.Frame >= frames.FrameCount) continue;
-                now[half] = ScanCrop(frames.Draw(h.Frame));
+                if (h == null || h.Frame >= count) continue;
+                now[half] = ScanCrop(draw(h.Frame));
                 for (int i = 0; i < now[half].Length; i++)
                 {
                     if (now[half][i] == h.Base[i]) continue;
@@ -2141,6 +2141,20 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public bool CanUseAnimationSheets => CanUseSheets && !IsFlatSheetMode;
 
         private string EntryPath(int entry) => Path.Combine(RomInfo.GameDirs[_set.Archive].unpackedDir, entry.ToString("D4"));
+
+        // nitrogfx writes hg-engine's cells without the block the frame reader needs, so there the frames are drawn from
+        // the cells this editor shows. Either way only the colour within each palette is compared.
+        private Func<int, int[]> FrameDrawer(int part, out int count)
+        {
+            if (HgEngineProject.IsActive && _cellsFromSource)
+            {
+                count = BankCount;
+                return FrameIndices;
+            }
+            TrainerSpriteFrames frames = OpenFrames(part);
+            count = frames.FrameCount;
+            return frames.Draw;
+        }
 
         private Data.TrainerSpriteFrames OpenFrames(int part)
         {

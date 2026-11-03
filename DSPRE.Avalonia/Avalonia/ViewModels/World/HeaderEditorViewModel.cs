@@ -511,9 +511,12 @@ namespace DSPRE.Avalonia.ViewModels.World
             _dynamicHeaders = MapHeader.UsesDynamicHeaders;
             CanAddRemove = _dynamicHeaders;
             OnPropertyChanged(nameof(CanAddRemove));
+            OnPropertyChanged(nameof(OffersHeadersPatch));
             OnPropertyChanged(nameof(AddTip));
             OnPropertyChanged(nameof(RemoveTip));
         }
+
+        public bool OffersHeadersPatch => !_dynamicHeaders && AvaloniaEditorLauncher.IsRomLoaded && PatchToolboxLogic.DynamicHeadersSupported;
 
         private void OnMusicChanged() => Dispatcher.UIThread.Post(() => { OnPropertyChanged(nameof(DayPlayIcon)); OnPropertyChanged(nameof(NightPlayIcon)); });
         public string DayPlayIcon => MusicPreview.StartedBy((this, false)) ? "stop" : "play";
@@ -559,6 +562,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 _dynamicHeaders = MapHeader.UsesDynamicHeaders;
                 CanAddRemove = _dynamicHeaders;
                 OnPropertyChanged(nameof(CanAddRemove));
+                OnPropertyChanged(nameof(OffersHeadersPatch));
                 OnPropertyChanged(nameof(AddTip));
                 OnPropertyChanged(nameof(RemoveTip));
 

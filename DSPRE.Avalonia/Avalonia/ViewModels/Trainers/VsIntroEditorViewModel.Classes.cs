@@ -165,9 +165,6 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         }
         public bool CanMakeClassRoom => IsHgss && !_t.ClassTableMoved && !_t.FromSource;
 
-        /// <summary>Making room changes the game's code, so the toolbox does it.</summary>
-        public void OpenClassRoomPatch() => AvaloniaEditorLauncher.OpenPatchToolboxAt("vsClassTableExpanded");
-
         public ObservableCollection<IntroChoice> ClassIntroChoices { get; } = new();
 
         public int ClassIntroIndex

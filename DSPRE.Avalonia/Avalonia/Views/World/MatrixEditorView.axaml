@@ -44,6 +44,7 @@
 
     <TextBlock DockPanel.Dock="Top" Text="{Binding SizeWarning}" IsVisible="{Binding HasSizeWarning}" TextWrapping="Wrap"
                Foreground="{DynamicResource Editor.Warning}" Margin="8,6,8,0"/>
+    <controls:EnableInToolbox DockPanel.Dock="Top" Margin="8,4,8,0" Patch="matrix" Need="A bigger matrix" IsVisible="{Binding OffersMatrixPatch}"/>
 
     <TabControl Margin="4">
       <TabItem Header="Maps">

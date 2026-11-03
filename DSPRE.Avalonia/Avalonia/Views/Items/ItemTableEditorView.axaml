@@ -38,6 +38,10 @@
             <ToggleButton x:Name="PickupViewToggle" Content="{Binding PickupViewLabel}" IsChecked="{Binding PickupListView}"
                           IsVisible="{Binding ShowPickupViewToggle}" Margin="16,0,0,0"
                           ToolTip.Tip="The game's own lists: each item once, with its chance at every level range"/>
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="16,0,0,0" IsVisible="{Binding OffersPickupPatch}">
+              <TextBlock Text="Items per level range" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+              <controls:EnableInToolbox Patch="pickupSlots" Need="Giving each level range its own items"/>
+            </StackPanel>
           </StackPanel>
           <StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="0,8,0,0">
             <TextBlock Text="{Binding PickupChanceNote}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>

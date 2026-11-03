@@ -95,6 +95,15 @@
           <Button Content="Enable eye-contact music for this class" Click="EnableMusic_Click"
                   IsVisible="{Binding !MusicEnabled}" IsEnabled="{Binding CanEnableMusic}" HorizontalAlignment="Left"/>
 
+          <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding OffersMetadataPatch}">
+            <TextBlock Text="Gender, prize money, music and VS intro" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+            <controls:EnableInToolbox Patch="trainerClassMetadata" Need="Giving each class its own gender, prize money, music and VS intro"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding OffersClassIntroPatch}">
+            <TextBlock Text="VS intro style and look" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+            <controls:EnableInToolbox Patch="classIntros" Need="Giving each class its own VS intro style and look"/>
+          </StackPanel>
+
           <StackPanel Spacing="8" IsVisible="{Binding ShowMetadata}">
             <StackPanel Spacing="2">
               <TextBlock Text="Battle music"/>

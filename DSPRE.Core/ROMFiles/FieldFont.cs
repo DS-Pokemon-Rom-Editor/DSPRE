@@ -24,6 +24,7 @@ namespace DSPRE.ROMFiles
 
         private readonly byte[] _pixels;    // one byte a pixel, glyph by glyph, row by row
         private readonly byte[] _widths;
+        private readonly int _storedWidths; // Korean stores widths for its first letters only, not for Hangul
 
         // Kept so a font written back out is the same bytes it came in as. Reading does not look at
         // every byte of the header, and some fonts carry something after the width table; rebuilding
@@ -36,10 +37,10 @@ namespace DSPRE.ROMFiles
         public int Height { get; }
         public int BitsPerPixel { get; }
 
-        private FieldFont(byte[] pixels, byte[] widths, int count, int maxWidth, int height, int bpp,
+        private FieldFont(byte[] pixels, byte[] widths, int storedWidths, int count, int maxWidth, int height, int bpp,
                           byte[] header, byte[] tail)
         {
-            _pixels = pixels; _widths = widths;
+            _pixels = pixels; _widths = widths; _storedWidths = storedWidths;
             GlyphCount = count; MaxWidth = maxWidth; Height = height; BitsPerPixel = bpp;
             _header = header; _tail = tail;
         }
@@ -57,7 +58,8 @@ namespace DSPRE.ROMFiles
             // Anything that is not this shape is not one of these fonts.
             if (headerSize != HeaderSize || bpp != 2 || count <= 0 || count > 0x4000) return null;
             if (tableStart != headerSize + count * BytesPerGlyph) return null;
-            if (data.Length < tableStart + count) return null;
+            int stored = Math.Min(count, data.Length - tableStart);
+            if (stored <= 0) return null;
 
             byte[] pixels = new byte[count * CellSize * CellSize];
             for (int g = 0; g < count; g++)
@@ -76,22 +78,34 @@ namespace DSPRE.ROMFiles
             }
 
             byte[] widths = new byte[count];
-            Array.Copy(data, tableStart, widths, 0, count);
+            Array.Copy(data, tableStart, widths, 0, stored);
+            for (int g = stored; g < count; g++) widths[g] = DrawnWidth(pixels, g);
 
             byte[] header = new byte[HeaderSize];
             Array.Copy(data, 0, header, 0, HeaderSize);
-            int after = tableStart + count;
+            int after = tableStart + stored;
             byte[] tail = new byte[data.Length - after];
             Array.Copy(data, after, tail, 0, tail.Length);
 
-            return new FieldFont(pixels, widths, count, maxWidth, height, bpp, header, tail);
+            return new FieldFont(pixels, widths, stored, count, maxWidth, height, bpp, header, tail);
+        }
+
+        // A letter with no stored width is as wide as its ink, plus a pixel before the next one.
+        private static byte DrawnWidth(byte[] pixels, int glyph)
+        {
+            int start = glyph * CellSize * CellSize;
+            for (int x = CellSize - 1; x >= 0; x--)
+                for (int y = 0; y < CellSize; y++)
+                    if (pixels[start + y * CellSize + x] is not (Nothing or Paper))
+                        return (byte)Math.Min(x + 2, CellSize);
+            return 0;
         }
 
         /// <summary>The font as archive entry bytes; the header and trailing data are kept, so an unedited font round-trips.</summary>
         public byte[] Write()
         {
             int tableStart = HeaderSize + GlyphCount * BytesPerGlyph;
-            byte[] data = new byte[tableStart + GlyphCount + (_tail?.Length ?? 0)];
+            byte[] data = new byte[tableStart + _storedWidths + (_tail?.Length ?? 0)];
             Array.Copy(_header, 0, data, 0, HeaderSize);
 
             // The same walk Read does, the other way round: four eight by eight blocks, two bytes a
@@ -115,9 +129,9 @@ namespace DSPRE.ROMFiles
                         }
             }
 
-            Array.Copy(_widths, 0, data, tableStart, GlyphCount);
+            Array.Copy(_widths, 0, data, tableStart, _storedWidths);
             if (_tail != null && _tail.Length > 0)
-                Array.Copy(_tail, 0, data, tableStart + GlyphCount, _tail.Length);
+                Array.Copy(_tail, 0, data, tableStart + _storedWidths, _tail.Length);
             return data;
         }
 
@@ -129,10 +143,13 @@ namespace DSPRE.ROMFiles
             _pixels[glyph * CellSize * CellSize + y * CellSize + x] = (byte)(value & 3);
         }
 
+        /// <summary>Whether the font stores this letter's width. Korean Hangul letters use a fixed one.</summary>
+        public bool HasStoredWidth(int glyph) => glyph >= 0 && glyph < _storedWidths;
+
         /// <summary>Changes how far along the next letter starts.</summary>
         public void SetWidth(int glyph, int width)
         {
-            if (glyph < 0 || glyph >= GlyphCount) return;
+            if (glyph < 0 || glyph >= _storedWidths) return;
             _widths[glyph] = (byte)Math.Clamp(width, 0, CellSize);
         }
 

@@ -116,11 +116,17 @@ namespace DSPRE
             : new BattleMenuTables(0, new[] { -0x5A0, -0x668, -0x654, -0x560, -0x640, -0x628, -0x580, -0x678 }, 0x598, 34);
 
         /// <summary>A battle Pokémon or bag button's window template (tile x, y at +1) or icon (s32 pixel x, y), from PartyCursors.</summary>
-        public sealed record BattleMenuSpot(int Page, int Button, int At, bool Window);
+        /// <param name="CopyOf">For a copy drawn while the page turns, the offset of the window it follows. Otherwise -1.</param>
+        public sealed record BattleMenuSpot(int Page, int Button, int At, bool Window, int CopyOf = -1, string Kind = null);
 
-        private static BattleMenuSpot W(int page, int button, int table, int window) => new BattleMenuSpot(page, button, table + window * 8, true);
+        private static BattleMenuSpot W(int page, int button, int table, int window, string kind = "text") =>
+            new BattleMenuSpot(page, button, table + window * 8, true, Kind: kind);
 
-        private static BattleMenuSpot S(int page, int button, int table, int entry) => new BattleMenuSpot(page, button, table + entry * 8, false);
+        private static BattleMenuSpot Copy(int page, int button, int table, int window, int of) =>
+            new BattleMenuSpot(page, button, table + window * 8, true, table + of * 8, "text");
+
+        private static BattleMenuSpot S(int page, int button, int table, int entry, string kind = "icon") =>
+            new BattleMenuSpot(page, button, table + entry * 8, false, Kind: kind);
 
         // pokeplatinum battle_party_text.c and battle_bag_text.c window templates, battle_party_sprites.c and battle_bag_sprites.c
         // positions; HGSS overlay 8 keeps every table the same distance from the cursor tables. Measured on every dump.
@@ -132,15 +138,15 @@ namespace DSPRE
             {
                 const int party = -0x438, select = -0x4B0, summary = -0x290, moves = -0x3D0, restore = -0x490, learn = -0x468;
                 const int confirm = -0x378, contest = -0x408, partyIcons = 0x78, statusIcons = 0xA8, moveTypes = -0x68, learnTypes = 0x50;
-                for (int i = 0; i < 6; i++) spots.AddRange(new[] { W(0, i, party, i), S(0, i, partyIcons, i), S(0, i, statusIcons, i) });
+                for (int i = 0; i < 6; i++) spots.AddRange(new[] { W(0, i, party, i), S(0, i, partyIcons, i), S(0, i, statusIcons, i, "status icon") });
                 for (int i = 0; i < 3; i++) spots.Add(W(1, i, select, i + 1));
                 spots.Add(W(2, 2, summary, 21));
-                for (int i = 0; i < 4; i++) spots.AddRange(new[] { W(3, i, moves, i + 1), W(3, i, moves, i + 7), S(3, i, moveTypes, i) });
+                for (int i = 0; i < 4; i++) spots.AddRange(new[] { W(3, i, moves, i + 1, "name"), W(3, i, moves, i + 7, "PP"), S(3, i, moveTypes, i, "type icon") });
                 spots.Add(W(3, 6, moves, 5));
                 // Restore PP and Forget a move draw their move types from one table.
-                for (int i = 0; i < 4; i++) spots.AddRange(new[] { W(5, i, restore, i + 1), S(5, i, learnTypes, i) });
-                for (int i = 0; i < 5; i++) spots.AddRange(new[] { W(6, i, learn, i + 1), S(6, i, learnTypes, i) });
-                spots.AddRange(new[] { W(7, 0, confirm, 11), W(7, 0, contest, 6) });
+                for (int i = 0; i < 4; i++) spots.AddRange(new[] { W(5, i, restore, i + 1), S(5, i, learnTypes, i, "type icon") });
+                for (int i = 0; i < 5; i++) spots.AddRange(new[] { W(6, i, learn, i + 1), S(6, i, learnTypes, i, "type icon") });
+                spots.AddRange(new[] { W(7, 0, confirm, 11), W(7, 0, contest, 6, "contest text") });
             }
             else
             {
@@ -149,7 +155,7 @@ namespace DSPRE
                 spots.Add(S(0, 4, lastUsed, 0));
                 // Each item's name and count, then the copies the page draws while it turns.
                 for (int i = 0; i < 6; i++)
-                    spots.AddRange(new[] { W(1, i, items, 2 * i), W(1, i, items, 2 * i + 1), W(1, i, items, 12 + 2 * i), W(1, i, items, 13 + 2 * i), S(1, i, itemIcons, i) });
+                    spots.AddRange(new[] { W(1, i, items, 2 * i, "name"), W(1, i, items, 2 * i + 1, "count"), Copy(1, i, items, 12 + 2 * i, 2 * i), Copy(1, i, items, 13 + 2 * i, 2 * i + 1), S(1, i, itemIcons, i) });
                 spots.Add(W(2, 0, use, 3));
             }
             return spots;

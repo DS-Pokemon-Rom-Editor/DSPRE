@@ -8,7 +8,7 @@ namespace DSPRE.ROMFiles
     /// The battle Pokémon and bag screens' buttons, page by page: each button's touch area and cursor stop. The stop's corners
     /// frame the button, and its neighbours are where the arrow keys go. The art, text windows and icons follow.
     /// </summary>
-    public sealed class BattleMenuButtons : IScreenButtons
+    public sealed class BattleMenuButtons : IScreenButtons, IScreenParts
     {
         public enum Menu { Pokemon, Bag }
 
@@ -168,19 +168,69 @@ namespace DSPRE.ROMFiles
         /// A button's text windows, by their top left tile, and icons, by their centre in pixels, in RomLocator.BattleMenuSpots order.
         /// </summary>
         public IReadOnlyList<(int X, int Y)> SpotsOf(int page, int button) =>
-            _spots.Where(s => s.Page == page && s.Button == button).Select(s =>
-            {
-                int at = _spotData[s.At];
-                return s.Window ? (_data[at], _data[at + 1]) : (BitConverter.ToInt32(_data, at), BitConverter.ToInt32(_data, at + 4));
-            }).ToList();
+            _spots.Where(s => s.Page == page && s.Button == button).Select(SpotValue).ToList();
+
+        // A text window's top left tile is two u8s, an icon's centre two s32 pixels.
+        private (int X, int Y) SpotValue(RomLocator.BattleMenuSpot s)
+        {
+            int at = _spotData[s.At], size = s.Window ? 1 : 4;
+            return (ScreenSpots.Value(_data, at, size), ScreenSpots.Value(_data, at + size, size));
+        }
 
         public int MoveStep(int page, int button) => Tile;
 
         /// <summary>Which art entry the button uses; Cancel and the arrows share one across the Pokémon pages.</summary>
         public int ArtIndex(int page, int button) => Pages[page].Art[button];
 
-        /// <summary>Moves the touch area, cursor frame, art, text and icons together in whole tiles; buttons that share art or an icon move too.</summary>
-        public void Move(int page, int button, int dx, int dy)
+        private List<RomLocator.BattleMenuSpot> PartSpots(int page) => _spots.Where(s => s.Page == page && s.CopyOf < 0).ToList();
+
+        public IReadOnlyList<ScreenPart> PartsOf(int page)
+        {
+            List<ScreenPart> parts = new List<ScreenPart>();
+            foreach (RomLocator.BattleMenuSpot s in PartSpots(page))
+                parts.Add(new ScreenPart($"{Pages[page].Buttons[s.Button]} {s.Kind}", s.Button, s.Window ? Tile : 1));
+            return parts;
+        }
+
+        /// <summary>In pixels.</summary>
+        public (int X, int Y) PartAt(int page, int part)
+        {
+            RomLocator.BattleMenuSpot s = PartSpots(page)[part];
+            (int x, int y) = SpotValue(s);
+            return s.Window ? (x * Tile, y * Tile) : (x, y);
+        }
+
+        public void MovePart(int page, int part, int dx, int dy)
+        {
+            RomLocator.BattleMenuSpot s = PartSpots(page)[part];
+            int tx = (int)Math.Round(dx / (double)Tile), ty = (int)Math.Round(dy / (double)Tile);
+            if (!s.Window) { ShiftSpot(s, 0, 0, dx, dy); return; }
+            ShiftSpot(s, tx, ty, 0, 0);
+            foreach (RomLocator.BattleMenuSpot copy in _spots.Where(o => o.CopyOf == s.At)) ShiftSpot(copy, tx, ty, 0, 0);
+        }
+
+        private void ShiftSpot(RomLocator.BattleMenuSpot spot, int tx, int ty, int dx, int dy)
+        {
+            int at = _spotData[spot.At];
+            if (spot.Window)
+            {
+                (int w, int h) = _windowSizes[spot.At];
+                ScreenSpots.Shift(_data, at, 1, tx, 32 - w);
+                ScreenSpots.Shift(_data, at + 1, 1, ty, 24 - h);
+            }
+            else
+            {
+                ScreenSpots.Shift(_data, at, 4, dx, 255);
+                ScreenSpots.Shift(_data, at + 4, 4, dy, 191);
+            }
+        }
+
+        public void Move(int page, int button, int dx, int dy) => MoveButton(page, button, dx, dy, true);
+
+        public void MoveArea(int page, int button, int dx, int dy) => MoveButton(page, button, dx, dy, false);
+
+        /// <summary>Moves the touch area, cursor frame and art in whole tiles, with the text and icons if asked. Buttons that share art or an icon move too.</summary>
+        private void MoveButton(int page, int button, int dx, int dy, bool parts)
         {
             (int top, int bottom, int left, int right) = AreaOf(page, button);
             (int ax, int ay, int aw, int ah) = ArtOf(page, button);
@@ -194,22 +244,10 @@ namespace DSPRE.ROMFiles
                 int at = ArtEntry(p, b);
                 (_data[at], _data[at + 1]) = ((byte)(_data[at] + Math.Clamp(tx, -x, 32 - w - x)), (byte)(_data[at + 1] + Math.Clamp(ty, -y, 24 - h - y)));
             }
-            foreach ((int p, int b) in moved) MoveArea(p, b, dx, dy);
+            foreach ((int p, int b) in moved) MoveTouch(p, b, dx, dy);
+            if (!parts) return;
             foreach (RomLocator.BattleMenuSpot spot in _spots.Where(s => moved.Contains((s.Page, s.Button))).DistinctBy(s => s.At))
-            {
-                int at = _spotData[spot.At];
-                if (spot.Window)
-                {
-                    (int w, int h) = _windowSizes[spot.At];
-                    ScreenSpots.Shift(_data, at, 1, tx, 32 - w);
-                    ScreenSpots.Shift(_data, at + 1, 1, ty, 24 - h);
-                }
-                else
-                {
-                    ScreenSpots.Shift(_data, at, 4, tx * Tile, 255);
-                    ScreenSpots.Shift(_data, at + 4, 4, ty * Tile, 191);
-                }
-            }
+                ShiftSpot(spot, tx, ty, tx * Tile, ty * Tile);
         }
 
         private List<(int Page, int Button)> Linked(int page, int button)
@@ -228,7 +266,7 @@ namespace DSPRE.ROMFiles
             return linked;
         }
 
-        private void MoveArea(int page, int button, int dx, int dy)
+        private void MoveTouch(int page, int button, int dx, int dy)
         {
             (dx, dy) = TouchRects.Move(_data, TouchAt(page, button), dx, dy);
             if (!HasStop(page, button)) return;

@@ -102,7 +102,6 @@ namespace DSPRE.Avalonia.Views.World
             if (VM.Flat2D) GlView.SetOrientation(0f, 90f);
         }
 
-        private void RotationPatch_Click(object sender, RoutedEventArgs e) => AvaloniaEditorLauncher.OpenPatchToolboxAt("buildingRotation");
         private void CamTop_Click(object sender, RoutedEventArgs e) => GlView.SetOrientation(0f, 89f);
         private void CamIso_Click(object sender, RoutedEventArgs e) => GlView.SetOrientation(30f, 30f);
         private void CamFront_Click(object sender, RoutedEventArgs e) => GlView.SetOrientation(0f, 8f);

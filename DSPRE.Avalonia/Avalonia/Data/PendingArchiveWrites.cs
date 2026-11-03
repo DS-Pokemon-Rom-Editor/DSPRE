@@ -303,7 +303,10 @@ namespace DSPRE.Avalonia.Data
         public void Save()
         {
             _saving = true;
-            try { SaveMembers(); }
+            try
+            {
+                using (PreviewFileGate.Writing()) SaveMembers();
+            }
             finally { _saving = false; }
             _saved = _state;
             _history.MarkSaved();

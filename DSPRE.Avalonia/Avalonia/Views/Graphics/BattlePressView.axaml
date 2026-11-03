@@ -27,8 +27,10 @@
     </controls:EditorToolbar>
 
     <Grid>
-      <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" IsVisible="{Binding NeedsPatch}" Click="Patch_Click" Margin="16" VerticalAlignment="Top" HorizontalAlignment="Left"
-              ToolTip.Tip="Needs Battle button frames"/>
+      <StackPanel IsVisible="{Binding NeedsPatch}" Margin="16" Spacing="6" VerticalAlignment="Top">
+        <TextBlock Text="Press frames" Classes="subtle"/>
+        <controls:EnableInToolbox Patch="buttonFrames" Need="Editing press frames"/>
+      </StackPanel>
       <ScrollViewer IsVisible="{Binding Ready}">
         <ItemsControl x:Name="FrameList" ItemsSource="{Binding Frames}" Margin="16">
           <ItemsControl.ItemTemplate>

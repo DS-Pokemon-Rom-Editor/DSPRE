@@ -64,15 +64,17 @@
                   <Grid ColumnDefinitions="18,*,64,64" ColumnSpacing="6" Margin="0,2">
                     <Ellipse Width="10" Height="10" Fill="{Binding Colour}" VerticalAlignment="Center" HorizontalAlignment="Left"/>
                     <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                    <NumericUpDown Grid.Column="2" Value="{Binding Across}" Minimum="0" Maximum="255" Increment="1" FormatString="0" ToolTip.Tip="Across in pixels"/>
-                    <NumericUpDown Grid.Column="3" Value="{Binding Down}" Minimum="0" Maximum="191" Increment="1" FormatString="0" ToolTip.Tip="Down in pixels"/>
+                    <NumericUpDown Grid.Column="2" IsEnabled="{Binding CanAcross}" Value="{Binding Across}" Minimum="0" Maximum="255" Increment="{Binding Step}" FormatString="0" ToolTip.Tip="Across in pixels"/>
+                    <NumericUpDown Grid.Column="3" IsEnabled="{Binding CanDown}" Value="{Binding Down}" Minimum="0" Maximum="191" Increment="{Binding Step}" FormatString="0" ToolTip.Tip="Down in pixels"/>
                   </Grid>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
           </StackPanel>
-          <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" IsVisible="{Binding IconNeedsPatch}" Click="IconPatch_Click" Margin="0,12,0,0"
-                  ToolTip.Tip="Needs FIGHT icon"/>
+          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0" IsVisible="{Binding IconNeedsPatch}">
+            <TextBlock Text="Pokémon icon" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+            <controls:EnableInToolbox Patch="{Binding IconPatchKey}" Need="Moving and sizing the Pokémon icon"/>
+          </StackPanel>
           <StackPanel IsVisible="{Binding IconEditable}" Spacing="6" Margin="0,12,16,0">
             <TextBlock Text="Pokémon icon" FontWeight="SemiBold"/>
             <Grid ColumnDefinitions="Auto,90,Auto,90" ColumnSpacing="8">

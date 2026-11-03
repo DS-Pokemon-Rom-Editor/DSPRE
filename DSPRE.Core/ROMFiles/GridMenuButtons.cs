@@ -8,7 +8,7 @@ namespace DSPRE.ROMFiles
     /// Screens run by the shared grid input handler (pokeheartgold unk_02019BA4.c): per page a touch list and a cursor table
     /// of 8-byte entries, x, y, width, height, then the stop Up, Down, Left and Right go to. The HGSS PC and Pokédex use it.
     /// </summary>
-    public sealed class GridMenuButtons : IScreenButtons, IScreenArt
+    public sealed class GridMenuButtons : IScreenButtons, IScreenArt, IScreenParts
     {
         /// <param name="Touch">The touch list's offset in the overlay file.</param>
         /// <param name="Flow">The cursor table's offset, or -1 for a touch-only page.</param>
@@ -117,18 +117,18 @@ namespace DSPRE.ROMFiles
             _art[page]?.SheetOf() is byte[] sheet ? (sheet, _art[page].Spec.Bands.Characters) : null;
 
         private static bool IsCopy(ushort op) => op >> 6 == 0b0001110000 && (op >> 3 & 7) == 1;
-        private static bool LoadsTile(ushort op) => op >> 11 == 0b00100 || IsCopy(op);
+        private static bool LoadsTile(ushort op) => ThumbImm8.Is(op, ThumbImm8.Op.Movs) || IsCopy(op);
 
         private ushort Op(int at) => BitConverter.ToUInt16(_data, _code[at]);
 
         // An add rd, r1, #0 reports the x it copies.
-        private int Loaded(int at, int x) => IsCopy(Op(at)) ? x : Op(at) & 0xFF;
+        private int Loaded(int at, int x) => IsCopy(Op(at)) ? x : ThumbImm8.Value(Op(at));
 
         private void Load(int at, int value)
         {
             ushort op = Op(at);
-            int rd = IsCopy(op) ? op & 7 : op >> 8 & 7;
-            BitConverter.TryWriteBytes(_data.AsSpan(_code[at]), (ushort)(0x2000 | rd << 8 | Math.Clamp(value, 0, 255)));
+            int rd = IsCopy(op) ? op & 7 : ThumbImm8.Register(op);
+            BitConverter.TryWriteBytes(_data.AsSpan(_code[at]), ThumbImm8.Make(ThumbImm8.Op.Movs, rd, Math.Clamp(value, 0, 255)));
         }
 
         /// <summary>The page's byte spots from <paramref name="table"/>, in its units, or null.</summary>
@@ -137,12 +137,20 @@ namespace DSPRE.ROMFiles
             TouchListButtons.Spots[] all = _pages[page].Spots;
             if (all == null || table >= all.Length) return null;
             TouchListButtons.Spots s = all[table];
-            int At(int i) => _spotStarts[page][table] + i * s.Stride + s.X;
-            return Enumerable.Range(0, s.Count).Select(i => ((int)_data[At(i)], s.XOnly ? 0 : (int)_data[At(i) + 1])).ToList();
+            return Enumerable.Range(0, s.Count).Select(i => ScreenSpots.Entry(_data, s, _spotStarts[page][table] + i * s.Stride + s.X)).ToList();
         }
 
+        public IReadOnlyList<ScreenPart> PartsOf(int page) => TextOf(page).Select(p => p.Row).ToList();
+        public (int X, int Y) PartAt(int page, int part) => ScreenTextSpots.At(_data, TextOf(page)[part]);
+        public void MovePart(int page, int part, int dx, int dy) => ScreenTextSpots.Move(_data, TextOf(page)[part], dx, dy);
+
+        private List<ScreenTextSpots.Part> TextOf(int page) => ScreenTextSpots.Of(_pages[page].Spots, _spotStarts[page], _pages[page].Buttons, s => s.Count);
+
+        public void Move(int page, int button, int dx, int dy) => MoveButton(page, button, dx, dy, true);
+        public void MoveArea(int page, int button, int dx, int dy) => MoveButton(page, button, dx, dy, false);
+
         // The cursor sits at the entry's x and y, so it moves as far as the area.
-        public void Move(int page, int button, int dx, int dy)
+        private void MoveButton(int page, int button, int dx, int dy, bool text)
         {
             if (MoveLocked(page, button) != null) return;
             int step = MoveStep(page, button);
@@ -174,11 +182,8 @@ namespace DSPRE.ROMFiles
             for (int t = 0; t < spots.Length; t++)
             {
                 int entry = button - spots[t].FirstButton;
-                if (entry < 0 || entry >= spots[t].Count) continue;
-                // Grid pages only carry u8 spots.
-                int at = _spotStarts[page][t] + entry * spots[t].Stride + spots[t].X;
-                ScreenSpots.Shift(_data, at, 1, (int)Math.Round(dx / (double)spots[t].Unit), 255);
-                if (!spots[t].XOnly) ScreenSpots.Shift(_data, at + 1, 1, (int)Math.Round(dy / (double)spots[t].Unit), 255);
+                if (entry < 0 || entry >= spots[t].Count || (!text && spots[t].Text != null)) continue;
+                ScreenSpots.ShiftEntry(_data, spots[t], _spotStarts[page][t] + entry * spots[t].Stride + spots[t].X, dx, dy);
             }
             if (button >= StopsOf(page)) return;
             int s = StopAt(page, button);

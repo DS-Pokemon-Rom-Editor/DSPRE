@@ -103,15 +103,19 @@ namespace DSPRE.ROMFiles
             int letters = RomInfo.GameLanguage switch { RomInfo.GameLanguages.Japanese => 45, RomInfo.GameLanguages.Korean => 15, _ => 27 };
             CursorDirection[] upDown = { CursorDirection.Up, CursorDirection.Down };
             // Text windows are 8-byte templates with x and y at byte 1, in tiles; highlights are x, y, width and height in tiles.
-            TouchListButtons.Spots Window(int entry, int button, int count = 1) =>
-                new TouchListButtons.Spots((int)sites.Art[0] + entry * 8, 8, 1, 1, 8, button, count);
+            TouchListButtons.Spots Window(int entry, int button, int count = 1, string text = "") =>
+                new TouchListButtons.Spots((int)sites.Art[0] + entry * 8, 8, 1, 1, 8, button, count, Text: text);
             TouchListButtons.Spots Highlight(int table, int count) => new TouchListButtons.Spots((int)sites.Art[table], 4, 0, 1, 8, 0, count);
             ScreenTiles Art(int member, int count, int plainFromRow, int around, int below) =>
                 new ScreenTiles(RomInfo.DirNames.PokedexGraphics, member, Enumerable.Range(0, count).ToArray(), Grid: 5, PlainFromRow: plainFromRow,
                                 Left: around, Top: around, Right: around, Bottom: below, Rebuild: true);
             // The search menu's values are drawn twice, at templates 8 to 16 and again at 27 to 35.
-            (int Entry, int Button)[] values = { (8, 0), (9, 1), (10, 2), (11, 2), (12, 3), (13, 3), (14, 4), (15, 4), (16, 5) };
-            TouchListButtons.Spots[] searchText = values.SelectMany(v => new[] { Window(v.Entry, v.Button), Window(v.Entry + 19, v.Button) }).ToArray();
+            (int Entry, int Button, string Text)[] values =
+            {
+                (8, 0, "Order"), (9, 1, "Name"), (10, 2, "Type 1"), (11, 2, "Type 2"), (12, 3, "Height 1"), (13, 3, "Height 2"),
+                (14, 4, "Weight 1"), (15, 4, "Weight 2"), (16, 5, "Area"),
+            };
+            TouchListButtons.Spots[] searchText = values.SelectMany(v => new[] { Window(v.Entry, v.Button, 1, v.Text), Window(v.Entry + 19, v.Button, 1, v.Text) }).ToArray();
             // ov18_021E8BF4.c PokedexApp_MainSeq_22: the flash on a pressed value starts at Order's x. Type's y and Area's width copy x.
             int f = (int)sites.Flash;
             GridMenuButtons.CodeSpot[] flash =

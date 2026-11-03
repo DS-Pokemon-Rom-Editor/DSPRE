@@ -89,7 +89,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
     /// every piece of it editable. The top screen beside it is a picture of the game, not something this
     /// window changes; it is there so the bottom screen is seen the way a player sees it.
     /// </summary>
-    public sealed class BottomScreenEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
+    public sealed class BottomScreenEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -133,6 +133,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             IsHgss = GameFamily == GameFamilies.HGSS;
             HasPoketch = GameFamily == GameFamilies.Plat || GameFamily == GameFamilies.DP;
+            _coloursPatchMissing = !HgEngine.HgEngineProject.IsActive && FieldMenuColoursPatch.SupportsCurrentRom && !FieldMenuColoursPatch.IsApplied;
+            if (_coloursPatchMissing) AppEvents.RomPatchStateChanged += OnRomPatchStateChanged;
 
             foreach (string t in IsHgss ? new[] { "Menu", "Poké Ball screen" } : new[] { "Pokétch" })
                 TabNames.Add(t);
@@ -327,6 +329,19 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <summary>What else is painted from the row being edited, so a shared change is no surprise.</summary>
         public string SharedNote => Selected?.SharedWith;
         public bool IsShared => !string.IsNullOrEmpty(Selected?.SharedWith);
+        private bool _coloursPatchMissing;
+        public bool OffersColoursPatch => _coloursPatchMissing && Selected?.IconKind >= 0;
+
+        private void OnRomPatchStateChanged(object sender, EventArgs e)
+        {
+            if (!_coloursPatchMissing || !FieldMenuColoursPatch.IsApplied) return;
+            _coloursPatchMissing = false;
+            OnPropertyChanged(nameof(OffersColoursPatch));
+            // Each icon gets its own colour rows. Unsaved colour edits keep the old rows until the editor reopens.
+            if (!HasUnsavedChanges) Refresh();
+        }
+
+        public void Detach() => AppEvents.RomPatchStateChanged -= OnRomPatchStateChanged;
 
         /// <summary>A rule about this piece worth reading before changing it.</summary>
         public string Caution => Selected?.Warning;
@@ -899,6 +914,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             OnPropertyChanged(nameof(HasColours));
             OnPropertyChanged(nameof(SharedNote));
             OnPropertyChanged(nameof(IsShared));
+            OnPropertyChanged(nameof(OffersColoursPatch));
             OnPropertyChanged(nameof(Caution));
             OnPropertyChanged(nameof(HasCaution));
             BuildSwatches();

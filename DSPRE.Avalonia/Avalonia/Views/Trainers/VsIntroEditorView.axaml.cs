@@ -24,7 +24,6 @@ namespace DSPRE.Avalonia.Views.Trainers
         }
 
         private void ClassesAndMusic_Click(object sender, RoutedEventArgs e) => VM?.ShowClassesAndMusic();
-        private void MakeClassRoom_Click(object sender, RoutedEventArgs e) => VM?.OpenClassRoomPatch();
         private void ClassColours_Click(object sender, RoutedEventArgs e) => VM?.EditClassColours();
         private void PaintFace_Click(object sender, RoutedEventArgs e) => VM?.PaintFace();
         private void AnimateFace_Click(object sender, RoutedEventArgs e) => VM?.AnimateFace();
@@ -43,7 +42,6 @@ namespace DSPRE.Avalonia.Views.Trainers
         private void BannerGraphics_Click(object sender, RoutedEventArgs e) => VM?.ShowBannerInGraphics();
         private void Animate_Click(object sender, RoutedEventArgs e) => VM?.ToggleAnimation();
         private void PlayMotion_Click(object sender, RoutedEventArgs e) => VM?.ToggleMotion();
-        private void InstallTimings_Click(object sender, RoutedEventArgs e) => VM?.OpenTimingPatch();
         private void ShowMugshot_Click(object sender, RoutedEventArgs e) => VM?.ShowMugshot();
 
         private void PaintSlot_Click(object sender, RoutedEventArgs e)

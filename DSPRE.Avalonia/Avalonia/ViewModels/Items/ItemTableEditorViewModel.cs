@@ -245,7 +245,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
     }
 
     // ─── Main ViewModel ───────────────────────────────────────────────────────
-    public class ItemTableEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
+    public class ItemTableEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -344,6 +344,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public string PickupViewLabel => _pickupListView ? "Show by slot" : "Show by item";
         // With the patch every cell is its own entry, so the lists would only repeat the grid.
         public bool ShowPickupViewToggle => !_pickup.Independent;
+        private bool _pickupPatchSupported;
+        public bool OffersPickupPatch => _pickupPatchSupported && !_pickup.Independent;
 
         internal int EntryAt(bool rare, int index) => rare ? _pickup.Rare[index] : _pickup.Common[index];
 
@@ -760,6 +762,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 if (OverlayUtils.IsCompressed(RomInfo.PickupTableOverlayNumber))
                     OverlayUtils.Decompress(RomInfo.PickupTableOverlayNumber);
                 LoadPickupTable();
+                AppEvents.RomPatchStateChanged += OnRomPatchStateChanged;
             }
             if (ShowHiddenItemsTab)
             {
@@ -774,11 +777,23 @@ namespace DSPRE.Avalonia.ViewModels.Items
             ResetUndo();
         }
 
+        private void OnRomPatchStateChanged(object sender, EventArgs e) => OnPatchStateChanged();
+        public void Detach() => AppEvents.RomPatchStateChanged -= OnRomPatchStateChanged;
+
+        /// <summary>Rereads Pickup once the toolbox gives each range its own items, unless edits here are still unsaved.</summary>
+        public void OnPatchStateChanged()
+        {
+            if (_pickup == null || _pickup.Independent || HasUnsavedChanges || !PickupSlotsPatch.IsApplied) return;
+            LoadPickupTable();
+            ResetUndo();
+        }
+
         // ── Pickup load ───────────────────────────────────────────────────────
         private void LoadPickupTable()
         {
             _pickup = PickupTable.Read();
             if (_pickup.Divisor == 0) _pickup.Divisor = 10;
+            _pickupPatchSupported = !HgEngineProject.IsActive && PickupSlotsPatch.SupportsCurrentRom;
             BuildPickupRows();
         }
 
@@ -790,6 +805,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             PickupLinkNote = "";
             BuildPickupEntries();
             OnPropertyChanged(nameof(ShowPickupViewToggle));
+            OnPropertyChanged(nameof(OffersPickupPatch));
             OnPropertyChanged(nameof(PickupChanceNote));
         }
 

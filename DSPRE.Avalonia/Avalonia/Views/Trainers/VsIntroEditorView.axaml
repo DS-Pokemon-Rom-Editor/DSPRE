@@ -257,6 +257,10 @@
           <ScrollViewer Grid.Column="1">
             <StackPanel x:Name="ClassDetails" Margin="12,8" Spacing="6" IsVisible="{Binding HasClass}">
               <TextBlock Text="{Binding ClassTitle}" FontSize="16" FontWeight="SemiBold"/>
+              <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding OffersClassIntroPatch}">
+                <TextBlock Text="Intro per class" Classes="subtle" VerticalAlignment="Center"/>
+                <controls:EnableInToolbox Patch="{Binding ClassIntroPatchKey}" Need="Giving each class its own VS intro"/>
+              </StackPanel>
               <TextBlock Text="Intro" Classes="section"/>
               <ComboBox x:Name="ClassIntroBox" ItemsSource="{Binding ClassIntroChoices}" SelectedIndex="{Binding ClassIntroIndex}" Width="320"
                         HorizontalAlignment="Left" IsEnabled="{Binding ClassEditable}">
@@ -271,8 +275,7 @@
               </ComboBox>
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="{Binding ClassNote}" Classes="subtle" VerticalAlignment="Center"/>
-                <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Click="MakeClassRoom_Click" IsVisible="{Binding CanMakeClassRoom}"
-                        ToolTip.Tip="The &quot;VS intro class table expansion&quot; patch gives room for up to 255 classes"/>
+                <controls:EnableInToolbox Patch="vsClassTableExpanded" Need="Intros for more classes" IsVisible="{Binding CanMakeClassRoom}"/>
               </StackPanel>
               <TextBlock Text="Music" Classes="section"/>
               <ComboBox x:Name="ClassMusicBox" ItemsSource="{Binding SequenceChoices}" SelectedIndex="{Binding ClassMusicIndex}" Width="320"
@@ -376,7 +379,7 @@
                   <controls:HelpTip Text="How long each part of this class's intro takes, in frames. 0 keeps the game's timing."/>
                 </StackPanel>
                 <TextBlock Text="{Binding TimingNote}" IsVisible="{Binding !HasTimings}" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
-                <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Click="InstallTimings_Click" IsVisible="{Binding CanInstallTimings}" HorizontalAlignment="Left"/>
+                <controls:EnableInToolbox Patch="vsIntroTimings" Need="Timings for each class" IsVisible="{Binding CanInstallTimings}"/>
                 <ItemsControl ItemsSource="{Binding TimingRows}" IsVisible="{Binding ShowTimingRows}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:TimingRow">

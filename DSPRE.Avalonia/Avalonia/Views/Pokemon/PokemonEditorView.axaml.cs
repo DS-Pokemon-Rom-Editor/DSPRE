@@ -112,7 +112,6 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private void OpenSizePage_Click(object sender, RoutedEventArgs e) => ViewModel.PokedexVM?.OpenSizePage();
 
-        private void OpenEvolutionSlots_Click(object sender, RoutedEventArgs e) => ViewModel.EvolutionsVM?.OpenSlotsPatch();
         private async void Evolutions_Import_Click(object sender, RoutedEventArgs e) => await ViewModel.EvolutionsVM.ImportCsvAsync(this);
         private async void Evolutions_Export_Click(object sender, RoutedEventArgs e) => await ViewModel.EvolutionsVM.ExportCsvAsync(this);
 

@@ -68,7 +68,10 @@ namespace DSPRE.ROMFiles
     }
 
     /// <summary>A piece of text or an icon on a button.</summary>
-    public sealed record ScreenPart(string Name, int Button);
+    /// <param name="Step">Pixels per move step.</param>
+    /// <param name="Across">False when the game fixes its x.</param>
+    /// <param name="Down">False when the game fixes its y.</param>
+    public sealed record ScreenPart(string Name, int Button, int Step = 1, bool Across = true, bool Down = true);
 
     /// <summary>Screens whose text and icons can move apart from their buttons.</summary>
     public interface IScreenParts

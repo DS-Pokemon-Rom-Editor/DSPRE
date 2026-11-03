@@ -53,7 +53,7 @@ namespace DSPRE.Avalonia.Views.Tools
         private void Requires_Click(object sender, RoutedEventArgs e)
         {
             // The search may be narrowed to this patch, which would hide the one it needs.
-            if (sender is Control c && c.DataContext is PatchRowViewModel { RequiresKey: { } key }) VM?.ShowOnly(key);
+            if (sender is Control c && c.DataContext is PatchRowViewModel { RequiresKey: { } key }) VM?.ShowRequired(key);
         }
 
         private void Apply_Click(object sender, RoutedEventArgs e)

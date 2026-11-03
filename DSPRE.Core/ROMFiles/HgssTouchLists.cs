@@ -24,16 +24,16 @@ namespace DSPRE.ROMFiles
             // templates 5 to 8, with x and y as s16 at 4.
             List<Spots> spots = OptionRows.Select((r, i) => new Spots((int)s.Highlights + i * 12, 4, 0, 4, 1, r.First, r.Count, XOnly: true)).ToList();
             if (s.Labels != 0)
-                spots.AddRange(OptionRows.Select((r, i) => new Spots((int)s.Labels + i * 6, 2, 0, 2, 1, r.First, r.Count, XOnly: true)));
+                spots.AddRange(OptionRows.Select((r, i) => new Spots((int)s.Labels + i * 6, 2, 0, 2, 1, r.First, r.Count, XOnly: true, Text: "")));
             const int template = 0x28;
             spots.Add(new Spots((int)s.Sprites + 5 * template, template, 4, 2, 1, 11, 2));
             spots.Add(new Spots((int)s.Sprites + 7 * template, template, 4, 2, 1, 14, 1));
             spots.Add(new Spots((int)s.Sprites + 8 * template, template, 4, 2, 1, 13, 1));
             // Quit's and Confirm's text windows sit where these movs immediates say, in tiles.
-            spots.Add(new Spots((int)s.QuitX, 1, 0, 1, 8, 14, 1, XOnly: true));
-            spots.Add(new Spots((int)s.QuitY, 1, 0, 1, 8, 14, 1, YOnly: true));
-            spots.Add(new Spots((int)s.ConfirmX, 1, 0, 1, 8, 13, 1, XOnly: true));
-            spots.Add(new Spots((int)s.ConfirmY, 1, 0, 1, 8, 13, 1, YOnly: true));
+            spots.Add(new Spots((int)s.QuitX, 1, 0, 1, 8, 14, 1, XOnly: true, Text: ""));
+            spots.Add(new Spots((int)s.QuitY, 1, 0, 1, 8, 14, 1, YOnly: true, Text: ""));
+            spots.Add(new Spots((int)s.ConfirmX, 1, 0, 1, 8, 13, 1, XOnly: true, Text: ""));
+            spots.Add(new Spots((int)s.ConfirmY, 1, 0, 1, 8, 13, 1, YOnly: true, Text: ""));
             // The choices' boxes are tiles in background screen 17; the plain band right of the labels starts at column 14.
             ScreenTiles boxes = new ScreenTiles(RomInfo.DirNames.OptionsGraphics, 17, Enumerable.Range(0, 11).ToArray(), 14);
             return TouchListButtons.Read(new[] { new TouchListButtons.Page("Options", buttons, s.Overlay, (int)s.Touch, Spots: spots.ToArray(), Tiles: boxes) });
@@ -56,7 +56,7 @@ namespace DSPRE.ROMFiles
             RomInfo.HgssMainMenuSites s = RomLocator.HgssMainMenuSites;
             if (s == null) return null;
             // Message windows 5 and 6 hold the new game buttons: x, y, width, height and message as u32, in tiles.
-            Spots windows = new Spots((int)s.Windows + 5 * 20, 20, 0, 4, 8);
+            Spots windows = new Spots((int)s.Windows + 5 * 20, 20, 0, 4, 8, Text: "");
             return TouchListButtons.Read(new[]
             {
                 new TouchListButtons.Page("Scroll arrows", new[] { "Up", "Down" }, s.Overlay, (int)s.Arrows, Locked: FixedArt(0, 1)),
@@ -72,8 +72,8 @@ namespace DSPRE.ROMFiles
             Spots[] spots =
             {
                 new Spots((int)s.ButtonSprites, 2, 0, 1, 1, 0, 2),
-                new Spots((int)s.Windows + 13 * 8, 8, 1, 1, 8, 0, 1),
-                new Spots((int)s.Windows + 12 * 8, 8, 1, 1, 8, 1, 1),
+                new Spots((int)s.Windows + 13 * 8, 8, 1, 1, 8, 0, 1, Text: ""),
+                new Spots((int)s.Windows + 12 * 8, 8, 1, 1, 8, 1, 1, Text: ""),
             };
             return TouchListButtons.Read(new[]
             {
@@ -87,7 +87,7 @@ namespace DSPRE.ROMFiles
             if (s == null) return null;
             string[] keys = Enumerable.Range(0, 10).Select(i => i.ToString()).Concat(new[] { "Back", "Confirm", "Quit" }).ToArray();
             // Sprites 2 to 4 are Back, Confirm and Quit as u8 x and y; their labels are windows 0 to 2, x and y in tiles at 1.
-            Spots[] spots = { new Spots((int)s.Sprites + 2 * 4, 4, 0, 1, 1, 10, 3), new Spots((int)s.Labels, 8, 1, 1, 8, 10, 3) };
+            Spots[] spots = { new Spots((int)s.Sprites + 2 * 4, 4, 0, 1, 1, 10, 3), new Spots((int)s.Labels, 8, 1, 1, 8, 10, 3, Text: "") };
             List<GridMenuButtons.Page> pages = new List<GridMenuButtons.Page>
             {
                 new GridMenuButtons.Page("Keys", keys, (int)s.Keys, (int)s.Flow, FixedArt(Enumerable.Range(0, 10).ToArray()), Spots: spots),

@@ -177,6 +177,9 @@ namespace DSPRE
             _ => 2,
         };
 
+        /// <summary>The font archive file of special characters, such as the "Lv" glyph.</summary>
+        public static int SpecialGlyphsFontEntry(bool hgss) => hgss ? 5 : 4;
+
         /// <summary>"X used Y!" for each move, three lines a move: your Pokémon, a wild one, the foe's. -1 when unknown.</summary>
         public static int MovesUsedTextNumber { get; private set; } = -1;
 
@@ -438,6 +441,21 @@ namespace DSPRE
 
         /// <summary>For a party Pokémon's window, which Pokémon (1 to 6) and part it is.</summary>
         public sealed record ScreenWindowName(string Name, int Pokemon = 0, string Part = null);
+
+        /// <summary>A tile position in code or a table.</summary>
+        /// <param name="Offset">A <c>movs</c> whose low byte is the value, or an s32 in a table when <paramref name="Word"/> is set.</param>
+        /// <param name="Word">An s32.</param>
+        /// <param name="Add">Added to the stored number to get the position.</param>
+        public sealed record ScreenWindowSpot(uint Offset, bool Word = false, int Add = 0);
+
+        /// <summary>
+        /// A window the game places in code, with a fixed size. X and Y can each sit in several places that must agree.
+        /// An axis with none stays at <paramref name="FixedX"/> or <paramref name="FixedY"/> because its register is shared.
+        /// </summary>
+        public sealed record ScreenCodeWindow(string Group, string Name, int Layer, int Width, int Height, ScreenWindowSpot[] X, ScreenWindowSpot[] Y,
+                                              int FixedX = 0, int FixedY = 0);
+
+        public sealed record ScreenCodeWindowSites(int Overlay, ScreenCodeWindow[] Windows);
 
         /// <summary>
         /// Party tables in arm9: panels (12 bytes each), cursor stops (8), sprite templates with the status icons at entries 4 to 9 (40),
@@ -1857,8 +1875,8 @@ namespace DSPRE
         private static readonly Dictionary<GameFamilies, Dictionary<int, int>> KoreanTextBanks = new()
         {
             [GameFamilies.DP] = new() { [10] = 10, [16] = 15, [320] = 319, [326] = 325, [343] = 341, [344] = 342, [362] = 357, [382] = 376, [552] = 546, [555] = 548, [558] = 551, [559] = 552, [560] = 553, [565] = 557, [587] = 576, [588] = 577, [614] = 602, [615] = 603, [616] = 604, [617] = 605, [619] = 607, [620] = 608, [621] = 609, [622] = 610, [623] = 611 },
-            [GameFamilies.Plat] = new() { [12] = 12, [21] = 20, [360] = 359, [361] = 360, [370] = 369, [391] = 389, [392] = 390, [412] = 408, [433] = 428, [610] = 605, [614] = 608, [617] = 611, [618] = 612, [619] = 613, [624] = 617, [646] = 636, [647] = 637, [697] = 687, [701] = 691, [702] = 692, [703] = 693, [704] = 694, [705] = 695, [706] = 696, [707] = 697, [709] = 699, [711] = 701, [712] = 702, [713] = 703, [714] = 704, [715] = 705, [716] = 706, [717] = 707, [719] = 709, [720] = 710, [721] = 711, [722] = 712, [723] = 713 },
-            [GameFamilies.HGSS] = new() { [15] = 15, [27] = 26, [30] = 29, [190] = 189, [191] = 190, [196] = 195, [200] = 199, [211] = 210, [221] = 219, [222] = 220, [237] = 233, [246] = 241, [265] = 260, [271] = 266, [279] = 274, [435] = 430, [445] = 440, [720] = 715, [724] = 718, [728] = 722, [729] = 723, [730] = 724, [735] = 728, [749] = 742, [750] = 743, [752] = 744, [802] = 795, [803] = 796, [804] = 797, [806] = 799, [807] = 800, [808] = 801, [809] = 802, [810] = 803, [812] = 805, [814] = 807, [816] = 809, [817] = 810, [818] = 811, [819] = 812, [820] = 813, [821] = 814, [822] = 815, [824] = 817, [825] = 818, [826] = 819, [827] = 820, [828] = 821 },
+            [GameFamilies.Plat] = new() { [7] = 7, [12] = 12, [17] = 16, [18] = 17, [19] = 18, [21] = 20, [220] = 219, [360] = 359, [361] = 360, [367] = 366, [370] = 369, [391] = 389, [392] = 390, [395] = 391, [412] = 408, [422] = 417, [433] = 428, [453] = 448, [550] = 545, [610] = 605, [614] = 608, [616] = 610, [617] = 611, [618] = 612, [619] = 613, [624] = 617, [646] = 636, [647] = 637, [697] = 687, [701] = 691, [702] = 692, [703] = 693, [704] = 694, [705] = 695, [706] = 696, [707] = 697, [709] = 699, [711] = 701, [712] = 702, [713] = 703, [714] = 704, [715] = 705, [716] = 706, [717] = 707, [719] = 709, [720] = 710, [721] = 711, [722] = 712, [723] = 713 },
+            [GameFamilies.HGSS] = new() { [10] = 10, [15] = 15, [17] = 16, [24] = 23, [25] = 24, [27] = 26, [30] = 29, [34] = 33, [45] = 44, [190] = 189, [191] = 190, [196] = 195, [200] = 199, [211] = 210, [221] = 219, [222] = 220, [237] = 233, [246] = 241, [249] = 244, [265] = 260, [271] = 266, [273] = 268, [279] = 274, [300] = 295, [409] = 404, [410] = 405, [411] = 406, [412] = 407, [413] = 408, [414] = 409, [415] = 410, [416] = 411, [417] = 412, [418] = 413, [419] = 414, [420] = 415, [435] = 430, [442] = 437, [445] = 440, [640] = 635, [641] = 636, [642] = 637, [643] = 638, [644] = 639, [645] = 640, [646] = 641, [647] = 642, [648] = 643, [649] = 644, [650] = 645, [651] = 646, [652] = 647, [653] = 648, [654] = 649, [655] = 650, [656] = 651, [657] = 652, [658] = 653, [659] = 654, [660] = 655, [661] = 656, [662] = 657, [663] = 658, [664] = 659, [665] = 660, [666] = 661, [667] = 662, [668] = 663, [669] = 664, [670] = 665, [671] = 666, [672] = 667, [673] = 668, [674] = 669, [675] = 670, [676] = 671, [677] = 672, [678] = 673, [679] = 674, [680] = 675, [681] = 676, [682] = 677, [683] = 678, [684] = 679, [685] = 680, [686] = 681, [687] = 682, [688] = 683, [689] = 684, [690] = 685, [691] = 686, [692] = 687, [693] = 688, [694] = 689, [695] = 690, [696] = 691, [697] = 692, [698] = 693, [699] = 694, [700] = 695, [701] = 696, [702] = 697, [703] = 698, [704] = 699, [705] = 700, [706] = 701, [707] = 702, [708] = 703, [709] = 704, [710] = 705, [711] = 706, [712] = 707, [713] = 708, [714] = 709, [715] = 710, [716] = 711, [720] = 715, [724] = 718, [727] = 721, [728] = 722, [729] = 723, [730] = 724, [735] = 728, [749] = 742, [750] = 743, [752] = 744, [802] = 795, [803] = 796, [804] = 797, [806] = 799, [807] = 800, [808] = 801, [809] = 802, [810] = 803, [812] = 805, [814] = 807, [816] = 809, [817] = 810, [818] = 811, [819] = 812, [820] = 813, [821] = 814, [822] = 815, [824] = 817, [825] = 818, [826] = 819, [827] = 820, [828] = 821 },
         };
 
         public static int TextBank(int usBank) =>
@@ -2371,8 +2389,8 @@ namespace DSPRE
                         [DirNames.DynamicHeaders] = $@"{_dataFolderName}\debug\cb_edit\d_test.narc",
                         [DirNames.AreaWindowGraphics] = $@"{_dataFolderName}\arc\area_win_gra.narc",
                         [DirNames.StartMenuGraphics] = $@"{_dataFolderName}\graphic\menu_gra.narc",
-                        [DirNames.PartyMenuGraphics] = $@"{_dataFolderName}\graphic\pl_plist_gra.narc",
-                        [DirNames.BoxGraphics] = $@"{_dataFolderName}\graphic\box.narc",
+                        [DirNames.PartyMenuGraphics] = Localized($@"{_dataFolderName}\graphic\pl_plist_gra.narc", "pokelist", "pl_plist_gra.narc"),
+                        [DirNames.BoxGraphics] = Localized($@"{_dataFolderName}\graphic\box.narc", "box", "box.narc"),
                         [DirNames.OptionsGraphics] = $@"{_dataFolderName}\graphic\config_gra.narc",
                         [DirNames.SealGraphics] = $@"{_dataFolderName}\application\custom_ball\data\cb_data.narc",
                         [DirNames.TrainerCapsules] = $@"{_dataFolderName}\application\custom_ball\edit\pl_cb_data.narc",
@@ -2634,6 +2652,8 @@ namespace DSPRE
                     return "ger";
                 case GameLanguages.Spanish:
                     return "spa";
+                case GameLanguages.Korean:
+                    return "kor";
                 default:
                     return "";
             }
@@ -2708,11 +2728,8 @@ namespace DSPRE
             return PickupTableOverlayNumber >= 0 || GameFamily == GameFamilies.HGSS;
         }
 
-        /// <summary>Whether the standard ARM9 mart layout has been verified for this ROM.</summary>
-        public static bool IsMartEditorAvailable()
-        {
-            return (!IsHGE || HgEngine.HgEngineMarts.Enabled) && MartSpecialtyShopCount > 0;
-        }
+        /// <summary>hg-engine keeps its marts in src/field/mart.c. Any other ROM needs the standard ARM9 layout verified.</summary>
+        public static bool IsMartEditorAvailable() => IsHGE ? HgEngine.HgEngineMarts.Enabled : MartSpecialtyShopCount > 0;
 
         /// <summary>Whether this ROM's hidden item table and its count checks are known.</summary>
         public static bool IsHiddenItemsEditorAvailable() => HiddenItemTableCapacity > 0;

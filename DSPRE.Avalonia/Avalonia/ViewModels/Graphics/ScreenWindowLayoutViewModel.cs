@@ -278,8 +278,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public bool CanRebuildGraphics => PanelsResizable && _members != null;
         public bool CanOfferSizePatch => _panels != null && !_panels.Resizable && !RomInfo.IsHGE && PartyPanelSizePatch.SupportsCurrentRom;
 
-        public void OpenSizePatch() => AvaloniaEditorLauncher.OpenPatchToolboxAt("partyPanelSize");
-
         // ── fonts for the names and the line under them, once the party menu fonts patch is in ──
 
         private PendingArchiveWrites.Target _fontTable;
@@ -293,7 +291,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         public bool OffersFontPatch => _screen == "party" && _fontTable == null && !RomInfo.IsHGE && PartyFontPatch.SupportsCurrentRom;
-        public void OpenFontPatch() => AvaloniaEditorLauncher.OpenPatchToolboxAt("partyFonts");
 
         private static IReadOnlyList<string> FontNames => GameFonts.Names;
 
@@ -305,7 +302,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             Commit();
         }
 
-        // The patch keeps the game's size, so unsaved edits stay as they are.
         private void OnPatchStateChanged(object sender, EventArgs e)
         {
             if (_fontTable == null && PartyFontPatch.IsApplied)
@@ -385,7 +381,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             Windows.Clear();
             TopWindows.Clear();
             BottomWindows.Clear();
-            bool mainOnTop = RomInfo.GameFamily != RomInfo.GameFamilies.HGSS;
+            bool mainOnTop = _text?.MainOnTop ?? RomInfo.GameFamily != RomInfo.GameFamilies.HGSS;
             int colour = 0;
             bool multi = HasStates && _layout.Windows.Any(w => w.Group == MultiGroup && _text.Shows(_state, w.Group, w.Name));
             if (_panels != null && !multi)
@@ -438,7 +434,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 ScreenWindowRow row = new ScreenWindowRow(w, HpBarLayoutEditorViewModel.Colours[colour++ % HpBarLayoutEditorViewModel.Colours.Length], scrolled)
                 {
                     MoveTo = (r, x, y) => { Move(r, x, y); Commit(); },
-                    SizeTo = (r, width, height) => { Resize(r, width, height); Commit(); },
+                    OnScreenTiles = true,
+                    SizeTo = w.Code != null ? null : (r, width, height) => { Resize(r, width, height); Commit(); },
                     FixedTop = _text?.FixedTop?.Invoke(_state, w),
                     FontNames = FontNames,
                     GetFont = _fonts != null && w.Part == "name" ? () => Math.Max(_fonts["name"], 0) : null,
@@ -620,14 +617,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (IsSprite(row)) { MoveSprite(row, x, y); return; }
             if (IsBall(row)) { MoveBall(row, x, y); return; }
             ScreenWindowLayout.Window w = row.Window;
-            x = Math.Clamp(x, 0, ScreenWindowLayout.MapColumns - w.Width);
-            y = Math.Clamp(y, 0, ScreenWindowLayout.MapHeight - w.Height);
+            x = Math.Clamp(x, w.MinX, ScreenWindowLayout.MapColumns - w.Width);
+            y = Math.Clamp(y, w.MinY, ScreenWindowLayout.MapHeight - w.Height);
             int dx = x - w.X, dy = y - w.Y;
             if (dx == 0 && dy == 0) return;
             foreach (ScreenWindowLayout.Window moved in Following(w))
             {
-                moved.X = Math.Clamp(moved.X + dx, 0, ScreenWindowLayout.MapColumns - moved.Width);
-                moved.Y = Math.Clamp(moved.Y + dy, 0, ScreenWindowLayout.MapHeight - moved.Height);
+                if (moved.CanMoveAcross) moved.X = Math.Clamp(moved.X + dx, moved.MinX, ScreenWindowLayout.MapColumns - moved.Width);
+                if (moved.CanMoveDown) moved.Y = Math.Clamp(moved.Y + dy, moved.MinY, ScreenWindowLayout.MapHeight - moved.Height);
                 FollowLabel(moved);
             }
             foreach (ScreenWindowRow shown in Windows) shown.Refresh();
@@ -639,7 +636,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <summary>Never bigger than in the ROM.</summary>
         public void Resize(ScreenWindowRow row, int width, int height)
         {
-            if (row == null || IsPanel(row) || IsSprite(row) || IsBall(row)) return;
+            if (row == null || IsPanel(row) || IsSprite(row) || IsBall(row) || row.Window.Code != null) return;
             if (width == row.Window.Width && height == row.Window.Height) return;
             foreach (ScreenWindowLayout.Window w in Following(row.Window))
             {
@@ -705,7 +702,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             int asked = ++_asked;
             int state = HasStates ? _state : -1;
-            (byte[] top, byte[] bottom) = await Task.Run(() =>
+            (byte[] top, byte[] bottom) = await PreviewFileGate.RunAsync(() =>
             {
                 using (DrawScope()) return ScreenWindowLayouts.Draw(_screen, state);
             });
@@ -830,8 +827,21 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public Action<ScreenWindowRow, int, int> SizeTo;
 
         public int Across { get => Window.X; set => MoveTo?.Invoke(this, value, Window.Y); }
+        /// <summary>Set on a window placed in screen tiles. Panels, sprites and balls have other limits.</summary>
+        public bool OnScreenTiles { get; init; }
+        /// <summary>The furthest the window can go and still fit on screen.</summary>
+        public int MaxAcross => OnScreenTiles ? Math.Max(0, ScreenWindowLayout.MapColumns - Window.Width) : 31;
+        public int MaxDown => OnScreenTiles ? Math.Max(0, ScreenWindowLayout.MapHeight - Window.Height) : 31;
+        public int MinAcross => Window.MinX;
+        public int MinDown => Window.MinY;
         public int Down { get => Window.Y; set => MoveTo?.Invoke(this, Window.X, value); }
+        public bool CanAcross => Window.CanMoveAcross;
+        public bool CanDown => Window.CanMoveDown;
+        public string AcrossTip => CanAcross ? "Across" : "Can't move: the game shares this position with something else.";
+        public string DownTip => CanDown ? "Down" : "Can't move: the game shares this position with something else.";
         public bool Sizable => SizeTo != null;
+        public string WideTip => Sizable ? "Width in tiles, up to the original width." : "The game's code sets this window's size.";
+        public string TallTip => Sizable ? "Height in tiles, up to the original height." : "The game's code sets this window's size.";
         public int Wide { get => Window.Width; set => SizeTo?.Invoke(this, value, Window.Height); }
         public int Tall { get => Window.Height; set => SizeTo?.Invoke(this, Window.Width, value); }
         public int MaxWide => Math.Max(1, Window.MaxWidth);
@@ -851,7 +861,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public void Refresh()
         {
-            foreach (string n in new[] { nameof(Across), nameof(Down), nameof(Wide), nameof(Tall), nameof(Left), nameof(Top), nameof(Width), nameof(Height), nameof(FontIndex) })
+            foreach (string n in new[] { nameof(Across), nameof(Down), nameof(MaxAcross), nameof(MaxDown), nameof(Wide), nameof(Tall), nameof(Left), nameof(Top), nameof(Width), nameof(Height), nameof(FontIndex) })
                 Raise(n);
         }
     }

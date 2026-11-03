@@ -295,9 +295,6 @@ namespace DSPRE.Avalonia.ViewModels.Items
         /// <summary>Shown while the marts can't grow.</summary>
         public bool CanOfferExpansion => _data != null && !CanResize;
 
-        /// <summary>Making room changes the game's code, so the toolbox does it.</summary>
-        public void OfferExpansion() => AvaloniaEditorLauncher.OpenPatchToolboxAt("martsExpanded");
-
         private void OnRomPatchStateChanged(object sender, System.EventArgs e) => OnPatchStateChanged();
         public void Detach() => AppEvents.RomPatchStateChanged -= OnRomPatchStateChanged;
 

@@ -63,19 +63,36 @@ namespace DSPRE.Avalonia.ViewModels.World
             get
             {
                 if (_matrix == null) return "";
-                bool patched = false;
-                try { patched = RomPatchState.FlagMatrixExpansionApplied || (GameFamily == GameFamilies.HGSS && PatchToolboxLogic.CheckFilesMatrixExpansionApplied()); }
-                catch { }   // the expansion check falls back to unpatched limits
-                int max = MatrixMaxCells(patched), cells = _matrix.Width * _matrix.Height;
+                int max = MatrixMaxCells(Expanded), cells = _matrix.Width * _matrix.Height;
                 if (cells <= max) return "";
-                string fix = GameFamily == GameFamilies.HGSS && !patched ? " Apply the Matrix 0 expansion patch in the ROM patch toolbox to double it." : "";
-                return $"{cells} cells: the game holds at most {max}, so a bigger matrix corrupts memory.{fix}";
+                return $"{cells} cells: the game holds at most {max}, so a bigger matrix corrupts memory.";
             }
         }
         public bool HasSizeWarning => SizeWarning.Length > 0;
 
+        public bool OffersMatrixPatch => HasSizeWarning && PatchToolboxLogic.MatrixExpansionSupported && !Expanded;
+
+        // Read from the ARM9 once, and again only when the toolbox applies a patch.
+        private bool? _expanded;
+        private bool Expanded
+        {
+            get
+            {
+                if (_expanded is bool known) return known;
+                bool patched = RomPatchState.FlagMatrixExpansionApplied;
+                try { patched = patched || (GameFamily == GameFamilies.HGSS && PatchToolboxLogic.CheckFilesMatrixExpansionApplied()); }
+                catch (Exception e) { AppLogger.WarnOnce("MatrixEditor.Expanded", e); }   // unpatched limits
+                _expanded = patched;
+                return patched;
+            }
+        }
+
         /// <summary>Matrix 0 expansion raises the size limit, so the warning is read again after a patch.</summary>
-        public void OnPatchStateChanged() { OnPropertyChanged(nameof(SizeWarning)); OnPropertyChanged(nameof(HasSizeWarning)); }
+        public void OnPatchStateChanged()
+        {
+            _expanded = null;
+            OnPropertyChanged(nameof(SizeWarning)); OnPropertyChanged(nameof(HasSizeWarning)); OnPropertyChanged(nameof(OffersMatrixPatch));
+        }
 
         private void Resize(int width, int height)
         {
@@ -408,7 +425,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             OnPropertyChanged(nameof(Width)); OnPropertyChanged(nameof(Height));
             OnPropertyChanged(nameof(SizeWidth)); OnPropertyChanged(nameof(SizeHeight)); OnPropertyChanged(nameof(HasMatrix)); OnPropertyChanged(nameof(MatrixName));
-            OnPropertyChanged(nameof(SizeWarning)); OnPropertyChanged(nameof(HasSizeWarning));
+            OnPropertyChanged(nameof(SizeWarning)); OnPropertyChanged(nameof(HasSizeWarning)); OnPropertyChanged(nameof(OffersMatrixPatch));
             OnPropertyChanged(nameof(HasHeaders)); OnPropertyChanged(nameof(HasHeights));
             OnPropertyChanged(nameof(CanAddHeaders)); OnPropertyChanged(nameof(CanAddHeights));
             OnPropertyChanged(nameof(UnsavedChangesDescription));

@@ -25,7 +25,6 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private void GameLook_Click(object sender, RoutedEventArgs e) => ((sender as Control)?.DataContext as PressFrameRow)?.GameLook();
 
-        private void Patch_Click(object sender, RoutedEventArgs e) => VM?.OpenPatch();
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveChanges();
 

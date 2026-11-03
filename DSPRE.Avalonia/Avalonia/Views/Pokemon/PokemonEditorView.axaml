@@ -123,8 +123,8 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
               <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0" IsVisible="{Binding CanOfferSlots}">
-                <Button Content="Open in ROM patch toolbox" controls:Icon.Key="OpenLink" Click="OpenEvolutionSlots_Click"
-                        ToolTip.Tip="More evolutions need the Evolution slots patch"/>
+                <TextBlock Text="More evolutions" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+                <controls:EnableInToolbox Patch="evolutionSlots" Need="More evolutions per Pokémon"/>
               </StackPanel>
             </StackPanel>
           </ScrollViewer>

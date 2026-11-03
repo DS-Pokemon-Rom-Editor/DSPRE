@@ -15,8 +15,6 @@ namespace DSPRE.Avalonia.Views.Graphics
         public BannerLayoutView(BannerLayoutViewModel vm) : this() => DataContext = vm;
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveChanges();
-        private void Patch_Click(object sender, RoutedEventArgs e) => VM?.OpenPatch();
-        private void MotionPatch_Click(object sender, RoutedEventArgs e) => VM?.OpenMotionPatch();
         private void Play_Click(object sender, RoutedEventArgs e) => VM?.Play();
 
         private Point? _grab;

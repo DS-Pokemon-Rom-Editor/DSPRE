@@ -257,6 +257,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         // The row is edited in the VS intro editor; this window shows what it is and opens it there.
 
         public bool ShowPtIntro { get; private set; }
+        private bool _classIntrosInstalled;
+        private readonly bool _classIntrosSupported = !HgEngineProject.IsActive && ClassIntroPatch.SupportsCurrentRom;
+        public bool OffersClassIntroPatch => _classIntrosSupported && !_classIntrosInstalled;
+        public bool OffersMetadataPatch => !HgEngineProject.IsActive && _metadata == TrainerClassMetadataDetectionState.Stock
+            && TrainerClassMetadataPatch.SupportsCurrentRom;
         private string _ciIntroSummary = "";
         public string CiIntroSummary { get => _ciIntroSummary; private set => Set(ref _ciIntroSummary, value); }
         private DSPRE.Avalonia.Data.VsIntroNames _introNames;
@@ -265,7 +270,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             List<ClassIntroPatch.Row> rows = ClassIntroPatch.ReadRows();
             ShowPtIntro = rows != null && index >= 0 && index < rows.Count;
+            _classIntrosInstalled = rows != null;
             OnPropertyChanged(nameof(ShowPtIntro));
+            OnPropertyChanged(nameof(OffersClassIntroPatch));
             if (!ShowPtIntro) return;
             _introNames ??= DSPRE.Avalonia.Data.VsIntroNames.Read();
             ClassIntroPatch.Row row = rows[index];
@@ -551,6 +558,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (HgEngineProject.IsActive) return;
             TrainerClassMetadataDetectionState was = _metadata;
             _metadata = TrainerClassMetadataStore.DetectCurrentRom(out _metadataNote);
+            OnPropertyChanged(nameof(OffersMetadataPatch));
+            if (_selectedIndex >= 0 && _selectedIndex < ClassNames.Count && _pendingClass == null) LoadPtIntro(_selectedIndex);
             if (_metadata == was) return;
             _musicDict.Clear();
             if ((!IsHGE || _musicFromSource) && _metadata == TrainerClassMetadataDetectionState.Stock) SetupEncounterMusicTable();

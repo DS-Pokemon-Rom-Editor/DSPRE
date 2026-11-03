@@ -98,7 +98,6 @@ namespace DSPRE.Avalonia.Views.Graphics
             VM?.Commit();
         }
 
-        private void IconPatch_Click(object sender, RoutedEventArgs e) => VM?.OpenIconPatch();
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveChanges();
 

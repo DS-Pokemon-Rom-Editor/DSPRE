@@ -286,8 +286,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>The slots are the game's 7 and the toolbox patch can raise them.</summary>
         public bool CanOfferSlots => !UseHgEngineSource && EvolutionSlots.WhyNot() == null && !EvolutionSlots.Expanded;
 
-        public void OpenSlotsPatch() => AvaloniaEditorLauncher.OpenPatchToolboxAt("evolutionSlots");
-
         // After the toolbox raised the slots, the new rows appear and the Pokémon is read again.
         private void OnPatchStateChanged(object sender, EventArgs e)
         {

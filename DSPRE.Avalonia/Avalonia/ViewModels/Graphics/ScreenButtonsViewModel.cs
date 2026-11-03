@@ -91,7 +91,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_buttons is IScreenParts parts)
             {
                 IReadOnlyList<ScreenPart> list = parts.PartsOf(_page);
-                for (int p = 0; p < list.Count; p++) Parts.Add(new ButtonPartRow(this, p, list[p].Name, ColourOf(list[p].Button)));
+                for (int p = 0; p < list.Count; p++) Parts.Add(new ButtonPartRow(this, p, list[p], ColourOf(list[p].Button)));
             }
             Raise(nameof(HasParts));
             Refresh();
@@ -111,9 +111,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             if (_buttons is not IScreenParts parts) return;
             (int ox, int oy) = parts.PartAt(_page, row.Part);
-            if (x == ox && y == oy) return;
-            parts.MovePart(_page, row.Part, x - ox, y - oy);
-            Refresh();
+            if (x != ox || y != oy)
+            {
+                parts.MovePart(_page, row.Part, x - ox, y - oy);
+                Refresh();
+            }
+            // Text sits on whole tiles, so a box left between two goes back to the spot the game uses.
+            if (parts.PartAt(_page, row.Part) != (x, y)) row.SnapBack();
         }
 
         private IScreenIconLook Icon => _buttons as IScreenIconLook;
@@ -123,7 +127,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private void RaiseIcon()
         {
-            foreach (string n in new[] { nameof(IconEditable), nameof(IconNeedsPatch), nameof(IconSize), nameof(IconAngle), nameof(IconFlipAcross), nameof(IconFlipDown) })
+            foreach (string n in new[] { nameof(IconEditable), nameof(IconNeedsPatch), nameof(IconPatchKey), nameof(IconSize), nameof(IconAngle), nameof(IconFlipAcross), nameof(IconFlipDown) })
                 Raise(n);
         }
 
@@ -142,7 +146,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public bool IconFlipAcross { get => Icon?.Look.FlipAcross == true; set => SetLook(l => l with { FlipAcross = value }); }
         public bool IconFlipDown { get => Icon?.Look.FlipDown == true; set => SetLook(l => l with { FlipDown = value }); }
 
-        public void OpenIconPatch() { if (Icon != null) AvaloniaEditorLauncher.OpenPatchToolboxAt(Icon.IconPatch); }
+        public string IconPatchKey => Icon?.IconPatch;
 
         private void OnPatchStateChanged(object sender, EventArgs e)
         {
@@ -168,7 +172,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     try
                     {
                         Func<byte[]> work = _draw(_page);
-                        rgba = await Task.Run(work);
+                        rgba = await PreviewFileGate.RunAsync(work);
                     }
                     catch (Exception ex) { AppLogger.WarnOnce("ScreenButtonsViewModel.Draw", ex); }
                     if (!_again) CursorPicture = rgba == null ? null : ImageConverter.FromRgba(rgba, 256, 192);
@@ -187,10 +191,15 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public void MoveTo(TouchAreaRow row, int left, int top)
         {
             (int t, int _, int l, int _) = AreaOf(row.Button);
-            if ((left == l && top == t) || !row.Open) return;
-            if (!TextFollows && _buttons is IScreenParts parts) parts.MoveArea(_page, row.Button, left - l, top - t);
-            else _buttons.Move(_page, row.Button, left - l, top - t);
-            Refresh();
+            if (!row.Open) return;
+            if (left != l || top != t)
+            {
+                if (!TextFollows && _buttons is IScreenParts parts) parts.MoveArea(_page, row.Button, left - l, top - t);
+                else _buttons.Move(_page, row.Button, left - l, top - t);
+                Refresh();
+            }
+            (int nt, int _, int nl, int _) = AreaOf(row.Button);
+            if (nl != left || nt != top) row.SnapBack();
         }
 
         public void SizeTo(TouchAreaRow row, int width, int height)
@@ -416,20 +425,32 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private readonly ScreenButtonsViewModel _owner;
 
-        public ButtonPartRow(ScreenButtonsViewModel owner, int part, string name, string colour)
+        public ButtonPartRow(ScreenButtonsViewModel owner, int part, ScreenPart shown, string colour)
         {
             _owner = owner;
             Part = part;
-            Name = name;
+            Name = shown.Name;
+            Step = shown.Step;
+            CanAcross = shown.Across;
+            CanDown = shown.Down;
             Colour = colour;
         }
 
         public int Part { get; }
         public string Name { get; }
+        public int Step { get; }
+        public bool CanAcross { get; }
+        public bool CanDown { get; }
         public string Colour { get; }
 
-        public int Across { get => _owner.PartAt(Part).X; set { _owner.MovePartTo(this, value, Down); _owner.Commit(); } }
-        public int Down { get => _owner.PartAt(Part).Y; set { _owner.MovePartTo(this, Across, value); _owner.Commit(); } }
+        private (int X, int Y)? _passing;
+        private (int X, int Y) Spot => _passing ?? _owner.PartAt(Part);
+
+        public int Across { get => Spot.X; set { if (RecordSwitchGuard.IsSnappingBack) return; _owner.MovePartTo(this, value, Down); _owner.Commit(); } }
+        public int Down { get => Spot.Y; set { if (RecordSwitchGuard.IsSnappingBack) return; _owner.MovePartTo(this, Across, value); _owner.Commit(); } }
+
+        public void SnapBack() => RecordSwitchGuard.SnapBack(() => _owner.PartAt(Part), v => _passing = v == _owner.PartAt(Part) ? null : v, Refresh,
+            real => (real.X == 0 ? 1 : real.X - 1, real.Y == 0 ? 1 : real.Y - 1));
 
         public double Left => Across * ScreenButtonsViewModel.Scale - Mark / 2;
         public double Top => Down * ScreenButtonsViewModel.Scale - Mark / 2;
@@ -470,8 +491,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private (int Top, int Bottom, int Left, int Right) Area => _owner.AreaOf(Button);
 
-        public int Across { get => Area.Left; set { _owner.MoveTo(this, value, Area.Top); _owner.Commit(); } }
-        public int Down { get => Area.Top; set { _owner.MoveTo(this, Area.Left, value); _owner.Commit(); } }
+        private (int X, int Y)? _passing;
+        private (int X, int Y) Corner => (Area.Left, Area.Top);
+
+        public int Across { get => _passing?.X ?? Area.Left; set { if (RecordSwitchGuard.IsSnappingBack) return; _owner.MoveTo(this, value, Area.Top); _owner.Commit(); } }
+        public int Down { get => _passing?.Y ?? Area.Top; set { if (RecordSwitchGuard.IsSnappingBack) return; _owner.MoveTo(this, Area.Left, value); _owner.Commit(); } }
+
+        public void SnapBack() => RecordSwitchGuard.SnapBack(() => Corner, v => _passing = v == Corner ? null : v, Refresh,
+            real => (real.X == 0 ? 1 : real.X - 1, real.Y == 0 ? 1 : real.Y - 1));
         public int Wide { get => Area.Right - Area.Left; set { _owner.SizeTo(this, value, Tall); _owner.Commit(); } }
         public int Tall { get => Area.Bottom - Area.Top; set { _owner.SizeTo(this, Wide, value); _owner.Commit(); } }
 

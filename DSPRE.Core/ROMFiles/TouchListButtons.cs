@@ -8,7 +8,7 @@ namespace DSPRE.ROMFiles
     /// Touch lists with no cursor table, in an overlay or arm9, with any button spot tables that move along. Platinum's bag,
     /// trainer case, summary, PC and Pokétch use them.
     /// </summary>
-    public sealed class TouchListButtons : IScreenButtons, IScreenArt
+    public sealed class TouchListButtons : IScreenButtons, IScreenArt, IScreenParts
     {
         public const int InArm9 = ScreenTables.InArm9;
 
@@ -19,8 +19,9 @@ namespace DSPRE.ROMFiles
         /// <param name="Unit">Pixels per step: 8 for tiles.</param>
         /// <param name="XOnly">The entry holds only x.</param>
         /// <param name="YOnly">The entry holds only y.</param>
+        /// <param name="Text">Set on text, which can move apart from its button: its row's name, or empty to use the button's.</param>
         public sealed record Spots(int At, int Stride, int X, int Size, int Unit, int FirstButton = 0, int Count = 0, bool XOnly = false,
-                                   bool YOnly = false);
+                                   bool YOnly = false, string Text = null);
 
         /// <param name="File">The overlay, or <see cref="InArm9"/>.</param>
         /// <param name="Ended">Whether the list ends with the 0xFF entry; Pokétch lists are counted in code instead.</param>
@@ -97,9 +98,8 @@ namespace DSPRE.ROMFiles
             Spots[] all = _pages[page].Spots;
             if (all == null || table >= all.Length) return null;
             Spots s = all[table];
-            int At(int i) => _spotStart[page][table] + i * s.Stride + s.X;
             return Enumerable.Range(0, CountOf(_pages[page], s))
-                .Select(i => (s.YOnly ? 0 : Value(s, At(i)), s.XOnly ? 0 : Value(s, s.YOnly ? At(i) : At(i) + s.Size))).ToList();
+                .Select(i => ScreenSpots.Entry(_data, s, _spotStart[page][table] + i * s.Stride + s.X)).ToList();
         }
 
         /// <summary>One spot table entry's bytes, as the file holds them now.</summary>
@@ -108,8 +108,6 @@ namespace DSPRE.ROMFiles
             Spots s = _pages[page].Spots[table];
             return _data.Skip(_spotStart[page][table] + entry * s.Stride).Take(s.Stride).ToArray();
         }
-
-        private int Value(Spots s, int at) => ScreenSpots.Value(_data, at, s.Size);
 
         private bool Tiled(int page, int button) => _art[page]?.Moves(button) == true;
 
@@ -125,8 +123,18 @@ namespace DSPRE.ROMFiles
         public ushort? SquareAt(int page, int x, int y) => _art[page]?.SquareAt(_data, x, y);
         public void SetSquare(int page, int x, int y, ushort square) => _art[page]?.SetSquare(_data, x, y, square);
 
+        public IReadOnlyList<ScreenPart> PartsOf(int page) => TextOf(page).Select(p => p.Row).ToList();
+        public (int X, int Y) PartAt(int page, int part) => ScreenTextSpots.At(_data, TextOf(page)[part]);
+        public void MovePart(int page, int part, int dx, int dy) => ScreenTextSpots.Move(_data, TextOf(page)[part], dx, dy);
+
+        private List<ScreenTextSpots.Part> TextOf(int page) =>
+            ScreenTextSpots.Of(_pages[page].Spots, _spotStart[page], _pages[page].Buttons, s => CountOf(_pages[page], s));
+
+        public void Move(int page, int button, int dx, int dy) => MoveButton(page, button, dx, dy, true);
+        public void MoveArea(int page, int button, int dx, int dy) => MoveButton(page, button, dx, dy, false);
+
         // A circle's partner, the button's picture spots and its background tiles move along.
-        public void Move(int page, int button, int dx, int dy)
+        private void MoveButton(int page, int button, int dx, int dy, bool text)
         {
             if (MoveLocked(page, button) != null) return;
             int step = MoveStep(page, button);
@@ -151,11 +159,8 @@ namespace DSPRE.ROMFiles
             {
                 Spots s = all[t];
                 int entry = button - s.FirstButton;
-                if (entry < 0 || entry >= CountOf(_pages[page], s)) continue;
-                int at = _spotStart[page][t] + entry * s.Stride + s.X;
-                // Spots are pixels or tiles without leaving the screen.
-                if (!s.YOnly) ScreenSpots.Shift(_data, at, s.Size, (int)Math.Round(dx / (double)s.Unit), 255 / s.Unit);
-                if (!s.XOnly) ScreenSpots.Shift(_data, s.YOnly ? at : at + s.Size, s.Size, (int)Math.Round(dy / (double)s.Unit), 191 / s.Unit);
+                if (entry < 0 || entry >= CountOf(_pages[page], s) || (!text && s.Text != null)) continue;
+                ScreenSpots.ShiftEntry(_data, s, _spotStart[page][t] + entry * s.Stride + s.X, dx, dy);
             }
         }
 

@@ -52,7 +52,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public bool HasMotion => _hasMotion;
         public bool OffersMotionPatch => _banner != null && !_hasMotion && BannerMotionPatch.SupportsCurrentRom && !RomInfo.IsHGE;
-        public void OpenMotionPatch() => AvaloniaEditorLauncher.OpenPatchToolboxAt("bannerMotion");
 
         public string[] Directions { get; } = { "From the top", "From the bottom", "In place" };
         public string[] Motions { get; } = { "Straight", "Ease", "Overshoot", "Bounce" };
@@ -94,7 +93,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string ColumnTip => Patched ? "In tiles from the left" : "Needs the banner position patch";
         public string RowTip => Patched ? "In tiles from the top" : "Needs the banner position patch";
         public bool OffersPatch => _banner != null && !Patched;
-        public void OpenPatch() => AvaloniaEditorLauncher.OpenPatchToolboxAt("bannerPosition");
 
         private void OnPatchStateChanged(object sender, EventArgs e)
         {
