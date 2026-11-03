@@ -136,6 +136,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             foreach (KeyValuePair<uint, (uint spriteID, ushort properties)> kv in RomInfo.OverworldTable)
             {
+                // 3D overworlds have no sprite.
+                if (kv.Value.spriteID == 0x3D3D) continue;
                 string path = Path.Combine(dir, kv.Value.spriteID.ToString("D4"));
                 if (!TryReadTextureInfo(path, out int w, out int h, out uint colorLimit, out Btx0Structure structure)) continue;
                 _cloneProfiles[kv.Key] = structure;
