@@ -177,16 +177,26 @@ namespace DSPRE.Avalonia
                 S("tab:Headbutt>name:GlHost", "Trees", "Green are normal, yellow special. Move trees drags them."),
                 S("tab:Headbutt>name:GlHost", "ID key", "A normal tree's table depends on the player's ID. Hover to see."),
                 S("tab:Bug Contest", "Bug Contest", "Pokémon, levels, rate and score, by day."),
-                S("tab:Bug Contest opponents", "Contest rivals", "Each rival's entry, day and final score."),
                 S("tab:Safari Zone", "Safari Zone", "Each area's Pokémon by method and time of day."),
                 S("tab:Safari Zone", "Object points", "Bonus slots need enough points from placed objects."),
                 S("tab:Swarms", "Swarms", "Where swarms happen and what they bring."),
-                S(null, "Shortcuts", "Each tab saves on its own. Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
+                S(null, "Shortcuts", "Ctrl+S saves the tab shown, Ctrl+Z undoes, Ctrl+Y redoes."));
+
+            Add("BugContestEditorView", "Bug Contest editor",
+                S("tab:Opponents", "Opponents", "Each opponent's entry, day and final score."),
+                S("tab:Prizes", "Prizes", "What each place wins, including a random prize for first place after the National Dex."),
+                S("name:EditEncountersButton", "Encounters", "The contest's Pokémon are in Special encounters."),
+                S(null, "Shortcuts", "Ctrl+S saves the tab shown, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("HgEngineFormEditorView", "Form editor",
                 S("name:SpeciesBar", "Pokémon", "A base Pokémon and its alternate forms."),
-                S("name:FormList", "Forms", "Each form's species entry, and whether it reverts."),
+                S("name:FormList", "Forms", "Each form's species entry, whether it reverts, and its Mega item or move."),
                 S("name:AddSlotButton", "Adding forms", "Add or remove a form. Its data is in the Pokémon editor."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
+
+            Add("HgEngineTablesView", "Battle tables",
+                S("name:TableList", "Tables", "Small tables from hg-engine's battle and field code."),
+                S("name:RowList", "Rows", "Each row's value. A greyed row depends on a build option."),
                 S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("AbilityFlagsEditorView", "Ability flags",

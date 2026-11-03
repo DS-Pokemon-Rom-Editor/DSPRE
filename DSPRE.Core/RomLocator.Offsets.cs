@@ -2444,5 +2444,25 @@ namespace DSPRE
             },
             _ => null,
         };
+
+        /// <summary>The Bug Contest prize code in overlay 24: the same in all sixteen HeartGold and SoulSilver dumps.</summary>
+        private static Spot BugContestPrizes(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.HeartGold or GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.English when revision == 10 => BugContestPrizeSites(),   // Europe
+                GameLanguages.English => BugContestPrizeSites(),   // US, and any English revision not listed
+                GameLanguages.Japanese => BugContestPrizeSites(),
+                GameLanguages.French => BugContestPrizeSites(),
+                GameLanguages.German => BugContestPrizeSites(),
+                GameLanguages.Italian => BugContestPrizeSites(),
+                GameLanguages.Spanish => BugContestPrizeSites(),
+                GameLanguages.Korean => BugContestPrizeSites(),
+                _ => null,
+            },
+            _ => null,
+        };
+
+        private static Spot BugContestPrizeSites() => Ov(24, 0x156, 0x164, 0x168, 0x16E, 0x174, 0x17A, 0x188);
     }
 }

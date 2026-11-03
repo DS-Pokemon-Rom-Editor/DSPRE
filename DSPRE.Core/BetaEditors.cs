@@ -25,6 +25,7 @@ namespace DSPRE
         private static readonly Dictionary<string, Editor> Testing = new(StringComparer.OrdinalIgnoreCase)
         {
             ["AbilityFlagsEditorView"] = new("Ability flags (hg-engine)", "Pokémon"),
+            ["HgEngineTablesView"] = new("Battle tables (hg-engine)", "Pokémon"),
             ["AudioEditorView"] = new("Audio editor", "Audio"),
             ["BallCapsuleEditorView"] = new("Ball capsules", "Graphics"),
             ["BannerEditorView"] = new("Game icon & banner", "Graphics"),
@@ -34,6 +35,7 @@ namespace DSPRE
             ["BerryDataEditorView"] = new("Berry data", "Items"),
             ["BottomScreenEditorView"] = new("Bottom screen", "Graphics"),
             ["BpShopEditorView"] = new("Battle Point shop", "Items"),
+            ["BugContestEditorView"] = new("Bug Contest editor", "Pokémon"),
             ["BreedingItemsView"] = new("Breeding items", "Pokémon"),
             ["CellAnimationEditorView"] = new("Cell animations", "Graphics"),
             ["DistortionWorldView"] = new("Distortion World", "World"),
@@ -108,7 +110,6 @@ namespace DSPRE
             new() { Name = "Walking the map", Where = "Event editor" },
             new() { Name = "Animated preview", Where = "Event editor and Map editor" },
             new() { Name = "Tile boundary overlay", Where = "Event editor and Map editor" },
-            new() { Name = "Bug Contest opponents", Where = "Special encounters editor" },
             new() { Name = "Pokéathlon stats", Where = "Pokémon editor" },
             new() { Name = "Swarms", Where = "Special encounters editor" },
             new() { Name = "Roamers", Where = "Special encounters editor" },

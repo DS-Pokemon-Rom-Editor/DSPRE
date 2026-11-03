@@ -8,7 +8,11 @@ namespace DSPRE.Avalonia.Views.Pokemon
     {
         private RoamersViewModel VM => DataContext as RoamersViewModel;
 
-        public RoamersView() { InitializeComponent(); }
+        public RoamersView()
+        {
+            InitializeComponent();
+            TabSetup.OnFirstShow(this, () => VM?.Setup());
+        }
 
         private async void Save_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.SaveChangesAsync(); }
         private async void Discard_Click(object sender, RoutedEventArgs e)

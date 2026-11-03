@@ -21,19 +21,20 @@
 
     <Grid ColumnDefinitions="Auto,16,*" Margin="8">
       <StackPanel Grid.Column="0" Spacing="4">
-        <Grid ColumnDefinitions="80,240,80">
-          <TextBlock Grid.Column="1" Text="Pokémon" FontWeight="SemiBold"/>
-          <TextBlock Grid.Column="2" Text="Level" FontWeight="SemiBold"/>
+        <Grid ColumnDefinitions="80,40,240,80">
+          <TextBlock Grid.Column="2" Text="Pokémon" FontWeight="SemiBold"/>
+          <TextBlock Grid.Column="3" Text="Level" FontWeight="SemiBold"/>
         </Grid>
         <ItemsControl ItemsSource="{Binding Slots}">
           <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Spacing="4"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:RoamersViewModel+SlotRow">
-              <Grid ColumnDefinitions="80,240,80">
+              <Grid ColumnDefinitions="80,40,240,80">
                 <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
-                <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" Grid.Column="1" Margin="0,0,8,0" AllowsNone="False"
+                <Image Grid.Column="1" Width="32" Height="32" Source="{Binding Species, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
+                <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" Grid.Column="2" Margin="0,0,8,0" AllowsNone="False"
                     ItemsSource="{Binding $parent[ItemsControl].((vm:RoamersViewModel)DataContext).PokemonNames}" SelectedIndex="{Binding Species}"/>
-                <NumericUpDown Grid.Column="2" Value="{Binding Level}" Minimum="1" Maximum="100" FormatString="0"/>
+                <NumericUpDown Grid.Column="3" Value="{Binding Level}" Minimum="1" Maximum="100" FormatString="0"/>
               </Grid>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
@@ -45,7 +46,10 @@
                    FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,6"/>
         <Grid DockPanel.Dock="Top" ColumnDefinitions="40,300,*" Margin="6,0,24,4">
           <TextBlock Grid.Column="1" Text="Route" FontWeight="SemiBold"/>
-          <TextBlock Grid.Column="2" Text="Next routes" FontWeight="SemiBold" IsVisible="{Binding RoutesEditable}"/>
+          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" IsVisible="{Binding RoutesEditable}">
+            <TextBlock Text="Can move to" FontWeight="SemiBold"/>
+            <controls:HelpTip Text="Row numbers a roamer can move to from here, separated by commas."/>
+          </StackPanel>
         </Grid>
         <ListBox ItemsSource="{Binding Routes}" Background="Transparent" IsEnabled="{Binding RoutesEditable}">
           <ListBox.ItemTemplate>

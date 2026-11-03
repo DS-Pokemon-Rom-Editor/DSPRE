@@ -831,6 +831,7 @@ namespace DSPRE.Avalonia.Views.Shell
             bool built = await new CompileRomView().BuildAsync(this, buildRom);
             // What make rebuilt replaces DSPRE's copies, so open editors and the next save start from the build.
             int refreshed = built ? (await System.Threading.Tasks.Task.Run(() => HgEngineFolder.RefreshRebuiltArchives(before))).Count : 0;
+            if (built) await RotomTool.RefreshHgEngineCommonScriptsAsync();
             if (DataContext is MainWindowViewModel vm)
                 vm.StatusText = built ? "Built " + (buildRom ?? "test.nds") + " with make." + (refreshed > 0 ? $" {refreshed} archives reloaded from the build." : "")
                     : "The hg-engine build failed.";
@@ -1090,6 +1091,9 @@ namespace DSPRE.Avalonia.Views.Shell
         private void AbilityFlags_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenAbilityFlagsEditor();
 
+        private void HgEngineTables_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenHgEngineTables();
+
         private void MoveDataEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenMoveDataEditor();
 
@@ -1272,6 +1276,9 @@ namespace DSPRE.Avalonia.Views.Shell
 
         private void SpecialEncountersEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenSpecialEncountersEditor();
+
+        private void BugContestEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenBugContestEditor();
 
         private void WildEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenWildEditor();

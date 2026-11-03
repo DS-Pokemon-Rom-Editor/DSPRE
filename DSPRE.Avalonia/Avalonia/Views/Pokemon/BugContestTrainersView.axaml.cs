@@ -11,6 +11,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         public BugContestTrainersView()
         {
             InitializeComponent();
+            TabSetup.OnFirstShow(this, () => VM?.Setup());
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e)

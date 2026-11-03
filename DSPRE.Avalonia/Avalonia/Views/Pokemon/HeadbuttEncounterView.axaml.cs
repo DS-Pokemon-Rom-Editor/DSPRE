@@ -11,7 +11,6 @@ namespace DSPRE.Avalonia.Views.Pokemon
     public partial class HeadbuttEncounterView : UserControl
     {
         private HeadbuttEncounterViewModel VM => DataContext as HeadbuttEncounterViewModel;
-        private bool _setupDone;
         private Gl3DPointerNavigation _nav;
 
         public HeadbuttEncounterView()
@@ -48,7 +47,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
                 }
             };
 
-            Loaded += OnLoadedSetup;
+            TabSetup.OnFirstShow(this, SetupAsync);
             GlHost.AddHandler(PointerMovedEvent, Host_Moved, RoutingStrategies.Bubble, handledEventsToo: true);
             GlHost.PointerExited += (_, _) => HideCard();
         }
@@ -117,12 +116,20 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         public HeadbuttEncounterView(HeadbuttEncounterViewModel vm) : this() { DataContext = vm; }
 
-        private async void OnLoadedSetup(object sender, RoutedEventArgs e)
+        private async System.Threading.Tasks.Task SetupAsync(Window owner)
         {
-            if (_setupDone || Design.IsDesignMode) return;
             HeadbuttEncounterViewModel vm = VM;
             if (vm == null) return;
-            _setupDone = true;
+            // A setup that failed runs again on the next show. The view's handlers are added once.
+            if (!_wired) WireEvents(vm);
+            await vm.SetupAsync(owner);
+        }
+
+        private bool _wired;
+
+        private void WireEvents(HeadbuttEncounterViewModel vm)
+        {
+            _wired = true;
             vm.MapLoaded += (_, _) => { GlView.SetModel(VM.Model3D); RefreshGizmo(); };
             // Picking a group brings its tree into view, close enough to see the tiles around it.
             vm.GroupFocused += (_, p) => { GlView.LookAt(p.X, p.Y, p.Z); GlView.Distance = 1.2f; };
@@ -133,7 +140,6 @@ namespace DSPRE.Avalonia.Views.Pokemon
             };
             vm.EditModeChanged += (_, _) => RefreshGizmo();
             vm.GizmoTargetChanged += (_, _) => RefreshGizmo();
-            await vm.SetupAsync(TopLevel.GetTopLevel(this) as Window);
         }
 
         private void RefreshGizmo()

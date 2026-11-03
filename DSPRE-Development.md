@@ -144,7 +144,8 @@ An editor shows what the open game has, under the names that game uses, and noth
 
 Labels are short nouns, in the words players already use for the thing, never questions. A tooltip is a few words
 and only says what the label can't, and a tour step is one sentence. Titles use sentence case. Buttons say what
-they do, and one that takes you to another editor says "Open in <editor>". "…" appears only when the action asks
+they do, and one that takes you to another editor says "Open in <editor>", except a patch offer, which is
+`EnableInToolbox` (see Code patches). "…" appears only when the action asks
 for more input.
 
 Controls for something this game doesn't have are hidden. Controls that can't be used right now are disabled, with
@@ -375,6 +376,9 @@ In `MainWindowView.axaml` the menu item binds `IsVisible` to `Shown[MyEditorView
 | DSPRE's own folders, logging | `AppPaths`, `AppLogger` (Core) |
 | Pixels in Core | `RawImage` |
 | Counts in text ("1 map", "3 maps") | `Plural.Of` (Core) |
+| A tab that loads when first shown | `TabSetup.OnFirstShow` in the tab view's constructor |
+| Thumb `movs`/`cmp`/`adds`/`subs` immediates | `ThumbImm8` (Core) |
+| Screen spot tables | `ScreenSpots.Entry`, `ScreenSpots.ShiftEntry` (Core) |
 
 An editor that only draws archive members redraws with `AppEvents.WhenSaved(redraw, dirs)`.
 
@@ -449,6 +453,9 @@ Editors keep archive changes in `PendingArchiveWrites` until Save. Editors that 
 `StagedArchive`. An editor with its own undo stores `PendingArchiveWrites.Take()` in each state. Scripts, trainers,
 new map headers and new overworld entries still apply straight away, after asking.
 
+A preview that reads project files on a worker thread runs through `PreviewFileGate.RunAsync`, so it takes turns with
+`PendingArchiveWrites.Save`.
+
 ```csharp
 _pending.Change(step => step.Put(DirNames.DungeonCutinGraphics, p, nclrBytes)
                             .Put(DirNames.DungeonCutinGraphics, t, ncgrBytes));   // one undo step
@@ -470,7 +477,8 @@ games' touch rectangles; a touch on the right or bottom edge misses.
 move with a button are `TouchListButtons.Spots` entries. Background art that moves is a page's `ScreenTiles`, which
 `ScreenTileArt` reads and writes. Spots the code loads with Thumb instructions are `GridMenuButtons.CodeSpot`s. A button whose
 art the game places itself is locked with `TouchRects.FixedArt`. `IScreenParts` gives a reader rows for text and icons that move
-apart from their buttons, and `IScreenIconLook` adds an icon's size, rotation and flip.
+apart from their buttons, and `IScreenIconLook` adds an icon's size, rotation and flip. Give a spot `Text` and `ScreenTextSpots`
+turns it into a row. Text the code places goes in a Layout tab as a `ScreenCodeWindow`, like the bag's.
 
 The picture function runs on the UI thread and reads what the page needs; the function it returns draws off the UI thread.
 
@@ -556,8 +564,14 @@ from the art and the pixels the game changes in that frame, and the Battle scree
 `ROMFiles/FieldMenuColoursPatch.cs` gives each HGSS field menu button its own pair of colours from the button palette file.
 
 Each patch applies only itself. One that needs the ARM9 expansion returns `Unsupported("Requires ARM9
-expansion")`. Editors hand patches over to the Patch Toolbox with an "Open in Patch Toolbox" button
-(`AvaloniaEditorLauncher.OpenPatchToolboxAt(key)`) and refresh on `AppEvents.RomPatchStateChanged`.
+expansion")`. Editors keep the option a patch unlocks in view, greyed out, with a `controls:EnableInToolbox`
+beside it, and refresh on `AppEvents.RomPatchStateChanged`. An action that needs a patch asks through
+`PatchHandover.OfferAsync`.
+
+```xml
+<CheckBox Content="Eye-contact music" IsEnabled="{Binding CanAddMusic}"/>
+<controls:EnableInToolbox Patch="trainerEncounterBgmRepointed" Need="Eye-contact music for a new class" IsVisible="{Binding MusicNeedsPatch}"/>
+```
 
 ### Synthetic overlay space
 
@@ -798,6 +812,23 @@ patches are refused.
 
 An editor loads an entry with `TryLoadForEditing`. `HgEngineLoadedEntries` keeps that copy, so a save writes only the
 fields the user changed, keeps changes made outside DSPRE and refuses a field changed on both sides.
+
+C source is read through `CSourceFile` and `CLexer`, and values through `HgEngineSourceExpression`:
+
+```csharp
+CDeclaration table = CSourceFile.For(text).Find("sTutorMoves");
+CEntry? species = CSourceFile.For(text).FindEntry("SPECIES_BULBASAUR");
+CDirective count = CSourceFile.For(text).FindDefine("SWARM_MAP_COUNT");
+```
+
+Makefiles go through `HgEngineMakeFile`. If a reader can't answer something, add it there. `DSPRE.Core/HgEngine` has
+no regexes.
+
+The hg-engine sources tab in Validation and where used lists what was read from each file (`HgEngineSourceReport`). `HgEngineMegaTables` reads and writes
+the Mega tables for the Form editor, where a form's number is its place in the species' list.
+
+`make` rebuilds archives on every run. For an archive with a build rule, `NarcSync` copies the build's members into the
+unpacked folder without asking. A member DSPRE edited since the last sync still asks.
 
 ## Reference
 

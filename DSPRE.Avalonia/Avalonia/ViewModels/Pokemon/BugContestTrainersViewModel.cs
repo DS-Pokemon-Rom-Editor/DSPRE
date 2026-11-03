@@ -86,8 +86,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public BugContestTrainersViewModel() { }
 
+        private bool _setUp;
+
         public void Setup()
         {
+            _setUp = true;
             SpeciesNames.Clear();
             foreach (string n in GetPokemonNames()) SpeciesNames.Add(n);
             _names = BugContestTrainerFile.OpponentNames();
@@ -98,6 +101,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public void RefreshNames()
         {
+            if (!_setUp) return;   // a tab not shown yet reads its names when it sets up
             DSPRE.Avalonia.Data.ListSync.Apply(SpeciesNames, GetPokemonNames());
             _names = BugContestTrainerFile.OpponentNames();
             DSPRE.Avalonia.Data.ListSync.Apply(OpponentNames, _names);

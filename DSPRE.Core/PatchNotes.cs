@@ -133,6 +133,13 @@ namespace DSPRE
                 "Items > Item tables (pickup, hidden, Rock Smash).\n\n" +
                 "Requirements\n" +
                 "Diamond, Pearl, Platinum, HeartGold or SoulSilver, with the ARM9 expansion. The toolbox lists which versions it works on. Not compatible with hg-engine.",
+            ["bugContestPrizes"] =
+                "What it does\n" +
+                "Gives first place in the Bug Contest a list of up to 64 prizes, any items, and lets second and third place win any item, not only items up to #255.\n\n" +
+                "Where to edit\n" +
+                "Pokémon > Bug Contest editor, Prizes tab.\n\n" +
+                "Requirements\n" +
+                "HeartGold or SoulSilver, with the ARM9 expansion. Not compatible with hg-engine.",
             ["martsExpanded"] =
                 "What it does\n" +
                 "Moves every mart into the expanded ARM9 area with room for 64 marts of 64 items. Every mart keeps its items.\n\n" +
@@ -365,6 +372,9 @@ namespace DSPRE
             ["pickupSlots"] = ("The Pickup code's range clamp becomes a multiply, and its two item list pointers are moved to the new tables.",
                 "About 400 bytes in the synthetic overlay: a common and a rare item table, nine items for each of the ten level ranges.",
                 "the Pickup overlay and the synthetic overlay"),
+            ["bugContestPrizes"] = ("The prize code in overlay 24 reads every place's prize from the new table instead of setting it in the code.",
+                "About 170 bytes in the synthetic overlay: second, third, everyone else and 64 slots for first place.",
+                "overlay 24 and the synthetic overlay"),
             ["vsClassTableExpanded"] = ("The ARM9's pointer to the class table and the count its search stops at are changed to the new table.",
                 "About 0.5 KB in the synthetic overlay.",
                 "the ARM9 and the synthetic overlay"),

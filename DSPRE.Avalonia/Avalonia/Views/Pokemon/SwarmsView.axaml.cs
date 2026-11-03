@@ -8,7 +8,11 @@ namespace DSPRE.Avalonia.Views.Pokemon
     {
         private SwarmsViewModel VM => DataContext as SwarmsViewModel;
 
-        public SwarmsView() { InitializeComponent(); }
+        public SwarmsView()
+        {
+            InitializeComponent();
+            TabSetup.OnFirstShow(this, () => VM?.Setup());
+        }
 
         // Coming back to the window after editing encounters elsewhere shows the new swarm Pokémon.
         private Window _window;

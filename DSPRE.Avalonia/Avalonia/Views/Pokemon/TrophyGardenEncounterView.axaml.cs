@@ -13,6 +13,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         public TrophyGardenEncounterView()
         {
             InitializeComponent();
+            TabSetup.OnFirstShow(this, () => VM?.Setup());
         }
 
         public TrophyGardenEncounterView(TrophyGardenEncounterViewModel vm) : this()

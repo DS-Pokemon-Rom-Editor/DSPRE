@@ -66,6 +66,8 @@
                   ToolTip.Tip="Which forms each Pokémon has"/>
         <MenuItem Header="Ability flags (hg-engine)" Click="AbilityFlags_Click" IsVisible="{Binding Shown[AbilityFlagsEditorView]}" IsEnabled="{Binding CanUseAbilityFlagsEditor}"
                   ToolTip.Tip="Mold Breaker, Neutralizing Gas, Trace and Skill Swap rules"/>
+        <MenuItem Header="Battle tables (hg-engine)" Click="HgEngineTables_Click" IsVisible="{Binding Shown[HgEngineTablesView]}" IsEnabled="{Binding Usable[HgEngineTablesView]}"
+                  ToolTip.Tip="{Binding BlockedNote[HgEngineTablesView], TargetNullValue='Moon Ball, Camouflage, Secret Power, mints'}"/>
         <MenuItem Header="Growth curves" Click="GrowthCurves_Click" IsVisible="{Binding Shown[GrowthCurveEditorView]}" IsEnabled="{Binding CanUseGrowthCurves}"
                   ToolTip.Tip="{Binding BlockedNote[GrowthCurveEditorView], TargetNullValue='The EXP each growth rate needs per level'}"/>
         <MenuItem Header="Pokédex lists" Click="PokedexLists_Click" IsEnabled="{Binding Usable[PokedexListsView]}"
@@ -106,6 +108,8 @@
                   ToolTip.Tip="{Binding BlockedNote[WildHeldItemOddsView], TargetNullValue='How often wild Pokémon hold their common or rare item'}"/>
         <MenuItem Header="Special encounters editor" Click="SpecialEncountersEditor_Click" IsEnabled="{Binding CanUseSpecialEncountersEditor}"
                   ToolTip.Tip="Headbutt, Bug Contest, Safari, honey trees, Great Marsh, Trophy Garden, swarms"/>
+        <MenuItem Header="Bug Contest editor" Click="BugContestEditor_Click" IsVisible="{Binding Shown[BugContestEditorView]}" IsEnabled="{Binding Usable[BugContestEditorView]}"
+                  ToolTip.Tip="{Binding BlockedNote[BugContestEditorView], TargetNullValue='Opponents and prizes'}"/>
         <MenuItem Header="Wild Pokémon intro editor" Click="WildIntroEditor_Click" IsVisible="{Binding Shown[WildIntroEditorView]}" IsEnabled="{Binding CanUseWildIntroEditor}"
                   ToolTip.Tip="{Binding BlockedNote[WildIntroEditorView], TargetNullValue='The intros and music of wild Pokémon battles'}"/>
       </MenuItem>

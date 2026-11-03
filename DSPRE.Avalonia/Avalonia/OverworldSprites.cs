@@ -117,9 +117,13 @@ namespace DSPRE.Avalonia
             if (OverworldTable == null || !OverworldTable.TryGetValue(eventEntryID, out (uint spriteID, ushort properties) result))
                 return ResourceImages.GetRaw("overworld");
 
+            // Waits for an unpack in progress, so a sprite isn't read from a half-written folder.
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.OWSprites });
+            string path = Path.Combine(GameDirs[DirNames.OWSprites].unpackedDir, result.spriteID.ToString("D4"));
+            if (!File.Exists(path)) return null;
             try
             {
-                byte[] bank = File.ReadAllBytes(Path.Combine(GameDirs[DirNames.OWSprites].unpackedDir, result.spriteID.ToString("D4")));
+                byte[] bank = File.ReadAllBytes(path);
                 Tex0Block block = Tex0Block.ReadBtx0(bank, out _);
                 if (block == null) return ResourceImages.GetRaw("overworldUnreadable");
                 int n = block.Textures.Count;

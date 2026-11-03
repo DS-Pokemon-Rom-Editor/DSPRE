@@ -25,7 +25,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public TrophyGardenEncounterViewModel TrophyGardenVM { get; }
         public HeadbuttEncounterViewModel HeadbuttVM { get; }
         public BugContestEncounterViewModel BugContestVM { get; }
-        public BugContestTrainersViewModel BugContestTrainersVM { get; }
         public SafariZoneEncounterViewModel SafariZoneVM { get; }
         public SwarmsViewModel SwarmsVM { get; }
         public RoamersViewModel RoamersVM { get; }
@@ -35,7 +34,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool ShowTrophyGarden { get; }
         public bool ShowHeadbutt { get; }
         public bool ShowBugContest { get; }
-        public bool ShowBugContestOpponents => ShowBugContest && BetaEditors.Enabled;
         public bool ShowSafariZone { get; }
         public bool ShowSwarms { get; }
         public bool ShowRoamers { get; }
@@ -43,12 +41,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>Open on the Headbutt tab, as a "Go to Headbutt file" jump does.</summary>
         public bool StartOnHeadbutt { get; }
 
+        /// <summary>Open on the Bug Contest tab, as the Bug Contest editor's encounters link does.</summary>
+        public bool StartOnBugContest { get; init; }
+
         private string _pendingNote = "";
         public string PendingNote { get => _pendingNote; private set { _pendingNote = value; OnPropertyChanged(); } }
         public bool HasPending => !string.IsNullOrEmpty(_pendingNote);
 
         private IEditorWithUnsavedChanges[] Children => new IEditorWithUnsavedChanges[]
-        { HoneyTreeVM, GreatMarshVM, TrophyGardenVM, HeadbuttVM, BugContestVM, BugContestTrainersVM, SafariZoneVM, SwarmsVM, RoamersVM };
+        { HoneyTreeVM, GreatMarshVM, TrophyGardenVM, HeadbuttVM, BugContestVM, SafariZoneVM, SwarmsVM, RoamersVM };
 
         public bool HasUnsavedChanges
         {
@@ -104,7 +105,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             TrophyGardenVM?.RefreshNames();
             HeadbuttVM?.RefreshNames();
             BugContestVM?.RefreshNames();
-            BugContestTrainersVM?.RefreshNames();
             SafariZoneVM?.RefreshNames();
             SwarmsVM?.RefreshNames();
             RoamersVM?.RefreshNames();
@@ -116,7 +116,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             HoneyTreeVM = new HoneyTreeEncounterViewModel();
             GreatMarshVM = new GreatMarshEncounterViewModel();
             BugContestVM = new BugContestEncounterViewModel();
-            BugContestTrainersVM = new BugContestTrainersViewModel();
             SafariZoneVM = new SafariZoneEncounterViewModel();
             ShowHoneyTree = true;
             ShowGreatMarsh = true;
@@ -156,8 +155,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 {
                     BugContestVM = new BugContestEncounterViewModel(true);
                     BugContestVM.PropertyChanged += OnChildChanged;
-                    BugContestTrainersVM = new BugContestTrainersViewModel();
-                    BugContestTrainersVM.PropertyChanged += OnChildChanged;
                     ShowBugContest = true;
                 }
 
@@ -192,22 +189,5 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
-        public async Task SetupAsync(Window owner)
-        {
-            if (ShowHoneyTree && HoneyTreeVM != null)
-                await HoneyTreeVM.SetupAsync(owner);
-            if (ShowGreatMarsh && GreatMarshVM != null)
-                await GreatMarshVM.SetupAsync(owner);
-            if (ShowBugContest && BugContestVM != null)
-                await BugContestVM.SetupAsync(owner);
-            if (ShowBugContest && BugContestTrainersVM != null)
-                BugContestTrainersVM.Setup();
-            if (ShowSafariZone && SafariZoneVM != null)
-                await SafariZoneVM.SetupAsync(owner);
-            if (ShowSwarms && SwarmsVM != null)
-                SwarmsVM.Setup();
-            if (ShowRoamers && RoamersVM != null)
-                RoamersVM.Setup();
-        }
     }
 }

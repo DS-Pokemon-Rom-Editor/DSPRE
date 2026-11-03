@@ -1,0 +1,176 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+             x:Class="DSPRE.Avalonia.Views.Pokemon.BugContestPrizesView"
+             x:DataType="vm:BugContestPrizesViewModel">
+  <Design.DataContext>
+    <vm:BugContestPrizesViewModel/>
+  </Design.DataContext>
+
+  <UserControl.Styles>
+    <Style Selector="Border.slot">
+      <Setter Property="BorderBrush" Value="{DynamicResource Editor.Good}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="Padding" Value="4,6,4,5"/>
+      <Setter Property="Margin" Value="0,0,4,4"/>
+      <Setter Property="Width" Value="92"/>
+    </Style>
+    <Style Selector="Border.slot.second">
+      <Setter Property="BorderBrush" Value="#8F8CE0"/>
+    </Style>
+    <Style Selector="Border.slot.first">
+      <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+    <Style Selector="Border.cell">
+      <Setter Property="BorderBrush" Value="{DynamicResource Editor.Border}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="3"/>
+      <Setter Property="Padding" Value="3"/>
+      <Setter Property="Margin" Value="0,0,3,3"/>
+      <Setter Property="Width" Value="80"/>
+      <Setter Property="Opacity" Value="0.45"/>
+    </Style>
+    <Style Selector="Border.cell.inside">
+      <Setter Property="BorderBrush" Value="{DynamicResource Editor.Good}"/>
+      <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Border.cell.inside.second">
+      <Setter Property="BorderBrush" Value="#8F8CE0"/>
+    </Style>
+  </UserControl.Styles>
+
+  <Panel>
+    <TextBlock IsVisible="{Binding !Loaded}" Text="{Binding WhyNotLoaded}" Margin="16" TextWrapping="Wrap"/>
+    <DockPanel IsVisible="{Binding Loaded}">
+      <controls:EditorToolbar>
+        <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
+      </controls:EditorToolbar>
+
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="14" Spacing="12" MaxWidth="1000" HorizontalAlignment="Left">
+          <TextBlock Text="First place" FontWeight="SemiBold" FontSize="14"/>
+          <TextBlock Text="{Binding DrawSummary}" TextWrapping="Wrap"/>
+
+          <ItemsControl ItemsSource="{Binding Draw}">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:BugContestPrizesViewModel+DrawSlot">
+                <Border Classes="slot" Classes.second="{Binding SecondGroup}" Classes.first="{Binding First}">
+                  <StackPanel Spacing="2" HorizontalAlignment="Center">
+                    <Image Width="32" Height="32" HorizontalAlignment="Center" Source="{Binding Item, Converter={x:Static controls:GameIconConverter.Item}}"/>
+                    <TextBlock Text="{Binding Name}" FontSize="11" TextAlignment="Center" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding Chance}" FontSize="10" HorizontalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Text="{Binding RepeatsText}" IsVisible="{Binding HasRepeats}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+          <TextBlock Text="{Binding BeforeDexText}" TextWrapping="Wrap"/>
+
+          <Separator/>
+
+          <!-- Without the patch: two groups counted up from a starting item -->
+          <StackPanel Spacing="12" IsVisible="{Binding Unpatched}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Text="Prize groups" FontWeight="SemiBold"/>
+              <controls:HelpTip Text="Each group is a run of items in item list order, starting at the item chosen."/>
+            </StackPanel>
+            <StackPanel Spacing="6">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="1. Fill the first" VerticalAlignment="Center" Width="100"/>
+                <NumericUpDown Width="110" Minimum="1" Maximum="255" FormatString="0" Value="{Binding FirstCount}"/>
+                <TextBlock Text="slots, counting up from" VerticalAlignment="Center"/>
+                <controls:FusionAutoCompleteBox Width="200" controls:EditorLink.To="Item" AllowsNone="False"
+                    ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding FirstStart}"/>
+              </StackPanel>
+              <ItemsControl ItemsSource="{Binding FirstStrip}" Margin="18,0,0,0">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:BugContestPrizesViewModel+StripCell">
+                    <Border Classes="cell" Classes.inside="{Binding Inside}" Classes.second="{Binding SecondGroup}">
+                      <StackPanel Spacing="1" HorizontalAlignment="Center">
+                        <TextBlock Text="{Binding Number}" FontSize="10" HorizontalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+                        <Image Width="24" Height="24" HorizontalAlignment="Center" Source="{Binding Item, Converter={x:Static controls:GameIconConverter.Item}}"/>
+                        <TextBlock Text="{Binding Name}" FontSize="10" TextAlignment="Center" TextWrapping="Wrap"/>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+            <StackPanel Spacing="6">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="2. Fill the other" VerticalAlignment="Center" Width="100"/>
+                <NumericUpDown Width="110" Minimum="0" Maximum="254" FormatString="0" Value="{Binding SecondCount}"/>
+                <TextBlock Text="slots, counting up from" VerticalAlignment="Center"/>
+                <controls:FusionAutoCompleteBox Width="200" controls:EditorLink.To="Item" AllowsNone="False" IsEnabled="{Binding HasSecondGroup}"
+                    ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding SecondStart}"/>
+                <controls:HelpTip Text="More slots means lower odds for each. Set this to 0 to use one group only."/>
+              </StackPanel>
+              <ItemsControl ItemsSource="{Binding SecondStrip}" Margin="18,0,0,0">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:BugContestPrizesViewModel+StripCell">
+                    <Border Classes="cell" Classes.inside="{Binding Inside}" Classes.second="{Binding SecondGroup}">
+                      <StackPanel Spacing="1" HorizontalAlignment="Center">
+                        <TextBlock Text="{Binding Number}" FontSize="10" HorizontalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+                        <Image Width="24" Height="24" HorizontalAlignment="Center" Source="{Binding Item, Converter={x:Static controls:GameIconConverter.Item}}"/>
+                        <TextBlock Text="{Binding Name}" FontSize="10" TextAlignment="Center" TextWrapping="Wrap"/>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Text="Any items in any order" VerticalAlignment="Center"/>
+              <controls:EnableInToolbox Patch="bugContestPrizes" Need="Picking any items"/>
+            </StackPanel>
+          </StackPanel>
+
+          <!-- With the patch: a picker per slot -->
+          <StackPanel Spacing="6" IsVisible="{Binding Patched}">
+            <ItemsControl ItemsSource="{Binding SlotRows}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:BugContestPrizesViewModel+SlotRow">
+                  <Grid ColumnDefinitions="60,Auto,60,Auto" Margin="0,0,0,4">
+                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+                    <controls:FusionAutoCompleteBox Grid.Column="1" Width="220" controls:EditorLink.To="Item" AllowsNone="False"
+                        ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item}"/>
+                    <TextBlock Grid.Column="2" Text="{Binding Chance}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="{DynamicResource Editor.Subtle}"/>
+                    <Button Grid.Column="3" controls:Icon.Key="deleteIcon" ToolTip.Tip="Remove slot" IsEnabled="{Binding CanRemove}" Click="RemoveSlot_Click"/>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Content="Add slot" controls:Icon.Key="addIcon" Click="AddSlot_Click" IsEnabled="{Binding CanAddSlot}"/>
+              <TextBlock Text="{Binding CapacityText}" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+            </StackPanel>
+          </StackPanel>
+
+          <Separator/>
+
+          <TextBlock Text="These places always win the same item."/>
+          <Grid ColumnDefinitions="130,Auto" RowDefinitions="Auto,Auto,Auto">
+            <TextBlock Grid.Row="0" Text="Second place" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,0,6"/>
+            <controls:FusionAutoCompleteBox Grid.Row="0" Grid.Column="1" Width="220" Margin="0,0,0,6" controls:EditorLink.To="Item" AllowsNone="False"
+                ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Second}"/>
+            <TextBlock Grid.Row="1" Text="Third place" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,0,6"/>
+            <controls:FusionAutoCompleteBox Grid.Row="1" Grid.Column="1" Width="220" Margin="0,0,0,6" controls:EditorLink.To="Item" AllowsNone="False"
+                ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Third}"/>
+            <TextBlock Grid.Row="2" Text="Everyone else" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            <controls:FusionAutoCompleteBox Grid.Row="2" Grid.Column="1" Width="220" controls:EditorLink.To="Item" AllowsNone="False"
+                ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Consolation}"/>
+          </Grid>
+          <TextBlock Text="{Binding Problem}" IsVisible="{Binding HasProblem}" Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap"/>
+        </StackPanel>
+      </ScrollViewer>
+    </DockPanel>
+  </Panel>
+</UserControl>

@@ -1060,6 +1060,22 @@ namespace DSPRE
             return true;
         }
 
+        public static bool ApplyBugContestPrizesPatch()
+        {
+            if (AlreadyApplied(Probe(() => BugContestPrizes.IsApplied))) return false;
+            if (BugContestPrizes.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
+            if (PlacementNote(new[] { BugContestPrizes.BlockLength }, out int[] offsets) is not string placement) return false;
+            if (!ConfirmYesNo("First place gets a list of up to 64 prizes, and every place can win any item. Edit them in the Bug Contest editor." +
+                placement + BackupNote("overlay 24 and the synthetic overlay") + "\n\nApply this patch?" + CreditNote("bugContestPrizes"), "Confirm to proceed"))
+                return false;
+            string overlayPath = BugContestPrizes.CodeFile;
+            PlainFiles.Copy(overlayPath, overlayPath + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
+            BugContestPrizes.ApplyPatch(offsets[0]);
+            ShowInfo("Bug Contest prizes can now be any item.", "Patch applied");
+            return true;
+        }
+
         public static bool ApplyClassIntrosPatch()
         {
             if (AlreadyApplied(Probe(() => ClassIntroPatch.IsApplied))) return false;
@@ -1634,6 +1650,7 @@ namespace DSPRE
             ["trainerClassTablesExpanded"] = ("Mixone", "trainer class table expansion"),
             ["trainerEncounterBgmRepointed"] = ("Mixone", "trainer encounter music repoint"),
             ["pickupSlots"] = ("Mixone", "independent pickup slots"),
+            ["bugContestPrizes"] = ("Mixone", "Bug Contest prize table"),
             ["classIntros"] = ("Mixone", "trainer class intros"),
             ["hpBarText"] = ("Mixone", "clear battle text background"),
             ["buttonFrames"] = ("Mixone", "battle button frames"),
@@ -1762,6 +1779,7 @@ namespace DSPRE
             ["trainerClassTablesExpanded"] = "Trainer class tables",
             ["trainerEncounterBgmRepointed"] = "Trainer encounter music table",
             ["pickupSlots"] = "Independent pickup slots",
+            ["bugContestPrizes"] = "Bug Contest prize table",
             ["classIntros"] = "Trainer class intros",
             ["hpBarText"] = "Clear battle text background",
             ["buttonFrames"] = "Battle button frames",
@@ -2011,6 +2029,16 @@ namespace DSPRE
                     if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
                     if (!PickupSlotsPatch.SupportsCurrentRom) return UnsupportedVersion(RomLocator.WorksOn(RomLocator.PickupSlotSitesIn));
                     if (PickupSlotsPatch.IsApplied) return PatchState.Applied;
+                    return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
+                }));
+
+            list.Add(Status("bugContestPrizes",
+                "First place in the Bug Contest wins a random prize from a set list, and every place can win any item. Requires the ARM9 expansion patch.",
+                () =>
+                {
+                    if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+                    if (!BugContestPrizes.SupportsCurrentRom) return Unsupported("HeartGold and SoulSilver only");
+                    if (BugContestPrizes.IsApplied) return PatchState.Applied;
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
                 }));
 
@@ -2540,7 +2568,7 @@ namespace DSPRE
             string hgEngineRefusal = HgEngine.HgEngineSyntheticOverlay.WhyNot();
             if (hgEngineRefusal != null && key is "arm9" or "bdhcam" or "buildingRotation" or "scrcmdRepoint"
                 or "trainerClassTablesExpanded" or "trainerEncounterBgmRepointed" or "punchingMovesExpanded" or "soundMovesExpanded"
-                or "pickupSlots" or "classIntros" or "hpBarText" or "vsClassTableExpanded" or "trainerShiny" or "trainerClassMetadata"
+                or "pickupSlots" or "bugContestPrizes" or "classIntros" or "hpBarText" or "vsClassTableExpanded" or "trainerShiny" or "trainerClassMetadata"
                 or "martsExpanded" or "bpShopExpanded" or "swarmTableExpanded" or "typeChartExpanded" or "vsIntroTimings" or "partyPanelSize"
                 or "summaryFonts" or "partyFonts" or "hpBarFonts" or "extraFonts" or "bannerMotion")
             {
@@ -2572,6 +2600,7 @@ namespace DSPRE
                 case "trainerClassTablesExpanded": return ApplyMoveTrainerClassTables();
                 case "trainerEncounterBgmRepointed": return ApplyMoveEncounterMusicTable();
                 case "pickupSlots": return ApplyPickupSlotsPatch();
+                case "bugContestPrizes": return ApplyBugContestPrizesPatch();
                 case "classIntros": return ApplyClassIntrosPatch();
                 case "hpBarText": return ApplyHpBarTextPatch();
                 case "buttonFrames": return ApplyButtonFramesPatch();

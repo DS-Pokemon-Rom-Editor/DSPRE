@@ -107,8 +107,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
-        public TrophyGardenEncounterViewModel()
+        public TrophyGardenEncounterViewModel() { }
+
+        /// <summary>Reads the file the first time the tab shows.</summary>
+        public void Setup()
         {
+            if (_file != null) return;
             if (!IsAvailable)
             {
                 StatusText = "Not in this game";

@@ -23,15 +23,15 @@ namespace DSPRE.Avalonia.Views.Pokemon
             if (!vm.ShowHeadbutt && !vm.ShowBugContest) { Width = 1040; MinWidth = 820; }
         }
 
-        private async void OnLoadedSetup(object sender, RoutedEventArgs e)
+        private void OnLoadedSetup(object sender, RoutedEventArgs e)
         {
             if (_setupDone || Design.IsDesignMode) return;
             SpecialEncountersEditorViewModel vm = VM;
             if (vm == null) return;
             _setupDone = true;
-            await vm.SetupAsync(this);
 
             if (vm.StartOnHeadbutt) Tabs.SelectedItem = HeadbuttTab;
+            else if (vm.StartOnBugContest) Tabs.SelectedItem = BugContestTab;
             TabDefault.SelectFirstVisible(Tabs);
             Tabs.SelectionChanged += (_, _) => TellActiveTab();
             TellActiveTab();

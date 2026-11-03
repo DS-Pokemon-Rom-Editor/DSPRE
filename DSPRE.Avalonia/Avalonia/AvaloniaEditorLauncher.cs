@@ -377,13 +377,24 @@ namespace DSPRE.Avalonia
         }
 
         /// <param name="headbuttFile">Opens on the Headbutt tab at this file; -1 opens on the first tab.</param>
-        public static void OpenSpecialEncountersEditor(int headbuttFile = -1)
+        public static void OpenSpecialEncountersEditor(int headbuttFile = -1) => OpenSpecialEncountersEditor(headbuttFile, false);
+
+        /// <summary>Opens Special encounters on its Bug Contest tab, for the Bug Contest editor's encounters link.</summary>
+        public static void OpenSpecialEncountersEditorAtBugContest() => OpenSpecialEncountersEditor(-1, true);
+
+        private static void OpenSpecialEncountersEditor(int headbuttFile, bool bugContest)
         {
             if (!IsRomLoaded) return;
             // On hg-engine only Headbutt, and Safari once a checkout is linked, are edited from source here.
             bool headbuttOnly = RomInfo.IsHGE;
             if (headbuttOnly && (GameFamily != GameFamilies.HGSS || Refused("SpecialEncountersEditorView"))) return;
-            new SpecialEncountersEditorView(new SpecialEncountersEditorViewModel(headbuttOnly, headbuttFile)).ShowManaged();
+            new SpecialEncountersEditorView(new SpecialEncountersEditorViewModel(headbuttOnly, headbuttFile) { StartOnBugContest = bugContest }).ShowManaged();
+        }
+
+        public static void OpenBugContestEditor()
+        {
+            if (Refused("BugContestEditorView")) return;
+            new EditorHostWindow("Bug Contest editor", new BugContestEditorView(new BugContestEditorViewModel(true)), 1100, 700).ShowManaged();
         }
 
         /// <summary>Opens a small editor for one of the fixed game tables, or says why this ROM can't.</summary>
@@ -1732,7 +1743,8 @@ namespace DSPRE.Avalonia
             new() { Name = "Wild Pokémon editor",   Keywords = "encounter grass surf", Run = () => OpenWildEditor() },
             new() { Name = "Pokédex lists",         Keywords = "pokedex dex regional order sort alphabetical type search lists", Run = OpenPokedexLists },
             new() { Beta = "WildHeldItemOddsView", Name = "Wild held items",       Keywords = "held item chance odds compound eyes wild", Run = OpenWildHeldItems },
-            new() { Name = "Special encounters editor", Keywords = "headbutt tree bug contest opponents great marsh honey safari trophy garden daily swarm", Run = () => OpenSpecialEncountersEditor() },
+            new() { Name = "Special encounters editor", Keywords = "headbutt tree bug contest great marsh honey safari trophy garden daily swarm roamer", Run = () => OpenSpecialEncountersEditor() },
+            new() { Beta = "BugContestEditorView", Name = "Bug Contest editor", Keywords = "bug catching contest opponents prizes sun stone national park", Run = OpenBugContestEditor },
             new() { Name = "Battle Tower editor",   Keywords = "tower trainer set party rental", Run = OpenBattleTowerEditor },
             new() { Name = "Address helper",        Run = OpenAddressHelper },
             new() { Name = "Research helper",       Run = OpenResearchHelper },

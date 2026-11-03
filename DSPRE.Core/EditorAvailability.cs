@@ -74,12 +74,9 @@ namespace DSPRE
             },
             ["WildHeldItemOddsView"] = new Rule { Title = "The Wild held items editor", Hge = HgEngine.Open, Unsupported = () => NoSpot(RomLocator.Thing.WildHeldItemOdds) },
             ["GrowthCurveEditorView"] = new Rule { Title = "The Growth curve editor", Hge = HgEngine.Open },
-            ["PokedexListsView"] = new Rule { Title = "The Pokédex lists editor", Hge = HgEngine.Closed },
+            ["PokedexListsView"] = new Rule { Title = "The Pokédex lists editor", Hge = HgEngine.Source },
             ["FriendshipChangesView"] = new Rule { Title = "The Friendship changes editor", Hge = HgEngine.Open, Unsupported = () => RomLocator.Where(RomLocator.Thing.FriendshipChanges) == null ? RomLocator.WhyNot(RomLocator.Thing.FriendshipChanges, 0) : null },
-            ["EncounterSlotOddsView"] = new Rule
-            {
-                Title = "The Encounter slot odds editor", Hge = HgEngine.Source,
-            },
+            ["EncounterSlotOddsView"] = new Rule { Title = "The Encounter slot odds editor", Hge = HgEngine.Source },
             ["BreedingItemsView"] = new Rule { Title = "The Breeding items editor", Hge = HgEngine.Open, Unsupported = () => NoSpot(RomLocator.Thing.IncenseBabies) },
             ["BerryDataEditorView"] = new Rule { Title = "The Berry data editor", Hge = HgEngine.Open },
             ["TypeChartEditorView"] = new Rule { Title = "The Type chart editor", Hge = HgEngine.Source },
@@ -139,6 +136,11 @@ namespace DSPRE
             {
                 Title = "Follower talk", Hge = HgEngine.NeedsLink,
                 Unsupported = () => FollowerTalk.WhyNot(),
+            },
+            ["BugContestEditorView"] = new Rule
+            {
+                Title = "The Bug Contest editor", Hge = HgEngine.Closed,
+                Unsupported = Unless(() => GameFamily == GameFamilies.HGSS, "The Bug-Catching Contest only exists in HeartGold and SoulSilver."),
             },
             ["PokegearPhoneBookView"] = new Rule
             {
@@ -218,6 +220,7 @@ namespace DSPRE
 
             ["HgEngineFormEditorView"] = new Rule { Title = "The Form editor", Hge = HgEngine.LinkedOnly },
             ["AbilityFlagsEditorView"] = new Rule { Title = "Ability flags", Hge = HgEngine.LinkedOnly },
+            ["HgEngineTablesView"] = new Rule { Title = "Battle tables", Hge = HgEngine.LinkedOnly },
             ["MoveBackgroundEditorView"] = new Rule { Title = "Move backgrounds", Hge = HgEngine.Source },
             ["HgEngineSettingsView"] = new Rule { Title = "hg-engine settings", Hge = HgEngine.LinkedOnly },
             ["HgEnginePatchesView"] = new Rule { Title = "hg-engine patches", Hge = HgEngine.LinkedOnly },

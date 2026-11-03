@@ -1,0 +1,25 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+             xmlns:views="clr-namespace:DSPRE.Avalonia.Views.Pokemon"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+             x:Class="DSPRE.Avalonia.Views.Pokemon.BugContestEditorView"
+             x:DataType="vm:BugContestEditorViewModel">
+  <Design.DataContext>
+    <vm:BugContestEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,6,8,0">
+      <Button x:Name="EditEncountersButton" Content="Open in Special encounters editor" controls:Icon.Key="OpenLink" Click="EditEncounters_Click"/>
+    </StackPanel>
+    <TabControl x:Name="Tabs" Margin="4">
+      <TabItem Header="Opponents">
+        <views:BugContestTrainersView DataContext="{Binding OpponentsVM}"/>
+      </TabItem>
+      <TabItem Header="Prizes">
+        <views:BugContestPrizesView DataContext="{Binding PrizesVM}"/>
+      </TabItem>
+    </TabControl>
+  </DockPanel>
+</UserControl>

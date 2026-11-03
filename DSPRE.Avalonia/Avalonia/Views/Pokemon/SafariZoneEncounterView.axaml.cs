@@ -12,6 +12,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         public SafariZoneEncounterView()
         {
             InitializeComponent();
+            TabSetup.OnFirstShow(this, owner => VM?.SetupAsync(owner) ?? Task.CompletedTask);
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e) => await DialogHelper.GuardAsync(() => VM?.SaveAsync() ?? Task.CompletedTask, "The Safari Zone area wasn't saved.", ErrorTitle);
