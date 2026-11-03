@@ -362,7 +362,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
                 // A legacy ndstool project can't reliably track overlay compression state (see
                 // RomInfo.IsDsRomProject); ds-rom handles it automatically during unpack/build.
-                if (RomInfo.GameFamily == GameFamilies.HGSS && !RomInfo.IsDsRomProject && RomInfo.CameraTblOverlayNumber == 1)
+                if (RomInfo.GameFamily == GameFamilies.HGSS && !RomInfo.OverlaysStayFlat && RomInfo.CameraTblOverlayNumber == 1)
                 {
                     StatusText = "Needs a ds-rom project (File > Convert to ds-rom format)";
                     await DialogHelper.ShowInfoAsync(StatusText, "ds-rom project required");

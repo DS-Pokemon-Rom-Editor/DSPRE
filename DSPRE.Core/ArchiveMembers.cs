@@ -21,8 +21,14 @@ namespace DSPRE
 
         public static void Put(DirNames dir, int id, byte[] data)
         {
-            string path = PathOf(dir, id);
             HgEngineSourceAssets.WriteVerbatim(HgEngineOwnedFiles.ArchiveOf(dir), id, data);
+            PutBuilt(dir, id, data);
+        }
+
+        /// <summary>A member hg-engine's build made, so its source already holds it.</summary>
+        public static void PutBuilt(DirNames dir, int id, byte[] data)
+        {
+            string path = PathOf(dir, id);
             byte[] before = File.Exists(path) ? File.ReadAllBytes(path) : null;
             File.WriteAllBytes(path, data);
             Written?.Invoke(dir, id, before, data);

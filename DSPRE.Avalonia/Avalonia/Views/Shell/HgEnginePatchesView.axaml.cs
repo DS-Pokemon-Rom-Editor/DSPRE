@@ -1,5 +1,8 @@
+using System;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using DSPRE.Avalonia.ViewModels.Shell;
 
 namespace DSPRE.Avalonia.Views.Shell
@@ -16,6 +19,22 @@ namespace DSPRE.Avalonia.Views.Shell
         public HgEnginePatchesView(HgEnginePatchesViewModel vm) : this()
         {
             DataContext = vm;
+            // Opened at a row from another editor: show it, since the table is long.
+            Loaded += (_, _) => { if (VM?.SelectedRow is PatchRow row) CentreOn(row); };
+        }
+
+        // ScrollIntoView leaves a row at the bottom edge, so scrolling to the row half a screen below centres this one.
+        private void CentreOn(PatchRow row)
+        {
+            PatchGrid.ScrollIntoView(row, null);
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                if (VM == null) return;
+                double rowHeight = PatchGrid.GetVisualDescendants().OfType<DataGridRow>().Select(r => r.Bounds.Height).FirstOrDefault(h => h > 0);
+                if (rowHeight <= 0) return;
+                int at = VM.Rows.IndexOf(row), half = (int)(PatchGrid.Bounds.Height / rowHeight / 2);
+                if (at >= 0) PatchGrid.ScrollIntoView(VM.Rows[Math.Min(at + half, VM.Rows.Count - 1)], null);
+            }, global::Avalonia.Threading.DispatcherPriority.Background);
         }
 
         private async void Add_Click(object sender, RoutedEventArgs e)

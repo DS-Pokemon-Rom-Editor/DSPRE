@@ -20,10 +20,10 @@
         <controls:EditorToolbar x:Name="TrainerToolbar">
             <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
             <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-            <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Undo (Ctrl+Z)"/>
-            <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Redo (Ctrl+Y)"/>
-            <Button Content="Add" controls:Icon.Key="addIcon" Click="AddTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Append a new, blank trainer after the last one"/>
-            <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Remove the last trainer if nothing uses it"/>
+            <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
+            <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
+            <Button Content="Add" controls:Icon.Key="addIcon" Click="AddTrainer_Click" ToolTip.Tip="Append a new trainer after the last one"/>
+            <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveTrainer_Click" ToolTip.Tip="Remove the last trainer if nothing uses it"/>
             <Button Content="Search…" controls:Icon.Key="lens"        Click="Search_Click"/>
             <Button controls:EditorToolbar.Slot="Import" Content="Import" controls:Icon.Key="import" IsVisible="{Binding !IsHgeActive}">
               <Button.Flyout>
@@ -168,6 +168,17 @@
 
           <!-- Party -->
           <GroupBox x:Name="PartyBox" Header="Party">
+            <DockPanel>
+            <WrapPanel DockPanel.Dock="Top">
+              <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,6" IsVisible="{Binding OffersShinyPatch}">
+                <TextBlock Text="Shiny" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+                <controls:EnableInToolbox Patch="trainerShiny" Need="Making party members shiny"/>
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,6" IsVisible="{Binding OffersBallPatch}">
+                <TextBlock Text="Poké Ball" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+                <controls:EnableInToolbox Patch="trainerCustomPokeballs" Need="Picking a Poké Ball instead of a Ball Capsule"/>
+              </StackPanel>
+            </WrapPanel>
             <!-- Non-virtualizing panel: the default VirtualizingStackPanel mismeasures cards whose
                  Expander changes height. -->
             <ItemsControl ItemsSource="{Binding Party}">
@@ -448,9 +459,10 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
+            </DockPanel>
           </GroupBox>
 
-          <GroupBox Header="Battle messages" IsVisible="{Binding !IsHgeActive}">
+          <GroupBox Header="Battle messages">
             <DockPanel>
               <Button DockPanel.Dock="Right" VerticalAlignment="Top" Content="Edit" controls:Icon.Key="pencil" Click="BattleMessages_Click"
                       ToolTip.Tip="Open this trainer's battle messages"/>
@@ -467,7 +479,7 @@
             </DockPanel>
           </GroupBox>
 
-          <GroupBox Header="Used in" IsVisible="{Binding !IsHgeActive}">
+          <GroupBox Header="Used in">
             <DockPanel>
               <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8">
                 <Button Content="Find uses" controls:Icon.Key="lens" Click="FindUses_Click"

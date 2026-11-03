@@ -201,7 +201,7 @@ namespace DSPRE.ROMFiles
 
         public static bool IsAvailable()
         {
-            return !RomInfo.IsHGE && RomInfo.GameDirs.ContainsKey(RomInfo.DirNames.BattleTowerPokemon);
+            return RomInfo.GameDirs.ContainsKey(RomInfo.DirNames.BattleTowerPokemon);
         }
     }
 }

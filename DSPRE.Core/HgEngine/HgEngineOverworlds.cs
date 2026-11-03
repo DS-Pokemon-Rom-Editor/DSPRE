@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -33,7 +32,7 @@ namespace DSPRE.HgEngine
         private sealed record Macro(string Name, string[] Params, string Body);
 
         // A directive token holds the whole #define, continuations included.
-        private static readonly Regex FunctionMacro = new(@"^#[ \t]*define[ \t]+(\w+)\(([^)]*)\)(.*)$", RegexOptions.Singleline);
+        private const string CallbackField = "callback_params";
 
         public static bool TryReadTable(out List<Entry> entries, out string error)
         {
@@ -55,14 +54,8 @@ namespace DSPRE.HgEngine
             bodyClose = table.Close;
 
             Dictionary<string, Macro> macros = new Dictionary<string, Macro>(StringComparer.Ordinal);
-            foreach (CToken token in source.Tokens.Where(t => t.Kind == CTokenKind.Directive))
-            {
-                Match m = FunctionMacro.Match(token.Text(text));
-                if (!m.Success) continue;
-                Macro macro = new Macro(m.Groups[1].Value, m.Groups[2].Value.Split(',').Select(p => p.Trim()).ToArray(),
-                    Regex.Replace(m.Groups[3].Value, @"\\\r?\n", " ").Trim());
-                if (macro.Body.Contains(".tag")) macros[macro.Name] = macro;
-            }
+            foreach (CDirective define in source.Directives.Where(d => d.Parameters != null))
+                if (define.Body.Contains(".tag")) macros[define.Name] = new Macro(define.Name, define.Parameters.ToArray(), define.Body);
             Func<string, int?> lookup = HgEngineSourceFields.NameLookup(Headers);
 
             foreach (CInitItem item in table.Items)
@@ -132,8 +125,9 @@ namespace DSPRE.HgEngine
                     if (tag == 0xFFFF) return true;
 
                     // A row whose callback_params is a parameter is written there, in the call itself.
-                    Match cb = Regex.Match(macro.Body, @"\.callback_params\s*=\s*(\w+)");
-                    int param = cb.Success ? Array.IndexOf(macro.Params, cb.Groups[1].Value) : -1;
+                    string bodySource = "int row[] = { " + macro.Body + " };";
+                    CInitItem callback = CSourceFile.For(bodySource).Find("row")?.Init?.Items.FirstOrDefault()?.List?.Field(CallbackField);
+                    int param = callback != null ? Array.IndexOf(macro.Params, callback.ValueText(bodySource).Trim()) : -1;
                     int at = param >= 0 ? args[param].Start : -1, len = param >= 0 ? args[param].End - args[param].Start : 0;
                     entries.Add(new Entry(tag, gfx, props, callStart, callEnd - callStart, at, len, expanded, macro.Name));
                     k = close + 1;
@@ -157,7 +151,11 @@ namespace DSPRE.HgEngine
                 text = text.Substring(0, entry.PropertiesAt) + literal + text.Substring(entry.PropertiesAt + entry.PropertiesLength);
             else
             {
-                string row = Regex.Replace(entry.Expanded, @"(\.callback_params\s*=\s*)[^,}]+?(\s*[,}])", m => m.Groups[1].Value + literal + m.Groups[2].Value);
+                const string wrapper = "int row[] = { ";
+                string expandedSource = wrapper + entry.Expanded + " };";
+                CInitItem callback = CSourceFile.For(expandedSource).Find("row")?.Init?.Items.FirstOrDefault()?.List?.Field(CallbackField);
+                if (callback == null) return false;
+                string row = entry.Expanded.Substring(0, callback.ValueStart - wrapper.Length) + literal + entry.Expanded.Substring(callback.ValueEnd - wrapper.Length);
                 text = text.Substring(0, entry.ItemStart) + row + "," + text.Substring(entry.ItemStart + entry.ItemLength).TrimStartComma();
             }
             HgEngineFileCache.WriteText(path, text);
@@ -225,7 +223,13 @@ namespace DSPRE.HgEngine
             string indent = text.Substring(lineStart, rowStart - lineStart);
             string newline = text.Contains("\r\n") ? "\r\n" : "\n";
             text = text.Substring(0, lineStart) + indent + $"{NpcMacro}({number})" + newline + text.Substring(lineStart);
-            text = Regex.Replace(text, @"(#define[ \t]+MON_OVERWORLD_GFX_START[ \t]+\(?)\d+", m => m.Groups[1].Value + (monGfxStart + 1));
+            CDirective start = CSourceFile.For(text).FindDefine("MON_OVERWORLD_GFX_START");
+            foreach (CToken literal in CLexer.Tokenize(text, start?.BodyStart ?? 0, start?.BodyEnd ?? 0))
+            {
+                if (literal.Kind != CTokenKind.Number) continue;
+                text = string.Concat(text.AsSpan(0, literal.Start), (monGfxStart + 1).ToString(), text.AsSpan(literal.End));
+                break;
+            }
             HgEngineFileCache.WriteText(tablePath, text);
 
             tag = npcTagStart + number;
@@ -238,8 +242,6 @@ namespace DSPRE.HgEngine
 
         /// <summary>One a/0/8/1 member: drawn from a PNG with its JSON layout and palettes, or a raw file.</summary>
         public sealed record Member(string Name, string Png, string Json, IReadOnlyList<string> Palettes, string Bin);
-
-        private static readonly Regex FollowerRule = new(@"^build/pokemonow/(\S+\.btx0)\s*:\s*(\S+\.png)\s*$", RegexOptions.Multiline);
 
         /// <summary>Every member in a/0/8/1 order, or null with <paramref name="error"/>.</summary>
         public static List<Member> Members(out string error)
@@ -262,8 +264,13 @@ namespace DSPRE.HgEngine
 
             string graphics = Path.Combine(root, "data", "graphics");
             foreach (string mk in Directory.Exists(graphics) ? Directory.GetFiles(graphics, "*.mk") : Array.Empty<string>())
-                foreach (Match m in FollowerRule.Matches(HgEngineFileCache.GetText(mk)))
-                    members.Add(FromPng(m.Groups[1].Value, Path.Combine(root, m.Groups[2].Value.Replace('/', Path.DirectorySeparatorChar))));
+                foreach (HgEngineMakeFile.Rule rule in HgEngineMakeFile.For(HgEngineFileCache.GetText(mk)).Rules)
+                {
+                    const string built = "build/pokemonow/";
+                    if (rule.Target.StartsWith(built, StringComparison.Ordinal) && rule.Target.EndsWith(".btx0", StringComparison.Ordinal)
+                        && rule.Prerequisites.EndsWith(".png", StringComparison.Ordinal) && !rule.Prerequisites.Any(char.IsWhiteSpace))
+                        members.Add(FromPng(rule.Target.Substring(built.Length), Path.Combine(root, rule.Prerequisites.Replace('/', Path.DirectorySeparatorChar))));
+                }
 
             members.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
             return members;
@@ -401,8 +408,8 @@ namespace DSPRE.HgEngine
             string rel = "data/graphics/overworlds";
             if (File.Exists(narcs))
             {
-                Match m = Regex.Match(HgEngineFileCache.GetText(narcs), @"^\s*OVERWORLDS_DEPENDENCIES_DIR\s*:?=\s*(\S+)\s*$", RegexOptions.Multiline);
-                if (m.Success && !m.Groups[1].Value.Contains("$(")) rel = m.Groups[1].Value;
+                string value = HgEngineMakeFile.For(HgEngineFileCache.GetText(narcs)).Value("OVERWORLDS_DEPENDENCIES_DIR");
+                if (value != null && !value.Contains("$(")) rel = value;
             }
             return Path.Combine(root, rel.Replace('/', Path.DirectorySeparatorChar));
         }

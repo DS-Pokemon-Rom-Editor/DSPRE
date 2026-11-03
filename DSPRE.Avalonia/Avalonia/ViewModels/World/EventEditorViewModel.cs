@@ -366,7 +366,13 @@ namespace DSPRE.Avalonia.ViewModels.World
         public int OwTrainerIndex
         {
             get => _owTrainerIndex;
-            set { if (Set(ref _owTrainerIndex, value) && !_suppress && _ow != null && _owKind == OwKind.Trainer) RecomputeTrainerScript(); }
+            set
+            {
+                if (!Set(ref _owTrainerIndex, value)) return;
+                OnPropertyChanged(nameof(OwTrainerIndexOutOfRange)); OnPropertyChanged(nameof(OwTrainerIsDummy)); OnPropertyChanged(nameof(OwScriptEnabled));
+                OnPropertyChanged(nameof(OwScriptGenericWarningVisible));
+                if (!_suppress && _ow != null && _owKind == OwKind.Trainer) RecomputeTrainerScript();
+            }
         }
 
         // A script number past the trainer roster shows a warning, not a blank box.
@@ -928,7 +934,9 @@ namespace DSPRE.Avalonia.ViewModels.World
             OnPropertyChanged(nameof(TrScriptCommonName)); OnPropertyChanged(nameof(TrScriptCommonInfo));
             OnPropertyChanged(nameof(SpScriptCommonName)); OnPropertyChanged(nameof(SpScriptCommonInfo));
         }
-        public bool OwScriptGenericWarningVisible => !OwTalkRunsNothing && OwScriptIndexOutOfRange && !OwScriptHasCommonInfo;
+        // A trainer's script is in the trainer script file, so it's expected to be missing here.
+        public bool OwScriptGenericWarningVisible => !OwTalkRunsNothing && OwScriptIndexOutOfRange && !OwScriptHasCommonInfo
+            && !(_owKind == OwKind.Trainer && !OwTrainerIndexOutOfRange);
         public decimal OwOrientation
         {
             get => _owOrient;

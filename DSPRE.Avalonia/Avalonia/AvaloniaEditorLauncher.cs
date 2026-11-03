@@ -150,6 +150,12 @@ namespace DSPRE.Avalonia
             new AbilityFlagsEditorView(new AbilityFlagsEditorViewModel(load: true)).ShowManaged();
         }
 
+        public static void OpenHgEngineTables()
+        {
+            if (Refused("HgEngineTablesView")) return;
+            new EditorHostWindow("Battle tables", new HgEngineTablesView(new HgEngineTablesViewModel(load: true)), 760, 600).ShowManaged();
+        }
+
         public static void OpenMoveDataEditor(int initialIndex = 0) => _ = OpenMoveDataEditorAsync(initialIndex);
 
         public static async System.Threading.Tasks.Task OpenMoveDataEditorAsync(int initialIndex = 0)
@@ -683,12 +689,16 @@ namespace DSPRE.Avalonia
             new Views.Tools.BattleTestsView(new ViewModels.Tools.BattleTestsViewModel(load: true)).ShowManaged();
         }
 
-        public static void OpenHgEnginePatches()
+        public static void OpenHgEnginePatches() => OpenHgEnginePatches(null);
+
+        /// <summary>Opens the patch lists with the first entry for <paramref name="symbol"/> selected, ready to change.</summary>
+        public static void OpenHgEnginePatches(string symbol)
         {
             if (Refused("HgEnginePatchesView")) return;
 
-            new EditorHostWindow("hg-engine patches",
-                new Views.Shell.HgEnginePatchesView(new HgEnginePatchesViewModel()), 1150, 700).ShowManaged();
+            HgEnginePatchesViewModel vm = new HgEnginePatchesViewModel();
+            if (symbol != null) vm.SelectSymbol(symbol);
+            new EditorHostWindow("hg-engine patches", new Views.Shell.HgEnginePatchesView(vm), 1150, 700).ShowManaged();
         }
 
         public static void OpenPokegearRematchEditor(int initialRowIndex = -1) => _ = OpenPokegearRematchEditorAsync(initialRowIndex);
@@ -1670,6 +1680,7 @@ namespace DSPRE.Avalonia
             new() { Beta = "HgEngineFormEditorView", Name = "Form editor (hg-engine)", Keywords = "mega regional alolan galarian gmax gigantamax primal reversion form", Run = OpenHgEngineFormEditor },
             new() { Beta = "MoveBackgroundEditorView", Name = "Move backgrounds", Keywords = "move animation background surf psychic haikei scroll effect battle bg", Run = OpenMoveBackgroundEditor },
             new() { Beta = "AbilityFlagsEditorView", Name = "Ability flags (hg-engine)", Keywords = "ability mold breaker neutralizing gas trace skill swap role play entrainment receiver", Run = OpenAbilityFlagsEditor },
+            new() { Beta = "HgEngineTablesView", Name = "Battle tables (hg-engine)", Keywords = "moon ball camouflage secret power terrain type boosting hold effect plate mint nature", Run = OpenHgEngineTables },
             new() { Name = "Move data editor",      Keywords = "attack",   Run = () => OpenMoveDataEditor() },
             new() { Name = "TM / HM editor",        Keywords = "machine",  Run = () => OpenTMEditor() },
             new() { Name = "TM/HM bulk editor",     Keywords = "machine compatibility bulk family sync copy", Run = OpenTmHmBulkEditor },

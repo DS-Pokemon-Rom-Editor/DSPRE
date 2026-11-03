@@ -330,8 +330,57 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             OnPropertyChanged(nameof(Preview));
         }
 
-        private sealed record UndoState(byte[] Move, string Description, string Bag, bool Punching, bool Sound);
-        private byte[] Snapshot() => DSPRE.Avalonia.UndoJson.Take(new UndoState(_currentFile.ToByteArray(), _description, _bagText, IsPunching, IsSound));
+        private sealed record UndoState(byte[] Move, string Description, string Bag, bool Punching, bool Sound, bool[] Extra);
+        private byte[] Snapshot() => DSPRE.Avalonia.UndoJson.Take(new UndoState(_currentFile.ToByteArray(), _description, _bagText, IsPunching, IsSound,
+            ExtraLists.Select(l => l.IsListed).ToArray()));
+
+        /// <summary>One of hg-engine's own move lists, ticked for the move shown.</summary>
+        public sealed class ExtraListRow : INotifyPropertyChanged
+        {
+            private readonly MoveDataEditorViewModel _owner;
+            public HgEngine.HgEngineMoveList.Info Info { get; }
+            public List<ushort> Moves { get; }
+            public List<ushort> Saved { get; set; }
+            public string Label => Info.Label;
+            public string Tip => Info.Tip;
+
+            public ExtraListRow(MoveDataEditorViewModel owner, HgEngine.HgEngineMoveList.Info info, List<ushort> moves)
+            {
+                _owner = owner; Info = info; Moves = moves; Saved = moves.ToList();
+            }
+
+            public bool IsListed
+            {
+                get => Moves.Contains((ushort)_owner._currentId);
+                set
+                {
+                    if (_owner._loading || _owner._currentFile == null || value == IsListed) return;
+                    if (value) Moves.Add((ushort)_owner._currentId); else Moves.Remove((ushort)_owner._currentId);
+                    Raise();
+                    _owner.SetDirty();
+                }
+            }
+
+            public bool Changed => !Moves.SequenceEqual(Saved);
+            public void Raise() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsListed)));
+            public event PropertyChangedEventHandler PropertyChanged;
+        }
+
+        public ObservableCollection<ExtraListRow> ExtraLists { get; } = new ObservableCollection<ExtraListRow>();
+        public bool HasExtraLists => ExtraLists.Count > 0;
+
+        private void LoadExtraLists()
+        {
+            ExtraLists.Clear();
+            if (!HgEngine.HgEngineProject.IsActive) return;
+            foreach (HgEngine.HgEngineMoveList.Info info in HgEngine.HgEngineMoveList.Extra)
+            {
+                if (HgEngine.HgEngineMoveList.WhyNot(info) != null) continue;
+                try { ExtraLists.Add(new ExtraListRow(this, info, HgEngine.HgEngineMoveList.Load(info))); }
+                catch (InvalidDataException ex) { AppLogger.Warn($"Move list {info.Symbol}: {ex.Message}"); }
+            }
+            OnPropertyChanged(nameof(HasExtraLists));
+        }
 
         // ── Ability based lists: the punching and sound moves the battle code keeps as tables ──
         private MoveCategoryTable _punching, _sound;
@@ -396,8 +445,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _punching = _sound = null;
             _savedPunching = _savedSound = null;
             AbilityWhyNot = null;
-            if (HgEngineProject.IsActive) { AbilityWhyNot = "hg-engine keeps these lists in its own source."; }
-            else
             {
                 try
                 {
@@ -416,6 +463,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     AbilityWhyNot = ex.Message;
                 }
             }
+            LoadExtraLists();
             RaiseCategories();
         }
 
@@ -427,33 +475,44 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             foreach (string n in new[] { nameof(IsPunching), nameof(IsSound), nameof(PunchingNote), nameof(SoundNote),
                                          nameof(AbilityWhyNot), nameof(HasAbilityWhyNot), nameof(HasPunchingList), nameof(HasSoundList) })
                 OnPropertyChanged(n);
+            foreach (ExtraListRow row in ExtraLists) row.Raise();
             ListsChanged?.Invoke();
         }
 
         private bool CategoriesChanged =>
-            (_punching != null && !_punching.Moves.SequenceEqual(_savedPunching)) || (_sound != null && !_sound.Moves.SequenceEqual(_savedSound));
+            (_punching != null && !_punching.Moves.SequenceEqual(_savedPunching)) || (_sound != null && !_sound.Moves.SequenceEqual(_savedSound))
+            || ExtraLists.Any(l => l.Changed);
 
         private void RevertCategories()
         {
             if (_punching != null) { _punching.Moves.Clear(); _punching.Moves.AddRange(_savedPunching); }
             if (_sound != null) { _sound.Moves.Clear(); _sound.Moves.AddRange(_savedSound); }
+            foreach (ExtraListRow row in ExtraLists) { row.Moves.Clear(); row.Moves.AddRange(row.Saved); }
             RaiseCategories();
         }
 
-        /// <summary>Writes both lists when they changed; the move itself is already saved by then.</summary>
-        private string SaveCategories()
+        /// <summary>Writes the lists that changed. On hg-engine this runs inside the move's save session, so all commit together.</summary>
+        private string WriteCategories()
         {
             if (!CategoriesChanged) return null;
             try
             {
-                if (_punching != null && !_punching.Moves.SequenceEqual(_savedPunching)) { _punching.Save(); _savedPunching = _punching.Moves.ToList(); }
-                if (_sound != null && !_sound.Moves.SequenceEqual(_savedSound)) { _sound.Save(); _savedSound = _sound.Moves.ToList(); }
+                if (_punching != null && !_punching.Moves.SequenceEqual(_savedPunching)) _punching.Save();
+                if (_sound != null && !_sound.Moves.SequenceEqual(_savedSound)) _sound.Save();
+                foreach (ExtraListRow row in ExtraLists.Where(l => l.Changed)) HgEngine.HgEngineMoveList.Save(row.Info, row.Moves);
                 return null;
             }
             catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is InvalidOperationException || ex is UnauthorizedAccessException)
             {
                 return ex.Message;
             }
+        }
+
+        private void MarkCategoriesSaved()
+        {
+            if (_punching != null) _savedPunching = _punching.Moves.ToList();
+            if (_sound != null) _savedSound = _sound.Moves.ToList();
+            foreach (ExtraListRow row in ExtraLists) row.Saved = row.Moves.ToList();
         }
 
         private string _title = "Move data editor";
@@ -497,6 +556,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             BagText = state.Bag;
             _punching?.Set(_currentId, state.Punching);
             _sound?.Set(_currentId, state.Sound);
+            for (int i = 0; i < ExtraLists.Count && state.Extra != null && i < state.Extra.Length; i++)
+            {
+                ushort id = (ushort)_currentId;
+                if (state.Extra[i] && !ExtraLists[i].Moves.Contains(id)) ExtraLists[i].Moves.Add(id);
+                else if (!state.Extra[i]) ExtraLists[i].Moves.Remove(id);
+            }
             _loading = false;
             RaiseCategories();
 
@@ -654,7 +719,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 (bool saved, string error) = await HgEngineSave.RunAsync(() => pending != null
                     ? (HgEngineMoveExpansion.TryCommitMove(pending, move, out string addError) ? null : addError)
-                    : (HgEngineMoveSource.TryWriteMany(records, out string writeError) ? null : writeError));
+                    : (HgEngineMoveSource.TryWriteMany(records, out string writeError) ? WriteCategories() : writeError));
                 if (!saved)
                 {
                     if (error != null) await DialogHelper.ShowErrorAsync($"{subject} not saved.\n{error}", "Move data editor");
@@ -686,11 +751,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     await DialogHelper.ShowErrorAsync($"The text of move {id} wasn't saved.\n{textError}", "Move data editor");
                     return;
                 }
-                if (SaveCategories() is string listError)
+                if (!HgEngineProject.IsActive && WriteCategories() is string listError)
                 {
                     await DialogHelper.ShowErrorAsync($"Move {id} was saved, but its punching or sound listing wasn't.\n{listError}", "Move data editor");
                     return;
                 }
+                MarkCategoriesSaved();
                 _history.MarkSaved();   // current state is now the on-disk baseline (undo can still go past it)
             }
             SetClean();

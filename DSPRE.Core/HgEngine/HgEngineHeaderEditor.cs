@@ -1,5 +1,4 @@
 using System;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -10,18 +9,18 @@ namespace DSPRE.HgEngine
         /// <summary>Replaces a #define's value. Fails (no mutation) if the name isn't found.</summary>
         public static bool TryReplaceDefineValue(ref string text, string defineName, string newValue)
         {
-            Match m = Regex.Match(text, $@"#define[ \t]+{Regex.Escape(defineName)}[ \t]+[^\r\n]+");
-            if (!m.Success) return false;
-            text = string.Concat(text.AsSpan(0, m.Index), $"#define {defineName} {newValue}", text.AsSpan(m.Index + m.Length));
+            CDirective define = CSourceFile.For(text).FindDefine(defineName);
+            if (define == null || define.Body.Length == 0) return false;
+            text = string.Concat(text.AsSpan(0, define.BodyStart), newValue, text.AsSpan(define.BodyEnd));
             return true;
         }
 
         /// <summary>Inserts before the line that defines <paramref name="anchorDefineName"/>.</summary>
         public static bool TryInsertBeforeDefine(ref string text, string anchorDefineName, string newLines)
         {
-            Match m = Regex.Match(text, $@"#define[ \t]+{Regex.Escape(anchorDefineName)}[ \t]+");
-            if (!m.Success) return false;
-            text = string.Concat(text.AsSpan(0, m.Index), newLines, text.AsSpan(m.Index));
+            CDirective define = CSourceFile.For(text).FindDefine(anchorDefineName);
+            if (define == null || define.Body.Length == 0) return false;
+            text = string.Concat(text.AsSpan(0, define.Start), newLines, text.AsSpan(define.Start));
             return true;
         }
 

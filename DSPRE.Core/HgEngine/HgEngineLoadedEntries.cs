@@ -35,6 +35,10 @@ namespace DSPRE.HgEngine
             lock (Entries) return Entries.TryGetValue((path, designator), out string entry) ? new HgEngineSourceBlock(entry) : null;
         }
 
+        /// <summary>For a list saved whole: true when the file's copy no longer matches what the editor loaded.</summary>
+        internal static bool ChangedOutside(string path, string key, string onDisk) =>
+            Get(path, key) is HgEngineSourceBlock loaded && !Same(loaded.Raw, onDisk);
+
         /// <summary>Returns the writes that still apply to <paramref name="disk"/>. It drops fields that already hold the
         /// value and fields only the file changed. A field changed on both sides goes in <paramref name="conflicts"/>.</summary>
         internal static List<HgEngineFieldWrite> Reconcile(HgEngineSourceBlock? loaded, HgEngineSourceBlock disk, IEnumerable<HgEngineFieldWrite> writes, out List<string> conflicts)

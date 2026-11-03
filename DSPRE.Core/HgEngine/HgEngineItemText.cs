@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
-using System.Text.RegularExpressions;
+using System.Linq;
 
 namespace DSPRE.HgEngine
 {
@@ -14,10 +14,6 @@ namespace DSPRE.HgEngine
         private const string ItemHeaderRelPath = "include/constants/item.h";
         private const string FileHeaderRelPath = "include/constants/file.h";
 
-        private static readonly Regex Generation = new(@"#define\s+ITEM_GENERATION\(id\)((?:[^\n]*\\\r?\n)*[^\n]*)");
-        private static readonly Regex Step = new(@"\(id\)\s*<=\s*(\w+)\s*\?\s*(\w+)");
-        private static readonly Regex Last = new(@":\s*(\w+)\s*\)\s*$");
-
         /// <summary>
         /// The text archive and line of item <paramref name="itemId"/>'s <paramref name="kind"/> message, kind being
         /// what file.h names after MSG_DATA_ITEM_ (DESCRIPTION, NAME_ARTICLE, NAME_PLURAL, GIVE_ITEM).
@@ -29,20 +25,24 @@ namespace DSPRE.HgEngine
             string header = Read(ItemHeaderRelPath);
             HgEngineSymbolTable items = HgEngineSymbolTable.Load(ItemHeaderRelPath);
             HgEngineSymbolTable files = HgEngineSymbolTable.Load(FileHeaderRelPath);
-            Match macro = header == null ? Match.Empty : Generation.Match(header);
-            if (!macro.Success || items == null || files == null) return false;
+            CDirective macro = header == null ? null : CSourceFile.For(header).FindDefine("ITEM_GENERATION");
+            if (macro == null || items == null || files == null) return false;
 
-            string body = macro.Groups[1].Value.Replace("\\\r\n", " ").Replace("\\\n", " ");
+            // ((id) <= LAST_A ? GEN_A : (id) <= LAST_B ? GEN_B : GEN_C)
+            List<string> body = CLexer.Tokenize(macro.Body).Select(t => t.Text(macro.Body)).ToList();
             List<(int Last, string Gen)> steps = new List<(int Last, string Gen)>();
-            foreach (Match m in Step.Matches(body))
+            string gen = null;
+            for (int t = 0; t + 2 < body.Count; t++)
             {
-                if (!items.TryGetValue(m.Groups[1].Value, out int last)) return false;
-                steps.Add((last, m.Groups[2].Value));
+                if (body[t] == "<=" && body[t + 2] == "?" && t + 3 < body.Count)
+                {
+                    if (!items.TryGetValue(body[t + 1], out int last)) return false;
+                    steps.Add((last, body[t + 3]));
+                }
+                else if (body[t] == ":" && body[t + 1] != "(") gen = body[t + 1];
             }
-            Match rest = Last.Match(body.Trim());
-            if (steps.Count == 0 || !rest.Success) return false;
+            if (steps.Count == 0 || gen == null) return false;
 
-            string gen = rest.Groups[1].Value;
             int start = steps[^1].Last + 1;
             for (int i = 0; i < steps.Count; i++)
             {

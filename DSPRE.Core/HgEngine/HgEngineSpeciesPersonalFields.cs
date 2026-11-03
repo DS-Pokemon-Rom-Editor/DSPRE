@@ -98,8 +98,6 @@ namespace DSPRE.HgEngine
             return HgEnginePokedexMetrics.TryMoveTypes(speciesId, (oldTypes[0], oldTypes[1]), ((int)data.Type1, (int)data.Type2), out error);
         }
 
-        private static readonly System.Text.RegularExpressions.Regex SpeciesEntry = new(@"\[\s*(SPECIES_\w+)\s*\]\s*=\s*\{");
-
         /// <summary>Every species' two abilities from one pass over Species.c, by species id. An ability the
         /// entry doesn't declare is -1.</summary>
         public static bool TryLoadAllAbilities(out Dictionary<int, (int first, int second)> abilities, out string error)
@@ -117,21 +115,17 @@ namespace DSPRE.HgEngine
             HgEngineSourceField<PokemonPersonalData>[] abilityFields = All.Where(f => f.Path[1].Name == "abilities").ToArray();
             Func<string, int?>[] lookups = abilityFields.Select(f => HgEngineSourceFields.NameLookup(f.Headers, HgEngineSymbolTable.Load)).ToArray();
             string text = HgEngineFileCache.GetText(path);
-            int lastClose = -1;
-            foreach (System.Text.RegularExpressions.Match m in SpeciesEntry.Matches(text))
+            foreach (CEntry row in CSourceFile.For(text).OuterEntries)
             {
-                int open = m.Index + m.Length - 1;
-                if (open < lastClose || !BraceScanner.TryFindMatchingBrace(text, open, out int close)) continue;
-                lastClose = close;
-                if (!species.TryGetValue(m.Groups[1].Value, out int id)) continue;
+                if (!species.TryGetValue(row.Name, out int id)) continue;
 
-                HgEngineSourceBlock entry = new HgEngineSourceBlock(text.Substring(open, close - open + 1));
+                HgEngineSourceBlock entry = new HgEngineSourceBlock(text.Substring(row.Open, row.Close - row.Open + 1));
                 int[] values = new int[abilityFields.Length];
                 for (int i = 0; i < abilityFields.Length; i++)
                 {
                     if (!entry.TryGetRaw(abilityFields[i].Path, out string raw)) { values[i] = -1; continue; }
                     if (!HgEngineSourceExpression.TryEvaluate(raw, lookups[i], out values[i]))
-                    { error = $"{m.Groups[1].Value} {abilityFields[i].Name} = {raw} couldn't be read."; return false; }
+                    { error = $"{row.Name} {abilityFields[i].Name} = {raw} couldn't be read."; return false; }
                 }
                 abilities[id] = (values[0], values[1]);
             }

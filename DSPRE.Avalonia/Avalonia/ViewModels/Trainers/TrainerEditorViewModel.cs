@@ -71,8 +71,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void LoadBattleLines(int trainer)
         {
+            if (IsHgeActive) { LoadHgeBattleLines(trainer); return; }
             BattleLines.Clear();
-            if (IsHgeActive) { OnPropertyChanged(nameof(HasBattleLines)); return; }
             try
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TrainerTextTable, DirNames.TrainerTextOffset });
@@ -101,7 +101,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public async Task FindUsesAsync()
         {
             int id = _loadedTrainerId;
-            if (id < 0 || IsHgeActive) return;
+            if (id < 0) return;
             Uses.Clear();
             UsesStatus = "Looking…";
             (List<TrainerReference> refs, string error) = await Task.Run<(List<TrainerReference>, string)>(() =>
@@ -574,7 +574,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         // ── Undo / redo (ISupportsUndo) ────────────────────────────────────────
         // Composite snapshot via the SAME serialization the proven Save/Load round-trip uses: trp bytes +
         // party bytes (synced from the VM first) + the name. Edit bursts within CoalesceMs collapse into one.
-        private sealed class TrainerSnapshot { public byte[] Trp; public byte[] Party; public string Name; }
+        private sealed class TrainerSnapshot { public byte[] Trp; public byte[] Party; public string Name; public byte[] Source; }
         private readonly DSPRE.Avalonia.UndoHistory<TrainerSnapshot> _history = new();
         private DateTime _lastCaptureUtc = DateTime.MinValue;
         private const int CoalesceMs = 500;
@@ -585,8 +585,47 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public void Redo() { if (_history.CanRedo) ApplyState(_history.Redo()); }
         private void RaiseUndoState() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
 
+        private byte[] PackSourceFields() => ByteStateUndo.Pack(w =>
+        {
+            w.Write(_trainerName ?? ""); w.Write(_trainerClassIndex); w.Write(BattleTypeIndex); w.Write((int)_partyCount);
+            foreach (AiFlagViewModel f in TrainerDataTypeFlags) w.Write(f.Checked);
+            foreach (AiFlagViewModel f in AiFlags) w.Write(f.Checked);
+            foreach (TrainerItemSlotViewModel item in TrainerItems) w.Write(item.ItemIndex);
+            foreach (TrainerPartyMonViewModel mon in Party)
+            {
+                w.Write(mon.SpeciesIndex); w.Write((int)mon.FormId); w.Write((int)mon.Level); w.Write(mon.ItemIndex); w.Write(mon.AbilityIndex);
+                w.Write((int)mon.Difficulty); w.Write((int)mon.BallSeals);
+                foreach (int move in new[] { mon.Move1, mon.Move2, mon.Move3, mon.Move4 }) w.Write(move);
+                mon.HgeExtras.WriteTo(w);
+            }
+        });
+
+        private void UnpackSourceFields(byte[] state) => ByteStateUndo.Unpack(state, r =>
+        {
+            TrainerName = r.ReadString(); TrainerClassIndex = r.ReadInt32(); BattleTypeIndex = r.ReadInt32(); PartyCount = r.ReadInt32();
+            foreach (AiFlagViewModel f in TrainerDataTypeFlags) f.Checked = r.ReadBoolean();
+            RaiseHgeFlagCheckedChanged();
+            ChooseMoves = HgeMovesFlagChecked;
+            ChooseItems = HgeItemsFlagChecked;
+            foreach (AiFlagViewModel f in AiFlags) f.Checked = r.ReadBoolean();
+            foreach (TrainerItemSlotViewModel item in TrainerItems) item.Load(r.ReadInt32());
+            foreach (TrainerPartyMonViewModel mon in Party)
+            {
+                int species = r.ReadInt32(), form = r.ReadInt32(), level = r.ReadInt32(), held = r.ReadInt32(), ability = r.ReadInt32();
+                int ivs = r.ReadInt32(), seals = r.ReadInt32();
+                int[] moves = { r.ReadInt32(), r.ReadInt32(), r.ReadInt32(), r.ReadInt32() };
+                mon.Load(species, form, level, moves, held, 0, ability, ivs, seals);
+                mon.HgeExtras.ReadFrom(r);
+            }
+            ApplyMovesEnabled();
+            ApplyItemsEnabled();
+            ApplyPartyVisibility();
+            ApplyHgeGatingToParty();
+        });
+
         private TrainerSnapshot Snapshot()
         {
+            if (IsHgeActive) return new TrainerSnapshot { Source = PackSourceFields() };
             if (_trainer == null) return null;
             SyncToTrainer();
             return new TrainerSnapshot
@@ -600,14 +639,18 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void ApplyState(TrainerSnapshot snap)
         {
-            if (snap == null || _trainer == null || _loadedTrainerId < 0) return;
+            if (snap == null || (_trainer == null && snap.Source == null) || _loadedTrainerId < 0) return;
             _suppress = true;
-            TrainerProperties trp = new TrainerProperties((ushort)_loadedTrainerId, new MemoryStream(snap.Trp));
-            byte partyCount = trp.PartyCount;
-            trp.PartyCount = TrainerFile.PokeInParty;
-            _trainer = new TrainerFile(trp, new MemoryStream(snap.Party), snap.Name);
-            trp.PartyCount = partyCount;
-            PopulateFromTrainer();
+            if (snap.Source != null) UnpackSourceFields(snap.Source);
+            else
+            {
+                TrainerProperties trp = new TrainerProperties((ushort)_loadedTrainerId, new MemoryStream(snap.Trp));
+                byte partyCount = trp.PartyCount;
+                trp.PartyCount = TrainerFile.PokeInParty;
+                _trainer = new TrainerFile(trp, new MemoryStream(snap.Party), snap.Name);
+                trp.PartyCount = partyCount;
+                PopulateFromTrainer();
+            }
             _suppress = false;
 
             _dirty = _history.IsDirty;
@@ -617,7 +660,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void RecordUndoSnapshot()
         {
-            if (_suppress || _trainer == null) return;
+            if (_suppress || (_trainer == null && !IsHgeActive)) return;
             bool coalesce = (DateTime.UtcNow - _lastCaptureUtc).TotalMilliseconds < CoalesceMs;
             _history.Capture(Snapshot(), coalesce);
             _lastCaptureUtc = DateTime.UtcNow;
@@ -675,6 +718,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void OnClassIntrosSaved(object sender, EventArgs e) => Classes?.RefreshIntroSummary();
 
+        public bool OffersShinyPatch => !_shinyPatch && GameFamily == GameFamilies.HGSS && !HgEngineProject.IsActive && TrainerShinyPatch.SupportsCurrentRom;
+        public bool OffersBallPatch => !_customPokeballsPatch && !HgEngineProject.IsActive && TrainerCustomPokeballsPatch.SupportsCurrentRom;
+
         // Reconfigure controls without reloading party data or discarding unsaved edits.
         private void OnRomPatchStateChanged(object sender, EventArgs e)
         {
@@ -683,6 +729,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 _shinyPatch = shiny;
                 foreach (TrainerPartyMonViewModel mon in Party) mon.ShinyEnabled = shiny;
+                OnPropertyChanged(nameof(OffersShinyPatch));
             }
             Classes?.RefreshPatchState();
             bool customPokeballs = TrainerCustomPokeballsPatch.DetectCurrentProject();
@@ -691,6 +738,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 _customPokeballsPatch = customPokeballs;
                 if (customPokeballs) DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.ItemIcons });
                 ShowCapsuleNames();
+                OnPropertyChanged(nameof(OffersBallPatch));
             }
         }
 
@@ -716,8 +764,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
                 _genderEditable = GameFamily == GameFamilies.HGSS || AIBackportEnabled;
                 _shinyPatch = GameFamily == GameFamilies.HGSS && TrainerShinyPatch.DetectCurrentProject();
+                OnPropertyChanged(nameof(OffersShinyPatch));
                 _customPokeballsPatch = TrainerCustomPokeballsPatch.DetectCurrentProject();
                 if (_customPokeballsPatch) DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.ItemIcons });
+                OnPropertyChanged(nameof(OffersBallPatch));
                 _abilityEditable = _genderEditable;
                 _ballEnabled = GameFamily != GameFamilies.DP;
                 _formVisible = GameFamily != GameFamilies.DP;
@@ -906,11 +956,27 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             finally { _suppress = false; }
 
             SetClean();
-            _history.Reset(null);   // undo relies on _trainer's byte round-trip; not available for hg-engine trainers
+            _history.Reset(Snapshot());
             _lastCaptureUtc = DateTime.MinValue;
             RaiseUndoState();
+            ShowHgeBattleLines(block);
             StatusText = $"Trainer {index} loaded from hg-engine source.";
             OnPropertyChanged(nameof(UnsavedChangesDescription));
+        }
+
+        // The built text can lag behind Trainers.c until the next build, so the lines come from source.
+        private void LoadHgeBattleLines(int trainer)
+        {
+            if (HgEngineTrainerSource.TryLoad(trainer, out HgEngineSourceBlock block, out string error)) ShowHgeBattleLines(block);
+            else AppLogger.Warn($"Battle messages of trainer {trainer}: {error}");
+        }
+
+        private void ShowHgeBattleLines(HgEngineSourceBlock block)
+        {
+            BattleLines.Clear();
+            foreach ((string _, int trigger, string text) in BattleMessageEditorViewModel.HgeMessages(block).OrderBy(m => m.Trigger))
+                BattleLines.Add(new BattleLine(BattleMessageEditorViewModel.TriggerDescription((ushort)trigger), Shown(text ?? "")));
+            OnPropertyChanged(nameof(HasBattleLines));
         }
 
         /// <summary>Pushes one trainer's source block into the bound fields + party mons. Caller guards
@@ -998,6 +1064,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             TrainerPartyMonHgeExtras extras = mon.HgeExtras;
             extras.AbilityId = HgeAbilityFlagChecked && monBlock.TryGetSymbol(new[] { FieldPathSegment.Field("ability") }, AbilityHeader, out int abilityId) ? abilityId : -1;
+            mon.RememberSlotAbility();
             extras.BallId = HgeBallFlagChecked && monBlock.TryGetSymbol(new[] { FieldPathSegment.Field("ball") }, ItemHeader, out int ballId) ? ballId : -1;
 
             if (HgeIvEvFlagChecked)
@@ -1510,12 +1577,6 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         /// <summary>Appends a trainer and grows every table that depends on the count, all or nothing.</summary>
         public void AddTrainer()
         {
-            // Adding to Trainers.c isn't supported yet, and a binary-only add would be lost on the next build.
-            if (IsHgeActive)
-            {
-                _ = DialogHelper.ShowErrorAsync("Adding trainers isn't supported yet on a linked hg-engine project.", "Trainer editor");
-                return;
-            }
             if (HasUnsavedChanges)
             {
                 _ = DialogHelper.ShowErrorAsync("Save or discard the current trainer's changes before adding another trainer.", "Trainer editor");
@@ -1545,13 +1606,6 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         /// <summary>Removes only the final appended trainer after every known reference source is clear.</summary>
         public async Task RemoveLastAddedTrainerAsync()
         {
-            if (HgEngineProject.IsActive)
-            {
-                await DialogHelper.ShowErrorAsync(
-                    "Removing trainers isn't supported on a linked hg-engine project.",
-                    "Trainer editor");
-                return;
-            }
             if (HasUnsavedChanges)
             {
                 await DialogHelper.ShowErrorAsync(

@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -23,6 +21,22 @@ namespace DSPRE.HgEngine
 
         public bool TryGetName(int value, out string name) => ByValue.TryGetValue(value, out name);
         public bool TryGetValue(string name, out int value) => ByName.TryGetValue(name, out value);
+
+        /// <summary>A number as written, or a name from <paramref name="table"/>; 0 when it is neither.</summary>
+        public static int ValueOrZero(string token, HgEngineSymbolTable table) => TryValue(token, out int v, table) ? v : 0;
+
+        /// <summary>A number as written (decimal or 0x hex), or a name from the first table that has it.</summary>
+        public static bool TryValue(string token, out int value, params HgEngineSymbolTable[] tables)
+        {
+            value = 0;
+            if (token == null) return false;
+            token = token.Trim();
+            if (HgEngineSourceBlock.TryParseLiteral(token, out value)) return true;
+            foreach (HgEngineSymbolTable t in tables)
+                if (t != null && t.TryGetValue(token, out value)) return true;
+            value = 0;
+            return false;
+        }
 
         /// <summary>Reverse lookup restricted to names starting with <paramref name="prefix"/>, needed
         /// for headers that pack multiple constant families into one flat namespace (e.g. item.h's
@@ -106,22 +120,9 @@ namespace DSPRE.HgEngine
 
         internal static HgEngineSymbolTable Parse(string text, IReadOnlyDictionary<string, int> outside = null)
         {
-            // Strip "//" line comments first: a commented-out "// #define X (Y + 1)" is dead code, but
-            // the #define regex below has no notion of comments and would parse it as real.
-            text = StripLineComments(text);
-            text = DropInactiveBranches(text, outside);
-
             Dictionary<string, string> rawExpr = new Dictionary<string, string>(StringComparer.Ordinal);
-
-            // [ \t]+ (not \s+): a value-less header guard must not match, or \s+ would cross the
-            // newline and swallow the next line's real #define as this one's value.
-            foreach (Match m in Regex.Matches(text, @"#define[ \t]+([A-Za-z_]\w*)[ \t]+(.+)"))
-                rawExpr[m.Groups[1].Value] = StripComment(m.Groups[2].Value);
-
-            foreach (Match m in Regex.Matches(text, @"\b([A-Za-z_]\w*)\s*=\s*(-?\d+)\s*,"))
-                rawExpr.TryAdd(m.Groups[1].Value, m.Groups[2].Value);   // enum: only plain literals seen so far
-
-            ResolveImplicitEnumMembers(text, rawExpr);
+            List<CToken> code = CompiledTokens(text, outside, rawExpr);
+            ReadEnums(text, code, rawExpr);
 
             Dictionary<string, int> cache = new Dictionary<string, int>(StringComparer.Ordinal);
             Dictionary<string, int> byName = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -145,48 +146,48 @@ namespace DSPRE.HgEngine
             return new HgEngineSymbolTable(byName, byValue);
         }
 
-        /// <summary>Blanks the lines of #if branches the compiler would skip, so a name defined in both
-        /// branches (move_data.h's FLAG_UNUSABLE_* under DISALLOW_DEXIT_GEN) gets the value that is built.
-        /// Names come from earlier #defines in this file or <paramref name="outside"/> (config.h); an
-        /// undefined name is 0, as in C. A condition this can't evaluate keeps every branch.</summary>
-        internal static string DropInactiveBranches(string text, IReadOnlyDictionary<string, int> outside)
+        /// <summary>The tokens the compiler would see, with the file's #defines and config.h's applied, and the file's
+        /// value #defines added to <paramref name="rawExpr"/>. An #if this can't evaluate keeps every branch.</summary>
+        private static List<CToken> CompiledTokens(string text, IReadOnlyDictionary<string, int> outside, Dictionary<string, string> rawExpr)
         {
-            if (!text.Contains("#if")) return text;
-            string[] lines = text.Split('\n');
+            List<CToken> code = new List<CToken>();
             Dictionary<string, string> known = new Dictionary<string, string>(StringComparer.Ordinal);
             // Each open #if: whether its current branch is live, and whether an earlier branch already was.
             Stack<(bool live, bool taken, bool unknown)> stack = new Stack<(bool live, bool taken, bool unknown)>();
             bool Live() => stack.All(s => s.live);
+            bool IsDefined(string name) => known.ContainsKey(name) || (outside?.ContainsKey(name) ?? false);
 
-            for (int i = 0; i < lines.Length; i++)
+            foreach (CToken token in CLexer.Tokenize(text))
             {
-                string line = lines[i].Trim();
-                Match directive = Regex.Match(line, @"^#\s*(ifdef|ifndef|if|elif|else|endif)\b\s*(.*)$");
-                if (!directive.Success)
+                if (token.Kind != CTokenKind.Directive)
                 {
-                    if (!Live()) { lines[i] = ""; continue; }
-                    Match def = Regex.Match(line, @"^#\s*define[ \t]+([A-Za-z_]\w*)(?:[ \t]+(.*))?$");
-                    if (def.Success) known[def.Groups[1].Value] = def.Groups[2].Success ? StripComment(def.Groups[2].Value) : "1";
+                    if (Live()) code.Add(token);
                     continue;
                 }
 
-                string kind = directive.Groups[1].Value, cond = directive.Groups[2].Value.Trim();
-                lines[i] = "";
-                bool? value(string c) => EvaluateCondition(c, known, outside);
-                switch (kind)
+                CDirective directive = CDirective.Parse(text, token);
+                switch (directive.Keyword)
                 {
+                    case "define":
+                        if (!Live() || directive.Name == null || directive.Parameters != null) break;
+                        known[directive.Name] = directive.Body.Length > 0 ? directive.Body : "1";
+                        if (directive.Body.Length > 0) rawExpr[directive.Name] = directive.Body;
+                        break;
+                    case "undef":
+                        if (!Live() || directive.Name == null) break;
+                        known.Remove(directive.Name);
+                        rawExpr.Remove(directive.Name);
+                        break;
                     case "ifdef":
                     case "ifndef":
                         {
-                            string name = cond.Split(' ', '\t')[0];
-                            bool defined = known.ContainsKey(name) || (outside?.ContainsKey(name) ?? false);
-                            bool live = kind == "ifdef" ? defined : !defined;
+                            bool live = directive.Keyword == "ifdef" == IsDefined(directive.Name ?? "");
                             stack.Push((live, live, false));
                             break;
                         }
                     case "if":
                         {
-                            bool? v = value(cond);
+                            bool? v = EvaluateCondition(directive.Rest, known, outside, IsDefined);
                             stack.Push(v == null ? (true, false, true) : (v.Value, v.Value, false));
                             break;
                         }
@@ -194,7 +195,7 @@ namespace DSPRE.HgEngine
                         {
                             if (stack.Count == 0) break;
                             (bool live, bool taken, bool unknown) top = stack.Pop();
-                            bool? v = top.unknown ? null : value(cond);
+                            bool? v = top.unknown ? null : EvaluateCondition(directive.Rest, known, outside, IsDefined);
                             if (v == null) stack.Push((true, top.taken, true));
                             else stack.Push((!top.taken && v.Value, top.taken || v.Value, false));
                             break;
@@ -211,57 +212,22 @@ namespace DSPRE.HgEngine
                         break;
                 }
             }
-            return string.Join("\n", lines);
+            return code;
         }
 
-        // Handles NAME, !NAME, defined(NAME), and NAME ==/!=/>=/<=/>/< literal-or-name; anything else is unknown.
-        private static bool? EvaluateCondition(string cond, Dictionary<string, string> known, IReadOnlyDictionary<string, int> outside)
+        // An undefined name is 0, as in C. A defined name with no numeric value makes the condition unknown.
+        private static bool? EvaluateCondition(string condition, Dictionary<string, string> known,
+            IReadOnlyDictionary<string, int> outside, Func<string, bool> isDefined)
         {
-            cond = StripComment(cond).Trim();
-            while (cond.StartsWith("(") && cond.EndsWith(")")) cond = cond[1..^1].Trim();
-
-            long? Operand(string token)
+            int? Value(string name, int depth)
             {
-                token = token.Trim();
-                if (TryParseLiteral(token, out int literal)) return literal;
-                if (!Regex.IsMatch(token, @"^[A-Za-z_]\w*$")) return null;
-                if (known.TryGetValue(token, out string raw))
-                    return TryParseLiteral(raw.Trim('(', ')', ' '), out int v) ? v : null;
-                if (outside != null && outside.TryGetValue(token, out int o)) return o;
-                return 0;   // undefined in C
+                if (depth > 25) return null;
+                if (known.TryGetValue(name, out string raw))
+                    return HgEngineSourceExpression.TryEvaluate(raw, n => Value(n, depth + 1), out int v) ? v : null;
+                return outside != null && outside.TryGetValue(name, out int o) ? o : 0;
             }
-
-            Match defined = Regex.Match(cond, @"^(!?)\s*defined\s*\(?\s*([A-Za-z_]\w*)\s*\)?$");
-            if (defined.Success)
-            {
-                bool isDefined = known.ContainsKey(defined.Groups[2].Value) || (outside?.ContainsKey(defined.Groups[2].Value) ?? false);
-                return defined.Groups[1].Value == "!" ? !isDefined : isDefined;
-            }
-
-            Match compare = Regex.Match(cond, @"^([A-Za-z_]\w*|-?\w+)\s*(==|!=|>=|<=|>|<)\s*([A-Za-z_]\w*|-?\w+)$");
-            if (compare.Success)
-            {
-                long? left = Operand(compare.Groups[1].Value), right = Operand(compare.Groups[3].Value);
-                if (left == null || right == null) return null;
-                return compare.Groups[2].Value switch
-                {
-                    "==" => left == right,
-                    "!=" => left != right,
-                    ">=" => left >= right,
-                    "<=" => left <= right,
-                    ">" => left > right,
-                    _ => left < right,
-                };
-            }
-
-            Match single = Regex.Match(cond, @"^(!?)\s*([A-Za-z_]\w*|-?\d+)$");
-            if (single.Success)
-            {
-                long? v = Operand(single.Groups[2].Value);
-                if (v == null) return null;
-                return single.Groups[1].Value == "!" ? v == 0 : v != 0;
-            }
-            return null;
+            string expression = CConditions.ResolveDefined(condition, isDefined);
+            return HgEngineSourceExpression.TryEvaluate(expression, n => Value(n, 0), out int result) ? result != 0 : null;
         }
 
         private static bool IsAdministrativeName(string name) =>
@@ -270,163 +236,56 @@ namespace DSPRE.HgEngine
             name.Contains("_NUM_", StringComparison.Ordinal) || name.EndsWith("_NUM", StringComparison.Ordinal) ||
             name.StartsWith("NUM_", StringComparison.Ordinal);
 
-        private static string StripComment(string expr)
+        /// <summary>Adds each enum member. One with no "= value" counts on from the member before it.
+        /// A #define of the same name wins.</summary>
+        private static void ReadEnums(string text, List<CToken> code, Dictionary<string, string> rawExpr)
         {
-            int i = expr.IndexOf("//", StringComparison.Ordinal);
-            return (i >= 0 ? expr[..i] : expr).Trim();
-        }
+            bool IsPunct(int t, string p) => t < code.Count && code[t].Kind == CTokenKind.Punct && code[t].Is(text, p);
 
-        /// <summary>Blanks every comment, line and block, as the C lexer finds them (so "//" inside a string stays),
-        /// keeping line breaks: a "#define" inside "/* ... */" is dead text, not a definition.</summary>
-        private static string StripLineComments(string text)
-        {
-            StringBuilder sb = new System.Text.StringBuilder(text);
-            foreach (CToken t in CLexer.Tokenize(text, keepComments: true))
+            for (int t = 0; t < code.Count; t++)
             {
-                if (t.Kind != CTokenKind.Comment) continue;
-                for (int i = t.Start; i < t.End; i++)
-                    if (sb[i] != '\n' && sb[i] != '\r') sb[i] = ' ';
-            }
-            return sb.ToString();
-        }
+                if (code[t].Kind != CTokenKind.Identifier || !code[t].Is(text, "enum")) continue;
+                int k = t + 1;
+                if (k < code.Count && code[k].Kind == CTokenKind.Identifier) k++;
+                if (!IsPunct(k, "{")) continue;
+                k++;
 
-        /// <summary>Fills in enum members with no explicit "= N" (e.g. only "EVO_NONE = 0" is pinned,
-        /// the rest auto-increment), which the two regexes above miss entirely. A member whose explicit
-        /// value isn't a plain literal stops auto-numbering for the rest of that enum.</summary>
-        private static void ResolveImplicitEnumMembers(string text, Dictionary<string, string> rawExpr)
-        {
-            foreach (Match block in Regex.Matches(text, @"enum\s*\w*\s*\{([^{}]*)\}"))
-            {
-                int current = 0;
-                bool known = true;
-                foreach (string member in SplitTopLevelCommas(block.Groups[1].Value))
+                string start = "0";
+                int offset = 0;
+                while (k < code.Count && code[k].Kind == CTokenKind.Identifier)
                 {
-                    string trimmed = member.Trim();
-                    if (trimmed.Length == 0) continue;
-                    Match m = Regex.Match(trimmed, @"^([A-Za-z_]\w*)\s*(?:=\s*(.+))?$", RegexOptions.Singleline);
-                    if (!m.Success) { known = false; continue; }
-
-                    string name = m.Groups[1].Value;
-                    if (m.Groups[2].Success)
+                    string name = code[k++].Text(text);
+                    if (IsPunct(k, "="))
                     {
-                        known = TryParseLiteral(m.Groups[2].Value.Trim(), out int lit);
-                        if (known) current = lit;
+                        int first = ++k;
+                        for (int depth = 0; k < code.Count; k++)
+                        {
+                            if (IsPunct(k, "(") || IsPunct(k, "[")) depth++;
+                            else if (IsPunct(k, ")") || IsPunct(k, "]")) depth--;
+                            else if (depth == 0 && (IsPunct(k, ",") || IsPunct(k, "}"))) break;
+                        }
+                        if (k == first || k >= code.Count) break;
+                        start = text.Substring(code[first].Start, code[k - 1].End - code[first].Start);
+                        offset = 0;
                     }
-
-                    if (known)
-                    {
-                        rawExpr.TryAdd(name, current.ToString());
-                        current++;
-                    }
+                    rawExpr.TryAdd(name, offset == 0 ? start : $"({start}) + {offset}");
+                    offset++;
+                    if (IsPunct(k, ",")) k++;
                 }
+                t = k;
             }
         }
 
-        /// <summary>Splits on top-level commas only, so a member's own "(1 &lt;&lt; 3)"-style value
-        /// expression can't be mistaken for a member separator.</summary>
-        private static List<string> SplitTopLevelCommas(string body)
-        {
-            List<string> result = new List<string>();
-            int depth = 0, start = 0;
-            for (int i = 0; i < body.Length; i++)
-            {
-                char c = body[i];
-                if (c == '(' || c == '[') depth++;
-                else if (c == ')' || c == ']') depth--;
-                else if (c == ',' && depth == 0)
-                {
-                    result.Add(body.Substring(start, i - start));
-                    start = i + 1;
-                }
-            }
-            if (start < body.Length) result.Add(body.Substring(start));
-            return result;
-        }
-
-        /// <summary>Resolves a #define's value: a literal, a bare "(NAME)", or "(A + B)"/"(A - B)" where
-        /// A/B are each a literal or another #define name, resolved recursively. Bounded depth guards
+        /// <summary>Resolves a constant's value through other constants, recursively. Bounded depth guards
         /// against reference cycles.</summary>
         private static bool TryResolve(string name, Dictionary<string, string> rawExpr, Dictionary<string, int> cache, int depth, out int value)
         {
             value = 0;
             if (cache.TryGetValue(name, out value)) return true;
             if (depth > 25 || !rawExpr.TryGetValue(name, out string expr)) return false;
-            if (!TryResolveExpr(expr, rawExpr, cache, depth, out value)) return false;
+            if (!HgEngineSourceExpression.TryEvaluate(expr, n => TryResolve(n, rawExpr, cache, depth + 1, out int v) ? v : null, out value)) return false;
             cache[name] = value;
             return true;
         }
-
-        private static bool TryResolveExpr(string expr, Dictionary<string, string> rawExpr, Dictionary<string, int> cache, int depth, out int value)
-        {
-            value = 0;
-            expr = expr.Trim();
-            if (expr.StartsWith("(", StringComparison.Ordinal) && expr.EndsWith(")", StringComparison.Ordinal))
-                expr = expr[1..^1].Trim();
-
-            // Combined flag macros, e.g. F_TRAINER_EXPERT_AI (A | B | C).
-            if (expr.Contains('|') && !expr.Contains("||"))
-            {
-                int combined = 0;
-                foreach (string part in expr.Split('|'))
-                {
-                    if (!TryResolveExpr(part, rawExpr, cache, depth + 1, out int partValue)) return false;
-                    combined |= partValue;
-                }
-                value = combined;
-                return true;
-            }
-
-            // moves.h chains more than one operator, e.g. "(NUM_OF_MOVES - 1 + 1)"; C evaluates +/- left to right.
-            Match chain = Regex.Match(expr, @"^([A-Za-z_]\w*|0[xX][0-9a-fA-F]+|\d+)((?:\s*[+-]\s*(?:[A-Za-z_]\w*|0[xX][0-9a-fA-F]+|\d+)){2,})$");
-            if (chain.Success)
-            {
-                if (!TryResolveOperand(chain.Groups[1].Value, rawExpr, cache, depth, out int total)) return false;
-                foreach (Match step in Regex.Matches(chain.Groups[2].Value, @"([+-])\s*([A-Za-z_]\w*|0[xX][0-9a-fA-F]+|\d+)"))
-                {
-                    if (!TryResolveOperand(step.Groups[2].Value, rawExpr, cache, depth, out int term)) return false;
-                    total = step.Groups[1].Value == "+" ? total + term : total - term;
-                }
-                value = total;
-                return true;
-            }
-
-            // hg-engine declares bit-flag families as shift expressions (e.g. "(1 << 13)"), not just +/-.
-            const string operand = @"[A-Za-z_]\w*|-?0[xX][0-9a-fA-F]+|-?\d+";
-            Match m = Regex.Match(expr, $@"^({operand})\s*(?:(<<|>>|[+-])\s*({operand}))?$");
-            if (!m.Success) return false;
-
-            if (!TryResolveOperand(m.Groups[1].Value, rawExpr, cache, depth, out int left)) return false;
-            if (!m.Groups[2].Success) { value = left; return true; }
-
-            if (!TryResolveOperand(m.Groups[3].Value, rawExpr, cache, depth, out int right)) return false;
-            value = m.Groups[2].Value switch
-            {
-                "+" => left + right,
-                "-" => left - right,
-                "<<" => left << right,
-                ">>" => left >> right,
-                _ => 0
-            };
-            return true;
-        }
-
-        // hg-engine mixes decimal and hex ("0x01") literals across headers; plain int.TryParse rejects hex.
-        private static bool TryParseLiteral(string token, out int value)
-        {
-            bool negative = token.StartsWith("-", StringComparison.Ordinal);
-            string unsigned = negative ? token[1..] : token;
-            if (unsigned.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-            {
-                if (!int.TryParse(unsigned[2..], System.Globalization.NumberStyles.HexNumber,
-                        System.Globalization.CultureInfo.InvariantCulture, out value))
-                    return false;
-                if (negative) value = -value;
-                return true;
-            }
-            return int.TryParse(token, out value);
-        }
-
-        private static bool TryResolveOperand(string token, Dictionary<string, string> rawExpr, Dictionary<string, int> cache, int depth, out int value)
-            => TryParseLiteral(token, out value) || TryResolve(token, rawExpr, cache, depth + 1, out value);
     }
 }

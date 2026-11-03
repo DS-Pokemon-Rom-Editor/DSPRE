@@ -44,13 +44,31 @@
           <DataTemplate>
             <Border BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
                     CornerRadius="4" Padding="8" Margin="0,0,0,6">
-              <Grid ColumnDefinitions="*,Auto,Auto">
-                <controls:FusionAutoCompleteBox Grid.Column="0"
-                    ItemsSource="{Binding $parent[ItemsControl].((vm:HgEngineFormEditorViewModel)DataContext).PokemonNames}"
-                    SelectedIndex="{Binding PokemonIndex}" MaxDropDownHeight="260"/>
-                <CheckBox Grid.Column="1" Content="Reverts to base form" IsChecked="{Binding NeedsReversion}" ToolTip.Tip="Needs reversion" Margin="12,0"/>
-                <Button Grid.Column="2" controls:Icon.Key="Cross" Click="RemoveSlot_Click" ToolTip.Tip="Remove this form"/>
-              </Grid>
+              <StackPanel Spacing="6">
+                <Grid ColumnDefinitions="*,Auto,Auto">
+                  <controls:FusionAutoCompleteBox Grid.Column="0"
+                      ItemsSource="{Binding $parent[ItemsControl].((vm:HgEngineFormEditorViewModel)DataContext).PokemonNames}"
+                      SelectedIndex="{Binding PokemonIndex}" MaxDropDownHeight="260"/>
+                  <CheckBox Grid.Column="1" Content="Reverts to base form" IsChecked="{Binding NeedsReversion}" ToolTip.Tip="Needs reversion" Margin="12,0"/>
+                  <Button Grid.Column="2" controls:Icon.Key="Cross" Click="RemoveSlot_Click" ToolTip.Tip="Remove this form"/>
+                </Grid>
+                <Grid ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="6"
+                      IsVisible="{Binding $parent[ItemsControl].((vm:HgEngineFormEditorViewModel)DataContext).MegaAvailable}">
+                  <TextBlock Grid.Column="0" Text="Mega item" VerticalAlignment="Center"/>
+                  <controls:FusionAutoCompleteBox Grid.Column="1"
+                      ItemsSource="{Binding $parent[ItemsControl].((vm:HgEngineFormEditorViewModel)DataContext).ItemNames}"
+                      SelectedIndex="{Binding MegaItem}" MaxDropDownHeight="260"/>
+                  <TextBlock Grid.Column="2" Text="Mega move" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                  <controls:FusionAutoCompleteBox Grid.Column="3"
+                      ItemsSource="{Binding $parent[ItemsControl].((vm:HgEngineFormEditorViewModel)DataContext).MoveNames}"
+                      SelectedIndex="{Binding MegaMove}" MaxDropDownHeight="260"/>
+                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding ShowRevertsTo}">
+                  <TextBlock Text="Form after battle" VerticalAlignment="Center"/>
+                  <NumericUpDown Value="{Binding RevertsTo}" Minimum="0" Maximum="63" Increment="1" FormatString="0" Width="110"
+                                 ToolTip.Tip="0 is the base form"/>
+                </StackPanel>
+              </StackPanel>
             </Border>
           </DataTemplate>
         </ItemsControl.ItemTemplate>

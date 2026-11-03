@@ -15,14 +15,14 @@ namespace DSPRE.Avalonia.Views.Pokemon
             DataContext = vm;
         }
 
-        private void CountPatch_Click(object sender, RoutedEventArgs e) => AvaloniaEditorLauncher.OpenPatchToolboxAt("regionalDexCount");
 
         private void Say(string message) => Status.Text = message ?? "";
 
         private async void Save_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null || !await VM.SaveChangesAsync()) return;
-            Say("Saved. Save ROM puts the lists in the game.");
+            Say(VM.SavedNote);
+            if (VM.FromSource) return;
             // The game's code holds its own count of the regional dex, so a new size is offered as the patch.
             (DSPRE.ROMFiles.RegionalDexCount.Counts Now, DSPRE.ROMFiles.RegionalDexCount.Counts Next, string Problem)? offer = VM.RegionalCountOffer();
             if (offer == null) return;

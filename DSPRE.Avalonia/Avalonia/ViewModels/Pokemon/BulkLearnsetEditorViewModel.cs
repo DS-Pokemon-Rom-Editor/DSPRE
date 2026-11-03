@@ -142,7 +142,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 if (HgEngine.HgEngineProject.IsActive)
                 {
-                    if (!HgEngine.HgEngineLearnsets.TryGetAllLevelMoves(out _sourceLists, out string error)) throw new InvalidOperationException(error);
+                    if (!HgEngine.HgEngineLearnsets.TryGetAllLevelMovesForEditing(out _sourceLists, out string error)) throw new InvalidOperationException(error);
                     foreach ((int id, List<(int level, int move)> list) in _sourceLists.OrderBy(kv => kv.Key))
                         foreach ((int level, int move) in list)
                             _all.Add(new BulkLearnsetRow(SpeciesNames, MoveNames, id, level, move, Dirty));

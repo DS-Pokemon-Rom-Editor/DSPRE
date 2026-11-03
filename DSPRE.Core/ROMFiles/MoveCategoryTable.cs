@@ -39,6 +39,7 @@ namespace DSPRE.ROMFiles
         public bool InExpansion { get; private set; }
         public string Where { get; private set; }
 
+        private bool _fromSource;
         private string _path, _ovPath;
         private int _offset;
         private MoveListSites _sites;
@@ -47,7 +48,8 @@ namespace DSPRE.ROMFiles
 
         public static string WhyNot(Kind kind)
         {
-            if (IsHGE) return "hg-engine keeps these lists in its own source.";
+            if (HgEngine.HgEngineProject.IsActive) return HgEngine.HgEngineMoveList.WhyNot(SourceInfo(kind));
+            if (IsHGE) return "Open the hg-engine folder to edit these lists.";
             MoveListSites sites = RomLocator.MoveListSitesOf(TableOf(kind));
             if (sites == null) return "Works on " + DescribeDumps(RomLocator.MoveListDumps(TableOf(kind))) + ".";
             return RomLocator.WhyNot(TableOf(kind), sites.VanillaCapacity * 2);
@@ -60,9 +62,22 @@ namespace DSPRE.ROMFiles
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException) { return false; }
         }
 
+        private static HgEngine.HgEngineMoveList.Info SourceInfo(Kind kind) =>
+            kind == Kind.Punching ? HgEngine.HgEngineMoveList.Punching : HgEngine.HgEngineMoveList.Sound;
+
+        private static MoveCategoryTable LoadSource(Kind kind)
+        {
+            MoveCategoryTable table = new MoveCategoryTable(kind) { Capacity = int.MaxValue, InExpansion = true, Where = "in " + SourceInfo(kind).File, _fromSource = true };
+            table.Moves.AddRange(HgEngine.HgEngineMoveList.Load(SourceInfo(kind)));
+            return table;
+        }
+
+        private void SaveSource() => HgEngine.HgEngineMoveList.Save(SourceInfo(Which), Moves);
+
         public static MoveCategoryTable Load(Kind kind)
         {
             if (WhyNot(kind) is string why) throw new InvalidOperationException(why);
+            if (HgEngine.HgEngineProject.IsActive) return LoadSource(kind);
             MoveCategoryTable table = new MoveCategoryTable(kind);
             table.Locate();
             byte[] ov = File.ReadAllBytes(table._ovPath);
@@ -135,6 +150,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Writes the list and its count; a failed count write puts the list back, so neither changes.</summary>
         public void Save()
         {
+            if (_fromSource) { SaveSource(); return; }
             if (Moves.Count > Capacity)
                 throw new InvalidOperationException($"The {NameOf(Which)} move list holds {Capacity} moves and this one has {Moves.Count}.");
             if (Moves.Count > byte.MaxValue)

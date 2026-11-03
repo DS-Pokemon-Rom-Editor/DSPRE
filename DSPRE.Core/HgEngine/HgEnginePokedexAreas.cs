@@ -137,9 +137,9 @@ namespace DSPRE.HgEngine
                     if (id == 0) end = token; else spelled.TryAdd(id, token);
                 }
                 Dictionary<int, string> group = p.Groups[k is 0 or 1 or 2 or 6 ? 0 : 1];
-                string indent = inits[k].Items.Count > 0 ? HgEngineSwarms.Indent(text, inits[k].Items[0].Start) : "    ";
+                string indent = inits[k].Items.Count > 0 ? HgEngineSourcePatcher.Indent(text, inits[k].Items[0].Start) : "    ";
                 IEnumerable<string> lines = lists[k].Select(id => spelled.TryGetValue(id, out string t) ? t : group.TryGetValue(id, out string n) ? n : id.ToString()).Append(end);
-                string closeIndent = HgEngineSwarms.Indent(text, inits[k].Close);
+                string closeIndent = HgEngineSourcePatcher.Indent(text, inits[k].Close);
                 edits.Add((inits[k].Open + 1, inits[k].Close, "\n" + string.Concat(lines.Select(t => indent + t + ",\n")) + closeIndent));
             }
             if (edits.Count == 0) return true;

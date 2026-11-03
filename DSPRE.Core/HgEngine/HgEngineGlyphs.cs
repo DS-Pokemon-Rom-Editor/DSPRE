@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using DSPRE.CharMaps;
 
 namespace DSPRE.HgEngine
@@ -14,7 +13,6 @@ namespace DSPRE.HgEngine
     /// </summary>
     public static class HgEngineGlyphs
     {
-        private static readonly Regex CharLine = new(@"^([0-9A-Fa-f]{4})=(.+)$");
         private static string _forRoot;
         private static List<(string Checkout, string Dspre)> _pairs = new();
 
@@ -43,9 +41,11 @@ namespace DSPRE.HgEngine
                 if (map != null)
                     foreach (string line in File.ReadLines(path))
                     {
-                        Match m = CharLine.Match(line.TrimEnd('\r'));
-                        if (!m.Success || !map.CharacterMap.TryGetValue(m.Groups[1].Value.ToUpperInvariant(), out CharMapEntry entry)) continue;
-                        string symbol = m.Groups[2].Value;
+                        // 0123=symbol
+                        string row = line.TrimEnd('\r');
+                        if (row.Length < 6 || row[4] != '=' || !row.AsSpan(0, 4).ToArray().All(char.IsAsciiHexDigit)) continue;
+                        if (!map.CharacterMap.TryGetValue(row.Substring(0, 4).ToUpperInvariant(), out CharMapEntry entry)) continue;
+                        string symbol = row.Substring(5);
                         if (symbol != entry.Character && entry.Aliases?.Contains(symbol) == true && entry.Character.StartsWith("["))
                             pairs.Add((symbol, entry.Character));
                     }

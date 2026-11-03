@@ -12,7 +12,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
     /// <summary>The chance of each wild encounter slot, per encounter method.</summary>
-    public class EncounterSlotOddsViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
+    public class EncounterSlotOddsViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
@@ -38,6 +38,40 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _saved = _odds.Snapshot();
             foreach (EncounterSlotOdds.Method m in _odds.Methods) Methods.Add(new MethodViewModel(this, m));
             StartUndo();
+            CheckHooks();
+            // A fix saved in the hooks editor clears the warning here.
+            DSPRE.HgEngine.HgEnginePatchList.Saved += OnHooksSaved;
+        }
+
+        private void OnHooksSaved() => global::Avalonia.Threading.Dispatcher.UIThread.Post(CheckHooks);
+        public void Detach() => DSPRE.HgEngine.HgEnginePatchList.Saved -= OnHooksSaved;
+
+        // A hooks file that puts the slot hooks in arm9 never applies them, so these odds never run. hg-engine pull request 1039 fixes it.
+        private string _hookWarning;
+        public string HookWarning => _hookWarning;
+        public bool HasHookWarning => _hookWarning != null;
+        public string FirstMislabelledHook { get; private set; }
+
+        // "line 654", "lines 654 to 658" for a run, otherwise "lines 654, 656 and 658".
+        private static string LineList(System.Collections.Generic.List<int> lines)
+        {
+            if (lines.Count == 1) return $"line {lines[0]}";
+            bool run = lines.Zip(lines.Skip(1)).All(p => p.Second == p.First + 1);
+            return run ? $"lines {lines[0]} to {lines[^1]}"
+                : $"lines {string.Join(", ", lines.Take(lines.Count - 1))} and {lines[^1]}";
+        }
+
+        public void CheckHooks()
+        {
+            System.Collections.Generic.List<(string Symbol, int Line)> wrong = DSPRE.HgEngine.HgEngineProject.IsActive
+                ? DSPRE.HgEngine.HgEngineSlotOdds.MislabelledHooks() : new System.Collections.Generic.List<(string, int)>();
+            FirstMislabelledHook = wrong.Count > 0 ? wrong[0].Symbol : null;
+            _hookWarning = wrong.Count == 0 ? null
+                : "This checkout's hooks file puts the slot hooks in arm9 instead of overlay 2, so these odds never run. " +
+                  $"Change arm9 to 0002 on {LineList(wrong.Select(w => w.Line).ToList())} of the hooks file, or in the hooks editor. " +
+                  "This pull request fixes it:";
+            Raise(nameof(HookWarning));
+            Raise(nameof(HasHookWarning));
         }
 
         public sealed class MethodViewModel : INotifyPropertyChanged

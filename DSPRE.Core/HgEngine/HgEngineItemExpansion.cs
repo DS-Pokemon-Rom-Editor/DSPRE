@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using DSPRE.ROMFiles;
 
 namespace DSPRE.HgEngine
@@ -379,13 +378,12 @@ namespace DSPRE.HgEngine
         private static bool? FindPriceMacro(string text, int open, int close, out int argStart, out int argEnd)
         {
             argStart = argEnd = -1;
-            Regex macro = new Regex(@"\GITEM_PRICE\s*\(");
             foreach ((int start, int end) in ElementScanner.ElementSpans(text, open, close))
             {
-                Match m = macro.Match(text, start);
-                if (!m.Success) continue;
-                argStart = m.Index + m.Length;
-                argEnd = text.LastIndexOf(')', end - 1, end - argStart);
+                List<CToken> tokens = CLexer.Tokenize(text, start, end);
+                if (tokens.Count < 2 || !tokens[0].Is(text, "ITEM_PRICE") || !tokens[1].Is(text, "(")) continue;
+                argStart = tokens[1].End;
+                argEnd = tokens[^1].Is(text, ")") ? tokens[^1].Start : -1;
                 return argEnd < argStart ? null : true;
             }
             return false;
@@ -477,9 +475,12 @@ namespace DSPRE.HgEngine
         /// the id is not a custom one. item.h's ITEM_MSG_OFFSET names the last base item it counts from.</summary>
         internal static int CustomMessageOffset(string itemHeaderText, HgEngineSymbolTable items, int itemId)
         {
-            Match m = Regex.Match(itemHeaderText ?? "",
-                @"#define\s+ITEM_MSG_OFFSET\(id\)(?:[^\n]*\\\r?\n)*[^\n]*:\s*\(\(id\)\s*-\s*\((\w+)\s*\+\s*1\)\)\)");
-            string lastBase = m.Success ? m.Groups[1].Value : "MAX_BASE_ITEM_NUM";
+            // The macro's last branch: ... : ((id) - (LAST_BASE + 1)))
+            string lastBase = "MAX_BASE_ITEM_NUM";
+            string body = CSourceFile.For(itemHeaderText ?? "").FindDefine("ITEM_MSG_OFFSET")?.Body ?? "";
+            List<string> tokens = CLexer.Tokenize(body).Select(t => t.Text(body)).ToList();
+            int plus = tokens.LastIndexOf("+");
+            if (plus > 0 && tokens.LastIndexOf(":") < plus && tokens[plus - 1] != ")") lastBase = tokens[plus - 1];
             if (items == null || !items.TryGetValue(lastBase, out int lastBaseId)) return -1;
             return itemId > lastBaseId ? itemId - (lastBaseId + 1) : -1;
         }

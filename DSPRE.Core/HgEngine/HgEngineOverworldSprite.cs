@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
-using System.Text.RegularExpressions;
+using System;
 
 namespace DSPRE.HgEngine
 {
@@ -51,11 +51,12 @@ namespace DSPRE.HgEngine
         internal static Dictionary<int, string> ParseMap(string pokegraMkText)
         {
             Dictionary<int, string> map = new Dictionary<int, string>();
-            foreach (Match m in Regex.Matches(pokegraMkText,
-                @"build/pokemonow/3_(\d+)\.btx0:\s*(data/graphics/sprites/[^\s/]+/overworld\.png)"))
+            foreach (HgEngineMakeFile.Rule rule in HgEngineMakeFile.For(pokegraMkText).Rules)
             {
-                if (int.TryParse(m.Groups[1].Value, out int id))
-                    map[id] = m.Groups[2].Value;
+                int id = HgEngineMakeFile.NumberBetween(rule.Target, "build/pokemonow/3_", ".btx0");
+                if (id >= 0 && rule.Prerequisites.StartsWith("data/graphics/sprites/", StringComparison.Ordinal)
+                    && HgEngineMakeFile.Words(rule.Prerequisites)[0] is string png && png.EndsWith("/overworld.png", StringComparison.Ordinal))
+                    map[id] = png;
             }
             return map;
         }

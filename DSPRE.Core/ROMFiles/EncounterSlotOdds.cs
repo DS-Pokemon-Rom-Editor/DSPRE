@@ -53,7 +53,7 @@ namespace DSPRE.ROMFiles
         public static EncounterSlotOdds Load()
         {
             EncounterSlotOdds odds = new EncounterSlotOdds();
-            // hg-engine rolls the slots in its own C, so the odds are read from there.
+            // hg-engine hooks every slot roll to its own C, so the overlay's compares never run there.
             if (HgEngine.HgEngineProject.IsActive)
             {
                 if (!HgEngine.HgEngineSlotOdds.TryLoad(out List<int[]> fromSource, out string error)) throw new InvalidDataException(error);

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -142,8 +141,6 @@ namespace DSPRE.HgEngine
         private static string FullPath(Source source) =>
             Path.Combine(HgEngineProject.RepoRootWindows, source.RelPath.Replace('/', Path.DirectorySeparatorChar));
 
-        private static readonly Regex EntryStart = new(@"\[\s*([A-Za-z_][A-Za-z0-9_]*|\d+)\s*\]\s*=\s*\{", RegexOptions.Compiled);
-
         // One pass over the file. A file may spell an entry with any alias of its id, so each designator is
         // resolved to its value; the first entry for an id wins, as it does for the compiler's designated init.
         private static bool TryLoad(Source source, out string text, out Dictionary<int, (string Designator, int Open, int Close)> byId, out string error)
@@ -157,18 +154,9 @@ namespace DSPRE.HgEngine
 
             text = HgEngineFileCache.GetText(full);
             byId = new Dictionary<int, (string, int, int)>();
-            int from = 0;
-            while (true)
-            {
-                Match m = EntryStart.Match(text, from);
-                if (!m.Success) break;
-                int open = m.Index + m.Length - 1;
-                if (!BraceScanner.TryFindMatchingBrace(text, open, out int close)) break;
-                string designator = m.Groups[1].Value;
-                if (int.TryParse(designator, out int id) || symbols.TryGetValue(designator, out id))
-                    byId.TryAdd(id, (designator, open, close));
-                from = close + 1;
-            }
+            foreach (CEntry entry in CSourceFile.For(text).OuterEntries)
+                if (int.TryParse(entry.Name, out int id) || symbols.TryGetValue(entry.Name, out id))
+                    byId.TryAdd(id, (entry.Name, entry.Open, entry.Close));
             return true;
         }
 

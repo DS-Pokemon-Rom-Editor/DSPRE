@@ -418,19 +418,26 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _currentIsDouble = block.TryGetSymbol(new[] { data, FieldPathSegment.Field("battleType") }, TrainerDataHeader, out int battleType) && battleType != 0;
 
             int number = 0;
-            foreach (HgEngineSourceBlock msg in block.GetArrayElements(new[] { FieldPathSegment.Field("text") }))
+            foreach ((string token, int value, string text) in HgeMessages(block))
             {
                 number++;
+                if (text == null) _hgeLoadError ??= $"Message {number} of trainer {trainerId} has no text that can be read.";
+                _hgeCurrent.Add(new HgeMessage { Token = token, Value = value, Text = text ?? "" });
+            }
+        }
+
+        /// <summary>A trainer's `.text` array. Text is null for a message that can't be read.</summary>
+        public static List<(string Token, int Trigger, string Text)> HgeMessages(HgEngineSourceBlock block)
+        {
+            List<(string, int, string)> messages = new List<(string, int, string)>();
+            foreach (HgEngineSourceBlock msg in block.GetArrayElements(new[] { FieldPathSegment.Field("text") }))
+            {
                 string token = msg.TryGetRaw(new[] { FieldPathSegment.Field("type") }, out string raw) ? raw : null;
                 // C leaves a missing .type at 0.
                 int value = token == null ? 0 : HgEngineSourceBlock.TryResolveToken(token, TrainerDataHeader, out int resolved) ? resolved : -1;
-                if (!msg.TryGetString(new[] { FieldPathSegment.Field("text") }, out string text))
-                {
-                    _hgeLoadError ??= $"Message {number} of trainer {trainerId} has no text that can be read.";
-                    text = "";
-                }
-                _hgeCurrent.Add(new HgeMessage { Token = token, Value = value, Text = text });
+                messages.Add((token, value, msg.TryGetString(new[] { FieldPathSegment.Field("text") }, out string text) ? text : null));
             }
+            return messages;
         }
 
         private void RefreshEntries(bool keepSelection = true)
@@ -633,6 +640,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             }
 
             ReadHgeTextOrder();
+            // An open Trainer editor shows these lines.
+            TextArchive.RaiseSaved(this, TrainerMessageTextNumber);
             _undo?.MarkSaved();
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);

@@ -21,8 +21,8 @@ namespace DSPRE
             : VanillaMachineCount + (PlatPatches.Tms()?.Count ?? 0);
 
         /// <summary>
-        /// An hg-engine folder's machines, which its own src/item.c defines and its code reads instead of the ARM9
-        /// table; null on any other project. An unreadable table is an empty list, so nothing falls back to ARM9.
+        /// On hg-engine the machines come from its source, which the game reads instead of the ARM9 table. Null on any
+        /// other project. An unreadable table is an empty list, so nothing falls back to ARM9.
         /// </summary>
         private static System.Collections.Generic.List<HgEngine.HgEngineMachineMoves.Machine> SourceMachines()
         {

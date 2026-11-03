@@ -875,6 +875,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
                         : "Compile successful with " + Plural.Of(diagnostics, "warning") + ": " + summary;
                     if (result.KeptBinaries.Count > 0)
                         await DialogHelper.ShowInfoAsync(KeptBinariesMessage(result.KeptBinaries), "Compile");
+                    if (result.HgEngineOwnedEdits.Count > 0)
+                        await DialogHelper.ShowInfoAsync(OwnedEditsMessage(result.HgEngineOwnedEdits), "Compile");
                 }
                 else
                 {
@@ -1160,14 +1162,22 @@ namespace DSPRE.Avalonia.ViewModels.Text
         private static string KeptBinariesNote(List<int> kept)
             => (kept.Count == 1 ? "Script " : "Scripts ") + string.Join(", ", kept.Select(i => i.ToString("D4"))) + " keep the game's bytes";
 
+        private static string OwnedEditsMessage(List<int> ids)
+        {
+            string list = string.Join(", ", ids.Select(i => i.ToString("D4")));
+            return ids.Count == 1
+                ? $"hg-engine builds script {list} from its own source, so the edit to it wasn't compiled in. Edit it in the hg-engine checkout."
+                : $"hg-engine builds scripts {list} from its own source, so the edits to them weren't compiled in. Edit them in the hg-engine checkout.";
+        }
+
         private static string KeptBinariesMessage(List<int> kept)
         {
             string ids = string.Join(", ", kept.Select(i => i.ToString("D4")));
             return kept.Count == 1
                 ? $"Rotom builds script {ids} differently from the game, although nobody edited it, so the game's version was kept. " +
-                  "Its source doesn't build back to those bytes, so editing it here would change more than your edit."
+                  "Its source doesn't build back to those bytes, so editing it here would change more than the edit."
                 : $"Rotom builds scripts {ids} differently from the game, although nobody edited them, so the game's versions were kept. " +
-                  "Their sources don't build back to those bytes, so editing them here would change more than your edit.";
+                  "Their sources don't build back to those bytes, so editing them here would change more than the edit.";
         }
 
         // Binaries with no source after a decompile are the ones rotom could not read. An empty file

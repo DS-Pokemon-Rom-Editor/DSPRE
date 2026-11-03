@@ -34,8 +34,8 @@ namespace DSPRE.HgEngine
             {
                 if (table == null) return false;
                 CInitItem last = table.Init.Items.LastOrDefault();
-                string indent = last != null ? HgEngineSwarms.Indent(text, last.Start) : "    ";
-                int at = HgEngineSwarms.LineStart(text, table.Init.Close);
+                string indent = last != null ? HgEngineSourcePatcher.Indent(text, last.Start) : "    ";
+                int at = HgEngineSourcePatcher.LineStart(text, table.Init.Close);
                 // An entry before the brace needs the previous one to end in a comma.
                 string before = text.Substring(0, at);
                 if (last != null && text.IndexOf(',', last.End, at - last.End) < 0)

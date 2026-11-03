@@ -55,8 +55,8 @@ namespace DSPRE.HgEngine
                     if (parts.Count < 2) continue;
                     dest.Add(new SafariZoneEncounter
                     {
-                        PokemonID = (ushort)ResolveSpecies(parts[0], species, ref unreadable),
-                        Level = (byte)ResolveToken(parts[1], null),
+                        PokemonID = (ushort)HgEngineTrainerSource.SpeciesWord(parts[0], species, ref unreadable),
+                        Level = (byte)HgEngineSymbolTable.ValueOrZero(parts[1], null),
                     });
                 }
             }
@@ -207,23 +207,9 @@ namespace DSPRE.HgEngine
         {
             List<string> parts = HgEngineSourcePatcher.SplitArrayValue(block.Trim());
             if (parts.Count < 2) return new SafariZoneObjectRequirement();
-            return new SafariZoneObjectRequirement((byte)ResolveToken(parts[0], objectTypes), (byte)ResolveToken(parts[1], null));
+            return new SafariZoneObjectRequirement((byte)HgEngineSymbolTable.ValueOrZero(parts[0], objectTypes), (byte)HgEngineSymbolTable.ValueOrZero(parts[1], null));
         }
 
-        // A slot can name a form: MON_WITH_FORM(SPECIES_X, n) or SPECIES_X | (n << 11).
-        private static int ResolveSpecies(string token, HgEngineSymbolTable species, ref string unreadable)
-        {
-            if (HgEngineEvolutions.ResolveTarget(token.Trim(), species, out int id, out int form)) return id | (form << HgEngineTrainerSource.FormShift);
-            unreadable ??= token.Trim();
-            return 0;
-        }
-
-        private static int ResolveToken(string token, HgEngineSymbolTable table)
-        {
-            token = token.Trim();
-            if (int.TryParse(token, out int v)) return v;
-            return table != null && table.TryGetValue(token, out int tv) ? tv : 0;
-        }
 
         private static string FieldNameFor(RodType t) => t switch
         {

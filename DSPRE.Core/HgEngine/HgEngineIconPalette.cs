@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -15,7 +14,7 @@ namespace DSPRE.HgEngine
         public const string SourceFile = "data/IconPaletteTable.c";
 
         private const string SourceRelPath = SourceFile;
-        private static readonly Regex EntryPattern = new(@"\[\s*(SPECIES_\w+|\d+)\s*\]\s*=\s*(\d+)\s*,");
+        private const string TableName = "gIconPalTable";
 
         public static bool TryGetPaletteId(int speciesId, out int paletteId)
         {
@@ -24,10 +23,8 @@ namespace DSPRE.HgEngine
             string text = TryReadSource(out _);
             if (text == null) return false;
 
-            Group value = FindValue(text, speciesId, DesignatorFor(speciesId));
-            if (value == null) return false;
-            paletteId = int.Parse(value.Value);
-            return true;
+            CInitItem row = FindRow(text, speciesId, DesignatorFor(speciesId));
+            return row != null && int.TryParse(row.ValueText(text).Trim(), out paletteId);
         }
 
         public static bool TrySetPaletteId(int speciesId, int paletteId, out string error)
@@ -44,25 +41,27 @@ namespace DSPRE.HgEngine
             return true;
         }
 
-        /// <summary>The value of the row named <paramref name="designator"/>, or failing that the row
-        /// designated by the number <paramref name="speciesId"/>.</summary>
-        internal static Group FindValue(string text, int speciesId, string designator)
+        /// <summary>The row named <paramref name="designator"/>, or failing that the row designated by the number
+        /// <paramref name="speciesId"/>.</summary>
+        private static CInitItem FindRow(string text, int speciesId, string designator)
         {
-            Group numeric = null;
-            foreach (Match m in EntryPattern.Matches(text))
+            CDeclaration table = CSourceFile.For(text).Find(TableName);
+            if (table == null) return null;
+            CInitItem numeric = null;
+            foreach (CInitItem row in table.Init.Items)
             {
-                string d = m.Groups[1].Value;
-                if (designator != null && d == designator) return m.Groups[2];
-                if (numeric == null && int.TryParse(d, out int n) && n == speciesId) numeric = m.Groups[2];
+                string d = row.IndexText?.Trim();
+                if (designator != null && d == designator) return row;
+                if (numeric == null && int.TryParse(d, out int n) && n == speciesId) numeric = row;
             }
             return numeric;
         }
 
-        internal static bool TryReplaceValue(ref string text, int speciesId, string designator, int paletteId)
+        private static bool TryReplaceValue(ref string text, int speciesId, string designator, int paletteId)
         {
-            Group value = FindValue(text, speciesId, designator);
-            if (value == null) return false;
-            text = string.Concat(text.AsSpan(0, value.Index), paletteId.ToString(), text.AsSpan(value.Index + value.Length));
+            CInitItem row = FindRow(text, speciesId, designator);
+            if (row == null) return false;
+            text = string.Concat(text.AsSpan(0, row.ValueStart), paletteId.ToString(), text.AsSpan(row.ValueEnd));
             return true;
         }
 

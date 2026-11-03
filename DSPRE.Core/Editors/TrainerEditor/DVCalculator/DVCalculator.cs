@@ -217,6 +217,9 @@ namespace DSPRE
 
             public static bool GetTrainerClassGender(int trainerClassID)
             {
+                if (HgEngine.HgEngineProject.IsActive && HgEngine.HgEngineTrainerClassTables.TryGetGender(trainerClassID, out int source))
+                    return source != 1;
+
                 // The trainer class metadata patch (PR #272) reads the gender from its own record instead.
                 TrainerClassMetadataDetectionState metadata = ROMFiles.TrainerClassMetadataStore.DetectCurrentRom(out string metadataDetail);
                 if (metadata == ROMFiles.TrainerClassMetadataDetectionState.SchemaV1

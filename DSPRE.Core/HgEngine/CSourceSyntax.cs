@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -151,20 +150,35 @@ namespace DSPRE.HgEngine
     /// <summary>Evaluates the preprocessor conditions an element sits under, the way the compiler would.</summary>
     public static class CConditions
     {
-        private static readonly System.Text.RegularExpressions.Regex Defined =
-            new(@"\bdefined\s*(?:\(\s*([A-Za-z_]\w*)\s*\)|([A-Za-z_]\w*))");
-
         /// <summary>True when every condition holds, false when one doesn't, null when one can't be evaluated.
         /// An undefined name is 0, as in C.</summary>
         public static bool? Evaluate(IEnumerable<string> conditions, Func<string, bool> isDefined, Func<string, int?> value)
         {
             foreach (string condition in conditions)
             {
-                string expr = Defined.Replace(condition, m => isDefined(m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value) ? "1" : "0");
-                if (!HgEngineSourceExpression.TryEvaluate(expr, n => value(n) ?? 0, out int result)) return null;
+                if (!HgEngineSourceExpression.TryEvaluate(ResolveDefined(condition, isDefined), n => value(n) ?? 0, out int result)) return null;
                 if (result == 0) return false;
             }
             return true;
+        }
+
+        /// <summary>The condition with each <c>defined X</c> and <c>defined(X)</c> replaced by 1 or 0.</summary>
+        public static string ResolveDefined(string condition, Func<string, bool> isDefined)
+        {
+            List<CToken> tokens = CLexer.Tokenize(condition);
+            StringBuilder sb = new StringBuilder();
+            for (int t = 0; t < tokens.Count; t++)
+            {
+                if (sb.Length > 0) sb.Append(' ');
+                if (!tokens[t].Is(condition, "defined")) { sb.Append(tokens[t].Text(condition)); continue; }
+                int name = t + 1;
+                bool bracketed = name < tokens.Count && tokens[name].Is(condition, "(");
+                if (bracketed) name++;
+                if (name >= tokens.Count) { sb.Append('0'); break; }
+                sb.Append(isDefined(tokens[name].Text(condition)) ? '1' : '0');
+                t = bracketed ? name + 1 : name;
+            }
+            return sb.ToString();
         }
     }
 
@@ -182,12 +196,8 @@ namespace DSPRE.HgEngine
             string text = HgEngineFileCache.GetText(path);
             if (ReferenceEquals(_cache.Text, text)) return _cache.Names;
             HashSet<string> names = new HashSet<string>(StringComparer.Ordinal);
-            foreach (CToken t in CLexer.Tokenize(text))
-            {
-                if (t.Kind != CTokenKind.Directive) continue;
-                Match m = System.Text.RegularExpressions.Regex.Match(t.Text(text), @"^#\s*define\s+([A-Za-z_]\w*)");
-                if (m.Success) names.Add(m.Groups[1].Value);
-            }
+            foreach (CDirective d in CSourceFile.For(text).Directives)
+                if (d.Keyword == "define" && d.Name != null) names.Add(d.Name);
             _cache = (text, names);
             return names;
         }
@@ -240,6 +250,17 @@ namespace DSPRE.HgEngine
 
         /// <summary>The element whose first designator is <c>.name</c>.</summary>
         public CInitItem Field(string name) => Items.FirstOrDefault(i => i.FieldName == name);
+
+        /// <summary>The first element called <c>.name</c> at any depth, in file order.</summary>
+        public CInitItem FindField(string name)
+        {
+            foreach (CInitItem item in Items)
+            {
+                if (item.FieldName == name) return item;
+                if (item.List?.FindField(name) is CInitItem found) return found;
+            }
+            return null;
+        }
     }
 
     /// <summary>A file-scope declaration with a brace initializer: <c>const T name[...] = { ... };</c>.</summary>
@@ -256,6 +277,78 @@ namespace DSPRE.HgEngine
         public List<string> Conditions { get; } = new();
     }
 
+    /// <summary>A <c>[name] = { ... }</c> element. Close is -1 when its brace has no match.</summary>
+    public readonly record struct CEntry(string Name, int Open, int Close);
+
+    /// <summary>A preprocessor line: its keyword and what follows it, continuation lines joined.</summary>
+    public sealed class CDirective
+    {
+        public string Keyword { get; private init; }
+        public string Rest { get; private init; }
+        public int Start { get; private init; }
+        public int End { get; private init; }
+        /// <summary>The name a #define, #undef, #ifdef or #ifndef is about.</summary>
+        public string Name { get; private init; }
+        /// <summary>A function-like #define's parameters; null on every other directive.</summary>
+        public List<string> Parameters { get; private init; }
+        /// <summary>A #define's value; empty when it has none.</summary>
+        public string Body { get; private init; }
+        public int BodyStart { get; private init; }
+        public int BodyEnd { get; private init; }
+
+        public static CDirective Parse(string text, CToken directive)
+        {
+            List<CToken> tokens = CLexer.Tokenize(text, directive.Start + 1, directive.End);
+            while (tokens.Count > 0 && tokens[^1].Is(text, "\\")) tokens.RemoveAt(tokens.Count - 1);
+            string keyword = tokens.Count > 0 ? tokens[0].Text(text) : "";
+            int restAt = tokens.Count > 1 ? 1 : tokens.Count;
+            string name = tokens.Count > 1 && tokens[1].Kind == CTokenKind.Identifier ? tokens[1].Text(text) : null;
+
+            int body = 2;
+            List<string> parameters = null;
+            if (keyword == "define" && tokens.Count > 2 && tokens[2].Is(text, "(") && tokens[2].Start == tokens[1].End)
+            {
+                parameters = new List<string>();
+                int t = 3;
+                for (; t < tokens.Count && !tokens[t].Is(text, ")"); t++)
+                    if (tokens[t].Kind == CTokenKind.Identifier) parameters.Add(tokens[t].Text(text));
+                body = t + 1;
+            }
+            int bodyStart = body < tokens.Count ? tokens[body].Start : directive.End;
+            int bodyEnd = body < tokens.Count ? tokens[^1].End : directive.End;
+            return new CDirective
+            {
+                Keyword = keyword,
+                Rest = restAt < tokens.Count ? Joined(text, tokens[restAt].Start, tokens[^1].End) : "",
+                Start = directive.Start,
+                End = directive.End,
+                Name = name,
+                Parameters = parameters,
+                Body = keyword == "define" ? Joined(text, bodyStart, bodyEnd) : "",
+                BodyStart = bodyStart,
+                BodyEnd = bodyEnd,
+            };
+        }
+
+        private static string Joined(string text, int start, int end) =>
+            text.Substring(start, end - start).Replace("\\\r\n", " ").Replace("\\\n", " ").Trim();
+    }
+
+    /// <summary>One member of a struct: <c>u8 slowStart : 1;</c>. Bits is 0 when it isn't a bitfield.</summary>
+    public readonly record struct CMember(string Type, string Name, int Bits);
+
+    /// <summary>A struct definition. The tag and the typedef name both find it.</summary>
+    public sealed class CStruct
+    {
+        public List<string> Names { get; } = new();
+        public int Open { get; init; }
+        public int Close { get; init; }
+        public List<CMember> Members { get; } = new();
+    }
+
+    /// <summary>A call or macro use: where it sits and where each argument is.</summary>
+    public sealed record CCall(int Start, int End, List<(int Start, int End)> Args);
+
     /// <summary>Reads brace initializers and the declarations that own them from tokenized C.</summary>
     public sealed class CSourceFile
     {
@@ -263,6 +356,9 @@ namespace DSPRE.HgEngine
         public List<CToken> Tokens { get; }
         private readonly Dictionary<int, int> _tokenAt = new();
         private List<CDeclaration> _declarations;
+        private List<CEntry> _entries;
+        private List<CDirective> _directives;
+        private List<CStruct> _structs;
 
         public CSourceFile(string text) : this(text, 0, text?.Length ?? 0) { }
 
@@ -305,6 +401,210 @@ namespace DSPRE.HgEngine
                 else if (Tokens[t].Is(Text, c) && --depth == 0) return t;
             }
             return -1;
+        }
+
+        /// <summary>Every <c>[name] = {</c> in the code, nested ones included, in file order. This also finds a lone
+        /// entry cut from its table, which no declaration owns.</summary>
+        public IReadOnlyList<CEntry> Entries => _entries ??= FindEntries();
+
+        /// <summary>The entries not inside another entry's braces.</summary>
+        public IEnumerable<CEntry> OuterEntries
+        {
+            get
+            {
+                int lastClose = -1;
+                foreach (CEntry entry in Entries)
+                {
+                    if (entry.Open < lastClose || entry.Close < 0) continue;
+                    lastClose = entry.Close;
+                    yield return entry;
+                }
+            }
+        }
+
+        /// <summary>The first entry called <paramref name="name"/>.</summary>
+        public CEntry? FindEntry(string name)
+        {
+            foreach (CEntry entry in Entries)
+                if (entry.Name == name) return entry;
+            return null;
+        }
+
+        private List<CEntry> FindEntries()
+        {
+            List<CEntry> entries = new List<CEntry>();
+            for (int t = 0; t < Tokens.Count; t++)
+            {
+                if (!Is(t, "[")) continue;
+                // "name[N] = {" and "name[A][B] = {" declare an array. Only a designator opens "[".
+                if (t > 0 && (Tokens[t - 1].Kind == CTokenKind.Identifier || Is(t - 1, "]"))) continue;
+                int bracket = Match(t);
+                if (bracket < 0 || !Is(bracket + 1, "=") || !Is(bracket + 2, "{")) continue;
+                int brace = Match(bracket + 2);
+                string name = Text.Substring(Tokens[t].End, Tokens[bracket].Start - Tokens[t].End).Trim();
+                entries.Add(new CEntry(name, Tokens[bracket + 2].Start, brace < 0 ? -1 : Tokens[brace].Start));
+            }
+            return entries;
+        }
+
+        /// <summary>Every preprocessor line, in file order.</summary>
+        public IReadOnlyList<CDirective> Directives =>
+            _directives ??= Tokens.Where(t => t.Kind == CTokenKind.Directive).Select(t => CDirective.Parse(Text, t)).ToList();
+
+        /// <summary>The first #define of <paramref name="name"/>.</summary>
+        public CDirective FindDefine(string name) => Directives.FirstOrDefault(d => d.Keyword == "define" && d.Name == name);
+
+        /// <summary>The paths of the file's quoted #includes.</summary>
+        public IEnumerable<string> Includes => Directives.Where(d => d.Keyword == "include" && d.Rest.StartsWith('"')).Select(d => d.Rest.Trim('"'));
+
+        /// <summary>The quoted #includes and where each path starts, in file order.</summary>
+        public IEnumerable<(string Path, int Start)> IncludePaths
+        {
+            get
+            {
+                foreach (CDirective d in Directives)
+                    if (d.Keyword == "include" && d.Rest.StartsWith('"'))
+                        yield return (d.Rest.Trim('"'), Text.IndexOf('"', d.Start) + 1);
+            }
+        }
+
+        /// <summary>Every enum member's name, in any #if branch.</summary>
+        public IEnumerable<string> EnumMembers
+        {
+            get
+            {
+                for (int t = 0; t < Tokens.Count; t++)
+                {
+                    if (Tokens[t].Kind != CTokenKind.Identifier || !Tokens[t].Is(Text, "enum")) continue;
+                    int open = t + 1;
+                    if (open < Tokens.Count && Tokens[open].Kind == CTokenKind.Identifier) open++;
+                    if (!Is(open, "{")) continue;
+                    int close = Match(open);
+                    if (close < 0) continue;
+                    bool atName = true;
+                    int depth = 0;
+                    for (int k = open + 1; k < close; k++)
+                    {
+                        if (Is(k, "(") || Is(k, "[")) depth++;
+                        else if (Is(k, ")") || Is(k, "]")) depth--;
+                        else if (Is(k, ",") && depth == 0) atName = true;
+                        else if (atName && Tokens[k].Kind == CTokenKind.Identifier) { atName = false; yield return Tokens[k].Text(Text); }
+                    }
+                    t = close;
+                }
+            }
+        }
+
+        /// <summary>Every struct definition at file scope, in file order.</summary>
+        public IReadOnlyList<CStruct> Structs => _structs ??= FindStructs();
+
+        public CStruct FindStruct(string name) => Structs.FirstOrDefault(s => s.Names.Contains(name));
+
+        private List<CStruct> FindStructs()
+        {
+            List<CStruct> structs = new List<CStruct>();
+            for (int t = 0; t < Tokens.Count; t++)
+            {
+                if (Tokens[t].Kind != CTokenKind.Identifier || !Tokens[t].Is(Text, "struct")) continue;
+                int open = t + 1;
+                while (open < Tokens.Count && Tokens[open].Kind == CTokenKind.Identifier) open++;
+                if (!Is(open, "{")) continue;
+                int close = Match(open);
+                if (close < 0) continue;
+
+                CStruct found = new CStruct { Open = Tokens[open].Start, Close = Tokens[close].Start };
+                for (int n = t + 1; n < open; n++) found.Names.Add(Tokens[n].Text(Text));
+                if (close + 1 < Tokens.Count && Tokens[close + 1].Kind == CTokenKind.Identifier) found.Names.Add(Tokens[close + 1].Text(Text));
+                ReadMembers(found, open + 1, close);
+                structs.Add(found);
+                t = close;
+            }
+            return structs;
+        }
+
+        private void ReadMembers(CStruct target, int from, int close)
+        {
+            int start = from, depth = 0;
+            for (int t = from; t < close; t++)
+            {
+                if (Is(t, "{")) depth++;
+                else if (Is(t, "}")) depth--;
+                else if (Is(t, ";") && depth == 0)
+                {
+                    ReadMember(target, start, t);
+                    start = t + 1;
+                }
+            }
+        }
+
+        // "u8 a : 1, b : 1": the type runs to the first name, and each comma-separated declarator shares it.
+        private void ReadMember(CStruct target, int start, int end)
+        {
+            string type = null;
+            int declarator = start;
+            for (int t = start; t <= end; t++)
+            {
+                if (t < end && !Is(t, ",")) continue;
+                int name = -1, bits = 0;
+                for (int k = declarator; k < t; k++)
+                {
+                    if (Is(k, ":")) { if (k + 1 < t) int.TryParse(Tokens[k + 1].Text(Text), out bits); break; }
+                    if (Is(k, "[")) break;
+                    if (Tokens[k].Kind == CTokenKind.Identifier) name = k;
+                }
+                if (name >= 0)
+                {
+                    type ??= name > start ? Normalize(Text.Substring(Tokens[start].Start, Tokens[name - 1].End - Tokens[start].Start)) : "";
+                    target.Members.Add(new CMember(type, Tokens[name].Text(Text), bits));
+                }
+                declarator = t + 1;
+            }
+        }
+
+        /// <summary>The braces of <paramref name="name"/>'s body, or null.</summary>
+        public (int Open, int Close)? FunctionBody(string name)
+        {
+            for (int t = 0; t + 1 < Tokens.Count; t++)
+            {
+                if (Tokens[t].Kind != CTokenKind.Identifier || !Tokens[t].Is(Text, name) || !Is(t + 1, "(")) continue;
+                int parameters = Match(t + 1);
+                if (parameters < 0 || !Is(parameters + 1, "{")) continue;
+                int close = Match(parameters + 1);
+                if (close >= 0) return (Tokens[parameters + 1].Start, Tokens[close].Start);
+            }
+            return null;
+        }
+
+        /// <summary>Every use of <paramref name="name"/> followed by an argument list, in file order.</summary>
+        public List<CCall> Calls(string name)
+        {
+            List<CCall> calls = new List<CCall>();
+            for (int t = 0; t + 1 < Tokens.Count; t++)
+            {
+                if (Tokens[t].Kind != CTokenKind.Identifier || !Tokens[t].Is(Text, name) || !Is(t + 1, "(")) continue;
+                int close = Match(t + 1);
+                if (close < 0) continue;
+                List<(int Start, int End)> args = new List<(int Start, int End)>();
+                int first = t + 2, depth = 0;
+                for (int k = first; k <= close; k++)
+                {
+                    if (k < close && (Is(k, "(") || Is(k, "[") || Is(k, "{"))) depth++;
+                    else if (k < close && (Is(k, ")") || Is(k, "]") || Is(k, "}"))) depth--;
+                    if (k < close && (depth != 0 || !Is(k, ","))) continue;
+                    if (k > first) args.Add((Tokens[first].Start, Tokens[k - 1].End));
+                    first = k + 1;
+                }
+                calls.Add(new CCall(Tokens[t].Start, Tokens[close].End, args));
+            }
+            return calls;
+        }
+
+        /// <summary>The name in a <c>.name =</c> opening the range, or null when it opens with anything else.</summary>
+        public static string LeadingField(string text, int start, int end)
+        {
+            List<CToken> tokens = CLexer.Tokenize(text, start, Math.Min(end, start + 256));
+            bool named = tokens.Count >= 3 && tokens[0].Is(text, ".") && tokens[1].Kind == CTokenKind.Identifier && tokens[2].Is(text, "=");
+            return named ? tokens[1].Text(text) : null;
         }
 
         /// <summary>Every file-scope declaration with a brace initializer, in file order.</summary>

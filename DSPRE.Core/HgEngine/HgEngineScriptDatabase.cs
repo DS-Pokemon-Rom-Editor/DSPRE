@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -17,28 +16,37 @@ namespace DSPRE.HgEngine
     /// </summary>
     public static class HgEngineScriptDatabase
     {
-        private static readonly Regex ConfigFlag = new(@"^\s*#define\s+(\w*FLAG\w*)\s+(0x[0-9A-Fa-f]+|\d+)\b", RegexOptions.Multiline);
-        private static readonly Regex EquFlag = new(@"^\s*\.equ\s+(\w+)\s*,\s*(0x[0-9A-Fa-f]+|\d+)\b", RegexOptions.Multiline);
 
         /// <summary>Flag names the checkout defines, by number: config.h first, then asm/include/flags.inc.</summary>
         public static Dictionary<int, string> CheckoutFlags()
         {
             Dictionary<int, string> flags = new Dictionary<int, string>();
             if (!HgEngineProject.IsActive) return flags;
-            void Read(string rel, Regex pattern)
+            string ReadFile(string rel)
             {
                 string path = Path.Combine(HgEngineProject.RepoRootWindows, rel.Replace('/', Path.DirectorySeparatorChar));
-                if (!File.Exists(path)) return;
-                foreach (Match m in pattern.Matches(File.ReadAllText(path)))
-                {
-                    string name = m.Groups[1].Value;
-                    if (name.StartsWith("NUM_", StringComparison.Ordinal) || name.EndsWith("_BASE", StringComparison.Ordinal)) continue;
-                    int value = Convert.ToInt32(m.Groups[2].Value, m.Groups[2].Value.StartsWith("0x") ? 16 : 10);
-                    flags.TryAdd(value, name);
-                }
+                return File.Exists(path) ? File.ReadAllText(path) : null;
             }
-            Read("include/config.h", ConfigFlag);
-            Read("asm/include/flags.inc", EquFlag);
+            void Add(string name, string number)
+            {
+                if (name.StartsWith("NUM_", StringComparison.Ordinal) || name.EndsWith("_BASE", StringComparison.Ordinal)) return;
+                flags.TryAdd(Convert.ToInt32(number, number.StartsWith("0x") ? 16 : 10), name);
+            }
+
+            if (ReadFile("include/config.h") is string config)
+                foreach (CDirective d in CSourceFile.For(config).Directives)
+                    if (d.Keyword == "define" && d.Name?.Contains("FLAG") == true && d.Parameters == null
+                        && CLexer.Tokenize(d.Body) is [{ Kind: CTokenKind.Number } literal])
+                        Add(d.Name, literal.Text(d.Body));
+            if (ReadFile("asm/include/flags.inc") is string asm)
+                foreach (string line in asm.Split('\n'))
+                {
+                    // .equ NAME, 0x10
+                    string[] words = HgEngineMakeFile.Words(line.Replace(",", " "));
+                    if (words.Length >= 3 && words[0] == ".equ" && words[1].All(HgEngineMakeFile.IsNameChar)
+                        && CLexer.Tokenize(words[2]) is [{ Kind: CTokenKind.Number }] && words[2].All(char.IsAsciiLetterOrDigit))
+                        Add(words[1], words[2]);
+                }
             return flags;
         }
 

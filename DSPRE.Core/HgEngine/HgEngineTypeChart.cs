@@ -82,11 +82,11 @@ namespace DSPRE.HgEngine
             if (table.Marker.Any(m => m == null)) { error = $"{TableName} in {SourceRelPath} doesn't have its ring target, foresight and end rows."; return false; }
 
             // New rows go right before the next part's marker, indented like it.
-            string indent = HgEngineSwarms.Indent(text, table.Marker[0].Start);
+            string indent = HgEngineSourcePatcher.Indent(text, table.Marker[0].Start);
             for (int s = 0; s < 3; s++)
                 if (add[(Section)s].Count > 0)
                 {
-                    int at = HgEngineSwarms.LineStart(text, table.Marker[s].Start);
+                    int at = HgEngineSourcePatcher.LineStart(text, table.Marker[s].Start);
                     edits.Add((at, at, string.Concat(add[(Section)s].Select(e => indent + e + "\n"))));
                 }
             foreach ((int Start, int End, string Text) e in edits.OrderByDescending(e => e.Start).ThenByDescending(e => e.End)) text = text.Substring(0, e.Start) + e.Text + text.Substring(e.End);
@@ -110,7 +110,7 @@ namespace DSPRE.HgEngine
         // A row alone on its line goes with its line; otherwise just the row and its comma.
         private static (int, int, string) Removal(string text, CInitItem item)
         {
-            int lineStart = HgEngineSwarms.LineStart(text, item.Start), lineEnd = HgEngineSwarms.LineEnd(text, item.End);
+            int lineStart = HgEngineSourcePatcher.LineStart(text, item.Start), lineEnd = HgEngineSourcePatcher.LineEnd(text, item.End);
             int end = item.End;
             while (end < text.Length && (text[end] == ' ' || text[end] == '\t')) end++;
             if (end < text.Length && text[end] == ',') end++;

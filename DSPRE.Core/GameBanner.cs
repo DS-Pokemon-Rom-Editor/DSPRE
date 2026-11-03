@@ -82,7 +82,15 @@ namespace DSPRE
         public static string DsRomBannerDir => RomInfo.BannerPath;   // an hg-engine base project keeps it in base_dsrom/
         public static string DsRomBitmapPath => Path.Combine(DsRomBannerDir, "bitmap.png");
         public static string DsRomPalettePath => Path.Combine(DsRomBannerDir, "palette.png");
-        public static string DsRomYamlPath => Path.Combine(DsRomBannerDir, "banner.yaml");
+        public static string DsRomYamlPath => CheckoutYamlPath() ?? Path.Combine(DsRomBannerDir, "banner.yaml");
+
+        // hg-engine's build copies the checkout's own banner.yaml over base_dsrom's before it packs.
+        private static string CheckoutYamlPath()
+        {
+            if (!HgEngine.HgEngineProject.IsActive) return null;
+            string path = Path.Combine(HgEngine.HgEngineProject.RepoPathUnc, "banner.yaml");
+            return File.Exists(path) ? path : null;
+        }
 
         /// <summary>Matches ds-rom's banner.yaml schema; <c>title</c> keys are language names
         /// ("japanese", "english", …) and values are the 2-3 line menu text.</summary>

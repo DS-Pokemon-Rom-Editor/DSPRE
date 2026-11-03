@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -54,11 +53,11 @@ namespace DSPRE.HgEngine
             {
                 string raw = item.ValueText(text).Trim();
                 if (item.IsConditional) { complete = false; continue; }
-                Match withReversion = Regex.Match(raw, @"^NEEDS_REVERSION\s*\|\s*(SPECIES_\w+)$");
-                if (withReversion.Success) { slots.Add(new FormSlot(true, withReversion.Groups[1].Value)); continue; }
-                Match plain = Regex.Match(raw, @"^(SPECIES_\w+)$");
-                if (plain.Success) { slots.Add(new FormSlot(false, plain.Groups[1].Value)); continue; }
-                complete = false;   // unrecognized: skipped, never guessed
+                List<string> tokens = CLexer.Tokenize(raw).Select(t => t.Text(raw)).ToList();
+                bool reverts = tokens.Count == 3 && tokens[0] == "NEEDS_REVERSION" && tokens[1] == "|";
+                string form = reverts ? tokens[2] : tokens.Count == 1 ? tokens[0] : null;
+                if (form?.StartsWith("SPECIES_", StringComparison.Ordinal) == true) slots.Add(new FormSlot(reverts, form));
+                else complete = false;   // unrecognized: skipped, never guessed
             }
             return slots;
         }
@@ -129,7 +128,7 @@ namespace DSPRE.HgEngine
             }
             else
             {
-                int insertAt = HgEngineSwarms.LineStart(text, table.Init.Close);
+                int insertAt = HgEngineSourcePatcher.LineStart(text, table.Init.Close);
                 text = text.Insert(insertAt, $"    [{designator}] = {{{body}\n    }},\n");
             }
 
@@ -169,7 +168,7 @@ namespace DSPRE.HgEngine
                         text = text.Substring(0, entry.ValueStart) + baseDesignator + text.Substring(entry.ValueEnd);
                     continue;
                 }
-                text = text.Insert(HgEngineSwarms.LineStart(text, table.Init.Close), $"    [{slot.SpeciesSymbol} - SPECIES_MEGA_START] = {baseDesignator},\n");
+                text = text.Insert(HgEngineSourcePatcher.LineStart(text, table.Init.Close), $"    [{slot.SpeciesSymbol} - SPECIES_MEGA_START] = {baseDesignator},\n");
             }
             if (text == original) return true;
             species.TryGetValue(baseDesignator, out int baseId);

@@ -1,0 +1,43 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+        x:Class="DSPRE.Avalonia.Views.Pokemon.HgEngineTablesView"
+        x:DataType="vm:HgEngineTablesViewModel">
+
+  <Design.DataContext>
+    <vm:HgEngineTablesViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <controls:EditorToolbar>
+        <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
+        <Button Content="Add" controls:Icon.Key="addIcon" Click="Add_Click" IsVisible="{Binding IsList}"/>
+    </controls:EditorToolbar>
+    <Border DockPanel.Dock="Bottom" Padding="8,6" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Editor.Border}">
+      <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap"/>
+    </Border>
+    <Grid ColumnDefinitions="220,8,*" Margin="8">
+      <ListBox x:Name="TableList" Grid.Column="0" ItemsSource="{Binding Tables}" SelectedIndex="{Binding SelectedTable}"/>
+      <ScrollViewer x:Name="RowList" Grid.Column="2">
+        <ItemsControl ItemsSource="{Binding Rows}">
+          <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Spacing="4"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:HgEngineTablesViewModel+TableRow">
+              <Grid ColumnDefinitions="200,Auto,*,Auto" ColumnSpacing="8">
+                <TextBlock Text="{Binding KeyText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                <Image Grid.Column="1" Width="32" Height="32" Source="{Binding Icon}" IsVisible="{Binding HasIcon}"/>
+                <ComboBox Grid.Column="2" ItemsSource="{Binding Choices}" SelectedIndex="{Binding Index}" HorizontalAlignment="Stretch"
+                          IsEnabled="{Binding Editable}" ToolTip.Tip="{Binding Tip}" ToolTip.ShowOnDisabled="True" MaxDropDownHeight="300"/>
+                <Button Grid.Column="3" controls:Icon.Key="Cross" Click="Remove_Click" ToolTip.Tip="Remove"
+                        IsVisible="{Binding $parent[ItemsControl].((vm:HgEngineTablesViewModel)DataContext).IsList}" IsEnabled="{Binding Editable}"/>
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Grid>
+  </DockPanel>
+</UserControl>

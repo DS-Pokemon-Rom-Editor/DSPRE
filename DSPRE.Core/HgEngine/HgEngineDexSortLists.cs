@@ -20,7 +20,10 @@ namespace DSPRE.HgEngine
         public string Text { get; private set; }
         public List<string> Names { get; } = new();
         public Dictionary<string, List<string>> Lists { get; } = new();
+        /// <summary>Each sPokedexSortLists row's list, by its index there. Rows the game leaves empty are missing.</summary>
+        public Dictionary<int, string> ByTableIndex { get; } = new();
         private readonly Dictionary<string, CDeclaration> _declarations = new();
+        private const string Table = "sPokedexSortLists";
 
         public static bool Exists => HgEngineProject.IsActive && File.Exists(FilePath);
 
@@ -29,6 +32,16 @@ namespace DSPRE.HgEngine
             lists = new HgEngineDexSortLists { Text = text };
             foreach (CDeclaration decl in CSourceFile.For(text).Declarations)
             {
+                if (decl.Name == Table && decl.Init != null)
+                {
+                    foreach (CInitItem row in decl.Init.Items)
+                    {
+                        if (row.Position < 0 || row.List == null || row.List.Items.Count == 0) continue;
+                        string first = row.List.Items[0].ValueText(text).Trim();
+                        if (first.StartsWith(Prefix, StringComparison.Ordinal)) lists.ByTableIndex[row.Position] = first.Substring(Prefix.Length);
+                    }
+                    continue;
+                }
                 if (!decl.Name.StartsWith(Prefix, StringComparison.Ordinal) || decl.Dimensions.Count != 1) continue;
                 if (decl.Init.Items.Any(i => i.IsConditional || i.Designators.Count > 0 || i.List != null))
                 {

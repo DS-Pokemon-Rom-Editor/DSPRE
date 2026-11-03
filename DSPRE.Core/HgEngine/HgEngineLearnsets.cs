@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using NarcAPI;
 
 namespace DSPRE.HgEngine
@@ -52,17 +51,18 @@ namespace DSPRE.HgEngine
             }
         }
 
-        // The same per-line pattern build_learnsets.py matches.
-        private static readonly Regex FormMapLine = new(@"\[(SPECIES_\w+)\s*-\s*SPECIES_MEGA_START\]\s*=\s*(SPECIES_\w+),");
-
+        /// <summary>FormToSpeciesMapping.c's <c>[SPECIES_FORM - SPECIES_MEGA_START] = SPECIES_BASE</c> rows, by name.</summary>
         internal static Dictionary<string, string> ParseFormToBase(string text)
         {
+            const string offset = "- SPECIES_MEGA_START";
             Dictionary<string, string> map = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (string line in text.Split('\n'))
-            {
-                Match m = FormMapLine.Match(line);
-                if (m.Success) map[m.Groups[1].Value] = m.Groups[2].Value;
-            }
+            foreach (CDeclaration table in CSourceFile.For(text).Declarations)
+                foreach (CInitItem row in table.Init.Items)
+                {
+                    string index = CSourceFile.Normalize(row.IndexText ?? "");
+                    if (index.EndsWith(offset, StringComparison.Ordinal))
+                        map[index.Substring(0, index.Length - offset.Length).Trim()] = row.ValueText(text).Trim();
+                }
             return map;
         }
 
@@ -71,11 +71,16 @@ namespace DSPRE.HgEngine
             IReadOnlyDictionary<string, string> formToBase, out List<(int level, int move)> list, out string error)
         {
             list = new List<(int level, int move)>();
-            error = null;
-
             List<JsonSpan.Member> root = JsonSpan.Members(json, 0);
             if (root == null) { error = "learnsets.json isn't a JSON object."; return false; }
+            return TryReadLevelMoves(json, root, speciesId, species, moves, formToBase, list, out error);
+        }
 
+        // Takes the root parsed once, so a save checking many species doesn't rescan the file for each.
+        private static bool TryReadLevelMoves(string json, List<JsonSpan.Member> root, int speciesId, HgEngineSymbolTable species, HgEngineSymbolTable moves,
+            IReadOnlyDictionary<string, string> formToBase, List<(int level, int move)> list, out string error)
+        {
+            error = null;
             // Same key choice as the save: the file's own alias wins.
             List<string> names = species.ByName
                 .Where(kv => kv.Value == speciesId && kv.Key.StartsWith("SPECIES_", StringComparison.Ordinal))
@@ -247,8 +252,8 @@ namespace DSPRE.HgEngine
             List<JsonSpan.Member> fields = existing != null && json[existing.ValueStart] == '{' ? JsonSpan.Members(json, existing.ValueStart) : null;
             JsonSpan.Member current = fields?.FirstOrDefault(m => m.Key == field);
             if (current != null)
-                foreach (Match m in Regex.Matches(json.Substring(current.ValueStart, current.ValueEnd - current.ValueStart), "\"([^\"]+)\""))
-                    if (moveTable.TryGetValue(m.Groups[1].Value.Trim(), out int id)) kept.TryAdd(id, m.Groups[1].Value);
+                foreach (string name in JsonSpan.Strings(json, current.ValueStart, current.ValueEnd))
+                    if (moveTable.TryGetValue(name.Trim(), out int id)) kept.TryAdd(id, name);
 
             List<string> names = new List<string>(moves.Count);
             foreach (int move in moves)
@@ -413,9 +418,31 @@ namespace DSPRE.HgEngine
         {
             string path = Path.Combine(repoUnc, "include", "constants", "generated", "learnsets.h");
             if (!File.Exists(path)) return -1;
-            Match m = Regex.Match(File.ReadAllText(path), @"#define\s+MAX_LEVELUP_MOVES\s+(\d+)");
-            return m.Success ? int.Parse(m.Groups[1].Value) : -1;
+            return int.TryParse(CSourceFile.For(File.ReadAllText(path)).FindDefine("MAX_LEVELUP_MOVES")?.Body, out int max) ? max : -1;
         }
+
+        private static string LevelKey(int speciesId) => "level:" + speciesId;
+
+        private static string LevelText(IEnumerable<(int level, int move)> list) => string.Join(" ", list.Select(m => $"{m.level}:{m.move}"));
+
+        /// <summary>Same as <see cref="TryGetLevelMoves"/>, for an editor that will save this list. The save compares
+        /// against what this loads.</summary>
+        public static bool TryGetLevelMovesForEditing(int speciesId, out List<(int level, int move)> moves, out string error)
+        {
+            if (!TryGetLevelMoves(speciesId, out moves, out error)) return false;
+            HgEngineLoadedEntries.Store(LevelsPath, LevelKey(speciesId), LevelText(moves));
+            return true;
+        }
+
+        /// <summary>Same as <see cref="TryGetAllLevelMoves"/>, for an editor that will save these lists.</summary>
+        public static bool TryGetAllLevelMovesForEditing(out Dictionary<int, List<(int level, int move)>> lists, out string error)
+        {
+            if (!TryGetAllLevelMoves(out lists, out error)) return false;
+            foreach ((int id, List<(int level, int move)> list) in lists) HgEngineLoadedEntries.Store(LevelsPath, LevelKey(id), LevelText(list));
+            return true;
+        }
+
+        private static string LevelsPath => Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', Path.DirectorySeparatorChar));
 
         /// <summary>Every species' own level-up list in one pass, keyed by species id; forms that inherit are absent.</summary>
         public static bool TryGetAllLevelMoves(out Dictionary<int, List<(int level, int move)>> lists, out string error)
@@ -457,6 +484,19 @@ namespace DSPRE.HgEngine
                 bool bom = bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF;
                 string text = new UTF8Encoding(false).GetString(bytes, bom ? 3 : 0, bytes.Length - (bom ? 3 : 0));
 
+                Dictionary<string, string> formToBase = ParseFormToBase(HgEngineFileCache.GetText(Path.Combine(HgEngineProject.RepoPathUnc, FormMapRelPath.Replace('/', Path.DirectorySeparatorChar))));
+                List<JsonSpan.Member> root = JsonSpan.Members(text, 0);
+                foreach (int speciesId in lists.Keys)
+                {
+                    // Nothing loaded for it means nothing to compare.
+                    if (root == null || HgEngineLoadedEntries.Get(path, LevelKey(speciesId)) == null) continue;
+                    List<(int level, int move)> onDisk = new List<(int level, int move)>();
+                    if (!TryReadLevelMoves(text, root, speciesId, species, moves, formToBase, onDisk, out _)) continue;
+                    if (!HgEngineLoadedEntries.ChangedOutside(path, LevelKey(speciesId), LevelText(onDisk))) continue;
+                    error = HgEngineLoadedEntries.ConflictMessage("learnsets.json", new[] { species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string name) ? name : speciesId.ToString() });
+                    return false;
+                }
+
                 string updated = text;
                 foreach ((int speciesId, IReadOnlyList<(int level, int move)> entries) in lists)
                     if (!TryApplyLevelMoves(updated, speciesId, entries, species, moves, out updated, out error))
@@ -467,6 +507,14 @@ namespace DSPRE.HgEngine
                 if (updated == text) return true;
 
                 HgEngineFileCache.WriteText(path, updated, new UTF8Encoding(bom));
+                // What a later read sees. A form saved empty reads its base's list, which isn't an outside change.
+                List<JsonSpan.Member> written = JsonSpan.Members(updated, 0);
+                foreach ((int speciesId, IReadOnlyList<(int level, int move)> entries) in lists)
+                {
+                    List<(int level, int move)> back = new List<(int level, int move)>();
+                    bool read = written != null && TryReadLevelMoves(updated, written, speciesId, species, moves, formToBase, back, out _);
+                    HgEngineLoadedEntries.Remember(path, LevelKey(speciesId), LevelText(read ? back : entries));
+                }
                 return true;
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
@@ -559,9 +607,12 @@ namespace DSPRE.HgEngine
             List<JsonSpan.Member> fields = JsonSpan.Members(json, species.ValueStart);
             JsonSpan.Member levelMoves = fields?.FirstOrDefault(m => m.Key == "LevelMoves");
             if (levelMoves == null) yield break;
-            foreach (Match m in Regex.Matches(json.Substring(levelMoves.ValueStart, levelMoves.ValueEnd - levelMoves.ValueStart),
-                         "\"Move\"\\s*:\\s*\"([^\"]+)\""))
-                yield return m.Groups[1].Value;
+            string previous = null;
+            foreach (string text in JsonSpan.Strings(json, levelMoves.ValueStart, levelMoves.ValueEnd))
+            {
+                if (previous == "Move") yield return text;
+                previous = text;
+            }
         }
 
         // Matches Python's json.dump(indent=N), which is how hg-engine writes this file.
@@ -590,24 +641,39 @@ namespace DSPRE.HgEngine
             return json.Substring(0, after) + "," + newline + memberIndent + member + json.Substring(after);
         }
 
-        private static string LineIndent(string text, int index)
-        {
-            int lineStart = text.LastIndexOf('\n', Math.Max(0, index - 1)) + 1;
-            int i = lineStart;
-            while (i < index && (text[i] == ' ' || text[i] == '\t')) i++;
-            return text.Substring(lineStart, i - lineStart);
-        }
+        private static string LineIndent(string text, int index) => HgEngineSourcePatcher.IndentOfLine(text, index);
 
         private static string DetectIndentUnit(string json)
         {
-            Match m = Regex.Match(json, "\\{\\r?\\n([ \\t]+)\"");
-            return m.Success ? m.Groups[1].Value : "  ";
+            for (int open = json.IndexOf('{'); open >= 0; open = json.IndexOf('{', open + 1))
+            {
+                int at = open + 1;
+                if (at < json.Length && json[at] == '\r') at++;
+                if (at >= json.Length || json[at] != '\n') continue;
+                int start = ++at;
+                while (at < json.Length && json[at] is ' ' or '\t') at++;
+                if (at > start && at < json.Length && json[at] == '"') return json.Substring(start, at - start);
+            }
+            return "  ";
         }
 
         /// <summary>Minimal string-aware scanner that reports character offsets, which System.Text.Json
         /// does not, so edits can splice the original text instead of reserializing 3 MB of JSON.</summary>
         internal static class JsonSpan
         {
+            /// <summary>Each non-empty quoted string between two positions, in order.</summary>
+            internal static IEnumerable<string> Strings(string json, int start, int end)
+            {
+                int at = json.IndexOf('"', start, end - start);
+                while (at >= 0)
+                {
+                    int close = json.IndexOf('"', at + 1, end - at - 1);
+                    if (close < 0) yield break;
+                    if (close > at + 1) yield return json.Substring(at + 1, close - at - 1);
+                    at = close + 1 < end ? json.IndexOf('"', close + 1, end - close - 1) : -1;
+                }
+            }
+
             internal sealed class Member
             {
                 public string Key;

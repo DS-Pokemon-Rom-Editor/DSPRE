@@ -38,6 +38,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             OnPropertyChanged(nameof(Hp)); OnPropertyChanged(nameof(Attack)); OnPropertyChanged(nameof(Defense));
             OnPropertyChanged(nameof(Speed)); OnPropertyChanged(nameof(SpAttack)); OnPropertyChanged(nameof(SpDefense));
         }
+
+        public void WriteTo(System.IO.BinaryWriter w) { foreach (decimal v in new[] { _hp, _attack, _defense, _speed, _spAttack, _spDefense }) w.Write((int)v); }
+        public void ReadFrom(System.IO.BinaryReader r) => Load(r.ReadInt32(), r.ReadInt32(), r.ReadInt32(), r.ReadInt32(), r.ReadInt32(), r.ReadInt32());
     }
 
     /// <summary>hg-engine-only extended fields for one party slot: every field hg-engine's real
@@ -118,6 +121,38 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             SetIvs.Changed += (s, e) => Changed?.Invoke(this, EventArgs.Empty);
             SetEvs.Changed += (s, e) => Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>Undo's copy of every field.</summary>
+        public void WriteTo(System.IO.BinaryWriter w)
+        {
+            w.Write(AbilityId); w.Write(BallId); w.Write(NatureIndex); w.Write(ShinyLocked);
+            SetIvs.WriteTo(w); SetEvs.WriteTo(w);
+            w.Write(ExtraStatusEnabled); w.Write(ExtraStatus);
+            foreach ((bool on, decimal value) in new[] { (ExtraHpEnabled, ExtraHp), (ExtraAttackEnabled, ExtraAttack), (ExtraDefenseEnabled, ExtraDefense),
+                         (ExtraSpeedEnabled, ExtraSpeed), (ExtraSpAtkEnabled, ExtraSpAtk), (ExtraSpDefEnabled, ExtraSpDef) })
+            {
+                w.Write(on); w.Write(value);
+            }
+            w.Write(ExtraPpCountsEnabled);
+            foreach (decimal pp in new[] { ExtraPp1, ExtraPp2, ExtraPp3, ExtraPp4 }) w.Write(pp);
+            w.Write(ExtraNicknameEnabled); w.Write(ExtraNickname ?? "");
+        }
+
+        public void ReadFrom(System.IO.BinaryReader r)
+        {
+            AbilityId = r.ReadInt32(); BallId = r.ReadInt32(); NatureIndex = r.ReadInt32(); ShinyLocked = r.ReadBoolean();
+            SetIvs.ReadFrom(r); SetEvs.ReadFrom(r);
+            ExtraStatusEnabled = r.ReadBoolean(); ExtraStatus = r.ReadInt32();
+            ExtraHpEnabled = r.ReadBoolean(); ExtraHp = r.ReadDecimal();
+            ExtraAttackEnabled = r.ReadBoolean(); ExtraAttack = r.ReadDecimal();
+            ExtraDefenseEnabled = r.ReadBoolean(); ExtraDefense = r.ReadDecimal();
+            ExtraSpeedEnabled = r.ReadBoolean(); ExtraSpeed = r.ReadDecimal();
+            ExtraSpAtkEnabled = r.ReadBoolean(); ExtraSpAtk = r.ReadDecimal();
+            ExtraSpDefEnabled = r.ReadBoolean(); ExtraSpDef = r.ReadDecimal();
+            ExtraPpCountsEnabled = r.ReadBoolean();
+            ExtraPp1 = r.ReadDecimal(); ExtraPp2 = r.ReadDecimal(); ExtraPp3 = r.ReadDecimal(); ExtraPp4 = r.ReadDecimal();
+            ExtraNicknameEnabled = r.ReadBoolean(); ExtraNickname = r.ReadString();
         }
     }
 
@@ -388,7 +423,21 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private int _itemIndex = -1; public int ItemIndex { get => _itemIndex; set { if (RejectCleared(value, nameof(ItemIndex))) return; if (Set(ref _itemIndex, value)) Touch(); } }
         private int _genderIndex; public int GenderIndex { get => _genderIndex; set { if (RejectCleared(value, nameof(GenderIndex))) return; if (Set(ref _genderIndex, value)) Touch(); } }
-        private int _abilityIndex; public int AbilityIndex { get => _abilityIndex; set { if (RejectCleared(value, nameof(AbilityIndex))) return; if (Set(ref _abilityIndex, value)) Touch(); } }
+        private int _abilityIndex; public int AbilityIndex { get => _abilityIndex; set { if (RejectCleared(value, nameof(AbilityIndex))) return; if (Set(ref _abilityIndex, value)) { FollowSlotAbility(); Touch(); } } }
+
+        // hg-engine's explicit ability wins over the slot in game. It follows the species and slot while it still
+        // matches what they give, so it only stays put once it was picked by hand.
+        private int _followedAbility = -1;
+        private void FollowSlotAbility()
+        {
+            int now = SlotAbilityId();
+            if (HgEngineProject.IsActive && !_suppress && HgeExtras.AbilityId > 0 && HgeExtras.AbilityId == _followedAbility && now > 0)
+                HgeExtras.AbilityId = now;
+            _followedAbility = now;
+        }
+
+        /// <summary>Called once a load has set the explicit ability, so it is compared with what the slot gives.</summary>
+        public void RememberSlotAbility() => _followedAbility = SlotAbilityId();
 
         // HeartGold and SoulSilver: the flag the external trainer shiny patch reads, editable only with the patch applied.
         private bool _forceShiny; public bool ForceShiny { get => _forceShiny; set { if (Set(ref _forceShiny, value)) Touch(); } }
@@ -560,6 +609,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 }
             }
             finally { _rebuildingAbilities = false; }
+            FollowSlotAbility();
             RepushAbilityIndex();
         }
 

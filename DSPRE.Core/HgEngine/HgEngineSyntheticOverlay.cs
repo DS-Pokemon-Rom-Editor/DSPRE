@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -64,9 +63,10 @@ namespace DSPRE.HgEngine
             try
             {
                 List<string> found = new List<string>();
-                foreach (Match m in Regex.Matches(File.ReadAllText(path), @"a028/(\S+)"))
+                foreach (string word in HgEngineMakeFile.Words(File.ReadAllText(path)))
                 {
-                    string name = m.Groups[1].Value.Trim();
+                    int at = word.IndexOf("a028/", StringComparison.Ordinal);
+                    string name = at < 0 ? "" : word.Substring(at + 5);
                     if (name.Length > 0 && !found.Contains(name)) found.Add(name);
                 }
                 found.Sort(StringComparer.OrdinalIgnoreCase);
@@ -93,8 +93,8 @@ namespace DSPRE.HgEngine
         internal static int MemberIndexOf(string fileName)
         {
             if (string.IsNullOrEmpty(fileName)) return -1;
-            Match m = Regex.Match(fileName, @"_(\d+)$");
-            return m.Success && int.TryParse(m.Groups[1].Value, out int index) ? index : -1;
+            string digits = fileName.Substring(fileName.LastIndexOf('_') + 1);
+            return fileName.Contains('_') && HgEngineMakeFile.IsDigits(digits) && int.TryParse(digits, out int index) ? index : -1;
         }
 
         /// <summary>

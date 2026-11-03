@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.IO;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -18,16 +17,16 @@ namespace DSPRE.HgEngine
         // not before the literal "};", which is followed by unrelated function definitions.
         private const string TerminatorLine = "{ 0xFFFF, 0, 0 },";
 
-        private static readonly Regex EntryRegex = new(@"MON_FOLLOWER_ENTRY\(\s*(SPECIES_\w+)\s*,\s*(\w+)\s*\)");
-
-        /// <summary>Pure text lookup, split out for direct unit testing.</summary>
-        internal static bool TryFindEntry(string tableText, string designator, out Match match)
+        /// <summary>Where the size class of the species' MON_FOLLOWER_ENTRY is.</summary>
+        internal static bool TryFindEntry(string tableText, string designator, out (int Start, int End) sizeClass)
         {
-            foreach (Match m in EntryRegex.Matches(tableText))
+            sizeClass = default;
+            foreach (CCall call in CSourceFile.For(tableText).Calls("MON_FOLLOWER_ENTRY"))
             {
-                if (m.Groups[1].Value == designator) { match = m; return true; }
+                if (call.Args.Count != 2 || tableText[call.Args[0].Start..call.Args[0].End] != designator) continue;
+                sizeClass = call.Args[1];
+                return true;
             }
-            match = null;
             return false;
         }
 
@@ -68,9 +67,9 @@ namespace DSPRE.HgEngine
             string text = TryReadTable(out string path);
             if (text == null) { error = $"{path} is missing from the checkout."; return false; }
 
-            if (!TryFindEntry(text, designator, out Match m))
+            if (!TryFindEntry(text, designator, out (int Start, int End) size))
             { error = $"{designator} has no overworld follower entry yet."; return false; }
-            sizeClassName = m.Groups[2].Value;
+            sizeClassName = text[size.Start..size.End];
 
             HgEngineSymbolTable table = HgEngineSymbolTable.Load(TableRelPath);
             if (table == null || !table.TryGetValue("MON_OVERWORLD_GFX_START", out int baseGfx))
@@ -90,11 +89,10 @@ namespace DSPRE.HgEngine
 
             string text = TryReadTable(out string path);
             if (text == null) { error = $"{path} is missing from the checkout."; return false; }
-            if (!TryFindEntry(text, designator, out Match m))
+            if (!TryFindEntry(text, designator, out (int Start, int End) size))
             { error = $"{designator} has no overworld follower entry yet."; return false; }
 
-            Group g2 = m.Groups[2];
-            text = text.Substring(0, g2.Index) + sizeClassName + text.Substring(g2.Index + g2.Length);
+            text = text.Substring(0, size.Start) + sizeClassName + text.Substring(size.End);
             HgEngineFileCache.WriteText(path, text);
             return true;
         }

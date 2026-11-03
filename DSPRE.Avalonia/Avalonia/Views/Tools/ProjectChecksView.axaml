@@ -32,6 +32,20 @@
         </DockPanel>
       </TabItem>
 
+      <TabItem Header="hg-engine sources" IsVisible="{Binding HasSources}">
+        <DataGrid ItemsSource="{Binding Sources}" IsReadOnly="True" GridLinesVisibility="Horizontal"
+                  Margin="4,6,4,4" CanUserResizeColumns="True">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Data"    Binding="{Binding Label}"       Width="130"/>
+            <DataGridTextColumn Header="File"    Binding="{Binding File}"        Width="190"/>
+            <DataGridTextColumn Header="Table"   Binding="{Binding Table}"       Width="150"/>
+            <DataGridTextColumn Header="Read"    Binding="{Binding Read}"        Width="60"/>
+            <DataGridTextColumn Header="Unreadable" Binding="{Binding Refused}"     Width="70"/>
+            <DataGridTextColumn Header="Fields DSPRE doesn't edit" Binding="{Binding NotModelled}" Width="*"/>
+          </DataGrid.Columns>
+        </DataGrid>
+      </TabItem>
+
       <TabItem Header="Where used">
         <DockPanel>
           <controls:EditorToolbar>

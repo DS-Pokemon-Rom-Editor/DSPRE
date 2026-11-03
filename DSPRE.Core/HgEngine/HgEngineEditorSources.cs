@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using DSPRE.ROMFiles;
 using static DSPRE.MoveData;
 
@@ -13,19 +12,12 @@ namespace DSPRE.HgEngine
     /// occurrence of a name wins, as <see cref="HgEngineSourcePatcher.TryFindEntry"/> finds it.</summary>
     internal static class HgEngineEntryIndex
     {
-        private static readonly Regex EntryStart = new(@"\[\s*([^\[\]\r\n]+?)\s*\]\s*=\s*\{", RegexOptions.Compiled);
-
         /// <summary>An unmatched brace is kept as (-1, -1) so a later spelling can't stand in for it.</summary>
         internal static Dictionary<string, (int Open, int Close)> Build(string text)
         {
             Dictionary<string, (int Open, int Close)> spans = new Dictionary<string, (int Open, int Close)>(StringComparer.Ordinal);
-            foreach (Match m in BraceScanner.InCode(EntryStart.Match(text), text))
-            {
-                string name = m.Groups[1].Value;
-                if (spans.ContainsKey(name)) continue;
-                int open = m.Index + m.Length - 1;
-                spans[name] = BraceScanner.TryFindMatchingBrace(text, open, out int close) ? (open, close) : (-1, -1);
-            }
+            foreach (CEntry entry in CSourceFile.For(text).Entries)
+                spans.TryAdd(entry.Name, entry.Close < 0 ? (-1, -1) : (entry.Open, entry.Close));
             return spans;
         }
 

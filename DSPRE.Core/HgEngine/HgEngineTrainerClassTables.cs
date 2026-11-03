@@ -70,7 +70,7 @@ namespace DSPRE.HgEngine
             }
             else
             {
-                int at = HgEngineSwarms.LineStart(text, table.Init.Close);
+                int at = HgEngineSourcePatcher.LineStart(text, table.Init.Close);
                 text = text.Insert(at, $"    {{ .class = {designator}, .multiplier = {multiplier} }},\n");
             }
             return HgEngineVerifiedWrite.TryWrite(path, MoneyRelPath, text, written =>
@@ -110,7 +110,7 @@ namespace DSPRE.HgEngine
             if (table == null) { error = $"{GenderRelPath} has no {GenderTable}."; return false; }
             if (CompiledOut(table)) { error = $"{GenderTable} is only built with EXPAND_TRAINER_GENDER_TABLE; turn it on in hg-engine settings to change genders."; return false; }
             if (entry != null) text = text.Substring(0, entry.ValueStart) + genderName + text.Substring(entry.ValueEnd);
-            else text = text.Insert(HgEngineSwarms.LineStart(text, table.Init.Close), $"    [{designator}] = {genderName},\n");
+            else text = text.Insert(HgEngineSourcePatcher.LineStart(text, table.Init.Close), $"    [{designator}] = {genderName},\n");
 
             return HgEngineVerifiedWrite.TryWrite(path, GenderRelPath, text, written =>
                 TryGenderIn(written, trainerClassId) == genderName ? null : "the gender differs", out error);

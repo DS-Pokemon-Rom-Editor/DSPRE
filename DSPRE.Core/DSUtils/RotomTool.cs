@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DSPRE.ROMFiles;
+using NarcAPI;
 
 namespace DSPRE
 {
@@ -20,6 +22,8 @@ namespace DSPRE
             public bool Success => ExitCode == 0;
             /// <summary>Scripts a whole-project rebuild changed although nobody edited them; their previous binaries were kept.</summary>
             public System.Collections.Generic.List<int> KeptBinaries { get; set; } = new System.Collections.Generic.List<int>();
+            /// <summary>Edited scripts that hg-engine builds. The compile kept hg-engine's binaries, so the edits aren't in.</summary>
+            public System.Collections.Generic.List<int> HgEngineOwnedEdits { get; } = new System.Collections.Generic.List<int>();
         }
 
         public static string ProjectRoot => RomInfo.DspreDir?.TrimEnd('\\', '/') ?? "";
@@ -121,27 +125,73 @@ namespace DSPRE
         /// <summary>
         /// hg-engine builds some field scripts from its own source and replaces their members every build. Rotom's
         /// decompiled copies of those are moved out of its source root, so a project compile never rebuilds them
-        /// and their binaries stay as hg-engine built them.
+        /// and their binaries stay as hg-engine built them. Common scripts stay in place, because Rotom can't compile
+        /// a CallStd without their source. <see cref="CompileProjectAsync"/> keeps their binaries.
         /// </summary>
         public static void SetAsideHgEngineOwnedSources()
         {
             if (!DSPRE.HgEngine.HgEngineProject.IsActive || string.IsNullOrEmpty(ProjectRoot)) return;
             string sources = Path.Combine(ProjectRoot, "expanded", "scripts");
             string aside = Path.Combine(ProjectRoot, ".rotom", "backups", "hg-engine-owned");
+            HashSet<int> common = OwnedCommonScripts();
             foreach (int id in DSPRE.HgEngine.HgEngineOwnedFiles.OwnedScriptIds())
             {
                 foreach (string ext in new[] { ".rotom", ".json" })
                 {
                     string source = Path.Combine(sources, id.ToString("D4") + ext);
-                    if (!File.Exists(source)) continue;
+                    string kept = Path.Combine(aside, Path.GetFileName(source));
+                    string from = common.Contains(id) ? kept : source, to = common.Contains(id) ? source : kept;
+                    if (!File.Exists(from) || (common.Contains(id) && File.Exists(to))) continue;
                     try
                     {
                         Directory.CreateDirectory(aside);
-                        PlainFiles.Move(source, Path.Combine(aside, Path.GetFileName(source)), overwrite: true);
+                        PlainFiles.Move(from, to, overwrite: true);
                     }
                     catch (IOException ex) { AppLogger.Error("RotomTool.SetAsideHgEngineOwnedSources: " + ex.Message); }
                 }
             }
+        }
+
+        private static HashSet<int> OwnedCommonScripts() => new HashSet<int>(
+            DSPRE.HgEngine.HgEngineOwnedFiles.OwnedScriptIds().Intersect(CommonScriptId.ScriptArchives(RomInfo.GameFamily)));
+
+        private static Dictionary<int, (byte[] Bytes, DateTime Written)> OwnedCommonBinaries()
+        {
+            Dictionary<int, (byte[] Bytes, DateTime Written)> binaries = new Dictionary<int, (byte[] Bytes, DateTime Written)>();
+            if (!DSPRE.HgEngine.HgEngineProject.IsActive) return binaries;
+            foreach (int id in OwnedCommonScripts())
+            {
+                string path = Filesystem.GetScriptPath(id);
+                if (File.Exists(path)) binaries[id] = (File.ReadAllBytes(path), File.GetLastWriteTimeUtc(path));
+            }
+            return binaries;
+        }
+
+        private static bool SourceWrittenAfter(int id, DateTime time)
+        {
+            string sources = Path.Combine(ProjectRoot, "expanded", "scripts");
+            return new[] { ".rotom", ".json" }.Select(ext => Path.Combine(sources, id.ToString("D4") + ext))
+                .Any(p => File.Exists(p) && File.GetLastWriteTimeUtc(p) > time);
+        }
+
+        /// <summary>After a build, gives hg-engine's common scripts to Rotom again when an edit to their source changed
+        /// them, so CallStd names the current scripts.</summary>
+        public static async Task RefreshHgEngineCommonScriptsAsync()
+        {
+            if (!DSPRE.HgEngine.HgEngineProject.IsActive) return;
+            Narc built = Narc.Open(RomInfo.GameDirs[RomInfo.DirNames.Scripts].packedDir);
+            if (built == null) return;
+            List<int> changed = new List<int>();
+            foreach (int id in OwnedCommonScripts())
+            {
+                if (id >= built.ElementCount) continue;
+                byte[] bytes = built.GetElementBytes(id);
+                string path = Filesystem.GetScriptPath(id);
+                if (File.Exists(path) && bytes.AsSpan().SequenceEqual(File.ReadAllBytes(path))) continue;
+                ArchiveMembers.PutBuilt(RomInfo.DirNames.Scripts, id, bytes);
+                changed.Add(id);
+            }
+            await ScriptSourceSync.RefreshAsync(changed).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -163,13 +213,24 @@ namespace DSPRE
                 string target = Path.GetRelativePath(ProjectRoot, source);
                 FileInfo file = new FileInfo(destination);
                 if (file.LinkTarget == target) continue;
-                if (file.Exists || file.LinkTarget != null) File.Delete(destination);
+                if (file.Exists || file.LinkTarget != null) DeleteLink(destination);
                 try { File.CreateSymbolicLink(destination, target); }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is PlatformNotSupportedException)
                 {
                     // Windows can require permission to create a link. Refresh the copy before each command.
                     PlainFiles.Copy(source, destination, overwrite: true);
                 }
+            }
+        }
+
+        // Windows can't delete a link Linux made in a WSL checkout, so the checkout's build shell does.
+        private static void DeleteLink(string path)
+        {
+            try { File.Delete(path); }
+            catch (DirectoryNotFoundException) when (DSPRE.HgEngine.HgEngineProject.IsActive)
+            {
+                string posix = $"{DSPRE.HgEngine.HgEngineProject.RepoPathPosix.TrimEnd('/')}/.dspre/{Path.GetFileName(path)}";
+                if (!DSPRE.HgEngine.HgEngineBuild.TryRunShell($"rm -f '{posix}'", out _, out string error)) throw new IOException(error);
             }
         }
 
@@ -183,9 +244,18 @@ namespace DSPRE
             await DSPRE.ROMFiles.ScriptSourceSync.WhenIdleAsync().ConfigureAwait(false);
             SetAsideHgEngineOwnedSources();
             Dictionary<int, DateTime> archivesBefore = TextArchiveTimes();
+            Dictionary<int, (byte[] Bytes, DateTime Written)> commonBinaries = OwnedCommonBinaries();
             RotomRebuildGuard guard = DSPRE.ROMFiles.RotomRebuildGuard.Before(ProjectRoot);
             Result result = await RunAsync("compile", "--json").ConfigureAwait(false);
             if (guard != null) result.KeptBinaries = guard.After();
+            // hg-engine builds these from its own source, so its binaries win and an edit made here is reported.
+            foreach ((int id, (byte[] bytes, DateTime written)) in commonBinaries)
+            {
+                string path = Filesystem.GetScriptPath(id);
+                if (File.Exists(path) && bytes.AsSpan().SequenceEqual(File.ReadAllBytes(path))) continue;
+                ArchiveMembers.PutBuilt(RomInfo.DirNames.Scripts, id, bytes);
+                if (SourceWrittenAfter(id, written)) result.HgEngineOwnedEdits.Add(id);
+            }
             // A compile appends inline messages to the text archives, which open text editors must reload.
             foreach ((int id, DateTime time) in TextArchiveTimes())
                 if (!archivesBefore.TryGetValue(id, out DateTime before) || before != time)

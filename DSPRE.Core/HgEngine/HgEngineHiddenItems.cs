@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.RegularExpressions;
+using System.Linq;
 
 namespace DSPRE.HgEngine
 {
@@ -17,12 +17,10 @@ namespace DSPRE.HgEngine
     /// past the end of the compiled array. <see cref="TrySave"/> keeps the two in sync.</summary>
     public static class HgEngineHiddenItems
     {
-        private const string SourceRelPath = "data/HiddenItems.c";
+        internal const string SourceRelPath = "data/HiddenItems.c";
         private const string ConsumerRelPath = "src/field/hidden_items.c";
         private const string ItemHeaderRelPath = "include/constants/item.h";
         private const string CountDefineName = "HIDDEN_ITEM_PARAM_COUNT";
-        private static readonly Regex ArrayAnchor = new(@"const\s+HiddenItemData\s+sHiddenItemParam\s*\[\s*\]\s*=\s*\{");
-        private static readonly Regex RowLine = new(@"^\s*(\{[^{}]*\})\s*,?\s*(//.*|/\*.*\*/)?\s*$");
 
         public struct Entry { public int ItemId; public int Quantity; public int Index; }
 
@@ -52,9 +50,9 @@ namespace DSPRE.HgEngine
                 if (parts.Count < 5) continue;
                 entries.Add(new Entry
                 {
-                    ItemId = ResolveToken(parts[0], items),
-                    Quantity = ResolveToken(parts[1], null),
-                    Index = ResolveToken(parts[4], null),
+                    ItemId = HgEngineSymbolTable.ValueOrZero(parts[0], items),
+                    Quantity = HgEngineSymbolTable.ValueOrZero(parts[1], null),
+                    Index = HgEngineSymbolTable.ValueOrZero(parts[4], null),
                 });
             }
             return entries;
@@ -110,33 +108,36 @@ namespace DSPRE.HgEngine
         {
             newBlock = null;
             error = null;
-            string inner = oldBlock.Replace("\r\n", "\n");
-            inner = inner.Substring(1, inner.Length - 2);
+            string block = oldBlock.Replace("\r\n", "\n");
+            CInitList rows = new CSourceFile(block).ListAt(0);
 
             List<string> comments = new List<string>();
             List<(string, string)> unknowns = new List<(string, string)>();
             List<List<string>> linesAbove = new List<List<string>>();
             List<string> pending = new List<string>();
 
-            foreach (string line in inner.Split('\n'))
+            List<CToken> tokens = CLexer.Tokenize(block, keepComments: true);
+            if (rows == null || tokens.Any(t => t.Kind == CTokenKind.Directive))
+            { error = $"sHiddenItemParam[] has preprocessor lines, which rewriting the table would drop. Edit {SourceRelPath} by hand."; return false; }
+            List<CToken> notes = tokens.Where(t => t.Kind == CTokenKind.Comment).ToList();
+
+            int next = 0;
+            foreach (CInitItem row in rows.Items)
             {
-                string trimmed = line.Trim();
-                if (trimmed.Length == 0) continue;
-                if (trimmed.StartsWith("#", StringComparison.Ordinal))
-                { error = $"sHiddenItemParam[] has preprocessor lines, which rewriting the table would drop. Edit {SourceRelPath} by hand."; return false; }
-                if (trimmed.StartsWith("//", StringComparison.Ordinal) || (trimmed.StartsWith("/*", StringComparison.Ordinal) && trimmed.EndsWith("*/", StringComparison.Ordinal)))
-                { pending.Add(trimmed); continue; }
+                if (row.List?.Items.Count != 5 || notes.Any(n => n.Start > row.Start && n.Start < row.End))
+                { error = $"sHiddenItemParam[] has a row DSPRE can't rewrite safely: {row.ValueText(block).Trim()}"; return false; }
 
-                Match m = RowLine.Match(line);
-                List<string> parts = m.Success ? HgEngineSourcePatcher.SplitArrayValue(m.Groups[1].Value) : null;
-                if (parts == null || parts.Count != 5)
-                { error = $"sHiddenItemParam[] has a line DSPRE can't rewrite safely: {trimmed}"; return false; }
-
-                comments.Add(m.Groups[2].Success ? m.Groups[2].Value.TrimEnd() : null);
-                unknowns.Add((parts[2].Trim(), parts[3].Trim()));
+                for (; next < notes.Count && notes[next].Start < row.Start; next++) pending.Add(notes[next].Text(block).TrimEnd());
                 linesAbove.Add(pending);
                 pending = new List<string>();
+                unknowns.Add((row.List.Items[2].ValueText(block).Trim(), row.List.Items[3].ValueText(block).Trim()));
+
+                // A comment on the row's own line stays with the row.
+                int lineEnd = block.IndexOf('\n', row.End);
+                bool sameLine = next < notes.Count && (lineEnd < 0 || notes[next].Start < lineEnd);
+                comments.Add(sameLine ? notes[next++].Text(block).TrimEnd() : null);
             }
+            for (; next < notes.Count; next++) pending.Add(notes[next].Text(block).TrimEnd());
 
             List<string> output = new List<string>(entries.Count);
             for (int i = 0; i < entries.Count; i++)
@@ -159,20 +160,12 @@ namespace DSPRE.HgEngine
         private static bool TryFindArrayBlock(string text, out int open, out int close)
         {
             open = close = -1;
-            Match m = ArrayAnchor.Match(text);
-            if (!m.Success) return false;
-            int braceStart = m.Index + m.Length - 1;
-            if (!BraceScanner.TryFindMatchingBrace(text, braceStart, out int braceEnd)) return false;
-            open = braceStart; close = braceEnd;
+            CDeclaration table = CSourceFile.For(text).Find("sHiddenItemParam");
+            if (table == null) return false;
+            open = table.Init.Open; close = table.Init.Close;
             return true;
         }
 
-        private static int ResolveToken(string token, HgEngineSymbolTable table)
-        {
-            token = token.Trim();
-            if (int.TryParse(token, out int v)) return v;
-            return table != null && table.TryGetValue(token, out int tv) ? tv : 0;
-        }
 
         private static string TryReadSource(out string path)
         {

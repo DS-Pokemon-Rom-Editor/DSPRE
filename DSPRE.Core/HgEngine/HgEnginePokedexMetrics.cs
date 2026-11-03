@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using DSPRE.ROMFiles;
 
 namespace DSPRE.HgEngine
@@ -96,8 +95,6 @@ namespace DSPRE.HgEngine
             return all == null || TryUpdateSortLists(speciesId, before, metrics, all, out error);
         }
 
-        private static readonly Regex SpeciesEntry = new(@"\[\s*(SPECIES_\w+)\s*\]\s*=\s*\{");
-
         /// <summary>Every Species.c entry's metricsData, by species id.</summary>
         public static bool TryLoadAll(out Dictionary<int, PokedexMetrics> all, out string error)
         {
@@ -111,16 +108,12 @@ namespace DSPRE.HgEngine
             if (!File.Exists(path)) { error = $"{path} is missing from the checkout."; return false; }
 
             string text = HgEngineFileCache.GetText(path);
-            int lastClose = -1;
-            foreach (Match m in SpeciesEntry.Matches(text))
+            foreach (CEntry row in CSourceFile.For(text).OuterEntries)
             {
-                int open = m.Index + m.Length - 1;
-                if (open < lastClose || !BraceScanner.TryFindMatchingBrace(text, open, out int close)) continue;
-                lastClose = close;
-                if (!species.TryGetValue(m.Groups[1].Value, out int id)) continue;
+                if (!species.TryGetValue(row.Name, out int id)) continue;
                 PokedexMetrics metrics = new PokedexMetrics();
-                if (!HgEngineSourceFields.TryRead(new HgEngineSourceBlock(text.Substring(open, close - open + 1)), Fields, metrics, HgEngineSymbolTable.Load, out error))
-                { error = $"{m.Groups[1].Value}: {error}"; return false; }
+                if (!HgEngineSourceFields.TryRead(new HgEngineSourceBlock(text.Substring(row.Open, row.Close - row.Open + 1)), Fields, metrics, HgEngineSymbolTable.Load, out error))
+                { error = $"{row.Name}: {error}"; return false; }
                 all[id] = metrics;
             }
             return true;
@@ -252,7 +245,7 @@ namespace DSPRE.HgEngine
             bool fairyList = tokens.Keys.Any(k => k.Equals("TypeFairy", StringComparison.OrdinalIgnoreCase));
             foreach (string list in sort.Names.Where(n => n.StartsWith("Type", StringComparison.Ordinal)))
             {
-                string symbol = "TYPE_" + System.Text.RegularExpressions.Regex.Replace(list.Substring(4), "(?<=[a-z])(?=[A-Z])", "_").ToUpperInvariant();
+                string symbol = "TYPE_" + string.Concat(list.Substring(4).Select((c, i) => i > 0 && char.IsUpper(c) && char.IsLower(list[i + 3]) ? "_" + c : c.ToString())).ToUpperInvariant();
                 int type = TypeValue(symbol);
                 if (type < 0) continue;
                 bool Has(int id)
@@ -281,8 +274,6 @@ namespace DSPRE.HgEngine
             return b.ToString();
         }
 
-        private static readonly Regex TypesField = new(@"\.types\s*=\s*\{\s*(\w+)\s*,\s*(\w+)\s*\}");
-
         /// <summary>Each species' two types from Species.c, by id.</summary>
         public static bool TryLoadAllTypes(out Dictionary<int, (int, int)> types, out string error)
         {
@@ -298,15 +289,12 @@ namespace DSPRE.HgEngine
             string path = Path.Combine(HgEngineProject.RepoPathUnc, info.SourceFileRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path)) { error = $"{path} is missing from the checkout."; return false; }
             string text = HgEngineFileCache.GetText(path);
-            int lastClose = -1;
-            foreach (Match m in SpeciesEntry.Matches(text))
+            CSourceFile source = CSourceFile.For(text);
+            foreach (CEntry row in source.OuterEntries)
             {
-                int open = m.Index + m.Length - 1;
-                if (open < lastClose || !BraceScanner.TryFindMatchingBrace(text, open, out int close)) continue;
-                lastClose = close;
-                if (!species.TryGetValue(m.Groups[1].Value, out int id)) continue;
-                Match t = TypesField.Match(text, open, close - open);
-                if (t.Success) types[id] = (Value(t.Groups[1].Value), Value(t.Groups[2].Value));
+                if (!species.TryGetValue(row.Name, out int id)) continue;
+                CInitList pair = source.ListAt(row.Open)?.FindField("types")?.List;
+                if (pair?.Items.Count == 2) types[id] = (Value(pair.Items[0].ValueText(text).Trim()), Value(pair.Items[1].ValueText(text).Trim()));
             }
             return true;
         }

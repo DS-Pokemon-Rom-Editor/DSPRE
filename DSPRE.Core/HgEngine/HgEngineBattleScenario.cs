@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -74,6 +73,23 @@ namespace DSPRE.HgEngine
             return s;
         }
 
+        // A chain such as ".battler[1].ability =" at pos.
+        private static bool DesignatorEnd(string v, int pos, out int end, out int afterEquals)
+        {
+            end = afterEquals = pos;
+            List<CToken> tokens = CLexer.Tokenize(v, pos, Math.Min(v.Length, pos + 200));
+            int t = 0;
+            while (t + 1 < tokens.Count && tokens[t].Is(v, ".") && tokens[t + 1].Kind == CTokenKind.Identifier)
+            {
+                t += 2;
+                if (t + 2 < tokens.Count && tokens[t].Is(v, "[") && tokens[t + 1].Kind == CTokenKind.Number && tokens[t + 2].Is(v, "]")) t += 3;
+                end = tokens[t - 1].End;
+            }
+            if (t == 0 || t >= tokens.Count || !tokens[t].Is(v, "=")) return false;
+            afterEquals = tokens[t].End;
+            return true;
+        }
+
         private static Node ParseNode(string v, ref int pos, out string error)
         {
             error = null;
@@ -86,8 +102,11 @@ namespace DSPRE.HgEngine
                 if (v[pos] == '}') { node.Close = pos; pos++; return node; }
 
                 Item item = new Item();
-                Match d = Regex.Match(v.Substring(pos, Math.Min(200, v.Length - pos)), @"^((?:\.\w+(?:\[\d+\])?)+)\s*=\s*");
-                if (d.Success) { item.Designator = d.Groups[1].Value; pos += d.Length; }
+                if (DesignatorEnd(v, pos, out int designatorEnd, out int afterEquals))
+                {
+                    item.Designator = v.Substring(pos, designatorEnd - pos);
+                    pos = afterEquals;
+                }
                 SkipSpace(v, ref pos);
                 item.ValueStart = pos;
                 if (pos < v.Length && v[pos] == '{')
@@ -266,8 +285,9 @@ namespace DSPRE.HgEngine
         private string IndentAt(int valueStart, string designator)
         {
             int lineStart = _text.LastIndexOf('\n', Math.Max(0, valueStart - 1)) + 1;
-            string lead = Regex.Match(_text.Substring(lineStart), @"^[ \t]*").Value;
-            return lead;
+            int end = lineStart;
+            while (end < _text.Length && _text[end] is ' ' or '\t') end++;
+            return _text.Substring(lineStart, end - lineStart);
         }
 
         private void WriteParty(List<(int, int, string)> edits, string designator, Mon[] before, Mon[] now)

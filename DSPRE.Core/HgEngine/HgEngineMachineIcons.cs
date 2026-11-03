@@ -1,8 +1,8 @@
+using System.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -18,8 +18,6 @@ namespace DSPRE.HgEngine
 
         // Item i's icon is $(ITEMGFX_DIR)/NNNN-00.NCGR with NNNN = i + 2: GetItemIndex reads member i * 2 + 2, and the
         // two members before item 0's are the shared 0000.NANR and 0001.NCER.
-        private static readonly Regex IconRule = new(@"^\$\(ITEMGFX_DIR\)/(\d+)-00\.NCGR:\$\(ITEMGFX_DEPENDENCIES_DIR\)/(\S+\.png)\s*$", RegexOptions.Multiline);
-
         private static string _rulesText;
         private static Dictionary<int, string> _iconByItem;
 
@@ -41,9 +39,14 @@ namespace DSPRE.HgEngine
             {
                 Dictionary<int, string> map = new Dictionary<int, string>();
                 string dir = MakeVariable(text, "ITEMGFX_DEPENDENCIES_DIR") ?? "data/graphics/item";
-                foreach (Match m in IconRule.Matches(text))
-                    map[int.Parse(m.Groups[1].Value) - 2] = Path.Combine(HgEngineProject.RepoPathUnc,
-                        (dir + "/" + m.Groups[2].Value).Replace('/', Path.DirectorySeparatorChar));
+                const string sources = "$(ITEMGFX_DEPENDENCIES_DIR)/";
+                foreach (HgEngineMakeFile.Rule rule in HgEngineMakeFile.For(text).Rules)
+                {
+                    int number = HgEngineMakeFile.NumberBetween(rule.Target, "$(ITEMGFX_DIR)/", "-00.NCGR");
+                    string source = rule.Prerequisites;
+                    if (number < 0 || !source.StartsWith(sources, StringComparison.Ordinal) || !source.EndsWith(".png", StringComparison.Ordinal) || source.Any(char.IsWhiteSpace)) continue;
+                    map[number - 2] = Path.Combine(HgEngineProject.RepoPathUnc, (dir + "/" + source.Substring(sources.Length)).Replace('/', Path.DirectorySeparatorChar));
+                }
                 _iconByItem = map;
                 _rulesText = text;
             }
@@ -98,8 +101,8 @@ namespace DSPRE.HgEngine
 
         private static string MakeVariable(string text, string name)
         {
-            Match m = Regex.Match(text, @"^\s*" + Regex.Escape(name) + @"\s*:?=\s*(\S+)\s*$", RegexOptions.Multiline);
-            return m.Success && !m.Groups[1].Value.Contains("$(") ? m.Groups[1].Value : null;
+            string value = HgEngineMakeFile.For(text).Value(name);
+            return value != null && !value.Contains("$(") ? value : null;
         }
     }
 }

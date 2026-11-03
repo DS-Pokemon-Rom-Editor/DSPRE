@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -41,17 +40,18 @@ namespace DSPRE.HgEngine
         public static string Check(string text)
         {
             if (text == null) return "There is no text.";
-            string code = Regex.Replace(Regex.Replace(text, @"/\*.*?\*/", "", RegexOptions.Singleline), @"//[^\n]*", "");
-            int begin = Regex.Matches(code, @"\bBEGIN_TEST\b").Count, end = Regex.Matches(code, @"\bEND_TEST\b").Count;
+            List<CToken> tokens = CLexer.Tokenize(text);
+            int begin = tokens.Count(t => t.Is(text, "BEGIN_TEST")), end = tokens.Count(t => t.Is(text, "END_TEST"));
             if (begin != end || begin > 1) return "A test file holds one BEGIN_TEST { ... } END_TEST block, or one { ... }, on its own.";
             // The build pastes each file into one array, so what it sees has to be a single { ... },.
-            string built = AsBuilt(code).Trim();
+            string built = AsBuilt(text).Trim();
             if (!built.StartsWith('{') || !built.EndsWith(',')) return "Once built, the test must come out as { ... }, so the next test can follow it.";
             int depth = 0;
-            foreach (char c in code)
+            foreach (CToken token in tokens)
             {
-                if (c == '{') depth++;
-                else if (c == '}' && --depth < 0) break;
+                if (token.Kind != CTokenKind.Punct) continue;
+                if (token.Is(text, "{")) depth++;
+                else if (token.Is(text, "}") && --depth < 0) break;
             }
             return depth == 0 ? null : "The braces don't match up.";
         }
@@ -65,38 +65,43 @@ namespace DSPRE.HgEngine
         public static string Visible(string text, bool endTestAsComma = false)
         {
             string code = BlankComments(text);
-            StringBuilder sb = new StringBuilder(code.Length);
+            StringBuilder sb = new StringBuilder(code);
+            void Blank(int start, int end)
+            {
+                for (int i = start; i < end; i++)
+                    if (sb[i] != '\n' && sb[i] != '\r') sb[i] = ' ';
+            }
+
             // Each open #if: whether it tests GET_TEST_CASE_ONLY, and whether its branch is dropped.
             Stack<(bool Guard, bool Dropped)> open = new Stack<(bool, bool)>();
-            string[] lines = code.Split('\n');
-            for (int n = 0; n < lines.Length; n++)
+            foreach (CToken token in CLexer.Tokenize(code))
             {
-                string line = lines[n];
-                bool dropped = open.Any(o => o.Dropped);
-                Match d = Regex.Match(line.Trim(), @"^#\s*(ifndef|ifdef|if|else|elif|endif)\b\s*(\w*)");
-                if (d.Success)
+                if (token.Kind == CTokenKind.Directive)
                 {
-                    string kind = d.Groups[1].Value;
-                    bool guard = d.Groups[2].Value == "GET_TEST_CASE_ONLY";
-                    if (kind == "ifndef" || kind == "ifdef") open.Push((guard, guard && kind == "ifndef"));
-                    else if (kind == "if") open.Push((false, false));
-                    else if (open.Count > 0 && (kind == "else" || kind == "elif")) { (bool g, bool was) = open.Pop(); open.Push((g, g && !was)); }
-                    else if (kind == "endif" && open.Count > 0) open.Pop();
-                    dropped = true;
+                    CDirective d = CDirective.Parse(code, token);
+                    bool guard = d.Name == "GET_TEST_CASE_ONLY";
+                    if (d.Keyword == "ifndef" || d.Keyword == "ifdef") open.Push((guard, guard && d.Keyword == "ifndef"));
+                    else if (d.Keyword == "if") open.Push((false, false));
+                    else if (open.Count > 0 && (d.Keyword == "else" || d.Keyword == "elif")) { (bool g, bool was) = open.Pop(); open.Push((g, g && !was)); }
+                    else if (d.Keyword == "endif" && open.Count > 0) open.Pop();
+                    Blank(token.Start, token.End);
                 }
-                else if (line.TrimStart().StartsWith("#")) dropped = true;
-                sb.Append(dropped ? new string(' ', line.Length) : line);
-                if (n < lines.Length - 1) sb.Append('\n');
+                else if (open.Any(o => o.Dropped) || token.Is(code, "BEGIN_TEST")) Blank(token.Start, token.End);
+                else if (token.Is(code, "END_TEST"))
+                {
+                    Blank(token.Start, token.End);
+                    if (endTestAsComma) sb[token.Start] = ',';
+                }
             }
-            string visible = Regex.Replace(sb.ToString(), @"\bBEGIN_TEST\b", m => new string(' ', m.Length));
-            return Regex.Replace(visible, @"\bEND_TEST\b", m => (endTestAsComma ? "," : " ") + new string(' ', m.Length - 1));
+            return sb.ToString();
         }
 
         /// <summary>A spot in a test's text and what is wrong there.</summary>
         public sealed record Problem(int Offset, int Length, string Message);
 
-        private static readonly Regex Include = new(@"#\s*include\s+""([^""]+)""");
-        private static readonly Regex ConstantName = new(@"\b[A-Z][A-Z0-9]*_[A-Z0-9_]*\b");
+        // TYPE_FIRE: capitals, digits and at least one underscore after the first letter.
+        private static bool IsConstantName(string name) =>
+            name.Length > 1 && char.IsAsciiLetterUpper(name[0]) && name.Contains('_') && name.All(c => char.IsAsciiLetterUpper(c) || char.IsAsciiDigit(c) || c == '_');
 
         // Defined by the generated BattleTests.c that gathers every test, not by a header.
         private static readonly string[] BuildDefined = { "GET_TEST_CASE_ONLY" };
@@ -114,16 +119,15 @@ namespace DSPRE.HgEngine
 
             HashSet<string> declared = new HashSet<string>(BuildDefined, StringComparer.Ordinal);
             foreach (string header in BuildHeaders()) declared.UnionWith(DeclaredIn(header));
-            foreach (Match inc in Include.Matches(code))
+            foreach ((string wanted, int at) in CSourceFile.For(code).IncludePaths)
             {
-                string wanted = inc.Groups[1].Value;
                 string path = Path.GetFullPath(Path.Combine(folder, wanted.Replace('/', Path.DirectorySeparatorChar)));
                 if (!File.Exists(path))
                 {
                     string fix = Path.GetFileName(wanted) == "battle_tests.h"
                         ? $" From this folder it is \"{Ups(rel)}battle_tests.h\"."
                         : wanted.Contains("include/") ? $" From this folder it is \"{Ups(rel)}../../{wanted[wanted.IndexOf("include/")..]}\"." : "";
-                    found.Add(new Problem(inc.Groups[1].Index, inc.Groups[1].Length, $"\"{wanted}\" isn't there from this folder.{fix}"));
+                    found.Add(new Problem(at, wanted.Length, $"\"{wanted}\" isn't there from this folder.{fix}"));
                     continue;
                 }
                 declared.UnionWith(DeclaredIn(path));
@@ -145,21 +149,43 @@ namespace DSPRE.HgEngine
 
             string bare = BlankComments(text, keepStrings: false);
             if (declared.Count > BuildDefined.Length)
-                foreach (Match m in ConstantName.Matches(bare))
-                    if (!declared.Contains(m.Value) && !IsInsideInclude(bare, m.Index))
-                        found.Add(new Problem(m.Index, m.Length, $"{m.Value} isn't defined in the headers this test includes."));
+                foreach (CToken t in CodeTokens(bare))
+                {
+                    string name = t.Text(bare);
+                    if (t.Kind == CTokenKind.Identifier && IsConstantName(name) && !declared.Contains(name))
+                        found.Add(new Problem(t.Start, t.Length, $"{name} isn't defined in the headers this test includes."));
+                }
             return found;
         }
 
-        // Comments, and strings unless kept, become spaces so offsets still match the text.
-        private static string BlankComments(string text, bool keepStrings = true) =>
-            Regex.Replace(text, @"/\*.*?\*/|//[^\n]*|""(?:[^""\\\n]|\\.)*""",
-                m => keepStrings && m.Value.StartsWith("\"") ? m.Value : Regex.Replace(m.Value, @"[^\n]", " "), RegexOptions.Singleline);
-
-        private static bool IsInsideInclude(string code, int at)
+        // The tokens of the code and of each directive, leaving out #include paths.
+        private static IEnumerable<CToken> CodeTokens(string code)
         {
-            int lineStart = code.LastIndexOf('\n', Math.Max(0, at - 1)) + 1;
-            return code.AsSpan(lineStart).TrimStart().StartsWith("#include");
+            foreach (CToken token in CLexer.Tokenize(code))
+            {
+                if (token.Kind != CTokenKind.Directive) { yield return token; continue; }
+                if (CDirective.Parse(code, token).Keyword == "include") continue;
+                foreach (CToken inner in CLexer.Tokenize(code, token.Start + 1, token.End)) yield return inner;
+            }
+        }
+
+        // Comments, and strings unless kept, become spaces so offsets still match the text.
+        private static string BlankComments(string text, bool keepStrings = true)
+        {
+            StringBuilder sb = new StringBuilder(text);
+            void Blank(CToken t)
+            {
+                for (int i = t.Start; i < t.End; i++)
+                    if (sb[i] != '\n') sb[i] = ' ';
+            }
+            foreach (CToken token in CLexer.Tokenize(text, keepComments: true))
+            {
+                if (token.Kind == CTokenKind.Comment || (token.Kind == CTokenKind.String && !keepStrings)) Blank(token);
+                else if (token.Kind == CTokenKind.Directive)
+                    foreach (CToken inner in CLexer.Tokenize(text, token.Start + 1, token.End, keepComments: true))
+                        if (inner.Kind == CTokenKind.Comment) Blank(inner);
+            }
+            return sb.ToString();
         }
 
         /// <summary>The names starting with <paramref name="prefix"/> a test at <paramref name="rel"/> can use, sorted.</summary>
@@ -177,8 +203,16 @@ namespace DSPRE.HgEngine
             if (!File.Exists(script)) yield break;
             // BattleTests.c is written to build/battle_tests, so its "../../" is the checkout root.
             string from = Path.Combine(HgEngineProject.RepoRootWindows, "build", "battle_tests");
-            foreach (Match inc in Include.Matches(HgEngineFileCache.GetText(script) ?? ""))
-                yield return Path.GetFullPath(Path.Combine(from, inc.Groups[1].Value.Replace('/', Path.DirectorySeparatorChar)));
+            // A Python file, so its C text is read line by line. The script's own "// #include" lines are for disabled tests.
+            foreach (string line in (HgEngineFileCache.GetText(script) ?? "").Split('\n'))
+            {
+                int include = line.IndexOf("#include \"", StringComparison.Ordinal);
+                if (include < 0) continue;
+                int open = line.IndexOf('"', include), close = line.IndexOf('"', open + 1);
+                string header = close > open ? line.Substring(open + 1, close - open - 1) : "";
+                if (header.Length > 0 && !header.Contains('{'))
+                    yield return Path.GetFullPath(Path.Combine(from, header.Replace('/', Path.DirectorySeparatorChar)));
+            }
         }
 
         private static string Ups(string rel) => string.Concat(Enumerable.Repeat("../", rel.Count(c => c == '/')));
@@ -197,13 +231,12 @@ namespace DSPRE.HgEngine
             {
                 string path = pending.Pop();
                 if (!seen.Add(path) || !File.Exists(path)) continue;
-                string header = BlankComments(HgEngineFileCache.GetText(path) ?? "");
-                foreach (Match m in Regex.Matches(header, @"#\s*define[ \t]+([A-Za-z_]\w*)")) names.Add(m.Groups[1].Value);
-                foreach (Match body in Regex.Matches(header, @"\benum\b[^{;]*\{([^}]*)\}"))
-                    foreach (Match member in Regex.Matches(body.Groups[1].Value, @"(?:^|,)\s*([A-Za-z_]\w*)"))
-                        names.Add(member.Groups[1].Value);
-                foreach (Match inc in Include.Matches(header))
-                    pending.Push(Path.GetFullPath(Path.Combine(Path.GetDirectoryName(path), inc.Groups[1].Value.Replace('/', Path.DirectorySeparatorChar))));
+                CSourceFile header = CSourceFile.For(HgEngineFileCache.GetText(path) ?? "");
+                foreach (CDirective d in header.Directives)
+                    if (d.Keyword == "define" && d.Name != null) names.Add(d.Name);
+                names.UnionWith(header.EnumMembers);
+                foreach ((string include, int _) in header.IncludePaths)
+                    pending.Push(Path.GetFullPath(Path.Combine(Path.GetDirectoryName(path), include.Replace('/', Path.DirectorySeparatorChar))));
             }
             _declaredIn[start] = names;
             return names;
@@ -220,15 +253,21 @@ namespace DSPRE.HgEngine
         {
             if (string.IsNullOrWhiteSpace(rel) || !rel.EndsWith(".c", StringComparison.OrdinalIgnoreCase))
                 return "Name the test like abilities/intimidate/doubles.c.";
-            if (!Regex.IsMatch(rel, @"^[A-Za-z0-9_./-]+$") || rel.Contains("..")) return "Use letters, numbers, _ and / in the name.";
+            if (!rel.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '.' or '/' or '-') || rel.Contains("..")) return "Use letters, numbers, _ and / in the name.";
             string full;
             try { full = FullPath(rel); } catch (ArgumentException ex) { return ex.Message; }
             if (File.Exists(full)) return "There is already a test with that name.";
             string why = Check(text);
             if (why != null) return why;
             // Includes are relative to the test's folder, so a copy at another depth needs its own number of "../".
-            text = Regex.Replace(text, "#include\\s+\"(?:\\.\\./)*battle_tests\\.h\"", "#include \"" + Ups(rel) + "battle_tests.h\"");
-            text = Regex.Replace(text, "#include\\s+\"(?:\\.\\./)+include/", "#include \"" + Ups(rel) + "../../include/");
+            foreach ((string include, int at) in CSourceFile.For(text).IncludePaths.Reverse().ToList())
+            {
+                string bare = include;
+                while (bare.StartsWith("../", StringComparison.Ordinal)) bare = bare.Substring(3);
+                string moved = bare == "battle_tests.h" ? Ups(rel) + bare
+                    : bare != include && bare.StartsWith("include/", StringComparison.Ordinal) ? Ups(rel) + "../../" + bare : include;
+                text = text.Remove(at, include.Length).Insert(at, moved);
+            }
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(full));

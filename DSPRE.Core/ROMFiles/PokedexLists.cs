@@ -61,8 +61,94 @@ namespace DSPRE.ROMFiles
         public static string WhyNot()
         {
             if (GameDirs == null || !GameDirs.ContainsKey(DirNames.PokedexData)) return "This game's Pokédex data isn't known to DSPRE.";
-            if (HgEngine.HgEngineProject.IsActive) return "hg-engine builds these lists from data/PokedexSort.c, which the Pokédex data tab keeps up to date.";
             return null;
+        }
+
+        private static bool FromSource => HgEngine.HgEngineProject.IsActive;
+
+        // sPokedexSortLists row N is the list the game reads as member National + N.
+        private static string SourceName(ListInfo info, HgEngine.HgEngineDexSortLists sort) =>
+            sort.ByTableIndex.TryGetValue(info.Member - National, out string name) ? name : null;
+
+        private bool TryLoadSource(out string error)
+        {
+            HgEngine.HgEngineSymbolTable species = HgEngine.HgEngineSymbolTable.Load("include/constants/species.h");
+            if (species == null) { error = "include/constants/species.h couldn't be read."; return false; }
+            if (!HgEngine.HgEngineDexSortLists.TryLoad(out HgEngine.HgEngineDexSortLists sort, out error)) return false;
+            if (!HgEngine.HgEnginePokedexMetrics.TryLoadAll(out Dictionary<int, PokedexMetrics> metrics, out error)) return false;
+
+            Lists = BuildLayout();
+            Copy c = new Copy { Dir = DirNames.PokedexData, Members = new byte[MemberCount][], Lists = new List<ushort>[MemberCount] };
+            for (int i = National; i < MemberCount; i++) c.Lists[i] = new List<ushort>();
+            foreach (ListInfo info in Lists)
+            {
+                // The regional order comes from RegionalDex.c below, and the game leaves the unused rows empty.
+                if (info.Member == Regional || info.Group == Group.Unused) continue;
+                if (SourceName(info, sort) is not string name || !sort.Lists.TryGetValue(name, out List<string> tokens))
+                {
+                    error = $"data/PokedexSort.c has no list for {info.Name}.";
+                    return false;
+                }
+                foreach (string token in tokens)
+                {
+                    if (!species.TryGetValue(token, out int id)) { error = $"{name} lists {token}, which species.h doesn't name."; return false; }
+                    c.Lists[info.Member].Add((ushort)id);
+                }
+            }
+
+            SpeciesCount = c.Lists[National].DefaultIfEmpty((ushort)0).Max() + 1;
+            if (!HgEngine.HgEngineRegionalDex.TryGetAllDexNumbers(out Dictionary<int, int> regional, out error)) return false;
+            c.Lists[Regional] = regional.Where(r => r.Key > 0 && r.Key < SpeciesCount).OrderBy(r => r.Value).ThenBy(r => r.Key)
+                                        .Select(r => (ushort)r.Key).ToList();
+
+            byte[] heights = new byte[SpeciesCount * 4], weights = new byte[SpeciesCount * 4], shapes = new byte[SpeciesCount];
+            foreach ((int id, PokedexMetrics m) in metrics)
+            {
+                if (id >= SpeciesCount) continue;
+                BitConverter.TryWriteBytes(heights.AsSpan(id * 4), m.Height);
+                BitConverter.TryWriteBytes(weights.AsSpan(id * 4), m.Weight);
+                shapes[id] = (byte)m.BodyShape;
+            }
+            c.Members[0] = heights;
+            c.Members[1] = weights;
+            c.Members[2] = shapes;
+            for (int i = National; i < MemberCount; i++) c.Members[i] = ToBytes(c.Lists[i]);
+            _copies.Add(c);
+            error = null;
+            return true;
+        }
+
+        private void SaveSource()
+        {
+            HgEngine.HgEngineSymbolTable species = HgEngine.HgEngineSymbolTable.Load("include/constants/species.h")
+                ?? throw new InvalidOperationException("include/constants/species.h couldn't be read.");
+            if (!HgEngine.HgEngineDexSortLists.TryLoad(out HgEngine.HgEngineDexSortLists sort, out string error)) throw new InvalidOperationException(error);
+            Copy c = _copies[0];
+
+            // Spellings already in the file stay, so an alias isn't rewritten.
+            Dictionary<int, string> spelled = new Dictionary<int, string>();
+            foreach (string token in sort.Lists.Values.SelectMany(l => l))
+                if (species.TryGetValue(token, out int id)) spelled.TryAdd(id, token);
+            string Token(int id) => spelled.TryGetValue(id, out string t) ? t : species.TryGetNameWithPrefix(id, "SPECIES_", out string n) ? n : id.ToString();
+
+            HashSet<string> changed = new HashSet<string>();
+            foreach (ListInfo info in Lists)
+            {
+                if (SourceName(info, sort) is not string name || ToBytes(c.Lists[info.Member]).AsSpan().SequenceEqual(c.Members[info.Member])) continue;
+                sort.Lists[name] = c.Lists[info.Member].Select(s => Token(s)).ToList();
+                changed.Add(name);
+            }
+            if (!sort.TryWrite(changed, out error)) throw new InvalidOperationException(error);
+
+            List<ushort> before = ToList(c.Members[Regional]), order = c.Lists[Regional];
+            Dictionary<int, int> moved = new Dictionary<int, int>();
+            foreach (int id in before.Concat(order).Distinct())
+            {
+                int was = before.IndexOf((ushort)id), now = order.IndexOf((ushort)id);
+                if (was != now) moved[id] = now + 1;
+            }
+            if (!HgEngine.HgEngineRegionalDex.TrySetDexNumbers(moved, out error)) throw new InvalidOperationException(error);
+            for (int i = National; i < MemberCount; i++) c.Members[i] = ToBytes(c.Lists[i]);
         }
 
         public static bool TryLoad(out PokedexLists lists, out string error)
@@ -71,6 +157,12 @@ namespace DSPRE.ROMFiles
             error = WhyNot();
             if (error != null) return false;
             PokedexLists l = new PokedexLists();
+            if (FromSource)
+            {
+                if (!l.TryLoadSource(out error)) return false;
+                lists = l;
+                return true;
+            }
             List<DirNames> dirs = new List<DirNames> { DirNames.PokedexData };
             if (GameDirs.ContainsKey(DirNames.PokedexDataAltered)) dirs.Add(DirNames.PokedexDataAltered);
             DSUtils.TryUnpackNarcs(dirs);
@@ -254,7 +346,8 @@ namespace DSPRE.ROMFiles
             // The GTS and Battle Video pickers index the alphabetical list at fixed places up to the last species,
             // so a shorter list would be read past its end.
             foreach (Copy c in _copies)
-                if (c.Lists[Alphabetical].Count != SpeciesCount - 1)
+                // hg-engine's own NameAToZ lists 649 species against 1025 in NationalNum, so this rule applies to the base game only.
+                if (!FromSource && c.Lists[Alphabetical].Count != SpeciesCount - 1)
                     return $"Alphabetical must list every species ({SpeciesCount - 1}); the GTS and Battle Video species pickers read all of it.";
             return null;
         }
@@ -286,6 +379,7 @@ namespace DSPRE.ROMFiles
         public void Save()
         {
             if (Problem() is string p) throw new InvalidOperationException(p);
+            if (FromSource) { SaveSource(); return; }
             foreach (Copy c in _copies)
                 for (int i = National; i < c.Members.Length; i++)
                 {

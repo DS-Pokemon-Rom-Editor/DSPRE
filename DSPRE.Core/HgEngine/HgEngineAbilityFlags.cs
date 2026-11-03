@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -18,9 +17,6 @@ namespace DSPRE.HgEngine
         private const string AbilityH = "include/constants/ability.h";
         private const string Table = "sAbilityFlags";
 
-        private static readonly Regex Struct = new(@"typedef\s+struct\s+AbilityFlags\s*\{(.*?)\}\s*AbilityFlags\s*;", RegexOptions.Singleline);
-        private static readonly Regex Bit = new(@"\bu\d+\s+(\w+)\s*:\s*1\s*;");
-
         private static string PathOf(string rel) => Path.Combine(HgEngineProject.RepoPathUnc, rel.Replace('/', Path.DirectorySeparatorChar));
 
         /// <summary>The struct's one-bit flags in declaration order, without the unused padding.</summary>
@@ -28,10 +24,9 @@ namespace DSPRE.HgEngine
         {
             List<string> names = new List<string>();
             if (!HgEngineProject.IsActive || !File.Exists(PathOf(StructHeader))) return names;
-            string header = Regex.Replace(HgEngineFileCache.GetText(PathOf(StructHeader)), @"//[^\n]*|/\*.*?\*/", "", RegexOptions.Singleline);
-            Match m = Struct.Match(header);
-            if (m.Success)
-                names.AddRange(Bit.Matches(m.Groups[1].Value).Select(b => b.Groups[1].Value).Where(n => !n.StartsWith("unused", StringComparison.Ordinal)));
+            CStruct flags = CSourceFile.For(HgEngineFileCache.GetText(PathOf(StructHeader))).FindStruct("AbilityFlags");
+            if (flags != null)
+                names.AddRange(flags.Members.Where(m => m.Bits == 1 && !m.Name.StartsWith("unused", StringComparison.Ordinal)).Select(m => m.Name));
             return names;
         }
 
@@ -101,7 +96,7 @@ namespace DSPRE.HgEngine
                 : "{ " + string.Join(", ", order.Where(set.Contains).Select(n => $".{n} = TRUE")) + " }";
 
             List<(int Start, int End, string Text)> edits = new List<(int Start, int End, string Text)>();
-            string indent = entries.Count > 0 ? HgEngineSwarms.Indent(text, entries[0].Item.Start) : "    ";
+            string indent = entries.Count > 0 ? HgEngineSourcePatcher.Indent(text, entries[0].Item.Start) : "    ";
             foreach ((int id, HashSet<string> set) in changes.OrderBy(c => c.Key))
             {
                 if (set.Any(f => !order.Contains(f))) { error = $"Ability {id} has a flag {StructHeader} doesn't declare."; return false; }
@@ -116,7 +111,7 @@ namespace DSPRE.HgEngine
                 if (set.Count == 0) continue;
                 if (!abilities.TryGetNameWithPrefix(id, "ABILITY_", out string name)) { error = $"Ability {id} has no ABILITY_ name in {AbilityH}."; return false; }
                 Entry next = entries.Where(e => e.Id > id).OrderBy(e => e.Item.Start).FirstOrDefault();
-                int at = next != null ? HgEngineSwarms.LineStart(text, next.Item.Start) : HgEngineSwarms.LineStart(text, table.Init.Close);
+                int at = next != null ? HgEngineSourcePatcher.LineStart(text, next.Item.Start) : HgEngineSourcePatcher.LineStart(text, table.Init.Close);
                 edits.Add((at, at, $"{indent}[{name}] = {Literal(set)},\n"));
             }
             if (edits.Count == 0) return true;

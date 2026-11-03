@@ -299,6 +299,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         }
         public bool HasSelection => _selectedRow != null;
 
+        /// <summary>Selects the first row for a symbol, so its values are in the fields ready to change.</summary>
+        public void SelectSymbol(string symbol) => SelectedRow = Rows.FirstOrDefault(r => r.Entry.Symbol == symbol) ?? SelectedRow;
+
         /// <summary>Reads the fields into an entry's values, or says why they can't be used.</summary>
         private string ReadFields(HgEnginePatchKind kind, out int overlay, out long at, out int register, out List<byte> bytes)
         {

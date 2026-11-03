@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
-using System.Text.RegularExpressions;
+using System;
 
 namespace DSPRE.HgEngine
 {
@@ -50,13 +50,17 @@ namespace DSPRE.HgEngine
         internal static Dictionary<int, string[]> ParseMap(string pokegraMkText)
         {
             Dictionary<int, string[]> map = new Dictionary<int, string[]>();
-            foreach (Match m in Regex.Matches(pokegraMkText,
-                @"build/pokemonpic/(\d+)-0([0-3])\.NCGR:\s*(data/graphics/sprites/[^\s]+\.png)"))
+            foreach (HgEngineMakeFile.Rule rule in HgEngineMakeFile.For(pokegraMkText).Rules)
             {
-                if (!int.TryParse(m.Groups[1].Value, out int id)) continue;
-                int slot = m.Groups[2].Value[0] - '0';
-                if (!map.TryGetValue(id, out string[] paths)) map[id] = paths = new string[4];
-                paths[slot] = m.Groups[3].Value;
+                for (int slot = 0; slot < 4; slot++)
+                {
+                    int id = HgEngineMakeFile.NumberBetween(rule.Target, "build/pokemonpic/", $"-0{slot}.NCGR");
+                    if (id < 0 || !rule.Prerequisites.StartsWith("data/graphics/sprites/", StringComparison.Ordinal)) continue;
+                    string png = HgEngineMakeFile.Words(rule.Prerequisites)[0];
+                    if (!png.EndsWith(".png", StringComparison.Ordinal)) continue;
+                    if (!map.TryGetValue(id, out string[] paths)) map[id] = paths = new string[4];
+                    paths[slot] = png;
+                }
             }
             return map;
         }

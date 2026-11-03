@@ -56,7 +56,7 @@ namespace DSPRE.HgEngine
             CInitItem entry = Entry(text, speciesId, out CDeclaration table);
             if (table == null) { error = $"{SourceRelPath} has no height table."; return false; }
             if (entry != null) text = text.Substring(0, entry.List.Open) + valueLiteral + text.Substring(entry.List.Close + 1);
-            else text = text.Insert(HgEngineSwarms.LineStart(text, table.Init.Close), $"    [{designator}] = {valueLiteral},\n");
+            else text = text.Insert(HgEngineSourcePatcher.LineStart(text, table.Init.Close), $"    [{designator}] = {valueLiteral},\n");
 
             int[] want = { femaleBack, maleBack, femaleFront, maleFront };
             return HgEngineVerifiedWrite.TryWrite(path, SourceRelPath, text, written =>

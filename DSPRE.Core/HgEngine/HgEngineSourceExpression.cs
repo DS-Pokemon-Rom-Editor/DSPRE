@@ -13,8 +13,6 @@ namespace DSPRE.HgEngine
         {
             value = 0;
             if (string.IsNullOrWhiteSpace(text)) return false;
-            // The one function-like macro data files put in values; the evaluator itself only knows operators.
-            text = MonWithForm.Replace(text, "(($1) | (($2) << " + HgEngineTrainerSource.FormShift + "))");
             if (!TryTokenize(text, out List<string> tokens)) return false;
             Parser parser = new Parser(tokens, lookup);
             if (!parser.TryTernary(out long result) || parser.Position != tokens.Count) return false;
@@ -23,11 +21,8 @@ namespace DSPRE.HgEngine
             return true;
         }
 
-        private static readonly System.Text.RegularExpressions.Regex MonWithForm =
-            new(@"\bMON_WITH_FORM\s*\(\s*([^,()]+?)\s*,\s*([^,()]+?)\s*\)");
-
         private static readonly string[] Operators =
-            { "||", "&&", "==", "!=", "<=", ">=", "<<", ">>", "?", ":", "|", "^", "&", "<", ">", "+", "-", "*", "/", "%", "!", "~", "(", ")" };
+            { "||", "&&", "==", "!=", "<=", ">=", "<<", ">>", "?", ":", "|", "^", "&", "<", ">", "+", "-", "*", "/", "%", "!", "~", "(", ")", "," };
 
         private static bool TryTokenize(string s, out List<string> tokens)
         {
@@ -149,6 +144,13 @@ namespace DSPRE.HgEngine
                 }
                 if (!char.IsLetter(token[0]) && token[0] != '_') return false;
                 Position++;
+                // The one function-like macro data files put in values.
+                if (token == "MON_WITH_FORM" && Accept("("))
+                {
+                    if (!TryTernary(out long species) || !Accept(",") || !TryTernary(out long form) || !Accept(")")) return false;
+                    value = species | (form << HgEngineTrainerSource.FormShift);
+                    return true;
+                }
                 int? resolved = _lookup?.Invoke(token);
                 if (resolved == null) return false;
                 value = resolved.Value;

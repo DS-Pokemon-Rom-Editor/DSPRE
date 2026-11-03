@@ -1,7 +1,7 @@
+using System.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -41,35 +41,53 @@ namespace DSPRE.HgEngine
             }
         }
 
-        // ".macro name,a,b" then ".word 0x58, a, b" then ".endmacro"; only single-line commands with a literal opcode.
-        private static readonly Regex AnimMacro = new(@"^\s*\.macro\s+(\w+)[^\n]*\n\s*\.word\s+(0x[0-9A-Fa-f]+|\d+)\s*((?:,[^\n]*)?)\n\s*\.endmacro", RegexOptions.Multiline);
+        // The name of a ".macro name ..." line, or null.
+        private static string MacroName(string line)
+        {
+            if (!line.StartsWith(".macro", StringComparison.Ordinal) || line.Length < 7 || !char.IsWhiteSpace(line[6])) return null;
+            string rest = line.Substring(6).TrimStart();
+            int end = 0;
+            while (end < rest.Length && HgEngineMakeFile.IsNameChar(rest[end])) end++;
+            return end > 0 ? rest.Substring(0, end) : null;
+        }
 
+        private static string[] MacroLines(string text) =>
+            text.Replace("\r\n", "\n").Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0).ToArray();
+
+        private static bool IsDirective(string line, string directive) =>
+            line.StartsWith(directive, StringComparison.Ordinal) && (line.Length == directive.Length || char.IsWhiteSpace(line[directive.Length]));
+
+        // ".macro name,a,b" then ".word 0x58, a, b" then ".endmacro". Only single-line commands with a literal opcode.
         internal static Dictionary<int, Command> ReadAnimation(string text)
         {
             Dictionary<int, Command> map = new Dictionary<int, Command>();
-            foreach (Match m in AnimMacro.Matches(text.Replace("\r\n", "\n")))
+            string[] lines = MacroLines(text);
+            for (int i = 0; i + 2 < lines.Length; i++)
             {
-                int op = Number(m.Groups[2].Value);
-                string rest = m.Groups[3].Value.Trim();
-                int args = rest.Length == 0 ? 0 : rest.Split(',').Length - 1;
-                if (op >= 0) map.TryAdd(op, new Command(m.Groups[1].Value, args));
+                string name = MacroName(lines[i]);
+                if (name == null || !IsDirective(lines[i + 1], ".word") || !lines[i + 2].StartsWith(".endmacro", StringComparison.Ordinal)) continue;
+                string[] parts = lines[i + 1].Substring(5).Split(',');
+                int op = Number(parts[0].Trim());
+                if (op >= 0) map.TryAdd(op, new Command(name, parts.Length - 1));
             }
             return map;
         }
 
         // ".macro Name a, b" then ".long NN" and one ".long" per argument, then ".endm".
-        private static readonly Regex BattleMacro = new(@"^\s*\.macro\s+(\w+)[^\n]*\n((?:\s*\.long[^\n]*\n)+)\s*\.endm\b", RegexOptions.Multiline);
-
         internal static Dictionary<int, Command> ReadBattle(string text)
         {
             Dictionary<int, Command> map = new Dictionary<int, Command>();
-            foreach (Match m in BattleMacro.Matches(text.Replace("\r\n", "\n")))
+            string[] lines = MacroLines(text);
+            for (int i = 0; i < lines.Length; i++)
             {
-                string[] longs = m.Groups[2].Value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-                Match first = Regex.Match(longs[0], @"\.long\s+(0x[0-9A-Fa-f]+|\d+)\s*$");
-                if (!first.Success) continue;
-                int op = Number(first.Groups[1].Value);
-                if (op >= 0) map.TryAdd(op, new Command(m.Groups[1].Value, longs.Length - 1));
+                string name = MacroName(lines[i]);
+                if (name == null) continue;
+                int end = i + 1;
+                while (end < lines.Length && lines[end].StartsWith(".long", StringComparison.Ordinal)) end++;
+                if (end == i + 1 || end >= lines.Length || !IsDirective(lines[end], ".endm")) continue;
+                string[] first = HgEngineMakeFile.Words(lines[i + 1]);
+                int op = first.Length == 2 && first[0] == ".long" ? Number(first[1]) : -1;
+                if (op >= 0) map.TryAdd(op, new Command(name, end - i - 2));
             }
             return map;
         }

@@ -70,7 +70,7 @@
       </StackPanel>
     </Border>
 
-    <DataGrid ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}" AutoGenerateColumns="False" IsReadOnly="True"
+    <DataGrid x:Name="PatchGrid" ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}" AutoGenerateColumns="False" IsReadOnly="True"
               GridLinesVisibility="Horizontal" CanUserResizeColumns="True" CanUserSortColumns="True">
       <DataGrid.Styles>
         <Style Selector="DataGridRow">

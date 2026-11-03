@@ -242,7 +242,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (!DSPRE.HgEngine.HgEngineProject.IsActive) return new LearnsetData(id);
 
             List<byte> bytes = new System.Collections.Generic.List<byte>();
-            bool read = DSPRE.HgEngine.HgEngineLearnsets.TryGetLevelMoves(id, out List<(int level, int move)> moves, out error);
+            bool read = DSPRE.HgEngine.HgEngineLearnsets.TryGetLevelMovesForEditing(id, out List<(int level, int move)> moves, out error);
             if (read)
             {
                 foreach ((int level, int move) in moves)

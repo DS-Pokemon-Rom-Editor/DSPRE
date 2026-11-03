@@ -188,6 +188,13 @@
 		  <TextBlock Text="{Binding SoundNote}" IsVisible="{Binding HasSoundList}" FontSize="11" TextWrapping="Wrap" Margin="26,0,0,0"
 					 Foreground="{DynamicResource Editor.Subtle}"/>
 		  <Button Classes="link" Content="Guide on the DS Pokémon Hacking wiki" Tag="Sound" Click="Guide_Click" IsVisible="{Binding HasSoundList}" Margin="26,0,0,0"/>
+		  <ItemsControl ItemsSource="{Binding ExtraLists}" IsVisible="{Binding HasExtraLists}" Margin="0,6,0,0">
+			<ItemsControl.ItemTemplate>
+			  <DataTemplate x:DataType="vm:MoveDataEditorViewModel+ExtraListRow">
+				<CheckBox Content="{Binding Label}" IsChecked="{Binding IsListed}" ToolTip.Tip="{Binding Tip}" Margin="2,0"/>
+			  </DataTemplate>
+			</ItemsControl.ItemTemplate>
+		  </ItemsControl>
 		  <TextBlock Text="{Binding AbilityWhyNot}" IsVisible="{Binding HasAbilityWhyNot}" FontSize="11" TextWrapping="Wrap" Margin="2,0"
 					 Foreground="{DynamicResource Editor.Subtle}"/>
 		</StackPanel>

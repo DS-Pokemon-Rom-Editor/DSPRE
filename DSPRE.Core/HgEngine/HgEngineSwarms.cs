@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -17,8 +16,7 @@ namespace DSPRE.HgEngine
         private const string MapsH = "include/constants/maps.h";
         private const string Table = "sSwarmMapLUT";
 
-        private static readonly Regex Count = new(@"(#define\s+SWARM_MAP_COUNT\s+)(\w+)");
-        private static readonly Regex Define = new(@"#define\s+(SWARM_\w+)\s+(\d+)");
+        private const string CountName = "SWARM_MAP_COUNT";
 
         private static string FilePath => Path.Combine(HgEngineProject.RepoPathUnc, RelPath.Replace('/', Path.DirectorySeparatorChar));
 
@@ -38,10 +36,11 @@ namespace DSPRE.HgEngine
         {
             Parsed p = parsed = new Parsed { File = new CSourceFile(text) };
             p.Table = p.File.Find(Table);
-            Match count = Count.Match(text);
-            if (p.Table == null || !count.Success) return $"{RelPath} has no {Table} or SWARM_MAP_COUNT that DSPRE can read.";
-            foreach (Match d in Define.Matches(text)) p.Methods[d.Groups[1].Value] = int.Parse(d.Groups[2].Value);
-            p.Methods.Remove("SWARM_MAP_COUNT");
+            CDirective count = p.File.FindDefine(CountName);
+            if (p.Table == null || count == null) return $"{RelPath} has no {Table} or {CountName} that DSPRE can read.";
+            foreach (CDirective d in p.File.Directives)
+                if (d.Keyword == "define" && d.Name != CountName && d.Name?.StartsWith("SWARM_", StringComparison.Ordinal) == true && int.TryParse(d.Body, out int method))
+                    p.Methods[d.Name] = method;
 
             HgEngineSymbolTable maps = HgEngineSymbolTable.Load(MapsH);
             int? Map(string name) => maps != null && maps.TryGetValue(name, out int v) ? v : null;
@@ -55,8 +54,8 @@ namespace DSPRE.HgEngine
                 if (!HgEngineSourceExpression.TryEvaluate(method, n => p.Methods.TryGetValue(n, out int v) ? v : null, out int m) || m < 0 || m > 2) return $"{RelPath}: swarm kind {method} couldn't be read.";
                 parsed.Rows.Add(((ushort)h, (ushort)m));
             }
-            if (!int.TryParse(count.Groups[2].Value, out int n) || n != parsed.Rows.Count)
-                return $"{RelPath} declares {count.Groups[2].Value} swarm rows but lists {parsed.Rows.Count}.";
+            if (!int.TryParse(count.Body, out int n) || n != parsed.Rows.Count)
+                return $"{RelPath} declares {count.Body} swarm rows but lists {parsed.Rows.Count}.";
             return null;
         }
 
@@ -91,7 +90,7 @@ namespace DSPRE.HgEngine
             string MapName(ushort v) => maps?.TryGetNameWithPrefix(v, "MAP_", out string n) == true ? n : v.ToString();
             string MethodName(ushort v) => p.Methods.FirstOrDefault(kv => kv.Value == v).Key ?? v.ToString();
             List<CInitItem> items = p.Table.Init.Items;
-            string indent = items.Count > 0 ? Indent(text, items[0].Start) : "    ";
+            string indent = items.Count > 0 ? HgEngineSourcePatcher.Indent(text, items[0].Start) : "    ";
 
             // Changed rows are replaced in place and new ones go after the last, so comments stay where they were.
             List<(int Start, int End, string Text)> edits = new List<(int Start, int End, string Text)>();
@@ -99,33 +98,21 @@ namespace DSPRE.HgEngine
                 if (p.Rows[i] != rows[i]) edits.Add((items[i].Start, items[i].End, $"{{ {MapName(rows[i].Header)}, {MethodName(rows[i].Method)} }}"));
             if (rows.Count > items.Count)
             {
-                int at = items.Count > 0 ? LineEnd(text, items[^1].End) : p.Table.Init.Open + 1;
+                int at = items.Count > 0 ? HgEngineSourcePatcher.LineEnd(text, items[^1].End) : p.Table.Init.Open + 1;
                 edits.Add((at, at, string.Concat(rows.Skip(items.Count).Select(r => $"\n{indent}{{ {MapName(r.Header)}, {MethodName(r.Method)} }},"))));
             }
             for (int i = rows.Count; i < items.Count; i++)
             {
-                int start = LineStart(text, items[i].Start), end = LineEnd(text, items[i].End);
+                int start = HgEngineSourcePatcher.LineStart(text, items[i].Start), end = HgEngineSourcePatcher.LineEnd(text, items[i].End);
                 edits.Add((start - 1, end, ""));
             }
             foreach ((int Start, int End, string Text) e in edits.OrderByDescending(e => e.Start)) text = text.Substring(0, e.Start) + e.Text + text.Substring(e.End);
-            text = Count.Replace(text, m => m.Groups[1].Value + rows.Count, 1);
+            if (!HgEngineHeaderEditor.TryReplaceDefineValue(ref text, CountName, rows.Count.ToString()))
+            { error = $"{RelPath} has no {CountName}."; return false; }
 
             return HgEngineVerifiedWrite.TryWrite(FilePath, RelPath, text, written =>
                 TryParse(written, out Parsed back) ?? (back.Rows.SequenceEqual(rows) ? null : "the rows differ"), out error, keepLostComments: false);
         }
 
-        internal static string Indent(string text, int at)
-        {
-            int start = LineStart(text, at);
-            return text.Substring(start, at - start).All(char.IsWhiteSpace) ? text.Substring(start, at - start) : "    ";
-        }
-
-        internal static int LineStart(string text, int at) => text.LastIndexOf('\n', Math.Max(0, at - 1)) + 1;
-
-        internal static int LineEnd(string text, int at)
-        {
-            int n = text.IndexOf('\n', at);
-            return n < 0 ? text.Length : n;
-        }
     }
 }

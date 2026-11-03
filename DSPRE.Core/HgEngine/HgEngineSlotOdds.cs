@@ -3,14 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
     /// <summary>
     /// hg-engine's wild slot rolls in src/field/encounter_check.c: each EncounterSlot_WildMonSlotRoll_* function takes
-    /// a roll of 0 to 99 and returns a slot by comparing it against boundaries. They only run when the checkout's
-    /// hooks list sends the game's own rolls in overlay 2 to them.
+    /// a roll of 0 to 99 and returns a slot by comparing it against boundaries. Slot hooks in overlay 2 send the game's
+    /// own rolls to them, so the overlay's compares never run. Hooks put in arm9 never apply.
     /// </summary>
     public static class HgEngineSlotOdds
     {
@@ -26,6 +25,23 @@ namespace DSPRE.HgEngine
             ("EncounterSlot_WildMonSlotRoll_Headbutt", "Headbutt", 6),
         };
 
+        /// <summary>The hg-engine pull request that gives the slot roll hooks overlay 2's number.</summary>
+        public const string HookFixUrl = "https://github.com/BluRosie/hg-engine/pull/1039";
+
+        /// <summary>
+        /// Slot roll hooks the checkout's hooks file labels arm9. The rolls are in overlay 2, so make.py writes those hooks
+        /// past the ARM9's end and the game keeps rolling with overlay 2's own odds.
+        /// </summary>
+        public static List<(string Symbol, int Line)> MislabelledHooks()
+        {
+            HgEnginePatchList hooks = HgEnginePatchList.ReadAll().FirstOrDefault(l => l.Kind == HgEnginePatchKind.Hook);
+            if (hooks == null) return new List<(string, int)>();
+            // The list keeps one entry per line of the file, so an entry's place is its line.
+            return hooks.Entries.Select((e, i) => (Entry: e, Line: i + 1))
+                .Where(x => x.Entry.Parsed && x.Entry.OverlayNumber < 0 && x.Entry.Built != false && Rolls.Any(r => r.Function == x.Entry.Symbol))
+                .Select(x => (x.Entry.Symbol, x.Line)).ToList();
+        }
+
         private static string FullPath => Path.Combine(HgEngineProject.RepoRootWindows, RelPath.Replace('/', Path.DirectorySeparatorChar));
 
         /// <summary>Why the rolls can't be edited in this checkout, or null.</summary>
@@ -33,11 +49,6 @@ namespace DSPRE.HgEngine
         {
             if (!HgEngineProject.IsActive) return "No hg-engine checkout is linked.";
             if (!File.Exists(FullPath)) return $"{RelPath} isn't in the checkout.";
-            HgEnginePatchList hooks = HgEnginePatchList.ReadAll().FirstOrDefault(l => l.Kind == HgEnginePatchKind.Hook);
-            List<HgEnginePatchEntry> wrong = hooks?.Entries.Where(e => e.Parsed && e.Symbol.StartsWith("EncounterSlot_WildMonSlotRoll_") && e.OverlayNumber != 2).ToList();
-            if (wrong != null && wrong.Count > 0)
-                return $"The checkout's hooks list sends {wrong.Count} slot rolls to arm9 instead of overlay 2, where the game rolls them, "
-                     + "so the odds in encounter_check.c are never used. Change those hooks to 0002 in hg-engine patches first.";
             return TryLoad(out _, out string error) ? null : error;
         }
 
@@ -47,7 +58,7 @@ namespace DSPRE.HgEngine
             percents = new List<int[]>();
             error = null;
             string text;
-            try { text = File.ReadAllText(FullPath); }
+            try { text = HgEngineFileCache.GetText(FullPath); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { error = ex.Message; return false; }
 
             foreach ((string function, string name, int slots) in Rolls)
@@ -72,17 +83,32 @@ namespace DSPRE.HgEngine
         // "rnd >= N ? 1 : 0" gives N. Lower bounds ("rnd >= a &&") repeat the previous slot's and are skipped.
         private static List<int> Bounds(string body)
         {
-            Match ternary = Regex.Match(body, @"return\s+rnd\s*>=\s*(\d+)\s*\?\s*1\s*:\s*0\s*;");
-            if (ternary.Success) return new List<int> { int.Parse(ternary.Groups[1].Value) };
+            List<string> tokens = CLexer.Tokenize(body).Select(t => t.Text(body)).ToList();
+            int? Number(int t) => t < tokens.Count && int.TryParse(tokens[t], out int n) ? n : null;
+
             List<int> bounds = new List<int>();
-            foreach (Match m in Regex.Matches(body, @"\bif\s*\(([^)]*)\)"))
+            for (int t = 0; t < tokens.Count; t++)
             {
-                string cond = m.Groups[1].Value;
-                Match lt = Regex.Match(cond, @"rnd\s*<\s*(\d+)");
-                Match eq = Regex.Match(cond, @"rnd\s*==\s*(\d+)");
-                if (lt.Success) bounds.Add(int.Parse(lt.Groups[1].Value));
-                else if (eq.Success) bounds.Add(int.Parse(eq.Groups[1].Value) + 1);
-                else return null;
+                if (tokens[t] == "return" && t + 7 < tokens.Count && tokens[t + 1] == "rnd" && tokens[t + 2] == ">=" && Number(t + 3) is int rare
+                    && tokens[t + 4] == "?" && tokens[t + 5] == "1" && tokens[t + 6] == ":" && tokens[t + 7] == "0")
+                    return new List<int> { rare };
+
+                if (tokens[t] != "if") continue;
+                int? bound = null;
+                int depth = 0;
+                for (int k = t + 1; k < tokens.Count; k++)
+                {
+                    if (tokens[k] == "(") depth++;
+                    else if (tokens[k] == ")" && --depth == 0) break;
+                    else if (tokens[k] == "rnd" && bound == null)
+                    {
+                        if (k + 2 >= tokens.Count) break;
+                        if (tokens[k + 1] == "<") bound = Number(k + 2);
+                        else if (tokens[k + 1] == "==") bound = Number(k + 2) + 1;
+                    }
+                }
+                if (bound == null) return null;
+                bounds.Add(bound.Value);
             }
             return bounds.Count > 0 ? bounds : null;
         }
@@ -90,17 +116,16 @@ namespace DSPRE.HgEngine
         private static bool TryBody(string text, string function, out int open, out int close)
         {
             open = close = -1;
-            Match m = Regex.Match(text, @"\b" + Regex.Escape(function) + @"\s*\([^)]*\)\s*\{");
-            if (!m.Success) return false;
-            open = m.Index + m.Length - 1;
-            return BraceScanner.TryFindMatchingBrace(text, open, out close);
+            if (CSourceFile.For(text).FunctionBody(function) is not (int, int) body) return false;
+            (open, close) = body;
+            return true;
         }
 
         /// <summary>Rewrites the functions whose odds changed as a plain chain of comparisons. Null on success.</summary>
         public static string Write(IReadOnlyList<int[]> percents)
         {
             if (!TryLoad(out List<int[]> current, out string error)) return error;
-            string text = File.ReadAllText(FullPath);
+            string text = HgEngineFileCache.GetText(FullPath);
             string nl = text.Contains("\r\n") ? "\r\n" : "\n";
             for (int r = Rolls.Length - 1; r >= 0; r--)
             {
@@ -110,14 +135,17 @@ namespace DSPRE.HgEngine
                 TryBody(text, Rolls[r].Function, out int open, out int close);
                 text = text.Substring(0, open + 1) + Body(percents[r], nl) + text.Substring(close);
             }
-            try { HgEngineFileCache.WriteText(FullPath, text); return null; }
+            try { HgEngineFileCache.WriteText(FullPath, text); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { return ex.Message; }
+            return null;
         }
 
         private static string Body(int[] percents, string nl)
         {
             StringBuilder b = new StringBuilder();
-            b.Append(nl).Append("    u8 rnd = LCRandRange(100);").Append(nl).Append(nl);
+            // A leading 0% slot compares rnd < 0, which -Wextra flags on an unsigned type and debug builds make an error.
+            string type = percents[0] == 0 ? "int" : "u8";
+            b.Append(nl).Append($"    {type} rnd = LCRandRange(100);").Append(nl).Append(nl);
             int bound = 0;
             for (int i = 0; i < percents.Length - 1; i++)
             {

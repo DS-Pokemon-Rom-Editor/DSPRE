@@ -43,7 +43,13 @@ namespace DSPRE.ROMFiles
         {
             if (HgEngineProject.IsActive)
             {
-                return Refuse("Trainers can't be added or removed in an hg-engine project, since it builds them from source.");
+                int trainers = HgEngineTrainerSource.Count();
+                if (trainers < 0) return Refuse("data/Trainers.c is missing from the checkout.");
+                if (!HgEngineCapacity(out TrainerRosterCapacity limits, out string why)) return Refuse(why);
+                int left = limits.RemainingAdditions(trainers, HgEngineSpecialIndex(limits, trainers));
+                // The trainer on the approach script's entry is a placeholder, so it takes one of the ids left.
+                if (HgEngineTrainerSource.ApproachTrainer() >= trainers && left > 0) left--;
+                return new TrainerRosterAnalysis(true, null, isConsistent: true, trainerRecordCount: trainers, remainingAdditions: left);
             }
 
             if (!TrainerScriptDescriptor.TryFor(GameFamily, out TrainerScriptDescriptor scriptDescriptor))
@@ -143,11 +149,49 @@ namespace DSPRE.ROMFiles
                 layout.SpecialIndex, capacity.RemainingAdditions(trainerCount, layout.SpecialIndex));
         }
 
+        // hg-engine keeps the game's trainer flags (TRAINER_FLAG_BASE 1360 in asm/include/flags.inc, and the flags after
+        // the last trainer's have their own uses), so HeartGold's limits are kept, including the shared trainer script's.
+        private static bool HgEngineCapacity(out TrainerRosterCapacity capacity, out string error) =>
+            TrainerRosterCapacity.TryFor(GameVersion, GameLanguage, out capacity, out error);
+
+        /// <summary>The name of the hg-engine trainer that sits on the approach script's entry.</summary>
+        public const string UnusableTrainerName = "Unused";
+
+        // The shared trainer script's last index grows with each trainer added.
+        private static int HgEngineSpecialIndex(TrainerRosterCapacity capacity, int trainers) =>
+            capacity.RetailSpecialIndex + trainers - capacity.RetailTrainerRecordCount;
+
+        private static bool TryAddHgEngineTrainer(string trainerName, out int trainerId, out string error)
+        {
+            trainerId = -1;
+            int trainers = HgEngineTrainerSource.Count();
+            if (trainers < 0) { error = "data/Trainers.c is missing from the checkout."; return false; }
+            if (!HgEngineCapacity(out TrainerRosterCapacity capacity, out error)) return false;
+            if (!capacity.CanAdd(trainers, HgEngineSpecialIndex(capacity, trainers), out error)) return false;
+            // hg-engine's trainer script note appends entries after the approach script, so the trainer on its
+            // entry can't be used on the field. It is added as a placeholder and the new trainer comes after it.
+            if (HgEngineTrainerSource.ApproachTrainer() == trainers)
+            {
+                if (!capacity.CanAdd(trainers + 1, HgEngineSpecialIndex(capacity, trainers + 1), out error)) return false;
+                if (!HgEngineTrainerSource.TryAdd(UnusableTrainerName, out _, out error)) return false;
+                trainers++;
+            }
+            if (!HgEngineTrainerSource.TryGiveScript(trainers, out error)) return false;
+            return HgEngineTrainerSource.TryAdd(trainerName, out trainerId, out error);
+        }
+
         public static bool TryAddTrainer(string name, out int trainerId, out string error)
         {
             trainerId = -1;
             error = null;
             string trainerName = string.IsNullOrWhiteSpace(name) ? "Trainer" : name.Trim();
+            if (HgEngineProject.IsActive)
+            {
+                // Up to four writes over two files: held until all of them work, so a failure leaves neither file changed.
+                using HgEngineWriteSession session = HgEngineWriteSession.Begin();
+                if (!TryAddHgEngineTrainer(trainerName, out trainerId, out error)) return false;
+                return session.Commit(keepLostComments: true, out error);
+            }
             int trainerNameLimit = TrainerNameMaxChars;
             if (trainerName.Length > trainerNameLimit)
             {
@@ -279,6 +323,21 @@ namespace DSPRE.ROMFiles
         {
             trainerId = -1;
             error = null;
+
+            if (HgEngineProject.IsActive)
+            {
+                int last = HgEngineTrainerSource.Count() - 1;
+                if (!TrainerRosterCapacity.TryFor(GameVersion, GameLanguage, out TrainerRosterCapacity retail, out error)) return false;
+                if (last < retail.RetailTrainerRecordCount) { error = "Only trainers DSPRE added can be removed."; return false; }
+                if (!TrainerReferenceScanner.TryFindCurrentProjectReferences(last, out List<TrainerReference> uses, out error)) return false;
+                if (uses.Count > 0)
+                {
+                    error = $"Trainer {last} is still in use and can't be removed:" + Environment.NewLine
+                        + string.Join(Environment.NewLine, uses.Take(8).Select(u => "• " + u));
+                    return false;
+                }
+                return HgEngineTrainerSource.TryRemoveLast(out trainerId, out error);
+            }
 
             TrainerRosterAnalysis analysis = AnalyzeCurrentProject();
             if (!analysis.IsConsistent)

@@ -57,18 +57,18 @@ namespace DSPRE.HgEngine
             if (rows.Count == 0 || rows.Any(r => r.Length != 5 || r.Any(v => v < 0 || v > ushort.MaxValue))) { error = "Each background needs five values from 0 to 65535."; return false; }
 
             List<CInitItem> items = table.Init.Items;
-            string indent = items.Count > 0 ? HgEngineSwarms.Indent(text, items[0].Start) : "    ";
+            string indent = items.Count > 0 ? HgEngineSourcePatcher.Indent(text, items[0].Start) : "    ";
             static string Literal(int[] r) => "{ " + string.Join(", ", r.Select(v => v.ToString().PadLeft(3))) + " }";
             List<(int Start, int End, string Text)> edits = new List<(int Start, int End, string Text)>();
             for (int i = 0; i < Math.Min(rows.Count, items.Count); i++)
                 if (!current[i].SequenceEqual(rows[i])) edits.Add((items[i].Start, items[i].End, Literal(rows[i])));
             if (rows.Count > items.Count)
             {
-                int at = items.Count > 0 ? HgEngineSwarms.LineEnd(text, items[^1].End) : table.Init.Open + 1;
+                int at = items.Count > 0 ? HgEngineSourcePatcher.LineEnd(text, items[^1].End) : table.Init.Open + 1;
                 edits.Add((at, at, string.Concat(rows.Skip(items.Count).Select(r => "\n" + indent + Literal(r) + ","))));
             }
             for (int i = rows.Count; i < items.Count; i++)
-                edits.Add((HgEngineSwarms.LineStart(text, items[i].Start) - 1, HgEngineSwarms.LineEnd(text, items[i].End), ""));
+                edits.Add((HgEngineSourcePatcher.LineStart(text, items[i].Start) - 1, HgEngineSourcePatcher.LineEnd(text, items[i].End), ""));
             foreach ((int Start, int End, string Text) e in edits.OrderByDescending(e => e.Start)) text = text.Substring(0, e.Start) + e.Text + text.Substring(e.End);
 
             // A removed background's comment goes with it.

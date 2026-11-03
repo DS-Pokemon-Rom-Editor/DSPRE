@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace DSPRE.HgEngine
@@ -118,8 +117,6 @@ namespace DSPRE.HgEngine
     internal static class HgEngineSourceComments
     {
         private static readonly HashSet<string> CommentedExtensions = new(StringComparer.OrdinalIgnoreCase) { ".c", ".h", ".s", ".asm" };
-        private static readonly Regex EntryStart = new(@"\[\s*([^\[\]\r\n]+?)\s*\]\s*=\s*\{", RegexOptions.Compiled);
-        private static readonly Regex Designator = new(@"\G\.\s*(\w+)\s*=(?!=)|\G\[\s*([^\]\r\n]+?)\s*\]\s*=");
 
         private readonly record struct Comment(int Start, string Text);
 
@@ -190,21 +187,12 @@ namespace DSPRE.HgEngine
             string body = comment.StartsWith("//", StringComparison.Ordinal)
                 ? comment.Substring(2)
                 : comment.Substring(2, Math.Max(0, comment.Length - (comment.EndsWith("*/", StringComparison.Ordinal) ? 4 : 2)));
-            return Regex.Replace(body, @"\s+", " ").Trim();
+            return string.Join(' ', body.Split((char[])null, StringSplitOptions.RemoveEmptyEntries));
         }
 
         private static List<(int Open, int Close, string Name)> TopLevelEntries(string text)
         {
-            List<(int, int, string)> entries = new List<(int, int, string)>();
-            int lastClose = -1;
-            foreach (Match m in EntryStart.Matches(text))
-            {
-                int open = m.Index + m.Length - 1;
-                if (open < lastClose || !BraceScanner.TryFindMatchingBrace(text, open, out int close)) continue;
-                entries.Add((open, close, m.Groups[1].Value));
-                lastClose = close;
-            }
-            return entries;
+            return CSourceFile.For(text).OuterEntries.Select(e => (e.Open, e.Close, e.Name)).ToList();
         }
 
         private static (string entry, string place) Locate(string path, string text, List<(int Open, int Close, string Name)> entries, int offset)
@@ -228,21 +216,17 @@ namespace DSPRE.HgEngine
                 if (k < 0) break;
 
                 (int start, int end) = spans[k];
-                Match named = Designator.Match(text, start);
-                bool designated = named.Success && named.Index + named.Length <= end;
+                CInitItem item = new CSourceFile("{" + text.Substring(start, end - start) + "}").ListAt(0)?.Items.FirstOrDefault();
+                string name = item?.Designators.Count > 0 ? item.Designators[0].Text : null;
                 // Positions count from 1, as the editors number party slots and rows.
-                words.Add(!designated ? (k + 1).ToString() : named.Groups[1].Success ? named.Groups[1].Value : named.Groups[2].Value);
+                words.Add(name ?? (k + 1).ToString());
 
-                int value = designated ? named.Index + named.Length : start;
-                while (value < end && char.IsWhiteSpace(text[value])) value++;
-                if (value < end && text[value] == '{' && BraceScanner.TryFindMatchingBrace(text, value, out int inner)
-                    && value < offset && offset < inner)
-                {
-                    open = value;
-                    close = inner;
-                    continue;
-                }
-                break;
+                if (item?.List == null) break;
+                int value = start + item.List.Open - 1;
+                int inner = start + item.List.Close - 1;
+                if (value >= offset || offset >= inner) break;
+                open = value;
+                close = inner;
             }
             return string.Join(" ", words);
         }

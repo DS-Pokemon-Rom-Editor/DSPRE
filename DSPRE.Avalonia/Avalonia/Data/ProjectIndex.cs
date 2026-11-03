@@ -80,10 +80,26 @@ namespace DSPRE.Avalonia.Data
         public static List<ValidationIssue> Validate()
         {
             List<ValidationIssue> issues = new List<ValidationIssue>();
+            // A fresh project hasn't unpacked these, and an empty folder would read as nothing wrong.
+            DSUtils.TryUnpackNarcs(new List<DirNames>
+            {
+                DirNames.Evolutions, DirNames.TrainerProperties, DirNames.TrainerParty,
+                // The header checks count these to see whether a reference is in range.
+                DirNames.Matrices, DirNames.AreaData, DirNames.EventFiles, DirNames.Scripts, DirNames.TextArchives, DirNames.Encounters,
+            });
             ValidateHeaders(issues);
             ValidateEvolutions(issues);
             ValidateTrainers(issues);
             return issues;
+        }
+
+        /// <summary>What was read from an hg-engine checkout, with its findings added to <paramref name="issues"/>.</summary>
+        public static List<HgEngine.HgEngineSourceReport.SourceRow> ReportSources(List<ValidationIssue> issues)
+        {
+            HgEngine.HgEngineSourceReport.Report report = HgEngine.HgEngineSourceReport.Build();
+            foreach ((string where, string message) in report.Findings)
+                issues.Add(new ValidationIssue { Category = "Source", Where = where, Message = message });
+            return report.Rows;
         }
 
         private static void ValidateHeaders(List<ValidationIssue> issues)
@@ -131,8 +147,10 @@ namespace DSPRE.Avalonia.Data
                         void Add(string msg) => issues.Add(new ValidationIssue
                         { Category = "Evolution", Where = $"{Name(species, mons)} (slot {slot + 1})", Message = msg });
 
-                        if (d.Target < 0 || d.Target >= mons)
-                            Add($"target species {d.Target} is out of range (only {mons} exist)");
+                        // hg-engine keeps the form above the species id.
+                        int target = RomInfo.IsHGE ? d.Target & HgEngine.HgEngineTrainerSource.SpeciesMask : d.Target;
+                        if (target < 0 || target >= mons)
+                            Add($"target species {target} is out of range (only {mons} exist)");
 
                         EvolutionParamMeaning meaning = (EvolutionParamMeaning)LabelStore.GetAttr("evolution_methods", (int)d.Method);
                         int p = d.Param;

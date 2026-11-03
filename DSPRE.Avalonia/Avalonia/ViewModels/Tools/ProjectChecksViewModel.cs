@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using DSPRE.Avalonia.Data;
+using DSPRE.HgEngine;
 
 namespace DSPRE.Avalonia.ViewModels.Tools
 {
@@ -19,6 +20,9 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         // ── Validation tab ─────────────────────────────────────────────────────
         public ObservableCollection<ValidationIssue> Issues { get; } = new();
+        /// <summary>What the last run read from an hg-engine checkout, table by table.</summary>
+        public ObservableCollection<HgEngineSourceReport.SourceRow> Sources { get; } = new();
+        public bool HasSources => Sources.Count > 0;
         private string _validationStatus = "";
         public string ValidationStatus { get => _validationStatus; private set => Set(ref _validationStatus, value); }
 
@@ -35,13 +39,22 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             try
             {
                 // The scan reads many ROM files; run it off the UI thread so the window stays responsive.
-                List<ValidationIssue> found = await Task.Run(() => ProjectIndex.Validate());
+                List<HgEngineSourceReport.SourceRow> rows = null;
+                List<ValidationIssue> found = await Task.Run(() =>
+                {
+                    List<ValidationIssue> all = ProjectIndex.Validate();
+                    rows = ProjectIndex.ReportSources(all);
+                    return all;
+                });
                 foreach (ValidationIssue i in found) Issues.Add(i);
+                Sources.Clear();
+                foreach (HgEngineSourceReport.SourceRow row in rows) Sources.Add(row);
+                On(nameof(HasSources));
                 ValidationStatus = found.Count == 0
                     ? "No problems found. Every reference points at something that exists."
                     : $"{Plural.Of(found.Count, "problem")} found.";
             }
-            catch (Exception ex) { ValidationStatus = "Validation failed: " + ex.Message; }
+            catch (Exception ex) { CrashReporter.LogHandled(ex); ValidationStatus = "Validation failed: " + ex.Message; }
             finally { IsRunning = false; }
         }
 

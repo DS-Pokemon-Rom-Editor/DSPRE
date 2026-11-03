@@ -1,3 +1,4 @@
+using System;
 using DSPRE;
 
 namespace DSPRE.HgEngine
@@ -25,7 +26,8 @@ namespace DSPRE.HgEngine
             HgEngineOwnedFile file = HgEngineOwnedFiles.Get(archive, index);
             if (file?.FullPath == null || !file.Rule.CopiesSourceVerbatim) return null;
             // Only a file named exactly like a member lands as one; anything with an extension is copied in beside them.
-            if (!System.Text.RegularExpressions.Regex.IsMatch(System.IO.Path.GetFileName(file.FullPath), @"^\d+_\d+$")) return null;
+            string[] number = System.IO.Path.GetFileName(file.FullPath).Split('_');
+            if (number.Length != 2 || !HgEngineMakeFile.IsDigits(number[0]) || !HgEngineMakeFile.IsDigits(number[1])) return null;
             return System.IO.File.Exists(file.FullPath) ? file : null;
         }
 
@@ -51,9 +53,6 @@ namespace DSPRE.HgEngine
             return true;
         }
 
-        private static readonly System.Text.RegularExpressions.Regex ConvertedPalette = new(
-            @"\$\(GFX\)\s+\$\((\w+)_DEPENDENCIES_DIR\)/(\S+\.pal)\s+\$\(\1_DIR\)/\d+_(\d+)\.NCLR");
-
         /// <summary>
         /// The JASC palette the build converts into this member (as otherpoke's Arceus Fairy palettes), or null. The
         /// rest of such an archive comes from the ROM, so only these members have to be saved into the checkout.
@@ -65,12 +64,19 @@ namespace DSPRE.HgEngine
             string narcs = System.IO.Path.Combine(HgEngineProject.RepoPathUnc, HgEngineOwnedFiles.MakeFragmentRelPath);
             if (archive == null || !System.IO.File.Exists(narcs)) return null;
             string text = HgEngineFileCache.GetText(narcs);
-            foreach (System.Text.RegularExpressions.Match m in ConvertedPalette.Matches(text))
+            HgEngineRule rule = HgEngineOwnedFiles.RuleForArchive(archive);
+            if (rule?.SourceDirRelPath == null) return null;
+
+            // $(GFX) $(X_DEPENDENCIES_DIR)/name.pal $(X_DIR)/4_212.NCLR
+            string from = $"$({rule.Variable}_DEPENDENCIES_DIR)/", to = $"$({rule.Variable}_DIR)/";
+            string[] words = HgEngineMakeFile.Words(text);
+            for (int w = 0; w + 2 < words.Length; w++)
             {
-                if (int.Parse(m.Groups[3].Value) != member) continue;
-                HgEngineRule rule = HgEngineOwnedFiles.RuleForArchive(archive);
-                if (rule == null || rule.Variable != m.Groups[1].Value || rule.SourceDirRelPath == null) continue;
-                return System.IO.Path.Combine(HgEngineProject.RepoPathUnc, (rule.SourceDirRelPath + "/" + m.Groups[2].Value).Replace('/', System.IO.Path.DirectorySeparatorChar));
+                if (words[w] != "$(GFX)" || !words[w + 1].StartsWith(from, StringComparison.Ordinal) || !words[w + 1].EndsWith(".pal", StringComparison.Ordinal)) continue;
+                if (!words[w + 2].StartsWith(to, StringComparison.Ordinal) || !words[w + 2].EndsWith(".NCLR", StringComparison.Ordinal)) continue;
+                string[] number = words[w + 2].Substring(to.Length, words[w + 2].Length - to.Length - 5).Split('_');
+                if (number.Length != 2 || !HgEngineMakeFile.IsDigits(number[0]) || !int.TryParse(number[1], out int target) || target != member) continue;
+                return System.IO.Path.Combine(HgEngineProject.RepoPathUnc, (rule.SourceDirRelPath + "/" + words[w + 1].Substring(from.Length)).Replace('/', System.IO.Path.DirectorySeparatorChar));
             }
             return null;
         }

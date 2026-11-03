@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using System.IO;
 using System.Text.Json;
@@ -163,7 +164,7 @@ namespace DSPRE.HgEngine
         /// <summary>A plain file name ending in .nds, safe to hand to make.</summary>
         public static bool IsSafeBuildRomName(string name) =>
             !string.IsNullOrWhiteSpace(name) && name.EndsWith(".nds", StringComparison.OrdinalIgnoreCase)
-            && System.Text.RegularExpressions.Regex.IsMatch(name, @"^[A-Za-z0-9][A-Za-z0-9 ._-]*$");
+            && char.IsAsciiLetterOrDigit(name[0]) && name.All(c => char.IsAsciiLetterOrDigit(c) || c is ' ' or '.' or '_' or '-');
 
         public static void SetBuildRomName(string name)
         {

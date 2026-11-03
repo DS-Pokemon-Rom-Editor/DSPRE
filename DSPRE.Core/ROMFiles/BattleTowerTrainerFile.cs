@@ -249,7 +249,7 @@ namespace DSPRE.ROMFiles
 
         public static bool IsAvailable()
         {
-            return !RomInfo.IsHGE && RomInfo.GameDirs.ContainsKey(RomInfo.DirNames.BattleTowerTrainers);
+            return RomInfo.GameDirs.ContainsKey(RomInfo.DirNames.BattleTowerTrainers);
         }
     }
 }

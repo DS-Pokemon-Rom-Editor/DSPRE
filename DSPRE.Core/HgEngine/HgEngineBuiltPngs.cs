@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -17,13 +16,6 @@ namespace DSPRE.HgEngine
 
         /// <summary>What one member is built from. A Copy is a file copied in as it is.</summary>
         public sealed record Source(string Path, Part Part);
-
-        private static readonly Regex Assignment = new(@"^[ \t]*(\w+)[ \t]*:?=[ \t]*(.*?)[ \t]*\r?$", RegexOptions.Multiline);
-        private static readonly Regex Include = new(@"^[ \t]*include[ \t]+(\S+\.mk)[ \t]*\r?$", RegexOptions.Multiline);
-        // A recipe can carry blank and comment lines between its commands, as the battle graphics one does.
-        private static readonly Regex NarcRecipe = new(@"^\$\((\w+)_NARC\)[ \t]*:[^\n]*\n((?:(?:\t[^\n]*|#[^\n]*|[ \t]*\r?)(?:\n|$))+)", RegexOptions.Multiline);
-        private static readonly Regex PngRule = new(@"^(\S+\.(NCGR|NCLR))[ \t]*:[ \t]*(\S+\.png)[ \t]*\r?$", RegexOptions.Multiline);
-        private static readonly Regex Reference = new(@"\$\((\w+)\)");
 
         private static Dictionary<string, List<Source>> _members;
         private static string _cachedFor;
@@ -77,7 +69,8 @@ namespace DSPRE.HgEngine
             try
             {
                 string top = HgEngineFileCache.GetText(makefile);
-                List<string> includes = Include.Matches(top).Select(inc => Full(root, inc.Groups[1].Value)).Where(File.Exists).ToList();
+                List<string> includes = HgEngineMakeFile.For(top).Includes.Where(inc => inc.EndsWith(".mk", StringComparison.Ordinal) && !inc.Any(char.IsWhiteSpace))
+                    .Select(inc => Full(root, inc)).Where(File.Exists).ToList();
                 // Species added by script rewrite pokegra.mk, so any fragment changing reads them all again.
                 DateTime stamp = includes.Append(makefile).Max(File.GetLastWriteTimeUtc);
                 if (_members != null && _cachedFor == root && _cachedStamp == stamp) return _members;
@@ -86,7 +79,7 @@ namespace DSPRE.HgEngine
                 foreach (string path in includes)
                 {
                     string text = HgEngineFileCache.GetText(path);
-                    if (!PngRule.IsMatch(text) && !NarcRecipe.IsMatch(text)) continue;
+                    if (!HgEngineMakeFile.For(text).Rules.Any(r => IsPngRule(r) || NarcOf(r) != null)) continue;
                     Read(root, text, Variables(text, new Dictionary<string, string>(vars)), members);
                 }
                 _cachedStamp = stamp;
@@ -101,23 +94,38 @@ namespace DSPRE.HgEngine
             return members;
         }
 
-        private static readonly Regex PatternRule = new(@"^(\S*%\S*\.(NCGR|NCLR))[ \t]*:[ \t]*(\S*%\S*\.png)[ \t]*\r?$", RegexOptions.Multiline);
+        private static bool OneWord(string text) => text.Length > 0 && !text.Any(char.IsWhiteSpace);
+
+        private static bool IsDrawn(string target) => target.EndsWith(".NCGR", StringComparison.Ordinal) || target.EndsWith(".NCLR", StringComparison.Ordinal);
+
+        private static bool IsPngRule(HgEngineMakeFile.Rule rule) =>
+            OneWord(rule.Target) && OneWord(rule.Prerequisites) && IsDrawn(rule.Target) && rule.Prerequisites.EndsWith(".png", StringComparison.Ordinal);
+
         // Pokéwalker pictures: $(DIR)/%.lz from $(ART_DIR)/%.2bpp, which ENCODE_IMG makes from %.png.
-        private static readonly Regex ChainRule = new(@"^(\S*%\S*\.(lz|2bpp))[ \t]*:[ \t]*(\S*%\S*\.(2bpp|png))[ \t]*\r?$", RegexOptions.Multiline);
-        private static readonly Regex HyphenMember = new(@"^(.+)(-0\d)\.(NCGR|NCLR)(\.lz)?$");
-        private static readonly Regex NumberedMember = new(@"^(.*_)(\d+)$");
+        private static bool IsChainRule(HgEngineMakeFile.Rule rule) =>
+            OneWord(rule.Target) && OneWord(rule.Prerequisites) && rule.Target.Contains('%') && rule.Prerequisites.Contains('%')
+            && (rule.Target.EndsWith(".lz", StringComparison.Ordinal) || rule.Target.EndsWith(".2bpp", StringComparison.Ordinal))
+            && (rule.Prerequisites.EndsWith(".2bpp", StringComparison.Ordinal) || rule.Prerequisites.EndsWith(".png", StringComparison.Ordinal));
+
+        // X for a rule on $(X_NARC), or null.
+        private static string NarcOf(HgEngineMakeFile.Rule rule)
+        {
+            string name = HgEngineMakeFile.ReferenceName(rule.Target);
+            return name != null && name.EndsWith("_NARC", StringComparison.Ordinal) ? name.Substring(0, name.Length - 5) : null;
+        }
+
+        private static Part PartOf(string target) => target.EndsWith(".NCGR", StringComparison.Ordinal) ? Part.Pixels : Part.Colours;
 
         private static void Read(string root, string text, Dictionary<string, string> vars, Dictionary<string, List<Source>> into)
         {
-            List<(string Target, Part Part, string Png)> pngs = new List<(string Target, Part Part, string Png)>();
-            foreach (Match m in PngRule.Matches(text))
-                if (!m.Groups[1].Value.Contains('%'))
-                    pngs.Add((Expand(m.Groups[1].Value, vars), m.Groups[2].Value == "NCGR" ? Part.Pixels : Part.Colours, Expand(m.Groups[3].Value, vars)));
-            List<(string Target, Part Part, string Png)> patterns = PatternRule.Matches(text).Cast<Match>()
-                .Select(m => (Target: Expand(m.Groups[1].Value, vars), Part: m.Groups[2].Value == "NCGR" ? Part.Pixels : Part.Colours, Png: Expand(m.Groups[3].Value, vars)))
+            List<HgEngineMakeFile.Rule> rules = HgEngineMakeFile.For(text).Rules;
+            List<(string Target, Part Part, string Png)> pngs = rules.Where(r => IsPngRule(r) && !r.Target.Contains('%'))
+                .Select(r => (Expand(r.Target, vars), PartOf(r.Target), Expand(r.Prerequisites, vars))).ToList();
+            List<(string Target, Part Part, string Png)> patterns = rules.Where(r => IsPngRule(r) && r.Target.Contains('%') && r.Prerequisites.Contains('%'))
+                .Select(r => (Target: Expand(r.Target, vars), Part: PartOf(r.Target), Png: Expand(r.Prerequisites, vars)))
                 .ToList();
-            List<(string Target, string From)> chains = ChainRule.Matches(text).Cast<Match>()
-                .Select(m => (Target: Expand(m.Groups[1].Value, vars), From: Expand(m.Groups[3].Value, vars)))
+            List<(string Target, string From)> chains = rules.Where(IsChainRule)
+                .Select(r => (Target: Expand(r.Target, vars), From: Expand(r.Prerequisites, vars)))
                 .ToList();
             // A packed picture whose .2bpp is made from a PNG counts as drawn from that PNG.
             foreach ((string t, string from) in chains)
@@ -127,12 +135,15 @@ namespace DSPRE.HgEngine
                 if (art.From != null) patterns.Add((t, Part.Pixels, art.From));
             }
 
-            foreach (Match recipe in NarcRecipe.Matches(text))
+            foreach (HgEngineMakeFile.Rule recipe in rules)
             {
-                string body = recipe.Groups[2].Value;
-                Match create = Regex.Match(body, @"\$\(NARCHIVE\)\s+create\s+\$@\s+\$\((\w+)\)");
-                if (!create.Success || !vars.TryGetValue(recipe.Groups[1].Value + "_TARGET", out string target)) continue;
-                string dirVar = create.Groups[1].Value;
+                string variable = NarcOf(recipe);
+                if (variable == null || recipe.Body.Length == 0) continue;
+                string body = recipe.Body;
+                string[] words = HgEngineMakeFile.Words(body);
+                int create = HgEngineMakeFile.RunStart(words, 0, "$(NARCHIVE)", "create", "$@", "$(");
+                string dirVar = create < 0 ? null : HgEngineMakeFile.ReferenceName(words[create + 3]);
+                if (dirVar == null || !vars.TryGetValue(variable + "_TARGET", out string target)) continue;
                 string buildDir = Expand("$(" + dirVar + ")", vars).TrimEnd('/');
 
                 SortedDictionary<string, Source> byName = new SortedDictionary<string, Source>(StringComparer.Ordinal);
@@ -140,22 +151,27 @@ namespace DSPRE.HgEngine
                     if (Path.GetDirectoryName(t)?.Replace('\\', '/') == buildDir)
                         byName[Path.GetFileName(t)] = new Source(Full(root, png), part);
 
-                string to = Regex.Escape("$(" + dirVar + ")");
-                foreach (Match cp in Regex.Matches(body, @"cp\s+-r\s+(\S+)/\.\s+" + to))
+                string to = "$(" + dirVar + ")";
+                for (int w = 0; w + 2 < words.Length; w++)
                 {
-                    string from = Full(root, Expand(cp.Groups[1].Value, vars));
-                    if (Directory.Exists(from))
-                        foreach (string f in Directory.GetFiles(from)) byName[Path.GetFileName(f)] = new Source(f, Part.Copy);
+                    string next = words[w + 1], after = words[w + 2];
+                    if (words[w] == "cp" && next == "-r" && w + 3 < words.Length && after.EndsWith("/.", StringComparison.Ordinal)
+                        && words[w + 3].StartsWith(to, StringComparison.Ordinal))
+                    {
+                        string from = Full(root, Expand(after.Substring(0, after.Length - 2), vars));
+                        if (Directory.Exists(from))
+                            foreach (string f in Directory.GetFiles(from)) byName[Path.GetFileName(f)] = new Source(f, Part.Copy);
+                    }
+                    if (next.StartsWith("$$", StringComparison.Ordinal) || !after.StartsWith(to + "/", StringComparison.Ordinal)) continue;
+                    string file = after.Substring(to.Length + 1);
+                    // A file name only, so scr_seq's "cp ... $(SCR_SEQ_DIR)/)" inside $(if ...) doesn't count.
+                    if (words[w] == "cp" && file.Length > 0 && file.All(c => HgEngineMakeFile.IsNameChar(c) || c is '.' or '-'))
+                        byName[file] = new Source(Full(root, Expand(next, vars)), Part.Copy);
+                    // One file converted straight into a member, as otherpoke's $(GFX) x.pal $(DIR)/4_212.NCLR.
+                    if (words[w] == "$(GFX)" && IsDrawn(file) && (next.EndsWith(".pal", StringComparison.Ordinal) || next.EndsWith(".png", StringComparison.Ordinal)))
+                        byName[file] = new Source(Full(root, Expand(next, vars)),
+                            next.EndsWith(".pal", StringComparison.Ordinal) ? Part.JascColours : PartOf(file));
                 }
-                // Match a file name only, so scr_seq's "cp ... $(SCR_SEQ_DIR)/)" inside $(if ...) doesn't count.
-                foreach (Match cp in Regex.Matches(body, @"cp\s+(\S+)\s+" + to + @"/([\w.\-]+)(?=\s|$)"))
-                    if (!cp.Groups[1].Value.StartsWith("$$", StringComparison.Ordinal))
-                        byName[cp.Groups[2].Value] = new Source(Full(root, Expand(cp.Groups[1].Value, vars)), Part.Copy);
-                // One file converted straight into a member, as otherpoke's $(GFX) x.pal $(DIR)/4_212.NCLR.
-                foreach (Match gfx in Regex.Matches(body, @"\$\(GFX\)\s+(\S+\.(pal|png))\s+" + to + @"/(\S+\.(NCLR|NCGR))\b"))
-                    if (!gfx.Groups[1].Value.StartsWith("$$", StringComparison.Ordinal))
-                        byName[gfx.Groups[3].Value] = new Source(Full(root, Expand(gfx.Groups[1].Value, vars)),
-                            gfx.Groups[2].Value == "pal" ? Part.JascColours : gfx.Groups[4].Value == "NCGR" ? Part.Pixels : Part.Colours);
 
                 // The archive is packed straight from a source folder, as footprints are: every member is a copy.
                 bool fromSource = dirVar.EndsWith("_DEPENDENCIES_DIR", StringComparison.Ordinal);
@@ -166,11 +182,11 @@ namespace DSPRE.HgEngine
                     foreach (string n in names) byName[n] = new Source(Path.Combine(built, n), Part.Copy);
 
                 // Trainer sprites have their own editor writing their sources, so only it touches them.
-                string narc = Expand("$(" + recipe.Groups[1].Value + "_NARC)", vars);
+                string narc = Expand("$(" + variable + "_NARC)", vars);
                 bool ownedByEditor = HgEngineDomains.All.Any(d => d.Domain == HgEngineDomain.TrainerGraphics && d.MakeTargets.Contains(narc));
                 if (names != null && !fromSource && !ownedByEditor)
                 {
-                    List<string> sourceDirs = SourceDirs(recipe.Value, vars, root);
+                    List<string> sourceDirs = SourceDirs(recipe.Text, vars, root);
                     foreach (string n in names)
                     {
                         if (byName.ContainsKey(n)) continue;
@@ -195,9 +211,11 @@ namespace DSPRE.HgEngine
             {
                 if (Path.GetDirectoryName(t)?.Replace('\\', '/') != buildDir) continue;
                 string file = Path.GetFileName(t);
-                Match m = Regex.Match(name, "^" + Regex.Escape(file).Replace("%", "(.+)") + "$");
-                if (!m.Success) continue;
-                string path = Full(root, png.Replace("%", m.Groups[1].Value));
+                int stemAt = file.IndexOf('%');
+                if (stemAt < 0) continue;
+                string before = file.Substring(0, stemAt), after = file.Substring(stemAt + 1);
+                if (name.Length <= before.Length + after.Length || !name.StartsWith(before, StringComparison.Ordinal) || !name.EndsWith(after, StringComparison.Ordinal)) continue;
+                string path = Full(root, png.Replace("%", name.Substring(before.Length, name.Length - before.Length - after.Length)));
                 if (File.Exists(path)) return new Source(path, part);
             }
             return null;
@@ -209,26 +227,45 @@ namespace DSPRE.HgEngine
             string Find(string file) => sourceDirs.Select(d => Path.Combine(d, file)).FirstOrDefault(File.Exists);
 
             // $(GFX) $$file $(DIR)/$$(basename $$file .png)-00.NCGR, -01.NCLR, and the -00.NCGR.lz the terrain gets.
-            Match h = HyphenMember.Match(name);
-            if (h.Success && body.Contains("$$(basename $$file .png)" + h.Groups[2].Value, StringComparison.Ordinal)
-                && Find(h.Groups[1].Value + ".png") is string hyphenPng)
-                return new Source(hyphenPng, h.Groups[3].Value == "NCGR" ? Part.Pixels : Part.Colours);
+            string plain = name.EndsWith(".lz", StringComparison.Ordinal) ? name.Substring(0, name.Length - 3) : name;
+            string stem = plain.Length > 5 ? plain.Substring(0, plain.Length - 5) : "";
+            if (IsDrawn(plain) && stem.Length > 3 && stem[^3] == '-' && stem[^2] == '0' && char.IsAsciiDigit(stem[^1]))
+            {
+                string hyphen = stem.Substring(stem.Length - 3), picture = stem.Substring(0, stem.Length - 3);
+                if (body.Contains("$$(basename $$file .png)" + hyphen, StringComparison.Ordinal) && Find(picture + ".png") is string hyphenPng)
+                    return new Source(hyphenPng, PartOf(plain));
+            }
 
-            Match n = NumberedMember.Match(name);
-            if (!n.Success) return null;
+            int digits = name.Length;
+            while (digits > 0 && char.IsAsciiDigit(name[digits - 1])) digits--;
+            if (digits == name.Length || digits == 0 || name[digits - 1] != '_') return null;
+            string head = name.Substring(0, digits), tail = name.Substring(digits);
             // mv $(...)/$$(basename $$file .png).NCGR.lz $(DIR)/$$(basename $$file .png): the drawing keeps the PNG's name.
-            if (Regex.IsMatch(body, @"NCGR\.lz\s+\$\(\w+\)/\$\$\(basename \$\$file \.png\)") && Find(name + ".png") is string drawn)
+            if (MovesInto(body, "NCGR.lz", "$$(basename $$file .png)") && Find(name + ".png") is string drawn)
                 return new Source(drawn, Part.Pixels);
             // ... and its colours go to the member one after it.
             if (body.Contains("+1))", StringComparison.Ordinal) && body.Contains(".NCLR", StringComparison.Ordinal)
-                && int.TryParse(n.Groups[2].Value, out int number) && number > 0
-                && Find(n.Groups[1].Value + (number - 1).ToString("D" + n.Groups[2].Value.Length) + ".png") is string coloured)
+                && int.TryParse(tail, out int number) && number > 0
+                && Find(head + (number - 1).ToString("D" + tail.Length) + ".png") is string coloured)
                 return new Source(coloured, Part.Colours);
             if (body.Contains("$$(basename $$file .pal)", StringComparison.Ordinal) && Find(name + ".pal") is string jasc)
                 return new Source(jasc, Part.JascColours);
-            if (Regex.IsMatch(body, @"cp \$\$file \$\(\w+\)/\$\$\(basename \$\$file \.NSCR\)") && Find(name + ".NSCR") is string screen)
+            if (MovesInto(body, "cp $$file", "$$(basename $$file .NSCR)") && Find(name + ".NSCR") is string screen)
                 return new Source(screen, Part.Copy);
             return null;
+        }
+
+        // Whether "<source> $(ANY_DIR)/<name>" appears in the recipe.
+        private static bool MovesInto(string body, string source, string name)
+        {
+            for (int at = body.IndexOf(source, StringComparison.Ordinal); at >= 0; at = body.IndexOf(source, at + 1, StringComparison.Ordinal))
+            {
+                int i = at + source.Length;
+                while (i < body.Length && char.IsWhiteSpace(body[i])) i++;
+                int close = string.CompareOrdinal(body, i, "$(", 0, 2) == 0 ? body.IndexOf(')', i) : -1;
+                if (close > 0 && string.CompareOrdinal(body, close + 1, "/" + name, 0, name.Length + 1) == 0) return true;
+            }
+            return false;
         }
 
         // The source folders a recipe reads: every *_DEPENDENCIES_DIR its rule line and body reach through variables.
@@ -246,18 +283,14 @@ namespace DSPRE.HgEngine
 
         private static Dictionary<string, string> Variables(string text, Dictionary<string, string> into)
         {
-            foreach (Match m in Assignment.Matches(text))
-                into.TryAdd(m.Groups[1].Value, m.Groups[2].Value);
+            foreach (HgEngineMakeFile.Assignment a in HgEngineMakeFile.For(text).Assignments)
+                if (!a.Appends) into.TryAdd(a.Name, a.Value);
             return into;
         }
 
         // FILESYS stays as written: Normalise finds the archive below it.
-        private static string Expand(string value, Dictionary<string, string> vars)
-        {
-            for (int depth = 0; depth < 8 && value.Contains("$(", StringComparison.Ordinal); depth++)
-                value = Reference.Replace(value, m => m.Groups[1].Value != "FILESYS" && vars.TryGetValue(m.Groups[1].Value, out string v) ? v : m.Value);
-            return value;
-        }
+        private static string Expand(string value, Dictionary<string, string> vars) =>
+            HgEngineMakeFile.Expand(value, name => name != "FILESYS" && vars.TryGetValue(name, out string v) ? v : null);
 
         private static string Full(string root, string rel) => Path.Combine(root, rel.Replace('/', Path.DirectorySeparatorChar));
     }

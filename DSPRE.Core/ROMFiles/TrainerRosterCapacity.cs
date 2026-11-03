@@ -47,15 +47,15 @@ namespace DSPRE.ROMFiles
             if (version == RomInfo.GameVersions.HeartGold &&
                 language == RomInfo.GameLanguages.English)
             {
-                // IDs 738 and 739 use unnamed flags 0x832 and 0x833. The separate retail
-                // LAST_TRAINER_INDEX comparison remains correct for those IDs, but not ID 740.
+                // Defeated flags 0x834 to 0x95F are unused and 0x960 is the first in use. Trainer scripts are 3000 + id - 1,
+                // partners start at 5000, and the phone's LAST_TRAINER_INDEX check does the same on both branches.
                 capacity = new TrainerRosterCapacity(
                     retailTrainerRecordCount: 738,
                     retailSpecialIndex: 739,
-                    maximumSpecialIndex: 741,
+                    maximumSpecialIndex: 1999,
                     defeatedFlagBase: 0x550,
-                    exclusiveDefeatedFlagLimit: 0x834,
-                    specialIndexLimitReason: "English HeartGold takes two more trainers at most.");
+                    exclusiveDefeatedFlagLimit: 0x960,
+                    specialIndexLimitReason: "The trainer scripts have no more room.");
                 return true;
             }
 

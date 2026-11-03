@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -101,9 +100,6 @@ namespace DSPRE.HgEngine
         // A source file names the archive slot it fills: either the whole stem, or the first run of
         // digits after an underscore. That covers scr_seq_00953_trainerscript, move_script_0001_POUND
         // and the group_index form the asset directories use, like 6_06, 8_51 and 8_003.
-        private static readonly Regex BareNumber = new(@"^\d+$");
-        private static readonly Regex PrefixedNumber = new(@"_(\d+)");
-
         private static Dictionary<string, HgEngineRule> _rules;
         private static Dictionary<string, Dictionary<int, HgEngineOwnedFile>> _filesByArchive;
         private static string _cachedFor;
@@ -150,8 +146,9 @@ namespace DSPRE.HgEngine
         {
             string packed = (packedPath ?? "").Replace('\\', '/');
 
-            Match m = Regex.Match(packed, @"(?:^|/)(a/\d+/\d+/\d+)$");
-            if (m.Success) return m.Groups[1].Value;
+            string[] parts = packed.Split('/');
+            if (parts.Length >= 4 && parts[^4] == "a" && parts[^3..].All(HgEngineMakeFile.IsDigits))
+                return string.Join("/", parts[^4..]);
 
             // Not everything lives under a/x/y/z. The sound archive and the named folders are written
             // out in full, so what identifies them is the part below the ROM's filesystem root.
@@ -248,8 +245,13 @@ namespace DSPRE.HgEngine
         {
             string fragment = ReadMakeFragment(root);
             if (fragment == null) return null;
-            Match m = Regex.Match(fragment, @"(\S*validate_text_archive\.py)");
-            return m.Success ? m.Groups[1].Value : null;
+            const string validator = "validate_text_archive.py";
+            foreach (string word in HgEngineMakeFile.Words(fragment))
+            {
+                int at = word.IndexOf(validator, StringComparison.Ordinal);
+                if (at >= 0) return word.Substring(0, at + validator.Length);
+            }
+            return null;
         }
 
         private static (Dictionary<string, HgEngineRule> rules,
@@ -271,6 +273,7 @@ namespace DSPRE.HgEngine
             string fragment = root == null ? null : ReadMakeFragment(root);
             if (fragment == null) return (rules, files);
 
+            string[] words = HgEngineMakeFile.Words(fragment);
             foreach ((string variable, string label, HgEngineOwnership ownership) in Known)
             {
                 // A target is written against $(FILESYS), so it is read raw and the prefix stripped.
@@ -284,10 +287,8 @@ namespace DSPRE.HgEngine
                     Ownership = ownership,
                     SourceDirRelPath = MakeVariable(fragment, variable + "_DEPENDENCIES_DIR"),
                     TargetArchive = archive,
-                    ReplacesWholeArchive = !Regex.IsMatch(fragment,
-                        @"extract\s+\$\(" + Regex.Escape(variable) + @"_TARGET\)"),
-                    CopiesSourceVerbatim = Regex.IsMatch(fragment,
-                        @"cp\s+-r\s+\$\(" + Regex.Escape(variable) + @"_DEPENDENCIES_DIR\)/\.\s+\$\(" + Regex.Escape(variable) + @"_DIR\)"),
+                    ReplacesWholeArchive = !HgEngineMakeFile.HasRun(words, "extract", $"$({variable}_TARGET)"),
+                    CopiesSourceVerbatim = HgEngineMakeFile.HasRun(words, "cp", "-r", $"$({variable}_DEPENDENCIES_DIR)/.", $"$({variable}_DIR)"),
                 };
 
                 rules[rule.TargetArchive] = rule;
@@ -303,8 +304,8 @@ namespace DSPRE.HgEngine
             try
             {
                 string config = Path.Combine(root, "include", "config.h");
-                return File.Exists(config) && Regex.IsMatch(File.ReadAllText(config),
-                    @"^[ \t]*#define[ \t]+" + Regex.Escape(name) + @"[ \t]*\r?$", RegexOptions.Multiline);
+                return File.Exists(config) && CSourceFile.For(File.ReadAllText(config)).Directives
+                    .Any(d => d.Keyword == "define" && d.Name == name && d.Parameters == null && d.Body.Length == 0);
             }
             catch (IOException ex) { AppLogger.Error("HgEngineOwnedFiles.ConfigEnabled: " + ex.Message); return false; }
         }
@@ -330,7 +331,7 @@ namespace DSPRE.HgEngine
                     {
                         foreach (string path in Directory.EnumerateFiles(dir))
                         {
-                            if (!dumpedScriptsBuilt && !Regex.IsMatch(Path.GetFileName(path), @"^scr_seq_\d{5}_.*\.s$")) continue;
+                            if (!dumpedScriptsBuilt && !IsFiveDigitScript(Path.GetFileName(path))) continue;
                             int id = IdFromName(Path.GetFileNameWithoutExtension(path));
                             if (id < 0 || into.ContainsKey(id)) continue;
 
@@ -373,31 +374,40 @@ namespace DSPRE.HgEngine
         /// <summary>Archives the msgdata rule encodes from build output, not its source directory.</summary>
         internal static IEnumerable<int> GeneratedTextArchives(string fragment)
         {
-            foreach (Match m in Regex.Matches(fragment ?? "",
-                @"MSGDATA_COMPILETIME_DEPENDENCIES\s*\+?=\s*(?<list>.+)"))
+            const string folder = "rawtext/", extension = ".txt";
+            foreach (HgEngineMakeFile.Assignment a in HgEngineMakeFile.For(fragment ?? "").Assignments)
             {
-                foreach (Match file in Regex.Matches(m.Groups["list"].Value, @"rawtext/(\d+)\.txt"))
+                if (a.Name != "MSGDATA_COMPILETIME_DEPENDENCIES") continue;
+                foreach (string word in HgEngineMakeFile.Words(a.Value))
                 {
-                    if (int.TryParse(file.Groups[1].Value, out int id)) yield return id;
+                    int at = word.LastIndexOf(folder, StringComparison.Ordinal);
+                    if (at < 0 || !word.EndsWith(extension, StringComparison.Ordinal)) continue;
+                    string number = word.Substring(at + folder.Length, word.Length - at - folder.Length - extension.Length);
+                    if (HgEngineMakeFile.IsDigits(number) && int.TryParse(number, out int id)) yield return id;
                 }
             }
         }
 
+        // scr_seq_00953_trainerscript.s
+        private static bool IsFiveDigitScript(string file) =>
+            file.StartsWith("scr_seq_", StringComparison.Ordinal) && file.EndsWith(".s", StringComparison.Ordinal) && file.Length >= 16
+            && HgEngineMakeFile.IsDigits(file.Substring(8, 5)) && file[13] == '_';
+
         internal static int IdFromName(string stem)
         {
-            if (BareNumber.IsMatch(stem)) return int.Parse(stem);
-            Match m = PrefixedNumber.Match(stem);
-            return m.Success && int.TryParse(m.Groups[1].Value, out int id) ? id : -1;
+            if (HgEngineMakeFile.IsDigits(stem)) return int.Parse(stem);
+            for (int at = stem.IndexOf('_'); at >= 0; at = stem.IndexOf('_', at + 1))
+            {
+                int end = at + 1;
+                while (end < stem.Length && char.IsAsciiDigit(stem[end])) end++;
+                if (end > at + 1) return int.TryParse(stem.AsSpan(at + 1, end - at - 1), out int id) ? id : -1;
+            }
+            return -1;
         }
 
         /// <summary>A make variable's literal value, whatever it holds.</summary>
-        private static string MakeVariableRaw(string fragment, string name)
-        {
-            if (fragment == null) return null;
-            Match m = Regex.Match(fragment, @"^\s*" + Regex.Escape(name) + @"\s*:?=\s*(\S+)\s*$",
-                RegexOptions.Multiline);
-            return m.Success ? m.Groups[1].Value : null;
-        }
+        private static string MakeVariableRaw(string fragment, string name) =>
+            fragment == null ? null : HgEngineMakeFile.For(fragment).Value(name);
 
         /// <summary>A make variable's value as a path. Anything still holding a $(...) is not one.</summary>
         private static string MakeVariable(string fragment, string name)

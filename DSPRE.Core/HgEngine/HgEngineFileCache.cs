@@ -52,44 +52,85 @@ namespace DSPRE.HgEngine
                 }
             }
 
-            string temp = WriteTemp(path, output, encoding);
-            try { Install(path, temp, output); }
-            catch
-            {
-                DeleteTemp(temp);
-                throw;
-            }
+            string current = null;
+            Store(new[] { (path, output, encoding) }, ref current);
         }
 
         /// <summary>Writes all the files or none. Each goes to a temporary file first, and if moving one into place fails,
         /// the files already moved are restored. Throws an <see cref="IOException"/> naming the file.</summary>
         internal static void WriteAll(IReadOnlyList<(string Path, string Text, System.Text.Encoding Encoding, bool Crlf)> files)
         {
-            List<(string Path, string Temp, string Output, byte[] Before)> staged = new();
             string current = null;
+            try
+            {
+                Store(files.Select(f =>
+                {
+                    string lf = f.Text.Replace("\r\n", "\n");
+                    return (f.Path, f.Crlf ? lf.Replace("\n", "\r\n") : lf, f.Encoding);
+                }).ToList(), ref current);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                throw new IOException($"Couldn't write {Path.GetFileName(current)}: {ex.Message}", ex);
+            }
+        }
+
+        private const int BackupsPerFile = 10;
+        private static readonly TimeSpan BackupGap = TimeSpan.FromMinutes(1);
+
+        /// <summary>Backs up, moves each file into place and reads it back. Any failure puts every file back.
+        /// <paramref name="current"/> names the file being handled.</summary>
+        private static void Store(IReadOnlyList<(string Path, string Output, System.Text.Encoding Encoding)> files, ref string current)
+        {
+            List<(string Path, string Temp, string Output, byte[] Before, System.Text.Encoding Encoding)> staged = new();
             int moved = 0;
             try
             {
-                foreach ((string path, string text, System.Text.Encoding encoding, bool crlf) in files)
+                foreach ((string path, string output, System.Text.Encoding encoding) in files)
                 {
                     current = path;
-                    string lf = text.Replace("\r\n", "\n");
-                    string output = crlf ? lf.Replace("\n", "\r\n") : lf;
                     byte[] before = File.Exists(path) ? File.ReadAllBytes(path) : null;
-                    staged.Add((path, WriteTemp(path, output, encoding), output, before));
+                    staged.Add((path, WriteTemp(path, output, encoding), output, before, encoding));
                 }
-                foreach ((string path, string temp, string output, byte[] _) in staged)
+                foreach ((string path, string _, string _, byte[] before, System.Text.Encoding _) in staged) BackUp(path, before);
+                foreach ((string path, string temp, string output, byte[] _, System.Text.Encoding encoding) in staged)
                 {
                     current = path;
                     Install(path, temp, output);
                     moved++;
+                    if (File.ReadAllText(path, encoding ?? System.Text.Encoding.UTF8) != output) throw new IOException("It read back differently.");
                 }
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                foreach ((string path, string _, string _, byte[] before) in staged.Take(moved)) Restore(path, before);
-                foreach ((string _, string temp, string _, byte[] _) in staged.Skip(moved)) DeleteTemp(temp);
-                throw new IOException($"Couldn't write {Path.GetFileName(current)}: {ex.Message}", ex);
+                foreach ((string path, string _, string _, byte[] before, System.Text.Encoding _) in staged.Take(moved)) Restore(path, before);
+                foreach ((string _, string temp, string _, byte[] _, System.Text.Encoding _) in staged.Skip(moved)) DeleteTemp(temp);
+                throw;
+            }
+        }
+
+        /// <summary>Keeps a copy in the checkout's ignored .dspre/backups. A burst of writes keeps the copy from
+        /// before the burst. A backup that fails never stops a save.</summary>
+        private static void BackUp(string path, byte[] before)
+        {
+            string root = HgEngineProject.RepoRootWindows;
+            if (before == null || string.IsNullOrEmpty(root)) return;
+            string relative = Path.GetRelativePath(root, path);
+            if (relative.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relative)) return;
+            try
+            {
+                HgEngineProject.FolderConfigPath(root);
+                string folder = Path.Combine(root, RomInfo.HgEngineDspreFolder, "backups");
+                Directory.CreateDirectory(folder);
+                string name = relative.Replace(Path.DirectorySeparatorChar, '_').Replace('/', '_');
+                List<string> copies = Directory.GetFiles(folder, name + ".*").OrderByDescending(File.GetLastWriteTimeUtc).ToList();
+                if (copies.Count > 0 && DateTime.UtcNow - File.GetLastWriteTimeUtc(copies[0]) < BackupGap) return;
+                PlainFiles.WriteBytes(Path.Combine(folder, name + "." + DateTime.Now.ToString("yyyyMMdd-HHmmss")), before);
+                foreach (string old in copies.Skip(BackupsPerFile - 1)) File.Delete(old);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                AppLogger.Warn($"hg-engine save: no backup of {relative}: {ex.Message}");
             }
         }
 

@@ -227,9 +227,13 @@ namespace DSPRE.HgEngine
             HashSet<string> flags = new HashSet<string>(StringComparer.Ordinal);
             string makefile = Path.Combine(root, "Makefile");
             if (!File.Exists(makefile)) return flags;
-            foreach (string line in File.ReadLines(makefile).Where(l => l.Contains("CFLAGS")))
-                foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(line, @"-D(\w+)"))
-                    flags.Add(m.Groups[1].Value);
+            foreach (string line in HgEngineMakeFile.For(HgEngineFileCache.GetText(makefile)).Assignments.Where(a => a.Name.Contains("CFLAGS", StringComparison.Ordinal)).Select(a => a.Value))
+                for (int at = line.IndexOf("-D", StringComparison.Ordinal); at >= 0; at = line.IndexOf("-D", at + 2, StringComparison.Ordinal))
+                {
+                    int end = at + 2;
+                    while (end < line.Length && HgEngineMakeFile.IsNameChar(line[end])) end++;
+                    if (end > at + 2) flags.Add(line.Substring(at + 2, end - at - 2));
+                }
             return flags;
         }
 
@@ -369,6 +373,9 @@ namespace DSPRE.HgEngine
             entry.RawLine = indent + entry.Render();
         }
 
+        /// <summary>Raised after a list was written, for editors that read the lists.</summary>
+        public static event Action Saved;
+
         /// <summary>Why this list cannot be written, or null.</summary>
         public string FirstProblem => Entries.Select(Problem).FirstOrDefault(p => p != null);
 
@@ -382,6 +389,7 @@ namespace DSPRE.HgEngine
                 IEnumerable<string> lines = Entries.Select(e => e.RawLine);
                 HgEngineFileCache.WriteText(FullPath, string.Join("\n", lines) + (_endsWithNewline ? "\n" : ""));
                 HgEngineClaimedRanges.ClearCache();
+                Saved?.Invoke();
                 return true;
             }
             catch (Exception ex)

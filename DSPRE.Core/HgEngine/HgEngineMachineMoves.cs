@@ -1,23 +1,26 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
     /// <summary>
-    /// The move each TM, HM and TR teaches, from src/item.c's <c>sMachineMoves[]</c>. hg-engine hooks the game's
-    /// machine lookup to read this array, so the ARM9 table DSPRE edits on other ROMs is never used. The array is
-    /// positional, one <c>MOVE_X, // LABEL</c> line per machine, and ItemToMachineMoveIndex maps item ids onto it.
+    /// The move each TM, HM and TR teaches, from <c>sMachineMoves[]</c>. hg-engine hooks the game's machine lookup
+    /// to read this array, so the ARM9 table DSPRE edits on other ROMs is never used. The array is positional, one
+    /// <c>MOVE_X, // LABEL</c> line per machine, and ItemToMachineMoveIndex maps item ids onto it.
     /// </summary>
     public static class HgEngineMachineMoves
     {
-        private const string SourceRelPath = "src/item.c";
+        private const string CurrentRelPath = "data/MachineMoves.c";
+        private const string OlderRelPath = "src/item.c";
         private const string MovesHeaderRelPath = "include/constants/moves.h";
 
-        private static readonly Regex Table = new(@"sMachineMoves\s*\[\s*\]\s*=\s*\{(?<body>.*?)^\s*\};",
-            RegexOptions.Singleline | RegexOptions.Multiline);
-        private static readonly Regex Entry = new(@"^[ \t]*(?<move>[A-Za-z_][A-Za-z0-9_]*|\d+)[ \t]*,[ \t]*(?://[ \t]*(?<label>\S+))?[ \t]*\r?$");
+        // Older checkouts keep the array inside src/item.c.
+        internal static string SourceRelPath =>
+            File.Exists(Path.Combine(HgEngineProject.RepoPathUnc, CurrentRelPath.Replace('/', Path.DirectorySeparatorChar)))
+                ? CurrentRelPath : OlderRelPath;
+
+        private const string TableName = "sMachineMoves";
 
         /// <summary>One machine: its label from the source comment, its move, and where the move is written.</summary>
         public sealed record Machine(string Label, int Move, int MoveStart, int MoveLength);
@@ -43,27 +46,20 @@ namespace DSPRE.HgEngine
                 return true;
             }
 
-            Match table = Table.Match(text);
-            if (!table.Success) { error = $"{SourceRelPath} has no sMachineMoves array."; return false; }
+            CDeclaration table = CSourceFile.For(text).Find(TableName);
+            if (table == null) { error = $"{SourceRelPath} has no {TableName} array."; return false; }
 
-            int at = table.Groups["body"].Index;
-            foreach (string line in table.Groups["body"].Value.Split('\n'))
+            foreach (CInitItem item in table.Init.Items)
             {
-                int lineStart = at;
-                at += line.Length + 1;
-                string trimmed = line.Trim();
-                if (trimmed.Length == 0 || trimmed.StartsWith("//")) continue;
+                // A row under #if would shift every machine after it depending on the build.
+                string token = item.ValueText(text).Trim();
+                if (item.IsConditional || item.List != null || item.Designators.Count > 0)
+                { error = $"{SourceRelPath} has an entry in {TableName} DSPRE can't read: {token}"; return false; }
 
-                // Anything else (a #if, two entries on a line) would make the positions this editor writes by unreliable.
-                Match m = Entry.Match(line);
-                if (!m.Success) { error = $"{SourceRelPath} has a line in sMachineMoves DSPRE can't read: {trimmed}"; return false; }
-
-                string token = m.Groups["move"].Value;
                 if (!moves.TryGetValue(token, out int move) && !int.TryParse(token, out move))
                 { error = $"{token} in {SourceRelPath} isn't a move that moves.h names."; return false; }
 
-                string label = m.Groups["label"].Success ? m.Groups["label"].Value : $"Machine {machines.Count}";
-                machines.Add(new Machine(label, move, lineStart + m.Groups["move"].Index, token.Length));
+                machines.Add(new Machine(LabelAfter(text, item.ValueEnd) ?? $"Machine {machines.Count}", move, item.ValueStart, item.ValueEnd - item.ValueStart));
             }
             _parsedText = text;
             _parsed = new List<Machine>(machines);
@@ -75,7 +71,7 @@ namespace DSPRE.HgEngine
         {
             if (!TryRead(out List<Machine> machines, out error)) return false;
             if (moves.Count != machines.Count)
-            { error = "The number of machines in src/item.c changed since the editor opened. Reopen it to edit them."; return false; }
+            { error = $"The number of machines in {SourceRelPath} changed since the editor opened. Reopen it to edit them."; return false; }
 
             HgEngineSymbolTable table = HgEngineSymbolTable.Load(MovesHeaderRelPath);
             string text = ReadSource(out string path);
@@ -90,6 +86,19 @@ namespace DSPRE.HgEngine
             }
             HgEngineFileCache.WriteText(path, sb.ToString());
             return true;
+        }
+
+        // The first word of the comment closing the entry's line: TM001 in "MOVE_X, // TM001".
+        private static string LabelAfter(string text, int end)
+        {
+            int lineEnd = text.IndexOf('\n', end);
+            foreach (CToken token in CLexer.Tokenize(text, end, lineEnd < 0 ? text.Length : lineEnd, keepComments: true))
+            {
+                if (token.Kind != CTokenKind.Comment) continue;
+                string[] words = token.Text(text).TrimStart('/', '*').Split((char[])null, System.StringSplitOptions.RemoveEmptyEntries);
+                return words.Length > 0 ? words[0] : null;
+            }
+            return null;
         }
 
         private static string ReadSource(out string path)

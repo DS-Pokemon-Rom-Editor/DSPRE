@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.RegularExpressions;
+using System.Linq;
 
 namespace DSPRE.HgEngine
 {
@@ -12,10 +12,6 @@ namespace DSPRE.HgEngine
     /// </summary>
     public static class HgEngineBuildCache
     {
-        private static readonly Regex Target = new(@"^\s*([A-Z0-9_]+)_TARGET\s*:?=\s*\$\(FILESYS\)/(\S+)", RegexOptions.Multiline);
-        private static readonly Regex Narc = new(@"^\s*([A-Z0-9_]+)_NARC\s*:?=\s*\$\(BUILD_NARC\)/(\S+)", RegexOptions.Multiline);
-        private static readonly Regex Dir = new(@"^\s*([A-Z0-9_]+)_DIR\s*:?=\s*\$\(BUILD\)/([A-Za-z0-9_./-]+)\s*$", RegexOptions.Multiline);
-
         /// <summary>A partly built archive (as a/0/2/7), the cached file make reuses for it, and the folder its rule extracts into.</summary>
         public record PartialArchive(string Archive, string Cache, string ExtractDir);
 
@@ -26,26 +22,38 @@ namespace DSPRE.HgEngine
             if (!File.Exists(narcsMk)) return result;
             string text = File.ReadAllText(narcsMk);
             string buildDir = Path.GetFullPath(Path.Combine(checkout, "build"));
+            HgEngineMakeFile make = HgEngineMakeFile.For(text);
+            string[] words = HgEngineMakeFile.Words(text);
+
+            // Only values under the given prefix count, as a single word where there are several assignments.
+            static string Under(string value, string prefix) =>
+                value.StartsWith(prefix, StringComparison.Ordinal) ? value.Substring(prefix.Length).Split((char[])null, 2)[0] : null;
 
             Dictionary<string, string> caches = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (Match m in Narc.Matches(text)) caches[m.Groups[1].Value] = m.Groups[2].Value;
+            foreach ((string stem, string value) in make.Suffixed("_NARC"))
+                if (Under(value, "$(BUILD_NARC)/") is string cachedAs) caches[stem] = cachedAs;
             Dictionary<string, string> dirs = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (Match m in Dir.Matches(text)) dirs[m.Groups[1].Value] = m.Groups[2].Value;
+            foreach ((string stem, string value) in make.Suffixed("_DIR"))
+                if (value.StartsWith("$(BUILD)/", StringComparison.Ordinal) && Under(value, "$(BUILD)/") is string folder
+                    && folder.Length == value.Length - "$(BUILD)/".Length && folder.All(c => HgEngineMakeFile.IsNameChar(c) || c is '.' or '/' or '-'))
+                    dirs[stem] = folder;
 
-            foreach (Match m in Target.Matches(text))
+            foreach ((string variable, string target) in make.Suffixed("_TARGET"))
             {
-                string variable = m.Groups[1].Value;
-                if (!caches.TryGetValue(variable, out string cache)) continue;
-                Match rule = Regex.Match(text, @"extract\s+\$\(" + Regex.Escape(variable) + @"_TARGET\)\s+-o\s+\$\(([A-Z0-9_]+)_DIR\)");
-                if (!rule.Success) continue;
+                string archive = Under(target, "$(FILESYS)/");
+                if (archive == null || !caches.TryGetValue(variable, out string cache)) continue;
+                int extract = HgEngineMakeFile.RunStart(words, 0, "extract", $"$({variable}_TARGET)", "-o", "$(");
+                if (extract < 0) continue;
+                string extractInto = HgEngineMakeFile.ReferenceName(words[extract + 3]);
+                if (extractInto == null || !extractInto.EndsWith("_DIR", StringComparison.Ordinal)) continue;
 
                 string extractDir = null;
-                if (dirs.TryGetValue(rule.Groups[1].Value, out string dir))
+                if (dirs.TryGetValue(extractInto.Substring(0, extractInto.Length - 4), out string dir))
                 {
                     string full = Path.GetFullPath(Path.Combine(buildDir, dir.Replace('/', Path.DirectorySeparatorChar)));
                     if (full.StartsWith(buildDir + Path.DirectorySeparatorChar, StringComparison.Ordinal)) extractDir = full;
                 }
-                result.Add(new PartialArchive(m.Groups[2].Value,
+                result.Add(new PartialArchive(archive,
                     Path.Combine(buildDir, "narc", cache.Replace('/', Path.DirectorySeparatorChar)), extractDir));
             }
             return result;

@@ -4,7 +4,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -80,9 +79,9 @@ namespace DSPRE.HgEngine
             // Everything is planned and checked before the first write.
             string header = Read(HeaderRelPath, out string headerPath), asm = Read(AsmRelPath, out string asmPath);
             if (header == null || asm == null) { error = $"{HeaderRelPath} or {AsmRelPath} is missing from the checkout."; return false; }
-            if (!TryInsertAfterValue(header, @"^(\s*#define\s+)(" + Prefix + @"\w+)(\s+)\(?(\d+)\)?", id - 1, symbol, id, out string newHeader))
+            if (!TryInsertAfterDefine(header, id - 1, symbol, id, out string newHeader))
             { error = $"{HeaderRelPath} has no #define line for class {id - 1} to add after."; return false; }
-            if (!TryInsertAfterValue(asm, @"^(\s*\.equ\s+)(" + Prefix + @"\w+)(,\s*)(\d+)", id - 1, symbol, id, out string newAsm))
+            if (!TryInsertAfterEqu(asm, id - 1, symbol, id, out string newAsm))
             { error = $"{AsmRelPath} has no .equ line for class {id - 1} to add after."; return false; }
 
             HgEngineOwnedFile nameFile = NameFile(RomInfo.TrainerClassMessageNumber);
@@ -164,31 +163,66 @@ namespace DSPRE.HgEngine
         // TRAINERCLASS_ plus the name in capitals, made unique with a number.
         private static string UniqueSymbol(string name)
         {
-            string stem = Prefix + Regex.Replace(Regex.Replace(name.ToUpperInvariant(), @"[^A-Z0-9]+", "_"), "^_+|_+$", "");
-            if (stem == Prefix) stem = Prefix + "NEW";
+            char[] kept = name.ToUpperInvariant().Select(c => char.IsAsciiLetterUpper(c) || char.IsAsciiDigit(c) ? c : ' ').ToArray();
+            string words = string.Join("_", new string(kept).Split(' ', StringSplitOptions.RemoveEmptyEntries));
+            string stem = Prefix + (words.Length > 0 ? words : "NEW");
             HgEngineSymbolTable classes = HgEngineSymbolTable.Load(HeaderRelPath);
             string symbol = stem;
             for (int n = 2; classes != null && classes.TryGetValue(symbol, out _); n++) symbol = stem + "_" + n;
             return symbol;
         }
 
-        // Adds "<symbol> <value>" on a new line after the one defining <after>, spaced like it.
-        private static bool TryInsertAfterValue(string text, string linePattern, int after, string symbol, int value, out string updated)
+        private static bool TryInsertAfterDefine(string text, int after, string symbol, int value, out string updated)
         {
             updated = null;
-            Match line = Regex.Matches(text, linePattern, RegexOptions.Multiline).Cast<Match>()
-                .LastOrDefault(m => int.TryParse(m.Groups[4].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int v) && v == after);
+            CDirective line = CSourceFile.For(text).Directives.LastOrDefault(d => d.Keyword == "define" && d.Name?.StartsWith(Prefix, StringComparison.Ordinal) == true
+                && HgEngineSourceExpression.TryEvaluate(d.Body, null, out int v) && v == after);
             if (line == null) return false;
-            int end = text.IndexOf('\n', line.Index);
+            int lineStart = text.LastIndexOf('\n', line.Start) + 1, nameStart = text.IndexOf(line.Name, line.Start, StringComparison.Ordinal);
+            string lead = text.Substring(lineStart, nameStart - lineStart);
+            string gap = text.Substring(nameStart + line.Name.Length, line.BodyStart - nameStart - line.Name.Length);
+            updated = InsertAfter(text, lineStart, lead, line.Name.Length, gap, symbol, value);
+            return true;
+        }
+
+        // armips text, which the C reader doesn't cover.
+        private static bool TryInsertAfterEqu(string text, int after, string symbol, int value, out string updated)
+        {
+            updated = null;
+            int lineStart = 0, found = -1;
+            string lead = null, spacing = null, name = null;
+            foreach (string raw in text.Split('\n'))
+            {
+                string line = raw.TrimEnd('\r');
+                string[] words = HgEngineMakeFile.Words(line.Replace(",", " "));
+                if (words.Length >= 3 && words[0] == ".equ" && words[1].StartsWith(Prefix, StringComparison.Ordinal)
+                    && HgEngineMakeFile.IsDigits(words[2]) && int.TryParse(words[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out int v) && v == after)
+                {
+                    int nameAt = line.IndexOf(words[1], StringComparison.Ordinal);
+                    found = lineStart;
+                    name = words[1];
+                    lead = line.Substring(0, nameAt);
+                    spacing = line.Substring(nameAt + name.Length, line.LastIndexOf(words[2], StringComparison.Ordinal) - nameAt - name.Length);
+                }
+                lineStart += raw.Length + 1;
+            }
+            if (found < 0) return false;
+            updated = InsertAfter(text, found, lead, name.Length, spacing, symbol, value);
+            return true;
+        }
+
+        // Adds "<symbol> <value>" on a new line after the one at lineStart, spaced like it.
+        private static string InsertAfter(string text, int lineStart, string lead, int nameLength, string spacing, string symbol, int value)
+        {
+            int end = text.IndexOf('\n', lineStart);
             if (end < 0) end = text.Length;
             string newline = text.Contains("\r\n") ? "\r\n" : "\n";
-            int column = line.Groups[1].Length + line.Groups[2].Length + line.Groups[3].Length;
-            string head = line.Groups[1].Value + symbol;
-            string gap = line.Groups[3].Value.Contains(',') ? "," + new string(' ', Math.Max(1, column - head.Length - 1)) : new string(' ', Math.Max(1, column - head.Length));
+            int column = lead.Length + nameLength + spacing.Length;
+            string head = lead + symbol;
+            string gap = spacing.Contains(',') ? "," + new string(' ', Math.Max(1, column - head.Length - 1)) : new string(' ', Math.Max(1, column - head.Length));
             string add = head + gap + value.ToString(CultureInfo.InvariantCulture);
             int insertAt = end < text.Length ? end + 1 : end;
-            updated = text.Insert(insertAt, (end < text.Length ? "" : newline) + add + newline);
-            return true;
+            return text.Insert(insertAt, (end < text.Length ? "" : newline) + add + newline);
         }
 
         // bytereplacement's EXPAND_TRAINER_PRIZE_MONEY branch tells the game how many PrizeMoney rows to search.
@@ -209,17 +243,20 @@ namespace DSPRE.HgEngine
 
             StringBuilder sb = new StringBuilder(text);
             int at = text.IndexOf('\n', heading) + 1, changed = 0;
-            Regex countLine = new Regex(@"^[ \t]*\w+[ \t]+[0-9A-Fa-f]{8}[ \t]+([0-9A-Fa-f]{2})[ \t]*\r?$");
             while (at > 0 && at < text.Length)
             {
                 int end = text.IndexOf('\n', at);
                 if (end < 0) end = text.Length;
-                Match m = countLine.Match(text.Substring(at, end - at));
-                if (!m.Success) break;
-                int count = int.Parse(m.Groups[1].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+                // arm9 08051886 20
+                string line = text.Substring(at, end - at);
+                string[] words = HgEngineMakeFile.Words(line);
+                if (words.Length != 3 || !words[0].All(HgEngineMakeFile.IsNameChar) || words[1].Length != 8 || !words[1].All(char.IsAsciiHexDigit)
+                    || words[2].Length != 2 || !words[2].All(char.IsAsciiHexDigit)) break;
+                int digits = line.LastIndexOf(words[2], StringComparison.Ordinal);
+                int count = int.Parse(words[2], NumberStyles.HexNumber, CultureInfo.InvariantCulture);
                 if (count != rows - 1)
                 { error = $"PrizeMoney had {rows - 1} rows but {ByteReplacementRelPath} searches {count}. Make them agree first."; return false; }
-                sb.Remove(at + m.Groups[1].Index, 2).Insert(at + m.Groups[1].Index, rows.ToString("X2", CultureInfo.InvariantCulture));
+                sb.Remove(at + digits, 2).Insert(at + digits, rows.ToString("X2", CultureInfo.InvariantCulture));
                 changed++;
                 at = end + 1;
             }

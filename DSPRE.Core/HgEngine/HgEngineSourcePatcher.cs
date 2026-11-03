@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -29,14 +29,9 @@ namespace DSPRE.HgEngine
         public static bool TryFindEntry(string text, string designatorToken, out int openBrace, out int closeBrace)
         {
             openBrace = closeBrace = -1;
-            foreach (Match m in BraceScanner.InCode(Regex.Match(text, @"\[\s*" + Regex.Escape(designatorToken) + @"\s*\]\s*=\s*\{"), text))
-            {
-                int brace = m.Index + m.Length - 1;
-                if (!BraceScanner.TryFindMatchingBrace(text, brace, out int close)) return false;
-                openBrace = brace; closeBrace = close;
-                return true;
-            }
-            return false;
+            if (CSourceFile.For(text).FindEntry(designatorToken) is not CEntry entry || entry.Close < 0) return false;
+            openBrace = entry.Open; closeBrace = entry.Close;
+            return true;
         }
 
         /// <summary>Reads a field's current raw source text (trimmed), without modifying anything.</summary>
@@ -134,10 +129,9 @@ namespace DSPRE.HgEngine
             if (!ElementScanner.TryLocateParentBlock(text, open, close, path, out int parentOpen, out int parentClose)) return false;
 
             List<(int Start, int End)> fields = ElementScanner.ElementSpans(text, parentOpen, parentClose);
-            Regex named = new Regex(@"\G\.\s*" + Regex.Escape(path[^1].Name) + @"\s*=(?!=)");
             for (int i = 0; i < fields.Count; i++)
             {
-                if (!named.IsMatch(text, fields[i].Start)) continue;
+                if (CSourceFile.LeadingField(text, fields[i].Start, fields[i].End) != path[^1].Name) continue;
                 int cutStart = PastLineComment(text, i == 0 ? parentOpen + 1 : AfterComma(text, fields[i - 1].End, parentClose), parentClose);
                 int cutEnd = PastLineComment(text, AfterComma(text, fields[i].End, parentClose), parentClose);
                 text = string.Concat(text.AsSpan(0, cutStart), text.AsSpan(cutEnd));
@@ -230,6 +224,24 @@ namespace DSPRE.HgEngine
             text = text.Substring(0, valueEnd) + comma + text.Substring(valueEnd, insertAt - valueEnd) + lines + text.Substring(insertAt);
         }
 
+        /// <summary>
+        /// Removes one list element from <c>start</c> to <c>end</c>. An element alone on its line takes the line with it,
+        /// with any comment after it. One sharing a line with others leaves them and their comments in place.
+        /// </summary>
+        internal static string RemoveElement(string text, int start, int end)
+        {
+            int line = LineStart(text, start), lineEnd = LineEnd(text, end);
+            int after = end;
+            while (after < lineEnd && (text[after] == ' ' || text[after] == '\t')) after++;
+            if (after < lineEnd && text[after] == ',') after++;
+            int rest = after;
+            while (rest < lineEnd && (text[rest] == ' ' || text[rest] == '\t' || text[rest] == '\r')) rest++;
+            bool commentFollows = rest + 1 < lineEnd && text[rest] == '/' && (text[rest + 1] == '/' || text[rest + 1] == '*');
+            if (string.IsNullOrWhiteSpace(text.Substring(line, start - line)) && (rest == lineEnd || commentFollows))
+                return text.Remove(line, Math.Min(text.Length, lineEnd + 1) - line);
+            return text.Remove(start, rest - start);
+        }
+
         // A CRLF file must not gain bare LF lines.
         private static string MatchNewlines(string text, string inserted)
         {
@@ -250,9 +262,25 @@ namespace DSPRE.HgEngine
             return i < limit && text[i] == ',' ? i + 1 : pos;
         }
 
+        /// <summary>The indent of the line <paramref name="at"/> starts, or four spaces when code comes before it.</summary>
+        internal static string Indent(string text, int at)
+        {
+            int start = LineStart(text, at);
+            return text.Substring(start, at - start).All(char.IsWhiteSpace) ? text.Substring(start, at - start) : "    ";
+        }
+
+        internal static int LineStart(string text, int at) => text.LastIndexOf('\n', Math.Max(0, at - 1)) + 1;
+
+        internal static int LineEnd(string text, int at)
+        {
+            int n = text.IndexOf('\n', at);
+            return n < 0 ? text.Length : n;
+        }
+
+        /// <summary>The spaces and tabs that start the line <paramref name="pos"/> is on.</summary>
         internal static string IndentOfLine(string text, int pos)
         {
-            int lineStart = text.LastIndexOf('\n', Math.Max(0, pos - 1)) + 1;
+            int lineStart = LineStart(text, pos);
             int i = lineStart;
             while (i < pos && (text[i] == ' ' || text[i] == '\t')) i++;
             return text.Substring(lineStart, i - lineStart);
@@ -296,19 +324,6 @@ namespace DSPRE.HgEngine
                 int end = (int)Math.Min(text.Length, openIndex + window);
                 closeIndex = new CSourceFile(text, openIndex, end).MatchingBrace(openIndex);
                 if (closeIndex >= 0 || end == text.Length) return closeIndex >= 0;
-            }
-        }
-
-        /// <summary>Returns the matches from <paramref name="first"/> onward that start in code, because an old entry
-        /// kept in a comment doesn't count. It scans the text once, however many matches there are.</summary>
-        internal static IEnumerable<Match> InCode(Match first, string text)
-        {
-            int scan = 0;
-            for (Match m = first; m.Success; m = m.NextMatch())
-            {
-                while (scan < m.Index)
-                    if (!SkipNonCode(text, ref scan)) scan++;
-                if (scan == m.Index) yield return m;
             }
         }
 

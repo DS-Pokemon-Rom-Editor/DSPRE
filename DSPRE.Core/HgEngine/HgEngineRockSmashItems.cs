@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -12,14 +11,10 @@ namespace DSPRE.HgEngine
     /// </summary>
     public static class HgEngineRockSmashItems
     {
-        private const string SourceRelPath = "src/field/rock_smash_item.c";
+        internal const string SourceRelPath = "src/field/rock_smash_item.c";
         private const string ItemHeaderRelPath = "include/constants/item.h";
 
-        private static readonly Regex Table = new(@"RockSmashItemTable\s*\[[^\]]*\]\s*\[[^\]]*\]\s*=\s*\{(?<body>.*?)^\s*\};",
-            RegexOptions.Singleline | RegexOptions.Multiline);
-        private static readonly Regex Group = new(@"\{(?<items>[^{}]*)\}");
-        private static readonly Regex Token = new(@"[A-Za-z_][A-Za-z0-9_]*|\d+");
-        private static readonly Regex Comment = new(@"//[^\n]*");
+        private const string TableName = "RockSmashItemTable";
 
         private sealed record Slot(int Item, int Start, int Length);
 
@@ -67,20 +62,20 @@ namespace DSPRE.HgEngine
             text = File.Exists(path) ? HgEngineFileCache.GetText(path) : null;
             if (text == null) { error = $"Couldn't read {SourceRelPath} from the checkout."; return false; }
 
-            Match table = Table.Match(text);
-            if (!table.Success) { error = $"{SourceRelPath} has no RockSmashItemTable array."; return false; }
+            CDeclaration table = CSourceFile.For(text).Find(TableName);
+            if (table == null) { error = $"{SourceRelPath} has no {TableName} array."; return false; }
 
-            // Comments are blanked, not removed, so every position still points into the real text.
-            string body = Comment.Replace(table.Groups["body"].Value, m => new string(' ', m.Length));
-            int bodyStart = table.Groups["body"].Index;
-            foreach (Match group in Group.Matches(body))
+            foreach (CInitItem group in table.Init.Items)
             {
+                if (group.List == null || group.IsConditional)
+                { error = $"{SourceRelPath} has a table in {TableName} DSPRE can't read."; return false; }
                 List<Slot> slots = new List<Slot>();
-                foreach (Match token in Token.Matches(group.Groups["items"].Value))
+                foreach (CInitItem entry in group.List.Items)
                 {
-                    if (!names.TryGetValue(token.Value, out int item) && !int.TryParse(token.Value, out item))
-                    { error = $"{token.Value} in {SourceRelPath} isn't an item that item.h names."; return false; }
-                    slots.Add(new Slot(item, bodyStart + group.Groups["items"].Index + token.Index, token.Length));
+                    string token = entry.ValueText(text).Trim();
+                    if (entry.IsConditional || (!names.TryGetValue(token, out int item) && !int.TryParse(token, out item)))
+                    { error = $"{token} in {SourceRelPath} isn't an item that item.h names."; return false; }
+                    slots.Add(new Slot(item, entry.ValueStart, entry.ValueEnd - entry.ValueStart));
                 }
                 tables.Add(slots);
             }

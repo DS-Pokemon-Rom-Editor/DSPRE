@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -35,10 +34,6 @@ namespace DSPRE.HgEngine
             internal string WasValue { get; init; }
         }
 
-        private static readonly Regex HeaderDefine = new(@"^(\s*)(//\s*)?#define\s+(\w+)(?:[ \t]+(\S.*?))?\s*(//.*)?$");
-        private static readonly Regex AsmEqu = new(@"^(\s*)(//\s*)?(\w+)\s+equ\s+(\S.*?)\s*(//.*)?$");
-        private static readonly Regex AsmLabel = new(@"^(\s*)(//\s*)?\.definelabel\s+(\w+)\s*,\s*(\S.*?)\s*(//.*)?$");
-
         public static bool TryRead(out List<Setting> settings, out string error)
         {
             settings = new List<Setting>();
@@ -64,22 +59,23 @@ namespace DSPRE.HgEngine
             for (int i = 0; i < lines.Length; i++)
             {
                 string t = lines[i].Trim();
+                string keyword = Directive(t)?.Keyword;
                 // The include guard is the one #if everything sits in.
-                if (Regex.IsMatch(t, @"^#\s*if(n?def)?\b"))
+                if (keyword is "if" or "ifdef" or "ifndef")
                 {
-                    if (!(i < 3 && t.StartsWith("#ifndef", StringComparison.Ordinal))) depth++;
+                    if (!(i < 3 && keyword == "ifndef")) depth++;
                     comments.Clear();
                     continue;
                 }
-                if (Regex.IsMatch(t, @"^#\s*endif\b")) { if (depth > 0) depth--; comments.Clear(); continue; }
-                if (Regex.IsMatch(t, @"^#\s*(else|elif)\b")) { comments.Clear(); continue; }
-                Match m = HeaderDefine.Match(lines[i]);
-                if (m.Success && depth == 0)
+                if (keyword == "endif") { if (depth > 0) depth--; comments.Clear(); continue; }
+                if (keyword is "else" or "elif") { comments.Clear(); continue; }
+                Definition m = HeaderDefinition(lines[i]);
+                if (m != null && depth == 0)
                 {
-                    string name = m.Groups[3].Value;
-                    if (name == "CONFIG_H" || !Regex.IsMatch(name, "^[A-Z][A-Z0-9_]*$")) { comments.Clear(); continue; }
-                    bool enabled = !m.Groups[2].Success;
-                    string value = m.Groups[4].Success ? m.Groups[4].Value.Trim() : null;
+                    string name = m.Name;
+                    if (name == "CONFIG_H" || !IsSettingName(name)) { comments.Clear(); continue; }
+                    bool enabled = !m.CommentedOut;
+                    string value = m.Value;
                     yield return new Setting
                     {
                         Name = name, File = HeaderRelPath, Description = string.Join(" ", comments), Line = i,
@@ -100,17 +96,16 @@ namespace DSPRE.HgEngine
             for (int i = 0; i < lines.Length; i++)
             {
                 string t = lines[i].Trim();
-                Match equ = AsmEqu.Match(lines[i]), label = AsmLabel.Match(lines[i]);
-                Match m = equ.Success ? equ : label.Success ? label : null;
-                if (m != null && Regex.IsMatch(m.Groups[3].Value, "^[A-Z][A-Z0-9_]*$"))
+                Definition m = AsmDefinition(lines[i]);
+                if (m != null && IsSettingName(m.Name))
                 {
-                    bool enabled = !m.Groups[2].Success;
+                    bool enabled = !m.CommentedOut;
                     // A label is switched by being there; an equ's value is the setting.
                     yield return new Setting
                     {
-                        Name = m.Groups[3].Value, File = AsmRelPath, Description = string.Join(" ", comments), Line = i,
-                        Enabled = enabled, WasEnabled = enabled, CanDisable = label.Success,
-                        Value = equ.Success ? m.Groups[4].Value.Trim() : null, WasValue = equ.Success ? m.Groups[4].Value.Trim() : null,
+                        Name = m.Name, File = AsmRelPath, Description = string.Join(" ", comments), Line = i,
+                        Enabled = enabled, WasEnabled = enabled, CanDisable = m.IsLabel,
+                        Value = m.IsLabel ? null : m.Value, WasValue = m.IsLabel ? null : m.Value,
                     };
                     comments.Clear();
                     continue;
@@ -145,9 +140,9 @@ namespace DSPRE.HgEngine
                 string[] asm = LinesOf(AsmRelPath);
                 for (int i = 0; i < asm.Length; i++)
                 {
-                    Match equ = AsmEqu.Match(asm[i]), label = AsmLabel.Match(asm[i]);
-                    if (equ.Success && equ.Groups[3].Value == s.Name && s.Value != null) asm[i] = Rewrite(asm[i], AsmRelPath, true, s.Value);
-                    else if (label.Success && label.Groups[3].Value == s.Name) asm[i] = Rewrite(asm[i], AsmRelPath, s.Enabled, null);
+                    if (AsmDefinition(asm[i]) is not Definition copy || copy.Name != s.Name) continue;
+                    if (!copy.IsLabel && s.Value != null) asm[i] = Rewrite(asm[i], AsmRelPath, true, s.Value);
+                    else if (copy.IsLabel) asm[i] = Rewrite(asm[i], AsmRelPath, s.Enabled, null);
                 }
             }
             try
@@ -164,7 +159,7 @@ namespace DSPRE.HgEngine
         /// when the file is edited elsewhere, so the line read earlier is only a starting point.</summary>
         private static int FindLine(string[] lines, Setting s)
         {
-            bool Holds(int i) => i >= 0 && i < lines.Length && Definition(lines[i], s.File) is { Success: true } d && d.Groups[3].Value == s.Name;
+            bool Holds(int i) => i >= 0 && i < lines.Length && DefinitionOf(lines[i], s.File)?.Name == s.Name;
             int line = Holds(s.Line) ? s.Line : -1;
             if (line < 0)
             {
@@ -172,25 +167,79 @@ namespace DSPRE.HgEngine
                 if (found.Length != 1) return -1;
                 line = found[0];
             }
-            Match m = Definition(lines[line], s.File);
-            string value = s.WasValue != null && m.Groups[4].Success ? m.Groups[4].Value.Trim() : null;
-            return !m.Groups[2].Success == s.WasEnabled && value == s.WasValue ? line : -1;
+            Definition m = DefinitionOf(lines[line], s.File);
+            string value = s.WasValue != null ? m.Value : null;
+            return !m.CommentedOut == s.WasEnabled && value == s.WasValue ? line : -1;
         }
 
-        private static Match Definition(string line, string file) =>
-            file == HeaderRelPath ? HeaderDefine.Match(line) : AsmEqu.Match(line) is { Success: true } e ? e : AsmLabel.Match(line);
+        /// <summary>A setting's line. Marker is the "//" and the space after it when the line is commented out.</summary>
+        private sealed record Definition(string Name, int MarkerStart, int MarkerLength, string Value, int ValueStart, int ValueLength, bool IsLabel = false)
+        {
+            public bool CommentedOut => MarkerLength > 0;
+        }
+
+        private static bool IsSettingName(string name) =>
+            char.IsAsciiLetterUpper(name[0]) && name.All(c => char.IsAsciiLetterUpper(c) || char.IsAsciiDigit(c) || c == '_');
+
+        private static CDirective Directive(string line) =>
+            CLexer.Tokenize(line) is [{ Kind: CTokenKind.Directive } token, ..] ? CDirective.Parse(line, token) : null;
+
+        // A commented-out #define is a setting that is off, so the "//" is read here before the lexer drops it.
+        private static Definition HeaderDefinition(string line)
+        {
+            int code = CodeStart(line, out int indent);
+            CDirective define = Directive(line.Substring(code));
+            if (define?.Keyword != "define" || define.Name == null || define.Parameters != null) return null;
+            bool hasValue = define.Body.Length > 0;
+            return new Definition(define.Name, indent, code - indent, hasValue ? define.Body : null,
+                code + define.BodyStart, hasValue ? define.BodyEnd - define.BodyStart : 0);
+        }
+
+        // Where a line's text starts, past its indent and any "//" that comments it out.
+        private static int CodeStart(string line, out int indent)
+        {
+            indent = 0;
+            while (indent < line.Length && char.IsWhiteSpace(line[indent])) indent++;
+            int code = indent;
+            if (string.CompareOrdinal(line, code, "//", 0, 2) == 0)
+            {
+                code += 2;
+                while (code < line.Length && char.IsWhiteSpace(line[code])) code++;
+            }
+            return code;
+        }
+
+        // armips text: "NAME equ value" or ".definelabel NAME, value", either with a trailing "//" comment.
+        private static Definition AsmDefinition(string line)
+        {
+            int code = CodeStart(line, out int indent);
+            int comment = line.IndexOf("//", code, StringComparison.Ordinal);
+            string text = (comment < 0 ? line.Substring(code) : line.Substring(code, comment - code)).TrimEnd();
+            string[] words = HgEngineMakeFile.Words(text.Replace(",", " "));
+            bool isLabel = words.Length >= 3 && words[0] == ".definelabel";
+            bool isEqu = !isLabel && words.Length >= 3 && words[1] == "equ";
+            if (!isLabel && !isEqu) return null;
+
+            string name = isLabel ? words[1] : words[0];
+            if (!name.All(HgEngineMakeFile.IsNameChar)) return null;
+            int nameEnd = text.IndexOf(name, isLabel ? ".definelabel".Length : 0, StringComparison.Ordinal) + name.Length;
+            int valueAt = isLabel ? text.IndexOf(',', nameEnd) + 1 : text.IndexOf("equ", nameEnd, StringComparison.Ordinal) + 3;
+            while (valueAt < text.Length && char.IsWhiteSpace(text[valueAt])) valueAt++;
+            string value = text.Substring(valueAt);
+            return value.Length == 0 ? null : new Definition(name, indent, code - indent, value, code + valueAt, value.Length, isLabel);
+        }
+
+        private static Definition DefinitionOf(string line, string file) => file == HeaderRelPath ? HeaderDefinition(line) : AsmDefinition(line);
 
         // Turns a line on or off by its leading "//" and swaps in a new value, leaving the rest of the line as it was.
         private static string Rewrite(string line, string file, bool enabled, string value)
         {
-            Match m = Definition(line, file);
-            if (!m.Success) return line;
-            if (value != null && m.Groups[4].Success)
-                line = line.Substring(0, m.Groups[4].Index) + value.Trim() + line.Substring(m.Groups[4].Index + m.Groups[4].Length);
-            bool on = !m.Groups[2].Success;
-            if (on == enabled) return line;
-            int at = m.Groups[1].Length;
-            return enabled ? line.Remove(at, m.Groups[2].Length) : line.Insert(at, "// ");
+            Definition m = DefinitionOf(line, file);
+            if (m == null) return line;
+            if (value != null && m.Value != null)
+                line = line.Substring(0, m.ValueStart) + value.Trim() + line.Substring(m.ValueStart + m.ValueLength);
+            if (!m.CommentedOut == enabled) return line;
+            return enabled ? line.Remove(m.MarkerStart, m.MarkerLength) : line.Insert(m.MarkerStart, "// ");
         }
 
         private static string Read(string rel)

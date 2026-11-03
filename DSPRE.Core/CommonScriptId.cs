@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 namespace DSPRE
 {
     /// <summary>
@@ -136,6 +140,17 @@ namespace DSPRE
             new(2000,  2500,  3,   40,  "Common scripts"),
         };
 
+        private static Bracket[] Brackets(RomInfo.GameFamilies family) => family switch
+        {
+            RomInfo.GameFamilies.DP => DpBrackets,
+            RomInfo.GameFamilies.Plat => PlatBrackets,
+            RomInfo.GameFamilies.HGSS => HgssBrackets,
+            _ => Array.Empty<Bracket>(),
+        };
+
+        /// <summary>Every script archive the common script ranges point at.</summary>
+        public static IEnumerable<int> ScriptArchives(RomInfo.GameFamilies family) => Brackets(family).Select(b => b.ScriptArchive).Distinct();
+
         /// <summary>Resolves a script number missing from the event's own script file; NotCommon below 2000.</summary>
         public static Result Resolve(RomInfo.GameFamilies family, int scriptNumber)
         {
@@ -144,11 +159,7 @@ namespace DSPRE
                 return new Result { Kind = Kind.NotCommon };
             }
 
-            Bracket[] table;
-            if (family == RomInfo.GameFamilies.DP) table = DpBrackets;
-            else if (family == RomInfo.GameFamilies.Plat) table = PlatBrackets;
-            else if (family == RomInfo.GameFamilies.HGSS) table = HgssBrackets;
-            else return new Result { Kind = Kind.NotCommon };
+            Bracket[] table = Brackets(family);
 
             foreach (Bracket b in table)
             {

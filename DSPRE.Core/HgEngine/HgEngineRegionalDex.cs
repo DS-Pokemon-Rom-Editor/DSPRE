@@ -17,28 +17,53 @@ namespace DSPRE.HgEngine
         public static bool TryGetDexNumber(int speciesId, out int dexNumber)
         {
             dexNumber = 0;
-            if (!HgEngineProject.IsActive) return false;
-            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
-            if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator)) return false;
-
-            string text = TryReadSource(out _);
-            if (text == null) return false;
-            if (HgEngineFlatArrayField.TryGetRawValue(text, designator, out string raw)) int.TryParse(raw, out dexNumber);
+            HgEngineSymbolTable species = HgEngineProject.IsActive ? HgEngineSymbolTable.Load(SpeciesHeaderRelPath) : null;
+            if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out _)) return false;
+            if (!TryGetAllDexNumbers(out Dictionary<int, int> numbers, out _)) return false;
+            numbers.TryGetValue(speciesId, out dexNumber);
             return true;
         }
 
-        public static bool TrySetDexNumber(int speciesId, int dexNumber, out string error)
+        /// <summary>Every species with a regional number above 0, read in one pass over the table.</summary>
+        public static bool TryGetAllDexNumbers(out Dictionary<int, int> numbers, out string error)
         {
+            numbers = new Dictionary<int, int>();
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
             HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
-            if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator))
-            { error = $"Species {speciesId} has no SPECIES_ name in the checkout."; return false; }
+            if (species == null) { error = $"{SpeciesHeaderRelPath} couldn't be read."; return false; }
+            string text = TryReadSource(out string path);
+            if (text == null) return true;
+            CDeclaration table = CSourceFile.For(text).Find("RegionalDex");
+            if (table == null) { error = $"{SourceRelPath} has no RegionalDex table."; return false; }
+            foreach (CInitItem item in table.Init.Items)
+            {
+                string name = item.IndexText?.Trim();
+                if (name != null && species.TryGetValue(name, out int id) && int.TryParse(item.ValueText(text).Trim(), out int n) && n > 0)
+                    numbers[id] = n;
+            }
+            return true;
+        }
 
+        public static bool TrySetDexNumber(int speciesId, int dexNumber, out string error) =>
+            TrySetDexNumbers(new Dictionary<int, int> { [speciesId] = dexNumber }, out error);
+
+        /// <summary>Sets every number given, then writes the file and the sort list once.</summary>
+        public static bool TrySetDexNumbers(IReadOnlyDictionary<int, int> numbers, out string error)
+        {
+            error = null;
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
+            if (numbers.Count == 0) return true;
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             string text = TryReadSource(out string path);
             if (text == null) { error = $"{path} is missing from the checkout."; return false; }
-            if (!HgEngineFlatArrayField.TrySetRawValue(ref text, designator, dexNumber.ToString()))
-            { error = $"Couldn't locate or insert species {speciesId} in RegionalDex.c."; return false; }
+            foreach ((int speciesId, int dexNumber) in numbers)
+            {
+                if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator))
+                { error = $"Species {speciesId} has no SPECIES_ name in the checkout."; return false; }
+                if (!HgEngineFlatArrayField.TrySetRawValue(ref text, designator, dexNumber.ToString()))
+                { error = $"Couldn't locate or insert species {speciesId} in RegionalDex.c."; return false; }
+            }
 
             HgEngineFileCache.WriteText(path, text);
             return TrySyncSortOrder(text, out error);
@@ -53,7 +78,8 @@ namespace DSPRE.HgEngine
             error = null;
             if (!HgEngineDexSortLists.Exists) return true;
             if (!HgEngineDexSortLists.TryLoad(out HgEngineDexSortLists sort, out error)) return false;
-            if (!sort.Lists.ContainsKey("RegionalNum")) { error = $"{HgEngineDexSortLists.RelPath} has no sPokedexSort_RegionalNum to keep in order."; return false; }
+            // Newer checkouts generate the list from RegionalDex.c, so there is nothing to keep in step.
+            if (!sort.Lists.ContainsKey("RegionalNum")) return true;
 
             CDeclaration table = CSourceFile.For(regionalDex).Find("RegionalDex");
             if (table == null) { error = $"{SourceRelPath} has no RegionalDex table."; return false; }

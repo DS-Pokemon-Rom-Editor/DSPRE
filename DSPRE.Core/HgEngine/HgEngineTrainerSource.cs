@@ -4,7 +4,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -111,7 +110,7 @@ namespace DSPRE.HgEngine
         }
 
         // Mirrors HgEngineSymbolTable's literal parser: decimal or 0x-hex, optional leading '-'.
-        private static bool TryParseLiteral(string token, out int value)
+        internal static bool TryParseLiteral(string token, out int value)
         {
             bool negative = token.StartsWith("-");
             string unsigned = negative ? token[1..] : token;
@@ -187,7 +186,7 @@ namespace DSPRE.HgEngine
             if (ReferenceEquals(text, _indexedText)) return _indexed;
 
             Dictionary<int, TrainerEntry> entries = new Dictionary<int, TrainerEntry>();
-            string[] headers = Regex.Matches(text, @"#include\s+""(?:\.\./)*(include/[^""]+)""").Select(m => m.Groups[1].Value).ToArray();
+            string[] headers = CSourceFile.For(text).Includes.Select(p => p.Replace("../", "")).Where(p => p.StartsWith("include/", StringComparison.Ordinal)).ToArray();
             Func<string, int?> lookup = HgEngineSourceFields.NameLookup(headers);
             foreach ((string token, (int open, int close)) in HgEngineEntryIndex.Build(text))
                 if (open >= 0 && HgEngineSourceExpression.TryEvaluate(token, lookup, out int id) && id >= 0) entries.TryAdd(id, new TrainerEntry(token, open, close));
@@ -206,9 +205,6 @@ namespace DSPRE.HgEngine
             return Entries(HgEngineFileCache.GetText(path)).TryGetValue(trainerId, out TrainerEntry entry) ? entry.Token : trainerId.ToString();
         }
 
-        private static readonly System.Text.RegularExpressions.Regex TextOrderStart =
-            new(@"\bsTrainerTextOrder\s*\[\s*\]\s*=\s*\{");
-
         /// <summary>The trainers trainerdatagen builds messages for: only those listed in sTrainerTextOrder.</summary>
         public static bool TryReadTextOrder(out HashSet<int> listed, out string error)
         {
@@ -221,6 +217,158 @@ namespace DSPRE.HgEngine
                 listed.Add(id);
             }
             return true;
+        }
+
+        private const string TableName = "sTrainerData";
+
+        private static string TrainersPath => Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', Path.DirectorySeparatorChar));
+
+        /// <summary>How many trainers the file holds, counting any gap, or -1.</summary>
+        public static int Count()
+        {
+            if (!File.Exists(TrainersPath)) return -1;
+            Dictionary<int, TrainerEntry> entries = Entries(HgEngineFileCache.GetText(TrainersPath));
+            return entries.Count == 0 ? 0 : entries.Keys.Max() + 1;
+        }
+
+        private const string TrainerScriptsRelPath = "data/scr_seq/scr_seq_00953_trainerscript.s";
+
+        private const string NormalTrainerScript = "scr_seq_0953_normalTrainer";
+        private static string TrainerScriptsPath => System.IO.Path.Combine(HgEngineProject.RepoPathUnc, TrainerScriptsRelPath.Replace('/', System.IO.Path.DirectorySeparatorChar));
+
+        // Each scrdef line's label and where the line ends, in table order.
+        private static List<(string Label, int LineEnd)> ScriptEntries(string text)
+        {
+            List<(string, int)> entries = new List<(string, int)>();
+            for (int start = 0; start < text.Length;)
+            {
+                int end = text.IndexOf('\n', start);
+                if (end < 0) end = text.Length;
+                string line = text.Substring(start, end - start);
+                int at = line.IndexOf("scrdef ", StringComparison.Ordinal);
+                if (at >= 0 && !line.Contains("scrdef_end", StringComparison.Ordinal)) entries.Add((line.Substring(at + 7).Trim(), end));
+                start = end + 1;
+            }
+            return entries;
+        }
+
+        /// <summary>
+        /// The trainer whose eye-contact entry is the approach script, so it can't be used on the field: trainer N runs
+        /// entry N - 1 of the trainer script table. -1 when the table can't be read.
+        /// </summary>
+        public static int ApproachTrainer()
+        {
+            if (!File.Exists(TrainerScriptsPath)) return -1;
+            int entry = ScriptEntries(HgEngineFileCache.GetText(TrainerScriptsPath)).FindIndex(e => e.Label != NormalTrainerScript);
+            return entry < 0 ? -1 : entry + 1;
+        }
+
+        /// <summary>
+        /// Gives a trainer its normal eye-contact entry, appending entries after the last one as the table's own note
+        /// asks. False when that entry is a different script.
+        /// </summary>
+        public static bool TryGiveScript(int trainerId, out string error)
+        {
+            error = null;
+            if (!File.Exists(TrainerScriptsPath)) { error = $"{TrainerScriptsRelPath} is missing from the checkout."; return false; }
+            string text = HgEngineFileCache.GetText(TrainerScriptsPath);
+            List<(string Label, int LineEnd)> entries = ScriptEntries(text);
+            if (entries.Count == 0) { error = $"{TrainerScriptsRelPath} has no trainer script entries to add after."; return false; }
+            int entry = trainerId - 1;
+            if (entry < entries.Count)
+            {
+                if (entries[entry].Label == NormalTrainerScript) return true;
+                error = $"Trainer {trainerId}'s entry in {TrainerScriptsRelPath} runs {entries[entry].Label}, not the normal trainer script.";
+                return false;
+            }
+            string nl = text.Contains("\r\n") ? "\r\n" : "\n";
+            string added = string.Concat(Enumerable.Range(entries.Count, entry - entries.Count + 1).Select(i => $"{nl}/* Trainer {i,3} */ scrdef {NormalTrainerScript}"));
+            int after = entries[^1].LineEnd;
+            if (after > 0 && text[after - 1] == '\r') after--;
+            return HgEngineVerifiedWrite.TryWrite(TrainerScriptsPath, TrainerScriptsRelPath, text.Insert(after, added), written =>
+                ScriptEntries(written) is List<(string Label, int LineEnd)> back && back.Count > entry && back[entry].Label == NormalTrainerScript
+                    ? null : $"trainer {trainerId} has no entry", out error);
+        }
+
+        /// <summary>Appends a trainer shaped like the last one, so it has every field that one declares.</summary>
+        public static bool TryAdd(string name, out int trainerId, out string error)
+        {
+            trainerId = -1;
+            string text = File.Exists(TrainersPath) ? HgEngineFileCache.GetText(TrainersPath) : null;
+            CDeclaration table = text == null ? null : CSourceFile.For(text).Find(TableName);
+            if (table == null || table.Init.Items.Count == 0) { error = $"{SourceRelPath} has no {TableName} to add to."; return false; }
+
+            CInitItem last = table.Init.Items[^1];
+            Dictionary<int, TrainerEntry> known = Entries(text);
+            if (known.Count == 0) { error = $"{SourceRelPath} has no trainer DSPRE can read."; return false; }
+            trainerId = known.Keys.Max() + 1;
+            string entry = text.Substring(last.Start, last.End - last.Start);
+            // Positions in the copied entry, applied from the end so earlier positions stay valid.
+            List<(int At, int Length, string With)> edits = new List<(int, int, string)>();
+            if (last.List?.Field("text") is CInitItem lines)
+                edits.Add((lines.ValueStart - last.Start, lines.ValueEnd - lines.ValueStart, PlaceholderText(HgEngineSourcePatcher.Indent(text, lines.Start))));
+            else
+            {
+                string fieldIndent = last.List?.Items.FirstOrDefault() is CInitItem first ? HgEngineSourcePatcher.Indent(text, first.Start) : "        ";
+                int lineStart = HgEngineSourcePatcher.LineStart(entry, entry.LastIndexOf('}'));
+                edits.Add((lineStart, 0, $"{fieldIndent}.text = {PlaceholderText(fieldIndent)},\n"));
+            }
+            if (last.List?.Field("name") is CInitItem named)
+                edits.Add((named.ValueStart - last.Start, named.ValueEnd - named.ValueStart, ToCStringLiteral(name)));
+            foreach ((int at, int length, string with) in edits.OrderByDescending(e => e.At))
+                entry = entry.Remove(at, length).Insert(at, with);
+            entry = $"[{trainerId}]" + entry.Substring(entry.IndexOf(']') + 1);
+
+            string indent = HgEngineSourcePatcher.Indent(text, last.Start);
+            int added = trainerId;
+            if (!HgEngineVerifiedWrite.TryWrite(TrainersPath, SourceRelPath, text.Insert(table.Init.Close, $"{indent}{entry},\n\n"),
+                    written => Entries(written).ContainsKey(added) ? null : $"trainer {added} is missing", out error))
+                return false;
+            return TryAddToTextOrder(trainerId, out error);
+        }
+
+        // Without lines the game shows an empty box before and after the battle.
+        private static string PlaceholderText(string indent)
+        {
+            (string Type, string Text)[] lines =
+            {
+                ("TRMSG_INTRO", "Let’s battle!\\\\r"),
+                ("TRMSG_LOSE", "I lost!\\\\n"),
+                ("TRMSG_AFTER", "That was a good battle.\\\\n"),
+            };
+            StringBuilder sb = new StringBuilder("{");
+            foreach ((string type, string line) in lines)
+                sb.Append($"\n{indent}    {{\n{indent}        .type = {type},\n{indent}        .text = \"{line}\",\n{indent}    }},");
+            return sb.Append($"\n{indent}}}").ToString();
+        }
+
+        /// <summary>Removes the last trainer from the table and from sTrainerTextOrder.</summary>
+        public static bool TryRemoveLast(out int trainerId, out string error)
+        {
+            trainerId = -1;
+            error = null;
+            string text = File.Exists(TrainersPath) ? HgEngineFileCache.GetText(TrainersPath) : null;
+            CDeclaration table = text == null ? null : CSourceFile.For(text).Find(TableName);
+            if (table == null || table.Init.Items.Count == 0) { error = $"{SourceRelPath} has no {TableName}."; return false; }
+
+            CInitItem last = table.Init.Items[^1];
+            Dictionary<int, TrainerEntry> entries = Entries(text);
+            if (entries.Count == 0) { error = $"{SourceRelPath} has no trainer DSPRE can read."; return false; }
+            int id = entries.Keys.Max();
+            // The caller checked the highest number for uses, so that trainer has to be the block that goes.
+            if (!(entries[id].Open >= last.Start && entries[id].Open < last.End))
+            { error = $"Trainer {id} isn't the last entry in {SourceRelPath}, so it can't be removed as the last trainer."; return false; }
+            trainerId = id;
+            int start = HgEngineSourcePatcher.LineStart(text, last.Start), end = table.Init.Close;
+            text = text.Remove(start, HgEngineSourcePatcher.LineStart(text, end) - start);
+
+            CDeclaration order = CSourceFile.For(text).Find("sTrainerTextOrder");
+            string edited = text;
+            CInitItem listed = order?.Init.Items.FirstOrDefault(i => i.ValueText(edited).Trim() == id.ToString());
+            if (listed != null) text = HgEngineSourcePatcher.RemoveElement(text, listed.Start, listed.End);
+            return HgEngineVerifiedWrite.TryWrite(TrainersPath, SourceRelPath, text, written =>
+                Entries(written) is Dictionary<int, TrainerEntry> back && !back.ContainsKey(id) && back.Count == entries.Count - 1
+                    ? null : $"trainer {id} is still there", out error);
         }
 
         /// <summary>Appends a trainer to sTrainerTextOrder when it is missing. Appending keeps every listed
@@ -239,8 +387,9 @@ namespace DSPRE.HgEngine
             }
             else text = text.Insert(open + 1, "\n    " + trainerId + ",\n");
 
-            HgEngineFileCache.WriteText(path, text);
-            return true;
+            return HgEngineVerifiedWrite.TryWrite(path, SourceRelPath, text, written =>
+                CSourceFile.For(written).Find("sTrainerTextOrder")?.Init?.Items.Any(i => i.ValueText(written).Trim() == trainerId.ToString()) == true
+                    ? null : $"trainer {trainerId} isn't in sTrainerTextOrder", out error);
         }
 
         private static bool TryFindTextOrder(out string path, out string text, out int open, out int close, out string error)
@@ -255,10 +404,10 @@ namespace DSPRE.HgEngine
             if (!File.Exists(path)) { error = $"{path} is missing from the checkout."; return false; }
 
             text = HgEngineFileCache.GetText(path);
-            Match m = TextOrderStart.Match(text);
-            if (!m.Success || !BraceScanner.TryFindMatchingBrace(text, m.Index + m.Length - 1, out close))
-            { error = "sTrainerTextOrder wasn't found in Trainers.c."; return false; }
-            open = m.Index + m.Length - 1;
+            CDeclaration order = CSourceFile.For(text).Find("sTrainerTextOrder");
+            if (order == null) { error = "sTrainerTextOrder wasn't found in Trainers.c."; return false; }
+            open = order.Init.Open;
+            close = order.Init.Close;
             return true;
         }
 
@@ -301,19 +450,29 @@ namespace DSPRE.HgEngine
         {
             species = form = 0;
             if (raw == null) return false;
-            raw = raw.Trim();
-            string speciesToken = raw, formToken = null;
-
-            Match macro = System.Text.RegularExpressions.Regex.Match(raw, @"^MON_WITH_FORM\s*\(\s*([^,]+?)\s*,\s*([^)]+?)\s*\)$");
-            Match shifted = System.Text.RegularExpressions.Regex.Match(raw, @"^\(?\s*([^|()]+?)\s*\|\s*\(\s*([^<()]+?)\s*<<\s*11\s*\)\s*\)?$");
-            if (macro.Success) { speciesToken = macro.Groups[1].Value; formToken = macro.Groups[2].Value; }
-            else if (shifted.Success) { speciesToken = shifted.Groups[1].Value; formToken = shifted.Groups[2].Value; }
-
-            if (!HgEngineSourceBlock.TryResolveToken(speciesToken, speciesHeader, out int value)) return false;
-            if (formToken != null && !HgEngineSourceBlock.TryResolveToken(formToken, null, out form)) return false;
-            if (formToken == null && value > SpeciesMask) form = value >> FormShift;
+            int? Lookup(string name) => HgEngineSourceBlock.TryResolveToken(name, speciesHeader, out int v) ? v : null;
+            if (!HgEngineSourceExpression.TryEvaluate(raw, Lookup, out int value)) return false;
+            form = value >> FormShift;
             species = value & SpeciesMask;
             return true;
+        }
+
+        /// <summary>The same split with species names from a table already loaded.</summary>
+        public static bool TryParseSpecies(string raw, HgEngineSymbolTable speciesTable, out int species, out int form)
+        {
+            species = form = 0;
+            if (raw == null || !HgEngineSourceExpression.TryEvaluate(raw, n => speciesTable != null && speciesTable.TryGetValue(n, out int v) ? v : null, out int value)) return false;
+            form = value >> FormShift;
+            species = value & SpeciesMask;
+            return true;
+        }
+
+        /// <summary>A species word with its form packed in, or 0, noting the first token that couldn't be read.</summary>
+        internal static int SpeciesWord(string token, HgEngineSymbolTable speciesTable, ref string unreadable)
+        {
+            if (TryParseSpecies(token.Trim(), speciesTable, out int id, out int form)) return id | (form << FormShift);
+            unreadable ??= token.Trim();
+            return 0;
         }
 
         /// <summary>The species source value, wrapped in hg-engine's own macro when a form is set.</summary>

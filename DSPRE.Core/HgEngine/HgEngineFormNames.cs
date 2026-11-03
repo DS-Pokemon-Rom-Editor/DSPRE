@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.RegularExpressions;
 using System.IO;
 using System.Collections.Generic;
 
@@ -76,12 +75,9 @@ namespace DSPRE.HgEngine
             if (!File.Exists(mappingPath)) return null;
 
             Dictionary<int, int> result = new Dictionary<int, int>();
-            foreach (Match m in Regex.Matches(HgEngineFileCache.GetText(mappingPath), @"\[\s*(SPECIES_\w+)\s*-\s*SPECIES_MEGA_START\s*\]\s*=\s*(SPECIES_\w+)\s*,"))
-            {
-                if (species.TryGetValue(m.Groups[1].Value, out int formId) &&
-                    species.TryGetValue(m.Groups[2].Value, out int baseId))
+            foreach (KeyValuePair<string, string> row in HgEngineLearnsets.ParseFormToBase(HgEngineFileCache.GetText(mappingPath)))
+                if (species.TryGetValue(row.Key, out int formId) && species.TryGetValue(row.Value, out int baseId))
                     result[formId] = baseId;
-            }
             return result;
         }
     }

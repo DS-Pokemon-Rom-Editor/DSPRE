@@ -74,6 +74,8 @@ namespace DSPRE
             public long Size { get; set; }
             public long Written { get; set; }
             public string Sha256 { get; set; }
+            /// <summary>When the folder and archive were last in step. A member written later is DSPRE's edit.</summary>
+            public long Recorded { get; set; }
         }
 
         private static readonly object Gate = new object();
@@ -154,6 +156,7 @@ namespace DSPRE
             try
             {
                 Stamp s = Measure(packedPath, hash: true);
+                s.Recorded = DateTime.UtcNow.Ticks;
                 lock (Gate) { Stamps()[Key(packedPath)] = s; WriteStamps(); }
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
@@ -195,6 +198,7 @@ namespace DSPRE
                     {
                         if (!File.Exists(p.packedDir) || !HasMembers(p.unpackedDir)) continue;
                         drift = Check(p.packedDir, p.unpackedDir);
+                        if (drift != null && TakeBuiltMembers(dir, p.packedDir, p.unpackedDir)) drift = null;
                     }
                     if (drift != null)
                         found.Add(new Conflict { Dir = dir, Drift = drift.Value, PackedPath = p.packedDir, UnpackedPath = p.unpackedDir, Name = Key(p.packedDir) });
@@ -205,6 +209,78 @@ namespace DSPRE
                 }
             }
             return found;
+        }
+
+        /// <summary>
+        /// The build's copy wins for members DSPRE hasn't edited since the last sync. False when an edit would be lost.
+        /// </summary>
+        private static bool TakeBuiltMembers(DirNames dir, string packedPath, string folder)
+        {
+            if (!HgEngineProject.IsActive) return false;
+            string archive = HgEngineOwnedFiles.ArchiveOfPath(packedPath);
+            // The synthetic overlay is repacked whole from build/a028, outside the rule table.
+            HgEngineRule rule = HgEngineOwnedFiles.RuleForArchive(archive);
+            bool whole = dir == DirNames.SynthOverlay || rule?.ReplacesWholeArchive == true;
+            if (!whole && rule == null) return false;
+
+            long recorded;
+            lock (Gate) recorded = Stamps().TryGetValue(Key(packedPath), out Stamp known) ? known.Recorded : 0;
+            bool BinEdited(int member)
+            {
+                string bin = ArchiveMembers.PathOf(dir, member);
+                return File.Exists(bin) && File.GetLastWriteTimeUtc(bin).Ticks > recorded;
+            }
+            // Reading a text bank writes its JSON too, so a newer JSON is an edit only when its text differs from the bank's.
+            bool Edited(int member)
+            {
+                if (BinEdited(member)) return true;
+                if (dir != DirNames.TextArchives) return false;
+                string json = ROMFiles.TextArchive.GetFilePaths(member).jsonPath;
+                return File.Exists(json) && File.GetLastWriteTimeUtc(json).Ticks > recorded && !JsonMatchesBank(json, ArchiveMembers.PathOf(dir, member));
+            }
+
+            Narc packed = Narc.Open(packedPath);
+            if (packed == null) return false;
+            Narc unpacked = Narc.FromFolder(folder);
+            try
+            {
+                // DSPRE saves edits to hg-engine's members in its source, so the build's copy is current. Other members
+                // DSPRE edited since the last sync are asked about.
+                if (whole && packed.ElementCount != unpacked.ElementCount)
+                {
+                    ArchiveMembers.ReplaceAll(folder, Enumerable.Range(0, packed.ElementCount).Select(packed.GetElementBytes).ToList());
+                    Record(packedPath);
+                    return true;
+                }
+                // A build can add members, such as new text banks. A folder longer than the build holds DSPRE's work.
+                if (packed.ElementCount < unpacked.ElementCount) return false;
+                List<int> differing = new List<int>();
+                for (int i = 0; i < packed.ElementCount; i++)
+                    if (i >= unpacked.ElementCount || !packed.GetElementBytes(i).AsSpan().SequenceEqual(unpacked.GetElementBytes(i))) differing.Add(i);
+                if (!whole && differing.Any(i => i < unpacked.ElementCount && !HgEngineOwnedFiles.Owns(archive, i) && Edited(i))) return false;
+
+                foreach (int i in differing)
+                {
+                    ArchiveMembers.PutBuilt(dir, i, packed.GetElementBytes(i));
+                    // Text is read from its JSON first, so the old copy has to go for the new member to be seen.
+                    if (dir == DirNames.TextArchives) File.Delete(ROMFiles.TextArchive.GetFilePaths(i).jsonPath);
+                }
+            }
+            finally
+            {
+                packed.Free();
+                unpacked.Free();
+            }
+            Record(packedPath);
+            return true;
+        }
+
+        private static bool JsonMatchesBank(string json, string bin)
+        {
+            if (!File.Exists(bin)) return false;
+            // The messages are compared, so a JSON that differs only in layout or line endings still matches.
+            try { return ROMFiles.TextArchive.ReadMessagesFrom(json).SequenceEqual(ROMFiles.TextArchive.ReadMessagesFrom(bin)); }
+            catch (Exception e) when (e is IOException || e is InvalidDataException) { return false; }
         }
 
         private static Drift? Check(string packedPath, string folder)
@@ -220,6 +296,7 @@ namespace DSPRE
                 Stamp now = Measure(packedPath, hash: true);
                 if (string.Equals(now.Sha256, known.Sha256, StringComparison.OrdinalIgnoreCase))
                 {
+                    now.Recorded = known.Recorded;
                     lock (Gate) { Stamps()[key] = now; WriteStamps(); }
                     return null;
                 }

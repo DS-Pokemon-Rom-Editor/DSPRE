@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -18,37 +17,39 @@ namespace DSPRE.HgEngine
 
         public sealed record Tutor(int Move, int Cost, int Npc);
 
-        private static readonly Regex Head = new(@"\bsTutorMoves\s*\[\s*\]\s*=\s*\{");
-        private static readonly Regex Row = new(@"\{\s*(\w+)\s*,\s*(\w+)\s*,\s*(\w+)\s*\}");
+        private const string TableName = "sTutorMoves";
 
         public static bool TryRead(out List<Tutor> tutors, out string error)
         {
             tutors = null;
-            if (!TryRows(out string text, out List<Match> rows, out HgEngineSymbolTable moves, out HgEngineSymbolTable npcs, out error)) return false;
+            if (!TryRows(out string text, out List<CInitList> rows, out HgEngineSymbolTable moves, out HgEngineSymbolTable npcs, out error)) return false;
             tutors = new List<Tutor>();
-            foreach (Match m in rows)
+            foreach (CInitList row in rows)
             {
-                int move = Value(m.Groups[1].Value, moves), cost = Value(m.Groups[2].Value, null), npc = Value(m.Groups[3].Value, npcs);
-                if (move < 0 || cost < 0 || npc < 0) { error = $"{SourceRelPath}: {m.Value} couldn't be read."; tutors = null; return false; }
+                int move = Value(Cell(text, row, 0), moves), cost = Value(Cell(text, row, 1), null), npc = Value(Cell(text, row, 2), npcs);
+                if (move < 0 || cost < 0 || npc < 0)
+                { error = $"{SourceRelPath}: {text.Substring(row.Open, row.Close + 1 - row.Open)} couldn't be read."; tutors = null; return false; }
                 tutors.Add(new Tutor(move, cost, npc));
             }
             return true;
         }
 
+        private static string Cell(string text, CInitList row, int column) => row.Items[column].ValueText(text).Trim();
+
         /// <summary>Rewrites the rows that changed; the list must have as many rows as the file.</summary>
         public static bool TryWrite(IReadOnlyList<Tutor> tutors, out string error)
         {
-            if (!TryRows(out string text, out List<Match> rows, out HgEngineSymbolTable moves, out HgEngineSymbolTable npcs, out error)) return false;
+            if (!TryRows(out string text, out List<CInitList> rows, out HgEngineSymbolTable moves, out HgEngineSymbolTable npcs, out error)) return false;
             if (rows.Count != tutors.Count) { error = $"{SourceRelPath} has {rows.Count} tutor moves, not {tutors.Count}."; return false; }
             string updated = text;
             for (int i = rows.Count - 1; i >= 0; i--)
             {
-                Match m = rows[i];
+                CInitList row = rows[i];
                 Tutor t = tutors[i];
-                string move = Token(t.Move, m.Groups[1].Value, moves, "MOVE_"), cost = Token(t.Cost, m.Groups[2].Value, null, null),
-                       npc = Token(t.Npc, m.Groups[3].Value, npcs, "MOVE_TUTOR_NPC_");
-                if (move == m.Groups[1].Value && cost == m.Groups[2].Value && npc == m.Groups[3].Value) continue;
-                updated = updated.Substring(0, m.Index) + $"{{ {move}, {cost}, {npc} }}" + updated.Substring(m.Index + m.Length);
+                string move = Token(t.Move, Cell(text, row, 0), moves, "MOVE_"), cost = Token(t.Cost, Cell(text, row, 1), null, null),
+                       npc = Token(t.Npc, Cell(text, row, 2), npcs, "MOVE_TUTOR_NPC_");
+                if (move == Cell(text, row, 0) && cost == Cell(text, row, 1) && npc == Cell(text, row, 2)) continue;
+                updated = updated.Substring(0, row.Open) + $"{{ {move}, {cost}, {npc} }}" + updated.Substring(row.Close + 1);
             }
             if (updated == text) return true;
             try { HgEngineFileCache.WriteText(Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', Path.DirectorySeparatorChar)), updated); }
@@ -56,7 +57,7 @@ namespace DSPRE.HgEngine
             return true;
         }
 
-        private static bool TryRows(out string text, out List<Match> rows, out HgEngineSymbolTable moves, out HgEngineSymbolTable npcs, out string error)
+        private static bool TryRows(out string text, out List<CInitList> rows, out HgEngineSymbolTable moves, out HgEngineSymbolTable npcs, out string error)
         {
             text = null; rows = null; npcs = null; error = null;
             moves = HgEngineSymbolTable.Load(MovesHeaderRelPath);
@@ -66,23 +67,15 @@ namespace DSPRE.HgEngine
             text = HgEngineFileCache.GetText(path);
             // The tutor NPC names are #defines in the same file.
             npcs = HgEngineSymbolTable.Parse(text);
-            Match head = Head.Match(text);
-            if (!head.Success) { error = $"{SourceRelPath} has no sTutorMoves."; return false; }
-            int open = head.Index + head.Length - 1;
-            if (!BraceScanner.TryFindMatchingBrace(text, open, out int close)) { error = "sTutorMoves has no end."; return false; }
-            string masked = HgEngineMusicTables.MaskComments(text);
-            string source = text;
-            rows = Row.Matches(masked.Substring(0, close), open + 1).Cast<Match>()
-                .Select(m => Row.Match(source, m.Index)).ToList();
+            CDeclaration table = CSourceFile.For(text).Find(TableName);
+            if (table == null) { error = $"{SourceRelPath} has no {TableName}."; return false; }
+            CInitItem bad = table.Init.Items.FirstOrDefault(i => i.IsConditional || i.List == null || i.List.Items.Count != 3);
+            if (bad != null) { error = $"{SourceRelPath}: {bad.ValueText(text).Trim()} couldn't be read."; return false; }
+            rows = table.Init.Items.Select(i => i.List).ToList();
             return true;
         }
 
-        private static int Value(string token, HgEngineSymbolTable symbols)
-        {
-            if (token.StartsWith("0x", StringComparison.OrdinalIgnoreCase) && int.TryParse(token.Substring(2), System.Globalization.NumberStyles.HexNumber, null, out int hex)) return hex;
-            if (int.TryParse(token, out int dec)) return dec;
-            return symbols != null && symbols.TryGetValue(token, out int v) ? v : -1;
-        }
+        private static int Value(string token, HgEngineSymbolTable symbols) => HgEngineSymbolTable.TryValue(token, out int v, symbols) ? v : -1;
 
         // Keeps the token as written when its value is unchanged.
         private static string Token(int value, string current, HgEngineSymbolTable symbols, string prefix)

@@ -270,6 +270,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Redo() => _undo?.Redo();
 
         public bool HasUnsavedChanges => _lists != null && !_lists.Snapshot().AsSpan().SequenceEqual(_saved);
+
+        /// <summary>On hg-engine the lists are its source files, which a compile builds into the game.</summary>
+        public bool FromSource => DSPRE.HgEngine.HgEngineProject.IsActive;
+        public string SavedNote => FromSource ? "Saved. Compile ROM puts the lists in the game." : "Saved. Save ROM puts the lists in the game.";
         public string UnsavedChangesDescription => "Pokédex lists";
 
         public void SaveChanges() => DialogHelper.Watch(SaveChangesAsync());

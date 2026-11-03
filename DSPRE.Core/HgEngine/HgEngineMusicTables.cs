@@ -4,7 +4,6 @@ using System.Globalization;
 using System.Linq;
 using System.IO;
 using System.Text;
-using System.Text.RegularExpressions;
 using DSPRE.ROMFiles;
 
 namespace DSPRE.HgEngine
@@ -33,7 +32,7 @@ namespace DSPRE.HgEngine
                 if (!HgEngineProject.IsActive) return false;
                 string config = Read(ConfigRelPath, out _);
                 return config != null && Read(SourceRelPath, out _) != null
-                    && Regex.IsMatch(config, @"^[ \t]*#define[ \t]+EXPAND_MUSIC_TABLES\b", RegexOptions.Multiline);
+                    && CSourceFile.For(config).FindDefine("EXPAND_MUSIC_TABLES") != null;
             }
         }
 
@@ -58,18 +57,17 @@ namespace DSPRE.HgEngine
 
         internal static BattleMusicTables ParseBattle(string source, HgEngineSymbolTable sounds, HgEngineSymbolTable classes, HgEngineSymbolTable species)
         {
-            string masked = MaskComments(source);
-            IReadOnlyList<Match> combos = Rows(masked, ComboTable, ComboRow);
+            IReadOnlyList<Row> combos = Rows(source, ComboTable, ComboRow);
             if (combos == null) return null;
             BattleMusicTables t = new BattleMusicTables(fromHgEngineSource: true);
 
             SortedDictionary<int, (ushort, ushort)> byIndex = new SortedDictionary<int, (ushort, ushort)>();
             int next = 0;
-            foreach (Match m in combos)
+            foreach (Row m in combos)
             {
-                int index = m.Groups[1].Success ? Value(m.Groups[1].Value, sounds) : next;
+                int index = m[1] != null ? Value(m[1].Value, sounds) : next;
                 if (index < 0) continue;
-                byIndex[index] = ((ushort)Value(m.Groups[2].Value, sounds), (ushort)Value(m.Groups[3].Value, sounds));
+                byIndex[index] = ((ushort)Value(m[2].Value, sounds), (ushort)Value(m[3].Value, sounds));
                 next = index + 1;
             }
             foreach (KeyValuePair<int, (ushort, ushort)> kv in byIndex)
@@ -78,21 +76,21 @@ namespace DSPRE.HgEngine
                 t.Combos.Rows.Add(kv.Value);
             }
 
-            foreach (Match m in Rows(masked, ClassTable, ClassRow) ?? (IEnumerable<Match>)Array.Empty<Match>())
-                t.Classes.Rows.Add((Value(m.Groups[1].Value, classes), ClassCombo(m, sounds)));
+            foreach (Row m in Rows(source, ClassTable, ClassRow) ?? (IEnumerable<Row>)Array.Empty<Row>())
+                t.Classes.Rows.Add((Value(m[1].Value, classes), ClassCombo(m, sounds)));
 
-            foreach (Match m in Rows(masked, SpeciesTable, SpeciesRow) ?? (IEnumerable<Match>)Array.Empty<Match>())
-                t.Species.Rows.Add((Value(m.Groups[1].Value, species), Value(m.Groups[2].Value, sounds)));
+            foreach (Row m in Rows(source, SpeciesTable, SpeciesRow) ?? (IEnumerable<Row>)Array.Empty<Row>())
+                t.Species.Rows.Add((Value(m[1].Value, species), Value(m[2].Value, sounds)));
             return t;
         }
 
         internal static Dictionary<int, (int, int)> ParseEncounterMusic(string source, HgEngineSymbolTable sounds, HgEngineSymbolTable classes)
         {
             Dictionary<int, (int, int)> music = new Dictionary<int, (int, int)>();
-            foreach (Match m in Rows(MaskComments(source), EncounterTable, EncounterRow) ?? (IEnumerable<Match>)Array.Empty<Match>())
+            foreach (Row m in Rows(source, EncounterTable, EncounterRow) ?? (IEnumerable<Row>)Array.Empty<Row>())
             {
-                int cls = Value(m.Groups[1].Value, classes);
-                if (cls >= 0) music.TryAdd(cls, (Value(m.Groups[2].Value, sounds), Value(m.Groups[3].Value, sounds)));
+                int cls = Value(m[1].Value, classes);
+                if (cls >= 0) music.TryAdd(cls, (Value(m[2].Value, sounds), Value(m[3].Value, sounds)));
             }
             return music;
         }
@@ -141,22 +139,37 @@ namespace DSPRE.HgEngine
         private const string ByteReplacementRelPath = "bytereplacement";
 
         // bytereplacement's EXPAND_MUSIC_TABLES branch: "# <table> table range" then "arm9 <address> <count>".
-        private static Regex CountLine(string table) => new(@"#\s*" + table + @"\s+table range[^\n]*\n\s*arm9\s+\w+\s+([0-9A-Fa-f]{2})\b");
+        // Where the two hex digits of "arm9 ADDRESS NN" sit, on the line under the table's "# NAME table range", or -1.
+        private static int CountAt(string table, string text)
+        {
+            string[] lines = text.Split('\n');
+            int at = 0;
+            for (int i = 0; i + 1 < lines.Length; at += lines[i].Length + 1, i++)
+            {
+                string[] heading = HgEngineMakeFile.Words(lines[i].Replace("#", "# "));
+                if (heading.Length < 4 || heading[0] != "#" || heading[1] != table || heading[2] != "table" || heading[3] != "range") continue;
+                string[] count = HgEngineMakeFile.Words(lines[i + 1]);
+                if (count.Length < 3 || count[0] != "arm9" || count[2].Length != 2 || !count[2].All(char.IsAsciiHexDigit)) return -1;
+                int column = lines[i + 1].IndexOf(count[1], StringComparison.Ordinal) + count[1].Length;
+                return at + lines[i].Length + 1 + lines[i + 1].IndexOf(count[2], column, StringComparison.Ordinal);
+            }
+            return -1;
+        }
 
-        private static bool TryTableCount(string table, string rowPattern, int delta, out string updated, out string error)
+        private static bool TryTableCount(string table, RowShape shape, int delta, out string updated, out string error)
         {
             updated = null;
             error = null;
             string text = Read(ByteReplacementRelPath, out _), source = Read(SourceRelPath, out _);
             if (text == null || source == null) { error = $"{ByteReplacementRelPath} or {SourceRelPath} is missing from the checkout."; return false; }
-            Match m = CountLine(table).Match(text);
-            if (!m.Success) { error = $"{ByteReplacementRelPath} has no {table} table range, so a row can't be added or removed."; return false; }
-            int count = int.Parse(m.Groups[1].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-            int rows = Rows(MaskComments(source), table, rowPattern)?.Count ?? -1;
+            int countAt = CountAt(table, text);
+            if (countAt < 0) { error = $"{ByteReplacementRelPath} has no {table} table range, so a row can't be added or removed."; return false; }
+            int count = int.Parse(text.AsSpan(countAt, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            int rows = Rows(source, table, shape)?.Count ?? -1;
             if (rows != count) { error = $"{table} has {rows} rows but the game is told to search {count}. Make them agree first."; return false; }
             int next = count + delta;
             if (next < 1 || next > 255) { error = $"{table} can have 1 to 255 rows."; return false; }
-            updated = text.Substring(0, m.Groups[1].Index) + next.ToString("X2", CultureInfo.InvariantCulture) + text.Substring(m.Groups[1].Index + 2);
+            updated = text.Substring(0, countAt) + next.ToString("X2", CultureInfo.InvariantCulture) + text.Substring(countAt + 2);
             return true;
         }
 
@@ -171,45 +184,30 @@ namespace DSPRE.HgEngine
         internal static (string Text, string Error) SetSpeciesCombo(string text, int row, int species, int combo,
             HgEngineSymbolTable sounds, HgEngineSymbolTable speciesTable)
         {
-            IReadOnlyList<Match> rows = Rows(MaskComments(text), SpeciesTable, SpeciesRow);
+            IReadOnlyList<Row> rows = Rows(text, SpeciesTable, SpeciesRow);
             if (rows == null || row < 0 || row >= rows.Count) return (null, $"{SpeciesTable} has no row {row}.");
-            Match m = rows[row];
-            return (Replace(text, (m.Groups[2], Token(combo, m.Groups[2].Value, sounds, ComboPrefix)),
-                                  (m.Groups[1], Token(species, m.Groups[1].Value, speciesTable, "SPECIES_"))), null);
+            Row m = rows[row];
+            return (Replace(text, (m[2], Token(combo, m[2].Value, sounds, ComboPrefix)),
+                                  (m[1], Token(species, m[1].Value, speciesTable, "SPECIES_"))), null);
         }
 
         internal static (string Text, string Error) AddSpeciesRow(string text, int species, int combo,
             HgEngineSymbolTable sounds, HgEngineSymbolTable speciesTable)
         {
-            string masked = MaskComments(text);
-            IReadOnlyList<Match> rows = Rows(masked, SpeciesTable, SpeciesRow);
-            int end = BlockEnd(masked, SpeciesTable);
+            IReadOnlyList<Row> rows = Rows(text, SpeciesTable, SpeciesRow);
+            int end = BlockEnd(text, SpeciesTable);
             if (rows == null || end < 0) return (null, $"{SourceRelPath} has no {SpeciesTable}.");
             string newline = text.Contains("\r\n") ? "\r\n" : "\n";
-            string indent = "    ";
-            if (rows.Count > 0)
-            {
-                int lineStart = text.LastIndexOf('\n', rows[^1].Index) + 1;
-                indent = text.Substring(lineStart, rows[^1].Index - lineStart);
-                indent = indent.Substring(0, indent.Length - indent.TrimStart().Length);
-            }
+            string indent = rows.Count > 0 ? HgEngineSourcePatcher.IndentOfLine(text, rows[^1].Index) : "    ";
             string line = $"{indent}{{ .species = {Token(species, null, speciesTable, "SPECIES_")}, .combo = {Token(combo, null, sounds, ComboPrefix)} }},{newline}";
             return (text.Insert(text.LastIndexOf('\n', end) + 1, line), null);
         }
 
         internal static (string Text, string Error) RemoveSpeciesRow(string text, int row)
         {
-            IReadOnlyList<Match> rows = Rows(MaskComments(text), SpeciesTable, SpeciesRow);
+            IReadOnlyList<Row> rows = Rows(text, SpeciesTable, SpeciesRow);
             if (rows == null || row < 0 || row >= rows.Count) return (null, $"{SpeciesTable} has no row {row}.");
-            int start = text.LastIndexOf('\n', rows[row].Index) + 1;
-            int end = text.IndexOf('\n', rows[row].Index + rows[row].Length);
-            end = end < 0 ? text.Length : end + 1;
-            // A line holding only this row goes whole; otherwise just the row and its comma.
-            string lineText = text.Substring(start, end - start);
-            if (lineText.Trim().TrimEnd(',').Trim() == rows[row].Value.Trim()) return (text.Remove(start, end - start), null);
-            int cut = rows[row].Index + rows[row].Length;
-            while (cut < text.Length && (text[cut] == ' ' || text[cut] == ',')) cut++;
-            return (text.Remove(rows[row].Index, cut - rows[row].Index), null);
+            return (HgEngineSourcePatcher.RemoveElement(text, rows[row].Index, rows[row].Index + rows[row].Length), null);
         }
 
         /// <summary>Sets a class's eye-contact music. A new row raises the count the game searches, as hg-engine's
@@ -218,8 +216,8 @@ namespace DSPRE.HgEngine
         {
             error = null;
             string source = Read(SourceRelPath, out _);
-            bool adding = source != null && !(Rows(MaskComments(source), EncounterTable, EncounterRow) ?? Array.Empty<Match>())
-                .Any(m => Value(m.Groups[1].Value, Classes) == trainerClass);
+            bool adding = source != null && !(Rows(source, EncounterTable, EncounterRow) ?? Array.Empty<Row>())
+                .Any(m => Value(m[1].Value, Classes) == trainerClass);
             string count = null;
             if (adding && !TryTableCount(EncounterTable, EncounterRow, +1, out count, out error)) return false;
             return Edit(out error, text => SetEncounterMusic(text, trainerClass, johto, kanto, Sounds, Classes))
@@ -228,61 +226,107 @@ namespace DSPRE.HgEngine
 
         internal static (string Text, string Error) SetCombo(string text, int index, ushort transition, ushort sequence, HgEngineSymbolTable sounds)
         {
-            Match row = null;
+            Row row = null;
             int next = 0;
-            foreach (Match m in Rows(MaskComments(text), ComboTable, ComboRow) ?? (IEnumerable<Match>)Array.Empty<Match>())
+            foreach (Row m in Rows(text, ComboTable, ComboRow) ?? (IEnumerable<Row>)Array.Empty<Row>())
             {
-                int at = m.Groups[1].Success ? Value(m.Groups[1].Value, sounds) : next;
+                int at = m[1] != null ? Value(m[1].Value, sounds) : next;
                 next = at + 1;
                 if (at == index) { row = m; break; }
             }
             if (row == null) return (null, $"{ComboTable} has no combo {index}.");
-            return (Replace(text, (row.Groups[3], Seq(sequence, row.Groups[3].Value, sounds)),
-                                  (row.Groups[2], Token(transition, row.Groups[2].Value, sounds, null, hex: true))), null);
+            return (Replace(text, (row[3], Seq(sequence, row[3].Value, sounds)),
+                                  (row[2], Token(transition, row[2].Value, sounds, null, hex: true))), null);
         }
 
         internal static (string Text, string Error) SetClassCombo(string text, int row, int trainerClass, int combo,
             HgEngineSymbolTable sounds, HgEngineSymbolTable classes)
         {
-            IReadOnlyList<Match> rows = Rows(MaskComments(text), ClassTable, ClassRow);
+            IReadOnlyList<Row> rows = Rows(text, ClassTable, ClassRow);
             if (rows == null || row < 0 || row >= rows.Count) return (null, $"{ClassTable} has no row {row}.");
-            Match m = rows[row];
-            string cls = Token(trainerClass, m.Groups[1].Value, classes, ClassPrefix);
-            string comboText = m.Groups[3].Success
-                ? (Value(m.Groups[2].Value, sounds) == combo ? m.Groups[2].Value : Token(combo, null, sounds, ComboPrefix)) + " * 4"
-                : Token(combo * 4, m.Groups[2].Value, null, null);
+            Row m = rows[row];
+            string cls = Token(trainerClass, m[1].Value, classes, ClassPrefix);
+            string comboText = m[3] != null
+                ? (Value(m[2].Value, sounds) == combo ? m[2].Value : Token(combo, null, sounds, ComboPrefix)) + " * 4"
+                : Token(combo * 4, m[2].Value, null, null);
             return (Replace(text, (m, $"{{ {cls}, {comboText} }}")), null);
         }
 
         internal static (string Text, string Error) SetEncounterMusic(string text, int trainerClass, ushort johto, ushort kanto,
             HgEngineSymbolTable sounds, HgEngineSymbolTable classes)
         {
-            string masked = MaskComments(text);
-            IReadOnlyList<Match> rows = Rows(masked, EncounterTable, EncounterRow);
+            IReadOnlyList<Row> rows = Rows(text, EncounterTable, EncounterRow);
             if (rows == null) return (null, $"{SourceRelPath} has no {EncounterTable}.");
-            foreach (Match m in rows)
-                if (Value(m.Groups[1].Value, classes) == trainerClass)
-                    return (Replace(text, (m.Groups[3], Seq(kanto, m.Groups[3].Value, sounds)),
-                                          (m.Groups[2], Seq(johto, m.Groups[2].Value, sounds))), null);
+            foreach (Row m in rows)
+                if (Value(m[1].Value, classes) == trainerClass)
+                    return (Replace(text, (m[3], Seq(kanto, m[3].Value, sounds)),
+                                          (m[2], Seq(johto, m[2].Value, sounds))), null);
 
             string designator = Token(trainerClass, null, classes, ClassPrefix);
-            int lineStart = text.LastIndexOf('\n', BlockEnd(masked, EncounterTable)) + 1;
-            string line = $"        {{ .class = {designator}, .music1 = {Seq(johto, null, sounds)}, .music2 = {Seq(kanto, null, sounds)} }},{(text.Contains("\r\n") ? "\r\n" : "\n")}";
+            int lineStart = HgEngineSourcePatcher.LineStart(text, BlockEnd(text, EncounterTable));
+            string indent = rows.Count > 0 ? HgEngineSourcePatcher.IndentOfLine(text, rows[^1].Index) : "        ";
+            string line = $"{indent}{{ .class = {designator}, .music1 = {Seq(johto, null, sounds)}, .music2 = {Seq(kanto, null, sounds)} }},{(text.Contains("\r\n") ? "\r\n" : "\n")}";
             return (text.Insert(lineStart, line), null);
         }
 
         // ── Source text ──────────────────────────────────────────────────────────────────────────
 
-        private const string ComboRow = @"(?:\[\s*(\w+)\s*\]\s*=\s*)?\{\s*(\w+)\s*,\s*(\w+)\s*\}";
-        private const string ClassRow = @"\{\s*(\w+)\s*,\s*(\w+)\s*(\*\s*4)?\s*\}";
-        private const string SpeciesRow = @"\{\s*\.species\s*=\s*(\w+)\s*,\s*\.combo\s*=\s*(\w+)\s*\}";
-        private const string EncounterRow = @"\.class\s*=\s*(\w+)\s*,\s*\.music1\s*=\s*(\w+)\s*,\s*\.music2\s*=\s*(\w+)";
+        /// <summary>A value in a row, or the whole row: its text and where it sits.</summary>
+        private record Cell(string Value, int Index, int Length);
+
+        /// <summary>One table row. Cells count from 1. An optional cell the row doesn't have is null.</summary>
+        private sealed record Row(string Value, int Index, int Length, Cell[] Cells) : Cell(Value, Index, Length)
+        {
+            public Cell this[int cell] => Cells[cell - 1];
+        }
+
+        /// <summary>A row's cells, or null when it isn't the shape the table needs.</summary>
+        private delegate Cell[] RowShape(CInitItem item, string text);
+
+        private static Cell Of(CInitItem value, string text)
+        {
+            if (value?.List != null) return null;
+            string written = value?.ValueText(text);
+            if (string.IsNullOrWhiteSpace(written)) return null;
+            int start = value.ValueStart + written.Length - written.TrimStart().Length;
+            return new Cell(written.Trim(), start, written.Trim().Length);
+        }
+
+        private static Cell[] Filled(params Cell[] cells) => cells.All(c => c != null) ? cells : null;
+
+        // [SEQ_A] = { transition, sequence }, or the same with no index.
+        private static Cell[] ComboRow(CInitItem item, string text)
+        {
+            if (item.List?.Items.Count != 2) return null;
+            Cell[] pair = Filled(Of(item.List.Items[0], text), Of(item.List.Items[1], text));
+            if (pair == null) return null;
+            string index = item.IndexText?.Trim();
+            return new[] { index == null ? null : new Cell(index, 0, 0), pair[0], pair[1] };
+        }
+
+        // { class, combo } or { class, COMBO * 4 }. The last cell is set in the second form.
+        private static Cell[] ClassRow(CInitItem item, string text)
+        {
+            if (item.List?.Items.Count != 2) return null;
+            Cell cls = Of(item.List.Items[0], text), combo = Of(item.List.Items[1], text);
+            if (cls == null || combo == null) return null;
+            List<CToken> tokens = CLexer.Tokenize(text, combo.Index, combo.Index + combo.Length);
+            if (tokens.Count == 1) return new[] { cls, combo, null };
+            if (tokens.Count != 3 || !tokens[1].Is(text, "*") || !tokens[2].Is(text, "4")) return null;
+            return new[] { cls, new Cell(tokens[0].Text(text), tokens[0].Start, tokens[0].Length), new Cell("* 4", tokens[1].Start, tokens[2].End - tokens[1].Start) };
+        }
+
+        private static Cell[] SpeciesRow(CInitItem item, string text) =>
+            Filled(Of(item.List?.Field("species"), text), Of(item.List?.Field("combo"), text));
+
+        private static Cell[] EncounterRow(CInitItem item, string text) =>
+            Filled(Of(item.List?.Field("class"), text), Of(item.List?.Field("music1"), text), Of(item.List?.Field("music2"), text));
 
         // The second byte of a class row is the combo's offset into the 4-byte-row combo table.
-        private static int ClassCombo(Match m, HgEngineSymbolTable sounds)
+        private static int ClassCombo(Row m, HgEngineSymbolTable sounds)
         {
-            int v = Value(m.Groups[2].Value, sounds);
-            return v < 0 || m.Groups[3].Success ? v : v / 4;
+            int v = Value(m[2].Value, sounds);
+            return v < 0 || m[3] != null ? v : v / 4;
         }
 
         private static string Read(string relPath, out string path)
@@ -305,42 +349,30 @@ namespace DSPRE.HgEngine
             return true;
         }
 
-        // Comments blanked to spaces, so matches in the masked text sit at the same offsets as in the source.
-        internal static string MaskComments(string text)
+        // Null when the table is missing, a row sits under #if, or a row isn't the shape the table needs.
+        private static IReadOnlyList<Row> Rows(string text, string table, RowShape shape)
         {
-            StringBuilder sb = new StringBuilder(text);
-            foreach (Match m in Regex.Matches(text, @"//[^\n]*|/\*.*?\*/", RegexOptions.Singleline))
-                for (int i = m.Index; i < m.Index + m.Length; i++)
-                    if (sb[i] != '\n') sb[i] = ' ';
-            return sb.ToString();
-        }
-
-        // The table's rows as the C reader splits them, each matched against the row's own span; null when the table is
-        // missing, a row sits under #if, or a row isn't the shape the pattern describes.
-        private static IReadOnlyList<Match> Rows(string masked, string table, string rowPattern)
-        {
-            CDeclaration decl = CSourceFile.For(masked).Find(table);
+            CDeclaration decl = CSourceFile.For(text).Find(table);
             if (decl == null) return null;
-            Regex pattern = new Regex(rowPattern);
-            List<Match> rows = new List<Match>();
+            List<Row> rows = new List<Row>();
             foreach (CInitItem item in decl.Init.Items)
             {
                 if (item.IsConditional) return null;
-                Match m = pattern.Match(masked, item.Start, item.End - item.Start);
-                if (!m.Success) return null;
-                rows.Add(m);
+                Cell[] cells = shape(item, text);
+                if (cells == null) return null;
+                rows.Add(new Row(text.Substring(item.Start, item.End - item.Start), item.Start, item.End - item.Start, cells));
             }
             return rows;
         }
 
         // Where the table's closing brace is, for inserting rows before it.
-        private static int BlockEnd(string masked, string table) => CSourceFile.For(masked).Find(table)?.Init.Close ?? -1;
+        private static int BlockEnd(string text, string table) => CSourceFile.For(text).Find(table)?.Init.Close ?? -1;
 
         // Replaces spans right to left so earlier offsets stay valid.
-        private static string Replace(string text, params (Capture At, string With)[] edits)
+        private static string Replace(string text, params (Cell At, string With)[] edits)
         {
             Array.Sort(edits, (a, b) => b.At.Index.CompareTo(a.At.Index));
-            foreach ((Capture at, string with) in edits) text = text.Remove(at.Index, at.Length).Insert(at.Index, with);
+            foreach ((Cell at, string with) in edits) text = text.Remove(at.Index, at.Length).Insert(at.Index, with);
             return text;
         }
 
@@ -354,12 +386,6 @@ namespace DSPRE.HgEngine
             return hex ? "0x" + value.ToString("X", CultureInfo.InvariantCulture) : value.ToString(CultureInfo.InvariantCulture);
         }
 
-        internal static int Value(string token, HgEngineSymbolTable symbols)
-        {
-            if (token.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
-                && int.TryParse(token.Substring(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int hex)) return hex;
-            if (int.TryParse(token, NumberStyles.Integer, CultureInfo.InvariantCulture, out int dec)) return dec;
-            return symbols != null && symbols.TryGetValue(token, out int v) ? v : -1;
-        }
+        internal static int Value(string token, HgEngineSymbolTable symbols) => HgEngineSymbolTable.TryValue(token, out int v, symbols) ? v : -1;
     }
 }

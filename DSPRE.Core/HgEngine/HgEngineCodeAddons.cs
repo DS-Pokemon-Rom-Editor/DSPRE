@@ -28,17 +28,42 @@ namespace DSPRE.HgEngine
         public const int BackgroundGraphics = 17;
         public const int HiddenItemParams = 18;
         public const int AbilityFlags = 19;
+        public const int MachineMoves = 20;
 
         /// <summary>The tables in the order hg-engine packs them, starting at <see cref="HiddenAbilities"/>.</summary>
         public static readonly IReadOnlyList<string> TableNames = new[]
         {
             "Hidden abilities", "Base experience", "Icon palettes", "Overworld female forms",
             "Form data", "Form to species", "Form reversion", "TM/HM learnsets", "Tutor learnsets",
-            "Battle tests", "Background graphics", "Hidden item parameters", "Ability flags",
+            "Battle tests", "Background graphics", "Hidden item parameters", "Ability flags", "Machine moves",
         };
 
         public static int TableCount => TableNames.Count;
-        public static int HealthyMemberCount => VanillaMembers + TableCount;
+
+        /// <summary>
+        /// How many tables the linked checkout packs, from its CODE_ADDON_ indexes in include/constants/file.h, or -1
+        /// with no checkout. hg-engine adds tables over time, so a ROM alone doesn't say how many it should have.
+        /// </summary>
+        public static int ExpectedTableCount()
+        {
+            if (!HgEngineProject.IsActive || HgEngineProject.RepoRootWindows == null) return -1;
+            string path = Path.Combine(HgEngineProject.RepoRootWindows, "include", "constants", "file.h");
+            try
+            {
+                if (!File.Exists(path)) return -1;
+                int last = -1;
+                foreach (CDirective d in CSourceFile.For(File.ReadAllText(path)).Directives)
+                    if (d.Keyword == "define" && d.Name != null && d.Name.StartsWith("CODE_ADDON_", StringComparison.Ordinal)
+                        && int.TryParse(d.Body?.Trim(), out int index))
+                        last = Math.Max(last, index);
+                return last < VanillaMembers ? -1 : last + 1 - VanillaMembers;
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                AppLogger.Warn("HgEngineCodeAddons.ExpectedTableCount: " + ex.Message);
+                return -1;
+            }
+        }
 
         /// <summary>Palette banks a party icon may use, so a stored id outside them is not a bank at all.</summary>
         public const int IconPaletteBanks = 3;
@@ -137,6 +162,8 @@ namespace DSPRE.HgEngine
             /// <summary>Where hg-engine's table block starts, or -1. It belongs at <see cref="HiddenAbilities"/>.</summary>
             public int TableBlockStart = -1;
             public bool IsHealthy;
+            /// <summary>Built before the linked checkout's newest tables: every table it has is in place.</summary>
+            public bool BuiltBeforeSources;
             /// <summary>Members to drop so the remaining ones sit at the indices the game reads.</summary>
             public IReadOnlyList<int> StaleMembers = Array.Empty<int>();
             public string Summary = "";
@@ -151,11 +178,12 @@ namespace DSPRE.HgEngine
             int count = MemberCount();
             byte[][] members = new byte[count][];
             for (int i = 0; i < count; i++) members[i] = Member(i);
-            return DescribeMembers(members, speciesCount);
+            return DescribeMembers(members, speciesCount, ExpectedTableCount());
         }
 
         /// <summary>The reading of a layout on its own, for callers that already hold the members.</summary>
-        public static Layout DescribeMembers(IReadOnlyList<byte[]> memberBytes, int speciesCount)
+        /// <param name="expectedTables">What <see cref="ExpectedTableCount"/> gives, -1 when it isn't known.</param>
+        public static Layout DescribeMembers(IReadOnlyList<byte[]> memberBytes, int speciesCount, int expectedTables = -1)
         {
             Layout layout = new Layout();
             int count = memberBytes?.Count ?? 0;
@@ -177,20 +205,26 @@ namespace DSPRE.HgEngine
                 layout.TableBlockStart = layout.IconPaletteMemberIndex - (IconPalettes - HiddenAbilities);
             }
 
-            if (layout.TableBlockStart >= VanillaMembers && layout.TableBlockStart + TableCount <= count)
+            if (layout.TableBlockStart >= VanillaMembers && layout.TableBlockStart < count)
             {
-                for (int t = 0; t < TableCount; t++) members[layout.TableBlockStart + t].Holds = TableNames[t];
+                int named = Math.Min(TableCount, count - layout.TableBlockStart);
+                for (int t = 0; t < named; t++) members[layout.TableBlockStart + t].Holds = TableNames[t];
 
-                HashSet<int> keep = new HashSet<int>(Enumerable.Range(0, VanillaMembers)
-                    .Concat(Enumerable.Range(layout.TableBlockStart, TableCount)));
-                List<int> stale = Enumerable.Range(0, count).Where(i => !keep.Contains(i)).ToList();
-                foreach (int i in stale) members[i].IsStale = true;
-                layout.StaleMembers = stale;
+                // Members before the block shift it. Past the checkout's last table they are left over too. With no
+                // checkout, one past the block may be a table this DSPRE doesn't know, so it is kept.
+                IEnumerable<int> stale = Enumerable.Range(VanillaMembers, layout.TableBlockStart - VanillaMembers);
+                if (expectedTables > 0)
+                    stale = stale.Concat(Enumerable.Range(layout.TableBlockStart + expectedTables, Math.Max(0, count - layout.TableBlockStart - expectedTables)));
+                layout.StaleMembers = stale.ToList();
+                foreach (int i in layout.StaleMembers) members[i].IsStale = true;
             }
 
             layout.Members = members;
-            layout.IsHealthy = layout.TableBlockStart == HiddenAbilities && count == HealthyMemberCount;
-            layout.Summary = SummaryFor(layout, count);
+            // A ROM built before the checkout gained a table has fewer, all in place: its code reads only those.
+            layout.BuiltBeforeSources = layout.TableBlockStart == HiddenAbilities && expectedTables > 0 && count < VanillaMembers + expectedTables;
+            layout.IsHealthy = layout.TableBlockStart == HiddenAbilities
+                && (expectedTables > 0 ? count == VanillaMembers + expectedTables || layout.BuiltBeforeSources : count > HiddenAbilities);
+            layout.Summary = SummaryFor(layout, count, expectedTables);
             return layout;
         }
 
@@ -218,15 +252,23 @@ namespace DSPRE.HgEngine
             return -1;
         }
 
-        private static string SummaryFor(Layout layout, int count)
+        private static string SummaryFor(Layout layout, int count, int expectedTables)
         {
-            if (layout.IsHealthy) return $"All {TableCount} hg-engine tables sit where the game reads them.";
+            string healthy = expectedTables > 0 ? $"A healthy build of the linked checkout has {VanillaMembers + expectedTables}." : "";
+            if (layout.BuiltBeforeSources)
+                return $"All {count - VanillaMembers} of this build's hg-engine tables sit where the game reads them. "
+                     + $"The checkout's sources have {expectedTables}, so Compile ROM adds the rest.";
+            if (layout.IsHealthy)
+                return expectedTables > 0
+                    ? $"All {expectedTables} hg-engine tables sit where the game reads them."
+                    : $"hg-engine's tables start where the game reads them. Link the checkout to check how many there should be.";
 
             if (layout.TableBlockStart < 0)
-            {
-                return $"This archive holds {count} members and hg-engine's tables couldn't be identified in it. "
-                     + $"A healthy build has {HealthyMemberCount}.";
-            }
+                return ($"This archive holds {count} members and hg-engine's tables couldn't be identified in it. " + healthy).TrimEnd();
+
+            if (layout.TableBlockStart == HiddenAbilities)
+                return string.Join(" ", new[] { $"hg-engine's tables start where the game reads them, but this archive holds {count} members.", healthy,
+                     $"{Plural.Of(layout.StaleMembers.Count, "member")} left over from earlier builds can be dropped." }.Where(s => s.Length > 0));
 
             int shift = layout.TableBlockStart - HiddenAbilities;
             string shifted = shift == 0
@@ -234,9 +276,8 @@ namespace DSPRE.HgEngine
                 : $"hg-engine's tables start {Plural.Of(Math.Abs(shift), "member")} "
                   + (shift > 0 ? "later" : "earlier") + " than the game reads them";
 
-            return $"{shifted}, so the game reads the wrong member for every one of them. This archive holds "
-                 + $"{count} members where a healthy build has {HealthyMemberCount}; {layout.StaleMembers.Count} "
-                 + "left over from earlier builds can be dropped.";
+            return string.Join(" ", new[] { $"{shifted}, so the game reads the wrong member for every one of them. This archive holds {count} members.", healthy,
+                 $"{Plural.Of(layout.StaleMembers.Count, "member")} left over from earlier builds can be dropped." }.Where(s => s.Length > 0));
         }
     }
 }

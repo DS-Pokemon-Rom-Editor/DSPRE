@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
-using System.Text.RegularExpressions;
 using DSPRE.ROMFiles;
 
 namespace DSPRE.HgEngine
@@ -14,8 +13,7 @@ namespace DSPRE.HgEngine
     {
         private const string SourceRelPath = "data/Headbutt.c";
         private const string SpeciesHeaderRelPath = "include/constants/species.h";
-        private static readonly Regex MemberRegex = new(@"HeadbuttFile_(\d+)_\w+\s+(\w+)\s*;");
-        private static readonly Regex DataAnchor = new(@"const\s+HeadbuttArchiveData\s+__data\s*=\s*\{");
+        private const string ArchiveStruct = "HeadbuttArchiveData";
 
         public static bool TryGetFieldName(int headbuttFileIndex, out string fieldName)
         {
@@ -29,10 +27,11 @@ namespace DSPRE.HgEngine
         internal static bool TryFindFieldName(string headbuttSourceText, int headbuttFileIndex, out string fieldName)
         {
             fieldName = null;
-            foreach (Match m in MemberRegex.Matches(headbuttSourceText))
+            foreach (CMember member in CSourceFile.For(headbuttSourceText).FindStruct(ArchiveStruct)?.Members ?? new List<CMember>())
             {
-                if (int.TryParse(m.Groups[1].Value, out int idx) && idx == headbuttFileIndex)
-                { fieldName = m.Groups[2].Value; return true; }
+                string[] parts = member.Type.Split('_', 3);
+                if (parts.Length == 3 && parts[0] == "HeadbuttFile" && int.TryParse(parts[1], out int idx) && idx == headbuttFileIndex)
+                { fieldName = member.Name; return true; }
             }
             return false;
         }
@@ -137,8 +136,6 @@ namespace DSPRE.HgEngine
             return true;
         }
 
-        private static readonly Regex MemberTypeRegex = new(@"(HeadbuttFile_\d+_\w+)\s+(\w+)\s*;");
-
         /// <summary>
         /// Makes the map's struct type and initializer hold exactly the arrays it needs: the two slot arrays when
         /// <paramref name="slots"/>, and treeCoords[<paramref name="groups"/>][6] when there are groups.
@@ -146,16 +143,18 @@ namespace DSPRE.HgEngine
         private static bool TryShapeMap(ref string text, string fieldName, bool slots, int groups, out string error)
         {
             error = null;
-            string type = MemberTypeRegex.Matches(text).Cast<Match>().FirstOrDefault(m => m.Groups[2].Value == fieldName)?.Groups[1].Value;
+            CSourceFile source = CSourceFile.For(text);
+            string type = source.FindStruct(ArchiveStruct)?.Members.FirstOrDefault(m => m.Name == fieldName).Type;
             if (type == null) { error = $"Headbutt.c declares no type for .{fieldName}."; return false; }
-            Match decl = new Regex(@"(typedef\s+struct\s+PACKED\s+" + Regex.Escape(type) + @"\s*\{)(.*?)(\}\s*" + Regex.Escape(type) + @"\s*;)", RegexOptions.Singleline).Match(text);
-            if (!decl.Success) { error = $"Headbutt.c has no typedef for {type}."; return false; }
+            CStruct decl = source.FindStruct(type);
+            if (decl == null) { error = $"Headbutt.c has no typedef for {type}."; return false; }
 
             string body = "\n    u16 normalTreeCount;\n    u16 specialTreeCount;\n"
                 + (slots ? "    HeadbuttEncounterSlot normalSlots[12];\n    HeadbuttEncounterSlot specialSlots[6];\n" : "")
                 + (groups > 0 ? $"    HeadbuttTreeCoord treeCoords[{groups}][6];\n" : "");
-            if (Regex.Replace(decl.Groups[2].Value, @"\s+", " ").Trim() != Regex.Replace(body, @"\s+", " ").Trim())
-                text = text.Substring(0, decl.Groups[2].Index) + body + text.Substring(decl.Groups[2].Index + decl.Groups[2].Length);
+            string current = text.Substring(decl.Open + 1, decl.Close - decl.Open - 1);
+            if (CSourceFile.Normalize(current) != CSourceFile.Normalize(body))
+                text = text.Substring(0, decl.Open + 1) + body + text.Substring(decl.Close);
 
             foreach ((string name, bool wanted, string placeholder) in new[]
             {
@@ -205,9 +204,9 @@ namespace DSPRE.HgEngine
                     if (parts.Count < 3) continue;
                     dest.Add(new HeadbuttEncounter
                     {
-                        PokemonID = (ushort)ResolveSpecies(parts[0], species, ref unreadable),
-                        MinLevel = (byte)ResolveToken(parts[1], null),
-                        MaxLevel = (byte)ResolveToken(parts[2], null),
+                        PokemonID = (ushort)HgEngineTrainerSource.SpeciesWord(parts[0], species, ref unreadable),
+                        MinLevel = (byte)HgEngineSymbolTable.ValueOrZero(parts[1], null),
+                        MaxLevel = (byte)HgEngineSymbolTable.ValueOrZero(parts[2], null),
                     });
                 }
             }
@@ -227,8 +226,8 @@ namespace DSPRE.HgEngine
                 {
                     List<string> xy = HgEngineSourcePatcher.SplitArrayValue(coords[j].Trim());
                     if (xy.Count < 2) continue;
-                    group.Trees[j].GlobalX = unchecked((ushort)ResolveToken(xy[0], null));
-                    group.Trees[j].GlobalY = unchecked((ushort)ResolveToken(xy[1], null));
+                    group.Trees[j].GlobalX = unchecked((ushort)HgEngineSymbolTable.ValueOrZero(xy[0], null));
+                    group.Trees[j].GlobalY = unchecked((ushort)HgEngineSymbolTable.ValueOrZero(xy[1], null));
                 }
                 if (i < normalCount) normalDest.Add(group);
                 else specialDest.Add(group);
@@ -252,26 +251,13 @@ namespace DSPRE.HgEngine
         private static bool TryFindDataBlock(string text, out int open, out int close)
         {
             open = close = -1;
-            Match m = DataAnchor.Match(text);
-            if (!m.Success) return false;
-            open = m.Index + m.Length - 1;
-            return BraceScanner.TryFindMatchingBrace(text, open, out close);
+            CDeclaration data = CSourceFile.For(text).Find("__data");
+            if (data == null) return false;
+            open = data.Init.Open;
+            close = data.Init.Close;
+            return true;
         }
 
-        // A slot can name a form: MON_WITH_FORM(SPECIES_X, n) or SPECIES_X | (n << 11).
-        private static int ResolveSpecies(string token, HgEngineSymbolTable species, ref string unreadable)
-        {
-            if (HgEngineEvolutions.ResolveTarget(token.Trim(), species, out int id, out int form)) return id | (form << HgEngineTrainerSource.FormShift);
-            unreadable ??= token.Trim();
-            return 0;
-        }
-
-        private static int ResolveToken(string token, HgEngineSymbolTable table)
-        {
-            token = token.Trim();
-            if (int.TryParse(token, out int v)) return v;
-            return table != null && table.TryGetValue(token, out int tv) ? tv : 0;
-        }
 
         private static string TryReadSource(out string path)
         {

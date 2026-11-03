@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using DSPRE.ROMFiles;
 
 namespace DSPRE.HgEngine
@@ -16,7 +15,6 @@ namespace DSPRE.HgEngine
         private const string HeaderRelPath = "include/constants/moves.h";
         private const string SourceRelPath = "data/Moves.c";
         private const string Prefix = "MOVE_";
-        private static readonly Regex TerminatorEntry = new(@"^[ \t]*\[\s*NUM_OF_MOVES\s*\]\s*=", RegexOptions.Multiline);
 
         public static bool TryGetVanillaBoundary(out int lastVanillaMoveId)
         {
@@ -221,10 +219,9 @@ namespace DSPRE.HgEngine
                 "    },\n\n";
 
             // Moves.c ends with the [NUM_OF_MOVES] terminator entry; the new move goes just before it.
-            Match terminator = TerminatorEntry.Match(newSource);
-            if (terminator.Success)
+            if (CSourceFile.For(newSource).FindEntry("NUM_OF_MOVES") is CEntry terminator)
             {
-                int lineStart = terminator.Index;
+                int lineStart = newSource.LastIndexOf('\n', terminator.Open) + 1;
                 int indentEnd = lineStart;
                 while (indentEnd < newSource.Length && (newSource[indentEnd] == ' ' || newSource[indentEnd] == '\t')) indentEnd++;
                 string indent = newSource.Substring(lineStart, indentEnd - lineStart);
