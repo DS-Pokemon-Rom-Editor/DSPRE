@@ -46,7 +46,7 @@ namespace DSPRE.HgEngine
             if (table?.Init == null) return null;
             Dictionary<string, Row> rows = new Dictionary<string, Row>(StringComparer.Ordinal);
             foreach (CInitItem item in table.Init.Items)
-                if (SpeciesOf(item) is string species && int.TryParse(item.ValueText(text).Trim(), out int form))
+                if (SpeciesOf(item) is string species && CLexer.TryParseInt(item.ValueText(text), out int form))
                     rows[species] = new Row(species, form, item.IsConditional);
             return rows;
         }

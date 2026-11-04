@@ -93,33 +93,14 @@ namespace DSPRE.HgEngine
                         || !macros.TryGetValue(tokens[k].Text(text), out Macro macro))
                     { error = $"{TableName} has a row DSPRE can't read: {Line(text, tokens[k].Start)}"; return false; }
 
-                    // Arguments run between top-level commas inside the call's parentheses.
-                    int close = -1;
-                    for (int j = k + 1, depth = 0; j < tokens.Count && close < 0; j++)
-                    {
-                        if (tokens[j].Kind != CTokenKind.Punct) continue;
-                        string tk = tokens[j].Text(text);
-                        if (tk is "(" or "{" or "[") depth++;
-                        else if (tk is ")" or "}" or "]" && --depth == 0) close = j;
-                    }
-                    List<(int Start, int End)> args = new List<(int Start, int End)>();
-                    for (int j = k + 2, from = k + 2, depth = 0; close >= 0 && j <= close; j++)
-                    {
-                        string tk = tokens[j].Kind == CTokenKind.Punct ? tokens[j].Text(text) : null;
-                        if (j < close && tk is "(" or "{" or "[") depth++;
-                        else if (j < close && tk is ")" or "}" or "]") depth--;
-                        else if (j == close || (tk == "," && depth == 0))
-                        {
-                            if (j > from) args.Add((tokens[from].Start, tokens[j - 1].End));
-                            from = j + 1;
-                        }
-                    }
-                    if (close < 0) { error = $"{macro.Name} isn't closed: {Line(text, tokens[k].Start)}"; return false; }
+                    CCall call = source.CallAt(tokens[k].Start);
+                    if (call == null || call.End > item.ValueEnd) { error = $"{macro.Name} isn't closed: {Line(text, tokens[k].Start)}"; return false; }
+                    List<(int Start, int End)> args = call.Args;
                     if (args.Count != macro.Params.Length) { error = $"{macro.Name} is called with {args.Count} arguments: {Line(text, tokens[k].Start)}"; return false; }
 
                     string expanded = Expand(macro, args.Select(a => text.Substring(a.Start, a.End - a.Start)).ToArray());
                     CInitList row = CSourceFile.For("int row[] = { " + expanded + " };").Find("row")?.Init?.Items.FirstOrDefault()?.List;
-                    int callStart = tokens[k].Start, callEnd = tokens[close].End;
+                    int callStart = call.Start, callEnd = call.End;
                     if (row == null || !TryRow(row, "int row[] = { " + expanded + " };", lookup, out int tag, out int gfx, out int props, out _))
                     { error = $"{TableName} has a row DSPRE can't evaluate: {Line(text, callStart)}"; return false; }
                     if (tag == 0xFFFF) return true;
@@ -130,7 +111,7 @@ namespace DSPRE.HgEngine
                     int param = callback != null ? Array.IndexOf(macro.Params, callback.ValueText(bodySource).Trim()) : -1;
                     int at = param >= 0 ? args[param].Start : -1, len = param >= 0 ? args[param].End - args[param].Start : 0;
                     entries.Add(new Entry(tag, gfx, props, callStart, callEnd - callStart, at, len, expanded, macro.Name));
-                    k = close + 1;
+                    while (k < tokens.Count && tokens[k].Start < callEnd) k++;
                 }
             }
             return true;
@@ -156,7 +137,7 @@ namespace DSPRE.HgEngine
                 CInitItem callback = CSourceFile.For(expandedSource).Find("row")?.Init?.Items.FirstOrDefault()?.List?.Field(CallbackField);
                 if (callback == null) return false;
                 string row = entry.Expanded.Substring(0, callback.ValueStart - wrapper.Length) + literal + entry.Expanded.Substring(callback.ValueEnd - wrapper.Length);
-                text = text.Substring(0, entry.ItemStart) + row + "," + text.Substring(entry.ItemStart + entry.ItemLength).TrimStartComma();
+                text = text.Substring(0, entry.ItemStart) + row + "," + text.Substring(CLexer.PastComma(text, entry.ItemStart + entry.ItemLength, text.Length));
             }
             HgEngineFileCache.WriteText(path, text);
             return true;
@@ -215,9 +196,7 @@ namespace DSPRE.HgEngine
                 palettes.Add(copy);
             }
 
-            if (!TryParseTable(text, out _, out _, out int bodyClose, out error)) return false;
-            int terminator = text.LastIndexOf("0xFFFF", bodyClose, StringComparison.Ordinal);
-            int rowStart = terminator < 0 ? -1 : text.LastIndexOf('{', terminator);
+            int rowStart = TerminatorRow(text);
             if (rowStart < 0) { error = $"{TableName} has no 0xFFFF row to add before."; return false; }
             int lineStart = text.LastIndexOf('\n', rowStart) + 1;
             string indent = text.Substring(lineStart, rowStart - lineStart);
@@ -464,11 +443,19 @@ namespace DSPRE.HgEngine
             return text.Substring(at, (end < 0 ? text.Length : end) - at).Trim();
         }
 
-        private static string TrimStartComma(this string s)
+        /// <summary>Where the tag table's last 0xFFFF terminator row starts, or -1. A 0xFFFF in a comment or a macro's
+        /// arguments isn't a row.</summary>
+        internal static int TerminatorRow(string text)
         {
-            int i = 0;
-            while (i < s.Length && (s[i] == ' ' || s[i] == '\t')) i++;
-            return i < s.Length && s[i] == ',' ? s.Substring(i + 1) : s;
+            CSourceFile source = CSourceFile.For(text);
+            CInitList table = source.Find(TableName)?.Init;
+            if (table == null) return -1;
+            int found = -1;
+            foreach (CToken token in CLexer.Tokenize(text, table.Open + 1, table.Close))
+                if (token.Is(text, "{") && source.ListAt(token.Start) is CInitList row && row.Items.Count > 0
+                    && CLexer.TryParseInt(row.Items[0].ValueText(text), out int tag) && tag == 0xFFFF)
+                    found = token.Start;
+            return found;
         }
     }
 }

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.IO;
-using System.Text;
 using DSPRE.ROMFiles;
 
 namespace DSPRE.HgEngine
@@ -125,59 +124,36 @@ namespace DSPRE.HgEngine
         {
             error = SpeciesRowProblem(species, combo);
             if (error != null) return false;
-            if (!TryTableCount(SpeciesTable, SpeciesRow, +1, out string count, out error)) return false;
-            return Edit(out error, text => AddSpeciesRow(text, species, combo, Sounds, Species)) && WriteCount(count, out error);
+            if (!TryTableCount(SpeciesTable, SpeciesRow, +1, out HgEnginePatchList count, out error)) return false;
+            return Edit(out error, text => AddSpeciesRow(text, species, combo, Sounds, Species)) && count.Save(out error);
         }
 
         /// <summary>Takes a Pokemon music row out, lowering the table's count byte with it.</summary>
         public static bool TryRemoveSpeciesRow(int row, out string error)
         {
-            if (!TryTableCount(SpeciesTable, SpeciesRow, -1, out string count, out error)) return false;
-            return Edit(out error, text => RemoveSpeciesRow(text, row)) && WriteCount(count, out error);
+            if (!TryTableCount(SpeciesTable, SpeciesRow, -1, out HgEnginePatchList count, out error)) return false;
+            return Edit(out error, text => RemoveSpeciesRow(text, row)) && count.Save(out error);
         }
 
         private const string ByteReplacementRelPath = "bytereplacement";
 
-        // bytereplacement's EXPAND_MUSIC_TABLES branch: "# <table> table range" then "arm9 <address> <count>".
-        // Where the two hex digits of "arm9 ADDRESS NN" sit, on the line under the table's "# NAME table range", or -1.
-        private static int CountAt(string table, string text)
+        // Changes the count under "# <table> table range" in bytereplacement by delta. The caller saves the list after
+        // the table is written.
+        private static bool TryTableCount(string table, RowShape shape, int delta, out HgEnginePatchList updated, out string error)
         {
-            string[] lines = text.Split('\n');
-            int at = 0;
-            for (int i = 0; i + 1 < lines.Length; at += lines[i].Length + 1, i++)
-            {
-                string[] heading = HgEngineMakeFile.Words(lines[i].Replace("#", "# "));
-                if (heading.Length < 4 || heading[0] != "#" || heading[1] != table || heading[2] != "table" || heading[3] != "range") continue;
-                string[] count = HgEngineMakeFile.Words(lines[i + 1]);
-                if (count.Length < 3 || count[0] != "arm9" || count[2].Length != 2 || !count[2].All(char.IsAsciiHexDigit)) return -1;
-                int column = lines[i + 1].IndexOf(count[1], StringComparison.Ordinal) + count[1].Length;
-                return at + lines[i].Length + 1 + lines[i + 1].IndexOf(count[2], column, StringComparison.Ordinal);
-            }
-            return -1;
-        }
-
-        private static bool TryTableCount(string table, RowShape shape, int delta, out string updated, out string error)
-        {
-            updated = null;
+            updated = HgEnginePatchList.Read(HgEnginePatchKind.ByteReplacement);
             error = null;
-            string text = Read(ByteReplacementRelPath, out _), source = Read(SourceRelPath, out _);
-            if (text == null || source == null) { error = $"{ByteReplacementRelPath} or {SourceRelPath} is missing from the checkout."; return false; }
-            int countAt = CountAt(table, text);
-            if (countAt < 0) { error = $"{ByteReplacementRelPath} has no {table} table range, so a row can't be added or removed."; return false; }
-            int count = int.Parse(text.AsSpan(countAt, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            string source = Read(SourceRelPath, out _);
+            if (updated == null || source == null) { error = $"{ByteReplacementRelPath} or {SourceRelPath} is missing from the checkout."; return false; }
+            HgEnginePatchEntry entry = updated.Entries.FirstOrDefault(e => e.Parsed && e.Heading == table + " table range");
+            if (entry == null || entry.OverlayNumber >= 0 || entry.Bytes.Count != 1)
+            { error = $"{ByteReplacementRelPath} has no {table} table range, so a row can't be added or removed."; return false; }
+            int count = entry.Bytes[0];
             int rows = Rows(source, table, shape)?.Count ?? -1;
-            if (rows != count) { error = $"{table} has {rows} rows but the game is told to search {count}. Make them agree first."; return false; }
+            if (rows != count) { error = $"{table} has {rows} rows but {ByteReplacementRelPath} counts {count}. Fix the count before adding or removing rows."; return false; }
             int next = count + delta;
             if (next < 1 || next > 255) { error = $"{table} can have 1 to 255 rows."; return false; }
-            updated = text.Substring(0, countAt) + next.ToString("X2", CultureInfo.InvariantCulture) + text.Substring(countAt + 2);
-            return true;
-        }
-
-        private static bool WriteCount(string text, out string error)
-        {
-            error = null;
-            Read(ByteReplacementRelPath, out string path);
-            HgEngineFileCache.WriteText(path, text);
+            HgEnginePatchList.ChangeBytes(entry, new[] { (byte)next });
             return true;
         }
 
@@ -218,10 +194,10 @@ namespace DSPRE.HgEngine
             string source = Read(SourceRelPath, out _);
             bool adding = source != null && !(Rows(source, EncounterTable, EncounterRow) ?? Array.Empty<Row>())
                 .Any(m => Value(m[1].Value, Classes) == trainerClass);
-            string count = null;
+            HgEnginePatchList count = null;
             if (adding && !TryTableCount(EncounterTable, EncounterRow, +1, out count, out error)) return false;
             return Edit(out error, text => SetEncounterMusic(text, trainerClass, johto, kanto, Sounds, Classes))
-                && (!adding || WriteCount(count, out error));
+                && (!adding || count.Save(out error));
         }
 
         internal static (string Text, string Error) SetCombo(string text, int index, ushort transition, ushort sequence, HgEngineSymbolTable sounds)

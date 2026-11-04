@@ -31,7 +31,7 @@ namespace DSPRE.HgEngine
             value = 0;
             if (token == null) return false;
             token = token.Trim();
-            if (HgEngineSourceBlock.TryParseLiteral(token, out value)) return true;
+            if (CLexer.TryParseInt(token, out value)) return true;
             foreach (HgEngineSymbolTable t in tables)
                 if (t != null && t.TryGetValue(token, out value)) return true;
             value = 0;
@@ -258,12 +258,7 @@ namespace DSPRE.HgEngine
                     if (IsPunct(k, "="))
                     {
                         int first = ++k;
-                        for (int depth = 0; k < code.Count; k++)
-                        {
-                            if (IsPunct(k, "(") || IsPunct(k, "[")) depth++;
-                            else if (IsPunct(k, ")") || IsPunct(k, "]")) depth--;
-                            else if (depth == 0 && (IsPunct(k, ",") || IsPunct(k, "}"))) break;
-                        }
+                        k = CLexer.NextOutsideBrackets(text, code, k, code.Count, c => c.Kind == CTokenKind.Punct && (c.Is(text, ",") || c.Is(text, "}")));
                         if (k == first || k >= code.Count) break;
                         start = text.Substring(code[first].Start, code[k - 1].End - code[first].Start);
                         offset = 0;

@@ -62,93 +62,30 @@ namespace DSPRE.HgEngine
         {
             error = null;
             string visible = HgEngineBattleTests.Visible(text);
-            int open = visible.IndexOf('{');
+            CSourceFile source = CSourceFile.For(visible);
+            int open = source.Tokens.FindIndex(t => t.Kind == CTokenKind.Punct && t.Is(visible, "{"));
             if (open < 0) { error = "There is no { ... } scenario in this test."; return null; }
-            int pos = open;
-            Node root = ParseNode(visible, ref pos, out error);
-            if (root == null) return null;
+            CInitList list = source.ListAt(source.Tokens[open].Start);
+            if (list == null) { error = "A { is never closed."; return null; }
 
-            HgEngineBattleScenario s = new HgEngineBattleScenario { _text = text, _root = root };
+            HgEngineBattleScenario s = new HgEngineBattleScenario { _text = text, _root = ToNode(visible, list) };
             s.Load(text);
             return s;
         }
 
-        // A chain such as ".battler[1].ability =" at pos.
-        private static bool DesignatorEnd(string v, int pos, out int end, out int afterEquals)
+        private static Node ToNode(string visible, CInitList list)
         {
-            end = afterEquals = pos;
-            List<CToken> tokens = CLexer.Tokenize(v, pos, Math.Min(v.Length, pos + 200));
-            int t = 0;
-            while (t + 1 < tokens.Count && tokens[t].Is(v, ".") && tokens[t + 1].Kind == CTokenKind.Identifier)
-            {
-                t += 2;
-                if (t + 2 < tokens.Count && tokens[t].Is(v, "[") && tokens[t + 1].Kind == CTokenKind.Number && tokens[t + 2].Is(v, "]")) t += 3;
-                end = tokens[t - 1].End;
-            }
-            if (t == 0 || t >= tokens.Count || !tokens[t].Is(v, "=")) return false;
-            afterEquals = tokens[t].End;
-            return true;
-        }
-
-        private static Node ParseNode(string v, ref int pos, out string error)
-        {
-            error = null;
-            Node node = new Node { Open = pos };
-            pos++;
-            while (true)
-            {
-                SkipSpace(v, ref pos);
-                if (pos >= v.Length) { error = "A { is never closed."; return null; }
-                if (v[pos] == '}') { node.Close = pos; pos++; return node; }
-
-                Item item = new Item();
-                if (DesignatorEnd(v, pos, out int designatorEnd, out int afterEquals))
+            Node node = new Node { Open = list.Open, Close = list.Close };
+            foreach (CInitItem i in list.Items)
+                node.Items.Add(new Item
                 {
-                    item.Designator = v.Substring(pos, designatorEnd - pos);
-                    pos = afterEquals;
-                }
-                SkipSpace(v, ref pos);
-                item.ValueStart = pos;
-                if (pos < v.Length && v[pos] == '{')
-                {
-                    item.Child = ParseNode(v, ref pos, out error);
-                    if (item.Child == null) return null;
-                    item.ValueEnd = pos;
-                }
-                else
-                {
-                    while (pos < v.Length && v[pos] != ',' && v[pos] != '}')
-                    {
-                        if (v[pos] == '"') SkipString(v, ref pos);
-                        else if (v[pos] == '(') SkipParens(v, ref pos);
-                        else pos++;
-                    }
-                    item.ValueEnd = pos;
-                    while (item.ValueEnd > item.ValueStart && char.IsWhiteSpace(v[item.ValueEnd - 1])) item.ValueEnd--;
-                }
-                item.End = item.ValueEnd;
-                node.Items.Add(item);
-                SkipSpace(v, ref pos);
-                if (pos < v.Length && v[pos] == ',') pos++;
-            }
-        }
-
-        private static void SkipSpace(string v, ref int pos) { while (pos < v.Length && char.IsWhiteSpace(v[pos])) pos++; }
-        private static void SkipString(string v, ref int pos)
-        {
-            pos++;
-            while (pos < v.Length && v[pos] != '"') pos += v[pos] == '\\' ? 2 : 1;
-            pos++;
-        }
-        private static void SkipParens(string v, ref int pos)
-        {
-            int depth = 0;
-            do
-            {
-                if (v[pos] == '(') depth++;
-                else if (v[pos] == ')') depth--;
-                pos++;
-            } while (pos < v.Length && depth > 0);
+                    Designator = i.Designators.Count == 0 ? null : visible.Substring(i.Designators[0].Start, i.Designators[^1].End - i.Designators[0].Start),
+                    ValueStart = i.ValueStart,
+                    ValueEnd = i.ValueEnd,
+                    End = i.ValueEnd,
+                    Child = i.List == null ? null : ToNode(visible, i.List),
+                });
+            return node;
         }
 
         private string ValueOf(Item i) => i == null || i.Child != null ? "" : _text.Substring(i.ValueStart, i.ValueEnd - i.ValueStart);
@@ -271,15 +208,8 @@ namespace DSPRE.HgEngine
             Item last = node.Items[^1];
             string indent = IndentAt(last.ValueStart, last.Designator);
             int after = last.ValueEnd;
-            bool comma = after < _text.Length && NextNonSpace(after) == ',';
-            int at = comma ? _text.IndexOf(',', after) + 1 : after;
-            return (at, 0, (comma ? "" : ",") + "\n" + indent + field + ",");
-        }
-
-        private char NextNonSpace(int from)
-        {
-            while (from < _text.Length && char.IsWhiteSpace(_text[from])) from++;
-            return from < _text.Length ? _text[from] : '\0';
+            int at = CLexer.PastComma(_text, after, _text.Length);
+            return (at, 0, (at != after ? "" : ",") + "\n" + indent + field + ",");
         }
 
         private string IndentAt(int valueStart, string designator)
@@ -341,9 +271,8 @@ namespace DSPRE.HgEngine
             Item last = array.Items[^1];
             string indent = IndentAt(last.ValueStart, null);
             int after = last.ValueEnd;
-            bool comma = NextNonSpace(after) == ',';
-            int at = comma ? _text.IndexOf(',', after) + 1 : after;
-            return (at, 0, (comma ? "" : ",") + "\n" + indent + element + ",");
+            int at = CLexer.PastComma(_text, after, _text.Length);
+            return (at, 0, (at != after ? "" : ",") + "\n" + indent + element + ",");
         }
 
         private void WriteScript(List<(int, int, string)> edits, string designator, Action[][] before, Action[][] now)
@@ -394,7 +323,7 @@ namespace DSPRE.HgEngine
             {
                 int from = Expectations.Count == 0 ? rows[0].ValueStart : rows[Expectations.Count - 1].ValueEnd;
                 int to = rows[^1].ValueEnd;
-                if (Expectations.Count == 0 && NextNonSpace(to) == ',') to = _text.IndexOf(',', to) + 1;
+                if (Expectations.Count == 0) to = CLexer.PastComma(_text, to, _text.Length);
                 edits.Add((from, to - from, ""));
             }
         }

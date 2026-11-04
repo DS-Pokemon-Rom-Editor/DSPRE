@@ -51,13 +51,9 @@ namespace DSPRE.HgEngine
         // Only the token with the table's prefix is edited, so the rest of an expression stays as written.
         private static (int Start, int End)? TokenIn(Info info, string text, int from, int to)
         {
-            for (int at = text.IndexOf(info.Prefix, from, StringComparison.Ordinal); at >= 0 && at < to; at = text.IndexOf(info.Prefix, at + 1, StringComparison.Ordinal))
-            {
-                if (at > 0 && HgEngineMakeFile.IsNameChar(text[at - 1])) continue;
-                int end = at;
-                while (end < to && HgEngineMakeFile.IsNameChar(text[end])) end++;
-                return (at, end);
-            }
+            foreach (CToken token in CLexer.Tokenize(text, from, to))
+                if (token.Kind == CTokenKind.Identifier && string.CompareOrdinal(text, token.Start, info.Prefix, 0, info.Prefix.Length) == 0)
+                    return (token.Start, token.End);
             return null;
         }
 

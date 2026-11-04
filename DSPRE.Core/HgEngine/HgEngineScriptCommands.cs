@@ -41,34 +41,17 @@ namespace DSPRE.HgEngine
             }
         }
 
-        // The name of a ".macro name ..." line, or null.
-        private static string MacroName(string line)
-        {
-            if (!line.StartsWith(".macro", StringComparison.Ordinal) || line.Length < 7 || !char.IsWhiteSpace(line[6])) return null;
-            string rest = line.Substring(6).TrimStart();
-            int end = 0;
-            while (end < rest.Length && HgEngineMakeFile.IsNameChar(rest[end])) end++;
-            return end > 0 ? rest.Substring(0, end) : null;
-        }
-
-        private static string[] MacroLines(string text) =>
-            text.Replace("\r\n", "\n").Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0).ToArray();
-
-        private static bool IsDirective(string line, string directive) =>
-            line.StartsWith(directive, StringComparison.Ordinal) && (line.Length == directive.Length || char.IsWhiteSpace(line[directive.Length]));
-
         // ".macro name,a,b" then ".word 0x58, a, b" then ".endmacro". Only single-line commands with a literal opcode.
         internal static Dictionary<int, Command> ReadAnimation(string text)
         {
             Dictionary<int, Command> map = new Dictionary<int, Command>();
-            string[] lines = MacroLines(text);
-            for (int i = 0; i + 2 < lines.Length; i++)
+            foreach (AsmMacro macro in AsmSourceFile.For(text).Macros)
             {
-                string name = MacroName(lines[i]);
-                if (name == null || !IsDirective(lines[i + 1], ".word") || !lines[i + 2].StartsWith(".endmacro", StringComparison.Ordinal)) continue;
-                string[] parts = lines[i + 1].Substring(5).Split(',');
-                int op = Number(parts[0].Trim());
-                if (op >= 0) map.TryAdd(op, new Command(name, parts.Length - 1));
+                if (macro.End != ".endmacro" || macro.Body.Count != 1 || !macro.Body[0].Is(text, 0, ".word")) continue;
+                List<CToken> words = macro.Body[0].Words;
+                List<(int First, int End)> parts = CLexer.SplitOutsideBrackets(text, words, 1, words.Count, ",");
+                if (parts.Count > 0 && parts[0].End - parts[0].First == 1 && CLexer.TryParseInt(words[parts[0].First].Text(text), out int op) && op >= 0)
+                    map.TryAdd(op, new Command(macro.Name, parts.Count - 1));
             }
             return map;
         }
@@ -77,24 +60,14 @@ namespace DSPRE.HgEngine
         internal static Dictionary<int, Command> ReadBattle(string text)
         {
             Dictionary<int, Command> map = new Dictionary<int, Command>();
-            string[] lines = MacroLines(text);
-            for (int i = 0; i < lines.Length; i++)
+            foreach (AsmMacro macro in AsmSourceFile.For(text).Macros)
             {
-                string name = MacroName(lines[i]);
-                if (name == null) continue;
-                int end = i + 1;
-                while (end < lines.Length && lines[end].StartsWith(".long", StringComparison.Ordinal)) end++;
-                if (end == i + 1 || end >= lines.Length || !IsDirective(lines[end], ".endm")) continue;
-                string[] first = HgEngineMakeFile.Words(lines[i + 1]);
-                int op = first.Length == 2 && first[0] == ".long" ? Number(first[1]) : -1;
-                if (op >= 0) map.TryAdd(op, new Command(name, end - i - 2));
+                if (macro.End != ".endm" || macro.Body.Count == 0 || macro.Body.Any(l => !l.Is(text, 0, ".long"))) continue;
+                List<CToken> first = macro.Body[0].Words;
+                if (first.Count == 2 && CLexer.TryParseInt(first[1].Text(text), out int op) && op >= 0)
+                    map.TryAdd(op, new Command(macro.Name, macro.Body.Count - 1));
             }
             return map;
         }
-
-        private static int Number(string token) =>
-            token.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
-                ? (int.TryParse(token.Substring(2), System.Globalization.NumberStyles.HexNumber, null, out int h) ? h : -1)
-                : (int.TryParse(token, out int d) ? d : -1);
     }
 }

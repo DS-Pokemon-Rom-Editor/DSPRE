@@ -20,7 +20,7 @@ namespace DSPRE.HgEngine
 
             string text = TryReadSource(out _);
             if (text == null || !HgEngineFlatArrayField.TryGetRawValue(text, designator, out string raw)) return false;
-            return int.TryParse(raw, out baseExp);
+            return CLexer.TryParseInt(raw, out baseExp);
         }
 
         public static bool TrySetBaseExp(int speciesId, int baseExp, out string error)

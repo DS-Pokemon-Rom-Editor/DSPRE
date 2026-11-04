@@ -39,7 +39,7 @@ namespace DSPRE.HgEngine
             foreach (CInitItem item in table.Init.Items)
             {
                 string name = item.IndexText?.Trim();
-                if (name != null && species.TryGetValue(name, out int id) && int.TryParse(item.ValueText(text).Trim(), out int n) && n > 0)
+                if (name != null && species.TryGetValue(name, out int id) && CLexer.TryParseInt(item.ValueText(text), out int n) && n > 0)
                     numbers[id] = n;
             }
             return true;
@@ -84,7 +84,7 @@ namespace DSPRE.HgEngine
             CDeclaration table = CSourceFile.For(regionalDex).Find("RegionalDex");
             if (table == null) { error = $"{SourceRelPath} has no RegionalDex table."; return false; }
             List<string> order = table.Init.Items
-                .Select((item, i) => (Species: item.IndexText?.Trim(), Number: int.TryParse(item.ValueText(regionalDex).Trim(), out int n) ? n : 0, At: i))
+                .Select((item, i) => (Species: item.IndexText?.Trim(), Number: CLexer.TryParseInt(item.ValueText(regionalDex), out int n) ? n : 0, At: i))
                 .Where(e => e.Species != null && e.Number > 0).OrderBy(e => e.Number).ThenBy(e => e.At).Select(e => e.Species).ToList();
             if (sort.Lists["RegionalNum"].SequenceEqual(order)) return true;
             sort.Lists["RegionalNum"] = order;

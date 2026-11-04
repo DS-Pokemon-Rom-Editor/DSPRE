@@ -140,7 +140,7 @@ namespace DSPRE.HgEngine
                 {
                     if (call.Args.Count != 2) continue;
                     string name = text[call.Args[0].Start..call.Args[0].End].Trim(), form = text[call.Args[1].Start..call.Args[1].End].Trim();
-                    if (!species.TryGetValue(name, out int id) || !int.TryParse(form, out int number) || number <= 0) continue;
+                    if (!species.TryGetValue(name, out int id) || !CLexer.TryParseInt(form, out int number) || number <= 0) continue;
                     if (HgEngineFormRegistry.ResolveFormSpecies(id, number) == id && seen.Add(name + form))
                         findings.Add((file, $"MON_WITH_FORM({name}, {form}) points past the forms {name} has, so the game uses the base species."));
                 }

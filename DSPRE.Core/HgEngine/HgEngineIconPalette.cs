@@ -24,7 +24,7 @@ namespace DSPRE.HgEngine
             if (text == null) return false;
 
             CInitItem row = FindRow(text, speciesId, DesignatorFor(speciesId));
-            return row != null && int.TryParse(row.ValueText(text).Trim(), out paletteId);
+            return row != null && CLexer.TryParseInt(row.ValueText(text), out paletteId);
         }
 
         public static bool TrySetPaletteId(int speciesId, int paletteId, out string error)
@@ -52,7 +52,7 @@ namespace DSPRE.HgEngine
             {
                 string d = row.IndexText?.Trim();
                 if (designator != null && d == designator) return row;
-                if (numeric == null && int.TryParse(d, out int n) && n == speciesId) numeric = row;
+                if (numeric == null && CLexer.TryParseInt(d, out int n) && n == speciesId) numeric = row;
             }
             return numeric;
         }

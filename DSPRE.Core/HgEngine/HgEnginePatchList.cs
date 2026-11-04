@@ -53,6 +53,13 @@ namespace DSPRE.HgEngine
         /// <summary>The #ifdef / #ifndef conditions the line sits under, as the list writes them, or empty.</summary>
         public string Condition { get; set; } = "";
 
+        /// <summary>Each condition of <see cref="Condition"/>, outermost first: a name, or "not " and a name.</summary>
+        public IReadOnlyList<string> Conditions { get; set; } = Array.Empty<string>();
+
+        /// <summary>The "# text" comment line the entry's block starts with, without the '#'. A blank line or a
+        /// directive ends the block.</summary>
+        public string Heading { get; set; } = "";
+
         /// <summary>Whether the build applies it: false when the checkout's defines rule it out, null when that turns on a make flag.</summary>
         public bool? Built { get; set; } = true;
 
@@ -144,6 +151,15 @@ namespace DSPRE.HgEngine
         public static List<HgEnginePatchList> ReadAll()
             => ReadAllAt(HgEngineProject.IsActive ? HgEngineProject.RepoRootWindows : null);
 
+        /// <summary>The linked checkout's list of this kind, or null when it has none.</summary>
+        public static HgEnginePatchList Read(HgEnginePatchKind kind)
+        {
+            if (!HgEngineProject.IsActive) return null;
+            string name = Known.First(k => k.Kind == kind).FileName;
+            string path = Path.Combine(HgEngineProject.RepoRootWindows, name);
+            return File.Exists(path) ? Read(kind, name, path) : null;
+        }
+
         internal static List<HgEnginePatchList> ReadAllAt(string root)
         {
             List<HgEnginePatchList> lists = new List<HgEnginePatchList>();
@@ -182,12 +198,17 @@ namespace DSPRE.HgEngine
             HashSet<string> defined = new HashSet<string>(StringComparer.Ordinal);
             HashSet<string> makeFlags = MakeFlags(root);
             List<(string Name, bool WhenDefined)> open = new List<(string, bool)>();
+            string heading = "";
             foreach (HgEnginePatchEntry entry in entries)
             {
                 string raw = entry.RawLine ?? "";
                 string line = raw.Trim();
                 string upper = line.ToUpperInvariant();
                 string[] words = line.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+                // "# text" is a comment and "#word" a directive.
+                if (line.Length == 0 || (line[0] == '#' && line.Length > 1 && !char.IsWhiteSpace(line[1]))) heading = "";
+                else if (line[0] == '#') heading = line.Substring(1).Trim();
+                entry.Heading = heading;
                 if (raw.StartsWith("#include \""))
                 {
                     string file = Path.Combine(root, raw.Split('"')[1].Trim().Replace('/', Path.DirectorySeparatorChar));
@@ -205,7 +226,8 @@ namespace DSPRE.HgEngine
                 if (upper == "#ENDIF" && open.Count > 0) { open.RemoveAt(0); continue; }
                 if (open.Count == 0) continue;
 
-                entry.Condition = string.Join(" and ", open.AsEnumerable().Reverse().Select(c => (c.WhenDefined ? "" : "not ") + c.Name));
+                entry.Conditions = open.AsEnumerable().Reverse().Select(c => (c.WhenDefined ? "" : "not ") + c.Name).ToList();
+                entry.Condition = string.Join(" and ", entry.Conditions);
                 (string Name, bool WhenDefined) off = open.FirstOrDefault(c => !makeFlags.Contains(c.Name) && defined.Contains(c.Name) != c.WhenDefined);
                 (string Name, bool WhenDefined) depends = open.FirstOrDefault(c => makeFlags.Contains(c.Name));
                 if (off.Name != null)
@@ -371,6 +393,29 @@ namespace DSPRE.HgEngine
             entry.Register = register;
             entry.Bytes = bytes ?? Array.Empty<byte>();
             entry.RawLine = indent + entry.Render();
+        }
+
+        /// <summary>Sets a replacement's bytes and rewrites only their columns, so the line keeps its spacing.</summary>
+        public static void ChangeBytes(HgEnginePatchEntry entry, IReadOnlyList<byte> bytes)
+        {
+            string raw = entry.RawLine ?? "";
+            List<(int Start, int End)> fields = new List<(int, int)>();
+            for (int i = 0; i < raw.Length;)
+            {
+                while (i < raw.Length && char.IsWhiteSpace(raw[i])) i++;
+                int start = i;
+                while (i < raw.Length && !char.IsWhiteSpace(raw[i])) i++;
+                if (i > start) fields.Add((start, i));
+            }
+            entry.Bytes = bytes;
+            if (!entry.Parsed || entry.Kind != HgEnginePatchKind.ByteReplacement || fields.Count - 2 != bytes.Count)
+            {
+                Change(entry, entry.OverlayNumber, entry.Symbol, entry.Address, entry.Register, bytes);
+                return;
+            }
+            for (int b = bytes.Count - 1; b >= 0; b--)
+                raw = raw.Substring(0, fields[b + 2].Start) + bytes[b].ToString("X2") + raw.Substring(fields[b + 2].End);
+            entry.RawLine = raw;
         }
 
         /// <summary>Raised after a list was written, for editors that read the lists.</summary>

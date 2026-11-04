@@ -33,11 +33,11 @@ namespace DSPRE.HgEngine
 
             HgEngineSymbolTable bounceNames = HgEngineSymbolTable.Load(SourceRelPath);
             if (HgEngineSourcePatcher.TryGetFieldValue(text, designator, SizePath, out string sizeRaw))
-                int.TryParse(sizeRaw, out size);
+                CLexer.TryParseInt(sizeRaw, out size);
             if (HgEngineSourcePatcher.TryGetFieldValue(text, designator, BouncePath, out string bounceRaw))
             {
                 if (bounceNames != null && bounceNames.TryGetValue(bounceRaw, out int bv)) bounce = bv;
-                else int.TryParse(bounceRaw, out bounce);
+                else CLexer.TryParseInt(bounceRaw, out bounce);
             }
             return true;
         }

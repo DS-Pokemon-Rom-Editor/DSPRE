@@ -56,7 +56,7 @@ namespace DSPRE.HgEngine
                 if (item.IsConditional || item.List != null || item.Designators.Count > 0)
                 { error = $"{SourceRelPath} has an entry in {TableName} DSPRE can't read: {token}"; return false; }
 
-                if (!moves.TryGetValue(token, out int move) && !int.TryParse(token, out move))
+                if (!moves.TryGetValue(token, out int move) && !CLexer.TryParseInt(token, out move))
                 { error = $"{token} in {SourceRelPath} isn't a move that moves.h names."; return false; }
 
                 machines.Add(new Machine(LabelAfter(text, item.ValueEnd) ?? $"Machine {machines.Count}", move, item.ValueStart, item.ValueEnd - item.ValueStart));

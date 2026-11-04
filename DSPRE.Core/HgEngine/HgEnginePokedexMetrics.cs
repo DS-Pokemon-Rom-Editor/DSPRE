@@ -284,7 +284,7 @@ namespace DSPRE.HgEngine
             if (info == null || species == null) { error = "include/constants/species.h couldn't be read."; return false; }
             HgEngineSymbolTable typeTable = HgEngineSymbolTable.Load(PokemonH);
             HgEngineSymbolTable battleTypes = HgEngineSymbolTable.Load("include/constants/battle_constants.h");
-            int Value(string token) => int.TryParse(token, out int n) ? n
+            int Value(string token) => CLexer.TryParseInt(token, out int n) ? n
                 : typeTable?.TryGetValue(token, out int v) == true ? v : battleTypes?.TryGetValue(token, out int w) == true ? w : -1;
             string path = Path.Combine(HgEngineProject.RepoPathUnc, info.SourceFileRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path)) { error = $"{path} is missing from the checkout."; return false; }

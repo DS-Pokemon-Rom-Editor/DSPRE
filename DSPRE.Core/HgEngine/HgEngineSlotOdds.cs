@@ -64,53 +64,105 @@ namespace DSPRE.HgEngine
             foreach ((string function, string name, int slots) in Rolls)
             {
                 if (!TryBody(text, function, out int open, out int close)) { error = $"{function} isn't in {RelPath}."; return false; }
-                List<int> bounds = Bounds(text.Substring(open + 1, close - open - 1));
-                if (bounds == null || bounds.Count != slots - 1 || bounds.Zip(bounds.Skip(1)).Any(p => p.Second < p.First) || bounds[^1] > 100)
+                int[] p = Percents(Bounds(text.Substring(open + 1, close - open - 1)), slots);
+                if (p == null)
                 {
                     error = $"{function} isn't a chain of roll comparisons DSPRE can read; edit it in {RelPath}.";
                     return false;
                 }
-                int[] p = new int[slots];
-                int previous = 0;
-                for (int i = 0; i < bounds.Count; i++) { p[i] = bounds[i] - previous; previous = bounds[i]; }
-                p[^1] = 100 - previous;
                 percents.Add(p);
             }
             return true;
         }
 
-        // The upper bound of each slot but the last: "rnd < N" gives N, "rnd == N" gives N + 1, and Rock Smash's
-        // "rnd >= N ? 1 : 0" gives N. Lower bounds ("rnd >= a &&") repeat the previous slot's and are skipped.
-        private static List<int> Bounds(string body)
+        private static int[] Percents(List<SlotBound> slots, int count)
         {
-            List<string> tokens = CLexer.Tokenize(body).Select(t => t.Text(body)).ToList();
-            int? Number(int t) => t < tokens.Count && int.TryParse(tokens[t], out int n) ? n : null;
+            if (slots == null || slots.Count != count - 1) return null;
+            List<int> bounds = slots.Select(s => s.Bound).ToList();
+            if (bounds.Zip(bounds.Skip(1)).Any(p => p.Second < p.First) || bounds[^1] > 100) return null;
+            int[] p = new int[count];
+            int previous = 0;
+            for (int i = 0; i < bounds.Count; i++) { p[i] = bounds[i] - previous; previous = bounds[i]; }
+            p[^1] = 100 - previous;
+            return p;
+        }
 
-            List<int> bounds = new List<int>();
+        private enum Edge { Upper, Equal, Lower }
+
+        // Editable is false when the condition has a comparison the in-place writer can't move.
+        private sealed record SlotBound(int Bound, List<(CToken Op, CToken Number, Edge Edge)> Numbers, bool Editable);
+
+        // The upper bound of each slot but the last: "rnd < N" gives N, "rnd == N" gives N + 1, and Rock Smash's
+        // "rnd >= N ? 1 : 0" gives N. Lower bounds ("rnd >= a &&") repeat the previous slot's.
+        private static List<SlotBound> Bounds(string body)
+        {
+            CSourceFile source = CSourceFile.For(body);
+            List<CToken> code = source.Tokens;
+            List<string> tokens = code.Select(t => t.Text(body)).ToList();
+            int? Number(int t) => t < tokens.Count && CLexer.TryParseInt(tokens[t], out int n) ? n : null;
+            string At(int t) => t >= 0 && t < tokens.Count ? tokens[t] : "";
+
+            List<SlotBound> bounds = new List<SlotBound>();
             for (int t = 0; t < tokens.Count; t++)
             {
                 if (tokens[t] == "return" && t + 7 < tokens.Count && tokens[t + 1] == "rnd" && tokens[t + 2] == ">=" && Number(t + 3) is int rare
                     && tokens[t + 4] == "?" && tokens[t + 5] == "1" && tokens[t + 6] == ":" && tokens[t + 7] == "0")
-                    return new List<int> { rare };
+                    return new List<SlotBound> { new SlotBound(rare, new List<(CToken, CToken, Edge)> { (code[t + 2], code[t + 3], Edge.Upper) }, true) };
 
-                if (tokens[t] != "if") continue;
+                if (tokens[t] != "if" || t + 1 >= tokens.Count || tokens[t + 1] != "(") continue;
                 int? bound = null;
-                int depth = 0;
-                for (int k = t + 1; k < tokens.Count; k++)
+                int close = source.Match(t + 1);
+                bool editable = close >= 0;
+                List<(CToken, CToken, Edge)> numbers = new List<(CToken, CToken, Edge)>();
+                for (int k = t + 2; k < (close < 0 ? tokens.Count : close); k++)
                 {
-                    if (tokens[k] == "(") depth++;
-                    else if (tokens[k] == ")" && --depth == 0) break;
-                    else if (tokens[k] == "rnd" && bound == null)
-                    {
-                        if (k + 2 >= tokens.Count) break;
-                        if (tokens[k + 1] == "<") bound = Number(k + 2);
-                        else if (tokens[k + 1] == "==") bound = Number(k + 2) + 1;
-                    }
+                    if (tokens[k] != "rnd") continue;
+                    string op = At(k + 1);
+                    bool plain = At(k - 1) is "(" or "&&" && Number(k + 2) != null && At(k + 3) is ")" or "&&";
+                    if (bound == null && op == "<") bound = Number(k + 2);
+                    else if (bound == null && op == "==") bound = Number(k + 2) + 1;
+                    else if (op != ">=") plain = false;
+                    if (!plain) { editable = false; continue; }
+                    numbers.Add((code[k + 1], code[k + 2], op == "<" ? Edge.Upper : op == "==" ? Edge.Equal : Edge.Lower));
                 }
                 if (bound == null) return null;
-                bounds.Add(bound.Value);
+                bounds.Add(new SlotBound(bound.Value, numbers, editable));
             }
             return bounds.Count > 0 ? bounds : null;
+        }
+
+        // Changes only the numbers in the existing chain, so layout and comments stay. Null when the new odds don't fit it.
+        private static string InPlace(string body, int[] percents)
+        {
+            // A 0% first slot needs the signed variable the full rewrite declares.
+            if (percents[0] == 0) return null;
+            List<SlotBound> slots = Bounds(body);
+            if (slots == null || slots.Count != percents.Length - 1 || slots.Any(s => !s.Editable)) return null;
+            List<(int Start, int End, string Text)> edits = new List<(int, int, string)>();
+            int previous = 0, oldPrevious = 0;
+            for (int i = 0; i < slots.Count; i++)
+            {
+                int bound = previous + percents[i];
+                foreach ((CToken op, CToken number, Edge edge) in slots[i].Numbers)
+                {
+                    if (edge == Edge.Equal)
+                    {
+                        // "rnd == N" only reads as one slot when the previous slot ends at N.
+                        if (slots[i].Bound - oldPrevious != 1) return null;
+                        edits.Add(bound - previous == 1 ? (number.Start, number.End, (bound - 1).ToString()) : (op.Start, number.End, $"< {bound}"));
+                        continue;
+                    }
+                    if (edge == Edge.Lower && (!CLexer.TryParseInt(number.Text(body), out int lower) || lower != oldPrevious)) return null;
+                    edits.Add((number.Start, number.End, (edge == Edge.Lower ? previous : bound).ToString()));
+                }
+                oldPrevious = slots[i].Bound;
+                previous = bound;
+            }
+            StringBuilder b = new StringBuilder(body);
+            foreach ((int start, int end, string text) in edits.OrderByDescending(e => e.Start))
+                b.Remove(start, end - start).Insert(start, text);
+            string edited = b.ToString();
+            return Percents(Bounds(edited), percents.Length) is int[] check && check.SequenceEqual(percents) ? edited : null;
         }
 
         private static bool TryBody(string text, string function, out int open, out int close)
@@ -121,7 +173,10 @@ namespace DSPRE.HgEngine
             return true;
         }
 
-        /// <summary>Rewrites the functions whose odds changed as a plain chain of comparisons. Null on success.</summary>
+        /// <summary>
+        /// Changes the numbers of each function whose odds changed, or rewrites it as a plain chain of comparisons when
+        /// its chain can't hold the new odds. Null on success.
+        /// </summary>
         public static string Write(IReadOnlyList<int[]> percents)
         {
             if (!TryLoad(out List<int[]> current, out string error)) return error;
@@ -133,7 +188,8 @@ namespace DSPRE.HgEngine
                 if (percents[r].Length != Rolls[r].Slots || percents[r].Sum() != 100 || percents[r].Any(p => p < 0))
                     return $"{Rolls[r].Name}: the slots have to add up to 100%.";
                 TryBody(text, Rolls[r].Function, out int open, out int close);
-                text = text.Substring(0, open + 1) + Body(percents[r], nl) + text.Substring(close);
+                string body = InPlace(text.Substring(open + 1, close - open - 1), percents[r]) ?? Body(percents[r], nl);
+                text = text.Substring(0, open + 1) + body + text.Substring(close);
             }
             try { HgEngineFileCache.WriteText(FullPath, text); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { return ex.Message; }

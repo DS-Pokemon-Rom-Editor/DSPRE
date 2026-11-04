@@ -39,7 +39,7 @@ namespace DSPRE.HgEngine
             CDirective count = p.File.FindDefine(CountName);
             if (p.Table == null || count == null) return $"{RelPath} has no {Table} or {CountName} that DSPRE can read.";
             foreach (CDirective d in p.File.Directives)
-                if (d.Keyword == "define" && d.Name != CountName && d.Name?.StartsWith("SWARM_", StringComparison.Ordinal) == true && int.TryParse(d.Body, out int method))
+                if (d.Keyword == "define" && d.Name != CountName && d.Name?.StartsWith("SWARM_", StringComparison.Ordinal) == true && CLexer.TryParseInt(d.Body, out int method))
                     p.Methods[d.Name] = method;
 
             HgEngineSymbolTable maps = HgEngineSymbolTable.Load(MapsH);
@@ -54,7 +54,7 @@ namespace DSPRE.HgEngine
                 if (!HgEngineSourceExpression.TryEvaluate(method, n => p.Methods.TryGetValue(n, out int v) ? v : null, out int m) || m < 0 || m > 2) return $"{RelPath}: swarm kind {method} couldn't be read.";
                 parsed.Rows.Add(((ushort)h, (ushort)m));
             }
-            if (!int.TryParse(count.Body, out int n) || n != parsed.Rows.Count)
+            if (!CLexer.TryParseInt(count.Body, out int n) || n != parsed.Rows.Count)
                 return $"{RelPath} declares {count.Body} swarm rows but lists {parsed.Rows.Count}.";
             return null;
         }

@@ -5,17 +5,13 @@ namespace DSPRE.HgEngine
 {
     /// <summary>Species to overworld-follower assignment. <c>src/field/overworld_table.c</c> gives each species
     /// <c>gfx = MON_OVERWORLD_GFX_START + speciesId</c> through one <c>MON_FOLLOWER_ENTRY(species, cbparams)</c>
-    /// line, read and written here with a line scan. The sprite itself is the species' sprites/&lt;name&gt;/overworld.png
+    /// call. The sprite itself is the species' sprites/&lt;name&gt;/overworld.png
     /// (<see cref="HgEngineOverworldSprite"/>).</summary>
     public static class HgEngineOverworldFollowerSprite
     {
         private const string TableRelPath = "src/field/overworld_table.c";
         private const string SpeciesHeaderRelPath = "include/constants/species.h";
         private const string SizeClassPrefix = "OVERWORLD_SIZE_";
-
-        // Sits right before the array's closing "};". A new entry must be inserted before this line,
-        // not before the literal "};", which is followed by unrelated function definitions.
-        private const string TerminatorLine = "{ 0xFFFF, 0, 0 },";
 
         /// <summary>Where the size class of the species' MON_FOLLOWER_ENTRY is.</summary>
         internal static bool TryFindEntry(string tableText, string designator, out (int Start, int End) sizeClass)
@@ -31,10 +27,10 @@ namespace DSPRE.HgEngine
         }
 
         /// <summary>Inserts a new MON_FOLLOWER_ENTRY line (default size class OVERWORLD_SIZE_SMALL) right
-        /// before the array's terminator sentinel. Pure text transform, unit-testable directly.</summary>
+        /// before the table's 0xFFFF terminator row.</summary>
         internal static bool TryInsertEntry(ref string tableText, string designator, string sizeClassName)
         {
-            int idx = tableText.IndexOf(TerminatorLine, System.StringComparison.Ordinal);
+            int idx = HgEngineOverworlds.TerminatorRow(tableText);
             if (idx < 0) return false;
             string newLine = $"MON_FOLLOWER_ENTRY({designator}, {sizeClassName})\n        ";
             tableText = tableText.Substring(0, idx) + newLine + tableText.Substring(idx);

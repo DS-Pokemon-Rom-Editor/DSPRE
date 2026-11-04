@@ -54,7 +54,7 @@ namespace DSPRE.HgEngine
                 int last = -1;
                 foreach (CDirective d in CSourceFile.For(File.ReadAllText(path)).Directives)
                     if (d.Keyword == "define" && d.Name != null && d.Name.StartsWith("CODE_ADDON_", StringComparison.Ordinal)
-                        && int.TryParse(d.Body?.Trim(), out int index))
+                        && CLexer.TryParseInt(d.Body, out int index))
                         last = Math.Max(last, index);
                 return last < VanillaMembers ? -1 : last + 1 - VanillaMembers;
             }

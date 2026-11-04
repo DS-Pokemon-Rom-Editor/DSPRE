@@ -25,12 +25,12 @@ namespace DSPRE.HgEngine
             string ReadFile(string rel)
             {
                 string path = Path.Combine(HgEngineProject.RepoRootWindows, rel.Replace('/', Path.DirectorySeparatorChar));
-                return File.Exists(path) ? File.ReadAllText(path) : null;
+                return File.Exists(path) ? HgEngineFileCache.GetText(path) : null;
             }
             void Add(string name, string number)
             {
                 if (name.StartsWith("NUM_", StringComparison.Ordinal) || name.EndsWith("_BASE", StringComparison.Ordinal)) return;
-                flags.TryAdd(Convert.ToInt32(number, number.StartsWith("0x") ? 16 : 10), name);
+                if (CLexer.TryParseInt(number, out int id)) flags.TryAdd(id, name);
             }
 
             if (ReadFile("include/config.h") is string config)
@@ -39,14 +39,9 @@ namespace DSPRE.HgEngine
                         && CLexer.Tokenize(d.Body) is [{ Kind: CTokenKind.Number } literal])
                         Add(d.Name, literal.Text(d.Body));
             if (ReadFile("asm/include/flags.inc") is string asm)
-                foreach (string line in asm.Split('\n'))
-                {
-                    // .equ NAME, 0x10
-                    string[] words = HgEngineMakeFile.Words(line.Replace(",", " "));
-                    if (words.Length >= 3 && words[0] == ".equ" && words[1].All(HgEngineMakeFile.IsNameChar)
-                        && CLexer.Tokenize(words[2]) is [{ Kind: CTokenKind.Number }] && words[2].All(char.IsAsciiLetterOrDigit))
-                        Add(words[1], words[2]);
-                }
+                foreach (AsmDefinition d in AsmSourceFile.For(asm).Definitions)
+                    if (d.Kind == AsmDefinitionKind.DotEqu && CLexer.Tokenize(d.Value(asm)) is [{ Kind: CTokenKind.Number }])
+                        Add(d.Name, d.Value(asm));
             return flags;
         }
 

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -39,10 +38,8 @@ namespace DSPRE.HgEngine
         {
             value = 0;
             if (!TryGetRaw(path, out string raw)) return false;
-            foreach (string part in raw.Split('|'))
+            foreach (string token in CLexer.Split(raw, "|"))
             {
-                string token = part.Trim();
-                if (token.Length == 0) continue;
                 if (!TryResolveTokenIn(token, headers, out int term)) { value = 0; return false; }
                 value |= term;
             }
@@ -80,10 +77,8 @@ namespace DSPRE.HgEngine
             if (!TryGetRaw(path, out string raw)) return false;
 
             int result = 0;
-            foreach (string part in raw.Split('|'))
+            foreach (string token in CLexer.Split(raw, "|"))
             {
-                string token = part.Trim();
-                if (token.Length == 0) continue;
                 if (!TryResolveToken(token, headerRelPath, out int termValue)) return false;
                 result |= termValue;
             }
@@ -103,25 +98,10 @@ namespace DSPRE.HgEngine
         public static bool TryResolveToken(string token, string headerRelPath, out int value)
         {
             token = token.Trim();
-            if (TryParseLiteral(token, out value)) return true;
+            if (CLexer.TryParseInt(token, out value)) return true;
             if (headerRelPath == null) return false;
             HgEngineSymbolTable table = HgEngineSymbolTable.Load(headerRelPath);
             return table != null && table.TryGetValue(token, out value);
-        }
-
-        // Mirrors HgEngineSymbolTable's literal parser: decimal or 0x-hex, optional leading '-'.
-        internal static bool TryParseLiteral(string token, out int value)
-        {
-            bool negative = token.StartsWith("-");
-            string unsigned = negative ? token[1..] : token;
-            if (unsigned.StartsWith("0x", System.StringComparison.OrdinalIgnoreCase))
-            {
-                if (!int.TryParse(unsigned[2..], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out value))
-                    return false;
-                if (negative) value = -value;
-                return true;
-            }
-            return int.TryParse(token, out value);
         }
 
         private static string UnquoteCString(string raw)
@@ -237,20 +217,9 @@ namespace DSPRE.HgEngine
         private static string TrainerScriptsPath => System.IO.Path.Combine(HgEngineProject.RepoPathUnc, TrainerScriptsRelPath.Replace('/', System.IO.Path.DirectorySeparatorChar));
 
         // Each scrdef line's label and where the line ends, in table order.
-        private static List<(string Label, int LineEnd)> ScriptEntries(string text)
-        {
-            List<(string, int)> entries = new List<(string, int)>();
-            for (int start = 0; start < text.Length;)
-            {
-                int end = text.IndexOf('\n', start);
-                if (end < 0) end = text.Length;
-                string line = text.Substring(start, end - start);
-                int at = line.IndexOf("scrdef ", StringComparison.Ordinal);
-                if (at >= 0 && !line.Contains("scrdef_end", StringComparison.Ordinal)) entries.Add((line.Substring(at + 7).Trim(), end));
-                start = end + 1;
-            }
-            return entries;
-        }
+        private static List<(string Label, int LineEnd)> ScriptEntries(string text) =>
+            AsmSourceFile.For(text).Lines.Where(l => l.Is(text, 0, "scrdef") && l.Words.Count == 2)
+                .Select(l => (l.Words[1].Text(text), l.End)).ToList();
 
         /// <summary>
         /// The trainer whose eye-contact entry is the approach script, so it can't be used on the field: trainer N runs
@@ -299,25 +268,27 @@ namespace DSPRE.HgEngine
             if (table == null || table.Init.Items.Count == 0) { error = $"{SourceRelPath} has no {TableName} to add to."; return false; }
 
             CInitItem last = table.Init.Items[^1];
+            if (last.List == null || last.Designators.Count == 0) { error = $"{SourceRelPath}'s last trainer isn't a [N] = {{ ... }} entry to copy."; return false; }
             Dictionary<int, TrainerEntry> known = Entries(text);
             if (known.Count == 0) { error = $"{SourceRelPath} has no trainer DSPRE can read."; return false; }
             trainerId = known.Keys.Max() + 1;
             string entry = text.Substring(last.Start, last.End - last.Start);
             // Positions in the copied entry, applied from the end so earlier positions stay valid.
             List<(int At, int Length, string With)> edits = new List<(int, int, string)>();
-            if (last.List?.Field("text") is CInitItem lines)
+            if (last.List.Field("text") is CInitItem lines)
                 edits.Add((lines.ValueStart - last.Start, lines.ValueEnd - lines.ValueStart, PlaceholderText(HgEngineSourcePatcher.Indent(text, lines.Start))));
             else
             {
-                string fieldIndent = last.List?.Items.FirstOrDefault() is CInitItem first ? HgEngineSourcePatcher.Indent(text, first.Start) : "        ";
-                int lineStart = HgEngineSourcePatcher.LineStart(entry, entry.LastIndexOf('}'));
+                string fieldIndent = last.List.Items.FirstOrDefault() is CInitItem first ? HgEngineSourcePatcher.Indent(text, first.Start) : "        ";
+                int lineStart = HgEngineSourcePatcher.LineStart(entry, last.List.Close - last.Start);
                 edits.Add((lineStart, 0, $"{fieldIndent}.text = {PlaceholderText(fieldIndent)},\n"));
             }
-            if (last.List?.Field("name") is CInitItem named)
+            if (last.List.Field("name") is CInitItem named)
                 edits.Add((named.ValueStart - last.Start, named.ValueEnd - named.ValueStart, ToCStringLiteral(name)));
+            // The designator goes last: every other edit sits after it.
+            edits.Add((0, last.Designators[0].End - last.Start, $"[{trainerId}]"));
             foreach ((int at, int length, string with) in edits.OrderByDescending(e => e.At))
                 entry = entry.Remove(at, length).Insert(at, with);
-            entry = $"[{trainerId}]" + entry.Substring(entry.IndexOf(']') + 1);
 
             string indent = HgEngineSourcePatcher.Indent(text, last.Start);
             int added = trainerId;

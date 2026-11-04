@@ -21,7 +21,7 @@ namespace DSPRE.HgEngine
             if (text == null || !HgEngineFlatArrayField.TryGetRawValue(text, designator, out string raw)) return false;
 
             if (species.TryGetValue(raw, out int v)) { babySpeciesId = v; return true; }
-            return int.TryParse(raw, out babySpeciesId);
+            return CLexer.TryParseInt(raw, out babySpeciesId);
         }
 
         public static bool TrySetBabySpecies(int speciesId, int babySpeciesId, out string error)

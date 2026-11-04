@@ -23,7 +23,7 @@ namespace DSPRE.HgEngine
 
             HgEngineSymbolTable abilities = HgEngineSymbolTable.Load(AbilityHeaderRelPath);
             if (abilities != null && abilities.TryGetValue(raw, out int v)) { abilityId = v; return true; }
-            return int.TryParse(raw, out abilityId);
+            return CLexer.TryParseInt(raw, out abilityId);
         }
 
         public static bool TrySetAbilityId(int speciesId, int abilityId, out string error)

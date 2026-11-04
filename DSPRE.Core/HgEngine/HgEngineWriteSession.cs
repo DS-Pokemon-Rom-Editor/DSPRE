@@ -161,23 +161,10 @@ namespace DSPRE.HgEngine
         private static List<Comment> Find(string text)
         {
             List<Comment> found = new List<Comment>();
-            int i = 0;
-            while (i < text.Length)
+            foreach (CToken comment in CLexer.Comments(text))
             {
-                char c = text[i];
-                bool comment = c == '/' && i + 1 < text.Length && (text[i + 1] == '/' || text[i + 1] == '*');
-                if (comment || c == '"' || c == '\'')
-                {
-                    int start = i;
-                    BraceScanner.SkipNonCode(text, ref i);
-                    if (comment)
-                    {
-                        string clean = Clean(text.Substring(start, i - start));
-                        if (clean.Length > 0) found.Add(new Comment(start, clean));
-                    }
-                    continue;
-                }
-                i++;
+                string clean = Clean(comment.Text(text));
+                if (clean.Length > 0) found.Add(new Comment(comment.Start, clean));
             }
             return found;
         }

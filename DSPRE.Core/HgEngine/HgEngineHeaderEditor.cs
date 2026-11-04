@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace DSPRE.HgEngine
 {
@@ -24,11 +25,16 @@ namespace DSPRE.HgEngine
             return true;
         }
 
-        /// <summary>Appends a new array entry before the file's last "};".</summary>
+        /// <summary>Appends a new array entry before the file's last "};" in code.</summary>
         public static bool TryInsertBeforeFinalCloseBrace(ref string text, string newEntry)
         {
-            int insertAt = text.LastIndexOf("};", StringComparison.Ordinal);
-            if (insertAt < 0) return false;
+            string source = text;
+            List<CToken> tokens = CSourceFile.For(source).Tokens;
+            bool Punct(int t, string s) => tokens[t].Kind == CTokenKind.Punct && tokens[t].Is(source, s);
+            int close = tokens.Count - 1;
+            while (close > 0 && !(Punct(close, ";") && Punct(close - 1, "}"))) close--;
+            if (close <= 0) return false;
+            int insertAt = tokens[close - 1].Start;
             text = string.Concat(text.AsSpan(0, insertAt), newEntry, text.AsSpan(insertAt));
             return true;
         }

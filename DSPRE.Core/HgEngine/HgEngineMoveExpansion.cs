@@ -302,7 +302,7 @@ namespace DSPRE.HgEngine
         {
             if (string.IsNullOrWhiteSpace(originalRaw)) return newExpression;
 
-            List<string> terms = originalRaw.Split('|').Select(t => t.Trim()).Where(t => t.Length > 0).ToList();
+            List<string> terms = CLexer.Split(originalRaw, "|");
             int value = 0;
             bool known = true;
             foreach (string term in terms)
@@ -323,7 +323,7 @@ namespace DSPRE.HgEngine
                 parts.Add(term);
                 covered |= v.Value;
             }
-            foreach (string part in newExpression.Split('|').Select(t => t.Trim()).Where(t => t.Length > 0))
+            foreach (string part in CLexer.Split(newExpression, "|"))
             {
                 int? v = resolve(part);
                 if (parts.Contains(part) || (v != null && (v.Value & ~covered) == 0)) continue;

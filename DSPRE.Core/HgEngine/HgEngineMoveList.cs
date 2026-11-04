@@ -140,8 +140,9 @@ namespace DSPRE.HgEngine
             int count = CSourceFile.For(updated).Find(info.Symbol).Init.Items.Count;
             if (table.Dimensions.Count == 1 && table.Dimensions[0] != "[]")
             {
-                int size = updated.LastIndexOf(table.Dimensions[0], table.Init.Open, StringComparison.Ordinal);
-                updated = updated.Substring(0, size) + $"[{count}]" + updated.Substring(size + table.Dimensions[0].Length);
+                // Rows are inserted after the brace, so the size's position is still valid.
+                (int sizeStart, int sizeEnd) = table.DimensionSpans[0];
+                updated = updated.Substring(0, sizeStart) + $"[{count}]" + updated.Substring(sizeEnd);
             }
             // battle.h declares a fixed-size list too, and the two have to agree or the build fails, so both are
             // checked before either is written.
@@ -149,19 +150,38 @@ namespace DSPRE.HgEngine
             bool sized = table.Dimensions.Count == 1 && table.Dimensions[0] != "[]";
             if (sized && File.Exists(header))
             {
-                string declared = HgEngineFileCache.GetText(header), was = info.Symbol + table.Dimensions[0];
-                if (!declared.Contains(was, StringComparison.Ordinal))
-                    throw new InvalidOperationException($"include/battle.h doesn't declare {was} the way DSPRE reads, so the list size can't be kept in step.");
-                newHeader = declared.Replace(was, $"{info.Symbol}[{count}]", StringComparison.Ordinal);
+                string declared = HgEngineFileCache.GetText(header);
+                List<(int Start, int End)> sizes = SizesIn(declared, info.Symbol);
+                if (sizes.Count == 0 || sizes.Any(s => CSourceFile.Normalize(declared[s.Start..s.End]) != CSourceFile.Normalize(table.Dimensions[0])))
+                    throw new InvalidOperationException($"include/battle.h doesn't declare {info.Symbol}{table.Dimensions[0]}, so the list size can't be updated there.");
+                newHeader = declared;
+                foreach ((int start, int end) in sizes.OrderByDescending(s => s.Start))
+                    newHeader = newHeader.Substring(0, start) + $"[{count}]" + newHeader.Substring(end);
             }
             string Check(string written) => Read(info, written, moves).OrderBy(m => m).SequenceEqual(wanted.OrderBy(m => m)) ? null : $"{info.Symbol} differs";
-            string HeaderCheck(string written) => written.Contains($"{info.Symbol}[{count}]", StringComparison.Ordinal) ? null : "the list size differs";
+            string HeaderCheck(string written) => SizesIn(written, info.Symbol) is { Count: > 0 } back && back.All(s => CSourceFile.Normalize(written[s.Start..s.End]) == $"[ {count} ]")
+                ? null : "the list size differs";
             string problem = Check(updated) ?? (newHeader != null ? HeaderCheck(newHeader) : null);
             if (problem != null) throw new InvalidOperationException($"{info.File} wouldn't read back as saved ({problem}), so nothing was written.");
             if (!HgEngineVerifiedWrite.TryWrite(path, info.File, updated, Check, out string error)) throw new InvalidOperationException(error);
             if (newHeader != null && !HgEngineVerifiedWrite.TryWrite(header, "include/battle.h", newHeader, HeaderCheck, out error))
                 throw new InvalidOperationException(error);
             HgEngineLoadedEntries.Remember(path, LoadedKey(info), ListText(Read(info, updated, moves)));
+        }
+
+        // Where [size] is in each "name[size];" declaration, like the extern in battle.h.
+        private static List<(int Start, int End)> SizesIn(string text, string name)
+        {
+            CSourceFile source = CSourceFile.For(text);
+            List<CToken> tokens = source.Tokens;
+            List<(int, int)> sizes = new List<(int, int)>();
+            for (int t = 0; t + 1 < tokens.Count; t++)
+            {
+                if (tokens[t].Kind != CTokenKind.Identifier || !tokens[t].Is(text, name) || !tokens[t + 1].Is(text, "[")) continue;
+                int close = source.Match(t + 1);
+                if (close > 0 && close + 1 < tokens.Count && tokens[close + 1].Is(text, ";")) sizes.Add((tokens[t + 1].Start, tokens[close].End));
+            }
+            return sizes;
         }
     }
 }

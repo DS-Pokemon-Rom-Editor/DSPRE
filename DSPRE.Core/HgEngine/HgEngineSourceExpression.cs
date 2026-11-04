@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 
 namespace DSPRE.HgEngine
 {
@@ -27,29 +26,12 @@ namespace DSPRE.HgEngine
         private static bool TryTokenize(string s, out List<string> tokens)
         {
             tokens = new List<string>();
-            int i = 0;
-            while (i < s.Length)
+            foreach (CToken token in CLexer.Tokenize(s))
             {
-                char c = s[i];
-                if (char.IsWhiteSpace(c)) { i++; continue; }
-                if (c == '/' && i + 1 < s.Length && (s[i + 1] == '/' || s[i + 1] == '*'))
-                {
-                    BraceScanner.SkipNonCode(s, ref i);
-                    continue;
-                }
-                if (char.IsLetterOrDigit(c) || c == '_')
-                {
-                    int start = i;
-                    while (i < s.Length && (char.IsLetterOrDigit(s[i]) || s[i] == '_')) i++;
-                    tokens.Add(s.Substring(start, i - start));
-                    continue;
-                }
-                string op = null;
-                foreach (string candidate in Operators)
-                    if (string.CompareOrdinal(s, i, candidate, 0, candidate.Length) == 0) { op = candidate; break; }
-                if (op == null) return false;
-                tokens.Add(op);
-                i += op.Length;
+                if (token.Kind is not (CTokenKind.Identifier or CTokenKind.Number or CTokenKind.Punct)) return false;
+                string text = token.Text(s);
+                if (token.Kind == CTokenKind.Punct && Array.IndexOf(Operators, text) < 0) return false;
+                tokens.Add(text);
             }
             return tokens.Count > 0;
         }
@@ -140,7 +122,7 @@ namespace DSPRE.HgEngine
                 if (char.IsDigit(token[0]))
                 {
                     Position++;
-                    return TryParseNumber(token, out value);
+                    return CLexer.TryParseInteger(token, out value);
                 }
                 if (!char.IsLetter(token[0]) && token[0] != '_') return false;
                 Position++;
@@ -155,14 +137,6 @@ namespace DSPRE.HgEngine
                 if (resolved == null) return false;
                 value = resolved.Value;
                 return true;
-            }
-
-            private static bool TryParseNumber(string token, out long value)
-            {
-                string digits = token.TrimEnd('u', 'U', 'l', 'L');
-                if (digits.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-                    return long.TryParse(digits[2..], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out value);
-                return long.TryParse(digits, NumberStyles.None, CultureInfo.InvariantCulture, out value);
             }
         }
     }

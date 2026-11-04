@@ -821,8 +821,18 @@ CEntry? species = CSourceFile.For(text).FindEntry("SPECIES_BULBASAUR");
 CDirective count = CSourceFile.For(text).FindDefine("SWARM_MAP_COUNT");
 ```
 
-Makefiles go through `HgEngineMakeFile`. If a reader can't answer something, add it there. `DSPRE.Core/HgEngine` has
-no regexes.
+Makefiles go through `HgEngineMakeFile`, and armips (`.s`, `.inc`) through `AsmSourceFile`. The hooks,
+bytereplacement and repoints lists go through `HgEnginePatchList`, and an entry's `Heading` and `Conditions` identify
+its block. JSON edited in place goes through `JsonText`, which gives character offsets. Its values are read with
+`JsonDocument`.
+
+```csharp
+AsmDefinition flag = AsmSourceFile.For(text).Definitions.First(d => d.Name == "FLAG_HIDE_X");
+HgEnginePatchEntry count = HgEnginePatchList.Read(HgEnginePatchKind.ByteReplacement).Entries
+    .First(e => e.Parsed && e.Heading == "PrizeMoney table range");
+```
+
+When a reader is missing something, extend that reader. `DSPRE.Core/HgEngine` has no regexes.
 
 The hg-engine sources tab in Validation and where used lists what was read from each file (`HgEngineSourceReport`). `HgEngineMegaTables` reads and writes
 the Mega tables for the Form editor, where a form's number is its place in the species' list.

@@ -56,9 +56,9 @@ namespace DSPRE.HgEngine
 
             int normalTreeCount = 0, specialTreeCount = 0;
             if (HgEngineSourcePatcher.TryGetFieldValueInBlock(mapBlock, new[] { FieldPathSegment.Field("normalTreeCount") }, out string ntc))
-                int.TryParse(ntc.Trim(), out normalTreeCount);
+                CLexer.TryParseInt(ntc, out normalTreeCount);
             if (HgEngineSourcePatcher.TryGetFieldValueInBlock(mapBlock, new[] { FieldPathSegment.Field("specialTreeCount") }, out string stc))
-                int.TryParse(stc.Trim(), out specialTreeCount);
+                CLexer.TryParseInt(stc, out specialTreeCount);
 
             string unreadable = null;
             ReadSlots(mapBlock, "normalSlots", species, file.NormalEncounters, 12, ref unreadable);
@@ -163,30 +163,19 @@ namespace DSPRE.HgEngine
                 ("normalSlots", slots, "{ }"),
             })
             {
-                if (!TryFindDataBlock(text, out int open, out int close)) { error = "Couldn't locate the Headbutt.c __data initializer."; return false; }
-                bool has = ElementScanner.TryLocateValueSpan(text, open, close, new[] { FieldPathSegment.Field(fieldName), FieldPathSegment.Field(name) }, out int vs, out int ve);
-                if (has && !wanted)
+                if (!TryFindDataBlock(text, out int open, out _)) { error = "Couldn't locate the Headbutt.c __data initializer."; return false; }
+                CInitList map = CSourceFile.For(text).ListAt(open)?.Field(fieldName)?.List;
+                CInitItem member = map?.Field(name);
+                if (member != null && !wanted)
+                    text = HgEngineSourcePatcher.RemoveElement(text, member.Start, member.End);
+                else if (member == null && wanted)
                 {
-                    int start = text.LastIndexOf('\n', text.LastIndexOf("." + name, vs, StringComparison.Ordinal)) + 1;
-                    int end = ve;
-                    while (end < text.Length && (text[end] == ' ' || text[end] == ',')) end++;
-                    if (end < text.Length && text[end] == '\n') end++;
-                    text = text.Remove(start, end - start);
-                }
-                else if (!has && wanted)
-                {
-                    if (!ElementScanner.TryLocateValueSpan(text, open, close, new[] { FieldPathSegment.Field(fieldName) }, out int ms, out int me))
-                    { error = $"Couldn't locate .{fieldName} in Headbutt.c."; return false; }
+                    if (map == null) { error = $"Couldn't locate .{fieldName} in Headbutt.c."; return false; }
                     // Placed before the map's closing brace, the counts come first and the arrays follow in order.
-                    int closing = text.LastIndexOf('}', me - 1);
-                    int lineStart = text.LastIndexOf('\n', closing) + 1;
-                    string indent = text.Substring(lineStart, closing - lineStart) + "    ";
-                    string after = name == "treeCoords" ? null : ".treeCoords";
-                    int at = lineStart;
-                    if (after != null && ElementScanner.TryLocateValueSpan(text, open, close, new[] { FieldPathSegment.Field(fieldName), FieldPathSegment.Field("treeCoords") }, out int ts, out _))
-                        at = text.LastIndexOf('\n', text.LastIndexOf(after, ts, StringComparison.Ordinal)) + 1;
-                    if (name == "normalSlots" && ElementScanner.TryLocateValueSpan(text, open, close, new[] { FieldPathSegment.Field(fieldName), FieldPathSegment.Field("specialSlots") }, out int ss, out _))
-                        at = text.LastIndexOf('\n', text.LastIndexOf(".specialSlots", ss, StringComparison.Ordinal)) + 1;
+                    int lineStart = HgEngineSourcePatcher.LineStart(text, map.Close);
+                    string indent = text.Substring(lineStart, map.Close - lineStart) + "    ";
+                    CInitItem before = name == "treeCoords" ? null : name == "normalSlots" ? map.Field("specialSlots") ?? map.Field("treeCoords") : map.Field("treeCoords");
+                    int at = before != null ? HgEngineSourcePatcher.LineStart(text, before.Start) : lineStart;
                     text = text.Insert(at, $"{indent}.{name} = {placeholder.Replace("\n", "\n" + indent.Substring(4))},\n");
                 }
             }

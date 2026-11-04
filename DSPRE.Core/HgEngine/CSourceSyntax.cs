@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 
@@ -35,14 +36,109 @@ namespace DSPRE.HgEngine
         public static List<CToken> Tokenize(string text, bool keepComments = false) => Tokenize(text, 0, text.Length, keepComments);
 
         /// <summary>Tokens of <paramref name="text"/> from <paramref name="start"/> up to <paramref name="end"/>.</summary>
-        public static List<CToken> Tokenize(string text, int start, int end, bool keepComments = false)
+        public static List<CToken> Tokenize(string text, int start, int end, bool keepComments = false) =>
+            Tokenize(text, start, end, keepComments, int.MaxValue);
+
+        /// <summary>The first token from <paramref name="start"/> up to <paramref name="end"/>, or null when there is none.</summary>
+        public static CToken? FirstToken(string text, int start, int end, bool keepComments = false)
+        {
+            List<CToken> tokens = Tokenize(text, start, end, keepComments, 1);
+            return tokens.Count > 0 ? tokens[0] : null;
+        }
+
+        /// <summary>Just past a comma that follows <paramref name="pos"/> with only comments between, or
+        /// <paramref name="pos"/> when the next token isn't a comma.</summary>
+        public static int PastComma(string text, int pos, int limit) =>
+            FirstToken(text, pos, limit) is CToken next && next.Kind == CTokenKind.Punct && next.Is(text, ",") ? next.End : pos;
+
+        /// <summary>Every comment from <paramref name="start"/> up to <paramref name="end"/>, those on preprocessor lines included.</summary>
+        public static List<CToken> Comments(string text, int start, int end)
+        {
+            List<CToken> comments = new List<CToken>();
+            foreach (CToken token in Tokenize(text, start, end, keepComments: true))
+            {
+                if (token.Kind == CTokenKind.Comment) comments.Add(token);
+                else if (token.Kind == CTokenKind.Directive)
+                    comments.AddRange(Tokenize(text, token.Start + 1, token.End, keepComments: true).Where(t => t.Kind == CTokenKind.Comment));
+            }
+            return comments;
+        }
+
+        public static List<CToken> Comments(string text) => Comments(text, 0, text.Length);
+
+        /// <summary>The first token at or after <paramref name="from"/> that <paramref name="stop"/> accepts, skipping brackets
+        /// opened after <paramref name="from"/>. <paramref name="end"/> when there is none.</summary>
+        public static int NextOutsideBrackets(string text, IReadOnlyList<CToken> tokens, int from, int end, Func<CToken, bool> stop)
+        {
+            int depth = 0;
+            for (int t = from; t < end; t++)
+            {
+                CToken token = tokens[t];
+                if (depth == 0 && stop(token)) return t;
+                if (token.Kind != CTokenKind.Punct || token.Length != 1) continue;
+                char c = text[token.Start];
+                if (c is '(' or '[' or '{') depth++;
+                else if (c is ')' or ']' or '}') depth--;
+            }
+            return end;
+        }
+
+        /// <summary>The token ranges between the <paramref name="separator"/>s outside brackets, from <paramref name="from"/> up to
+        /// <paramref name="end"/>. Empty ranges are left out.</summary>
+        public static List<(int First, int End)> SplitOutsideBrackets(string text, IReadOnlyList<CToken> tokens, int from, int end, string separator)
+        {
+            List<(int First, int End)> parts = new List<(int First, int End)>();
+            while (from < end)
+            {
+                int stop = NextOutsideBrackets(text, tokens, from, end, t => t.Kind == CTokenKind.Punct && t.Is(text, separator));
+                if (stop > from) parts.Add((from, stop));
+                from = stop + 1;
+            }
+            return parts;
+        }
+
+        /// <summary>The parts of <paramref name="text"/> between the <paramref name="separator"/>s outside brackets, each from
+        /// its first token to its last, so comments around a part are left out.</summary>
+        public static List<string> Split(string text, string separator)
+        {
+            List<CToken> tokens = Tokenize(text ?? "");
+            return SplitOutsideBrackets(text, tokens, 0, tokens.Count, separator)
+                .Select(p => text.Substring(tokens[p.First].Start, tokens[p.End - 1].End - tokens[p.First].Start)).ToList();
+        }
+
+        /// <summary>A C integer literal: decimal or 0x hex, with any u, U, l or L suffix.</summary>
+        public static bool TryParseInteger(string token, out long value)
+        {
+            value = 0;
+            if (string.IsNullOrEmpty(token)) return false;
+            string digits = token.TrimEnd('u', 'U', 'l', 'L');
+            if (digits.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                return long.TryParse(digits.AsSpan(2), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out value);
+            return long.TryParse(digits, NumberStyles.None, CultureInfo.InvariantCulture, out value);
+        }
+
+        /// <summary>An integer literal with an optional leading sign, as an int. Hex runs to 32 bits, as C stores 0xFFFFFFFF in an int.</summary>
+        public static bool TryParseInt(string token, out int value)
+        {
+            value = 0;
+            token = token?.Trim();
+            if (string.IsNullOrEmpty(token)) return false;
+            bool negative = token[0] == '-';
+            string digits = negative || token[0] == '+' ? token[1..] : token;
+            long max = digits.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? uint.MaxValue : int.MaxValue + (negative ? 1L : 0L);
+            if (!TryParseInteger(digits, out long n) || n > max) return false;
+            value = unchecked((int)(negative ? -n : n));
+            return true;
+        }
+
+        private static List<CToken> Tokenize(string text, int start, int end, bool keepComments, int limit)
         {
             List<CToken> tokens = new List<CToken>();
             int i = Math.Max(0, start), n = Math.Min(text.Length, end);
             bool lineStart = true;
             for (int k = i - 1; k >= 0 && text[k] != '\n'; k--)
                 if (!char.IsWhiteSpace(text[k])) { lineStart = false; break; }
-            while (i < n)
+            while (i < n && tokens.Count < limit)
             {
                 char c = text[i];
                 if (c == '\n') { lineStart = true; i++; continue; }
@@ -271,6 +367,8 @@ namespace DSPRE.HgEngine
         public int Start { get; init; }
         /// <summary>The bracketed dimensions after the name, as written (<c>[]</c>, <c>[SWARM_MAP_COUNT][2]</c>).</summary>
         public List<string> Dimensions { get; } = new();
+        /// <summary>Where each of <see cref="Dimensions"/> is, brackets included.</summary>
+        public List<(int Start, int End)> DimensionSpans { get; } = new();
         public CInitList Init { get; init; }
         /// <summary>Just past the terminating semicolon.</summary>
         public int End { get; init; }
@@ -481,15 +579,9 @@ namespace DSPRE.HgEngine
                     if (!Is(open, "{")) continue;
                     int close = Match(open);
                     if (close < 0) continue;
-                    bool atName = true;
-                    int depth = 0;
-                    for (int k = open + 1; k < close; k++)
-                    {
-                        if (Is(k, "(") || Is(k, "[")) depth++;
-                        else if (Is(k, ")") || Is(k, "]")) depth--;
-                        else if (Is(k, ",") && depth == 0) atName = true;
-                        else if (atName && Tokens[k].Kind == CTokenKind.Identifier) { atName = false; yield return Tokens[k].Text(Text); }
-                    }
+                    foreach ((int first, int end) in CLexer.SplitOutsideBrackets(Text, Tokens, open + 1, close, ","))
+                        for (int k = first; k < end; k++)
+                            if (Tokens[k].Kind == CTokenKind.Identifier) { yield return Tokens[k].Text(Text); break; }
                     t = close;
                 }
             }
@@ -524,17 +616,8 @@ namespace DSPRE.HgEngine
 
         private void ReadMembers(CStruct target, int from, int close)
         {
-            int start = from, depth = 0;
-            for (int t = from; t < close; t++)
-            {
-                if (Is(t, "{")) depth++;
-                else if (Is(t, "}")) depth--;
-                else if (Is(t, ";") && depth == 0)
-                {
-                    ReadMember(target, start, t);
-                    start = t + 1;
-                }
-            }
+            foreach ((int first, int end) in CLexer.SplitOutsideBrackets(Text, Tokens, from, close, ";"))
+                ReadMember(target, first, end);
         }
 
         // "u8 a : 1, b : 1": the type runs to the first name, and each comma-separated declarator shares it.
@@ -548,7 +631,7 @@ namespace DSPRE.HgEngine
                 int name = -1, bits = 0;
                 for (int k = declarator; k < t; k++)
                 {
-                    if (Is(k, ":")) { if (k + 1 < t) int.TryParse(Tokens[k + 1].Text(Text), out bits); break; }
+                    if (Is(k, ":")) { if (k + 1 < t) CLexer.TryParseInt(Tokens[k + 1].Text(Text), out bits); break; }
                     if (Is(k, "[")) break;
                     if (Tokens[k].Kind == CTokenKind.Identifier) name = k;
                 }
@@ -580,23 +663,21 @@ namespace DSPRE.HgEngine
         {
             List<CCall> calls = new List<CCall>();
             for (int t = 0; t + 1 < Tokens.Count; t++)
-            {
-                if (Tokens[t].Kind != CTokenKind.Identifier || !Tokens[t].Is(Text, name) || !Is(t + 1, "(")) continue;
-                int close = Match(t + 1);
-                if (close < 0) continue;
-                List<(int Start, int End)> args = new List<(int Start, int End)>();
-                int first = t + 2, depth = 0;
-                for (int k = first; k <= close; k++)
-                {
-                    if (k < close && (Is(k, "(") || Is(k, "[") || Is(k, "{"))) depth++;
-                    else if (k < close && (Is(k, ")") || Is(k, "]") || Is(k, "}"))) depth--;
-                    if (k < close && (depth != 0 || !Is(k, ","))) continue;
-                    if (k > first) args.Add((Tokens[first].Start, Tokens[k - 1].End));
-                    first = k + 1;
-                }
-                calls.Add(new CCall(Tokens[t].Start, Tokens[close].End, args));
-            }
+                if (Tokens[t].Kind == CTokenKind.Identifier && Tokens[t].Is(Text, name) && CallAtToken(t) is CCall call) calls.Add(call);
             return calls;
+        }
+
+        /// <summary>The call named by the token at <paramref name="nameStart"/>, or null when no closed argument list follows it.</summary>
+        public CCall CallAt(int nameStart) => _tokenAt.TryGetValue(nameStart, out int t) ? CallAtToken(t) : null;
+
+        private CCall CallAtToken(int t)
+        {
+            if (!Is(t + 1, "(")) return null;
+            int close = Match(t + 1);
+            if (close < 0) return null;
+            List<(int Start, int End)> args = CLexer.SplitOutsideBrackets(Text, Tokens, t + 2, close, ",")
+                .Select(p => (Tokens[p.First].Start, Tokens[p.End - 1].End)).ToList();
+            return new CCall(Tokens[t].Start, Tokens[close].End, args);
         }
 
         /// <summary>The name in a <c>.name =</c> opening the range, or null when it opens with anything else.</summary>
@@ -631,6 +712,7 @@ namespace DSPRE.HgEngine
                 // name [dims] = { ... };
                 int nameTok = t - 1;
                 List<string> dims = new List<string>();
+                List<(int, int)> dimSpans = new List<(int, int)>();
                 while (nameTok >= statementStart && Is(nameTok, "]"))
                 {
                     int open = nameTok;
@@ -642,6 +724,7 @@ namespace DSPRE.HgEngine
                     }
                     if (open < statementStart) break;
                     dims.Insert(0, Text.Substring(Tokens[open].Start, Tokens[nameTok].End - Tokens[open].Start));
+                    dimSpans.Insert(0, (Tokens[open].Start, Tokens[nameTok].End));
                     nameTok = open - 1;
                 }
                 if (nameTok < statementStart || Tokens[nameTok].Kind != CTokenKind.Identifier) continue;
@@ -659,6 +742,7 @@ namespace DSPRE.HgEngine
                     End = Tokens[end - 1].End,
                 };
                 decl.Dimensions.AddRange(dims);
+                decl.DimensionSpans.AddRange(dimSpans);
                 decl.Conditions.AddRange(conditions);
                 result.Add(decl);
                 t = end - 1;
@@ -687,17 +771,8 @@ namespace DSPRE.HgEngine
                 if (Is(t, ",")) { t++; continue; }
 
                 // One element runs to the next comma or directive at this depth.
-                int end = t;
-                int depth = 0;
-                for (; end < close; end++)
-                {
-                    if (Tokens[end].Kind == CTokenKind.Directive && depth == 0) break;
-                    if (Tokens[end].Kind != CTokenKind.Punct) continue;
-                    string p = Tokens[end].Text(Text);
-                    if (p is "{" or "(" or "[") depth++;
-                    else if (p is "}" or ")" or "]") depth--;
-                    else if (p == "," && depth == 0) break;
-                }
+                int end = CLexer.NextOutsideBrackets(Text, Tokens, t, close,
+                    k => k.Kind == CTokenKind.Directive || (k.Kind == CTokenKind.Punct && k.Is(Text, ",")));
                 CInitItem item = ParseItem(t, end, ref position);
                 item.Conditions.AddRange(conditions);
                 list.Items.Add(item);
@@ -738,9 +813,7 @@ namespace DSPRE.HgEngine
 
             if (item.Designators.Count == 0) item.Position = position;
             else if (!item.Designators[0].IsField)
-                item.Position = int.TryParse(item.Designators[0].Text.Trim(), out int p) ? p
-                    : item.Designators[0].Text.Trim().StartsWith("0x", StringComparison.OrdinalIgnoreCase)
-                      && int.TryParse(item.Designators[0].Text.Trim().Substring(2), System.Globalization.NumberStyles.HexNumber, null, out int h) ? h : -1;
+                item.Position = CLexer.TryParseInteger(item.Designators[0].Text.Trim(), out long p) && p <= int.MaxValue ? (int)p : -1;
             else item.Position = position;
             position = item.Position >= 0 ? item.Position + 1 : position + 1;
             return item;

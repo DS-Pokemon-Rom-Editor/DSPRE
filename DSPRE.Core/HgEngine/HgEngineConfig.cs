@@ -209,24 +209,13 @@ namespace DSPRE.HgEngine
             return code;
         }
 
-        // armips text: "NAME equ value" or ".definelabel NAME, value", either with a trailing "//" comment.
+        // armips text: "NAME equ value" or ".definelabel NAME, value".
         private static Definition AsmDefinition(string line)
         {
             int code = CodeStart(line, out int indent);
-            int comment = line.IndexOf("//", code, StringComparison.Ordinal);
-            string text = (comment < 0 ? line.Substring(code) : line.Substring(code, comment - code)).TrimEnd();
-            string[] words = HgEngineMakeFile.Words(text.Replace(",", " "));
-            bool isLabel = words.Length >= 3 && words[0] == ".definelabel";
-            bool isEqu = !isLabel && words.Length >= 3 && words[1] == "equ";
-            if (!isLabel && !isEqu) return null;
-
-            string name = isLabel ? words[1] : words[0];
-            if (!name.All(HgEngineMakeFile.IsNameChar)) return null;
-            int nameEnd = text.IndexOf(name, isLabel ? ".definelabel".Length : 0, StringComparison.Ordinal) + name.Length;
-            int valueAt = isLabel ? text.IndexOf(',', nameEnd) + 1 : text.IndexOf("equ", nameEnd, StringComparison.Ordinal) + 3;
-            while (valueAt < text.Length && char.IsWhiteSpace(text[valueAt])) valueAt++;
-            string value = text.Substring(valueAt);
-            return value.Length == 0 ? null : new Definition(name, indent, code - indent, value, code + valueAt, value.Length, isLabel);
+            AsmDefinition d = AsmSourceFile.DefinitionIn(line, code, line.Length);
+            if (d == null || d.Kind == AsmDefinitionKind.DotEqu) return null;
+            return new Definition(d.Name, indent, code - indent, d.Value(line), d.ValueStart, d.ValueEnd - d.ValueStart, d.Kind == AsmDefinitionKind.DefineLabel);
         }
 
         private static Definition DefinitionOf(string line, string file) => file == HeaderRelPath ? HeaderDefinition(line) : AsmDefinition(line);

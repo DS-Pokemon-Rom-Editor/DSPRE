@@ -155,7 +155,7 @@ namespace DSPRE.HgEngine
             text = HgEngineFileCache.GetText(full);
             byId = new Dictionary<int, (string, int, int)>();
             foreach (CEntry entry in CSourceFile.For(text).OuterEntries)
-                if (int.TryParse(entry.Name, out int id) || symbols.TryGetValue(entry.Name, out id))
+                if (CLexer.TryParseInt(entry.Name, out int id) || symbols.TryGetValue(entry.Name, out id))
                     byId.TryAdd(id, (entry.Name, entry.Open, entry.Close));
             return true;
         }

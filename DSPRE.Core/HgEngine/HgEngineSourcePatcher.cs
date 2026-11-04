@@ -59,35 +59,18 @@ namespace DSPRE.HgEngine
 
         /// <summary>True when two values are the same C tokens, ignoring whitespace, comments and a trailing comma
         /// before a closing brace or bracket.</summary>
-        internal static bool SameTokens(string a, string b) => Tokens(a) == Tokens(b);
+        internal static bool SameTokens(string a, string b) => Tokens(a).SequenceEqual(Tokens(b));
 
-        private static string Tokens(string s)
+        private static List<string> Tokens(string s)
         {
-            StringBuilder sb = new System.Text.StringBuilder(s.Length);
-            int i = 0;
-            while (i < s.Length)
+            List<string> texts = new List<string>();
+            foreach (CToken token in CLexer.Tokenize(s))
             {
-                char c = s[i];
-                if (c == '/' && i + 1 < s.Length && (s[i + 1] == '/' || s[i + 1] == '*'))
-                {
-                    BraceScanner.SkipNonCode(s, ref i);
-                    continue;
-                }
-                if (c == '"' || c == '\'')
-                {
-                    int start = i;
-                    BraceScanner.SkipNonCode(s, ref i);
-                    sb.Append(s, start, i - start);
-                    continue;
-                }
-                if (!char.IsWhiteSpace(c))
-                {
-                    if ((c == '}' || c == ']') && sb.Length > 0 && sb[^1] == ',') sb.Length--;
-                    sb.Append(c);
-                }
-                i++;
+                string text = token.Text(s);
+                if (text is "}" or "]" && texts.Count > 0 && texts[^1] == ",") texts.RemoveAt(texts.Count - 1);
+                texts.Add(text);
             }
-            return sb.ToString();
+            return texts;
         }
 
         /// <summary>
@@ -132,8 +115,8 @@ namespace DSPRE.HgEngine
             for (int i = 0; i < fields.Count; i++)
             {
                 if (CSourceFile.LeadingField(text, fields[i].Start, fields[i].End) != path[^1].Name) continue;
-                int cutStart = PastLineComment(text, i == 0 ? parentOpen + 1 : AfterComma(text, fields[i - 1].End, parentClose), parentClose);
-                int cutEnd = PastLineComment(text, AfterComma(text, fields[i].End, parentClose), parentClose);
+                int cutStart = PastLineComment(text, i == 0 ? parentOpen + 1 : CLexer.PastComma(text, fields[i - 1].End, parentClose), parentClose);
+                int cutEnd = PastLineComment(text, CLexer.PastComma(text, fields[i].End, parentClose), parentClose);
                 text = string.Concat(text.AsSpan(0, cutStart), text.AsSpan(cutEnd));
                 return true;
             }
@@ -166,8 +149,8 @@ namespace DSPRE.HgEngine
 
             if (count < n)
             {
-                int cutStart = PastLineComment(text, count == 0 ? vs + 1 : AfterComma(text, spans[count - 1].End, close), close);
-                int cutEnd = PastLineComment(text, AfterComma(text, spans[n - 1].End, close), close);
+                int cutStart = PastLineComment(text, count == 0 ? vs + 1 : CLexer.PastComma(text, spans[count - 1].End, close), close);
+                int cutEnd = PastLineComment(text, CLexer.PastComma(text, spans[n - 1].End, close), close);
                 text = string.Concat(text.AsSpan(0, cutStart), text.AsSpan(cutEnd));
                 return true;
             }
@@ -189,38 +172,39 @@ namespace DSPRE.HgEngine
         // with the element on that line: kept for the element before a cut, removed with a cut element.
         private static int PastLineComment(string text, int j, int limit)
         {
-            int k = j;
-            while (k < limit && (text[k] == ' ' || text[k] == '\t')) k++;
-            if (k + 1 >= limit || text[k] != '/') return j;
-            if (text[k + 1] == '/')
+            while (CommentOnLine(text, j, limit) is CToken comment)
             {
-                int nl = text.IndexOf('\n', k);
-                if (nl < 0 || nl > limit) return limit;
-                return text[nl - 1] == '\r' ? nl - 1 : nl;
-            }
-            if (text[k + 1] == '*')
-            {
-                int end = text.IndexOf("*/", k + 2, StringComparison.Ordinal);
-                int nl = text.IndexOf('\n', k);
-                if (end >= 0 && end + 2 <= limit && (nl < 0 || end < nl)) return PastLineComment(text, end + 2, limit);
+                if (IsLineComment(text, comment)) return LineCommentEnd(text, comment);
+                bool closed = comment.Length >= 4 && text[comment.End - 2] == '*' && text[comment.End - 1] == '/';
+                if (!closed || text.IndexOf('\n', comment.Start, comment.Length) >= 0) break;
+                j = comment.End;
             }
             return j;
         }
+
+        // The comment that comes next on pos's line with only spaces or tabs before it, or null.
+        private static CToken? CommentOnLine(string text, int pos, int limit)
+        {
+            if (CLexer.FirstToken(text, pos, limit, keepComments: true) is not CToken next || next.Kind != CTokenKind.Comment) return null;
+            for (int i = pos; i < next.Start; i++)
+                if (text[i] is not (' ' or '\t')) return null;
+            return next;
+        }
+
+        private static bool IsLineComment(string text, CToken comment) => text[comment.Start + 1] == '/';
+
+        // A // comment ends before any \r.
+        private static int LineCommentEnd(string text, CToken comment) =>
+            comment.End > comment.Start && text[comment.End - 1] == '\r' ? comment.End - 1 : comment.End;
 
         // Adds the comma the last element lacks right after its value, and the new lines after any
         // comment on that line, so the comment stays with the element it describes.
         internal static void InsertAfterLastElement(ref string text, int valueEnd, int limit, string lines)
         {
-            int afterComma = AfterComma(text, valueEnd, limit);
+            int afterComma = CLexer.PastComma(text, valueEnd, limit);
             string comma = afterComma == valueEnd ? "," : "";
-            int insertAt = afterComma;
-            int i = afterComma;
-            while (i < limit && (text[i] == ' ' || text[i] == '\t')) i++;
-            if (i + 1 < limit && text[i] == '/' && text[i + 1] == '/')
-            {
-                int nl = text.IndexOf('\n', i);
-                insertAt = nl < 0 || nl > limit ? limit : (nl > 0 && text[nl - 1] == '\r' ? nl - 1 : nl);
-            }
+            int insertAt = CommentOnLine(text, afterComma, limit) is CToken comment && IsLineComment(text, comment)
+                ? LineCommentEnd(text, comment) : afterComma;
             text = text.Substring(0, valueEnd) + comma + text.Substring(valueEnd, insertAt - valueEnd) + lines + text.Substring(insertAt);
         }
 
@@ -230,16 +214,21 @@ namespace DSPRE.HgEngine
         /// </summary>
         internal static string RemoveElement(string text, int start, int end)
         {
+            (int cutStart, int cutEnd) = RemovalSpan(text, start, end);
+            return text.Remove(cutStart, cutEnd - cutStart);
+        }
+
+        /// <summary>The span <see cref="RemoveElement"/> cuts.</summary>
+        internal static (int Start, int End) RemovalSpan(string text, int start, int end)
+        {
             int line = LineStart(text, start), lineEnd = LineEnd(text, end);
-            int after = end;
-            while (after < lineEnd && (text[after] == ' ' || text[after] == '\t')) after++;
-            if (after < lineEnd && text[after] == ',') after++;
-            int rest = after;
+            int rest = CLexer.PastComma(text, end, lineEnd);
             while (rest < lineEnd && (text[rest] == ' ' || text[rest] == '\t' || text[rest] == '\r')) rest++;
-            bool commentFollows = rest + 1 < lineEnd && text[rest] == '/' && (text[rest + 1] == '/' || text[rest + 1] == '*');
+            bool commentFollows = CLexer.FirstToken(text, rest, lineEnd, keepComments: true) is CToken next
+                && next.Kind == CTokenKind.Comment && next.Start == rest;
             if (string.IsNullOrWhiteSpace(text.Substring(line, start - line)) && (rest == lineEnd || commentFollows))
-                return text.Remove(line, Math.Min(text.Length, lineEnd + 1) - line);
-            return text.Remove(start, rest - start);
+                return (line, Math.Min(text.Length, lineEnd + 1));
+            return (start, rest);
         }
 
         // A CRLF file must not gain bare LF lines.
@@ -249,18 +238,6 @@ namespace DSPRE.HgEngine
             return text.Contains("\r\n") ? lf.Replace("\n", "\r\n") : lf;
         }
 
-        // Past the comma after a value, even with a comment before it; the value's end when no comma follows.
-        private static int AfterComma(string text, int pos, int limit)
-        {
-            int i = pos;
-            while (i < limit)
-            {
-                if (char.IsWhiteSpace(text[i])) { i++; continue; }
-                if (text[i] == '/' && i + 1 < limit && (text[i + 1] == '/' || text[i + 1] == '*')) { BraceScanner.SkipNonCode(text, ref i); continue; }
-                break;
-            }
-            return i < limit && text[i] == ',' ? i + 1 : pos;
-        }
 
         /// <summary>The indent of the line <paramref name="at"/> starts, or four spaces when code comes before it.</summary>
         internal static string Indent(string text, int at)
@@ -325,38 +302,6 @@ namespace DSPRE.HgEngine
                 closeIndex = new CSourceFile(text, openIndex, end).MatchingBrace(openIndex);
                 if (closeIndex >= 0 || end == text.Length) return closeIndex >= 0;
             }
-        }
-
-        /// <summary>If the position at i starts a comment or string/char literal, advances i past it and
-        /// returns true (caller should re-check from the new i). Otherwise leaves i untouched.</summary>
-        internal static bool SkipNonCode(string text, ref int i)
-        {
-            char c = text[i];
-            if (c == '/' && i + 1 < text.Length && text[i + 1] == '/')
-            {
-                int nl = text.IndexOf('\n', i);
-                i = nl < 0 ? text.Length : nl + 1;
-                return true;
-            }
-            if (c == '/' && i + 1 < text.Length && text[i + 1] == '*')
-            {
-                int end = text.IndexOf("*/", i + 2);
-                i = end < 0 ? text.Length : end + 2;
-                return true;
-            }
-            if (c == '"' || c == '\'')
-            {
-                char quote = c;
-                int j = i + 1;
-                while (j < text.Length && text[j] != quote)
-                {
-                    if (text[j] == '\\') j++;
-                    j++;
-                }
-                i = j < text.Length ? j + 1 : text.Length;
-                return true;
-            }
-            return false;
         }
     }
 

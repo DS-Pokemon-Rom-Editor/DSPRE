@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text;
 
 namespace DSPRE.HgEngine
 {
@@ -134,7 +133,7 @@ namespace DSPRE.HgEngine
 
                 if (!HgEngineTrainerClassTables.TrySetGender(id, gender, out error)) throw new IOException(error);
                 if (!HgEngineTrainerClassTables.TrySetPrizeMultiplier(id, prizeMultiplier, out error)) throw new IOException(error);
-                if (!TryRaisePrizeCount(bytesPath, out error)) throw new IOException(error);
+                if (!TryRaisePrizeCount(out error)) throw new IOException(error);
                 if (music != 0 && !HgEngineMusicTables.TrySetEncounterMusic(id, music, music, out error)) throw new IOException(error);
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException)
@@ -185,29 +184,16 @@ namespace DSPRE.HgEngine
             return true;
         }
 
-        // armips text, which the C reader doesn't cover.
         private static bool TryInsertAfterEqu(string text, int after, string symbol, int value, out string updated)
         {
             updated = null;
-            int lineStart = 0, found = -1;
-            string lead = null, spacing = null, name = null;
-            foreach (string raw in text.Split('\n'))
-            {
-                string line = raw.TrimEnd('\r');
-                string[] words = HgEngineMakeFile.Words(line.Replace(",", " "));
-                if (words.Length >= 3 && words[0] == ".equ" && words[1].StartsWith(Prefix, StringComparison.Ordinal)
-                    && HgEngineMakeFile.IsDigits(words[2]) && int.TryParse(words[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out int v) && v == after)
-                {
-                    int nameAt = line.IndexOf(words[1], StringComparison.Ordinal);
-                    found = lineStart;
-                    name = words[1];
-                    lead = line.Substring(0, nameAt);
-                    spacing = line.Substring(nameAt + name.Length, line.LastIndexOf(words[2], StringComparison.Ordinal) - nameAt - name.Length);
-                }
-                lineStart += raw.Length + 1;
-            }
-            if (found < 0) return false;
-            updated = InsertAfter(text, found, lead, name.Length, spacing, symbol, value);
+            AsmSourceFile asm = AsmSourceFile.For(text);
+            AsmDefinition d = asm.Definitions.LastOrDefault(x => x.Kind == AsmDefinitionKind.DotEqu && x.Name.StartsWith(Prefix, StringComparison.Ordinal)
+                && CLexer.TryParseInt(x.Value(text), out int v) && v == after);
+            if (d == null) return false;
+            int lineStart = asm.Lines[d.Line].Start;
+            updated = InsertAfter(text, lineStart, text.Substring(lineStart, d.NameStart - lineStart), d.Name.Length,
+                text.Substring(d.NameEnd, d.ValueStart - d.NameEnd), symbol, value);
             return true;
         }
 
@@ -226,44 +212,27 @@ namespace DSPRE.HgEngine
         }
 
         // bytereplacement's EXPAND_TRAINER_PRIZE_MONEY branch tells the game how many PrizeMoney rows to search.
-        private static bool TryRaisePrizeCount(string bytesPath, out string error)
+        private static bool TryRaisePrizeCount(out string error)
         {
             error = null;
-            string text = HgEngineFileCache.GetText(bytesPath);
             string money = Read(MoneyRelPath, out _);
             CDeclaration table = money == null ? null : CSourceFile.For(money).Find("PrizeMoney");
             if (table == null) { error = $"{MoneyRelPath} has no PrizeMoney table."; return false; }
             int rows = table.Init.Items.Count(i => i.List != null && HgEngineConfigState.Compiles(i.Conditions) != false);
 
-            int branch = text.IndexOf("#ifdef " + MoneySwitch, StringComparison.Ordinal);
-            int heading = branch < 0 ? -1 : text.IndexOf("# PrizeMoney table range", branch, StringComparison.Ordinal);
-            int stop = branch < 0 ? -1 : text.IndexOf("#else", branch, StringComparison.Ordinal);
-            if (heading < 0 || (stop >= 0 && heading > stop))
-            { error = $"{ByteReplacementRelPath} has no PrizeMoney table range under #ifdef {MoneySwitch}."; return false; }
-
-            StringBuilder sb = new StringBuilder(text);
-            int at = text.IndexOf('\n', heading) + 1, changed = 0;
-            while (at > 0 && at < text.Length)
+            HgEnginePatchList list = HgEnginePatchList.Read(HgEnginePatchKind.ByteReplacement);
+            List<HgEnginePatchEntry> counts = list?.Entries.Where(e => e.Parsed && e.Heading == "PrizeMoney table range"
+                && e.Conditions.Count > 0 && e.Conditions[^1] == MoneySwitch).ToList() ?? new List<HgEnginePatchEntry>();
+            if (counts.Count == 0) { error = $"{ByteReplacementRelPath} has no PrizeMoney table range under #ifdef {MoneySwitch}."; return false; }
+            foreach (HgEnginePatchEntry entry in counts)
             {
-                int end = text.IndexOf('\n', at);
-                if (end < 0) end = text.Length;
-                // arm9 08051886 20
-                string line = text.Substring(at, end - at);
-                string[] words = HgEngineMakeFile.Words(line);
-                if (words.Length != 3 || !words[0].All(HgEngineMakeFile.IsNameChar) || words[1].Length != 8 || !words[1].All(char.IsAsciiHexDigit)
-                    || words[2].Length != 2 || !words[2].All(char.IsAsciiHexDigit)) break;
-                int digits = line.LastIndexOf(words[2], StringComparison.Ordinal);
-                int count = int.Parse(words[2], NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-                if (count != rows - 1)
-                { error = $"PrizeMoney had {rows - 1} rows but {ByteReplacementRelPath} searches {count}. Make them agree first."; return false; }
-                sb.Remove(at + digits, 2).Insert(at + digits, rows.ToString("X2", CultureInfo.InvariantCulture));
-                changed++;
-                at = end + 1;
+                if (entry.Bytes.Count != 1) { error = $"{ByteReplacementRelPath}'s PrizeMoney table range has a line that isn't one count byte."; return false; }
+                if (entry.Bytes[0] != rows - 1)
+                { error = $"PrizeMoney has {rows - 1} rows but {ByteReplacementRelPath} counts {entry.Bytes[0]}. Fix the count before adding a class."; return false; }
             }
-            if (changed == 0) { error = $"{ByteReplacementRelPath}'s PrizeMoney table range has no count lines."; return false; }
             if (rows > 255) { error = "PrizeMoney can hold at most 255 rows."; return false; }
-            HgEngineFileCache.WriteText(bytesPath, sb.ToString());
-            return true;
+            foreach (HgEnginePatchEntry entry in counts) HgEnginePatchList.ChangeBytes(entry, new[] { (byte)rows });
+            return list.Save(out error);
         }
 
         private static string Read(string relPath, out string path)

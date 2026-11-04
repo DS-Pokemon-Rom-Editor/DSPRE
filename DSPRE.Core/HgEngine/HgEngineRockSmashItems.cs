@@ -73,7 +73,7 @@ namespace DSPRE.HgEngine
                 foreach (CInitItem entry in group.List.Items)
                 {
                     string token = entry.ValueText(text).Trim();
-                    if (entry.IsConditional || (!names.TryGetValue(token, out int item) && !int.TryParse(token, out item)))
+                    if (entry.IsConditional || (!names.TryGetValue(token, out int item) && !CLexer.TryParseInt(token, out item)))
                     { error = $"{token} in {SourceRelPath} isn't an item that item.h names."; return false; }
                     slots.Add(new Slot(item, entry.ValueStart, entry.ValueEnd - entry.ValueStart));
                 }

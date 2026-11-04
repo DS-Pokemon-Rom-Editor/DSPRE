@@ -38,7 +38,7 @@ namespace DSPRE.HgEngine
                 int at = HgEngineSourcePatcher.LineStart(text, table.Init.Close);
                 // An entry before the brace needs the previous one to end in a comma.
                 string before = text.Substring(0, at);
-                if (last != null && text.IndexOf(',', last.End, at - last.End) < 0)
+                if (last != null && CLexer.PastComma(text, last.End, at) == last.End)
                     before = text.Substring(0, last.End) + "," + text.Substring(last.End, at - last.End);
                 edited = before + $"{indent}[{designator}] = {valueLiteral},\n" + text.Substring(at);
             }

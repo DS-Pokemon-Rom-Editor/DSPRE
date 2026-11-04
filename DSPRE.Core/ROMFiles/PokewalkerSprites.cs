@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using DSPRE.HgEngine;
 
 namespace DSPRE.ROMFiles
@@ -73,19 +72,23 @@ namespace DSPRE.ROMFiles
             return index;
         }
 
-        private static readonly Regex Define = new(@"^\s*#define\s+(POKEWALKER_SPRITE_BASE_\w+)\s+(\d+)", RegexOptions.Multiline);
+        private const string BasePrefix = "POKEWALKER_SPRITE_BASE_";
 
         private static PokewalkerSprites FromHgEngine(int pictureCount, out string error)
         {
             error = null;
             string path = Path.Combine(HgEngineProject.RepoRootWindows, "src", "field", "pokewalker.c");
             if (!File.Exists(path)) { error = "src/field/pokewalker.c isn't in the checkout."; return null; }
-            string text = File.ReadAllText(path);
+            CSourceFile source = CSourceFile.For(HgEngineFileCache.GetText(path));
             HgEngineSymbolTable species = HgEngineSymbolTable.Load("include/constants/species.h");
             if (species == null) { error = "include/constants/species.h couldn't be read."; return null; }
 
-            Dictionary<string, int> bases = Define.Matches(text).Cast<Match>().ToDictionary(m => m.Groups[1].Value, m => int.Parse(m.Groups[2].Value));
-            int Value(string token) => int.TryParse(token, out int n) ? n
+            Dictionary<string, int> bases = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (CDirective define in source.Directives)
+                if (define.Keyword == "define" && define.Parameters == null && define.Name?.StartsWith(BasePrefix, StringComparison.Ordinal) == true
+                    && CLexer.TryParseInt(define.Body, out int value))
+                    bases.TryAdd(define.Name, value);
+            int Value(string token) => CLexer.TryParseInt(token, out int n) ? n
                 : bases.TryGetValue(token, out n) ? n
                 : species.ByName.TryGetValue(token, out n) ? n : throw new InvalidOperationException($"pokewalker.c uses {token}, which isn't defined.");
 
@@ -97,11 +100,12 @@ namespace DSPRE.ROMFiles
                 return null;
             }
 
-            List<int> females = ArrayBody(text, "sSpeciesWithGenderDifferences").Select(Value).ToList();
-            List<(int, int)> formRows = ArrayBody(text, "sMapOldSpeciesToBaseFormIndex", rows: true)
-                .Select(row => row.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
-                .Where(cells => cells.Length == 2)
-                .Select(cells => (Value(cells[0]), Value(cells[1])))
+            List<CInitItem> Items(string name) => source.Find(name)?.Init?.Items ?? new List<CInitItem>();
+            string Text(CInitItem item) => item.ValueText(source.Text).Trim();
+            List<int> females = Items("sSpeciesWithGenderDifferences").Select(i => Value(Text(i))).ToList();
+            List<(int, int)> formRows = Items("sMapOldSpeciesToBaseFormIndex")
+                .Where(row => row.List?.Items.Count == 2)
+                .Select(row => (Value(Text(row.List.Items[0])), Value(Text(row.List.Items[1]))))
                 .ToList();
 
             PokewalkerSprites index = new PokewalkerSprites();
@@ -116,19 +120,6 @@ namespace DSPRE.ROMFiles
             for (int s = firstNew; s < firstNew + Math.Max(0, pictureCount - newBase); s++)
                 index._bySex[(s, false)] = s - firstNew + newBase;
             return index;
-        }
-
-        // The entries of `name[] = { ... };`, or each `{ ... }` row's inside when rows is set.
-        private static IEnumerable<string> ArrayBody(string text, string name, bool rows = false)
-        {
-            Match m = Regex.Match(text, Regex.Escape(name) + @"\s*(\[[^\]]*\]\s*)+=\s*\{");
-            if (!m.Success) return Enumerable.Empty<string>();
-            int open = m.Index + m.Length - 1;
-            if (!BraceScanner.TryFindMatchingBrace(text, open, out int close)) return Enumerable.Empty<string>();
-            string body = Regex.Replace(text.Substring(open + 1, close - open - 1), @"//[^\n]*", "");
-            return rows
-                ? Regex.Matches(body, @"\{([^{}]*)\}").Cast<Match>().Select(r => r.Groups[1].Value)
-                : body.Split(',').Select(t => t.Trim()).Where(t => t.Length > 0);
         }
 
         private void AddSex(int species, int male, int female)

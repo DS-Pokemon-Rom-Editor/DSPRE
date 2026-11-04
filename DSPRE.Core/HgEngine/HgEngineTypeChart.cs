@@ -110,13 +110,8 @@ namespace DSPRE.HgEngine
         // A row alone on its line goes with its line; otherwise just the row and its comma.
         private static (int, int, string) Removal(string text, CInitItem item)
         {
-            int lineStart = HgEngineSourcePatcher.LineStart(text, item.Start), lineEnd = HgEngineSourcePatcher.LineEnd(text, item.End);
-            int end = item.End;
-            while (end < text.Length && (text[end] == ' ' || text[end] == '\t')) end++;
-            if (end < text.Length && text[end] == ',') end++;
-            string before = text.Substring(lineStart, item.Start - lineStart), after = text.Substring(end, lineEnd - end);
-            bool alone = before.Trim().Length == 0 && (after.Trim().Length == 0 || after.TrimStart().StartsWith("//"));
-            return alone ? (lineStart, Math.Min(text.Length, lineEnd + 1), "") : (item.Start, end, "");
+            (int start, int end) = HgEngineSourcePatcher.RemovalSpan(text, item.Start, item.End);
+            return (start, end, "");
         }
 
         private static string Parse(string text, out Table table)

@@ -178,13 +178,10 @@ namespace DSPRE.HgEngine
                 for (int i = t.Start; i < t.End; i++)
                     if (sb[i] != '\n') sb[i] = ' ';
             }
-            foreach (CToken token in CLexer.Tokenize(text, keepComments: true))
-            {
-                if (token.Kind == CTokenKind.Comment || (token.Kind == CTokenKind.String && !keepStrings)) Blank(token);
-                else if (token.Kind == CTokenKind.Directive)
-                    foreach (CToken inner in CLexer.Tokenize(text, token.Start + 1, token.End, keepComments: true))
-                        if (inner.Kind == CTokenKind.Comment) Blank(inner);
-            }
+            foreach (CToken comment in CLexer.Comments(text)) Blank(comment);
+            if (!keepStrings)
+                foreach (CToken token in CLexer.Tokenize(text))
+                    if (token.Kind == CTokenKind.String) Blank(token);
             return sb.ToString();
         }
 

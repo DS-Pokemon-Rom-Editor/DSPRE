@@ -136,21 +136,11 @@ namespace DSPRE.HgEngine
             if (!Enabled) { error = "This checkout doesn't build its marts from source (MART_EXPANSION is off)."; return false; }
             if (items == null || !File.Exists(Path(RepointsRelPath))) { error = $"{ItemHeaderRelPath} or {RepointsRelPath} is missing from the checkout."; return false; }
             text = HgEngineFileCache.GetText(Path(SourceRelPath)).Replace("\r\n", "\n");
-            // The specialty slots, in the game's order: the repoints lines inside MART_EXPANSION, by address.
-            string repoints = HgEngineFileCache.GetText(Path(RepointsRelPath));
-            bool inside = false, found = false;
-            List<(string Name, uint At)> slots = new List<(string Name, uint At)>();
-            foreach (string line in repoints.Split('\n'))
-            {
-                string[] words = HgEngineMakeFile.Words(line);
-                if (!found && words.Length >= 2 && words[0] == "#ifdef" && words[1] == "MART_EXPANSION") { inside = found = true; continue; }
-                if (!inside) continue;
-                if (words.Length > 0 && words[0] == "#endif") break;
-                if (words.Length == 3 && words[0] == "arm9" && words[1].All(HgEngineMakeFile.IsNameChar) && words[2].Length == 8 && words[2].All(char.IsAsciiHexDigit))
-                    slots.Add((words[1], Convert.ToUInt32(words[2], 16)));
-            }
-            if (!found) { error = $"{RepointsRelPath} has no MART_EXPANSION block."; return false; }
-            order = slots.OrderBy(x => x.At).Select(x => x.Name).ToList();
+            // The game orders specialty slots by the address of their repoint inside MART_EXPANSION.
+            HgEnginePatchList repoints = HgEnginePatchList.Read(HgEnginePatchKind.Repoint);
+            List<HgEnginePatchEntry> inside = repoints?.Entries.Where(e => e.Conditions.Count == 1 && e.Conditions[0] == "MART_EXPANSION").ToList();
+            if (inside == null || inside.Count == 0) { error = $"{RepointsRelPath} has no MART_EXPANSION block."; return false; }
+            order = inside.Where(e => e.Parsed && e.OverlayNumber < 0).OrderBy(e => e.Address).Select(e => e.Symbol).ToList();
             if (order.Count == 0) { error = $"{RepointsRelPath} repoints no marts."; return false; }
             return true;
         }
