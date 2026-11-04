@@ -2,7 +2,7 @@
 .thumb
 
 ; =============================================================================
-; Trainer Class Metadata Relocation v1.0.0
+; Trainer Class Metadata Relocation v1.1.0
 ; =============================================================================
 ;
 ; HeartGold (USA) cumulative runtime patch. Trainer-class records in a/1/5/5 own gender, prize coefficient, eye-contact music, battle music, VS style, and the style-specific presentation data defined by the release and usage notes.
@@ -1860,9 +1860,9 @@ TCM_Ov115Vs20StateMachinePrologue:
     add r6, r0, #0              ; Selected record pointer.
 
     ldr r4, [r5, #0xC]
-    ldr r0, =(Ov115_Vs20StateMachine_Resume | 1)
-    bx r0
-    .pool
+    add r0, r5, #0              ; State 4 consumes the original state pointer directly from r0.
+    bl Ov115_Vs20StateMachine_Resume
+    .fill 0x20 - (. - TCM_Ov115Vs20StateMachinePrologue), 0x00
 
 TCM_GetTrainerClassEyeContactMusic:
     push {r4, r5, r6, lr}

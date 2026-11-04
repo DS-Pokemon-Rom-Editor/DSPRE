@@ -278,7 +278,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                     StatusBrush = new SolidColorBrush(Color.FromRgb(0x9E, 0x9E, 0x9E));
                     break;
                 default:
-                    StatusText = "Available";
+                    StatusText = p.Reason ?? "Available";
                     CanApply = true;
                     ButtonText = string.IsNullOrEmpty(p.ActionLabel) ? "Apply" : p.ActionLabel;
                     StatusBrush = new SolidColorBrush(Color.FromRgb(0x15, 0x65, 0xC0));

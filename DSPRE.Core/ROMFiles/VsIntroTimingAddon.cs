@@ -50,7 +50,7 @@ namespace DSPRE.ROMFiles
             0x07, 0xB5, 0x00, 0x20, 0x01, 0x21, 0xFF, 0xF7, 0x67, 0xFF, 0x04, 0x90, 0x07, 0xBC, 0x33, 0x1D, 0x00, 0xBD, 0xC0, 0x46
         };
         private const int ClassWordAt = 0x30, TableAt = 0x154;
-        private const int ActiveClassInPayload = 0x78;   // TCM_CurrentTrainerClass in the v1.0.0 payload
+        private const int ActiveClassInPayload = 0x78;   // TCM_CurrentTrainerClass in the v1.0.0 and v1.1.0 payloads
 
         private sealed record Site(int Overlay, int Offset, byte[] Original, int Hook);
 
@@ -107,15 +107,7 @@ namespace DSPRE.ROMFiles
         }
 
         // The helper reads a word inside the patch payload, so the payload version must match.
-        private static bool ActiveClassWordMatches()
-        {
-            uint? offset = TrainerClassMetadataPatch.InstalledOffset();
-            if (offset == null) return false;
-            byte[] synth = File.ReadAllBytes(Filesystem.ExpArmPath);
-            byte[] expected = TrainerClassMetadataPatch.BuildPayload(RomInfo.SynthOverlayLoadAddress + offset.Value);
-            return offset.Value + ActiveClassInPayload <= synth.Length
-                && synth.AsSpan((int)offset.Value, ActiveClassInPayload).SequenceEqual(expected.AsSpan(0, ActiveClassInPayload));
-        }
+        private static bool ActiveClassWordMatches() => TrainerClassMetadataPatch.InstalledPayloadMatches(ActiveClassInPayload);
 
         public static int HookCount => Sites.Length;
         public static IEnumerable<int> HookedOverlays => Sites.Select(s => s.Overlay).Distinct();

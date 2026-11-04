@@ -579,6 +579,22 @@ namespace DSPRE
             return true;
         }
 
+        private static bool UpdateTrainerClassMetadataPatch()
+        {
+            if (!ConfirmYesNo("Version 1.0.0 of the patch is installed. With it, the style 1 VS banner appears at once and " +
+                "doesn't sweep in. Version 1.1.0 fixes this." + BackupNote("the synthetic overlay") + "\n\nUpdate the patch?" + CreditNote("trainerClassMetadata"), "Confirm to proceed"))
+                return false;
+            PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
+            try { TrainerClassMetadataPatch.UpdateInstalled(); }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException)
+            {
+                ShowError("The patch wasn't updated: " + ex.Message + "\nRestore the synthetic overlay from its backup.", "Update failed");
+                return false;
+            }
+            ShowInfo("The trainer class metadata patch is now version 1.1.0.", "Patch updated");
+            return true;
+        }
+
         /// <summary>The trainer class metadata patch from PR #272 (US HeartGold and SoulSilver).</summary>
         public static bool ApplyTrainerClassMetadataPatch()
         {
@@ -598,6 +614,7 @@ namespace DSPRE
                 return false;
             }
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.SynthOverlay });
+            if (Probe(TrainerClassMetadataPatch.InstalledIsV100)) return UpdateTrainerClassMetadataPatch();
             if (AlreadyApplied(Probe(() => TrainerClassMetadataStore.DetectCurrentRom(out _) == TrainerClassMetadataDetectionState.SchemaV1))) return false;
             if (TrainerClassMetadataPatch.WhyNotApplicable() is string why)
             {
@@ -1928,6 +1945,7 @@ namespace DSPRE
                     if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
                     return TrainerClassMetadataStore.DetectCurrentRom(out _) switch
                     {
+                        TrainerClassMetadataDetectionState.SchemaV1 when TrainerClassMetadataPatch.InstalledIsV100() => UpdateOffered("v1.0.0 installed"),
                         TrainerClassMetadataDetectionState.SchemaV1 => PatchState.Applied,
                         TrainerClassMetadataDetectionState.Inconsistent => Unsupported("Partly applied"),
                         _ => PatchState.Available,
@@ -2516,6 +2534,9 @@ namespace DSPRE
         [ThreadStatic] private static string _reason_text;
         private static PatchState Unsupported(string reason) { _reason_text = reason; return PatchState.Unsupported; }
 
+        [ThreadStatic] private static string _action_text;
+        private static PatchState UpdateOffered(string reason) { _reason_text = reason; _action_text = "Update"; return PatchState.Available; }
+
         // Names the dumps a patch works on, from the same tables its check reads.
         private static PatchState UnsupportedVersion(IEnumerable<(string id, int rev)> works) =>
             Unsupported("Unsupported version\nWorks on " + RomInfo.DescribeDumps(works));
@@ -2548,7 +2569,9 @@ namespace DSPRE
             try
             {
                 _reason_text = null;
+                _action_text = null;
                 info.State = probe();
+                info.ActionLabel = _action_text ?? actionLabel;
                 // A probe can set _reason_text itself (e.g. via Unsupported(), or directly for an
                 // optional Applied-state note); Unsupported falls back to a generic label if it didn't.
                 info.Reason = _reason_text ?? (info.State == PatchState.Unsupported ? "Unsupported" : null);

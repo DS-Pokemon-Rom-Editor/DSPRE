@@ -9,7 +9,7 @@ using System.Text;
 namespace DSPRE
 {
     /// <summary>
-    /// The external Trainer Class Metadata patch v1.0.0 by MrHam88 (PR #272, MIT licence), for US HeartGold and SoulSilver.
+    /// The external Trainer Class Metadata patch v1.1.0 by MrHam88 (PR #272, MIT licence), for US HeartGold and SoulSilver.
     /// The armips source was assembled once and kept as original and patched bytes for every native write, plus the
     /// payload and the places that refer to where it sits, so it can be placed anywhere in the synthetic overlay.
     /// Building a/1/5/5 from the game's own tables is a port of the patch's build_trainer_class_metadata_narc.py.
@@ -101,6 +101,40 @@ namespace DSPRE
                 return address >= RomInfo.SynthOverlayLoadAddress && address - RomInfo.SynthOverlayLoadAddress + PayloadSize <= RomInfo.SynthOverlaySize ? address - RomInfo.SynthOverlayLoadAddress : null;
             }
             catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is InvalidOperationException) { return null; }
+        }
+
+        // v1.0.0 resumed the VS20 state machine with ldr/bx, which clobbered r0 and skipped style 1's banner animation (#317).
+        private const int ResumeFixAt = 0x3C;
+        private static readonly byte[] ResumeV100 = { 0x00, 0x48, 0x00, 0x47, 0x2F, 0xF2, 0x25, 0x02 };
+
+        /// <summary>True when the installed copy still has v1.0.0's resume code.</summary>
+        public static bool InstalledIsV100()
+        {
+            if (InstalledOffset() is not uint offset) return false;
+            byte[] synth = File.ReadAllBytes(Filesystem.ExpArmPath);
+            return offset + ResumeFixAt + ResumeV100.Length <= synth.Length
+                && synth.AsSpan((int)(offset + ResumeFixAt), ResumeV100.Length).SequenceEqual(ResumeV100);
+        }
+
+        /// <summary>Only the resume code differs between v1.0.0 and v1.1.0.</summary>
+        public static void UpdateInstalled()
+        {
+            uint offset = InstalledOffset() ?? throw new InvalidOperationException("The trainer class metadata patch isn't installed.");
+            byte[] payload = BuildPayload(RomInfo.SynthOverlayLoadAddress + offset);
+            DSUtils.WriteToFile(Filesystem.ExpArmPath, payload.AsSpan(ResumeFixAt, ResumeV100.Length).ToArray(), offset + ResumeFixAt);
+        }
+
+        /// <summary>True when the first <paramref name="length"/> bytes of the installed payload match v1.0.0 or v1.1.0.</summary>
+        public static bool InstalledPayloadMatches(int length)
+        {
+            if (InstalledOffset() is not uint offset) return false;
+            byte[] synth = File.ReadAllBytes(Filesystem.ExpArmPath);
+            if (offset + length > synth.Length) return false;
+            byte[] expected = BuildPayload(RomInfo.SynthOverlayLoadAddress + offset);
+            if (synth.AsSpan((int)offset, length).SequenceEqual(expected.AsSpan(0, length))) return true;
+            if (length <= ResumeFixAt) return false;
+            ResumeV100.AsSpan(0, Math.Min(ResumeV100.Length, length - ResumeFixAt)).CopyTo(expected.AsSpan(ResumeFixAt));
+            return synth.AsSpan((int)offset, length).SequenceEqual(expected.AsSpan(0, length));
         }
 
         /// <summary>The payload with everything that depends on its address zeroed, for the range check.</summary>
