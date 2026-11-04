@@ -2464,5 +2464,73 @@ namespace DSPRE
         };
 
         private static Spot BugContestPrizeSites() => Ov(24, 0x156, 0x164, 0x168, 0x16E, 0x174, 0x17A, 0x188);
+
+        /// <summary>The shiny check's cmp against 8, in CalcShininessByOtIdAndPersonality.</summary>
+        private static Spot ShinyCheck(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Diamond => language switch
+            {
+                GameLanguages.English when revision == 13 => Arm9(0x68AC4),   // Europe
+                GameLanguages.English => Arm9(0x68AC4),   // US, and any English revision not listed
+                GameLanguages.Japanese => Arm9(0x6CD44),
+                GameLanguages.French => Arm9(0x68B20),
+                GameLanguages.German => Arm9(0x68B20),
+                GameLanguages.Italian => Arm9(0x68B00),
+                GameLanguages.Spanish => Arm9(0x68B20),
+                GameLanguages.Korean => Arm9(0x68F8C),
+                _ => null,
+            },
+            GameVersions.Pearl => language switch
+            {
+                GameLanguages.English when revision == 13 => Arm9(0x68AC4),   // Europe
+                GameLanguages.English => Arm9(0x68AC4),   // US, and any English revision not listed
+                GameLanguages.Japanese when revision == 0 => Arm9(0x6CD44),
+                GameLanguages.Japanese when revision == 5 => Arm9(0x6CD44),
+                GameLanguages.Japanese when revision == 6 => Arm9(0x6CE44),
+                GameLanguages.French => Arm9(0x68B20),
+                GameLanguages.German => Arm9(0x68B20),
+                GameLanguages.Italian => Arm9(0x68B00),
+                GameLanguages.Spanish => Arm9(0x68B20),
+                GameLanguages.Korean => Arm9(0x68F8C),
+                _ => null,
+            },
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English when revision == 10 => Arm9(0x75E50),   // Europe
+                GameLanguages.English => Arm9(0x75E50),   // US, and any English revision not listed
+                GameLanguages.Japanese => Arm9(0x756D8),
+                GameLanguages.French => Arm9(0x75EF0),
+                GameLanguages.German => Arm9(0x75EF0),
+                GameLanguages.Italian => Arm9(0x75EF0),
+                GameLanguages.Spanish => Arm9(0x75EF0),
+                GameLanguages.Korean => Arm9(0x76340),
+                _ => null,
+            },
+            GameVersions.HeartGold => language switch
+            {
+                GameLanguages.English when revision == 10 => Arm9(0x70080),   // Europe
+                GameLanguages.English => Arm9(0x70080),   // US, and any English revision not listed
+                GameLanguages.Japanese => Arm9(0x6FAC0),
+                GameLanguages.French => Arm9(0x70080),
+                GameLanguages.German => Arm9(0x70080),
+                GameLanguages.Italian => Arm9(0x70080),
+                GameLanguages.Spanish => Arm9(0x70078),
+                GameLanguages.Korean => Arm9(0x7017C),
+                _ => null,
+            },
+            GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.English when revision == 10 => Arm9(0x70080),   // Europe
+                GameLanguages.English => Arm9(0x70080),   // US, and any English revision not listed
+                GameLanguages.Japanese => Arm9(0x6FAC0),
+                GameLanguages.French => Arm9(0x70080),
+                GameLanguages.German => Arm9(0x70080),
+                GameLanguages.Italian => Arm9(0x70080),
+                GameLanguages.Spanish => Arm9(0x70080),
+                GameLanguages.Korean => Arm9(0x70174),
+                _ => null,
+            },
+            _ => null,
+        };
     }
 }

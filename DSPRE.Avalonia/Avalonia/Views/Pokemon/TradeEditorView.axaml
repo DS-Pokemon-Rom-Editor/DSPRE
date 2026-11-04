@@ -72,7 +72,7 @@
 						 IsEnabled="{Binding CanChooseGender}" ToolTip.Tip="{Binding GenderTip}" ToolTip.ShowOnDisabled="True"/>
 
 			  <TextBlock Grid.Row="8" Grid.Column="0" Text="Shiny" VerticalAlignment="Center"/>
-			  <CheckBox Grid.Row="8" Grid.Column="1" IsChecked="{Binding IsShiny}" ToolTip.Tip="Changes the PID"/>
+			  <CheckBox Grid.Row="8" Grid.Column="1" IsChecked="{Binding IsShiny}" IsEnabled="{Binding CanChooseShiny}" ToolTip.Tip="{Binding ShinyTip}" ToolTip.ShowOnDisabled="True"/>
 			</Grid>
 		  </StackPanel>
 		</ScrollViewer>

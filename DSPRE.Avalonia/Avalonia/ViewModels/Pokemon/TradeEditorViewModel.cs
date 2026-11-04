@@ -288,6 +288,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             set => ChoosePersonality(_natureIndex, _abilityIndex, _genderIndex, value);
         }
 
+        // Null when a patch changed the shiny check in a way DSPRE can't read.
+        private readonly int? _shinyValues;
+        public bool CanChooseShiny => _shinyValues > 0;
+        public string ShinyTip => _shinyValues switch
+        {
+            null => "Shiny check changed by a patch DSPRE can't read",
+            0 => "This ROM has no shiny Pokémon",
+            _ => "Changes the PID",
+        };
+
         // ---- Text fields ----
         private string _otName = string.Empty;
         public string OtName
@@ -338,6 +348,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return;
             }
 
+            _shinyValues = ShinyCheck.Values();
             foreach (string n in RomInfo.GetPokemonNames())  PokemonNames.Add(n);
             foreach (string n in RomInfo.GetAbilityNames())  AbilityNames.Add(n);
             foreach (string n in RomInfo.GetItemNames())     ItemNames.Add(n);
@@ -462,7 +473,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 _natureIndex = DVCalculator.GetNatureFromPID(pid);
                 _abilityIndex = TradePersonality.AbilitySlot(pid, _secondAbility);
                 _genderIndex = _genderValues.IndexOf(TradePersonality.Gender(pid, _genderRatio));
-                _isShiny = TradePersonality.IsShiny((uint)_otID, pid);
+                _isShiny = _shinyValues is int shinyValues && TradePersonality.IsShiny((uint)_otID, pid, shinyValues);
 
                 OnPropertyChanged(nameof(NatureIndex));
                 OnPropertyChanged(nameof(AbilityIndex));
@@ -510,7 +521,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // Refilling a list for a new species briefly selects nothing.
             if (_refreshingPersonality || _loading || _cur == null || nature < 0 || abilitySlot < 0 || genderIndex < 0) return;
             if (_personalSpecies != _selectedSpecies) return;
-            uint pid = TradePersonality.Find((uint)_pid, (uint)_otID, nature, abilitySlot, _genderValues[genderIndex], shiny, _genderRatio, _secondAbility);
+            uint pid = TradePersonality.Find((uint)_pid, (uint)_otID, nature, abilitySlot, _genderValues[genderIndex], shiny, _shinyValues ?? 0, _genderRatio, _secondAbility);
             if (pid != (uint)_pid) { Pid = (int)pid; return; }
 
             // No PID gives that mix. The controls hold the rejected pick, and the binding skips a value it already has.
