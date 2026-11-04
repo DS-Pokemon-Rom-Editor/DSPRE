@@ -1093,6 +1093,24 @@ namespace DSPRE
             return true;
         }
 
+        public static bool ApplyShinyOddsPatch()
+        {
+            if (AlreadyApplied(Probe(() => ShinyOddsPatch.IsApplied))) return false;
+            if (ShinyOddsPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
+            if (PlacementNote(new[] { ShinyOddsPatch.BlockLength }, out int[] offsets) is not string placement) return false;
+            if (!ConfirmYesNo($"Wild Pokémon, gifts and roaming Pokémon are shiny about 1 in {ShinyOddsPatch.DefaultOdds}, and eggs get a second try. " +
+                "Every shiny stays legal. Change the odds in Pokémon > Shiny odds." +
+                placement + BackupNote("the ARM9, overlay 2 and the synthetic overlay") + "\n\nApply this patch?" + CreditNote("shinyOdds"), "Confirm to proceed"))
+                return false;
+            ARM9.DecompressIfMarked();
+            PlainFiles.Copy(RomInfo.Arm9Path, RomInfo.Arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(OverlayUtils.GetPath(2), OverlayUtils.GetPath(2) + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
+            ShinyOddsPatch.Apply(offsets[0], ShinyOddsPatch.DefaultOdds);
+            ShowInfo($"Shiny Pokémon now appear about 1 in {ShinyOddsPatch.DefaultOdds}. Change the odds in Pokémon > Shiny odds.", "Patch applied");
+            return true;
+        }
+
         public static bool ApplyClassIntrosPatch()
         {
             if (AlreadyApplied(Probe(() => ClassIntroPatch.IsApplied))) return false;
@@ -1668,6 +1686,7 @@ namespace DSPRE
             ["trainerEncounterBgmRepointed"] = ("Mixone", "trainer encounter music repoint"),
             ["pickupSlots"] = ("Mixone", "independent pickup slots"),
             ["bugContestPrizes"] = ("Mixone", "Bug Contest prize table"),
+            ["shinyOdds"] = ("Eclipse", "shiny odds"),
             ["classIntros"] = ("Mixone", "trainer class intros"),
             ["hpBarText"] = ("Mixone", "clear battle text background"),
             ["buttonFrames"] = ("Mixone", "battle button frames"),
@@ -1797,6 +1816,7 @@ namespace DSPRE
             ["trainerEncounterBgmRepointed"] = "Trainer encounter music table",
             ["pickupSlots"] = "Independent pickup slots",
             ["bugContestPrizes"] = "Bug Contest prize table",
+            ["shinyOdds"] = "Shiny odds",
             ["classIntros"] = "Trainer class intros",
             ["hpBarText"] = "Clear battle text background",
             ["buttonFrames"] = "Battle button frames",
@@ -2048,6 +2068,17 @@ namespace DSPRE
                     if (!PickupSlotsPatch.SupportsCurrentRom) return UnsupportedVersion(RomLocator.WorksOn(RomLocator.PickupSlotSitesIn));
                     if (PickupSlotsPatch.IsApplied) return PatchState.Applied;
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
+                }));
+
+            list.Add(Status("shinyOdds",
+                "Sets how often wild Pokémon, gifts and roaming Pokémon are shiny. Every shiny stays legal. English HeartGold and SoulSilver only. Requires the ARM9 expansion patch.",
+                () =>
+                {
+                    if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+                    if (!ShinyOddsPatch.SupportsCurrentRom) return UnsupportedVersion(RomInfo.WithTwins(new[] { ("IPKE", 0), ("IPGE", 0) }));
+                    if (ShinyOddsPatch.IsApplied) return PatchState.Applied;
+                    if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
+                    return ShinyCheck.Values() == ShinyCheck.Retail ? PatchState.Available : Unsupported("Shiny check already changed");
                 }));
 
             list.Add(Status("bugContestPrizes",
@@ -2591,7 +2622,7 @@ namespace DSPRE
             string hgEngineRefusal = HgEngine.HgEngineSyntheticOverlay.WhyNot();
             if (hgEngineRefusal != null && key is "arm9" or "bdhcam" or "buildingRotation" or "scrcmdRepoint"
                 or "trainerClassTablesExpanded" or "trainerEncounterBgmRepointed" or "punchingMovesExpanded" or "soundMovesExpanded"
-                or "pickupSlots" or "bugContestPrizes" or "classIntros" or "hpBarText" or "vsClassTableExpanded" or "trainerShiny" or "trainerClassMetadata"
+                or "pickupSlots" or "bugContestPrizes" or "shinyOdds" or "classIntros" or "hpBarText" or "vsClassTableExpanded" or "trainerShiny" or "trainerClassMetadata"
                 or "martsExpanded" or "bpShopExpanded" or "swarmTableExpanded" or "typeChartExpanded" or "vsIntroTimings" or "partyPanelSize"
                 or "summaryFonts" or "partyFonts" or "hpBarFonts" or "extraFonts" or "bannerMotion")
             {
@@ -2624,6 +2655,7 @@ namespace DSPRE
                 case "trainerEncounterBgmRepointed": return ApplyMoveEncounterMusicTable();
                 case "pickupSlots": return ApplyPickupSlotsPatch();
                 case "bugContestPrizes": return ApplyBugContestPrizesPatch();
+                case "shinyOdds": return ApplyShinyOddsPatch();
                 case "classIntros": return ApplyClassIntrosPatch();
                 case "hpBarText": return ApplyHpBarTextPatch();
                 case "buttonFrames": return ApplyButtonFramesPatch();

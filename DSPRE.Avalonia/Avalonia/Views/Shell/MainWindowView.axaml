@@ -106,6 +106,8 @@
                   ToolTip.Tip="{Binding BlockedNote[EncounterSlotOddsView], TargetNullValue='The chance of each wild encounter slot'}"/>
         <MenuItem Header="Wild held items" Click="WildHeldItems_Click" IsVisible="{Binding Shown[WildHeldItemOddsView]}" IsEnabled="{Binding CanUseWildHeldItems}"
                   ToolTip.Tip="{Binding BlockedNote[WildHeldItemOddsView], TargetNullValue='How often wild Pokémon hold their common or rare item'}"/>
+        <MenuItem Header="Shiny odds" Click="ShinyOdds_Click" IsVisible="{Binding Shown[ShinyOddsView]}" IsEnabled="{Binding Usable[ShinyOddsView]}"
+                  ToolTip.Tip="{Binding BlockedNote[ShinyOddsView], TargetNullValue='How often Pokémon are shiny'}"/>
         <MenuItem Header="Special encounters editor" Click="SpecialEncountersEditor_Click" IsEnabled="{Binding CanUseSpecialEncountersEditor}"
                   ToolTip.Tip="Headbutt, Bug Contest, Safari, honey trees, Great Marsh, Trophy Garden, swarms"/>
         <MenuItem Header="Bug Contest editor" Click="BugContestEditor_Click" IsVisible="{Binding Shown[BugContestEditorView]}" IsEnabled="{Binding Usable[BugContestEditorView]}"

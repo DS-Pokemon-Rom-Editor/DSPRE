@@ -435,6 +435,9 @@ namespace DSPRE.Avalonia
         public static void OpenWildHeldItems() => OpenTableEditor("Wild held items", WildHeldItemOdds.WhyNot,
             () => new WildHeldItemOddsView(new WildHeldItemOddsViewModel(true)), 640, 360, 460, 340);
 
+        public static void OpenShinyOdds() => OpenTableEditor("Shiny odds", () => null,
+            () => new ShinyOddsView(new ShinyOddsViewModel(true)), 520, 220, 420, 200);
+
         public static void OpenPokedexLists() => OpenTableEditor("Pokédex lists", PokedexLists.WhyNot,
             () => new PokedexListsView(new PokedexListsViewModel(true)), 860, 640, 640, 420);
 
@@ -1743,6 +1746,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Wild Pokémon editor",   Keywords = "encounter grass surf", Run = () => OpenWildEditor() },
             new() { Name = "Pokédex lists",         Keywords = "pokedex dex regional order sort alphabetical type search lists", Run = OpenPokedexLists },
             new() { Beta = "WildHeldItemOddsView", Name = "Wild held items",       Keywords = "held item chance odds compound eyes wild", Run = OpenWildHeldItems },
+            new() { Beta = "ShinyOddsView", Name = "Shiny odds", Keywords = "shiny odds rate chance", Run = OpenShinyOdds },
             new() { Name = "Special encounters editor", Keywords = "headbutt tree bug contest great marsh honey safari trophy garden daily swarm roamer", Run = () => OpenSpecialEncountersEditor() },
             new() { Beta = "BugContestEditorView", Name = "Bug Contest editor", Keywords = "bug catching contest opponents prizes sun stone national park", Run = OpenBugContestEditor },
             new() { Name = "Battle Tower editor",   Keywords = "tower trainer set party rental", Run = OpenBattleTowerEditor },

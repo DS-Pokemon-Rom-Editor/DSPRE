@@ -1271,6 +1271,9 @@ namespace DSPRE.Avalonia.Views.Shell
         private void WildHeldItems_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenWildHeldItems();
 
+        private void ShinyOdds_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenShinyOdds();
+
         private void PokedexLists_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenPokedexLists();
 

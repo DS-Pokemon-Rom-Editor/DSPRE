@@ -65,6 +65,7 @@ namespace DSPRE
             ["UndergroundMiningView"] = new("Underground mining", "Items"),
             ["VsIntroEditorView"] = new("VS intro editor", "Trainers"),
             ["WildHeldItemOddsView"] = new("Wild held items", "Pokémon"),
+            ["ShinyOddsView"] = new("Shiny odds", "Pokémon"),
             ["WildIntroEditorView"] = new("Wild Pokémon intro editor", "Pokémon"),
         };
 

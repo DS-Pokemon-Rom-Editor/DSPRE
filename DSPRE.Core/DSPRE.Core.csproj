@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Resources\ROMToolboxDB\TrainerClassMetadataPatch.bin" LogicalName="DSPRE.Resources.ROMToolboxDB.TrainerClassMetadataPatch.bin" />
+    <EmbeddedResource Include="Resources\ROMToolboxDB\ShinyOdds.bin" LogicalName="DSPRE.Resources.ROMToolboxDB.ShinyOdds.bin" />
   </ItemGroup>
 
   <ItemGroup>

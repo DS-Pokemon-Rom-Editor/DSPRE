@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+             x:Class="DSPRE.Avalonia.Views.Pokemon.ShinyOddsView"
+             x:DataType="vm:ShinyOddsViewModel">
+  <Design.DataContext>
+    <vm:ShinyOddsViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <controls:EditorToolbar>
+        <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
+    </controls:EditorToolbar>
+
+    <Grid Margin="12" ColumnDefinitions="Auto,Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+      <TextBlock x:Name="ShinyCheck" Grid.Row="0" Grid.Column="0" Text="Shiny check" VerticalAlignment="Center" ToolTip.Tip="{Binding CheckTip}"/>
+      <TextBlock Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding CheckText}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+
+      <TextBlock x:Name="PatchOdds" Grid.Row="1" Grid.Column="0" Text="Shiny odds" VerticalAlignment="Center" IsVisible="{Binding ShowsPatch}"
+                 ToolTip.Tip="Wild, gift and roaming Pokémon"/>
+      <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="6" IsVisible="{Binding ShowsPatch}">
+        <TextBlock Text="1 in" VerticalAlignment="Center"/>
+        <NumericUpDown Value="{Binding Odds}" Minimum="{Binding MinOdds}" Maximum="{Binding MaxOdds}" FormatString="0" Increment="1" Width="130"
+                       IsEnabled="{Binding CanEditOdds}"/>
+      </StackPanel>
+      <controls:EnableInToolbox Grid.Row="1" Grid.Column="2" Patch="shinyOdds" Need="Changing the shiny odds" IsVisible="{Binding NeedsPatch}"/>
+      <TextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Text="The odds can't be read" IsVisible="{Binding OddsUnreadable}"/>
+    </Grid>
+  </DockPanel>
+</UserControl>

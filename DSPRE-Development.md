@@ -558,6 +558,10 @@ public static bool ApplyClassIntrosPatch()
 }
 ```
 
+An outside author's armips patch is assembled once into a bin that `ROMFiles/PrebuiltPatch.cs` reads. The bin holds the payload,
+its relocations and the original bytes of each hook. `TrainerClassMetadataPatch` and `ShinyOddsPatch` use it.
+`Resources/ROMToolboxDB/ShinyOdds/build_shiny_odds_bin.py` builds a bin from armips output.
+
 `ROMFiles/BattlePressFrames.cs` gives every battle button press its own pages in the screen files. `TouchButtonFit` builds each frame
 from the art and the pixels the game changes in that frame, and the Battle screen's Press tab (`BattlePressViewModel`) edits the frames.
 `ROMFiles/BattleFightIcon.cs` rewrites the code that places the Pokémon icon beside FIGHT. The new code fits in the same space.

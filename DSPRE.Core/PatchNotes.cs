@@ -140,6 +140,13 @@ namespace DSPRE
                 "Pokémon > Bug Contest editor, Prizes tab.\n\n" +
                 "Requirements\n" +
                 "HeartGold or SoulSilver, with the ARM9 expansion. Not compatible with hg-engine.",
+            ["shinyOdds"] =
+                "What it does\n" +
+                "Wild Pokémon, gifts and roaming Pokémon get extra chances at a shiny, and eggs get one more. Every shiny is legal: its PID, IVs and nature match a normal shiny.\n\n" +
+                "Where to edit\n" +
+                "Pokémon > Shiny odds.\n\n" +
+                "Requirements\n" +
+                "English HeartGold or SoulSilver, with the ARM9 expansion and an unchanged shiny check. Not compatible with hg-engine.",
             ["martsExpanded"] =
                 "What it does\n" +
                 "Moves every mart into the expanded ARM9 area with room for 64 marts of 64 items. Every mart keeps its items.\n\n" +
@@ -375,6 +382,9 @@ namespace DSPRE
             ["bugContestPrizes"] = ("The prize code in overlay 24 reads every place's prize from the new table instead of setting it in the code.",
                 "About 170 bytes in the synthetic overlay: second, third, everyone else and 64 slots for first place.",
                 "overlay 24 and the synthetic overlay"),
+            ["shinyOdds"] = ("21 calls in the ARM9 and overlay 2 that make wild, gift, roaming and egg Pokémon go through the patch first.",
+                "About 1.2 KB in the synthetic overlay: the patch's code and the odds.",
+                "the ARM9, overlay 2 and the synthetic overlay"),
             ["vsClassTableExpanded"] = ("The ARM9's pointer to the class table and the count its search stops at are changed to the new table.",
                 "About 0.5 KB in the synthetic overlay.",
                 "the ARM9 and the synthetic overlay"),

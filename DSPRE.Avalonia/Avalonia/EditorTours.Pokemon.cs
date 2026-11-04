@@ -132,6 +132,11 @@ namespace DSPRE.Avalonia
                 S("toolbar", "Held items", "Set the items they hold in the Pokémon editor."),
                 S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
+            Add("ShinyOddsView", "Shiny odds",
+                S("name:ShinyCheck", "Shiny check", "How often Pokémon in this ROM are shiny."),
+                S("name:PatchOdds", "Shiny odds", "Eclipse's patch sets the odds for wild, gift and roaming Pokémon."),
+                S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
+
             Add("GrowthCurveEditorView", "Growth curves",
                 S("toolbar", "Curve", "Each Pokémon's growth curve, and its level 100 EXP."),
                 S("list", "EXP per level", "Total EXP for each level, and the gap to the next."),

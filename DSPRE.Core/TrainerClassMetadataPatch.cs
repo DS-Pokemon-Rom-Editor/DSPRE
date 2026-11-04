@@ -3,15 +3,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 
 namespace DSPRE
 {
     /// <summary>
     /// The external Trainer Class Metadata patch v1.1.0 by MrHam88 (PR #272, MIT licence), for US HeartGold and SoulSilver.
-    /// The armips source was assembled once and kept as original and patched bytes for every native write, plus the
-    /// payload and the places that refer to where it sits, so it can be placed anywhere in the synthetic overlay.
     /// Building a/1/5/5 from the game's own tables is a port of the patch's build_trainer_class_metadata_narc.py.
     /// </summary>
     public static class TrainerClassMetadataPatch
@@ -21,83 +18,18 @@ namespace DSPRE
         public static bool SupportsCurrentRom =>
             RomInfo.GameLanguage == RomInfo.GameLanguages.English && RomInfo.GameFamily == RomInfo.GameFamilies.HGSS;
 
-        private sealed class Reloc { public byte Kind; public bool Blx; public uint Offset, Value; }
-        private sealed class Span { public uint Offset; public byte[] Original, Patched; }
-        private sealed class Target { public string Path; public List<Span> Spans = new(); public List<Reloc> Relocs = new(); }
-        private sealed class Data { public byte[] Payload; public List<Reloc> PayloadRelocs = new(); public List<Target> Targets = new(); }
-
-        private static Data _data;
-
-        private static Data Load()
-        {
-            if (_data != null) return _data;
-            using Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream("DSPRE.Resources.ROMToolboxDB.TrainerClassMetadataPatch.bin")
-                ?? throw new InvalidOperationException("The trainer class metadata patch data is missing from this build.");
-            using BinaryReader r = new BinaryReader(s);
-            if (Encoding.ASCII.GetString(r.ReadBytes(4)) != "TCMP" || r.ReadUInt16() != 1) throw new InvalidDataException("Unknown trainer class metadata patch data.");
-            Data d = new Data { Payload = r.ReadBytes(r.ReadInt32()) };
-            Reloc ReadReloc() { Reloc x = new Reloc { Kind = r.ReadByte(), Blx = r.ReadByte() != 0 }; r.ReadUInt16(); x.Offset = r.ReadUInt32(); x.Value = r.ReadUInt32(); return x; }
-            for (int i = r.ReadInt32(); i > 0; i--) d.PayloadRelocs.Add(ReadReloc());
-            for (int f = r.ReadUInt16(); f > 0; f--)
-            {
-                Target t = new Target { Path = Encoding.ASCII.GetString(r.ReadBytes(r.ReadUInt16())) };
-                for (int i = r.ReadInt32(); i > 0; i--)
-                {
-                    uint off = r.ReadUInt32(); int len = r.ReadInt32();
-                    t.Spans.Add(new Span { Offset = off, Original = r.ReadBytes(len), Patched = r.ReadBytes(len) });
-                }
-                for (int i = r.ReadInt32(); i > 0; i--) t.Relocs.Add(ReadReloc());
-                d.Targets.Add(t);
-            }
-            return _data = d;
-        }
-
-        private static string PathOf(string target)
-        {
-            if (target == "arm9/arm9.bin") return RomInfo.Arm9Path;
-            int overlay = int.Parse(Path.GetFileNameWithoutExtension(target).Substring(2));
-            return OverlayUtils.GetPath(overlay);
-        }
-
-        private static int OverlayOf(string target) =>
-            target.StartsWith("arm9_overlays/", StringComparison.Ordinal) ? int.Parse(Path.GetFileNameWithoutExtension(target).Substring(2)) : -1;
-
-        /// <summary>Thumb BL, or BLX into ARM code, from <paramref name="source"/> to <paramref name="target"/>.</summary>
-        private static byte[] Branch(uint source, uint target, bool blx)
-        {
-            int offset = blx ? (int)(target - ((source + 4) & ~3u)) : (int)(target - (source + 4));
-            ushort hi = (ushort)(0xF000 | ((offset >> 12) & 0x7FF));
-            ushort lo = (ushort)((blx ? 0xE800 : 0xF800) | ((offset >> 1) & 0x7FF));
-            return BitConverter.GetBytes(hi).Concat(BitConverter.GetBytes(lo)).ToArray();
-        }
+        private static PrebuiltPatch _patch;
+        private static PrebuiltPatch Patch => _patch ??= PrebuiltPatch.Load("DSPRE.Resources.ROMToolboxDB.TrainerClassMetadataPatch.bin", "TCMP");
 
         /// <summary>The payload for a runtime address.</summary>
-        public static byte[] BuildPayload(uint address)
-        {
-            Data d = Load();
-            byte[] p = (byte[])d.Payload.Clone();
-            foreach (Reloc x in d.PayloadRelocs)
-            {
-                byte[] bytes = x.Kind == 0 ? Branch(address + x.Offset, x.Value, x.Blx) : BitConverter.GetBytes(address + x.Value);
-                bytes.CopyTo(p, (int)x.Offset);
-            }
-            return p;
-        }
+        public static byte[] BuildPayload(uint address) => Patch.BuildPayload(address);
 
-        /// <summary>
-        /// Where an installed copy's routines sit in the synthetic overlay, read back from the first ARM9 pointer the
-        /// install wrote (the payload address plus a known offset); null when it can't be told.
-        /// </summary>
+        /// <summary>Where an installed copy sits in the synthetic overlay, read back from arm9, or null.</summary>
         public static uint? InstalledOffset()
         {
             try
             {
-                Target arm9 = Load().Targets.FirstOrDefault(t => t.Path == "arm9/arm9.bin");
-                Reloc pointer = arm9?.Relocs.FirstOrDefault(x => x.Kind != 2);
-                if (pointer == null) return null;
-                byte[] file = File.ReadAllBytes(RomInfo.Arm9Path);
-                if (pointer.Offset + 4 > file.Length) return null;
-                uint address = BitConverter.ToUInt32(file, (int)pointer.Offset) - pointer.Value;
+                if (Patch.InstalledAddress() is not uint address) return null;
                 return address >= RomInfo.SynthOverlayLoadAddress && address - RomInfo.SynthOverlayLoadAddress + PayloadSize <= RomInfo.SynthOverlaySize ? address - RomInfo.SynthOverlayLoadAddress : null;
             }
             catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is InvalidOperationException) { return null; }
@@ -143,17 +75,8 @@ namespace DSPRE
         /// <summary>Why the project can't take the patch as it stands, or null.</summary>
         public static string WhyNotApplicable()
         {
-            Data d = Load();
-            foreach (Target t in d.Targets)
-            {
-                int overlay = OverlayOf(t.Path);
-                if (overlay >= 0 && OverlayUtils.IsCompressed(overlay)) OverlayUtils.Decompress(overlay);
-                byte[] file = File.ReadAllBytes(PathOf(t.Path));
-                foreach (Span s in t.Spans)
-                    if (s.Offset + s.Original.Length > file.Length || !file.AsSpan((int)s.Offset, s.Original.Length).SequenceEqual(s.Original))
-                        return $"{t.Path} at 0x{s.Offset:X} isn't the unmodified US HeartGold/SoulSilver code the patch hooks. " +
-                            "Another patch or edit has changed it.";
-            }
+            if (Patch.ChangedHook() is string hook)
+                return $"Another patch or edit changed {hook}.";
             try { BuildRecords(); }
             catch (InvalidDataException ex) { return ex.Message; }
             return null;
@@ -162,22 +85,9 @@ namespace DSPRE
         /// <summary>Builds a/1/5/5 from the game's tables, then writes the payload and every hook.</summary>
         public static void Apply(uint payloadOffset)
         {
-            Data d = Load();
             List<byte[]> records = BuildRecords();   // before the hooks retire the tables it reads
             uint address = RomInfo.SynthOverlayLoadAddress + payloadOffset;
-            foreach (Target t in d.Targets)
-            {
-                string path = PathOf(t.Path);
-                byte[] file = File.ReadAllBytes(path);
-                foreach (Span s in t.Spans) s.Patched.CopyTo(file, (int)s.Offset);
-                uint fileBase = t.Path == "arm9/arm9.bin" ? ARM9.Address : OverlayUtils.OverlayTable.GetRAMAddress(OverlayOf(t.Path));
-                foreach (Reloc x in t.Relocs)
-                {
-                    byte[] bytes = x.Kind == 2 ? Branch(fileBase + x.Offset, address + x.Value, x.Blx) : BitConverter.GetBytes(address + x.Value);
-                    bytes.CopyTo(file, (int)x.Offset);
-                }
-                ArchiveMembers.Write(path, file);
-            }
+            Patch.WriteHooks(address);
             DSUtils.WriteToFile(Filesystem.ExpArmPath, BuildPayload(address), payloadOffset);
             WriteArchive(records);
             TrainerClassMetadataStore.Reset();

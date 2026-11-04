@@ -73,6 +73,7 @@ namespace DSPRE
                 Unsupported = Unless(IsMartEditorAvailable, "The Mart editor doesn't support this ROM."),
             },
             ["WildHeldItemOddsView"] = new Rule { Title = "The Wild held items editor", Hge = HgEngine.Open, Unsupported = () => NoSpot(RomLocator.Thing.WildHeldItemOdds) },
+            ["ShinyOddsView"] = new Rule { Title = "Shiny odds", Hge = HgEngine.Closed, HgeReason = "hg-engine handles shiny odds." },
             ["GrowthCurveEditorView"] = new Rule { Title = "The Growth curve editor", Hge = HgEngine.Open },
             ["PokedexListsView"] = new Rule { Title = "The Pokédex lists editor", Hge = HgEngine.Source },
             ["FriendshipChangesView"] = new Rule { Title = "The Friendship changes editor", Hge = HgEngine.Open, Unsupported = () => RomLocator.Where(RomLocator.Thing.FriendshipChanges) == null ? RomLocator.WhyNot(RomLocator.Thing.FriendshipChanges, 0) : null },

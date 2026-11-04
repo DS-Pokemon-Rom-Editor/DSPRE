@@ -18,7 +18,7 @@ namespace DSPRE.ROMFiles
         public static readonly string[] BlockMarkers = { "MARTEXPANDV1", "BPSHOPEXPV1\0", "TYPECHARTXP1", "SWARMTABLEX1", VsIntroTables.ClassTableMarker, VsIntroTimingAddon.Marker,
                                                          MoveCategoryTable.MarkerOf(MoveCategoryTable.Kind.Punching), MoveCategoryTable.MarkerOf(MoveCategoryTable.Kind.Sound),
                                                          TrainerClassTableExpansion.GenderMarker, TrainerClassTableExpansion.PrizeMarker, TrainerClassTableExpansion.MusicMarker,
-                                                         PickupSlotsPatch.Marker, BugContestPrizes.Marker, ClassIntroPatch.Marker, BattleGaugeTextPatch.Marker, SummaryFontPatch.Marker, PartyFontPatch.Marker, HpBarFontPatch.Marker, ExtraFontsPatch.Marker, BannerMotionPatch.Marker,
+                                                         PickupSlotsPatch.Marker, BugContestPrizes.Marker, ShinyOddsPatch.Marker,ClassIntroPatch.Marker, BattleGaugeTextPatch.Marker, SummaryFontPatch.Marker, PartyFontPatch.Marker, HpBarFontPatch.Marker, ExtraFontsPatch.Marker, BannerMotionPatch.Marker,
                                                          BuildingRotationMarker, TrainerShinyMarker, ClassMetadataMarker, CommandTableMarker };
 
         /// <summary>Markers for the patches that used to ask for an offset; their blocks hold the old payload after the header.</summary>
@@ -74,6 +74,9 @@ namespace DSPRE.ROMFiles
             ranges.AddRange(PlatPatchesBlocks(data));
             ranges.AddRange(PatchToolboxLogic.HandPlacedRanges());
             ranges.AddRange(TrainerClassTableExpansion.MovedTableRanges());
+            // Eclipse's script installs the shiny odds patch with no DSPRE header, and its zeroed variables look like free space.
+            if (RomInfo.GameFamily == RomInfo.GameFamilies.HGSS && ShinyOddsPatch.HandPlacedRange(data) is (long, long) shiny)
+                ranges.Add(shiny);
             // The class metadata patch's payload has zero-filled scratch words an all-zero search would take for free space.
             if (RomInfo.GameFamily == RomInfo.GameFamilies.HGSS && TrainerClassMetadataPatch.InstalledOffset() is uint tcm)
                 ranges.Add((tcm, tcm + TrainerClassMetadataPatch.PayloadSize));
