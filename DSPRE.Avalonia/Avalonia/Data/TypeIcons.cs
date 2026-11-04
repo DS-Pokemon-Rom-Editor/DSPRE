@@ -24,34 +24,30 @@ namespace DSPRE.Avalonia.Data
             return icon;
         }
 
-        private static Bitmap Render(string thing)
-        {
-            GraphicAssets.Preview p = Pixels(thing);
-            return p?.Rgba != null ? ImageConverter.FromRgba(p.Rgba, p.Width, p.Height) : null;
-        }
+        private static Bitmap Render(string thing) => ToBitmap(Pixels(BattleObjects.Find(thing, "Drawing")));
 
-        private static GraphicAssets.Preview Pixels(string thing)
+        private static Bitmap ToBitmap(GraphicAssets.Preview p) => p?.Rgba != null ? ImageConverter.FromRgba(p.Rgba, p.Width, p.Height) : null;
+
+        private static GraphicAssets.Preview Pixels(int member)
         {
             try
             {
-                int index = BattleObjects.Find(thing, "Drawing");
                 GraphicAssets.Archive archive = GraphicAssets.All.FirstOrDefault(a => a.Dir == DirNames.BattleObj);
-                return index < 0 || archive == null ? null : GraphicAssets.Render(archive, index);
+                return member < 0 || archive == null ? null : GraphicAssets.Render(archive, member);
             }
             catch (System.Exception ex) { AppLogger.WarnOnce("TypeIcons.Render", ex); return null; }
         }
 
         /// <summary>A type's icon as raw pixels for composed pictures, or null if there's none.</summary>
-        public static GraphicAssets.Preview PixelsFor(int type) =>
-            type >= 0 && type < BattleObjects.IconOrder.Length ? Pixels(BattleObjects.IconOrder[type]) : null;
+        public static GraphicAssets.Preview PixelsFor(int type) => Pixels(BattleObjects.TypeIconMember(type));
 
         /// <summary>A move category's icon as pixels.</summary>
         public static GraphicAssets.Preview CategoryPixels(int category) =>
-            category >= 0 && category < BattleObjects.KindOrder.Length ? Pixels(BattleObjects.KindOrder[category]) : null;
+            category >= 0 && category < BattleObjects.KindOrder.Length ? Pixels(BattleObjects.Find(BattleObjects.KindOrder[category], "Drawing")) : null;
 
         /// <summary>
         /// The icon for a type, or null when this ROM has none for it. The game's icon tables run on past the
-        /// 18 types into the five contest conditions, so types 18 to 22 draw those pictures, as the game does.
+        /// types into the five contest conditions, so a type number past them draws those pictures, as the game does.
         /// </summary>
         public static Bitmap For(int type)
         {
@@ -59,7 +55,7 @@ namespace DSPRE.Avalonia.Data
             if (_cachedFor != rom) { Cache.Clear(); CategoryCache.Clear(); _cachedFor = rom; }
             if (Cache.TryGetValue(type, out Bitmap known)) return known;
 
-            Bitmap icon = type >= 0 && type < BattleObjects.IconOrder.Length ? Render(BattleObjects.IconOrder[type]) : null;
+            Bitmap icon = ToBitmap(PixelsFor(type));
             Cache[type] = icon;
             return icon;
         }

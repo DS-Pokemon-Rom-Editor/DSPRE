@@ -221,9 +221,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get
             {
                 if (_chart == null) return "";
+                int missed = _chart.ConversionMisses;
+                string conversion = missed > 0
+                    ? (missed == 1 ? "Conversion 2 ignores the last matchup." : $"Conversion 2 ignores the last {missed} matchups.") + " Make room fixes this."
+                    : "";
                 List<string> notes = _chart.Unusual.Select(m => $"{NameOf(m.Attacker)} on {NameOf(m.Defender)}: {m.Tenths / 10m}×").ToList();
-                if (notes.Count == 0) return "";
-                return "Battle messages and Conversion 2 only know 0×, ½× and 2×: " + string.Join(", ", notes.Take(6)) + (notes.Count > 6 ? "…" : "") + ". "
+                if (notes.Count == 0) return conversion;
+                return (conversion.Length > 0 ? conversion + " " : "")
+                    + "Battle messages and Conversion 2 only handle 0×, ½× and 2×: " + string.Join(", ", notes.Take(6)) + (notes.Count > 6 ? "…" : "") + ". "
                     + "Stealth Rock only deals 0, ½, 1, 2 or 4 times its damage, and Wonder Guard, Filter, Solid Rock, Expert Belt "
                     + "and Tinted Lens treat custom values as neutral.";
             }

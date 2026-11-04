@@ -22,7 +22,7 @@ namespace DSPRE
             MonIconPalettePointer, OverworldTable, OverworldTablePointer, PokedexForeignSpecies, PokedexFieldZones, PokedexDungeonZones, PokedexAreaSort,
             StarterSpecies, StarterScene, StarterSceneInner, StarterCries, PokegearRematches,
             RockSmashItemTables, TrainerClassMetadataGenderHook, TrainerClassMetadataEyeContactHook, FrontierBrainTable, PlatPatchesItemFileIdHook, PlatPatchesItemIsTmHmHook, AiBackportCheck, AiBackportOutdatedCheck, DynamicHeadersInit, MatrixExpansionCode,
-            BugContestPrizes, ShinyCheck,
+            BugContestPrizes, ShinyCheck, PokedexTypeAnimation, PokedexTypeBoxAnimation, SideEffectSubscriptCount, SideEffectSubscriptPointer,
         }
 
         /// <summary>arm9 when <see cref="Overlay"/> is -1, otherwise that overlay; one or more file offsets.</summary>
@@ -124,6 +124,10 @@ namespace DSPRE
             [Thing.MatrixExpansionCode] = MatrixExpansionCode,
             [Thing.BugContestPrizes] = BugContestPrizes,
             [Thing.ShinyCheck] = ShinyCheck,
+            [Thing.PokedexTypeAnimation] = PokedexTypeAnimation,
+            [Thing.PokedexTypeBoxAnimation] = PokedexTypeBoxAnimation,
+            [Thing.SideEffectSubscriptCount] = SideEffectSubscriptCount,
+            [Thing.SideEffectSubscriptPointer] = SideEffectSubscriptPointer,
         };
 
         /// <summary>Where <paramref name="thing"/> is in a given dump, whether or not it is the loaded one.</summary>

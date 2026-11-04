@@ -219,15 +219,18 @@ namespace DSPRE.Avalonia.Data
         // Physical, special, status: the order of the game's category icon table.
         public static readonly string[] KindOrder = { "MoveIcon.Physical", "MoveIcon.Special", "MoveIcon.Status" };
 
+        private sealed class GameIcons
+        {
+            public BattleUiTables.TypeIconTable Types;
+            public Dictionary<int, int> BankOfMember;
+        }
+
         private static readonly object BanksLock = new();
         private static string _banksFor;
-        private static BattleUiTables.IconTables _banks;
+        private static GameIcons _banks;
 
-        /// <summary>
-        /// The ROM's own icon bank tables, or null. They are trusted only when the member table beside them
-        /// names the same archive files as the icon names do, which rules out a wrong address or a moved table.
-        /// </summary>
-        private static BattleUiTables.IconTables GameBanks()
+        // Contest entries must match the named contest icons to prove the address. Type expansions move the type entries.
+        private static GameIcons GameBanks()
         {
             lock (BanksLock)
             {
@@ -235,13 +238,30 @@ namespace DSPRE.Avalonia.Data
                 if (_banksFor == rom) return _banks;
                 _banksFor = rom;
                 _banks = null;
-                BattleUiTables.IconTables t = BattleUiTables.ReadIconTables();
-                if (t == null) return null;
+                BattleUiTables.IconTables retail = BattleUiTables.ReadIconTables();
+                BattleUiTables.TypeIconTable types = retail == null ? null : BattleUiTables.ReadTypeIcons();
+                if (types == null) return null;
                 IReadOnlyList<string> names = Names();
-                for (int i = 0; i < IconOrder.Length; i++)
-                    if (IndexOf(names, IconOrder[i], "Drawing") != t.TypeMembers[i]) return null;
-                return _banks = t;
+                for (int c = 0; c < BattleUiTables.ContestCount; c++)
+                    if (IndexOf(names, IconOrder[BattleUiTables.TypeCount + c], "Drawing") != retail.TypeMembers[BattleUiTables.TypeCount + c]) return null;
+                Dictionary<int, int> bankOf = new Dictionary<int, int>();
+                for (int i = 0; i < types.Members.Length; i++) bankOf.TryAdd((int)types.Members[i], types.Banks[i]);
+                for (int k = 0; k < KindOrder.Length; k++)
+                {
+                    int member = IndexOf(names, KindOrder[k], "Drawing");
+                    if (member >= 0) bankOf.TryAdd(member, retail.CategoryBanks[k]);
+                }
+                return _banks = new GameIcons { Types = types, BankOfMember = bankOf };
             }
+        }
+
+        /// <summary>The member the game draws for a type number, or -1. Contest conditions come after the types.</summary>
+        public static int TypeIconMember(int type)
+        {
+            if (type < 0) return -1;
+            GameIcons game = GameBanks();
+            if (game != null) return type < game.Types.Members.Length ? (int)game.Types.Members[type] : -1;
+            return type < IconOrder.Length ? Find(IconOrder[type], "Drawing") : -1;
         }
 
         /// <summary>Whether this entry is one of the type, contest or move-category icons.</summary>
@@ -254,27 +274,22 @@ namespace DSPRE.Avalonia.Data
                     || thing.StartsWith("MoveIcon.", StringComparison.Ordinal));
         }
 
+        /// <summary>Whether a member is an icon by its name, or because the game's icon tables use it.</summary>
+        private static bool IsIcon(IReadOnlyList<string> names, int index) =>
+            index >= 0 && (index < names.Count && IsIcon(names[index]) || GameBanks()?.BankOfMember.ContainsKey(index) == true);
+
         /// <summary>The icons are 32 by 16; the file doesn't record a size.</summary>
-        public static int WidthFor(int index)
-        {
-            IReadOnlyList<string> names = Names();
-            if (index < 0 || index >= names.Count) return 0;
-            return IsIcon(names[index]) ? 32 : 0;
-        }
+        public static int WidthFor(int index) => IsIcon(Names(), index) ? 32 : 0;
 
         /// <summary>Which bank of the shared icon colours an icon is painted with.</summary>
         public static int ColourBankFor(int index)
         {
             IReadOnlyList<string> names = Names();
-            if (index < 0 || index >= names.Count) return 0;
-            if (!IsIcon(names[index])) return 0;
-            string thing = Split(names[index]).Thing;
-            BattleUiTables.IconTables game = GameBanks();
-            int at = Array.IndexOf(IconOrder, thing);
-            if (game != null && at >= 0) return game.TypeBanks[at];
-            at = Array.IndexOf(KindOrder, thing);
-            if (game != null && at >= 0) return game.CategoryBanks[at];
-            return IconBank.TryGetValue(thing, out int bank) ? bank : 0;
+            if (!IsIcon(names, index)) return 0;
+            GameIcons game = GameBanks();
+            if (game != null && game.BankOfMember.TryGetValue(index, out int fromGame)) return fromGame;
+            if (index >= names.Count) return 0;
+            return IconBank.TryGetValue(Split(names[index]).Thing, out int bank) ? bank : 0;
         }
 
         /// <summary>Splits a PascalCase key segment into words.</summary>
@@ -398,6 +413,8 @@ namespace DSPRE.Avalonia.Data
         public static int ColoursFor(int fileIndex)
         {
             IReadOnlyList<string> names = Names();
+            // A type expansion's added icon is an unnamed member the game's icon table points at.
+            if (fileIndex >= names.Count && IsIcon(names, fileIndex)) return IndexOf(names, "TypeIcon.Shared", "Colours");
             if (fileIndex < 0 || fileIndex >= names.Count) return -1;
             (string thing, string part) = Split(names[fileIndex]);
             if (thing == null || part == "Colours") return -1;

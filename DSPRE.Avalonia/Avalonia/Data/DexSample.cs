@@ -338,12 +338,7 @@ namespace DSPRE.Avalonia.Data
             return (FirstDigitSeq + tenths / scale % 10, PoundDigitX[place]);
         }
 
-        // The Pokédex lists types in its own order, which is not the order of the type numbers.
-        private static readonly int[] DexTypeOrder =
-        {
-            // Normal Fighting Flying Poison Ground Rock Bug Ghost Steel ??? Fire Water Grass Electric Psychic Ice Dragon Dark
-            0, 6, 14, 10, 8, 5, 11, 7, 9, 7, 1, 3, 2, 4, 15, 13, 16, 12,
-        };
+        private readonly Dictionary<int, int> _typeAnimations = new();
 
         /// <summary>The sample's first or second type in the Pokédex's order, or -1 (no second type).</summary>
         public int TypeSlot(int slot)
@@ -353,7 +348,8 @@ namespace DSPRE.Avalonia.Data
                 PokemonPersonalData data = new PokemonPersonalData(Species);
                 int type = slot == 1 ? (int)data.Type1 : (int)data.Type2;
                 if (slot == 2 && data.Type2 == data.Type1) return -1;
-                return type >= 0 && type < DexTypeOrder.Length ? DexTypeOrder[type] : -1;
+                if (!_typeAnimations.TryGetValue(type, out int animation)) _typeAnimations[type] = animation = PokedexTypeAnimations.ForType(type);
+                return animation;
             }
             catch (Exception ex) { AppLogger.WarnOnce("DexSample.TypeSlot", ex); return -1; }
         }

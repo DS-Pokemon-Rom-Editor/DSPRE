@@ -71,6 +71,9 @@ namespace DSPRE.ROMFiles
             // A chart moved here by another patch has no marker.
             (long Start, long End)? chart = TypeChart.UnmarkedRangeInExpansion();
             if (chart.HasValue) ranges.Add(chart.Value);
+            // Type expansions move the move effect subscripts and the type icon tables here without a marker either.
+            if (TypeChart.SubscriptRangeInExpansion() is (long, long) subscripts) ranges.Add(subscripts);
+            if (BattleUiTables.ReadTypeIcons() is { } icons) ranges.AddRange(icons.InExpansion);
             ranges.AddRange(PlatPatchesBlocks(data));
             ranges.AddRange(PatchToolboxLogic.HandPlacedRanges());
             ranges.AddRange(TrainerClassTableExpansion.MovedTableRanges());

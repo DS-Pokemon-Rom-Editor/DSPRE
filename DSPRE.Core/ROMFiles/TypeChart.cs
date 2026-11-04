@@ -46,6 +46,24 @@ namespace DSPRE.ROMFiles
         public string CodePath => _ovPath;
         private bool _countIsCompare;
         private bool _modulusIsMovs;
+        private int _loadedSlots;
+
+        /// <summary>How many records Conversion 2 walks, from its `cmp`, or 0 when unknown.</summary>
+        public int ConversionCount { get; private set; }
+
+        /// <summary>Matchups past Conversion 2's count, which it never picks. The Foresight marker uses one slot.</summary>
+        public int ConversionMisses
+        {
+            get
+            {
+                if (FromSource || !_countIsCompare) return 0;
+                int plain = Matchups.Count(m => !m.ForesightRemovable);
+                return Math.Max(0, plain - ConversionCount) + Math.Max(0, Matchups.Count - plain - Math.Max(0, ConversionCount - plain - 1));
+            }
+        }
+
+        // Retail keeps sSideEffectSubscripts (145 words) right after the chart's 112 records, in every dump measured.
+        private const int RetailRecords = 112, RetailSubscripts = 145;
 
         public const string Marker = "TYPECHARTXP1";
         /// <summary>Capped at 255 because Conversion 2's bound is a byte immediate.</summary>
@@ -94,6 +112,7 @@ namespace DSPRE.ROMFiles
                 if (existing != null) throw new InvalidDataException($"The type chart lists types {a} and {d} twice; DSPRE can't edit it without changing damage.");
                 chart.Matchups.Add(new Matchup { Attacker = a, Defender = d, Tenths = m, ForesightRemovable = foresight });
             }
+            chart._loadedSlots = records;
             chart.Capacity = Math.Max(chart.Capacity, records);
             return chart;
         }
@@ -162,7 +181,43 @@ namespace DSPRE.ROMFiles
             byte imm = ov[sites.countCompare], op = ov[sites.countCompare + 1];
             _countIsCompare = (op & 0xF8) == 0x28;
             Capacity = _countIsCompare ? imm : 0;
+            ConversionCount = Capacity;
             _modulusIsMovs = ov[sites.countModulus + 1] == 0x21;
+            if (region == 0 && offset == spot.Offset && FreedSubscriptSlots(ov, spot) is int room) Capacity = Math.Max(Capacity, room);
+        }
+
+        /// <summary>Record slots up to the end of the subscript table once a type expansion has moved it, or null.</summary>
+        private static int? FreedSubscriptSlots(byte[] ov, RomLocator.Spot chart)
+        {
+            RomLocator.Spot pointer = RomLocator.Where(RomLocator.Thing.SideEffectSubscriptPointer);
+            if (pointer == null || pointer.Overlay != chart.Overlay || pointer.Offset + 4 > ov.Length) return null;
+            uint retail = OverlayUtils.OverlayTable.GetRAMAddress(chart.Overlay) + (uint)(chart.Offset + RetailRecords * RecordSize);
+            if (BitConverter.ToUInt32(ov, pointer.Offset) == retail) return null;
+            return (RetailRecords * RecordSize + RetailSubscripts * 4) / RecordSize;
+        }
+
+        /// <summary>Where the battle code reads the move effect subscripts from in the synthetic overlay, so allocators skip it.</summary>
+        internal static (long Start, long End)? SubscriptRangeInExpansion()
+        {
+            try
+            {
+                RomLocator.Spot pointer = RomLocator.Where(RomLocator.Thing.SideEffectSubscriptPointer);
+                RomLocator.Spot count = RomLocator.Where(RomLocator.Thing.SideEffectSubscriptCount);
+                if (pointer == null || count == null || RomLocator.WhyNot(RomLocator.Thing.SideEffectSubscriptPointer, 4) != null) return null;
+                if (OverlayUtils.IsStillCompressed(pointer.Overlay) || !File.Exists(Filesystem.ExpArmPath)) return null;
+                byte[] ov = File.ReadAllBytes(RomLocator.PathOf(pointer));
+                if (count.Offset + 2 > ov.Length) return null;
+                ushort cmp = BitConverter.ToUInt16(ov, count.Offset);
+                int entries = ThumbImm8.Is(cmp, ThumbImm8.Op.Cmp) ? ThumbImm8.Value(cmp) : RetailSubscripts;
+                (int region, int at) = RamAddress.Find(BitConverter.ToUInt32(ov, pointer.Offset), entries * 4,
+                    RamAddress.Synthetic(new FileInfo(Filesystem.ExpArmPath).Length));
+                return region == 0 ? (at, at + entries * 4L) : null;
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
+            {
+                AppLogger.WarnOnce("TypeChart.SubscriptRangeInExpansion", e);
+                return null;
+            }
         }
 
         /// <summary>
@@ -191,16 +246,23 @@ namespace DSPRE.ROMFiles
             return grid;
         }
 
-        public byte[] ToBytes()
+        public byte[] ToBytes() => ToBytes(Capacity);
+
+        /// <summary>The chart padded with end records to <paramref name="slots"/>.</summary>
+        private byte[] ToBytes(int slots)
         {
             List<byte> data = new List<byte>();
             void Add(byte a, byte d, byte m) { data.Add(a); data.Add(d); data.Add(m); }
             foreach (Matchup m in Matchups.Where(x => !x.ForesightRemovable)) Add(m.Attacker, m.Defender, m.Tenths);
             Add(Boundary, Boundary, 0);
             foreach (Matchup m in Matchups.Where(x => x.ForesightRemovable)) Add(m.Attacker, m.Defender, m.Tenths);
-            while (data.Count < Capacity * RecordSize) Add(End, End, 0);
+            Add(End, End, 0);
+            while (data.Count < slots * RecordSize) Add(End, End, 0);
             return data.ToArray();
         }
+
+        // Room freed behind the chart is only written as the chart grows into it, so whatever sits there now stays.
+        private int SaveSlots => InExpansion ? Capacity : Math.Min(Capacity, Math.Max(_loadedSlots, ConversionCount));
 
         /// <summary>Why the chart can't be saved, or null.</summary>
         public string Problem()
@@ -225,7 +287,7 @@ namespace DSPRE.ROMFiles
                 if (!HgEngine.HgEngineTypeChart.TryWrite(rows, out string error)) throw new IOException(error);
                 return;
             }
-            byte[] chart = ToBytes();
+            byte[] chart = ToBytes(SaveSlots);
             // A failed Pokétch write puts the chart and modulus back, so neither overlay changes.
             byte[] chartBefore = DSUtils.ReadFromFile(_path, _offset, chart.Length);
             int modulusSite = Sites.Value.countModulus;

@@ -2532,5 +2532,227 @@ namespace DSPRE
             },
             _ => null,
         };
+        /// <summary>The Pokédex's PokedexGraphics_GetAnimIDfromType, which turns a type into its icon's animation.</summary>
+        private static Spot PokedexTypeAnimation(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Diamond => language switch
+            {
+                GameLanguages.English when revision == 13 => Ov(16, 0xE15C),   // Europe
+                GameLanguages.English => Ov(16, 0xE15C),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(16, 0xE9F8),
+                GameLanguages.French => Ov(16, 0xE15C),
+                GameLanguages.German => Ov(16, 0xE164),
+                GameLanguages.Italian => Ov(16, 0xE15C),
+                GameLanguages.Spanish => Ov(16, 0xE15C),
+                GameLanguages.Korean => Ov(16, 0xE0EC),
+                _ => null,
+            },
+            GameVersions.Pearl => language switch
+            {
+                GameLanguages.English when revision == 13 => Ov(16, 0xE15C),   // Europe
+                GameLanguages.English => Ov(16, 0xE15C),   // US, and any English revision not listed
+                GameLanguages.Japanese when revision == 0 => Ov(16, 0xE9F8),
+                GameLanguages.Japanese when revision == 5 => Ov(16, 0xE9F8),
+                GameLanguages.Japanese when revision == 6 => Ov(16, 0xE9F8),
+                GameLanguages.French => Ov(16, 0xE15C),
+                GameLanguages.German => Ov(16, 0xE164),
+                GameLanguages.Italian => Ov(16, 0xE15C),
+                GameLanguages.Spanish => Ov(16, 0xE15C),
+                GameLanguages.Korean => Ov(16, 0xE0EC),
+                _ => null,
+            },
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English when revision == 10 => Ov(21, 0xE400),   // Europe
+                GameLanguages.English => Ov(21, 0xE400),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(21, 0xE4F8),
+                GameLanguages.French => Ov(21, 0xE400),
+                GameLanguages.German => Ov(21, 0xE408),
+                GameLanguages.Italian => Ov(21, 0xE400),
+                GameLanguages.Spanish => Ov(21, 0xE400),
+                GameLanguages.Korean => Ov(21, 0xE37C),   // needs verifying: measured on a dump that is not a known good dump
+                _ => null,
+            },
+            _ => null,
+        };
+
+        /// <summary>The `mov r1, #0x11` giving the Pokédex category box its animation, in CreateCategoryBox.</summary>
+        private static Spot PokedexTypeBoxAnimation(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Diamond => language switch
+            {
+                GameLanguages.English when revision == 13 => Ov(16, 0xE270),   // Europe
+                GameLanguages.English => Ov(16, 0xE270),   // US, and any English revision not listed
+                GameLanguages.Japanese => null,   // CreateCategoryBox is built differently here and isn't measured
+                GameLanguages.French => Ov(16, 0xE270),
+                GameLanguages.German => Ov(16, 0xE278),
+                GameLanguages.Italian => Ov(16, 0xE270),
+                GameLanguages.Spanish => Ov(16, 0xE270),
+                GameLanguages.Korean => Ov(16, 0xE200),
+                _ => null,
+            },
+            GameVersions.Pearl => language switch
+            {
+                GameLanguages.English when revision == 13 => Ov(16, 0xE270),   // Europe
+                GameLanguages.English => Ov(16, 0xE270),   // US, and any English revision not listed
+                GameLanguages.Japanese => null,   // CreateCategoryBox is built differently here and isn't measured
+                GameLanguages.French => Ov(16, 0xE270),
+                GameLanguages.German => Ov(16, 0xE278),
+                GameLanguages.Italian => Ov(16, 0xE270),
+                GameLanguages.Spanish => Ov(16, 0xE270),
+                GameLanguages.Korean => Ov(16, 0xE200),
+                _ => null,
+            },
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English when revision == 10 => Ov(21, 0xE514),   // Europe
+                GameLanguages.English => Ov(21, 0xE514),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(21, 0xE60C),
+                GameLanguages.French => Ov(21, 0xE514),
+                GameLanguages.German => Ov(21, 0xE51C),
+                GameLanguages.Italian => Ov(21, 0xE514),
+                GameLanguages.Spanish => Ov(21, 0xE514),
+                GameLanguages.Korean => Ov(21, 0xE490),   // needs verifying: measured on a dump that is not a known good dump
+                _ => null,
+            },
+            _ => null,
+        };
+
+        /// <summary>The `cmp r4, #145` bounding sSideEffectSubscripts, which retail keeps right after the type chart.</summary>
+        private static Spot SideEffectSubscriptCount(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Diamond => language switch
+            {
+                GameLanguages.English when revision == 13 => Ov(11, 0x1F06E),   // Europe
+                GameLanguages.English => Ov(11, 0x1F06E),   // US, and any English revision not listed
+                GameLanguages.Japanese => null,   // the getter is built differently here and isn't measured
+                GameLanguages.French => Ov(11, 0x1F1AA),
+                GameLanguages.German => Ov(11, 0x1F0BE),
+                GameLanguages.Italian => Ov(11, 0x1F0BE),
+                GameLanguages.Spanish => Ov(11, 0x1F1AA),
+                GameLanguages.Korean => Ov(11, 0x1F07A),
+                _ => null,
+            },
+            GameVersions.Pearl => language switch
+            {
+                GameLanguages.English when revision == 13 => Ov(11, 0x1F06E),   // Europe
+                GameLanguages.English => Ov(11, 0x1F06E),   // US, and any English revision not listed
+                GameLanguages.Japanese when revision == 0 => null,   // the getter is built differently here and isn't measured
+                GameLanguages.Japanese when revision == 5 => null,   // the getter is built differently here and isn't measured
+                GameLanguages.Japanese when revision == 6 => null,   // the getter is built differently here and isn't measured
+                GameLanguages.French => Ov(11, 0x1F1AA),
+                GameLanguages.German => Ov(11, 0x1F0BE),
+                GameLanguages.Italian => Ov(11, 0x1F0BE),
+                GameLanguages.Spanish => Ov(11, 0x1F1AA),
+                GameLanguages.Korean => Ov(11, 0x1F07A),
+                _ => null,
+            },
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English when revision == 10 => Ov(16, 0x204E2),   // Europe
+                GameLanguages.English => Ov(16, 0x204E2),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(16, 0x204D6),
+                GameLanguages.French => Ov(16, 0x205EA),
+                GameLanguages.German => Ov(16, 0x204FE),
+                GameLanguages.Italian => Ov(16, 0x204FE),
+                GameLanguages.Spanish => Ov(16, 0x205EA),
+                GameLanguages.Korean => Ov(16, 0x204FA),   // needs verifying: measured on a dump that is not a known good dump
+                _ => null,
+            },
+            GameVersions.HeartGold => language switch
+            {
+                GameLanguages.English when revision == 10 => Ov(12, 0x20ADA),   // Europe
+                GameLanguages.English => Ov(12, 0x20ADA),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(12, 0x20AE2),
+                GameLanguages.French => Ov(12, 0x20ADA),   // needs verifying: measured on a dump that is not a known good dump
+                GameLanguages.German => Ov(12, 0x20ADA),
+                GameLanguages.Italian => Ov(12, 0x20ADA),
+                GameLanguages.Spanish => Ov(12, 0x20ADA),   // needs verifying: measured on a dump that is not a known good dump
+                GameLanguages.Korean => Ov(12, 0x20ADE),
+                _ => null,
+            },
+            GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.English when revision == 10 => Ov(12, 0x20ADA),   // Europe
+                GameLanguages.English => Ov(12, 0x20ADA),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(12, 0x20AE2),
+                GameLanguages.French => Ov(12, 0x20ADA),   // needs verifying: measured on a dump that is not a known good dump
+                GameLanguages.German => Ov(12, 0x20ADA),
+                GameLanguages.Italian => Ov(12, 0x20ADA),
+                GameLanguages.Spanish => Ov(12, 0x20ADA),
+                GameLanguages.Korean => Ov(12, 0x20ADE),
+                _ => null,
+            },
+            _ => null,
+        };
+
+        /// <summary>The literal that points the battle code at sSideEffectSubscripts.</summary>
+        private static Spot SideEffectSubscriptPointer(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Diamond => language switch
+            {
+                GameLanguages.English when revision == 13 => Ov(11, 0x1F084),   // Europe
+                GameLanguages.English => Ov(11, 0x1F084),   // US, and any English revision not listed
+                GameLanguages.Japanese => null,   // the getter is built differently here and isn't measured
+                GameLanguages.French => Ov(11, 0x1F1C0),
+                GameLanguages.German => Ov(11, 0x1F0D4),
+                GameLanguages.Italian => Ov(11, 0x1F0D4),
+                GameLanguages.Spanish => Ov(11, 0x1F1C0),
+                GameLanguages.Korean => Ov(11, 0x1F090),
+                _ => null,
+            },
+            GameVersions.Pearl => language switch
+            {
+                GameLanguages.English when revision == 13 => Ov(11, 0x1F084),   // Europe
+                GameLanguages.English => Ov(11, 0x1F084),   // US, and any English revision not listed
+                GameLanguages.Japanese when revision == 0 => null,   // the getter is built differently here and isn't measured
+                GameLanguages.Japanese when revision == 5 => null,   // the getter is built differently here and isn't measured
+                GameLanguages.Japanese when revision == 6 => null,   // the getter is built differently here and isn't measured
+                GameLanguages.French => Ov(11, 0x1F1C0),
+                GameLanguages.German => Ov(11, 0x1F0D4),
+                GameLanguages.Italian => Ov(11, 0x1F0D4),
+                GameLanguages.Spanish => Ov(11, 0x1F1C0),
+                GameLanguages.Korean => Ov(11, 0x1F090),
+                _ => null,
+            },
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English when revision == 10 => Ov(16, 0x204F8),   // Europe
+                GameLanguages.English => Ov(16, 0x204F8),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(16, 0x204EC),
+                GameLanguages.French => Ov(16, 0x20600),
+                GameLanguages.German => Ov(16, 0x20514),
+                GameLanguages.Italian => Ov(16, 0x20514),
+                GameLanguages.Spanish => Ov(16, 0x20600),
+                GameLanguages.Korean => Ov(16, 0x20510),   // needs verifying: measured on a dump that is not a known good dump
+                _ => null,
+            },
+            GameVersions.HeartGold => language switch
+            {
+                GameLanguages.English when revision == 10 => Ov(12, 0x20AF0),   // Europe
+                GameLanguages.English => Ov(12, 0x20AF0),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(12, 0x20AF8),
+                GameLanguages.French => Ov(12, 0x20AF0),   // needs verifying: measured on a dump that is not a known good dump
+                GameLanguages.German => Ov(12, 0x20AF0),
+                GameLanguages.Italian => Ov(12, 0x20AF0),
+                GameLanguages.Spanish => Ov(12, 0x20AF0),   // needs verifying: measured on a dump that is not a known good dump
+                GameLanguages.Korean => Ov(12, 0x20AF4),
+                _ => null,
+            },
+            GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.English when revision == 10 => Ov(12, 0x20AF0),   // Europe
+                GameLanguages.English => Ov(12, 0x20AF0),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(12, 0x20AF8),
+                GameLanguages.French => Ov(12, 0x20AF0),   // needs verifying: measured on a dump that is not a known good dump
+                GameLanguages.German => Ov(12, 0x20AF0),
+                GameLanguages.Italian => Ov(12, 0x20AF0),
+                GameLanguages.Spanish => Ov(12, 0x20AF0),
+                GameLanguages.Korean => Ov(12, 0x20AF4),
+                _ => null,
+            },
+            _ => null,
+        };
+
     }
 }
