@@ -154,6 +154,9 @@ namespace DSPRE.Avalonia.Views.Battle
                 await PatchHandover.OfferAsync("buttonFrames", "Importing art onto the battle buttons", ErrorTitle);
                 return;
             }
+            if (BattlePressFrames.NeedsFightUpdate
+                && !await PatchHandover.OfferUpdateAsync("buttonFrames", "The update lets art above and below Fight flash with the button.", ErrorTitle))
+                return;
             string path = await DialogHelper.OpenFileAsync(Owner, "Import PNG",
                 new[] { new FilePickerFileType("PNG image") { Patterns = new[] { "*.png" } } });
             if (path == null) return;

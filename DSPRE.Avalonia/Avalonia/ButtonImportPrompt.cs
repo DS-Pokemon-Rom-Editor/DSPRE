@@ -38,15 +38,12 @@ namespace DSPRE.Avalonia
         private FightIconView _icon;
         private readonly TextBlock[] _tiles = new TextBlock[TouchButtonFit.ButtonCount], _notes = new TextBlock[TouchButtonFit.ButtonCount];
         private readonly Image _main = NewImage();
-        private readonly TextBlock _count = new TextBlock(), _why = new TextBlock { TextWrapping = TextWrapping.Wrap }, _freed = new TextBlock { FontSize = 12, TextWrapping = TextWrapping.Wrap };
-        private readonly TextBlock _mergeValue = new TextBlock { Text = "Off", FontSize = 12 };
-        private readonly ProgressBar _meter = new ProgressBar { Minimum = 0, Maximum = 100, Height = 12 };
-        private readonly CheckBox _showNew = new CheckBox { Content = "Show new tiles" };
+        private readonly TileFitPanel _fitPanel = new TileFitPanel();
         private readonly Button _import = new Button { Content = "Import" };
         private readonly ComboBox _flashFor = Choices(TouchButtonFit.Names);
         private readonly TextBlock _flashNote = new TextBlock { FontSize = 12, TextWrapping = TextWrapping.Wrap };
         private readonly string[] _flashNames = { "Automatic", "Automatic", "Automatic", "Automatic" };
-        private readonly ToggleButton _showAfter = new ToggleButton { Content = "After", IsChecked = true };
+        private readonly ToggleButton _showAfter;
         private readonly DispatcherTimer _redraw = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
         private readonly Dictionary<Card, byte[]> _after = new();
         private TouchButtonFit.Plan _plan;
@@ -57,6 +54,7 @@ namespace DSPRE.Avalonia
         private ButtonImportPrompt(TouchButtonFit fit, byte[] rgba, int width)
         {
             _fit = fit;
+            _showAfter = TileFitPanel.BeforeAfter(ShowCards);
             _textOf = LabelSpots();
             for (int b = 0; b < TouchButtonFit.ButtonCount; b++)
             {
@@ -80,14 +78,7 @@ namespace DSPRE.Avalonia
         /// <summary>Returns what to import, or null when cancelled.</summary>
         public static async Task<Result> AskAsync(Window owner, TouchButtonFit fit, string path)
         {
-            byte[] file;
-            try { file = File.ReadAllBytes(path); }
-            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { await DialogHelper.ShowErrorAsync(ex.Message, "Import buttons"); return null; }
-            if (!AnyPng.TryReadRgba(file, out byte[] rgba, out int w, out int h, out string whynot))
-            {
-                await DialogHelper.ShowErrorAsync(whynot, "Import buttons");
-                return null;
-            }
+            if (await TileFitPanel.ReadPictureAsync(path, "Import buttons") is not (byte[] rgba, int w, int h)) return null;
             if (w != ScreenWidth || (h != ScreenHeight && h != ScreenWidth))
             {
                 await DialogHelper.ShowErrorAsync($"{Path.GetFileName(path)} needs to be 256 by 192 or 256 by 256.", "Import buttons");
@@ -150,27 +141,12 @@ namespace DSPRE.Avalonia
         {
             StackPanel left = new StackPanel { Spacing = 6 };
             left.Children.Add(new Viewbox { Stretch = Stretch.Uniform, MaxWidth = ScreenWidth * 2, Child = _main });
-            StackPanel tiles = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-            tiles.Children.Add(Heading("Tiles"));
-            tiles.Children.Add(_count);
-            left.Children.Add(tiles);
-            left.Children.Add(_meter);
-            left.Children.Add(_why);
-            _showNew.IsCheckedChanged += (_, _) => ShowMain();
-            left.Children.Add(_showNew);
-            StackPanel merge = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-            merge.Children.Add(new TextBlock { Text = "Merge similar tiles" });
-            merge.Children.Add(_mergeValue);
-            left.Children.Add(merge);
-            Slider slider = new Slider { Minimum = 0, Maximum = 8, TickFrequency = 1, IsSnapToTickEnabled = true };
-            slider.ValueChanged += (_, e) =>
-            {
-                _settings.Merge = (int)e.NewValue;
-                _mergeValue.Text = _settings.Merge == 0 ? "Off" : Plural.Of(_settings.Merge, "pixel");
-                Refit();
-            };
-            left.Children.Add(slider);
-            left.Children.Add(_freed);
+            _fitPanel.ShowNewChanged += ShowMain;
+            _fitPanel.MergeChanged += () => { _settings.Merge = _fitPanel.Merge; Refit(); };
+            _fitPanel.KeepChanged += Refit;
+            _settings.Keep = _fitPanel.Keep;
+            left.Children.Add(_fitPanel.View);
+            left.Children.Add(_fitPanel.ColoursView);
             return left;
         }
 
@@ -263,10 +239,7 @@ namespace DSPRE.Avalonia
                 new[] { new global::Avalonia.Platform.Storage.FilePickerFileType("PNG image") { Patterns = new[] { "*.png" } } });
             if (path == null) return;
             (_, _, int w, int h) = TouchButtonFit.PixelRect(b);
-            byte[] file;
-            try { file = File.ReadAllBytes(path); }
-            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { await DialogHelper.ShowErrorAsync(ex.Message, "Import buttons"); return; }
-            if (!AnyPng.TryReadRgba(file, out byte[] rgba, out int pw, out int ph, out string whynot)) { await DialogHelper.ShowErrorAsync(whynot, "Import buttons"); return; }
+            if (await TileFitPanel.ReadPictureAsync(path, "Import buttons") is not (byte[] rgba, int pw, int ph)) return;
             if (pw != w || ph != h)
             {
                 await DialogHelper.ShowErrorAsync($"{Path.GetFileName(path)} is {pw} by {ph}. {TouchButtonFit.Names[b]} needs {w} by {h}.", "Import buttons");
@@ -286,18 +259,16 @@ namespace DSPRE.Avalonia
             {
                 _tiles[b].Text = _on[b] ? Plural.Of(_plan.Tiles[b], "tile") : "";
                 _notes[b].Text = !_on[b] ? "No change."
-                    : _plan.TooManyColours[b] == 1 ? "1 colour doesn't fit."
-                    : _plan.TooManyColours[b] > 1 ? $"{_plan.TooManyColours[b]} colours don't fit."
+                    : _plan.NearestColours[b] == 1 ? $"{Changing(_plan.Squares[b])} 1 colour shows as the nearest one."
+                    : _plan.NearestColours[b] > 1 ? $"{Changing(_plan.Squares[b])} {_plan.NearestColours[b]} colours show as the nearest ones."
                     : _plan.NewColours[b] > 0 ? $"{Changing(_plan.Squares[b])} {Plural.Of(_plan.NewColours[b], "new colour")}."
                     : Changing(_plan.Squares[b]);
             }
-            _count.Text = $"{_plan.Need} needed, {_plan.Room} free";
-            _meter.Value = _plan.Room == 0 ? 100 : Math.Min(100, _plan.Need * 100.0 / _plan.Room);
-            _meter.Foreground = _plan.Need <= _plan.Room ? null : StatusBrushes.Bad;
-            _freed.Text = _plan.Merged > 0 ? $"Frees {Plural.Of(_plan.Merged, "tile")}, but the picture changes a little." : "";
-            _why.Text = Why();
+            string why = Why();
+            _fitPanel.Show(_plan.Need, _plan.Room, _plan.Merged, why);
+            _fitPanel.ShowColours(_plan.NewColours.Sum(), _plan.Swaps, _plan.CanKeep);
             _import.IsEnabled = _plan.Fits && _on.Any(x => x);
-            ToolTip.SetTip(_import, !_on.Any(x => x) ? "Pick a button" : _plan.Fits ? null : _why.Text);
+            ToolTip.SetTip(_import, !_on.Any(x => x) ? "Pick a button" : _plan.Fits ? null : why);
             _redraw.Stop();
             _redraw.Start();
         }
@@ -307,16 +278,10 @@ namespace DSPRE.Avalonia
         private string Why()
         {
             if (!_on.Any(x => x)) return "";
-            string[] over = Enumerable.Range(0, TouchButtonFit.ButtonCount).Where(b => _plan.TooManyColours[b] > 0).Select(b => TouchButtonFit.Names[b]).ToArray();
-            if (over.Length > 0)
-            {
-                string names = string.Join(", ", over);
-                return $"Too many colours on {names}. Each button can have 15 in total.";
-            }
             if (_plan.Need > _plan.Room)
             {
                 string most = TouchButtonFit.Names[Array.IndexOf(_plan.Tiles, _plan.Tiles.Max())];
-                return $"{Plural.Of(_plan.Need - _plan.Room, "tile")} over. {most} uses the most. Try merging tiles.";
+                return $"{Plural.Of(_plan.Need - _plan.Room, "tile")} too many. {most} uses the most. Merge similar tiles or simplify the picture.";
             }
             return $"Fits, with {Plural.Of(_plan.Room - _plan.Need, "tile")} to spare.";
         }
@@ -326,7 +291,6 @@ namespace DSPRE.Avalonia
             StackPanel all = new StackPanel { Spacing = 6 };
             StackPanel head = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
             head.Children.Add(Heading("Screens affected"));
-            _showAfter.IsCheckedChanged += (_, _) => { _showAfter.Content = _showAfter.IsChecked == true ? "After" : "Before"; ShowCards(); };
             head.Children.Add(_showAfter);
             all.Children.Add(head);
 
@@ -381,23 +345,15 @@ namespace DSPRE.Avalonia
         {
             byte[] rgba = _mainAfter ?? _cards[0].Before;
             if (rgba == null) return;
-            if (_showNew.IsChecked == true && _plan != null)
+            if (_plan != null && (_fitPanel.ShowNew || _fitPanel.ShowChanged))
             {
                 rgba = (byte[])rgba.Clone();
-                foreach (int square in _plan.NewSquares) Outline(rgba, square % 32 * 8, square / 32 * 8);
+                if (_fitPanel.ShowNew)
+                    foreach (int square in _plan.NewSquares) TileFitPanel.Outline(rgba, ScreenWidth, ScreenHeight, square % 32 * 8, square / 32 * 8);
+                if (_fitPanel.ShowChanged)
+                    foreach (int square in _plan.ChangedSquares) TileFitPanel.Outline(rgba, ScreenWidth, ScreenHeight, square % 32 * 8, square / 32 * 8, changedColour: true);
             }
             _main.Source = ImageConverter.FromRgba(rgba, ScreenWidth, ScreenHeight);
-        }
-
-        private static void Outline(byte[] rgba, int left, int top)
-        {
-            for (int i = 0; i < 8; i++)
-                foreach ((int x, int y) in new[] { (left + i, top), (left + i, top + 7), (left, top + i), (left + 7, top + i) })
-                {
-                    if (y >= ScreenHeight) continue;
-                    int at = (y * ScreenWidth + x) * 4;
-                    rgba[at] = 255; rgba[at + 1] = 212; rgba[at + 2] = 0; rgba[at + 3] = 255;
-                }
         }
 
         private string StatusOf(Card c, bool after)

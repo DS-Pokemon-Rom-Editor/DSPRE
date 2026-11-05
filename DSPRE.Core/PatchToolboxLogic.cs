@@ -2162,7 +2162,8 @@ namespace DSPRE
                 {
                     if (RomInfo.IsHGE) return Unsupported("Not compatible with hg-engine");
                     if (!BattlePressFrames.SupportsCurrentRom) return Unsupported("Platinum, HeartGold and SoulSilver, except Japanese");
-                    return BattlePressFrames.IsApplied && !BattlePressFrames.NeedsFightUpdate ? PatchState.Applied : PatchState.Available;
+                    if (BattlePressFrames.NeedsFightUpdate) return UpdateOffered("Older version applied");
+                    return BattlePressFrames.IsApplied ? PatchState.Applied : PatchState.Available;
                 }));
 
             list.Add(Status("fightIcon",

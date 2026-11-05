@@ -22,6 +22,17 @@ namespace DSPRE.Avalonia
             if (open) AvaloniaEditorLauncher.OpenPatchToolboxAt(key);
         }
 
+        /// <summary>Offers the toolbox entry of a patch the project has an older version of. Returns whether to carry on.</summary>
+        /// <param name="gain">What the update adds, as a sentence.</param>
+        public static async Task<bool> OfferUpdateAsync(string key, string gain, string title)
+        {
+            bool update = await DialogHelper.AskTwoWayAsync(
+                $"This project has an older version of the \"{TitleOf(key)}\" patch. {gain} Update the patch in the toolbox, then import again.",
+                title, "Update in toolbox", "Import anyway");
+            if (update) AvaloniaEditorLauncher.OpenPatchToolboxAt(key);
+            return !update;
+        }
+
         /// <summary>The Enable in toolbox tooltip.</summary>
         public static string Needs(string key, string need) => $"{need ?? "This"} needs the \"{TitleOf(key)}\" patch.";
 

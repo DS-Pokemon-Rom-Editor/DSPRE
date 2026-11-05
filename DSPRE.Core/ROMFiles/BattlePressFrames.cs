@@ -181,16 +181,9 @@ namespace DSPRE.ROMFiles
             return p;
         }
 
-        public static byte[] Flip(byte[] p, int bits)
-        {
-            byte[] o = new byte[64];
-            bool h = (bits & 0x400) != 0, v = (bits & 0x800) != 0;
-            for (int y = 0; y < 8; y++)
-                for (int x = 0; x < 8; x++) o[y * 8 + x] = p[(v ? 7 - y : y) * 8 + (h ? 7 - x : x)];
-            return o;
-        }
+        public static byte[] Flip(byte[] p, int bits) => TileFit.Flip(p, bits);
 
-        public static readonly int[] FlipBits = { 0, 0x400, 0x800, 0xC00 };
+        public static readonly int[] FlipBits = TileFit.FlipBits;
 
         // Maps each tile to its twin: the tile number in the low bits, the flip above them.
         private static int[] OnePerShape(IEnumerable<ushort[]> pages, byte[] sheet, int tilesAt, byte[] frontier, int frontierAt)

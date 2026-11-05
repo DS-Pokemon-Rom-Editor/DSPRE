@@ -532,6 +532,10 @@ byte[] bytes = RomLocator.Read(RomLocator.Thing.FriendshipChanges, Size);
 Each format has one reader that works from bytes, members are read through `ScriptNarc`, and bitmaps are made by
 `ImageConverter` and shown without smoothing.
 
+`TileFit.RowColours` keeps the colours a picture uses most and swaps each of the rest for the closest colour that fits.
+The import window lists each swap with Keep. Layers that share the drawing keep their tiles, and layers that share the
+palette rows or the extended palettes keep their colours. The window shows every page and state the import changes.
+
 ## Code patches
 
 `ApplyClassIntrosPatch` and `ROMFiles/ClassIntroPatch.cs` are the model to copy. A synthetic-overlay patch has:
@@ -570,7 +574,8 @@ from the art and the pixels the game changes in that frame, and the Battle scree
 Each patch applies only itself. One that needs the ARM9 expansion returns `Unsupported("Requires ARM9
 expansion")`. Editors keep the option a patch unlocks in view, greyed out, with a `controls:EnableInToolbox`
 beside it, and refresh on `AppEvents.RomPatchStateChanged`. An action that needs a patch asks through
-`PatchHandover.OfferAsync`.
+`PatchHandover.OfferAsync`. An older version of a patch shows `UpdateOffered`, and an action that needs the newer one
+asks through `PatchHandover.OfferUpdateAsync`.
 
 ```xml
 <CheckBox Content="Eye-contact music" IsEnabled="{Binding CanAddMusic}"/>
@@ -773,7 +778,8 @@ A game screen is drawn by a renderer that returns its pieces with their source f
 and offer `PngColourPrompt`. `OpenGraphicAt` and `OpenPainter` hand a graphic to the Graphics window or the
 painter, with the colours file and row the screen shows it in. Changing a file other pieces also show asks first
 ("This piece is shared"), in the Battle screen editor and in `ScreenPagesView` alike. Battle text goes into the
-message box through `BattleMessageText`.
+message box through `BattleMessageText`. Pictures imported onto tiles go through `TileFit` (`TouchButtonFit`,
+`ScreenLayerFit`), and their windows share `TileFitPanel`.
 
 Move animation code lives in `Avalonia/BattleAnim/`. `SplManager` is the game's particle library, in fixed point.
 `BattleParticles` places and moves its emitters the way a battle does, and `SplRenderer` draws them the way the DS

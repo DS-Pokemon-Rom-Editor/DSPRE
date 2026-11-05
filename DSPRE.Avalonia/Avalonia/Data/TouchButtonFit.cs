@@ -30,14 +30,19 @@ namespace DSPRE.Avalonia.Data
             public ushort[][] Flash = new ushort[ButtonCount][];     // 16 colours for FlashKind.Colour
             public byte[] Whole;                                     // the imported picture, for art past the buttons
             public int WholeWidth;
+            /// <summary>Colours to give a place first when a button's row runs out.</summary>
+            public IReadOnlyCollection<ushort> Keep;
         }
 
         public sealed class Plan
         {
-            public int[] Tiles = new int[ButtonCount], Squares = new int[ButtonCount], NewColours = new int[ButtonCount], TooManyColours = new int[ButtonCount];
+            public int[] Tiles = new int[ButtonCount], Squares = new int[ButtonCount], NewColours = new int[ButtonCount], NearestColours = new int[ButtonCount];
             public int Need, Room, Merged;
             public bool Fits;
             public List<int> NewSquares = new();                     // screen squares that point at new tiles
+            public List<int> ChangedSquares = new();                 // screen squares showing a colour that didn't fit
+            public List<(ushort Colour, ushort Shown, int Pixels)> Swaps = new();
+            public bool CanKeep;
             internal List<(int Slot, byte[] Numbers, byte[] Frontier)> NewTiles = new();
             internal List<(int Page, int Square, int Entry)> Entries = new();
             internal List<(int Row, int Number, ushort Colour)> Colours = new();
@@ -91,35 +96,12 @@ namespace DSPRE.Avalonia.Data
             return cut;
         }
 
-        private static byte[] TileNumbers(byte[] sheet, int tilesAt, int tile)
-        {
-            byte[] p = new byte[64];
-            int at = tilesAt + tile * TileBytes;
-            if (at + TileBytes > sheet.Length) return p;
-            for (int i = 0; i < TileBytes; i++)
-            {
-                p[i * 2] = (byte)(sheet[at + i] & 15);
-                p[i * 2 + 1] = (byte)(sheet[at + i] >> 4);
-            }
-            return p;
-        }
-
-        private byte[] Normal(int tile) => TileNumbers(_sheet, _tilesAt, tile);
-        private byte[] Frontier(int tile) => TileNumbers(_frontierSheet, _frontierTilesAt, tile);
+        private byte[] Normal(int tile) => TileFit.Numbers(_sheet, _tilesAt, tile);
+        private byte[] Frontier(int tile) => TileFit.Numbers(_frontierSheet, _frontierTilesAt, tile);
 
         private byte[] Square(int entry, bool frontier) => BattlePressFrames.Flip(frontier ? Frontier(entry & 0x3FF) : Normal(entry & 0x3FF), entry & 0xC00);
 
         private static int Row(int entry) => entry >> 12 & 15;
-
-        private static string Key(byte[] a, byte[] b) =>
-            BattlePressFrames.FlipBits.Select(bits => Convert.ToHexString(BattlePressFrames.Flip(a, bits)) + Convert.ToHexString(BattlePressFrames.Flip(b, bits))).Min(StringComparer.Ordinal);
-
-        private static int Difference(byte[] a, byte[] b)
-        {
-            int d = 0;
-            for (int i = 0; i < 64; i++) if (a[i] != b[i]) d++;
-            return d;
-        }
 
         private ushort Original(int row, int number) => _original[row * RowColours + number];
 
@@ -164,58 +146,6 @@ namespace DSPRE.Avalonia.Data
             public int Page, Row;
             public int[] Number;       // colour number in the button's row, -1 for clear
             public int[] Frontier;
-        }
-
-        // Colours keep their original number when they can, so unchanged pixels match the game's tiles and need no new ones.
-        private sealed class RowColourSet
-        {
-            private readonly Dictionary<ushort, int> _numbers = new();
-            private readonly HashSet<ushort> _wanted = new();
-            private readonly ushort[] _original;
-            private readonly int _row;
-            private readonly bool[] _taken;
-            public readonly List<(int Number, ushort Colour)> Added = new();
-            public int Refused;
-
-            public RowColourSet(ushort[] colours, ushort[] original, int row, bool[] locked)
-            {
-                _original = original;
-                _row = row;
-                _taken = (bool[])locked.Clone();
-                for (int n = RowColours - 1; n >= 1; n--)
-                    if (locked[n]) _numbers[(ushort)(colours[row * RowColours + n] & 0x7FFF)] = n;
-            }
-
-            public void Want(int colour) { if (colour >= 0 && (colour & EdgeMark) == 0) _wanted.Add((ushort)colour); }
-
-            public void Settle()
-            {
-                List<ushort> left = _wanted.Where(c => !_numbers.ContainsKey(c)).ToList();
-                foreach (ushort colour in left.ToList())
-                    for (int n = 1; n < RowColours; n++)
-                    {
-                        if (_taken[n] || (_original[_row * RowColours + n] & 0x7FFF) != colour) continue;
-                        Take(n, colour);
-                        left.Remove(colour);
-                        break;
-                    }
-                foreach (ushort colour in left)
-                {
-                    int n = Array.IndexOf(_taken, false);
-                    if (n < 0) { Refused++; continue; }
-                    Take(n, colour);
-                }
-            }
-
-            private void Take(int n, ushort colour)
-            {
-                _taken[n] = true;
-                _numbers[colour] = n;
-                Added.Add((n, colour));
-            }
-
-            /// <summary>The colour's number, or 1 when it didn't fit.</summary>
-            public int Number(int colour) => _numbers.TryGetValue((ushort)colour, out int n) ? n : 1;
         }
 
         private static ushort Lighter(ushort c)
@@ -308,7 +238,7 @@ namespace DSPRE.Avalonia.Data
             for (int i = 0; i < pixels.Length; i++)
             {
                 int px = x * Tile + i % Tile, py = y * Tile + i / Tile, at = (py * s.WholeWidth + px) * 4;
-                pixels[i] = px >= s.WholeWidth || py >= height || s.Whole[at + 3] < 128 ? -1 : NitroBgCodec.ToBgr555(s.Whole[at], s.Whole[at + 1], s.Whole[at + 2]) & 0x7FFF;
+                pixels[i] = px >= s.WholeWidth || py >= height ? -1 : TileFit.Colour(s.Whole, at);
             }
             return pixels;
         }
@@ -320,7 +250,7 @@ namespace DSPRE.Avalonia.Data
             byte[] rgba = s.Pictures[b];
             int[] art = new int[count];
             for (int p = 0; p < count; p++)
-                art[p] = rgba[p * 4 + 3] < 128 ? -1 : NitroBgCodec.ToBgr555(rgba[p * 4], rgba[p * 4 + 1], rgba[p * 4 + 2]) & 0x7FFF;
+                art[p] = TileFit.Colour(rgba, p * 4);
 
             int[] normal = OriginalPixels(BattlePressFrames.OriginalNormal, b, false), frontierNormal = OriginalPixels(BattlePressFrames.OriginalNormal, b, true);
             // A frame that covers the button replaces it. A smaller one only touches squares the art left as they were.
@@ -338,7 +268,7 @@ namespace DSPRE.Avalonia.Data
             int[] frontierArt = new int[count];
             for (int p = 0; p < count; p++) frontierArt[p] = reshaped || art[p] != normal[p] ? art[p] : frontierNormal[p];
 
-            RowColourSet colours = new RowColourSet(_colours, _original, row, FixedNumbers(row, replaced));
+            TileFit.RowColours colours = new TileFit.RowColours(_colours, _original, row, FixedNumbers(row, replaced), s.Keep);
             List<(int Page, int[] Normal, int[] Frontier, bool Flash)> frames = new() { (BattlePressFrames.NormalPage, art, frontierArt, false) };
             bool usesFlash = false;
             FlashKind kind = s.Kind[b];
@@ -377,7 +307,10 @@ namespace DSPRE.Avalonia.Data
             foreach (int square in around)
                 foreach (int colour in WholeSquare(s, square % Columns, square / Columns)) colours.Want(colour);
             colours.Settle();
-            plan.TooManyColours[b] = colours.Refused;
+            plan.NearestColours[b] = colours.Refused;
+            plan.Swaps.AddRange(colours.Swaps);
+            plan.CanKeep |= colours.Open > 0 && colours.Refused > 0;
+            HashSet<int> swapped = colours.Swaps.Select(w => (int)w.Colour).ToHashSet();
             plan.NewColours[b] = colours.Added.Count(a => a.Colour != Original(row, a.Number));
             foreach ((int number, ushort colour) in colours.Added) plan.Colours.Add((row, number, colour));
 
@@ -429,7 +362,12 @@ namespace DSPRE.Avalonia.Data
                             n[i] = (byte)Num(pictureN[at]);
                             f[i] = (byte)Num(pictureF[at]);
                         }
-                        if (page == BattlePressFrames.NormalPage) plan.Squares[b]++;
+                        if (page == BattlePressFrames.NormalPage)
+                        {
+                            plan.Squares[b]++;
+                            if (swapped.Count > 0 && Enumerable.Range(0, 64).Any(i => swapped.Contains(pictureN[((y - r.Top) * Tile + i / Tile) * width + (x - r.Left) * Tile + i % Tile])))
+                                plan.ChangedSquares.Add(square);
+                        }
                         wanted.Add(new Wanted { Button = b, Page = page, Square = square, Row = flashes ? flashRow : row, Numbers = n, Frontier = f });
                     }
             }
@@ -438,7 +376,9 @@ namespace DSPRE.Avalonia.Data
             BattlePressFrames.Rect reach = BattlePressFrames.FightReach;
             foreach (int square in around)
             {
-                byte[] n = WholeSquare(s, square % Columns, square / Columns).Select(c => (byte)Num(c)).ToArray();
+                int[] whole = WholeSquare(s, square % Columns, square / Columns);
+                if (whole.Any(swapped.Contains)) plan.ChangedSquares.Add(square);
+                byte[] n = whole.Select(c => (byte)Num(c)).ToArray();
                 int x = square % Columns, y = square / Columns;
                 bool pressed = b == 0 && x >= reach.Left && x <= reach.Right && y >= reach.Top && y <= reach.Bottom;
                 foreach ((int page, _, _, bool flashes) in frames)
@@ -447,80 +387,28 @@ namespace DSPRE.Avalonia.Data
         }
 
         // Marks a pixel the flash row has to show in its exact colour. Colours fill only 15 bits.
-        private const int EdgeMark = 0x8000;
+        private const int EdgeMark = TileFit.RowColours.CallerMark;
 
         private void Allocate(Settings s, Plan plan, List<Wanted> wanted, bool[] keep)
         {
-            Dictionary<string, int> existing = new();
-            for (int tile = 0; tile < BattlePressFrames.BlankTile; tile++)
-                if (keep[tile]) existing.TryAdd(Key(Normal(tile), Frontier(tile)), tile);
-
+            IEnumerable<(int, byte[][])> kept = Enumerable.Range(0, BattlePressFrames.BlankTile).Where(t => keep[t]).Select(t => (t, new[] { Normal(t), Frontier(t) }));
             // The replay screen's text box draws over these.
             List<int> free = Enumerable.Range(0, BattlePressFrames.BlankTile).Where(t => !keep[t] && (t < 0x20 || t > 0x28)).ToList();
-            plan.Room = free.Count;
-
-            List<(byte[] Numbers, byte[] Frontier, int Owner, string Key)> shapes = new();
-            Dictionary<string, (byte[] Numbers, byte[] Frontier, int Tile)> resolved = new();
-            bool Close(byte[] a, byte[] af, byte[] b, byte[] bf, int bits) =>
-                Math.Max(Difference(BattlePressFrames.Flip(a, bits), b), Difference(BattlePressFrames.Flip(af, bits), bf)) <= s.Merge;
-
-            List<IGrouping<string, Wanted>> groups = wanted.GroupBy(w => Key(w.Numbers, w.Frontier)).OrderByDescending(g => g.Count()).ToList();
-            foreach (IGrouping<string, Wanted> g in groups)
-            {
-                Wanted first = g.First();
-                if (existing.TryGetValue(g.Key, out int tile))
-                {
-                    resolved[g.Key] = (first.Numbers, first.Frontier, tile);
-                    continue;
-                }
-                if (s.Merge > 0)
-                {
-                    (byte[] Numbers, byte[] Frontier, int Owner, string Key)? near = shapes
-                        .Cast<(byte[] Numbers, byte[] Frontier, int Owner, string Key)?>()
-                        .FirstOrDefault(x => BattlePressFrames.FlipBits.Any(bits => Close(x.Value.Numbers, x.Value.Frontier, first.Numbers, first.Frontier, bits)));
-                    if (near != null)
-                    {
-                        resolved[g.Key] = (near.Value.Numbers, near.Value.Frontier, -1);
-                        plan.Merged++;
-                        continue;
-                    }
-                }
-                shapes.Add((first.Numbers, first.Frontier, first.Button, g.Key));
-                resolved[g.Key] = (first.Numbers, first.Frontier, -1);
-                plan.Tiles[first.Button]++;
-            }
-
-            plan.Need = shapes.Count;
-            plan.Fits = plan.Need <= free.Count && plan.TooManyColours.All(n => n == 0);
+            List<TileFit.Square> squares = wanted.Select(w => new TileFit.Square { Sheets = new[] { w.Numbers, w.Frontier }, Owner = w.Button }).ToList();
+            TileFit.Placement placed = TileFit.Place(squares, kept, free, s.Merge);
+            plan.Room = placed.Room;
+            plan.Need = placed.Need;
+            plan.Merged = placed.Merged;
+            foreach ((int owner, int count) in placed.TilesByOwner) plan.Tiles[owner] += count;
+            plan.Fits = placed.Fits;
             if (!plan.Fits) return;
-
-            Queue<int> slotsLeft = new Queue<int>(free);
-            Dictionary<string, int> slots = new();
-            foreach ((byte[] numbers, byte[] frontier, int owner, string key) in shapes)
+            foreach ((int slot, byte[][] sheets) in placed.NewTiles) plan.NewTiles.Add((slot, sheets[0], sheets[1]));
+            for (int i = 0; i < wanted.Count; i++)
             {
-                int slot = slotsLeft.Dequeue();
-                slots[key] = slot;
-                plan.NewTiles.Add((slot, numbers, frontier));
+                (int tile, int flip) = placed.Squares[i];
+                plan.Entries.Add((wanted[i].Page, wanted[i].Square, wanted[i].Row << 12 | flip | tile));
+                if (wanted[i].Page == BattlePressFrames.NormalPage) plan.NewSquares.Add(wanted[i].Square);
             }
-
-            foreach (IGrouping<string, Wanted> g in groups)
-                foreach (Wanted w in g)
-                {
-                    (byte[] numbers, byte[] frontier, int tile) = resolved[g.Key];
-                    int slot = tile >= 0 ? tile : slots.GetValueOrDefault(g.Key, -1);
-                    byte[] source = tile >= 0 ? Normal(tile) : numbers, frontierSource = tile >= 0 ? Frontier(tile) : frontier;
-                    if (slot < 0)
-                    {
-                        (byte[] Numbers, byte[] Frontier, int Owner, string Key) merged = shapes
-                            .First(x => BattlePressFrames.FlipBits.Any(bits => Close(x.Numbers, x.Frontier, w.Numbers, w.Frontier, bits)));
-                        source = merged.Numbers;
-                        frontierSource = merged.Frontier;
-                        slot = slots[merged.Key];
-                    }
-                    int best = BattlePressFrames.FlipBits.OrderBy(bits => Difference(BattlePressFrames.Flip(source, bits), w.Numbers) + Difference(BattlePressFrames.Flip(frontierSource, bits), w.Frontier)).First();
-                    plan.Entries.Add((w.Page, w.Square, w.Row << 12 | best | slot));
-                    if (w.Page == BattlePressFrames.NormalPage) plan.NewSquares.Add(w.Square);
-                }
         }
 
         private void PutColours(int member, Plan plan)
