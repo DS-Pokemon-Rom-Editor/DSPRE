@@ -7,6 +7,8 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using DSPRE.Avalonia.Data;
+using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
 using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChanges;
 
@@ -73,6 +75,53 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool IsFlyPoint { get => _isFlyPoint; set => Set(ref _isFlyPoint, value); }
     }
 
+    /// <summary>One fly spot on the HGSS town map, with the Fly row it sends the player to.</summary>
+    public class FlySpotRow : INotifyPropertyChanged
+    {
+        public event PropertyChangedEventHandler PropertyChanged;
+        private void OnPropertyChanged([CallerMemberName] string n = null)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+        private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
+        { if (Equals(f, v)) return false; f = v; OnPropertyChanged(n); return true; }
+
+        public int Index { get; set; }
+        public string Name { get; set; }
+        public int NameMap { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
+
+        private byte _x;
+        public byte X { get => _x; set { if (Set(ref _x, value)) OnPropertyChanged(nameof(Left)); } }
+        private byte _y;
+        public byte Y { get => _y; set { if (Set(ref _y, value)) OnPropertyChanged(nameof(Top)); } }
+        private int _warpMap;
+        public int WarpMap { get => _warpMap; set => Set(ref _warpMap, value); }
+        private byte _flag;
+        public byte Flag { get => _flag; set => Set(ref _flag, value); }
+
+        // The picture is the region map at twice its size.
+        public const int Scale = 2;
+        public double Left => X * 8 * Scale;
+        public double Top => (Y + HgssFlySpots.RowsDown) * 8 * Scale;
+        public double BoxWidth => Math.Max(1, Width) * 8 * Scale;
+        public double BoxHeight => Math.Max(1, Height) * 8 * Scale;
+
+        /// <summary>The town's area on the town map, in spot tiles, or null when the town has none.</summary>
+        public (int X, int Y, int Width, int Height)? Area { get; set; }
+        public bool HasArea => Area != null;
+        public double AreaLeft => (Area?.X ?? 0) * 8 * Scale;
+        public double AreaTop => ((Area?.Y ?? 0) + HgssFlySpots.RowsDown) * 8 * Scale;
+        public double AreaWidth => Math.Max(1, Area?.Width ?? 1) * 8 * Scale;
+        public double AreaHeight => Math.Max(1, Area?.Height ?? 1) * 8 * Scale;
+
+        private int _flyRow = -1;
+        /// <summary>The Fly row this spot uses, or -1 when no row has its warp map.</summary>
+        public int FlyRow { get => _flyRow; set => Set(ref _flyRow, value); }
+        private string _warning = "";
+        public string Warning { get => _warning; set { if (Set(ref _warning, value)) OnPropertyChanged(nameof(HasWarning)); } }
+        public bool HasWarning => !string.IsNullOrEmpty(Warning);
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     public class FlyEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
@@ -102,15 +151,38 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void Redo() => _undo?.Redo();
         private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
 
+        private sealed class UndoState
+        {
+            public List<FlyRow> Rows { get; set; }
+            public List<FlySpotRow> Spots { get; set; }
+        }
+
+        private byte[] TakeState() => UndoJson.Take(new UndoState { Rows = Rows.ToList(), Spots = Spots.ToList() });
+
         private void ApplyState(byte[] state)
         {
-            UndoJson.ApplyInto(state, Rows);
+            UndoState read = UndoJson.Read<UndoState>(state);
+            _applying = true;
+            for (int i = 0; i < Rows.Count && i < read.Rows.Count; i++) UndoJson.CopyInto(read.Rows[i], Rows[i]);
+            for (int i = 0; i < Spots.Count && i < (read.Spots?.Count ?? 0); i++)
+            {
+                (Spots[i].X, Spots[i].Y, Spots[i].WarpMap, Spots[i].Flag) = (read.Spots[i].X, read.Spots[i].Y, read.Spots[i].WarpMap, read.Spots[i].Flag);
+            }
+            _applying = false;
+            CheckSpots();
             if (_undo.IsDirty) SetDirty(); else SetClean();
         }
+
+        private bool _applying;
 
         // ── Observable state ─────────────────────────────────────────────────
         public ObservableCollection<FlyRow>   Rows    { get; } = new();
         public ObservableCollection<string>   Headers { get; } = new();
+        public ObservableCollection<FlySpotRow> Spots { get; } = new();
+        /// <summary>Each Fly row by its fly map and flag, for linking a spot.</summary>
+        public ObservableCollection<string> FlyRowChoices { get; } = new();
+        public global::Avalonia.Media.Imaging.Bitmap TownMap { get; private set; }
+        public bool HasSpots => Spots.Count > 0;
 
         private string _title = "Fly / warp editor";
         public string Title { get => _title; private set => Set(ref _title, value); }
@@ -185,6 +257,13 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 WriteRows();
+                if (Spots.Count == HgssFlySpots.Count)
+                {
+                    List<HgssFlySpots.Spot> spots = HgssFlySpots.Read();
+                    for (int i = 0; i < spots.Count; i++)
+                        (spots[i].X, spots[i].Y, spots[i].WarpMap, spots[i].Flag) = (Spots[i].X, Spots[i].Y, Spots[i].WarpMap, Spots[i].Flag);
+                    HgssFlySpots.Write(spots);
+                }
                 _undo?.MarkSaved();
                 SetClean();
                 SaveNotice.Saved(UnsavedChangesDescription);
@@ -203,7 +282,9 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void Edited()
         {
-            _undo?.Record();
+            if (_applying) return;
+            CheckSpots();
+            _undo?.Record(_step);
             if (_undo == null || _undo.IsDirty) SetDirty(); else SetClean();
         }
 
@@ -231,8 +312,117 @@ namespace DSPRE.Avalonia.ViewModels.World
                 AppLogger.Error($"FlyEditorViewModel.LoadRows: {ex.Message}");
                 StatusText = $"Couldn't load: {ex.Message}";
             }
-            _undo = new ByteStateUndo(() => UndoJson.Take(Rows), ApplyState, RaiseUndo);
+            LoadSpots();
+            _undo = new ByteStateUndo(TakeState, ApplyState, RaiseUndo);
             RaiseUndo();
+        }
+
+        // The town map's spots (HGSS only). A spot sends the player to the first Fly row with its warp map and shows once its flag
+        // is set, so a spot is checked against that row.
+        private void LoadSpots()
+        {
+            Spots.Clear();
+            if (GameFamily != GameFamilies.HGSS) return;
+            List<HgssFlySpots.Spot> spots = null;
+            try { spots = HgssFlySpots.Read(); }
+            catch (Exception ex) { AppLogger.Error($"FlyEditorViewModel.LoadSpots: {ex.Message}"); }
+            if (spots == null) { OnPropertyChanged(nameof(HasSpots)); return; }
+            for (int i = 0; i < spots.Count; i++)
+            {
+                HgssFlySpots.Spot s = spots[i];
+                FlySpotRow row = new FlySpotRow
+                {
+                    Index = i, NameMap = s.NameMap, Name = s.NameMap < Headers.Count ? Headers[s.NameMap] : $"Map {s.NameMap}",
+                    Width = s.Width, Height = s.Height, X = s.X, Y = s.Y, WarpMap = s.WarpMap, Flag = s.Flag,
+                };
+                row.PropertyChanged += (_, e) => { if (e.PropertyName is nameof(FlySpotRow.X) or nameof(FlySpotRow.Y) or nameof(FlySpotRow.WarpMap) or nameof(FlySpotRow.Flag)) Edited(); };
+                Spots.Add(row);
+            }
+            LoadWorld();
+            foreach (FlySpotRow row in Spots)
+            {
+                HgssFlySpots.Location? area = _locations?.FirstOrDefault(l => l.Map == spots[row.Index].NameMap);
+                if (area is HgssFlySpots.Location l && l.Width > 0) row.Area = (l.X, l.Y - HgssFlySpots.RowsDown, l.Width, l.Height);
+            }
+            NitroBgCodec.BgImage map = PokegearPictures.WholeRegionMap();
+            TownMap = map == null ? null : ImageConverter.FromRgba(map.Rgba, map.Width, map.Height);
+            OnPropertyChanged(nameof(TownMap));
+            OnPropertyChanged(nameof(HasSpots));
+            FlyRowChoices.Clear();
+            for (int i = 0; i < Rows.Count; i++)
+                FlyRowChoices.Add($"{i}: {(Rows[i].HeaderIdFly < Headers.Count ? Headers[Rows[i].HeaderIdFly] : Rows[i].HeaderIdFly.ToString())}, flag {Rows[i].FlagIdx}");
+            CheckSpots();
+        }
+
+        /// <summary>Links a spot to a Fly row: the spot takes that row's map and flag.</summary>
+        public void LinkSpot(FlySpotRow spot, int row)
+        {
+            if (spot == null || row < 0 || row >= Rows.Count) return;
+            BeginStep();
+            spot.WarpMap = Rows[row].HeaderIdFly;
+            spot.Flag = Rows[row].FlagIdx;
+            EndStep();
+        }
+
+        // Edits between these are one undo step, however long a drag takes.
+        private object _step;
+        public void BeginStep() => _step = new object();
+        public void EndStep() => _step = null;
+
+        /// <summary>Moves a spot to a town map tile, clamped to the map.</summary>
+        public void MoveSpot(FlySpotRow spot, int x, int y)
+        {
+            if (spot == null) return;
+            spot.X = (byte)Math.Clamp(x, 0, HgssFlySpots.MapColumns - Math.Max(1, spot.Width));
+            spot.Y = (byte)Math.Clamp(y, 0, HgssFlySpots.MapRows - HgssFlySpots.RowsDown - Math.Max(1, spot.Height));
+        }
+
+        private List<HgssFlySpots.Location> _locations;
+        private GameMatrix _world;
+
+        // Spot tiles are cells of the main world matrix (pokeheartgold FieldSystem_InitPokegearArgs).
+        private void LoadWorld()
+        {
+            try { _locations = HgssFlySpots.ReadLocations(); }
+            catch (Exception ex) { AppLogger.WarnOnce("FlyEditorViewModel.Locations", ex); }
+            try { _world = new GameMatrix(0); }
+            catch (Exception ex) { AppLogger.WarnOnce("FlyEditorViewModel.World", ex); }
+        }
+
+        // Empty cells don't count: Victory Road's spot sits on them in the retail game.
+        private string OffWorld(FlySpotRow spot, int nameMap)
+        {
+            if (_world?.Headers == null) return null;
+            bool own = false, other = false;
+            for (int r = spot.Y; r < spot.Y + Math.Max(1, spot.Height) && r < _world.Height; r++)
+                for (int c = spot.X; c < spot.X + Math.Max(1, spot.Width) && c < _world.Width; c++)
+                {
+                    ushort map = _world.Headers[r, c];
+                    if (map == spot.WarpMap || map == nameMap) own = true;
+                    else if (map != 0) other = true;
+                }
+            return other && !own ? "Covers another map in the main matrix." : null;
+        }
+
+        private static string OffArea(FlySpotRow spot)
+        {
+            if (spot.Area is not (int ax, int ay, int aw, int ah)) return null;
+            bool overlaps = spot.X < ax + aw && ax < spot.X + Math.Max(1, spot.Width) && spot.Y < ay + ah && ay < spot.Y + Math.Max(1, spot.Height);
+            return overlaps ? null : "Outside its town's area on the town map.";
+        }
+
+        private void CheckSpots()
+        {
+            if (Spots.Count == 0) return;
+            foreach (FlySpotRow spot in Spots)
+            {
+                int row = -1;
+                for (int i = 0; i < Rows.Count && row < 0; i++) if (Rows[i].HeaderIdFly == spot.WarpMap) row = i;
+                spot.FlyRow = row;
+                string link = row < 0 ? "No Fly row has this map, so flying here does nothing."
+                    : Rows[row].FlagIdx != spot.Flag ? $"Shows on flag {spot.Flag}, but its Fly row sets flag {Rows[row].FlagIdx}." : null;
+                spot.Warning = string.Join("\n", new[] { link, OffWorld(spot, spot.NameMap), OffArea(spot) }.Where(w => w != null));
+            }
         }
 
         private void WriteRows()

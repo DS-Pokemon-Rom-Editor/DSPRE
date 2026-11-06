@@ -3139,6 +3139,21 @@ namespace DSPRE
             _ => null,
         };
 
+        /// <summary>The town map's fly spots, pokeheartgold overlay_101_021F79B4.c gMapFlypointParams. Measured on every HGSS dump.</summary>
+        private static Spot HgssFlySpots(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.HeartGold or GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.English => Ov(101, 0x10274),
+                GameLanguages.French or GameLanguages.German or GameLanguages.Spanish => Ov(101, 0x10280),
+                GameLanguages.Italian => Ov(101, 0x1027C),
+                GameLanguages.Japanese => Ov(101, 0x1020C),
+                GameLanguages.Korean => Ov(101, 0x10284),
+                _ => null,
+            },
+            _ => null,
+        };
+
         /// <summary>The Pokédex's PokedexGraphics_LoadGraphicNarcPaletteData.</summary>
         private static Spot PokedexPaletteLoader(GameVersions game, GameLanguages language, int revision) => game switch
         {

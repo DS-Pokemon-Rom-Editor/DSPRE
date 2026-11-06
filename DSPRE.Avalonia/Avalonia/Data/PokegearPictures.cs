@@ -65,7 +65,7 @@ namespace DSPRE.Avalonia.Data
         // The region map's top left corner, coloured by file 20 (the town map) or 63 (the fly map).
         internal static byte[] RegionMap(Func<int, byte[]> m, int colours = 20)
         {
-            NitroBgCodec.BgImage map = NitroBgCodec.Composite(NitroBgCodec.Inflate(m(10)), NitroBgCodec.Inflate(m(20)), Blocked(NitroBgCodec.Inflate(m(11))));
+            NitroBgCodec.BgImage map = Region(m, colours);
             if (map?.Rgba == null) return null;
             byte[] rgba = new byte[256 * 192 * 4];
             for (int y = 16; y < 192; y++)
@@ -73,6 +73,25 @@ namespace DSPRE.Avalonia.Data
                     Buffer.BlockCopy(map.Rgba, ((y - 16) * map.Width + x) * 4, rgba, (y * 256 + x) * 4, 4);
             return rgba;
         }
+
+        /// <summary>The whole region map the town map shows (file 11), in the town map's colours, or null when unreadable.</summary>
+        internal static NitroBgCodec.BgImage WholeRegionMap()
+        {
+            try
+            {
+                Func<int, byte[]> m = MoveTextScreens.Members(RomInfo.DirNames.PokegearMapGraphics);
+                NitroBgCodec.BgImage map = m == null ? null : Region(m, 20);
+                if (map?.Rgba == null) return null;
+                int width = Math.Min(map.Width, HgssFlySpots.MapColumns * 8), height = Math.Min(map.Height, HgssFlySpots.MapRows * 8);
+                byte[] rgba = new byte[width * height * 4];
+                for (int y = 0; y < height; y++) Buffer.BlockCopy(map.Rgba, y * map.Width * 4, rgba, y * width * 4, width * 4);
+                return new NitroBgCodec.BgImage { Rgba = rgba, Width = width, Height = height };
+            }
+            catch (Exception ex) { AppLogger.WarnOnce("PokegearPictures.WholeRegionMap", ex); return null; }
+        }
+
+        private static NitroBgCodec.BgImage Region(Func<int, byte[]> m, int colours) =>
+            NitroBgCodec.Composite(NitroBgCodec.Inflate(m(10)), NitroBgCodec.Inflate(m(colours)), Blocked(NitroBgCodec.Inflate(m(11))));
 
         // The region map is kept row by row, as the game copies it, but Composite reads a screen wider than 32 tiles as 32 by 32 blocks.
         private static byte[] Blocked(byte[] screen)

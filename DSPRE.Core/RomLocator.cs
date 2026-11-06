@@ -29,6 +29,7 @@ namespace DSPRE
             BagBottomPaletteCall, BagBottomBanks, BagBottomColourMode, BagPocketColoursCall, BagButtonDraws, BagSpriteTemplates,
             PcBottomPaletteCall, PcCompareBottomPaletteCall, PcBottomBanks, PcBottomColourModes,
             NamingBottomPaletteCall, NamingBottomBanks, NamingBottomColourMode, NamingBottomTileLoad, NamingSpriteWindows,
+            HgssFlySpots,
         }
 
         /// <summary>arm9 when <see cref="Overlay"/> is -1, otherwise that overlay; one or more file offsets.</summary>
@@ -159,6 +160,7 @@ namespace DSPRE
             [Thing.NamingBottomColourMode] = NamingBottomColourMode,
             [Thing.NamingBottomTileLoad] = NamingBottomTileLoad,
             [Thing.NamingSpriteWindows] = NamingSpriteWindows,
+            [Thing.HgssFlySpots] = HgssFlySpots,
         };
 
         /// <summary>Where <paramref name="thing"/> is in a given dump, whether or not it is the loaded one.</summary>

@@ -21,7 +21,6 @@
 		<TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Bad}" Margin="12,0,0,0"/>
 	</controls:EditorToolbar>
 
-	<!-- Three tabs -->
 	<TabControl Margin="8">
 
 	  <TabItem Header="Whiteout warps">
@@ -142,6 +141,68 @@
 
 		  </DataGrid.Columns>
 		</DataGrid>
+	  </TabItem>
+
+	  <TabItem Header="Town map" IsVisible="{Binding HasSpots}">
+		<Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,*">
+		  <TextBlock Grid.ColumnSpan="2" Margin="0,0,0,6" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"
+					 Text="Drag a spot to move it" ToolTip.Tip="Dashed boxes are town areas"/>
+		  <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+			<Panel x:Name="TownMapPanel" Width="752" Height="320" HorizontalAlignment="Left" VerticalAlignment="Top">
+			  <Image Source="{Binding TownMap}" Width="752" Height="320" Stretch="Fill" RenderOptions.BitmapInterpolationMode="None"/>
+			  <ItemsControl ItemsSource="{Binding Spots}" IsHitTestVisible="False">
+				<ItemsControl.ItemsPanel>
+				  <ItemsPanelTemplate><Panel/></ItemsPanelTemplate>
+				</ItemsControl.ItemsPanel>
+				<ItemsControl.ItemTemplate>
+				  <DataTemplate x:DataType="vm:FlySpotRow">
+					<Canvas IsVisible="{Binding HasArea}">
+					  <Rectangle Canvas.Left="{Binding AreaLeft}" Canvas.Top="{Binding AreaTop}" Width="{Binding AreaWidth}" Height="{Binding AreaHeight}"
+								 Stroke="{DynamicResource Editor.Good}" StrokeThickness="1" StrokeDashArray="3,2"/>
+					</Canvas>
+				  </DataTemplate>
+				</ItemsControl.ItemTemplate>
+			  </ItemsControl>
+			  <ItemsControl ItemsSource="{Binding Spots}">
+				<ItemsControl.ItemsPanel>
+				  <ItemsPanelTemplate><Panel/></ItemsPanelTemplate>
+				</ItemsControl.ItemsPanel>
+				<ItemsControl.ItemTemplate>
+				  <DataTemplate x:DataType="vm:FlySpotRow">
+					<Canvas>
+					  <Border Canvas.Left="{Binding Left}" Canvas.Top="{Binding Top}"
+							  Width="{Binding BoxWidth}" Height="{Binding BoxHeight}" BorderThickness="2" Cursor="SizeAll"
+							  BorderBrush="{DynamicResource Editor.Warn}" Background="Transparent"
+							  ToolTip.Tip="{Binding Name}" Tag="{Binding}"
+							  PointerPressed="Spot_PointerPressed" PointerMoved="Spot_PointerMoved" PointerReleased="Spot_PointerReleased"/>
+					</Canvas>
+				  </DataTemplate>
+				</ItemsControl.ItemTemplate>
+			  </ItemsControl>
+			</Panel>
+		  </ScrollViewer>
+		  <DataGrid Grid.Row="1" Grid.Column="1" Margin="8,0,0,0" ItemsSource="{Binding Spots}"
+					CanUserReorderColumns="False" CanUserSortColumns="False" GridLinesVisibility="All">
+			<DataGrid.Columns>
+			  <DataGridTextColumn Header="Town" Binding="{Binding Name}" IsReadOnly="True" Width="*"/>
+			  <DataGridTextColumn Header="X" Binding="{Binding X}" Width="50"/>
+			  <DataGridTextColumn Header="Y" Binding="{Binding Y}" Width="50"/>
+			  <DataGridTemplateColumn Header="Fly row" Width="2*">
+				<DataGridTemplateColumn.CellTemplate>
+				  <DataTemplate x:DataType="vm:FlySpotRow">
+					<StackPanel Spacing="2">
+					  <ComboBox ItemsSource="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).FlyRowChoices}"
+								SelectedIndex="{Binding FlyRow, Mode=OneWay}" HorizontalAlignment="Stretch"
+								SelectionChanged="FlyRow_SelectionChanged" Tag="{Binding}"/>
+					  <TextBlock Text="{Binding Warning}" IsVisible="{Binding HasWarning}" TextWrapping="Wrap"
+								 FontSize="12" Foreground="{DynamicResource Editor.Bad}"/>
+					</StackPanel>
+				  </DataTemplate>
+				</DataGridTemplateColumn.CellTemplate>
+			  </DataGridTemplateColumn>
+			</DataGrid.Columns>
+		  </DataGrid>
+		</Grid>
 	  </TabItem>
 
 	</TabControl>
