@@ -166,6 +166,7 @@ namespace DSPRE
         public static Spot Where(Thing thing) => RomID == null ? null : WhereIn(thing, GameVersion, GameLanguage, RomRevision);
 
         public static string PathOf(Spot spot) => spot.Overlay < 0 ? Arm9Path : OverlayUtils.GetPath(spot.Overlay);
+
         /// <summary>Where the spot's file loads in RAM.</summary>
         public static uint RamBase(Spot spot) => spot.Overlay < 0 ? ARM9.Address : OverlayUtils.OverlayTable.GetRAMAddress(spot.Overlay);
 

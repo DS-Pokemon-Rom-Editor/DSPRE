@@ -175,7 +175,17 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         rgba = await PreviewFileGate.RunAsync(work);
                     }
                     catch (Exception ex) { AppLogger.WarnOnce("ScreenButtonsViewModel.Draw", ex); }
-                    if (!_again) CursorPicture = rgba == null ? null : ImageConverter.FromRgba(rgba, 256, 192);
+                    byte[] top = null;
+                    if (TopDraw != null)
+                    {
+                        try { top = await PreviewFileGate.RunAsync(TopDraw(_page)); }
+                        catch (Exception ex) { AppLogger.WarnOnce("ScreenButtonsViewModel.DrawTop", ex); }
+                    }
+                    if (!_again)
+                    {
+                        CursorPicture = rgba == null ? null : ImageConverter.FromRgba(rgba, 256, 192);
+                        TopPicture = top == null ? null : ImageConverter.FromRgba(top, 256, 192);
+                    }
                 } while (_again);
             }
             finally { _drawing = false; }
@@ -183,7 +193,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         internal (int Top, int Bottom, int Left, int Right) AreaOf(int button) => _buttons.AreaOf(_page, button);
 
-        internal string LockedWhy(int button) => _buttons.MoveLocked(_page, button);
+        /// <summary>Areas that move only with a Layout picture, by picture name.</summary>
+        internal IReadOnlyDictionary<string, (int Page, int Button)[]> Carried { get; init; }
+
+        internal string LockedWhy(int button) => _buttons.MoveLocked(_page, button)
+            ?? (Carried?.Values.Any(c => c.Contains((_page, button))) == true ? "Moved with its picture in the Layout tab." : null);
 
         /// <summary>Pixels per step for the button.</summary>
         internal int StepOf(int button) => _buttons?.MoveStep(_page, button) ?? 1;
@@ -212,6 +226,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public bool CanResize(int button) => _buttons.CanResize(_page, button);
 
         public void Commit() => _pending.Import(() => { _pending.Stage(_tables, _buttons.ToBytes()); return null; });
+
+        // A Layout tab on the same screen shares these, so its moves and these are one undo history and one save.
+        internal PendingArchiveWrites Pending => _pending;
+        internal IScreenButtons Buttons => _buttons;
+        internal PendingArchiveWrites.Target Tables => _tables;
+
+        /// <summary>Shows a move made from the Layout tab.</summary>
+        internal void Moved() => Refresh();
 
         // ── fixing tiles ──
 
@@ -371,6 +393,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private Bitmap _picture;
         public Bitmap CursorPicture { get => _picture; private set { _picture = value; Raise(); } }
+
+        /// <summary>Draws the other screen for a page, or null when the screen has none to show.</summary>
+        public Func<int, Func<byte[]>> TopDraw { get; init; }
+        public bool HasTop => TopDraw != null;
+        private Bitmap _top;
+        public Bitmap TopPicture { get => _top; private set { _top = value; Raise(); } }
 
         // ── saving and undo ──
 

@@ -169,9 +169,8 @@ namespace DSPRE.Avalonia.Data
             // Only the letters: the panel is already behind them, and a flat fill would cover the frame's slanted edge.
 
             int at = 0;
-            foreach (char c in name ?? "")
+            foreach (int glyph in FieldFontCharacters.GlyphsOf(name ?? ""))
             {
-                int glyph = FieldFontCharacters.GlyphFor(c);
                 if (glyph < 0 || glyph >= font.GlyphCount) continue;
 
                 int wide = Math.Max(1, font.WidthOf(glyph));

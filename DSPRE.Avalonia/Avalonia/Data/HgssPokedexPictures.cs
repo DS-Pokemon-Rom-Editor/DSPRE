@@ -57,6 +57,19 @@ namespace DSPRE.Avalonia.Data
             catch (Exception ex) { AppLogger.WarnOnce("HgssPokedexPictures.Draw", ex); return null; }
         }
 
+        /// <summary>The page's top screen, or null when it can't be drawn.</summary>
+        public static byte[] DrawTop(int page)
+        {
+            try
+            {
+                if (page < 0 || page >= Recipes.Length) return null;
+                PokedexBook book = new PokedexBook();
+                ScreenPage recipe = book.Pages.FirstOrDefault(p => p.Id == Recipes[page]);
+                return recipe == null ? null : book.MakeComposer(Font).Compose(recipe, "", recipe.MainOnTop ? ScreenSide.Main : ScreenSide.Sub)?.Rgba;
+            }
+            catch (Exception ex) { AppLogger.WarnOnce("HgssPokedexPictures.DrawTop", ex); return null; }
+        }
+
         // Texts whose window is at a moved spot, and highlights pasted from or to it, move by the same amount.
         private static void Follow(ScreenPage recipe, int member, (int X, int Y)[][] game, IReadOnlyList<IReadOnlyList<(int X, int Y)>> now)
         {

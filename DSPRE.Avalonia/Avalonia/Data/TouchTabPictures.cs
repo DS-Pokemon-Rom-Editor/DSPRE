@@ -33,6 +33,22 @@ namespace DSPRE.Avalonia.Data
             return rgba;
         }
 
+        /// <summary>
+        /// The battle's top screen above the touch menus: backdrop, ground, the HP bars as the ROM has them, and the "What will" prompt in
+        /// the message box.
+        /// </summary>
+        public static byte[] BattleTop()
+        {
+            BattleScreenRenderer.Options look = new BattleScreenRenderer.Options();
+            byte[] top = BattleScreenRenderer.Flatten(new BattleScreenRenderer().Build(look), touch: false);
+            if (top == null || RomInfo.BattleStringsTextNumber < 0) return top;
+            // The line's one placeholder is the nickname of the Pokémon on the bar.
+            List<string> lines = new ROMFiles.TextArchive(RomInfo.BattleStringsTextNumber).Messages;
+            if (RomInfo.BattleWhatWillPokemonDoLine < lines.Count)
+                BattleMessageText.Draw(top, lines[RomInfo.BattleWhatWillPokemonDoLine], (_, _, _) => look.PokemonName, 0);
+            return top;
+        }
+
         /// <summary>Draws Platinum's Pokétch with the named app, or the digital watch when app is null.</summary>
         public static byte[] Poketch(string app)
         {

@@ -1956,7 +1956,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             for (int i = 0; i < _sampleName.Length && i < letters; i++)
             {
                 string ch = _sampleName[i].ToString();
-                int x = DSPRE.ROMFiles.NamingScreenIcons.NameX + i * DSPRE.ROMFiles.NamingScreenIcons.LetterStep - Data.DsBgScreen.MeasureText(_topBarFont, ch) / 2;
+                // naming_screen.c blits each letter's cell from the left of its 12-pixel step, in a window at tile 10,3.
+                int x = DSPRE.ROMFiles.NamingScreenIcons.NameX + i * DSPRE.ROMFiles.NamingScreenIcons.LetterStep;
                 Data.DsBgScreen.DrawText(rgba, _topBarFont, ch, x, DSPRE.ROMFiles.NamingScreenIcons.NameY - 15, 0x294A, 0x5EF7);
             }
 

@@ -2,6 +2,7 @@
 // written out. Sites outside the US dumps were found by the bytes around them in the US dump of the same game, and
 // RomLocatorTests checks each site against the dump it names.
 using System;
+using System.Linq;
 using static DSPRE.RomInfo;
 
 namespace DSPRE
@@ -674,7 +675,24 @@ namespace DSPRE
             },
             new SummaryBarSite(0x8DA46, 0x8DA38, 6, 3, 0xA0C8),
             new SummaryBarSite(0x8DAD8, 0x8DABA, 7, 3, 0x00B4),
-            455, 612, 210);
+            455, 612, 210, PlatinumSummaryFollows);
+
+        // pokeplatinum sprites.c: the info page's type icons, the move rows' type icons, 5th move icon and selector (one x and a
+        // 32-pixel step, so all ten rows move together), and the category icon.
+        private static ScreenWindowSpot Px(uint at, int add) => new ScreenWindowSpot(at, Add: add, Scale: 8);
+
+        // A property, since the sites above are built first.
+        private static SummaryFollow[] PlatinumSummaryFollows => new SummaryFollow[]
+        {
+            new(new[] { ("Static", 9) }, new[] { Px(0x8EFA8, -104), Px(0x8EFB4, -87), Px(0x8EFC8, -121) },
+                new[] { Px(0x8EFAA, -8), Px(0x8EFB6, -8), Px(0x8EFCC, -8) }),
+            new(Enumerable.Range(0, 5).Select(i => ("BattleMoves", i)).Concat(Enumerable.Range(0, 5).Select(i => ("ContestMoves", i))).ToArray(),
+                new[] { Px(0x8F020, 17), Px(0x8F066, 17), Px(0x8F0E2, 17), Px(0x8F12A, 17), Px(0x8F300, -26) },
+                new[] { Px(0x8F01A, -10), Px(0x8F068, -138), Px(0x8F0DC, -10), Px(0x8F12C, -138), Px(0x8F2FA, -16) }),
+            new(new[] { ("Static", 25) }, new[] { Px(0x8F088, -100), Px(0x8F14C, -100) }, new[] { Px(0x8F08C, -8), Px(0x8F150, -8) }),
+            // PokemonSummaryScreen_UpdateAButtonSprite takes x from the button hint's window but y as 8.
+            new(new[] { ("Static", 35) }, Array.Empty<ScreenWindowSpot>(), new[] { Px(0x8F704, -8) }),
+        };
 
         // The HGSS window tables and the limits on moving them were worked out by Mixone in Ghidra.
         private static readonly SummaryScreenSites HgssSummary = new(
@@ -687,7 +705,17 @@ namespace DSPRE
             },
             new SummaryBarSite(0x8A160, 0x8A152, 6, 3, 0xF09F),
             new SummaryBarSite(0x8A1F4, 0x8A1D6, 7, 6, 0xE03F),
-            302, 722, -1);
+            302, 722, -1, HgssSummaryFollows);
+
+        // The bottom screen's type icons beside the Type label, and the move rows' type icons (one x and a 32-pixel step from the
+        // first row, the 5th apart), so the five rows move together. Measured on every English HG and SS dump.
+        private static SummaryFollow[] HgssSummaryFollows => new SummaryFollow[]
+        {
+            new(new[] { ("Static", 9) }, new[] { Px(0x8B604, -100), Px(0x8B614, -83), Px(0x8B628, -117) },
+                new[] { Px(0x8B606, -8), Px(0x8B616, -8), Px(0x8B62C, -8) }),
+            new(Enumerable.Range(8, 5).Select(i => ("Skills", i)).ToArray(), new[] { Px(0x8B67C, 16), Px(0x8B6BC, 16) },
+                new[] { Px(0x8B676, -8), Px(0x8B6C0, -152) }),
+        };
 
         // pokeheartgold asm/unk_0208C3E4.s and unk_02088288.s.
         private static readonly SummaryFontSites HgssSummaryFonts = new(

@@ -170,6 +170,9 @@ namespace DSPRE
         /// <summary>The FIGHT label in <see cref="BattleStringsTextNumber"/>.</summary>
         public const int BattleFightLine = 924;
 
+        /// <summary>"What will {Pokémon} do?" in <see cref="BattleStringsTextNumber"/> (BattleStrings_Text_WhatWillPokemonDo).</summary>
+        public const int BattleWhatWillPokemonDoLine = 921;
+
         /// <summary>The font of the battle touch screen's labels.</summary>
         public static int BattleTouchFontEntry => GameFamily switch
         {
@@ -277,6 +280,12 @@ namespace DSPRE
         /// walk over it, and how many entries the vanilla list has room for (its zero padding included).
         /// </summary>
         public sealed record MoveListSites(int PointerSite, int CountCompare, int VanillaCapacity);
+
+        /// <summary>
+        /// Platinum bag's item box (bag/main.c ToggleHideItemSprite): the 5 by 5 tables of map entries it writes to BG1 when the icon
+        /// shows and when it hides, in <paramref name="Overlay"/>, and the description panel map they belong to.
+        /// </summary>
+        public sealed record PtBagItemBoxSites(int Overlay, uint Shown, uint Hidden, int PanelMap);
 
         /// <summary>
         /// The battle overlay's HP bar text routines: the ldr before each image proxy call and the BLX of each text copy onto the bar.
@@ -437,16 +446,31 @@ namespace DSPRE
         /// <summary>
         /// Window templates (8 bytes each) in arm9 (overlay -1) or an overlay. A read checks the first window's layer and first tile.
         /// </summary>
-        public sealed record ScreenWindowTableSite(string Group, int Overlay, uint Offset, ScreenWindowName[] Windows, int FirstLayer, int FirstBaseTile);
+        /// <param name="Follows">Code that places a table window a second time, which has to move with the window.</param>
+        /// <param name="Locked">Windows the code places itself where those places aren't known, which can't move.</param>
+        public sealed record ScreenWindowTableSite(string Group, int Overlay, uint Offset, ScreenWindowName[] Windows, int FirstLayer, int FirstBaseTile,
+                                                   ScreenWindowFollow[] Follows = null, string[] Locked = null);
+
+        /// <summary>Where code repeats a table window's x and y. <paramref name="Packed"/> spots hold both as a tilemap byte offset.</summary>
+        /// <param name="KeepsRow">The window only moves across, because something tied to its row has no number to move.</param>
+        /// <param name="Within">The block of tiles the window must stay in, such as the part of a layer the game clears, or null for any.</param>
+        public sealed record ScreenWindowFollow(string Window, ScreenWindowSpot[] X, ScreenWindowSpot[] Y, ScreenWindowSpot[] Packed,
+                                                bool KeepsRow = false, (int X, int Y, int W, int H)? Within = null);
 
         /// <summary>For a party Pokémon's window, which Pokémon (1 to 6) and part it is.</summary>
         public sealed record ScreenWindowName(string Name, int Pokemon = 0, string Part = null);
 
         /// <summary>A tile position in code or a table.</summary>
         /// <param name="Offset">A <c>movs</c> whose low byte is the value, or an s32 in a table when <paramref name="Word"/> is set.</param>
-        /// <param name="Word">An s32.</param>
+        /// <param name="Word">An s32. A negative <paramref name="Scale"/> suits a scroll, which moves the picture the other way.</param>
         /// <param name="Add">Added to the stored number to get the position.</param>
-        public sealed record ScreenWindowSpot(uint Offset, bool Word = false, int Add = 0);
+        /// <param name="Imm3">An <c>adds Rd, Rn, #imm3</c> instead, which holds 0 to 7.</param>
+        /// <param name="Scale">Pixels per tile when the stored number is in pixels: the position is (number + Add) / Scale.</param>
+        /// <param name="Half">An s16 in a table, such as a sprite template's x or y.</param>
+        /// <param name="Byte">A u8 in a table, such as a touch rectangle's edge.</param>
+        /// <param name="From">The number is the gap from this window, for code that steps from one window's place to the next.</param>
+        public sealed record ScreenWindowSpot(uint Offset, bool Word = false, int Add = 0, bool Imm3 = false, int Scale = 1, bool Half = false,
+                                              bool Byte = false, string From = null);
 
         /// <summary>
         /// A window the game places in code, with a fixed size. X and Y can each sit in several places that must agree.
@@ -562,7 +586,13 @@ namespace DSPRE
         /// banks it reads ability descriptions and contest effects from (-1 where the game has none).
         /// </summary>
         public sealed record SummaryScreenSites(SummaryWindowTableSite[] Windows, SummaryBarSite Hp, SummaryBarSite Exp, int MessageBank,
-                                                int AbilityDescriptionBank, int ContestEffectBank);
+                                                int AbilityDescriptionBank, int ContestEffectBank, SummaryFollow[] Follows = null);
+
+        /// <summary>
+        /// Code that places sprites beside summary windows. The windows move as one block, and each spot holds a position worked
+        /// out from the first window's (movs immediates or s16 template values, as <see cref="ScreenWindowSpot"/> reads them).
+        /// </summary>
+        public sealed record SummaryFollow((string Page, int Index)[] Windows, ScreenWindowSpot[] X, ScreenWindowSpot[] Y);
 
         /// <summary>The arm9 addresses of the HGSS summary screen calls the fonts patch reroutes, with the width calls grouped by the registers that hold the window.</summary>
         /// <summary>
@@ -889,7 +919,10 @@ namespace DSPRE
             EncounterEffectGraphics, // DP/Pt graphic/field_encounteffect.narc, HGSS a/1/0/9: special trainer battle intro art
             NameInputGraphics,      // DP/Pt data/namein.narc, HGSS a/0/3/1: the naming screen's backgrounds and icons
             StartMenuGraphics,      // Pt graphic/menu_gra.narc: the start menu's icons and cursor
+            ShopGraphics,           // Pt graphic/shop_gra.narc: the shop's screens, and the count arrows the bag borrows
             PokegearGraphics,       // HGSS a/1/4/3: the Pokégear frame and app buttons, six skins each
+            MainMenuGraphics,       // HGSS a/1/1/3: the main menu's scroll arrows
+            TouchYesNoGraphics,     // HGSS a/1/5/2 (system/touch_subwindow): the touch Yes and No buttons menus share
             PokegearMapGraphics,    // HGSS a/1/4/4: the Pokégear map
             PokegearPhoneGraphics,  // HGSS a/1/4/6: the Pokégear phone
             PokegearRadioGraphics,  // HGSS a/1/4/7: the Pokégear radio
@@ -2389,6 +2422,7 @@ namespace DSPRE
                         [DirNames.DynamicHeaders] = $@"{_dataFolderName}\debug\cb_edit\d_test.narc",
                         [DirNames.AreaWindowGraphics] = $@"{_dataFolderName}\arc\area_win_gra.narc",
                         [DirNames.StartMenuGraphics] = $@"{_dataFolderName}\graphic\menu_gra.narc",
+                        [DirNames.ShopGraphics] = $@"{_dataFolderName}\graphic\shop_gra.narc",
                         [DirNames.PartyMenuGraphics] = Localized($@"{_dataFolderName}\graphic\pl_plist_gra.narc", "pokelist", "pl_plist_gra.narc"),
                         [DirNames.BoxGraphics] = Localized($@"{_dataFolderName}\graphic\box.narc", "box", "box.narc"),
                         [DirNames.OptionsGraphics] = $@"{_dataFolderName}\graphic\config_gra.narc",
@@ -2528,6 +2562,8 @@ namespace DSPRE
                         [DirNames.PokegearSkinGraphics] = $@"{_dataFolderName}\a\1\4\5",
                         [DirNames.PokegearPhoneGraphics] = $@"{_dataFolderName}\a\1\4\6",
                         [DirNames.PokegearRadioGraphics] = $@"{_dataFolderName}\a\1\4\7",
+                        [DirNames.MainMenuGraphics] = $@"{_dataFolderName}\a\1\1\3",
+                        [DirNames.TouchYesNoGraphics] = $@"{_dataFolderName}\a\1\5\2",
                         [DirNames.PartyMenuGraphics] = $@"{_dataFolderName}\a\0\2\1",
                         [DirNames.BoxGraphics] = $@"{_dataFolderName}\a\0\1\9",
                         [DirNames.OptionsGraphics] = $@"{_dataFolderName}\a\0\7\2",

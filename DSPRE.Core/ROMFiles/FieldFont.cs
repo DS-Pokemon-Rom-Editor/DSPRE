@@ -217,6 +217,14 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>How wide a run of letters comes out, in pixels.</summary>
+        /// <summary>The width of a line, with bracketed codes such as [PK] read as their one character.</summary>
+        public int Measure(string text)
+        {
+            int w = 0;
+            foreach (int g in FieldFontCharacters.GlyphsOf(text)) w += WidthOf(g);
+            return w;
+        }
+
         public int Measure(string text, Func<char, int> glyphOf)
         {
             if (string.IsNullOrEmpty(text) || glyphOf == null) return 0;
@@ -256,6 +264,7 @@ namespace DSPRE.ROMFiles
     public static class FieldFontCharacters
     {
         private static Dictionary<char, int> _glyphByChar;
+        private static Dictionary<string, int> _glyphByCode;
 
         /// <summary>The picture number for a letter, or -1 when the font has nothing for it.</summary>
         public static int GlyphFor(char c)
@@ -266,13 +275,37 @@ namespace DSPRE.ROMFiles
 
         public static bool Ready => Map() != null && Map().Count > 0;
 
+        /// <summary>
+        /// The picture numbers for a line. A bracketed code in the map, such as [PK], counts as one character. Any other
+        /// character the font lacks is -1.
+        /// </summary>
+        public static List<int> GlyphsOf(string text)
+        {
+            List<int> glyphs = new List<int>();
+            if (string.IsNullOrEmpty(text)) return glyphs;
+            Map();
+            for (int i = 0; i < text.Length; i++)
+            {
+                int close = text[i] == '[' ? text.IndexOf(']', i + 1) : -1;
+                if (close > i && _glyphByCode != null && _glyphByCode.TryGetValue(text.Substring(i, close - i + 1), out int coded))
+                {
+                    glyphs.Add(coded);
+                    i = close;
+                    continue;
+                }
+                glyphs.Add(GlyphFor(text[i]));
+            }
+            return glyphs;
+        }
+
         /// <summary>Forgets the table, for when a different ROM is opened.</summary>
-        public static void Reset() { _glyphByChar = null; }
+        public static void Reset() { _glyphByChar = null; _glyphByCode = null; }
 
         private static Dictionary<char, int> Map()
         {
             if (_glyphByChar != null) return _glyphByChar;
             Dictionary<char, int> map = new Dictionary<char, int>();
+            Dictionary<string, int> codes = new Dictionary<string, int>();
             try
             {
                 CharMap charMap = CharMaps.CharMapManager.LoadCharMap();
@@ -285,9 +318,12 @@ namespace DSPRE.ROMFiles
                         string text = pair.Value?.Character;
                         if (text != null && text.Length == 1 && !map.ContainsKey(text[0]))
                             map[text[0]] = code - 1;
+                        else if (text != null && text.Length > 2 && text[0] == '[' && text[^1] == ']' && !codes.ContainsKey(text))
+                            codes[text] = code - 1;
                     }
             }
             catch (Exception ex) { AppLogger.Warn("Field font character map: " + ex.Message); }
+            _glyphByCode = codes;
             _glyphByChar = map;
             return _glyphByChar;
         }

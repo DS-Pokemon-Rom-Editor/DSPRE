@@ -107,7 +107,7 @@ namespace DSPRE.Avalonia.Views.Controls
         public static int Measure(string text)
         {
             if (string.IsNullOrEmpty(text)) return 0;
-            if (Font != null && FieldFontCharacters.Ready) return Font.Measure(text, FieldFontCharacters.GlyphFor);
+            if (Font != null && FieldFontCharacters.Ready) return Font.Measure(text);
             return text.Length * 6;
         }
 
@@ -238,9 +238,8 @@ namespace DSPRE.Avalonia.Views.Controls
                 return false;
             }
             bool drew = false;
-            foreach (char c in text)
+            foreach (int g in FieldFontCharacters.GlyphsOf(text))
             {
-                int g = FieldFontCharacters.GlyphFor(c);
                 int advance = Font.WidthOf(g);
                 if (g >= 0)
                 {

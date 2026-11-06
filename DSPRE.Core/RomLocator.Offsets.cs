@@ -2532,6 +2532,7 @@ namespace DSPRE
             },
             _ => null,
         };
+
         /// <summary>The Pokédex's PokedexGraphics_GetAnimIDfromType, which turns a type into its icon's animation.</summary>
         private static Spot PokedexTypeAnimation(GameVersions game, GameLanguages language, int revision) => game switch
         {

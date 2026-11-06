@@ -28,9 +28,8 @@ namespace DSPRE.Avalonia.Data
             for (int i = 0; i < pixels.Length; i++) pixels[i] = Background;
 
             int at = 0;
-            foreach (char c in name ?? "")
+            foreach (int glyph in FieldFontCharacters.GlyphsOf(name ?? ""))
             {
-                int glyph = FieldFontCharacters.GlyphFor(c);
                 if (glyph < 0 || glyph >= font.GlyphCount) continue;
 
                 int step = Math.Max(1, font.WidthOf(glyph));

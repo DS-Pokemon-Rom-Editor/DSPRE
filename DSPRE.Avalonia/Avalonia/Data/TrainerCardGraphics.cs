@@ -40,15 +40,16 @@ namespace DSPRE.Avalonia.Data
         public void RevertAll() => Pending.Discard();
 
         // ── Decode ───────────────────────────────────────────────────────────
-        public RawImage ComposeCardFront(int rankIndex) => ComposeCard(rankIndex, front: true);
-        public RawImage ComposeCardBack(int rankIndex) => ComposeCard(rankIndex, front: false);
+        /// <param name="clear">Colour 0 left see-through, so the case behind the card shows as in the game.</param>
+        public RawImage ComposeCardFront(int rankIndex, bool clear = false) => ComposeCard(rankIndex, true, clear);
+        public RawImage ComposeCardBack(int rankIndex, bool clear = false) => ComposeCard(rankIndex, false, clear);
 
-        private RawImage ComposeCard(int rankIndex, bool front)
+        private RawImage ComposeCard(int rankIndex, bool front, bool clear)
         {
             (int ncgr, int facaNscr, int backNscr, int[] rankPalettes) m = TrainerCardMembers;
             int palId = m.rankPalettes[rankIndex];
             int scrId = front ? m.facaNscr : m.backNscr;
-            return ComposeVia(m.ncgr, palId, scrId, transparentZero: false);
+            return ComposeVia(m.ncgr, palId, scrId, transparentZero: clear);
         }
 
         public RawImage ComposeTrainer(bool male)

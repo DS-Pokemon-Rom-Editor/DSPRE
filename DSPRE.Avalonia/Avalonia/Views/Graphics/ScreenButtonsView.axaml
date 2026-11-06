@@ -97,6 +97,8 @@
     <Grid ColumnDefinitions="*,*" ColumnSpacing="16" Margin="16">
       <Viewbox Stretch="Uniform" VerticalAlignment="Top">
         <StackPanel Spacing="6">
+        <TextBlock Text="Top screen" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding HasTop}"/>
+        <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="Black" Width="514" Height="386" IsVisible="{Binding HasTop}"/>
         <TextBlock Text="Bottom screen" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
         <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="Black">
           <Panel x:Name="Board" Width="512" Height="384" ClipToBounds="True" Background="Black"
@@ -142,6 +144,10 @@
       </Viewbox>
       <Viewbox Grid.Column="1" Stretch="Uniform" VerticalAlignment="Top">
         <StackPanel Spacing="6">
+          <TextBlock Text="Top screen" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding HasTop}"/>
+          <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="{DynamicResource Editor.PanelBg}" IsVisible="{Binding HasTop}">
+            <Image Source="{Binding TopPicture}" Width="512" Height="384" Stretch="Fill" RenderOptions.BitmapInterpolationMode="None"/>
+          </Border>
           <TextBlock Text="Bottom screen" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
           <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="{DynamicResource Editor.PanelBg}">
             <Image Source="{Binding CursorPicture}" Width="512" Height="384" Stretch="Fill" RenderOptions.BitmapInterpolationMode="None"

@@ -81,13 +81,13 @@ namespace DSPRE.ROMFiles
         /// The plain one-tile border menus and the yes/no box use: the archive's first picture with its first
         /// palette, standard_system in the Platinum decomp.
         /// </summary>
-        public static FieldWindowFrame LoadStandard(Func<int, byte[]> member, int count)
+        public static FieldWindowFrame LoadStandard(Func<int, byte[]> member, int count, int drawing = 0)
         {
             try
             {
                 int palette = FirstPaletteIndex(member, count);
                 if (palette < 0) return null;
-                byte[] gfx = member(0);
+                byte[] gfx = member(drawing);
                 byte[] pal = member(palette);
                 if (gfx == null || pal == null) return null;
 
@@ -96,6 +96,14 @@ namespace DSPRE.ROMFiles
                 return tiles == null || colours == null ? null : new FieldWindowFrame(tiles, colours, palette);
             }
             catch (Exception ex) { AppLogger.WarnOnce("FieldWindowFrame.LoadStandard", ex); return null; }
+        }
+
+        /// <summary>A copy with one colour changed, for screens that animate that colour.</summary>
+        public FieldWindowFrame WithColour(int index, uint argb)
+        {
+            uint[] colours = (uint[])_colours.Clone();
+            if (index > 0 && index < colours.Length) colours[index] = argb;
+            return new FieldWindowFrame(_tiles, colours, PaletteEntry, _cursor);
         }
 
         /// <summary>The corners, edges and middle of the standard border.</summary>

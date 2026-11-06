@@ -242,6 +242,18 @@ namespace DSPRE.ROMFiles
             else foreach (Copy c in _copies) c.Lists[member] = values.ToList();
         }
 
+        /// <summary>The species' regional dex number as the game reads it, or 0 when it isn't in the regional dex.</summary>
+        public static int RegionalNumber(int species)
+        {
+            if (FromSource) return HgEngine.HgEngineRegionalDex.TryGetDexNumber(species, out int dex) ? dex : 0;
+            if (GameDirs == null || !GameDirs.ContainsKey(DirNames.RegionalDexNumbers)) return 0;
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.RegionalDexNumbers });
+            string path = Path.Combine(GameDirs[DirNames.RegionalDexNumbers].unpackedDir, "0000");
+            if (!File.Exists(path)) return 0;
+            byte[] numbers = File.ReadAllBytes(path);
+            return species >= 0 && species * 2 + 2 <= numbers.Length ? BitConverter.ToUInt16(numbers, species * 2) : 0;
+        }
+
         /// <summary>The regional dex, first entry first.</summary>
         public List<ushort> RegionalOrder => _copies[0].Lists[Regional];
 

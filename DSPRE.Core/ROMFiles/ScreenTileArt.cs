@@ -36,6 +36,27 @@ namespace DSPRE.ROMFiles
         void SetSquare(int page, int x, int y, ushort square);
     }
 
+    /// <summary>Background art that follows a window: each result is built from the saved screen, so moving back gives the file as it was.</summary>
+    public static class WindowTileArt
+    {
+        /// <summary>
+        /// A block the game draws at its window: <paramref name="shown"/> where the window is now. Where the window was saved,
+        /// <paramref name="hidden"/> goes back at its home spot, and away from home the row's plain squares fill in.
+        /// </summary>
+        public static byte[] Swap(byte[] saved, (int X, int Y) was, (int X, int Y) now, (int X, int Y) home, int width, int height,
+                                  ushort[] hidden, ushort[] shown)
+        {
+            if (now == was) return saved;
+            ushort[] left = was == home ? hidden : NitroBgCodec.PlainSquares(saved, was.X, was.Y, width, height, now, home);
+            byte[] map = NitroBgCodec.PutSquares(saved, was.X, was.Y, width, height, left);
+            return NitroBgCodec.PutSquares(map, now.X, now.Y, width, height, shown);
+        }
+
+        /// <summary>A band of <paramref name="rows"/> rows starting <paramref name="above"/> rows above its window, moved with the window.</summary>
+        public static byte[] Band(byte[] saved, int savedRow, int nowRow, int above, int rows) =>
+            NitroBgCodec.MoveRows(saved, savedRow - above, savedRow - above + rows - 1, nowRow - savedRow);
+    }
+
     /// <summary>A <see cref="ScreenTiles"/> screen read into a page's <see cref="ScreenTables"/>, plain or LZ-packed.</summary>
     internal sealed class ScreenTileArt
     {

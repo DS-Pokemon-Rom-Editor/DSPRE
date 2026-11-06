@@ -39,17 +39,27 @@ namespace DSPRE.Avalonia.Data
             /// <summary>Whether a window (by group and name) is on screen in a state.</summary>
             public Func<int, string, string, bool> Shows { get; init; }
             /// <summary>The Layout tab's states: <see cref="States"/> plus Layout-only ones.</summary>
-            public string[] LayoutStates { get; init; }
+            public string[] LayoutStates => LayoutStatesOf?.Invoke();
+            // Read on each use: the table outlives a switch to another game.
+            public Func<string[]> LayoutStatesOf { get; init; }
             /// <summary>Whether this game has a Layout-only state; null when it has all of them.</summary>
             public Func<int, bool> HasLayoutState { get; init; }
             /// <summary>The state a Layout-only state is drawn as.</summary>
             public Func<int, int> DrawnAs { get; init; }
             /// <summary>Draws the screen the shots don't show, for the Layout tab; null if there is none.</summary>
             public Func<int, Shot> OtherScreen { get; init; }
+            /// <summary>Both screens for the Layout tab by state, when they differ from the text preview's, or null.</summary>
+            public Func<int, (byte[] Top, byte[] Bottom)?> LayoutPictures { get; init; }
             /// <summary>Rows a background is scrolled up in a state.</summary>
             public Func<int, int, int> RowsScrolled { get; init; }
+            /// <summary>The frame's corner in tiles. Windows inside the frame are placed relative to this corner.</summary>
+            public Func<int, ScreenWindowLayout.Window, (int X, int Y)> Inside { get; init; }
             /// <summary>The order the game puts windows down; null keeps the table order.</summary>
             public Func<ScreenWindowLayout.Window, int> PutOrder { get; init; }
+            /// <summary>Blocks of map squares that move with a window, or null.</summary>
+            public Func<IReadOnlyList<ScreenSwap>> SwapsOf { get; init; }
+            /// <summary>Background rows drawn behind a window, which move up and down with it, or null.</summary>
+            public Func<IReadOnlyList<ScreenBand>> BandsOf { get; init; }
             /// <summary>The block the game moves a window with, which the window must stay inside; null if none.</summary>
             public Func<ScreenWindowLayout.Window, (int X, int Y, int W, int H)?> Block { get; init; }
             /// <summary>The row the game's code forces a window to in a state; null if the table decides.</summary>
@@ -79,17 +89,19 @@ namespace DSPRE.Avalonia.Data
                     Banks = () => (Pt || Hg) && LocationNamesTextNumber >= 0 ? new[] { LocationNamesTextNumber } : Array.Empty<int>(),
                     Draw = (bank, line) => Banner(line, Hg), FirstLine = 1 },
             new() { Key = "naming", Title = "Naming screen", Banks = () => Pt ? Us(422) : Hg ? Us(249) : Array.Empty<int>(),
-                    Draw = (bank, line) => NamingPrompt(line, Hg), MainOnTop = false },
+                    Draw = (bank, line) => NamingPrompt(line, Hg), MainOnTop = false, OtherScreen = _ => NamingKeyboard() },
             new() { Key = "trainercard", Title = "Trainer card", Banks = () => Pt ? Us(616) : Hg ? Us(727) : Array.Empty<int>(),
                     Draw = (bank, line) => TrainerCard(line, Hg) },
             new() { Key = "box", Title = "PC boxes", Banks = () => Pt ? Us(19, 18) : Hg ? Us(25, 24) : Array.Empty<int>(),
                     Draw = (bank, line) => Pt ? BoxPt(bank == TextBank(19), line) : BoxHg(bank == TextBank(25), line), FirstLine = 7,
-                    LayoutStates = BoxStates, HasLayoutState = state => state != BoxSelected || Hg, OtherScreen = state => Hg ? BoxTopHg(state) : null,
-                    // With a Pokémon picked, the menu covers the right of the bottom screen and hides the messages and yes/no.
-                    Shows = (state, group, name) => state != BoxSelected || name is not ("Message" or "Short message" or "Second message" or "Yes/no") },
+                    LayoutStatesOf = () => BoxStates, OtherScreen = state => Hg ? BoxTopHg(state) : null,
+                    Inside = (state, w) => !Hg ? (0, 0) : w.Name.StartsWith("Move ", StringComparison.Ordinal) ? (20, 12)
+                        : w.Name is "Item name" or "Item description" ? (0, 15) : (0, 0),
+                    LayoutPictures = state => Pt ? BoxLayoutPt(state) : null,
+                    Shows = BoxShows },
             new() { Key = "party", Title = "Party", Banks = () => Pt ? Us(453) : Hg ? Us(300) : Array.Empty<int>(),
                     Draw = (bank, line) => Party(line, Hg), FirstLine = 29,
-                    States = PartyStates, LayoutStates = PartyStates.Append("Menu with field moves").Append("Multi battle").ToArray(),
+                    States = PartyStates, LayoutStatesOf = () => PartyStates.Append("Menu with field moves").Append("Multi battle").ToArray(),
                     // Retail Platinum only uses the single layout, so the multi tables never show.
                     HasLayoutState = state => state != PartyMulti || Hg,
                     DrawnAs = state => state == PartyFieldMoves ? PartyMenu : state == PartyMulti ? PartyNormal : state,
@@ -99,11 +111,18 @@ namespace DSPRE.Avalonia.Data
                     TakesTurns = w => w.Name.EndsWith(" message", StringComparison.Ordinal) ? "message" : null, Frame = PartyFrame, StateOf = (bank, line) => PartyStateOf(line, Hg), Shows = (state, group, name) => PartyShows(state, group, name, Hg) },
             new() { Key = "bag", Title = "Bag", Banks = () => Pt ? Us(392, 7, 395) : Hg ? Us(222, 10) : Array.Empty<int>(),
                     Draw = (bank, line) => Pt ? BagPt(bank, line) : BagHg(bank, line), FirstLine = 1,
-                    MainOnTop = true, LayoutStates = BagStates, HasLayoutState = state => state == 0 || Hg, OtherScreen = BagOtherScreen, Shows = BagShows },
+                    MainOnTop = true, LayoutStatesOf = () => BagStates, OtherScreen = BagOtherScreen, Shows = BagShows,
+                    // HGSS draws the description's dark band into both top backdrops (54, and 9 once a TM's menu is open): rows 17 to 28,
+                    // from one row above the window.
+                    BandsOf = () => Hg ? new[] { new ScreenBand("Description", DirNames.BagGraphics, new[] { 9, 54 }, 1, 12) } : null,
+                    SwapsOf = () => Pt && RomLocator.PtBagItemBox is { } box
+                        ? new[] { new ScreenSwap("Item frame", DirNames.BagGraphics, box.PanelMap, 0, 18, 5, 5, () => PtItemBox(false), () => PtItemBox(true)) }
+                        : null },
             new() { Key = "pokegear", Title = "Pokégear",
                     Banks = () => Hg ? Us(new[] { 640 }.Concat(Enumerable.Range(641, 76).Where(b => b != 668))
                                            .Concat(Enumerable.Range(409, 12)).Concat(new[] { 273, 271 }).ToArray()) : Array.Empty<int>(),
-                    Draw = Pokegear, FirstLine = 1, LayoutStates = PokegearApps, Shows = (state, group, name) => group == PokegearApps[Math.Clamp(state, 0, PokegearApps.Length - 1)] },
+                    Draw = Pokegear, FirstLine = 1, LayoutStatesOf = () => PokegearApps, LayoutPictures = state => Hg ? PokegearLayout(state) : null,
+                    Shows = (state, group, name) => group == PokegearApps[Math.Clamp(state, 0, PokegearApps.Length - 1)] },
         };
 
         /// <summary>"Top screen" or "Bottom screen", for the screen a shot shows.</summary>
@@ -135,8 +154,11 @@ namespace DSPRE.Avalonia.Data
         private static Dictionary<string, bool[]> _shownTiles;
 
         /// <summary>A window's position in tiles in a state: its own, or the row the game's code forces.</summary>
-        public static (int X, int Y, int W, int H) Placed(Screen screen, ScreenWindowLayout.Window w, int state) =>
-            (w.X, screen.FixedTop?.Invoke(state, w) ?? w.Y, w.Width, w.Height);
+        public static (int X, int Y, int W, int H) Placed(Screen screen, ScreenWindowLayout.Window w, int state)
+        {
+            (int ix, int iy) = screen.Inside?.Invoke(state, w) ?? (0, 0);
+            return (w.X + ix, (screen.FixedTop?.Invoke(state, w) ?? w.Y) + iy, w.Width, w.Height);
+        }
 
         /// <summary>Whether two windows can be on screen together. Windows that take turns never are.</summary>
         public static bool Together(Screen screen, ScreenWindowLayout.Window a, ScreenWindowLayout.Window b)
@@ -208,6 +230,7 @@ namespace DSPRE.Avalonia.Data
             lock (Gate)
             {
                 _state = state >= 0 ? state : Math.Max(0, screen.StateOf?.Invoke(bank, line) ?? 0);
+                _forLayout = state >= 0;
                 _stop = Math.Max(0, stop);
                 _line = (b, l) => b == bank && l == line ? text : archiveLine(b, l);
                 _stops = 1;
@@ -351,12 +374,20 @@ namespace DSPRE.Avalonia.Data
 
         private static ushort Rgb(int r, int g, int b) => (ushort)(r | g << 5 | b << 10);
 
-        /// <summary>Fills placeholders with sample words and removes markup, keeping line breaks.</summary>
-        private static string Text(int usBank, int id) => Line(TextBank(usBank), id);
+        private static uint Argb(ushort colour)
+        {
+            (byte r, byte g, byte b) = NitroBgCodec.Colour(colour);
+            return 0xFF000000u | (uint)r << 16 | (uint)g << 8 | b;
+        }
 
-        private static string Line(int bank, int id)
+        /// <summary>Fills placeholders with sample words and removes markup, keeping line breaks.</summary>
+        private static string Text(int usBank, int id, Func<int, int, int, string> fill = null) => Line(TextBank(usBank), id, fill);
+
+        /// <summary>Placeholders that <paramref name="fill"/> leaves null get sample words.</summary>
+        private static string Line(int bank, int id, Func<int, int, int, string> fill = null)
         {
             string raw = _line(bank, id) ?? "";
+            if (fill != null) raw = FieldStringVars.Expand(raw, fill);
             string expanded = FieldStringVars.Expand(raw, SampleWord);
             expanded = expanded.Replace("\\n", "\n").Replace("\\r", "\n").Replace("\\f", "\n");
             return global::System.Text.RegularExpressions.Regex.Replace(expanded, @"\{[^}]*\}", "");
@@ -373,8 +404,12 @@ namespace DSPRE.Avalonia.Data
 
         private static string BoxText(int usBank, int id, FieldFont font) => Box(TextBank(usBank), id, font);
 
+        // The item named in a screen's messages, such as the item picked in the bag, or 0 for the generic word.
+        [ThreadStatic] private static int _sampleItem;
+
         public static string SampleWord(int family, int kind, int buffer)
         {
+            if (kind == 8 && _sampleItem > 0) return Text(392, _sampleItem);
             string word = FieldStringVars.SuggestFor(kind, buffer, null);
             if (!word.StartsWith("strvar", StringComparison.Ordinal)) return word;
             // Month names are family 34 in HGSS; any other unknown placeholder shows as a dash.
@@ -428,10 +463,12 @@ namespace DSPRE.Avalonia.Data
                 }
         }
 
-        private static void StandardWindow(byte[] rgba, int x, int y, int w, int h, ushort paper)
+        private static void StandardWindow(byte[] rgba, int x, int y, int w, int h, ushort paper) => StandardWindow(rgba, x, y, w, h, paper, null);
+
+        private static void StandardWindow(byte[] rgba, int x, int y, int w, int h, ushort paper, Func<FieldWindowFrame> pick)
         {
             (byte r, byte g, byte b) = NitroBgCodec.Colour(paper);
-            FieldWindowFrame frame = WindowFrames.LoadStandard();
+            FieldWindowFrame frame = pick != null ? pick() : WindowFrames.LoadStandard();
             if (frame == null) { Fill(rgba, paper, x * 8, y * 8, w * 8, h * 8); return; }
             byte[] piece = frame.ComposeStandard(w, h, out int pw, out int ph, 0xFF000000u | (uint)r << 16 | (uint)g << 8 | b);
             Blit(rgba, piece, pw, ph, (x - 1) * 8, (y - 1) * 8);
@@ -607,26 +644,45 @@ namespace DSPRE.Avalonia.Data
             ushort[] sys = SystemColours;
             ushort grey = Rgb(26, 26, 26);
 
-            // CONTINUE is selected, so its window is white and the others grey.
-            StandardWindow(rgba, 3, 1, width, 10, sys[15]);
+            // CONTINUE is selected, so its window is white and the others grey. HGSS main_menu.c ov74_0222841C frames the selected
+            // button with frame type 1 and cycles its colour 6 from RGB(1, 28, 20) (AdvanceButtonBorderAnimation).
+            Func<FieldWindowFrame> chosen = hg ? () => WindowFrames.LoadStandard(1)?.WithColour(6, Argb(Rgb(1, 28, 20))) : null;
+            StandardWindow(rgba, 3, 1, width, 10, sys[15], chosen);
             Print(rgba, SystemFont, Text(bank, 0), 24, 8, sys[1], sys[2]);
             for (int i = 0; i < 4; i++)
             {
                 int y = 8 + 16 * (i + 1);
                 Print(rgba, SystemFont, Text(bank, labels[i]), 24 + 32, y, sys[7], sys[8]);
-                Print(rgba, SystemFont, Text(bank, values[i]), 24 + valueRight, y, sys[7], sys[8], Align.Right);
+                // The time's minutes are padded with zeros (BufferIntegerAsString, PRINTING_MODE_LEADING_ZEROS), so 0:00.
+                string value = i == 1 ? FieldStringVars.Expand(_line(bank, values[i]) ?? "", (_, _, buffer) => buffer == 1 ? "00" : "0") : Text(bank, values[i]);
+                Print(rgba, SystemFont, value, 24 + valueRight, y, sys[7], sys[8], Align.Right);
             }
             List<int> titles = new List<int> { 1 };
             bool inContinue = line == 0 || labels.Contains(line) || values.Contains(line);
             if (!inContinue && line != 1) titles.Add(line);
             if (hg && !titles.Contains(9)) titles.Add(9);
+            // main_menu.c sMainMenuButtons: Nintendo WFC Settings always follows, below the screen.
+            if (hg && !titles.Contains(12)) titles.Add(12);
             int top = 13;
+            bool below = false;
             foreach (int title in titles)
             {
-                if (top + others > 24) break;
+                if (top + others > 24) { below = true; break; }
                 StandardWindow(rgba, 3, top, width, others, grey);
                 Print(rgba, SystemFont, Text(bank, title), 24, top * 8, sys[1], sys[2]);
                 top += others + 2;
+            }
+            if (hg)
+            {
+                // main_menu.c: the arrows are sprites (a/1/1/3 drawing 47, colours 44, cells 46, animations 45) at 236,20 and 236,172.
+                // MainMenu_UpdateArrowSprites lights one (sequence 2 or 3) when options lie past that edge.
+                Func<int, byte[]> archive = Members(DirNames.MainMenuGraphics);
+                if (archive != null)
+                {
+                    Func<int, byte[]> m = i => GraphicAssets.Unsqueeze(archive(i));
+                    PartySprite(rgba, m, 45, 46, 47, 236, 20, 0, -1, 44);
+                    PartySprite(rgba, m, 45, 46, 47, 236, 172, below ? 3 : 1, -1, 44);
+                }
             }
             return new Shot($"Main menu graphics: {(hg ? "bottom" : "top")}", rgba);
         }
@@ -651,7 +707,7 @@ namespace DSPRE.Avalonia.Data
 
         // ── place-name banner ────────────────────────────────────────────────────────
 
-        private static Dictionary<int, int> _bannerStyles;
+        private static Dictionary<int, int> _bannerStyles, _bannerUses;
         private static string _bannerRom;
 
         // Maps with no banner use style 0.
@@ -661,6 +717,7 @@ namespace DSPRE.Avalonia.Data
             {
                 _bannerRom = WorkDir;
                 _bannerStyles = new Dictionary<int, int>();
+                _bannerUses = new Dictionary<int, int>();
                 int count = MapHeader.GetHeaderCount();
                 for (ushort i = 0; i < count; i++)
                 {
@@ -673,6 +730,7 @@ namespace DSPRE.Avalonia.Data
                         _ => (-1, 0),
                     };
                     if (place >= 0 && style > 0 && !_bannerStyles.ContainsKey(place)) _bannerStyles[place] = style;
+                    if (place >= 0 && style > 0) _bannerUses[place] = _bannerUses.GetValueOrDefault(place) + 1;
                 }
             }
             return _bannerStyles.TryGetValue(name, out int found) ? found : 0;
@@ -700,6 +758,16 @@ namespace DSPRE.Avalonia.Data
         }
 
         public static Shot BannerOf(int line) => Banner(line, Hg);
+
+        /// <summary>The place name most maps show on entry. HGSS lists Sinnoh's names first, and its maps don't use them.</summary>
+        public static int CommonBannerPlace()
+        {
+            lock (Gate)
+            {
+                BannerStyle(0, Hg);
+                return _bannerUses.Count == 0 ? 1 : _bannerUses.OrderByDescending(u => u.Value).ThenBy(u => u.Key).First().Key;
+            }
+        }
 
         private static Shot Banner(int line, bool hg)
         {
@@ -885,8 +953,11 @@ namespace DSPRE.Avalonia.Data
             _pieces.Add((DirNames.TrainerCardGraphics, back ? backScreen : front, back ? "Card back" : "Card front"));
             if (!back) _pieces.Add((DirNames.TrainerCardGraphics, TrainerCardTrainerMembers.maleNscr, "Trainer"));
 
-            byte[] rgba = Blank(0);
-            DsBgScreen.DrawImage(rgba, back ? card.ComposeCardBack(0) : card.ComposeCardFront(0), 0, 0);
+            // The case on BG1 shows around and under the card on BG2. HGSS colours it with the card palette, Platinum
+            // (trainer_case/main.c) with the case palette.
+            byte[] caseLayer = hg ? TrainerCaseHg() : Pt ? TrainerCasePt() : null;
+            byte[] rgba = caseLayer ?? Blank(0);
+            DsBgScreen.DrawImage(rgba, back ? card.ComposeCardBack(0, caseLayer != null) : card.ComposeCardFront(0, caseLayer != null), 0, 0);
             if (!back)
             {
                 RawImage trainer = card.ComposeTrainer(true);
@@ -900,7 +971,7 @@ namespace DSPRE.Avalonia.Data
             {
                 int x = r.TileX * 8, y = r.TileY * 8;
                 Print(rgba, SystemFont, Text(bank, r.Label), x, y, ink, shadow);
-                string value = r.Value switch { -1 => "00000", -2 => "PLAYER", -3 => "0", _ => Text(bank, r.Value) };
+                string value = r.Value switch { -1 => "00000", -2 => "PLAYER", -3 => "0", _ => CardValue(bank, r.Value) };
                 if (r.At >= 0)
                 {
                     // Link battles place "W" and "L", with each count ending before its letter.
@@ -919,6 +990,16 @@ namespace DSPRE.Avalonia.Data
                 FieldFont touch = Font(4) ?? SystemFont;
                 (int hx, int hy) = hint ?? (1, 21);
                 (int cx, int cy) = cancel ?? (25, 21);
+                // The Back and hint buttons are sprites a tile left of their text (ov51_021E80A0): Back animation 0 at 192,168, the hint 4 at 0,168.
+                Func<int, byte[]> files = Members(DirNames.TrainerCardGraphics);
+                if (files != null)
+                {
+                    Func<int, byte[]> m = i => GraphicAssets.Unsqueeze(files(i));
+                    (int bNcgr, int bNcer, int bNanr, int bNclr) = (HgssTrainerCardCase.ButtonNcgr, HgssTrainerCardCase.ButtonNcer,
+                                                                     HgssTrainerCardCase.ButtonNanr, HgssTrainerCardCase.ButtonNclr);
+                    PartySprite(rgba, m, bNanr, bNcer, bNcgr, cx * 8 - 8, cy * 8, 0, -1, bNclr);
+                    if (!back) PartySprite(rgba, m, bNanr, bNcer, bNcgr, hx * 8 - 8, hy * 8, 4, -1, bNclr);
+                }
                 if (back) Print(rgba, touch, Text(bank, 16), hx * 8 + 48, hy * 8 + 4, rank[5], rank[4], Align.Centre);
                 else Print(rgba, SystemFont, Text(bank, 15), hx * 8, hy * 8 + 4, rank[5], rank[4]);
                 Print(rgba, touch, Text(bank, 14), cx * 8 + 24, cy * 8 + 4, rank[5], rank[4], Align.Centre);
@@ -930,6 +1011,30 @@ namespace DSPRE.Avalonia.Data
                 }
             }
             return new Shot($"Trainer card graphics: {(hg ? "bottom" : "top")}", rgba, AvaloniaEditorLauncher.OpenTrainerCardEditor);
+        }
+
+        // A new save pads the minutes and the year's last two digits with zeros (0:00, Jan. 1, 2009).
+        private static string CardValue(int bank, int line)
+        {
+            return Text(bank, line, (_, kind, buffer) => kind != 51 ? null : buffer switch { 1 => "00", 2 => "09", 4 => "1", _ => null });
+        }
+
+        private static byte[] TrainerCasePt()
+        {
+            (DsBgScreen s, Func<int, byte[]> m) = Bg(DirNames.TrainerCardGraphics);
+            if (s == null) return null;
+            Palettes(s, NitroBgCodec.ReadColours(m(PlatinumTrainerCardCase.CaseNclr)));
+            Layer(s, m, 1, 1, 0, PlatinumTrainerCardCase.CaseNcgr, PlatinumTrainerCardCase.CaseNscr);
+            return s.Render();
+        }
+
+        private static byte[] TrainerCaseHg()
+        {
+            (DsBgScreen s, Func<int, byte[]> m) = Bg(DirNames.TrainerCardGraphics);
+            if (s == null) return null;
+            Palettes(s, NitroBgCodec.ReadColours(m(TrainerCardMembers.rankPalettes[0])));
+            Layer(s, m, 1, 1, 0, HgssTrainerCardCase.CaseNcgr, HgssTrainerCardCase.CaseNscr);
+            return s.Render();
         }
 
         private static void DrawImagePart(byte[] rgba, RawImage image, int x, int y, int w, int h)
@@ -957,21 +1062,38 @@ namespace DSPRE.Avalonia.Data
             Palettes(s, panel, 0, 7);
             s.SetPalette(9, DsBgScreen.Row(NitroBgCodec.ReadColours(m(28)), 0));
             Layer(s, m, 2, 1, 0, 1, 0);
+            // preview_display.c PCMonPreviewDisplay_LoadGraphics fills species, number and nickname with colour 15 and leaves the
+            // held item window clear. Only its top 12x2 goes on the map.
+            (string Name, (int, int, int, int) At, int Palette, int Base, int Fill, int Rows)[] windows =
+            {
+                ("Species", (0, 1, 10, 2), 1, 288, 15, -1), ("Dex number", (5, 3, 5, 1), 1, 308, 15, -1),
+                ("Nickname", (0, 16, 10, 3), 3, 313, 15, -1), ("Held item and more", (1, 21, 12, 4), 1, 343, 0, 2),
+            };
+            foreach ((string wName, (int, int, int, int) at, int palette, int baseTile, int fill, int rows) in windows)
+            {
+                (int wx, int wy, int ww, int wh) = ScreenWindowLayouts.Window("box", wName, at);
+                s.PutWindow(2, wx, wy, ww, wh, palette, baseTile, fill, rows);
+            }
             s.InitLayer(3, 3, 0x10000);
             s.LoadTiles(0x10000, m(29));
             s.Fill(3, 0x18, 0, 0, 32, 32, 9);
             (int _, ushort[] wall) = NitroBgCodec.ReadMap(m(30));
+            // The Box picture scrolls BG3, so the wallpaper and its name go wherever it is.
+            (int boxX, int boxY, int _, int _) = ScreenWindowLayouts.Window("box", "Pictures", "Box", (11, 0, 21, 20));
             for (int y = 0; y < 20; y++)
                 for (int x = 0; x < 21; x++)
                 {
                     int at = y * 21 + x;
-                    if (at < wall.Length) s.Copy(3, 11 + x, y, 1, 1, new[] { (ushort)((wall[at] & 0x0FFF) | 9 << 12) }, 0, 0, 1);
+                    if (at < wall.Length && boxX + x < 32 && boxY + y < 32)
+                        s.Copy(3, boxX + x, boxY + y, 1, 1, new[] { (ushort)((wall[at] & 0x0FFF) | 9 << 12) }, 0, 0, 1);
                 }
+            // view.c BoxView_WriteWallpaperTilemap: the four rows under the wallpaper get its first tile.
+            s.Fill(3, 0, boxX, boxY + 20, Math.Min(21, 32 - boxX), Math.Max(0, Math.Min(4, 32 - boxY - 20)), 9);
             byte[] rgba = s.Render();
 
             ushort[] wallRow = DsBgScreen.Row(NitroBgCodec.ReadColours(m(28)), 0);
             int name = !messages && line >= 6 && line <= 23 ? line : 6;
-            Print(rgba, SystemFont, Text(18, name), 88 + 84, 13, wallRow[2], wallRow[1], Align.Centre);
+            Print(rgba, SystemFont, Text(18, name), boxX * 8 + 84, boxY * 8 + 13, wallRow[2], wallRow[1], Align.Centre);
 
             ushort[] row4 = DsBgScreen.Row(panel, 4);
             if (messages)
@@ -993,14 +1115,150 @@ namespace DSPRE.Avalonia.Data
             return new Shot("PC box graphics: top", rgba);
         }
 
+        // The Layout tab's Platinum box list: the first sample Pokémon hovered, then picked (preview_display.c windows on BG2:
+        // species 0,1 and number 5,3 in row 1, nickname 0,16 in row 3, held item 1,21 in row 1, and the picture centred on 44,84).
+        private static byte[] BoxLayoutTopPt(int state)
+        {
+            byte[] rgba = BoxPt(false, 6)?.Rgba;
+            Func<int, byte[]> m = Members(DirNames.BoxGraphics);
+            if (rgba == null || m == null) return rgba;
+            ushort[] panel = NitroBgCodec.ReadColours(m(5));
+            ushort[] row1 = DsBgScreen.Row(panel, 1), row3 = DsBgScreen.Row(panel, 3), row4 = DsBgScreen.Row(panel, 4);
+            (int boxX, int boxY, int _, int _) = ScreenWindowLayouts.Window("box", "Pictures", "Box", (11, 0, 21, 20));
+            for (int i = 0; i < PartySample.Party.Length; i++)
+                if (!PartySample.Party[i].Empty)
+                    PartyIcon(rgba, PartySample.Party[i].Species, 108 + 8 * (boxX - 11) + 24 * (i % 6), 46 + 8 * boxY + 24 * (i / 6));
+            // Pictures move in whole tiles from where the game has them (RomLocator.BoxCodeWindowSitesIn).
+            (int X, int Y) Moved(string name, int x, int y, int tileX, int tileY, int width, int height)
+            {
+                (int nx, int ny, int _, int _) = ScreenWindowLayouts.Window("box", name, (tileX, tileY, width, height));
+                return (x + 8 * (nx - tileX), y + 8 * (ny - tileY));
+            }
+            Func<int, byte[]> files = i => GraphicAssets.Unsqueeze(m(i));
+            // Sprites in the order the game stacks them: frame (47), buttons (44), arrows (43).
+            ushort[] objects = NitroBgCodec.ReadColours(files(26));
+            // preview_display.c PCMonPreviewDisplay_CreateInfoSprites: the held item's frame (tiles 15, cells 16) under its clear window.
+            (int hx, int hy, int _, int _) = ScreenWindowLayouts.Window("box", "Held item and more", (1, 21, 12, 4));
+            List<DsBgScreen.Oam[]> frame = DsBgScreen.ReadCells(files(16));
+            if (frame.Count > 0)
+                DsBgScreen.DrawCell(rgba, frame[0], NitroBgCodec.ReadCharacters(files(15)), row => DsBgScreen.Row(objects, row), hx * 8 + 48, hy * 8 + 8);
+            // buttons_graphics.c: the Party Pokémon and Close buttons are one sprite (tiles 9, cells 10, animations 11).
+            (int bx, int by) = Moved("Party and Close buttons", 183, 176, 13, 20, 18, 3);
+            Sprite(rgba, files, 11, 10, 9, bx, by, 0, row => DsBgScreen.Row(objects, row));
+            // cursor_graphics.c: the box arrows (tiles 12, cells 13, animations 14, sequences 6 and 7).
+            (int ax, int ay) = Moved("Box arrows", 108, 20, 12, 1, 19, 3);
+            Sprite(rgba, files, 14, 13, 12, ax, ay, 6, row => DsBgScreen.Row(objects, row));
+            Sprite(rgba, files, 14, 13, 12, ax + 128, ay, 7, row => DsBgScreen.Row(objects, row));
+            PartySample.Pokemon who = PartySample.Party[0];
+            string species = Line(PokemonNamesTextNumbers[0], who.Species);
+            (int sx, int sy, int _, int _) = ScreenWindowLayouts.Window("box", "Species", (0, 1, 10, 2));
+            Print(rgba, SystemFont, species, sx * 8 + 2, sy * 8, row1[9], row1[6]);
+            (int dx, int dy, int _, int _) = ScreenWindowLayouts.Window("box", "Dex number", (5, 3, 5, 1));
+            SpecialText(rgba, 2, who.Species, 3, 2, dx * 8, dy * 8, row1[9], row1[6]);
+            if (new DexSample(who.Species).Picture(new ScreenMon { Kind = ScreenMonKind.Front }) is { Rgba: not null } picture)
+            {
+                (int px, int py) = Moved("Pokémon picture", 44, 84, 0, 5, 10, 10);
+                Blit(rgba, picture.Rgba, picture.Width, picture.Height, px - picture.Width / 2, py - picture.Height / 2);
+            }
+            (int nx, int ny, int _, int _) = ScreenWindowLayouts.Window("box", "Nickname", (0, 16, 10, 3));
+            Print(rgba, SystemFont, species, nx * 8 + 2, ny * 8, row3[1], row3[2]);
+            // Male in colours 7 and 8, female in 3 and 4 (bank 19 lines 21 and 22).
+            if (who.Gender is 0 or 1)
+                Print(rgba, SystemFont, Text(19, 21 + who.Gender), nx * 8 + 70, ny * 8, row3[who.Gender == 0 ? 7 : 3], row3[who.Gender == 0 ? 8 : 4]);
+            SpecialText(rgba, 1, who.Level, 3, 1, nx * 8, ny * 8 + 16, row3[1], row3[2]);
+            if (state == BoxSelected)
+            {
+                // A picked Pokémon swaps the held item for the message and opens the menu (bank 18: Move, Summary, Item, Withdraw, Mark, Release, Cancel).
+                (int mx, int my, int mw, int mh) = ScreenWindowLayouts.Window("box", "Message", (2, 21, 27, 2));
+                MessageWindow(rgba, mx, my, mw, mh, row4[15]);
+                string picked = Text(19, 0, (_, _, _) => species);
+                Print(rgba, TalkFont, picked, mx * 8, my * 8, row4[1], row4[2]);
+                int[] items = { 58, 61, 64, 62, 65, 66, 67 };
+                (int ux, int uy, int uw, int _) = ScreenWindowLayouts.Window("box", "Menu", (19, 3, 12, 16));
+                int top = uy + (8 - items.Length) * 2;
+                StandardWindow(rgba, ux, top, uw, 2 * items.Length, row4[15]);
+                for (int i = 0; i < items.Length; i++)
+                    Print(rgba, SystemFont, Text(18, items[i]), ux * 8 + 10, top * 8 + 16 * i, row4[11], row4[12]);
+            }
+            else
+            {
+                (int ix, int iy, int _, int _) = ScreenWindowLayouts.Window("box", "Held item and more", (1, 21, 12, 4));
+                Print(rgba, SystemFont, who.Item > 0 ? Line(ItemNamesTextNumber, who.Item) : Text(19, 20), ix * 8, iy * 8, row1[9], row1[6]);
+            }
+            return rgba;
+        }
+
+        // Platinum shows the held item on hover and the message and menu once picked. HGSS shows the item texts in Move Items mode
+        // with an item picked, and each message in its dialog. The copies are a page-swap buffer and move with their windows.
+        private static bool BoxShows(int state, string group, string name)
+        {
+            bool picked = state == BoxSelected;
+            if (Pt) return picked ? name != "Held item and more" : name is not ("Message" or "Menu");
+            if (name.StartsWith("Copy of", StringComparison.Ordinal)) return false;
+            if (name is "Item name" or "Item description") return state == BoxItemMessage;
+            if (name.StartsWith("Move ", StringComparison.Ordinal)) return picked;
+            return name switch
+            {
+                "Message" => state == BoxRelease,
+                "Message at the top" => state == BoxMarking,
+                "Short message" => state is BoxPartyMessage or BoxMenu,
+                "Second message" => state == BoxItemMessage,
+                "Change box button" => state == BoxMenu,
+                _ => true,
+            };
+        }
+
+        /// <summary>Both screens of the Platinum box list for the Layout tab, by state.</summary>
+        internal static (byte[] Top, byte[] Bottom) BoxLayoutPt(int state) => WithArchive(() => (BoxLayoutTopPt(state), BoxLayoutBottomPt()));
+
+        // dial_graphics.c: the box list and markings tabs (tiles 138, cells 139, animations 140, colours 144) at the bottom
+        // corners, x 0 and 256, 568 on the sprite surface (184 on the bottom screen). The markings tab is the same sprite flipped.
+        private static byte[] BoxLayoutBottomPt()
+        {
+            byte[] rgba = PcBottomPt(0);
+            Func<int, byte[]> m = Members(DirNames.BoxGraphics);
+            if (rgba == null || m == null) return rgba;
+            ushort[] tabs = NitroBgCodec.ReadColours(GraphicAssets.Unsqueeze(m(144)));
+            // The tabs move in whole tiles from 0,184 and 256,184, the markings one flipped to the left of its x.
+            (int lx, int ly, int _, int _) = ScreenWindowLayouts.Window("box", "Box list tab", (0, 17, 6, 6));
+            (int rx, int ry, int _, int _) = ScreenWindowLayouts.Window("box", "Markings tab", (26, 17, 6, 6));
+            int leftY = 184 + 8 * (ly - 17), rightX = 256 + 8 * (rx - 26), rightY = 184 + 8 * (ry - 17);
+            byte[] tab = new byte[rgba.Length], flipped = new byte[rgba.Length];
+            Sprite(tab, i => GraphicAssets.Unsqueeze(m(i)), 140, 139, 138, 8 * lx, leftY, 0, row => DsBgScreen.Row(tabs, row));
+            Sprite(flipped, i => GraphicAssets.Unsqueeze(m(i)), 140, 139, 138, 0, rightY, 0, row => DsBgScreen.Row(tabs, row));
+            for (int y = 0; y < H; y++)
+                for (int x = 0; x < W; x++)
+                {
+                    int from = (y * W + x) * 4;
+                    if (tab[from + 3] != 0) Array.Copy(tab, from, rgba, from, 4);
+                    int to = rightX - 1 - x;
+                    if (flipped[from + 3] != 0 && to >= 0 && to < W) Array.Copy(flipped, from, rgba, (y * W + to) * 4, 4);
+                }
+            return rgba;
+        }
+
         // pokeheartgold overlay 14, laid out like Platinum's box screens.
-        private static string[] BoxStates => new[] { "Normal", "Pokémon selected" };
-        private const int BoxSelected = 1;
+        private static string[] BoxStates => Hg
+            ? new[] { "Normal", "Pokémon selected", "Release question", "Marking", "Party message", "Item message", "Box menu" }
+            : new[] { "Normal", "Pokémon selected" };
+        private const int BoxNormal = 0, BoxSelected = 1, BoxRelease = 2, BoxMarking = 3, BoxPartyMessage = 4, BoxItemMessage = 5, BoxMenu = 6;
+        // The box menu opened from the box name: HgssMenuButtons.Pc's Box theme layout.
+        private const int BoxThemeLayout = 9;
 
         private static Shot BoxHg(bool messages, int line)
         {
             // A Pokémon picked in the box opens the menu on the right (HgssMenuButtons.Pc layout 3).
             if (_state == BoxSelected) return DrawBox(3) is byte[] menu ? new Shot("PC box graphics: bottom", menu) : null;
+            if (_forLayout && _state == BoxNormal) return DrawBox(IdleMoveLayout) is byte[] idle ? new Shot("PC box graphics: bottom", idle) : null;
+            if (_forLayout && _state == BoxMenu && DrawBox(BoxThemeLayout) is byte[] theme)
+            {
+                // Bank 25 line 7, "What do you want to do?", in the short message window.
+                ushort[] says = TalkColours;
+                (int qx, int qy, int qw, int qh) = ScreenWindowLayouts.Window("box", "Short message", (2, 21, 19, 2));
+                MessageWindow(theme, qx, qy, qw, qh, says[15]);
+                Print(theme, TalkFont, BoxText(25, 7, TalkFont), qx * 8, qy * 8, says[1], says[2]);
+                return new Shot("PC box graphics: bottom", theme);
+            }
             (DsBgScreen s, Func<int, byte[]> m) = Bg(DirNames.BoxGraphics);
             if (s == null) return null;
 
@@ -1031,7 +1289,26 @@ namespace DSPRE.Avalonia.Data
                 }
             byte[] rgba = s.Render();
             ushort[] talk = TalkColours;
-            if (messages)
+            if (_forLayout)
+            {
+                // The window and bank 25 line of each dialog: release 2 (with the touch Yes and No), marking 35, party 37, item mode 60.
+                (string Window, (int, int, int, int) At, int Line) dialog = _state switch
+                {
+                    BoxRelease => ("Message", (2, 21, 27, 2), 2),
+                    BoxMarking => ("Message at the top", (2, 1, 27, 2), 35),
+                    BoxPartyMessage => ("Short message", (2, 21, 19, 2), 37),
+                    BoxItemMessage => ("Second message", (2, 21, 27, 2), 60),
+                    _ => (null, default, -1),
+                };
+                if (dialog.Window != null)
+                {
+                    (int mx, int my, int mw, int mh) = ScreenWindowLayouts.Window("box", dialog.Window, dialog.At);
+                    MessageWindow(rgba, mx, my, mw, mh, talk[15]);
+                    Print(rgba, TalkFont, BoxText(25, dialog.Line, TalkFont), mx * 8, my * 8, talk[1], talk[2]);
+                }
+                if (_state == BoxRelease) TouchYesNoHg(rgba, 25, 12);
+            }
+            else if (messages)
             {
                 (int mx, int my, int mw, int mh) = ScreenWindowLayouts.Window("box", "Message", (2, 21, 27, 2));
                 MessageWindow(rgba, mx, my, mw, mh, talk[15]);
@@ -1048,6 +1325,27 @@ namespace DSPRE.Avalonia.Data
             return new Shot("PC box graphics: bottom", rgba);
         }
 
+        // yes_no_prompt.c, the small shape: tiles 1 and colours 0 of system/touch_subwindow, Yes (map 2) and No (map 4) each 6 by 4,
+        // stacked from tile x, y, each in a separate colour row.
+        private static void TouchYesNoHg(byte[] rgba, int x, int y)
+        {
+            Func<int, byte[]> m = Members(DirNames.TouchYesNoGraphics);
+            if (m == null) return;
+            DsBgScreen s = new DsBgScreen();
+            Palettes(s, NitroBgCodec.ReadColours(m(0)), 0, 2);
+            s.InitLayer(0, 0, 0);
+            s.LoadTiles(0, m(1));
+            for (int i = 0; i < 2; i++)
+            {
+                (int width, ushort[] map) = NitroBgCodec.ReadMap(m(2 + 2 * i));
+                if (map == null) continue;
+                ushort[] button = map.Select(e => (ushort)(e & 0x0FFF | i << 12)).ToArray();
+                s.Copy(0, x, y + 4 * i, 6, 4, button, 0, 0, Math.Max(1, width));
+            }
+            byte[] drawn = s.Render(rgba);
+            Array.Copy(drawn, rgba, rgba.Length);
+        }
+
         // Draws the PC's top screen (overlay 14) for the hovered Pokémon, with its moves once it's picked.
         private static Shot BoxTopHg(int state)
         {
@@ -1056,47 +1354,183 @@ namespace DSPRE.Avalonia.Data
             DsBgScreen top = new DsBgScreen();
             Palettes(top, NitroBgCodec.ReadColours(m(7)));
             Layer(top, m, 1, 2, 0, 6, 5);
+            if (state == BoxSelected)
+            {
+                // The moves panel is a 12 by 10 frame (member 86) on the front layer, slid in to 20,12.
+                top.InitLayer(2, 0, 0);
+                (int frameWidth, ushort[] frame) = NitroBgCodec.ReadMap(m(86));
+                if (frame != null) top.Copy(2, 20, 12, 12, 10, frame, 0, 0, Math.Max(1, frameWidth));
+            }
+            else if (state == BoxItemMessage)
+            {
+                // Move Items mode's item panel is a 32 by 9 frame (member 85) slid in to row 15.
+                top.InitLayer(2, 0, 0);
+                (int frameWidth, ushort[] frame) = NitroBgCodec.ReadMap(m(85));
+                if (frame != null) top.Copy(2, 0, 15, 32, 9, frame, 0, 0, Math.Max(1, frameWidth));
+            }
             byte[] rgba = top.Render();
             PartySample.Pokemon who = PartySample.Party[0];
             PokemonPersonalData data = new PokemonPersonalData(who.Species);
             ushort[] sys = SystemColours;
             string species = Line(PokemonNamesTextNumbers[0], who.Species);
-            void Put(string window, (int X, int Y, int W, int H) fallback, string text, Align align = Align.Left)
+            // The "No." and "Lv" marks sit 5 down in their windows, with the number 16 right of the mark.
+            void Put(string window, (int X, int Y, int W, int H) fallback, string text, int mark = 0, int down = 0)
             {
-                (int x, int y, int w, int _) = ScreenWindowLayouts.Window("box", window, fallback);
-                Print(rgba, SystemFont, text, align == Align.Right ? (x + w) * 8 : x * 8, y * 8, sys[1], sys[2], align);
+                (int x, int y, int w, int h) = ScreenWindowLayouts.Window("box", window, fallback);
+                // The item panel covers row 15 and below.
+                if (state == BoxItemMessage && y + h > 15) return;
+                if (mark > 0) SpecialMark(rgba, mark, x * 8, y * 8 + 5, sys[1], sys[2]);
+                Print(rgba, SystemFont, text, x * 8 + (mark > 0 ? 16 : 0), y * 8 + down, sys[1], sys[2]);
             }
-            Put("Title", (1, 0, 30, 3), Text(25, 52));
-            Put("Dex number", (1, 5, 6, 2), $"No.{who.Species:000}");
+            Put("Title", (1, 0, 30, 3), Text(25, 52), down: 8);
+            // A new game shows the Johto number, and nothing for a species outside the Johto dex.
+            int dexNumber = PokedexLists.RegionalNumber(who.Species);
+            if (dexNumber > 0) Put("Dex number", (1, 5, 6, 2), $"{dexNumber:000}", mark: 2);
             Put("Species", (8, 5, 8, 2), species);
             Put("Nickname", (1, 7, 8, 2), species);
-            Put("Level", (4, 9, 6, 2), $"Lv.{who.Level}");
+            Put("Level", (4, 9, 6, 2), who.Level.ToString(), mark: 1);
+            Put("Nature label", (1, 11, 8, 2), Text(24, 87));
+            Put("Ability label", (1, 15, 11, 2), Text(24, 88));
+            Put("Held item label", (1, 19, 12, 2), Text(24, 89));
             Put("Nature", (1, 13, 8, 2), Text(34, 0));
             Put("Ability", (1, 17, 11, 2), Line(AbilityNamesTextNumber, data.FirstAbility));
             Put("Held item", (1, 21, 12, 2), who.Item > 0 ? Line(ItemNamesTextNumber, who.Item) : "None");
-            int typeX = 144;
+            if (new DexSample(who.Species).Picture(new ScreenMon { Kind = ScreenMonKind.Front }) is { Rgba: not null } picture)
+                Blit(rgba, picture.Rgba, picture.Width, picture.Height, 140 - picture.Width / 2, 100 - picture.Height / 2);
+            // The type icons' templates centre them 80 and 114 right of the species box and 8 down, so they follow it. They are sprites
+            // and draw over the Pokémon.
+            (int speciesX, int speciesY, int _, int _) = ScreenWindowLayouts.Window("box", "Species", (8, 5, 8, 2));
+            int typeX = speciesX * 8 + 80;
             foreach (int type in new[] { (int)data.Type1, (int)data.Type2 }.Distinct())
             {
-                Paste(rgba, TypeIcons.PixelsFor(type), typeX, 40);
+                Paste(rgba, TypeIcons.PixelsFor(type), typeX, speciesY * 8);
                 typeX += 34;
             }
-            if (new DexSample(who.Species).Picture(new ScreenMon { Kind = ScreenMonKind.Front }) is { Rgba: not null } picture)
-                Blit(rgba, picture.Rgba, picture.Width, picture.Height, 144 - picture.Width / 2, 80 - picture.Height / 2);
             if (state == BoxSelected)
             {
-                // The moves panel slides out from the right edge.
-                Fill(rgba, Rgb(31, 31, 31), 166, 104, 90, 64);
-                int[] moves = { 53, 52, 98, 108 };
+                int[] moves = PartySample.Moves;
+                // The move windows sit inside the frame: their table places count from its corner.
                 for (int i = 0; i < moves.Length; i++)
                 {
-                    Fill(rgba, Rgb(20, 20, 20), 166, 104 + 16 * i + 15, 90, 1);
-                    Print(rgba, SystemFont, Line(MoveNamesTextNumbers, moves[i]), 168, 104 + 16 * i, sys[1], sys[2]);
+                    (int mx, int my, int _, int _) = ScreenWindowLayouts.Window("box", $"Move {i + 1}", (1, 1 + 2 * i, 11, 2));
+                    Print(rgba, SystemFont, Line(MoveNamesTextNumbers, moves[i]), (20 + mx) * 8, (12 + my) * 8, sys[1], sys[2]);
                 }
+            }
+            if (state == BoxItemMessage)
+            {
+                // The item texts sit inside the panel. The icon is centred 10 right of the name and 32 below it.
+                int item = PartySample.Party.Select(p => p.Item).FirstOrDefault(i => i > 0);
+                if (item == 0) item = 1;
+                (int nx, int ny, int nw, int nh) = ScreenWindowLayouts.Window("box", "Item name", (1, 1, 12, 2));
+                (int dx, int dy, int dw, int dh) = ScreenWindowLayouts.Window("box", "Item description", (4, 3, 27, 6));
+                // Both windows are cleared to colour 13 of palette 1 first.
+                ushort[] colours = NitroBgCodec.ReadColours(m(7));
+                if (colours != null && colours.Length > 29)
+                {
+                    Fill(rgba, colours[29], nx * 8, (15 + ny) * 8, nw * 8, nh * 8);
+                    Fill(rgba, colours[29], dx * 8, (15 + dy) * 8, dw * 8, dh * 8);
+                }
+                Print(rgba, SystemFont, Line(ItemNamesTextNumber, item), nx * 8, (15 + ny) * 8, sys[1], sys[2]);
+                Print(rgba, SystemFont, Line(RomInfo.ItemDescriptionsTextNumber, item), dx * 8, (15 + dy) * 8, sys[1], sys[2]);
+                ItemIcon(rgba, item, nx * 8 + 10, (15 + ny) * 8 + 32);
             }
             return new Shot("PC box graphics: top", rgba);
         }
 
         // ── Pokégear ─────────────────────────────────────────────────────────────────
+
+        // Each app as it opens: phone and radio from their text previews, and the town map and fly map on New Bark Town (map 60,
+        // flavour text 21 in pokegear_map.c) with the windows of overlay_101_021E7FF4.c and overlay_101_021EDCE0.c.
+        private static (byte[] Top, byte[] Bottom)? PokegearLayout(int state) => WithArchive<(byte[], byte[])?>(() =>
+        {
+            _stop = 0;
+            _stops = 1;
+            _forLayout = true;
+            switch (state)
+            {
+                case 0: return (Pokegear(TextBank(640), 1)?.Rgba, PokegearPictures.Draw(0));
+                case 1:
+                    PokegearButtons radio = ScreenWindowLayouts.ButtonsInUse<PokegearButtons>();
+                    return (Pokegear(TextBank(409), 2)?.Rgba,
+                            PokegearPictures.Draw(7, radio?.TileSpots(radio.RadioButtonsPage), radio?.ScreenOf(radio.RadioButtonsPage)));
+            }
+            bool fly = state == 3;
+            string group = fly ? "Fly map" : "Map";
+            Func<int, byte[]> m = Members(DirNames.PokegearMapGraphics);
+            byte[] top = fly ? FlyMapTopHg(m) : Pokegear(TextBank(273), 1)?.Rgba;
+            byte[] bottom = fly ? FlyMapBottomHg(m) : PokegearPictures.Draw(2);
+            if (top == null || bottom == null) return (top, bottom);
+            if (fly)
+            {
+                ushort[] sub = DsBgScreen.Row(NitroBgCodec.ReadColours(m(62)), 1);
+                (int rx, int ry, int _, int _) = ScreenWindowLayouts.Window("pokegear", group, "Region", (1, 8, 5, 3));
+                Print(top, SystemFont, Text(273, 1), rx * 8 + 2, ry * 8 + 4, sub[1], sub[2]);
+            }
+            else
+            {
+                // overlay_101_021E9270.c prints the place again in the bottom heading.
+                ushort[] heading = DsBgScreen.Row(NitroBgCodec.ReadColours(m(20)), 10);
+                (int hx, int hy, int _, int _) = ScreenWindowLayouts.Window("pokegear", group, "Map heading", (3, 0, 12, 3));
+                int at = 0;
+                bool headers = false;
+                try { headers = HeaderLabels.DynamicHeaders; } catch (Exception ex) { AppLogger.WarnOnce("GameTextScreens.PokegearHeading", ex); }
+                if (MapHeader.TryReadLocationNameIndex(60, headers, out int shown)) at = shown;
+                Print(bottom, SystemFont, Line(LocationNamesTextNumber, at), hx * 8, hy * 8 + 5, heading[1], heading[2]);
+            }
+            ushort[] row = DsBgScreen.Row(NitroBgCodec.ReadColours(m?.Invoke(fly ? 62 : 14)), 1);
+            int place = 0;
+            bool dynamic = false;
+            try { dynamic = HeaderLabels.DynamicHeaders; } catch (Exception ex) { AppLogger.WarnOnce("GameTextScreens.PokegearPlace", ex); }
+            if (MapHeader.TryReadLocationNameIndex(60, dynamic, out int named)) place = named;
+            (int px, int py, int _, int _) = ScreenWindowLayouts.Window("pokegear", group, "Place", (3, fly ? 11 : 12, 12, 2));
+            Print(top, SystemFont, Line(LocationNamesTextNumber, place), px * 8, py * 8 + (fly ? 0 : 1), row[1], row[2]);
+            (int dx, int dy, int _, int _) = ScreenWindowLayouts.Window("pokegear", group, "Description", (1, 14, 28, 4));
+            Print(top, SystemFont, Text(273, 21), dx * 8, dy * 8, row[1], row[2]);
+            // The four marking icons (sprite set 0: files 4, 5 and 6, colours 0) sit 8 left of the two marking windows, in two rows
+            // 21 apart. The game shows only the markings that are set.
+            (int l1x, int l1y, int _, int _) = ScreenWindowLayouts.Window("pokegear", group, "Landmark 1", (5, 18, 11, 5));
+            (int l2x, int _, int _, int _) = ScreenWindowLayouts.Window("pokegear", group, "Landmark 2", (18, 18, 11, 5));
+            ushort[] markerColours = NitroBgCodec.ReadColours(m?.Invoke(0));
+            if (m != null && markerColours != null)
+                for (int i = 0; i < 4; i++)
+                    Sprite(top, m, 6, 5, 4, (i % 2 == 0 ? l1x : l2x) * 8 - 8, l1y * 8 + 11 + 21 * (i / 2), 0,
+                           r => DsBgScreen.Row(markerColours, r), i);
+            if (fly)
+            {
+                ushort[] lower = NitroBgCodec.ReadColours(m?.Invoke(63));
+                ushort[] r10 = DsBgScreen.Row(lower, 10);
+                (int hx, int hy, int _, int _) = ScreenWindowLayouts.Window("pokegear", group, "Fly heading", (0, 21, 25, 2));
+                Print(bottom, SystemFont, Text(273, 4), hx * 8 + 8, hy * 8, r10[3], r10[2]);
+                (int cx, int cy, int _, int _) = ScreenWindowLayouts.Window("pokegear", group, "Fly close", (25, 21, 6, 2));
+                FieldFont touch = Font(4) ?? SystemFont;
+                Print(bottom, touch, Text(273, 6), cx * 8 + 24, cy * 8, r10[3], r10[1], Align.Centre);
+            }
+            return (top, bottom);
+        });
+
+        // overlay_101_021EDCE0.c, the fly map: the top is BG0 (drawing 64, map 65) behind BG2 (drawing 68, rows 8 on of map 69),
+        // coloured by file 62. The bottom is BG1 (drawing 66, map 67, colours 63) over the region map.
+        private static byte[] FlyMapTopHg(Func<int, byte[]> m)
+        {
+            if (m == null) return null;
+            DsBgScreen s = new DsBgScreen();
+            Palettes(s, NitroBgCodec.ReadColours(m(62)));
+            Layer(s, m, 0, 3, 0x8000, 64, 65);
+            s.InitLayer(2, 1, 0);
+            s.LoadTiles(0, m(68));
+            (int width, ushort[] map) = NitroBgCodec.ReadMap(m(69));
+            if (map != null) s.Copy(2, 0, 8, 32, 16, map, 0, 8, Math.Max(1, width));
+            return s.Render();
+        }
+
+        private static byte[] FlyMapBottomHg(Func<int, byte[]> m)
+        {
+            if (m == null) return null;
+            DsBgScreen s = new DsBgScreen();
+            Palettes(s, NitroBgCodec.ReadColours(m(63)));
+            Layer(s, m, 1, 1, 0, 66, 67);
+            return s.Render(PokegearPictures.RegionMap(m, 63));
+        }
 
         // pokeheartgold src/application/pokegear: the frame every app's top screen sits in, skin 0.
         private static void PokegearFrame(DsBgScreen s)
@@ -1203,9 +1637,7 @@ namespace DSPRE.Avalonia.Data
         {
             (int px, int py) = PanelOf(n);
             string name = who.Egg ? Line(PokemonNamesTextNumbers[0], 494) : Line(PokemonNamesTextNumbers[0], who.Species);
-            string template = _line(bank, 8 + n) ?? "";
-            string shown = global::System.Text.RegularExpressions.Regex.Replace(
-                FieldStringVars.Expand(template, (_, _, _) => name), @"\{[^}]*\}", "");
+            string shown = Line(bank, 8 + n, (_, _, _) => name);
             if (string.IsNullOrEmpty(shown)) shown = name;
             (int nx, int ny, int _, int _) = ScreenWindowLayouts.Window("party", ScreenWindowLayout.PokemonWindow(n + 1, "name"), (px + 6, py + 1, 9, 2));
             FieldFont nameFont = (GameFonts.EntryOf(ScreenWindowLayouts.PartyFont("name")) is int entry && entry >= 0 ? Font(entry) : null) ?? SystemFont;
@@ -1313,22 +1745,54 @@ namespace DSPRE.Avalonia.Data
             });
         }
 
-        /// <summary>The first frame of <paramref name="sequence"/> centred at x, y, with each OAM palette row from <paramref name="rows"/>.</summary>
-        internal static void Sprite(byte[] rgba, Func<int, byte[]> m, int nanr, int ncer, int ncgr, int x, int y, int sequence, Func<int, ushort[]> rows)
+        /// <summary>A frame of <paramref name="sequence"/> centred at x, y, with each OAM palette row from <paramref name="rows"/>.</summary>
+        internal static void Sprite(byte[] rgba, Func<int, byte[]> m, int nanr, int ncer, int ncgr, int x, int y, int sequence, Func<int, ushort[]> rows,
+                                    int frame = 0)
         {
             try
             {
                 NanrFile anim = NanrFile.Read(m(nanr));
                 List<DsBgScreen.Oam[]> cells = DsBgScreen.ReadCells(m(ncer));
                 byte[] tiles = NitroBgCodec.ReadCharacters(m(ncgr));
-                if (anim == null || sequence >= anim.Sequences.Count || anim.Sequences[sequence].Frames.Count == 0) return;
-                int resultAt = anim.Sequences[sequence].Frames[0].ResultAt;
+                if (anim == null || sequence >= anim.Sequences.Count || anim.Sequences[sequence].Frames.Count <= frame) return;
+                int resultAt = anim.Sequences[sequence].Frames[frame].ResultAt;
                 NanrFile.Result result = anim.Results.FirstOrDefault(r => r.Offset == resultAt);
                 if (result == null || result.Cell >= cells.Count) return;
                 DsBgScreen.DrawCell(rgba, cells[result.Cell], tiles, rows, x, y);
             }
             catch (Exception ex) { AppLogger.WarnOnce("GameTextScreens.Sprite", ex); }
         }
+
+        // font_special_chars.c FontSpecialChars_DrawPartyScreenText: a glyph (1 "Lv", 2 "No.", two tiles from tile 11 + 2·(glyph - 1))
+        // then the number in tile digits 0 to 9, padded to its digits with blanks (pad 1) or zeros (pad 2). Ink 1 and shadow 2.
+        private static void SpecialText(byte[] rgba, int glyph, int value, int digits, int pad, int x, int y, ushort ink, ushort shadow)
+        {
+            byte[] tiles;
+            try { tiles = NitroBgCodec.ReadCharacters(NitroBgCodec.Inflate(new ScriptNarc(DirNames.Fonts).Get(RomInfo.SpecialGlyphsFontEntry(Hg)))); }
+            catch (Exception ex) { AppLogger.WarnOnce("GameTextScreens.SpecialText", ex); return; }
+            if (tiles == null) return;
+            void Tile(int tile, int left)
+            {
+                for (int yy = 0; yy < 8; yy++)
+                    for (int xx = 0; xx < 8; xx++)
+                    {
+                        int at = tile * 32 + (yy * 8 + xx) / 2, px = left + xx, py = y + yy;
+                        if (at >= tiles.Length || px < 0 || py < 0 || px >= W || py >= H) continue;
+                        int v = (xx & 1) != 0 ? tiles[at] >> 4 : tiles[at] & 0xF;
+                        if (v is 1 or 2) DsBgScreen.Put(rgba, (py * W + px) * 4, v == 1 ? ink : shadow);
+                    }
+            }
+            Tile(11 + 2 * (glyph - 1), x);
+            Tile(12 + 2 * (glyph - 1), x + 8);
+            if (value < 0) return;
+            string text = pad == 2 ? value.ToString().PadLeft(digits, '0') : pad == 1 ? value.ToString().PadLeft(digits) : value.ToString();
+            for (int i = 0; i < text.Length; i++)
+                if (text[i] is >= '0' and <= '9') Tile(text[i] - '0', x + 16 + 8 * i);
+        }
+
+        /// <summary>The "Lv" (1) or "No." (2) mark alone, where text follows it.</summary>
+        private static void SpecialMark(byte[] rgba, int glyph, int x, int y, ushort ink, ushort shadow) =>
+            SpecialText(rgba, glyph, -1, 0, 0, x, y, ink, shadow);
 
         /// <summary>The sample party's icons at <paramref name="spots"/>, one per Pokémon.</summary>
         internal static void PartyIcons(byte[] rgba, IReadOnlyList<(int X, int Y)> spots) => WithArchive(() =>
@@ -1568,15 +2032,17 @@ namespace DSPRE.Avalonia.Data
             // party_menu sprites 8 and 9.
             if (state is PartyNormal or PartyConfirm)
             {
-                PartyButton(rgba, m, 232, state == PartyConfirm ? 184 : 176, state == PartyConfirm ? 2 : 0);
+                // The button sprite sits 24 right of and 16 below the window's corner (8 higher outside the confirm modes), and the
+                // confirm modes put the window a row lower. Layout moves all of them with the window.
                 (int cx, int cy, int cw, int _) = ScreenWindowLayouts.Window("party", "Cancel button", (26, 21, 5, 2));
-                if (state == PartyConfirm) cy = 22;
+                PartyButton(rgba, m, cx * 8 + 24, cy * 8 + (state == PartyConfirm ? 16 : 8), state == PartyConfirm ? 2 : 0);
+                if (state == PartyConfirm) cy++;
                 InWindow(rgba, "Cancel button", into => Print(into, SystemFont, Text(bank, 1), cx * 8 + cw * 4, cy * 8, row0[15], row0[14], Align.Centre));
             }
             if (state == PartyConfirm)
             {
-                PartyButton(rgba, m, 232, 168, 2);
                 (int fx, int fy, int fw, int _) = ScreenWindowLayouts.Window("party", "Confirm button", (25, 20, 7, 2));
+                PartyButton(rgba, m, fx * 8 + 32, fy * 8 + 8, 2);
                 InWindow(rgba, "Confirm button", into => Print(into, SystemFont, Text(bank, 0), fx * 8 + fw * 4, fy * 8, row0[15], row0[14], Align.Centre));
             }
 
@@ -1638,7 +2104,7 @@ namespace DSPRE.Avalonia.Data
             }
             else
             {
-                choices.AddRange(new[] { "MOVE", "MOVE", "MOVE", "MOVE" });
+                choices.AddRange(PartySample.Moves.Select(move => Line(MoveNamesTextNumbers, move)));
                 if (hg) choices.Add(Text(bank, t.Quit));
             }
 
@@ -1740,9 +2206,13 @@ namespace DSPRE.Avalonia.Data
                 (int nx, int ny, int _, int _) = ScreenWindowLayouts.Window("party", "Name", (7, 24, 10, 2));
                 (int hx, int hy, int _, int _) = ScreenWindowLayouts.Window("party", "Item heading", (17, 24, 6, 2));
                 (int ix, int iy, int _, int _) = ScreenWindowLayouts.Window("party", "Held item", (17, 26, 12, 3));
-                Print(rgba, SystemFont, Text(bank, 8), nx * 8, (ny - scroll) * 8, sys[15], sys[14]);
+                // The first Pokémon's icon, name and held item. party_menu_sprites.c puts the icon at 30,456 less the 40 the panel rose.
+                PartySample.Pokemon who = PartySample.Party[0];
+                string name = who.Egg ? Line(PokemonNamesTextNumbers[0], 494) : Line(PokemonNamesTextNumbers[0], who.Species);
+                if (!who.Empty) PartyIcon(rgba, who.Species, nx * 8 - 26, 456 - 40 - 256);
+                Print(rgba, SystemFont, line == 8 ? Text(bank, 8) : name, nx * 8, (ny - scroll) * 8, sys[15], sys[14]);
                 Print(rgba, SystemFont, Text(bank, 130), hx * 8 + 2, (hy - scroll) * 8, sys[15], sys[14]);
-                Print(rgba, SystemFont, Text(bank, 182), ix * 8 + 2, (iy - scroll) * 8 + 4, sys[15], sys[14]);
+                Print(rgba, SystemFont, line == 182 ? Text(bank, 182) : Line(ItemNamesTextNumber, who.Item), ix * 8 + 2, (iy - scroll) * 8 + 4, sys[15], sys[14]);
             }
             return new Shot("Party top screen graphics: top", rgba);
         }
@@ -1757,22 +2227,8 @@ namespace DSPRE.Avalonia.Data
             }
         }
 
-        private static void PartyButton(byte[] rgba, Func<int, byte[]> m, int x, int y, int sequence)
-        {
-            try
-            {
-                NanrFile anim = NanrFile.Read(m(9));
-                List<DsBgScreen.Oam[]> cells = DsBgScreen.ReadCells(m(10));
-                byte[] tiles = NitroBgCodec.ReadCharacters(m(11));
-                ushort[] obj = NitroBgCodec.ReadColours(m(8));
-                if (anim == null || sequence >= anim.Sequences.Count || anim.Sequences[sequence].Frames.Count == 0) return;
-                int resultAt = anim.Sequences[sequence].Frames[0].ResultAt;
-                NanrFile.Result result = anim.Results.FirstOrDefault(r => r.Offset == resultAt);
-                if (result == null || result.Cell >= cells.Count) return;
-                DsBgScreen.DrawCell(rgba, cells[result.Cell], tiles, row => DsBgScreen.Row(obj, row), x, y);
-            }
-            catch (Exception ex) { AppLogger.WarnOnce("GameTextScreens.PartyButton", ex); }
-        }
+        private static void PartyButton(byte[] rgba, Func<int, byte[]> m, int x, int y, int sequence) =>
+            PartySprite(rgba, m, 9, 10, 11, x, y, sequence, -1);
 
         // pokeheartgold party_context_menu.c sub_0207E3A8.
         private static readonly int[] ButtonFrameTiles = { 0, 2, 6, 8, 3, 5, 1, 7 };
@@ -1823,6 +2279,9 @@ namespace DSPRE.Avalonia.Data
             Palettes(s, colours);
             s.SetPalette(13, DsBgScreen.Row(NitroBgCodec.ReadColours(m(22)), 0));
             Layer(s, m, 1, 1, 0, 11, 14);
+            // bag/main.c ToggleHideItemSprite writes the item box onto BG1 wherever the Item frame picture is.
+            (int boxX, int boxY, int _, int _) = ScreenWindowLayouts.Window("bag", "Pictures", "Item frame", (0, 18, 5, 5));
+            if (PtItemBox(true) is ushort[] itemBox) s.Copy(1, boxX, boxY, 5, 5, itemBox, 0, 0, 5);
             s.InitLayer(3, 3, 0);
             s.LoadMap(3, NitroBgCodec.ReadMap(m(13)).Entries, DsBgScreen.MapSide);
             byte[] rgba = s.Render();
@@ -1830,20 +2289,51 @@ namespace DSPRE.Avalonia.Data
             (int listX, int listY, int _, int _) = ScreenWindowLayouts.Window("bag", "Item list", (14, 0, 17, 18));
 
             bool itemLine = bank == TextBank(392);
-            int pocket = bank == TextBank(395) ? line : 0;
+            // The berry menu and Poffin cooking open on the Berries pocket (4), whose first item is the Cheri Berry (149).
+            bool berries = _state is 2 or 5;
+            int pocket = bank == TextBank(395) ? line : berries ? 4 : 0;
             (int _, int pocketY, int _, int _) = ScreenWindowLayouts.Window("bag", "Pocket names", (0, 13, 12, 3));
             Print(rgba, SystemFont, Text(395, Math.Clamp(pocket, 0, 7)), 50, pocketY * 8 + 2, row3[1], row3[2], Align.Centre);
-
-            int first = itemLine ? Math.Max(1, line) : 1;
+            pocket = Math.Clamp(pocket, 0, 7);
+            int[] sample = itemLine && !_forLayout ? null : PocketSample(pocket);
+            int first = sample is { Length: > 0 } ? sample[0] : berries ? 149 : itemLine ? Math.Max(1, line) : 1;
             for (int k = 1; k < 9; k++)
             {
                 int x = listX * 8, y = listY * 8 + 16 * k;
-                bool close = k == 8 || (!itemLine && bank == TextBank(7) && line == 41 && k == 2);
+                // The eighth row shows the next item when there is one, half under the frame. Close bag comes after the last item.
+                bool close = (k == 8 && (sample == null || sample.Length < 8)) || (sample != null && k - 1 == sample.Length)
+                             || (!itemLine && bank == TextBank(7) && line == 41 && k == 2);
                 if (close) { Print(rgba, SystemFont, Text(7, 41), x, y, row3[1], row3[2]); break; }
-                Print(rgba, SystemFont, Text(392, first + k - 1), x, y, row3[1], row3[2]);
+                Print(rgba, SystemFont, Text(392, sample != null && k - 1 < sample.Length ? sample[k - 1] : first + k - 1), x, y, row3[1], row3[2]);
                 Print(rgba, SystemFont, Text(7, 38), x + 109, y, row3[1], row3[2]);
                 Print(rgba, SystemFont, "1", x + 134, y, row3[1], row3[2], Align.Right);
             }
+            // The list and pocket name are on BG2, under the panel on BG1: a list moved left runs under it.
+            s.SetVisible(3, false);
+            byte[] panel = s.Render(new byte[W * H * 4]);
+            s.SetVisible(3, true);
+            for (int at = 0; at < panel.Length; at += 4)
+                if (panel[at + 3] != 0) Buffer.BlockCopy(panel, at, rgba, at, 4);
+            Func<int, byte[]> files = i => GraphicAssets.Unsqueeze(m(i));
+            // bag/windows.c BagUI_DrawPocketSelectorIcons, all eight pockets: 10 by 10 from drawing 21 (colours 22, row 13), each pocket
+            // 32 across and the chosen one 16 further, at 7 + 11 per pocket and 3 down in the window at 0,11.
+            ushort[] iconColours = NitroBgCodec.ReadColours(m(22));
+            byte[] icons = NitroBgCodec.ReadCharacters(m(21));
+            for (int p = 0; icons != null && iconColours != null && p < 8; p++)
+                BlitBitmap(rgba, icons, 32 * 8, p * 32 + (p == pocket ? 16 : 0), 0, 10, 10, 7 + 11 * p, 11 * 8 + 3, DsBgScreen.Row(iconColours, 0));
+            // bag/sprites.c, colours ui_elements (20): the boy's bag (animations 0, cells 1, drawing 2, colours 3) is at 48,50 and
+            // animates by pocket. The pocket highlight is at 7 + 11 × pocket + 6, 97, the scroll arrows at 2 and 98, 96, and the item
+            // cursor at 177,24.
+            PartySprite(rgba, files, 0, 1, 2, 48, 50, pocket, -1, 3);
+            PartySprite(rgba, files, 23, 24, 25, 13 + 11 * pocket, 97, 0, -1, 20);
+            PartySprite(rgba, files, 8, 9, 10, 2, 96, 1, -1, 20);
+            PartySprite(rgba, files, 8, 9, 10, 98, 96, 0, -1, 20);
+
+            PartySprite(rgba, files, 26, 27, 28, listX * 8 + 65, 24, 0, -1, 20);
+            BagTopWindowsPt(rgba, first, row3);
+            // bag/sprites.c BAG_SPRITE_ITEM centres the picked item's icon on 22,172. The Item icon picture is the tiles it covers.
+            (int iconX, int iconY, int _, int _) = ScreenWindowLayouts.Window("bag", "Pictures", "Item icon", (1, 19, 4, 4));
+            if (BagShows(_state, "Pictures", "Item icon")) ItemIcon(rgba, first, iconX * 8 + 14, iconY * 8 + 20);
 
             if (bank == TextBank(7) && line != 41 && line != 38 && line != 37)
             {
@@ -1864,11 +2354,125 @@ namespace DSPRE.Avalonia.Data
                 }
                 else
                 {
-                    MessageWindow(rgba, 2, 19, 27, 4, talk[15]);
-                    Print(rgba, TalkFont, BoxText(7, line, TalkFont), 16, 152, talk[1], talk[2]);
+                    (int x, int y, int w, int h) = ScreenWindowLayouts.Window("bag", "Long message", (2, 19, 27, 4));
+                    MessageWindow(rgba, x, y, w, h, talk[15]);
+                    Print(rgba, TalkFont, BoxText(7, line, TalkFont), x * 8, y * 8, talk[1], talk[2]);
                 }
             }
             return new Shot("Bag graphics: top", rgba);
+        }
+
+        // Set while the Layout tab draws a whole screen state instead of one text line.
+        private static bool _forLayout;
+
+        private static Dictionary<int, int[]> _pocketSamples;
+        private static string _pocketSamplesRom;
+
+        private static int? SellPrice(int item)
+        {
+            try { return ItemTable.Exists(item) ? new ItemData((int)ItemTable.Read(item).ItemData).FullPrice / 2 : null; }
+            catch (Exception ex) { AppLogger.WarnOnce("GameTextScreens.SellPrice", ex); return null; }
+        }
+
+        // The first eight items whose data puts them in the pocket, so the list looks like that pocket in the game.
+        private static int[] PocketSample(int pocket)
+        {
+            if (_pocketSamplesRom != RomInfo.WorkDir) { _pocketSamples = new Dictionary<int, int[]>(); _pocketSamplesRom = RomInfo.WorkDir; }
+            if (_pocketSamples.TryGetValue(pocket, out int[] known)) return known;
+            List<int> found = new List<int>();
+            try
+            {
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.ItemData });
+                for (int item = 1; item < ItemTable.VanillaCount && found.Count < 8; item++)
+                {
+                    int data = (int)ItemTable.Read(item).ItemData;
+                    if ((int)new ItemData(data).FieldPocket == pocket) found.Add(item);
+                }
+            }
+            catch (Exception ex) { AppLogger.WarnOnce("GameTextScreens.PocketSample", ex); }
+            return _pocketSamples[pocket] = found.ToArray();
+        }
+
+        // Window_BlitBitmapRect from a tiled 4bpp drawing <paramref name="width"/> pixels wide, colour 0 left clear.
+        private static void BlitBitmap(byte[] rgba, byte[] tiles, int width, int sx, int sy, int w, int h, int dx, int dy, ushort[] row)
+        {
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    int px = sx + x, py = sy + y;
+                    int at = ((py / 8) * (width / 8) + px / 8) * 32 + ((py % 8) * 8 + px % 8) / 2;
+                    if (at >= tiles.Length) continue;
+                    int v = (px & 1) != 0 ? tiles[at] >> 4 : tiles[at] & 0xF;
+                    int X = dx + x, Y = dy + y;
+                    if (v == 0 || X < 0 || Y < 0 || X >= W || Y >= H) continue;
+                    DsBgScreen.Put(rgba, (Y * W + X) * 4, row[v]);
+                }
+        }
+
+        // Platinum bag top screen windows for the Layout state (pokeplatinum bag/windows.c). Bank lines: 42 selected, 52 and 84
+        // toss, 75, 80 and 81 sell, 108 and 109 Poffin count.
+        private static void BagTopWindowsPt(byte[] rgba, int item, ushort[] row3)
+        {
+            int was = _sampleItem;
+            _sampleItem = item;
+            try { BagTopWindowsPtDraw(rgba, item, row3); }
+            finally { _sampleItem = was; }
+        }
+
+        private static void BagTopWindowsPtDraw(byte[] rgba, int item, ushort[] row3)
+        {
+            ushort[] sys = SystemColours, talk = TalkColours;
+            bool Shows(string name) => BagShows(_state, "Top screen", name);
+            (int X, int Y, int W, int H) At(string name, (int, int, int, int) fallback) => ScreenWindowLayouts.Window("bag", name, fallback);
+            void Talk(string name, (int, int, int, int) fallback, int message)
+            {
+                if (!Shows(name)) return;
+                (int x, int y, int w, int h) = At(name, fallback);
+                MessageWindow(rgba, x, y, w, h, talk[15]);
+                Print(rgba, TalkFont, BoxText(7, message, TalkFont), x * 8, y * 8, talk[1], talk[2]);
+            }
+            if (Shows("Description"))
+            {
+                (int x, int y, int _, int _) = At("Description", (0, 18, 32, 6));
+                Print(rgba, SystemFont, Line(RomInfo.ItemDescriptionsTextNumber, item), x * 8 + 40, y * 8, row3[15], row3[14]);
+            }
+            bool tossing = _state == 3;
+            Talk("Message", (6, 19, 14, 4), tossing ? 52 : 42);
+            Talk("Short message", (6, 19, 13, 4), 42);
+            Talk("Long message", (2, 19, 27, 4), 75);
+            if (Shows("Toss amount"))
+            {
+                (int x, int y, int w, int h) = At("Toss amount", (24, 19, 7, 4));
+                StandardWindow(rgba, x, y, w, h, sys[15]);
+                Print(rgba, SystemFont, Text(7, 84), x * 8 + 16, y * 8 + 8, sys[1], sys[2]);
+                CountArrows(rgba, x * 8 + 28, y * 8 + 4);
+            }
+            if (Shows("Sell amount"))
+            {
+                (int x, int y, int w, int h) = At("Sell amount", (19, 13, 12, 4));
+                StandardWindow(rgba, x, y, w, h, sys[15]);
+                Print(rgba, SystemFont, Text(7, 80), x * 8, y * 8 + 8, sys[1], sys[2]);
+                // The shop pays half the item's price for one.
+                string price = Text(7, 81, (_, kind, _) => kind is >= 50 and <= 55 ? (SellPrice(item) ?? 1).ToString() : null);
+                Print(rgba, SystemFont, price, (x + w) * 8, y * 8 + 8, sys[1], sys[2], Align.Right);
+                CountArrows(rgba, x * 8 + 10, y * 8 + 4);
+            }
+            if (Shows("Poffin count"))
+            {
+                (int x, int y, int w, int h) = At("Poffin count", (1, 12, 11, 4));
+                StandardWindow(rgba, x, y, w, h, sys[15]);
+                Print(rgba, SystemFont, Text(7, 108), x * 8, y * 8, sys[1], sys[2]);
+                Print(rgba, SystemFont, Text(7, 109), (x + w) * 8, y * 8 + 16, sys[1], sys[2], Align.Right);
+            }
+        }
+
+        // bag/sprites.c BagUI_ShowItemCountArrows: shop_gra's scroll arrows, up (sequence 0) at x, y and down 24 below, colours 10.
+        private static void CountArrows(byte[] rgba, int x, int y)
+        {
+            Func<int, byte[]> shop = Members(DirNames.ShopGraphics);
+            if (shop == null) return;
+            const int drawing = 4, cells = 5, animations = 6, colours = 10;
+            for (int i = 0; i < 2; i++) PartySprite(rgba, shop, animations, cells, drawing, x, y + 24 * i, i, -1, colours);
         }
 
         // pokeheartgold src/application/bag.
@@ -1881,20 +2485,115 @@ namespace DSPRE.Avalonia.Data
 
         private static string[] PokegearApps => new[] { "Phone", "Radio", "Map", "Fly map" };
 
-        private static string[] BagStates => new[] { "Items", "Item menu", "Amount" };
-        private static readonly int[] BagStatePages = { 0, 1, 3 };
+        // Platinum's states follow its top screen. HGSS's follow its bottom screen pages, plus the TM pocket.
+        private static string[] BagStates => Pt ? new[] { "Items", "Item menu", "Berry menu", "Toss", "Sell", "Poffin cooking" }
+                                                : new[] { "Items", "TMs and HMs", "Item menu", "TM menu", "Amount" };
+        // HGSS: the bottom screen page each state shows. TM menu is Item menu opened on a TM.
+        private static readonly int[] BagStatePages = { 0, 0, 1, 1, 3 };
+
+        /// <summary>The HGSS bag's bottom screen page for a Layout state.</summary>
+        internal static int BagPageOf(int state) => BagStatePages[Math.Clamp(state, 0, BagStatePages.Length - 1)];
+        private const int BagTmMenu = 3;
+        /// <summary>A map block that sits where <paramref name="Window"/> is: <paramref name="Shown"/> there, <paramref name="Hidden"/> at home once it moves.</summary>
+        public sealed record ScreenSwap(string Window, DirNames Dir, int Member, int HomeX, int HomeY, int Width, int Height,
+                                        Func<ushort[]> Hidden, Func<ushort[]> Shown);
+
+        internal static ushort[] PtItemBox(bool shown)
+        {
+            try { return ScreenCodeData.PtItemBox(shown); }
+            catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException) { AppLogger.WarnOnce("GameTextScreens.PtItemBox", ex); return null; }
+        }
+
+        /// <summary><paramref name="Rows"/> rows of each map from <paramref name="Above"/> rows above <paramref name="Window"/>, drawn behind it.</summary>
+        public sealed record ScreenBand(string Window, DirNames Dir, int[] Members, int Above, int Rows);
+
+        private static bool BagShowsTms => Hg && _state is 1 or BagTmMenu;
 
         private static Shot BagOtherScreen(int state)
         {
-            if (Pt) return BagBottomPt(null) is byte[] bottom ? new Shot("Bag graphics: bottom", bottom) : null;
-            byte[] top = new MoveTextScreens().Render(MoveTextScreens.Screen.Bag, Text(10, 120), Font(0));
+            if (Pt) return BagBottomPt((ScreenWindowLayouts.ButtonsInUse<TouchListButtons>() ?? PlatinumTouchLists.Bag())?.SpotsOf(0)) is byte[] bottom ? new Shot("Bag graphics: bottom", bottom) : null;
+            byte[] top = BagTopHg(state);
             return top == null ? null : new Shot("Bag graphics: top", top);
+        }
+
+        // The game draws the player holding the bag as a 3D model here, which the preview leaves out. Dark grey reads on the white sky.
+        private const ushort PlaceholderInk = 0x294A, PlaceholderShadow = 0x5EF7;
+
+        private static void ModelPlaceholder(byte[] rgba, ushort ink, ushort shadow)
+        {
+            const int left = 88, top = 8, right = 168, bottom = 136;
+            for (int x = left; x <= right; x++)
+                if ((x / 4 & 1) == 0) { DsBgScreen.Put(rgba, (top * W + x) * 4, ink); DsBgScreen.Put(rgba, (bottom * W + x) * 4, ink); }
+            for (int y = top; y <= bottom; y++)
+                if ((y / 4 & 1) == 0) { DsBgScreen.Put(rgba, (y * W + left) * 4, ink); DsBgScreen.Put(rgba, (y * W + right) * 4, ink); }
+            Print(rgba, SystemFont, "3D bag model\ngoes here", (left + right) / 2, (top + bottom) / 2 - 16, ink, shadow, Align.Centre);
+        }
+
+        // bag_app_main.c: tiles 7 serve BG2, the backdrop (map 54, or 9 once a TM's menu is open), and BG3, the player (map 94).
+        // TM detail lines in bank 10: 101 type, 92 category, 89 PP, 90 power, 91 accuracy, 93 and 94 their numbers.
+        private static byte[] BagTopHg(int state)
+        {
+            (DsBgScreen s, Func<int, byte[]> m) = Bg(DirNames.BagGraphics);
+            if (s == null) return null;
+            ushort[] colours = NitroBgCodec.ReadColours(m(8));
+            Palettes(s, colours);
+            s.SetPalette(13, DsBgScreen.Row(NitroBgCodec.ReadColours(m(17)), 0));
+            s.InitLayer(2, 1, 0x8000);
+            s.InitLayer(3, 2, 0x8000);
+            s.LoadTiles(0x8000, m(7));
+            s.LoadMap(2, NitroBgCodec.ReadMap(m(state == BagTmMenu ? 9 : 54)).Entries, DsBgScreen.MapSide);
+            s.LoadMap(3, NitroBgCodec.ReadMap(m(94)).Entries, DsBgScreen.MapSide);
+            byte[] rgba = s.Render();
+            ushort[] text = DsBgScreen.Row(colours, 4);
+            ModelPlaceholder(rgba, PlaceholderInk, PlaceholderShadow);
+            if (BagShows(state, "Top screen", "Description"))
+            {
+                (int x, int y, int _, int _) = ScreenWindowLayouts.Window("bag", "Description", (0, 18, 32, 6));
+                // In the TM pocket the first TM (item 328) is described.
+                int[] sample = PocketSample(0);
+                int described = state is 1 or BagTmMenu ? 328 : sample is { Length: > 0 } ? sample[0] : 1;
+                Print(rgba, SystemFont, Line(RomInfo.ItemDescriptionsTextNumber, described), x * 8 + 20, y * 8, text[15], text[14]);
+            }
+            if (BagShows(state, "Top screen", "TM details"))
+            {
+                (int x, int y, int _, int _) = ScreenWindowLayouts.Window("bag", "TM details", (0, 13, 32, 4));
+                (int Line, int X, int Y)[] labels = { (101, 0, 0), (89, 0, 16), (92, 72, 0), (90, 168, 0), (91, 168, 16) };
+                foreach ((int l, int lx, int ly) in labels) Print(rgba, SystemFont, Text(10, l), x * 8 + lx, y * 8 + ly, text[15], text[14]);
+                // bag_app_window.c BagApp_PrintTMHMDetails and bag_app_sprite.c BagApp_DrawTMHMMoveDetails, for TM01.
+                Data.MoveInfo.Facts? move = Data.MoveInfo.Of(Data.MoveInfo.TaughtByItem(328));
+                if (move is Data.MoveInfo.Facts f)
+                {
+                    string Value(int line, string number) => Text(10, line, (_, _, _) => number);
+                    Print(rgba, SystemFont, Value(93, f.Pp.ToString().PadLeft(2)), x * 8 + 48, y * 8 + 16, text[15], text[14]);
+                    Print(rgba, SystemFont, f.Power <= 1 ? Text(10, 25) : Value(94, f.Power.ToString()), x * 8 + 232, y * 8, text[15], text[14]);
+                    Print(rgba, SystemFont, f.Accuracy == 0 ? Text(10, 25) : Value(94, f.Accuracy.ToString()), x * 8 + 232, y * 8 + 16, text[15], text[14]);
+                    GraphicAssets.Preview type = TypeIcons.PixelsFor(f.Type), category = TypeIcons.CategoryPixels(f.Category);
+                    if (type != null) Paste(rgba, type, 48 - type.Width / 2, 112 - type.Height / 2);
+                    if (category != null) Paste(rgba, category, 144 - category.Width / 2, 112 - category.Height / 2);
+                }
+            }
+            return rgba;
         }
 
         private static bool BagShows(int state, string group, string name)
         {
-            if (Pt || group != "Bottom screen" || name == "Cancel") return true;
-            return state switch
+            if (Pt)
+            {
+                if (name is "Item list" or "Pocket names") return true;
+                if (name is "Item icon" or "Item frame") name = "Description";
+                return state switch
+                {
+                    0 => name == "Description",
+                    1 => name == "Message",
+                    2 => name == "Short message",
+                    3 => name is "Message" or "Toss amount",
+                    4 => name is "Long message" or "Sell amount",
+                    _ => name is "Description" or "Poffin count",
+                };
+            }
+            if (group != "Bottom screen") return name == "Description" || (name == "TM details" && state == BagTmMenu);
+            if (name == "Cancel") return true;
+            return BagStatePages[Math.Clamp(state, 0, BagStatePages.Length - 1)] switch
             {
                 0 => name.StartsWith("Item ", StringComparison.Ordinal) || name == "Page",
                 1 => name.StartsWith("Option ", StringComparison.Ordinal) || name == "Selected item",
@@ -1918,8 +2617,11 @@ namespace DSPRE.Avalonia.Data
             Palettes(s, colours);
             ushort[] items = NitroBgCodec.ReadColours(m(8));
             for (int r = 0; r < 4; r++) s.SetPalette(8 + r, items, r * 16);
-            ushort[] pocket = DsBgScreen.Row(NitroBgCodec.ReadColours(m(41)), 0);
-            for (int r = 0; r < 4; r++) s.SetPalette(r, pocket);
+            // BagApp_LoadBgPaletteByPocket: the pocket's row into rows 0, 1 and 3, the next pocket's into row 2 (Items, or TMs and HMs).
+            ushort[] pockets = NitroBgCodec.ReadColours(m(41));
+            int pocket = BagShowsTms ? 3 : 0;
+            ushort[][] pocketRows = { DsBgScreen.Row(pockets, pocket), DsBgScreen.Row(pockets, pocket), DsBgScreen.Row(pockets, pocket + 1), DsBgScreen.Row(pockets, pocket) };
+            for (int r = 0; r < pocketRows.Length; r++) s.SetPalette(r, pocketRows[r]);
             s.InitLayer(1, 2, 0);
             s.LoadTiles(0, m(46));
             if (layout.Buttons >= 0) s.LoadMap(1, NitroBgCodec.ReadMap(m(layout.Buttons)).Entries, DsBgScreen.MapSide);
@@ -1930,17 +2632,89 @@ namespace DSPRE.Avalonia.Data
             if (layout.Buttons >= 0) BagSpritesHg(rgba, m);
 
             bool itemLine = bank == TextBank(222);
-            int first = itemLine ? Math.Max(1, line) : 1;
+            int[] sample = itemLine && !_forLayout ? null : PocketSample(0);
+            int first = sample is { Length: > 0 } ? sample[0] : itemLine ? Math.Max(1, line) : 1;
             (int X, int Y)[] buttons = { (4, 5), (20, 5), (4, 10), (20, 10), (4, 15), (20, 15) };
+            // The TM pocket names each TM by its move, with its number below (bag_app_window.c BagApp_PrintTMorHMNumberOnWindow).
+            int[] tms = BagShowsTms ? TMEditor.ReadMachineMoves() : null;
+            ushort[] obj = BagSpriteColoursHg(m);
             for (int i = 0; i < buttons.Length && layout.Buttons >= 0; i++)
             {
                 (int wx, int wy, int _, int _) = ScreenWindowLayouts.Window("bag", $"Item {i + 1}", (buttons[i].X, buttons[i].Y, 11, 4));
                 int x = wx * 8, y = wy * 8;
-                Print(rgba, SystemFont, Text(222, first + i), x, y, row11[1], row11[2]);
-                Print(rgba, SystemFont, Text(10, 87), x + 48, y + 16, row11[1], row11[2]);
+                bool tm = tms != null && i < tms.Length;
+                int listed = tm ? 328 + i : sample != null && i < sample.Length ? sample[i] : first + i;
+                // bag_app_sprite.c ITEM_ICON_1 to 6 and the cursor sit 10 left of and 19 below each button's game corner. Only the
+                // bag item buttons patch moves them with a window.
+                (int iconX, int iconY) = art?.Icons[i] ?? (buttons[i].X * 8 - 10, buttons[i].Y * 8 + 19);
+                ItemIcon(rgba, listed, iconX, iconY);
+                Print(rgba, SystemFont, tm ? Line(MoveNamesTextNumbers, tms[i]) : Text(222, listed), x, y, row11[1], row11[2]);
+                if (tm) Print(rgba, SystemFont, $"No.{i + 1:00}", x, y + 16, row11[1], row11[2]);
+                Print(rgba, SystemFont, Text(10, 87, (_, _, _) => "1"), x + 48, y + 16, row11[1], row11[2]);
+                // sCursorSpriteParam_PocketsItemsContext: the red frame on the first item, animation 10 in colour row 9.
+                if (i == 0 && obj != null && layout.Back != BagLayouts[1].Back)
+                    Sprite(rgba, m, 50, 49, 51, iconX + 26, iconY - 3, 10, _ => DsBgScreen.Row(obj, 9));
+            }
+            if (layout.Back == BagLayouts[1].Back)
+            {
+                // The item menu: Use, Trash, Give and Move (bank 10 lines 0, 1, 3, 75), the picked item and "The X item is selected."
+                int[] options = { 0, 1, 3, 75 };
+                // bag_app_sprite.c: the option buttons are animation 22 at 48 and 144 across, 144 and 176 down. The picked item's
+                // icon moves to 86,76.
+                for (int i = 0; obj != null && i < options.Length; i++)
+                    Sprite(rgba, m, 50, 49, 51, 48 + 96 * (i % 2), 144 + 32 * (i / 2), 22, _ => DsBgScreen.Row(obj, 8));
+                for (int i = 0; i < options.Length; i++)
+                {
+                    (int ox, int oy, int ow, int _) = ScreenWindowLayouts.Window("bag", $"Option {i + 1}", (1 + 12 * (i % 2), 17 + 4 * (i / 2), 10, 2));
+                    Print(rgba, SystemFont, Text(10, options[i]), ox * 8 + ow * 4, oy * 8, row11[1], row11[2], Align.Centre);
+                }
+                (int sx, int sy, int _, int _) = ScreenWindowLayouts.Window("bag", "Selected item", (12, 7, 11, 4));
+                // bag_app_window.c BagApp_PrintItemNameAndMaybeQuantityOnWindow: a TM shows its move and number like the list does.
+                int item = tms != null ? 328 : first;
+                ItemIcon(rgba, item, 86, 76);
+                Print(rgba, SystemFont, tms != null && tms.Length > 0 ? Line(MoveNamesTextNumbers, tms[0]) : Text(222, item), sx * 8 + 2, sy * 8, row11[1], row11[2]);
+                if (tms != null) Print(rgba, SystemFont, "No.01", sx * 8 + 2, sy * 8 + 16, row11[1], row11[2]);
+                Print(rgba, SystemFont, Text(10, 87), sx * 8 + 48, sy * 8 + 16, row11[1], row11[2]);
+                if (bank != TextBank(10))
+                {
+                    string picked = Text(10, 43, (_, _, _) => Text(222, item));
+                    MessageWindow(rgba, 2, 1, 27, 2, TalkColours[15]);
+                    Print(rgba, TalkFont, picked, 16, 8, TalkColours[1], TalkColours[2]);
+                }
+            }
+            bool amount = layout.Back == BagLayouts[3].Back;
+            if (amount)
+            {
+                // BagApp_ItemContextMenu_Trash: the picked item stays, the digits read 001 and TRASH (bank 10 line 1) sits on its button.
+                // All six arrows show when the bag holds 100 or more of the item.
+                int item = first;
+                ItemIcon(rgba, item, 86, 76);
+                (int sx, int sy, int _, int _) = ScreenWindowLayouts.Window("bag", "Selected item", (12, 7, 11, 4));
+                Print(rgba, SystemFont, Text(222, item), sx * 8 + 2, sy * 8, row11[1], row11[2]);
+                Print(rgba, SystemFont, Text(10, 87), sx * 8 + 48, sy * 8 + 16, row11[1], row11[2]);
+                // The item menu's "The X item is selected." stays up.
+                string picked = Text(10, 43, (_, _, _) => Text(222, item));
+                MessageWindow(rgba, 2, 1, 27, 2, TalkColours[15]);
+                Print(rgba, TalkFont, picked, 16, 8, TalkColours[1], TalkColours[2]);
+                for (int i = 0; i < 3; i++)
+                {
+                    (int dx, int dy, int _, int _) = ScreenWindowLayouts.Window("bag", $"Digit {i + 1}", (16 + 4 * i, 14, 2, 3));
+                    Print(rgba, SystemFont, i == 2 ? "1" : "0", dx * 8, dy * 8 + 4, row11[1], row11[2]);
+                }
+                for (int i = 0; obj != null && i < 6; i++)
+                    Sprite(rgba, m, 50, 49, 51, 136 + 32 * (i % 3), i < 3 ? 104 : 152, i < 3 ? 25 : 27, _ => DsBgScreen.Row(obj, 8));
+                if (obj != null) Sprite(rgba, m, 50, 49, 51, 136, 176, 37, _ => DsBgScreen.Row(obj, 8));
+                (int tx, int ty, int _, int _) = ScreenWindowLayouts.Window("bag", "Sell or toss", (14, 21, 7, 2));
+                Print(rgba, SystemFont, Text(10, 1), tx * 8 + 5, ty * 8, row11[15], row11[14]);
             }
             (int pageX, int pageY, int _, int _) = ScreenWindowLayouts.Window("bag", "Page", (10, 21, 7, 2));
-            if (layout.Buttons >= 0) Print(rgba, SystemFont, Text(10, 22), pageX * 8, pageY * 8, row11[15], row11[1]);
+            // BagApp_PrintPageCounter: page and page count each padded to three on the right. Eight sample items make two pages.
+            int pages = tms != null ? (tms.Length + 5) / 6 : sample is { Length: > 0 } ? (sample.Length + 5) / 6 : 1;
+            string counter = Text(10, 22, (_, _, buffer) => (buffer == 0 ? 1 : pages).ToString().PadLeft(3));
+            if (layout.Buttons >= 0) Print(rgba, SystemFont, counter, pageX * 8, pageY * 8, row11[15], row11[1]);
+            // bag_app_sprite.c: the B button is animation 16 at 224,176, and 39 while picking an amount.
+            ushort[] bObj = BagSpriteColoursHg(m);
+            if (bObj != null) Sprite(rgba, m, 50, 49, 51, 224, 176, amount ? 39 : 16, _ => DsBgScreen.Row(bObj, 8));
             (int cancelX, int cancelY, int _, int _) = ScreenWindowLayouts.Window("bag", "Cancel", (24, 21, 7, 2));
             Print(rgba, SystemFont, Text(10, 8), cancelX * 8 + 32, cancelY * 8, row11[15], row11[14], Align.Centre);
 
@@ -1954,14 +2728,22 @@ namespace DSPRE.Avalonia.Data
         }
 
         // Template palette rows override the cells' (sSpriteTemplates); BagApp_LoadObjPaletteByPocket loads the pocket rows from file 48.
-        private static void BagSpritesHg(byte[] rgba, Func<int, byte[]> m)
+        // The bottom screen's sprite colours: file 47, with the pocket colours from file 48 over its first rows.
+        private static ushort[] BagSpriteColoursHg(Func<int, byte[]> m)
         {
             ushort[] obj = NitroBgCodec.ReadColours(m(47)), pockets = NitroBgCodec.ReadColours(m(48));
-            if (obj == null || pockets == null) return;
+            if (obj == null || pockets == null) return null;
             obj = (ushort[])obj.Clone();
             Array.Resize(ref obj, Math.Max(obj.Length, 256));
             Array.Copy(pockets, 128, obj, 0, Math.Min(128, pockets.Length - 128));
             Array.Copy(pockets, 0, obj, 0, 16);
+            return obj;
+        }
+
+        private static void BagSpritesHg(byte[] rgba, Func<int, byte[]> m)
+        {
+            ushort[] obj = BagSpriteColoursHg(m);
+            if (obj == null) return;
             for (int i = 0; i < 8; i++)
             {
                 int row = i;

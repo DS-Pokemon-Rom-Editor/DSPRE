@@ -27,13 +27,17 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private readonly PartyPanelLayout _panels;
         private readonly GameTextScreens.Screen _text;
         private readonly PendingArchiveWrites _pending = new PendingArchiveWrites();
+        // The screen's touch buttons, shared with its Buttons tab, or null when it has none.
+        private readonly ScreenButtonsLink _link;
+        private readonly ScreenButtonsViewModel _buttons;
         private readonly PendingArchiveWrites.Target _windowTables, _panelTables;
 
         public ScreenWindowLayoutViewModel() { if (!Design.IsDesignMode) return; }
 
-        public ScreenWindowLayoutViewModel(string screen, string title)
+        public ScreenWindowLayoutViewModel(string screen, string title, ScreenButtonsLink link = null)
         {
             _screen = screen;
+            if (link?.Model() is { Buttons: not null } buttons) (_link, _buttons, _pending) = (link, buttons, buttons.Pending);
             Title = title;
             _text = GameTextScreens.Screens.FirstOrDefault(s => s.Key == screen);
             _layout = ScreenWindowLayout.Read(screen);
@@ -41,6 +45,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (screen == "party") _panels = PartyPanelLayout.Read();
             _windowTables = new PendingArchiveWrites.Target("windows", _layout.FileBytes, _layout.WriteFile);
             if (_panels != null) _panelTables = new PendingArchiveWrites.Target("panels", _panels.FileBytes, _panels.WriteFile);
+            {
+            }
+            _bands = _text?.BandsOf?.Invoke() ?? Array.Empty<GameTextScreens.ScreenBand>();
+            _swaps = _text?.SwapsOf?.Invoke() ?? Array.Empty<GameTextScreens.ScreenSwap>();
+            KeepBandRows();
+            KeepSwapSpots();
             OpenCursor();
             OpenFontTable();
             _savedSize = _panels?.Size;
@@ -69,6 +79,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         /// <summary>Use while drawing on a worker thread, so the preview shows the unsaved edits.</summary>
         public IDisposable DrawScope() => new Scopes(_pending.Reading(), ScreenWindowLayouts.Use(_screen, _layout, _panels),
+                                                     ScreenWindowLayouts.UseButtons(_buttons?.Buttons),
                                                      ScreenWindowLayouts.UseFonts(_fonts), ScreenWindowLayouts.UseMenu(ShownMenu));
 
         private sealed class Scopes : IDisposable
@@ -83,10 +94,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             if (_pending.Read(_windowTables) is byte[] windows) _layout.FromBytes(windows);
             if (_panelTables != null && _pending.Read(_panelTables) is byte[] panels) _panels.FromBytes(panels);
+            {
+            }
             if (_fontTable != null && _pending.Read(_fontTable) is byte[] fonts) _fonts = PartyFontPatch.FontsIn(fonts, _layout.Windows);
             if (_cursorTable != null && _pending.Read(_cursorTable) is byte[] cursor) _flow.FromBytes(cursor);
             if (_menuTable != null && _pending.Read(_menuTable) is byte[] menu) _menu.FromBytes(menu);
             RaiseUndo();
+            SyncTouch();
             Refresh();
             Changed?.Invoke();
         }
@@ -103,8 +117,61 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (_fontTable != null) _pending.Stage(_fontTable, PartyFontPatch.Table(_layout.Windows, _fonts));
                 if (_cursorTable != null) _pending.Stage(_cursorTable, _flow.ToBytes());
                 if (_menuTable != null) _pending.Stage(_menuTable, _menu.ToBytes());
+                if (_buttons != null) _pending.Stage(_buttons.Tables, _buttons.Buttons.ToBytes());
+                StageBands();
+                StageSwaps();
                 return null;
             });
+        }
+
+        // ── background bands that follow a window ──
+
+        private readonly IReadOnlyList<GameTextScreens.ScreenBand> _bands;
+        private readonly IReadOnlyList<GameTextScreens.ScreenSwap> _swaps;
+
+        // Where each swap's window was when its map was last saved. The saved map has the shown squares there.
+        private readonly Dictionary<string, (int X, int Y)> _swapSaved = new Dictionary<string, (int X, int Y)>();
+
+        private void KeepSwapSpots()
+        {
+            foreach (GameTextScreens.ScreenSwap swap in _swaps)
+                if (_layout.Windows.FirstOrDefault(w => w.Name == swap.Window) is { } w) _swapSaved[swap.Window] = (w.X, w.Y);
+        }
+
+        // The saved map with the shown squares where the window is now and the hidden ones where it was.
+        private void StageSwaps()
+        {
+            foreach (GameTextScreens.ScreenSwap swap in _swaps)
+            {
+                if (_layout.Windows.FirstOrDefault(w => w.Name == swap.Window) is not { } w || !_swapSaved.TryGetValue(swap.Window, out (int X, int Y) was)) continue;
+                ScriptNarc narc = new ScriptNarc(swap.Dir);
+                if (!narc.Available || narc.GetFromDisk(swap.Member) is not byte[] saved || swap.Hidden() is not ushort[] away || swap.Shown() is not ushort[] shown) continue;
+                byte[] map = WindowTileArt.Swap(saved, was, (w.X, w.Y), (swap.HomeX, swap.HomeY), swap.Width, swap.Height, away, shown);
+                if (!map.AsSpan().SequenceEqual(saved) || _pending.Changes(swap.Dir, swap.Member)) narc.Put(swap.Member, map);
+            }
+        }
+
+        // Each band window's row when its maps were last saved. The band on disk lines up with that row.
+        private readonly Dictionary<string, int> _bandRows = new Dictionary<string, int>();
+
+        private void KeepBandRows()
+        {
+            foreach (GameTextScreens.ScreenBand band in _bands)
+                if (_layout.Windows.FirstOrDefault(w => w.Name == band.Window) is { } w) _bandRows[band.Window] = w.Y;
+        }
+
+        // Each map is rebuilt from the saved file, so moving back stages the file as it was.
+        private void StageBands()
+        {
+            foreach (GameTextScreens.ScreenBand band in _bands)
+            {
+                if (!_bandRows.TryGetValue(band.Window, out int savedRow) || _layout.Windows.FirstOrDefault(w => w.Name == band.Window) is not { } w) continue;
+                ScriptNarc narc = new ScriptNarc(band.Dir);
+                if (!narc.Available) continue;
+                foreach (int member in band.Members)
+                    if ((w.Y != savedRow || _pending.Changes(band.Dir, member)) && narc.GetFromDisk(member) is byte[] saved)
+                        narc.Put(member, WindowTileArt.Band(saved, savedRow, w.Y, band.Above, band.Rows));
+            }
         }
 
         // ── party graphics rebuilt to the panel size: the cursor frame, the panel art and the background ──
@@ -430,9 +497,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             SyncPanels();
             foreach (ScreenWindowLayout.Window w in _layout.Windows.Where(w => !HasStates || _text.Shows(_state, w.Group, w.Name)))
             {
-                int scrolled = _text?.RowsScrolled?.Invoke(_state, w.Layer) ?? 0;
+                (int insideX, int insideY) = _text?.Inside?.Invoke(_state, w) ?? (0, 0);
+                int scrolled = (_text?.RowsScrolled?.Invoke(_state, w.Layer) ?? 0) - insideY;
                 ScreenWindowRow row = new ScreenWindowRow(w, HpBarLayoutEditorViewModel.Colours[colour++ % HpBarLayoutEditorViewModel.Colours.Length], scrolled)
                 {
+                    ShiftX = insideX,
                     MoveTo = (r, x, y) => { Move(r, x, y); Commit(); },
                     OnScreenTiles = true,
                     SizeTo = w.Code != null ? null : (r, width, height) => { Resize(r, width, height); Commit(); },
@@ -444,6 +513,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 Windows.Add(row);
                 ((w.Layer < 4) == mainOnTop ? TopWindows : BottomWindows).Add(row);
             }
+            AddTouchRows(mainOnTop);
             RaiseShown();
             Warn();
             _ = RedrawAsync();
@@ -476,6 +546,74 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             SyncPanels();
             Raise(nameof(HasUnsavedChanges));
             _ = RedrawAsync();
+        }
+
+        // Touch areas: moving one moves its art too, as in the Buttons tab. A picture that carries areas moves them with it.
+        private const string TouchGroup = "Buttons", TouchColour = "#FFFFFF";
+
+        private static bool IsTouch(ScreenWindowRow row) => row.Window.Group == TouchGroup && row.Window.Part == "touch";
+
+        private int TouchPage => _link == null ? -1 : _link.PageOf(HasStates ? _state : 0);
+
+        private void AddTouchRows(bool mainOnTop)
+        {
+            int page = TouchPage;
+            if (page < 0 || page >= _buttons.Buttons.PageNames.Count) return;
+            HashSet<int> carried = (_link.Carries?.Values ?? Enumerable.Empty<(int Page, int Button)[]>())
+                .SelectMany(c => c).Where(c => c.Page == page).Select(c => c.Button).ToHashSet();
+            string[] names = _buttons.Buttons.ButtonsOf(page);
+            for (int b = 0; b < names.Length; b++)
+            {
+                if (carried.Contains(b) || _buttons.Buttons.MoveLocked(page, b) != null) continue;
+                ScreenWindowRow row = new ScreenWindowRow(new ScreenWindowLayout.Window
+                {
+                    Group = TouchGroup, Name = names[b] + " button", Pokemon = b, Part = "touch", Layer = mainOnTop ? 4 : 0,
+                }, TouchColour, 0)
+                {
+                    MoveTo = (r, x, y) => { Move(r, x, y); Commit(); },
+                    OnScreenTiles = true,
+                    SizeElsewhere = "Touch area sizes are set in the Buttons tab.",
+                };
+                PlaceTouch(row, page);
+                Windows.Add(row);
+                BottomWindows.Add(row);
+            }
+        }
+
+        // The row covers the tiles the area touches.
+        private void PlaceTouch(ScreenWindowRow row, int page)
+        {
+            (int top, int bottom, int left, int right) = _buttons.Buttons.AreaOf(page, row.Window.Pokemon);
+            row.Window.X = left / 8;
+            row.Window.Y = top / 8;
+            row.Window.Width = Math.Max(1, (right - 1) / 8 - left / 8 + 1);
+            row.Window.Height = Math.Max(1, (bottom - 1) / 8 - top / 8 + 1);
+            row.Refresh();
+        }
+
+        private void SyncTouch()
+        {
+            int page = TouchPage;
+            if (page < 0) return;
+            foreach (ScreenWindowRow row in Windows.Where(IsTouch)) PlaceTouch(row, page);
+        }
+
+        private void MoveTouch(ScreenWindowRow row, int x, int y)
+        {
+            int page = TouchPage, dx = x - row.Window.X, dy = y - row.Window.Y;
+            if (page < 0 || (dx == 0 && dy == 0)) return;
+            _buttons.Buttons.Move(page, row.Window.Pokemon, dx * 8, dy * 8);
+            PlaceTouch(row, page);
+            _buttons.Moved();
+            Raise(nameof(HasUnsavedChanges));
+            _ = RedrawAsync();
+        }
+
+        private void Carry(ScreenWindowLayout.Window w, int dx, int dy)
+        {
+            if (_link?.Carries == null || (dx == 0 && dy == 0) || !_link.Carries.TryGetValue(w.Name, out (int Page, int Button)[] areas)) return;
+            foreach ((int page, int button) in areas) _buttons.Buttons.Move(page, button, dx * 8, dy * 8);
+            _buttons.Moved();
         }
 
         // Board box sizes in tiles.
@@ -558,7 +696,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 ScreenWindowLayout.Window w = row.Window;
                 if (IsPanel(row)) { row.Warning = string.Join("\n", PanelNotes(row, state)); continue; }
-                if (IsSprite(row) || IsBall(row)) continue;
+                if (IsSprite(row) || IsBall(row) || IsTouch(row)) continue;
                 List<string> notes = now.TryGetValue((w.Group, w.Name), out List<string> n) ? n : new List<string>();
                 if (before.TryGetValue((w.Group, w.Name), out List<string> old)) notes = notes.Except(old).ToList();
                 ScreenWindowLayout.Window was = _savedLayout?.Windows.FirstOrDefault(o => o.Group == w.Group && o.Name == w.Name);
@@ -616,15 +754,17 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (IsPanel(row)) { MovePanel(row.Window.Pokemon - 1, x, y); return; }
             if (IsSprite(row)) { MoveSprite(row, x, y); return; }
             if (IsBall(row)) { MoveBall(row, x, y); return; }
+            if (IsTouch(row)) { MoveTouch(row, x, y); return; }
             ScreenWindowLayout.Window w = row.Window;
-            x = Math.Clamp(x, w.MinX, ScreenWindowLayout.MapColumns - w.Width);
-            y = Math.Clamp(y, w.MinY, ScreenWindowLayout.MapHeight - w.Height);
+            (int fromX, int fromY) = (w.X, w.Y);
+            x = Math.Clamp(x, w.MinX, Math.Min(w.MaxX, ScreenWindowLayout.MapColumns - w.Width));
+            y = Math.Clamp(y, w.MinY, Math.Min(w.MaxY, ScreenWindowLayout.MapHeight - w.Height));
             int dx = x - w.X, dy = y - w.Y;
             if (dx == 0 && dy == 0) return;
             foreach (ScreenWindowLayout.Window moved in Following(w))
             {
-                if (moved.CanMoveAcross) moved.X = Math.Clamp(moved.X + dx, moved.MinX, ScreenWindowLayout.MapColumns - moved.Width);
-                if (moved.CanMoveDown) moved.Y = Math.Clamp(moved.Y + dy, moved.MinY, ScreenWindowLayout.MapHeight - moved.Height);
+                if (moved.CanMoveAcross) moved.X = Math.Clamp(moved.X + dx, moved.MinX, Math.Min(moved.MaxX, ScreenWindowLayout.MapColumns - moved.Width));
+                if (moved.CanMoveDown) moved.Y = Math.Clamp(moved.Y + dy, moved.MinY, Math.Min(moved.MaxY, ScreenWindowLayout.MapHeight - moved.Height));
                 FollowLabel(moved);
             }
             foreach (ScreenWindowRow shown in Windows) shown.Refresh();
@@ -636,7 +776,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <summary>Never bigger than in the ROM.</summary>
         public void Resize(ScreenWindowRow row, int width, int height)
         {
-            if (row == null || IsPanel(row) || IsSprite(row) || IsBall(row) || row.Window.Code != null) return;
+            if (row == null || IsPanel(row) || IsSprite(row) || IsBall(row) || IsTouch(row) || row.Window.Code != null) return;
             if (width == row.Window.Width && height == row.Window.Height) return;
             foreach (ScreenWindowLayout.Window w in Following(row.Window))
             {
@@ -722,11 +862,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 // Checks everything first, then writes graphics before arm9, so a failed save leaves arm9 untouched.
-                if (_pending.Pending(PartyGraphics).Count > 0)
+                foreach (RomInfo.DirNames dir in _bands.Select(b => b.Dir).Concat(_swaps.Select(s => s.Dir)).Append(PartyGraphics).Distinct())
                 {
-                    await Task.Run(() => DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { PartyGraphics }));
-                    if (!System.IO.File.Exists(ArchiveMembers.PathOf(PartyGraphics, _pending.Pending(PartyGraphics)[0].Id)))
-                        throw new System.IO.IOException("The party graphics couldn't be unpacked.");
+                    if (_pending.Pending(dir).Count == 0) continue;
+                    await Task.Run(() => DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { dir }));
+                    if (!System.IO.File.Exists(ArchiveMembers.PathOf(dir, _pending.Pending(dir)[0].Id)))
+                        throw new System.IO.IOException("The screen's graphics couldn't be unpacked.");
                 }
                 if (_panelTables != null && _panels.WhyNotWrite(_pending.Read(_panelTables)) is string why)
                     throw new InvalidOperationException(why);
@@ -734,6 +875,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     throw new InvalidOperationException(cursorWhy);
                 if (_menuTable != null && _menu.WhyNotWrite(_pending.Read(_menuTable)) is string menuWhy)
                     throw new InvalidOperationException(menuWhy);
+                if (_buttons != null && _buttons.Buttons.WhyNotWrite(_pending.Read(_buttons.Tables)) is string buttonsWhy)
+                    throw new InvalidOperationException(buttonsWhy);
                 _pending.Save();
             }
             catch (Exception e)
@@ -744,7 +887,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
             _savedLayout = null;
             _savedSize = _panels?.Size;
+            KeepBandRows();
+            KeepSwapSpots();
             ScreenWindowLayouts.Forget(_screen);
+            _buttons?.Moved();
             Raise(nameof(HasUnsavedChanges));
             SaveNotice.Saved(UnsavedChangesDescription);
             if (CursorMissesPanels()) StatusText = "The cursor frame wasn't rebuilt for the new panel size.";
@@ -804,6 +950,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <summary>The row the game's code forces in the shown state, if any.</summary>
         public int? FixedTop { get; init; }
         public int ShownY => (FixedTop ?? Window.Y) - _scrolled;
+        /// <summary>How many tiles right of its table place a window inside a frame is drawn.</summary>
+        public int ShiftX { get; init; }
+        public int ShownX => Window.X + ShiftX;
 
         private string _warning = "";
         /// <summary>One problem per line; empty when there are none.</summary>
@@ -830,18 +979,22 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <summary>Set on a window placed in screen tiles. Panels, sprites and balls have other limits.</summary>
         public bool OnScreenTiles { get; init; }
         /// <summary>The furthest the window can go and still fit on screen.</summary>
-        public int MaxAcross => OnScreenTiles ? Math.Max(0, ScreenWindowLayout.MapColumns - Window.Width) : 31;
-        public int MaxDown => OnScreenTiles ? Math.Max(0, ScreenWindowLayout.MapHeight - Window.Height) : 31;
+        public int MaxAcross => Math.Min(Window.MaxX, OnScreenTiles ? Math.Max(0, ScreenWindowLayout.MapColumns - Window.Width) : 31);
+        public int MaxDown => Math.Min(Window.MaxY, OnScreenTiles ? Math.Max(0, ScreenWindowLayout.MapHeight - Window.Height) : 31);
         public int MinAcross => Window.MinX;
         public int MinDown => Window.MinY;
         public int Down { get => Window.Y; set => MoveTo?.Invoke(this, Window.X, value); }
         public bool CanAcross => Window.CanMoveAcross;
         public bool CanDown => Window.CanMoveDown;
-        public string AcrossTip => CanAcross ? "Across" : "Can't move: the game shares this position with something else.";
-        public string DownTip => CanDown ? "Down" : "Can't move: the game shares this position with something else.";
+        public string AcrossTip => CanAcross ? "Across" : Window.LockReason ?? "Can't move: the game shares this position with something else.";
+        public string DownTip => !CanDown ? Window.LockReason ?? "Can't move: the game shares this position with something else."
+            : Window.Bounded ? $"Down, to row {Window.MaxY} at most. The window stays inside its frame."
+            : Window.MaxY + Window.Height < DsBgScreen.Height / DsBgScreen.TileSize ? $"Down. The game keeps this window's position in a single byte, so it can't go below row {Window.MaxY}." : "Down";
         public bool Sizable => SizeTo != null;
-        public string WideTip => Sizable ? "Width in tiles, up to the original width." : "The game's code sets this window's size.";
-        public string TallTip => Sizable ? "Height in tiles, up to the original height." : "The game's code sets this window's size.";
+        /// <summary>Shown on the size boxes of a row sized elsewhere.</summary>
+        public string SizeElsewhere { get; init; }
+        public string WideTip => Sizable ? "Width in tiles, up to the original width." : SizeElsewhere ?? "The game's code sets this window's size.";
+        public string TallTip => Sizable ? "Height in tiles, up to the original height." : SizeElsewhere ?? "The game's code sets this window's size.";
         public int Wide { get => Window.Width; set => SizeTo?.Invoke(this, value, Window.Height); }
         public int Tall { get => Window.Height; set => SizeTo?.Invoke(this, Window.Width, value); }
         public int MaxWide => Math.Max(1, Window.MaxWidth);
@@ -854,7 +1007,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public int FontIndex { get => GetFont?.Invoke() ?? 0; set => SetFont?.Invoke(value); }
         public int MaxTall => Math.Max(1, Window.MaxHeight);
 
-        public double Left => Window.X * ScreenWindowLayoutViewModel.Tile;
+        public double Left => ShownX * ScreenWindowLayoutViewModel.Tile;
         public double Top => ShownY * ScreenWindowLayoutViewModel.Tile;
         public double Width => Window.Width * ScreenWindowLayoutViewModel.Tile;
         public double Height => Window.Height * ScreenWindowLayoutViewModel.Tile;
@@ -865,4 +1018,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 Raise(n);
         }
     }
+}
+
+namespace DSPRE.Avalonia.ViewModels.Graphics
+{
+    /// <summary>A screen's touch buttons as its Layout tab shows them.</summary>
+    /// <param name="Model">The Buttons tab's model, made on first use.</param>
+    /// <param name="PageOf">The touch page each Layout state shows, or -1 for none.</param>
+    /// <param name="Carries">Layout pictures by name, with the touch areas that move with each.</param>
+    public sealed record ScreenButtonsLink(Func<ScreenButtonsViewModel> Model, Func<int, int> PageOf,
+                                           IReadOnlyDictionary<string, (int Page, int Button)[]> Carries = null);
 }

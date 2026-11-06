@@ -296,7 +296,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (SystemFont == null) return null;
             for (int i = 0; i < lines.Count; i++)
             {
-                int over = SystemFont.Measure(lines[i], FieldFontCharacters.GlyphFor) - width;
+                int over = SystemFont.Measure(lines[i]) - width;
                 if (over > 0) return $"Line {i + 1} runs {over} px past the box";
             }
             return null;

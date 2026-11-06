@@ -787,9 +787,10 @@ namespace DSPRE
                 ShowInfo("The synthetic overlay is ready for other patches.", "Patch applied");
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
-                ShowError("The patch failed. Restore the ARM9 from its backup (arm9.bin" + BackupSuffix + ").", "Patch failed");
+                AppLogger.Error("ARM9 expansion: " + ex);
+                ShowError("The patch failed. Restore the ARM9 from its backup (arm9.bin" + BackupSuffix + ").\n\n" + ex.Message, "Patch failed");
                 return false;
             }
         }
@@ -2614,8 +2615,14 @@ namespace DSPRE
                           : "Apply the ARM9 expansion in the ROM patch toolbox first.", "Patch not applied");
                 return null;
             }
-            int[] at = offsets;
-            IEnumerable<string> ranges = at.Select((start, i) => $"0x{start:X} to 0x{start + lengths[i] - 1:X}");
+            // Blocks placed end to end read as one range.
+            List<(int Start, int End)> spans = new();
+            foreach ((int start, int end) in offsets.Select((start, i) => (start, start + lengths[i])).OrderBy(r => r.start))
+            {
+                if (spans.Count > 0 && spans[^1].End == start) spans[^1] = (spans[^1].Start, end);
+                else spans.Add((start, end));
+            }
+            IEnumerable<string> ranges = spans.Select(r => $"0x{r.Start:X} to 0x{r.End - 1:X}");
             return "\n\nIt takes " + string.Join(" and ", ranges) + " in the synthetic overlay, the first free space no other patch or DSPRE table uses.";
         }
 

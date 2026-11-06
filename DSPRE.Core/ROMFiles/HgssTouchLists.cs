@@ -78,6 +78,8 @@ namespace DSPRE.ROMFiles
             return TouchListButtons.Read(new[]
             {
                 new TouchListButtons.Page("Card", new[] { "Cancel", "Hint", "Card" }, s.Overlay, (int)s.Touch, Spots: spots),
+                // The same table, shown with the badge case the game draws once the League is cleared.
+                new TouchListButtons.Page("Card after the League", new[] { "Cancel", "Hint", "Card" }, s.Overlay, (int)s.Touch, Spots: spots),
             });
         }
 

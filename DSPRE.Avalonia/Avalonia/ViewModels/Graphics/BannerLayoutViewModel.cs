@@ -40,6 +40,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             };
             int bank = RomInfo.LocationNamesTextNumber;
             if (bank >= 0) Places = new TextArchive(bank).Messages.Select((name, i) => $"{i}: {name}").ToList();
+            _place = GameTextScreens.CommonBannerPlace();
             _motion = new("banner-motion", () => BannerMotionPatch.Read() is BannerMotionPatch.Style s ? StyleBytes(s) : null, WriteMotion);
             AppEvents.RomPatchStateChanged += OnPatchStateChanged;
             Redraw();

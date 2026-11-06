@@ -258,6 +258,17 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 OnPropertyChanged(n);
         }
 
+        private string[] _speciesNames;
+
+        // The sprites show the species the sample name spells, or Pidgey.
+        private int SampleSpecies()
+        {
+            try { _speciesNames ??= RomInfo.GetPokemonNames(); }
+            catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException) { AppLogger.WarnOnce("BattleScreenEditorViewModel.SampleSpecies", ex); _speciesNames = Array.Empty<string>(); }
+            int found = Array.FindIndex(_speciesNames, n => string.Equals(n, _sampleName?.Trim(), StringComparison.OrdinalIgnoreCase));
+            return found > 0 && found <= RomInfo.LastVanillaSpecies ? found : new BattleScreenRenderer.Options().Species;
+        }
+
         /// <summary>Redraws both screens from the ROM.</summary>
         public void Refresh()
         {
@@ -273,6 +284,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     Menu = _menuIndex >= 0 && _menuIndex < _menus.Count ? _menus[_menuIndex] : TouchMenu.Background,
                     BackdropId = _backdropIndex - 1,
                     PokemonName = _sampleName,
+                    Species = SampleSpecies(),
                     Level = _sampleLevel,
                     Gender = _gender,
                     Status = _status,

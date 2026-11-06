@@ -12,10 +12,11 @@ namespace DSPRE.Avalonia.Data
             return frames.Available ? FieldWindowFrame.Load(frameIndex, frames.Get, frames.Count) : null;
         }
 
-        public static FieldWindowFrame LoadStandard()
+        /// <summary>render_window.c LoadUserFrameGfx1: frame type 0 is drawing 0, any other type drawing 1, both with the same colours.</summary>
+        public static FieldWindowFrame LoadStandard(int drawing = 0)
         {
             ScriptNarc frames = new ScriptNarc(DirNames.WindowFrames);
-            return frames.Available ? FieldWindowFrame.LoadStandard(frames.Get, frames.Count) : null;
+            return frames.Available ? FieldWindowFrame.LoadStandard(frames.Get, frames.Count, drawing) : null;
         }
 
         public static uint[] LoadSystemFontColours()

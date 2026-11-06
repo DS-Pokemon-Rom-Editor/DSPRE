@@ -41,7 +41,7 @@ namespace DSPRE.Avalonia.Views.Controls
         {
             string text = Text ?? "";
             if (text.Length == 0) return new Size(0, LineHeight);
-            if (RomFontReady) return new Size(Font.Measure(text, FieldFontCharacters.GlyphFor), LineHeight);
+            if (RomFontReady) return new Size(Font.Measure(text), LineHeight);
             return new Size(text.Length * LineHeight * 0.5, LineHeight);
         }
 
@@ -68,9 +68,8 @@ namespace DSPRE.Avalonia.Views.Controls
             double x = 0;
             IBrush ink = Ink ?? Brushes.Black;
             IBrush shadow = Shadow ?? ink;
-            foreach (char c in text)
+            foreach (int glyph in FieldFontCharacters.GlyphsOf(text))
             {
-                int glyph = FieldFontCharacters.GlyphFor(c);
                 if (glyph < 0) { x += font.MaxWidth / 2.0; continue; }
                 int width = font.WidthOf(glyph);
                 for (int py = 0; py < font.Height; py++)

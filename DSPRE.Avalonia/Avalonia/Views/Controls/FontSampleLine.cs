@@ -68,7 +68,7 @@ namespace DSPRE.Avalonia.Views.Controls
         {
             if (string.IsNullOrEmpty(text)) return 1;
             int w = 0;
-            foreach (char c in text) w += font.WidthOf(FieldFontCharacters.GlyphFor(c));
+            foreach (int g in FieldFontCharacters.GlyphsOf(text)) w += font.WidthOf(g);
             return w;
         }
 
@@ -78,9 +78,8 @@ namespace DSPRE.Avalonia.Views.Controls
         {
             if (string.IsNullOrEmpty(text)) return;
             double x = left;
-            foreach (char c in text)
+            foreach (int glyph in FieldFontCharacters.GlyphsOf(text))
             {
-                int glyph = FieldFontCharacters.GlyphFor(c);
                 if (glyph < 0) { x += font.MaxWidth / 2.0 * zoom; continue; }
                 int w = font.WidthOf(glyph);
                 for (int py = 0; py < font.Height; py++)

@@ -30,13 +30,15 @@ namespace DSPRE.Avalonia.Data
             Palettes(s, NitroBgCodec.ReadColours(m(18)), 2, 2);
             // The dial is an affine layer: 256-colour tiles on the standard palette.
             Layer(s, m, 3, 3, 0x10000, 32, 33);
+            s.UseWholePalette(3);
             Layer(s, m, 1, 1, 0x8000, 15, 17);
             ExtendedColours(s, m, 1, BottomPalettesPatch.Bag);
             s.InitLayer(0, 0, 0);
             s.LoadTiles(0, m(19));
             for (int i = 0; spots != null && i < spots.Count; i++) SheetButton(s, 0, i, spots[i].X, spots[i].Y, 2);
             ushort[] dial = new ushort[36];
-            for (int i = 0; i < 36; i++) dial[i] = (ushort)((0x276 + i / 6 * 30 + i % 6) | 2 << 12);
+            // bag/main.c DrawDialButton: palette 3.
+            for (int i = 0; i < 36; i++) dial[i] = (ushort)((0x276 + i / 6 * 30 + i % 6) | 3 << 12);
             s.Put(0, dial, 13, 7, 6, 6);
             return s.Render();
         }
@@ -61,14 +63,21 @@ namespace DSPRE.Avalonia.Data
             return s.Render();
         }
 
-        // trainer_case/main.c draws the open case (29, 38) in colours 10. In sprites.c each badge is a sequence in 46 (cells 44, tiles 33)
-        // with its palette in file 16 plus the badge number.
-        internal static byte[] TrainerCaseBottomPt(IReadOnlyList<(int X, int Y)> badges)
+        // trainer_case/main.c: the case (29, 38) under the lid (30, 39) on BG3, the lid scaled to nothing once open. Each badge is a
+        // sequence in 46 (cells 44, tiles 33), palette 16 plus the badge number.
+        internal static byte[] TrainerCaseBottomPt(IReadOnlyList<(int X, int Y)> badges, bool lid = false)
         {
             (DsBgScreen s, Func<int, byte[]> m) = Bg(DirNames.TrainerCardGraphics);
             if (s == null) return null;
-            Palettes(s, NitroBgCodec.ReadColours(m(10)));
-            Layer(s, m, 2, 2, 0, 29, 38);
+            Palettes(s, NitroBgCodec.ReadColours(m(PlatinumTrainerCardCase.LidNclr)));
+            Palettes(s, NitroBgCodec.ReadColours(m(PlatinumTrainerCardCase.CaseNclr)), 0, 1);
+            Layer(s, m, 2, 3, 0, 29, 38);
+            if (lid)
+            {
+                Layer(s, m, 3, 0, 0x10000, PlatinumTrainerCardCase.LidNcgr, PlatinumTrainerCardCase.LidNscr);
+                s.UseWholePalette(3);
+                return s.Render();
+            }
             byte[] rgba = s.Render();
             ushort[] obj = NitroBgCodec.ReadColours(m(14));
             for (int i = 0; badges != null && i < badges.Count && i < 8; i++)
@@ -79,10 +88,36 @@ namespace DSPRE.Avalonia.Data
             return rgba;
         }
 
+        /// <summary>Platinum's trainer card front, on the top screen above the badge case.</summary>
+        internal static byte[] TrainerCardTopPt() => WithArchive(() => TrainerCard(0, false)?.Rgba);
+
+        // HGSS badge case: BG2 holds the case and portraits, BG3 the backdrop, and badges are sprites at BadgePos. After the League it
+        // adds Kanto's row and the Hall of Fame mark moves from 0,7 to 0,14. Before it, the eight badges sit 40 lower.
+        internal static byte[] TrainerCardTopHg(bool cleared = false) => WithArchive(() =>
+        {
+            (DsBgScreen s, Func<int, byte[]> m) = Bg(DirNames.TrainerCardGraphics);
+            if (s == null) return null;
+            Palettes(s, NitroBgCodec.ReadColours(m(HgssTrainerCardCase.BadgeCaseNclr)));
+            Layer(s, m, 2, 2, 0, HgssTrainerCardCase.BadgeCaseNcgr, cleared ? HgssTrainerCardCase.ClearedNscr : HgssTrainerCardCase.JohtoNscr);
+            Layer(s, m, 3, 3, 0, -1, HgssTrainerCardCase.BackdropNscr);
+            (int markWidth, ushort[] mark) = NitroBgCodec.ReadMap(m(HgssTrainerCardCase.MarkNscr));
+            if (mark != null) s.Copy(2, 0, cleared ? 14 : 7, 7, 9, mark, cleared ? 7 : 0, 0, Math.Max(1, markWidth));
+            byte[] rgba = s.Render();
+            ushort[] badgeColours = NitroBgCodec.ReadColours(m(HgssTrainerCardCase.BadgeNclr));
+            int[] across = { 96, 144, 192, 240 }, down = { 48, 88, 136, 176 };
+            for (int i = 0; badgeColours != null && i < (cleared ? 16 : 8); i++)
+                Sprite(rgba, m, HgssTrainerCardCase.BadgeNanr, HgssTrainerCardCase.BadgeNcer, HgssTrainerCardCase.BadgeNcgr,
+                       across[i % 4], down[i / 4] + (cleared ? 0 : 40), i, row => DsBgScreen.Row(badgeColours, row));
+            return rgba;
+        });
+
         /// <summary>The HGSS options bottom screen, drawn like its text preview.</summary>
         /// <param name="look">The options' screen, choice label x per row and Quit and Confirm spots as edited, or null for the game's.</param>
         internal static byte[] OptionsBottomHg((byte[] Screen, int[][] Labels, (int, int) Quit, (int, int) Confirm)? look) =>
             look is { } l ? WithArchive(() => OptionsHg(3, l.Screen, l.Labels, l.Quit, l.Confirm)?.Rgba) : WithArchive(() => OptionsHg(3)?.Rgba);
+
+        /// <summary>The HGSS options top screen: the backdrop and the text speed test window.</summary>
+        internal static byte[] OptionsTopHg() => WithArchive(() => OptionsHg(40)?.Rgba);
 
         /// <param name="buttons">The New game warning's two windows in tiles, drawn on page 1.</param>
         internal static byte[] MainMenuBottomHg(int page, IReadOnlyList<(int X, int Y)> buttons) =>
@@ -117,10 +152,11 @@ namespace DSPRE.Avalonia.Data
             (DsBgScreen s, Func<int, byte[]> m) = Bg(DirNames.BoxGraphics);
             if (s == null) return null;
             bool compare = page == 1;
-            Palettes(s, NitroBgCodec.ReadColours(m(compare ? 133 : 128)), 0, 3);
-            int tiles = compare ? 132 : 127;
-            s.LoadTiles(0, m(tiles));
-            for (int i = 0; i < 3; i++)
+            Palettes(s, NitroBgCodec.ReadColours(m(compare ? 133 : 128)), 0, compare ? 4 : 3);
+            s.LoadTiles(0, m(compare ? 132 : 127));
+            // The box list stacks maps 124 to 126 on BG3 to BG1. Compare mode shows one layer at a time, battle stats (129 on BG1) when it opens.
+            (int Bg, int Map)[] layers = compare ? new[] { (1, 129) } : new[] { (3, 124), (2, 125), (1, 126) };
+            foreach ((int bg, int map) in layers)
             {
                 s.InitLayer(bg, bg, 0);
                 s.LoadMap(bg, NitroBgCodec.ReadMap(m(map)).Entries, DsBgScreen.MapSide);

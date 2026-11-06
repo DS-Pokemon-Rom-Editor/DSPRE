@@ -65,10 +65,10 @@ namespace DSPRE.Avalonia.Views.Graphics
             (int x, int y) = TileAt(e.GetPosition(board));
             // Picks the smallest window under the pointer, so windows that share tiles can both be picked.
             _dragging = (board.Name == "BottomBoard" ? VM.BottomWindows : VM.TopWindows)
-                .Where(r => x >= r.Window.X && x < r.Window.X + r.Window.Width && y >= r.ShownY && y < r.ShownY + r.Window.Height)
+                .Where(r => x >= r.ShownX && x < r.ShownX + r.Window.Width && y >= r.ShownY && y < r.ShownY + r.Window.Height)
                 .OrderBy(r => r.Window.Width * r.Window.Height).FirstOrDefault();
             if (_dragging == null) return;
-            _grabbedAt = (x - _dragging.Window.X, y - _dragging.ShownY);
+            _grabbedAt = (x - _dragging.ShownX, y - _dragging.ShownY);
             e.Pointer.Capture(board);
         }
 
@@ -76,8 +76,8 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             if (_dragging == null || sender is not Control board) return;
             (int x, int y) = TileAt(e.GetPosition(board));
-            // A scrolled window shows higher than its row, so the scroll is added back.
-            VM?.Move(_dragging, x - _grabbedAt.X, y - _grabbedAt.Y + _dragging.Scrolled);
+            // A scrolled or framed window shows away from its table place, so the difference is taken back off.
+            VM?.Move(_dragging, x - _grabbedAt.X - _dragging.ShiftX, y - _grabbedAt.Y + _dragging.Scrolled);
         }
 
         private void Board_Released(object sender, PointerReleasedEventArgs e)

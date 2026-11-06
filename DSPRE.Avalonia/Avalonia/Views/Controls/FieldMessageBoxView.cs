@@ -86,7 +86,7 @@ namespace DSPRE.Avalonia.Views.Controls
         public static int Measure(string text)
         {
             if (string.IsNullOrEmpty(text)) return 0;
-            if (RomFontReady) return Font.Measure(text, FieldFontCharacters.GlyphFor);
+            if (RomFontReady) return Font.Measure(text);
 
             FormattedText f = new FormattedText(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
                                       Fallback, FontPixels, Brushes.Black);
@@ -228,9 +228,8 @@ namespace DSPRE.Avalonia.Views.Controls
                 {
                     int penX = 0;
                     int top = line * FieldMessageWindow.LineHeight;
-                    foreach (char c in lines[line])
+                    foreach (int g in FieldFontCharacters.GlyphsOf(lines[line]))
                     {
-                        int g = FieldFontCharacters.GlyphFor(c);
                         int advance = Font.WidthOf(g);
                         if (g < 0) { penX += advance > 0 ? advance : 6; continue; }
 

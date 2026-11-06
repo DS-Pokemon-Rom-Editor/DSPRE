@@ -134,6 +134,9 @@ written wrong. An edit whose result shows right away on screen applies without a
 When an edit changes something the player sees, the editor shows it the way the game draws it, and the preview
 follows every change, so a user can judge an edit without leaving DSPRE.
 
+When a picture can't go in exactly as it is, the import makes the closest fit it can and shows every change before
+anything is written. The user chooses which colours stay as they were. Only a picture that can't fit at all is refused.
+
 Editors are connected. A value that refers to another record leads to the editor for that record, any editor can
 be opened by name, and when one editor changes data, the others showing it update. They also feel the same:
 toolbars, saving, undo, notices and wording work alike everywhere, so knowing one editor means knowing the rest.
@@ -378,7 +381,9 @@ In `MainWindowView.axaml` the menu item binds `IsVisible` to `Shown[MyEditorView
 | Counts in text ("1 map", "3 maps") | `Plural.Of` (Core) |
 | A tab that loads when first shown | `TabSetup.OnFirstShow` in the tab view's constructor |
 | Thumb `movs`/`cmp`/`adds`/`subs` immediates | `ThumbImm8` (Core) |
+| Thumb `adds rd, rn, #n` and `lsls` | `ThumbImm3`, `ThumbLsls` (Core) |
 | Thumb `bl` and `blx` calls | `ThumbBl` (Core) |
+| Screen data kept in game code, for previews | `ScreenCodeData` (Core) |
 | Screen spot tables | `ScreenSpots.Entry`, `ScreenSpots.ShiftEntry` (Core) |
 
 An editor that only draws archive members redraws with `AppEvents.WhenSaved(redraw, dirs)`.
@@ -434,7 +439,8 @@ Archive members are written through `ArchiveMembers.Put` and `ArchiveMembers.Del
 only the path is known. arm9 and overlays are written through `DSUtils.WriteToFile` or `DSUtils.WriteWholeFile`,
 which check the hg-engine write guard. Everything else, such as exports, DSPRE's own data, project sources,
 backups and temp files, goes through `PlainFiles`, which refuses members and code. Source text in an hg-engine
-checkout goes through `HgEngineVerifiedWrite`.
+checkout goes through `HgEngineVerifiedWrite`. A patch prepares every file it changes before it writes any, so a file it
+can't use stops it with nothing written.
 
 ```csharp
 ArchiveMembers.Put(DirNames.PersonalPokeData, species, bytes);
@@ -785,8 +791,8 @@ for 3D. Readers, all in `DSPRE.Core/ROMFiles`:
 
 A game screen is drawn by a renderer that returns its pieces with their source files (`BattleScreenRenderer`,
 `ScreenPageComposer`). Pokédex and summary pages are `ScreenBook`s (`PokedexBook`, `SummaryBook`) shown by
-`ScreenPagesView`. PNG export keeps colour numbers, and shared-palette imports refuse a PNG with the wrong colours
-and offer `PngColourPrompt`. `OpenGraphicAt` and `OpenPainter` hand a graphic to the Graphics window or the
+`ScreenPagesView`. `MenuBackgroundBook` covers the other menu screens the same way. PNG export keeps colour numbers, and shared-palette imports refuse a PNG with the wrong colours and offer
+`PngColourPrompt`. `OpenGraphicAt` and `OpenPainter` hand a graphic to the Graphics window or the
 painter, with the colours file and row the screen shows it in. Changing a file other pieces also show asks first
 ("This piece is shared"), in the Battle screen editor and in `ScreenPagesView` alike. Battle text goes into the
 message box through `BattleMessageText`. Pictures imported onto tiles go through `TileFit` (`TouchButtonFit`,

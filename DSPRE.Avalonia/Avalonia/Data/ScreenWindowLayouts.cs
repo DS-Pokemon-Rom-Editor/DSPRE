@@ -41,6 +41,25 @@ namespace DSPRE.Avalonia.Data
 
         internal static (bool Item, int[] Windows)? Menu => _usingMenu;
 
+        [ThreadStatic] private static IScreenButtons _usingButtons;
+
+        /// <summary>Previews drawn on this thread read these unsaved touch buttons until the result is disposed.</summary>
+        public static IDisposable UseButtons(IScreenButtons buttons)
+        {
+            IScreenButtons before = _usingButtons;
+            _usingButtons = buttons;
+            return new ButtonsRestore(before);
+        }
+
+        internal static T ButtonsInUse<T>() where T : class, IScreenButtons => _usingButtons as T;
+
+        private sealed class ButtonsRestore : IDisposable
+        {
+            private readonly IScreenButtons _before;
+            public ButtonsRestore(IScreenButtons before) { _before = before; }
+            public void Dispose() => _usingButtons = _before;
+        }
+
         private sealed class MenuRestore : IDisposable
         {
             private readonly (bool, int[])? _before;
@@ -112,9 +131,13 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>In tiles; <paramref name="fallback"/> when the layout isn't known.</summary>
-        public static (int X, int Y, int W, int H) Window(string screen, string name, (int X, int Y, int W, int H) fallback)
+        public static (int X, int Y, int W, int H) Window(string screen, string name, (int X, int Y, int W, int H) fallback) =>
+            Window(screen, null, name, fallback);
+
+        /// <summary>A window of one group, for screens whose groups reuse names.</summary>
+        public static (int X, int Y, int W, int H) Window(string screen, string group, string name, (int X, int Y, int W, int H) fallback)
         {
-            ScreenWindowLayout.Window w = For(screen)?.Windows.FirstOrDefault(x => x.Name == name);
+            ScreenWindowLayout.Window w = For(screen)?.Windows.FirstOrDefault(x => x.Name == name && (group == null || x.Group == group));
             return w == null ? fallback : (w.X, w.Y, w.Width, w.Height);
         }
 
@@ -136,6 +159,7 @@ namespace DSPRE.Avalonia.Data
                 }
                 return l >= 0 && l < lines.Count ? lines[l] : "";
             }
+            if (state >= 0 && text.LayoutPictures?.Invoke(state) is (byte[], byte[]) pictures) return pictures;
             int first = Math.Clamp(text.FirstLine, 0, Math.Max(0, lines.Count - 1));
             // A Layout-only state is drawn as the nearest real one; a screen with only Layout states draws them as they are.
             int drawn = state < 0 ? -1 : text.DrawnAs?.Invoke(state) ?? (text.States == null ? state : Math.Min(state, text.States.Length - 1));

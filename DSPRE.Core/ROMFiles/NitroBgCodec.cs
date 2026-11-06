@@ -96,7 +96,7 @@ namespace DSPRE.ROMFiles
         public static (byte r, byte g, byte b)[] ReadPalette(byte[] pal, out int palCount)
         {
             ushort[] raw = ReadColours(pal);
-            palCount = Math.Min(256, raw.Length);
+            palCount = raw.Length;
             (byte r, byte g, byte b)[] colors = new (byte r, byte g, byte b)[Math.Max(256, palCount)];
             for (int i = 0; i < palCount; i++) colors[i] = Colour(raw[i]);
             return colors;
@@ -316,7 +316,7 @@ namespace DSPRE.ROMFiles
 
         private static void BlitTile(byte[] rgba, int w, byte[] chr, int tileBytes, bool is8,
             (byte r, byte g, byte b)[] colors, int palCount, int tile, int palNo, bool flipH, bool flipV,
-            bool transparentZero, int dstTx, int dstTy)
+            bool transparentZero, int dstTx, int dstTy, bool extended = false)
         {
             int tbase = tileBytes + tile * (is8 ? 64 : 32);
             for (int py = 0; py < 8; py++)
@@ -327,7 +327,7 @@ namespace DSPRE.ROMFiles
                     if (is8) { int off = tbase + sy * 8 + sx; idx = off < chr.Length ? chr[off] : 0; }
                     else { int off = tbase + (sy * 8 + sx) / 2; int bb = off < chr.Length ? chr[off] : 0; idx = ((sx & 1) == 0) ? (bb & 0xF) : (bb >> 4); }
                     if (transparentZero && idx == 0) continue;
-                    int ci = is8 ? idx : palNo * 16 + idx;
+                    int ci = is8 ? (extended ? palNo * 256 + idx : idx) : palNo * 16 + idx;
                     if (ci >= palCount) ci = idx;
                     if (ci >= colors.Length) continue;
                     (byte r, byte g, byte b) = colors[ci];
@@ -340,7 +340,7 @@ namespace DSPRE.ROMFiles
         public static BgImage Composite(byte[] chr, byte[] pal, byte[] scr, bool transparentZero = true, bool extended = false)
         {
             (byte r, byte g, byte b)[] colors = ReadPalette(pal, out int palCount);
-            return Composite(chr, colors, palCount, scr, transparentZero);
+            return Composite(chr, colors, palCount, scr, transparentZero, extended);
         }
 
         /// <summary>
@@ -348,7 +348,7 @@ namespace DSPRE.ROMFiles
         /// palette file loaded over each other, row by row, and only the caller knows which.
         /// </summary>
         public static BgImage Composite(byte[] chr, (byte r, byte g, byte b)[] colors, int palCount, byte[] scr,
-                                        bool transparentZero = true)
+                                        bool transparentZero = true, bool extended = false)
         {
             ReadNcgrHeader(chr, out bool is8, out int tileBytes);
 
@@ -364,7 +364,7 @@ namespace DSPRE.ROMFiles
                     if (e < 0) continue;
                     int tile = e & 0x3FF, palNo = (e >> 12) & 0xF;
                     bool flipH = ((e >> 10) & 1) != 0, flipV = ((e >> 11) & 1) != 0;
-                    BlitTile(rgba, w, chr, tileBytes, is8, colors, palCount, tile, palNo, flipH, flipV, transparentZero, tx, ty);
+                    BlitTile(rgba, w, chr, tileBytes, is8, colors, palCount, tile, palNo, flipH, flipV, transparentZero, tx, ty, extended);
                 }
             return new BgImage { Rgba = rgba, Width = w, Height = h };
         }

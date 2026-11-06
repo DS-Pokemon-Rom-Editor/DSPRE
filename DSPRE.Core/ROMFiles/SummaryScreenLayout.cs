@@ -54,7 +54,20 @@ namespace DSPRE.ROMFiles
         {
             foreach (SummaryWindowTableSite t in s.Windows) yield return (t.Offset, t.Count * 8);
             foreach (uint at in new[] { s.Hp.X, s.Hp.Y, s.Exp.X, s.Exp.Y }) yield return (at, 2);
+            foreach (ScreenWindowSpot spot in FollowSpots(s)) yield return (spot.Offset, 2);
         }
+
+        private static IEnumerable<ScreenWindowSpot> FollowSpots(SummaryScreenSites s) =>
+            (s.Follows ?? Array.Empty<SummaryFollow>()).SelectMany(f => f.X.Concat(f.Y));
+
+
+        /// <summary>The block of windows that move together with this one, and the code spots that follow them, or null for a lone window.</summary>
+        public static SummaryFollow FollowOf(string page, int index) =>
+            Sites.Follows?.FirstOrDefault(f => f.Windows.Contains((page, index)));
+
+        /// <summary>Why the code beside a block can't follow its first window to this tile, or null.</summary>
+        public static string WhyNotFollow(SummaryFollow follow, int x, int y) =>
+            follow.X.All(s => ScreenWindowLayout.Fits(s, x)) && follow.Y.All(s => ScreenWindowLayout.Fits(s, y)) ? null : "The icons beside it can't go that far.";
 
         private static int LayoutLength(SummaryScreenSites s) => Ranges(s).Sum(r => r.Length);
         private static int WindowCount(SummaryScreenSites s) => s.Windows.Sum(t => t.Count);
@@ -134,6 +147,18 @@ namespace DSPRE.ROMFiles
             bytes[at] = (byte)Hp.X; bytes[at + 2] = (byte)Hp.Y;
             bytes[at + 4] = (byte)Exp.X; bytes[at + 6] = (byte)Exp.Y;
             at += 8;
+            // Each follow spot takes its value from the block's first window. An instruction keeps its opcode byte.
+            foreach (SummaryFollow follow in Sites.Follows ?? Array.Empty<SummaryFollow>())
+            {
+                Window first = Tables.First(t => t.Page == follow.Windows[0].Page).Windows[follow.Windows[0].Index];
+                foreach ((ScreenWindowSpot spot, int tile) in follow.X.Select(s => (s, first.X)).Concat(follow.Y.Select(s => (s, first.Y))))
+                {
+                    int value = ScreenWindowLayout.Stored(spot, tile);
+                    if (spot.Half) { bytes[at] = (byte)value; bytes[at + 1] = (byte)(value >> 8); }
+                    else if (value is >= 0 and <= 0xFF) bytes[at] = (byte)value;
+                    at += 2;
+                }
+            }
             if (HasFonts && bytes.Length >= at + AllWindows.Count())
                 foreach (Window w in AllWindows) bytes[at++] = (byte)w.Font;
             return bytes;

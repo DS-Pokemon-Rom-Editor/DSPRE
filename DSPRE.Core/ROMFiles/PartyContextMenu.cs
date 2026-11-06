@@ -86,18 +86,30 @@ namespace DSPRE.ROMFiles
                                              && _data[at + 3] == (byte)((x + w) * Tile));
         }
 
+        /// <summary>
+        /// PartyMenu_HideContextMenu clears only these two blocks of BG0 when the menu closes, so a frame can't leave the
+        /// block it starts in.
+        /// </summary>
+        public static readonly (int X, int Y, int W, int H)[] ClearedAreas = { (0, 0, 32, 18), (25, 19, 7, 5) };
+
+        private static (int X, int Y, int W, int H) AreaOf((int X, int Y, int W, int H) frame) =>
+            ClearedAreas.FirstOrDefault<(int X, int Y, int W, int H)>(a => frame.X >= a.X && frame.Y >= a.Y && frame.X + frame.W <= a.X + a.W && frame.Y + frame.H <= a.Y + a.H,
+                                        (0, 0, 32, 24));
+
         /// <summary>Moves the button's frame and touch area by whole tiles; the Layout moves its label.</summary>
         public void Move(int window, int dx, int dy)
         {
             (int x, int y, int w, int h) = Frame(window);
-            Place(window, Math.Clamp(x + dx, 0, 32 - w), Math.Clamp(y + dy, 0, 24 - h), w, h);
+            (int ax, int ay, int aw, int ah) = AreaOf((x, y, w, h));
+            Place(window, Math.Clamp(x + dx, ax, ax + aw - w), Math.Clamp(y + dy, ay, ay + ah - h), w, h);
         }
 
         /// <summary>Sets the frame's size in tiles from its top left corner.</summary>
         public void Resize(int window, int width, int height)
         {
-            (int x, int y, int _, int _) = Frame(window);
-            Place(window, x, y, Math.Clamp(width, 1, 32 - x), Math.Clamp(height, 1, 24 - y));
+            (int x, int y, int w, int h) = Frame(window);
+            (int ax, int ay, int aw, int ah) = AreaOf((x, y, w, h));
+            Place(window, x, y, Math.Clamp(width, 1, ax + aw - x), Math.Clamp(height, 1, ay + ah - y));
         }
 
         // A right edge of 256 is stored as 0, like in the game's lists.

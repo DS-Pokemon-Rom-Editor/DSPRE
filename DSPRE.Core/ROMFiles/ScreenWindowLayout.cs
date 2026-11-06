@@ -30,6 +30,12 @@ namespace DSPRE.ROMFiles
             public bool CanMoveAcross = true, CanMoveDown = true;
             /// <summary>The least x and y its code can hold: a spot that adds 1 to its immediate can't reach 0.</summary>
             public int MinX, MinY;
+            /// <summary>The furthest column and lowest row its code can hold.</summary>
+            public int MaxX = MapColumns, MaxY = MapHeight;
+            /// <summary>Set when it has to stay inside a block of tiles, such as the frame it's drawn into.</summary>
+            public bool Bounded;
+            /// <summary>Why its code stops it moving, or null.</summary>
+            public string LockReason;
             public Window Copy() => (Window)MemberwiseClone();
         }
 
@@ -40,7 +46,9 @@ namespace DSPRE.ROMFiles
         private readonly RomInfo.ScreenWindowTableSite[] _sites;
         private readonly RomInfo.ScreenCodeWindowSites _code;
 
-        private ScreenWindowLayout(RomInfo.ScreenWindowTableSite[] sites, RomInfo.ScreenCodeWindowSites code) { _sites = sites; _code = code; }
+        private readonly string _screen;
+
+        private ScreenWindowLayout(string screen, RomInfo.ScreenWindowTableSite[] sites, RomInfo.ScreenCodeWindowSites code) { _screen = screen; _sites = sites; _code = code; }
 
         private IEnumerable<Window> TableWindows => Windows.Where(w => w.Code == null);
         private IEnumerable<Window> CodeWindows => Windows.Where(w => w.Code != null);
@@ -55,7 +63,7 @@ namespace DSPRE.ROMFiles
             sites ??= Array.Empty<RomInfo.ScreenWindowTableSite>();
             try
             {
-                ScreenWindowLayout layout = new ScreenWindowLayout(sites, code);
+                ScreenWindowLayout layout = new ScreenWindowLayout(screen, sites, code);
                 foreach (RomInfo.ScreenWindowTableSite site in sites)
                 {
                     byte[] bytes = ReadSite(site);
@@ -72,6 +80,7 @@ namespace DSPRE.ROMFiles
                         (w.MaxWidth, w.MaxHeight) = (w.Width, w.Height);
                         layout.Windows.Add(w);
                     }
+                    layout.CheckFollows(site);
                 }
                 return code == null || layout.ReadCode() ? layout : null;
             }
@@ -92,21 +101,79 @@ namespace DSPRE.ROMFiles
                     Group = code.Group, Name = code.Name, Layer = code.Layer, X = x, Y = y, Width = code.Width, Height = code.Height,
                     MaxWidth = code.Width, MaxHeight = code.Height, Code = code,
                     CanMoveAcross = code.X.Length > 0, CanMoveDown = code.Y.Length > 0,
-                    MinX = LeastValue(code.X), MinY = LeastValue(code.Y),
+                    MinX = Math.Max(0, LeastValue(code.X)), MinY = Math.Max(0, LeastValue(code.Y)),
+                    MaxX = MostValue(code.X, MapColumns), MaxY = MostValue(code.Y, MapHeight),
                 });
             }
             return true;
         }
+
+        // A window the code places again moves only where that code is known and still agrees with the table.
+        private void CheckFollows(RomInfo.ScreenWindowTableSite site)
+        {
+            if (site.Follows == null && site.Locked == null) return;
+            byte[] file = File.ReadAllBytes(FileOf(site));
+            foreach (Window w in Windows.Where(w => w.Group == site.Group))
+            {
+                RomInfo.ScreenWindowFollow follow = site.Follows?.FirstOrDefault(f => f.Window == w.Name);
+                string where = site.Overlay < 0 ? "the ARM9" : $"overlay {site.Overlay}";
+                int FromX(RomInfo.ScreenWindowSpot s) => s.From == null ? 0 : Windows.FirstOrDefault(o => o.Group == site.Group && o.Name == s.From)?.X ?? 0;
+                int FromY(RomInfo.ScreenWindowSpot s) => s.From == null ? 0 : Windows.FirstOrDefault(o => o.Group == site.Group && o.Name == s.From)?.Y ?? 0;
+                bool locked = site.Locked?.Contains(w.Name) == true
+                    || (follow != null && (follow.X.Any(s => SpotValue(file, s) != w.X - FromX(s)) || follow.Y.Any(s => SpotValue(file, s) != w.Y - FromY(s))
+                                           || follow.Packed.Any(s => SpotValue(file, s) != Packed(w.X, w.Y))));
+                if (locked)
+                {
+                    w.CanMoveAcross = w.CanMoveDown = false;
+                    w.LockReason = $"This window's position is hard-coded in {where}, and DSPRE can't move it on this ROM yet.";
+                }
+                else if (follow != null)
+                {
+                    (w.MinX, w.MinY) = (Math.Max(w.MinX, LeastValue(follow.X)), Math.Max(w.MinY, LeastValue(follow.Y)));
+                    (w.MaxX, w.MaxY) = (MostValue(follow.X, MapColumns), MostValue(follow.Y, MapHeight));
+                    // A packed offset holds 2 × (32 × row + column) in one byte, so the row can't pass 3.
+                    if (follow.Packed.Length > 0) w.MaxY = Math.Min(w.MaxY, 0xFF / 2 / MapColumns);
+                    if (follow.KeepsRow) w.CanMoveDown = false;
+                    if (follow.Within is (int ax, int ay, int aw, int ah))
+                    {
+                        (w.MinX, w.MinY, w.MaxX, w.MaxY) = (ax, ay, Math.Min(w.MaxX, ax + aw - w.Width), Math.Min(w.MaxY, ay + ah - w.Height));
+                        w.Bounded = true;
+                    }
+                }
+            }
+        }
+
+        private static int Packed(int x, int y) => 2 * (y * MapColumns + x);
 
         private string CodeFile => _code.Overlay < 0 ? RomInfo.Arm9Path : OverlayUtils.GetPath(_code.Overlay);
 
         private static int SpotValue(byte[] file, RomInfo.ScreenWindowSpot spot)
         {
             if (spot.Offset + (spot.Word ? 4 : 2) > file.Length) return -1;
-            if (spot.Word) return BitConverter.ToInt32(file, (int)spot.Offset);
+            if (spot.Word)
+            {
+                int word = BitConverter.ToInt32(file, (int)spot.Offset) + spot.Add;
+                return word % spot.Scale != 0 ? -1 : word / spot.Scale;
+            }
+            if (spot.Byte)
+            {
+                int b = file[(int)spot.Offset] + spot.Add;
+                return b < 0 || b % spot.Scale != 0 ? -1 : b / spot.Scale;
+            }
+            if (spot.Half)
+            {
+                int half = BitConverter.ToInt16(file, (int)spot.Offset) + spot.Add;
+                return half < 0 || half % spot.Scale != 0 ? -1 : half / spot.Scale;
+            }
             ushort op = BitConverter.ToUInt16(file, (int)spot.Offset);
-            return ThumbImm8.Is(op, ThumbImm8.Op.Movs) || ThumbImm8.Is(op, ThumbImm8.Op.Adds) ? ThumbImm8.Value(op) + spot.Add : -1;
+            if (spot.Imm3) return ThumbImm3.Is(op) ? ThumbImm3.Value(op) + spot.Add : -1;
+            if (!ThumbImm8.Is(op, ThumbImm8.Op.Movs) && !ThumbImm8.Is(op, ThumbImm8.Op.Adds)) return -1;
+            int at = ThumbImm8.Value(op) + spot.Add;
+            return at < 0 || at % spot.Scale != 0 ? -1 : at / spot.Scale;
         }
+
+        /// <summary>The number a spot stores for a position.</summary>
+        internal static int Stored(RomInfo.ScreenWindowSpot spot, int value) => value * spot.Scale - spot.Add;
 
         // Every place one position sits has to agree. A window with none stays where the game's register has it.
         private static int SpotValue(byte[] file, RomInfo.ScreenWindowSpot[] spots, int fixedAt)
@@ -116,16 +183,30 @@ namespace DSPRE.ROMFiles
             return values.Length == 1 ? values[0] : -1;
         }
 
-        private static int LeastValue(RomInfo.ScreenWindowSpot[] spots) => spots.Length == 0 ? 0 : spots.Max(s => s.Word ? 0 : s.Add);
+        private static int LeastValue(RomInfo.ScreenWindowSpot[] spots) =>
+            spots.Length == 0 ? 0 : spots.Max(s => s.Word || s.From != null ? 0 : (int)Math.Ceiling(s.Add / (double)s.Scale));
 
-        private static bool Fits(RomInfo.ScreenWindowSpot spot, int value) => spot.Word || value - spot.Add is >= 0 and <= 0xFF;
+        private static int MostValue(RomInfo.ScreenWindowSpot[] spots, int limit) =>
+            spots.Aggregate(limit, (most, s) => s.Word || s.Half || s.From != null ? most : Math.Min(most, (int)Math.Floor(((s.Imm3 ? 7 : 0xFF) + s.Add) / (double)s.Scale)));
+
+        /// <summary>Whether a spot's instruction or number can hold a position.</summary>
+        internal static bool Fits(RomInfo.ScreenWindowSpot spot, int value) =>
+            spot.Word || (spot.Half ? Stored(spot, value) is >= short.MinValue and <= short.MaxValue
+                                    : Stored(spot, value) is int n && n >= 0 && n <= (spot.Imm3 ? 7 : 0xFF));
 
         private static void WriteSpot(string path, byte[] file, RomInfo.ScreenWindowSpot spot, int value)
         {
             if (SpotValue(file, spot) == value) return;
             if (!Fits(spot, value)) throw new InvalidDataException($"{value} doesn't fit the game's code for this window.");
-            if (spot.Word) DSUtils.WriteToFile(path, BitConverter.GetBytes(value), spot.Offset);
-            else DSUtils.WriteToFile(path, new[] { (byte)(value - spot.Add) }, spot.Offset);
+            if (spot.Word) DSUtils.WriteToFile(path, BitConverter.GetBytes(Stored(spot, value)), spot.Offset);
+            else if (spot.Half) DSUtils.WriteToFile(path, BitConverter.GetBytes((short)Stored(spot, value)), spot.Offset);
+            else if (spot.Byte) DSUtils.WriteToFile(path, new[] { (byte)Stored(spot, value) }, spot.Offset);
+            else if (spot.Imm3)
+            {
+                ushort op = BitConverter.ToUInt16(file, (int)spot.Offset);
+                DSUtils.WriteToFile(path, BitConverter.GetBytes(ThumbImm3.With(op, Stored(spot, value))), spot.Offset);
+            }
+            else DSUtils.WriteToFile(path, new[] { (byte)Stored(spot, value) }, spot.Offset);
         }
 
         // A real table always has every window on a background, inside the map and with a palette row.
@@ -203,17 +284,68 @@ namespace DSPRE.ROMFiles
             return tables.Concat(_code.Windows.SelectMany(w => new[] { (byte)SpotValue(file, w.X, w.FixedX), (byte)SpotValue(file, w.Y, w.FixedY) })).ToArray();
         }
 
+        private static IEnumerable<(RomInfo.ScreenWindowFollow Follow, RomInfo.ScreenWindowSpot Spot, int Value)> Spots(
+            RomInfo.ScreenWindowTableSite site, byte[] all, int start)
+        {
+            int At(string name, int axis)
+            {
+                int i = Array.FindIndex(site.Windows, w => w.Name == name);
+                return i < 0 ? 0 : all[start + i * 8 + axis];
+            }
+            foreach (RomInfo.ScreenWindowFollow follow in site.Follows ?? Array.Empty<RomInfo.ScreenWindowFollow>())
+            {
+                if (Array.FindIndex(site.Windows, w => w.Name == follow.Window) < 0) continue;
+                int x = At(follow.Window, 1), y = At(follow.Window, 2);
+                foreach (RomInfo.ScreenWindowSpot spot in follow.X) yield return (follow, spot, x - (spot.From == null ? 0 : At(spot.From, 1)));
+                foreach (RomInfo.ScreenWindowSpot spot in follow.Y) yield return (follow, spot, y - (spot.From == null ? 0 : At(spot.From, 2)));
+                foreach (RomInfo.ScreenWindowSpot spot in follow.Packed) yield return (follow, spot, Packed(x, y));
+            }
+        }
+
+        // The game draws into a window, then its copy, so a copy takes its window's place and size.
+        private byte[] WithCopies(byte[] all)
+        {
+            byte[] bytes = (byte[])all.Clone();
+            int start = 0;
+            foreach (RomInfo.ScreenWindowTableSite site in _sites)
+            {
+                for (int i = 0; i < site.Windows.Length; i++)
+                {
+                    string name = site.Windows[i].Name;
+                    if (!name.StartsWith("Copy of ", StringComparison.Ordinal)) continue;
+                    int of = Array.FindIndex(site.Windows, w => string.Equals(w.Name, name.Substring(8), StringComparison.OrdinalIgnoreCase));
+                    if (of >= 0) Array.Copy(bytes, start + of * 8 + 1, bytes, start + i * 8 + 1, 4);
+                }
+                start += site.Windows.Length * 8;
+            }
+            return bytes;
+        }
+
         /// <summary>Writes bytes in <see cref="ToBytes"/> order back to the tables and code.</summary>
         public void WriteFile(byte[] all)
         {
+            all = WithCopies(all);
             // Every code spot is checked before anything is written, so a bad value can't leave a half-saved layout.
+            int start = 0;
+            foreach (RomInfo.ScreenWindowTableSite site in _sites)
+            {
+                Dictionary<uint, (string Window, int Value)> shared = new Dictionary<uint, (string, int)>();
+                foreach ((RomInfo.ScreenWindowFollow follow, RomInfo.ScreenWindowSpot spot, int value) in Spots(site, all, start))
+                {
+                    if (!Fits(spot, value)) throw new InvalidDataException($"The game can't store {follow.Window}'s new position.");
+                    if (shared.TryGetValue(spot.Offset, out (string Window, int Value) other) && other.Value != value)
+                        throw new InvalidDataException($"{other.Window} and {follow.Window} have to move together.");
+                    shared[spot.Offset] = (follow.Window, value);
+                }
+                start += site.Windows.Length * 8;
+            }
             if (_code != null)
             {
                 int at = _sites.Sum(s => s.Windows.Length * 8);
                 foreach (RomInfo.ScreenCodeWindow window in _code.Windows)
                 {
                     if (window.X.Any(s => !Fits(s, all[at])) || window.Y.Any(s => !Fits(s, all[at + 1])))
-                        throw new InvalidDataException($"{window.Name}'s place doesn't fit the game's code.");
+                        throw new InvalidDataException($"The game can't store {window.Name}'s new position.");
                     at += 2;
                 }
             }
@@ -222,6 +354,9 @@ namespace DSPRE.ROMFiles
             {
                 int length = site.Windows.Length * 8;
                 DSUtils.WriteToFile(FileOf(site), all, site.Offset, from, length);
+                byte[] siteFile = site.Follows == null ? null : File.ReadAllBytes(FileOf(site));
+                foreach ((RomInfo.ScreenWindowFollow _, RomInfo.ScreenWindowSpot spot, int value) in Spots(site, all, from))
+                    WriteSpot(FileOf(site), siteFile, spot, value);
                 from += length;
             }
             if (_code == null) return;

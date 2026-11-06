@@ -16,7 +16,8 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>The page's pixels in PokegearButtons page order, or null when the archives can't be read.</summary>
         /// <param name="radioButtons">The radio buttons' tile spots, from the page being edited.</param>
-        public static byte[] Draw(int page, IReadOnlyList<(int X, int Y)> radioButtons = null)
+        /// <param name="dial">The radio dial's screen as edited, or null for the saved one.</param>
+        public static byte[] Draw(int page, IReadOnlyList<(int X, int Y)> radioButtons = null, byte[] dial = null)
         {
             try
             {
@@ -25,7 +26,7 @@ namespace DSPRE.Avalonia.Data
                 DsBgScreen s = new DsBgScreen();
                 byte[] under = null;
                 if (page is MarkingsPage or IconPoolPage) return Markings(s);
-                if (page >= RadioButtonsPage) Radio(s, radioButtons);
+                if (page >= RadioButtonsPage) Radio(s, radioButtons, dial);
                 // The map frame and phone list are in separate archives. The Bar page shows the phone because the Pokégear opens on it.
                 // In overlay_101_021EF1D8.c, skin 0's configure page is screen 16 on drawing 10 with palette file 4.
                 (RomInfo.DirNames Dir, int Drawing, int Screen, int Colours)? app = page switch
@@ -61,8 +62,8 @@ namespace DSPRE.Avalonia.Data
             catch (Exception ex) { AppLogger.WarnOnce("PokegearPictures.Draw", ex); return null; }
         }
 
-        // The region map's top left corner, coloured by file 20.
-        private static byte[] RegionMap(Func<int, byte[]> m)
+        // The region map's top left corner, coloured by file 20 (the town map) or 63 (the fly map).
+        internal static byte[] RegionMap(Func<int, byte[]> m, int colours = 20)
         {
             NitroBgCodec.BgImage map = NitroBgCodec.Composite(NitroBgCodec.Inflate(m(10)), NitroBgCodec.Inflate(m(20)), Blocked(NitroBgCodec.Inflate(m(11))));
             if (map?.Rgba == null) return null;
@@ -155,7 +156,7 @@ namespace DSPRE.Avalonia.Data
         }
 
         // overlay_101_021F49F8.c draws screen 22 over screen 28 on drawing 16 with palette file 10. Buttons go at their edited spots.
-        private static void Radio(DsBgScreen s, IReadOnlyList<(int X, int Y)> buttons)
+        private static void Radio(DsBgScreen s, IReadOnlyList<(int X, int Y)> buttons, byte[] dialScreen)
         {
             Func<int, byte[]> m = MoveTextScreens.Members(RomInfo.DirNames.PokegearRadioGraphics);
             if (m == null) return;
@@ -164,7 +165,7 @@ namespace DSPRE.Avalonia.Data
             s.LoadTiles(0x10000, m(16));
             s.InitLayer(2, 2, 0x10000);
             s.InitLayer(3, 3, 0x10000);
-            (int w, ushort[] dial) = NitroBgCodec.ReadMap(m(22));
+            (int w, ushort[] dial) = NitroBgCodec.ReadMap(dialScreen ?? m(22));
             s.Copy(2, 0, 0, 32, 24, dial, 0, 0, w);
             (int backWidth, ushort[] back) = NitroBgCodec.ReadMap(m(28));
             s.Copy(3, 0, 0, 32, 24, back, 0, 0, backWidth);

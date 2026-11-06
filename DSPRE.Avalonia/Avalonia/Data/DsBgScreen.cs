@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Data
@@ -53,7 +54,7 @@ namespace DSPRE.Avalonia.Data
             if (_layers[bg] != null) _layers[bg].Visible = visible;
         }
 
-        /// <summary>Copies a sixteen-colour drawing's pixels in at a character base, from tile <paramref name="tileOffset"/> on.</summary>
+        /// <summary>Copies a drawing's pixels in at a character base, from tile <paramref name="tileOffset"/> on.</summary>
         public void LoadTiles(int charBase, byte[] ncgr, int tileOffset = 0)
         {
             byte[] pixels = NitroBgCodec.ReadCharacters(ncgr);
@@ -109,6 +110,23 @@ namespace DSPRE.Avalonia.Data
                         map[yy * MapSide + xx] = (ushort)((palette << 12) | (tile & 0x3FF));
         }
 
+        /// <summary>
+        /// A game text window after Window_AddFromTemplate, Window_FillTilemap and Window_PutRectToTilemap: tiles from
+        /// <paramref name="baseTile"/> filled with one colour index, placed at tile x, y.
+        /// </summary>
+        public void PutWindow(int bg, int x, int y, int w, int h, int palette, int baseTile, int fill, int shownRows = -1)
+        {
+            Layer layer = _layers[bg];
+            if (layer == null) return;
+            int start = layer.CharBase + baseTile * 32, length = Math.Min(w * h * 32, _vram.Length - start);
+            if (start >= 0 && length > 0) Array.Fill(_vram, (byte)((fill & 0xF) * 0x11), start, length);
+            int rows = shownRows < 0 ? h : Math.Min(h, shownRows);
+            for (int yy = 0; yy < rows; yy++)
+                for (int xx = 0; xx < w; xx++)
+                    if (x + xx >= 0 && y + yy >= 0 && x + xx < MapSide && y + yy < MapSide)
+                        layer.Map[(y + yy) * MapSide + x + xx] = (ushort)((palette << 12) | ((baseTile + yy * w + xx) & 0x3FF));
+        }
+
         /// <summary>Pastes a w by h block of entries at tile x, y.</summary>
         public void Put(int bg, ushort[] block, int x, int y, int w, int h) => Copy(bg, x, y, w, h, block, 0, 0, w);
 
@@ -127,7 +145,7 @@ namespace DSPRE.Avalonia.Data
                 }
         }
 
-        private static void Put(byte[] rgba, int at, ushort c)
+        internal static void Put(byte[] rgba, int at, ushort c)
         {
             (rgba[at], rgba[at + 1], rgba[at + 2]) = NitroBgCodec.Colour(c);
             rgba[at + 3] = 255;
@@ -157,6 +175,15 @@ namespace DSPRE.Avalonia.Data
                         int lx = px % TileSize, ly = py % TileSize;
                         if ((e & 0x400) != 0) lx = 7 - lx;
                         if ((e & 0x800) != 0) ly = 7 - ly;
+                        if (layer.Extended != null)
+                        {
+                            int wideAt = layer.CharBase + tile * 64 + ly * 8 + lx;
+                            if (wideAt >= _vram.Length || _vram[wideAt] == 0) continue;
+                            int colour = palette * 256 + _vram[wideAt];
+                            c = colour < layer.Extended.Length ? layer.Extended[colour] : (ushort)0;
+                            drawn = true;
+                            break;
+                        }
                         int at = layer.CharBase + tile * 32 + (ly * 8 + lx) / 2;
                         if (at >= _vram.Length) continue;
                         int index = ((ly * 8 + lx) & 1) != 0 ? _vram[at] >> 4 : _vram[at] & 0xF;
@@ -339,7 +366,7 @@ namespace DSPRE.Avalonia.Data
         {
             if (string.IsNullOrEmpty(text)) return 0;
             if (font == null || !FieldFontCharacters.Ready) return text.Length * 6;
-            return font.Measure(text, FieldFontCharacters.GlyphFor);
+            return font.Measure(text);
         }
 
         /// <summary>Writes a line in a ROM font with 15-bit letter and shadow colours, and an outline colour for fonts that have one.</summary>
@@ -347,9 +374,8 @@ namespace DSPRE.Avalonia.Data
         {
             if (rgba == null || string.IsNullOrEmpty(text) || font == null || !FieldFontCharacters.Ready) return;
             int pen = x;
-            foreach (char ch in text)
+            foreach (int g in FieldFontCharacters.GlyphsOf(text))
             {
-                int g = FieldFontCharacters.GlyphFor(ch);
                 int advance = font.WidthOf(g);
                 if (g >= 0)
                     for (int gy = 0; gy < FieldFont.CellSize; gy++)
@@ -363,6 +389,23 @@ namespace DSPRE.Avalonia.Data
                         }
                 pen += advance > 0 ? advance : 6;
             }
+        }
+
+        /// <summary>Draws one font picture by its number (a character code minus one) and returns how far the pen moves.</summary>
+        public static int DrawGlyph(byte[] rgba, FieldFont font, int glyph, int x, int y, ushort letter, ushort shadow)
+        {
+            if (rgba == null || font == null || glyph < 0) return 0;
+            int advance = font.WidthOf(glyph);
+            for (int gy = 0; gy < FieldFont.CellSize; gy++)
+                for (int gx = 0; gx < advance; gx++)
+                {
+                    byte v = font.PixelAt(glyph, gx, gy);
+                    if (v == FieldFont.Nothing || v == FieldFont.Paper) continue;
+                    int X = x + gx, Y = y + gy;
+                    if (X < 0 || Y < 0 || X >= Width || Y >= Height) continue;
+                    Put(rgba, (Y * Width + X) * 4, v == 1 ? letter : shadow);
+                }
+            return advance;
         }
 
         /// <summary>Darkens the whole picture towards black, 0 for black and 1 for untouched, the way a fade does.</summary>

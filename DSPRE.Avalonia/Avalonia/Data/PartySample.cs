@@ -33,6 +33,9 @@ namespace DSPRE.Avalonia.Data
             new() { Species = 175, Level = 1, Hp = 1, MaxHp = 1, Gender = 2, Egg = true },
         };
 
+        /// <summary>The first Pokémon's moves, for previews that list them: Flamethrower, Ember, Quick Attack, SmokeScreen.</summary>
+        public static readonly int[] Moves = { 53, 52, 98, 108 };
+
         public static event Action Changed;
 
         public static void Raise() => Changed?.Invoke();

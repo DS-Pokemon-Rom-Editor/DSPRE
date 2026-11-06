@@ -46,6 +46,12 @@ namespace DSPRE.Avalonia.Data
         private readonly SummaryLayout _layout;
         private SummaryScreenLayout _now, _original;
         private readonly Dictionary<int, List<string>> _banks = new();
+        private TouchListButtons _romButtons;
+
+        /// <summary>Platinum: the touch list the page buttons are drawn from, with its unsaved moves, or null to read the ROM's.</summary>
+        internal TouchListButtons PageButtons { get; set; }
+        /// <summary>HGSS's touch areas as edited. The sample sits on the first party icon spot.</summary>
+        internal SummaryTouchButtons HgButtons { get; set; }
 
         /// <param name="species">The Pokémon the pages are shown with; 0 keeps the usual sample.</param>
         public SummaryBook(int species = 0)
@@ -222,7 +228,8 @@ namespace DSPRE.Avalonia.Data
             string[] parts = sprite.Picture.Split(':');
             if (parts[0] == "level") return (DirNames.Fonts, RomInfo.SpecialGlyphsFontEntry(_hgss));
             int n = int.Parse(parts[1]);
-            string[] names = parts[0] == "type" ? BattleObjects.IconOrder : BattleObjects.KindOrder;
+            if (parts[0] == "type") return (DirNames.BattleObj, BattleObjects.TypeIconMember(n));
+            string[] names = BattleObjects.KindOrder;
             return (DirNames.BattleObj, n >= 0 && n < names.Length ? BattleObjects.Find(names[n], "Drawing") : -1);
         }
 
@@ -412,41 +419,59 @@ namespace DSPRE.Avalonia.Data
                 sprites.Add(new ScreenSprite { Name = "Marking: " + name, Cells = 51, Anim = 50, Drawing = drawing, Colours = 69, Palette = 0, X = x, Y = 150, Priority = 3, When = unpicked });
             // The A button beside the button hint: 10 pixels left of the hint's box, 8 down.
             if (_specs[pageIndex].Boxes.Any(b => b.Table == "Static" && b.Index == 35) && WindowOf("Static", 35) is { } hint)
-                sprites.Add(new ScreenSprite { Name = "A button", Cells = 18, Anim = 17, Drawing = 20, Colours = 69, Palette = 0, X = hint.X * 8 - 10, Y = 8 });
+                sprites.Add(new ScreenSprite { Name = "A button", Cells = 18, Anim = 17, Drawing = 20, Colours = 69, Palette = 0, X = hint.X * 8 - 10, Y = hint.Y * 8 + 8 });
 
             (int first, int second) = Types();
             string id = _specs[pageIndex].Id;
+            // Icons beside a window move with it, offset from the window's original place (RomLocator summary follows).
+            (int X, int Y) Beside(string table, int index, int homeX, int homeY, int x, int y) =>
+                WindowOf(table, index) is { } w ? (x + 8 * (w.X - homeX), y + 8 * (w.Y - homeY)) : (x, y);
             if (id == "info")
             {
-                if (second < 0) sprites.Add(TypeIcon("Type", first, 216, 80, null));
+                (int tx, int ty) = Beside("Static", 9, 14, 9, 0, 0);
+                if (second < 0) sprites.Add(TypeIcon("Type", first, 216 + tx, 80 + ty, null));
                 else
                 {
-                    sprites.Add(TypeIcon("First type", first, 199, 80, null));
-                    sprites.Add(TypeIcon("Second type", second, 233, 80, null));
+                    sprites.Add(TypeIcon("First type", first, 199 + tx, 80 + ty, null));
+                    sprites.Add(TypeIcon("Second type", second, 233 + tx, 80 + ty, null));
                 }
             }
             if (id is "battle_moves" or "contest_moves")
             {
                 bool contest = id == "contest_moves";
+                (int mx, int my) = Beside(contest ? "ContestMoves" : "BattleMoves", 0, 21, 4, 0, 0);
                 for (int m = 0; m < SampleMoves.Length; m++)
-                    sprites.Add(TypeIcon("Move " + (m + 1) + " type", MoveIcon(SampleMoves[m], contest), 151, 42 + m * 32, null));
+                    sprites.Add(TypeIcon("Move " + (m + 1) + " type", MoveIcon(SampleMoves[m], contest), 151 + mx, 42 + m * 32 + my, null));
                 sprites.Add(TypeIcon("First type", first, 63, 52, Picked));
                 if (second >= 0) sprites.Add(TypeIcon("Second type", second, 97, 52, Picked));
+                (int cx, int cy) = Beside("Static", 25, 1, 8, 108, 72);
                 if (!contest && Move(SampleMoves[0]) is MoveData picked)
-                    sprites.Add(new ScreenSprite { Name = "Category", Picture = "kind:" + (int)picked.Split, X = 108, Y = 72, When = Picked });
-                sprites.Add(new ScreenSprite { Name = "Move cursor", Cells = 131, Anim = 130, Drawing = 132, Colours = 69, Palette = 2, X = 194, Y = 48, Priority = 1, When = Picked });
+                    sprites.Add(new ScreenSprite { Name = "Category", Picture = "kind:" + (int)picked.Split, X = cx, Y = cy, When = Picked });
+                sprites.Add(new ScreenSprite { Name = "Move cursor", Cells = 131, Anim = 130, Drawing = 132, Colours = 69, Palette = 2, X = 194 + mx, Y = 48 + my, Priority = 1, When = Picked });
                 page.Main.Mons.Add(new ScreenMon { Kind = ScreenMonKind.Icon, X = contest ? 32 : 24, Y = contest ? 68 : 48, Priority = 0, When = Picked });
             }
 
-            // The touch screen's page buttons: 5 by 5 tiles each, counting up through sub_buttons 30 tiles a row.
-            (int Page, int Row, int X, int Y)[] buttons = { (0, 1, 1, 4), (1, 1, 2, 10), (2, 2, 5, 15), (3, 3, 10, 18), (4, 2, 17, 18), (5, 3, 22, 15), (6, 4, 25, 10), (7, 4, 26, 4) };
+            // The touch screen's page buttons: 5 by 5 tiles each, counting up through sub_buttons 30 tiles a row, at the entries of
+            // the touch list's Pages table (page, palette, tile x, tile y).
             ScreenBg sub0 = new() { Bg = 0, Priority = 0, Drawing = 2 };
-            foreach ((int p, int row, int x, int y) in buttons)
+            foreach ((int p, int row, int x, int y) in PageButtonEntries())
             {
                 int start = (p & 1) * 15 + p / 2 * 150 + 30;
                 sub0.Pieces.Add(new ScreenPaste { Fill = start | row << 12, FillStride = 30, TileX = x, TileY = y, Width = 5, Height = 5 });
             }
             page.Sub.Bgs.Insert(0, sub0);
+        }
+
+        private IEnumerable<(int Page, int Palette, int X, int Y)> PageButtonEntries()
+        {
+            TouchListButtons touch = PageButtons ?? (_romButtons ??= PlatinumTouchLists.Summary());
+            if (touch == null) yield break;
+            for (int i = 0; i < touch.ButtonsOf(0).Length; i++)
+            {
+                byte[] entry = touch.SpotEntry(0, 0, i);
+                if (entry == null || entry.Length < 4 || entry[0] == 0xFF) yield break;
+                yield return (entry[0], entry[1], entry[2], entry[3]);
+            }
         }
 
         // HGSS's sprites, from its sprite templates and the code that places them (pokeheartgold unk_0208B1AC): the ball
@@ -463,24 +488,30 @@ namespace DSPRE.Avalonia.Data
 
             // The party on the touch screen: an icon per Pokémon (the sample is the only one, in the first slot) and
             // the frame on the one shown, placed from the table at _021105B0 with animation 2.
-            page.Sub.Mons.Add(new ScreenMon { Kind = ScreenMonKind.Icon, X = 184, Y = 50, Priority = 0 });
+            (int iconX, int iconY) = HgButtons?.IconSpots is { Count: > 0 } spots ? spots[0] : (184, 50);
+            page.Sub.Mons.Add(new ScreenMon { Kind = ScreenMonKind.Icon, X = iconX, Y = iconY, Priority = 0 });
             bottom.Add(new ScreenSprite { Name = "Party frame", Cells = 63, Anim = 62, Drawing = 64, Colours = 61, Palette = 2, Seq = 2, X = 183, Y = 55 });
 
             (int first, int second) = Types();
             string id = _specs[pageIndex].Id;
+            // Icons beside a window move with it, offset from the window's original place (RomLocator summary follows).
+            (int X, int Y) Beside(string table, int index, int homeX, int homeY) =>
+                WindowOf(table, index) is { } w ? (8 * (w.X - homeX), 8 * (w.Y - homeY)) : (0, 0);
             if (id == "info")
             {
-                if (second < 0) bottom.Add(TypeIcon("Type", first, 108, 48, null));
+                (int tx, int ty) = Beside("Static", 9, 1, 5);
+                if (second < 0) bottom.Add(TypeIcon("Type", first, 108 + tx, 48 + ty, null));
                 else
                 {
-                    bottom.Add(TypeIcon("First type", first, 91, 48, null));
-                    bottom.Add(TypeIcon("Second type", second, 125, 48, null));
+                    bottom.Add(TypeIcon("First type", first, 91 + tx, 48 + ty, null));
+                    bottom.Add(TypeIcon("Second type", second, 125 + tx, 48 + ty, null));
                 }
             }
             if (id == "skills")
             {
+                (int mx, int my) = Beside("Skills", 8, 5, 1);
                 for (int m = 0; m < SampleMoves.Length; m++)
-                    bottom.Add(TypeIcon("Move " + (m + 1) + " type", MoveIcon(SampleMoves[m], false), 24, 16 + m * 32, null));
+                    bottom.Add(TypeIcon("Move " + (m + 1) + " type", MoveIcon(SampleMoves[m], false), 24 + mx, 16 + m * 32 + my, null));
                 bottom.Add(TypeIcon("First type", first, 200, 24, Picked));
                 if (second >= 0) bottom.Add(TypeIcon("Second type", second, 234, 24, Picked));
                 if (Move(SampleMoves[0]) is MoveData picked)
@@ -782,6 +813,30 @@ namespace DSPRE.Avalonia.Data
             Name = name, Side = Where(bar.Layer).Side, X = bar.X, Y = bar.Y, Width = bar.Tiles, Height = 1, Key = name,
         };
 
+        // A page change clears only these blocks per layer (main 0-3, sub 4-7), so a box on some pages that sits outside them
+        // stays on the rest. Pt: pokeplatinum window.c PokemonSummaryScreen_DrawExtraWindows. HGSS measured on the US game.
+        private static readonly Dictionary<int, (int X, int Y, int W, int H)[]> PtPageClears = new() { [1] = new[] { (0, 0, 32, 2), (14, 2, 18, 22) } };
+        private static readonly Dictionary<int, (int X, int Y, int W, int H)[]> HgssPageClears = new()
+        {
+            [1] = new[] { (0, 0, 32, 2), (0, 2, 18, 22) },
+            [4] = new[] { (0, 1, 18, 23) },
+        };
+
+        private string Linger => _hgss
+            ? "The game clears only the left 18 columns between pages, so this box would stay on the other pages."
+            : "The game clears only the top two rows and columns 14 to 31 between pages, so this box would stay on the other pages.";
+
+        private bool Lingers(string table, int index, SummaryScreenLayout.Window w) =>
+            (_hgss ? HgssPageClears : PtPageClears).TryGetValue(w.Layer, out (int X, int Y, int W, int H)[] clears) && OnSomePages(table, index)
+            && !clears.Any(c => w.X >= c.X && w.Y >= c.Y && w.X + w.Width <= c.X + c.W && w.Y + w.Height <= c.Y + c.H);
+
+        // Boxes every page shows aren't in the pages' lists, or are in all of them.
+        private bool OnSomePages(string table, int index)
+        {
+            int shown = _specs.Count(s => s.Boxes.Any(b => b.Table == table && b.Index == index));
+            return shown > 0 && shown < _specs.Length;
+        }
+
         private (byte[] Bytes, string Error) Place(ScreenLayoutItem item, int x, int y, int width, int height)
         {
             byte[] original = SummaryScreenLayout.ReadBytes();
@@ -803,7 +858,30 @@ namespace DSPRE.Avalonia.Data
             wanted.Y = y;
             wanted.Width = width;
             wanted.Height = height;
+            if (Lingers(tableName, index, wanted)) return (null, Linger);
             string why = next.WhyNot(table, index, wanted, _original);
+            // Windows with icons placed beside them move as a block, and the code that places the icons follows the first.
+            if (SummaryScreenLayout.FollowOf(tableName, index) is { } follow)
+            {
+                SummaryScreenLayout.Window was = table.Windows[index];
+                int dx = x - was.X, dy = y - was.Y;
+                (string firstPage, int firstIndex) = follow.Windows[0];
+                SummaryScreenLayout.Window first = next.Tables.First(t => t.Page == firstPage).Windows[firstIndex];
+                if (SummaryScreenLayout.WhyNotFollow(follow, first.X + dx, first.Y + dy) is string far) return (null, far);
+                foreach ((string page, int i) in follow.Windows)
+                {
+                    if (page == tableName && i == index) continue;
+                    SummaryScreenLayout.Window w = next.Tables.First(t => t.Page == page).Windows[i];
+                    if (w.X + dx < 0 || w.Y + dy < 0 || w.X + dx + w.Width > SummaryScreenLayout.MapColumns || w.Y + dy + w.Height > SummaryScreenLayout.MapRows)
+                        return (null, "The rows that move with this window would go off the screen.");
+                    SummaryScreenLayout.Window moved = w.Copy();
+                    moved.X += dx;
+                    moved.Y += dy;
+                    if (Lingers(page, i, moved)) return (null, Linger);
+                    w.X += dx;
+                    w.Y += dy;
+                }
+            }
             table.Windows[index] = wanted;
             // Out of tiles where it is: hand every box its tiles again, which makes room when there is any.
             if (why != null) why = next.Repack(_original);

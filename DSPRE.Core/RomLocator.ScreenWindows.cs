@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using static DSPRE.RomInfo;
@@ -88,6 +89,85 @@ namespace DSPRE
             _ => null,
         };
 
+        // The Confirm and Cancel button sprites' s16 x and y in sSpriteTemplates, and the code that puts Cancel at row 22 in the
+        // confirm and Frontier modes (pokeplatinum windows.c PartyMenu_AddWindows, pokeheartgold party_context_menu.c).
+        private static ScreenWindowFollow[] PartyButtons(uint a, GameVersions game, GameLanguages language)
+        {
+            bool pt = game == GameVersions.Platinum;
+            uint? row22 = pt
+                ? language switch
+                {
+                    GameLanguages.English => 0x81AE6, GameLanguages.Japanese => 0x813B6, GameLanguages.Korean => 0x81FD2,
+                    GameLanguages.French or GameLanguages.German or GameLanguages.Italian or GameLanguages.Spanish => 0x81B86,
+                    _ => null,
+                }
+                : language switch
+                {
+                    GameLanguages.Japanese => 0x7C942,
+                    GameLanguages.Korean => game == GameVersions.HeartGold ? 0x7CFC2u : 0x7CFBAu,
+                    GameLanguages.Spanish when game == GameVersions.HeartGold => 0x7CEB6,
+                    GameLanguages.English or GameLanguages.French or GameLanguages.German or GameLanguages.Italian or GameLanguages.Spanish => 0x7CEBE,
+                    _ => null,
+                };
+            uint confirm = a + (pt ? 0x540u : 0x588u), cancel = a + (pt ? 0x568u : 0x5B0u);
+            ScreenWindowSpot Sprite(uint at, int add) => new ScreenWindowSpot(at, Add: add, Scale: 8, Half: true);
+            ScreenWindowSpot[] cancelY = row22 is uint r
+                ? new[] { Sprite(cancel + 2, -16), new ScreenWindowSpot(r, Add: -1) }
+                : new[] { Sprite(cancel + 2, -16) };
+            List<ScreenWindowSpot> cancelX = new List<ScreenWindowSpot> { Sprite(cancel, -24) }, confirmX = new List<ScreenWindowSpot> { Sprite(confirm, -32) };
+            List<ScreenWindowSpot> cancelRows = cancelY.ToList(), confirmY = new List<ScreenWindowSpot> { Sprite(confirm + 2, -8) };
+            // HGSS touch rects (u8 top, bottom, left, right): entry 6 is Cancel and 7 Confirm in party_menu.c _02110104, and entry 6
+            // is Cancel in both rows of _02110128. The right edges stay at the screen's edge.
+            if (!pt && HgssPartyTouch(game, language) is uint t)
+            {
+                ScreenWindowSpot Edge(uint at, int add) => new ScreenWindowSpot(at, Add: add, Scale: 8, Byte: true);
+                cancelX.Add(Edge(t + 26, 8));
+                cancelRows.AddRange(new[] { Edge(t + 24, -8), Edge(t + 25, -24) });
+                confirmX.Add(Edge(t + 30, 0));
+                confirmY.AddRange(new[] { Edge(t + 28, 0), Edge(t + 29, -16) });
+                foreach (uint row in new[] { t + 0x24 + 24, t + 0x24 + 32 + 24 })
+                {
+                    cancelX.Add(Edge(row + 2, 8));
+                    cancelRows.AddRange(new[] { Edge(row, 16), Edge(row + 1, -24) });
+                }
+            }
+            List<ScreenWindowFollow> follows = new List<ScreenWindowFollow>
+            {
+                new ScreenWindowFollow("Cancel button", cancelX.ToArray(), cancelRows.ToArray(), System.Array.Empty<ScreenWindowSpot>()),
+                new ScreenWindowFollow("Confirm button", confirmX.ToArray(), confirmY.ToArray(), System.Array.Empty<ScreenWindowSpot>()),
+            };
+            // HGSS menu labels stay in the part of BG0 the game clears when the menu closes (PartyContextMenu.ClearedAreas).
+            if (!pt)
+            {
+                ScreenWindowSpot[] none = System.Array.Empty<ScreenWindowSpot>();
+                (int, int, int, int) menuArea = ROMFiles.PartyContextMenu.ClearedAreas[0], quitArea = ROMFiles.PartyContextMenu.ClearedAreas[1];
+                follows.AddRange(Numbered("Menu button", 1, 7).Concat(Numbered("Submenu button", 1, 4))
+                    .Select(n => new ScreenWindowFollow(n, none, none, none, Within: menuArea)));
+                follows.Add(new ScreenWindowFollow("Quit button", none, none, none, Within: quitArea));
+            }
+            return follows.ToArray();
+        }
+
+        // party_menu_sprites.c PartyMenu_SetTopScreenSelectionPanelYDisplacement: the top screen's icon at x 30 and status icon at
+        // x 50, 26 and 6 pixels left of the name's corner. Their y is 456 less a scroll, so the name keeps its row. Measured on every dump.
+        private static ScreenWindowFollow[] HgssTopIcons(GameVersions game, GameLanguages language)
+        {
+            uint? icon = language switch
+            {
+                GameLanguages.Japanese => 0x7EDCA,
+                GameLanguages.Korean => game == GameVersions.HeartGold ? 0x7F476u : 0x7F46Eu,
+                GameLanguages.Spanish when game == GameVersions.HeartGold => 0x7F36A,
+                GameLanguages.English or GameLanguages.French or GameLanguages.German or GameLanguages.Italian or GameLanguages.Spanish => 0x7F372,
+                _ => null,
+            };
+            if (icon is not uint at) return null;
+            return new[]
+            {
+                new ScreenWindowFollow("Name", new[] { new ScreenWindowSpot(at, Add: 26, Scale: 8), new ScreenWindowSpot(at + 0xC, Add: 6, Scale: 8) },
+                                       System.Array.Empty<ScreenWindowSpot>(), System.Array.Empty<ScreenWindowSpot>(), KeepsRow: true),
+            };
+        }
+
         public static ScreenWindowTableSite[] PartyWindowSitesIn(GameVersions game, GameLanguages language, int revision)
         {
             if (PartyAnchor(game, language) is not uint a) return null;
@@ -95,7 +175,7 @@ namespace DSPRE
             if (game == GameVersions.Platinum)
                 return new ScreenWindowTableSite[]
                 {
-                    new("Messages and buttons", -1, a + 0x2FC, Named(PartyText), 1, 0x160),
+                    new("Messages and buttons", -1, a + 0x2FC, Named(PartyText), 1, 0x160, PartyButtons(a, game, language)),
                     new("Pokémon", -1, a + 0x334, PartyPokemon(1, 2, 3, 4, 5, 6), 1, 0x28),
                     new("Pokémon in a multi battle", -1, a + 0x424, PartyPokemon(2, 4, 6), 1, 0x5C),
                 };
@@ -103,10 +183,10 @@ namespace DSPRE
             return new ScreenWindowTableSite[]
             {
                 new("Messages and buttons", -1, a + 0x258, Named(PartyText.Concat(Numbered("Menu button", 1, 7)).Append("Quit button")
-                    .Concat(Numbered("Submenu button", 1, 4))), 1, 0x180),
+                    .Concat(Numbered("Submenu button", 1, 4))), 1, 0x180, PartyButtons(a, game, language)),
                 new("Pokémon", -1, a + 0x370, PartyPokemon(1, 2, 3, 4, 5, 6), 1, 0x48),
                 new("Pokémon in a multi battle", -1, a + 0x460, PartyPokemon(2, 4, 6), 1, 0x7C),
-                new("Top screen", -1, a + 0x4D8, Named(new[] { "Name", "Item heading", "Held item" }), 6, 0x1),
+                new("Top screen", -1, a + 0x4D8, Named(new[] { "Name", "Item heading", "Held item" }), 6, 0x1, HgssTopIcons(game, language)),
             };
         }
 
@@ -445,22 +525,105 @@ namespace DSPRE
 
         public static int PartyStripTile => RomID == null ? 0 : PartyStripTileIn(GameVersion, GameLanguage, RomRevision);
 
-        // pokeplatinum src/applications/pc_boxes/ov19_021DA92C.c and ov19_021DB2FC.c, in overlay 19.
-        private static ScreenWindowTableSite[] PlatinumBox(uint at) => new ScreenWindowTableSite[]
+        // menu_graphics.c BoxMenuGraphics_PutMenuToTilemap places the menu again (Japanese builds it differently, so its menu stays put).
+        // preview_display.c PCMonPreviewDisplay_CreateInfoSprites puts the held item's frame and type icons from that window's corner.
+        private static ScreenWindowTableSite[] PlatinumBox(uint at, uint? menu, uint rotation, uint shift = 0)
         {
-            new("Box", 19, at, Named(new[] { "Species", "Dex number", "Nickname", "Held item and more", "Message", "Menu" }), 2, 0x120),
-        };
+            ScreenWindowSpot Pixels(uint offset, int extra) => new ScreenWindowSpot(offset - shift, Add: -extra, Scale: 8);
+            List<ScreenWindowFollow> follows = new List<ScreenWindowFollow>
+            {
+                // PCMonPreviewDisplay_DrawRotationPage puts the type icons back at 176 + 16 per row on the types page.
+                new("Held item and more", new[] { Pixels(0x9EBC, 48), Pixels(0x9DF8, 16) },
+                    new[] { Pixels(0x9EBE, 8), Pixels(0x9E4A, 8), new ScreenWindowSpot(rotation, Add: -8, Scale: 8) },
+                    Array.Empty<ScreenWindowSpot>()),
+            };
+            if (menu is uint m)
+                follows.Add(new ScreenWindowFollow("Menu", Movs(m + 0x46), new[] { new ScreenWindowSpot(m + 0x48, Imm3: true) }, Movs(m)));
+            return new ScreenWindowTableSite[]
+            {
+                new("Box", 19, at, Named(new[] { "Species", "Dex number", "Nickname", "Held item and more", "Message", "Menu" }), 2, 0x120,
+                    follows.ToArray(), menu == null ? new[] { "Menu" } : null),
+            };
+        }
 
-        // pokeheartgold overlay 14. One table: the top screen details, then (not listed yet) moves, item text and menus, then the messages.
-        private static ScreenWindowTableSite[] HgssBox(uint top, uint messages) => new ScreenWindowTableSite[]
+        // buttons_graphics.c BOX_BUTTONS_X/Y with the cursor stops, preview_display.c's picture and cursor_graphics.c's arrows, in pixels.
+        // Measured on every dump: Japanese sits earlier. Past 0xA000 the other languages sit 0xC after English.
+        public static ScreenCodeWindowSites BoxCodeWindowSitesIn(GameVersions game, GameLanguages language, int revision)
+        {
+            if (game != GameVersions.Platinum) return null;
+            bool japanese = language == GameLanguages.Japanese;
+            uint late = japanese ? unchecked((uint)-0x5E) : language == GameLanguages.English ? 0u : 0xCu;
+            uint Early(uint offset, uint jp) => japanese ? offset - jp : offset;
+            uint Tabs(uint offset) => japanese ? offset - 0x5C : language == GameLanguages.English ? offset : offset + 0xC;
+            ScreenWindowSpot P(uint offset, int add) => new ScreenWindowSpot(offset, Add: add, Scale: 8);
+            const string group = "Pictures";
+            // The box: the 21 by 20 wallpaper on BG3 at tile 11,0 (template 0xF148 in English), and the icon code from grid corner
+            // 112,40, scroll-off edge 72 and name stop 168,8 (view.c, cursor_graphics.c, item_icon_graphics.c).
+            uint wallpaper = Tabs(0xF148);
+            ScreenCodeWindow box = new ScreenCodeWindow(group, "Box", 0, 21, 20,
+                new[]
+                {
+                    P(Early(0x71AE, 0x48), -24), P(Early(0x71C4, 0x48), -24), P(Early(0x77FE, 0x48), -24), P(Early(0x78A0, 0x48), -24),
+                    P(Early(0x79AC, 0x48), -24), P(Early(0x900E, 0x50), -24), P(Tabs(0xD96C), -24), P(Early(0x6CA0, 0x48), 16),
+                    P(Early(0x9050, 0x50), -80), new ScreenWindowSpot(wallpaper, Word: true, Add: -88, Scale: -8),
+                },
+                new[]
+                {
+                    // Not 0x72D4's 40: the compiler shifts it into the icon tile stride, so box-change icons snap down at the end.
+                    P(Early(0x780C, 0x48), -40), P(Early(0x7852, 0x48), -40), P(Early(0x7998, 0x48), -40),
+                    P(Early(0x9020, 0x50), -24), P(Tabs(0xD980), -48), P(Early(0x9054, 0x50), -8),
+                    new ScreenWindowSpot(wallpaper + 4, Word: true, Scale: -8),
+                });
+            return new ScreenCodeWindowSites(19, new[]
+            {
+                box,
+                new ScreenCodeWindow(group, "Party and Close buttons", 0, 18, 3,
+                    new[] { P(Early(0x9B42, 0x54), -79), P(Early(0x9062, 0x50), -55), P(Early(0x9074, 0x50), -131) },
+                    new[] { P(Early(0x9B44, 0x54), -16), P(Early(0x9066, 0x50), 0), P(Early(0x9078, 0x50), 0) }),
+                new ScreenCodeWindow(group, "Pokémon picture", 0, 10, 10,
+                    new[] { P(Early(0x9D36, 0x54), -44), P(0xA474 + late, -44) }, new[] { P(Early(0x9D38, 0x54), -44), P(0xA476 + late, -44) }),
+                new ScreenCodeWindow(group, "Box arrows", 0, 19, 3,
+                    new[] { P(Early(0x7F50, 0x4C), -12), P(Early(0x7F52, 0x4C), -140), P(Early(0x7F56, 0x4C), 32), P(Early(0x7F58, 0x4C), -96) },
+                    new[] { P(Early(0x7F6C, 0x4C), -12), P(Early(0x7F82, 0x4C), -12) }),
+                // BoxDialGraphics_CreateTabSprites: x 0 and 256 (markings tab flipped, left of its x), y 142 × 4 from the top screen's
+                // 384, so a tile row is 2 of it. Each tab is 6 by 6 tiles above its y.
+                new ScreenCodeWindow(group, "Box list tab", 4, 6, 6, new[] { P(Tabs(0xC4FE), 0) },
+                    new[] { new ScreenWindowSpot(Tabs(0xC4F8), Add: -108, Scale: 2) }),
+                new ScreenCodeWindow(group, "Markings tab", 4, 6, 6, new[] { P(Tabs(0xC516), -46) },
+                    new[] { new ScreenWindowSpot(Tabs(0xC50A), Add: -108, Scale: 2) }),
+            });
+        }
+
+        private static ScreenWindowFollow InFrame(string window, int width, int height) =>
+            new(window, System.Array.Empty<ScreenWindowSpot>(), System.Array.Empty<ScreenWindowSpot>(), System.Array.Empty<ScreenWindowSpot>(),
+                Within: (0, 0, width, height));
+
+        // pokeheartgold overlay 14 keeps the top screen windows, the moves and item panel text, and the messages in one table.
+        private static ScreenWindowTableSite[] HgssBox(uint top, uint messages, uint itemIcon) => new ScreenWindowTableSite[]
         {
             new("Top screen", 14, top, Named(new[]
             {
                 "Species", "Nickname", "Level", "Title", "Gender", "Dex number", "Nature", "Ability", "Held item",
                 "Move 1", "Move 2", "Move 3", "Move 4", "Copy of move 1", "Copy of move 2", "Copy of move 3", "Copy of move 4",
                 "Nature label", "Ability label", "Held item label", "Item name", "Item description", "Copy of item name", "Copy of item description",
-            }), 4, 0x69),
-            new("Messages", 14, messages, Named(new[] { "Message", "Message at the top", "Short message", "Second message", "Yes/no" }), 0, 0x2B3),
+            }), 4, 0x69, new[]
+            {
+                // The type icons' sprite templates sit just before the table and put the icons beside the species (s16 x and y, 160,48 and 194,48).
+                new ScreenWindowFollow("Species",
+                    new[] { new ScreenWindowSpot(top - 0x68, Add: -96, Scale: 8, Half: true), new ScreenWindowSpot(top - 0x34, Add: -130, Scale: 8, Half: true) },
+                    new[] { new ScreenWindowSpot(top - 0x66, Add: -8, Scale: 8, Half: true), new ScreenWindowSpot(top - 0x32, Add: -8, Scale: 8, Half: true) },
+                    System.Array.Empty<ScreenWindowSpot>()),
+                // Move Items mode puts the item icon beside the name: a movs x in pixels and a movs y in 4-pixel steps from the panel's top.
+                new ScreenWindowFollow("Item name",
+                    new[] { new ScreenWindowSpot(itemIcon, Add: -10, Scale: 8) },
+                    new[] { new ScreenWindowSpot(itemIcon + 4, Add: -88, Scale: 2) },
+                    System.Array.Empty<ScreenWindowSpot>(), Within: (0, 0, 32, 9)),
+                // Windows drawn into a slid-in frame count from its corner and stay inside it: the 32 by 9 item panel, the 12 by 10 moves panel.
+                InFrame("Item description", 32, 9), InFrame("Move 1", 12, 10), InFrame("Move 2", 12, 10), InFrame("Move 3", 12, 10), InFrame("Move 4", 12, 10),
+            }),
+            // The box menu's text goes into a frame the code puts at 21,8 or 21,14, so its table spot never shows.
+            new("Messages", 14, messages, Named(new[] { "Message", "Message at the top", "Short message", "Second message", "Change box button" }), 0, 0x2B3,
+                Locked: new[] { "Change box button" }),
         };
 
         // Measured on every dump.
@@ -468,24 +631,24 @@ namespace DSPRE
         {
             GameVersions.Platinum => language switch
             {
-                GameLanguages.English => PlatinumBox(0xF458),
-                GameLanguages.Japanese => PlatinumBox(0xF3FC),
-                GameLanguages.French => PlatinumBox(0xF464),
-                GameLanguages.German => PlatinumBox(0xF464),
-                GameLanguages.Italian => PlatinumBox(0xF464),
-                GameLanguages.Spanish => PlatinumBox(0xF464),
-                GameLanguages.Korean => PlatinumBox(0xF464),
+                GameLanguages.English => PlatinumBox(0xF458, 0xA91A, 0xA15C),
+                GameLanguages.Japanese => PlatinumBox(0xF3FC, null, 0xA0FE, 0x54),
+                GameLanguages.French => PlatinumBox(0xF464, 0xA926, 0xA168),
+                GameLanguages.German => PlatinumBox(0xF464, 0xA926, 0xA168),
+                GameLanguages.Italian => PlatinumBox(0xF464, 0xA926, 0xA168),
+                GameLanguages.Spanish => PlatinumBox(0xF464, 0xA926, 0xA168),
+                GameLanguages.Korean => PlatinumBox(0xF464, 0xA926, 0xA168),
                 _ => null,
             },
             GameVersions.HeartGold or GameVersions.SoulSilver => language switch
             {
-                GameLanguages.Japanese => HgssBox(0x12A78, 0x12BA0),
-                GameLanguages.English => HgssBox(0x12BB4, 0x12CDC),
-                GameLanguages.French => HgssBox(0x12BB4, 0x12CDC),
-                GameLanguages.German => HgssBox(0x12BB4, 0x12CDC),
-                GameLanguages.Italian => HgssBox(0x12BB4, 0x12CDC),
-                GameLanguages.Spanish => HgssBox(0x12BB4, 0x12CDC),
-                GameLanguages.Korean => HgssBox(0x12BB4, 0x12CDC),
+                GameLanguages.Japanese => HgssBox(0x12A78, 0x12BA0, 0xE268),
+                GameLanguages.English => HgssBox(0x12BB4, 0x12CDC, 0xE2E4),
+                GameLanguages.French => HgssBox(0x12BB4, 0x12CDC, 0xE2E4),
+                GameLanguages.German => HgssBox(0x12BB4, 0x12CDC, 0xE2E4),
+                GameLanguages.Italian => HgssBox(0x12BB4, 0x12CDC, 0xE2E4),
+                GameLanguages.Spanish => HgssBox(0x12BB4, 0x12CDC, 0xE2E4),
+                GameLanguages.Korean => HgssBox(0x12BB4, 0x12CDC, 0xE2E4),
                 _ => null,
             },
             _ => null,
@@ -515,21 +678,48 @@ namespace DSPRE
             };
             if (known is not int shift) return null;
             int map = language == GameLanguages.Japanese ? -0x68 : shift;
+            uint band = language == GameLanguages.Japanese ? 0x9378u : 0x93B4u;
             string[] places = { "Region", "Place", "Description", "Landmark 1", "Landmark 2", "Landmark 3", "Landmark 4" };
+            bool jp = language == GameLanguages.Japanese;
+            uint mapMarkers = jp ? 0x11C6u : 0x11D6u, flyMarkers = jp ? 0x6CF2u : 0x6D0Eu, scrollMarkers = jp ? 0x26C0u : 0x26D0u, scrollRow = jp ? 0x273Cu : 0x274Cu;
             return new ScreenWindowTableSite[]
             {
-                new("Phone", 101, (uint)(0x10CE0 + shift), Named(new[] { "Call", "Caller", "Contacts", "Hint" }), 6, 0x375),
+                // PokegearPhone_PrintContextMenuTooltip copies and clears the hint's 4-row band from the row above it.
+                new("Phone", 101, (uint)(0x10CE0 + shift), Named(new[] { "Call", "Caller", "Contacts", "Hint" }), 6, 0x375,
+                    new[] { new ScreenWindowFollow("Hint", System.Array.Empty<ScreenWindowSpot>(),
+                        new[] { new ScreenWindowSpot(band, Add: 1), new ScreenWindowSpot(band + 0x5A, Add: 1) }, System.Array.Empty<ScreenWindowSpot>()) }),
                 new("Radio", 101, (uint)(0x1109C + shift), Named(new[] { "Broadcast", "Station", "Heading" }), 6, 0x38F),
-                new("Map", 101, (uint)(0x10424 + map), Named(places.Append("Map heading")), 5, 0x3F0),
-                new("Fly map", 101, (uint)(0x10814 + map), Named(places.Append("Fly heading").Append("Fly close")), 5, 0x3F0),
+                new("Map", 101, (uint)(0x10424 + map), Named(places.Append("Map heading")), 5, 0x3F0,
+                    MarkerFollows(new[] { (mapMarkers, mapMarkers + 10), (scrollMarkers, scrollMarkers + 4) }, new[] { new ScreenWindowSpot(mapMarkers + 12, Add: -59, Scale: 8),
+                        new ScreenWindowSpot(scrollRow, Word: true, Add: -187, Scale: 8) })),
+                new("Fly map", 101, (uint)(0x10814 + map), Named(places.Append("Fly heading").Append("Fly close")), 5, 0x3F0,
+                    MarkerFollows(new[] { (flyMarkers, flyMarkers + 10) }, new[] { new ScreenWindowSpot(flyMarkers + 12, Add: -59, Scale: 8) })),
             };
         }
+
+        // The four marking icons sit 8 left of the two marking word windows, two rows each: x is 32 (an adds) plus 104 (a movs)
+        // for the right column, and one y number serves both windows.
+        private static ScreenWindowFollow[] MarkerFollows((uint Gap, uint Left)[] x, ScreenWindowSpot[] row) => new[]
+        {
+            new ScreenWindowFollow("Landmark 1", x.Select(at => new ScreenWindowSpot(at.Left, Add: 8, Scale: 8)).ToArray(), row,
+                System.Array.Empty<ScreenWindowSpot>()),
+            new ScreenWindowFollow("Landmark 2", x.Select(at => new ScreenWindowSpot(at.Gap, Scale: 8, From: "Landmark 1")).ToArray(), row,
+                System.Array.Empty<ScreenWindowSpot>()),
+        };
+
+        public static PtBagItemBoxSites PtBagItemBox => Here(PtBagItemBoxSitesIn);
+
+        // Measured on every dump.
+        public static PtBagItemBoxSites PtBagItemBoxSitesIn(GameVersions game, GameLanguages language, int revision) =>
+            game != GameVersions.Platinum ? null
+            : new PtBagItemBoxSites(84, language == GameLanguages.Japanese ? 0x5A34u : 0x5AC4u, language == GameLanguages.Japanese ? 0x5A66u : 0x5AF6u, 14);
 
         /// <summary>Null where they aren't known for this ROM.</summary>
         public static ScreenCodeWindowSites ScreenCodeWindows(string screen) => screen switch
         {
             "bag" => Here(BagWindowSitesIn),
             "naming" => Here(NamingWindowSitesIn),
+            "box" => Here(BoxCodeWindowSitesIn),
             _ => null,
         };
 
@@ -572,6 +762,27 @@ namespace DSPRE
             _ => null,
         };
 
+        // pokeplatinum sCharCodes and pokeheartgold sKeyboardLayoutPtrs: five pages of five key rows, as arm9 pointers. Measured on
+        // every dump. SoulSilver Spanish sits 0x20 after HeartGold Spanish.
+        public static uint? NamingKeyTableIn(GameVersions game, GameLanguages language) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English => 0x100C54, GameLanguages.French => 0x100E30, GameLanguages.German => 0x100DF0,
+                GameLanguages.Italian => 0x100DB0, GameLanguages.Spanish => 0x100E50, GameLanguages.Japanese => 0x100048,
+                GameLanguages.Korean => 0x101B30, _ => null,
+            },
+            GameVersions.HeartGold or GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.English => 0x1104F8, GameLanguages.French => 0x110518, GameLanguages.German => 0x1104D8,
+                GameLanguages.Italian => 0x110498, GameLanguages.Japanese => 0x10FA2C, GameLanguages.Korean => 0x110ED8,
+                GameLanguages.Spanish => game == GameVersions.SoulSilver ? 0x110538u : 0x110518u, _ => null,
+            },
+            _ => null,
+        };
+
+        public static uint? NamingKeyTable => RomID == null ? null : NamingKeyTableIn(GameVersion, GameLanguage);
+
         // Measured on every dump. The keys and the title only slide across: one register holds their y and their palette or height.
         // Japanese keys are placed elsewhere, so they stay out.
         public static ScreenCodeWindowSites NamingWindowSitesIn(GameVersions game, GameLanguages language, int revision)
@@ -579,16 +790,26 @@ namespace DSPRE
             if (NamingAnchor(game, language) is not uint m) return null;
             const string bottom = "Keyboard", top = "Top screen";
             ScreenWindowSpot[] none = System.Array.Empty<ScreenWindowSpot>();
+            // The name's side window sits just right of it, and its underscores (80 + 12 per letter, 39) and the gender sign
+            // (80 + 13 per letter, 27) hang off it. Japanese builds those differently, so its name stays put.
+            bool pt = game == GameVersions.Platinum, korean = language == GameLanguages.Korean;
+            uint underscore = m - (pt ? (korean ? 0x5C8u : 0x5D4u) : (korean ? 0x5D4u : 0x5E0u)), gender = m - (pt ? 0x49Au : 0x4A6u);
+            ScreenWindowSpot Pixel(uint at, int add) => new ScreenWindowSpot(at, Add: add, Scale: 8);
+            ScreenCodeWindow name = language == GameLanguages.Japanese
+                ? new ScreenCodeWindow(bottom, "Name", 2, 13, 2, none, none, FixedX: 10, FixedY: 3)
+                : new ScreenCodeWindow(bottom, "Name", 2, 13, 2,
+                    new[] { new ScreenWindowSpot(m - 0x62), new ScreenWindowSpot(m - 0x44, Add: 1), Pixel(underscore, 0), Pixel(gender, 0) },
+                    new[] { new ScreenWindowSpot(m - 0x84), new ScreenWindowSpot(m - 0x50), Pixel(underscore + 8, -15), Pixel(gender + 6, -3) });
+            // The keys are text on a layer the code scrolls to -11 in several places, over key art on another layer, with a pixel
+            // touch grid and a cursor at 26 + 16 per key, so they stay put.
             List<ScreenCodeWindow> windows = new List<ScreenCodeWindow>
             {
                 new ScreenCodeWindow(bottom, "Title", 2, 22, 2, Movs(m - 0x9C), none, FixedY: 2),
-                // The name's side window sits just right of it, so its position moves along.
-                new ScreenCodeWindow(bottom, "Name", 2, 13, 2, new[] { new ScreenWindowSpot(m - 0x62), new ScreenWindowSpot(m - 0x44, Add: 1) },
-                                     new[] { new ScreenWindowSpot(m - 0x84), new ScreenWindowSpot(m - 0x50) }),
+                name,
                 new ScreenCodeWindow(top, "Prompt", 4, 27, 4, Movs(m + 0x1C), Movs(m)),
             };
             if (language != GameLanguages.Japanese)
-                windows.Insert(0, new ScreenCodeWindow(bottom, "Keys", 0, 26, 12, new[] { new ScreenWindowSpot(m - 0x15C), new ScreenWindowSpot(m - 0x138) }, none, FixedY: 1));
+                windows.Insert(0, new ScreenCodeWindow(bottom, "Keys", 0, 26, 12, none, none, FixedX: 2, FixedY: 1));
             return new ScreenCodeWindowSites(-1, windows.ToArray());
         }
 
@@ -604,6 +825,9 @@ namespace DSPRE
             new ScreenCodeWindow(group, name, layer, width, height, at.Select(a => new ScreenWindowSpot(a, true)).ToArray(),
                                  at.Select(a => new ScreenWindowSpot(a + 4, true)).ToArray());
 
+        private static readonly uint[] PtHighlight = { 0x1090, 0x1770, 0x1DFE, 0x1F74, 0x1FC4, 0x3854, 0x3970, 0x54AC };
+        private static readonly uint[] PtHighlightJapanese = { 0x108C, 0x176C, 0x1DFA, 0x1F70, 0x1FC0, 0x3808, 0x3924, 0x541C };
+
         // pokeplatinum applications/bag/windows.c and pokeheartgold application/bag/bag_app_window.c. Measured on every dump.
         // The money windows are left out because one register holds their x and y.
         public static ScreenCodeWindowSites BagWindowSitesIn(GameVersions game, GameLanguages language, int revision)
@@ -615,19 +839,39 @@ namespace DSPRE
                 uint c = japanese ? 0x4Cu : 0;
                 ScreenCodeWindow Pt(string name, int layer, int width, int height, uint xAt, uint yAt, int copiedX = -1) =>
                     Coded(top, name, layer, width, height, xAt - c, yAt - c, copiedX);
+                uint a = japanese ? 0x90u : 0;
+                ScreenWindowSpot Px(uint at, int add) => new ScreenWindowSpot(at, Add: add, Scale: 8);
+                ScreenCodeWindow Counted(string name, int width, uint xAt, uint yAt, uint upX, uint downX, int addX, uint upY, uint downY) =>
+                    new ScreenCodeWindow(top, name, 0, width, 4, new[] { new ScreenWindowSpot(xAt), Px(upX, addX), Px(downX, addX) },
+                                         new[] { new ScreenWindowSpot(yAt), Px(upY, -4), Px(downY, -28) });
                 return new ScreenCodeWindowSites(84, new[]
                 {
-                    Pt("Item list", 2, 17, 18, 0x3AC0, 0x3AA6),
+                    // The item highlight and move bar sit at x 177 (its template and 8 movs). Their y is 16 per row with no number
+                    // to move, so the list keeps its row.
+                    new ScreenCodeWindow(top, "Item list", 2, 17, 18,
+                        Movs(0x3AC0 - c).Concat((japanese ? PtHighlightJapanese : PtHighlight).Select(o => new ScreenWindowSpot(o, Add: -65, Scale: 8)))
+                            .Append(new ScreenWindowSpot(japanese ? 0x5C50u : 0x5CE0u, Add: -65, Scale: 8, Half: true)).ToArray(),
+                        System.Array.Empty<ScreenWindowSpot>()),
                     Pt("Description", 0, 32, 6, 0x3AE2, 0x3AC6, 0),
                     Pt("Message", 0, 14, 4, 0x3B24, 0x3B08),
                     Pt("Short message", 0, 13, 4, 0x3B46, 0x3B2A),
                     Pt("Long message", 0, 27, 4, 0x3B8A, 0x3B6E),
-                    Pt("Sell amount", 0, 12, 4, 0x3BAC, 0x3B90),
-                    Pt("Toss amount", 0, 7, 4, 0x3BEE, 0x3BD2),
+                    // bag/sprites.c BagUI_ShowItemCountArrows puts the up and down arrows beside these two, from movs pairs.
+                    Counted("Sell amount", 12, 0x3BAC - c, 0x3B90 - c, 0x577C - a, 0x578A - a, -10, 0x577E - a, 0x578C - a),
+                    Counted("Toss amount", 7, 0x3BEE - c, 0x3BD2 - c, 0x575E - a, 0x576C - a, -28, 0x5760 - a, 0x576E - a),
                     Pt("Poffin count", 0, 11, 4, 0x3C10, 0x3BF4),
                     // Code clears this box at the same rows, so those move too. Its columns come from a loop.
                     new ScreenCodeWindow(top, "Pocket names", 2, 12, 3, System.Array.Empty<ScreenWindowSpot>(),
                                          new[] { new ScreenWindowSpot(0x3AE8 - c), new ScreenWindowSpot(0x3CC4 - c), new ScreenWindowSpot(0x3CE6 - c, Add: -1) }),
+                    // bag/main.c ToggleHideItemSprite writes the 5 by 5 item box at 0,18 each time, from two movs pairs.
+                    new ScreenCodeWindow("Pictures", "Item frame", 0, 5, 5,
+                                         new[] { new ScreenWindowSpot(japanese ? 0x225Eu : 0x2262u), new ScreenWindowSpot(japanese ? 0x2282u : 0x2286u) },
+                                         new[] { new ScreenWindowSpot(japanese ? 0x224Eu : 0x2252u), new ScreenWindowSpot(japanese ? 0x2272u : 0x2276u) }),
+                    // bag/sprites.c BAG_SPRITE_ITEM's template, x 22 and y 172 as s16, which nothing moves later. The picture is
+                    // the 4 by 4 tiles the icon covers. Measured on every dump.
+                    new ScreenCodeWindow("Pictures", "Item icon", 0, 4, 4,
+                                         new[] { new ScreenWindowSpot((japanese ? 0x5CECu : 0x5D7Cu), Add: -14, Scale: 8, Half: true) },
+                                         new[] { new ScreenWindowSpot((japanese ? 0x5CEEu : 0x5D7Eu), Add: -20, Scale: 8, Half: true) }),
                 });
             }
             if (game != GameVersions.HeartGold && game != GameVersions.SoulSilver) return null;

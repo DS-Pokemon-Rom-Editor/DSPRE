@@ -19,8 +19,12 @@ namespace DSPRE.ROMFiles
         /// <param name="Locked">Why the touch areas stay, when the game draws their pictures at spots in code.</param>
         /// <param name="Pairs">Circles come in twos round one spot, and move together.</param>
         /// <param name="UpDown">Why Up and Down aren't read, when they aren't.</param>
+        /// <param name="Tiles">The screen the buttons are drawn into, whose tiles move with them.</param>
         private sealed record Page(string Name, string[] Buttons, Table At, bool LeftRightOnly = false, int[] Stops = null, string Locked = null,
-                                   bool Pairs = false, string UpDown = null);
+                                   bool Pairs = false, string UpDown = null, ScreenTiles Tiles = null);
+
+        // The radio dial's screen holds the four buttons. Each row behind them is one tile, so a moved button's spot takes it.
+        private const int RadioDialScreen = 22;
 
         // The radio's dial lists: each station is a small circle for a clear signal round a larger one for a faint one.
         private static string[] Stations(int count) =>
@@ -43,7 +47,8 @@ namespace DSPRE.ROMFiles
             new Page("Map marking icons", Markings, t[5], Stops: Enumerable.Range(8, 8).ToArray(), Locked: TouchRects.FixedArt, UpDown: LeftRight),
             new Page("Moving a contact", Numbered("Handle", 6).Concat(new[] { "Page up", "Page down" }).ToArray(), t[6]),
             // Radio_SnapCursorToChannelHitbox puts the cursor on Johto station n for button n.
-            new Page("Radio buttons", Numbered("Station", 4), t[7]),
+            new Page("Radio buttons", Numbered("Station", 4), t[7],
+                     Tiles: new ScreenTiles(RomInfo.DirNames.PokegearRadioGraphics, RadioDialScreen, new[] { 0, 1, 2, 3 })),
             new Page("Johto radio dial", Stations(4), t[8], Pairs: true),
             new Page("Kanto radio dial", Stations(3), t[9], Pairs: true),
             new Page("Kanto radio dial with the Expansion Card", Stations(5), t[10], Pairs: true),
@@ -54,6 +59,7 @@ namespace DSPRE.ROMFiles
         private readonly Page[] _pages;
         private readonly ScreenTables _tables;
         private readonly int[] _touchStart, _tileStart;
+        private readonly ScreenTileArt[] _art;
         private readonly List<int>[] _gridStart;
         private readonly byte[] _data;
 
@@ -64,14 +70,21 @@ namespace DSPRE.ROMFiles
             _touchStart = new int[pages.Length];
             _tileStart = new int[pages.Length];
             _gridStart = new List<int>[pages.Length];
+            _art = new ScreenTileArt[pages.Length];
             for (int i = 0; i < pages.Length; i++)
             {
                 Table t = pages[i].At;
                 _touchStart[i] = tables.Take(t.Overlay, t.Touch, pages[i].Buttons.Length * TouchRects.Size);
                 _gridStart[i] = t.Grids.Select(g => tables.Take(t.Overlay, g.At, g.Count * Grid)).ToList();
                 _tileStart[i] = t.Tiles >= 0 ? tables.Take(t.Overlay, t.Tiles, pages[i].Buttons.Length * 2) : tables.Count;
+                _art[i] = ScreenTileArt.Take(pages[i].Tiles, tables);
             }
             _data = tables.Finish();
+            for (int i = 0; i < pages.Length; i++)
+            {
+                int page = i;
+                _art[i]?.Remember(_data, b => AreaOf(page, b));
+            }
         }
 
         /// <summary>Null when this ROM's tables aren't known or don't look like the game's.</summary>
@@ -105,6 +118,9 @@ namespace DSPRE.ROMFiles
             _pages[page].At.Tiles < 0 ? null
                 : Enumerable.Range(0, _pages[page].Buttons.Length).Select(i => ((int)_data[_tileStart[page] + i * 2], (int)_data[_tileStart[page] + i * 2 + 1])).ToList();
 
+        /// <summary>The page's screen as edited, or null when its buttons aren't drawn into one.</summary>
+        public byte[] ScreenOf(int page) => _art[page]?.Screen(_data);
+
         /// <summary>The radio buttons page. Every radio picture shows its spots.</summary>
         public int RadioButtonsPage => Array.FindIndex(_pages, p => p.At.Tiles >= 0);
 
@@ -136,6 +152,7 @@ namespace DSPRE.ROMFiles
                 ScreenSpots.Shift(_data, at, 1, (int)Math.Round(dx / (double)Tile), 32 - 4);
                 ScreenSpots.Shift(_data, at + 1, 1, (int)Math.Round(dy / (double)Tile), 24 - 4);
             }
+            _art[page]?.Compose(_data, b => AreaOf(page, b));
             if (StopsOf(page) == 0) return;
             for (int g = 0; g < _pages[page].At.Grids.Length; g++)
                 for (int i = 0; i < _pages[page].At.Grids[g].Count; i++)
@@ -148,9 +165,11 @@ namespace DSPRE.ROMFiles
                 }
         }
 
+        public bool CanResize(int page, int button) => _art[page] == null;
+
         public void Resize(int page, int button, int width, int height)
         {
-            if (MoveLocked(page, button) == null) TouchRects.Resize(_data, TouchAt(page, button), width, height);
+            if (MoveLocked(page, button) == null && CanResize(page, button)) TouchRects.Resize(_data, TouchAt(page, button), width, height);
         }
 
         public (double X, double Y) CursorCentre(int page, int stop) => (_data[EntryAt(page, stop) + 6], _data[EntryAt(page, stop) + 7]);
@@ -206,6 +225,7 @@ namespace DSPRE.ROMFiles
         {
             if (WhyNotWrite(bytes) is string why) throw new InvalidOperationException(why);
             _tables.Write(bytes);
+            foreach (ScreenTileArt art in _art) art?.Write(bytes);
         }
     }
 }

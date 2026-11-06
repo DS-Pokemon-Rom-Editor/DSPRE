@@ -40,7 +40,7 @@ namespace DSPRE.ROMFiles
             return TouchListButtons.Read(new[]
             {
                 new Page("Badge case", badges, s.Overlay, (int)s.Badges, Spots: sprites, Locked: FixedArt(0)),
-                new Page("Badge case without badges", new[] { badges[0] }, s.Overlay, (int)s.Closed, Locked: FixedArt(0)),
+                new Page("Lid closed", new[] { badges[0] }, s.Overlay, (int)s.Closed, Locked: FixedArt(0)),
             });
         }
 
