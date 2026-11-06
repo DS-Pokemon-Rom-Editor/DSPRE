@@ -60,14 +60,71 @@ namespace DSPRE.Avalonia.ViewModels.Text
         }
     }
 
+    /// <summary>A text code the game's printer handles, in DSPRE's spelling, with an example line from the game.</summary>
+    public sealed class SpecialCode
+    {
+        public string Code { get; }
+        public string What { get; }
+        public string Example { get; }
+        public bool HasExample => !string.IsNullOrEmpty(Example);
+        public string Note { get; }
+        public bool HasNote => !string.IsNullOrEmpty(Note);
+
+        public SpecialCode(string code, string what, string example, string note = null)
+        {
+            Code = code;
+            What = what;
+            Example = example;
+            Note = note;
+        }
+    }
+
     public sealed class StrVarHelpViewModel
     {
-        public string Title => "String buffer (STRVAR) reference";
+        public string Title => "Special variables";
         public string Subtitle => "For Diamond, Pearl, Platinum, HeartGold, and SoulSilver";
         public IReadOnlyList<StrVarHelpSection> Sections { get; }
+        public IReadOnlyList<SpecialCode> LineAndBox { get; }
+        public IReadOnlyList<SpecialCode> Look { get; }
+        public IReadOnlyList<SpecialCode> Placement { get; }
+        public IReadOnlyList<SpecialCode> TimingAndIcons { get; }
 
         public StrVarHelpViewModel()
         {
+            // pokeplatinum and pokeheartgold render_text.c: Diamond, Pearl and Platinum handle the same codes. HGSS adds the
+            // alignment codes and two box breaks.
+            bool hgss = RomInfo.GameFamily == RomInfo.GameFamilies.HGSS;
+            string HgssOnly() => hgss ? null : "HeartGold and SoulSilver only. Other games ignore it.";
+            LineAndBox = Array.AsReadOnly(new[]
+            {
+                new SpecialCode("\\n", "Next line.", "OUR FRIENDS LOOK\\n"),
+                new SpecialCode("\\r", "Waits for A, then clears the box and starts again at the top.", "{SIZE, 0, 200}“Gyaaah!!”{SIZE, 0, 100}\\r"),
+                new SpecialCode("\\f", "Waits for A, then scrolls the box up one line.", "TURTWIG,{CURSOR_X, 0, 70}GROTLE,{CURSOR_X, 0, 140}TORTERRA,\\f"),
+                new SpecialCode("{UNK_207, 0}", "Like \\r: waits for A and clears the box. A \\n right after it is skipped.", null, HgssOnly() ?? "Not used in the retail games."),
+                new SpecialCode("{UNK_208, 0}", "Like \\f: waits for A and scrolls one line. A \\n right after it is skipped.", null, HgssOnly() ?? "Not used in the retail games."),
+            });
+            Look = Array.AsReadOnly(new[]
+            {
+                new SpecialCode("{COLOR, 0, n}", "Text after it uses colour pair n of the box's palette row (colours 2n+1 and 2n+2). 0 is the normal colour.",
+                                "{COLOR, 0, 1}LINK WITH POKéMON RANGER{COLOR, 0, 0}."),
+                new SpecialCode("{SIZE, 0, n}", "200 doubles the letters. 100 sets them back to normal.", "{SIZE, 0, 200}“Gyaaah!!”{SIZE, 0, 100}"),
+            });
+            Placement = Array.AsReadOnly(new[]
+            {
+                new SpecialCode("{CURSOR_X, 0, n}", "The next letter starts n pixels from the box's left edge.", "TURTWIG,{CURSOR_X, 0, 70}GROTLE,{CURSOR_X, 0, 140}TORTERRA,"),
+                new SpecialCode("{CURSOR_Y, 0, n}", "The next letter starts n pixels from the box's top edge.", "{CURSOR_Y, 0, 24}The characters found scratched"),
+                new SpecialCode("{ALN_CENTER, 0}", "Centres the rest of the line in the box.", "{ALN_CENTER, 0}UNOWN Report", HgssOnly()),
+                new SpecialCode("{ALN_RIGHT, 0}", "Puts the rest of the line against the box's right edge.", "{ALN_RIGHT, 0}Lv. {STRVAR_1, 52, 1, 0}", HgssOnly()),
+            });
+            TimingAndIcons = Array.AsReadOnly(new[]
+            {
+                new SpecialCode("{PAUSE, 0, n}", "Waits n frames before the next letter. 60 frames is a second.", "1,{PAUSE, 0, 20} 2,{PAUSE, 0, 20} and...{PAUSE, 0, 20} Poof!"),
+                new SpecialCode("{YESNO, 0, n}", "Draws the icon that tells the player where to look: 0 touch the bottom screen, 1 look at the bottom screen, 2 answer on the top screen, 3 look at the top screen.",
+                                "Use next Pokémon?{YESNO, 0, 0}"),
+                new SpecialCode("{WAIT, 0, n}", "Plays sound or animation n on the screen showing the text. To wait, use PAUSE.",
+                                "Booted up a TM.{WAIT, 0, 3}{WAIT, 0, 4}"),
+            });
+
             Sections = Array.AsReadOnly(new[]
             {
                 new StrVarHelpSection(

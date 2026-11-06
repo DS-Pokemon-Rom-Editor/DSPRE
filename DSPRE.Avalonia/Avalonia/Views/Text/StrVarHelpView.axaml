@@ -11,16 +11,39 @@
     <vm:StrVarHelpViewModel/>
   </Design.DataContext>
 
+  <Window.DataTemplates>
+    <DataTemplate x:DataType="vm:SpecialCode">
+      <Border Padding="10" Margin="0,0,0,8" CornerRadius="4"
+              Background="{DynamicResource Editor.PanelBg}"
+              BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+        <StackPanel Spacing="4">
+          <SelectableTextBlock Text="{Binding Code}" FontFamily="Consolas, monospace" FontWeight="SemiBold"/>
+          <TextBlock Text="{Binding What}" TextWrapping="Wrap"/>
+          <TextBlock Text="{Binding Note}" IsVisible="{Binding HasNote}" TextWrapping="Wrap"
+                     FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+          <TextBlock Text="From the game" IsVisible="{Binding HasExample}" FontSize="12" Margin="0,4,0,0"
+                     Foreground="{DynamicResource Editor.Subtle}"/>
+          <SelectableTextBlock Text="{Binding Example}" IsVisible="{Binding HasExample}"
+                               FontFamily="Consolas, monospace" TextWrapping="Wrap"/>
+        </StackPanel>
+      </Border>
+    </DataTemplate>
+  </Window.DataTemplates>
+
   <DockPanel Margin="12">
     <Button DockPanel.Dock="Bottom" Content="Close" Click="Close_Click"
             HorizontalAlignment="Right" Width="90" Margin="0,10,0,0"
             IsDefault="True" IsCancel="True"/>
 
+    <StackPanel DockPanel.Dock="Top" Spacing="2" Margin="0,0,0,8">
+      <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="SemiBold"/>
+      <TextBlock Text="{Binding Subtitle}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+    </StackPanel>
+
+    <TabControl>
+      <TabItem Header="STRVAR">
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-      <StackPanel Spacing="8">
-        <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="SemiBold"/>
-        <TextBlock Text="{Binding Subtitle}" FontSize="12"
-                   Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,8"/>
+      <StackPanel Spacing="8" Margin="0,8,0,0">
 
         <ItemsControl ItemsSource="{Binding Sections}">
           <ItemsControl.ItemTemplate>
@@ -88,5 +111,27 @@
         </ItemsControl>
       </StackPanel>
     </ScrollViewer>
+      </TabItem>
+      <TabItem Header="Line and box">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding LineAndBox}" Margin="0,8,0,0"/>
+        </ScrollViewer>
+      </TabItem>
+      <TabItem Header="Colour and size">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding Look}" Margin="0,8,0,0"/>
+        </ScrollViewer>
+      </TabItem>
+      <TabItem Header="Placement">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding Placement}" Margin="0,8,0,0"/>
+        </ScrollViewer>
+      </TabItem>
+      <TabItem Header="Timing and icons">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding TimingAndIcons}" Margin="0,8,0,0"/>
+        </ScrollViewer>
+      </TabItem>
+    </TabControl>
   </DockPanel>
 </Window>

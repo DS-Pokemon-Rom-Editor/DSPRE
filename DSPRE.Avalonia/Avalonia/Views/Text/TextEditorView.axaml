@@ -29,8 +29,8 @@
         <CheckBox Content="Hex line numbers" IsChecked="{Binding HexNumbering}" VerticalAlignment="Center"/>
         <CheckBox Content="Message box" IsChecked="{Binding ShowPreview}" VerticalAlignment="Center"
                   ToolTip.Tip="Show the selected line in the game's message box."/>
-        <Button Content="STRVAR help" Click="StrVarHelp_Click"
-                ToolTip.Tip="How to put names and numbers into a message, with examples"/>
+        <Button Content="Special variables" Click="StrVarHelp_Click"
+                ToolTip.Tip="Codes for names, numbers, line breaks, colour, size, placement and timing"/>
     </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Top" IsVisible="{Binding HasHgEngineNote}"

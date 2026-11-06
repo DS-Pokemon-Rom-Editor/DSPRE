@@ -9,7 +9,7 @@ namespace DSPRE.Avalonia
                 S("toolbar", "Archives", "Pick, add or remove an archive, or import and export one."),
                 S("name:LinesGrid", "Lines", "Double-click a line to edit it. Scripts use its number."),
                 S("name:LineButtons", "Adding lines", "Add, remove or move lines."),
-                S("toolbar", "Message box", "Shows the line in the game's box. STRVAR help lists the codes."),
+                S("toolbar", "Message box", "Shows the line in the game's box, and Special variables lists the codes."),
                 S("name:ReplacePanel", "Search and replace", "Search this archive or all of them. Double-click a result to go there."),
                 S(null, "Shortcuts", "Enter searches. Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 

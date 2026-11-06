@@ -117,7 +117,8 @@ namespace DSPRE.ROMFiles
                 case 28: return "STONE";
                 case 39: return "RIBBON";
                 default:
-                    if (kind >= 50 && kind <= 55) return "0";
+                    // A sample count: previews have no save behind them, and 1 reads as a real amount.
+                    if (kind >= 50 && kind <= 55) return "1";
                     return scripts != null && scripts.Count > 0
                         ? $"strvar {buffer} (script {scripts[0]})"
                         : $"strvar {buffer}";

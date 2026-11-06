@@ -57,6 +57,8 @@ namespace DSPRE.ROMFiles
 
             // A compressed trainer name is stored as {TRAINER_NAME:...}; the game shows just the name.
             text = DSPRE.TextConverter.GetSimpleTrainerName(text);
+            // A message can end by opening a yes/no box, which prints nothing.
+            text = System.Text.RegularExpressions.Regex.Replace(text, @"\{YESNO[^}]*\}", "");
 
             List<(Token token, string value)> parts = Tokenise(text);
 
