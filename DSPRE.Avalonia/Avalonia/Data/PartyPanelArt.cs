@@ -58,6 +58,32 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>
+        /// Moves the HP bar strip in the lead and normal panels and fills its old place with the egg blank tile and that tile's palette.
+        /// Null on failure, with the reason in why.
+        /// </summary>
+        public static byte[] MoveStrip(byte[] nscr, int height, (int Column, int Row) from, (int Column, int Row) to, int length, int blank,
+                                       out string why)
+        {
+            why = null;
+            int map = NitroBgCodec.Find(nscr ?? new byte[0], "NRCS", 0);
+            if (map < 0) { why = "The panel art couldn't be read."; return null; }
+            int widthTiles = NitroBgCodec.U16(nscr, map + 8) / 8, heightTiles = NitroBgCodec.U16(nscr, map + 10) / 8;
+            int entries = map + 0x14;
+            if (widthTiles < 32 || 2 * height > heightTiles) { why = "The panel art isn't laid out the way the game reads it."; return null; }
+            byte[] result = (byte[])nscr.Clone();
+            ushort At(int x, int y) => (ushort)NitroBgCodec.U16(result, entries + (y * widthTiles + x) * 2);
+            void Put(int x, int y, ushort e) { result[entries + (y * widthTiles + x) * 2] = (byte)e; result[entries + (y * widthTiles + x) * 2 + 1] = (byte)(e >> 8); }
+            for (int block = 0; block < 2; block++)
+            {
+                int top = block * height;
+                ushort[] strip = Enumerable.Range(0, length).Select(i => At(from.Column + i, top + from.Row)).ToArray();
+                for (int i = 0; i < length; i++) Put(from.Column + i, top + from.Row, (ushort)(strip[i] & 0xF000 | blank));
+                for (int i = 0; i < length; i++) Put(to.Column + i, top + to.Row, strip[i]);
+            }
+            return result;
+        }
+
+        /// <summary>
         /// The background (file 17) with the panel area cleared to its most used tile. Rows from <paramref name="rows"/> down, the message
         /// box frame, are kept.
         /// </summary>

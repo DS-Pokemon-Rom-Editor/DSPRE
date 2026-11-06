@@ -67,10 +67,33 @@ namespace DSPRE.ROMFiles
             if (layout._regions.Any(r => r.Offset + r.Length > arm9.Length)) return null;
             PartyPanelSizePatch.Size patched = PartyPanelSizePatch.Read();
             layout.Resizable = patched != null;
-            layout.Size = patched ?? PartyPanelSizePatch.Original;
+            layout.Size = patched ?? (PtPartyStrip.Read() is (int column, int row)
+                ? PartyPanelSizePatch.Original with { StripColumn = column, StripRow = row } : PartyPanelSizePatch.Original);
             layout._data = layout._regions.SelectMany(r => arm9.Skip((int)r.Offset).Take(r.Length)).ToArray();
             if (layout.ReadHpBar(arm9) is int length) (layout.HpBarLength, layout.HpBarLengthEditable) = (length, true);
             return layout.Sane(arm9) ? layout : null;
+        }
+
+        /// <summary>Where every HP bar sits in its panel, or null when they don't all sit the same way.</summary>
+        /// <param name="bar">A Pokémon's HP bar spot, null when it has none.</param>
+        public (int X, int Y)? SharedBarSpot(Func<int, (int X, int Y)?> bar)
+        {
+            List<(int X, int Y)?> spots = Enumerable.Range(0, PartySize).Select(n =>
+            {
+                (int px, int py) = Panel(n);
+                return bar(n) is (int x, int y) ? (x - px, y - py) : ((int, int)?)null;
+            }).Distinct().ToList();
+            return spots.Count == 1 ? spots[0] : null;
+        }
+
+        /// <summary>The strip's column and row for a bar at this spot in its panel: the bar starts after the "HP" label.</summary>
+        public (int Column, int Row) StripUnder((int X, int Y) bar) =>
+            (bar.X - (Resizable && Size.StripLength < 3 ? 0 : PtPartyStrip.BarOffset), bar.Y);
+
+        /// <summary>Without the size patch only Platinum's strip can move, because its place is in arm9.</summary>
+        public void MoveStrip(int column, int row)
+        {
+            if (!Resizable) Size = Size with { StripColumn = column, StripRow = row };
         }
 
         // Null when the code there isn't movs r2, #length.
@@ -293,7 +316,12 @@ namespace DSPRE.ROMFiles
             if (bytes[Length - 1] != GameHpBarLength && !HpBarLengthEditable) return "This game's HP bar length can't be changed.";
             PartyPanelSizePatch.Size size = PartyPanelSizePatch.FromBytes(bytes.Skip(_data.Length).Take(6).ToArray());
             if (size == PartyPanelSizePatch.Original) return null;
-            if (PartyPanelSizePatch.Read() == null) return "The panel size patch isn't applied, so the panels can't change size.";
+            if (PartyPanelSizePatch.Read() == null)
+            {
+                // Platinum's strip is written by PtPartyStrip.
+                bool stripOnly = size with { StripColumn = 0, StripRow = 0 } == PartyPanelSizePatch.Original with { StripColumn = 0, StripRow = 0 };
+                return stripOnly && PtPartyStrip.Read() != null ? null : "The panel size patch isn't applied, so the panels can't change size.";
+            }
             return PartyPanelSizePatch.WhyNotSize(size);
         }
 

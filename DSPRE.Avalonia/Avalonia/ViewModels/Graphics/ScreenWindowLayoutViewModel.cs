@@ -45,7 +45,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (screen == "party") _panels = PartyPanelLayout.Read();
             _windowTables = new PendingArchiveWrites.Target("windows", _layout.FileBytes, _layout.WriteFile);
             if (_panels != null) _panelTables = new PendingArchiveWrites.Target("panels", _panels.FileBytes, _panels.WriteFile);
+            if (_panels != null && !_panels.Resizable && PtPartyStrip.Read() is (int column, int row))
             {
+                _ptStrip = _savedPtStrip = (column, row);
+                _ptStripTable = new PendingArchiveWrites.Target("strip", () => PtPartyStrip.Read() is (int c, int r) ? new[] { (byte)c, (byte)r } : null,
+                                                                 b => PtPartyStrip.Write(b[0], b[1]));
             }
             _bands = _text?.BandsOf?.Invoke() ?? Array.Empty<GameTextScreens.ScreenBand>();
             _swaps = _text?.SwapsOf?.Invoke() ?? Array.Empty<GameTextScreens.ScreenSwap>();
@@ -94,7 +98,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             if (_pending.Read(_windowTables) is byte[] windows) _layout.FromBytes(windows);
             if (_panelTables != null && _pending.Read(_panelTables) is byte[] panels) _panels.FromBytes(panels);
+            if (_ptStripTable != null && _pending.Read(_ptStripTable) is byte[] strip)
             {
+                _ptStrip = (strip[0], strip[1]);
+                _panels.MoveStrip(strip[0], strip[1]);
             }
             if (_fontTable != null && _pending.Read(_fontTable) is byte[] fonts) _fonts = PartyFontPatch.FontsIn(fonts, _layout.Windows);
             if (_cursorTable != null && _pending.Read(_cursorTable) is byte[] cursor) _flow.FromBytes(cursor);
@@ -113,6 +120,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 graphics?.Invoke(new ScriptNarc(PartyGraphics));
                 _pending.Stage(_windowTables, _layout.ToBytes());
                 if (_panelTables != null) _pending.Stage(_panelTables, _panels.ToBytes());
+                if (_ptStripTable != null) _pending.Stage(_ptStripTable, new[] { (byte)_ptStrip.Column, (byte)_ptStrip.Row });
                 // The font table is keyed by where each window is, so it follows every move.
                 if (_fontTable != null) _pending.Stage(_fontTable, PartyFontPatch.Table(_layout.Windows, _fonts));
                 if (_cursorTable != null) _pending.Stage(_cursorTable, _flow.ToBytes());
@@ -761,16 +769,56 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             y = Math.Clamp(y, w.MinY, Math.Min(w.MaxY, ScreenWindowLayout.MapHeight - w.Height));
             int dx = x - w.X, dy = y - w.Y;
             if (dx == 0 && dy == 0) return;
+            bool bar = w.Group == SingleGroup && w.Part == "HP bar";
+            List<(ScreenWindowLayout.Window Window, int X, int Y)> before = bar ? _layout.Windows.Select(o => (o, o.X, o.Y)).ToList() : null;
             foreach (ScreenWindowLayout.Window moved in Following(w))
             {
                 if (moved.CanMoveAcross) moved.X = Math.Clamp(moved.X + dx, moved.MinX, Math.Min(moved.MaxX, ScreenWindowLayout.MapColumns - moved.Width));
                 if (moved.CanMoveDown) moved.Y = Math.Clamp(moved.Y + dy, moved.MinY, Math.Min(moved.MaxY, ScreenWindowLayout.MapHeight - moved.Height));
                 FollowLabel(moved);
             }
+            Carry(w, w.X - fromX, w.Y - fromY);
+            // A bar the strip can't follow goes back.
+            if (bar && !FollowStrip())
+                foreach ((ScreenWindowLayout.Window o, int ox, int oy) in before) (o.X, o.Y) = (ox, oy);
             foreach (ScreenWindowRow shown in Windows) shown.Refresh();
             Warn();
             Raise(nameof(HasUnsavedChanges));
             _ = RedrawAsync();
+        }
+
+        private Action<ScriptNarc> _stripArt;
+        // Without the size patch, Platinum's strip position is written into arm9.
+        private readonly PendingArchiveWrites.Target _ptStripTable;
+        private (int Column, int Row) _ptStrip, _savedPtStrip;
+
+        // The HP bar strip is panel art all six panels share, so it follows once every bar sits the same way in its panel.
+        // False when the strip can't go where the bars are.
+        private bool FollowStrip()
+        {
+            if (_ptStripTable != null) return FollowPtStrip();
+            if (_panels == null || !_panels.Resizable || _members == null)
+            {
+                StatusText = "The HP bar frame needs the party panel size patch to move.";
+                return false;
+            }
+            if (BarSpot() is not (int, int) spot)
+            {
+                StatusText = "All six HP bars need the same spot in their panels.";
+                return true;
+            }
+            PartyPanelSizePatch.Size now = _panels.Size;
+            (int column, int row) = _panels.StripUnder(spot);
+            PartyPanelSizePatch.Size size = now with { StripColumn = column, StripRow = row };
+            if (size == now) return true;
+            if (PartyPanelSizePatch.WhyNotSize(size) is string why) { StatusText = why; return false; }
+            byte[] art = PartyPanelArt.Build(Saved(_members.PanelArt), _savedSize ?? now, size, out string failed);
+            if (art == null) { StatusText = failed; return false; }
+            StatusText = "";
+            _panels.Resize(size);
+            _stripArt = narc => narc.Put(_members.PanelArt, art);
+            RaiseSize();
+            return true;
         }
 
         /// <summary>Never bigger than in the ROM.</summary>
@@ -821,7 +869,33 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (!ReferenceEquals(other, w) && other.Group == w.Group && other.Pokemon > 0 && other.Part == w.Part) yield return other;
         }
 
-        public void Commit() => Record();
+        private (int X, int Y)? BarSpot() => _panels.SharedBarSpot(n =>
+            _layout.Windows.FirstOrDefault(o => o.Group == SingleGroup && o.Pokemon == n + 1 && o.Part == "HP bar") is { } bar ? (bar.X, bar.Y) : null);
+
+        private bool FollowPtStrip()
+        {
+            if (BarSpot() is not (int, int) spot) { StatusText = "All six HP bars need the same spot in their panels."; return true; }
+            (int column, int row) = _panels.StripUnder(spot);
+            if ((column, row) == _ptStrip) return true;
+            if (PtPartyStrip.WhyNot(column, row) is string why) { StatusText = why; return false; }
+            // Built from the saved art, where the strip is still at its saved spot.
+            int member = RomLocator.PtPartyStripSites.PanelArt;
+            byte[] art = PartyPanelArt.MoveStrip(Saved(member), PtPartyStrip.PanelHeight, _savedPtStrip, (column, row), PtPartyStrip.Length,
+                                                 RomLocator.PartyStripTile, out string failed);
+            if (art == null) { StatusText = failed; return false; }
+            StatusText = "";
+            _ptStrip = (column, row);
+            _panels.MoveStrip(column, row);
+            _stripArt = narc => narc.Put(member, art);
+            return true;
+        }
+
+        public void Commit()
+        {
+            Action<ScriptNarc> art = _stripArt;
+            _stripArt = null;
+            Record(art);
+        }
 
         private void Refresh()
         {
@@ -887,6 +961,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
             _savedLayout = null;
             _savedSize = _panels?.Size;
+            _savedPtStrip = _ptStrip;
             KeepBandRows();
             KeepSwapSpots();
             ScreenWindowLayouts.Forget(_screen);

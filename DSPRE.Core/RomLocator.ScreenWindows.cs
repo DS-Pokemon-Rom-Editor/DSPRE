@@ -506,6 +506,26 @@ namespace DSPRE
 
         public static PartyHpBarSites PartyHpBarSites => Here(PartyHpBarSitesIn);
 
+        // pokeplatinum party_menu main.c DrawMemberPanel and PartyMenu_GetHealthbarTilemap, context_menu.c UpdateSlotHealthbar.
+        // Measured on every Platinum dump.
+        public static PtPartyStripSites PtPartyStripSitesIn(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English => PtStrip(0x7F2B4, 0x7F248, 0x8444E),
+                GameLanguages.French or GameLanguages.German or GameLanguages.Italian or GameLanguages.Spanish => PtStrip(0x7F354, 0x7F2E8, 0x844EE),
+                GameLanguages.Japanese => PtStrip(0x7EB84, 0x7EB18, 0x83D0A),
+                GameLanguages.Korean => PtStrip(0x7F7A0, 0x7F734, 0x8493A),
+                _ => null,
+            },
+            _ => null,
+        };
+
+        private static PtPartyStripSites PtStrip(uint egg, uint getter, uint swap) =>
+            new PtPartyStripSites(egg, getter, new[] { swap + 0xC, swap + 0x12, swap + 0x36, swap + 0x48 });
+
+        public static PtPartyStripSites PtPartyStripSites => Here(PtPartyStripSitesIn);
+
         // pokeheartgold a/0/2/1. The background's message box frame starts on row 18.
         public static PartyGraphicsMembers PartyGraphicsMembersIn(GameVersions game, GameLanguages language, int revision) => game switch
         {

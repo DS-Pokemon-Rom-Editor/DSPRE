@@ -576,6 +576,13 @@ namespace DSPRE
         /// </summary>
         public sealed record PartyHpBarSites(uint Length);
 
+        /// <summary>
+        /// Where arm9 holds Platinum's HP bar strip: two <c>adds Rd, Rn, #imm3</c> for the egg blank (row, then column 18 bytes on),
+        /// a <c>movs</c> and <c>lsls</c> in the health bar getter, and four <c>adds #imm8</c> after a switch.
+        /// </summary>
+        /// <param name="PanelArt">The party graphics member holding the panels (pokeplatinum PartyMenu_LoadMemberPanelTilemaps).</param>
+        public sealed record PtPartyStripSites(uint EggRow, uint Getter, uint[] Swap, int PanelArt = 22);
+
         /// <summary>Party graphics members a panel resize rebuilds, and how many background rows sit above the message box.</summary>
         public sealed record PartyGraphicsMembers(int CursorCells, int CursorTiles, int PanelArt, int Background, int PanelRows);
 
