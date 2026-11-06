@@ -23,6 +23,12 @@ namespace DSPRE
             StarterSpecies, StarterScene, StarterSceneInner, StarterCries, PokegearRematches,
             RockSmashItemTables, TrainerClassMetadataGenderHook, TrainerClassMetadataEyeContactHook, FrontierBrainTable, PlatPatchesItemFileIdHook, PlatPatchesItemIsTmHmHook, AiBackportCheck, AiBackportOutdatedCheck, DynamicHeadersInit, MatrixExpansionCode,
             BugContestPrizes, ShinyCheck, PokedexTypeAnimation, PokedexTypeBoxAnimation, SideEffectSubscriptCount, SideEffectSubscriptPointer,
+            SummaryBottomPaletteCall, SummaryBottomBanks, SummaryBottomColourMode,
+            PokedexPaletteLoader, PokedexTileLoader, PokedexBottomBanks, PokedexBottomColourMode,
+            PartyBottomPaletteCall, PartyBottomBanks, PartyBottomColourMode,
+            BagBottomPaletteCall, BagBottomBanks, BagBottomColourMode, BagPocketColoursCall, BagButtonDraws, BagSpriteTemplates,
+            PcBottomPaletteCall, PcCompareBottomPaletteCall, PcBottomBanks, PcBottomColourModes,
+            NamingBottomPaletteCall, NamingBottomBanks, NamingBottomColourMode, NamingBottomTileLoad, NamingSpriteWindows,
         }
 
         /// <summary>arm9 when <see cref="Overlay"/> is -1, otherwise that overlay; one or more file offsets.</summary>
@@ -128,6 +134,29 @@ namespace DSPRE
             [Thing.PokedexTypeBoxAnimation] = PokedexTypeBoxAnimation,
             [Thing.SideEffectSubscriptCount] = SideEffectSubscriptCount,
             [Thing.SideEffectSubscriptPointer] = SideEffectSubscriptPointer,
+            [Thing.SummaryBottomPaletteCall] = SummaryBottomPaletteCall,
+            [Thing.SummaryBottomBanks] = SummaryBottomBanks,
+            [Thing.SummaryBottomColourMode] = SummaryBottomColourMode,
+            [Thing.PokedexPaletteLoader] = PokedexPaletteLoader,
+            [Thing.PokedexTileLoader] = PokedexTileLoader,
+            [Thing.PokedexBottomBanks] = PokedexBottomBanks,
+            [Thing.PokedexBottomColourMode] = PokedexBottomColourMode,
+            [Thing.PartyBottomPaletteCall] = PartyBottomPaletteCall,
+            [Thing.PartyBottomBanks] = PartyBottomBanks,
+            [Thing.PartyBottomColourMode] = PartyBottomColourMode,
+            [Thing.BagBottomPaletteCall] = BagBottomPaletteCall,
+            [Thing.BagBottomBanks] = BagBottomBanks,
+            [Thing.BagBottomColourMode] = BagBottomColourMode,
+            [Thing.BagPocketColoursCall] = BagPocketColoursCall,
+            [Thing.PcBottomPaletteCall] = PcBottomPaletteCall,
+            [Thing.PcCompareBottomPaletteCall] = PcCompareBottomPaletteCall,
+            [Thing.PcBottomBanks] = PcBottomBanks,
+            [Thing.PcBottomColourModes] = PcBottomColourModes,
+            [Thing.NamingBottomPaletteCall] = NamingBottomPaletteCall,
+            [Thing.NamingBottomBanks] = NamingBottomBanks,
+            [Thing.NamingBottomColourMode] = NamingBottomColourMode,
+            [Thing.NamingBottomTileLoad] = NamingBottomTileLoad,
+            [Thing.NamingSpriteWindows] = NamingSpriteWindows,
         };
 
         /// <summary>Where <paramref name="thing"/> is in a given dump, whether or not it is the loaded one.</summary>
@@ -137,6 +166,11 @@ namespace DSPRE
         public static Spot Where(Thing thing) => RomID == null ? null : WhereIn(thing, GameVersion, GameLanguage, RomRevision);
 
         public static string PathOf(Spot spot) => spot.Overlay < 0 ? Arm9Path : OverlayUtils.GetPath(spot.Overlay);
+        /// <summary>Where the spot's file loads in RAM.</summary>
+        public static uint RamBase(Spot spot) => spot.Overlay < 0 ? ARM9.Address : OverlayUtils.OverlayTable.GetRAMAddress(spot.Overlay);
+
+        /// <summary>The RAM address of the spot's first offset.</summary>
+        public static uint RamAddressOf(Spot spot) => RamBase(spot) + (uint)spot.Offset;
 
         /// <summary>The known dumps <paramref name="thing"/> has a place in, from the same switch <see cref="Where"/> reads.</summary>
         public static List<(string id, int rev)> WorksOn(Thing thing) =>

@@ -18,6 +18,8 @@ namespace DSPRE.Avalonia.Data
             public int Priority, CharBase, ScrollX, ScrollY;
             public bool Visible = true;
             public readonly ushort[] Map = new ushort[MapSide * MapSide];
+            // 16 palettes of 256 colours for a layer with 256-colour tiles, or null for 16-colour tiles.
+            public ushort[] Extended;
         }
 
         // A BG engine can place characters up to 256 KB in.
@@ -34,6 +36,18 @@ namespace DSPRE.Avalonia.Data
             if (_layers[bg] != null) (_layers[bg].ScrollX, _layers[bg].ScrollY) = (x, y);
         }
 
+        /// <summary>Gives a layer 256-colour tiles that read these 16 extended palettes of 256 colours.</summary>
+        public void UseExtendedPalettes(int bg, ushort[] palettes)
+        {
+            if (_layers[bg] != null) _layers[bg].Extended = palettes;
+        }
+
+        /// <summary>Gives a layer 256-colour tiles that read the whole standard palette, as an affine layer does.</summary>
+        public void UseWholePalette(int bg)
+        {
+            if (_layers[bg] != null) _layers[bg].Extended = _colours;
+        }
+
         public void SetVisible(int bg, bool visible)
         {
             if (_layers[bg] != null) _layers[bg].Visible = visible;
@@ -43,6 +57,9 @@ namespace DSPRE.Avalonia.Data
         public void LoadTiles(int charBase, byte[] ncgr, int tileOffset = 0)
         {
             byte[] pixels = NitroBgCodec.ReadCharacters(ncgr);
+            // A layer with extended palettes takes a 256-colour drawing unchanged.
+            if (pixels.Length == 0 && ncgr != null && NitroBgCodec.ReadDrawingHeader(ncgr) is { EightBit: true } wide)
+                pixels = ncgr.AsSpan(wide.DataAt, Math.Max(0, Math.Min(wide.DataSize, ncgr.Length - wide.DataAt))).ToArray();
             int dst = charBase + tileOffset * 32;
             int n = Math.Min(pixels.Length, _vram.Length - dst);
             if (n > 0 && dst >= 0) Array.Copy(pixels, 0, _vram, dst, n);

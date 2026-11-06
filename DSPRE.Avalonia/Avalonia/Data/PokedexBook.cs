@@ -17,6 +17,23 @@ namespace DSPRE.Avalonia.Data
         {
             _sample = new DexSample(species);
             _pages = DexPageLanguages.ForLoadedRom();
+            if (GameFamily == GameFamilies.Plat && PokedexBottomPalettes.Twins is (Dictionary<int, int> drawings, Dictionary<int, int> colours))
+                foreach (ScreenPage page in _pages) UseTwins(page.Sub, drawings, colours);
+        }
+
+        // The bottom screen palettes patch loads 256-colour copies into sub BG2 and twins of the bottom palettes into its extended palettes.
+        private static void UseTwins(ScreenLayout screen, Dictionary<int, int> drawings, Dictionary<int, int> colours)
+        {
+            if (screen == null) return;
+            screen.ExtendedPalettes = screen.Palettes.Where(l => colours.ContainsKey(l.File))
+                .Select(l => new ScreenPaletteLoad { File = colours[l.File], FromRow = l.FromRow, ToRow = l.ToRow, Rows = l.Rows, When = l.When }).ToList();
+            ScreenPaletteLoad whole = screen.ExtendedPalettes.FirstOrDefault(l => l.Rows == 16) ?? screen.ExtendedPalettes.FirstOrDefault();
+            foreach (ScreenBg bg in screen.Bgs.Where(b => b.Bg == 2 && drawings.ContainsKey(b.Drawing)))
+            {
+                bg.Drawing = drawings[bg.Drawing];
+                bg.ExtendedColours = whole?.File ?? -1;
+                bg.TileLimit = PokedexBottomPalettes.TileLimit;
+            }
         }
 
         public override string Title => "Pokédex graphics";
@@ -74,7 +91,20 @@ namespace DSPRE.Avalonia.Data
                 Habitat = sample.Habitat,
                 Size = sample.SizeInfo,
                 Digit = sample.SearchDigit,
+                SeqOf = CategoryBoxSeq(),
             };
+        }
+
+        // The category box shares the type icons' animation file. Type expansions move it to another animation.
+        private static Func<ScreenSprite, int> CategoryBoxSeq()
+        {
+            int box = PokedexTypeAnimations.Box();
+            if (box == PokedexTypeAnimations.RetailBox) return null;
+            HashSet<(DirNames?, int, int)> typeFiles = DexPageLanguages.ForLoadedRom()
+                .SelectMany(p => p.Main.Sprites.Concat(p.Sub.Sprites))
+                .Where(s => s.TypeSlot > 0 && s.TypeDrawing < 0)
+                .Select(s => (s.Archive, s.Cells, s.Anim)).ToHashSet();
+            return s => s.TypeSlot == 0 && s.Seq == PokedexTypeAnimations.RetailBox && typeFiles.Contains((s.Archive, s.Cells, s.Anim)) ? box : s.Seq;
         }
 
         /// <summary>The game's size comparison page: DP and Platinum's height page, HGSS's size page.</summary>

@@ -2754,5 +2754,435 @@ namespace DSPRE
             _ => null,
         };
 
+        /// <summary>The summary screen's BL that loads its bottom palette when the screen sets up its backgrounds.</summary>
+        private static Spot SummaryBottomPaletteCall(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English when revision == 10 => Arm9(0x8C862),   // Europe
+                GameLanguages.English => Arm9(0x8C862),   // US, and any English revision not listed
+                GameLanguages.Japanese => Arm9(0x8BFEA),
+                GameLanguages.French => Arm9(0x8C902),
+                GameLanguages.German => Arm9(0x8C902),
+                GameLanguages.Italian => Arm9(0x8C902),
+                GameLanguages.Spanish => Arm9(0x8C902),
+                GameLanguages.Korean => Arm9(0x8D2FE),
+                _ => null,
+            },
+            GameVersions.HeartGold => language switch
+            {
+                GameLanguages.English when revision == 10 => Arm9(0x88828),   // Europe
+                GameLanguages.English => Arm9(0x88828),   // US, and any English revision not listed
+                GameLanguages.Japanese => Arm9(0x88148),
+                GameLanguages.French => Arm9(0x88828),
+                GameLanguages.German => Arm9(0x88828),
+                GameLanguages.Italian => Arm9(0x88828),
+                GameLanguages.Spanish => Arm9(0x88820),
+                GameLanguages.Korean => Arm9(0x88EEC),
+                _ => null,
+            },
+            GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.English when revision == 10 => Arm9(0x88828),   // Europe
+                GameLanguages.English => Arm9(0x88828),   // US, and any English revision not listed
+                GameLanguages.Japanese => Arm9(0x88148),
+                GameLanguages.French => Arm9(0x88828),
+                GameLanguages.German => Arm9(0x88828),
+                GameLanguages.Italian => Arm9(0x88828),
+                GameLanguages.Spanish => Arm9(0x88828),
+                GameLanguages.Korean => Arm9(0x88EE4),
+                _ => null,
+            },
+            _ => null,
+        };
+
+        /// <summary>The bottom screen's BG extended palette bank in the summary screen's VRAM bank table.</summary>
+        private static Spot SummaryBottomBanks(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English when revision == 10 => Arm9(0xF40F0),   // Europe
+                GameLanguages.English => Arm9(0xF40F0),   // US, and any English revision not listed
+                GameLanguages.Japanese => Arm9(0xF3798),
+                GameLanguages.French => Arm9(0xF4178),
+                GameLanguages.German => Arm9(0xF4148),
+                GameLanguages.Italian => Arm9(0xF410C),
+                GameLanguages.Spanish => Arm9(0xF4184),
+                GameLanguages.Korean => Arm9(0xF4C6C),
+                _ => null,
+            },
+            GameVersions.HeartGold => language switch
+            {
+                GameLanguages.English when revision == 10 => Arm9(0x10399C),   // Europe
+                GameLanguages.English => Arm9(0x10399C),   // US, and any English revision not listed
+                GameLanguages.Japanese => Arm9(0x103134),
+                GameLanguages.French => Arm9(0x103980),
+                GameLanguages.German => Arm9(0x103950),
+                GameLanguages.Italian => Arm9(0x103914),
+                GameLanguages.Spanish => Arm9(0x103984),
+                GameLanguages.Korean => Arm9(0x10413C),
+                _ => null,
+            },
+            GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.English when revision == 10 => Arm9(0x10399C),   // Europe
+                GameLanguages.English => Arm9(0x10399C),   // US, and any English revision not listed
+                GameLanguages.Japanese => Arm9(0x103134),
+                GameLanguages.French => Arm9(0x103980),
+                GameLanguages.German => Arm9(0x103950),
+                GameLanguages.Italian => Arm9(0x103914),
+                GameLanguages.Spanish => Arm9(0x10398C),
+                GameLanguages.Korean => Arm9(0x104134),
+                _ => null,
+            },
+            _ => null,
+        };
+
+        /// <summary>The colour mode byte of the summary screen's bottom background template.</summary>
+        private static Spot SummaryBottomColourMode(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English when revision == 10 => Arm9(0xF4069),   // Europe
+                GameLanguages.English => Arm9(0xF4069),   // US, and any English revision not listed
+                GameLanguages.Japanese => Arm9(0xF3711),
+                GameLanguages.French => Arm9(0xF40F1),
+                GameLanguages.German => Arm9(0xF40C1),
+                GameLanguages.Italian => Arm9(0xF4085),
+                GameLanguages.Spanish => Arm9(0xF40FD),
+                GameLanguages.Korean => Arm9(0xF4BE5),
+                _ => null,
+            },
+            GameVersions.HeartGold => language switch
+            {
+                GameLanguages.English when revision == 10 => Arm9(0x103969),   // Europe
+                GameLanguages.English => Arm9(0x103969),   // US, and any English revision not listed
+                GameLanguages.Japanese => Arm9(0x103101),
+                GameLanguages.French => Arm9(0x10394D),
+                GameLanguages.German => Arm9(0x10391D),
+                GameLanguages.Italian => Arm9(0x1038E1),
+                GameLanguages.Spanish => Arm9(0x103951),
+                GameLanguages.Korean => Arm9(0x104109),
+                _ => null,
+            },
+            GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.English when revision == 10 => Arm9(0x103969),   // Europe
+                GameLanguages.English => Arm9(0x103969),   // US, and any English revision not listed
+                GameLanguages.Japanese => Arm9(0x103101),
+                GameLanguages.French => Arm9(0x10394D),
+                GameLanguages.German => Arm9(0x10391D),
+                GameLanguages.Italian => Arm9(0x1038E1),
+                GameLanguages.Spanish => Arm9(0x103959),
+                GameLanguages.Korean => Arm9(0x104101),
+                _ => null,
+            },
+            _ => null,
+        };
+
+        /// <summary>The party screen's BL that loads the bottom palette (subscreen.NCLR, one row).</summary>
+        private static Spot PartyBottomPaletteCall(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English when revision == 10 => Arm9(0x7EC88),   // Europe
+                GameLanguages.English => Arm9(0x7EC88),   // US, and any English revision not listed
+                GameLanguages.Japanese => Arm9(0x7E558),
+                GameLanguages.French => Arm9(0x7ED28),
+                GameLanguages.German => Arm9(0x7ED28),
+                GameLanguages.Italian => Arm9(0x7ED28),
+                GameLanguages.Spanish => Arm9(0x7ED28),
+                GameLanguages.Korean => Arm9(0x7F174),
+                _ => null,
+            },
+            _ => null,
+        };
+
+        /// <summary>The bottom screen's BG extended palette bank in the party screen's VRAM bank table.</summary>
+        private static Spot PartyBottomBanks(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English when revision == 10 => Arm9(0xF1CDC),   // Europe
+                GameLanguages.English => Arm9(0xF1CDC),   // US, and any English revision not listed
+                GameLanguages.Japanese => Arm9(0xF136C),
+                GameLanguages.French => Arm9(0xF1D64),
+                GameLanguages.German => Arm9(0xF1D34),
+                GameLanguages.Italian => Arm9(0xF1CF8),
+                GameLanguages.Spanish => Arm9(0xF1D70),
+                GameLanguages.Korean => Arm9(0xF2764),
+                _ => null,
+            },
+            _ => null,
+        };
+
+        /// <summary>The colour mode byte of the party screen's bottom background template.</summary>
+        private static Spot PartyBottomColourMode(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English when revision == 10 => Arm9(0xF1C6D),   // Europe
+                GameLanguages.English => Arm9(0xF1C6D),   // US, and any English revision not listed
+                GameLanguages.Japanese => Arm9(0xF12FD),
+                GameLanguages.French => Arm9(0xF1CF5),
+                GameLanguages.German => Arm9(0xF1CC5),
+                GameLanguages.Italian => Arm9(0xF1C89),
+                GameLanguages.Spanish => Arm9(0xF1D01),
+                GameLanguages.Korean => Arm9(0xF26F5),
+                _ => null,
+            },
+            _ => null,
+        };
+
+        /// <summary>The bag's BL that loads the bottom palette (pokeball_borders.NCLR).</summary>
+        private static Spot BagBottomPaletteCall(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.Japanese => Ov(84, 0x780),
+                _ => Ov(84, 0x780),   // every other language and revision measured the same
+            },
+            GameVersions.HeartGold or GameVersions.SoulSilver => Ov(15, 0x858),   // every language and revision measured the same
+            _ => null,
+        };
+
+        /// <summary>The bottom screen's BG extended palette bank in the bag's VRAM bank table.</summary>
+        private static Spot BagBottomBanks(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.Japanese => Ov(84, 0x59E8),
+                _ => Ov(84, 0x5A78),   // every other language and revision measured the same
+            },
+            GameVersions.HeartGold or GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.Japanese => Ov(15, 0x722C),
+                _ => Ov(15, 0x72A4),   // every other language and revision measured the same
+            },
+            _ => null,
+        };
+
+        /// <summary>The colour mode bytes of the bag's bottom templates: Platinum's border, HGSS's BG1 and BG2.</summary>
+        private static Spot BagBottomColourMode(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.Japanese => Ov(84, 0x5935),
+                _ => Ov(84, 0x59C5),   // every other language and revision measured the same
+            },
+            GameVersions.HeartGold or GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.Japanese => Ov(15, 0x7355, 0x7371),
+                _ => Ov(15, 0x73CD, 0x73E9),   // every other language and revision measured the same
+            },
+            _ => null,
+        };
+
+        /// <summary>The HGSS bag's last GXS_LoadBGPltt call in BagApp_LoadBgPaletteByPocket, which recolours row 3 per pocket.</summary>
+        private static Spot BagPocketColoursCall(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.HeartGold or GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.Japanese => Ov(15, 0x406C),
+                _ => Ov(15, 0x40B0),   // every other language and revision measured the same
+            },
+            _ => null,
+        };
+
+        /// <summary>The PC boxes' BL that loads the bottom palette in the box list (file 128).</summary>
+        private static Spot PcBottomPaletteCall(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English => Ov(19, 0xC48E),   // US and Europe
+                GameLanguages.Japanese => Ov(19, 0xC432),
+                _ => Ov(19, 0xC49A),   // French, German, Italian, Spanish and Korean measured the same
+            },
+            _ => null,
+        };
+
+        /// <summary>The PC boxes' BL that loads the bottom palette in compare mode (file 133).</summary>
+        private static Spot PcCompareBottomPaletteCall(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English => Ov(19, 0xDFF0),   // US and Europe
+                GameLanguages.Japanese => Ov(19, 0xDF94),
+                _ => Ov(19, 0xDFFC),   // French, German, Italian, Spanish and Korean measured the same
+            },
+            _ => null,
+        };
+
+        /// <summary>The bottom screen's BG extended palette bank in the PC boxes' VRAM bank table.</summary>
+        private static Spot PcBottomBanks(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English => Ov(19, 0xF1FC),   // US and Europe
+                GameLanguages.Japanese => Ov(19, 0xF1A0),
+                _ => Ov(19, 0xF208),   // French, German, Italian, Spanish and Korean measured the same
+            },
+            _ => null,
+        };
+
+        /// <summary>The colour mode bytes of the PC boxes' BG1 to BG3 templates, both modes (v7, v8, v9, v10, v11).</summary>
+        private static Spot PcBottomColourModes(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English => Ov(19, 0xF13D, 0xF121, 0xF105, 0xF1E5, 0xF0E9),   // US and Europe
+                GameLanguages.Japanese => Ov(19, 0xF0E1, 0xF0C5, 0xF0A9, 0xF189, 0xF08D),
+                _ => Ov(19, 0xF149, 0xF12D, 0xF111, 0xF1F1, 0xF0F5),   // French, German, Italian, Spanish and Korean measured the same
+            },
+            _ => null,
+        };
+
+        /// <summary>The naming screen's BL that loads its backdrop palette (naming_screen.NCLR).</summary>
+        private static Spot NamingBottomPaletteCall(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English => Arm9(0x876BA),   // US and Europe
+                GameLanguages.Japanese => Arm9(0x86F86),
+                GameLanguages.Korean => Arm9(0x87BFA),
+                _ => Arm9(0x8775A),   // French, German, Italian and Spanish measured the same
+            },
+            _ => null,
+        };
+
+        /// <summary>The top engine's BG extended palette word in the naming screen's VRAM bank table. The BG bank word is just before it.</summary>
+        private static Spot NamingBottomBanks(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English => Arm9(0xF28E0),   // US and Europe
+                GameLanguages.Japanese => Arm9(0xF1F70),
+                GameLanguages.Korean => Arm9(0xF3368),
+                GameLanguages.French => Arm9(0xF2968),
+                GameLanguages.German => Arm9(0xF2938),
+                GameLanguages.Italian => Arm9(0xF28FC),
+                GameLanguages.Spanish => Arm9(0xF2974),
+                _ => null,
+            },
+            _ => null,
+        };
+
+        /// <summary>The colour mode byte of the naming screen's backdrop template (BG2).</summary>
+        private static Spot NamingBottomColourMode(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English => Arm9(0xF2825),   // US and Europe
+                GameLanguages.Japanese => Arm9(0xF1EB5),
+                GameLanguages.Korean => Arm9(0xF30D1),
+                GameLanguages.French => Arm9(0xF28AD),
+                GameLanguages.German => Arm9(0xF287D),
+                GameLanguages.Italian => Arm9(0xF2841),
+                GameLanguages.Spanish => Arm9(0xF28B9),
+                _ => null,
+            },
+            _ => null,
+        };
+
+        /// <summary>The naming screen's backdrop tile load: its size, member and layer instructions.</summary>
+        private static Spot NamingBottomTileLoad(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English => Arm9(0x876DE, 0x876EA, 0x876F2),   // US and Europe
+                GameLanguages.Japanese => Arm9(0x86FAA, 0x86FB6, 0x86FBE),
+                GameLanguages.Korean => Arm9(0x87C1E, 0x87C2A, 0x87C32),
+                _ => Arm9(0x8777E, 0x8778A, 0x87792),   // French, German, Italian and Spanish measured the same
+            },
+            _ => null,
+        };
+
+        /// <summary>
+        /// The four naming screen windows on BG2 whose pixels become top screen sprites: the loop's layer, then the last window's
+        /// height, its height store and its palette store.
+        /// </summary>
+        private static Spot NamingSpriteWindows(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English => Arm9(0x881E0, 0x881FE, 0x88200, 0x88204),   // US and Europe
+                GameLanguages.Japanese => Arm9(0x87AFA, 0x87B18, 0x87B1A, 0x87B1E),
+                GameLanguages.Korean => Arm9(0x88714, 0x88732, 0x88734, 0x88738),
+                _ => Arm9(0x88280, 0x8829E, 0x882A0, 0x882A4),   // French, German, Italian and Spanish measured the same
+            },
+            _ => null,
+        };
+
+        /// <summary>The Pokédex's PokedexGraphics_LoadGraphicNarcPaletteData.</summary>
+        private static Spot PokedexPaletteLoader(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English when revision == 10 => Ov(21, 0x19EC),   // Europe
+                GameLanguages.English => Ov(21, 0x19EC),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(21, 0x19EC),
+                GameLanguages.French => Ov(21, 0x19EC),
+                GameLanguages.German => Ov(21, 0x19EC),
+                GameLanguages.Italian => Ov(21, 0x19EC),
+                GameLanguages.Spanish => Ov(21, 0x19EC),
+                GameLanguages.Korean => Ov(21, 0x19EC),
+                _ => null,
+            },
+            _ => null,
+        };
+
+        /// <summary>The Pokédex's PokedexGraphics_LoadGraphicNarcCharacterData.</summary>
+        private static Spot PokedexTileLoader(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English when revision == 10 => Ov(21, 0x19A4),   // Europe
+                GameLanguages.English => Ov(21, 0x19A4),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(21, 0x19A4),
+                GameLanguages.French => Ov(21, 0x19A4),
+                GameLanguages.German => Ov(21, 0x19A4),
+                GameLanguages.Italian => Ov(21, 0x19A4),
+                GameLanguages.Spanish => Ov(21, 0x19A4),
+                GameLanguages.Korean => Ov(21, 0x19A4),
+                _ => null,
+            },
+            _ => null,
+        };
+
+        /// <summary>The bottom screen's BG extended palette bank in the Pokédex's VRAM bank table.</summary>
+        private static Spot PokedexBottomBanks(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English when revision == 10 => Ov(21, 0x18E50),   // Europe
+                GameLanguages.English => Ov(21, 0x18E50),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(21, 0x18F98),
+                GameLanguages.French => Ov(21, 0x18E50),
+                GameLanguages.German => Ov(21, 0x18E58),
+                GameLanguages.Italian => Ov(21, 0x18E50),
+                GameLanguages.Spanish => Ov(21, 0x18E50),
+                GameLanguages.Korean => Ov(21, 0x18E48),
+                _ => null,
+            },
+            _ => null,
+        };
+
+        /// <summary>The colour mode byte of the Pokédex's sub BG2 template.</summary>
+        private static Spot PokedexBottomColourMode(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English when revision == 10 => Ov(21, 0x18E8D),   // Europe
+                GameLanguages.English => Ov(21, 0x18E8D),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(21, 0x18FD5),
+                GameLanguages.French => Ov(21, 0x18E8D),
+                GameLanguages.German => Ov(21, 0x18E95),
+                GameLanguages.Italian => Ov(21, 0x18E8D),
+                GameLanguages.Spanish => Ov(21, 0x18E8D),
+                GameLanguages.Korean => Ov(21, 0x18E85),
+                _ => null,
+            },
+            _ => null,
+        };
     }
 }

@@ -135,9 +135,17 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public ScreenPagesEditorViewModel() : this(new PokedexBook(), null) { }
 
         /// <param name="pageId">The page to open on, or null for the first.</param>
-        public ScreenPagesEditorViewModel(ScreenBook book, string pageId)
+        /// <param name="link">The touch buttons, shown as rows in the layout and drawn as edited.</param>
+        public ScreenPagesEditorViewModel(ScreenBook book, string pageId, ScreenButtonsLink link = null)
         {
             _book = book;
+            if (link?.Model() is { Buttons: TouchListButtons or SummaryTouchButtons } buttons && book is SummaryBook summary)
+            {
+                (_link, _buttons, Pending) = (link, buttons, buttons.Pending);
+                summary.PageButtons = buttons.Buttons as TouchListButtons;
+                summary.HgButtons = buttons.Buttons as SummaryTouchButtons;
+                Pending.Changed += OnButtonsChanged;
+            }
             Pending.Changed += RaiseSteps;
             _pages = book.Pages;
             foreach (ScreenPage p in _pages) PageNames.Add(p.Name);
@@ -149,7 +157,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         private readonly IDisposable _picturesSaved;
-        public void Detach() => _picturesSaved?.Dispose();
+        public void Detach()
+        {
+            _picturesSaved?.Dispose();
+            if (_buttons != null) Pending.Changed -= OnButtonsChanged;
+        }
 
         /// <summary>Null or an unknown id keeps the current page.</summary>
         public void GoToPage(string pageId)
@@ -231,6 +243,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 using IDisposable pending = Pending.Reading();
+                _drawnButtons = _buttons?.Buttons.ToBytes();
                 if (_book.Layout != null) _book.Layout.Use(Pending.Read(_book.Layout.Target));
                 ScreenSide topSide = page.MainOnTop ? ScreenSide.Main : ScreenSide.Sub;
                 ScreenSide bottomSide = page.MainOnTop ? ScreenSide.Sub : ScreenSide.Main;
@@ -457,7 +470,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     ScreenBg bg = screen.Bgs.FirstOrDefault(b => b.Bg == layer.Index && ScreenPage.Shows(b.When, Variant));
                     if (bg == null) break;
                     ScreenPartRow bgDrawing = Dex("Drawing", bg.Drawing);
-                    (int coloursFile, int coloursRow) = _composer?.MainColours(screen, bg, Variant) ?? (-1, -1);
+                    (int coloursFile, int coloursRow) = bg.ExtendedColours >= 0 ? (bg.ExtendedColours, 0) : _composer?.MainColours(screen, bg, Variant) ?? (-1, -1);
                     Add(bgDrawing == null ? null : new ScreenPartRow
                     {
                         Name = bgDrawing.Name, Where = bgDrawing.Where, Dir = bgDrawing.Dir, Member = bgDrawing.Member,
@@ -473,8 +486,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                             });
                     // A text layer has no drawing; its colours are the rows its text windows print in.
                     (int textFile, int textRow) = coloursFile >= 0 ? (-1, -1) : TextColours(screen, bg);
-                    foreach (ScreenPaletteLoad load in screen.Palettes.Where(p => ScreenPage.Shows(p.When, Variant)))
-                        Add(ColoursPart(Dex("Colours", load.File), load.File == coloursFile ? coloursRow : load.File == textFile ? textRow : -1));
+                    if (bg.ExtendedColours >= 0) Add(ColoursPart(Dex("Colours", bg.ExtendedColours), 0));
+                    else
+                        foreach (ScreenPaletteLoad load in screen.Palettes.Where(p => ScreenPage.Shows(p.When, Variant)))
+                            Add(ColoursPart(Dex("Colours", load.File), load.File == coloursFile ? coloursRow : load.File == textFile ? textRow : -1));
                     break;
                 case ScreenLayerKind.Sprite when layer.Index >= 0 && layer.Index < screen.Sprites.Count:
                     ScreenSprite s = screen.Sprites[layer.Index];
@@ -611,6 +626,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _filling = true;
             Boxes.Clear();
             foreach (ScreenLayoutItem item in _book.Layout.Items(_pageIndex, Variant)) Boxes.Add(item);
+            foreach (ScreenLayoutItem item in TouchItems()) Boxes.Add(item);
             _boxIndex = -1;
             _filling = false;
             int again = keep == null ? -1 : Boxes.ToList().FindIndex(b => b.Name == keep);
@@ -671,8 +687,40 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
         }
 
+        // The touch buttons of the page the layout shows, in the tiles each one covers.
+        private sealed record TouchKey(int Page, int Button);
+
+        private IEnumerable<ScreenLayoutItem> TouchItems()
+        {
+            int page = _link?.PageOf(_pageIndex) ?? -1;
+            if (page < 0 || page >= _buttons.Buttons.PageNames.Count) yield break;
+            string[] names = _buttons.Buttons.ButtonsOf(page);
+            for (int b = 0; b < names.Length; b++)
+            {
+                if (_buttons.Buttons.MoveLocked(page, b) != null) continue;
+                (int top, int bottom, int left, int right) = _buttons.Buttons.AreaOf(page, b);
+                yield return new ScreenLayoutItem
+                {
+                    Name = names[b] + " button", Side = ScreenSide.Sub, Key = new TouchKey(page, b),
+                    X = left / 8, Y = top / 8,
+                    Width = Math.Max(1, (right - 1) / 8 - left / 8 + 1), Height = Math.Max(1, (bottom - 1) / 8 - top / 8 + 1),
+                };
+            }
+        }
+
+        private void PlaceTouch(ScreenBoxRow row, TouchKey key, int x, int y)
+        {
+            int dx = x - row.Item.X, dy = y - row.Item.Y;
+            _buttons.Buttons.Move(key.Page, key.Button, dx * 8, dy * 8);
+            Pending.Import(() => { Pending.Stage(_buttons.Tables, _buttons.Buttons.ToBytes()); return null; });
+            _buttons.Moved();
+            StatusText = "Moved.";
+            Compose();
+        }
+
         private void PlaceItem(ScreenBoxRow row, int x, int y)
         {
+            if (row.Item.Key is TouchKey touch) { PlaceTouch(row, touch, x, y); return; }
             ScreenLayoutItem item = row.Item;
             if (_book.Layout == null || (x == item.X && y == item.Y)) { row.Use(item); return; }
             (byte[] bytes, string error) = _book.Layout.Place(item, x, y, item.Width, item.Height);
@@ -701,6 +749,16 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         // Imports wait here until Save; the pages are drawn from them meanwhile.
         public PendingArchiveWrites Pending { get; } = new PendingArchiveWrites();
 
+        private readonly ScreenButtonsLink _link;
+        private readonly ScreenButtonsViewModel _buttons;
+        private byte[] _drawnButtons;
+
+        // A move made in the Buttons tab, or its undo, redraws the pages.
+        private void OnButtonsChanged()
+        {
+            if (_drawnButtons == null || !_drawnButtons.AsSpan().SequenceEqual(_buttons.Buttons.ToBytes())) Compose();
+        }
+
         public bool HasUnsavedChanges => Pending.IsDirty;
         public string UnsavedChangesDescription => _book.UnsavedChangesDescription;
         public bool CanUndo => Pending.CanUndo;
@@ -726,6 +784,114 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         /// <summary>Reads on this thread see the pending files until disposed.</summary>
         public IDisposable Reading() => Pending.Reading();
+
+        // The colours file fills the last extended palettes, one palette each. Later loads from other files fill the rest.
+        private HashSet<int> ExtendedRows(ScreenLayout screen, int colours)
+        {
+            if (screen.ExtendedPalettes.Count == 0) return Enumerable.Range(0, 16).ToHashSet();
+            HashSet<int> rows = new();
+            for (int p = 0; p < 16; p++)
+            {
+                ScreenPaletteLoad last = screen.ExtendedPalettes.LastOrDefault(l => ScreenPage.Shows(l.When, Variant) && p >= l.ToRow && p < l.ToRow + l.Rows);
+                if (last?.File == colours && last.FromRow == last.ToRow) rows.Add(p);
+            }
+            return rows;
+        }
+
+        /// <summary>The selected background reads extended palettes.</summary>
+        public bool ExtendedLayer
+        {
+            get
+            {
+                ScreenLayerRow layer = SelectedLayer;
+                ScreenLayout screen = layer == null ? null : Page?.Side(layer.Side);
+                return layer?.Kind == ScreenLayerKind.Background
+                    && screen?.Bgs.FirstOrDefault(b => b.Bg == layer.Index && ScreenPage.Shows(b.When, Variant))?.ExtendedColours >= 0;
+            }
+        }
+
+        /// <summary>A rebuild of the selected background from a picture, when its layer has one arrangement, or null.</summary>
+        public ScreenLayerFit BackgroundFit(out string whyNot)
+        {
+            whyNot = null;
+            ScreenLayerRow layer = SelectedLayer;
+            ScreenPage page = Page;
+            if (page == null || layer?.Kind != ScreenLayerKind.Background || _composer == null) return null;
+            ScreenLayout screen = page.Side(layer.Side);
+            ScreenBg bg = screen.Bgs.FirstOrDefault(b => b.Bg == layer.Index && ScreenPage.Shows(b.When, Variant));
+            List<ScreenPaste> pieces = bg?.Pieces.Where(p => p.Screen >= 0 && ScreenPage.Shows(p.When, Variant)).ToList();
+            if (pieces == null || pieces.Count == 0 || pieces.Any(p => p.Screen != pieces[0].Screen || p.Fill >= 0 || p.Palette >= 0)) return null;
+            // Slices of one arrangement take the whole file as the picture, as its export shows it.
+            bool screenView = pieces.Count == 1 && pieces[0].TileX == 0 && pieces[0].TileY == 0 && pieces[0].Width < 0;
+            // A layer with extended palettes reads 16 palettes that no other layer uses.
+            bool extended = bg.ExtendedColours >= 0;
+            int colours = extended ? bg.ExtendedColours : _composer.MainColours(screen, bg, Variant).File;
+            List<ScreenPaletteLoad> loads = screen.Palettes.Where(l => l.File == colours && ScreenPage.Shows(l.When, Variant)).ToList();
+            // Arrangement entries pick screen palette rows, so each file row must load into the same screen row.
+            if (!extended && (loads.Count == 0 || loads.Any(l => l.FromRow != l.ToRow)))
+            {
+                whyNot = "Pictures can't be imported onto this background yet, because the game moves its colours to other palette rows.";
+                return null;
+            }
+            HashSet<int> loadedRows = extended ? ExtendedRows(screen, colours) : loads.SelectMany(l => Enumerable.Range(l.FromRow, l.Rows)).ToHashSet();
+            using (Reading())
+            {
+                whyNot = ScreenLayerFit.WhyNot(new ScriptNarc(_book.Archive), bg.Drawing, pieces[0].Screen, colours, extended);
+                if (whyNot != null) return null;
+                List<ScreenLayerFit.Layer> layers = new();
+                List<(int, int)> textRows = new();
+                foreach (ScreenPage p in _pages)
+                {
+                    foreach (ScreenLayout s in new[] { p.Main, p.Sub })
+                    {
+                        if (s == null) continue;
+                        HashSet<int> shared = extended ? new HashSet<int>()
+                            : s.Palettes.Where(l => l.File == colours && l.FromRow == l.ToRow).SelectMany(l => Enumerable.Range(l.FromRow, l.Rows)).ToHashSet();
+                        // Layers that read the same extended palettes keep the colours their squares show.
+                        HashSet<int> allPalettes = Enumerable.Range(0, BottomPalettesPatch.Palettes).ToHashSet();
+                        foreach (ScreenBg b in s.Bgs.Where(b => b.Drawing >= 0))
+                            foreach (ScreenPaste piece in b.Pieces.Where(x => x.Screen >= 0))
+                                layers.Add(new ScreenLayerFit.Layer(b.Drawing, piece.Screen, extended && b.ExtendedColours == colours ? allPalettes : shared));
+                        foreach (ScreenText t in s.Texts.Where(t => shared.Contains(t.Row))) textRows.Add((colours, t.Row));
+                    }
+                }
+                ushort[] shown = extended && (screen.ExtendedPalettes.Count > 0 || screen.GameColours.Count > 0) ? _composer.ExtendedPalette(screen, bg, Variant) : null;
+                // Every variant's game colours count: the game rewrites them whichever one is open.
+                IEnumerable<int> gameRows = extended ? screen.GameColours.Select(l => l.ToRow).Distinct() : null;
+                return new ScreenLayerFit(_book.Archive, bg.Drawing, pieces[0].Screen, colours, layers, textRows, loadedRows, screenView, bg.TileLimit, shown, gameRows);
+            }
+        }
+
+        /// <summary>Every page side that shows this background's drawing, arrangement or colours, drawn now and with the plan.</summary>
+        public IReadOnlyList<(string Name, byte[] Before, byte[] After)> AffectedPages(ScreenLayerFit fit, ScreenLayerFit.Plan plan)
+        {
+            List<(string, byte[], byte[])> pages = new();
+            ScreenPageComposer before = _book.MakeComposer(Font), after = _book.MakeComposer(Font);
+            after.Replace = fit.Replacement(plan);
+            using (Reading())
+                foreach (ScreenPage page in _pages)
+                    foreach (ScreenSide side in new[] { ScreenSide.Main, ScreenSide.Sub })
+                    {
+                        ScreenLayout screen = page.Side(side);
+                        if (screen == null) continue;
+                        // Check every state that shows the drawing or its colours, because a state can show other layers of it.
+                        foreach (string variant in page.Variants.Length > 0 ? page.Variants : new string[] { null })
+                        {
+                            bool shows = screen.Bgs.Any(b => ScreenPage.Shows(b.When, variant)
+                                    && (b.Drawing == fit.Drawing || b.ExtendedColours == fit.ColoursFile || b.Pieces.Any(x => x.Screen == fit.Arrangement)))
+                                || screen.Palettes.Any(l => l.File == fit.ColoursFile);
+                            if (!shows) continue;
+                            string name = page.Name + (page.Variants.Length > 1 ? ", " + variant : "")
+                                + (side == (page.MainOnTop ? ScreenSide.Main : ScreenSide.Sub) ? "" : ", bottom screen");
+                            byte[] was = before.Compose(page, variant, side)?.Rgba, now = after.Compose(page, variant, side)?.Rgba;
+                            if (pages.Any(p => Same(p.Item2, was) && Same(p.Item3, now))) continue;
+                            pages.Add((name, was, now));
+                        }
+                    }
+            return pages;
+        }
+
+        private static bool Same(byte[] a, byte[] b) => a == null ? b == null : b != null && a.AsSpan().SequenceEqual(b);
 
         /// <summary>Runs an import whose writes become one pending step. Returns its error or null.</summary>
         public string Import(Func<string> import)

@@ -77,24 +77,9 @@ namespace DSPRE.ROMFiles
         private static int At(uint address) => (int)(address - ARM9.Address);
 
         // The target of the BL at address, or null when there is none.
-        internal static uint? CallAt(byte[] arm9, uint address)
-        {
-            int at = At(address);
-            if (at < 0 || at + 4 > arm9.Length) return null;
-            ushort hi = BitConverter.ToUInt16(arm9, at), lo = BitConverter.ToUInt16(arm9, at + 2);
-            if ((hi & 0xF800) != 0xF000 || (lo & 0xF800) != 0xF800) return null;
-            int off = ((hi & 0x7FF) << 12) | ((lo & 0x7FF) << 1);
-            if ((off & 0x400000) != 0) off -= 0x800000;
-            return (uint)(address + 4 + off);
-        }
+        internal static uint? CallAt(byte[] arm9, uint address) => ThumbBl.Target(arm9, At(address), address);
 
-        internal static byte[] Bl(uint from, uint to)
-        {
-            int off = (int)(to - (from + 4));
-            if (off < -0x400000 || off >= 0x400000) throw new InvalidOperationException("The synthetic overlay is out of the summary screen's reach.");
-            ushort hi = (ushort)(0xF000 | ((off >> 12) & 0x7FF)), lo = (ushort)(0xF800 | ((off >> 1) & 0x7FF));
-            return BitConverter.GetBytes(hi).Concat(BitConverter.GetBytes(lo)).ToArray();
-        }
+        internal static byte[] Bl(uint from, uint to) => ThumbBl.Make(from, to);
 
         private static long BlockOffset(uint code) => (long)code - RomInfo.SynthOverlayLoadAddress - CodeStart;
 

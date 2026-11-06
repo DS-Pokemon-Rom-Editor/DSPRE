@@ -78,6 +78,13 @@ namespace DSPRE.Avalonia.Data
         public int Priority;
         public int Bpp = 4;
         public int Drawing = -1;
+        /// <summary>
+        /// The colours file a 256-colour layer reads as 16 extended palettes, or -1 for the screen's palette. When the screen
+        /// lists extended palette loads, those build the palettes and this is the file an import writes.
+        /// </summary>
+        public int ExtendedColours = -1;
+        /// <summary>Tiles the layer has room for in VRAM. An import may grow the drawing up to this, and 0 keeps its size.</summary>
+        public int TileLimit;
         /// <summary>Tiles across the layer's map: 32, or 64 for a 512-wide background.</summary>
         public int MapWidth = 32;
         public int MapHeight = 32;
@@ -206,6 +213,10 @@ namespace DSPRE.Avalonia.Data
         public int Darken;
         public List<ScreenBg> Bgs = new();
         public List<ScreenPaletteLoad> Palettes = new();
+        /// <summary>Loads into the extended palettes of 256-colour layers, in order, as the patched game makes them.</summary>
+        public List<ScreenPaletteLoad> ExtendedPalettes = new();
+        /// <summary>Rows the game copies over the first 16 colours of extended palettes while the screen is open, one row each.</summary>
+        public List<ScreenPaletteLoad> GameColours = new();
         public List<ScreenSprite> Sprites = new();
         public List<ScreenText> Texts = new();
         public List<ScreenMon> Mons = new();

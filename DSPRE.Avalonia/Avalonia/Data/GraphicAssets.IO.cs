@@ -460,13 +460,12 @@ namespace DSPRE.Avalonia.Data
             string why = PutBackgroundBack(a, index, painted, w, h, out int changed, out int shared,
                                            out int fought);
             if (why != null) return why;
-            if (shared > 0)
-                note = $"{changed} tiles changed, and {shared} of them are used elsewhere in this background, so "
-                     + "those places changed too. Backgrounds share tiles to save room, so nothing went wrong.";
+            // A shared tile shows the same pixels everywhere, so a picture that paints its copies differently can't fit.
             if (fought > 0)
-                note = (note == null ? "" : note + " ")
-                     + $"{fought} pixels were painted different colours in places that share a tile. A tile "
-                     + "holds one picture, so the last one painted wins.";
+                note = "This background repeats some tiles, and the picture paints the copies differently, so some places show the wrong pixels."
+                     + (BetaEditors.Allows("ScreensEditorView") ? " Import the picture in the Screens editor to rebuild the whole background." : "");
+            else if (shared > 0)
+                note = "Some of these tiles also show in other places, so those places changed too.";
             return null;
         }
 

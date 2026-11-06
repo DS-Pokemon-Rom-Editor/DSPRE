@@ -116,8 +116,18 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             ScreenPartRow part = VM?.SelectedPart;
             GraphicAssets.Archive archive = ScreenPagesEditorViewModel.ArchiveOf(part);
-            if (archive == null || await RowAsync(part) is not int row) return;
+            if (archive == null) return;
             string name = VM.Title.ToLowerInvariant().Replace(' ', '_').Replace("é", "e");
+            // A layer with extended palettes exports as the picture it shows, which a 16-colour PNG can't hold.
+            if (!part.IsColours && VM.ExtendedLayer && VM.BackgroundFit(out _) is ScreenLayerFit fit)
+            {
+                string picture = await DialogHelper.SaveFileAsync(Owner, "Save as a PNG", new[] { Png }, $"{name}_{part.Member}.png");
+                if (picture == null) return;
+                ImageConverter.FromRgba(fit.Picture(), fit.Width, fit.ShownHeight).Save(picture, global::Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
+                SaveNotice.Exported(picture);
+                return;
+            }
+            if (await RowAsync(part) is not int row) return;
             string path = await DialogHelper.SaveFileAsync(Owner, "Save as a PNG", new[] { Png }, $"{name}_{part.Member}.png");
             if (path == null) return;
             string trouble;
@@ -130,7 +140,21 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             ScreenPartRow part = VM?.SelectedPart;
             GraphicAssets.Archive archive = ScreenPagesEditorViewModel.ArchiveOf(part);
-            if (archive == null || !await WarnIfSharedAsync(part) || await RowAsync(part) is not int row) return;
+            if (archive == null) return;
+            string cannot = null;
+            if (!part.IsColours && VM.BackgroundFit(out cannot) is ScreenLayerFit fit)
+            {
+                // Other layers keep their tiles and colours, so only pages sharing this arrangement need the warning.
+                if (!await WarnIfSharedAsync(VM.Parts.FirstOrDefault(p => p.Name == "Arrangement") ?? part)) return;
+                string picture = await DialogHelper.OpenFileAsync(Owner, "Import PNG", new[] { Png });
+                if (picture == null || await BackgroundImportPrompt.AskAsync(Owner, fit, picture, "Import picture", plan => VM.AffectedPages(fit, plan)) is not ScreenLayerFit.Plan plan) return;
+                string failed = VM.Import(() => fit.Apply(plan));
+                if (failed != null) { await DialogHelper.ShowErrorAsync(failed, ErrorTitle); return; }
+                SaveNotice.Imported(part.Name.ToLowerInvariant() + " " + part.Member, picture);
+                return;
+            }
+            if (cannot != null && part.Name == "Arrangement") { await DialogHelper.ShowErrorAsync(cannot, ErrorTitle); return; }
+            if (!await WarnIfSharedAsync(part) || await RowAsync(part) is not int row) return;
             string path = await DialogHelper.OpenFileAsync(Owner, "Import PNG", new[] { Png });
             if (path == null) return;
             (PngColourPrompt.Choice choice, GraphicAssets.PngColourCheck check) = await PngColourPrompt.AskAsync(Owner, archive, part.Member, path, part.ColoursFile, row);

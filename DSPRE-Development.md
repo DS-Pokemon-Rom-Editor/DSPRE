@@ -378,6 +378,7 @@ In `MainWindowView.axaml` the menu item binds `IsVisible` to `Shown[MyEditorView
 | Counts in text ("1 map", "3 maps") | `Plural.Of` (Core) |
 | A tab that loads when first shown | `TabSetup.OnFirstShow` in the tab view's constructor |
 | Thumb `movs`/`cmp`/`adds`/`subs` immediates | `ThumbImm8` (Core) |
+| Thumb `bl` and `blx` calls | `ThumbBl` (Core) |
 | Screen spot tables | `ScreenSpots.Entry`, `ScreenSpots.ShiftEntry` (Core) |
 
 An editor that only draws archive members redraws with `AppEvents.WhenSaved(redraw, dirs)`.
@@ -570,6 +571,16 @@ its relocations and the original bytes of each hook. `TrainerClassMetadataPatch`
 from the art and the pixels the game changes in that frame, and the Battle screen's Press tab (`BattlePressViewModel`) edits the frames.
 `ROMFiles/BattleFightIcon.cs` rewrites the code that places the Pokémon icon beside FIGHT. The new code fits in the same space.
 `ROMFiles/FieldMenuColoursPatch.cs` gives each HGSS field menu button its own pair of colours from the button palette file.
+
+`ROMFiles/BottomPalettesPatch.cs` gives bottom backgrounds 256-colour tiles and extended palettes. A screen is a `Screen`:
+its palette loads, template bytes and palette slots, at `RomLocator` spots in the ARM9 or one overlay. A screen added later
+is patched on the next Apply.
+
+```csharp
+private static readonly Screen PlatinumBag = One("bag", DirNames.BagGraphics,
+    new Load(RomLocator.Thing.BagBottomPaletteCall, 15, 16, (0xE800 - 0x8000) / 64),
+    RomLocator.Thing.BagBottomBanks, RomLocator.Thing.BagBottomColourMode);
+```
 
 Each patch applies only itself. One that needs the ARM9 expansion returns `Unsupported("Requires ARM9
 expansion")`. Editors keep the option a patch unlocks in view, greyed out, with a `controls:EnableInToolbox`

@@ -28,8 +28,10 @@ namespace DSPRE.Avalonia.Data
             if (s == null) return null;
             Palettes(s, NitroBgCodec.ReadColours(m(16)));
             Palettes(s, NitroBgCodec.ReadColours(m(18)), 2, 2);
+            // The dial is an affine layer: 256-colour tiles on the standard palette.
             Layer(s, m, 3, 3, 0x10000, 32, 33);
             Layer(s, m, 1, 1, 0x8000, 15, 17);
+            ExtendedColours(s, m, 1, BottomPalettesPatch.Bag);
             s.InitLayer(0, 0, 0);
             s.LoadTiles(0, m(19));
             for (int i = 0; spots != null && i < spots.Count; i++) SheetButton(s, 0, i, spots[i].X, spots[i].Y, 2);
@@ -46,6 +48,7 @@ namespace DSPRE.Avalonia.Data
             if (s == null) return null;
             Palettes(s, NitroBgCodec.ReadColours(m(14)));
             Layer(s, m, 1, 1, 0x8000, 16, 15);
+            ExtendedColours(s, m, 1, BottomPalettesPatch.Summary);
             s.InitLayer(0, 0, 0);
             s.LoadTiles(0, m(2));
             foreach (byte[] entry in entries ?? Array.Empty<byte[]>())
@@ -119,8 +122,9 @@ namespace DSPRE.Avalonia.Data
             s.LoadTiles(0, m(tiles));
             for (int i = 0; i < 3; i++)
             {
-                s.InitLayer(3 - i, 3 - i, 0);
-                s.LoadMap(3 - i, NitroBgCodec.ReadMap(m((compare ? 129 : 124) + i)).Entries, DsBgScreen.MapSide);
+                s.InitLayer(bg, bg, 0);
+                s.LoadMap(bg, NitroBgCodec.ReadMap(m(map)).Entries, DsBgScreen.MapSide);
+                ExtendedColours(s, m, bg, BottomPalettesPatch.Pc, compare ? 1 : 0);
             }
             return s.Render();
         }

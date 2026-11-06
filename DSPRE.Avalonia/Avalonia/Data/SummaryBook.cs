@@ -38,6 +38,8 @@ namespace DSPRE.Avalonia.Data
 
         private readonly DexSample _sample;
         private readonly bool _hgss;
+        // The extended palettes member once the bottom screen palettes patch is in, or -1.
+        private readonly int _bottomPalettes;
         private readonly SummaryScreenSites _sites;
         private Spec[] _specs;
         private readonly List<ScreenPage> _pages = new();
@@ -53,6 +55,7 @@ namespace DSPRE.Avalonia.Data
             catch (Exception ex) { AppLogger.WarnOnce("SummaryBook.Unpack", ex); }
             _sample = new DexSample(species);
             _hgss = GameFamily == GameFamilies.HGSS;
+            _bottomPalettes = BottomPalettesPatch.PaletteMember(BottomPalettesPatch.Summary);
             _sites = RomLocator.SummaryScreenSites;
             _specs = _sites == null ? Array.Empty<Spec>() : _hgss ? HgssSpecs() : PlatinumSpecs();
             foreach (Spec spec in _specs) _pages.Add(new ScreenPage { Id = spec.Id, Name = spec.Name, Variants = spec.Variants ?? Array.Empty<string>() });
@@ -263,7 +266,8 @@ namespace DSPRE.Avalonia.Data
                 page.Sub = new ScreenLayout();
                 string unpicked = Unpicked(spec);
                 if (_hgss) HgssBackgrounds(page, spec);
-                else PlatinumBackgrounds(page, spec, unpicked);
+                else PlatinumBackgrounds(page, spec, unpicked, _bottomPalettes);
+                if (_hgss && _bottomPalettes >= 0) Extended(page.Sub, 20, _bottomPalettes);
                 foreach (Box box in BoxesOf(spec)) AddBox(page, box);
                 if (spec.Hp) AddBar(page, layout.Hp);
                 if (spec.Exp) AddBar(page, layout.Exp);
@@ -329,9 +333,19 @@ namespace DSPRE.Avalonia.Data
             page.Side(side).Sprites.Add(new ScreenSprite { Name = "Level mark", Picture = "level:" + w.Palette, X = w.X * 8 + 8, Y = w.Y * 8 + 5 + 4, When = unpicked });
         }
 
+        // The bottom screen palettes patch gives this drawing 256-colour tiles and separate palettes.
+        private static void Extended(ScreenLayout screen, int drawing, int colours)
+        {
+            foreach (ScreenBg bg in screen.Bgs.Where(b => b.Drawing == drawing))
+            {
+                bg.ExtendedColours = colours;
+                bg.TileLimit = BottomPalettesPatch.Summary.TileLimit;
+            }
+        }
+
         private static void Text(ScreenLayout screen, int bg) => screen.Bgs.Add(new ScreenBg { Bg = bg, Priority = 0 });
 
-        private static void PlatinumBackgrounds(ScreenPage page, Spec spec, string unpicked)
+        private static void PlatinumBackgrounds(ScreenPage page, Spec spec, string unpicked, int bottomPalettes)
         {
             page.Main.Palettes.Add(new ScreenPaletteLoad { File = 1 });
             Text(page.Main, 1);
@@ -340,7 +354,7 @@ namespace DSPRE.Avalonia.Data
                 page.Main.Bgs.Add(new ScreenBg { Bg = 2, Priority = 1, Drawing = 0, MapWidth = 64, When = Picked, Pieces = { new ScreenPaste { Screen = 11 } } });
             page.Main.Bgs.Add(new ScreenBg { Bg = 3, Priority = 3, Drawing = 0, Pieces = { new ScreenPaste { Screen = spec.Top } } });
             page.Sub.Palettes.Add(new ScreenPaletteLoad { File = 14 });
-            page.Sub.Bgs.Add(new ScreenBg { Bg = 1, Priority = 1, Drawing = 16, Pieces = { new ScreenPaste { Screen = spec.Bottom } } });
+            page.Sub.Bgs.Add(new ScreenBg { Bg = 1, Priority = 1, Drawing = 16, ExtendedColours = bottomPalettes, TileLimit = bottomPalettes >= 0 ? BottomPalettesPatch.Summary.TileLimit : 0, Pieces = { new ScreenPaste { Screen = spec.Bottom } } });
         }
 
         private static void HgssBackgrounds(ScreenPage page, Spec spec)

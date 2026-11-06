@@ -78,6 +78,8 @@ namespace DSPRE.Avalonia.Data
         public Func<int, byte[]> Replace { get; set; }
         /// <summary>A digit sprite's animation and its offset from the sprite's position, or null when it is hidden.</summary>
         public Func<DexReadout, int, int, (int Seq, int Dx)?> Digit { get; set; }
+        /// <summary>The animation a sprite shows when the game's code picks a different one than the page lists.</summary>
+        public Func<ScreenSprite, int> SeqOf { get; set; }
         private readonly Dictionary<int, byte[]> _files = new();
 
         /// <param name="type">For a type slot (1 or 2), the type's place in the Pokédex's type order, or -1.</param>
@@ -126,7 +128,7 @@ namespace DSPRE.Avalonia.Data
             {
                 if (!ScreenPage.Shows(bg.When, variant)) continue;
                 byte[] rgba = new byte[Width * Height * 4];
-                DrawBg(rgba, bg, palette, variant);
+                DrawBg(rgba, bg, palette, variant, screen);
                 DexHabitatData habitat = screen.Habitat != null && screen.Habitat.Bg == bg.Bg ? Habitat?.Invoke(variant) : null;
                 if (habitat != null) DrawHabitat(rgba, screen.Habitat, habitat, palette);
                 // A text window takes the layer's squares under it: unless the game fills it with the
@@ -298,7 +300,45 @@ namespace DSPRE.Avalonia.Data
             return palette;
         }
 
-        private void DrawBg(byte[] rgba, ScreenBg bg, ushort[] palette, string variant)
+        /// <summary>The 16 extended palettes a 256-colour layer reads: the screen's loads in order, or the whole colours file.</summary>
+        public ushort[] ExtendedPalette(ScreenLayout screen, ScreenBg bg, string variant)
+        {
+            ushort[] palette;
+            if (screen == null || screen.ExtendedPalettes.Count == 0)
+            {
+                ushort[] whole = NitroBgCodec.ReadColours(File(bg.ExtendedColours));
+                if (screen == null || screen.GameColours.Count == 0 || whole == null) return whole;
+                palette = new ushort[Math.Max(16 * 256, whole.Length)];
+                whole.CopyTo(palette, 0);
+            }
+            else
+            {
+                palette = new ushort[16 * 256];
+                foreach (ScreenPaletteLoad load in screen.ExtendedPalettes)
+                {
+                    if (!ScreenPage.Shows(load.When, variant)) continue;
+                    ushort[] colours = NitroBgCodec.ReadColours(File(load.File));
+                    for (int i = 0; i < load.Rows * 256; i++)
+                    {
+                        int from = load.FromRow * 256 + i, to = load.ToRow * 256 + i;
+                        if (from < colours.Length && to < palette.Length) palette[to] = colours[from];
+                    }
+                }
+            }
+            foreach (ScreenPaletteLoad load in screen.GameColours)
+            {
+                if (!ScreenPage.Shows(load.When, variant)) continue;
+                ushort[] colours = NitroBgCodec.ReadColours(File(load.File));
+                for (int c = 0; c < 16; c++)
+                {
+                    int from = load.FromRow * 16 + c, to = load.ToRow * 256 + c;
+                    if (colours != null && from < colours.Length && to < palette.Length) palette[to] = colours[from];
+                }
+            }
+            return palette;
+        }
+
+        private void DrawBg(byte[] rgba, ScreenBg bg, ushort[] palette, string variant, ScreenLayout screen)
         {
             int cols = Math.Max(32, bg.MapWidth), rows = Math.Max(32, bg.MapHeight);
             int[] map = new int[NitroBgCodec.SquareCount(cols, rows)];
@@ -310,6 +350,7 @@ namespace DSPRE.Avalonia.Data
             (bool eightBit, int tilesAt) = NitroBgCodec.ReadTileHeader(chr);
             bool wide = eightBit || bg.Bpp == 8;
             int tileBytes = wide ? 64 : 32;
+            ushort[] extended = wide && bg.ExtendedColours >= 0 ? ExtendedPalette(screen, bg, variant) : null;
 
             for (int y = 0; y < Height; y++)
                 for (int x = 0; x < Width; x++)
@@ -335,6 +376,12 @@ namespace DSPRE.Avalonia.Data
                         index = (lx & 1) != 0 ? chr[at] >> 4 : chr[at] & 0xF;
                     }
                     if (index == 0) continue;
+                    if (extended != null)
+                    {
+                        int at = row * 256 + index;
+                        if (at < extended.Length) Put(rgba, (y * Width + x) * 4, extended[at]);
+                        continue;
+                    }
                     int colour = wide ? index : row * 16 + index;
                     Put(rgba, (y * Width + x) * 4, palette[colour & 0xFF]);
                 }
@@ -411,7 +458,7 @@ namespace DSPRE.Avalonia.Data
         // False when the page doesn't show the sprite; pieces is null for a sprite drawn whole.
         private bool Resolve(ScreenSprite s, out int drawing, out int row, out int shift, out DsBgScreen.Oam[] pieces)
         {
-            int seq = s.Seq;
+            int seq = SeqOf?.Invoke(s) ?? s.Seq;
             (drawing, row, shift, pieces) = (s.Drawing, s.Row, 0, null);
             if (s.Readout != DexReadout.None)
             {
@@ -582,15 +629,15 @@ namespace DSPRE.Avalonia.Data
             int top = t.BoxHeight > 0 ? t.Y + (t.BoxHeight - lines.Length * 16) / 2 : t.Y;
             for (int i = 0; i < lines.Length; i++)
             {
-                int width = font.Measure(lines[i], FieldFontCharacters.GlyphFor);
+                int width = font.Measure(lines[i]);
                 int slash = t.Align == ScreenTextAlign.Slash ? lines[i].IndexOf('/') : -1;
                 if (slash >= 0)
                 {
                     // The slash sits centred on X; the first number ends where it starts, the second starts where it ends.
                     string first = lines[i].Substring(0, slash), second = lines[i].Substring(slash + 1);
-                    int slashWidth = font.Measure("/", FieldFontCharacters.GlyphFor);
+                    int slashWidth = font.Measure("/");
                     int at = t.X - slashWidth / 2;
-                    DsBgScreen.DrawText(rgba, font, first, at - font.Measure(first, FieldFontCharacters.GlyphFor), top + i * 16, ink, shadow);
+                    DsBgScreen.DrawText(rgba, font, first, at - font.Measure(first), top + i * 16, ink, shadow);
                     DsBgScreen.DrawText(rgba, font, "/", at, top + i * 16, ink, shadow);
                     DsBgScreen.DrawText(rgba, font, second, at + slashWidth, top + i * 16, ink, shadow);
                     continue;
@@ -619,7 +666,7 @@ namespace DSPRE.Avalonia.Data
         private static int BlockWidth(FieldFont font, string[] lines)
         {
             int widest = 0;
-            foreach (string line in lines) widest = Math.Max(widest, font.Measure(line, FieldFontCharacters.GlyphFor));
+            foreach (string line in lines) widest = Math.Max(widest, font.Measure(line));
             return widest;
         }
 

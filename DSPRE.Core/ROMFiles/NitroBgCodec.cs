@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 
 namespace DSPRE.ROMFiles
 {
@@ -225,6 +226,80 @@ namespace DSPRE.ROMFiles
             return true;
         }
 
+        // Reads a screen's size in squares, where its entries start and how wide each is. False when it has no NRCS block or stops short.
+        private static bool Squares(byte[] scr, out int columns, out int rows, out int mapAt, out int entryBytes)
+        {
+            columns = rows = mapAt = entryBytes = 0;
+            if (scr == null || Find(scr, "NRCS", 0) < 0) return false;
+            (int w, int h, int at) = ReadScreenHeader(scr);
+            (columns, rows, mapAt, entryBytes) = (w / 8, h / 8, at, EntryBytes(scr));
+            return columns > 0 && mapAt + SquareCount(columns, rows) * entryBytes <= scr.Length;
+        }
+
+        /// <summary>
+        /// A screen with rows <paramref name="first"/> to <paramref name="last"/> moved <paramref name="down"/> rows. Moving the band
+        /// down fills the rows it leaves with the row above the band. Moving it up fills them with the band's last row.
+        /// </summary>
+        public static byte[] MoveRows(byte[] scr, int first, int last, int down)
+        {
+            if (down == 0 || !Squares(scr, out int columns, out int rows, out int mapAt, out int eb)) return scr;
+            last = Math.Min(last, rows - 1);
+            if (first < 0 || first > last) return scr;
+            byte[] moved = (byte[])scr.Clone();
+            for (int r = 0; r < rows; r++)
+            {
+                int from = r >= first + down && r <= last + down ? r - down
+                         : r >= first && r < first + down ? Math.Max(0, first - 1)
+                         : r <= last && r > last + down ? last
+                         : r;
+                for (int c = 0; c < columns; c++)
+                    PutEntry(moved, mapAt, SquareIndex(columns, c, r), eb, EntryAt(scr, mapAt, SquareIndex(columns, c, from), eb));
+            }
+            return moved;
+        }
+
+        /// <summary>Maps each square of a block to the first square in its row outside the block and the same-sized blocks at
+        /// <paramref name="also"/>.</summary>
+        public static ushort[] PlainSquares(byte[] scr, int x, int y, int width, int height, params (int X, int Y)[] also)
+        {
+            if (!Squares(scr, out int columns, out int rows, out int mapAt, out int eb)) return null;
+            bool Inside(int cx, int cy, int bx, int by) => cx >= bx && cx < bx + width && cy >= by && cy < by + height;
+            ushort[] plain = new ushort[width * height];
+            for (int r = 0; r < height; r++)
+            {
+                int row = y + r;
+                if (row >= rows) continue;
+                int column = Enumerable.Range(0, columns).FirstOrDefault(c => !Inside(c, row, x, y) && !also.Any(a => Inside(c, row, a.X, a.Y)), -1);
+                ushort square = column < 0 ? (ushort)0 : (ushort)EntryAt(scr, mapAt, SquareIndex(columns, column, row), eb);
+                for (int c = 0; c < width; c++) plain[r * width + c] = square;
+            }
+            return plain;
+        }
+
+        /// <summary>A screen with a block of squares put at <paramref name="x"/>, <paramref name="y"/>, dropping squares past its edge.</summary>
+        public static byte[] PutSquares(byte[] scr, int x, int y, int width, int height, ushort[] squares)
+        {
+            if (squares == null || squares.Length < width * height || !Squares(scr, out int columns, out int rows, out int mapAt, out int eb)) return scr;
+            byte[] put = (byte[])scr.Clone();
+            for (int r = 0; r < height; r++)
+                for (int c = 0; c < width; c++)
+                    if (x + c >= 0 && x + c < columns && y + r >= 0 && y + r < rows)
+                        PutEntry(put, mapAt, SquareIndex(columns, x + c, y + r), eb, squares[r * width + c]);
+            return put;
+        }
+
+        /// <summary>A drawing with its pixel data replaced by <paramref name="data"/>. The section and file lengths count the new size.</summary>
+        public static byte[] WithCharacterData(byte[] ncgr, DrawingHeader head, byte[] data)
+        {
+            byte[] file = new byte[head.DataAt + data.Length];
+            Array.Copy(ncgr, file, head.DataAt);
+            data.CopyTo(file, head.DataAt);
+            BitConverter.GetBytes(data.Length).CopyTo(file, head.SectionAt + 0x18);
+            BitConverter.GetBytes(file.Length - head.SectionAt).CopyTo(file, head.SectionAt + 4);
+            BitConverter.GetBytes(file.Length).CopyTo(file, 0x08);
+            return file;
+        }
+
         /// <summary>How many whole tiles a drawing file has room for.</summary>
         public static int TileRoom(byte[] chr)
         {
@@ -261,7 +336,8 @@ namespace DSPRE.ROMFiles
                 }
         }
 
-        public static BgImage Composite(byte[] chr, byte[] pal, byte[] scr, bool transparentZero = true)
+        /// <param name="extended">A 256-colour drawing reads the palette file as 16 extended palettes.</param>
+        public static BgImage Composite(byte[] chr, byte[] pal, byte[] scr, bool transparentZero = true, bool extended = false)
         {
             (byte r, byte g, byte b)[] colors = ReadPalette(pal, out int palCount);
             return Composite(chr, colors, palCount, scr, transparentZero);

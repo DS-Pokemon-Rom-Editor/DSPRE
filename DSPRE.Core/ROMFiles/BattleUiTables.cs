@@ -151,7 +151,7 @@ namespace DSPRE.ROMFiles
                 if (spot.Overlay >= 0 && OverlayUtils.IsStillCompressed(spot.Overlay)) return null;
 
                 byte[] file = File.ReadAllBytes(RomLocator.PathOf(spot));
-                uint ramBase = spot.Overlay >= 0 ? OverlayUtils.OverlayTable.GetRAMAddress(spot.Overlay) : ARM9.Address;
+                uint ramBase = RomLocator.RamBase(spot);
                 uint pointer = BitConverter.ToUInt32(file, spot.Offset + type * 4);
                 long at = (long)pointer - ramBase;
                 if ((pointer & 1) != 0 || at < 0 || at + 32 > file.Length) return null;

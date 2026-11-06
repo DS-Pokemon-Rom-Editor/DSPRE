@@ -2793,6 +2793,21 @@ namespace DSPRE
             : GameFamily == GameFamilies.DP ? (23, 30, 31, new[] { 0, 1, 2, 3, 4, 5, 6 })
             : (41, 47, 48, new[] { 0, 1, 2, 3, 4, 5, 6 });
 
+        // The naming screen archive, numbered alike in Platinum and HGSS: BG colours, sprite colours, key tiles, backdrop map, key map,
+        // sprite drawing, cells and animations, and the extra key glyphs.
+        public static readonly (int Colours, int SpriteColours, int Tiles, int Backdrop, int Keys, int Sprites, int Cells, int Animations,
+            int Glyphs) NamingScreenMembers = (0, 1, 2, 4, 6, 10, 12, 14, 16);
+
+        // HGSS: the case behind the card, the top screen's badge case (Johto map, cleared map, Hall of Fame mark source, backdrop),
+        // the badges and the bottom buttons.
+        public static readonly (int CaseNcgr, int CaseNscr, int BadgeCaseNclr, int BadgeCaseNcgr, int JohtoNscr, int ClearedNscr, int MarkNscr,
+            int BackdropNscr, int BadgeNcgr, int BadgeNcer, int BadgeNanr, int BadgeNclr, int ButtonNcgr, int ButtonNcer, int ButtonNanr,
+            int ButtonNclr) HgssTrainerCardCase = (42, 49, 28, 43, 51, 52, 53, 50, 46, 58, 59, 30, 45, 56, 57, 29);
+
+        // Platinum: the case round the card on the top screen and the closed lid on the bottom, each with its colours.
+        public static readonly (int CaseNcgr, int CaseNscr, int CaseNclr, int LidNcgr, int LidNscr, int LidNclr) PlatinumTrainerCardCase =
+            (28, 37, 10, 30, 39, 13);
+
         // DP and Platinum use the pokeplatinum level names; HeartGold's are not named, so they go by colour.
         public static string[] TrainerCardRankNames => GameFamily == GameFamilies.HGSS
             ? new[] { "Normal", "Blue", "Green", "Purple", "Silver", "Black", "No Pokédex" }

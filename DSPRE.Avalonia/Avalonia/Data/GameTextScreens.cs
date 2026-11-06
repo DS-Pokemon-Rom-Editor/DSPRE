@@ -466,6 +466,19 @@ namespace DSPRE.Avalonia.Data
 
         private static void Palettes(DsBgScreen s, ushort[] colours, int firstSlot = 0, int rows = 16) => s.SetPalettes(colours, firstSlot, rows);
 
+        // With the bottom screen palettes patch, the layer's drawing has 256-colour tiles that read the patch's palettes.
+        // gameRows: rows the game copies over the first 16 colours of extended palettes 0 and up while the screen is open.
+        internal static void ExtendedColours(DsBgScreen s, Func<int, byte[]> m, int bg, BottomPalettesPatch.Screen screen, int load = 0,
+                                             IReadOnlyList<ushort[]> gameRows = null)
+        {
+            int member = screen == null ? -1 : BottomPalettesPatch.PaletteMember(screen, load);
+            if (member < 0) return;
+            ushort[] palettes = NitroBgCodec.ReadColours(m(member));
+            for (int r = 0; gameRows != null && r < gameRows.Count; r++)
+                Array.Copy(gameRows[r], 0, palettes, r * BottomPalettesPatch.PaletteSize, Math.Min(16, Math.Min(gameRows[r].Length, palettes.Length - r * BottomPalettesPatch.PaletteSize)));
+            s.UseExtendedPalettes(bg, palettes);
+        }
+
         // ── options ──────────────────────────────────────────────────────────────────
 
         // pokeplatinum src/applications/options_menu.c: rows of label, choices and description, by message id.
@@ -767,6 +780,70 @@ namespace DSPRE.Avalonia.Data
             MessageWindow(rgba, x, y, w, h, talk[15]);
             Print(rgba, TalkFont, BoxText(hg ? 249 : 422, line, TalkFont), x * 8, y * 8, talk[1], talk[2]);
             return new Shot("Naming screen graphics: top", rgba, () => AvaloniaEditorLauncher.OpenNamingScreenEditor());
+        }
+
+        // naming_screen.c in both games: the backdrop on BG2, the key art on BG1 scrolled by -11,-80, and the keys window (2,1, 26 by 12)
+        // filled with colour 4, every other key in colour 3, the first page's characters every 16 by 19 pixels in colours 14 and 15.
+        private static Shot NamingKeyboard()
+        {
+            (DsBgScreen s, Func<int, byte[]> m) = Bg(DirNames.NameInputGraphics);
+            if (s == null) return null;
+            ushort[] colours = NitroBgCodec.ReadColours(m(NamingScreenMembers.Colours));
+            Palettes(s, colours, 0, 3);
+            // With the bottom screen palettes patch, the backdrop reads a 256-colour copy at 0x20000.
+            BottomPalettesPatch.Screen wide = BottomPalettesPatch.Naming;
+            int backdrop = BottomPalettesPatch.DrawingMember(wide);
+            bool widened = backdrop >= 0 && backdrop != NamingScreenMembers.Tiles;
+            Layer(s, m, 2, 3, widened ? 0x20000 : 0, widened ? backdrop : NamingScreenMembers.Tiles, NamingScreenMembers.Backdrop);
+            if (widened) ExtendedColours(s, m, 2, wide);
+            Layer(s, m, 1, 2, 0x10000, NamingScreenMembers.Tiles, NamingScreenMembers.Keys);
+            const int scrollX = -11, scrollY = -80;
+            s.SetScroll(1, scrollX, scrollY);
+            byte[] rgba = s.Render();
+            // The name and its side window are filled with colour 1, which an imported backdrop doesn't have there.
+            (int nameX, int nameY, int nameW, int nameH) = ScreenWindowLayouts.Window("naming", "Name", (10, 3, 13, 2));
+            Fill(rgba, DsBgScreen.Row(colours, 0)[1], nameX * 8, nameY * 8, nameW * 8, nameH * 8);
+
+            ushort[] row = DsBgScreen.Row(colours, 1);
+            (int kx, int ky, int _, int _) = ScreenWindowLayouts.Window("naming", "Keys", (2, 1, 26, 12));
+            int left = kx * 8 - scrollX, top = ky * 8 - scrollY;
+            const int keyWidth = 16, keyHeight = 19, keyColumns = 13;
+            Fill(rgba, row[4], left, top, 26 * 8, 12 * 8);
+            for (int r = 0; r < 5; r++)
+                for (int c = (r + 1) % 2; c < keyColumns; c += 2)
+                    Fill(rgba, row[3], left + c * keyWidth, top + r * keyHeight, keyWidth, keyHeight);
+            ushort[][] keys = NamingKeys(0);
+            FieldFont font = SystemFont;
+            for (int r = 0; keys != null && font != null && r < keys.Length; r++)
+                for (int c = 0; c < keys[r].Length; c++)
+                {
+                    int glyph = keys[r][c] - 1;
+                    if (glyph < 0) continue;
+                    int width = font.WidthOf(glyph);
+                    DsBgScreen.DrawGlyph(rgba, font, glyph, left + c * keyWidth + (keyWidth - width) / 2, top + r * keyHeight + 4, row[14], row[15]);
+                }
+
+            // sSpriteAnimations / sUISpritesParam: the labels sit at 22,56 with UPPER chosen and each button is placed from its x
+            // (SubspritePosControllerTask). The player's icon (48) is at 24,8, and seven underscores run from 80,39 every 12.
+            Func<int, byte[]> sprites = i => GraphicAssets.Unsqueeze(m(i));
+            const int nameLength = 7, labelsX = 22;
+            List<(int X, int Y, int Anim)> drawn = new List<(int, int, int)>
+            {
+                (labelsX, 56, 37), (labelsX + 4, 68, 0), (labelsX + 36, 68, 8), (labelsX + 68, 68, 13), (labelsX + 136, 68, 23),
+                (labelsX + 176, 68, 25), (24, 8, 48),
+            };
+            // The underscores follow the Name window, at 10,3 in the game.
+            for (int i = 0; i < nameLength; i++) drawn.Add((nameX * 8 + 12 * i, nameY * 8 + 15, i == 0 ? 44 : 43));
+            foreach ((int bx, int by, int anim) in drawn)
+                PartySprite(rgba, sprites, NamingScreenMembers.Animations, NamingScreenMembers.Cells, NamingScreenMembers.Sprites, bx, by, anim, -1,
+                            NamingScreenMembers.SpriteColours);
+            return new Shot("Naming screen graphics: bottom", rgba, () => AvaloniaEditorLauncher.OpenNamingScreenEditor());
+        }
+
+        private static ushort[][] NamingKeys(int page)
+        {
+            try { return ScreenCodeData.NamingKeys(page); }
+            catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException) { AppLogger.WarnOnce("GameTextScreens.NamingKeys", ex); return null; }
         }
 
         // ── trainer card ─────────────────────────────────────────────────────────────
@@ -1623,6 +1700,7 @@ namespace DSPRE.Avalonia.Data
             s.SetPalette(0, NitroBgCodec.ReadColours(m(13)));
             s.SetPalette(1, NitroBgCodec.ReadColours(m(4)));
             Layer(s, m, 1, 1, 0, 12, 14);
+            ExtendedColours(s, m, 1, BottomPalettesPatch.Party);
             s.InitLayer(0, 0, 0x10000);
             s.LoadTiles(0x10000, m(3));
             PartyPanelLayout panels = ScreenWindowLayouts.Panels();

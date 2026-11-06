@@ -357,7 +357,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         // Layout and Cursor share one model so the Cursor tab shows unsaved panel moves.
         private static ScreenEntry PartyEntry(ScreensEditorViewModel o)
         {
-            if (ScreenWindowLayout.Read("party") == null) return new ScreenEntry(o, "party", "Party", Text("party"));
+            ScreenEditorView edit = BackgroundTab(BottomPalettesPatch.Party, MenuBackgroundBook.Party, "Party");
+            if (ScreenWindowLayout.Read("party") == null) return new ScreenEntry(o, "party", "Party", Text("party"), edit);
             ScreenWindowLayoutViewModel shared = null;
             ScreenWindowLayoutViewModel Model() => shared ??= new ScreenWindowLayoutViewModel("party", "Party");
             void Forget() => shared = null;
@@ -366,6 +367,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 PartyCursorFlow.Read() == null ? null
                     : new ScreenEditorView("Cursor", () => new Views.Graphics.ScreenCursorView(Model()), forgotten: Forget));
         }
+
+        // A menu's background tab, for screens the bottom screen palettes patch covers.
+        private static ScreenEditorView BackgroundTab(BottomPalettesPatch.Screen screen, Func<MenuBackgroundBook> book, string title, string tab = "Edit") =>
+            screen == null ? null
+                : new ScreenEditorView(tab,() => new Views.Graphics.ScreenPagesView { DataContext = new ScreenPagesEditorViewModel(book(), null) },
+                                       null, Unpack(screen.Archive), $"Opening {title}…");
 
         private static ScreenEntry BattleMenuEntry(ScreensEditorViewModel o, BattleMenuButtons.Menu menu, string key, string title) =>
             RomLocator.BattleMenuSites == null ? null : new ScreenEntry(o, key, title, null, ButtonTabs(() => BattleMenuButtons.Read(menu), title, (buttons, page) =>
@@ -455,7 +462,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 ? ButtonTabs(PlatinumTouchLists.Pc, "PC boxes", (_, page) => () => GameTextScreens.PcBottomPt(page), "Buttons", cursor: false)
                 : RomLocator.PcBoxSites != null ? ButtonTabs(HgssMenuButtons.Pc, "PC boxes", GameTextScreens.BoxLayoutHg, "Buttons")
                 : Array.Empty<ScreenEditorView>();
-            return new ScreenEntry(o, "box", "PC boxes", Text("box"), new[] { layout }.Concat(buttons).ToArray());
+            ScreenEditorView layout = LayoutOf("box", "PC boxes", link, forget);
+            return new ScreenEntry(o, "box", "PC boxes", Text("box"),
+                new[] { BackgroundTab(BottomPalettesPatch.Pc, MenuBackgroundBook.Pc, "PC boxes"), layout }.Where(v => v != null).Concat(buttons).ToArray());
         }
 
         private static ScreenEntry PokedexEntry(ScreensEditorViewModel o)
@@ -542,6 +551,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     Editor("NamingScreenEditor", "Edit", () => new Views.Trainers.TrainerSpriteEditorView(
                             new ViewModels.Trainers.TrainerSpriteEditorViewModel(48, TrainerSpriteSet.NamingIcons)), null,
                            Unpack(DirNames.NameInputGraphics), "Opening Naming screen…"),
+                    BackgroundTab(BottomPalettesPatch.Naming, MenuBackgroundBook.Naming, "Naming screen", "Background"),
                     LayoutOf("naming", "Naming screen"),
                 }.Where(v => v != null).ToArray()),
             });

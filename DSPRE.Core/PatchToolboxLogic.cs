@@ -34,43 +34,14 @@ namespace DSPRE
         // ── Synthetic-overlay ARM9 helpers (Thumb BL encode/decode, payload/range status) ──────────
 
         /// <summary>Encodes a Thumb BL instruction (4 bytes) from <paramref name="sourceAddress"/> to <paramref name="targetAddress"/>.</summary>
-        public static byte[] BuildThumbBl(uint sourceAddress, uint targetAddress)
-        {
-            int offset = unchecked((int)(targetAddress - (sourceAddress + 4)));
-            ushort first = (ushort)(0xF000 | ((offset >> 12) & 0x07FF));
-            ushort second = (ushort)(0xF800 | ((offset >> 1) & 0x07FF));
-            return new byte[] {
-                (byte)(first & 0xFF),
-                (byte)(first >> 8),
-                (byte)(second & 0xFF),
-                (byte)(second >> 8)
-            };
-        }
+        public static byte[] BuildThumbBl(uint sourceAddress, uint targetAddress) => ThumbBl.Make(sourceAddress, targetAddress);
 
         /// <summary>Decodes a Thumb BL's target address, or false if <paramref name="branchBytes"/> isn't one.</summary>
         public static bool TryGetThumbBlTarget(uint sourceAddress, byte[] branchBytes, out uint targetAddress)
         {
-            targetAddress = 0;
-            if (branchBytes == null || branchBytes.Length != 4)
-            {
-                return false;
-            }
-
-            ushort first = BitConverter.ToUInt16(branchBytes, 0);
-            ushort second = BitConverter.ToUInt16(branchBytes, 2);
-            if ((first & 0xF800) != 0xF000 || (second & 0xF800) != 0xF800)
-            {
-                return false;
-            }
-
-            int offset = ((first & 0x07FF) << 12) | ((second & 0x07FF) << 1);
-            if ((offset & 0x00400000) != 0)
-            {
-                offset |= unchecked((int)0xFF800000);
-            }
-
-            targetAddress = unchecked((uint)((int)(sourceAddress + 4) + offset));
-            return true;
+            uint? to = branchBytes?.Length == 4 ? ThumbBl.Target(branchBytes, 0, sourceAddress) : null;
+            targetAddress = to ?? 0;
+            return to != null;
         }
 
         private static byte[] BuildBuildingRotationPayload(BuildingRotationPatchData data, uint payloadAddress)
@@ -1231,6 +1202,102 @@ namespace DSPRE
             return true;
         }
 
+        // Screens added after a project was patched get the patch on the next Apply.
+        private static bool PokedexBottomWanted => PokedexBottomPalettes.SupportsCurrentRom && !PokedexBottomPalettes.IsApplied;
+
+        private static List<BottomPalettesPatch.Screen> BottomScreensWanted() =>
+            BottomPalettesPatch.Screens.Where(s => !BottomPalettesPatch.IsApplied(s)).ToList();
+
+        public static bool ApplyBottomPalettesPatch()
+        {
+            List<BottomPalettesPatch.Screen> wanted = BottomScreensWanted();
+            bool pokedex = PokedexBottomWanted;
+            if (AlreadyApplied(Probe(() => wanted.Count == 0 && !pokedex))) return false;
+            foreach (BottomPalettesPatch.Screen screen in wanted)
+                if (BottomPalettesPatch.WhyNotApplicable(screen) is string why) { ShowError(why, "Patch not applied"); return false; }
+            if (pokedex && PokedexBottomPalettes.WhyNotApplicable() is string dexWhy) { ShowError(dexWhy, "Patch not applied"); return false; }
+            // Every screen's widened files are made before anything is written, so a file DSPRE can't read stops the whole patch.
+            Dictionary<BottomPalettesPatch.Load, (byte[] Drawing, byte[] Colours)> widened = new();
+            uint gameLoader = 0;
+            try
+            {
+                if (pokedex) gameLoader = BottomPalettesPatch.GameLoader();
+                foreach (BottomPalettesPatch.Screen screen in wanted)
+                {
+                    DSUtils.TryUnpackNarcs(new List<DirNames> { screen.Archive });
+                    foreach (BottomPalettesPatch.Load load in screen.Loads)
+                        widened[load] = BottomPalettesPatch.Widen(File.ReadAllBytes(ArchiveMembers.PathOf(screen.Archive, load.Drawing)),
+                                                                  File.ReadAllBytes(ArchiveMembers.PathOf(screen.Archive, load.Colours)));
+                }
+            }
+            catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is InvalidOperationException)
+            {
+                ShowError(ex.Message, "Patch not applied");
+                return false;
+            }
+            int[] lengths = wanted.SelectMany(s => s.BlockLengths)
+                .Concat(pokedex ? new[] { PokedexBottomPalettes.BlockLength } : Array.Empty<int>()).ToArray();
+            if (PlacementNote(lengths, out int[] offsets) is not string placement) return false;
+            List<string> names = wanted.Select(s => "the " + s.Name).Concat(pokedex ? new[] { "the Pokédex" } : Array.Empty<string>()).ToList();
+            string screens = names.Count == 1 ? $"The bottom background of {names[0]} gets 256-colour tiles and"
+                : $"The bottom backgrounds of {string.Join(", ", names.Take(names.Count - 1))} and {names[^1]} get 256-colour tiles and";
+            if (!ConfirmYesNo(screens + " 16 palettes, so pictures imported there keep far more " +
+                "colours." + placement +
+                BackupNote("the ARM9, the screens' overlays, the synthetic overlay and the screen graphics") + "\n\nApply this patch?" + CreditNote("bottomPalettes"), "Confirm to proceed"))
+                return false;
+            PlainFiles.Copy(RomInfo.Arm9Path, RomInfo.Arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
+            int next = 0;
+            foreach (BottomPalettesPatch.Screen screen in wanted)
+            {
+                List<int> members = new();
+                int member = MemberCount(ArchiveMembers.PathOf(screen.Archive, 0)), copy = -1;
+                foreach (BottomPalettesPatch.Load load in screen.Loads)
+                {
+                    string drawingPath = ArchiveMembers.PathOf(screen.Archive, load.Drawing);
+                    (byte[] drawing, byte[] colours) = widened[load];
+                    // A drawing other layers share stays as it is, and the layer gets a copy.
+                    if (screen.TileLoad != null) ArchiveMembers.Put(screen.Archive, copy = member++, drawing);
+                    else
+                    {
+                        PlainFiles.Copy(drawingPath, drawingPath + BackupSuffix, overwrite: true);
+                        ArchiveMembers.Put(screen.Archive, load.Drawing, drawing);
+                    }
+                    ArchiveMembers.Put(screen.Archive, member, colours);
+                    members.Add(member++);
+                }
+                string code = BottomPalettesPatch.CodePath(screen);
+                if (code != RomInfo.Arm9Path) PlainFiles.Copy(code, code + BackupSuffix, overwrite: true);
+                BottomPalettesPatch.Apply(screen, offsets.Skip(next).Take(screen.BlockCount).ToList(), members, copy);
+                next += screen.BlockCount;
+            }
+            if (pokedex)
+            {
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.PokedexGraphics });
+                int member = MemberCount(ArchiveMembers.PathOf(DirNames.PokedexGraphics, 0));
+                Dictionary<int, int> drawings = new(), colours = new();
+                foreach (int d in PokedexBottomPalettes.Drawings)
+                {
+                    ArchiveMembers.Put(DirNames.PokedexGraphics, member, BottomPalettesPatch.WideDrawing(File.ReadAllBytes(ArchiveMembers.PathOf(DirNames.PokedexGraphics, d))));
+                    drawings[d] = member++;
+                }
+                foreach (int c in PokedexBottomPalettes.Colours)
+                {
+                    ArchiveMembers.Put(DirNames.PokedexGraphics, member, BottomPalettesPatch.PaletteTwin(File.ReadAllBytes(ArchiveMembers.PathOf(DirNames.PokedexGraphics, c))));
+                    colours[c] = member++;
+                }
+                string overlay = OverlayUtils.GetPath(RomLocator.Where(RomLocator.Thing.PokedexPaletteLoader).Overlay);
+                PlainFiles.Copy(overlay, overlay + BackupSuffix, overwrite: true);
+                PokedexBottomPalettes.Apply(offsets[next], drawings, colours, gameLoader);
+            }
+            ShowInfo("Import a picture onto the bottom background in the Screens editor.", "Patch applied");
+            return true;
+        }
+
+        // Numbered members in an unpacked archive folder, without the backups beside them.
+        private static int MemberCount(string memberPath) =>
+            Directory.GetFiles(Path.GetDirectoryName(memberPath)).Count(f => int.TryParse(Path.GetFileName(f), out _));
+
         public static bool ApplyHpBarFontsPatch()
         {
             if (AlreadyApplied(Probe(() => HpBarFontPatch.IsApplied))) return false;
@@ -1693,6 +1760,7 @@ namespace DSPRE
             ["fightIcon"] = ("Mixone", "the FIGHT icon"),
             ["fieldMenuColours"] = ("Mixone", "field menu button colours"),
             ["summaryFonts"] = ("Mixone", "summary screen fonts"),
+            ["bottomPalettes"] = ("Mixone", "bottom screen palettes"),
             ["partyFonts"] = ("Mixone", "party menu fonts"),
             ["hpBarFonts"] = ("Mixone", "HP bar fonts"),
             ["extraFonts"] = ("Mixone", "extra fonts"),
@@ -1823,6 +1891,7 @@ namespace DSPRE
             ["fightIcon"] = "FIGHT icon",
             ["fieldMenuColours"] = "Field menu button colours",
             ["summaryFonts"] = "Summary screen fonts",
+            ["bottomPalettes"] = "Bottom screen palettes",
             ["partyFonts"] = "Party menu fonts",
             ["hpBarFonts"] = "HP bar fonts",
             ["extraFonts"] = "Extra fonts",
@@ -2110,6 +2179,17 @@ namespace DSPRE
                     if (RomInfo.GameFamily != RomInfo.GameFamilies.HGSS) return Unsupported("HeartGold and SoulSilver only");
                     if (!SummaryFontPatch.SupportsCurrentRom) return UnsupportedVersion(RomLocator.SummaryFontDumps);
                     if (SummaryFontPatch.IsApplied) return PatchState.Applied;
+                    return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
+                }));
+
+            list.Add(Status("bottomPalettes",
+                "Gives the bottom backgrounds of the summary screen, the bag and, on Platinum, the Pokédex, the party screen, the PC boxes and the naming screen 256-colour tiles and 16 palettes, for pictures with many colours (Platinum, HeartGold and SoulSilver). Requires the ARM9 expansion patch.",
+                () =>
+                {
+                    if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+                    if (BottomPalettesPatch.Summary == null) return Unsupported("Platinum, HeartGold and SoulSilver only");
+                    if (!BottomPalettesPatch.SupportsCurrentRom) return Unsupported("This patch doesn't support this ROM yet.");
+                    if (BottomScreensWanted().Count == 0 && !PokedexBottomWanted) return PatchState.Applied;
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
                 }));
 
@@ -2625,7 +2705,7 @@ namespace DSPRE
                 or "trainerClassTablesExpanded" or "trainerEncounterBgmRepointed" or "punchingMovesExpanded" or "soundMovesExpanded"
                 or "pickupSlots" or "bugContestPrizes" or "shinyOdds" or "classIntros" or "hpBarText" or "vsClassTableExpanded" or "trainerShiny" or "trainerClassMetadata"
                 or "martsExpanded" or "bpShopExpanded" or "swarmTableExpanded" or "typeChartExpanded" or "vsIntroTimings" or "partyPanelSize"
-                or "summaryFonts" or "partyFonts" or "hpBarFonts" or "extraFonts" or "bannerMotion")
+                or "summaryFonts" or "bottomPalettes" or "bagButtons" or "partyFonts" or "hpBarFonts" or "extraFonts" or "bannerMotion")
             {
                 ShowError(hgEngineRefusal, "Not available on hg-engine");
                 return false;
@@ -2663,6 +2743,7 @@ namespace DSPRE
                 case "fightIcon": return ApplyFightIconPatch();
                 case "fieldMenuColours": return ApplyFieldMenuColoursPatch();
                 case "summaryFonts": return ApplySummaryFontsPatch();
+                case "bottomPalettes": return ApplyBottomPalettesPatch();
                 case "partyFonts": return ApplyPartyFontsPatch();
                 case "hpBarFonts": return ApplyHpBarFontsPatch();
                 case "extraFonts": return ApplyExtraFontsPatch();

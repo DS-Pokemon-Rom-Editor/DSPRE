@@ -232,6 +232,14 @@ namespace DSPRE
                 "The old panel art doesn't fit a new size, so rebuild it or draw your own.\n\n" +
                 "Requirements\n" +
                 "HeartGold or SoulSilver, any language. No ARM9 expansion or synthetic overlay. Not compatible with hg-engine.",
+            ["bottomPalettes"] =
+                "What it does\n" +
+                "The bottom backgrounds of the summary screen, the bag and, on Platinum, the Pokédex, the party screen, the PC boxes and the naming screen get 256-colour " +
+                "tiles and 16 palettes of 255 colours, so pictures imported there keep far more colours.\n\n" +
+                "Where to edit\n" +
+                "The Screens editor's Summary, Pokédex, Party, Bag, PC boxes and Naming screen: import a picture onto the bottom background.\n\n" +
+                "Requirements\n" +
+                "Platinum, HeartGold or SoulSilver, any language. Needs the ARM9 expansion. Not compatible with hg-engine.",
             ["summaryFonts"] =
                 "What it does\n" +
                 "Each text box on the summary screen can use any of the game's fonts. The narrow Pokéwalker font fits long " +
@@ -397,6 +405,9 @@ namespace DSPRE
             ["partyPanelSize"] = ("76 instructions in seven of the ARM9's party menu functions hold the panel size instead of the game's 16 by 6, each changed in place.",
                 "No additional space or synthetic overlay.",
                 "the ARM9"),
+            ["bottomPalettes"] = ("Each screen's bottom palette loads go through the patch's routines, which also load the extended palettes. Each screen's VRAM bank table and bottom background template turn them on. In HeartGold and SoulSilver, the bag's pocket colours are copied into the extended palettes too.",
+                "56 bytes in the synthetic overlay for each of the summary screen, the party screen and Platinum's bag, 204 for the HeartGold and SoulSilver bag, 336 for the PC boxes, 148 for the Pokédex, and new drawing and palette members in their graphics.",
+                "the ARM9, the Pokédex, bag and PC overlays, the synthetic overlay and the screens' graphics"),
             ["summaryFonts"] = ("The ARM9 prints the summary screen's text through the patch's routine.",
                 "About 1.2 KB in the synthetic overlay, with a font table that has room for every summary screen window.",
                 "the ARM9 and the synthetic overlay"),
