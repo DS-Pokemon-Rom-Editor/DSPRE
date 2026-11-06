@@ -893,8 +893,10 @@ namespace DSPRE
                 Code(bottom, "Long message", 4, 27, 4, 0x4D1C, 0x4D02),
                 Code(bottom, "Price", 4, 8, 3, 0x5028, 0x5006),
             };
-            // Each item has two windows at one spot, which the game swaps between when the page turns.
-            windows.AddRange(Enumerable.Range(0, 6).Select(i => Tabled(bottom, $"Item {i + 1}", 4, 11, 4, items + (uint)i * 12, items + (uint)(i + 6) * 12)));
+            // Each item has two windows at one spot that the game swaps on a page turn. Its button, icon and cursor are fixed, so the
+            // text stays on its 16 by 6 button unless the bag item buttons patch is in.
+            windows.AddRange(Enumerable.Range(0, 6).Select(i => Tabled(bottom, $"Item {i + 1}", 4, 11, 4, items + (uint)i * 12, items + (uint)(i + 6) * 12)
+                with { Within = (16 * (i % 2), 4 + 5 * (i / 2), 16, 6), FreeWithBagButtons = true }));
             windows.AddRange(Enumerable.Range(0, 4).Select(i => Tabled(bottom, $"Option {i + 1}", 4, 10, 2, options + (uint)i * 8)));
             windows.AddRange(Enumerable.Range(0, 3).Select(i => Tabled(bottom, $"Digit {i + 1}", 4, 2, 3, digits + (uint)i * 8)));
             return new ScreenCodeWindowSites(15, windows.ToArray());

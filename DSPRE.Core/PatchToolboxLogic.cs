@@ -1315,6 +1315,27 @@ namespace DSPRE
             return true;
         }
 
+        public static bool ApplyBagButtonsPatch()
+        {
+            if (AlreadyApplied(Probe(() => BagButtonsPatch.IsApplied))) return false;
+            if (BagButtonsPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
+            if (PlacementNote(new[] { BagButtonsPatch.BlockLength }, out int[] offsets) is not string placement) return false;
+            if (!ConfirmYesNo("Each of the six item buttons on the bag's bottom screen can move separately, with its art, icon, cursor " +
+                "and touch areas. Move them in the Screens editor's Bag layout." + placement +
+                BackupNote("overlay 15, the synthetic overlay and the bag's four button screens") + "\n\nApply this patch?" + CreditNote("bagButtons"), "Confirm to proceed"))
+                return false;
+            PlainFiles.Copy(OverlayUtils.GetPath(15), OverlayUtils.GetPath(15) + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
+            foreach (int map in BagButtonsPatch.Maps)
+            {
+                string path = ArchiveMembers.PathOf(DirNames.BagGraphics, map);
+                PlainFiles.Copy(path, path + BackupSuffix, overwrite: true);
+            }
+            BagButtonsPatch.Apply(offsets[0]);
+            ShowInfo("Move the item buttons in the Screens editor's Bag layout.", "Patch applied");
+            return true;
+        }
+
         public static bool ApplyExtraFontsPatch()
         {
             if (AlreadyApplied(Probe(() => ExtraFontsPatch.IsApplied))) return false;
@@ -1762,6 +1783,7 @@ namespace DSPRE
             ["fieldMenuColours"] = ("Mixone", "field menu button colours"),
             ["summaryFonts"] = ("Mixone", "summary screen fonts"),
             ["bottomPalettes"] = ("Mixone", "bottom screen palettes"),
+            ["bagButtons"] = ("Mixone", "bag item buttons"),
             ["partyFonts"] = ("Mixone", "party menu fonts"),
             ["hpBarFonts"] = ("Mixone", "HP bar fonts"),
             ["extraFonts"] = ("Mixone", "extra fonts"),
@@ -1893,6 +1915,7 @@ namespace DSPRE
             ["fieldMenuColours"] = "Field menu button colours",
             ["summaryFonts"] = "Summary screen fonts",
             ["bottomPalettes"] = "Bottom screen palettes",
+            ["bagButtons"] = "Bag item buttons",
             ["partyFonts"] = "Party menu fonts",
             ["hpBarFonts"] = "HP bar fonts",
             ["extraFonts"] = "Extra fonts",
@@ -2191,6 +2214,17 @@ namespace DSPRE
                     if (BottomPalettesPatch.Summary == null) return Unsupported("Platinum, HeartGold and SoulSilver only");
                     if (!BottomPalettesPatch.SupportsCurrentRom) return Unsupported("This patch doesn't support this ROM yet.");
                     if (BottomScreensWanted().Count == 0 && !PokedexBottomWanted) return PatchState.Applied;
+                    return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
+                }));
+
+            list.Add(Status("bagButtons",
+                "Lets each of the six item buttons on the bag's bottom screen move separately in the Screens editor, with its art, icon, cursor and touch areas (HeartGold and SoulSilver). Requires the ARM9 expansion patch.",
+                () =>
+                {
+                    if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+                    if (RomInfo.GameFamily != RomInfo.GameFamilies.HGSS) return Unsupported("HeartGold and SoulSilver only");
+                    if (!BagButtonsPatch.Supports) return Unsupported("This patch doesn't support this ROM yet.");
+                    if (BagButtonsPatch.IsApplied) return PatchState.Applied;
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
                 }));
 
@@ -2751,6 +2785,7 @@ namespace DSPRE
                 case "fieldMenuColours": return ApplyFieldMenuColoursPatch();
                 case "summaryFonts": return ApplySummaryFontsPatch();
                 case "bottomPalettes": return ApplyBottomPalettesPatch();
+                case "bagButtons": return ApplyBagButtonsPatch();
                 case "partyFonts": return ApplyPartyFontsPatch();
                 case "hpBarFonts": return ApplyHpBarFontsPatch();
                 case "extraFonts": return ApplyExtraFontsPatch();

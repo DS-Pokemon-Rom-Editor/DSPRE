@@ -476,8 +476,12 @@ namespace DSPRE
         /// A window the game places in code, with a fixed size. X and Y can each sit in several places that must agree.
         /// An axis with none stays at <paramref name="FixedX"/> or <paramref name="FixedY"/> because its register is shared.
         /// </summary>
+        /// <param name="Within">The block of tiles it must stay in, such as the button art it sits on, or null for any.</param>
+        /// <param name="FreeWithBagButtons">The window leaves <paramref name="Within"/> once the bag item buttons patch is in, which moves
+        /// its button with it.</param>
         public sealed record ScreenCodeWindow(string Group, string Name, int Layer, int Width, int Height, ScreenWindowSpot[] X, ScreenWindowSpot[] Y,
-                                              int FixedX = 0, int FixedY = 0);
+                                              int FixedX = 0, int FixedY = 0, (int X, int Y, int W, int H)? Within = null,
+                                              bool FreeWithBagButtons = false);
 
         public sealed record ScreenCodeWindowSites(int Overlay, ScreenCodeWindow[] Windows);
 

@@ -2990,6 +2990,31 @@ namespace DSPRE
             _ => null,
         };
 
+        /// <summary>
+        /// The HGSS bag's BagApp_DrawItemBgButtons_NormalMode and _MoveMode, then the three BLs to NormalMode and the BL to
+        /// MoveMode. Measured on every dump.
+        /// </summary>
+        private static Spot BagButtonDraws(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.HeartGold or GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.Japanese => Ov(15, 0x4078, 0x40FC, 0x380C, 0x4218, 0x4338, 0x42A4),
+                _ => Ov(15, 0x40BC, 0x4140, 0x382C, 0x425C, 0x437C, 0x42E8),   // every other language and revision measured the same
+            },
+            _ => null,
+        };
+
+        /// <summary>The HGSS bag's sSpriteTemplates, 0x34 bytes each, x and y first as s16.</summary>
+        private static Spot BagSpriteTemplates(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.HeartGold or GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.Japanese => Ov(15, 0x7714),
+                _ => Ov(15, 0x778C),   // every other language and revision measured the same
+            },
+            _ => null,
+        };
+
         /// <summary>The PC boxes' BL that loads the bottom palette in the box list (file 128).</summary>
         private static Spot PcBottomPaletteCall(GameVersions game, GameLanguages language, int revision) => game switch
         {

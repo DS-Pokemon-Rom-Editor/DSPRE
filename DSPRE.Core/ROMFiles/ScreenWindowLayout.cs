@@ -92,6 +92,7 @@ namespace DSPRE.ROMFiles
         {
             if (_code.Overlay >= 0 && OverlayUtils.IsCompressed(_code.Overlay)) OverlayUtils.Decompress(_code.Overlay);
             byte[] file = File.ReadAllBytes(CodeFile);
+            bool wholeButtons = _code.Windows.Any(c => c.FreeWithBagButtons) && BagButtonsPatch.IsApplied;
             foreach (RomInfo.ScreenCodeWindow code in _code.Windows)
             {
                 int x = SpotValue(file, code.X, code.FixedX), y = SpotValue(file, code.Y, code.FixedY);
@@ -104,6 +105,13 @@ namespace DSPRE.ROMFiles
                     MinX = Math.Max(0, LeastValue(code.X)), MinY = Math.Max(0, LeastValue(code.Y)),
                     MaxX = MostValue(code.X, MapColumns), MaxY = MostValue(code.Y, MapHeight),
                 });
+                if (code.Within is (int ax, int ay, int aw, int ah) && !(wholeButtons && code.FreeWithBagButtons))
+                {
+                    Window w = Windows[^1];
+                    (w.MinX, w.MinY) = (Math.Max(w.MinX, ax), Math.Max(w.MinY, ay));
+                    (w.MaxX, w.MaxY) = (Math.Min(w.MaxX, ax + aw - w.Width), Math.Min(w.MaxY, ay + ah - w.Height));
+                    w.Bounded = true;
+                }
             }
             return true;
         }

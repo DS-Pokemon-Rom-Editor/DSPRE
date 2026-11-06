@@ -2481,7 +2481,16 @@ namespace DSPRE.Avalonia.Data
         private static readonly (int Buttons, int Back)[] BagLayouts = { (43, 39), (-1, 45), (44, 42), (-1, 52), (-1, 53) };
 
         /// <summary>Draws the HGSS bag's bottom screen for a FieldBagButtons page with the first items listed.</summary>
-        internal static byte[] BagBottomHg(int page) => BagHg(TextBank(222), 1, BagLayouts[page])?.Rgba;
+        internal static byte[] BagBottomHg(int page, BagArt art = null) => BagHg(TextBank(222), 1, BagLayouts[page], art)?.Rgba;
+
+        /// <summary>The moved button maps and item icon spots, with the bag item buttons patch.</summary>
+        internal sealed record BagArt(IReadOnlyDictionary<int, byte[]> Maps, (int X, int Y)[] Icons);
+
+        internal static BagArt BagArtOf(FieldBagButtons bag) => bag?.MovesWholeButtons == true
+            ? new BagArt(BagButtonsPatch.Maps.ToDictionary(m => m, bag.Map), Enumerable.Range(0, BagButtonsPatch.Buttons).Select(bag.IconOf).ToArray())
+            : null;
+
+        private static byte[] BagMap(Func<int, byte[]> m, BagArt art, int member) => art?.Maps.TryGetValue(member, out byte[] moved) == true ? moved : m(member);
 
         private static string[] PokegearApps => new[] { "Phone", "Radio", "Map", "Fly map" };
 
@@ -2601,9 +2610,10 @@ namespace DSPRE.Avalonia.Data
             };
         }
 
-        private static Shot BagHg(int bank, int line) => BagHg(bank, line, BagLayouts[BagStatePages[Math.Clamp(_state, 0, BagStatePages.Length - 1)]]);
+        private static Shot BagHg(int bank, int line) =>
+            BagHg(bank, line, BagLayouts[BagStatePages[Math.Clamp(_state, 0, BagStatePages.Length - 1)]], BagArtOf(ScreenWindowLayouts.ButtonsInUse<FieldBagButtons>()));
 
-        private static Shot BagHg(int bank, int line, (int Buttons, int Back) layout)
+        private static Shot BagHg(int bank, int line, (int Buttons, int Back) layout, BagArt art)
         {
             if (bank == TextBank(10) && line >= 120 && line <= 127)
             {
@@ -2624,9 +2634,11 @@ namespace DSPRE.Avalonia.Data
             for (int r = 0; r < pocketRows.Length; r++) s.SetPalette(r, pocketRows[r]);
             s.InitLayer(1, 2, 0);
             s.LoadTiles(0, m(46));
-            if (layout.Buttons >= 0) s.LoadMap(1, NitroBgCodec.ReadMap(m(layout.Buttons)).Entries, DsBgScreen.MapSide);
+            if (layout.Buttons >= 0) s.LoadMap(1, NitroBgCodec.ReadMap(BagMap(m, art, layout.Buttons)).Entries, DsBgScreen.MapSide);
             s.InitLayer(2, 3, 0);
-            s.LoadMap(2, NitroBgCodec.ReadMap(m(layout.Back)).Entries, DsBgScreen.MapSide);
+            s.LoadMap(2, NitroBgCodec.ReadMap(BagMap(m, art, layout.Back)).Entries, DsBgScreen.MapSide);
+            ExtendedColours(s, m, 1, BottomPalettesPatch.Bag, gameRows: pocketRows);
+            ExtendedColours(s, m, 2, BottomPalettesPatch.Bag, gameRows: pocketRows);
             byte[] rgba = s.Render();
             ushort[] row11 = DsBgScreen.Row(items, 3);
             if (layout.Buttons >= 0) BagSpritesHg(rgba, m);

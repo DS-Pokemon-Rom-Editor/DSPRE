@@ -148,6 +148,8 @@ namespace DSPRE
             [Thing.BagBottomBanks] = BagBottomBanks,
             [Thing.BagBottomColourMode] = BagBottomColourMode,
             [Thing.BagPocketColoursCall] = BagPocketColoursCall,
+            [Thing.BagButtonDraws] = BagButtonDraws,
+            [Thing.BagSpriteTemplates] = BagSpriteTemplates,
             [Thing.PcBottomPaletteCall] = PcBottomPaletteCall,
             [Thing.PcCompareBottomPaletteCall] = PcCompareBottomPaletteCall,
             [Thing.PcBottomBanks] = PcBottomBanks,

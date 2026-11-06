@@ -240,6 +240,14 @@ namespace DSPRE
                 "The Screens editor's Summary, Pokédex, Party, Bag, PC boxes and Naming screen: import a picture onto the bottom background.\n\n" +
                 "Requirements\n" +
                 "Platinum, HeartGold or SoulSilver, any language. Needs the ARM9 expansion. Not compatible with hg-engine.",
+            ["bagButtons"] =
+                "What it does\n" +
+                "Each of the six item buttons on the bag's bottom screen can move separately. Its art, item icon, cursor spot and " +
+                "touch areas go with it, and pages with fewer items clear the unused buttons wherever they are.\n\n" +
+                "Where to edit\n" +
+                "The Screens editor's Bag layout. Moving an item's text box moves its button.\n\n" +
+                "Requirements\n" +
+                "HeartGold or SoulSilver, any language. Needs the ARM9 expansion. Not compatible with hg-engine.",
             ["summaryFonts"] =
                 "What it does\n" +
                 "Each text box on the summary screen can use any of the game's fonts. The narrow Pokéwalker font fits long " +
@@ -405,6 +413,9 @@ namespace DSPRE
             ["partyPanelSize"] = ("76 instructions in seven of the ARM9's party menu functions hold the panel size instead of the game's 16 by 6, each changed in place.",
                 "No additional space or synthetic overlay.",
                 "the ARM9"),
+            ["bagButtons"] = ("The four calls that draw the bag's item buttons go to the patch's routines. They clear the slots a page doesn't fill, from lists DSPRE writes for the current button spots. The button maps keep their edge and frame art in rows below the screen.",
+                $"{DSPRE.ROMFiles.BagButtonsPatch.BlockLength} bytes in the synthetic overlay.",
+                "overlay 15, the synthetic overlay and the bag's button screens"),
             ["bottomPalettes"] = ("Each screen's bottom palette loads go through the patch's routines, which also load the extended palettes. Each screen's VRAM bank table and bottom background template turn them on. In HeartGold and SoulSilver, the bag's pocket colours are copied into the extended palettes too.",
                 "56 bytes in the synthetic overlay for each of the summary screen, the party screen and Platinum's bag, 204 for the HeartGold and SoulSilver bag, 336 for the PC boxes, 148 for the Pokédex, and new drawing and palette members in their graphics.",
                 "the ARM9, the Pokédex, bag and PC overlays, the synthetic overlay and the screens' graphics"),

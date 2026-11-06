@@ -6,7 +6,7 @@ namespace DSPRE.ROMFiles
 {
     /// <summary>
     /// The HeartGold and SoulSilver bag's bottom screen: touch areas per menu, where the arrow keys go and where the cursor
-    /// sprite sits. The buttons' art doesn't move with them.
+    /// sprite sits. With the bag item buttons patch, an item button moves whole: its art, sprites and both menus' spots.
     /// </summary>
     public sealed class FieldBagButtons : IScreenButtons
     {
@@ -47,6 +47,14 @@ namespace DSPRE.ROMFiles
         private readonly Dictionary<int, int> _spotTables = new Dictionary<int, int>();
         private readonly byte[] _data;
 
+        // Offsets in _data of each item's icon and button sprite templates, the patch spots and lists, and the button maps, or -1
+        // without the patch.
+        private const int TemplateSize = 0x34, IconTemplate = 1, ButtonTemplate = 21;
+        private readonly int[] _icons = new int[BagButtonsPatch.Buttons], _sprites = new int[BagButtonsPatch.Buttons];
+        private readonly Dictionary<int, int> _maps = new Dictionary<int, int>();
+        private readonly int _spots = -1, _lists, _mapLength;
+        private readonly long _block = -1;
+
         private FieldBagButtons(int overlay, int anchor, ScreenTables tables)
         {
             _tables = tables;
@@ -54,7 +62,75 @@ namespace DSPRE.ROMFiles
                                           p.At.Flow >= 0 ? tables.Take(overlay, anchor + p.At.Flow, p.Spots.Length * Arrows) : tables.Count)).ToArray();
             foreach (int table in Layout.Where(p => p.At.Flow >= 0).Select(p => p.At.Cursor).Distinct())
                 _spotTables[table] = tables.Take(overlay, anchor + table, SpotCount(table) * Spot);
+            _block = BagButtonsPatch.BlockOffset();
+            byte[][] maps = _block >= 0 ? BagButtonsPatch.Maps.Select(BagButtonsPatch.ReadMap).ToArray() : null;
+            if (maps != null && maps.All(m => m != null && m.Length == maps[0].Length)
+                && RomLocator.Where(RomLocator.Thing.BagSpriteTemplates) is RomLocator.Spot templates)
+            {
+                for (int i = 0; i < BagButtonsPatch.Buttons; i++)
+                {
+                    _icons[i] = tables.Take(templates.Overlay, templates.Offset + (IconTemplate + i) * TemplateSize, 4);
+                    _sprites[i] = tables.Take(templates.Overlay, templates.Offset + (ButtonTemplate + i) * TemplateSize, 4);
+                }
+                (long spotsAt, long listsAt) = BagButtonsPatch.Places(_block);
+                _spots = tables.Add(DSUtils.ReadFromFile(Filesystem.ExpArmPath, (uint)spotsAt, BagButtonsPatch.Buttons * 2),
+                                    () => DSUtils.ReadFromFile(Filesystem.ExpArmPath, (uint)spotsAt, BagButtonsPatch.Buttons * 2));
+                _lists = tables.Add(DSUtils.ReadFromFile(Filesystem.ExpArmPath, (uint)listsAt, BagButtonsPatch.ListsLength),
+                                    () => DSUtils.ReadFromFile(Filesystem.ExpArmPath, (uint)listsAt, BagButtonsPatch.ListsLength));
+                _mapLength = maps[0].Length;
+                for (int m = 0; m < maps.Length; m++)
+                {
+                    int member = BagButtonsPatch.Maps[m];
+                    _maps[member] = tables.Add(maps[m], () => BagButtonsPatch.ReadMap(member));
+                }
+            }
             _data = tables.Finish();
+        }
+
+        /// <summary>True when the bag item buttons patch is in.</summary>
+        public bool MovesWholeButtons => _spots >= 0;
+
+        // Which item a button belongs to on the two item menus, or -1.
+        private static int ItemOf(int page, int button) => page == 0 && button is >= 8 and < 14 ? button - 8 : page == 2 && button < 6 ? button : -1;
+
+        public (int X, int Y)[] ItemSpots(byte[] data = null) =>
+            _spots >= 0 ? BagButtonsPatch.FromBytes(data ?? _data, _spots) : ((int, int)[])BagButtonsPatch.GameSpots.Clone();
+
+        /// <summary>A button map with the moves so far, or null without the patch.</summary>
+        public byte[] Map(int member) => _spots < 0 || !_maps.TryGetValue(member, out int at) ? null : _data.Skip(at).Take(_mapLength).ToArray();
+
+        /// <summary>Where an item's icon sits, from its sprite template.</summary>
+        public (int X, int Y) IconOf(int item) => _spots < 0 ? (-1, -1) : (BitConverter.ToInt16(_data, _icons[item]), BitConverter.ToInt16(_data, _icons[item] + 2));
+
+        // Overlaps are left to the problem list.
+        private void MoveItem(int item, int dx, int dy)
+        {
+            (int X, int Y)[] was = ItemSpots(), now = ((int, int)[])was.Clone();
+            int x = Math.Clamp(was[item].X + dx / 8, 0, BagButtonsPatch.Columns - BagButtonsPatch.Width);
+            int y = Math.Clamp(was[item].Y + dy / 8, BagButtonsPatch.TopRow, BagButtonsPatch.BottomRow - BagButtonsPatch.Height + 1);
+            int tx = x - was[item].X, ty = y - was[item].Y;
+            if (tx == 0 && ty == 0) return;
+            now[item] = (x, y);
+            foreach ((int page, int button) in new[] { (0, item + 8), (2, item) })
+            {
+                TouchRects.Move(_data, TouchAt(page, button), tx * 8, ty * 8);
+                int s = SpotAt(page, button);
+                ScreenSpots.Shift(_data, s, 1, tx * 8, 255);
+                ScreenSpots.Shift(_data, s + 1, 1, ty * 8, 191);
+            }
+            foreach (int t in new[] { _icons[item], _sprites[item] })
+            {
+                BitConverter.GetBytes((short)(BitConverter.ToInt16(_data, t) + tx * 8)).CopyTo(_data, t);
+                BitConverter.GetBytes((short)(BitConverter.ToInt16(_data, t + 2) + ty * 8)).CopyTo(_data, t + 2);
+            }
+            BagButtonsPatch.Spots(now).CopyTo(_data, _spots);
+            foreach (int member in BagButtonsPatch.Maps)
+            {
+                byte[] map = Map(member);
+                BagButtonsPatch.Compose(member, map, was, now);
+                map.CopyTo(_data, _maps[member]);
+            }
+            if (BagButtonsPatch.WhyNot(now) == null) BagButtonsPatch.Lists(now).CopyTo(_data, _lists);
         }
 
         private static int SpotCount(int table) => Layout.Where(p => p.At.Flow >= 0 && p.At.Cursor == table).Max(p => p.Spots.Max()) + 1;
@@ -96,6 +172,7 @@ namespace DSPRE.ROMFiles
 
         public void Move(int page, int button, int dx, int dy)
         {
+            if (MovesWholeButtons && ItemOf(page, button) is int item and >= 0) { MoveItem(item, dx, dy); return; }
             (dx, dy) = TouchRects.Move(_data, TouchAt(page, button), dx, dy);
             if (button >= StopsOf(page)) return;
             int s = SpotAt(page, button);
@@ -146,6 +223,7 @@ namespace DSPRE.ROMFiles
 
         private IEnumerable<string> Problems(byte[] data)
         {
+            if (MovesWholeButtons && BagButtonsPatch.WhyNot(ItemSpots(data)) is string spots) yield return spots;
             for (int page = 0; page < Layout.Length; page++)
             {
                 HashSet<int> allowed = Choices(page).Select(c => c.Value).ToHashSet();
@@ -163,6 +241,14 @@ namespace DSPRE.ROMFiles
         {
             if (WhyNotWrite(bytes) is string why) throw new InvalidOperationException(why);
             _tables.Write(bytes);
+            if (!MovesWholeButtons) return;
+            (long spotsAt, long listsAt) = BagButtonsPatch.Places(_block);
+            DSUtils.WriteToFile(Filesystem.ExpArmPath, bytes.Skip(_spots).Take(BagButtonsPatch.Buttons * 2).ToArray(), (uint)spotsAt);
+            DSUtils.WriteToFile(Filesystem.ExpArmPath, bytes.Skip(_lists).Take(BagButtonsPatch.ListsLength).ToArray(), (uint)listsAt);
+            foreach ((int member, int at) in _maps) BagButtonsPatch.WriteMap(member, bytes.Skip(at).Take(_mapLength).ToArray());
         }
+
+        // An item button keeps its size with the patch: its art is fixed.
+        public bool CanResize(int page, int button) => !MovesWholeButtons || ItemOf(page, button) < 0;
     }
 }
