@@ -675,7 +675,7 @@ namespace DSPRE
             },
             new SummaryBarSite(0x8DA46, 0x8DA38, 6, 3, 0xA0C8),
             new SummaryBarSite(0x8DAD8, 0x8DABA, 7, 3, 0x00B4),
-            455, 612, 210, PlatinumSummaryFollows);
+            455, 612, 210, PlatinumSummaryFollows, 0xF4544);
 
         // pokeplatinum sprites.c: the info page's type icons, the move rows' type icons, 5th move icon and selector (one x and a
         // 32-pixel step, so all ten rows move together), and the category icon.
@@ -692,7 +692,11 @@ namespace DSPRE
             new(new[] { ("Static", 25) }, new[] { Px(0x8F088, -100), Px(0x8F14C, -100) }, new[] { Px(0x8F08C, -8), Px(0x8F150, -8) }),
             // PokemonSummaryScreen_UpdateAButtonSprite takes x from the button hint's window but y as 8.
             new(new[] { ("Static", 35) }, Array.Empty<ScreenWindowSpot>(), new[] { Px(0x8F704, -8) }),
+            // The caught ball's sprite template (s16 16,32) sits left of the nickname (Static 34 at 3,3).
+            new(new[] { ("Static", 34) }, new[] { Half(0xF42EC, 8) }, new[] { Half(0xF42EE, -8) }),
         };
+
+        private static ScreenWindowSpot Half(uint at, int add) => new ScreenWindowSpot(at, Add: add, Scale: 8, Half: true);
 
         // The HGSS window tables and the limits on moving them were worked out by Mixone in Ghidra.
         private static readonly SummaryScreenSites HgssSummary = new(
@@ -705,7 +709,7 @@ namespace DSPRE
             },
             new SummaryBarSite(0x8A160, 0x8A152, 6, 3, 0xF09F),
             new SummaryBarSite(0x8A1F4, 0x8A1D6, 7, 6, 0xE03F),
-            302, 722, -1, HgssSummaryFollows);
+            302, 722, -1, HgssSummaryFollows, 0x103E0C);
 
         // The bottom screen's type icons beside the Type label, and the move rows' type icons (one x and a 32-pixel step from the
         // first row, the 5th apart), so the five rows move together. Measured on every English HG and SS dump.
@@ -715,7 +719,19 @@ namespace DSPRE
                 new[] { Px(0x8B606, -8), Px(0x8B616, -8), Px(0x8B62C, -8) }),
             new(Enumerable.Range(8, 5).Select(i => ("Skills", i)).ToArray(), new[] { Px(0x8B67C, 16), Px(0x8B6BC, 16) },
                 new[] { Px(0x8B676, -8), Px(0x8B6C0, -152) }),
-        };
+            // _02103A70 entry 8, the caught ball (u16 168,39), sits left of the nickname (Static 33 at 22,4).
+            new(new[] { ("Static", 33) }, new[] { Half(0x103BB4, 8) }, new[] { Half(0x103BB6, -7) }),
+        }.Concat(AthlonStars).ToArray();
+
+        // _02103A70 entries 79 to 103: five Pokéathlon stars a row (x 64 + 16k, y 48 + 32r), and 104 to 108 the row's arrow (80,
+        // 32 + 32r), each row under its stat's window (Ribbons 3 to 7 at 1, 3 + 4r).
+        private static System.Collections.Generic.IEnumerable<SummaryFollow> AthlonStars => Enumerable.Range(0, 5).Select(r =>
+        {
+            uint X(int entry) => (uint)(0x103A70 + entry * 0x28 + 4);
+            ScreenWindowSpot[] x = Enumerable.Range(0, 5).Select(k => Half(X(79 + 5 * r + k), -56 - 16 * k)).Append(Half(X(104 + r), -72)).ToArray();
+            ScreenWindowSpot[] y = Enumerable.Range(0, 5).Select(k => Half(X(79 + 5 * r + k) + 2, -24)).Append(Half(X(104 + r) + 2, -8)).ToArray();
+            return new SummaryFollow(new[] { ("Ribbons", 3 + r) }, x, y);
+        });
 
         // pokeheartgold asm/unk_0208C3E4.s and unk_02088288.s.
         private static readonly SummaryFontSites HgssSummaryFonts = new(
@@ -863,21 +879,55 @@ namespace DSPRE
             {
                 GameLanguages.English when revision == 10 => PlatinumSummary,   // Europe
                 GameLanguages.English => PlatinumSummary,   // US, and any English revision not listed
+                GameLanguages.German => Shifted(PlatinumSummary, 0x58, 0xA0),
+                GameLanguages.French => Shifted(PlatinumSummary, 0x88, 0xA0),
+                GameLanguages.Italian => Shifted(PlatinumSummary, 0x1C, 0xA0),
+                GameLanguages.Spanish => Shifted(PlatinumSummary, 0x94, 0xA0),
+                GameLanguages.Korean => Shifted(PlatinumSummary, 0xB7C, 0xA9C),
                 _ => null,
             },
             GameVersions.HeartGold => language switch
             {
                 GameLanguages.English when revision == 10 => HgssSummary,   // Europe
                 GameLanguages.English => HgssSummary,   // US, and any English revision not listed
+                GameLanguages.German => Shifted(HgssSummary, -0x4C, 0),
+                GameLanguages.French => Shifted(HgssSummary, -0x1C, 0),
+                GameLanguages.Italian => Shifted(HgssSummary, -0x88, 0),
+                GameLanguages.Spanish => Shifted(HgssSummary, -0x18, -0x8),
+                GameLanguages.Korean => Shifted(HgssSummary, 0x7A0, 0x6C4),
                 _ => null,
             },
             GameVersions.SoulSilver => language switch
             {
                 GameLanguages.English when revision == 10 => HgssSummary,   // Europe
                 GameLanguages.English => HgssSummary,   // US, and any English revision not listed
+                GameLanguages.German => Shifted(HgssSummary, -0x4C, 0),
+                GameLanguages.French => Shifted(HgssSummary, -0x1C, 0),
+                GameLanguages.Italian => Shifted(HgssSummary, -0x88, 0),
+                GameLanguages.Spanish => Shifted(HgssSummary, -0x10, 0),
+                GameLanguages.Korean => Shifted(HgssSummary, 0x798, 0x6BC),
                 _ => null,
             },
             _ => null,
         };
+
+        // Outside English and Japanese the summary's window tables and code each sit a fixed distance from English's: measured on every
+        // dump by matching the tables' bytes and every site's instruction (Japanese is laid out differently).
+        private static SummaryScreenSites Shifted(SummaryScreenSites s, int data, int code)
+        {
+            uint Code(uint at) => (uint)(at + code);
+            SummaryBarSite Bar(SummaryBarSite b) => b with { X = Code(b.X), Y = Code(b.Y) };
+            // Sprite template values (Half) are data; immediates are code.
+            ScreenWindowSpot[] Spots(ScreenWindowSpot[] spots) =>
+                spots.Select(p => p with { Offset = p.Half ? (uint)(p.Offset + data) : Code(p.Offset) }).ToArray();
+            return s with
+            {
+                Windows = s.Windows.Select(w => w with { Offset = (uint)(w.Offset + data) }).ToArray(),
+                Hp = Bar(s.Hp), Exp = Bar(s.Exp),
+                Follows = s.Follows?.Select(f => f with { X = Spots(f.X), Y = Spots(f.Y) }).ToArray(),
+                // The markings' templates are data; checked on every dump.
+                Markings = s.Markings == 0 ? 0 : (uint)(s.Markings + data),
+            };
+        }
     }
 }

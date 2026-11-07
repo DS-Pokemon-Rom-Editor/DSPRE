@@ -1,0 +1,84 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
+        x:Class="DSPRE.Avalonia.Views.Graphics.OptionsExtraView"
+        x:DataType="vm:OptionsExtraViewModel">
+
+  <UserControl.Styles>
+    <Style Selector="TextBlock.hint">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Foreground" Value="{DynamicResource Editor.Subtle}"/>
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel>
+    <controls:EditorToolbar DockPanel.Dock="Top">
+      <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <controls:UndoRedoButtons/>
+    </controls:EditorToolbar>
+
+    <ScrollViewer>
+      <StackPanel Margin="8" Spacing="6" MaxWidth="620" HorizontalAlignment="Left">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <TextBlock Text="Text speeds" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          <controls:HelpTip Text="More than three speeds show one at a time, with arrows, like Frame."/>
+        </StackPanel>
+        <TextBlock Text="Not for this ROM" Classes="hint" IsVisible="{Binding Unsupported}"/>
+        <controls:EnableInToolbox Patch="optionsMenu" Need="More text speeds" IsVisible="{Binding OffersPatch}"/>
+        <StackPanel Spacing="6" IsEnabled="{Binding Patched}" IsVisible="{Binding !Unsupported}">
+          <ItemsControl ItemsSource="{Binding Speeds}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:OptionsExtraViewModel+SpeedRow">
+                <Grid ColumnDefinitions="24,140,*,Auto" ColumnSpacing="6" Margin="0,0,0,4">
+                  <TextBlock Text="{Binding Number}" VerticalAlignment="Center"/>
+                  <TextBox Grid.Column="1" Text="{Binding Name, UpdateSourceTrigger=LostFocus}" ToolTip.Tip="Name"/>
+                  <ComboBox Grid.Column="2" ItemsSource="{Binding Paces}" SelectedIndex="{Binding PaceIndex}" HorizontalAlignment="Stretch"/>
+                  <Button Grid.Column="3" controls:Icon.Key="deleteIcon" Click="Remove_Click" IsEnabled="{Binding CanRemove}"
+                          ToolTip.Tip="Remove this speed" VerticalAlignment="Center"/>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <Button Content="Add speed" controls:Icon.Key="addIcon" Click="Add_Click" IsEnabled="{Binding CanAdd}" HorizontalAlignment="Left"/>
+          <Grid ColumnDefinitions="110,200" ColumnSpacing="6">
+            <TextBlock Text="New saves" VerticalAlignment="Center"/>
+            <ComboBox Grid.Column="1" ItemsSource="{Binding SpeedNames}" SelectedIndex="{Binding SpeedDefault}" HorizontalAlignment="Stretch"
+                      ToolTip.Tip="New game speed"/>
+          </Grid>
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Text="Text" VerticalAlignment="Center"/>
+            <controls:HelpTip Text="{Binding TextPlaces}"/>
+            <Button Content="Open in Text editor" Click="OpenText_Click"/>
+          </StackPanel>
+
+          <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,12,0,0">
+            <TextBlock Text="Rows" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            <controls:HelpTip Text="A locked row shows only its choice, and the game always uses it. A removed row leaves no gap."/>
+          </StackPanel>
+          <Grid ColumnDefinitions="110,150,150,Auto" ColumnSpacing="6">
+            <TextBlock Grid.Column="1" Text="Locked to" Classes="hint"/>
+            <TextBlock Grid.Column="2" Text="New saves" Classes="hint"/>
+          </Grid>
+          <ItemsControl ItemsSource="{Binding Rows}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:OptionsExtraViewModel+OptionRow">
+                <Grid ColumnDefinitions="110,150,150,Auto" ColumnSpacing="6" Margin="0,0,0,4">
+                  <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
+                  <ComboBox Grid.Column="1" ItemsSource="{Binding Choices}" SelectedIndex="{Binding Lock}" IsVisible="{Binding Lockable}"
+                            HorizontalAlignment="Stretch" ToolTip.Tip="Locked to"/>
+                  <ComboBox Grid.Column="2" ItemsSource="{Binding Names}" SelectedIndex="{Binding Default}" IsEnabled="{Binding CanSetDefault}"
+                            HorizontalAlignment="Stretch" ToolTip.Tip="New saves" MaxDropDownHeight="300"/>
+                  <CheckBox Grid.Column="3" Content="Removed" IsChecked="{Binding Remove}" IsEnabled="{Binding CanRemove}"
+                            ToolTip.Tip="{Binding RemoveTip}" ToolTip.ShowOnDisabled="True"/>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+        <TextBlock Text="{Binding Problem}" IsVisible="{Binding HasProblem}" Foreground="#FF5050" TextWrapping="Wrap"/>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

@@ -15,14 +15,17 @@ namespace DSPRE
             at.Select((a, i) => new BattleTextSpot(page, button, a.X - anchor, a.Y - anchor, false, names[i]));
 
         private static IEnumerable<BattleTextSpot> Rows(int anchor, int page, int firstButton, int table, string[] names) =>
-            Enumerable.Range(0, names.Length).Select(i => new BattleTextSpot(page, firstButton + i, table - anchor + i * 4, table - anchor + i * 4 + 2, true, names[i]));
+            Enumerable.Range(0, names.Length).Where(i => names[i] != null)
+                      .Select(i => new BattleTextSpot(page, firstButton + i, table - anchor + i * 4, table - anchor + i * 4 + 2, true, names[i]));
 
         private static string[] One(string name) => new[] { name };
 
         private static string[] Moves(string what) => Enumerable.Range(1, 4).Select(i => $"Move {i} {what}").ToArray();
 
         private static readonly string[] Targets = { "Bottom left name", "Top right name", "Bottom right name", "Top left name", "Cancel" };
-        private static readonly string[] TargetIcons = { "Bottom left icon", "Top right icon", "Bottom right icon", "Top left icon" };
+        // Only the two opponents get an icon (battle_subscreen.c, battle_input.c). The bottom entries only seed the FIGHT icon, which the
+        // Command page moves at once, so they aren't offered.
+        private static readonly string[] TargetIcons = { null, "Top right icon", null, "Top left icon" };
         private static readonly string[] Agree = { "Yes", "Forget a move", "Give up on a move", "Next Pokémon", "Switch Pokémon" };
         private static readonly string[] Decline = { "No", "Keep the moves", "Keep the move", "Run away", "Keep battling" };
 
@@ -140,6 +143,8 @@ namespace DSPRE
                 const int confirm = -0x378, contest = -0x408, partyIcons = 0x78, statusIcons = 0xA8, moveTypes = -0x68, learnTypes = 0x50;
                 for (int i = 0; i < 6; i++) spots.AddRange(new[] { W(0, i, party, i), S(0, i, partyIcons, i), S(0, i, statusIcons, i, "status icon") });
                 for (int i = 0; i < 3; i++) spots.Add(W(1, i, select, i + 1));
+                // The Switch page's name window and icon (sSelectPokemonScreenPokemonSpritePosition, 0x1E8 before the party icons).
+                spots.AddRange(new[] { W(1, 0, select, 0, "Pokémon name"), S(1, 0, partyIcons - 0x1E8, 0, "Pokémon icon") });
                 spots.Add(W(2, 2, summary, 21));
                 for (int i = 0; i < 4; i++) spots.AddRange(new[] { W(3, i, moves, i + 1, "name"), W(3, i, moves, i + 7, "PP"), S(3, i, moveTypes, i, "type icon") });
                 spots.Add(W(3, 6, moves, 5));
@@ -147,6 +152,9 @@ namespace DSPRE
                 for (int i = 0; i < 4; i++) spots.AddRange(new[] { W(5, i, restore, i + 1), S(5, i, learnTypes, i, "type icon") });
                 for (int i = 0; i < 5; i++) spots.AddRange(new[] { W(6, i, learn, i + 1), S(6, i, learnTypes, i, "type icon") });
                 spots.AddRange(new[] { W(7, 0, confirm, 11), W(7, 0, contest, 6, "contest text") });
+                // sMessageBoxWindowTemplates[0], the short box for "Choose a Pokémon." and "Restore which move?", moves with Cancel.
+                const int messages = -0x4EC;
+                spots.AddRange(new[] { W(0, 6, messages, 0, "message"), W(5, 4, messages, 0, "message") });
             }
             else
             {
@@ -156,7 +164,13 @@ namespace DSPRE
                 // Each item's name and count, then the copies the page draws while it turns.
                 for (int i = 0; i < 6; i++)
                     spots.AddRange(new[] { W(1, i, items, 2 * i, "name"), W(1, i, items, 2 * i + 1, "count"), Copy(1, i, items, 12 + 2 * i, 2 * i), Copy(1, i, items, 13 + 2 * i, 2 * i + 1), S(1, i, itemIcons, i) });
+                // The pocket name and page counter (windows 24 and 25) sit by the page arrows, so they go with Previous.
+                int previous = GameFamily == GameFamilies.HGSS ? 7 : 6;
+                spots.AddRange(new[] { W(1, previous, items, 24, "pocket name"), W(1, previous, items, 25, "page counter") });
                 spots.Add(W(2, 0, use, 3));
+                // The Use page's item name, count and description (windows 0 to 2) and the item's icon, with the Use button.
+                spots.AddRange(new[] { W(2, 0, use, 0, "item name"), W(2, 0, use, 1, "item count"), W(2, 0, use, 2, "description"),
+                                       S(2, 0, 0x82C, 0, "item icon") });
             }
             return spots;
         }

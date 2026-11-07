@@ -67,6 +67,14 @@ namespace DSPRE.Avalonia.Data
             Enumerable.Range(0, buttons.Pages[page].Buttons.Length).Select(b => buttons.SpotsOf(page, b)).ToArray();
 
         /// <summary>The bottom screen's pixels, or null when the archive can't be read.</summary>
+        /// <summary>A Battle Pokémon page with its buttons as the ROM has them, or null.</summary>
+        public static byte[] PokemonPage(int page)
+        {
+            BattleMenuButtons buttons = BattleMenuButtons.Read(BattleMenuButtons.Menu.Pokemon);
+            return buttons == null || page < 0 || page >= buttons.PageNames.Count ? null
+                : Draw(BattleMenuButtons.Menu.Pokemon, page, Placed(buttons, page), Spots(buttons, page));
+        }
+
         public static byte[] Draw(BattleMenuButtons.Menu menu, int page, IReadOnlyList<Button> buttons, IReadOnlyList<(int X, int Y)>[] spots = null)
         {
             try { return menu == BattleMenuButtons.Menu.Pokemon ? Pokemon(page, buttons, spots) : Bag(page, buttons, spots); }
@@ -121,7 +129,13 @@ namespace DSPRE.Avalonia.Data
             PasteButtons(s, 2, m, buttons, PokemonArt);
             byte[] rgba = s.Render();
             // The "Choose a Pokémon." and "Restore which move?" boxes cover the buttons under them (sMessageBoxWindowTemplates).
-            if (page == 0 || page == 5) GameTextScreens.MessageWindow(rgba, 2, 21, 22, 2, GameTextScreens.TalkColours[15]);
+            if (page == 0 || page == 5)
+            {
+                // Cancel carries the box's spot (RomLocator.BattleMenuSpots).
+                IReadOnlyList<(int X, int Y)> cancel = spots != null && spots.Length > (page == 0 ? 6 : 4) ? spots[page == 0 ? 6 : 4] : null;
+                (int mx, int my) = cancel is { Count: > 0 } ? cancel[0] : (2, 21);
+                GameTextScreens.MessageWindow(rgba, mx, my, 22, 2, GameTextScreens.TalkColours[15]);
+            }
             GameTextScreens.BattlePartyText(rgba, page, colours, spots);
             return rgba;
         }

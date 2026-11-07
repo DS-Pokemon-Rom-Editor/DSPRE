@@ -146,6 +146,46 @@ namespace DSPRE.Avalonia.Data
         }
 
         // The touch screen labels' sprite palette (battle object member 72).
+        // battle_input.c BattleInput_PrintSystemMessage: a frame 0 box at 1,6 (30 by 6) and a line pair at 16, 56 + 16i, label row 4.
+        // Pairs: paused (1261, 1262), corrupted (1263, 1264), too long (1265, 1266).
+        private const int FirstStopLine = 1261, StopLines = 6, StopRow = 4;
+
+        internal static bool IsRecordingStopLine(int line) => line >= FirstStopLine && line < FirstStopLine + StopLines;
+
+        /// <summary>The Stop page holding stop message <paramref name="line"/>, with that line set to <paramref name="text"/>.</summary>
+        internal static byte[] RecordingStopped(int line, string text)
+        {
+            if (!IsRecordingStopLine(line) || GameFamily == GameFamilies.DP || BattleStringsTextNumber < 0) return null;
+            byte[] rgba = TouchTabPictures.Battle(6, null);
+            if (rgba == null) return null;
+            BattleTouchLabels(rgba, 6, null);
+            WithArchive(() =>
+            {
+                StandardWindow(rgba, 2, 7, 28, 4, SystemColours[15]);
+                ushort[] row = DsBgScreen.Row(LabelColours() ?? new ushort[16 * 16], StopRow);
+                int first = line - (line - FirstStopLine) % 2;
+                for (int i = 0; i < 2; i++)
+                    Print(rgba, SystemFont, first + i == line ? text : Line(BattleStringsTextNumber, first + i), 16, 56 + 16 * i, row[1], row[2]);
+                return 0;
+            });
+            return rgba;
+        }
+
+        // battle_subscreen.c GetCatchTutorialInput: in the catching demo a hand (ev_pokeselect 10 to 13, colours 11) drops onto
+        // FIGHT at 128,60, then Move 1 at 64,22, then BAG at 40,146. Platinum only.
+        internal static void CatchTutorialHand(byte[] rgba, TouchMenu menu)
+        {
+            if (rgba == null || GameFamily != GameFamilies.Plat || menu is not (TouchMenu.Command or TouchMenu.Fight)) return;
+            WithArchive(() =>
+            {
+                Func<int, byte[]> m = Members(DirNames.StarterChoiceGraphics);
+                if (m == null || NitroBgCodec.ReadColours(m(11)) is not ushort[] colours) return 0;
+                (int x, int y) = menu == TouchMenu.Fight ? (64, 22) : (128, 60);
+                Sprite(rgba, m, 13, 12, 10, x, y, 0, _ => DsBgScreen.Row(colours, 0));
+                return 0;
+            });
+        }
+
         private static ushort[] LabelColours()
         {
             int at = BattleObjects.Find("MessageFrame.Shared", "Colours");

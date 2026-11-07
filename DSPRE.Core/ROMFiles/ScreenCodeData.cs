@@ -33,6 +33,25 @@ namespace DSPRE.ROMFiles
             return rows;
         }
 
+        /// <summary>The HGSS bag's six item icon spots from their sprite templates (bag_app_sprite.c ITEM_ICON_1 to 6), or null when
+        /// unknown or the overlay is still compressed.</summary>
+        public static (int X, int Y)[] HgBagIconSpots()
+        {
+            if (RomLocator.Where(RomLocator.Thing.BagSpriteTemplates) is not RomLocator.Spot spot || OverlayUtils.IsStillCompressed(spot.Overlay)) return null;
+            string path = RomLocator.PathOf(spot);
+            if (!File.Exists(path)) return null;
+            long first = spot.Offset + BagIconTemplate * BagTemplateSize, length = 5 * BagTemplateSize + 4;
+            if (first + length > new FileInfo(path).Length) return null;
+            byte[] templates = DSUtils.ReadFromFile(path, (uint)first, (int)length);
+            (int X, int Y)[] spots = new (int X, int Y)[6];
+            for (int i = 0; i < spots.Length; i++)
+                spots[i] = (BitConverter.ToInt16(templates, i * BagTemplateSize), BitConverter.ToInt16(templates, i * BagTemplateSize + 2));
+            return spots;
+        }
+
+        // sSpriteTemplates: 0x34 bytes each, ITEM_ICON_1 is entry 1.
+        private const int BagTemplateSize = 0x34, BagIconTemplate = 1;
+
         public const int ItemBoxSide = 5;
 
         /// <summary>Platinum's 5 by 5 item box entries as the bag writes them to BG1, shown or hidden, or null when unknown or the

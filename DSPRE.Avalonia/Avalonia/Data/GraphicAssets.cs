@@ -805,9 +805,11 @@ namespace DSPRE.Avalonia.Data
             new Archive { Dir = DirNames.PokegearRadioGraphics, Title = "Pokégear radio", In = Group.MenuScreens,
                 What = "The Pokégear radio's screens and sprites.", DeepEditor = "Screens" },
             new Archive { Dir = DirNames.MainMenuGraphics, Title = "Main menu", In = Group.MenuScreens,
-                What = "The main menu's scroll arrows. HeartGold and SoulSilver only.", DeepEditor = "Screens" },
+                What = "The main menu's scroll arrows and wireless icons. In Platinum also the Mystery Gift screens.", DeepEditor = "Screens" },
             new Archive { Dir = DirNames.TouchYesNoGraphics, Title = "Touch Yes and No", In = Group.MenuScreens,
                 What = "The touch Yes and No buttons used by menus. HeartGold and SoulSilver only.", DeepEditor = "Screens" },
+            new Archive { Dir = DirNames.TouchListGraphics, Title = "Touch list menus", In = Group.MenuScreens,
+                What = "The button frames of touch list menus, like the Pokégear phone's. HeartGold and SoulSilver only.", DeepEditor = "Screens" },
             new Archive { Dir = DirNames.PokegearMapGraphics, Title = "Pokégear map", In = Group.MenuScreens,
                 What = "The Pokégear map: the region map, its frame and the place pictures.", DeepEditor = "Screens" },
 

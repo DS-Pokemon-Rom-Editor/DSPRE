@@ -1252,7 +1252,7 @@ namespace DSPRE
             foreach (BottomPalettesPatch.Screen screen in wanted)
             {
                 List<int> members = new();
-                int member = MemberCount(ArchiveMembers.PathOf(screen.Archive, 0)), copy = -1;
+                int member = ArchiveMembers.Count(screen.Archive), copy = -1;
                 foreach (BottomPalettesPatch.Load load in screen.Loads)
                 {
                     string drawingPath = ArchiveMembers.PathOf(screen.Archive, load.Drawing);
@@ -1275,7 +1275,7 @@ namespace DSPRE
             if (pokedex)
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.PokedexGraphics });
-                int member = MemberCount(ArchiveMembers.PathOf(DirNames.PokedexGraphics, 0));
+                int member = ArchiveMembers.Count(DirNames.PokedexGraphics);
                 Dictionary<int, int> drawings = new(), colours = new();
                 foreach (int d in PokedexBottomPalettes.Drawings)
                 {
@@ -1296,9 +1296,6 @@ namespace DSPRE
         }
 
         // Numbered members in an unpacked archive folder, without the backups beside them.
-        private static int MemberCount(string memberPath) =>
-            Directory.GetFiles(Path.GetDirectoryName(memberPath)).Count(f => int.TryParse(Path.GetFileName(f), out _));
-
         public static bool ApplyHpBarFontsPatch()
         {
             if (AlreadyApplied(Probe(() => HpBarFontPatch.IsApplied))) return false;
@@ -1333,6 +1330,52 @@ namespace DSPRE
             }
             BagButtonsPatch.Apply(offsets[0]);
             ShowInfo("Move the item buttons in the Screens editor's Bag layout.", "Patch applied");
+            return true;
+        }
+
+        public static bool ApplyScreenPositionsPatch()
+        {
+            if (AlreadyApplied(Probe(() => ScreenPositionsPatch.IsApplied))) return false;
+            if (ScreenPositionsPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
+            if (PlacementNote(new[] { ScreenPositionsPatch.BlockLength }, out int[] offsets) is not string placement) return false;
+            bool hg = RomInfo.GameFamily == RomInfo.GameFamilies.HGSS;
+            string windows = hg ? "the trainer card's Hall of Fame mark and the bag's item action window"
+                                : "the Start menu's ball count, the bag's Berries menu, the PC's markings and the Options title and entries";
+            int[] overlays = ScreenPositionsPatch.Overlays;
+            bool arm9 = ScreenPositionsPatch.WritesArm9;
+            string files = (arm9 ? "the ARM9, " : "") + $"overlays {string.Join(", ", overlays)} and the synthetic overlay";
+            if (!ConfirmYesNo($"Lets the Screens editor move {windows}." +
+                placement + BackupNote(files) + "\n\nApply this patch?" + CreditNote("screenPositions"), "Confirm to proceed"))
+                return false;
+            foreach (int overlay in overlays)
+                PlainFiles.Copy(OverlayUtils.GetPath(overlay), OverlayUtils.GetPath(overlay) + BackupSuffix, overwrite: true);
+            if (arm9) PlainFiles.Copy(RomInfo.Arm9Path, RomInfo.Arm9Path + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
+            ScreenPositionsPatch.Apply(offsets[0]);
+            ShowInfo("Move the windows in the Screens editor's Layout tabs.", "Patch applied");
+            return true;
+        }
+
+        public static bool ApplyOptionsMenuPatch()
+        {
+            if (AlreadyApplied(Probe(() => OptionsMenuPatch.IsApplied))) return false;
+            if (OptionsMenuPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
+            if (PlacementNote(new[] { OptionsMenuPatch.BlockLength }, out int[] offsets) is not string placement) return false;
+            if (!ConfirmYesNo("Gives the Options screen up to eight text speeds, including faster ones. Rows can be locked to one choice or removed. Set them in the Screens editor's Extra tab for Options. The speed names go on new lines at the end of the Options text." +
+                placement + BackupNote($"the ARM9, overlay {OptionsMenuPatch.MenuOverlay}" + (RomInfo.GameFamily == RomInfo.GameFamilies.HGSS ? ", the Options screen's map" : "") + " and the synthetic overlay") + "\n\nApply this patch?" + CreditNote("optionsMenu"), "Confirm to proceed"))
+                return false;
+            PlainFiles.Copy(RomInfo.Arm9Path, RomInfo.Arm9Path + BackupSuffix, overwrite: true);
+            int optionsOverlay = OptionsMenuPatch.MenuOverlay;
+            PlainFiles.Copy(OverlayUtils.GetPath(optionsOverlay), OverlayUtils.GetPath(optionsOverlay) + BackupSuffix, overwrite: true);
+            PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
+            if (RomInfo.GameFamily == RomInfo.GameFamilies.HGSS)
+            {
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.OptionsGraphics });
+                string map = ArchiveMembers.PathOf(DirNames.OptionsGraphics, 17);
+                PlainFiles.Copy(map, map + BackupSuffix, overwrite: true);
+            }
+            OptionsMenuPatch.Apply(offsets[0]);
+            ShowInfo("Set the speeds and rows in the Screens editor's Extra tab for Options.", "Patch applied");
             return true;
         }
 
@@ -1785,6 +1828,8 @@ namespace DSPRE
             ["summaryFonts"] = ("Mixone", "summary screen fonts"),
             ["bottomPalettes"] = ("Mixone", "bottom screen palettes"),
             ["bagButtons"] = ("Mixone", "bag item buttons"),
+            ["optionsMenu"] = ("Mixone", "Options menu extras"),
+            ["screenPositions"] = ("Mixone", "screen positions"),
             ["partyFonts"] = ("Mixone", "party menu fonts"),
             ["hpBarFonts"] = ("Mixone", "HP bar fonts"),
             ["extraFonts"] = ("Mixone", "extra fonts"),
@@ -1917,6 +1962,8 @@ namespace DSPRE
             ["summaryFonts"] = "Summary screen fonts",
             ["bottomPalettes"] = "Bottom screen palettes",
             ["bagButtons"] = "Bag item buttons",
+            ["optionsMenu"] = "Options menu extras",
+            ["screenPositions"] = "Screen positions",
             ["partyFonts"] = "Party menu fonts",
             ["hpBarFonts"] = "HP bar fonts",
             ["extraFonts"] = "Extra fonts",
@@ -2226,6 +2273,26 @@ namespace DSPRE
                     if (RomInfo.GameFamily != RomInfo.GameFamilies.HGSS) return Unsupported("HeartGold and SoulSilver only");
                     if (!BagButtonsPatch.Supports) return Unsupported("This patch doesn't support this ROM yet.");
                     if (BagButtonsPatch.IsApplied) return PatchState.Applied;
+                    return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
+                }));
+
+            list.Add(Status("optionsMenu",
+                "Gives the Options screen up to eight text speeds, including ones faster than Fast. Rows can be locked to one choice or removed in the Screens editor. Platinum, HeartGold and SoulSilver, except Japanese. Requires the ARM9 expansion patch.",
+                () =>
+                {
+                    if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+                    if (!OptionsMenuPatch.Supports) return Unsupported("Platinum, HeartGold and SoulSilver, except Japanese");
+                    if (OptionsMenuPatch.IsApplied) return PatchState.Applied;
+                    return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
+                }));
+
+            list.Add(Status("screenPositions",
+                "Lets the Screens editor move more windows. Platinum: the Start menu's ball count, the bag's Berries menu, the PC's markings and the Options title and entries. HeartGold and SoulSilver: the trainer card's Hall of Fame mark and the bag's item action window. Requires the ARM9 expansion patch.",
+                () =>
+                {
+                    if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+                    if (!ScreenPositionsPatch.Supports) return Unsupported("Platinum, HeartGold and SoulSilver, except Japanese");
+                    if (ScreenPositionsPatch.IsApplied) return PatchState.Applied;
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
                 }));
 
@@ -2747,7 +2814,8 @@ namespace DSPRE
                 or "trainerClassTablesExpanded" or "trainerEncounterBgmRepointed" or "punchingMovesExpanded" or "soundMovesExpanded"
                 or "pickupSlots" or "bugContestPrizes" or "shinyOdds" or "classIntros" or "hpBarText" or "vsClassTableExpanded" or "trainerShiny" or "trainerClassMetadata"
                 or "martsExpanded" or "bpShopExpanded" or "swarmTableExpanded" or "typeChartExpanded" or "vsIntroTimings" or "partyPanelSize"
-                or "summaryFonts" or "bottomPalettes" or "bagButtons" or "partyFonts" or "hpBarFonts" or "extraFonts" or "bannerMotion")
+                or "summaryFonts" or "bottomPalettes" or "bagButtons" or "partyFonts" or "hpBarFonts" or "extraFonts" or "bannerMotion" or "optionsMenu"
+                or "screenPositions")
             {
                 ShowError(hgEngineRefusal, "Not available on hg-engine");
                 return false;
@@ -2787,6 +2855,8 @@ namespace DSPRE
                 case "summaryFonts": return ApplySummaryFontsPatch();
                 case "bottomPalettes": return ApplyBottomPalettesPatch();
                 case "bagButtons": return ApplyBagButtonsPatch();
+                case "optionsMenu": return ApplyOptionsMenuPatch();
+                case "screenPositions": return ApplyScreenPositionsPatch();
                 case "partyFonts": return ApplyPartyFontsPatch();
                 case "hpBarFonts": return ApplyHpBarFontsPatch();
                 case "extraFonts": return ApplyExtraFontsPatch();

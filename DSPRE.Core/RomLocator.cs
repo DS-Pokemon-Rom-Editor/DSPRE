@@ -29,7 +29,8 @@ namespace DSPRE
             BagBottomPaletteCall, BagBottomBanks, BagBottomColourMode, BagPocketColoursCall, BagButtonDraws, BagSpriteTemplates,
             PcBottomPaletteCall, PcCompareBottomPaletteCall, PcBottomBanks, PcBottomColourModes,
             NamingBottomPaletteCall, NamingBottomBanks, NamingBottomColourMode, NamingBottomTileLoad, NamingSpriteWindows,
-            HgssFlySpots,
+            HgssFlySpots, OptionsTextPrinter, OptionsGetters, OptionsInit, OptionsMenuCode, OptionsMenuCodeHgss, OptionsTablesHgss,
+            StartMenuBallCount, BagBerryActions, BoxMarkings, OptionsWindowsX, TrainerCardHallOfFame, BagItemAction,
         }
 
         /// <summary>arm9 when <see cref="Overlay"/> is -1, otherwise that overlay; one or more file offsets.</summary>
@@ -161,6 +162,18 @@ namespace DSPRE
             [Thing.NamingBottomTileLoad] = NamingBottomTileLoad,
             [Thing.NamingSpriteWindows] = NamingSpriteWindows,
             [Thing.HgssFlySpots] = HgssFlySpots,
+            [Thing.OptionsTextPrinter] = OptionsTextPrinter,
+            [Thing.OptionsGetters] = OptionsGetters,
+            [Thing.OptionsInit] = OptionsInit,
+            [Thing.OptionsTablesHgss] = OptionsTablesHgss,
+            [Thing.OptionsMenuCode] = OptionsMenuCode,
+            [Thing.OptionsMenuCodeHgss] = OptionsMenuCodeHgss,
+            [Thing.StartMenuBallCount] = StartMenuBallCount,
+            [Thing.BagBerryActions] = BagBerryActions,
+            [Thing.BoxMarkings] = BoxMarkings,
+            [Thing.OptionsWindowsX] = OptionsWindowsX,
+            [Thing.TrainerCardHallOfFame] = TrainerCardHallOfFame,
+            [Thing.BagItemAction] = BagItemAction,
         };
 
         /// <summary>Where <paramref name="thing"/> is in a given dump, whether or not it is the loaded one.</summary>

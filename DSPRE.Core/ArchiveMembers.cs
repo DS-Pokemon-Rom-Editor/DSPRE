@@ -19,6 +19,10 @@ namespace DSPRE
 
         public static string PathOf(DirNames dir, int id) => Path.Combine(GameDirs[dir].unpackedDir, id.ToString("D4"));
 
+        /// <summary>How many members the unpacked archive holds, which is also the next new member's number.</summary>
+        public static int Count(DirNames dir) =>
+            Directory.GetFiles(GameDirs[dir].unpackedDir).Count(f => int.TryParse(Path.GetFileName(f), out int _));
+
         public static void Put(DirNames dir, int id, byte[] data)
         {
             HgEngineSourceAssets.WriteVerbatim(HgEngineOwnedFiles.ArchiveOf(dir), id, data);

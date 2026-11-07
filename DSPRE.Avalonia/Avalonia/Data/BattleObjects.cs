@@ -173,7 +173,7 @@ namespace DSPRE.Avalonia.Data
             ("HpBar.SpareB", "Unused spare HP bar"),
             ("NameBox.SpareA", "Unused spare name box"),
             ("NameBox.SpareB", "Unused spare name box"),
-            ("HpBar.CaughtBall", "Caught ball on the bar"),
+            ("PartyBalls.Gauge", "Party gauge at battle start"),
             ("CaughtBall.Unused", "Caught ball"),
             ("PartyBalls.Player", "Player party balls"),
             ("PartyBalls.Opponent", "Opponent party balls"),

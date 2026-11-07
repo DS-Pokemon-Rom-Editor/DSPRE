@@ -35,8 +35,18 @@ namespace DSPRE.ROMFiles
             public int X, Y, Tiles, Layer, FullTile;
         }
 
+        /// <summary>The six markings, 8 pixels apart: the first one's middle in pixels.</summary>
+        public sealed class Marks
+        {
+            public int X, Y;
+        }
+
+        public const int MarkCount = 6, MarkStride = 40;
+
         public List<Table> Tables = new();
         public Bar Hp, Exp;
+        /// <summary>Null where the templates aren't known.</summary>
+        public Marks Markings;
         /// <summary>Whether the bytes include fonts, as they do once the fonts patch is applied.</summary>
         public bool HasFonts;
 
@@ -55,6 +65,8 @@ namespace DSPRE.ROMFiles
             foreach (SummaryWindowTableSite t in s.Windows) yield return (t.Offset, t.Count * 8);
             foreach (uint at in new[] { s.Hp.X, s.Hp.Y, s.Exp.X, s.Exp.Y }) yield return (at, 2);
             foreach (ScreenWindowSpot spot in FollowSpots(s)) yield return (spot.Offset, 2);
+            if (s.Markings != 0)
+                for (int k = 0; k < MarkCount; k++) yield return ((uint)(s.Markings + k * MarkStride), 4);
         }
 
         private static IEnumerable<ScreenWindowSpot> FollowSpots(SummaryScreenSites s) =>
@@ -118,6 +130,11 @@ namespace DSPRE.ROMFiles
             layout.Hp = new Bar { X = bytes[at], Y = bytes[at + 2], Tiles = s.Hp.Tiles, Layer = s.Hp.Layer, FullTile = s.Hp.FullTile };
             layout.Exp = new Bar { X = bytes[at + 4], Y = bytes[at + 6], Tiles = s.Exp.Tiles, Layer = s.Exp.Layer, FullTile = s.Exp.FullTile };
             int fontsAt = LayoutLength(s);
+            if (s.Markings != 0)
+            {
+                int marks = fontsAt - MarkCount * 4;
+                layout.Markings = new Marks { X = BitConverter.ToInt16(bytes, marks), Y = BitConverter.ToInt16(bytes, marks + 2) };
+            }
             layout.HasFonts = bytes.Length >= fontsAt + WindowCount(s);
             if (layout.HasFonts)
                 foreach (Window w in layout.AllWindows)
@@ -159,6 +176,12 @@ namespace DSPRE.ROMFiles
                     at += 2;
                 }
             }
+            if (Markings != null && Sites.Markings != 0)
+                for (int k = 0; k < MarkCount; k++, at += 4)
+                {
+                    BitConverter.TryWriteBytes(bytes.AsSpan(at), (short)(Markings.X + 8 * k));
+                    BitConverter.TryWriteBytes(bytes.AsSpan(at + 2), (short)Markings.Y);
+                }
             if (HasFonts && bytes.Length >= at + AllWindows.Count())
                 foreach (Window w in AllWindows) bytes[at++] = (byte)w.Font;
             return bytes;

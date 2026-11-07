@@ -17,6 +17,16 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Bytes outside the archives that an import can change along with them.</summary>
         public sealed record Target(string Key, Func<byte[]> Read, Action<byte[]> Write);
 
+        /// <summary>A text archive as a target, saved by the Text editor's writer. Stage <see cref="TextBytes"/>.</summary>
+        public static Target Text(string key, int bank, object sender) =>
+            new(key, () => TextBytes(new DSPRE.ROMFiles.TextArchive(bank).Messages),
+                b => new DSPRE.ROMFiles.TextArchive(bank, TextLines(b)).SaveToExpandedDir(bank, false, sender));
+
+        public static byte[] TextBytes(List<string> lines) => System.Text.Encoding.UTF8.GetBytes(string.Join("\0", lines));
+
+        public static List<string> TextLines(byte[] bytes) =>
+            System.Text.Encoding.UTF8.GetString(bytes ?? Array.Empty<byte>()).Split('\0').ToList();
+
         private sealed record State(Dictionary<(DirNames, int), byte[]> Members, Dictionary<string, byte[]> Others);
 
         // What each entry held on disk before its first import, so undoing past a save writes it back.

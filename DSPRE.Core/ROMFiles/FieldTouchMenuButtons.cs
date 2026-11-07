@@ -128,13 +128,14 @@ namespace DSPRE.ROMFiles
                 runs.Add((windows, count * Window));
                 runs.Add(((int)sites.ListCursors + list * ListCursorRow, count * Spot));
             }
-            bool coded = a == RomLocator.TouchMenuCodedSite && RomLocator.TouchMenuImmediates.All(d => In(a + d, 2)) && RomLocator.TouchMenuImmediates.Select((d, i) =>
+            int[] immediates = RomLocator.TouchMenuImmediatesAt(a);
+            bool coded = immediates != null && immediates.All(d => In(a + d, 2)) && immediates.Select((d, i) =>
             {
                 ushort code = BitConverter.ToUInt16(file, a + d);
                 bool movs = ThumbImm8.Is(code, ThumbImm8.Op.Movs);
                 return i >= CopiedY ? code == CopyXToY || movs && ThumbImm8.Register(code) == 2 : movs;
             }).All(ok => ok);
-            if (coded) runs.AddRange(RomLocator.TouchMenuImmediates.Select(d => (a + d, 2)));
+            if (coded) runs.AddRange(immediates.Select(d => (a + d, 2)));
             FieldTouchMenuButtons buttons = new FieldTouchMenuButtons(sites.Overlay, runs, tables);
             return tables.Missing ? null : buttons;
         }

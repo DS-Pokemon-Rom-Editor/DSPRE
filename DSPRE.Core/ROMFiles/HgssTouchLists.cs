@@ -59,7 +59,8 @@ namespace DSPRE.ROMFiles
             Spots windows = new Spots((int)s.Windows + 5 * 20, 20, 0, 4, 8, Text: "");
             return TouchListButtons.Read(new[]
             {
-                new TouchListButtons.Page("Scroll arrows", new[] { "Up", "Down" }, s.Overlay, (int)s.Arrows, Locked: FixedArt(0, 1)),
+                // The arrows' sprites move in the Layout tab and carry these areas along.
+                new TouchListButtons.Page("Scroll arrows", new[] { "Up", "Down" }, s.Overlay, (int)s.Arrows),
                 new TouchListButtons.Page("New game warning", new[] { "Begin adventure", "Return" }, s.Overlay, (int)s.NewGame, Spots: new[] { windows }),
             });
         }

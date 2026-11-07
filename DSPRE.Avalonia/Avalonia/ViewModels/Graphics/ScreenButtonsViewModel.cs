@@ -396,6 +396,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         /// <summary>Draws the other screen for a page, or null when the screen has none to show.</summary>
         public Func<int, Func<byte[]>> TopDraw { get; init; }
+
+        /// <summary>Runs after a save, for a patch that rebuilds its copies of these tables.</summary>
+        public Action AfterSave { get; init; }
         public bool HasTop => TopDraw != null;
         private Bitmap _top;
         public Bitmap TopPicture { get => _top; private set { _top = value; Raise(); } }
@@ -413,6 +416,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 if (_buttons.WhyNotWrite(_pending.Read(_tables)) is string why) throw new InvalidOperationException(why);
                 _pending.Save();
+                AfterSave?.Invoke();
             }
             catch (Exception e)
             {

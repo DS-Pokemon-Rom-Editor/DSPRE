@@ -82,16 +82,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public event Action Changed;
 
         /// <summary>Use while drawing on a worker thread, so the preview shows the unsaved edits.</summary>
-        public IDisposable DrawScope() => new Scopes(_pending.Reading(), ScreenWindowLayouts.Use(_screen, _layout, _panels),
+        public IDisposable DrawScope() => new DrawScopes(_pending.Reading(), ScreenWindowLayouts.Use(_screen, _layout, _panels),
                                                      ScreenWindowLayouts.UseButtons(_buttons?.Buttons),
                                                      ScreenWindowLayouts.UseFonts(_fonts), ScreenWindowLayouts.UseMenu(ShownMenu));
-
-        private sealed class Scopes : IDisposable
-        {
-            private readonly IDisposable[] _all;
-            public Scopes(params IDisposable[] all) { _all = all; }
-            public void Dispose() { foreach (IDisposable d in _all.Reverse()) d.Dispose(); }
-        }
 
         // Undo, redo and discard change what's pending, so the tables are read back from it.
         private void OnPendingChanged()
@@ -153,8 +146,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 if (_layout.Windows.FirstOrDefault(w => w.Name == swap.Window) is not { } w || !_swapSaved.TryGetValue(swap.Window, out (int X, int Y) was)) continue;
                 ScriptNarc narc = new ScriptNarc(swap.Dir);
-                if (!narc.Available || narc.GetFromDisk(swap.Member) is not byte[] saved || swap.Hidden() is not ushort[] away || swap.Shown() is not ushort[] shown) continue;
-                byte[] map = WindowTileArt.Swap(saved, was, (w.X, w.Y), (swap.HomeX, swap.HomeY), swap.Width, swap.Height, away, shown);
+                if (!narc.Available || narc.GetFromDisk(swap.Member) is not byte[] saved || swap.Hidden() is not ushort[] away) continue;
+                ushort[] shown = swap.Shown?.Invoke();
+                byte[] map = WindowTileArt.Swap(saved, was, (w.X, w.Y), (swap.HomeX, swap.HomeY), swap.Width, swap.Height, away, shown, swap.PlainFrom);
                 if (!map.AsSpan().SequenceEqual(saved) || _pending.Changes(swap.Dir, swap.Member)) narc.Put(swap.Member, map);
             }
         }
@@ -379,6 +373,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private void OnPatchStateChanged(object sender, EventArgs e)
         {
+            // Any patch can move the code the windows' spots sit in.
+            if (_layout != null)
+            {
+                _layout.RereadCode();
+                Fill();
+            }
             if (_fontTable == null && PartyFontPatch.IsApplied)
             {
                 OpenFontTable();
@@ -456,7 +456,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             Windows.Clear();
             TopWindows.Clear();
             BottomWindows.Clear();
-            bool mainOnTop = _text?.MainOnTop ?? RomInfo.GameFamily != RomInfo.GameFamilies.HGSS;
+            bool mainOnTop = _text?.MainOnTopOf?.Invoke() ?? _text?.MainOnTop ?? RomInfo.GameFamily != RomInfo.GameFamilies.HGSS;
             int colour = 0;
             bool multi = HasStates && _layout.Windows.Any(w => w.Group == MultiGroup && _text.Shows(_state, w.Group, w.Name));
             if (_panels != null && !multi)
@@ -1060,9 +1060,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public int MinDown => Window.MinY;
         public int Down { get => Window.Y; set => MoveTo?.Invoke(this, Window.X, value); }
         public bool CanAcross => Window.CanMoveAcross;
+        /// <summary>The toolbox key of the patch that lets this window move, while that patch isn't in.</summary>
+        public string LockedFor => Window.LockedFor;
+        public bool NeedsPatch => Window.LockedFor != null;
+        private string Locked => NeedsPatch ? "Moves once the Screen positions patch is in." : "Can't move: the game shares this position with something else.";
         public bool CanDown => Window.CanMoveDown;
-        public string AcrossTip => CanAcross ? "Across" : Window.LockReason ?? "Can't move: the game shares this position with something else.";
-        public string DownTip => !CanDown ? Window.LockReason ?? "Can't move: the game shares this position with something else."
+        public string AcrossTip => CanAcross ? "Across" : Window.LockReason ?? Locked;
+        public string DownTip => !CanDown ? Window.LockReason ?? Locked
             : Window.Bounded ? $"Down, to row {Window.MaxY} at most. The window stays inside its frame."
             : Window.MaxY + Window.Height < DsBgScreen.Height / DsBgScreen.TileSize ? $"Down. The game keeps this window's position in a single byte, so it can't go below row {Window.MaxY}." : "Down";
         public bool Sizable => SizeTo != null;

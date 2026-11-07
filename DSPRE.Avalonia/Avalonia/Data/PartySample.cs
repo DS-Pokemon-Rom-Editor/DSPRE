@@ -18,6 +18,8 @@ namespace DSPRE.Avalonia.Data
             public int Condition;
             /// <summary>0 nothing, 1 an item, 2 mail.</summary>
             public int Item;
+            /// <summary>The item the previews show: Leftovers for an item, Grass Mail for mail, 0 for nothing.</summary>
+            public int ItemId => Item switch { 1 => 234, 2 => 137, _ => 0 };
             public bool Egg;
             public bool Empty => Species == 0 && !Egg;
         }

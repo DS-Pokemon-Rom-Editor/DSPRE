@@ -266,6 +266,53 @@ namespace DSPRE.Avalonia.Data
             }
         }
 
+        // pokeplatinum healthbox.c HealthBox_DrawBallCount and HealthBox_DrawBallsLeftMessage (pokeheartgold battle_hp_bar.c alike):
+        // in the Safari Zone and Pal Park the player's bar is the ball counter at 192,116. Each line is printed 13 tiles by 2 and its
+        // top and bottom rows go in at sBallCountVRAMTransfer and sBallsLeftVRAMTransfer, 6 tiles then the other 7.
+        private static readonly (int pos, int size)[] BallsLabel = { (0x12, 6), (0x1A, 6), (0x50, 7), (0x58, 7) };
+        private static readonly (int pos, int size)[] BallsLeft = { (0x22, 6), (0x2A, 6), (0x60, 7), (0x68, 7) };
+        private const int SafariBallsLine = 950, ParkBallsLine = 1220, CounterTiles = 13;
+
+        /// <summary>The Safari Zone or Pal Park ball counter with the given count, or null when it can't be read.</summary>
+        public static Drawn BuildBallCounter(bool park, int ballsLeft)
+        {
+            if (RomInfo.GameFamily is not (RomInfo.GameFamilies.Plat or RomInfo.GameFamilies.HGSS) || RomInfo.BattleStringsTextNumber < 0) return null;
+            ScriptNarc narc = new ScriptNarc(RomInfo.DirNames.BattleObj);
+            if (!narc.Available) return null;
+            int drawing = BattleObjects.Find("Safari.Counter", "Drawing");
+            int cells = BattleObjects.Find("Safari.Counter", "As it appears");
+            int colours = BattleObjects.Find("Safari.Shared", "Colours");
+            if (drawing < 0 || cells < 0 || colours < 0) return null;
+            try
+            {
+                byte[] tiles = GraphicAssets.Unsqueeze(narc.Get(drawing));
+                if (tiles == null || tiles.Length < CharDataAt(tiles) + TileBytes) return null;
+                List<string> lines = new TextArchive(RomInfo.BattleStringsTextNumber).Messages;
+                int label = park ? ParkBallsLine : SafariBallsLine;
+                if (label + 1 >= lines.Count) return null;
+                string Plain(string raw) => System.Text.RegularExpressions.Regex.Replace(
+                    FieldStringVars.Expand(raw, (_, _, _) => ballsLeft.ToString().PadLeft(2)), @"\{[^}]*\}", "");
+                WriteLine(tiles, BattleGaugeGlyphs.TextBlock(Plain(lines[label]), CounterTiles), BallsLabel);
+                WriteLine(tiles, BattleGaugeGlyphs.TextBlock(Plain(lines[label + 1]), CounterTiles), BallsLeft);
+                RawImage raw = CellRenderer.Draw(NcerFile.Read(NitroBgCodec.Inflate(narc.Get(cells))), 0, NitroBgCodec.Inflate(tiles),
+                    NitroBgCodec.ReadColours(NitroBgCodec.Inflate(narc.Get(colours))), Canvas, Canvas);
+                if (raw == null || raw.IsEmpty) return null;
+                (int x, int y) = CentreOf(Kind.PlayerSingle);
+                return new Drawn { Rgba = ToRgba(raw, Canvas), Width = Canvas, Height = Canvas, Left = x - Canvas / 2, Top = y - Canvas / 2 };
+            }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleGaugeComposer.BuildBallCounter", ex); return null; }
+        }
+
+        // The block's top row then its bottom row, each cut after the first piece's tiles.
+        private static void WriteLine(byte[] tiles, byte[] block, (int pos, int size)[] at)
+        {
+            if (block == null) return;
+            Copy(block, 0, tiles, at[0], showing: at[0].size);
+            Copy(block, CounterTiles * TileBytes, tiles, at[1], showing: at[1].size);
+            Copy(block, at[0].size * TileBytes, tiles, at[2], showing: at[2].size);
+            Copy(block, (CounterTiles + at[1].size) * TileBytes, tiles, at[3], showing: at[3].size);
+        }
+
         // ── writing into the gauge's tiles ────────────────────────────────────────────────────────
 
         private static void WriteTheText(byte[] tiles, Layout layout, Showing showing)

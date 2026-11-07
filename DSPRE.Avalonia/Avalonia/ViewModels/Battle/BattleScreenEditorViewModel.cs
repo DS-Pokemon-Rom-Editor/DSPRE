@@ -289,6 +289,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     Gender = _gender,
                     Status = _status,
                     Doubles = _doubles,
+                    BallCounter = _ballCounter,
                     NumbersInsteadOfBar = _numbersInsteadOfBar,
                     HealthLeft = _hpLeft,
                 });
@@ -298,8 +299,15 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 foreach (BattleScreenRenderer.Piece p in _pieces) Pieces.Add(new BattlePieceRow { Piece = p });
 
                 DrawBarPieces();
-                TopScreen = ToBitmap(BattleScreenRenderer.Flatten(_pieces, touch: false));
-                TouchScreen = ToBitmap(BattleScreenRenderer.Flatten(_pieces, touch: true));
+                // The gauge slides in before the HP bars come up.
+                byte[] top = BattleScreenRenderer.Flatten(_partyGauge ? _pieces.Where(p => !p.Name.EndsWith(" HP bar", StringComparison.Ordinal)).ToList() : _pieces,
+                                                          touch: false);
+                if (_partyGauge && top != null) GameTextScreens.BattlePartyGauge(top);
+                if (_levelUp && top != null) GameTextScreens.BattleLevelUp(top);
+                TopScreen = ToBitmap(top);
+                byte[] touch = BattleScreenRenderer.Flatten(_pieces, touch: true);
+                if (_catchHand && touch != null) GameTextScreens.CatchTutorialHand(touch, _menuIndex >= 0 && _menuIndex < _menus.Count ? _menus[_menuIndex] : TouchMenu.Background);
+                TouchScreen = ToBitmap(touch);
 
                 int at = keep == null ? -1 : Pieces.ToList().FindIndex(r => r.Name == keep);
                 _selectedIndex = at;
@@ -391,7 +399,36 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         private bool _doubles;
+        // 1 the Safari Zone, 2 Pal Park.
+        private int _ballCounter;
+        public bool HasBallCounter => RomInfo.GameFamily is RomInfo.GameFamilies.Plat or RomInfo.GameFamilies.HGSS;
         public bool IsDoubles => _doubles;
+
+        private bool _levelUp;
+        /// <summary>Shows the stat gains window a level-up puts over the battle.</summary>
+        public bool LevelUp
+        {
+            get => _levelUp;
+            set { if (_levelUp == value) return; _levelUp = value; OnPropertyChanged(nameof(LevelUp)); Refresh(); }
+        }
+
+        private bool _catchHand;
+        /// <summary>Shows the hand that taps for the player in Platinum's catching demo.</summary>
+        public bool CatchHand
+        {
+            get => _catchHand;
+            set { if (_catchHand == value) return; _catchHand = value; OnPropertyChanged(nameof(CatchHand)); Refresh(); }
+        }
+
+        public bool HasCatchHand => RomInfo.GameFamily == RomInfo.GameFamilies.Plat;
+
+        private bool _partyGauge;
+        /// <summary>Shows the arrows and balls that slide in as a trainer battle starts.</summary>
+        public bool PartyGauge
+        {
+            get => _partyGauge;
+            set { if (_partyGauge == value) return; _partyGauge = value; OnPropertyChanged(nameof(PartyGauge)); Refresh(); }
+        }
 
         private bool _numbersInsteadOfBar;
         /// <summary>In a double battle the games swap the player's bars for the numbers on a press.</summary>
@@ -405,12 +442,15 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// <summary>One Pokemon a side, or two. The games use a different set of bars for each.</summary>
         public int BattleSizeChoice
         {
-            get => _doubles ? 1 : 0;
+            get => _doubles ? 1 : _ballCounter > 0 ? _ballCounter + 1 : 0;
             set
             {
+                if (value < 0) return;
                 bool picked = value == 1;
-                if (_doubles == picked) return;
+                int counter = value >= 2 ? value - 1 : 0;
+                if (_doubles == picked && _ballCounter == counter) return;
                 _doubles = picked;
+                _ballCounter = counter;
                 OnPropertyChanged(nameof(BattleSizeChoice));
                 OnPropertyChanged(nameof(IsDoubles));
                 OnPropertyChanged(nameof(ShowsPlainFill));

@@ -156,6 +156,8 @@
                     IsVisible="{Binding GaugeTextIsReal}">
             <ComboBoxItem>Single battle</ComboBoxItem>
             <ComboBoxItem>Double battle</ComboBoxItem>
+            <ComboBoxItem IsVisible="{Binding HasBallCounter}">Safari Zone</ComboBoxItem>
+            <ComboBoxItem IsVisible="{Binding HasBallCounter}">Pal Park</ComboBoxItem>
           </ComboBox>
 
           <CheckBox Content="HP numbers"
@@ -189,6 +191,9 @@
                      IsVisible="{Binding HasGaugeTextNote}"/>
           <TextBlock Text="Health left" Classes="hint"/>
           <Slider Value="{Binding HpLeft}" Minimum="0" Maximum="1" TickFrequency="0.05"/>
+          <CheckBox Content="Level-up window" IsChecked="{Binding LevelUp}"/>
+          <CheckBox Content="Party gauge" IsChecked="{Binding PartyGauge}"/>
+          <CheckBox Content="Catching demo hand" IsChecked="{Binding CatchHand}" IsVisible="{Binding HasCatchHand}"/>
           <TextBlock Text="Message" Classes="hint"/>
           <TextBox Text="{Binding SampleMessage}" AcceptsReturn="True" Height="56" TextWrapping="Wrap"/>
         </StackPanel>

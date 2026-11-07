@@ -260,7 +260,11 @@ namespace DSPRE.ROMFiles
 
         /// <summary>Maps each square of a block to the first square in its row outside the block and the same-sized blocks at
         /// <paramref name="also"/>.</summary>
-        public static ushort[] PlainSquares(byte[] scr, int x, int y, int width, int height, params (int X, int Y)[] also)
+        public static ushort[] PlainSquares(byte[] scr, int x, int y, int width, int height, params (int X, int Y)[] also) =>
+            PlainSquares(scr, x, y, width, height, 0, also);
+
+        /// <summary>As above, searching each row from <paramref name="fromColumn"/>, for screens whose rows start with a frame.</summary>
+        public static ushort[] PlainSquares(byte[] scr, int x, int y, int width, int height, int fromColumn, params (int X, int Y)[] also)
         {
             if (!Squares(scr, out int columns, out int rows, out int mapAt, out int eb)) return null;
             bool Inside(int cx, int cy, int bx, int by) => cx >= bx && cx < bx + width && cy >= by && cy < by + height;
@@ -269,11 +273,24 @@ namespace DSPRE.ROMFiles
             {
                 int row = y + r;
                 if (row >= rows) continue;
-                int column = Enumerable.Range(0, columns).FirstOrDefault(c => !Inside(c, row, x, y) && !also.Any(a => Inside(c, row, a.X, a.Y)), -1);
+                int column = Enumerable.Range(Math.Clamp(fromColumn, 0, columns), columns - Math.Clamp(fromColumn, 0, columns))
+                                        .FirstOrDefault(c => !Inside(c, row, x, y) && !also.Any(a => Inside(c, row, a.X, a.Y)), -1);
                 ushort square = column < 0 ? (ushort)0 : (ushort)EntryAt(scr, mapAt, SquareIndex(columns, column, row), eb);
                 for (int c = 0; c < width; c++) plain[r * width + c] = square;
             }
             return plain;
+        }
+
+        /// <summary>The squares of a block, row by row, or null when the screen can't be read.</summary>
+        public static ushort[] ReadSquares(byte[] scr, int x, int y, int width, int height)
+        {
+            if (!Squares(scr, out int columns, out int rows, out int mapAt, out int eb)) return null;
+            ushort[] block = new ushort[width * height];
+            for (int r = 0; r < height; r++)
+                for (int c = 0; c < width; c++)
+                    if (x + c >= 0 && x + c < columns && y + r >= 0 && y + r < rows)
+                        block[r * width + c] = (ushort)EntryAt(scr, mapAt, SquareIndex(columns, x + c, y + r), eb);
+            return block;
         }
 
         /// <summary>A screen with a block of squares put at <paramref name="x"/>, <paramref name="y"/>, dropping squares past its edge.</summary>

@@ -34,7 +34,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             ["sentenceCase"] = "Items and Pokémon", ["itemSentenceCase"] = "Items and Pokémon", ["trainerNames"] = "Trainers",
             ["sameHeldItemOdds"] = "Items and Pokémon", ["itemStandardize"] = "Items and Pokémon",
             ["punchingMovesExpanded"] = "Moves", ["soundMovesExpanded"] = "Moves", ["regionalDexCount"] = "Items and Pokémon", ["evolutionSlots"] = "Items and Pokémon", ["typeChartExpanded"] = "Moves", ["swarmTableExpanded"] = "Items and Pokémon", ["bpShopExpanded"] = "Items and Pokémon", ["martsExpanded"] = "Items and Pokémon", ["pickupSlots"] = "Items and Pokémon", ["bugContestPrizes"] = "Items and Pokémon", ["shinyOdds"] = "Items and Pokémon",
-            ["fieldMenuColours"] = "Maps and graphics", ["bdhcam"] = "Maps and graphics", ["buildingRotation"] = "Maps and graphics", ["disableTextures"] = "Maps and graphics", ["hpBarText"] = "Maps and graphics", ["buttonFrames"] = "Maps and graphics", ["fightIcon"] = "Maps and graphics", ["partyPanelSize"] = "Maps and graphics", ["bannerPosition"] = "Maps and graphics", ["bannerMotion"] = "Maps and graphics", ["summaryFonts"] = "Maps and graphics", ["bottomPalettes"] = "Maps and graphics", ["bagButtons"] = "Maps and graphics", ["partyFonts"] = "Maps and graphics", ["hpBarFonts"] = "Maps and graphics", ["extraFonts"] = "Maps and graphics",
+            ["fieldMenuColours"] = "Maps and graphics", ["bdhcam"] = "Maps and graphics", ["buildingRotation"] = "Maps and graphics", ["disableTextures"] = "Maps and graphics", ["hpBarText"] = "Maps and graphics", ["buttonFrames"] = "Maps and graphics", ["fightIcon"] = "Maps and graphics", ["partyPanelSize"] = "Maps and graphics", ["bannerPosition"] = "Maps and graphics", ["bannerMotion"] = "Maps and graphics", ["summaryFonts"] = "Maps and graphics", ["bottomPalettes"] = "Maps and graphics", ["bagButtons"] = "Maps and graphics", ["optionsMenu"] = "Maps and graphics", ["screenPositions"] = "Maps and graphics", ["partyFonts"] = "Maps and graphics", ["hpBarFonts"] = "Maps and graphics", ["extraFonts"] = "Maps and graphics",
             ["platPatches"] = "External", ["g4Patcher"] = "External",
         };
 
@@ -55,6 +55,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             ["summaryFonts"] = "summary screen font fonts text size small narrow pokewalker names",
             ["bottomPalettes"] = "summary pokedex party bag pc box boxes bottom screen palette palettes colours 256 extended background picture import",
             ["bagButtons"] = "bag item items buttons move layout touch cursor icon",
+            ["optionsMenu"] = "options text speed faster instant menu lock remove row battle style set", ["screenPositions"] = "screens layout move window position start menu ball berries markings options hall of fame item action",
             ["partyFonts"] = "party menu font fonts text size small narrow pokewalker names",
             ["hpBarFonts"] = "hp bar battle font fonts text size small narrow pokewalker names", ["extraFonts"] = "extra more new add font fonts slots custom letters",
             ["platPatches"] = "external platinum patches link", ["g4Patcher"] = "external asm code injection armips patches link kalaay",

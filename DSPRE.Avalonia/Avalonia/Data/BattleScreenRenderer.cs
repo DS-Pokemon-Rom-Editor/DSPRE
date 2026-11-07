@@ -87,6 +87,7 @@ namespace DSPRE.Avalonia.Data
             public BattleGaugeText.Gender Gender = BattleGaugeText.Gender.Genderless;
             public BattleGaugeText.Status Status = BattleGaugeText.Status.None;
             public bool Doubles;             // two bars a side instead of one
+            public int BallCounter;          // 1 the Safari Zone, 2 Pal Park: the player's bar is the ball counter
             public bool NumbersInsteadOfBar; // in a double battle the games swap the two over
             public double HealthLeft = 1.0;
             /// <summary>Command button tiles the menu clears, x, y, width and height: the first battle's and Pal Park's.</summary>
@@ -330,6 +331,16 @@ namespace DSPRE.Avalonia.Data
                         MostHealth = SampleMostHealth,
                         FillGauges = true,
                     });
+                    if (player && !o.Doubles && o.BallCounter > 0)
+                    {
+                        g = BattleGaugeComposer.BuildBallCounter(o.BallCounter == 2, 30);
+                        piece.Name = o.BallCounter == 2 ? "Park Ball counter" : "Safari Ball counter";
+                        piece.What = "The balls left, in place of the player's HP bar.";
+                        piece.Drawing = BattleObjects.Find("Safari.Counter", "Drawing");
+                        piece.Layout = BattleObjects.Find("Safari.Counter", "As it appears");
+                        piece.Colours = BattleObjects.Find("Safari.Shared", "Colours");
+                        piece.UsesBarPieces = false;
+                    }
                     if (g == null && !o.Doubles)
                     {
                         // Games we cannot read the letters of still get the bar itself.

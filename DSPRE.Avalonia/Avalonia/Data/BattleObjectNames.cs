@@ -23,7 +23,7 @@ namespace DSPRE.Avalonia.Data
             + "ThrownBall.6:Colours ThrownBall.7:Colours ThrownBall.8:Colours ThrownBall.9:Colours ThrownBall.10:Colours "
             + "ThrownBall.11:Colours ThrownBall.12:Colours ThrownBall.13:Colours ThrownBall.14:Colours "
             + "ThrownBall.15:Colours ThrownBall.16:Colours ThrownBall.17:Colours ThrownBall.18:Colours "
-            + "HpBar.CaughtBall:Colours HpBar.SpareA:Animation HpBar.SpareA:Cells HpBar.SpareA:Drawing "
+            + "PartyBalls.Gauge:Colours HpBar.SpareA:Animation HpBar.SpareA:Cells HpBar.SpareA:Drawing "
             + "HpBar.SpareB:Animation HpBar.SpareB:Cells HpBar.SpareB:Drawing NameBox.SpareA:Drawing NameBox.SpareA:Cells "
             + "NameBox.SpareA:Animation NameBox.SpareB:Drawing NameBox.SpareB:Cells NameBox.SpareB:Animation "
             + "Platform.0.Player:Drawing Platform.0.Player:Cells Platform.0.Player:Animation Platform.0.Opponent:Drawing "
@@ -70,8 +70,8 @@ namespace DSPRE.Avalonia.Data
             + "ThrownBall.13:Cells ThrownBall.13:Drawing ThrownBall.14:Animation ThrownBall.14:Cells ThrownBall.14:Drawing "
             + "ThrownBall.15:Animation ThrownBall.15:Cells ThrownBall.15:Drawing ThrownBall.16:Animation "
             + "ThrownBall.16:Cells ThrownBall.16:Drawing ThrownBall.17:Animation ThrownBall.17:Cells ThrownBall.17:Drawing "
-            + "ThrownBall.18:Animation ThrownBall.18:Cells ThrownBall.18:Drawing HpBar.CaughtBall:Drawing "
-            + "HpBar.CaughtBall:Cells HpBar.CaughtBall:Animation";
+            + "ThrownBall.18:Animation ThrownBall.18:Cells ThrownBall.18:Drawing PartyBalls.Gauge:Drawing "
+            + "PartyBalls.Gauge:Cells PartyBalls.Gauge:Animation";
 
         /// <summary>Platinum: 343 entries.</summary>
         public const string Platinum =
@@ -102,7 +102,7 @@ namespace DSPRE.Avalonia.Data
             + "ThrownBall.6:Colours ThrownBall.7:Colours ThrownBall.8:Colours ThrownBall.9:Colours ThrownBall.10:Colours "
             + "ThrownBall.11:Colours ThrownBall.12:Colours ThrownBall.13:Colours ThrownBall.14:Colours "
             + "ThrownBall.15:Colours ThrownBall.16:Colours ThrownBall.17:Colours ThrownBall.18:Colours "
-            + "HpBar.CaughtBall:Colours PokemonSlot.Large:Colours PokemonSlot.Large:Drawing PokemonSlot.Large:Cells "
+            + "PartyBalls.Gauge:Colours PokemonSlot.Large:Colours PokemonSlot.Large:Drawing PokemonSlot.Large:Cells "
             + "PokemonSlot.Large:Animation HpBar.SpareA:Animation HpBar.SpareA:Cells HpBar.SpareA:Drawing "
             + "HpBar.SpareB:Animation HpBar.SpareB:Cells HpBar.SpareB:Drawing NameBox.SpareA:Drawing NameBox.SpareA:Cells "
             + "NameBox.SpareA:Animation NameBox.SpareB:Drawing NameBox.SpareB:Cells NameBox.SpareB:Animation "
@@ -156,8 +156,8 @@ namespace DSPRE.Avalonia.Data
             + "ThrownBall.13:Cells ThrownBall.13:Drawing ThrownBall.14:Animation ThrownBall.14:Cells ThrownBall.14:Drawing "
             + "ThrownBall.15:Animation ThrownBall.15:Cells ThrownBall.15:Drawing ThrownBall.16:Animation "
             + "ThrownBall.16:Cells ThrownBall.16:Drawing ThrownBall.17:Animation ThrownBall.17:Cells ThrownBall.17:Drawing "
-            + "ThrownBall.18:Animation ThrownBall.18:Cells ThrownBall.18:Drawing HpBar.CaughtBall:Drawing "
-            + "HpBar.CaughtBall:Cells HpBar.CaughtBall:Animation";
+            + "ThrownBall.18:Animation ThrownBall.18:Cells ThrownBall.18:Drawing PartyBalls.Gauge:Drawing "
+            + "PartyBalls.Gauge:Cells PartyBalls.Gauge:Animation";
 
         /// <summary>HeartGold: 346 entries.</summary>
         public const string HeartGold =
@@ -187,7 +187,7 @@ namespace DSPRE.Avalonia.Data
             + "ThrownBall.13:Colours ThrownBall.14:Colours ThrownBall.15:Colours ThrownBall.16:Colours "
             + "ThrownBall.17:Colours ThrownBall.18:Colours ThrownBall.19:Colours ThrownBall.20:Colours "
             + "ThrownBall.21:Colours ThrownBall.22:Colours ThrownBall.23:Colours ThrownBall.24:Colours "
-            + "ThrownBall.25:Colours ThrownBall.26:Colours ThrownBall.27:Colours HpBar.CaughtBall:Colours "
+            + "ThrownBall.25:Colours ThrownBall.26:Colours ThrownBall.27:Colours PartyBalls.Gauge:Colours "
             + "PokemonSlot.Large:Colours PokemonSlot.Large:Drawing PokemonSlot.Large:Cells PokemonSlot.Large:Animation "
             + "HpBar.SpareA:Animation HpBar.SpareA:Cells HpBar.SpareA:Drawing HpBar.SpareB:Animation HpBar.SpareB:Cells "
             + "HpBar.SpareB:Drawing NameBox.SpareA:Drawing NameBox.SpareA:Cells NameBox.SpareA:Animation "
@@ -241,8 +241,8 @@ namespace DSPRE.Avalonia.Data
             + "ThrownBall.23:Animation ThrownBall.23:Cells ThrownBall.23:Drawing ThrownBall.24:Animation "
             + "ThrownBall.24:Cells ThrownBall.24:Drawing ThrownBall.25:Animation ThrownBall.25:Cells ThrownBall.25:Drawing "
             + "ThrownBall.26:Animation ThrownBall.26:Cells ThrownBall.26:Drawing ThrownBall.27:Animation "
-            + "ThrownBall.27:Cells ThrownBall.27:Drawing HpBar.CaughtBall:Drawing HpBar.CaughtBall:Cells "
-            + "HpBar.CaughtBall:Animation BugContest.Net:Drawing BugContest.Net:Cells BugContest.Net:Animation";
+            + "ThrownBall.27:Cells ThrownBall.27:Drawing PartyBalls.Gauge:Drawing PartyBalls.Gauge:Cells "
+            + "PartyBalls.Gauge:Animation BugContest.Net:Drawing BugContest.Net:Cells BugContest.Net:Animation";
 
     }
 }

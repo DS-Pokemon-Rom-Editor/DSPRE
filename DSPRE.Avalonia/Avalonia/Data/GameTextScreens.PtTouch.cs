@@ -65,7 +65,11 @@ namespace DSPRE.Avalonia.Data
 
         // trainer_case/main.c: the case (29, 38) under the lid (30, 39) on BG3, the lid scaled to nothing once open. Each badge is a
         // sequence in 46 (cells 44, tiles 33), palette 16 plus the badge number.
-        internal static byte[] TrainerCaseBottomPt(IReadOnlyList<(int X, int Y)> badges, bool lid = false)
+        // trainer_case/sprites.c sSparkleCoordinates less sBadgeCoordinates: the top row's sparkles sit on the badge, the bottom row's 24 lower.
+        private static readonly int[] SparkleDown = { 0, 0, 0, 0, 24, 24, 24, 24 };
+        private const int FourSparkles = 9;
+
+        internal static byte[] TrainerCaseBottomPt(IReadOnlyList<(int X, int Y)> badges, bool lid = false, bool polished = false)
         {
             (DsBgScreen s, Func<int, byte[]> m) = Bg(DirNames.TrainerCardGraphics);
             if (s == null) return null;
@@ -85,6 +89,9 @@ namespace DSPRE.Avalonia.Data
                 ushort[] own = DsBgScreen.Row(NitroBgCodec.ReadColours(m(16 + i)), 0);
                 Sprite(rgba, m, 46, 44, 33, badges[i].X, badges[i].Y, i, row => row == i ? own : DsBgScreen.Row(obj, row));
             }
+            // Fully polished, each badge shows its four-sparkle sequence on top.
+            for (int i = 0; polished && badges != null && i < badges.Count && i < 8; i++)
+                Sprite(rgba, m, 46, 44, 33, badges[i].X, badges[i].Y + SparkleDown[i], FourSparkles, row => DsBgScreen.Row(obj, row));
             return rgba;
         }
 
@@ -101,13 +108,17 @@ namespace DSPRE.Avalonia.Data
             Layer(s, m, 2, 2, 0, HgssTrainerCardCase.BadgeCaseNcgr, cleared ? HgssTrainerCardCase.ClearedNscr : HgssTrainerCardCase.JohtoNscr);
             Layer(s, m, 3, 3, 0, -1, HgssTrainerCardCase.BackdropNscr);
             (int markWidth, ushort[] mark) = NitroBgCodec.ReadMap(m(HgssTrainerCardCase.MarkNscr));
-            if (mark != null) s.Copy(2, 0, cleared ? 14 : 7, 7, 9, mark, cleared ? 7 : 0, 0, Math.Max(1, markWidth));
+            // The mark moves with its Layout row (Screen positions patch), 7 lower after the League.
+            (int hx, int hy, int _, int _) = ScreenWindowLayouts.Window("trainercard", "Pictures", "Hall of Fame mark", (0, 7, 7, 9));
+            if (mark != null) s.Copy(2, hx, hy + (cleared ? 7 : 0), 7, 9, mark, cleared ? 7 : 0, 0, Math.Max(1, markWidth));
             byte[] rgba = s.Render();
             ushort[] badgeColours = NitroBgCodec.ReadColours(m(HgssTrainerCardCase.BadgeNclr));
             int[] across = { 96, 144, 192, 240 }, down = { 48, 88, 136, 176 };
+            // The Layout's Badges block (RomLocator.TrainerCardCodeSitesIn) moves them all in whole tiles from 10,4.
+            (int bx, int by, int _, int _) = ScreenWindowLayouts.Window("trainercard", "Pictures", "Badges", (10, 4, 22, 20));
             for (int i = 0; badgeColours != null && i < (cleared ? 16 : 8); i++)
                 Sprite(rgba, m, HgssTrainerCardCase.BadgeNanr, HgssTrainerCardCase.BadgeNcer, HgssTrainerCardCase.BadgeNcgr,
-                       across[i % 4], down[i / 4] + (cleared ? 0 : 40), i, row => DsBgScreen.Row(badgeColours, row));
+                       across[i % 4] + 8 * (bx - 10), down[i / 4] + 8 * (by - 4) + (cleared ? 0 : 40), i, row => DsBgScreen.Row(badgeColours, row));
             return rgba;
         });
 

@@ -146,6 +146,8 @@ namespace DSPRE.Avalonia.Data
         {
             GameTextScreens.Screen text = GameTextScreens.Screens.FirstOrDefault(s => s.Key == screen);
             if (text == null) return (null, null);
+            // Layout pictures need no text, so a Layout-only screen has them too.
+            if (state >= 0 && text.LayoutPictures?.Invoke(state) is (byte[], byte[]) pictures) return pictures;
             int bank = text.Banks().FirstOrDefault(-1);
             if (bank < 0) return (null, null);
             List<string> lines;
@@ -159,7 +161,6 @@ namespace DSPRE.Avalonia.Data
                 }
                 return l >= 0 && l < lines.Count ? lines[l] : "";
             }
-            if (state >= 0 && text.LayoutPictures?.Invoke(state) is (byte[], byte[]) pictures) return pictures;
             int first = Math.Clamp(text.FirstLine, 0, Math.Max(0, lines.Count - 1));
             // A Layout-only state is drawn as the nearest real one; a screen with only Layout states draws them as they are.
             int drawn = state < 0 ? -1 : text.DrawnAs?.Invoke(state) ?? (text.States == null ? state : Math.Min(state, text.States.Length - 1));

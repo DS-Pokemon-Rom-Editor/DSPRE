@@ -273,7 +273,7 @@ namespace DSPRE.Avalonia.Data
                 page.Sub = new ScreenLayout();
                 string unpicked = Unpicked(spec);
                 if (_hgss) HgssBackgrounds(page, spec);
-                else PlatinumBackgrounds(page, spec, unpicked, _bottomPalettes);
+                else PlatinumBackgrounds(page, spec, unpicked, _bottomPalettes, Hearts());
                 if (_hgss && _bottomPalettes >= 0) Extended(page.Sub, 20, _bottomPalettes);
                 foreach (Box box in BoxesOf(spec)) AddBox(page, box);
                 if (spec.Hp) AddBar(page, layout.Hp);
@@ -352,13 +352,32 @@ namespace DSPRE.Avalonia.Data
 
         private static void Text(ScreenLayout screen, int bg) => screen.Bgs.Add(new ScreenBg { Bg = bg, Priority = 0 });
 
-        private static void PlatinumBackgrounds(ScreenPage page, Spec spec, string unpicked, int bottomPalettes)
+        // The first sample move's appeal, ten points to a heart.
+        private int Hearts()
+        {
+            int effect = Move(SampleMoves[0])?.ContestAppeal ?? 0;
+            return effect < MoveData.ContestEffectAppeal.Length ? MoveData.ContestEffectAppeal[effect] / 10 : 0;
+        }
+
+        private static void PlatinumBackgrounds(ScreenPage page, Spec spec, string unpicked, int bottomPalettes, int hearts)
         {
             page.Main.Palettes.Add(new ScreenPaletteLoad { File = 1 });
             Text(page.Main, 1);
-            page.Main.Bgs.Add(new ScreenBg { Bg = 2, Priority = 1, Drawing = 0, MapWidth = 64, ScrollX = 136, When = unpicked, Pieces = { new ScreenPaste { Screen = 11 } } });
+            // Map 11 is 64 by 64: main.c SetupContestMoveInfo scrolls it to the lower half (y 256) for contest moves.
+            int y = spec.Id == "contest_moves" ? 256 : 0;
+            page.Main.Bgs.Add(new ScreenBg { Bg = 2, Priority = 1, Drawing = 0, MapWidth = 64, MapHeight = 64, ScrollX = 136, ScrollY = y, When = unpicked,
+                                             Pieces = { new ScreenPaste { Screen = 11 } } });
             if (unpicked != null)
-                page.Main.Bgs.Add(new ScreenBg { Bg = 2, Priority = 1, Drawing = 0, MapWidth = 64, When = Picked, Pieces = { new ScreenPaste { Screen = 11 } } });
+            {
+                ScreenBg slid = new ScreenBg { Bg = 2, Priority = 1, Drawing = 0, MapWidth = 64, MapHeight = 64, ScrollY = y, When = PickedOrSwapping,
+                                               Pieces = { new ScreenPaste { Screen = 11 } } };
+                // main.c UpdateAppealHearts: six 2 by 2 hearts from column 2 of row 47, filled (tile 0x12C) for each ten appeal points.
+                if (spec.Id == "contest_moves")
+                    for (int i = 0; i < 6; i++)
+                        slid.Pieces.Add(new ScreenPaste { TileX = 2 + i * 2, TileY = 47, Width = 2, Height = 2, FillStride = 32,
+                                                          Fill = (i < hearts ? 0x12C : 0x12E) | 5 << 12 });
+                page.Main.Bgs.Add(slid);
+            }
             page.Main.Bgs.Add(new ScreenBg { Bg = 3, Priority = 3, Drawing = 0, Pieces = { new ScreenPaste { Screen = spec.Top } } });
             page.Sub.Palettes.Add(new ScreenPaletteLoad { File = 14 });
             page.Sub.Bgs.Add(new ScreenBg { Bg = 1, Priority = 1, Drawing = 16, ExtendedColours = bottomPalettes, TileLimit = bottomPalettes >= 0 ? BottomPalettesPatch.Summary.TileLimit : 0, Pieces = { new ScreenPaste { Screen = spec.Bottom } } });
@@ -373,7 +392,7 @@ namespace DSPRE.Avalonia.Data
             if (spec.Variants?.Contains(Athlon) == true)
             {
                 // Without Pokéathlon stats the game puts up screen 11 in place of the stats panel.
-                page.Main.Bgs.Add(new ScreenBg { Bg = 3, Priority = 3, Drawing = 2, When = spec.Variants[0], Pieces = { new ScreenPaste { Screen = 11 } } });
+                page.Main.Bgs.Add(new ScreenBg { Bg = 3, Priority = 3, Drawing = 2, When = string.Join("|", spec.Variants.Where(v => v != Athlon)), Pieces = { new ScreenPaste { Screen = 11 } } });
                 page.Main.Bgs.Add(new ScreenBg { Bg = 3, Priority = 3, Drawing = 2, When = Athlon, Pieces = { new ScreenPaste { Screen = spec.Top } } });
             }
             else page.Main.Bgs.Add(new ScreenBg { Bg = 3, Priority = 3, Drawing = 2, Pieces = { new ScreenPaste { Screen = spec.Top } } });
@@ -381,7 +400,7 @@ namespace DSPRE.Avalonia.Data
             Text(page.Sub, 0);
             page.Sub.Bgs.Add(new ScreenBg { Bg = 1, Priority = 2, Drawing = 20, MapWidth = 64, When = picks ? spec.Variants[0] : null, Pieces = { new ScreenPaste { Screen = 21 } } });
             if (picks)
-                page.Sub.Bgs.Add(new ScreenBg { Bg = 1, Priority = 2, Drawing = 20, MapWidth = 64, ScrollX = 128, When = Picked, Pieces = { new ScreenPaste { Screen = 21 } } });
+                page.Sub.Bgs.Add(new ScreenBg { Bg = 1, Priority = 2, Drawing = 20, MapWidth = 64, ScrollX = 128, When = PickedOrSwapping, Pieces = { new ScreenPaste { Screen = 21 } } });
             page.Sub.Bgs.Add(new ScreenBg { Bg = 2, Priority = 3, Drawing = 1, Pieces = { new ScreenPaste { Screen = spec.Bottom } } });
         }
 
@@ -413,16 +432,35 @@ namespace DSPRE.Avalonia.Data
             sprites.Add(new ScreenSprite { Name = "Page arrow left", Cells = 60, Anim = 59, Drawing = 61, Colours = 69, Palette = 1, X = left - 12, Y = 24, When = unpicked });
             sprites.Add(new ScreenSprite { Name = "Page arrow right", Cells = 60, Anim = 59, Drawing = 61, Colours = 69, Palette = 1, Seq = 1, X = 188 + (188 - left) - 4, Y = 24, When = unpicked });
             // The ball's row holds its own one-row colours file, which the game swaps per ball.
-            sprites.Add(new ScreenSprite { Name = "Ball", Cells = 48, Anim = 47, Drawing = 24, Colours = 37, Palette = 0, X = 16, Y = 32 });
+            // It follows the nickname window (RomLocator PlatinumSummaryFollows).
+            (int ballX, int ballY) = WindowOf("Static", 34) is { } nick ? (16 + 8 * (nick.X - 3), 32 + 8 * (nick.Y - 3)) : (16, 32);
+            sprites.Add(new ScreenSprite { Name = "Ball", Cells = 48, Anim = 47, Drawing = 24, Colours = 37, Palette = 0, X = ballX, Y = ballY });
+            // sprites.c SUMMARY_SPRITE_STATUS_ICON, SHINY_ICON and POKERUS_CURED_ICON.
+            sprites.Add(new ScreenSprite { Name = "Status", Cells = 63, Anim = 62, Drawing = 64, Colours = 65, Palette = 0, Seq = MarksStatus, X = 80, Y = 52, When = Marks });
+            sprites.Add(new ScreenSprite { Name = "Shiny", Cells = 51, Anim = 50, Drawing = 58, Colours = 69, Palette = 2, X = 98, Y = 72, When = Marks });
+            sprites.Add(new ScreenSprite { Name = "Pokérus cured", Cells = 51, Anim = 50, Drawing = 58, Colours = 69, Palette = 2, Seq = 1, X = 98, Y = 132, When = Marks });
             (string Name, int Drawing, int X)[] marks = { ("circle", 52, 48), ("triangle", 56, 56), ("square", 55, 64), ("heart", 57, 72), ("star", 53, 80), ("diamond", 54, 88) };
+            (int markX, int markY) = MarkAt(48, 150);
             foreach ((string name, int drawing, int x) in marks)
-                sprites.Add(new ScreenSprite { Name = "Marking: " + name, Cells = 51, Anim = 50, Drawing = drawing, Colours = 69, Palette = 0, X = x, Y = 150, Priority = 3, When = unpicked });
+                sprites.Add(new ScreenSprite { Name = "Marking: " + name, Cells = 51, Anim = 50, Drawing = drawing, Colours = 69, Palette = 0, X = markX + x - 48, Y = markY, Priority = 3, When = unpicked });
             // The A button beside the button hint: 10 pixels left of the hint's box, 8 down.
-            if (_specs[pageIndex].Boxes.Any(b => b.Table == "Static" && b.Index == 35) && WindowOf("Static", 35) is { } hint)
-                sprites.Add(new ScreenSprite { Name = "A button", Cells = 18, Anim = 17, Drawing = 20, Colours = 69, Palette = 0, X = hint.X * 8 - 10, Y = hint.Y * 8 + 8 });
+            if (_specs[pageIndex].Boxes.FirstOrDefault(b => b.Table == "Static" && b.Index == 35) is { } hintBox && WindowOf("Static", 35) is { } hint)
+                sprites.Add(new ScreenSprite { Name = "A button", Cells = 18, Anim = 17, Drawing = 20, Colours = 69, Palette = 0, X = hint.X * 8 - 10,
+                                               Y = hint.Y * 8 + 8, When = hintBox.When });
 
             (int first, int second) = Types();
             string id = _specs[pageIndex].Id;
+            if (id == "ribbons")
+            {
+                // sprites.c UpdateRibbonSprites: four a row from 132,56, 32 across and 40 down, each in its ribbon's colour row
+                // (ribbon.c sRibbonDataTable), and the cursor on the first.
+                (string Name, int Drawing, int Row)[] sample = { ("Hoenn Champion", 72, 0), ("Effort", 80, 2), ("Sinnoh Champion", 88, 0) };
+                for (int r = 0; r < sample.Length; r++)
+                    sprites.Add(new ScreenSprite { Name = "Ribbon: " + sample[r].Name, Cells = 71, Anim = 70, Drawing = sample[r].Drawing, Colours = 136,
+                                                   Palette = sample[r].Row, X = 132 + 32 * r, Y = 56, When = PtRibbons });
+                sprites.Add(new ScreenSprite { Name = "Ribbon cursor", Cells = 125, Anim = 126, Drawing = 120, Colours = 69, Palette = 2, X = 132, Y = 56,
+                                               Priority = 1, When = PtRibbons });
+            }
             // Icons beside a window move with it, offset from the window's original place (RomLocator summary follows).
             (int X, int Y) Beside(string table, int index, int homeX, int homeY, int x, int y) =>
                 WindowOf(table, index) is { } w ? (x + 8 * (w.X - homeX), y + 8 * (w.Y - homeY)) : (x, y);
@@ -442,13 +480,20 @@ namespace DSPRE.Avalonia.Data
                 (int mx, int my) = Beside(contest ? "ContestMoves" : "BattleMoves", 0, 21, 4, 0, 0);
                 for (int m = 0; m < SampleMoves.Length; m++)
                     sprites.Add(TypeIcon("Move " + (m + 1) + " type", MoveIcon(SampleMoves[m], contest), 151 + mx, 42 + m * 32 + my, null));
-                sprites.Add(TypeIcon("First type", first, 63, 52, Picked));
-                if (second >= 0) sprites.Add(TypeIcon("Second type", second, 97, 52, Picked));
+                // main.c SetupContestMoveInfo shows the Pokémon's icon but not its types.
+                if (!contest)
+                {
+                    sprites.Add(TypeIcon("First type", first, 63, 52, PickedOrSwapping));
+                    if (second >= 0) sprites.Add(TypeIcon("Second type", second, 97, 52, PickedOrSwapping));
+                }
                 (int cx, int cy) = Beside("Static", 25, 1, 8, 108, 72);
                 if (!contest && Move(SampleMoves[0]) is MoveData picked)
-                    sprites.Add(new ScreenSprite { Name = "Category", Picture = "kind:" + (int)picked.Split, X = cx, Y = cy, When = Picked });
+                    sprites.Add(new ScreenSprite { Name = "Category", Picture = "kind:" + (int)picked.Split, X = cx, Y = cy, When = PickedOrSwapping });
                 sprites.Add(new ScreenSprite { Name = "Move cursor", Cells = 131, Anim = 130, Drawing = 132, Colours = 69, Palette = 2, X = 194 + mx, Y = 48 + my, Priority = 1, When = Picked });
-                page.Main.Mons.Add(new ScreenMon { Kind = ScreenMonKind.Icon, X = contest ? 32 : 24, Y = contest ? 68 : 48, Priority = 0, When = Picked });
+                // Swapping: selector 2 stays on the move picked and selector 1 points at the move it goes to.
+                sprites.Add(new ScreenSprite { Name = "Swap cursor", Cells = 131, Anim = 130, Drawing = 132, Colours = 69, Palette = 2, Seq = 1, X = 194 + mx, Y = 48 + my, When = Swapping });
+                sprites.Add(new ScreenSprite { Name = "Move cursor", Cells = 131, Anim = 130, Drawing = 132, Colours = 69, Palette = 2, X = 194 + mx, Y = 80 + my, Priority = 1, When = Swapping });
+                page.Main.Mons.Add(new ScreenMon { Kind = ScreenMonKind.Icon, X = contest ? 32 : 24, Y = contest ? 68 : 48, Priority = 0, When = PickedOrSwapping });
             }
 
             // The touch screen's page buttons: 5 by 5 tiles each, counting up through sub_buttons 30 tiles a row, at the entries of
@@ -481,19 +526,39 @@ namespace DSPRE.Avalonia.Data
             const DirNames cells = DirNames.SummarySprites;
             List<ScreenSprite> top = page.Main.Sprites, bottom = page.Sub.Sprites;
             // A Poké Ball: drawing 24 + ball, colours 49 + the ball's colour set; the ball cells say row 2.
-            top.Add(new ScreenSprite { Name = "Ball", Archive = cells, Cells = 48, Anim = 47, Drawing = 28, Colours = 49, Palette = 0, X = 168, Y = 39 });
+            // It follows the nickname window (RomLocator HgssSummaryFollows).
+            (int ballX, int ballY) = WindowOf("Static", 33) is { } nick ? (168 + 8 * (nick.X - 22), 39 + 8 * (nick.Y - 4)) : (168, 39);
+            top.Add(new ScreenSprite { Name = "Ball", Archive = cells, Cells = 48, Anim = 47, Drawing = 28, Colours = 49, Palette = 0, X = ballX, Y = ballY });
             (string Name, int Drawing, int X)[] marks = { ("circle", 52, 200), ("triangle", 56, 208), ("square", 55, 216), ("heart", 57, 224), ("star", 53, 232), ("diamond", 54, 240) };
+            (int markX, int markY) = MarkAt(200, 150);
             foreach ((string name, int drawing, int x) in marks)
-                top.Add(new ScreenSprite { Name = "Marking: " + name, Archive = cells, DrawingArchive = cells, Cells = 51, Anim = 50, Drawing = drawing, Colours = 61, Palette = 0, X = x, Y = 150 });
+                top.Add(new ScreenSprite { Name = "Marking: " + name, Archive = cells, DrawingArchive = cells, Cells = 51, Anim = 50, Drawing = drawing, Colours = 61, Palette = 0, X = markX + x - 200, Y = markY });
 
             // The party on the touch screen: an icon per Pokémon (the sample is the only one, in the first slot) and
             // the frame on the one shown, placed from the table at _021105B0 with animation 2.
+            // A picked move's panel covers the party, so the icons and their frame go while it shows.
+            Spec spec = _specs[pageIndex];
+            string party = spec.Variants?.Contains(Picked) == true ? spec.Variants[0] : null;
             (int iconX, int iconY) = HgButtons?.IconSpots is { Count: > 0 } spots ? spots[0] : (184, 50);
-            page.Sub.Mons.Add(new ScreenMon { Kind = ScreenMonKind.Icon, X = iconX, Y = iconY, Priority = 0 });
-            bottom.Add(new ScreenSprite { Name = "Party frame", Cells = 63, Anim = 62, Drawing = 64, Colours = 61, Palette = 2, Seq = 2, X = 183, Y = 55 });
+            page.Sub.Mons.Add(new ScreenMon { Kind = ScreenMonKind.Icon, X = iconX, Y = iconY, Priority = 0, When = party });
+            (int frameX, int frameY) = HgButtons?.FrameSpots is { Count: > 0 } frames ? frames[0] : (183, 55);
+            bottom.Add(new ScreenSprite { Name = "Party frame", Cells = 63, Anim = 62, Drawing = 64, Colours = 61, Palette = 2, Seq = 2, X = frameX, Y = frameY, When = party });
+
+            // Templates 20, 52 and 53 (resource list 85 sets 12 and 23): the status, shiny and cured Pokérus marks.
+            top.Add(new ScreenSprite { Name = "Status", Archive = cells, DrawingArchive = cells, ColoursArchive = cells, Cells = 63, Anim = 62,
+                                       Drawing = 64, Colours = 65, Palette = 0, Seq = MarksStatus, X = 232, Y = 58, When = Marks });
+            top.Add(new ScreenSprite { Name = "Shiny", Archive = cells, DrawingArchive = cells, Cells = 51, Anim = 50, Drawing = 58, Colours = 61,
+                                       Palette = 2, X = 252, Y = 72, When = Marks });
+            top.Add(new ScreenSprite { Name = "Pokérus cured", Archive = cells, DrawingArchive = cells, Cells = 51, Anim = 50, Drawing = 58, Colours = 61,
+                                       Palette = 2, Seq = 1, X = 252, Y = 132, When = Marks });
+            // Templates 109 to 113 (set 44, animation 6): five Shiny Leaves on the Info page.
+            if (spec.Id == "info")
+                for (int k = 0; k < 5; k++)
+                    top.Add(new ScreenSprite { Name = $"Shiny Leaf {k + 1}", Cells = 67, Anim = 68, Drawing = 66, Colours = 65, Seq = 6,
+                                               X = 91 + 10 * k, Y = 182, When = Marks });
 
             (int first, int second) = Types();
-            string id = _specs[pageIndex].Id;
+            string id = spec.Id;
             // Icons beside a window move with it, offset from the window's original place (RomLocator summary follows).
             (int X, int Y) Beside(string table, int index, int homeX, int homeY) =>
                 WindowOf(table, index) is { } w ? (8 * (w.X - homeX), 8 * (w.Y - homeY)) : (0, 0);
@@ -512,19 +577,42 @@ namespace DSPRE.Avalonia.Data
                 (int mx, int my) = Beside("Skills", 8, 5, 1);
                 for (int m = 0; m < SampleMoves.Length; m++)
                     bottom.Add(TypeIcon("Move " + (m + 1) + " type", MoveIcon(SampleMoves[m], false), 24 + mx, 16 + m * 32 + my, null));
-                bottom.Add(TypeIcon("First type", first, 200, 24, Picked));
-                if (second >= 0) bottom.Add(TypeIcon("Second type", second, 234, 24, Picked));
+                bottom.Add(TypeIcon("First type", first, 200, 24, PickedOrSwapping));
+                if (second >= 0) bottom.Add(TypeIcon("Second type", second, 234, 24, PickedOrSwapping));
                 if (Move(SampleMoves[0]) is MoveData picked)
-                    bottom.Add(new ScreenSprite { Name = "Category", Picture = "kind:" + (int)picked.Split, X = 232, Y = 40, When = Picked });
+                    bottom.Add(new ScreenSprite { Name = "Category", Picture = "kind:" + (int)picked.Split, X = 232, Y = 40, When = PickedOrSwapping });
+                // Templates 9 and 19 (resource list 85 sets 2 and 11): the move cursor on the first move and the Pokémon's icon.
+                bottom.Add(new ScreenSprite { Name = "Move cursor", Cells = 63, Anim = 62, Drawing = 64, Colours = 61, Palette = 2, X = 68, Y = 24, Priority = 1, When = Picked });
+                // Swapping: template 10 stays on the move picked and template 9 points at the move it goes to.
+                bottom.Add(new ScreenSprite { Name = "Swap cursor", Cells = 63, Anim = 62, Drawing = 64, Colours = 61, Palette = 2, Seq = 1, X = 68, Y = 24, When = Swapping });
+                bottom.Add(new ScreenSprite { Name = "Move cursor", Cells = 63, Anim = 62, Drawing = 64, Colours = 61, Palette = 2, X = 68, Y = 56, Priority = 1, When = Swapping });
+                page.Sub.Mons.Add(new ScreenMon { Kind = ScreenMonKind.Icon, X = 160, Y = 16, Priority = 0, When = PickedOrSwapping });
             }
             if (id == "ribbons")
             {
+                // Templates 54 to 62 (sets 25 to 33: a/0/3/9 cells 71, animations 70, colours 136): ribbon.c sRibbonInfo gives each
+                // ribbon's drawing and colour row. The sample has Hoenn Champion, Effort and Sinnoh Champion.
+                (string Name, int Drawing, int Row)[] sample = { ("Hoenn Champion", 72, 0), ("Effort", 80, 2), ("Sinnoh Champion", 88, 0) };
+                IReadOnlyList<(int X, int Y)> ribbonSpots = HgButtons?.RibbonSpots is { Count: >= 3 } found ? found : new[] { (32, 24), (64, 24), (96, 24) };
+                for (int r = 0; r < sample.Length; r++)
+                    bottom.Add(new ScreenSprite { Name = "Ribbon: " + sample[r].Name, Archive = cells, DrawingArchive = cells, ColoursArchive = cells,
+                                                  Cells = 71, Anim = 70, Drawing = sample[r].Drawing, Colours = 136, Palette = sample[r].Row,
+                                                  X = ribbonSpots[r].X, Y = ribbonSpots[r].Y, When = PtRibbons });
                 // Five Pokéathlon stars under each of the five stats.
                 string[] stats = { "Speed", "Power", "Skill", "Stamina", "Jump" };
+                // Each row follows its stat's window (RomLocator AthlonStars).
                 for (int r = 0; r < stats.Length; r++)
+                {
+                    (int dx, int dy) = WindowOf("Ribbons", 3 + r) is { } label ? (8 * (label.X - 1), 8 * (label.Y - 3 - 4 * r)) : (0, 0);
                     for (int k = 0; k < 5; k++)
                         top.Add(new ScreenSprite { Name = $"{stats[r]} star {k + 1}", Cells = 67, Anim = 68, Drawing = 66, Colours = 65,
-                                                   X = 64 + k * 16, Y = 48 + r * 32, When = Athlon });
+                                                   X = 64 + k * 16 + dx, Y = 48 + r * 32 + dy, When = Athlon });
+                    // Templates 104 to 108: a row's arrow, up (animation 4) or down (5) by the nature, hidden otherwise. The sample
+                    // raises Speed and lowers Power.
+                    if (r < 2)
+                        top.Add(new ScreenSprite { Name = $"{stats[r]} arrow", Cells = 67, Anim = 68, Drawing = 66, Colours = 65, Seq = 4 + r,
+                                                   X = 80 + dx, Y = 32 + r * 32 + dy, When = Athlon });
+                }
             }
         }
 
@@ -533,9 +621,12 @@ namespace DSPRE.Avalonia.Data
 
         // ── what the game prints ──────────────────────────────────────────────────────────────────
 
-        private const string Picked = "A move picked";
+        private const string Picked = "A move picked", Swapping = "Swapping moves", PickedOrSwapping = Picked + "|" + Swapping;
         // HGSS shows the Pokéathlon side only for a Pokémon that has Pokéathlon stats.
-        private const string Athlon = "With Pokéathlon stats";
+        private const string Athlon = "With Pokéathlon stats", PtRibbons = "With ribbons";
+        // The status mark replaces the Pokérus one, so the sample is shiny, poisoned and cured of Pokérus.
+        private string Marks => _hgss ? "Shiny, poisoned and leaves" : "Shiny and poisoned";
+        private const int MarksStatus = 4;
 
         private static Box Label(string table, int index, string name, int line, Ink colour = Ink.White,
                                  ScreenTextAlign at = ScreenTextAlign.Left, int x = 0, int y = 0, int font = 0, string when = null) =>
@@ -596,8 +687,8 @@ namespace DSPRE.Avalonia.Data
         {
             ScreenTextAlign at = _hgss ? ScreenTextAlign.BoxRight : ScreenTextAlign.BoxCentre;
             return none
-                ? Label(table, index, name, 154, Ink.Black, at, when: Picked)
-                : Value(table, index, name, line, Num(value, 3, _hgss ? '\0' : ' '), at: at, when: Picked);
+                ? Label(table, index, name, 154, Ink.Black, at, when: PickedOrSwapping)
+                : Value(table, index, name, line, Num(value, 3, _hgss ? '\0' : ' '), at: at, when: PickedOrSwapping);
         }
 
         private Spec[] PlatinumSpecs()
@@ -624,7 +715,7 @@ namespace DSPRE.Avalonia.Data
                     Value("Info", 3, "ID", 16, Num(12345, 5, '0'), at: ScreenTextAlign.BoxCentre),
                     Value("Info", 4, "Exp. points", 18, Num(125000, 7, ' '), at: ScreenTextAlign.BoxCentre),
                     Value("Info", 5, "Next level", 21, Num(7651, 7, ' '), at: ScreenTextAlign.BoxCentre),
-                }, Exp: true),
+                }, Exp: true, Variants: new[] { "Info", Marks }),
                 new Spec("memo", "Trainer memo", 4, 15, new[]
                 {
                     Label("Static", 1, "Title", 23),
@@ -654,15 +745,15 @@ namespace DSPRE.Avalonia.Data
                 {
                     Label("Static", 4, "Title", 128),
                     Label("Static", 35, "Button hint", 129, when: "Moves"),
-                    Label("Static", 35, "Button hint", 152, when: Picked),
-                    Label("Static", 25, "Category heading", 149, when: Picked),
-                    Label("Static", 26, "Power heading", 147, when: Picked),
-                    Label("Static", 27, "Accuracy heading", 148, when: Picked),
-                    Label("Static", 24, "Cancel", 146, x: 0, y: 2, when: Picked),
+                    Label("Static", 35, "Button hint", 152, when: PickedOrSwapping),
+                    Label("Static", 25, "Category heading", 149, when: PickedOrSwapping),
+                    Label("Static", 26, "Power heading", 147, when: PickedOrSwapping),
+                    Label("Static", 27, "Accuracy heading", 148, when: PickedOrSwapping),
+                    Label("Static", 24, "Cancel", 146, x: 0, y: 2, when: PickedOrSwapping),
                     Attribute("BattleMoves", 5, "Power", 150, tackle?.Damage ?? 0, (tackle?.Damage ?? 0) <= 1),
                     Attribute("BattleMoves", 6, "Accuracy", 151, tackle?.Accuracy ?? 0, (tackle?.Accuracy ?? 0) == 0),
-                    Value("BattleMoves", 7, "Move description", SampleMoves[0], null, bank: MoveDescriptionsTextNumbers, when: Picked),
-                }.Concat(moves("BattleMoves")).ToArray(), Variants: new[] { "Moves", Picked }),
+                    Value("BattleMoves", 7, "Move description", SampleMoves[0], null, bank: MoveDescriptionsTextNumbers, when: PickedOrSwapping),
+                }.Concat(moves("BattleMoves")).ToArray(), Variants: new[] { "Moves", Picked, Swapping }),
                 new Spec("condition", "Condition", 7, 15, new[]
                 {
                     Label("Static", 3, "Title", 126),
@@ -672,17 +763,21 @@ namespace DSPRE.Avalonia.Data
                 {
                     Label("Static", 5, "Title", 157),
                     Label("Static", 35, "Button hint", 158, when: "Moves"),
-                    Label("Static", 29, "Appeal points heading", 160, Ink.Black, ScreenTextAlign.BoxCentre, when: Picked),
+                    Label("Static", 35, "Button hint", 152, when: PickedOrSwapping),
+                    Label("Static", 24, "Cancel", 146, x: 0, y: 2, when: PickedOrSwapping),
+                    Label("Static", 29, "Appeal points heading", 160, Ink.Black, ScreenTextAlign.BoxCentre, when: PickedOrSwapping),
                     // The contest effect's description: line 46 + effect - 1 of the contest effects bank.
-                    Value("ContestMoves", 5, "Move description", 46 + (tackle?.ContestAppeal ?? 1) - 1, null, bank: _sites.ContestEffectBank, when: Picked),
-                }.Concat(moves("ContestMoves")).ToArray(), Variants: new[] { "Moves", Picked }),
+                    Value("ContestMoves", 5, "Move description", 46 + (tackle?.ContestAppeal ?? 1) - 1, null, bank: _sites.ContestEffectBank, when: PickedOrSwapping),
+                }.Concat(moves("ContestMoves")).ToArray(), Variants: new[] { "Moves", Picked, Swapping }),
                 new Spec("ribbons", "Ribbons", 9, 15, new[]
                 {
                     Label("Static", 31, "Title", 179),
                     Label("Static", 30, "Ribbon count heading", 182, Ink.Black),
-                    // The sample has no ribbons, so the game prints 0 and no button hint.
-                    Value("Ribbons", 0, "Ribbon count", 183, Num(0, 3)),
-                }),
+                    // Without ribbons the game prints 0 and no button hint; with them, the count and INFO.
+                    Value("Ribbons", 0, "Ribbon count", 183, Num(0, 3), when: "Ribbons"),
+                    Value("Ribbons", 0, "Ribbon count", 183, Num(3, 3), when: PtRibbons),
+                    Label("Static", 35, "Button hint", 180, when: PtRibbons),
+                }, Variants: new[] { "Ribbons", PtRibbons }),
                 new Spec("exit", "Exit", 10, 15, new[]
                 {
                     Label("Static", 28, "Close window", 162, at: ScreenTextAlign.BoxCentre),
@@ -720,7 +815,7 @@ namespace DSPRE.Avalonia.Data
                     Label("Info", 6, "Memo", 24, Ink.Black, x: 6),
                     // Shiny Leaf: printed only once the Pokémon has a leaf, which the sample doesn't.
                     new Box("Info", 7, "Shiny Leaf", Array.Empty<Print>()),
-                }, Exp: true),
+                }, Exp: true, Variants: new[] { "Info", Marks }),
                 new Spec("skills", "Stats and moves", 19, 17, new[]
                 {
                     Label("Static", 2, "Title", 109),
@@ -745,13 +840,13 @@ namespace DSPRE.Avalonia.Data
                     MoveBox("Skills", 9, SampleMoves[1]),
                     MoveBox("Skills", 10, SampleMoves[2]),
                     MoveBox("Skills", 11, SampleMoves[3]),
-                    Label("Static", 24, "Category heading", 149, when: Picked),
-                    Label("Static", 25, "Power heading", 147, when: Picked),
-                    Label("Static", 26, "Accuracy heading", 148, when: Picked),
+                    Label("Static", 24, "Category heading", 149, when: PickedOrSwapping),
+                    Label("Static", 25, "Power heading", 147, when: PickedOrSwapping),
+                    Label("Static", 26, "Accuracy heading", 148, when: PickedOrSwapping),
                     Attribute("Skills", 13, "Power", 150, tackle?.Damage ?? 0, (tackle?.Damage ?? 0) <= 1),
                     Attribute("Skills", 14, "Accuracy", 151, tackle?.Accuracy ?? 0, (tackle?.Accuracy ?? 0) == 0),
-                    Value("Skills", 15, "Move description", SampleMoves[0], null, bank: MoveDescriptionsTextNumbers, when: Picked),
-                }, Hp: true, Variants: new[] { "Moves", Picked }),
+                    Value("Skills", 15, "Move description", SampleMoves[0], null, bank: MoveDescriptionsTextNumbers, when: PickedOrSwapping),
+                }, Hp: true, Variants: new[] { "Moves", Picked, Swapping }),
                 new Spec("ribbons", "Performance and ribbons", 10, 9, new[]
                 {
                     Label("Static", 5, "Performance title", 157, when: Athlon),
@@ -762,9 +857,10 @@ namespace DSPRE.Avalonia.Data
                     Label("Ribbons", 7, "Jump", 191, Ink.Black, x: 4, when: Athlon),
                     Label("Static", 30, "Ribbons title", 179),
                     Label("Static", 29, "Ribbon count heading", 182, Ink.Black),
-                    // The sample has no ribbons, so the game prints 0.
-                    Value("Ribbons", 0, "Ribbon count", 183, Num(0, 3)),
-                }, Variants: new[] { "Ribbons", Athlon }),
+                    // Without ribbons the game prints 0.
+                    Value("Ribbons", 0, "Ribbon count", 183, Num(0, 3), when: "Ribbons"),
+                    Value("Ribbons", 0, "Ribbon count", 183, Num(3, 3), when: PtRibbons),
+                }, Variants: new[] { "Ribbons", Athlon, PtRibbons }),
             };
         }
 
@@ -792,6 +888,9 @@ namespace DSPRE.Avalonia.Data
             }
             if (spec.Hp) items.Add(BarItem("HP bar", _now.Hp));
             if (spec.Exp) items.Add(BarItem("EXP bar", _now.Exp));
+            // The first marking's middle sits 2 pixels above a row's top, and moving by whole tiles keeps that.
+            if (_now.Markings is { } marks)
+                items.Add(new ScreenLayoutItem { Name = MarkingsName, Side = Where(0).Side, X = marks.X / 8, Y = (marks.Y + MarkRise) / 8, Width = 6, Height = 1, Key = MarkingsName });
             return items;
         }
 
@@ -807,6 +906,12 @@ namespace DSPRE.Avalonia.Data
             next.Tables.First(t => t.Page == key.Item1).Windows[key.Item2].Font = font;
             return (next.ToBytes(original), null);
         }
+
+        private const string MarkingsName = "Markings";
+        private const int MarkRise = 2;
+
+        // The first marking's middle, as the layout has it, or the game's.
+        private (int X, int Y) MarkAt(int x, int y) => _now?.Markings is { } m ? (m.X, m.Y) : (x, y);
 
         private static ScreenLayoutItem BarItem(string name, SummaryScreenLayout.Bar bar) => new()
         {
@@ -841,6 +946,14 @@ namespace DSPRE.Avalonia.Data
         {
             byte[] original = SummaryScreenLayout.ReadBytes();
             SummaryScreenLayout next = SummaryScreenLayout.FromBytes(_now.ToBytes(original));
+            if (item.Key is MarkingsName)
+            {
+                if (next.Markings == null) return (null, null);
+                if (x < 0 || y < 0 || x + 6 > SummaryScreenLayout.MapColumns || y >= SummaryScreenLayout.MapRows) return (null, "That goes off the screen.");
+                next.Markings.X = 8 * x + _now.Markings.X % 8;
+                next.Markings.Y = 8 * y - MarkRise;
+                return (next.ToBytes(original), null);
+            }
             if (item.Key is string bar)
             {
                 SummaryScreenLayout.Bar b = bar == "HP bar" ? next.Hp : next.Exp;

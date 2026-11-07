@@ -44,9 +44,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (!load) return;
             _pending = new Data.PendingArchiveWrites();
-            _text = new Data.PendingArchiveWrites.Target("follower-talk-text",
-                () => Pack(new TextArchive(FollowerTalkTextArchive).Messages),
-                b => new TextArchive(FollowerTalkTextArchive, Unpack(b)).SaveToExpandedDir(FollowerTalkTextArchive, false, this));
+            _text = Data.PendingArchiveWrites.Text("follower-talk-text", FollowerTalkTextArchive, this);
             _placeNames = GetLocationNames().ToArray();
             _speciesNames = GetPokemonNames();
             Load();
@@ -77,7 +75,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 .Select(b => b?.Length == FollowerTalk.MoveSize ? new FollowerTalk.MoveData(b) : FollowerTalk.MoveData.New()).ToList();
             byte[] g = _pending.ReadMember(DirNames.FollowerSpeciesGroups, 0) ?? Array.Empty<byte>();
             _groups = g.Length >= FollowerTalk.SpeciesCount ? g : g.Concat(new byte[FollowerTalk.SpeciesCount - g.Length]).ToArray();
-            _lines = Unpack(_pending.Read(_text));
+            _lines = Data.PendingArchiveWrites.TextLines(_pending.Read(_text));
             _uses = null;
         }
 
@@ -98,7 +96,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void StageLines()
         {
             _own = true;
-            try { _pending.Import(() => { _pending.Stage(_text, Pack(_lines)); return null; }); }
+            try { _pending.Import(() => { _pending.Stage(_text, Data.PendingArchiveWrites.TextBytes(_lines)); return null; }); }
             finally { _own = false; }
             AfterEdit();
         }
@@ -156,8 +154,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         // ── Text ────────────────────────────────────────────────────────────────
 
-        private static byte[] Pack(List<string> lines) => Encoding.UTF8.GetBytes(string.Join("\0", lines));
-        private static List<string> Unpack(byte[] b) => Encoding.UTF8.GetString(b ?? Array.Empty<byte>()).Split('\0').ToList();
         public int LineCount => _lines.Count;
 
         public string LineText(int n) => n >= 1 && n <= _lines.Count ? _lines[n - 1] : "";

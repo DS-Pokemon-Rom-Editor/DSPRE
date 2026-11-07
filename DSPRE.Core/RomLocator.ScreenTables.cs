@@ -29,7 +29,20 @@ namespace DSPRE
             -0x22EE, -0x2308, -0x22C6, -0x22E0, -0x1D60, -0x1D78, -0x1D6C, -0x1CC0, -0x1CBE, -0xF0E, -0xF0C, -0xEC6, -0xEF0, -0xF60, -0xF5E, -0xF30, -0xF2E,
             -0xEC0, -0xEEA,
         };
-        public const int TouchMenuCodedSite = 0x2FE8;
+        public const int TouchMenuCodedSite = 0x2FE8, TouchMenuCodedSiteJapanese = 0x3118;
+
+        // The Japanese overlay 27 keeps the same immediates, the first nine 0x150 earlier and the two after the twelfth 2 earlier.
+        // Measured on Japanese HeartGold and SoulSilver.
+        private static readonly int[] TouchMenuImmediatesJapanese = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Select(TouchMenuImmediates,
+            (d, i) => i < 9 ? d - 0x150 : i is 13 or 14 ? d - 2 : d));
+
+        /// <summary>The touch menu's coded immediates for a menu rect table at <paramref name="menuRects"/>, or null for an unknown layout.</summary>
+        public static int[] TouchMenuImmediatesAt(int menuRects) => menuRects switch
+        {
+            TouchMenuCodedSite => TouchMenuImmediates,
+            TouchMenuCodedSiteJapanese => TouchMenuImmediatesJapanese,
+            _ => null,
+        };
 
         /// <summary>Overlay 27's field menu colour code, the same on every dump but the Japanese ones.</summary>
         public sealed record TouchMenuColourCode(int InitCall, int ExitCheck, int Cave, int KeepPalette, int FlushCall, int ApplyColours, int LoadCall, int LoadCallNew, int MenuOffset);

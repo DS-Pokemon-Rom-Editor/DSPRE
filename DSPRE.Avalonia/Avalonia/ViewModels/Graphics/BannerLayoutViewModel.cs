@@ -34,7 +34,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _target = new("banner", () => _disk, b => { _banner.WriteFile(b); _disk = b; });
             _pending.Changed += () =>
             {
-                foreach (string n in new[] { nameof(Across), nameof(Down), nameof(Width), nameof(Height), nameof(Time), nameof(Speed), nameof(SpeedOut), nameof(DirectionIndex), nameof(MotionIndex), nameof(EffectIndex),
+                foreach (string n in new[] { nameof(Across), nameof(Down), nameof(Width), nameof(Height), nameof(NameY), nameof(MostNameY), nameof(Time), nameof(Speed), nameof(SpeedOut), nameof(DirectionIndex), nameof(MotionIndex), nameof(EffectIndex),
                                              nameof(HasUnsavedChanges), nameof(CanUndo), nameof(CanRedo), nameof(MostWidth) }) Raise(n);
                 Redraw();
             };
@@ -143,7 +143,20 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public int Across { get => _banner == null ? 0 : Look.Across; set => Change(l => l with { Across = value }); }
         public int Down { get => _banner == null ? 0 : Look.Down; set => Change(l => l with { Down = value }); }
         public int Width { get => _banner == null ? 0 : Look.Width; set => Change(l => l with { Width = value }); }
-        public int Height { get => _banner == null ? 0 : Look.Height; set => Change(l => l with { Height = value }); }
+        // With the link on, the name moves half as far as the height grows, so it stays the same distance from the middle.
+        public int Height
+        {
+            get => _banner == null ? 0 : Look.Height;
+            set => Change(l => l with { Height = value, NameY = NameFollows && l.NameY >= 0 ? Math.Max(0, l.NameY + 4 * (value - l.Height)) : l.NameY });
+        }
+
+        public bool HasNameY => _banner != null && Look.NameY >= 0;
+        public int NameY { get => _banner == null ? 0 : Math.Max(0, Look.NameY); set => Change(l => l with { NameY = value }); }
+        public int MostNameY => _banner == null ? 0 : _banner.MostNameY(Look);
+
+        private bool _nameFollows = true;
+        /// <summary>Whether a height change moves the name too.</summary>
+        public bool NameFollows { get => _nameFollows; set { if (_nameFollows == value) return; _nameFollows = value; Raise(); } }
         public int Time { get => _banner == null ? 0 : Look.Time; set => Change(l => l with { Time = value }); }
         public int Speed { get => _banner == null ? 0 : Look.Speed; set => Change(l => l with { Speed = value }); }
         public int SpeedOut { get => _banner == null ? 0 : Look.SpeedOut; set => Change(l => l with { SpeedOut = value }); }

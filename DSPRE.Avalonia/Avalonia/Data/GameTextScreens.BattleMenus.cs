@@ -27,6 +27,42 @@ namespace DSPRE.Avalonia.Data
         private static readonly int[] SampleStats = { 168, 151, 207, 172, 186 };
         private const int SampleToNextLevel = 3742;
 
+        // party_gauge.c (both games): batt_obj 340/341/342 coloured by 110. The player's arrow (animation 8) ends at 224,120 with the balls from
+        // 162,114 every 16; the opponent's (7) at 32,56 with the balls from 94,50 every 16 leftwards. Balls: healthy, a status condition,
+        // fainted (player 3 to 5, opponent 0 to 2), an empty slot 6. The sample trainer has three Pokémon.
+        internal static void BattlePartyGauge(byte[] rgba) => WithArchive(() =>
+        {
+            if (Members(DirNames.BattleObj) is not Func<int, byte[]> m || NitroBgCodec.ReadColours(m(110)) is not ushort[] colours) return 0;
+            Func<int, ushort[]> row = _ => DsBgScreen.Row(colours, 0);
+            Sprite(rgba, m, 342, 341, 340, 224, 120, 8, row);
+            Sprite(rgba, m, 342, 341, 340, 32, 56, 7, row);
+            for (int i = 0; i < 6; i++)
+            {
+                PartySample.Pokemon who = PartySample.Party[i];
+                int ours = who.Empty || who.Egg ? 6 : who.Hp == 0 ? 5 : who.Condition > 0 ? 4 : 3;
+                Sprite(rgba, m, 342, 341, 340, 162 + 16 * i, 114, ours, row);
+                Sprite(rgba, m, 342, 341, 340, 94 - 16 * i, 50, i < 3 ? 0 : 6, row);
+            }
+            return 0;
+        });
+
+        // battle_script.c SEQ_GET_EXP_LEVEL_UP_SUMMARY: a standard window at 17,7, 14 by 12, with Max. HP, Attack, Defense, Sp. Atk,
+        // Sp. Def and Speed (stat names 8, 1, 2, 4, 5, 3) every 16 down and each gain ("+{0}", battle strings 948) right-aligned at 108.
+        internal static void BattleLevelUp(byte[] rgba) => WithArchive(() =>
+        {
+            bool hg = GameFamily == GameFamilies.HGSS;
+            int[] stats = { 8, 1, 2, 4, 5, 3 }, gains = { 3, 2, 2, 3, 1, 2 };
+            ushort[] sys = SystemColours;
+            StandardWindow(rgba, 17, 7, 14, 12, sys[15]);
+            for (int i = 0; i < stats.Length; i++)
+            {
+                Print(rgba, SystemFont, Text(hg ? 443 : 551, stats[i]), 17 * 8, 7 * 8 + 16 * i, sys[1], sys[2]);
+                string gain = Text(hg ? 197 : 368, 948, (_, kind, _) => kind == 51 ? gains[i].ToString() : null);
+                Print(rgba, SystemFont, gain, 17 * 8 + 108, 7 * 8 + 16 * i, sys[1], sys[2], Align.Right);
+            }
+            return 0;
+        });
+
         /// <summary>The battle Pokémon page's text and icons, in BattleMenuButtons page order.</summary>
         internal static void BattlePartyText(byte[] rgba, int page, ushort[] colours, IReadOnlyList<(int X, int Y)>[] spots = null) =>
             WithArchive(() => { DrawBattleParty(rgba, page, colours, Spots(spots)); return 0; });
@@ -48,26 +84,35 @@ namespace DSPRE.Avalonia.Data
                 (x, y) = spot(button, 0, (x, y));
                 Centred(rgba, names, Line(bank, message), x * 8 + w * 4, y * 8 + 6, list);
             }
-            void Message(int message)
+            void Message(int message, int cancel)
             {
                 ushort[] talk = TalkColours;
-                Print(rgba, TalkFont, Line(bank, message), 2 * 8, 21 * 8, talk[1], talk[2]);
+                (int mx, int my) = spot(cancel, 0, (2, 21));
+                Print(rgba, TalkFont, Line(bank, message), mx * 8, my * 8, talk[1], talk[2]);
             }
 
             switch (page)
             {
                 case 0:
                     for (int n = 0; n < BattleListWindows.Length; n++)
-                        BattleListPanel(rgba, n, spot(n, 0, BattleListWindows[n]), spot(n, 1, (BattleListWindows[n].X * 8 + 16, BattleListWindows[n].Y * 8 + 16)), bank, names, list, glyphs);
-                    Message(6);
+                    {
+                        (int X, int Y) icon = spot(n, 1, (BattleListWindows[n].X * 8 + 16, BattleListWindows[n].Y * 8 + 16));
+                        BattleListPanel(rgba, n, spot(n, 0, BattleListWindows[n]), icon, spot(n, 2, (icon.X + 12, icon.Y + 24)), bank, names, list, glyphs, hg);
+                    }
+                    Message(6, 6);
                     break;
                 case 1:
-                    NameAndGender(rgba, first, bank, names, 80 + 48, 40, list, true);
+                {
+                    // The name is centred in window 0 (10,4, 12 wide), 8 down.
+                    (int nx, int ny) = spot(0, 1, (10, 4));
+                    NameAndGender(rgba, first, bank, names, nx * 8 + 48, ny * 8 + 8, list, true);
                     Button(15, 0, 11, 12, 10);
                     Button(18, 1, 1, 20, 11);
                     Button(19, 2, 14, 20, 11);
-                    PartyIcon(rgba, first.Species, 128, 72);
+                    (int ix, int iy) = spot(0, 2, (128, 72));
+                    PartyIcon(rgba, first.Species, ix, iy);
                     break;
+                }
                 case 2:
                     SummaryPage(rgba, first, bank, labels);
                     Button(19, 2, 13, 20, 11);
@@ -78,7 +123,7 @@ namespace DSPRE.Avalonia.Data
                     Header(rgba, first, bank, labels);
                     MoveWindows(rgba, bank, names, list, i => spot(i, 0, BattleMoveWindows[i]), i => spot(i, page == 3 ? 2 : 1, BattleMoveTypes[i]));
                     if (page == 3) Button(18, 6, 13, 20, 11);
-                    if (page == 5) Message(94);
+                    if (page == 5) Message(94, 4);
                     if (page == 6) NewMove(rgba, names, list, spot(4, 0, (9, 18)), spot(4, 1, (88, 176)));
                     break;
                 case 4:
@@ -105,12 +150,19 @@ namespace DSPRE.Avalonia.Data
             Print(rgba, SystemFont, Line(bank, 16 + who.Gender), left + width + 8, y, row[ink], row[ink + 1]);
         }
 
-        private static void BattleListPanel(byte[] rgba, int n, (int X, int Y) window, (int X, int Y) icon, int bank, FieldFont font, ushort[] row, byte[] glyphs)
+        private static void BattleListPanel(byte[] rgba, int n, (int X, int Y) window, (int X, int Y) icon, (int X, int Y) status, int bank,
+                                            FieldFont font, ushort[] row, byte[] glyphs, bool hg)
         {
             PartySample.Pokemon who = PartySample.Party[n];
             if (who.Empty) return;
             (int wx, int wy) = (window.X * 8, window.Y * 8);
             PartyIcon(rgba, who.Egg ? 494 : who.Species, icon.X, icon.Y);
+            // battle_party_sprites.c: the held item (animation 0, mail 1) 8,8 from the icon in the party menu's files, and the status
+            // icon at its own spot in place of the level.
+            if (who.Item > 0 && Members(DirNames.PartyMenuGraphics) is Func<int, byte[]> party)
+                PartySprite(rgba, party, 18, 19, 20, icon.X + 8, icon.Y + 8, who.Item == 2 ? 1 : 0, -1, 21);
+            int condition = who.Egg ? 0 : who.Hp == 0 ? 6 : who.Condition;
+            if (condition > 0) StatusIcon(rgba, condition, status.X, status.Y, hg);
             string name = SpeciesName(who);
             DsBgScreen.DrawText(rgba, font, name, wx + 32, wy + 8, row[NameInk], row[NameInk + 1], row[NameInk + 2]);
             if (who.Egg) return;
@@ -138,14 +190,25 @@ namespace DSPRE.Avalonia.Data
 
         private static void Header(byte[] rgba, PartySample.Pokemon who, int bank, ushort[] labels)
         {
+            // The Layout tab's Header row (tile 2,1) moves the name, icon and types together.
+            (int hx, int hy, int _, int _) = ScreenWindowLayouts.Window("battlepokemon", "Pictures", "Header", (2, 1, 24, 2));
+            int dx = 8 * (hx - 2), dy = 8 * (hy - 1);
             string name = SpeciesName(who);
-            Print(rgba, SystemFont, name, 5 * 8, 8, labels[15], labels[14]);
+            Print(rgba, SystemFont, name, 5 * 8 + dx, 8 + dy, labels[15], labels[14]);
             if (who.Gender < 2)
             {
                 int ink = who.Gender == 0 ? 7 : 3;
-                Print(rgba, SystemFont, Line(bank, 16 + who.Gender), 5 * 8 + DsBgScreen.MeasureText(SystemFont, name) + 8, 8, labels[ink], labels[ink + 1]);
+                Print(rgba, SystemFont, Line(bank, 16 + who.Gender), 5 * 8 + DsBgScreen.MeasureText(SystemFont, name) + 8 + dx, 8 + dy, labels[ink], labels[ink + 1]);
             }
-            PartyIcon(rgba, who.Species, 24, 12);
+            PartyIcon(rgba, who.Species, 24 + dx, 12 + dy);
+            // battle_party_sprites.c DrawSelectedPokemonTypeIcons: the types at 130,16 and 164,16, the second only when it differs.
+            try
+            {
+                PokemonPersonalData data = new PokemonPersonalData(who.Species);
+                Paste(rgba, TypeIcons.PixelsFor((int)data.Type1), 130 - 16 + dx, 16 - 8 + dy);
+                if (data.Type2 != data.Type1) Paste(rgba, TypeIcons.PixelsFor((int)data.Type2), 164 - 16 + dx, 16 - 8 + dy);
+            }
+            catch (Exception ex) { AppLogger.WarnOnce("GameTextScreens.Header", ex); }
         }
 
         private static void SummaryPage(byte[] rgba, PartySample.Pokemon who, int bank, ushort[] labels)
@@ -262,21 +325,29 @@ namespace DSPRE.Avalonia.Data
                         Plain($"x{count}", cx * 8, cy * 8 + 4);
                         ItemIcon(rgba, item, ix, iy);
                     }
-                    Plain(Line(bank, 22), 16 * 8, 19 * 8 + 4, Align.Centre);
-                    Plain(Line(bank, 23), 16 * 8, 19 * 8 + 20, Align.Centre);
-                    Plain(Line(bank, 28), 24 * 8, 20 * 8 + 4, Align.Centre);
-                    Plain("1", 24 * 8 - 4, 20 * 8 + 4, Align.Right);
-                    Plain("1", 24 * 8 + 4, 20 * 8 + 4);
+                    // The pocket name centred in window 24 (11,19, 10 wide) and the page counter in window 25 (22,20, 4 wide).
+                    int previous = hg ? 7 : 6;
+                    (int nameX, int nameY) = spot(previous, 0, (11, 19));
+                    (int gx, int gy) = spot(previous, 1, (22, 20));
+                    Plain(Line(bank, 22), nameX * 8 + 40, nameY * 8 + 4, Align.Centre);
+                    Plain(Line(bank, 23), nameX * 8 + 40, nameY * 8 + 20, Align.Centre);
+                    Plain(Line(bank, 28), gx * 8 + 16, gy * 8 + 4, Align.Centre);
+                    Plain("1", gx * 8 + 12, gy * 8 + 4, Align.Right);
+                    Plain("1", gx * 8 + 20, gy * 8 + 4);
                     break;
                 case 2:
                     (int first, int many) = SampleItems[0];
-                    Plain(Line(ItemNamesTextNumber, first), 7 * 8, 4 * 8);
-                    Plain($"x{many}", 20 * 8, 4 * 8);
-                    Plain(Line(ItemDescriptionsTextNumber, first), 2 * 8 + 4, 9 * 8);
+                    (int useNameX, int useNameY) = spot(0, 1, (7, 4));
+                    (int useCountX, int useCountY) = spot(0, 2, (20, 4));
+                    (int useTextX, int useTextY) = spot(0, 3, (2, 9));
+                    Plain(Line(ItemNamesTextNumber, first), useNameX * 8, useNameY * 8);
+                    Plain($"x{many}", useCountX * 8, useCountY * 8);
+                    Plain(Line(ItemDescriptionsTextNumber, first), useTextX * 8 + 4, useTextY * 8);
                     // HGSS's USE window is 10 tiles wide at x 8; Platinum's is 6 wide at x 10.
                     (int ux, int uy) = spot(0, 0, (hg ? 8 : 10, 20));
                     Button(Line(bank, 31), ux * 8 + (hg ? 40 : 24), uy * 8 + 6);
-                    ItemIcon(rgba, first, 40, 44);
+                    (int useIconX, int useIconY) = spot(0, 4, (40, 44));
+                    ItemIcon(rgba, first, useIconX, useIconY);
                     break;
             }
         }

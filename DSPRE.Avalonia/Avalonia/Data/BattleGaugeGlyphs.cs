@@ -16,14 +16,18 @@ namespace DSPRE.Avalonia.Data
         private const int TileBytes = 32;      // 8 by 8 at four bits a pixel
 
         /// <summary>The name, eight tiles across and two down, in the order a gauge expects them.</summary>
-        public static byte[] NameBlock(string name)
+        public static byte[] NameBlock(string name) => TextBlock(name, 8);
+
+        /// <summary>A line of text in the name's font and colours, <paramref name="tilesWide"/> across and two down.</summary>
+        public static byte[] TextBlock(string name, int tilesWide)
         {
             FieldFont font;
             try { font = BattleGaugeTextRenderer.LoadNameFont(); }
             catch (Exception ex) { AppLogger.WarnOnce("BattleGaugeGlyphs.NameBlock", ex); return null; }
             if (font == null) return null;
 
-            const int wide = 8 * Tile, tall = 2 * Tile;
+            int wide = tilesWide * Tile;
+            const int tall = 2 * Tile;
             byte[] pixels = new byte[wide * tall];
             for (int i = 0; i < pixels.Length; i++) pixels[i] = Background;
 

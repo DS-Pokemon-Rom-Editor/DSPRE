@@ -11,7 +11,8 @@ namespace DSPRE.ROMFiles
     /// </summary>
     public sealed class PlaceNameBanner
     {
-        public sealed record Look(int Across, int Down, int Width, int Height, int Time, int Speed, int SpeedOut);
+        /// <param name="NameY">The name's top in pixels from the window's top, or -1 where the site isn't known.</param>
+        public sealed record Look(int Across, int Down, int Width, int Height, int Time, int Speed, int SpeedOut, int NameY = -1);
 
         // A style's sheet holds 96 tiles, and the window has room for 5 rows.
         public const int SheetTiles = 96, WindowRows = 5, ScreenColumns = 32;
@@ -29,7 +30,9 @@ namespace DSPRE.ROMFiles
             int window = tables.Take(s.Overlay, (int)s.Window, 0x1C);
             for (uint i = 0; i < 0x1C; i += 2) _at[s.Window + i] = window + (int)i;
             uint[] sites = new[] { s.Mod, SecondMod, s.Count, s.Task, SlideIn, SlideOut }.Concat(Hidden).ToArray();
-            foreach (uint site in s.Centre != 0 ? sites.Append(s.Centre) : sites) _at[site] = tables.Take(s.Overlay, (int)site, 2);
+            if (s.Centre != 0) sites = sites.Append(s.Centre).ToArray();
+            if (s.NameY != 0) sites = sites.Append(s.NameY).ToArray();
+            foreach (uint site in sites) _at[site] = tables.Take(s.Overlay, (int)site, 2);
             _data = tables.Finish();
         }
 
@@ -65,7 +68,7 @@ namespace DSPRE.ROMFiles
         private bool LooksRight() =>
             Cmp(Op(_s.Task), 0) && Mov(Op(_s.Mod), 1) && Mov(Op(SecondMod), 1) && Cmp(Op(_s.Count), 4) && Mov(Op(WindowHeight), Patched ? 2 : 0)
             && Hidden.All(h => (Op(h) & 0xFF) == (Op(_s.Show) & 0xFF)) && Speed(Op(SlideIn)) > 0 && Speed(Op(SlideOut)) > 0
-            && (Patched || Op(_s.Window) == 0x2300);
+            && (Patched || Op(_s.Window) == 0x2300) && (_s.NameY == 0 || Mov(Op(_s.NameY), 0));
 
         // "subs/adds rd, rn, #n" keeps n in bits 6-8. "subs/adds rd, #n" is the one-byte form.
         private static int Speed(ushort op) => op >> 9 == 0b0001111 || op >> 9 == 0b0001110 ? op >> 6 & 7
@@ -101,7 +104,7 @@ namespace DSPRE.ROMFiles
                 int width = Op(_s.Mod) & 0xFF;
                 int rows = width == 0 ? 0 : (Op(_s.Count) & 0xFF) / width;
                 return new Look(Patched ? Op(_s.Window + 18) & 0xFF : 0, Patched ? Op(_s.Window) & 0xFF : 0, width, rows,
-                                Op(_s.Task) & 0xFF, Speed(Op(SlideIn)), Speed(Op(SlideOut)));
+                                Op(_s.Task) & 0xFF, Speed(Op(SlideIn)), Speed(Op(SlideOut)), _s.NameY == 0 ? -1 : Op(_s.NameY) & 0xFF);
             }
         }
 
@@ -124,8 +127,12 @@ namespace DSPRE.ROMFiles
             if (HiddenScroll(l) > 255) return "The banner sits too low to slide out of sight.";
             if (l.Time < 0 || l.Time > 255) return "The banner can stay on screen for 0 to 255 steps.";
             if (l.Speed < 1 || l.Speed > 255 || l.SpeedOut < 1 || l.SpeedOut > 255) return "The banner can slide 1 to 255 pixels a step.";
+            if (_s.NameY != 0 && (l.NameY < 0 || l.NameY > MostNameY(l))) return $"The name can sit 0 to {MostNameY(l)} pixels down.";
             return null;
         }
+
+        // The name is 16 pixels tall and prints inside the window, which is the frame plus its extra rows.
+        public int MostNameY(Look l) => Math.Max(0, 8 * (l.Height + ExtraRows) - 16);
 
         public void Set(Look l)
         {
@@ -140,6 +147,7 @@ namespace DSPRE.ROMFiles
             Put(SlideIn, Imm(ThumbImm8.Op.Subs, 0, l.Speed));
             Put(SlideOut, Imm(ThumbImm8.Op.Adds, 0, l.SpeedOut));
             if (_s.Centre != 0) Put(_s.Centre, Imm(ThumbImm8.Op.Movs, 2, 8 * l.Width - 4));
+            if (_s.NameY != 0 && l.NameY >= 0) Put(_s.NameY, Imm(ThumbImm8.Op.Movs, 0, l.NameY));
             if (!Patched) return;
             Put(_s.Window, Imm(ThumbImm8.Op.Movs, 2, l.Down));
             Put(_s.Window + 2, Imm(ThumbImm8.Op.Movs, 3, ScreenColumns - l.Across));

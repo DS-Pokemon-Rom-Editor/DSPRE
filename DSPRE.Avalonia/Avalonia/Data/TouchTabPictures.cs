@@ -30,24 +30,54 @@ namespace DSPRE.Avalonia.Data
             };
             byte[] rgba = BattleScreenRenderer.Flatten(new BattleScreenRenderer().BuildTouch(look), touch: true);
             if (textOf != null) GameTextScreens.BattleTouchLabels(rgba, page, textOf, icon);
+            if (page == 0) PartyBalls(rgba);
             return rgba;
+        }
+
+        // pokeplatinum battle_subscreen.c BattleSubscreen_LoadSprites (pokeheartgold battle_input.c alike): the party's balls at 12 + 19i, 13 (batt_obj 208/207/209) and a
+        // trainer's at 246 - 12i, 9 (205/204/206), coloured by rows 0 and 1 of file 72. GetBallStatusAnimID: empty 0, alive 1, a status
+        // condition 2, fainted 3. The sample trainer has three Pokémon.
+        private static void PartyBalls(byte[] rgba)
+        {
+            if (RomInfo.GameFamily is not (RomInfo.GameFamilies.Plat or RomInfo.GameFamilies.HGSS) || MoveTextScreens.Members(RomInfo.DirNames.BattleObj) is not Func<int, byte[]> m) return;
+            ushort[] colours = ROMFiles.NitroBgCodec.ReadColours(m(72));
+            if (colours == null) return;
+            for (int i = 0; i < 6; i++)
+            {
+                PartySample.Pokemon who = PartySample.Party[i];
+                int status = who.Empty || who.Egg ? 0 : who.Hp == 0 ? 3 : who.Condition > 0 ? 2 : 1;
+                GameTextScreens.Sprite(rgba, m, 209, 207, 208, 12 + 19 * i, 13, status, _ => DsBgScreen.Row(colours, 0));
+                GameTextScreens.Sprite(rgba, m, 206, 204, 205, 246 - 12 * i, 9, i < 3 ? 1 : 0, _ => DsBgScreen.Row(colours, 1));
+            }
         }
 
         /// <summary>
         /// The battle's top screen above the touch menus: backdrop, ground, the HP bars as the ROM has them, and the "What will" prompt in
         /// the message box.
         /// </summary>
-        public static byte[] BattleTop()
+        public static byte[] BattleTop() => BattleTop(0);
+
+        /// <summary>The top screen behind a battle touch page: its prompt, or none while a recorded battle plays.</summary>
+        public static byte[] BattleTop(int page)
         {
             BattleScreenRenderer.Options look = new BattleScreenRenderer.Options();
             byte[] top = BattleScreenRenderer.Flatten(new BattleScreenRenderer().Build(look), touch: false);
-            if (top == null || RomInfo.BattleStringsTextNumber < 0) return top;
-            // The line's one placeholder is the nickname of the Pokémon on the bar.
+            if (top == null || RomInfo.BattleStringsTextNumber < 0 || page == RecordedPage) return top;
+            int line = page switch
+            {
+                YesNoPage => RomInfo.BattleUseNextPokemonLine,
+                ParkPage => RomInfo.BattleWhatWillPlayerThrowLine,
+                _ => RomInfo.BattleWhatWillPokemonDoLine,
+            };
+            // The one placeholder is the Pokémon's nickname, or the player's name when throwing.
             List<string> lines = new ROMFiles.TextArchive(RomInfo.BattleStringsTextNumber).Messages;
-            if (RomInfo.BattleWhatWillPokemonDoLine < lines.Count)
-                BattleMessageText.Draw(top, lines[RomInfo.BattleWhatWillPokemonDoLine], (_, _, _) => look.PokemonName, 0);
+            if (line < lines.Count)
+                BattleMessageText.Draw(top, lines[line], (_, _, _) => page == ParkPage ? "PLAYER" : look.PokemonName, 0);
             return top;
         }
+
+        // BattleCommandButtons page order.
+        private const int YesNoPage = 3, ParkPage = 5, RecordedPage = 6;
 
         /// <summary>Draws Platinum's Pokétch with the named app, or the digital watch when app is null.</summary>
         public static byte[] Poketch(string app)

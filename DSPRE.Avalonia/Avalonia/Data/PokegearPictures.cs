@@ -17,7 +17,8 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The page's pixels in PokegearButtons page order, or null when the archives can't be read.</summary>
         /// <param name="radioButtons">The radio buttons' tile spots, from the page being edited.</param>
         /// <param name="dial">The radio dial's screen as edited, or null for the saved one.</param>
-        public static byte[] Draw(int page, IReadOnlyList<(int X, int Y)> radioButtons = null, byte[] dial = null)
+        /// <param name="hintRow">The phone hint band's first row, or -1 for none.</param>
+        public static byte[] Draw(int page, IReadOnlyList<(int X, int Y)> radioButtons = null, byte[] dial = null, int hintRow = -1)
         {
             try
             {
@@ -44,6 +45,8 @@ namespace DSPRE.Avalonia.Data
                     s.InitLayer(1, 1, 0x10000);
                     (int w, ushort[] map) = NitroBgCodec.ReadMap(m(a.Screen));
                     s.LoadMap(1, map, w);
+                    // PokegearPhone_PrintContextMenuTooltip: rows 24 to 27 of the phone's screen cover the bar.
+                    if (hintRow >= 0) s.Copy(1, 0, hintRow, DsBgScreen.MapSide, BarRows, map, 0, 24, w);
                     // map overlay_101_021E9270.c draws the region map (8 bpp screen 11, drawing 10) under the frame, two rows down.
                     if (page == 2) under = RegionMap(m);
                 }
@@ -54,7 +57,13 @@ namespace DSPRE.Avalonia.Data
                 s.InitLayer(0, 0, 0);
                 (int sheetWidth, ushort[] sheet) = NitroBgCodec.ReadMap(gear(BarSheet));
                 s.Copy(0, 0, BarRow, DsBgScreen.MapSide, BarRows, sheet, 0, 0, sheetWidth);
+                if (hintRow >= 0) s.Fill(0, 0, 0, hintRow, DsBgScreen.MapSide, BarRows, 0);
                 byte[] rgba = s.Render(under);
+                // overlay_101_021F49F8.c sprite 4: the dial cursor, pgradio_gra 3/2/1 at a new save's 128,128. Its palette 4 is file 0
+                // row 0, loaded after the Pokégear's four.
+                if (page >= RadioButtonsPage && MoveTextScreens.Members(RomInfo.DirNames.PokegearRadioGraphics) is Func<int, byte[]> radio
+                    && NitroBgCodec.ReadColours(radio(0)) is ushort[] cursorColours)
+                    GameTextScreens.Sprite(rgba, radio, 3, 2, 1, 128, 128, 0, _ => DsBgScreen.Row(cursorColours, 0));
                 if (page is 0 or 3 && MoveTextScreens.Members(RomInfo.DirNames.PokegearPhoneGraphics) is Func<int, byte[]> phone)
                     PhoneRows(rgba, DsBgScreen.Row(NitroBgCodec.ReadColours(phone(10)), 2));
                 return rgba;
@@ -126,11 +135,12 @@ namespace DSPRE.Avalonia.Data
             return _contacts;
         }
 
-        // PhoneContactListUI_DrawNameSlotBG draws 24-pixel rows from y 8 in two alternating colour sets; PrintNameAndClass puts the
-        // name in font 4 at x 16 and the title in font 0 at x 94.
+        // PhoneContactListUI_DrawNameSlotBG draws 24-pixel rows from slot 1 in the Contacts window, its layer scrolled 32 up;
+        // PrintNameAndClass puts the name in font 4 at x 16 and the title in font 0 at x 94.
         private static void PhoneRows(byte[] rgba, ushort[] row)
         {
             string[] contacts = Contacts();
+            (int left, int top, int _, int _) = ScreenWindowLayouts.Window("pokegear", "Phone", "Contacts", (1, 2, 27, 24));
             int[][] sets = { new[] { 11, 9, 10, 1, 2, 5, 6, 10 }, new[] { 14, 12, 13, 1, 2, 5, 6, 13 } };
             void Fill(int x, int y, int w, int h, int colour)
             {
@@ -145,7 +155,7 @@ namespace DSPRE.Avalonia.Data
             for (int slot = 0; slot * 2 < contacts.Length && slot < 6; slot++)
             {
                 int[] c = sets[slot % 2];
-                int x = 8, y = 8 + 24 * slot;
+                int x = left * 8, y = top * 8 - 8 + 24 * slot;
                 Fill(x, y, 216, 24, c[0]);
                 Fill(x + 8, y, 82, 20, c[1]);
                 Fill(x + 90, y, 126, 20, c[2]);

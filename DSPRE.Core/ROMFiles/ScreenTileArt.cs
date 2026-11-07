@@ -39,18 +39,27 @@ namespace DSPRE.ROMFiles
     /// <summary>Background art that follows a window: each result is built from the saved screen, so moving back gives the file as it was.</summary>
     public static class WindowTileArt
     {
-        /// <summary>
-        /// A block the game draws at its window: <paramref name="shown"/> where the window is now. Where the window was saved,
-        /// <paramref name="hidden"/> goes back at its home spot, and away from home the row's plain squares fill in.
-        /// </summary>
+        /// <summary>A block the game draws at its window, moved from where the window was saved to where it is now.</summary>
+        /// <param name="hidden">What the home spot shows once the block leaves it. Away from home the row's plain squares fill in.</param>
+        /// <param name="shown">The block's squares, or null to move them as saved.</param>
         public static byte[] Swap(byte[] saved, (int X, int Y) was, (int X, int Y) now, (int X, int Y) home, int width, int height,
-                                  ushort[] hidden, ushort[] shown)
+                                  ushort[] hidden, ushort[] shown, int plainFrom = 0)
         {
             if (now == was) return saved;
-            ushort[] left = was == home ? hidden : NitroBgCodec.PlainSquares(saved, was.X, was.Y, width, height, now, home);
-            byte[] map = NitroBgCodec.PutSquares(saved, was.X, was.Y, width, height, left);
-            return NitroBgCodec.PutSquares(map, now.X, now.Y, width, height, shown);
+            // An LZ-packed map is edited unpacked and packed again, as the game loads it packed.
+            bool packed = Packed(saved);
+            byte[] plain = packed ? Lz77.Decompress(saved) : saved;
+            shown ??= NitroBgCodec.ReadSquares(plain, was.X, was.Y, width, height);
+            ushort[] left = was == home ? hidden : NitroBgCodec.PlainSquares(plain, was.X, was.Y, width, height, plainFrom, now, home);
+            byte[] map = NitroBgCodec.PutSquares(plain, was.X, was.Y, width, height, left);
+            map = NitroBgCodec.PutSquares(map, now.X, now.Y, width, height, shown);
+            return packed ? Lz77.Compress(map) : map;
         }
+
+        /// <summary>The map as the game reads it, unpacked when it is LZ-packed.</summary>
+        public static byte[] Unpacked(byte[] raw) => Packed(raw) ? Lz77.Decompress(raw) : raw;
+
+        internal static bool Packed(byte[] raw) => raw != null && raw.Length > 4 && raw[0] == 0x10 && Lz77.EndsAtDeclaredSize(raw);
 
         /// <summary>A band of <paramref name="rows"/> rows starting <paramref name="above"/> rows above its window, moved with the window.</summary>
         public static byte[] Band(byte[] saved, int savedRow, int nowRow, int above, int rows) =>
@@ -176,7 +185,7 @@ namespace DSPRE.ROMFiles
             return tile < 0 ? null : (ushort)(tile | upper & 0xF000);
         }
 
-        private static bool Packed(byte[] raw) => raw != null && raw.Length > 4 && raw[0] == 0x10 && Lz77.EndsAtDeclaredSize(raw);
+        private static bool Packed(byte[] raw) => WindowTileArt.Packed(raw);
 
         private static byte[] Read(ScreenTiles t)
         {

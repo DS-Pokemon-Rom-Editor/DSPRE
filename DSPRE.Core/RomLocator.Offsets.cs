@@ -3004,6 +3004,67 @@ namespace DSPRE
             _ => null,
         };
 
+        // The places ScreenPositionsPatch splits a shared register, measured on every dump.
+
+        /// <summary>pokeplatinum start_menu.c, the ball count window: movs r3, #1 (its x) then str r3, [sp] (its y).</summary>
+        private static Spot StartMenuBallCount(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English => Arm9(0x3B0CC),
+                GameLanguages.German or GameLanguages.French or GameLanguages.Italian or GameLanguages.Spanish => Arm9(0x3B170),
+                GameLanguages.Japanese => Arm9(0x3AC88),
+                GameLanguages.Korean => Arm9(0x3B5A8),
+                _ => null,
+            },
+            _ => null,
+        };
+
+        /// <summary>pokeplatinum bag windows.c, the Berries action menu: movs r3, #23 (x and bottom row) then subs r1, r3, r0.</summary>
+        private static Spot BagBerryActions(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language == GameLanguages.Japanese ? Ov(84, 0x457E) : Ov(84, 0x45F2),
+            _ => null,
+        };
+
+        /// <summary>pokeplatinum pc_boxes preview_display.c DrawMarkings: movs r2, #153 then lsls r2, #2 (row·32 + column), and the
+        /// literal holding twice that.</summary>
+        private static Spot BoxMarkings(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English => Ov(19, 0xA510, 0xA52C),
+                GameLanguages.Japanese => Ov(19, 0xA4B0, 0xA4CC),
+                _ => Ov(19, 0xA51C, 0xA538),
+            },
+            _ => null,
+        };
+
+        /// <summary>pokeplatinum options_menu.c SetupWindows: the title's and the entries' mov r3, r2, which copy the layer number as x.</summary>
+        private static Spot OptionsWindowsX(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => Ov(74, 0x796, 0x7B8),
+            _ => null,
+        };
+
+        /// <summary>
+        /// pokeheartgold trainer card, the Hall of Fame mark's two copies: movs r3, #7 (width and y) with str r3, [sp]; movs r2, #0
+        /// (x and the source corner) with its two stores; the second copy's movs r2, #0 with one store, and its own movs r3, #14.
+        /// </summary>
+        private static Spot TrainerCardHallOfFame(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.HeartGold or GameVersions.SoulSilver =>
+                language == GameLanguages.Japanese ? Ov(51, 0xACA, 0xAD8, 0xB1A, 0xB20) : Ov(51, 0xADA, 0xAE8, 0xB2A, 0xB30),
+            _ => null,
+        };
+
+        /// <summary>pokeheartgold bag_app_window.c, the item action window: movs r1, #1 (y and base tile) and movs r3, #2 (x and height).</summary>
+        private static Spot BagItemAction(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.HeartGold or GameVersions.SoulSilver => language == GameLanguages.Japanese ? Ov(15, 0x4CA0, 0x4CA8) : Ov(15, 0x4CE4, 0x4CEC),
+            _ => null,
+        };
+
         /// <summary>The HGSS bag's sSpriteTemplates, 0x34 bytes each, x and y first as s16.</summary>
         private static Spot BagSpriteTemplates(GameVersions game, GameLanguages language, int revision) => game switch
         {
@@ -3204,6 +3265,115 @@ namespace DSPRE
                 GameLanguages.Spanish => Ov(21, 0x18E50),
                 GameLanguages.Korean => Ov(21, 0x18E48),
                 _ => null,
+            },
+            _ => null,
+        };
+
+        /// <summary>Text_AddPrinter's icon reset call and id store, SysTask_RunTextPrinter's render call, Options_TextFrameDelay.</summary>
+        private static Spot OptionsTextPrinter(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English => Arm9(0x1D8C0, 0x1D90A, 0x1D9A0, 0x27AC0),   // US and Europe
+                GameLanguages.Japanese => Arm9(0x1D554, 0x1D59E, 0x1D634, 0x27670),
+                GameLanguages.French or GameLanguages.German or GameLanguages.Italian or GameLanguages.Spanish => Arm9(0x1D930, 0x1D97A, 0x1DA10, 0x27B30),
+                GameLanguages.Korean => Arm9(0x1DA20, 0x1DA6A, 0x1DB00, 0x27F78),
+                _ => null,
+            },
+            GameVersions.HeartGold or GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.Japanese => Arm9(0x1FED0, 0x1FF1A, 0x1FFB0, 0x2A8C8),
+                GameLanguages.Korean => Arm9(0x201C8, 0x20212, 0x202A8, game == GameVersions.HeartGold ? 0x2AFD0 : 0x2AFCC),
+                GameLanguages.Spanish when game == GameVersions.HeartGold => Arm9(0x20230, 0x2027A, 0x20310, 0x2AD38),
+                GameLanguages.English or GameLanguages.French or GameLanguages.German or GameLanguages.Italian or GameLanguages.Spanish
+                    => Arm9(0x20230, 0x2027A, 0x20310, 0x2AD3C),
+                _ => null,
+            },
+            _ => null,
+        };
+
+        /// <summary>Options_Init's field stores after the clear, 52 bytes, with their literals 0x38 on.</summary>
+        private static Spot OptionsInit(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English => Arm9(0x27A28),   // US and Europe
+                GameLanguages.Japanese => Arm9(0x275D8),
+                GameLanguages.French or GameLanguages.German or GameLanguages.Italian or GameLanguages.Spanish => Arm9(0x27A98),
+                GameLanguages.Korean => Arm9(0x27EE0),
+                _ => null,
+            },
+            GameVersions.HeartGold or GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.Japanese => Arm9(0x2A840),
+                GameLanguages.Korean => Arm9(game == GameVersions.HeartGold ? 0x2AF48 : 0x2AF44),
+                GameLanguages.Spanish when game == GameVersions.HeartGold => Arm9(0x2ACB0),
+                GameLanguages.English or GameLanguages.French or GameLanguages.German or GameLanguages.Italian or GameLanguages.Spanish
+                    => Arm9(0x2ACB4),
+                _ => null,
+            },
+            _ => null,
+        };
+
+        // HGSS Options: the literals that point at the choice label x (0 where Japanese has none), the highlight x, the touch list
+        // and its row and value table (twice), then the `movs r1, #17` that names screen 17.
+        private static Spot OptionsTablesHgss(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.HeartGold or GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.Japanese => Ov(54, 0, 0x1270, 0x1028, 0x102C, 0x1034, 0x666),
+                GameLanguages.Korean => Ov(54, 0xCC4, 0x1344, 0x10BC, 0x10C0, 0x10C8, 0x6BE),
+                _ => Ov(54, 0xCC4, 0x1304, 0x10BC, 0x10C0, 0x10C8, 0x6BE),   // every other language measured the same
+            },
+            _ => null,
+        };
+
+        /// <summary>The sound, battle style, battle scene and button mode getters, each `ldrh; lsls; lsrs; bx lr`.</summary>
+        private static Spot OptionsGetters(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English => Arm9(0x27ADC, 0x27B14, 0x27AF8, 0x27B30),   // US and Europe
+                GameLanguages.Japanese => Arm9(0x2768C, 0x276C4, 0x276A8, 0x276E0),
+                GameLanguages.French or GameLanguages.German or GameLanguages.Italian or GameLanguages.Spanish => Arm9(0x27B4C, 0x27B84, 0x27B68, 0x27BA0),
+                GameLanguages.Korean => Arm9(0x27F94, 0x27FCC, 0x27FB0, 0x27FE8),
+                _ => null,
+            },
+            GameVersions.HeartGold or GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.Japanese => Arm9(0x2A8E4, 0x2A91C, 0x2A900, 0x2A938),
+                GameLanguages.Korean when game == GameVersions.HeartGold => Arm9(0x2AFEC, 0x2B024, 0x2B008, 0x2B040),
+                GameLanguages.Korean => Arm9(0x2AFE8, 0x2B020, 0x2B004, 0x2B03C),
+                GameLanguages.Spanish when game == GameVersions.HeartGold => Arm9(0x2AD54, 0x2AD8C, 0x2AD70, 0x2ADA8),
+                GameLanguages.English or GameLanguages.French or GameLanguages.German or GameLanguages.Italian or GameLanguages.Spanish
+                    => Arm9(0x2AD58, 0x2AD90, 0x2AD74, 0x2ADAC),
+                _ => null,
+            },
+            _ => null,
+        };
+
+        // Platinum Options: LoadAllEntryChoices' end, the frame row check, label and choice y, the cursor's two remainders and
+        // two scrolls, then the choice counts (7 s32), each row's first text line (7 bytes) and x offset (7 s8).
+        private static Spot OptionsMenuCode(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.Korean => Ov(74, 0xA3C, 0xA7C, 0x934, 0xA56, 0xCC8, 0xD1A, 0xCE0, 0xD32, 0xE60, 0xE1C, 0xE24),
+                _ => Ov(74, 0xA3C, 0xA7C, 0x934, 0xA54, 0xD28, 0xD7A, 0xD40, 0xD92, 0xEC0, 0xE7C, 0xE84),   // every other language measured the same
+            },
+            _ => null,
+        };
+
+        // HGSS Options: the names loop, LoadMenuEntriesData's end, label and choice y, the cursor's two remainders, the frame
+        // row's switch (jump table, or Japanese `cmp r0, #5`), sprite count, sprite loop and its template pointer, the choice
+        // counts (7 s32) and the border y (7 s32).
+        private static Spot OptionsMenuCodeHgss(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.HeartGold or GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.Japanese => Ov(54, 0x9EA, 0xA62, 0x8F0, 0xA80, 0xD5C, 0xD92, 0xAB4, 0x1152, 0x120C, 0x1220, 0x1310, 0x12F4),
+                GameLanguages.Korean => Ov(54, 0xA8E, 0xB06, 0x992, 0xB24, 0xDF0, 0xE26, 0xB5A, 0x11E6, 0x12A0, 0x12B4, 0x13DC, 0x13C0),
+                _ => Ov(54, 0xA8E, 0xB06, 0x992, 0xB24, 0xDF0, 0xE26, 0xB5A, 0x11E6, 0x12A0, 0x12B4, 0x139C, 0x1380),   // every other language measured the same
             },
             _ => null,
         };

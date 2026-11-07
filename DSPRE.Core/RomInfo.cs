@@ -173,6 +173,9 @@ namespace DSPRE
         /// <summary>"What will {Pokémon} do?" in <see cref="BattleStringsTextNumber"/> (BattleStrings_Text_WhatWillPokemonDo).</summary>
         public const int BattleWhatWillPokemonDoLine = 921;
 
+        /// <summary>"Use next Pokémon?" and "What will {player} throw?" in <see cref="BattleStringsTextNumber"/>.</summary>
+        public const int BattleUseNextPokemonLine = 11, BattleWhatWillPlayerThrowLine = 922;
+
         /// <summary>The font of the battle touch screen's labels.</summary>
         public static int BattleTouchFontEntry => GameFamily switch
         {
@@ -469,8 +472,9 @@ namespace DSPRE
         /// <param name="Half">An s16 in a table, such as a sprite template's x or y.</param>
         /// <param name="Byte">A u8 in a table, such as a touch rectangle's edge.</param>
         /// <param name="From">The number is the gap from this window, for code that steps from one window's place to the next.</param>
+        /// <param name="Synthetic">The offset is in the synthetic overlay, in a patch's routine, not in the window's own file.</param>
         public sealed record ScreenWindowSpot(uint Offset, bool Word = false, int Add = 0, bool Imm3 = false, int Scale = 1, bool Half = false,
-                                              bool Byte = false, string From = null);
+                                              bool Byte = false, string From = null, bool Synthetic = false);
 
         /// <summary>
         /// A window the game places in code, with a fixed size. X and Y can each sit in several places that must agree.
@@ -479,9 +483,11 @@ namespace DSPRE
         /// <param name="Within">The block of tiles it must stay in, such as the button art it sits on, or null for any.</param>
         /// <param name="FreeWithBagButtons">The window leaves <paramref name="Within"/> once the bag item buttons patch is in, which moves
         /// its button with it.</param>
+        /// <param name="Packed">s32 copies of the position as a tilemap byte offset, 2 × (32 × row + column).</param>
+        /// <param name="LockedFor">The toolbox key of the patch the window needs before it can move.</param>
         public sealed record ScreenCodeWindow(string Group, string Name, int Layer, int Width, int Height, ScreenWindowSpot[] X, ScreenWindowSpot[] Y,
                                               int FixedX = 0, int FixedY = 0, (int X, int Y, int W, int H)? Within = null,
-                                              bool FreeWithBagButtons = false);
+                                              bool FreeWithBagButtons = false, ScreenWindowSpot[] Packed = null, string LockedFor = null);
 
         public sealed record ScreenCodeWindowSites(int Overlay, ScreenCodeWindow[] Windows);
 
@@ -516,7 +522,9 @@ namespace DSPRE
         public sealed record TouchMenuSites(int Overlay, uint MenuRects, uint YesNo, uint YesNoCursor, uint ListKeys, uint ListCursors);
 
         /// <summary>The HGSS summary screen's touch lists in arm9, at fixed distances from its Cancel rect.</summary>
-        public sealed record SummaryTouchSites(uint Cancel);
+        /// <param name="Frame">sub_0208B400's party selection frame spots (_021105B0, u8 x and y per Pokémon), or 0.</param>
+        /// <param name="RibbonCursor">unk_0208B1AC sub_0208C380's "movs r3, #40" (the row step); the first column and row follow at +10 and +12.</param>
+        public sealed record SummaryTouchSites(uint Cancel, uint Frame = 0, uint RibbonCursor = 0);
 
         /// <summary>
         /// The HGSS Pokégear's tables: the bar's in its overlay, the apps' at fixed distances from the map area rects, and the radio
@@ -556,7 +564,8 @@ namespace DSPRE
         /// <summary>The place-name banner's overlay and the instructions DSPRE reads there.</summary>
         /// <param name="Window">The window function's first instruction.</param>
         /// <param name="Centre">0 where the name isn't centred on the frame.</param>
-        public sealed record PlaceNameBannerSites(int Overlay, uint Window, uint Mod, uint Count, uint Task, uint Show, uint Centre);
+        /// <param name="NameY">The name print's "movs r0, #y" (map_name_popup.c, draw_map_name.c), or 0.</param>
+        public sealed record PlaceNameBannerSites(int Overlay, uint Window, uint Mod, uint Count, uint Task, uint Show, uint Centre, uint NameY = 0);
         /// <summary>The HGSS number pad's keys, their cursor grid, its sprite and label window tables, and the 1 to 6 digit touch lists.</summary>
         public sealed record NumberPadSites(int Overlay, uint Keys, uint Flow, uint Sprites, uint Labels, uint[] Digits);
 
@@ -596,8 +605,9 @@ namespace DSPRE
         /// The summary screen's window tables (always-there windows first), its HP and EXP bars, its message bank and the
         /// banks it reads ability descriptions and contest effects from (-1 where the game has none).
         /// </summary>
+        /// <param name="Markings">The first of the six markings' sprite templates (s16 x, y; 40 bytes apart), or 0.</param>
         public sealed record SummaryScreenSites(SummaryWindowTableSite[] Windows, SummaryBarSite Hp, SummaryBarSite Exp, int MessageBank,
-                                                int AbilityDescriptionBank, int ContestEffectBank, SummaryFollow[] Follows = null);
+                                                int AbilityDescriptionBank, int ContestEffectBank, SummaryFollow[] Follows = null, uint Markings = 0);
 
         /// <summary>
         /// Code that places sprites beside summary windows. The windows move as one block, and each spot holds a position worked
@@ -932,7 +942,7 @@ namespace DSPRE
             StartMenuGraphics,      // Pt graphic/menu_gra.narc: the start menu's icons and cursor
             ShopGraphics,           // Pt graphic/shop_gra.narc: the shop's screens, and the count arrows the bag borrows
             PokegearGraphics,       // HGSS a/1/4/3: the Pokégear frame and app buttons, six skins each
-            MainMenuGraphics,       // HGSS a/1/1/3: the main menu's scroll arrows
+            MainMenuGraphics,       // HGSS a/1/1/3, Pt graphic/mystery.narc: the main menu's scroll arrows
             TouchYesNoGraphics,     // HGSS a/1/5/2 (system/touch_subwindow): the touch Yes and No buttons menus share
             PokegearMapGraphics,    // HGSS a/1/4/4: the Pokégear map
             PokegearPhoneGraphics,  // HGSS a/1/4/6: the Pokégear phone
@@ -955,6 +965,8 @@ namespace DSPRE
             UndergroundParts,       // DP/Pt data/ug_parts.narc: Underground treasure, rock and sphere art
             NumberPadGraphics,      // HGSS a/2/3/6: the number pad
             PokegearSkinGraphics,   // HGSS a/1/4/5: the Pokégear skins page
+            TouchListGraphics,      // HGSS a/1/6/5 (data/sbox_gra): the button frames of touch list menus
+            StarterChoiceGraphics,  // Pt graphic/ev_pokeselect.narc: the starter choice screen and the pointing hand
         };
 
         public static Dictionary<DirNames, (string packedDir, string unpackedDir)> GameDirs { get; private set; }
@@ -2434,6 +2446,7 @@ namespace DSPRE
                         [DirNames.AreaWindowGraphics] = $@"{_dataFolderName}\arc\area_win_gra.narc",
                         [DirNames.StartMenuGraphics] = $@"{_dataFolderName}\graphic\menu_gra.narc",
                         [DirNames.ShopGraphics] = $@"{_dataFolderName}\graphic\shop_gra.narc",
+                        [DirNames.StarterChoiceGraphics] = $@"{_dataFolderName}\graphic\ev_pokeselect.narc",
                         [DirNames.TitleScreenGraphics] = $@"{_dataFolderName}\demo\title\titledemo.narc",
                         [DirNames.PartyMenuGraphics] = Localized($@"{_dataFolderName}\graphic\pl_plist_gra.narc", "pokelist", "pl_plist_gra.narc"),
                         [DirNames.BoxGraphics] = Localized($@"{_dataFolderName}\graphic\box.narc", "box", "box.narc"),
@@ -2456,6 +2469,7 @@ namespace DSPRE
                         [DirNames.Fonts] = $@"{_dataFolderName}\graphic\pl_font.narc",
                         [DirNames.WindowFrames] = $@"{_dataFolderName}\graphic\pl_winframe.narc",
                         [DirNames.SummaryGraphics] = Localized($@"{_dataFolderName}\graphic\pl_pst_gra.narc", "p_status", "pl_pst_gra.narc"),
+                        [DirNames.MainMenuGraphics] = $@"{_dataFolderName}\graphic\mystery.narc",
                         [DirNames.MoveRelearnerGraphics] = $@"{_dataFolderName}\graphic\waza_oshie_gra.narc",
                         [DirNames.BattlePartyGraphics] = Localized($@"{_dataFolderName}\battle\graphic\pl_b_plist_gra.narc", "b_plist", "pl_b_plist_gra.narc"),
                         [DirNames.BattleBagGraphics] = $@"{_dataFolderName}\battle\graphic\b_bag_gra.narc",
@@ -2576,6 +2590,7 @@ namespace DSPRE
                         [DirNames.PokegearRadioGraphics] = $@"{_dataFolderName}\a\1\4\7",
                         [DirNames.MainMenuGraphics] = $@"{_dataFolderName}\a\1\1\3",
                         [DirNames.TouchYesNoGraphics] = $@"{_dataFolderName}\a\1\5\2",
+                        [DirNames.TouchListGraphics] = $@"{_dataFolderName}\a\1\6\5",
                         [DirNames.PartyMenuGraphics] = $@"{_dataFolderName}\a\0\2\1",
                         [DirNames.BoxGraphics] = $@"{_dataFolderName}\a\0\1\9",
                         [DirNames.OptionsGraphics] = $@"{_dataFolderName}\a\0\7\2",

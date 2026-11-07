@@ -98,6 +98,8 @@
                 </Grid>
                 <ComboBox Margin="24,0,0,0" Width="180" ItemsSource="{Binding FontNames}" SelectedIndex="{Binding FontIndex}"
                           IsVisible="{Binding CanPickFont}" ToolTip.Tip="Font"/>
+                <controls:EnableInToolbox Margin="24,0,0,0" HorizontalAlignment="Left" Patch="{Binding LockedFor}" Need="Moving this window"
+                                          IsVisible="{Binding NeedsPatch}"/>
                 </StackPanel>
               </DataTemplate>
             </ItemsControl.ItemTemplate>

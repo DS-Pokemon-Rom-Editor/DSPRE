@@ -465,6 +465,12 @@ new map headers and new overworld entries still apply straight away, after askin
 A preview that reads project files on a worker thread runs through `PreviewFileGate.RunAsync`, so it takes turns with
 `PendingArchiveWrites.Save`.
 
+Text lines an editor changes besides its own data are a `PendingArchiveWrites.Text` target, staged with the rest in one
+`Import`, so they save through the Text editor's writer and undo together. A patch never writes text after it is applied.
+
+A Screens view whose unsaved edits change the Preview implements `IScreenPreviewSource`. Its `DrawScope` returns a
+thread-local `Use…` scope, and `DrawScopes` combines several.
+
 ```csharp
 _pending.Change(step => step.Put(DirNames.DungeonCutinGraphics, p, nclrBytes)
                             .Put(DirNames.DungeonCutinGraphics, t, ncgrBytes));   // one undo step
@@ -579,6 +585,7 @@ its relocations and the original bytes of each hook. `TrainerClassMetadataPatch`
 from the art and the pixels the game changes in that frame, and the Battle screen's Press tab (`BattlePressViewModel`) edits the frames.
 `ROMFiles/BattleFightIcon.cs` rewrites the code that places the Pokémon icon beside FIGHT. The new code fits in the same space.
 `ROMFiles/FieldMenuColoursPatch.cs` gives each HGSS field menu button its own pair of colours from the button palette file.
+`ROMFiles/ScreenPositionsPatch.cs` splits a register the game shares between two values.
 
 `ROMFiles/BottomPalettesPatch.cs` gives bottom backgrounds 256-colour tiles and extended palettes. A screen is a `Screen`:
 its palette loads, template bytes and palette slots, at `RomLocator` spots in the ARM9 or one overlay. A screen added later

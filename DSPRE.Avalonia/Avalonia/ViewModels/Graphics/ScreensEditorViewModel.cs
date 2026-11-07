@@ -175,12 +175,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
             foreach (ScreenView view in more) if (view != null) Views.Add(view);
             _view = Views.FirstOrDefault();
-            // Preview draws the Layout view's unsaved edits while it has one.
+            // Preview draws the other views' unsaved edits.
             if (Page != null)
                 foreach (ScreenEditorView editor in Views.OfType<ScreenEditorView>())
                     editor.PropertyChanged += (_, e) =>
                     {
-                        if (e.PropertyName == nameof(ScreenEditorView.Control)) Page.Follow(editor.Model as IScreenPreviewSource);
+                        if (e.PropertyName == nameof(ScreenEditorView.Control)) Page.Follow(editor, editor.Model as IScreenPreviewSource);
                     };
         }
 
@@ -388,12 +388,16 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                                        null, Unpack(screen.Archive), $"Opening {title}…");
 
         private static ScreenEntry BattleMenuEntry(ScreensEditorViewModel o, BattleMenuButtons.Menu menu, string key, string title) =>
-            RomLocator.BattleMenuSites == null ? null : new ScreenEntry(o, key, title, null, ButtonTabs(() => BattleMenuButtons.Read(menu), title, (buttons, page) =>
-            {
-                List<BattleMenuPictures.Button> placed = BattleMenuPictures.Placed(buttons, page);
-                IReadOnlyList<(int X, int Y)>[] spots = BattleMenuPictures.Spots(buttons, page);
-                return () => BattleMenuPictures.Draw(menu, page, placed, spots);
-            }, top: _ => TouchTabPictures.BattleTop));
+            RomLocator.BattleMenuSites == null ? null : new ScreenEntry(o, key, title, null,
+                // Battle Pokémon's header row lives on its own Layout tab.
+                new[] { menu == BattleMenuButtons.Menu.Pokemon ? LayoutOf(key, title) : null }.Where(v => v != null).Concat(
+                ButtonTabs(() => BattleMenuButtons.Read(menu), title, (buttons, page) =>
+                {
+                    List<BattleMenuPictures.Button> placed = BattleMenuPictures.Placed(buttons, page);
+                    IReadOnlyList<(int X, int Y)>[] spots = BattleMenuPictures.Spots(buttons, page);
+                    return () => BattleMenuPictures.Draw(menu, page, placed, spots);
+                }, menu == BattleMenuButtons.Menu.Pokemon && ScreenWindowLayout.Read(key) != null ? "Buttons" : "Layout",
+                top: _ => TouchTabPictures.BattleTop)).ToArray());
 
         private static readonly DirNames[] BattleArchives = { DirNames.BattleObj, DirNames.BattleBg, DirNames.WindowFrames, DirNames.Fonts };
 
@@ -409,7 +413,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     .Select(p => Enumerable.Range(0, buttons.ButtonsOf(p).Length).Select(b => buttons.TextOf(p, b)).ToArray()).ToArray();
                 FightIconView icon = buttons.IconView;
                 return () => TouchTabPictures.Battle(page, (p, b) => text[p][b], icon: icon);
-            }, archives: BattleArchives, top: _ => TouchTabPictures.BattleTop);
+            }, archives: BattleArchives, top: page => () => TouchTabPictures.BattleTop(page));
             ScreenEditorView[] press = BattlePressFrames.SupportsCurrentRom && !RomInfo.IsHGE
                 ? new[] { new ScreenEditorView("Press", () => new Views.Graphics.BattlePressView(new BattlePressViewModel(BattlePressFrames.Panel)), null, Unpack(BattleArchives), "Opening Battle screen…") }
                 : Array.Empty<ScreenEditorView>();
@@ -426,14 +430,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private static ScreenEditorView[] ButtonTabs<T>(Func<T> read, string title, Func<T, int, Func<byte[]>> draw, string touchTab = "Layout",
                                                          bool cursor = true, DirNames[] archives = null, Func<int, Func<byte[]>> top = null,
                                                          Action<Func<ScreenButtonsViewModel>, Action> share = null,
-                                                         IReadOnlyDictionary<string, (int Page, int Button)[]> carried = null) where T : class, IScreenButtons
+                                                         IReadOnlyDictionary<string, (int Page, int Button)[]> carried = null, Action afterSave = null) where T : class, IScreenButtons
         {
             ScreenButtonsViewModel shared = null;
             ScreenButtonsViewModel Model()
             {
                 if (shared != null) return shared;
                 T buttons = read();
-                return shared = new ScreenButtonsViewModel(buttons, title, page => draw(buttons, page)) { TopDraw = top, Carried = carried };
+                return shared = new ScreenButtonsViewModel(buttons, title, page => draw(buttons, page)) { TopDraw = top, Carried = carried, AfterSave = afterSave };
             }
             void Forget()
             {
@@ -556,7 +560,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                               share: (model, drop) => share(model, drop, carries), carried: carried);
         }
 
-        // Layout states Phone, Radio, Map and Fly map show the Phone, Radio buttons and Map pages. The fly map has no touch page.
+        // Layout states Phone, Radio, Map, Fly map and Skins show the Phone, Radio buttons, Map and Skins pages. The fly map has no touch page.
         private static ScreenEntry PokegearEntry(ScreensEditorViewModel o)
         {
             if (RomLocator.PokegearSites == null) return new ScreenEntry(o, "pokegear", "Pokégear", Text("pokegear"));
@@ -567,13 +571,45 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 IReadOnlyList<(int X, int Y)> spots = gear?.TileSpots(gear.RadioButtonsPage);
                 byte[] dial = gear?.ScreenOf(gear.RadioButtonsPage);
                 return () => PokegearPictures.Draw(page, spots, dial);
-            }, "Buttons", share: (model, drop) => (link, forget) = (new ScreenButtonsLink(model, state => state switch { 0 => 3, 1 => 7, 2 => 2, _ => -1 }), drop));
+            }, "Buttons", share: (model, drop) => (link, forget) = (new ScreenButtonsLink(model, state => state switch { 0 => 3, 1 => 7, 2 => 2, 4 => 1, _ => -1 }), drop));
             return new ScreenEntry(o, "pokegear", "Pokégear", Text("pokegear"),
                 new[] { LayoutOf("pokegear", "Pokégear", link, forget) }.Where(v => v != null).Concat(buttons).ToArray());
         }
 
         private static ScreenEntry OptionsEntry(ScreensEditorViewModel o) =>
-            new ScreenEntry(o, "options", "Options", Text("options"), RomLocator.HgssOptionsSites == null ? Array.Empty<ScreenEditorView>()
+            new ScreenEntry(o, "options", "Options", Text("options"), OptionsTabs().Concat(OptionsMenuPatch.Supports
+                ? new[] { new ScreenEditorView("Extra", () => new Views.Graphics.OptionsExtraView(new OptionsExtraViewModel())) }
+                : Array.Empty<ScreenEditorView>()).ToArray());
+
+        // HGSS shows the arrows in the Layout tab; the other touch areas keep their own Buttons tab.
+        private static ScreenEditorView[] MainMenuTabs()
+        {
+            if (RomLocator.HgssMainMenuSites == null) return new[] { LayoutOf("mainmenu", "Main menu") }.Where(v => v != null).ToArray();
+            ScreenButtonsLink link = null;
+            Action forget = null;
+            // Each arrow's touch area goes with its sprite.
+            Dictionary<string, (int Page, int Button)[]> arrows = new() { ["Up arrow"] = new[] { (0, 0) }, ["Down arrow"] = new[] { (0, 1) } };
+            ScreenEditorView[] buttons = ButtonTabs(HgssTouchLists.MainMenu, "Main menu", (menu, page) =>
+            {
+                IReadOnlyList<(int X, int Y)> spots = menu.SpotsOf(1);
+                return () => GameTextScreens.MainMenuBottomHg(page, spots);
+            }, "Buttons", cursor: false, share: (model, drop) => (link, forget) = (new ScreenButtonsLink(model, _ => 0, arrows), drop), carried: arrows);
+            ScreenEditorView layout = LayoutOf("mainmenu", "Main menu", link, forget);
+            return (layout == null ? buttons : new[] { layout }.Concat(buttons)).ToArray();
+        }
+
+        // HGSS shows its touch areas in the Layout tab beside the windows, as the Pokégear does; Platinum has the windows only.
+        private static ScreenEditorView[] OptionsTabs()
+        {
+            ScreenButtonsLink link = null;
+            Action forget = null;
+            ScreenEditorView[] buttons = OptionsButtons((model, drop) => (link, forget) = (new ScreenButtonsLink(model, _ => 0), drop));
+            ScreenEditorView layout = LayoutOf("options", "Options", link, forget);
+            return (layout == null ? buttons : new[] { layout }.Concat(buttons)).ToArray();
+        }
+
+        private static ScreenEditorView[] OptionsButtons(Action<Func<ScreenButtonsViewModel>, Action> share) =>
+            RomLocator.HgssOptionsSites == null ? Array.Empty<ScreenEditorView>()
                 : ButtonTabs(HgssTouchLists.Options, "Options", (options, _) =>
                 {
                     (byte[], int[][], (int, int), (int, int))? look = null;
@@ -583,7 +619,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         look = (options.ScreenOf(0), labels, quit, confirm);
                     }
                     return () => GameTextScreens.OptionsBottomHg(look);
-                }, cursor: false, top: _ => GameTextScreens.OptionsTopHg));
+                }, "Buttons", cursor: false, top: _ => GameTextScreens.OptionsTopHg, share: share, afterSave: OptionsMenuPatch.Refresh);
 
         public static IEnumerable<(string, IEnumerable<ScreenEntry>)> Build(ScreensEditorViewModel o)
         {
@@ -602,27 +638,23 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 BagEntry(o),
                 PcEntry(o),
                 OptionsEntry(o),
-                new ScreenEntry(o, "mainmenu", "Main menu", Text("mainmenu"), RomLocator.HgssMainMenuSites == null ? Array.Empty<ScreenEditorView>()
-                    : ButtonTabs(HgssTouchLists.MainMenu, "Main menu", (menu, page) =>
-                    {
-                        IReadOnlyList<(int X, int Y)> buttons = menu.SpotsOf(1);
-                        return () => GameTextScreens.MainMenuBottomHg(page, buttons);
-                    }, cursor: false)),
-                new ScreenEntry(o, "startmenu", "Start menu", Text("startmenu")),
+                new ScreenEntry(o, "mainmenu", "Main menu", Text("mainmenu"), MainMenuTabs()),
+                new ScreenEntry(o, "startmenu", "Start menu", Text("startmenu"), new[] { LayoutOf("startmenu", "Start menu") }.Where(v => v != null).ToArray()),
                 new ScreenEntry(o, "trainercard", "Trainer card", Text("trainercard"),
-                    new[] { Editor("TrainerCardEditorView", "Edit", () => new Views.Graphics.TrainerCardEditorView()) }.Concat(
+                    new[] { Editor("TrainerCardEditorView", "Edit", () => new Views.Graphics.TrainerCardEditorView()), LayoutOf("trainercard", "Trainer card") }
+                        .Where(v => v != null).Concat(
                         RomLocator.PtTrainerCaseSites != null
                             ? ButtonTabs(PlatinumTouchLists.TrainerCase, "Trainer card", (badgeCase, page) =>
                             {
                                 IReadOnlyList<(int X, int Y)> badges = badgeCase.SpotsOf(0);
                                 return () => GameTextScreens.TrainerCaseBottomPt(badges, page == 1);
-                            }, cursor: false, top: _ => GameTextScreens.TrainerCardTopPt)
+                            }, "Buttons", cursor: false, top: _ => GameTextScreens.TrainerCardTopPt)
                             : RomLocator.HgssTrainerCardSites == null ? Array.Empty<ScreenEditorView>()
                             : ButtonTabs(HgssTouchLists.TrainerCard, "Trainer card", (card, _) =>
                             {
                                 (int X, int Y) cancel = card.SpotsOf(0, 1)[0], hint = card.SpotsOf(0, 2)[0];
                                 return () => GameTextScreens.TrainerCardBottomHg(cancel, hint);
-                            }, cursor: false, top: page => () => GameTextScreens.TrainerCardTopHg(page == 1))).ToArray()),
+                            }, "Buttons", cursor: false, top: page => () => GameTextScreens.TrainerCardTopHg(page == 1))).ToArray()),
                 new ScreenEntry(o, "naming", "Naming screen", Text("naming"), new[]
                 {
                     Editor("NamingScreenEditor", "Edit", () => new Views.Trainers.TrainerSpriteEditorView(
@@ -652,13 +684,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }.Where(e => e != null));
             yield return ("Title", new[]
             {
-                new ScreenEntry(o, "title", "Title screen", null,
+                new ScreenEntry(o, "title", "Title screen", Text("title"),
                     Editor("TitleScreenEditorView", "Edit", () => new Views.Graphics.TitleScreenEditorView())),
             });
         }
     }
 
-    /// <summary>The Preview tab draws this Layout's unsaved edits.</summary>
+    /// <summary>The Preview tab draws this view's unsaved edits.</summary>
     public interface IScreenPreviewSource
     {
         event Action Changed;
@@ -681,6 +713,20 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             States = screen.States ?? Array.Empty<string>();
             if (HasSample) PartySample.Changed += OnSampleChanged;
             _picturesSaved = AppEvents.WhenSaved(() => { if (_filled) _ = RedrawAsync(); }, dir => _shot?.Pieces.Any(p => p.Dir == dir) == true);
+            TextArchive.Saved += OnTextSaved;
+        }
+
+        // Rereads a saved archive, and refills its lines if it is showing.
+        private void OnTextSaved(object sender, int bank)
+        {
+            if (Archives.All(a => a.Bank != bank)) return;
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                _archiveLines.Remove(bank);
+                if (!_filled) return;
+                if (_archive?.Bank == bank) FillLines(_line?.Index ?? _screen.FirstLine);
+                else _ = RedrawAsync();
+            });
         }
 
         private readonly IDisposable _picturesSaved;
@@ -689,15 +735,24 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public bool HasSample => _screen.Key == "party";
 
-        private IScreenPreviewSource _layout;
+        private readonly Dictionary<object, IScreenPreviewSource> _sources = new();
+        private IScreenPreviewSource[] _drawn = Array.Empty<IScreenPreviewSource>();
 
-        /// <summary>Draws the layout's unsaved edits from now on; null draws the ROM's.</summary>
-        public void Follow(IScreenPreviewSource layout)
+        /// <summary>Draws a view's unsaved edits from now on; null stops following that view.</summary>
+        public void Follow(object view, IScreenPreviewSource source)
         {
-            if (ReferenceEquals(_layout, layout)) return;
-            if (_layout != null) _layout.Changed -= OnLayoutChanged;
-            _layout = layout;
-            if (_layout != null) _layout.Changed += OnLayoutChanged;
+            if (_sources.TryGetValue(view, out IScreenPreviewSource was))
+            {
+                if (ReferenceEquals(was, source)) return;
+                was.Changed -= OnLayoutChanged;
+                _sources.Remove(view);
+            }
+            if (source != null)
+            {
+                _sources[view] = source;
+                source.Changed += OnLayoutChanged;
+            }
+            _drawn = _sources.Values.ToArray();
             OnLayoutChanged();
         }
 
@@ -706,7 +761,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_filled) _ = RedrawAsync();
         }
 
-        private IDisposable DrawScope() => _layout?.DrawScope();
+        private IDisposable DrawScope() => new DrawScopes(_drawn.Select(s => s.DrawScope()).ToArray());
 
         private void OnSampleChanged()
         {
@@ -718,6 +773,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             if (HasSample) PartySample.Changed -= OnSampleChanged;
             _picturesSaved.Dispose();
+            TextArchive.Saved -= OnTextSaved;
         }
 
         private List<string> _species;

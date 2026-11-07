@@ -95,7 +95,7 @@ namespace DSPRE.Tracking.Kinds
             DirNames.PokegearSkinGraphics, DirNames.PartyMenuGraphics, DirNames.BoxGraphics, DirNames.OptionsGraphics,
             DirNames.FootprintGraphics, DirNames.PokedexGraphics, DirNames.OpeningDemoGraphics, DirNames.PokewalkerSprites,
             DirNames.PokewalkerIcons, DirNames.UndergroundParts, DirNames.NumberPadGraphics, DirNames.BattleBgPlanm,
-            DirNames.MainMenuGraphics, DirNames.TouchYesNoGraphics,
+            DirNames.MainMenuGraphics, DirNames.TouchYesNoGraphics, DirNames.TouchListGraphics,
         };
 
         /// <summary>Whether an archive holds 2D graphics; other archives without their own kind are assets.</summary>

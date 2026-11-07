@@ -240,6 +240,23 @@ namespace DSPRE
                 "The Screens editor's Summary, Pokédex, Party, Bag, PC boxes and Naming screen: import a picture onto the bottom background.\n\n" +
                 "Requirements\n" +
                 "Platinum, HeartGold or SoulSilver, any language. Needs the ARM9 expansion. Not compatible with hg-engine.",
+            ["screenPositions"] =
+                "What it does\n" +
+                "The Screens editor can move these windows. Platinum: the Start menu's " +
+                "Safari and Park ball count, the bag's Berries menu, the PC's markings and the Options title and entries. " +
+                "HeartGold and SoulSilver: the trainer card's Hall of Fame mark and the bag's item action window.\n\n" +
+                "Where to edit\n" +
+                "The Screens editor's Layout tabs for the Start menu, Bag, PC boxes, Options and Trainer card.\n\n" +
+                "Requirements\n" +
+                "Platinum, HeartGold or SoulSilver, except Japanese. Needs the ARM9 expansion. Not compatible with hg-engine.",
+            ["optionsMenu"] =
+                "What it does\n" +
+                "The Options screen gets up to eight text speeds, including ones faster than Fast. Each speed gets a name in the editor. Any row can " +
+                "be locked to one choice, and a locked row can be removed from the screen. New saves start with the values set in the editor.\n\n" +
+                "Where to edit\n" +
+                "The Screens editor's Extra tab for Options.\n\n" +
+                "Requirements\n" +
+                "Platinum, HeartGold or SoulSilver, except Japanese. Needs the ARM9 expansion. Not compatible with hg-engine.",
             ["bagButtons"] =
                 "What it does\n" +
                 "Each of the six item buttons on the bag's bottom screen can move separately. Its art, item icon, cursor spot and " +
@@ -407,12 +424,18 @@ namespace DSPRE
             ["bannerMotion"] = ("Both slide steps call the patch's routine. It looks up the banner's scroll and its fade or pixelation for each step.",
                 "About 0.9 KB in the synthetic overlay.",
                 "the banner's overlay and the synthetic overlay"),
+            ["screenPositions"] = ("Where the game uses one register for two values, the two instructions become a call to a short routine that sets each value separately. Platinum's Options title and entries get their own x in place of a copy of the layer number.",
+                "A few bytes in the synthetic overlay for each window.",
+                "the ARM9 (Platinum), the overlays with each window's code and the synthetic overlay"),
             ["bannerPosition"] = ("Rewrites 14 instructions in the banner's window function to use the column and row you set instead of 0.",
                 "No additional space or synthetic overlay.",
                 "the banner's overlay"),
             ["partyPanelSize"] = ("76 instructions in seven of the ARM9's party menu functions hold the panel size instead of the game's 16 by 6, each changed in place.",
                 "No additional space or synthetic overlay.",
                 "the ARM9"),
+            ["optionsMenu"] = ("The text printer reads its delay from a table of paces, one per saved speed. The getters for sound, battle style, battle scene and button mode return a locked row's value. The Options screen places its rows from tables in the patch's block, and new saves take their values from it.",
+                $"{DSPRE.ROMFiles.OptionsMenuPatch.BlockLength} bytes in the synthetic overlay.",
+                "the ARM9, the Options screen's overlay, the Options text and the synthetic overlay"),
             ["bagButtons"] = ("The four calls that draw the bag's item buttons go to the patch's routines. They clear the slots a page doesn't fill, from lists DSPRE writes for the current button spots. The button maps keep their edge and frame art in rows below the screen.",
                 $"{DSPRE.ROMFiles.BagButtonsPatch.BlockLength} bytes in the synthetic overlay.",
                 "overlay 15, the synthetic overlay and the bag's button screens"),

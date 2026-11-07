@@ -130,7 +130,10 @@ namespace DSPRE.Avalonia.Data
             if (name) options.PokemonName = MenuLabel(text);
             _battle ??= new BattleScreenRenderer();
             byte[] top = BattleScreenRenderer.Flatten(_battle.Build(options), touch: false);
-            if (message) stops = BattleMessageText.Draw(top, text, GameTextScreens.SampleWord, stop);
+            // BattleSystem_SetStopRecording fades the top screen to black.
+            bool stopped = message && GameTextScreens.IsRecordingStopLine(line) && RomInfo.GameFamily != RomInfo.GameFamilies.DP;
+            if (stopped && top != null) for (int i = 0; i < top.Length; i += 4) { top[i] = top[i + 1] = top[i + 2] = 0; top[i + 3] = 255; }
+            else if (message) stops = BattleMessageText.Draw(top, text, GameTextScreens.SampleWord, stop);
             shots.Add(new TextScreenShot
             {
                 Name = "Battle screen graphics: top",
@@ -141,6 +144,14 @@ namespace DSPRE.Avalonia.Data
                 Open = AvaloniaEditorLauncher.OpenBattleScreenEditor,
                 EditorName = "Battle screen",
             });
+            if (message && GameTextScreens.IsRecordingStopLine(line) && GameTextScreens.RecordingStopped(line, text) is byte[] stopPage)
+                shots.Add(new TextScreenShot
+                {
+                    Name = "Battle screen graphics: bottom",
+                    Picture = ImageConverter.FromRgba(stopPage, 256, 192),
+                    Open = AvaloniaEditorLauncher.OpenBattleScreenEditor,
+                    EditorName = "Battle screen",
+                });
         }
 
         // The text entries the HGSS touch menu prints.

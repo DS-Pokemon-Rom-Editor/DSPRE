@@ -36,6 +36,8 @@ namespace DSPRE.ROMFiles
             public bool Bounded;
             /// <summary>Why its code stops it moving, or null.</summary>
             public string LockReason;
+            /// <summary>The toolbox key of the patch that lets it move, while that patch isn't in.</summary>
+            public string LockedFor;
             public Window Copy() => (Window)MemberwiseClone();
         }
 
@@ -44,7 +46,7 @@ namespace DSPRE.ROMFiles
 
         public List<Window> Windows { get; } = new List<Window>();
         private readonly RomInfo.ScreenWindowTableSite[] _sites;
-        private readonly RomInfo.ScreenCodeWindowSites _code;
+        private RomInfo.ScreenCodeWindowSites _code;
 
         private readonly string _screen;
 
@@ -87,6 +89,20 @@ namespace DSPRE.ROMFiles
             catch (Exception ex) { AppLogger.WarnOnce("ScreenWindowLayout.Read." + screen, ex); return null; }
         }
 
+        /// <summary>Takes the code windows' spots again after a patch moved them, keeping the positions being edited.</summary>
+        public void RereadCode()
+        {
+            ScreenWindowLayout fresh = Read(_screen);
+            if (fresh?._code == null) return;
+            _code = fresh._code;
+            foreach (Window w in Windows.Where(w => w.Code != null))
+            {
+                if (fresh.Windows.FirstOrDefault(f => f.Code != null && f.Group == w.Group && f.Name == w.Name) is not Window f) continue;
+                (w.Code, w.CanMoveAcross, w.CanMoveDown, w.LockedFor) = (f.Code, f.CanMoveAcross, f.CanMoveDown, f.LockedFor);
+                (w.MinX, w.MinY, w.MaxX, w.MaxY) = (f.MinX, f.MinY, f.MaxX, f.MaxY);
+            }
+        }
+
         // Every spot has to hold what the game's code does, or nothing is offered.
         private bool ReadCode()
         {
@@ -97,11 +113,12 @@ namespace DSPRE.ROMFiles
             {
                 int x = SpotValue(file, code.X, code.FixedX), y = SpotValue(file, code.Y, code.FixedY);
                 if (x < 0 || y < 0 || x + code.Width > MapColumns || y + code.Height > MapHeight) return false;
+                if (code.Packed?.Any(s => SpotValue(file, s) != Packed(x, y)) == true) return false;
                 Windows.Add(new Window
                 {
                     Group = code.Group, Name = code.Name, Layer = code.Layer, X = x, Y = y, Width = code.Width, Height = code.Height,
                     MaxWidth = code.Width, MaxHeight = code.Height, Code = code,
-                    CanMoveAcross = code.X.Length > 0, CanMoveDown = code.Y.Length > 0,
+                    CanMoveAcross = code.X.Length > 0, CanMoveDown = code.Y.Length > 0, LockedFor = code.LockedFor,
                     MinX = Math.Max(0, LeastValue(code.X)), MinY = Math.Max(0, LeastValue(code.Y)),
                     MaxX = MostValue(code.X, MapColumns), MaxY = MostValue(code.Y, MapHeight),
                 });
@@ -155,8 +172,15 @@ namespace DSPRE.ROMFiles
 
         private string CodeFile => _code.Overlay < 0 ? RomInfo.Arm9Path : OverlayUtils.GetPath(_code.Overlay);
 
+        private static string SyntheticPath => Filesystem.ExpArmPath;
+
+        // A patch routine's spot is read from the synthetic overlay.
+        private static byte[] FileFor(byte[] file, RomInfo.ScreenWindowSpot spot) =>
+            !spot.Synthetic ? file : File.Exists(SyntheticPath) ? File.ReadAllBytes(SyntheticPath) : Array.Empty<byte>();
+
         private static int SpotValue(byte[] file, RomInfo.ScreenWindowSpot spot)
         {
+            file = FileFor(file, spot);
             if (spot.Offset + (spot.Word ? 4 : 2) > file.Length) return -1;
             if (spot.Word)
             {
@@ -173,11 +197,19 @@ namespace DSPRE.ROMFiles
                 int half = BitConverter.ToInt16(file, (int)spot.Offset) + spot.Add;
                 return half < 0 || half % spot.Scale != 0 ? -1 : half / spot.Scale;
             }
+            if (!IsInstruction(file, spot)) return -1;
             ushort op = BitConverter.ToUInt16(file, (int)spot.Offset);
-            if (spot.Imm3) return ThumbImm3.Is(op) ? ThumbImm3.Value(op) + spot.Add : -1;
-            if (!ThumbImm8.Is(op, ThumbImm8.Op.Movs) && !ThumbImm8.Is(op, ThumbImm8.Op.Adds)) return -1;
+            if (spot.Imm3) return ThumbImm3.Value(op) + spot.Add;
             int at = ThumbImm8.Value(op) + spot.Add;
             return at < 0 || at % spot.Scale != 0 ? -1 : at / spot.Scale;
+        }
+
+        private static bool IsInstruction(byte[] file, RomInfo.ScreenWindowSpot spot)
+        {
+            if (spot.Offset + 2 > file.Length) return false;
+            ushort op = BitConverter.ToUInt16(file, (int)spot.Offset);
+            return spot.Imm3 ? ThumbImm3.Is(op)
+                             : ThumbImm8.Is(op, ThumbImm8.Op.Movs) || ThumbImm8.Is(op, ThumbImm8.Op.Adds) || ThumbImm8.Is(op, ThumbImm8.Op.Subs);
         }
 
         /// <summary>The number a spot stores for a position.</summary>
@@ -204,8 +236,12 @@ namespace DSPRE.ROMFiles
 
         private static void WriteSpot(string path, byte[] file, RomInfo.ScreenWindowSpot spot, int value)
         {
+            if (spot.Synthetic) (path, file) = (SyntheticPath, FileFor(file, spot));
             if (SpotValue(file, spot) == value) return;
             if (!Fits(spot, value)) throw new InvalidDataException($"{value} doesn't fit the game's code for this window.");
+            // Another patch may have put a call where the instruction was.
+            if (!spot.Word && !spot.Half && !spot.Byte && !IsInstruction(file, spot))
+                throw new InvalidDataException("The game's code for this window has changed. Reopen the Screens editor.");
             if (spot.Word) DSUtils.WriteToFile(path, BitConverter.GetBytes(Stored(spot, value)), spot.Offset);
             else if (spot.Half) DSUtils.WriteToFile(path, BitConverter.GetBytes((short)Stored(spot, value)), spot.Offset);
             else if (spot.Byte) DSUtils.WriteToFile(path, new[] { (byte)Stored(spot, value) }, spot.Offset);
@@ -374,6 +410,8 @@ namespace DSPRE.ROMFiles
             {
                 foreach (RomInfo.ScreenWindowSpot spot in window.X) WriteSpot(path, file, spot, all[from]);
                 foreach (RomInfo.ScreenWindowSpot spot in window.Y) WriteSpot(path, file, spot, all[from + 1]);
+                foreach (RomInfo.ScreenWindowSpot spot in window.Packed ?? Array.Empty<RomInfo.ScreenWindowSpot>())
+                    WriteSpot(path, file, spot, Packed(all[from], all[from + 1]));
                 from += 2;
             }
         }
