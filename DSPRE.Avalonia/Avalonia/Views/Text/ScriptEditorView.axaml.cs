@@ -385,15 +385,23 @@ namespace DSPRE.Avalonia.Views.Text
                 Spacing = 4
             };
 
-            bool inCode = false;
+            // rotom-lsp quotes message previews, so a fence can follow "> ", and it lengthens the fence when the message
+            // contains ```. Only a run at least as long closes the block.
+            int fenceLength = 0;
+            bool fenceQuoted = false;
             StringBuilder code = new StringBuilder();
 
             foreach (string rawLine in (markdown ?? "").Replace("\r\n", "\n").Split('\n'))
             {
                 string line = rawLine.TrimEnd('\r');
-                if (line.StartsWith("```", StringComparison.Ordinal))
+                bool quoted = line.StartsWith(">", StringComparison.Ordinal) && (fenceLength == 0 || fenceQuoted);
+                string body = !quoted ? line : line.StartsWith("> ", StringComparison.Ordinal) ? line.Substring(2) : line.Substring(1);
+                int ticks = 0;
+                while (ticks < body.Length && body[ticks] == '`') ticks++;
+
+                if (fenceLength > 0)
                 {
-                    if (inCode)
+                    if (ticks >= fenceLength && body.TrimEnd().Length == ticks)
                     {
                         panel.Children.Add(new SelectableTextBlock
                         {
@@ -406,18 +414,19 @@ namespace DSPRE.Avalonia.Views.Text
                             MaxWidth = 500
                         });
                         code.Clear();
-                        inCode = false;
+                        fenceLength = 0;
                     }
                     else
                     {
-                        inCode = true;
+                        code.Append(body).Append('\n');
                     }
                     continue;
                 }
 
-                if (inCode)
+                if (ticks >= 3)
                 {
-                    code.AppendLine(line);
+                    fenceLength = ticks;
+                    fenceQuoted = quoted;
                     continue;
                 }
 
@@ -509,6 +518,15 @@ namespace DSPRE.Avalonia.Views.Text
                         i = end + 1;
                         continue;
                     }
+                }
+
+                // An unmatched marker is plain text. The search below would find it again at i and never move on.
+                int markerLength = text[i] == '`' ? 1 : i + 1 < text.Length && text[i] == '*' && text[i + 1] == '*' ? 2 : 0;
+                if (markerLength > 0)
+                {
+                    textBlock.Inlines.Add(new Run(text.Substring(i, markerLength)));
+                    i += markerLength;
+                    continue;
                 }
 
                 int nextBold = text.IndexOf("**", i, StringComparison.Ordinal);
