@@ -408,10 +408,14 @@ namespace DSPRE.HgEngine
         public const int SpeciesMask = (1 << FormShift) - 1;
 
         /// <summary>A species word as source text: the species' name, wrapped in MON_WITH_FORM when it has a form.</summary>
-        public static string FormatPackedSpecies(int packed, string speciesHeader)
+        public static string FormatPackedSpecies(int packed, string speciesHeader) =>
+            FormatSpecies(packed & SpeciesMask, packed >> FormShift, HgEngineSymbolTable.Load(speciesHeader));
+
+        /// <summary>Writes a form species such as SPECIES_RATTATA_ALOLAN as MON_WITH_FORM(base, n).</summary>
+        public static string FormatSpecies(int speciesId, int form, HgEngineSymbolTable speciesTable)
         {
-            int species = packed & SpeciesMask, form = packed >> FormShift;
-            string name = HgEngineSymbolTable.Load(speciesHeader)?.TryGetNameWithPrefix(species, "SPECIES_", out string n) == true ? n : species.ToString();
+            if (HgEngineFormRegistry.TryGetBaseAndForm(speciesId, out int baseId, out int baseForm)) { speciesId = baseId; form = baseForm; }
+            string name = speciesTable?.TryGetNameWithPrefix(speciesId, "SPECIES_", out string n) == true ? n : speciesId.ToString();
             return FormatSpecies(name, form);
         }
 

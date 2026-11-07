@@ -215,10 +215,6 @@
                           <TextBlock Text="Form" FontSize="10"/>
                           <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding FormNames}" SelectedIndex="{Binding FormIndex}" IsEnabled="{Binding HasForms}"/>
                         </StackPanel>
-                        <StackPanel Width="110" Margin="0,0,6,0" IsVisible="{Binding ShowFormNumber}">
-                          <TextBlock Text="Form" FontSize="10"/>
-                          <NumericUpDown Minimum="0" Maximum="{Binding FormMaximum}" Increment="1" Value="{Binding FormId}"/>
-                        </StackPanel>
                         <StackPanel Width="150" Margin="0,0,6,0" IsVisible="{Binding GenderVisible}">
                           <TextBlock Text="Gender" FontSize="10"/>
                           <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding GenderItems}" SelectedIndex="{Binding GenderIndex}" IsEnabled="{Binding GenderEnabled}"/>

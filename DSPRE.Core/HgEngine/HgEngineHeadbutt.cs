@@ -96,8 +96,7 @@ namespace DSPRE.HgEngine
                 for (int i = 0; i < count; i++)
                 {
                     HeadbuttEncounter e = i < list.Count ? list[i] : new HeadbuttEncounter();
-                    int id = e.PokemonID & HgEngineTrainerSource.SpeciesMask, form = e.PokemonID >> HgEngineTrainerSource.FormShift;
-                    string sp = HgEngineTrainerSource.FormatSpecies(species != null && species.TryGetNameWithPrefix(id, "SPECIES_", out string sn) ? sn : id.ToString(), form);
+                    string sp = HgEngineTrainerSource.FormatSpecies(e.PokemonID & HgEngineTrainerSource.SpeciesMask, e.PokemonID >> HgEngineTrainerSource.FormShift, species);
                     items.Add($"{{ {sp}, {e.MinLevel}, {e.MaxLevel} }}");
                 }
                 return items;

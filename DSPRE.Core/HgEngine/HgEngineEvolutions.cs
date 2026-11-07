@@ -160,8 +160,7 @@ namespace DSPRE.HgEngine
         internal static string BuildEntryLiteral(string methodName, int param, int targetSpeciesId, int targetFormId, string existingRaw,
             HgEngineSymbolTable species, HgEngineSymbolTable[] paramTables)
         {
-            string speciesToken = species != null && species.TryGetNameWithPrefix(targetSpeciesId, "SPECIES_", out string tn) ? tn : targetSpeciesId.ToString();
-            string targetLiteral = HgEngineTrainerSource.FormatSpecies(speciesToken, targetFormId);
+            string targetLiteral = HgEngineTrainerSource.FormatSpecies(targetSpeciesId, targetFormId, species);
             string paramLiteral = param.ToString();
             if (existingRaw != null)
             {

@@ -254,7 +254,21 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public int SpeciesIndex
         {
             get => _speciesIndex;
-            set { if (RejectCleared(value, nameof(SpeciesIndex))) return; if (Set(ref _speciesIndex, value)) { RebuildAbilities(); RebuildForms(); UpdateIcon(); Touch(); } }
+            set
+            {
+                if (RejectCleared(value, nameof(SpeciesIndex))) return;
+                if (!Set(ref _speciesIndex, value)) return;
+                RebuildAbilities(); RebuildForms(); UpdateIcon();
+                if (_suppress || !HgEngineFormRegistry.TryGetBaseAndForm(value, out int baseId, out int form)) { Touch(); return; }
+                // One undo step: the form is set first, then the species change records both.
+                Dispatcher.UIThread.Post(() =>
+                {
+                    if (_speciesIndex != value) return;
+                    _formId = form;
+                    OnPropertyChanged(nameof(FormId));
+                    SpeciesIndex = baseId;
+                });
+            }
         }
 
         private decimal _formId;
@@ -264,8 +278,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public ObservableCollection<string> FormNames { get; } = new ObservableCollection<string>();
         /// <summary>The species has forms to pick from; for the rest the form box stays off.</summary>
         public bool HasForms => FormNames.Count > 1;
-        public bool ShowFormNames => FormVisible && !HgEngineProject.IsActive;
-        public bool ShowFormNumber => FormVisible && HgEngineProject.IsActive;
+        public bool ShowFormNames => FormVisible;
         public int FormIndex
         {
             get => _formBlank ? -1 : FormNames.Count > 1 ? Math.Min((int)_formId, FormNames.Count - 1) : 0;
@@ -275,6 +288,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void RebuildForms()
         {
             string[] names = PokemonForms.NamesOf(_speciesIndex) ?? new[] { "Normal" };
+            IReadOnlyList<int> hgeForms = HgEngineFormRegistry.FormsOf(_speciesIndex);
+            if (hgeForms.Count > 0)
+                names = hgeForms.Select(id => id < PokemonNames.Count ? PokemonNames[id] : id.ToString()).Prepend(names[0]).ToArray();
             FormNames.Clear();
             foreach (string n in names) FormNames.Add(n);
             OnPropertyChanged(nameof(HasForms));
@@ -409,9 +425,6 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         /// <summary>The species id this slot's form reads its abilities and learnset from.</summary>
         public int DataSpeciesId => HgEngineProject.IsActive ? HgEngineFormRegistry.ResolveFormSpecies(_speciesIndex, (int)_formId) : _speciesIndex;
-
-        // hg-engine keeps the form in the top five bits of the species word; vanilla allows six.
-        public decimal FormMaximum => HgEngineProject.IsActive ? 31 : 63;
 
         private decimal _level = 1;
         public decimal Level { get => _level; set { if (Set(ref _level, value)) Touch(); } }
@@ -553,6 +566,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             _suppress = true;
             ForceShiny = forceShiny;
+            if (form == 0 && HgEngineFormRegistry.TryGetBaseAndForm(species, out int baseId, out int baseForm)) (species, form) = (baseId, baseForm);
             SpeciesIndex = species;
             FormId = form;
             Level = level;
@@ -706,7 +720,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
                 if (HgEngineProject.IsActive)
                 {
-                    PokemonIcon = HgEnginePokemonIcons.TryGetIconPath(_speciesIndex, out string iconPath)
+                    PokemonIcon = HgEnginePokemonIcons.TryGetIconPath(DataSpeciesId, out string iconPath)
                         ? ImageConverter.LoadHgeIconFirstFrame(iconPath) : null;
                     return;
                 }

@@ -652,6 +652,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 PopulateFromTrainer();
             }
             _suppress = false;
+            QueueDerived();
 
             _dirty = _history.IsDirty;
             OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -1361,8 +1362,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 AppEvents.RaiseNamesChanged();
             }
 
+            string savedLabel = TrainerLabel;
             SetClean();
-            SaveNotice.Saved(UnsavedChangesDescription);
+            SaveNotice.Saved(savedLabel);
             _history.MarkSaved();
             RaiseUndoState();
             StatusText = $"Trainer {_selectedTrainerIndex} saved.";
@@ -1395,8 +1397,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             RefreshTrainerListEntry(trainer);
             AppEvents.RaiseNamesChanged();   // other editors list trainer names from Trainers.c too
             if (trainer != _selectedTrainerIndex) return;
+            string savedLabel = TrainerLabel;
             SetClean();
-            SaveNotice.Saved(UnsavedChangesDescription);
+            SaveNotice.Saved(savedLabel);
             _history.MarkSaved();
             RaiseUndoState();
             StatusText = $"Trainer {trainer} saved to hg-engine source.";
@@ -1425,8 +1428,6 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             string ClassSymbol(int classIndex) =>
                 HgEngineSymbolTable.Load(TrainerClassHeader)?.TryGetNameWithPrefix(classIndex, "TRAINERCLASS_", out string n) == true ? n : classIndex.ToString();
-            string SpeciesSymbol(int speciesId) =>
-                HgEngineSymbolTable.Load(SpeciesHeader)?.TryGetNameWithPrefix(speciesId, "SPECIES_", out string n) == true ? n : speciesId.ToString();
             // -1 as a u16 is 0xFFFF, which the game takes as a real id.
             string ItemSymbol(int itemId) => itemId <= 0 ? "ITEM_NONE" :
                 HgEngineSymbolTable.Load(ItemHeader)?.TryGetNameWithPrefix(itemId, "ITEM_", out string n) == true ? n : itemId.ToString();
@@ -1477,7 +1478,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 }
 
                 if (mon.SpeciesIndex >= 0)
-                    fields.Add(new(Path(FieldPathSegment.Field("species")), HgEngineTrainerSource.FormatSpecies(SpeciesSymbol(mon.SpeciesIndex), Math.Min(31, (int)mon.FormId))));
+                    fields.Add(new(Path(FieldPathSegment.Field("species")), HgEngineTrainerSource.FormatSpecies(mon.SpeciesIndex, Math.Min(31, (int)mon.FormId), HgEngineSymbolTable.Load(SpeciesHeader))));
                 fields.Add(new(Path(FieldPathSegment.Field("level")), mon.Level.ToString()));
                 fields.Add(new(Path(FieldPathSegment.Field("ivs")), mon.Difficulty.ToString()));
                 fields.Add(new(Path(FieldPathSegment.Field("ballSeal")), mon.BallSeals.ToString()));

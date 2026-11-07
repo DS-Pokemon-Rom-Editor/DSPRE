@@ -51,15 +51,20 @@ namespace DSPRE.HgEngine
             complete = true;
             foreach (CInitItem item in list.Items)
             {
-                string raw = item.ValueText(text).Trim();
-                if (item.IsConditional) { complete = false; continue; }
-                List<string> tokens = CLexer.Tokenize(raw).Select(t => t.Text(raw)).ToList();
-                bool reverts = tokens.Count == 3 && tokens[0] == "NEEDS_REVERSION" && tokens[1] == "|";
-                string form = reverts ? tokens[2] : tokens.Count == 1 ? tokens[0] : null;
-                if (form?.StartsWith("SPECIES_", StringComparison.Ordinal) == true) slots.Add(new FormSlot(reverts, form));
+                if (ReadSlot(text, item) is FormSlot slot) slots.Add(slot);
                 else complete = false;   // unrecognized: skipped, never guessed
             }
             return slots;
+        }
+
+        private static FormSlot? ReadSlot(string text, CInitItem item)
+        {
+            if (item.IsConditional) return null;
+            string raw = item.ValueText(text).Trim();
+            List<string> tokens = CLexer.Tokenize(raw).Select(t => t.Text(raw)).ToList();
+            bool reverts = tokens.Count == 3 && tokens[0] == "NEEDS_REVERSION" && tokens[1] == "|";
+            string form = reverts ? tokens[2] : tokens.Count == 1 ? tokens[0] : null;
+            return form?.StartsWith("SPECIES_", StringComparison.Ordinal) == true ? new FormSlot(reverts, form) : null;
         }
 
         private static string ReadSource(string rel)
@@ -74,12 +79,7 @@ namespace DSPRE.HgEngine
         {
             if (form <= 0 || !HgEngineProject.IsActive) return speciesId;
             return ResolveFormSpecies(speciesId, form, (baseId, formNo) =>
-            {
-                HgEngineSymbolTable speciesTable = HgEngineSymbolTable.Load("include/constants/species.h");
-                if (speciesTable == null || !speciesTable.TryGetNameWithPrefix(baseId, "SPECIES_", out string designator)) return 0;
-                if (!LoadAll().TryGetValue(designator, out List<FormSlot> slots) || formNo - 1 >= slots.Count) return 0;
-                return speciesTable.TryGetValue(slots[formNo - 1].SpeciesSymbol, out int id) ? id : 0;
-            });
+                FormsOf(baseId) is IReadOnlyList<int> forms && formNo - 1 < forms.Count ? forms[formNo - 1] : 0);
         }
 
         internal static int ResolveFormSpecies(int speciesId, int form, Func<int, int, int> tableSlot)
@@ -96,6 +96,53 @@ namespace DSPRE.HgEngine
             }
             int target = form <= MaxFormSlots ? tableSlot(speciesId, form) : 0;
             return target > 0 ? target : speciesId;
+        }
+
+        public static bool TryGetBaseAndForm(int speciesId, out int baseId, out int form)
+        {
+            baseId = form = 0;
+            if (FormIds() is not FormIdMaps maps || !maps.BaseOf.TryGetValue(speciesId, out (int BaseId, int Form) found)) return false;
+            (baseId, form) = found;
+            return true;
+        }
+
+        /// <summary>Returns the species ids of the forms in form order, starting at form 1.</summary>
+        public static IReadOnlyList<int> FormsOf(int baseId) =>
+            FormIds() is FormIdMaps maps && maps.Forms.TryGetValue(baseId, out List<int> forms) ? forms : Array.Empty<int>();
+
+        private sealed record FormIdMaps(string Text, HgEngineSymbolTable Species, Dictionary<int, (int BaseId, int Form)> BaseOf, Dictionary<int, List<int>> Forms);
+        private static FormIdMaps _formIds;
+
+        // Cached until species.h or the form table changes, since writers look up every species they write.
+        private static FormIdMaps FormIds()
+        {
+            if (!HgEngineProject.IsActive) return null;
+            HgEngineSymbolTable speciesTable = HgEngineSymbolTable.Load("include/constants/species.h");
+            string path = Path.Combine(HgEngineProject.RepoPathUnc, RelPath.Replace('/', Path.DirectorySeparatorChar));
+            if (speciesTable == null || !File.Exists(path)) return null;
+            string text = HgEngineFileCache.GetText(path);
+            FormIdMaps cached = _formIds;
+            if (cached != null && ReferenceEquals(cached.Text, text) && ReferenceEquals(cached.Species, speciesTable)) return cached;
+
+            int? Lookup(string name) => speciesTable.TryGetValue(name, out int v) ? v : null;
+            Dictionary<int, (int, int)> baseOf = new Dictionary<int, (int, int)>();
+            Dictionary<int, List<int>> forms = new Dictionary<int, List<int>>();
+            string source = text.Replace("\r\n", "\n");
+            foreach (CInitItem entry in Table(source)?.Init.Items ?? new List<CInitItem>())
+            {
+                if (entry.IndexText == null || entry.List == null || !HgEngineSourceExpression.TryEvaluate(entry.IndexText.Trim(), Lookup, out int baseSpecies)) continue;
+                List<int> ids = new List<int>();
+                // The species word has five form bits, so forms past 31 can't be written. An unreadable slot ends the
+                // list, since skipping it would renumber the forms after it.
+                for (int i = 0; i < entry.List.Items.Count && i < 31; i++)
+                {
+                    if (ReadSlot(source, entry.List.Items[i]) is not FormSlot slot || Lookup(slot.SpeciesSymbol) is not int id) break;
+                    ids.Add(id);
+                    baseOf.TryAdd(id, (baseSpecies, i + 1));
+                }
+                if (ids.Count > 0) forms[baseSpecies] = ids;
+            }
+            return _formIds = new FormIdMaps(text, speciesTable, baseOf, forms);
         }
 
         /// <summary>Replaces (or inserts) one base species' entire form-slot list in one shot.</summary>
