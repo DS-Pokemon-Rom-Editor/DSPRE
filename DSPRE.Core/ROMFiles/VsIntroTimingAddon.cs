@@ -128,7 +128,7 @@ namespace DSPRE.ROMFiles
         public static VsIntroTimingAddon Load()
         {
             if (WhyNot() != null) return null;
-            byte[] synth = File.ReadAllBytes(Filesystem.ExpArmPath);
+            byte[] synth = SyntheticOverlaySpace.Bytes();
             int block = FindBlock(synth);
             if (block < 0) return null;
             int at = block + SyntheticOverlaySpace.HeaderSize + TableAt;
@@ -140,7 +140,7 @@ namespace DSPRE.ROMFiles
         {
             string why = WhyNot();
             if (why != null) throw new InvalidOperationException(why);
-            byte[] synth = File.ReadAllBytes(Filesystem.ExpArmPath);
+            byte[] synth = SyntheticOverlaySpace.Copy();
             if (FindBlock(synth) >= 0) return Load();
 
             Dictionary<int, byte[]> overlays = Sites.Select(s => s.Overlay).Distinct().ToDictionary(ov => ov, ov => File.ReadAllBytes(OverlayFile(ov)));

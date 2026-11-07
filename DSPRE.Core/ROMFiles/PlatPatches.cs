@@ -31,17 +31,17 @@ namespace DSPRE.ROMFiles
             return (int)m;
         }
 
-        private static (string key, byte[] arm9, byte[] synth) _files;
+        private static (string key, byte[] arm9) _files;
 
-        /// <summary>arm9 and the synthetic overlay, re-read only when either changed on disk.</summary>
+        /// <summary>arm9, re-read only when it changed on disk, and the shared synthetic overlay.</summary>
         private static (byte[] arm9, byte[] synth) Files()
         {
             if (GameFamily != GameFamilies.Plat || IsHGE || !File.Exists(Arm9Path)) return (null, null);
             if (!File.Exists(Filesystem.ExpArmPath)) DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.SynthOverlay });
             if (!File.Exists(Filesystem.ExpArmPath)) return (null, null);
-            string key = Arm9Path + File.GetLastWriteTimeUtc(Arm9Path).Ticks + Filesystem.ExpArmPath + File.GetLastWriteTimeUtc(Filesystem.ExpArmPath).Ticks;
-            if (_files.key != key) _files = (key, File.ReadAllBytes(Arm9Path), File.ReadAllBytes(Filesystem.ExpArmPath));
-            return (_files.arm9, _files.synth);
+            string key = Arm9Path + File.GetLastWriteTimeUtc(Arm9Path).Ticks;
+            if (_files.key != key) _files = (key, File.ReadAllBytes(Arm9Path));
+            return (_files.arm9, SyntheticOverlaySpace.Bytes());
         }
 
         /// <summary>Drops cached reads, for callers that just wrote either file outside these methods.</summary>
@@ -101,7 +101,7 @@ namespace DSPRE.ROMFiles
         {
             ItemExpansion e = Items();
             if (e == null || !e.Covers(itemId)) return false;
-            byte[] synth = (byte[])Files().synth.Clone();
+            byte[] synth = SyntheticOverlaySpace.Copy();
             int o = e.RowsAt + (itemId - e.FirstItem) * 8;
             BitConverter.GetBytes((ushort)entry.ItemData).CopyTo(synth, o);
             BitConverter.GetBytes((ushort)entry.ItemIcon).CopyTo(synth, o + 2);
@@ -160,7 +160,7 @@ namespace DSPRE.ROMFiles
             if (moves.Keys.Any(r => r < 0 || r >= t.Count)) throw new ArgumentOutOfRangeException(nameof(moves));
             List<KeyValuePair<int, ushort>> changed = moves.Where(kv => t.MoveIds[kv.Key] != kv.Value).ToList();
             if (changed.Count == 0) return;
-            byte[] synth = (byte[])Files().synth.Clone();
+            byte[] synth = SyntheticOverlaySpace.Copy();
             foreach ((int row, ushort move) in changed) BitConverter.GetBytes(move).CopyTo(synth, t.Marker + 0x590 + row * 2);
             DSUtils.WriteWholeFile(Filesystem.ExpArmPath, synth);
             Forget();
@@ -197,7 +197,7 @@ namespace DSPRE.ROMFiles
         {
             List<(int Row, int PersonalId, bool Can)> list = changes.ToList();
             if (list.Any(c => c.Row < 0 || c.Row >= t.Count)) throw new ArgumentOutOfRangeException(nameof(changes));
-            byte[] synth = (byte[])Files().synth.Clone();
+            byte[] synth = SyntheticOverlaySpace.Copy();
             if (list.Any(c => c.Row >= PersonalMaskRows && c.Can && t.MasksAt + c.PersonalId * 4 + 4 > synth.Length))
                 throw new InvalidOperationException("A Pokémon is past the Extra TMs compatibility table.");
 

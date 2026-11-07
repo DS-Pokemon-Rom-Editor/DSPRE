@@ -70,7 +70,7 @@ namespace DSPRE.ROMFiles
             RomLocator.Spot members = RomLocator.Where(RomLocator.Thing.TypeIconMembers), banks = RomLocator.Where(RomLocator.Thing.TypeIconBanks);
             if (members == null || banks == null || members.Overlay >= 0 || banks.Overlay >= 0) return null;
             byte[] arm9 = File.ReadAllBytes(Arm9Path);
-            byte[] synth = File.Exists(Filesystem.ExpArmPath) ? File.ReadAllBytes(Filesystem.ExpArmPath) : Array.Empty<byte>();
+            byte[] synth = SyntheticOverlaySpace.BytesIfAny() ?? Array.Empty<byte>();
 
             (uint Ram, int Size)? memberTable = PatchedTable(arm9, synth, ARM9.Address + (uint)members.Offset);
             (uint Ram, int Size)? bankTable = PatchedTable(arm9, synth, ARM9.Address + (uint)banks.Offset);

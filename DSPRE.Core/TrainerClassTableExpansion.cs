@@ -48,7 +48,7 @@ namespace DSPRE
         {
             if (pointer < RomInfo.SynthOverlayLoadAddress || !File.Exists(Filesystem.ExpArmPath)) return -1;
             long at = pointer - RomInfo.SynthOverlayLoadAddress;
-            byte[] synth = File.ReadAllBytes(Filesystem.ExpArmPath);
+            byte[] synth = SyntheticOverlaySpace.Bytes();
             foreach ((long Start, long End) b in SyntheticOverlaySpace.Blocks(synth, marker))
                 if (at == b.Start + SyntheticOverlaySpace.HeaderSize && b.End - at >= capacity) return at;
             return -1;
@@ -105,7 +105,7 @@ namespace DSPRE
         private static long PlaceRoomyTable(string marker, byte[] table, int capacity, uint oldPointer, int oldLength, out string error)
         {
             error = null;
-            byte[] synth = File.ReadAllBytes(Filesystem.ExpArmPath);
+            byte[] synth = SyntheticOverlaySpace.Copy();
             byte[] block = new byte[RoomyBlockLength(capacity)];
             System.Text.Encoding.ASCII.GetBytes(marker).CopyTo(block, 0);
             BitConverter.GetBytes(1u).CopyTo(block, 0x0C);

@@ -185,7 +185,7 @@ namespace DSPRE.ROMFiles
             BitConverter.GetBytes((uint)ExpandedCapacity).CopyTo(block, 0x14);
             for (int i = 0; i < Moves.Count; i++) BitConverter.GetBytes(Moves[i]).CopyTo(block, SyntheticOverlaySpace.HeaderSize + 2 * i);
 
-            byte[] synth = File.ReadAllBytes(Filesystem.ExpArmPath);
+            byte[] synth = SyntheticOverlaySpace.Copy();
             int at = SyntheticOverlaySpace.Place(synth, block.Length, SyntheticOverlaySpace.Reserved(synth));
             if (at < 0) throw new InvalidOperationException($"No free space was found in the expanded ARM9 area for the {NameOf(Which)} move list.");
             byte[] ov = File.ReadAllBytes(_ovPath);

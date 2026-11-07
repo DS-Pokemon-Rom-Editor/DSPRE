@@ -81,7 +81,7 @@ namespace DSPRE.ROMFiles
         {
             if (!SupportsCurrentRom || !File.Exists(Filesystem.ExpArmPath)) return 0;
             if (BitConverter.ToUInt32(ov, Banks.Offset) != BankH) return 0;
-            long block = SyntheticOverlaySpace.Blocks(File.ReadAllBytes(Filesystem.ExpArmPath), Marker).Select(b => b.Start).DefaultIfEmpty(-1).First();
+            long block = SyntheticOverlaySpace.Blocks(SyntheticOverlaySpace.Bytes(), Marker).Select(b => b.Start).DefaultIfEmpty(-1).First();
             return block < 0 ? 0 : RomInfo.SynthOverlayLoadAddress + (uint)block + (uint)CodeStart;
         }
 
@@ -100,7 +100,7 @@ namespace DSPRE.ROMFiles
             get
             {
                 if (!IsApplied) return null;
-                byte[] synth = File.ReadAllBytes(Filesystem.ExpArmPath);
+                byte[] synth = SyntheticOverlaySpace.Bytes();
                 long block = SyntheticOverlaySpace.Blocks(synth, Marker).First().Start;
                 Dictionary<int, int> Read(int at, int room)
                 {

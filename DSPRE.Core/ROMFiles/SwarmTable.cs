@@ -100,7 +100,7 @@ namespace DSPRE.ROMFiles
             }
             else if (region == 1)
             {
-                byte[] synth = File.ReadAllBytes(Filesystem.ExpArmPath);
+                byte[] synth = SyntheticOverlaySpace.Bytes();
                 table._path = Filesystem.ExpArmPath; table._offset = offset;
                 (long Start, long End) block = SyntheticOverlaySpace.Blocks(synth, Marker).FirstOrDefault(b => table._offset == b.Start + SyntheticOverlaySpace.HeaderSize);
                 if (block.End > 0)
@@ -186,7 +186,7 @@ namespace DSPRE.ROMFiles
                 }
                 else
                 {
-                    byte[] synth = File.ReadAllBytes(Filesystem.ExpArmPath), synthOld = (byte[])synth.Clone();
+                    byte[] synth = SyntheticOverlaySpace.Copy(), synthOld = (byte[])synth.Clone();
                     Array.Clear(synth, _offset, Capacity * _sites.RowSize);
                     rows.CopyTo(synth, _offset);
                     if (_blockStart >= 0) BitConverter.GetBytes((uint)Rows.Count).CopyTo(synth, _blockStart + 0x14);
@@ -225,7 +225,7 @@ namespace DSPRE.ROMFiles
             if (!SyntheticOverlaySpace.Available()) throw new InvalidOperationException("Apply the ARM9 expansion in the ROM patch toolbox first.");
             byte[] code = ReadCode(), codeBefore = (byte[])code.Clone();
             byte[] rows = RowBytes();
-            byte[] synthNow = File.ReadAllBytes(Filesystem.ExpArmPath), synthBefore = (byte[])synthNow.Clone();
+            byte[] synthNow = SyntheticOverlaySpace.Copy(), synthBefore = (byte[])synthNow.Clone();
             byte[] block = new byte[ExpansionBlockLength];
             Encoding.ASCII.GetBytes(Marker).CopyTo(block, 0);
             BitConverter.GetBytes(1u).CopyTo(block, 0x0C);

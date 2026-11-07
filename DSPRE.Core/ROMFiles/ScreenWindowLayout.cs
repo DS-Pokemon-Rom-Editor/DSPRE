@@ -175,8 +175,7 @@ namespace DSPRE.ROMFiles
         private static string SyntheticPath => Filesystem.ExpArmPath;
 
         // A patch routine's spot is read from the synthetic overlay.
-        private static byte[] FileFor(byte[] file, RomInfo.ScreenWindowSpot spot) =>
-            !spot.Synthetic ? file : File.Exists(SyntheticPath) ? File.ReadAllBytes(SyntheticPath) : Array.Empty<byte>();
+        private static byte[] FileFor(byte[] file, RomInfo.ScreenWindowSpot spot) => spot.Synthetic ? SyntheticOverlaySpace.BytesIfAny() ?? Array.Empty<byte>() : file;
 
         private static int SpotValue(byte[] file, RomInfo.ScreenWindowSpot spot)
         {

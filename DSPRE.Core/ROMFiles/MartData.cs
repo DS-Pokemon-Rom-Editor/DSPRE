@@ -91,7 +91,7 @@ namespace DSPRE.ROMFiles
                 && new FileInfo(Filesystem.ExpArmPath).Length >= 0x16000;
 
             return new MartData(
-                File.ReadAllBytes(RomInfo.Arm9Path), expanded ? File.ReadAllBytes(Filesystem.ExpArmPath) : null,
+                File.ReadAllBytes(RomInfo.Arm9Path), expanded ? SyntheticOverlaySpace.Bytes() : null,
                 RomInfo.MartCommonCountOffset,
                 RomInfo.MartCommonPointerOffset,
                 RomInfo.MartSpecialtyPointerOffset,
@@ -224,7 +224,7 @@ namespace DSPRE.ROMFiles
             if (Expanded)
             {
                 // The layout already has room: the marts go back where they are and only the common count changes.
-                byte[] overlay = File.ReadAllBytes(Filesystem.ExpArmPath), overlayBefore = (byte[])overlay.Clone();
+                byte[] overlay = SyntheticOverlaySpace.Copy(), overlayBefore = (byte[])overlay.Clone();
                 _saveBase = Arm9AsItIsNow();
                 byte[] arm9Now;
                 try
@@ -288,7 +288,7 @@ namespace DSPRE.ROMFiles
         {
             if (FromSource || Expanded) return;
             if (!SyntheticOverlaySpace.Available()) throw new InvalidOperationException("Apply the ARM9 expansion in the ROM patch toolbox first.");
-            byte[] overlay = File.ReadAllBytes(Filesystem.ExpArmPath), overlayBefore = (byte[])overlay.Clone();
+            byte[] overlay = SyntheticOverlaySpace.Copy(), overlayBefore = (byte[])overlay.Clone();
             List<(long Start, long End)> excluded = SyntheticOverlaySpace.Reserved(overlay);
             // An older, tightly packed mart block is freed for the new one.
             if (_existingExpansionStart >= 0)

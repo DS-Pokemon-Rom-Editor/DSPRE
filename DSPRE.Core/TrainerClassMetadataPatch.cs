@@ -43,7 +43,7 @@ namespace DSPRE
         public static bool InstalledIsV100()
         {
             if (InstalledOffset() is not uint offset) return false;
-            byte[] synth = File.ReadAllBytes(Filesystem.ExpArmPath);
+            byte[] synth = SyntheticOverlaySpace.Bytes();
             return offset + ResumeFixAt + ResumeV100.Length <= synth.Length
                 && synth.AsSpan((int)(offset + ResumeFixAt), ResumeV100.Length).SequenceEqual(ResumeV100);
         }
@@ -60,7 +60,7 @@ namespace DSPRE
         public static bool InstalledPayloadMatches(int length)
         {
             if (InstalledOffset() is not uint offset) return false;
-            byte[] synth = File.ReadAllBytes(Filesystem.ExpArmPath);
+            byte[] synth = SyntheticOverlaySpace.Bytes();
             if (offset + length > synth.Length) return false;
             byte[] expected = BuildPayload(RomInfo.SynthOverlayLoadAddress + offset);
             if (synth.AsSpan((int)offset, length).SequenceEqual(expected.AsSpan(0, length))) return true;

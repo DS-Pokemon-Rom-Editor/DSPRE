@@ -47,7 +47,7 @@ namespace DSPRE.ROMFiles
             {
                 if (Patch.InstalledAddress() is not uint address || address < RomInfo.SynthOverlayLoadAddress) return -1;
                 long offset = address - RomInfo.SynthOverlayLoadAddress;
-                byte[] synth = File.ReadAllBytes(Filesystem.ExpArmPath);
+                byte[] synth = SyntheticOverlaySpace.Bytes();
                 if (offset + Patch.PayloadSize > synth.Length) return -1;
                 byte[] expected = Patch.BuildPayload(address);
                 byte[] installed = synth.AsSpan((int)offset, expected.Length).ToArray();

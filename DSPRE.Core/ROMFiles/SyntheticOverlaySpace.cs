@@ -35,6 +35,38 @@ namespace DSPRE.ROMFiles
             return header;
         }
 
+        private static (string Path, DateTime Written, long Length, byte[] Bytes) _read;
+
+        static SyntheticOverlaySpace() => ProjectWrites.Written += Forget;
+
+        /// <summary>
+        /// The synthetic overlay as on disk, shared, and read again only after it changes. Callers never change it; a writer
+        /// takes <see cref="Copy"/>. Throws like a file read when there is none.
+        /// </summary>
+        public static byte[] Bytes()
+        {
+            FileInfo info = new FileInfo(Filesystem.ExpArmPath);
+            if (!info.Exists) throw new FileNotFoundException("The synthetic overlay is missing.", info.FullName);
+            (string Path, DateTime Written, long Length, byte[] Bytes) read = _read;
+            if (read.Bytes != null && read.Path == info.FullName && read.Written == info.LastWriteTimeUtc && read.Length == info.Length) return read.Bytes;
+            byte[] bytes = File.ReadAllBytes(info.FullName);
+            _read = (info.FullName, info.LastWriteTimeUtc, info.Length, bytes);
+            return bytes;
+        }
+
+        /// <summary><see cref="Bytes"/>, or null without a synthetic overlay.</summary>
+        public static byte[] BytesIfAny() => File.Exists(Filesystem.ExpArmPath) ? Bytes() : null;
+
+        /// <summary>A copy of the synthetic overlay to change and write back.</summary>
+        public static byte[] Copy() => (byte[])Bytes().Clone();
+
+        // Any DSPRE write to the file, or to a folder holding it, drops the shared read.
+        private static void Forget(string written)
+        {
+            string read = _read.Path;
+            if (read != null && read.StartsWith(Path.GetFullPath(written), StringComparison.OrdinalIgnoreCase)) _read = default;
+        }
+
         /// <summary>Whether the ARM9 expansion is applied and its overlay is large enough to hold tables.</summary>
         public static bool Available()
         {
@@ -118,7 +150,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Where blocks of these lengths would go, in order, as <see cref="Place"/> would choose; null when one doesn't fit.</summary>
         public static int[] Plan(params int[] lengths)
         {
-            byte[] data = File.ReadAllBytes(Filesystem.ExpArmPath);
+            byte[] data = Bytes();
             List<(long Start, long End)> reserved = Reserved(data);
             int[] offsets = new int[lengths.Length];
             for (int i = 0; i < lengths.Length; i++)

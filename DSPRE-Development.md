@@ -469,7 +469,8 @@ Text lines an editor changes besides its own data are a `PendingArchiveWrites.Te
 `Import`, so they save through the Text editor's writer and undo together. A patch never writes text after it is applied.
 
 A Screens view whose unsaved edits change the Preview implements `IScreenPreviewSource`. Its `DrawScope` returns a
-thread-local `Use…` scope, and `DrawScopes` combines several.
+thread-local `Use…` scope, and `DrawScopes` combines several. Code that reads the synthetic overlay many times uses
+`SyntheticOverlaySpace.Bytes()`, which reads the file again only after it changes.
 
 ```csharp
 _pending.Change(step => step.Put(DirNames.DungeonCutinGraphics, p, nclrBytes)

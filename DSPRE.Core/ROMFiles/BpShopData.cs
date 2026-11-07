@@ -70,7 +70,7 @@ namespace DSPRE.ROMFiles
             return File.ReadAllBytes(OverlayUtils.GetPath(7));
         }
 
-        private static byte[] ReadSynth() => File.Exists(Filesystem.ExpArmPath) ? File.ReadAllBytes(Filesystem.ExpArmPath) : null;
+        private static byte[] ReadSynth() => SyntheticOverlaySpace.BytesIfAny()?.Clone() as byte[];
 
         /// <summary>Resolves a RAM address to (bytes, offset, 0 arm9 / 1 overlay 7 / 2 synthetic overlay).</summary>
         private static (byte[] data, int offset, int where) Resolve(uint ram, int length, byte[] arm9, byte[] ov7, uint ov7Base, byte[] synth, string what)

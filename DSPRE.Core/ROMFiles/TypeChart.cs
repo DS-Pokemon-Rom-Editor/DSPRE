@@ -327,7 +327,7 @@ namespace DSPRE.ROMFiles
             BitConverter.GetBytes((uint)ExpandedCapacity).CopyTo(block, 0x14);
             chart.CopyTo(block, SyntheticOverlaySpace.HeaderSize);
 
-            byte[] synth = File.ReadAllBytes(Filesystem.ExpArmPath);
+            byte[] synth = SyntheticOverlaySpace.Copy();
             int at = SyntheticOverlaySpace.Place(synth, block.Length, SyntheticOverlaySpace.Reserved(synth));
             if (at < 0) { Capacity = oldCapacity; throw new InvalidOperationException("No free space was found in the expanded ARM9 area for the type chart."); }
             byte[] ov = File.ReadAllBytes(_ovPath);

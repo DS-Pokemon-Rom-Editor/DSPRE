@@ -26,7 +26,7 @@ namespace DSPRE
             try
             {
                 byte[] arm9 = File.ReadAllBytes(RomInfo.Arm9Path);
-                byte[] synthetic = File.Exists(Filesystem.ExpArmPath) ? File.ReadAllBytes(Filesystem.ExpArmPath) : null;
+                byte[] synthetic = ROMFiles.SyntheticOverlaySpace.BytesIfAny();
                 return Inspect(RomLocator.TrainerShinySites, arm9, synthetic);
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
