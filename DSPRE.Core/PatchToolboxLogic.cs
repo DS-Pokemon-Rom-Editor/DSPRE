@@ -1527,6 +1527,7 @@ namespace DSPRE
 
         private static int GetCommandTableOffset()
         {
+            if (RomInfo.GameFamily != GameFamilies.HGSS || !ScrcmdLikeLangOk()) return -1;
             try
             {
                 int pointerOffset = GetCustomScrcmdDBInt("pointerOffset");
@@ -1940,7 +1941,7 @@ namespace DSPRE
                 () =>
                 {
                     if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
-                    if (!BannerMotionPatch.SupportsCurrentRom) return Unsupported("Platinum, HeartGold and SoulSilver only");
+                    if (!BannerMotionPatch.SupportsCurrentRom) return Unsupported("Platinum, HeartGold and SoulSilver, except Japanese");
                     if (BannerMotionPatch.IsApplied) return PatchState.Applied;
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
                 }));
@@ -2211,7 +2212,7 @@ namespace DSPRE
                 () =>
                 {
                     if (RomInfo.IsHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
-                    if (BottomPalettesPatch.Summary == null) return Unsupported("Platinum, HeartGold and SoulSilver only");
+                    if (BottomPalettesPatch.Summary == null) return Unsupported("Platinum, HeartGold and SoulSilver, except Japanese");
                     if (!BottomPalettesPatch.SupportsCurrentRom) return Unsupported("This patch doesn't support this ROM yet.");
                     if (BottomScreensWanted().Count == 0 && !PokedexBottomWanted) return PatchState.Applied;
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
