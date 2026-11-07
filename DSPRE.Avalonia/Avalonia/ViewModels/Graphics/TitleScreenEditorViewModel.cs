@@ -38,8 +38,19 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public AvaBitmap BackgroundPreview { get => _backgroundPreview; private set { if (Set(ref _backgroundPreview, value)) OnPropertyChanged(nameof(PiecePreview)); } }
         public AvaBitmap CopyrightPreview { get => _copyrightPreview; private set { if (Set(ref _copyrightPreview, value)) OnPropertyChanged(nameof(PiecePreview)); } }
 
-        /// <summary>The title screen's pieces, listed beside it.</summary>
-        public string[] Pieces { get; } = { "Background", "Logo", "Copyright text", "Colours" };
+        /// <summary>The title screen's pieces, listed beside it. Platinum's background is the top screen's border.</summary>
+        public string[] Pieces { get; } = IsPlatinum ? new[] { "Top screen border", "Logo", "Credit line", "Logo colours" }
+                                                     : new[] { "Background", "Logo", "Copyright text", "Colours" };
+
+        public static bool IsPlatinum => RomInfo.GameFamily == RomInfo.GameFamilies.Plat;
+        public bool HasVersions => !IsPlatinum;
+        /// <summary>HGSS shows the copyright on the top screen; Platinum shows its credit line on the bottom one.</summary>
+        public bool CopyrightOnTop => !IsPlatinum;
+
+        private AvaBitmap _bottomPreview;
+        /// <summary>Platinum's bottom screen: its border and the credit line.</summary>
+        public AvaBitmap BottomPreview { get => _bottomPreview; private set => Set(ref _bottomPreview, value); }
+        public string ColoursTip => IsPlatinum ? "Rebuilt on a logo import" : "Rebuilt on a logo or background import";
 
         private int _pieceIndex = 1;
         public int PieceIndex
@@ -98,6 +109,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             LogoPreview = ImageConverter.ToAvaloniaBitmap(logo);
             BackgroundPreview = ImageConverter.ToAvaloniaBitmap(background);
             CopyrightPreview = ImageConverter.ToAvaloniaBitmap(copyright);
+            BottomPreview = IsPlatinum ? ImageConverter.ToAvaloniaBitmap(Over(_graphics.ComposeBottomBorder(), copyright)) : null;
             StatusText = (logo == null || background == null || copyright == null)
                 ? "Couldn't decode the current title screen graphics." : string.Empty;
             OnPropertyChanged(nameof(HasChanges)); OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -157,6 +169,17 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (bytes == null) return "Couldn't read the current palette.";
             try { PlainFiles.WriteBytes(nclrPath, bytes); return null; }
             catch (Exception ex) { return ex.Message; }
+        }
+
+        // The copyright strip over the bottom border, both 256 by 192.
+        private static RawImage Over(RawImage under, RawImage over)
+        {
+            if (under == null || over == null || under.Width != over.Width || under.Height != over.Height) return under ?? over;
+            RawImage both = new RawImage(under.Width, under.Height);
+            Array.Copy(under.Bgra, both.Bgra, under.Bgra.Length);
+            for (int i = 0; i + 3 < over.Bgra.Length; i += 4)
+                if (over.Bgra[i + 3] != 0) Array.Copy(over.Bgra, i, both.Bgra, i, 4);
+            return both;
         }
 
         private static DSPRE.RawImage DecodePng(string path, out string error)

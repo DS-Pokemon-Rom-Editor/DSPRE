@@ -157,7 +157,7 @@ namespace DSPRE
             ["TitleScreenEditorView"] = new Rule
             {
                 Title = "The Title screen editor", Hge = HgEngine.NeedsLink,
-                Unsupported = Unless(IsTitleScreenEditorAvailable, "The Title screen editor is for HeartGold and SoulSilver."),
+                Unsupported = Unless(IsTitleScreenEditorAvailable, "The Title screen editor is for Platinum, HeartGold and SoulSilver."),
             },
             ["BottomScreenEditorView"] = new Rule
             {

@@ -845,7 +845,7 @@ namespace DSPRE
             TrainerBackGraphics,    // player-side trainer back sprites, poketool/trgra/trbgra.narc (HGSS a/0/0/6)
             BattleBgPlanm,          // HGSS-ONLY animated BG palette-anim data (SwitchBgEx), a/0/0/9
             DungeonCutinGraphics,   // HGSS only. Dungeon cutin (location-preview splash) art, a/1/5/0.
-            TitleScreenGraphics,    // HGSS only. Main-menu title logo/palette/background, a/0/4/6.
+            TitleScreenGraphics,    // HGSS a/0/4/6, Pt demo/title/titledemo.narc: the title logo, background and copyright.
             TrainerCardGraphics,    // Trainer card face/back + trainer-pose art.
             WeatherGraphics,        // HGSS only. DP and Platinum keep weather in synthOverlay.
             AreaWindowGraphics,     // Place-name banner frames. DP uses one loose file.
@@ -2434,6 +2434,7 @@ namespace DSPRE
                         [DirNames.AreaWindowGraphics] = $@"{_dataFolderName}\arc\area_win_gra.narc",
                         [DirNames.StartMenuGraphics] = $@"{_dataFolderName}\graphic\menu_gra.narc",
                         [DirNames.ShopGraphics] = $@"{_dataFolderName}\graphic\shop_gra.narc",
+                        [DirNames.TitleScreenGraphics] = $@"{_dataFolderName}\demo\title\titledemo.narc",
                         [DirNames.PartyMenuGraphics] = Localized($@"{_dataFolderName}\graphic\pl_plist_gra.narc", "pokelist", "pl_plist_gra.narc"),
                         [DirNames.BoxGraphics] = Localized($@"{_dataFolderName}\graphic\box.narc", "box", "box.narc"),
                         [DirNames.OptionsGraphics] = $@"{_dataFolderName}\graphic\config_gra.narc",
@@ -2804,7 +2805,15 @@ namespace DSPRE
             return DungeonCutinTableOffsetToRAMAddress != 0;
         }
 
-        public static bool IsTitleScreenEditorAvailable() => GameFamily == GameFamilies.HGSS;
+        public static bool IsTitleScreenEditorAvailable() => GameFamily is GameFamilies.HGSS or GameFamilies.Plat;
+
+        /// <summary>
+        /// Platinum's titledemo.narc members (pokeplatinum res/graphics/title_screen/titledemo.order): drawing, colours and map of the
+        /// logo (8-bit, its own 256 colours; Japanese has its own), the top and bottom borders, and the credit line the title shows at the bottom (gf_presents).
+        /// </summary>
+        public static ((int Ncgr, int Nclr, int Nscr) Logo, (int Ncgr, int Nclr, int Nscr) TopBorder, (int Ncgr, int Nclr, int Nscr) BottomBorder,
+                       (int Ncgr, int Nclr, int Nscr) Copyright) PlatinumTitleMembers =>
+            (GameLanguage == GameLanguages.Japanese ? (9, 8, 10) : (12, 11, 22), (23, 7, 24), (26, 6, 27), (5, 4, 3));
 
         /// <summary>HGSS have the touch menu and the Poké Ball question screen; Diamond, Pearl and Platinum have the Pokétch.</summary>
         public static bool IsBottomScreenEditorAvailable() =>

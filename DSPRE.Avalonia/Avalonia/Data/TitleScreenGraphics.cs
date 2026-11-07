@@ -7,7 +7,8 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.Data
 {
     /// <summary>
-    /// Reads and writes the HGSS title logo, background and copyright strip in a/0/4/6. The logo and background share a
+    /// Reads and writes the title logo, background and copyright strip: HGSS a/0/4/6, Platinum titledemo.narc, where the background is
+    /// the top screen's border and the copyright sits on the bottom screen. In HGSS the logo and background share a
     /// palette, so importing either rewrites both. The logo's screen is 256 by 256; only the top 192 rows show, and the rest
     /// is written blank.
     /// </summary>
@@ -24,6 +25,11 @@ namespace DSPRE.Avalonia.Data
         private const int CopyrightTileCapacity = 96;   // copyright NCGR's real character-pool size
 
         private readonly ScriptNarc _narc = new(DirNames.TitleScreenGraphics);
+        private static bool Pt => GameFamily == GameFamilies.Plat;
+        // Platinum's map is 256 colours across one 32 by 32 screen too; its border and bottom border are 16 colours.
+        private const int PtLogoTileCapacity = 512, PtBorderTileCapacity = 256, PtCopyrightTileCapacity = 1024;
+        /// <summary>Platinum loads the copyright's colours one row in, so its map's row 1 reads the file's row 0.</summary>
+        private const int PtCopyrightRow = 1;
         public bool Available => _narc.Available;
 
         /// <summary>Which game's logo set to read and write; both are in the archive. Defaults to the loaded game. The copyright
@@ -44,6 +50,12 @@ namespace DSPRE.Avalonia.Data
         // ── Decode ───────────────────────────────────────────────────────────
         public RawImage ComposeLogo()
         {
+            if (Pt)
+            {
+                (int ncgr, int nclr, int nscr) logo = PlatinumTitleMembers.Logo;
+                RawImage whole = ComposeVia(logo.ncgr, logo.nclr, logo.nscr, transparentZero: true);
+                return whole == null ? null : Crop(whole, LogoHeight);
+            }
             (int logo, int palette, int background, int logoNscr, int backgroundNscr) members = TitleScreenMembersFor(Version);
             RawImage full = ComposeVia(members.logo, members.palette, members.logoNscr, transparentZero: true);
             return full == null ? null : Crop(full, LogoHeight);
@@ -51,22 +63,34 @@ namespace DSPRE.Avalonia.Data
 
         public RawImage ComposeBackground()
         {
+            if (Pt) return ComposeVia(PlatinumTitleMembers.TopBorder.Ncgr, PlatinumTitleMembers.TopBorder.Nclr, PlatinumTitleMembers.TopBorder.Nscr, transparentZero: false);
             (int logo, int palette, int background, int logoNscr, int backgroundNscr) members = TitleScreenMembersFor(Version);
             return ComposeVia(members.background, members.palette, members.backgroundNscr, transparentZero: false);
         }
 
         public RawImage ComposeCopyright()
         {
+            if (Pt)
+            {
+                (int ncgr, int nclr, int nscr) c = PlatinumTitleMembers.Copyright;
+                return ComposeVia(c.ncgr, c.nclr, c.nscr, transparentZero: true, rowsIn: PtCopyrightRow);
+            }
             (int ncgr, int nclr, int nscr) m = TitleScreenCopyrightMembers;
             return ComposeVia(m.ncgr, m.nclr, m.nscr, transparentZero: true);
         }
 
-        private RawImage ComposeVia(int chrIdx, int palIdx, int scrIdx, bool transparentZero)
+        /// <summary>Platinum's bottom screen border, or null elsewhere.</summary>
+        public RawImage ComposeBottomBorder() =>
+            Pt ? ComposeVia(PlatinumTitleMembers.BottomBorder.Ncgr, PlatinumTitleMembers.BottomBorder.Nclr, PlatinumTitleMembers.BottomBorder.Nscr, transparentZero: false) : null;
+
+        /// <param name="rowsIn">How many palette rows in the game loads the colour file.</param>
+        private RawImage ComposeVia(int chrIdx, int palIdx, int scrIdx, bool transparentZero, int rowsIn = 0)
         {
             using IDisposable reading = Pending.Reading();
             if (!Available) return null;
             byte[] chr = NitroBgCodec.Inflate(_narc.Get(chrIdx));
             byte[] pal = NitroBgCodec.Inflate(_narc.Get(palIdx));
+            if (pal != null && rowsIn > 0) pal = RowsIn(pal, rowsIn);
             byte[] scr = NitroBgCodec.Inflate(_narc.Get(scrIdx));
             if (chr == null || pal == null || scr == null) return null;
             try { return ToRawImage(NitroBgCodec.Composite(chr, pal, scr, transparentZero)); }
@@ -75,6 +99,16 @@ namespace DSPRE.Avalonia.Data
                 AppLogger.Error($"TitleScreenGraphics.ComposeVia(chrIdx={chrIdx}): {ex}");
                 return null;
             }
+        }
+
+        // A copy of the colour file with every colour moved down by whole rows, the way the game loads it.
+        private static byte[] RowsIn(byte[] pal, int rows)
+        {
+            byte[] moved = (byte[])pal.Clone();
+            ushort[] colours = NitroBgCodec.ReadColours(pal);
+            if (colours == null) return moved;
+            for (int i = 0; i < colours.Length; i++) NitroBgCodec.PutColour(moved, i, i >= rows * 16 ? colours[i - rows * 16] : (ushort)0);
+            return moved;
         }
 
         private static RawImage ToRawImage(NitroBgCodec.BgImage bg)
@@ -100,6 +134,7 @@ namespace DSPRE.Avalonia.Data
 
         private string ImportLogoOrBackground(RawImage png, bool isLogo)
         {
+            if (Pt) return isLogo ? ImportPtLogo(png) : ImportPtBorder(png);
             if (!Available) return "This game doesn't have the title screen archive.";
             if (png == null || png.IsEmpty) return "No image.";
             if (png.Width != LogoWidth || png.Height != LogoHeight)
@@ -163,9 +198,69 @@ namespace DSPRE.Avalonia.Data
         }
 
         // ── Encode (copyright, standalone palette) ───────────────────────────
+        // Platinum's logo has its own 256 colours: colour 0 is see-through and the rest are the picture's.
+        private string ImportPtLogo(RawImage png)
+        {
+            if (!Available) return "This game doesn't have the title screen archive.";
+            if (png == null || png.IsEmpty) return "No image.";
+            if (png.Width != LogoWidth || png.Height != LogoHeight)
+                return $"That picture is {png.Width} by {png.Height}. It has to be {LogoWidth} by {LogoHeight}.";
+            (int ncgr, int nclr, int nscr) m = PlatinumTitleMembers.Logo;
+            return ImportPiece(png, m, reserveZero: true, tileCapacity: PtLogoTileCapacity, bytesPerTile: 64, maxColors: 255,
+                               mapCells: LogoRealMapCols * LogoRealMapRows, row: 0, colourSlots: 256);
+        }
+
+        // The top border is the back layer, so all 16 colours are its own.
+        private string ImportPtBorder(RawImage png)
+        {
+            if (!Available) return "This game doesn't have the title screen archive.";
+            if (png == null || png.IsEmpty) return "No image.";
+            if (png.Width != BackgroundWidth || png.Height != BackgroundHeight)
+                return $"That picture is {png.Width} by {png.Height}. It has to be {BackgroundWidth} by {BackgroundHeight}.";
+            return ImportPiece(png, PlatinumTitleMembers.TopBorder, reserveZero: false, tileCapacity: PtBorderTileCapacity, bytesPerTile: 32,
+                               maxColors: 16, mapCells: 32 * 24, row: 0, colourSlots: 16);
+        }
+
+        private string ImportPiece(RawImage png, (int Ncgr, int Nclr, int Nscr) m, bool reserveZero, int tileCapacity, int bytesPerTile,
+                                   int maxColors, int mapCells, int row, int colourSlots)
+        {
+            byte[] palRaw = NitroBgCodec.Inflate(Current(m.Nclr));
+            byte[] chrRaw = NitroBgCodec.Inflate(Current(m.Ncgr));
+            byte[] scrRaw = NitroBgCodec.Inflate(Current(m.Nscr));
+            if (palRaw == null || chrRaw == null || scrRaw == null) return "The current title screen couldn't be read.";
+            // The Japanese logo's file holds fewer tiles, so the room comes from the file.
+            int room = (chrRaw.Length - NitroBgCodec.ReadTileHeader(chrRaw).TilesAt) / bytesPerTile;
+            EncodedTiles encoded;
+            try { encoded = QuantizeAndTile(png, reserveZero, 32, 24, Math.Min(tileCapacity, room), bytesPerTile, maxColors); }
+            catch (Exception ex) { return ex.Message; }
+            (byte r, byte g, byte b)[] palette = new (byte r, byte g, byte b)[colourSlots];
+            for (int i = 0; i < encoded.Colors.Count; i++) palette[i + (reserveZero ? 1 : 0)] = encoded.Colors[i];
+            ushort[] map = new ushort[mapCells];
+            for (int i = 0; i < encoded.MapEntries.Length && i < map.Length; i++) map[i] = (ushort)(encoded.MapEntries[i] | row << 12);
+            try
+            {
+                WritePalette(palRaw, palette);
+                WriteTileData(chrRaw, encoded.TileData);
+                WriteMapData(scrRaw, map);
+            }
+            catch (InvalidDataException ex) { return ex.Message; }
+            _narc.Put(m.Nclr, palRaw);
+            _narc.Put(m.Ncgr, chrRaw);
+            _narc.Put(m.Nscr, scrRaw);
+            return null;
+        }
+
         public string ImportCopyright(RawImage png)
         {
             if (!Available) return "This game doesn't have the title screen archive.";
+            if (Pt)
+            {
+                if (png == null || png.IsEmpty) return "No image.";
+                if (png.Width != CopyrightWidth || png.Height != CopyrightHeight)
+                    return $"That picture is {png.Width} by {png.Height}. It has to be {CopyrightWidth} by {CopyrightHeight}.";
+                return ImportPiece(png, PlatinumTitleMembers.Copyright, reserveZero: true, tileCapacity: PtCopyrightTileCapacity, bytesPerTile: 32,
+                                   maxColors: 15, mapCells: 32 * 24, row: PtCopyrightRow, colourSlots: 16);
+            }
             if (png == null || png.IsEmpty) return "No image.";
             if (png.Width != CopyrightWidth || png.Height != CopyrightHeight)
                 return $"That picture is {png.Width} by {png.Height}. It has to be {CopyrightWidth} by {CopyrightHeight}.";
@@ -209,7 +304,7 @@ namespace DSPRE.Avalonia.Data
             if (nclrBytes == null || nclrBytes.Length < 4 ||
                 nclrBytes[0] != (byte)'R' || nclrBytes[1] != (byte)'L' || nclrBytes[2] != (byte)'C' || nclrBytes[3] != (byte)'N')
                 return "That isn't a colour file.";
-            int id = TitleScreenMembersFor(Version).palette;
+            int id = Pt ? PlatinumTitleMembers.Logo.Nclr : TitleScreenMembersFor(Version).palette;
             _narc.Put(id, nclrBytes);
             return null;
         }
@@ -218,7 +313,7 @@ namespace DSPRE.Avalonia.Data
         {
             if (!Available) return null;
             using IDisposable reading = Pending.Reading();
-            return NitroBgCodec.Inflate(_narc.Get(TitleScreenMembersFor(Version).palette));
+            return NitroBgCodec.Inflate(_narc.Get(Pt ? PlatinumTitleMembers.Logo.Nclr : TitleScreenMembersFor(Version).palette));
         }
 
         // ── Shared quantize + tile-dedup encoding ────────────────────────────

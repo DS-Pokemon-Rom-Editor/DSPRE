@@ -15,8 +15,8 @@
     </Border>
 
     <controls:EditorToolbar x:Name="SaveButtons">
-      <TextBlock Text="Version" VerticalAlignment="Center" Margin="0,0,6,0" controls:EditorToolbar.Slot="Picker"/>
-      <ComboBox Width="140" SelectedIndex="{Binding SelectedTabIndex}" controls:EditorToolbar.Slot="Picker">
+      <TextBlock Text="Version" VerticalAlignment="Center" Margin="0,0,6,0" controls:EditorToolbar.Slot="Picker" IsVisible="{Binding HasVersions}"/>
+      <ComboBox Width="140" SelectedIndex="{Binding SelectedTabIndex}" controls:EditorToolbar.Slot="Picker" IsVisible="{Binding HasVersions}">
         <ComboBoxItem Content="HeartGold"/>
         <ComboBoxItem Content="SoulSilver"/>
       </ComboBox>
@@ -38,7 +38,7 @@
       <StackPanel Margin="8" Spacing="8">
         <StackPanel Orientation="Horizontal">
           <TextBlock Text="{Binding PieceName}" FontWeight="SemiBold"/>
-          <controls:HelpTip Text="Rebuilt when you import the logo or background" IsVisible="{Binding PieceIsColours}"/>
+          <controls:HelpTip Text="{Binding ColoursTip}" IsVisible="{Binding PieceIsColours}"/>
         </StackPanel>
         <Border Background="#181818" HorizontalAlignment="Left" IsVisible="{Binding PieceIsImage}">
           <Image Source="{Binding PiecePreview}" Width="256" Height="192" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
@@ -67,8 +67,14 @@
                 <TranslateTransform/>
               </Image.RenderTransform>
             </Image>
-            <Image Source="{Binding CopyrightPreview}" Width="512" Height="384" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
+            <Image Source="{Binding CopyrightPreview}" Width="512" Height="384" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"
+                   IsVisible="{Binding CopyrightOnTop}"/>
           </Grid>
+        </Border>
+        <TextBlock Text="Bottom screen" Classes="screenCaption" IsVisible="{Binding !CopyrightOnTop}"/>
+        <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="#181818" ClipToBounds="True"
+                IsVisible="{Binding !CopyrightOnTop}">
+          <Image Source="{Binding BottomPreview}" Width="512" Height="384" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
         </Border>
         <Button Content="Play intro" controls:Icon.Key="play" Click="PlayIntro_Click" HorizontalAlignment="Center"
                 ToolTip.Tip="Plays the logo's entrance"/>
