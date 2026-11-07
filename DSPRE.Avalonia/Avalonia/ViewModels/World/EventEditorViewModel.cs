@@ -184,11 +184,13 @@ namespace DSPRE.Avalonia.ViewModels.World
                 NSBMDModel model = nsbmd.Models[0];
 
                 float unit = NsbmdGeometry.TileSize / 16f;   // one field unit
-                float localX = (ow.XMapPosition + 0.5f) * NsbmdGeometry.TileSize;
-                float localZ = (ow.YMapPosition + 0.5f) * NsbmdGeometry.TileSize + Overworld3DObjects.OffsetZ(ow.OverlayTableEntry) * unit;
+                (float offsetX, float offsetY, float offsetZ) = Overworld3DObjects.Offset(ow.OverlayTableEntry);
+                float localX = (ow.XMapPosition + 0.5f) * NsbmdGeometry.TileSize + offsetX * unit;
+                float localZ = (ow.YMapPosition + 0.5f) * NsbmdGeometry.TileSize + offsetZ * unit;
                 // The same ground the markers stand on: the terrain nearest the event's own height.
                 float y = 0f;
                 if (terrain != null && terrain.TryGetHeight(localX, localZ, HeightHint(ow) - altitudeY, out float ground)) y = ground;
+                y += offsetY * unit;
                 float x = localX - NsbmdGeometry.MapStride / 2f;
                 float z = localZ - NsbmdGeometry.MapStride / 2f;
 

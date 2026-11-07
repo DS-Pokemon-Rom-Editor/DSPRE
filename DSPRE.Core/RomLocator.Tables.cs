@@ -478,5 +478,226 @@ namespace DSPRE
             },
             _ => null,
         };
+
+        // pokeplatinum ov5_021F10E8.c FieldEffect_InitRenderObject and pokeheartgold overlay_01_021FD1B8.s: the literal
+        // pointing at the table that maps overworld ids to model members. Measured on every Platinum and HGSS dump.
+        private static Spot ObjectModelTablePointer(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English when revision == 10 => Ov(5, 0x205C8),   // Europe
+                GameLanguages.English => Ov(5, 0x205C8),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(5, 0x20494),
+                GameLanguages.French => Ov(5, 0x205D0),
+                GameLanguages.German => Ov(5, 0x205E4),
+                GameLanguages.Italian => Ov(5, 0x205D8),
+                GameLanguages.Spanish => Ov(5, 0x205D0),
+                GameLanguages.Korean => Ov(5, 0x205C4),   // needs verifying: measured on a dump that is not a known good dump
+                _ => null,
+            },
+            GameVersions.HeartGold => language switch
+            {
+                GameLanguages.English when revision == 10 => Ov(1, 0x17B18),   // Europe
+                GameLanguages.English => Ov(1, 0x17B18),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(1, 0x179A0),
+                GameLanguages.French => Ov(1, 0x17B18),   // needs verifying: measured on a dump that is not a known good dump
+                GameLanguages.German => Ov(1, 0x17B18),
+                GameLanguages.Italian => Ov(1, 0x17B18),
+                GameLanguages.Spanish => Ov(1, 0x17B18),   // needs verifying: measured on a dump that is not a known good dump
+                GameLanguages.Korean => Ov(1, 0x17B18),
+                _ => null,
+            },
+            GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.English when revision == 10 => Ov(1, 0x17B18),   // Europe
+                GameLanguages.English => Ov(1, 0x17B18),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(1, 0x179A0),
+                GameLanguages.French => Ov(1, 0x17B18),   // needs verifying: measured on a dump that is not a known good dump
+                GameLanguages.German => Ov(1, 0x17B18),
+                GameLanguages.Italian => Ov(1, 0x17B18),
+                GameLanguages.Spanish => Ov(1, 0x17B18),
+                GameLanguages.Korean => Ov(1, 0x17B18),
+                _ => null,
+            },
+            _ => null,
+        };
+
+        // The movs that loads that table's entry count, in the same function. Measured on every Platinum and HGSS dump.
+        private static Spot ObjectModelCount(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English when revision == 10 => Ov(5, 0x205AA),   // Europe
+                GameLanguages.English => Ov(5, 0x205AA),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(5, 0x20476),
+                GameLanguages.French => Ov(5, 0x205B2),
+                GameLanguages.German => Ov(5, 0x205C6),
+                GameLanguages.Italian => Ov(5, 0x205BA),
+                GameLanguages.Spanish => Ov(5, 0x205B2),
+                GameLanguages.Korean => Ov(5, 0x205A6),   // needs verifying: measured on a dump that is not a known good dump
+                _ => null,
+            },
+            GameVersions.HeartGold => language switch
+            {
+                GameLanguages.English when revision == 10 => Ov(1, 0x17AFA),   // Europe
+                GameLanguages.English => Ov(1, 0x17AFA),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(1, 0x17982),
+                GameLanguages.French => Ov(1, 0x17AFA),   // needs verifying: measured on a dump that is not a known good dump
+                GameLanguages.German => Ov(1, 0x17AFA),
+                GameLanguages.Italian => Ov(1, 0x17AFA),
+                GameLanguages.Spanish => Ov(1, 0x17AFA),   // needs verifying: measured on a dump that is not a known good dump
+                GameLanguages.Korean => Ov(1, 0x17AFA),
+                _ => null,
+            },
+            GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.English when revision == 10 => Ov(1, 0x17AFA),   // Europe
+                GameLanguages.English => Ov(1, 0x17AFA),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(1, 0x17982),
+                GameLanguages.French => Ov(1, 0x17AFA),   // needs verifying: measured on a dump that is not a known good dump
+                GameLanguages.German => Ov(1, 0x17AFA),
+                GameLanguages.Italian => Ov(1, 0x17AFA),
+                GameLanguages.Spanish => Ov(1, 0x17AFA),
+                GameLanguages.Korean => Ov(1, 0x17AFA),
+                _ => null,
+            },
+            _ => null,
+        };
+
+        // pokeplatinum gObjectEventGfxOverworldAnimsInitialPosTable and pokeheartgold ov01_022073D8: the literal pointing at the
+        // model offset table (id, x, y, z in fx32, ending at id 0xFFFF). Measured on every Platinum and HGSS dump.
+        private static Spot ObjectModelPositionsPointer(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Platinum => language switch
+            {
+                GameLanguages.English when revision == 10 => Ov(5, 0x1B9AC),   // Europe
+                GameLanguages.English => Ov(5, 0x1B9AC),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(5, 0x1B8C4),
+                GameLanguages.French => Ov(5, 0x1B9FC),
+                GameLanguages.German => Ov(5, 0x1BA10),
+                GameLanguages.Italian => Ov(5, 0x1BA04),
+                GameLanguages.Spanish => Ov(5, 0x1B9FC),
+                GameLanguages.Korean => Ov(5, 0x1B9F0),   // needs verifying: measured on a dump that is not a known good dump
+                _ => null,
+            },
+            GameVersions.HeartGold => language switch
+            {
+                GameLanguages.English when revision == 10 => Ov(1, 0x133F4),   // Europe
+                GameLanguages.English => Ov(1, 0x133F4),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(1, 0x1327C),
+                GameLanguages.French => Ov(1, 0x133F4),   // needs verifying: measured on a dump that is not a known good dump
+                GameLanguages.German => Ov(1, 0x133F4),
+                GameLanguages.Italian => Ov(1, 0x133F4),
+                GameLanguages.Spanish => Ov(1, 0x133F4),   // needs verifying: measured on a dump that is not a known good dump
+                GameLanguages.Korean => Ov(1, 0x133F4),
+                _ => null,
+            },
+            GameVersions.SoulSilver => language switch
+            {
+                GameLanguages.English when revision == 10 => Ov(1, 0x133F4),   // Europe
+                GameLanguages.English => Ov(1, 0x133F4),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(1, 0x1327C),
+                GameLanguages.French => Ov(1, 0x133F4),   // needs verifying: measured on a dump that is not a known good dump
+                GameLanguages.German => Ov(1, 0x133F4),
+                GameLanguages.Italian => Ov(1, 0x133F4),
+                GameLanguages.Spanish => Ov(1, 0x133F4),
+                GameLanguages.Korean => Ov(1, 0x133F4),
+                _ => null,
+            },
+            _ => null,
+        };
+
+        // pokediamond ov06_0224A06C: the literal pointing at the six signpost model members, picked by id 0x5B to 0x60
+        // (ov06_0224A0F0). Measured on every Diamond and Pearl dump.
+        private static Spot SignpostModelsPointer(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Diamond => language switch
+            {
+                GameLanguages.English when revision == 13 => Ov(6, 0x10A10),   // Europe
+                GameLanguages.English => Ov(6, 0x10A10),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(6, 0x11534),
+                GameLanguages.French => Ov(6, 0x109B8),
+                GameLanguages.German => Ov(6, 0x109B8),
+                GameLanguages.Italian => Ov(6, 0x109B8),
+                GameLanguages.Spanish => Ov(6, 0x109B8),
+                GameLanguages.Korean => Ov(6, 0x109BC),
+                _ => null,
+            },
+            GameVersions.Pearl => language switch
+            {
+                GameLanguages.English when revision == 13 => Ov(6, 0x10A1C),   // Europe
+                GameLanguages.English => Ov(6, 0x10A1C),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(6, 0x11534),
+                GameLanguages.French => Ov(6, 0x109C4),
+                GameLanguages.German => Ov(6, 0x109C4),
+                GameLanguages.Italian => Ov(6, 0x109C4),
+                GameLanguages.Spanish => Ov(6, 0x109C4),
+                GameLanguages.Korean => Ov(6, 0x109C8),
+                _ => null,
+            },
+            _ => null,
+        };
+
+        // pokediamond ov06_0224A8A8: the movs r1 that names the book's model member (id 0xB7). Measured on every Diamond
+        // and Pearl dump.
+        private static Spot BookModelLoad(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Diamond => language switch
+            {
+                GameLanguages.English when revision == 13 => Ov(6, 0x1121A),   // Europe
+                GameLanguages.English => Ov(6, 0x1121A),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(6, 0x11BF2),
+                GameLanguages.French => Ov(6, 0x111C2),
+                GameLanguages.German => Ov(6, 0x111C2),
+                GameLanguages.Italian => Ov(6, 0x111C2),
+                GameLanguages.Spanish => Ov(6, 0x111C2),
+                GameLanguages.Korean => Ov(6, 0x111C6),
+                _ => null,
+            },
+            GameVersions.Pearl => language switch
+            {
+                GameLanguages.English when revision == 13 => Ov(6, 0x11226),   // Europe
+                GameLanguages.English => Ov(6, 0x11226),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(6, 0x11BF2),
+                GameLanguages.French => Ov(6, 0x111CE),
+                GameLanguages.German => Ov(6, 0x111CE),
+                GameLanguages.Italian => Ov(6, 0x111CE),
+                GameLanguages.Spanish => Ov(6, 0x111CE),
+                GameLanguages.Korean => Ov(6, 0x111D2),
+                _ => null,
+            },
+            _ => null,
+        };
+
+        // pokediamond ov06_0224AA14: the movs r1 that names the door's model member (id 0xD1). Measured on every Diamond
+        // and Pearl dump.
+        private static Spot DoorModelLoad(GameVersions game, GameLanguages language, int revision) => game switch
+        {
+            GameVersions.Diamond => language switch
+            {
+                GameLanguages.English when revision == 13 => Ov(6, 0x11386),   // Europe
+                GameLanguages.English => Ov(6, 0x11386),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(6, 0x11A7E),
+                GameLanguages.French => Ov(6, 0x1132E),
+                GameLanguages.German => Ov(6, 0x1132E),
+                GameLanguages.Italian => Ov(6, 0x1132E),
+                GameLanguages.Spanish => Ov(6, 0x1132E),
+                GameLanguages.Korean => Ov(6, 0x11332),
+                _ => null,
+            },
+            GameVersions.Pearl => language switch
+            {
+                GameLanguages.English when revision == 13 => Ov(6, 0x11392),   // Europe
+                GameLanguages.English => Ov(6, 0x11392),   // US, and any English revision not listed
+                GameLanguages.Japanese => Ov(6, 0x11A7E),
+                GameLanguages.French => Ov(6, 0x1133A),
+                GameLanguages.German => Ov(6, 0x1133A),
+                GameLanguages.Italian => Ov(6, 0x1133A),
+                GameLanguages.Spanish => Ov(6, 0x1133A),
+                GameLanguages.Korean => Ov(6, 0x1133E),
+                _ => null,
+            },
+            _ => null,
+        };
     }
 }

@@ -31,6 +31,7 @@ namespace DSPRE
             NamingBottomPaletteCall, NamingBottomBanks, NamingBottomColourMode, NamingBottomTileLoad, NamingSpriteWindows,
             HgssFlySpots, OptionsTextPrinter, OptionsGetters, OptionsInit, OptionsMenuCode, OptionsMenuCodeHgss, OptionsTablesHgss,
             StartMenuBallCount, BagBerryActions, BoxMarkings, OptionsWindowsX, TrainerCardHallOfFame, BagItemAction,
+            ObjectModelTablePointer, ObjectModelCount, ObjectModelPositionsPointer, SignpostModelsPointer, BookModelLoad, DoorModelLoad,
         }
 
         /// <summary>arm9 when <see cref="Overlay"/> is -1, otherwise that overlay; one or more file offsets.</summary>
@@ -174,6 +175,12 @@ namespace DSPRE
             [Thing.OptionsWindowsX] = OptionsWindowsX,
             [Thing.TrainerCardHallOfFame] = TrainerCardHallOfFame,
             [Thing.BagItemAction] = BagItemAction,
+            [Thing.ObjectModelTablePointer] = ObjectModelTablePointer,
+            [Thing.ObjectModelCount] = ObjectModelCount,
+            [Thing.ObjectModelPositionsPointer] = ObjectModelPositionsPointer,
+            [Thing.SignpostModelsPointer] = SignpostModelsPointer,
+            [Thing.BookModelLoad] = BookModelLoad,
+            [Thing.DoorModelLoad] = DoorModelLoad,
         };
 
         /// <summary>Where <paramref name="thing"/> is in a given dump, whether or not it is the loaded one.</summary>

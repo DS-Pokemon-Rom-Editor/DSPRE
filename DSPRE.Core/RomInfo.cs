@@ -986,6 +986,7 @@ namespace DSPRE
             OverworldTable = null;
             OverworldTableKeys = null;
             Ow3DSpriteDict = null;
+            Overworld3DObjects.Forget();
             OWtablePath = null;
             OWTableOffset = 0;
             OverlayUtils.ForgetOverlayTable();
@@ -1225,13 +1226,16 @@ namespace DSPRE
         };
 
         /// <summary>
-        /// Overworld ids without a sprite, and a stand-in picture for each: DP and Platinum's 3D models,
+        /// Overworld ids without a sprite, and a stand-in picture for each: the 3D models,
         /// and ids 101 to 116, which take their picture from variables 0x4020 to 0x402F.
         /// </summary>
         public static void Set3DOverworldsDict()
         {
             Ow3DSpriteDict = new Dictionary<uint, string>();
             for (uint id = FirstVariableOverworld; id <= LastVariableOverworld; id++) Ow3DSpriteDict[id] = "overworld";
+            // HGSS points these entries at sprite 0, which the game never draws for them.
+            foreach (uint id in Overworld3DObjects.Entries)
+                Ow3DSpriteDict[id] = SignpostImages.TryGetValue(id, out string image) ? image : "overworld";
             if (GameFamily != GameFamilies.DP && GameFamily != GameFamilies.Plat) return;
 
             try
