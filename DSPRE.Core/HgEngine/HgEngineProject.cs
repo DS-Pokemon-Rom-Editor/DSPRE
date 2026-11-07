@@ -107,7 +107,7 @@ namespace DSPRE.HgEngine
             Directory.Exists(Path.Combine(path, "armips"));
 
         /// <summary>True when the path is inside WSL, so the shell is settled and nothing needs asking.</summary>
-        public static bool IsWslPath(string path) => TryParseWslUncPath(path, out _, out _);
+        public static bool IsWslPath(string path) => WslPaths.IsWslPath(path);
 
         // A base tree is deleted whole and re-extracted whenever rom.nds changes, so the settings live in the
         // checkout's .dspre/ folder instead.
@@ -383,24 +383,8 @@ namespace DSPRE.HgEngine
             return p;
         }
 
-        internal static bool TryParseWslUncPath(string path, out string distro, out string posixPath)
-        {
-            distro = null; posixPath = null;
-            if (string.IsNullOrWhiteSpace(path)) return false;
-            foreach (string prefix in new[] { @"\\wsl.localhost\", @"\\wsl$\" })
-            {
-                if (path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                {
-                    string rest = path.Substring(prefix.Length).TrimEnd('\\');
-                    int sep = rest.IndexOf('\\');
-                    if (sep < 0) { distro = rest; posixPath = "/"; return true; }
-                    distro = rest.Substring(0, sep);
-                    posixPath = "/" + rest.Substring(sep + 1).Replace('\\', '/');
-                    return true;
-                }
-            }
-            return false;
-        }
+        internal static bool TryParseWslUncPath(string path, out string distro, out string posixPath) =>
+            WslPaths.TryParse(path, out distro, out posixPath);
 
         private sealed class HgEngineConfig
         {

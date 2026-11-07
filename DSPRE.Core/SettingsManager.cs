@@ -102,6 +102,9 @@ namespace DSPRE
         /// <summary>How the map model editor's tile palette pictures tiles: 0 automatic, 1 angled, 2 from above.</summary>
         public int MapTilesView { get; set; } = 0;
 
+        /// <summary>WSL projects that won't show the Linux version notice again.</summary>
+        public List<string> WslNoticeShown { get; set; } = new List<string>();
+
         /// <summary>Most-recently-opened projects (.nds files or extracted folders), newest first.</summary>
         public List<string> RecentProjects { get; set; } = new List<string>();
 

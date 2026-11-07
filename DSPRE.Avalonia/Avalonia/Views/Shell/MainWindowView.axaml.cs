@@ -334,6 +334,7 @@ namespace DSPRE.Avalonia.Views.Shell
         {
             string path = await PickRomAsync();
             if (string.IsNullOrEmpty(path) || await RefuseUnsupportedAsync(path)) return;
+            if (!await ConfirmWslProjectAsync(path)) return;
 
             bool? reExtract = await CheckExtractedDataChoiceAsync(path);
             if (reExtract == null) return;   // user aborted
@@ -381,6 +382,7 @@ namespace DSPRE.Avalonia.Views.Shell
             }
 
             if (await RefuseUnsupportedAsync(path)) return;
+            if (!await ConfirmWslProjectAsync(path)) return;
             if (!await ConfirmProjectCloseAsync()) return;
             OpenEditors.CloseEditorWindows(this);
             await LoadRomAsync(err0 => { bool ok = AvaloniaRomLoader.LoadFromFolder(path, out string er); err0(er); return ok; }, sourcePath: path);
@@ -430,10 +432,8 @@ namespace DSPRE.Avalonia.Views.Shell
                 await DialogHelper.ShowErrorAsync("This hg-engine checkout is older than its ds-rom build. Update it to the current hg-engine, then open it again.", title, this);
                 return;
             }
+            if (!await ConfirmWslProjectAsync(checkout, hgEngine: true)) return;
             HgEngineShell? stored = HgEngineProject.StoredShellFor(checkout);
-            if (stored == null && HgEngineProject.IsWslPath(checkout) && !HgEngineProject.HostIsPosix
-                && !await DialogHelper.AskYesNoAsync(WslLinuxBuildAdvice, "This checkout is inside WSL"))
-                return;
 
             HgEngineShell? shell = stored ?? await ViewModels.Tools.HgEngineLinkViewModel.AskShellAsync(checkout);
             if (shell == null) return;
@@ -502,9 +502,25 @@ namespace DSPRE.Avalonia.Views.Shell
             return false;
         }
 
-        private const string WslLinuxBuildAdvice =
-            "Every file DSPRE reads crosses from Windows into WSL, which is slow, and hg-engine already builds inside WSL. "
-            + "Running DSPRE's Linux version inside WSL avoids that. In a WSL terminal:\n\n"
+        /// <summary>Offers the Linux version once per WSL project on Windows. False when the user declines.</summary>
+        private static async System.Threading.Tasks.Task<bool> ConfirmWslProjectAsync(string path, bool hgEngine = false)
+        {
+            if (!System.OperatingSystem.IsWindows() || !WslPaths.IsWslPath(path)) return true;
+            string key = path.TrimEnd('\\', '/');
+            List<string> shown = SettingsManager.Settings.WslNoticeShown;
+            if (shown.Exists(p => string.Equals(p, key, System.StringComparison.OrdinalIgnoreCase))) return true;
+
+            string message = hgEngine
+                ? "Opening a project inside WSL from Windows is slow. hg-engine already builds inside WSL, and the Linux version of DSPRE runs there at full speed. "
+                : "Opening a project inside WSL from Windows is slow. The Linux version of DSPRE runs inside WSL at full speed. ";
+            if (!await DialogHelper.AskYesNoAsync(message + WslLinuxAdvice, "This project is inside WSL")) return false;
+            shown.Add(key);
+            SettingsManager.Save();
+            return true;
+        }
+
+        private const string WslLinuxAdvice =
+            "In a WSL terminal:\n\n"
             + "mkdir -p ~/dspre && cd ~/dspre\n"
             + "curl -LO https://github.com/DS-Pokemon-Rom-Editor/DSPRE/releases/download/canary-avalonia/DSPRE-Avalonia-linux-x64-canary.tar.gz\n"
             + "tar -xzf DSPRE-Avalonia-linux-x64-canary.tar.gz\n"
@@ -545,6 +561,7 @@ namespace DSPRE.Avalonia.Views.Shell
 
             if (System.IO.File.Exists(path))
             {
+                if (!await ConfirmWslProjectAsync(path)) return;
                 bool? reExtract = await CheckExtractedDataChoiceAsync(path);
                 if (reExtract == null) return;   // user aborted
                 if (!await ConfirmProjectCloseAsync()) return;
@@ -557,6 +574,7 @@ namespace DSPRE.Avalonia.Views.Shell
             }
             else if (System.IO.Directory.Exists(path))
             {
+                if (!await ConfirmWslProjectAsync(path)) return;
                 if (!await ConfirmProjectCloseAsync()) return;
                 OpenEditors.CloseEditorWindows(this);
                 await LoadRomAsync(err0 => { bool ok = AvaloniaRomLoader.LoadFromFolder(path, out string er); err0(er); return ok; }, sourcePath: path);
@@ -573,11 +591,6 @@ namespace DSPRE.Avalonia.Views.Shell
                 await DialogHelper.ShowErrorAsync("This project no longer exists and was removed from the recent list:\n" + path, "Open recent");
             }
         }
-
-        /// <summary>True for a path served over WSL's network redirector (\\wsl.localhost\... or \\wsl$\...), where every file operation pays extra latency compared to a local drive.</summary>
-        private static bool IsWslPath(string path) =>
-            path != null && (path.StartsWith(@"\\wsl.localhost\", System.StringComparison.OrdinalIgnoreCase)
-                           || path.StartsWith(@"\\wsl$\", System.StringComparison.OrdinalIgnoreCase));
 
         // An archive replaced while DSPRE was closed would lose to its older unpacked folder at the next save.
         private static async System.Threading.Tasks.Task SettleChangedArchivesAsync(MainWindowViewModel vm)
@@ -607,7 +620,7 @@ namespace DSPRE.Avalonia.Views.Shell
             if (vm != null)
             {
                 vm.BusyText = "Opening ROM…";
-                vm.BusyHint = IsWslPath(sourcePath)
+                vm.BusyHint = WslPaths.IsWslPath(sourcePath)
                     ? "Projects in WSL load slower"
                     : "";
                 vm.IsBusy = true;
